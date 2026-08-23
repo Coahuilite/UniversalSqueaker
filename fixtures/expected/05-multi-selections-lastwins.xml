@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<voicePackSchemaVersion>2</voicePackSchemaVersion>
+		<settingsSchemaVersion>4</settingsSchemaVersion>
+		<experimentalRaceAllowlist />
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Race</scope>
+				<raceDefName>Ratkin</raceDefName>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_OfficialExample_Race</li>
+					<li>coahuilite.squeakyratkin:SR_ExtraRacePack</li>
+				</enabledPackKeys>
+			</li>
+			<li>
+				<scope>Xenotype</scope>
+				<raceDefName>Ratkin</raceDefName>
+				<xenotypeDefName>Baseliner_Highmate</xenotypeDefName>
+				<enabledPackKeys>
+					<li>other.mod:SR_HighmateVoice</li>
+				</enabledPackKeys>
+			</li>
+			<li>
+				<scope>Xenotype</scope>
+				<raceDefName>Ratkin</raceDefName>
+				<xenotypeDefName>Sanguophage</xenotypeDefName>
+				<enabledPackKeys>
+					<li>other.mod:SR_SanguoVoice</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets>
+			<li>
+				<raceDefName>Ratkin</raceDefName>
+				<xenotypeDefName>Baseliner_Highmate</xenotypeDefName>
+				<hasOverallIntervalMultiplier>True</hasOverallIntervalMultiplier>
+				<overallIntervalMultiplier>1.5</overallIntervalMultiplier>
+				<moodOverrides>
+					<li>
+						<hasPitchFactor>True</hasPitchFactor>
+						<pitchFactor>1.10000002</pitchFactor>
+					</li>
+				</moodOverrides>
+				<actionOverrides>
+					<li>
+						<hasIntervalMultiplier>True</hasIntervalMultiplier>
+						<intervalMultiplier>2</intervalMultiplier>
+					</li>
+				</actionOverrides>
+			</li>
+		</xenotypePresets>
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

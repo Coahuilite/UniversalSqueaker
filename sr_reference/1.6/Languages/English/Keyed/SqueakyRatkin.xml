@@ -1,0 +1,592 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <SR.SettingsCategory>Squeaky Ratkin</SR.SettingsCategory>
+  <SR.About.Name>Squeaky Ratkin</SR.About.Name>
+  <SR.About.Description>Squeaky Ratkin is a lightweight sound effect mod that injects a little stir into the Ratkin experience. It brings a whimsical medley of chirps and squeaks to these once-silent little critters, ensuring every action comes with... a little sound things. No longer shall the colonies and the world beyond echo solely with the lamentations of blood and fire - the whispered squeaks of the ratkin will remind you that though they may be small, they are never content to remain silent.
+
+*Not eligible for registration in The Book of Squeakudges*</SR.About.Description>
+
+  <SR.Global.Header>Tuning options</SR.Global.Header>
+  <SR.Basics.Header>Behavior and listening distance</SR.Basics.Header>
+  <SR.Basics.Auxiliary>Auxiliary options</SR.Basics.Auxiliary>
+  <SR.Basics.Version>Version {0}</SR.Basics.Version>
+  <SR.Basics.Version.Tooltip>{0}
+{1}</SR.Basics.Version.Tooltip>
+  <SR.Basics.Version.Count>Count: {0}</SR.Basics.Version.Count>
+  <SR.AudioBrowser.Title>Animal Voice Workbench</SR.AudioBrowser.Title>
+  <SR.AudioBrowser.Intro>Indexes loaded animal definitions, life stages, and voice references. Resolve is explicit; previews send one selected resolved clip through this mod's on-camera adapter and do not claim audibility.</SR.AudioBrowser.Intro>
+  <SR.AudioBrowser.Animals>Animals / actions</SR.AudioBrowser.Animals>
+  <SR.AudioBrowser.Sounds>Referenced SoundDefs</SR.AudioBrowser.Sounds>
+  <SR.AudioBrowser.SearchAnimals>Search animal name, defName, owner, or package ID</SR.AudioBrowser.SearchAnimals>
+  <SR.AudioBrowser.SearchReferences>Search field, action, SoundDef, source, or life stage</SR.AudioBrowser.SearchReferences>
+  <SR.AudioBrowser.HideMechanical>Hide mechanical references</SR.AudioBrowser.HideMechanical>
+  <SR.AudioBrowser.Category.Vocal>Vocal</SR.AudioBrowser.Category.Vocal>
+  <SR.AudioBrowser.Category.Mechanical>Mechanical</SR.AudioBrowser.Category.Mechanical>
+  <SR.AudioBrowser.Category.Other>Other</SR.AudioBrowser.Category.Other>
+  <SR.AudioBrowser.Semantic.Call>Call</SR.AudioBrowser.Semantic.Call>
+  <SR.AudioBrowser.Semantic.Angry>Angry</SR.AudioBrowser.Semantic.Angry>
+  <SR.AudioBrowser.Semantic.Wounded>Wounded</SR.AudioBrowser.Semantic.Wounded>
+  <SR.AudioBrowser.Semantic.Death>Death</SR.AudioBrowser.Semantic.Death>
+  <SR.AudioBrowser.Semantic.Ambience>Ambience</SR.AudioBrowser.Semantic.Ambience>
+  <SR.AudioBrowser.Semantic.Attack>Attack</SR.AudioBrowser.Semantic.Attack>
+  <SR.AudioBrowser.Semantic.Eating>Eating</SR.AudioBrowser.Semantic.Eating>
+  <SR.AudioBrowser.Semantic.Moving>Moving</SR.AudioBrowser.Semantic.Moving>
+  <SR.AudioBrowser.Semantic.Other>Other</SR.AudioBrowser.Semantic.Other>
+  <SR.AudioBrowser.WorkbenchMoodNote>Temporary pitch and volume start from the current global Mood settings. Changes made here are not saved. Pitch jitter uses the current global range and is read-only.</SR.AudioBrowser.WorkbenchMoodNote>
+  <SR.AudioBrowser.ReadOnly>read-only</SR.AudioBrowser.ReadOnly>
+  <SR.AudioBrowser.Copy>Copy sample trace</SR.AudioBrowser.Copy>
+  <SR.AudioBrowser.Copied>Sample summary and SR.AnimalVoiceSample.v1 trace copied to the clipboard.</SR.AudioBrowser.Copied>
+  <SR.AudioBrowser.SqueakyActions>Squeaky actions</SR.AudioBrowser.SqueakyActions>
+  <SR.AudioBrowser.GroupTip>{0}
+Source: {1}
+Referenced SoundDefs: {2}</SR.AudioBrowser.GroupTip>
+  <SR.AudioBrowser.EmptyGroup>No referenced SoundDefs.</SR.AudioBrowser.EmptyGroup>
+  <SR.AudioBrowser.NoSelection>Select a referenced SoundDef.</SR.AudioBrowser.NoSelection>
+  <SR.AudioBrowser.Animal>Animal / group</SR.AudioBrowser.Animal>
+  <SR.AudioBrowser.AnimalSource>Animal source</SR.AudioBrowser.AnimalSource>
+  <SR.AudioBrowser.SoundSource>SoundDef source</SR.AudioBrowser.SoundSource>
+  <SR.AudioBrowser.Reference>Referenced by</SR.AudioBrowser.Reference>
+  <SR.AudioBrowser.Context>Context</SR.AudioBrowser.Context>
+  <SR.AudioBrowser.ContextValue>{0}; sustain: {1}</SR.AudioBrowser.ContextValue>
+  <SR.AudioBrowser.Availability>Availability</SR.AudioBrowser.Availability>
+  <SR.AudioBrowser.Resolve>Resolve clips</SR.AudioBrowser.Resolve>
+  <SR.AudioBrowser.AlreadyResolved>This result is cached for the current process.</SR.AudioBrowser.AlreadyResolved>
+  <SR.AudioBrowser.ResolveFirst>Resolve this SoundDef first.</SR.AudioBrowser.ResolveFirst>
+  <SR.AudioBrowser.ResolveResult>Resolve result: {0}; clips: {1}.</SR.AudioBrowser.ResolveResult>
+  <SR.AudioBrowser.IndexFailed>Could not build the loaded-definition index: {0}.</SR.AudioBrowser.IndexFailed>
+  <SR.AudioBrowser.State.Unknown>Unknown</SR.AudioBrowser.State.Unknown>
+  <SR.AudioBrowser.State.Available>Available</SR.AudioBrowser.State.Available>
+  <SR.AudioBrowser.State.Empty>Empty</SR.AudioBrowser.State.Empty>
+  <SR.AudioBrowser.State.Failed>Failed</SR.AudioBrowser.State.Failed>
+  <SR.AudioBrowser.EmptyReason>Resolution completed without an available clip.</SR.AudioBrowser.EmptyReason>
+  <SR.AudioBrowser.FailedReason>Resolution failed. The negative result is cached to avoid repeated errors.</SR.AudioBrowser.FailedReason>
+  <SR.AudioBrowser.LayerA>A · Resolved clip</SR.AudioBrowser.LayerA>
+  <SR.AudioBrowser.LayerA.Desc>Requests one resolved clip through its original SubSound. In-map clips require the current map and a valid target.</SR.AudioBrowser.LayerA.Desc>
+  <SR.AudioBrowser.LayerB>B · Native SoundDef</SR.AudioBrowser.LayerB>
+  <SR.AudioBrowser.LayerB.Desc>Requests the whole SoundDef with its native context. Sustainers and mixed-context definitions are not currently supported.</SR.AudioBrowser.LayerB.Desc>
+  <SR.AudioBrowser.LayerC>C · Final Ratkin</SR.AudioBrowser.LayerC>
+  <SR.AudioBrowser.LayerC.Desc>Uses a spawned Ratkin on the current map and follows the production Xenotype lookup, voice-pack policy, mood, fallback, and InMap playback path.</SR.AudioBrowser.LayerC.Desc>
+  <SR.AudioBrowser.Clip>Resolved clip {0}/{1}</SR.AudioBrowser.Clip>
+  <SR.AudioBrowser.Previous>Previous</SR.AudioBrowser.Previous>
+  <SR.AudioBrowser.Next>Next</SR.AudioBrowser.Next>
+  <SR.AudioBrowser.NeedMultipleClips>At least two resolved clips are required.</SR.AudioBrowser.NeedMultipleClips>
+  <SR.AudioBrowser.RequestClip>Request resolved clip preview</SR.AudioBrowser.RequestClip>
+  <SR.AudioBrowser.RequestNative>Request native SoundDef preview</SR.AudioBrowser.RequestNative>
+  <SR.AudioBrowser.RequestFinal>Request final Ratkin preview</SR.AudioBrowser.RequestFinal>
+  <SR.AudioBrowser.ClipDispatched>Resolved clip preview dispatched. Audible playback is not confirmed.</SR.AudioBrowser.ClipDispatched>
+  <SR.AudioBrowser.NativeDispatched>Native SoundDef preview dispatched. Audible playback is not confirmed.</SR.AudioBrowser.NativeDispatched>
+  <SR.AudioBrowser.RequestRejected>Preview was not dispatched: {0}.</SR.AudioBrowser.RequestRejected>
+  <SR.AudioBrowser.RequestFailed>Preview request failed: {0}.</SR.AudioBrowser.RequestFailed>
+  <SR.Preview.Dispatched>Preview requested through the on-camera adapter. Audible playback is not confirmed.</SR.Preview.Dispatched>
+  <SR.Preview.NotDispatched>Preview was not dispatched: the on-camera audio source is unavailable.</SR.Preview.NotDispatched>
+  <SR.AudioBrowser.NoPawn>No eligible pawn</SR.AudioBrowser.NoPawn>
+  <SR.AudioBrowser.NoPawnReason>No spawned, living pawn with CompSqueaker is available on the current map.</SR.AudioBrowser.NoPawnReason>
+  <SR.AudioBrowser.RefreshPawns>Refresh eligible pawns</SR.AudioBrowser.RefreshPawns>
+  <SR.AudioBrowser.PawnsRefreshed>Eligible pawn list refreshed: {0}.</SR.AudioBrowser.PawnsRefreshed>
+  <SR.AudioBrowser.Action>Action: {0}</SR.AudioBrowser.Action>
+  <SR.AudioBrowser.NoActionMapping>The selected pawn has no {0} action mapping.</SR.AudioBrowser.NoActionMapping>
+  <SR.AudioBrowser.PawnUnavailable>The selected pawn is no longer eligible on the current map.</SR.AudioBrowser.PawnUnavailable>
+  <SR.AudioBrowser.FinalDispatched>Final preview dispatched. Source: {0}; SoundDef: {1}; xenotype: {2}; mood: {3}. Audible playback is not confirmed.</SR.AudioBrowser.FinalDispatched>
+  <SR.AudioBrowser.FinalRejected>Final preview not dispatched. Status: {0}; reason: {1}; SoundDef: {2}.</SR.AudioBrowser.FinalRejected>
+  <SR.AudioBrowser.Playability.Playable>Playable in the current context.</SR.AudioBrowser.Playability.Playable>
+  <SR.AudioBrowser.Playability.NoAudio>No resolved audio is available.</SR.AudioBrowser.Playability.NoAudio>
+  <SR.AudioBrowser.Playability.Failed>Audio resolution failed.</SR.AudioBrowser.Playability.Failed>
+  <SR.AudioBrowser.Playability.SustainerUnsupported>Sustainer preview is not currently supported. A resolved one-shot clip may still be requested.</SR.AudioBrowser.Playability.SustainerUnsupported>
+  <SR.AudioBrowser.Playability.MixedContextUnsupported>Mixed camera and in-map SoundDefs are not safe for native preview. Preview a resolved clip instead.</SR.AudioBrowser.Playability.MixedContextUnsupported>
+  <SR.AudioBrowser.Playability.UnsafeSoundContext>The SoundDef context does not match this preview path.</SR.AudioBrowser.Playability.UnsafeSoundContext>
+  <SR.AudioBrowser.Playability.MapRequired>A current map and valid in-map target are required.</SR.AudioBrowser.Playability.MapRequired>
+  <SR.DevTools.Header>Development tools</SR.DevTools.Header>
+  <SR.DevPage.Header>Developer &amp; diagnostics</SR.DevPage.Header>
+  <SR.DevPage.Desc>Inspect loaded audio, capture memory-only runtime information, and identify the exact installed build. These tools do not enable RimWorld Dev Mode.</SR.DevPage.Desc>
+  <SR.DevPage.Tools>Tools</SR.DevPage.Tools>
+  <SR.DevPage.Build>Build identity</SR.DevPage.Build>
+  <SR.DevPage.BuildIdentity>Installed build: {0}</SR.DevPage.BuildIdentity>
+  <SR.DevTools.AudioBrowser>Open audio browser</SR.DevTools.AudioBrowser>
+  <SR.DevTools.AudioBrowser.Short>Inspect loaded animal voice material in a separate window.</SR.DevTools.AudioBrowser.Short>
+  <SR.DevTools.AudioBrowser.Tooltip>The audio browser indexes loaded animal definitions and their referenced SoundDefs. Material previews require explicit Resolve and test a selected loaded clip; final Ratkin preview uses a selected pawn and the current production path. Opening it does not enable statistics, detailed logging, or successful dispatch recording.</SR.DevTools.AudioBrowser.Tooltip>
+  <SR.DevTools.Disable>Disable tools</SR.DevTools.Disable>
+  <SR.DevTools.DisableConfirm>Hide developer tools? This stops action-statistics collection and successful dispatch recording, while keeping their current in-memory records for next time. You can unlock the tools again from the version label. The saved detailed-logging mode is unchanged.</SR.DevTools.DisableConfirm>
+  <SR.DevTools.OneMore>One more.</SR.DevTools.OneMore>
+  <SR.DevTools.Enabled>Developer tools enabled.</SR.DevTools.Enabled>
+  <SR.DevTools.Logging.Header>Detailed development logging</SR.DevTools.Logging.Header>
+  <SR.DevTools.Logging.Short>Choose whether supported human-readable log events include additional stable diagnostic fields.</SR.DevTools.Logging.Short>
+  <SR.DevTools.Logging.Tooltip>Controls whether this mod adds stable srdiag detail fields to its human-readable log events. It is independent of RimWorld Dev Mode, action statistics, successful dispatch recording, and the seven-click tool unlock. More detail helps troubleshooting but increases log volume.</SR.DevTools.Logging.Tooltip>
+  <SR.DevTools.Logging.Status>Currently {0} · {1}</SR.DevTools.Logging.Status>
+  <SR.DevTools.Logging.EffectiveOn>ON</SR.DevTools.Logging.EffectiveOn>
+  <SR.DevTools.Logging.EffectiveOff>OFF</SR.DevTools.Logging.EffectiveOff>
+  <SR.DevTools.Logging.BuildDefaultOn>this build's Auto default is ON</SR.DevTools.Logging.BuildDefaultOn>
+  <SR.DevTools.Logging.BuildDefaultOff>this build's Auto default is OFF</SR.DevTools.Logging.BuildDefaultOff>
+  <SR.DevTools.Logging.Mode.Auto>Auto</SR.DevTools.Logging.Mode.Auto>
+  <SR.DevTools.Logging.Mode.Enabled>Enabled</SR.DevTools.Logging.Mode.Enabled>
+  <SR.DevTools.Logging.Mode.Disabled>Disabled</SR.DevTools.Logging.Mode.Disabled>
+  <SR.DevTools.Logging.Mode.Desc.Auto>Dev builds on; GitHub and Steam builds off.</SR.DevTools.Logging.Mode.Desc.Auto>
+  <SR.DevTools.Logging.Mode.Desc.Enabled>Always include detailed diagnostics for troubleshooting.</SR.DevTools.Logging.Mode.Desc.Enabled>
+  <SR.DevTools.Logging.Mode.Desc.Disabled>Always suppress detailed diagnostics.</SR.DevTools.Logging.Mode.Desc.Disabled>
+  <SR.DevTools.Logging.Mode.Tooltip.Auto>Uses the build channel default: enabled for Dev builds and disabled for GitHub and Steam builds. The effective state is shown above.</SR.DevTools.Logging.Mode.Tooltip.Auto>
+  <SR.DevTools.Logging.Mode.Tooltip.Enabled>Always include detailed srdiag fields for supported log events. This can increase log volume but does not enable RimWorld Dev Mode or the other diagnostic tools.</SR.DevTools.Logging.Mode.Tooltip.Enabled>
+  <SR.DevTools.Logging.Mode.Tooltip.Disabled>Suppress detailed srdiag fields even when the build default would enable them. Normal human-readable warnings and errors remain available.</SR.DevTools.Logging.Mode.Tooltip.Disabled>
+  <SR.Tab.Basics>Voice Rules</SR.Tab.Basics>
+  <SR.Tab.SoundMood>Mood Tone</SR.Tab.SoundMood>
+  <SR.Tab.Developer>Developer &amp; Diagnostics</SR.Tab.Developer>
+  <SR.Tab.Basics.Desc>Frequency, distance, and actions</SR.Tab.Basics.Desc>
+  <SR.Tab.SoundMood.Desc>Pitch, volume, and previews</SR.Tab.SoundMood.Desc>
+  <SR.Tab.Developer.Desc>Tools, reports, logs, and build identity</SR.Tab.Developer.Desc>
+  <SR.Tab.Global>Global</SR.Tab.Global>
+  <SR.Tab.Xenotype>Voice Sources &amp; Xenotypes</SR.Tab.Xenotype>
+  <SR.Tab.Remix>Voice policy</SR.Tab.Remix>
+  <SR.Tab.Global.Desc>Shared behavior and tone</SR.Tab.Global.Desc>
+  <SR.Tab.Xenotype.Desc>Voice packs and target-specific settings</SR.Tab.Xenotype.Desc>
+  <SR.Tab.Remix.Desc>Voice source policy</SR.Tab.Remix.Desc>
+  <SR.Global.PageDesc>All behavior, timing, distance, Mood, and voice settings apply immediately. Changes are saved automatically.</SR.Global.PageDesc>
+  <SR.Rules.Header>Voice rules</SR.Rules.Header>
+  <SR.Rules.PageDesc>Control how often Ratkin squeak, how far they can be heard, and which actions may produce a sound. Changes take effect immediately and save automatically.</SR.Rules.PageDesc>
+  <SR.Rules.Frequency>Frequency</SR.Rules.Frequency>
+  <SR.ActionEnable.Header>Action rules</SR.ActionEnable.Header>
+  <SR.ActionEnable.HeaderWithSummary>Action rules · {0} actions</SR.ActionEnable.HeaderWithSummary>
+  <SR.ActionEnable.Short>Choose when each squeak action is allowed to run.</SR.ActionEnable.Short>
+  <SR.ActionEnable.Tooltip>Changes apply immediately and save automatically. Disabled actions stop before random checks, cooldowns, voice checks, sound selection, playback, and action timestamps. Draft and Undraft share a visual group but remain separate settings.</SR.ActionEnable.Tooltip>
+  <SR.ActionScope.Tooltip>Choose the trigger scope for {0}. “Any eligible” includes automatic and player-driven occurrences; “player command” accepts only the supported player-issued path. Disabled prevents the action from entering its normal trigger pipeline.</SR.ActionScope.Tooltip>
+  <SR.ActionEnable.PlayerGroup>Player-triggered actions</SR.ActionEnable.PlayerGroup>
+  <SR.ActionEnable.SystemGroup>System or event-triggered actions</SR.ActionEnable.SystemGroup>
+  <SR.Common.OK>OK</SR.Common.OK>
+  <SR.Common.Cancel>Cancel</SR.Common.Cancel>
+  <SR.Common.Confirm>Confirm</SR.Common.Confirm>
+  <SR.Common.Continue>Continue</SR.Common.Continue>
+  <SR.Common.Core>Core</SR.Common.Core>
+  <SR.Common.None>none</SR.Common.None>
+  <SR.AudioBrowser.CopySummary>Animal voice sample: {0} — {1}</SR.AudioBrowser.CopySummary>
+  <SR.AudioBrowser.CopySource>Source field: {0}; SoundDef: {1}; availability: {2}.</SR.AudioBrowser.CopySource>
+  <SR.VoicePack.Header>Voice packs</SR.VoicePack.Header>
+  <SR.VoiceSource.Header>Voice sources</SR.VoiceSource.Header>
+  <SR.VoiceSource.Short>Voice packs change sound source only; frequency, eligibility, distance, and Mood rules remain unchanged.</SR.VoiceSource.Short>
+  <SR.VoiceSource.NoBiotechShort>Biotech is unavailable. Xenotype sources are dormant; the current policy uses only sources that remain available.</SR.VoiceSource.NoBiotechShort>
+  <SR.VoiceSource.InstalledCompact>Installed: {0} Race · {1} Xenotype</SR.VoiceSource.InstalledCompact>
+  <SR.VoiceSource.Help.Off>Off uses the built-in Vanilla fallback only. It does not mute Ratkin.</SR.VoiceSource.Help.Off>
+  <SR.VoiceSource.Help.Fallback>Fallback tries the pawn's exact Xenotype layer, then the shared Ratkin Race layer, then Vanilla.</SR.VoiceSource.Help.Fallback>
+  <SR.VoiceSource.Help.Remix>Remix chooses equally among currently playable Xenotype, Race, and Vanilla layers; eligible packs within a pack layer also participate equally.</SR.VoiceSource.Help.Remix>
+  <SR.VoiceSource.Help.NoBiotech.Off>Without Biotech, Off still uses Vanilla only. It does not mute Ratkin, and Race packs do not participate in this mode.</SR.VoiceSource.Help.NoBiotech.Off>
+  <SR.VoiceSource.Help.NoBiotech.Fallback>Without Biotech, the Xenotype layer is unavailable, so Fallback tries the shared Ratkin Race layer and then Vanilla.</SR.VoiceSource.Help.NoBiotech.Fallback>
+  <SR.VoiceSource.Help.NoBiotech.Remix>Without Biotech, Remix chooses equally among the currently playable Race and Vanilla layers. Eligible Race packs also participate equally within the Race layer.</SR.VoiceSource.Help.NoBiotech.Remix>
+  <SR.VoiceSource.Help.Common>Voice packs change sound source only, never frequency, eligibility, listening distance, or Mood.</SR.VoiceSource.Help.Common>
+  <SR.VoicePack.PageDesc>Choose a voice-source policy, then assign installed packs below. Changes apply and save immediately.</SR.VoicePack.PageDesc>
+  <SR.VoicePack.Mode.Off>OFF</SR.VoicePack.Mode.Off>
+  <SR.VoicePack.Mode.Fallback>FALLBACK</SR.VoicePack.Mode.Fallback>
+  <SR.VoicePack.Mode.Remix>REMIX</SR.VoicePack.Mode.Remix>
+  <SR.VoicePack.Mode.Desc.Off>Use the built-in fallback voice.</SR.VoicePack.Mode.Desc.Off>
+  <SR.VoicePack.Mode.Desc.Fallback>Fallback in order: Xenotype, Race, then Vanilla.</SR.VoicePack.Mode.Desc.Fallback>
+  <SR.VoicePack.Mode.Desc.Remix>Mix all playable source layers equally.</SR.VoicePack.Mode.Desc.Remix>
+  <SR.VoicePack.Mode.Tooltip.Off>Only the built-in Vanilla fallback participates in playback. Pack assignments remain saved and editable, ready for another mode. Voice packs never change action frequency, cooldowns, eligibility, or Mood settings.</SR.VoicePack.Mode.Tooltip.Off>
+  <SR.VoicePack.Mode.Tooltip.Fallback>For each action, try the pawn's exact Xenotype assignment first, then the Ratkin Race assignment, then the built-in Vanilla fallback. A missing action in one layer falls through to the next. Voice packs change sound source only, never behavior or frequency.</SR.VoicePack.Mode.Tooltip.Fallback>
+  <SR.VoicePack.Mode.Tooltip.Remix>For each action, choose equally among the currently playable Xenotype, Race, and Vanilla layers. Within a pack layer, eligible packs are also chosen equally before their sounds. Missing layers are skipped. Voice packs change sound source only.</SR.VoicePack.Mode.Tooltip.Remix>
+  <SR.VoicePack.InstalledSummary>Ready to assign: {0} Race pack(s), {1} Xenotype pack(s).</SR.VoicePack.InstalledSummary>
+  <SR.VoicePack.Installed.Tooltip>This list includes voice packs that passed validation. Names and authors are attribution only; they do not change selection weight. A pack supplies sounds for covered actions and cannot change action frequency, cooldowns, eligibility, distance, or Mood rules.</SR.VoicePack.Installed.Tooltip>
+  <SR.VoicePack.InstalledRace>Race: {0}</SR.VoicePack.InstalledRace>
+  <SR.VoicePack.InstalledXenotype>Xenotype: {0}</SR.VoicePack.InstalledXenotype>
+  <SR.VoicePack.InstalledNone>none</SR.VoicePack.InstalledNone>
+  <SR.VoicePack.InstalledMore>+{0} more</SR.VoicePack.InstalledMore>
+  <SR.VoicePack.RemixConfirm.Title>Enable equal-weight Remix?</SR.VoicePack.RemixConfirm.Title>
+  <SR.VoicePack.RemixConfirm1.Body>Remix can make the voice source change from one action to the next. It gives each currently playable Xenotype, Race, and Vanilla tier equal weight; it does not prioritize a preferred pack.</SR.VoicePack.RemixConfirm1.Body>
+  <SR.VoicePack.RemixConfirm1.Continue>Review risk</SR.VoicePack.RemixConfirm1.Continue>
+  <SR.VoicePack.RemixConfirm2.Body>Confirm equal-weight mixing. Playback may alternate noticeably between installed packs and Vanilla. This changes only the source policy; your selections remain saved.</SR.VoicePack.RemixConfirm2.Body>
+  <SR.VoicePack.RemixConfirm2.Enable>Enable Remix</SR.VoicePack.RemixConfirm2.Enable>
+  <SR.VoicePack.RaceHeader>Race packs</SR.VoicePack.RaceHeader>
+  <SR.VoicePack.DomainSummary>{0} of {1} pack(s) assigned</SR.VoicePack.DomainSummary>
+  <SR.VoicePack.Domain.Tooltip>Assignments apply immediately and save automatically. Multiple eligible packs in this same layer have equal weight; each chosen pack then selects from its own sounds. Coverage can differ by action, so normal fallback still applies.</SR.VoicePack.Domain.Tooltip>
+  <SR.VoicePack.Domain.Tooltip.Short>Assignments apply immediately. Multiple selected packs in this source layer participate equally.</SR.VoicePack.Domain.Tooltip.Short>
+  <SR.VoicePack.OffNotice>OFF is active: selections are retained and editable, but packs do not participate in playback.</SR.VoicePack.OffNotice>
+  <SR.VoicePack.Search>Search pack, author, source mod, defName, package ID, or stable key</SR.VoicePack.Search>
+  <SR.VoicePack.None>No compatible voice packs were found for this target.</SR.VoicePack.None>
+  <SR.VoicePack.SearchNone>No voice packs match the current search.</SR.VoicePack.SearchNone>
+  <SR.VoicePack.Attribution>{0} · {1}</SR.VoicePack.Attribution>
+  <SR.VoicePack.Coverage>{0}/{1} actions covered</SR.VoicePack.Coverage>
+  <SR.VoicePack.Status.Ready>Ready for its covered actions</SR.VoicePack.Status.Ready>
+  <SR.VoicePack.Status.Empty>No playable action audio currently resolved</SR.VoicePack.Status.Empty>
+  <SR.VoicePack.StableKey>Stable key: {0}</SR.VoicePack.StableKey>
+  <SR.VoicePack.Orphan>{0} saved pack key(s) are orphaned: this target is available, but those packs are missing or rejected.</SR.VoicePack.Orphan>
+  <SR.VoicePack.Dormant>{0} saved pack key(s) are dormant because Biotech, the target, or the Catalog cannot currently be evaluated.</SR.VoicePack.Dormant>
+  <SR.VoicePack.TargetUnavailable>{0} saved pack key(s) are retained while this target is not loaded. They will be evaluated when the exact defName returns.</SR.VoicePack.TargetUnavailable>
+  <SR.VoicePack.ForgetUnavailable>Forget missing</SR.VoicePack.ForgetUnavailable>
+  <SR.VoicePack.ForgetSelection>Forget selection</SR.VoicePack.ForgetSelection>
+  <SR.VoicePack.DormantHeader>Dormant Xenotype selections</SR.VoicePack.DormantHeader>
+  <SR.VoicePack.DormantTarget>{0} · {1} saved key(s). Restores automatically when the target is available.</SR.VoicePack.DormantTarget>
+  <SR.VoicePack.Row.Tooltip>{0}
+{1}
+{2}
+Stable key: {3}
+
+The assignment affects sound choice only. It does not change how often, when, or whether an action is eligible.</SR.VoicePack.Row.Tooltip>
+  <SR.VoicePack.Row.Tooltip.Short>{0}
+{1}
+Stable key: {2}</SR.VoicePack.Row.Tooltip.Short>
+  <SR.VoicePack.Unavailable.Tooltip>Saved keys currently unavailable:
+{0}
+
+They are kept for recovery when the same pack returns. Forgetting them removes that recovery link.</SR.VoicePack.Unavailable.Tooltip>
+  <SR.VoicePack.Unavailable.Tooltip.Short>{0} saved pack choice(s) are unavailable. They remain saved for automatic recovery unless forgotten.</SR.VoicePack.Unavailable.Tooltip.Short>
+  <SR.VoicePack.Dormant.Tooltip>Saved dormant keys:
+{0}
+
+They are not active while Biotech or the exact target cannot be evaluated, and recover automatically when available again.</SR.VoicePack.Dormant.Tooltip>
+  <SR.ActionScope.Disabled>Disabled</SR.ActionScope.Disabled>
+  <SR.ActionScope.Draft.ActiveCommand>Draft command</SR.ActionScope.Draft.ActiveCommand>
+  <SR.ActionScope.Undraft.ActiveCommand>Undraft command</SR.ActionScope.Undraft.ActiveCommand>
+  <SR.ActionScope.Attack.AnyOccurrence>Any eligible Core attack</SR.ActionScope.Attack.AnyOccurrence>
+  <SR.ActionScope.Attack.ActiveCommand>Player-forced attack</SR.ActionScope.Attack.ActiveCommand>
+  <SR.ActionScope.Work.AnyOccurrence>Any work job</SR.ActionScope.Work.AnyOccurrence>
+  <SR.ActionScope.Work.ActiveCommand>Player-forced work</SR.ActionScope.Work.ActiveCommand>
+  <SR.ActionScope.Equip.ActiveCommand>Player equip command</SR.ActionScope.Equip.ActiveCommand>
+  <SR.ActionScope.Call.AnyOccurrence>Idle occurrence</SR.ActionScope.Call.AnyOccurrence>
+  <SR.ActionScope.Eat.AnyOccurrence>Eating occurrence</SR.ActionScope.Eat.AnyOccurrence>
+  <SR.ActionScope.Sleep.AnyOccurrence>Sleeping occurrence</SR.ActionScope.Sleep.AnyOccurrence>
+  <SR.ActionScope.Wounded.AnyOccurrence>Damage event</SR.ActionScope.Wounded.AnyOccurrence>
+  <SR.ActionScope.Select.AnyOccurrence>Player selection</SR.ActionScope.Select.AnyOccurrence>
+  <SR.ActionScope.Move.AnyOccurrence>Movement occurrence</SR.ActionScope.Move.AnyOccurrence>
+  <SR.ActionScope.Social.AnyOccurrence>Social occurrence</SR.ActionScope.Social.AnyOccurrence>
+  <SR.ActionScope.Joy.AnyOccurrence>Joy occurrence</SR.ActionScope.Joy.AnyOccurrence>
+  <SR.ActionScope.Death.AnyOccurrence>Death event</SR.ActionScope.Death.AnyOccurrence>
+  <SR.ActionScope.MentalBreak.AnyOccurrence>Mental-break event</SR.ActionScope.MentalBreak.AnyOccurrence>
+  <SR.Xeno.Refresh>Refresh presets</SR.Xeno.Refresh>
+  <SR.Xeno.Refresh.Desc>Rescan available xenotypes and voice packs.</SR.Xeno.Refresh.Desc>
+  <SR.Xeno.Explanation>Race is the shared fallback layer; choose a Xenotype target for its own sound and behavior overrides.</SR.Xeno.Explanation>
+  <SR.Xeno.Search.Hint>Search localized name, defName, pack, source mod, or author</SR.Xeno.Search.Hint>
+  <SR.Xeno.Search.Results>{0} of {1} xenotypes</SR.Xeno.Search.Results>
+  <SR.Xeno.Search.CurrentHidden>{0} does not match the current search. The current editor remains open.</SR.Xeno.Search.CurrentHidden>
+  <SR.Xeno.Filter.Configured>Configured</SR.Xeno.Filter.Configured>
+  <SR.Xeno.Filter.Candidates>Candidates</SR.Xeno.Filter.Candidates>
+  <SR.Xeno.Filter.Enabled>Enabled</SR.Xeno.Filter.Enabled>
+  <SR.Xeno.Filter.Orphan>Orphan / unavailable</SR.Xeno.Filter.Orphan>
+  <SR.Xeno.Filter.Source>Source: {0}</SR.Xeno.Filter.Source>
+  <SR.Xeno.Filter.All>All</SR.Xeno.Filter.All>
+  <SR.Xeno.Filter.ActionOverrides>Only actions with overrides</SR.Xeno.Filter.ActionOverrides>
+  <SR.Xeno.Filter.EnabledPacks>Only selected voice packs</SR.Xeno.Filter.EnabledPacks>
+  <SR.Xeno.Search.Actions>Search localized action name or action ID</SR.Xeno.Search.Actions>
+  <SR.Xeno.Search.Packs>Search voice pack, author, defName, package ID, or stable key</SR.Xeno.Search.Packs>
+  <SR.Xeno.Source>Source: {0}</SR.Xeno.Source>
+  <SR.Xeno.Status.BehaviorInherited>behavior inherited</SR.Xeno.Status.BehaviorInherited>
+  <SR.Xeno.Status.BehaviorOverride>behavior overridden</SR.Xeno.Status.BehaviorOverride>
+  <SR.Xeno.Status.PacksEnabled>{0} pack(s) enabled</SR.Xeno.Status.PacksEnabled>
+  <SR.Xeno.Status.CandidatesDefault>packs available; none selected</SR.Xeno.Status.CandidatesDefault>
+  <SR.Xeno.Status.NoCandidatesDefault>no packs available</SR.Xeno.Status.NoCandidatesDefault>
+  <SR.Xeno.Status.Orphan>{0} orphaned</SR.Xeno.Status.Orphan>
+  <SR.Xeno.Status.TargetUnavailable>target currently not loaded</SR.Xeno.Status.TargetUnavailable>
+  <SR.Xeno.Status.Conflict>conflicting loaded definitions; Xenotype layer unavailable</SR.Xeno.Status.Conflict>
+  <SR.Xeno.Status.Dormant>Biotech unavailable; dormant</SR.Xeno.Status.Dormant>
+  <SR.Xeno.Status.HarHint>HAR discovery hint</SR.Xeno.Status.HarHint>
+  <SR.Xeno.Source.Unloaded>target currently not loaded</SR.Xeno.Source.Unloaded>
+  <SR.Xeno.Source.Conflict>conflicting loaded definitions</SR.Xeno.Source.Conflict>
+  <SR.Xeno.TargetUnavailableNotice>{0} is not currently loaded. Its exact defName remains available for preset and voice-pack management, but it cannot run until that target returns.</SR.Xeno.TargetUnavailableNotice>
+  <SR.Xeno.ForgetTarget>Forget this target</SR.Xeno.ForgetTarget>
+  <SR.Xeno.ForgetTarget.Title>Forget unavailable target</SR.Xeno.ForgetTarget.Title>
+  <SR.Xeno.ForgetTarget.Confirm>Forget {0}? This permanently removes its behavior preset and Xenotype VoicePack selection. Reinstalling the source mod will not restore these settings.</SR.Xeno.ForgetTarget.Confirm>
+  <SR.Xeno.DormantNotice>Biotech is unavailable. {0} is dormant; saved settings remain manageable and will recover when the DLC and target are available.</SR.Xeno.DormantNotice>
+  <SR.Xeno.ConflictNotice>Multiple loaded definitions use the exact defName {0}. This Xenotype layer and its identity-dependent overrides fail closed; global behavior and Race/Vanilla fallback continue. Existing choices and presets are retained, but new packs cannot be enabled for this layer.</SR.Xeno.ConflictNotice>
+  <SR.Xeno.ConflictEnableBlocked>New selections are blocked while this exact defName has conflicting loaded definitions.</SR.Xeno.ConflictEnableBlocked>
+  <SR.Xeno.ConflictSelectionRetained>Existing selections are retained. You may disable packs individually or forget the full selection.</SR.Xeno.ConflictSelectionRetained>
+  <SR.Xeno.ConflictSelectionRetained.Tooltip>The exact defName is ambiguous, so this Xenotype layer cannot accept new assignments. Global behavior and Race/Vanilla fallback continue.</SR.Xeno.ConflictSelectionRetained.Tooltip>
+  <SR.Xeno.ConflictSelectionRetained.InlineHelp>The exact Xenotype defName currently resolves to more than one loaded definition. Identity-dependent overrides and new assignments for this Xenotype layer fail closed, while global behavior and Race/Vanilla fallback continue to work. Existing saved keys remain available for recovery; forgetting them does not resolve the definition conflict.</SR.Xeno.ConflictSelectionRetained.InlineHelp>
+  <SR.Xeno.Target.Tooltip>{0}
+Exact defName: {1}
+{2}
+{3}
+
+The exact, case-sensitive defName is the saved identity. The localized name, icon, source, and HAR hints are for display and search only.</SR.Xeno.Target.Tooltip>
+  <SR.Xeno.Target.Tooltip.Short>Exact defName: {0}
+{1}
+{2}</SR.Xeno.Target.Tooltip.Short>
+  <SR.Xeno.RaceDefaultLayer.Tooltip>The Race layer applies to Ratkin regardless of Xenotype. Fallback tries an exact Xenotype assignment before this shared layer; without Biotech, playback can still use Race and then Vanilla.</SR.Xeno.RaceDefaultLayer.Tooltip>
+  <SR.Xeno.RaceDefaultLayer.InlineHelp>The shared Race layer applies to Ratkin regardless of Xenotype. Fallback tries an exact Xenotype assignment first, then this layer, then Vanilla. Without Biotech, Race and Vanilla remain available.</SR.Xeno.RaceDefaultLayer.InlineHelp>
+  <SR.Xeno.Availability.Tooltip>Dormant or unloaded targets keep their saved settings. A conflicting exact defName disables only that Xenotype layer and its new assignments; global behavior and Race/Vanilla fallback continue.</SR.Xeno.Availability.Tooltip>
+  <SR.Xeno.Tab.Behavior>Behavior</SR.Xeno.Tab.Behavior>
+  <SR.Xeno.Tab.AudioPacks>Voice Packs</SR.Xeno.Tab.AudioPacks>
+  <SR.Xeno.BehaviorSummary.Short>Current target: {0}</SR.Xeno.BehaviorSummary.Short>
+  <SR.Xeno.BehaviorSummary.Tooltip>Every field marked Inherit follows its current Global value. Enabling an override changes only that exact Xenotype and applies immediately. The exact defName, not the localized label, identifies the target.</SR.Xeno.BehaviorSummary.Tooltip>
+  <SR.Xeno.BehaviorSummary.Tooltip.Short>Inherited fields follow the current global value. Overrides affect only this exact Xenotype and apply immediately.</SR.Xeno.BehaviorSummary.Tooltip.Short>
+  <SR.Xeno.AudioSummary>Voice-pack summary: {0}.</SR.Xeno.AudioSummary>
+  <SR.Xeno.AudioFallbackSummary>Pack choices apply immediately and save automatically.</SR.Xeno.AudioFallbackSummary>
+  <SR.Xeno.NoBiotech>Biotech is not enabled. Xenotype presets are unavailable; all Global settings remain active.</SR.Xeno.NoBiotech>
+  <SR.Xeno.NoTargets>No Xenotype targets are currently declared, saved, or discovered.</SR.Xeno.NoTargets>
+  <SR.Xeno.DiscoveryUnavailable>Xenotype discovery is unavailable. All Global settings remain active.</SR.Xeno.DiscoveryUnavailable>
+  <SR.Xeno.SelectPrompt>Select a target from the list to edit its settings.</SR.Xeno.SelectPrompt>
+  <SR.Xeno.BackToTargets>← Back to targets</SR.Xeno.BackToTargets>
+  <SR.Xeno.RaceSummary.Short>Assign the shared Ratkin voice layer.</SR.Xeno.RaceSummary.Short>
+  <SR.Xeno.RaceSummary.Tooltip>This layer is available without Biotech and applies regardless of a pawn's Xenotype. In Fallback mode it is tried after an exact Xenotype layer and before Vanilla. Assignments affect sound source only.</SR.Xeno.RaceSummary.Tooltip>
+  <SR.Xeno.RaceSummary.Tooltip.Short>The shared Ratkin Race layer remains available without Biotech and changes sound source only.</SR.Xeno.RaceSummary.Tooltip.Short>
+  <SR.Xeno.RaceDefaultLayer>Race default assignment</SR.Xeno.RaceDefaultLayer>
+  <SR.Xeno.RaceDefaultLayer.Desc>{0} selected of {1} installed Race pack(s) · applies when the source policy reaches the Race layer</SR.Xeno.RaceDefaultLayer.Desc>
+  <SR.Xeno.Target.Race>Ratkin (Race)</SR.Xeno.Target.Race>
+  <SR.Xeno.Scope>Scope: {0}</SR.Xeno.Scope>
+  <SR.Xeno.Scope.Race>Race</SR.Xeno.Scope.Race>
+  <SR.Xeno.Scope.Xenotype>Xenotype</SR.Xeno.Scope.Xenotype>
+  <SR.Xeno.ScopeAndSource>{0} · Source: {1}</SR.Xeno.ScopeAndSource>
+  <SR.Xeno.PoolCount>{0} voice packs</SR.Xeno.PoolCount>
+  <SR.Xeno.Overall>Overall behavior</SR.Xeno.Overall>
+  <SR.Xeno.Interval>Interval multiplier</SR.Xeno.Interval>
+  <SR.Xeno.Actions>Actions</SR.Xeno.Actions>
+  <SR.Xeno.Moods>Mood overrides</SR.Xeno.Moods>
+  <SR.Xeno.AudioPools>Voice packs</SR.Xeno.AudioPools>
+  <SR.Xeno.Inherit>Inherit</SR.Xeno.Inherit>
+  <SR.Xeno.InheritEnabled>Inherit enabled</SR.Xeno.InheritEnabled>
+  <SR.Xeno.Enabled>Enabled</SR.Xeno.Enabled>
+  <SR.Xeno.ActionInterval>Interval</SR.Xeno.ActionInterval>
+  <SR.Xeno.Probability>Probability</SR.Xeno.Probability>
+  <SR.Xeno.TriggerMode>Trigger: {0}</SR.Xeno.TriggerMode>
+  <SR.Xeno.InheritJitter>Inherit pitch jitter</SR.Xeno.InheritJitter>
+  <SR.Xeno.NoPools>No compatible voice packs were found.</SR.Xeno.NoPools>
+  <SR.AudioPoolNotice.Title>Voice packs available</SR.AudioPoolNotice.Title>
+  <SR.AudioPoolNotice.Body>Voice packs were found but none are selected for the following targets. Playback still follows the current voice-pack mode:</SR.AudioPoolNotice.Body>
+  <SR.AudioPoolNotice.OpenSettings>Open settings</SR.AudioPoolNotice.OpenSettings>
+  <SR.AudioPoolNotice.Later>Later this session</SR.AudioPoolNotice.Later>
+  <SR.ScaleCooldownWithTimeSpeed.Label>Keep squeak pacing steady at higher game speeds</SR.ScaleCooldownWithTimeSpeed.Label>
+  <SR.ScaleCooldownWithTimeSpeed.Tooltip>When enabled, trigger cooldowns grow with the current game speed so fast-forward does not create a burst of squeaks in real time. This scales cooldown duration, not playback volume or action probability.</SR.ScaleCooldownWithTimeSpeed.Tooltip>
+  <SR.ScaleFrequencyWithTalking.Label>Scale ordinary squeak attempts with Talking capacity</SR.ScaleFrequencyWithTalking.Label>
+  <SR.ScaleFrequencyWithTalking.Short>Lower Talking makes ordinary squeak attempts less likely.</SR.ScaleFrequencyWithTalking.Short>
+  <SR.ScaleFrequencyWithTalking.Tooltip>Ordinary attempts roll against the pawn's Talking capacity. A rejected roll still consumes that action's attempt cooldown and the shared cooldown when applicable. Death skips this Talking roll, but unusable vocal organs or pathways silence every action, including Death.</SR.ScaleFrequencyWithTalking.Tooltip>
+  <SR.ScalePeriodicWithAudiblePopulation.Label>Reduce periodic squeaks in crowded audible areas</SR.ScalePeriodicWithAudiblePopulation.Label>
+  <SR.ScalePeriodicWithAudiblePopulation.Tooltip>When more than 10 Ratkin are audible, periodic attempts slow down and random periodic chances are reduced progressively. Immediate feedback such as selection, drafting, wounds, combat, and death is unchanged.</SR.ScalePeriodicWithAudiblePopulation.Tooltip>
+  <SR.LocalizeDebugActions.Label>Translate this mod's debug-action names</SR.LocalizeDebugActions.Label>
+  <SR.LocalizeDebugActions.Tooltip>Uses this mod's English or Simplified Chinese labels in RimWorld's developer action menu. Reopen that menu after changing the setting. This does not enable RimWorld Dev Mode or any diagnostic tool.</SR.LocalizeDebugActions.Tooltip>
+  <SR.GlobalCooldownMultiplier.Label>Master squeak interval: {0}x</SR.GlobalCooldownMultiplier.Label>
+  <SR.GlobalCooldownMultiplier.Short>1.0x uses the current default pacing.</SR.GlobalCooldownMultiplier.Short>
+  <SR.GlobalCooldownMultiplier.Tooltip>Scales both each action's own interval and the shared interval between attempts. Actions whose XML sets ignoreGlobalCooldown still ignore the shared interval, but their own interval is still scaled. At 0x these cooldown gates are removed; action probability, scope, eligibility, and Talking still apply.</SR.GlobalCooldownMultiplier.Tooltip>
+  <SR.Distance.Header>Listening distance</SR.Distance.Header>
+  <SR.Distance.HeaderWithSummary>Listening distance · {0} · {1}–{2}</SR.Distance.HeaderWithSummary>
+  <SR.Distance.Preset>Attenuation preset</SR.Distance.Preset>
+  <SR.Distance.Preset.Conservative>Conservative</SR.Distance.Preset.Conservative>
+  <SR.Distance.Preset.Balanced>Balanced</SR.Distance.Preset.Balanced>
+  <SR.Distance.Preset.Strong>Radical</SR.Distance.Preset.Strong>
+  <SR.Distance.Preset.Custom>Custom</SR.Distance.Preset.Custom>
+  <SR.Distance.Preset.Tooltip>Presets copy their XML-defined start and end heights into the live range. Manual edits switch the label to Custom. Changes apply immediately and use RimWorld's camera-height scale, not map-cell distance from the pawn.</SR.Distance.Preset.Tooltip>
+  <SR.Distance.FullVolume>Attenuation starts</SR.Distance.FullVolume>
+  <SR.Distance.Silent>Attenuation ends</SR.Distance.Silent>
+  <SR.Distance.Chart.Volume>Volume</SR.Distance.Chart.Volume>
+  <SR.Distance.Chart.Distance>Height</SR.Distance.Chart.Distance>
+  <SR.Distance.Chart.Full>start {0}</SR.Distance.Chart.Full>
+  <SR.Distance.Chart.Silent>end {0}</SR.Distance.Chart.Silent>
+  <SR.Distance.Chart.FullSegment>FULL</SR.Distance.Chart.FullSegment>
+  <SR.Distance.Chart.FadeSegment>FADE</SR.Distance.Chart.FadeSegment>
+  <SR.Distance.Chart.SilentSegment>SILENT</SR.Distance.Chart.SilentSegment>
+  <SR.Distance.Short>Full below {0}; fades to silence at {1}.</SR.Distance.Short>
+  <SR.Distance.Tooltip>This uses RimWorld's camera-height scale from 15 to 65. In-map sounds stay at full volume below the start, fade linearly through the range, and are silent above the end. The current-final-sound preview uses the real in-map path; material clip preview is on-camera and is not distance-attenuated.</SR.Distance.Tooltip>
+
+  <SR.Workbench.Header>Mood modulation workbench</SR.Workbench.Header>
+  <SR.SoundMood.Header>Mood tone</SR.SoundMood.Header>
+  <SR.SoundMood.PageDesc>Adjust the pitch, volume, and variation applied to the chosen sound for each Mood. This does not change action frequency, eligibility, or voice-source selection.</SR.SoundMood.PageDesc>
+  <SR.SoundMood.ToneSection>Tone adjustment</SR.SoundMood.ToneSection>
+  <SR.SoundMood.Context>{0} · {1} · {2}</SR.SoundMood.Context>
+  <SR.SoundMood.PreviewSection>Material and final previews</SR.SoundMood.PreviewSection>
+  <SR.SoundMood.Scope.Short>Choose a Mood, then adjust its shared pitch and volume.</SR.SoundMood.Scope.Short>
+  <SR.SoundMood.Scope.Tooltip>These values are the Global layer used by every Ratkin unless an exact Xenotype field overrides them. They modify the chosen sound at playback and do not change voice-pack policy, action frequency, cooldowns, or eligibility. Changes apply immediately and save automatically.</SR.SoundMood.Scope.Tooltip>
+  <SR.SoundMood.Override>player override</SR.SoundMood.Override>
+  <SR.SoundMood.Xml>XML default</SR.SoundMood.Xml>
+  <SR.SoundMood.SearchAction>Search localized action name or action ID</SR.SoundMood.SearchAction>
+  <SR.SoundMood.EnableFirst>Enable custom values before editing them.</SR.SoundMood.EnableFirst>
+  <SR.SoundMood.InheritedReadOnly>This Mood inherits its XML defaults. Enable custom values to edit these parameters.</SR.SoundMood.InheritedReadOnly>
+  <SR.SoundMood.Action.Tooltip>Selects which action supplies the material SoundDef and which action the final preview asks the selected Ratkin to play. This selector does not change production action settings.</SR.SoundMood.Action.Tooltip>
+  <SR.SoundMood.Override.Tooltip>Enabled uses the custom values shown below for this Mood. Disabled inherits the XML defaults. The switch and values apply immediately; Xenotype fields can still override individual values later.</SR.SoundMood.Override.Tooltip>
+  <SR.SoundMood.Preset.Tooltip>Loads a complete pitch, volume, and jitter combination, enables the custom Mood override, and applies it immediately. Presets do not change voice source or action behavior.</SR.SoundMood.Preset.Tooltip>
+  <SR.SoundMood.MaterialPreview.Short>Material preview tests one resolved clip only.</SR.SoundMood.MaterialPreview.Short>
+  <SR.SoundMood.MaterialPreview.Tooltip>Resolve explicitly loads the selected action's material clips, then Preview sends one chosen clip through the on-camera sample adapter with the current Mood values. It does not use the production resolver, pawn, voice-pack tier, distance path, probability, or cooldown. A dispatched result does not prove that a silent placeholder is audible.</SR.SoundMood.MaterialPreview.Tooltip>
+  <SR.SoundMood.MaterialPreview.Tooltip.Short>Tests one resolved material clip with the current Mood values. It does not use the final pawn or voice-source path.</SR.SoundMood.MaterialPreview.Tooltip.Short>
+  <SR.SoundMood.PreviewNote>Previews are explicit test requests. A dispatched request does not confirm audible output.</SR.SoundMood.PreviewNote>
+  <SR.MaterialPreview.Resolve.Ready>Resolved {0} material clip(s).</SR.MaterialPreview.Resolve.Ready>
+  <SR.MaterialPreview.Resolve.NoClips>Resolve completed, but no material clips are available. {1}</SR.MaterialPreview.Resolve.NoClips>
+  <SR.MaterialPreview.Resolve.Failed>Material resolve failed. {1}</SR.MaterialPreview.Resolve.Failed>
+  <SR.MaterialPreview.Reason.NotResolved>Resolve this material SoundDef first.</SR.MaterialPreview.Reason.NotResolved>
+  <SR.MaterialPreview.Reason.NoClips>No resolved material clips are available.</SR.MaterialPreview.Reason.NoClips>
+  <SR.MaterialPreview.Reason.ResolveFailed>Material resolution failed.</SR.MaterialPreview.Reason.ResolveFailed>
+  <SR.MaterialPreview.Reason.AdapterMissing>The material preview camera adapter is unavailable.</SR.MaterialPreview.Reason.AdapterMissing>
+  <SR.MaterialPreview.Reason.SampleFailed>The resolved material clip could not be sampled.</SR.MaterialPreview.Reason.SampleFailed>
+  <SR.MaterialPreview.Reason.Dispatched>Material clip preview dispatched. Audible output is not confirmed.</SR.MaterialPreview.Reason.Dispatched>
+  <SR.Settings.Save.Saving>Saving…</SR.Settings.Save.Saving>
+  <SR.Settings.Save.Saved>Saved</SR.Settings.Save.Saved>
+  <SR.Settings.Save.Failed>Save failed</SR.Settings.Save.Failed>
+  <SR.Settings.Save.Tooltip>Settings take effect immediately. Disk writes are grouped briefly to avoid writing once per slider step. “Saving…” means a write is queued; “Saved” confirms the latest queued values were written. “Save failed” means the current session changed but those values may not survive a restart.</SR.Settings.Save.Tooltip>
+  <SR.FinalPreview.Header>Current final sound</SR.FinalPreview.Header>
+  <SR.FinalPreview.Short>Hear the path currently chosen for the selected Ratkin.</SR.FinalPreview.Short>
+  <SR.FinalPreview.Tooltip>Uses the selected spawned Ratkin, current voice mode, exact Xenotype and Race assignments, fallback, current Mood, and the real in-map sound path. It bypasses probability and cooldown gates, does not add action statistics, and does not claim audible success. Silent placeholders can still return Dispatched.</SR.FinalPreview.Tooltip>
+  <SR.FinalPreview.Tooltip.Short>Uses the selected Ratkin and current production source, Mood, and in-map path while bypassing probability and cooldown.</SR.FinalPreview.Tooltip.Short>
+  <SR.FinalPreview.NoPawn>Select a spawned Ratkin on the current map.</SR.FinalPreview.NoPawn>
+  <SR.FinalPreview.MapRequired>Load a game with an active map to preview the current final sound.</SR.FinalPreview.MapRequired>
+  <SR.FinalPreview.Selected>Selected: {0}</SR.FinalPreview.Selected>
+  <SR.FinalPreview.Play>Play current final sound</SR.FinalPreview.Play>
+  <SR.FinalPreview.Reason.Dispatched>Dispatched: SoundDef {0}, source {1}. Audible output is not confirmed.</SR.FinalPreview.Reason.Dispatched>
+  <SR.FinalPreview.Reason.PawnOrMap>Preview unavailable: select a spawned Ratkin on the current map. ({3})</SR.FinalPreview.Reason.PawnOrMap>
+  <SR.FinalPreview.Reason.NoEligible>Preview unavailable: the production resolver found no eligible sound. ({3})</SR.FinalPreview.Reason.NoEligible>
+  <SR.FinalPreview.Reason.NotPlayable>Preview unavailable: SoundDef {0} is not playable here; state {2}. ({3})</SR.FinalPreview.Reason.NotPlayable>
+  <SR.FinalPreview.Reason.SoundInfo>Preview unavailable: production SoundInfo could not be created for {0}; state {2}. ({3})</SR.FinalPreview.Reason.SoundInfo>
+  <SR.FinalPreview.Reason.Exception>Preview failed with an exception. ({3})</SR.FinalPreview.Reason.Exception>
+  <SR.FinalPreview.Reason.Other>Preview unavailable: {3}; SoundDef {0}, source {1}, state {2}.</SR.FinalPreview.Reason.Other>
+  <SR.Stats.Header>Action runtime statistics</SR.Stats.Header>
+  <SR.Stats.Status>{0} · {1} · {2}s · {3}</SR.Stats.Status>
+  <SR.Stats.Status.Tooltip>Displayed tick range: {0}–{1}
+Current capture: tick {2}, speed {3}x
+Last attempt: tick {4}, speed {5}x
+Stopped-session end: tick {6} (final only after recording stops)
+TryTrigger timing samples: {7}
+Attempts entering TryTrigger in a paused-speed context: {8}
+
+The session is memory-only and follows one pawn. It stops if that pawn or map is no longer valid.</SR.Stats.Status.Tooltip>
+  <SR.Stats.Running>recording</SR.Stats.Running>
+  <SR.Stats.Stopped>stopped</SR.Stats.Stopped>
+  <SR.Stats.Start>Start selected</SR.Stats.Start>
+  <SR.Stats.Stop>Stop</SR.Stats.Stop>
+  <SR.Stats.Reset>Reset</SR.Stats.Reset>
+  <SR.Stats.Copy>Copy srstat</SR.Stats.Copy>
+  <SR.Stats.StartFailed>Select a spawned Ratkin on the current map.</SR.Stats.StartFailed>
+  <SR.Stats.Copied>Action statistics report copied.</SR.Stats.Copied>
+  <SR.Stats.Col.Action>Action</SR.Stats.Col.Action>
+  <SR.Stats.Col.Funnel>Checks / funnel</SR.Stats.Col.Funnel>
+  <SR.Stats.Random>startup wait {0} · checks {1} · pass {2} · expected {3} · observed {4} · sent {5}</SR.Stats.Random>
+  <SR.Stats.Funnel>enter {0} → scope/off {1} → startup wait {2} → cooldown {3} → vocal {4} → audio {5} → sent {6}</SR.Stats.Funnel>
+  <SR.Diagnostics.Outcome.PeriodicStartupPending>Periodic startup wait</SR.Diagnostics.Outcome.PeriodicStartupPending>
+  <SR.Stats.Short>Records one selected Ratkin until stopped or invalid.</SR.Stats.Short>
+  <SR.Stats.Tooltip>Statistics are memory-only and never saved. Start Selected clears the previous counters and records only that spawned Ratkin. Preview Final does not count. Counts begin at try_trigger_enter; work rejected before TryTrigger by map, view, or unconfigured-action checks is outside this report. This tool does not enable detailed logging, successful dispatch recording, or the audio browser.</SR.Stats.Tooltip>
+  <SR.Stats.InlineHelp>Statistics stay in memory and follow one selected Ratkin. Final preview does not count. The table starts after an attempt enters TryTrigger.
+
+Current session details:
+{0}</SR.Stats.InlineHelp>
+  <SR.Stats.Columns.Tooltip>The denominator is try_trigger_enter: an attempt counts only after entering TryTrigger. Rejections before that point—map, view, or an unconfigured action—are excluded. Random one-shot actions show probability checks, passes, average expected probability, observed pass rate, and dispatches. Each-time and external actions show the funnel through scope or disabled state, cooldowns, vocal-capability checks, audio failures, and dispatch.</SR.Stats.Columns.Tooltip>
+  <SR.AudioPath.Header>Successful dispatch records</SR.AudioPath.Header>
+  <SR.AudioPath.Enabled>Record successful dispatches</SR.AudioPath.Enabled>
+  <SR.AudioPath.Short>Keep the 10 most recent successful dispatches in memory.</SR.AudioPath.Short>
+  <SR.AudioPath.Enabled.Tooltip>Records successful production dispatches, including action, source tier, SoundDef, and voice-pack attribution. When enabled, production dispatches briefly show their result. Recording does not enable RimWorld Dev Mode, action statistics, detailed logging, or the audio browser.</SR.AudioPath.Enabled.Tooltip>
+  <SR.AudioPath.Clear>Clear records</SR.AudioPath.Clear>
+  <SR.AudioPath.Copy>Copy sraudio report</SR.AudioPath.Copy>
+  <SR.AudioPath.Copied>Successful dispatch records copied.</SR.AudioPath.Copied>
+  <SR.AudioPath.Empty>No successful dispatch records yet.</SR.AudioPath.Empty>
+  <SR.AudioPath.NoPack>Vanilla / no voice pack</SR.AudioPath.NoPack>
+  <SR.AudioPath.RecordHint>Click ? to show source details and clip limits below.</SR.AudioPath.RecordHint>
+  <SR.AudioPath.Record.Tooltip>Action: {0}
+Source layer: {1}
+SoundDef: {2}
+Pack label: {3}
+Pack defName: {4}
+Author: {5}
+Source mod: {6}
+packageId: {7}
+Target defName: {8}
+
+Actual clip: unavailable. This recorder observes the production choice after a successful dispatch, but RimWorld's final randomly selected clip filename is not exposed here.</SR.AudioPath.Record.Tooltip>
+  <SR.SoundMood.SelectedClip>Selected clip {0}/{1}: {2}</SR.SoundMood.SelectedClip>
+  <SR.SoundMood.UseXmlDefaults>Use XML Defaults</SR.SoundMood.UseXmlDefaults>
+  <SR.Workbench.Header.Desc>Edit the pitch multiplier, volume multiplier, and pitch jitter for each Mood, then preview them with any configured action. Moods without custom overrides use the XML defaults.</SR.Workbench.Header.Desc>
+  <SR.Workbench.Mood>Mood</SR.Workbench.Mood>
+  <SR.Workbench.Action>Preview action</SR.Workbench.Action>
+  <SR.Workbench.EnableOverride>Enable custom values (replaces the XML default)</SR.Workbench.EnableOverride>
+  <SR.Workbench.PitchFactor>Pitch multiplier</SR.Workbench.PitchFactor>
+  <SR.Workbench.VolumeFactor>Volume multiplier</SR.Workbench.VolumeFactor>
+  <SR.Workbench.PitchJitter>Pitch jitter</SR.Workbench.PitchJitter>
+  <SR.Workbench.JitterMin>min</SR.Workbench.JitterMin>
+  <SR.Workbench.JitterMax>max</SR.Workbench.JitterMax>
+  <SR.Workbench.Preview>Preview</SR.Workbench.Preview>
+  <SR.Workbench.RestoreDefaults>Use XML defaults</SR.Workbench.RestoreDefaults>
+  <SR.Workbench.Preset>Mood preset</SR.Workbench.Preset>
+  <SR.Preset.Sharp>Sharp</SR.Preset.Sharp>
+  <SR.Preset.Neutral>Neutral</SR.Preset.Neutral>
+  <SR.Preset.Low>Low</SR.Preset.Low>
+  <SR.Preset.Chaos>Chaos</SR.Preset.Chaos>
+
+  <SR.Action.Call>Call</SR.Action.Call>
+  <SR.Action.Eat>Eat</SR.Action.Eat>
+  <SR.Action.Sleep>Sleep</SR.Action.Sleep>
+  <SR.Action.Wounded>Wounded</SR.Action.Wounded>
+  <SR.Action.Select>Select</SR.Action.Select>
+  <SR.Action.Move>Move</SR.Action.Move>
+  <SR.Action.Social>Social</SR.Action.Social>
+  <SR.Action.Joy>Joy</SR.Action.Joy>
+  <SR.Action.Death>Death</SR.Action.Death>
+  <SR.Action.Draft>Draft</SR.Action.Draft>
+  <SR.Action.Undraft>Undraft</SR.Action.Undraft>
+  <SR.Action.DraftUndraft>Draft / Undraft</SR.Action.DraftUndraft>
+  <SR.Action.Attack>Attack</SR.Action.Attack>
+  <SR.Action.Work>Work</SR.Action.Work>
+  <SR.Action.Equip>Equip</SR.Action.Equip>
+  <SR.Action.MentalBreak>Mental break</SR.Action.MentalBreak>
+  <SR.Action.Crying>Crying</SR.Action.Crying>
+  <SR.Action.Giggling>Giggling</SR.Action.Giggling>
+
+  <SR.Mood.Good>Good</SR.Mood.Good>
+  <SR.Mood.Neutral>Neutral</SR.Mood.Neutral>
+  <SR.Mood.Bad>Bad</SR.Mood.Bad>
+  <SR.Mood.Break>Break</SR.Mood.Break>
+
+  <SR.Debug.OverlayOn>Record successful dispatches: ON</SR.Debug.OverlayOn>
+  <SR.Debug.OverlayOff>Record successful dispatches: OFF</SR.Debug.OverlayOff>
+  <SR.Debug.CameraIndicator>Camera: height {0}, view size {1}</SR.Debug.CameraIndicator>
+  <SR.Diagnostics.Panel.Title>Squeak diagnostics</SR.Diagnostics.Panel.Title>
+  <SR.Diagnostics.Panel.Mode.Selected>selected</SR.Diagnostics.Panel.Mode.Selected>
+  <SR.Diagnostics.Panel.Mode.Visible>in view</SR.Diagnostics.Panel.Mode.Visible>
+  <SR.Diagnostics.Panel.NoPawn>No pawn selected. Select a pawn to inspect its squeak state.</SR.Diagnostics.Panel.NoPawn>
+  <SR.Diagnostics.Panel.Empty>No squeak-enabled pawns in view.</SR.Diagnostics.Panel.Empty>
+  <SR.Diagnostics.Panel.PawnHeader>{0} · {1}</SR.Diagnostics.Panel.PawnHeader>
+  <SR.Diagnostics.Panel.CloseHint>Press Esc again to close</SR.Diagnostics.Panel.CloseHint>
+  <SR.Diagnostics.Panel.Section.Trigger>Trigger</SR.Diagnostics.Panel.Section.Trigger>
+  <SR.Diagnostics.Panel.Section.Multipliers>Multipliers</SR.Diagnostics.Panel.Section.Multipliers>
+  <SR.Diagnostics.Panel.Section.Probability>Probability</SR.Diagnostics.Panel.Section.Probability>
+  <SR.Diagnostics.Panel.Section.Voice>Voice</SR.Diagnostics.Panel.Section.Voice>
+  <SR.Diagnostics.Panel.Section.Outcome>Outcome</SR.Diagnostics.Panel.Section.Outcome>
+  <SR.Diagnostics.Panel.Section.Population>Population</SR.Diagnostics.Panel.Section.Population>
+  <SR.Diagnostics.Panel.Section.Startup>Startup</SR.Diagnostics.Panel.Section.Startup>
+  <SR.Diagnostics.Panel.Field.Action>Action</SR.Diagnostics.Panel.Field.Action>
+  <SR.Diagnostics.Panel.Field.TriggerMode>Trigger mode</SR.Diagnostics.Panel.Field.TriggerMode>
+  <SR.Diagnostics.Panel.Field.CooldownClock>Cooldown clock</SR.Diagnostics.Panel.Field.CooldownClock>
+  <SR.Diagnostics.Panel.Field.ActionTiming>Action timing</SR.Diagnostics.Panel.Field.ActionTiming>
+  <SR.Diagnostics.Panel.Field.GlobalTiming>Global timing</SR.Diagnostics.Panel.Field.GlobalTiming>
+  <SR.Diagnostics.Panel.Field.TimingReady>Timing ready</SR.Diagnostics.Panel.Field.TimingReady>
+  <SR.Diagnostics.Panel.Field.Master>Master multiplier</SR.Diagnostics.Panel.Field.Master>
+  <SR.Diagnostics.Panel.Field.Xenotype>Xenotype</SR.Diagnostics.Panel.Field.Xenotype>
+  <SR.Diagnostics.Panel.Field.XenoMult>Xeno multiplier</SR.Diagnostics.Panel.Field.XenoMult>
+  <SR.Diagnostics.Panel.Field.ActionMult>Action multiplier</SR.Diagnostics.Panel.Field.ActionMult>
+  <SR.Diagnostics.Panel.Field.TimeSpeed>Time-speed multiplier</SR.Diagnostics.Panel.Field.TimeSpeed>
+  <SR.Diagnostics.Panel.Field.BaseProbability>Base probability</SR.Diagnostics.Panel.Field.BaseProbability>
+  <SR.Diagnostics.Panel.Field.EffectiveProbability>Effective probability</SR.Diagnostics.Panel.Field.EffectiveProbability>
+  <SR.Diagnostics.Panel.Field.TalkingChance>Talking chance</SR.Diagnostics.Panel.Field.TalkingChance>
+  <SR.Diagnostics.Panel.Field.VocalEfficiency>Vocal organ efficiency</SR.Diagnostics.Panel.Field.VocalEfficiency>
+  <SR.Diagnostics.Panel.Field.TalkingGate>Talking gate applied</SR.Diagnostics.Panel.Field.TalkingGate>
+  <SR.Diagnostics.Panel.Field.DeathExempt>Death exempt</SR.Diagnostics.Panel.Field.DeathExempt>
+  <SR.Diagnostics.Panel.Field.LastEvaluation>Last evaluation</SR.Diagnostics.Panel.Field.LastEvaluation>
+  <SR.Diagnostics.Panel.Field.LastSignificant>Last significant</SR.Diagnostics.Panel.Field.LastSignificant>
+  <SR.Diagnostics.Panel.Field.Candidates>Candidates</SR.Diagnostics.Panel.Field.Candidates>
+  <SR.Diagnostics.Panel.Field.Audible>Audible</SR.Diagnostics.Panel.Field.Audible>
+  <SR.Diagnostics.Panel.Field.Scale>Scale</SR.Diagnostics.Panel.Field.Scale>
+  <SR.Diagnostics.Panel.Field.StartupPending>Startup pending</SR.Diagnostics.Panel.Field.StartupPending>
+  <SR.Diagnostics.Global>Global</SR.Diagnostics.Global>
+  <SR.Diagnostics.None>none</SR.Diagnostics.None>
+  <SR.Diagnostics.Ignored>ignored</SR.Diagnostics.Ignored>
+  <SR.Diagnostics.Ready>ready</SR.Diagnostics.Ready>
+  <SR.Diagnostics.Blocked>blocked</SR.Diagnostics.Blocked>
+  <SR.Diagnostics.Bool.True>true</SR.Diagnostics.Bool.True>
+  <SR.Diagnostics.Bool.False>false</SR.Diagnostics.Bool.False>
+  <SR.Diagnostics.Mode.EachTime>each time</SR.Diagnostics.Mode.EachTime>
+  <SR.Diagnostics.Mode.RandomOneShot>random one-shot</SR.Diagnostics.Mode.RandomOneShot>
+  <SR.Diagnostics.Mode.External>external</SR.Diagnostics.Mode.External>
+  <SR.Diagnostics.Mode.Sustained>sustained</SR.Diagnostics.Mode.Sustained>
+  <SR.Diagnostics.Clock.GameTicks>game ticks</SR.Diagnostics.Clock.GameTicks>
+  <SR.Diagnostics.Clock.Realtime>real time</SR.Diagnostics.Clock.Realtime>
+  <SR.Diagnostics.Outcome>{0}: {1} | cooldown consumed {2}</SR.Diagnostics.Outcome>
+  <SR.Diagnostics.Outcome.Disabled>disabled</SR.Diagnostics.Outcome.Disabled>
+  <SR.Diagnostics.Outcome.ProbabilityRejected>probability rejected</SR.Diagnostics.Outcome.ProbabilityRejected>
+  <SR.Diagnostics.Outcome.ActionCooldown>action cooldown</SR.Diagnostics.Outcome.ActionCooldown>
+  <SR.Diagnostics.Outcome.GlobalCooldown>global cooldown</SR.Diagnostics.Outcome.GlobalCooldown>
+  <SR.Diagnostics.Outcome.VocalOrgansSilent>vocal organs silent</SR.Diagnostics.Outcome.VocalOrgansSilent>
+  <SR.Diagnostics.Outcome.TalkingRejected>Talking rejected</SR.Diagnostics.Outcome.TalkingRejected>
+  <SR.Diagnostics.Outcome.NoSoundFallback>no fallback sound</SR.Diagnostics.Outcome.NoSoundFallback>
+  <SR.Diagnostics.Outcome.Dispatched>dispatched</SR.Diagnostics.Outcome.Dispatched>
+  <SR.Diagnostics.Outcome.EligibilityRejected>eligibility rejected</SR.Diagnostics.Outcome.EligibilityRejected>
+  <SR.Diagnostics.Outcome.PlaybackFailed>playback failed</SR.Diagnostics.Outcome.PlaybackFailed>
+  <DebugActionCategory_SqueakyRatkin>Squeaky Ratkin</DebugActionCategory_SqueakyRatkin>
+  <DebugAction_OverlayOn>Record successful dispatches: ON</DebugAction_OverlayOn>
+  <DebugAction_OverlayOff>Record successful dispatches: OFF</DebugAction_OverlayOff>
+  <DebugAction_ActionStatisticsStartSelected>Action statistics: Start selected</DebugAction_ActionStatisticsStartSelected>
+  <DebugAction_ActionStatisticsStop>Action statistics: Stop</DebugAction_ActionStatisticsStop>
+  <DebugAction_ActionStatisticsReset>Action statistics: Reset</DebugAction_ActionStatisticsReset>
+  <DebugAction_AudioPathDiagnosticsOn>Record successful dispatches: ON</DebugAction_AudioPathDiagnosticsOn>
+  <DebugAction_AudioPathDiagnosticsOff>Record successful dispatches: OFF</DebugAction_AudioPathDiagnosticsOff>
+  <DebugAction_AudioPathDiagnosticsClear>Successful dispatch records: Clear</DebugAction_AudioPathDiagnosticsClear>
+  <DebugAction_AudioPathDiagnosticsCopyLast>Successful dispatch records: Copy latest</DebugAction_AudioPathDiagnosticsCopyLast>
+  <DebugAction_CameraIndicatorOn>Camera Indicator: ON</DebugAction_CameraIndicatorOn>
+  <DebugAction_CameraIndicatorOff>Camera Indicator: OFF</DebugAction_CameraIndicatorOff>
+  <DebugAction_DiagnosticsSelected>Live squeak diagnostics: Selected Ratkin</DebugAction_DiagnosticsSelected>
+  <DebugAction_DiagnosticsVisible>Live squeak diagnostics: Ratkin in view</DebugAction_DiagnosticsVisible>
+  <DebugAction_DiagnosticsOff>Live squeak diagnostics: OFF</DebugAction_DiagnosticsOff>
+</LanguageData>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Race</scope>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_GonePack_9999</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets />
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

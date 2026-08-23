@@ -1,0 +1,2 @@
+# KernelCharacterization 以原始 UTF-8 字节比较冻结语料：仅 corpus 强制 LF。
+fixtures/corpus/*.txt text eol=lf

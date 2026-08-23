@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Xenotype</scope>
+				<targetDefName>InactiveXeno_NotLoaded</targetDefName>
+				<enabledPackKeys>
+					<li>other.mod:SR_InactiveXenoVoice</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets>
+			<li>
+				<xenotypeDefName>InactiveXeno_NotLoaded</xenotypeDefName>
+				<moodOverrides />
+				<actionOverrides />
+			</li>
+		</xenotypePresets>
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

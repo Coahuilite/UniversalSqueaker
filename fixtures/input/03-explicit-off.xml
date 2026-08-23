@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<voicePackMode>Off</voicePackMode>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections />
+		<xenotypePresets />
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

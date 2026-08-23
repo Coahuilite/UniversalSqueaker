@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<voicePackDefaultSeeded>True</voicePackDefaultSeeded>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Race</scope>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_OfficialExample_Race</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets />
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

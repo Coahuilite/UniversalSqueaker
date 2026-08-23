@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<voicePackSchemaVersion>2</voicePackSchemaVersion>
+		<settingsSchemaVersion>4</settingsSchemaVersion>
+		<experimentalRaceAllowlist />
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Race</scope>
+				<raceDefName>Ratkin</raceDefName>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_GonePack_9999</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets />
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

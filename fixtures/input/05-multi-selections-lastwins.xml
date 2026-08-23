@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys />
+			<values />
+		</moodOverrides>
+		<voicePackSelections>
+			<li>
+				<scope>Race</scope>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_OldRacePack</li>
+				</enabledPackKeys>
+			</li>
+			<li>
+				<scope>Race</scope>
+				<enabledPackKeys>
+					<li>coahuilite.squeakyratkin:SR_OfficialExample_Race</li>
+					<li>coahuilite.squeakyratkin:SR_ExtraRacePack</li>
+				</enabledPackKeys>
+			</li>
+			<li>
+				<scope>Xenotype</scope>
+				<targetDefName>Baseliner_Highmate</targetDefName>
+				<enabledPackKeys>
+					<li>other.mod:SR_HighmateVoice</li>
+				</enabledPackKeys>
+			</li>
+			<li>
+				<scope>Xenotype</scope>
+				<targetDefName>Sanguophage</targetDefName>
+				<enabledPackKeys>
+					<li>other.mod:SR_SanguoVoice</li>
+				</enabledPackKeys>
+			</li>
+		</voicePackSelections>
+		<xenotypePresets>
+			<li>
+				<xenotypeDefName>Baseliner_Highmate</xenotypeDefName>
+				<hasOverallIntervalMultiplier>True</hasOverallIntervalMultiplier>
+				<overallIntervalMultiplier>1.5</overallIntervalMultiplier>
+				<moodOverrides>
+					<li>
+						<hasPitchFactor>True</hasPitchFactor>
+						<pitchFactor>1.10000002</pitchFactor>
+					</li>
+				</moodOverrides>
+				<actionOverrides>
+					<li>
+						<hasIntervalMultiplier>True</hasIntervalMultiplier>
+						<intervalMultiplier>2</intervalMultiplier>
+					</li>
+				</actionOverrides>
+			</li>
+		</xenotypePresets>
+		<globalActionEnabled />
+	</ModSettings>
+</SettingsBlock>

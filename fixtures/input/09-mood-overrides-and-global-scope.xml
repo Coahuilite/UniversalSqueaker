@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SettingsBlock>
+	<ModSettings>
+		<voicePackMode>Off</voicePackMode>
+		<settingsSchemaVersion>3</settingsSchemaVersion>
+		<moodOverrides>
+			<keys>
+				<li>Bad</li>
+			</keys>
+			<values>
+				<li>
+					<mood>Bad</mood>
+					<pitchFactor>0.800000012</pitchFactor>
+					<volumeFactor>0.899999976</volumeFactor>
+					<pitchJitter>0.899999976~1.10000002</pitchJitter>
+				</li>
+			</values>
+		</moodOverrides>
+		<voicePackSelections />
+		<xenotypePresets />
+		<globalActionEnabled>
+			<li>
+				<action>Attack</action>
+			</li>
+			<li>
+				<action>Social</action>
+				<enabled>False</enabled>
+				<scope>Disabled</scope>
+			</li>
+		</globalActionEnabled>
+	</ModSettings>
+</SettingsBlock>
