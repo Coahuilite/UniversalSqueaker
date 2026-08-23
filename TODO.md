@@ -1,36 +1,53 @@
 # TODO
 
-## Current phase (local fork)
+## Rebuild plan (approved 2026-08-23, active)
 
-- [x] Migrate Kernel/Pure/harness/fixtures and the memory agreement from SR `0.3.x` `b19d68a` into this local repository; `git init` and local commits only.
-- [x] Adapt the harness links to local `Kernel/`+`Pure/`; keep the SR content snapshot under `sr_reference/`.
-- [x] Add `docs/mod-structure-reference-zh.md` and scaffold `About/`, `LoadFolders.xml`, `1.6/`, `Source/UniversalSqueaker/`, `scripts/`, `.github/workflows/`.
-- [x] Migrate the SR release flow into `docs/release-runbook-zh.md`.
-- [x] Write `HANDOFF.md` with the minimal-UI adaptation evaluation (VoicePack assignment works; other UI removable without crashes; race-generic, no Ratkin limits).
-- [x] Maintain the three memory files (`AGENTS.md`, `MEMORY.md`, `TODO.md`) in accurate English.
+Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file sets and never run git commit; the parent session integrates, verifies, and commits.
 
-## Phase 1 — De-SR-ize the kernel (US-general state)
+### Phase 0 - memory / privacy / baseline
 
-- [ ] Migrate namespaces: `SqueakyRatkin.Kernel` / `SqueakyRatkin` → `UniversalSqueaker.Kernel` / `UniversalSqueaker`; update the harness and all references.
-- [ ] Remove product literals from the kernel: move the Ratkin seed and `SR_*` sound keys out of `BuiltInFallbackTable` (data-injected or empty-table startup); replace `ActionAudioKeyMirror` and the five-way sync with a US data surface or freeze them as temporary migration guards.
-- [ ] Rebuild the harness corpus baseline after removing the SR reference; keep zero-delta replay and add an explicit two-race equal-routing scenario (no Ratkin-specific assertions).
-- [ ] Create the US assembly skeleton (csproj/About/packageId) — buildable locally only, not published.
+- [x] Empty baseline commit `dc8c598` recorded as the OBLIVIONIS archive pointer candidate.
+- [ ] Replace the personal absolute SR path in `MEMORY.md` with repo-relative `../squeaky_ratkin`.
+- [ ] Record D1-D7 rebuild decisions in `MEMORY.md`.
+- [ ] Rewrite this TODO to the rebuild action surface.
 
-## Phase 2 — Generalize runtime and assembly
+### Phase 1 - de-SR-ize kernel/pure + US test gate (batch 1-A)
 
-- [ ] Delete the `SqueakProductDomainFilter` equivalent: catalog/resolver must not whitelist `{Ratkin}`; domains are data-driven from each pack's `raceDefName`, and every race is assemblable by default.
-- [ ] Generalize race discovery: Race layer enumerates from VoicePack/fallback-profile data, with no HAR Ratkin special-casing; Xenotype layer keeps Biotech gating and exact `targetDefName` matching.
-- [ ] Generalize the built-in fallback-profile mechanism: no product seed; profiles come from data files/content packs.
-- [ ] Migrate logging and key prefixes: `SR_` → `US_`, `[SqueakyRatkin]` → `[UniversalSqueaker]` (`usdiag` protocol prefix); re-freeze the v1/v2 protocol for US.
+- [ ] Rebuild `Source/UniversalSqueaker/Kernel/*.cs` (9 files): namespace `UniversalSqueaker.Kernel`; remove Ratkin seed, `SR_*` keys, and `DomainFilter` whitelist semantics.
+- [ ] Rebuild `Source/UniversalSqueaker/Pure/*.cs` (2 files): namespace `UniversalSqueaker`; math byte-equivalent, zero Verse.
+- [ ] Create `Source/UniversalSqueaker/UniversalSqueaker.csproj`: net472, `<Version>0.1.0-dev`, TreatWarningsAsErrors, Dev/Release flavors.
+- [ ] Create `tools/UniversalSqueakerKernelTests/` linking the new Kernel+Pure; scenarios use RaceA/RaceB equal routing, neutral test sound keys, three-way sync, new US 0.1.0 corpus.
+- [ ] Gate: `dotnet run --project tools/UniversalSqueakerKernelTests -c Release` green; new code free of `SqueakyRatkin`/`Ratkin`/`SR_`.
 
-## Phase 3 — Minimal-UI adaptation (execute HANDOFF Plan A)
+### Phase 2 - runtime/assembly generalization
 
-- [ ] Keep: settings shell, Off/Fallback/Remix mode cards, Race layer, and Race/Xenotype VoicePack checkbox paths (`SetVoicePackSelection` write bridges).
-- [ ] Remove/degrade: SoundMood workbench, Diagnostics page, audio browser, statistics/overlay/mote diagnostics, camera indicator, DebugActions, and the Xenotype behavior editor; delete the corresponding diagnostics patches only.
-- [ ] Crash-safety matrix: settings page must open and close cleanly with no candidate packs, no Biotech, no HAR, no selected pawn, and corrupted settings.
-- [ ] Race-generic acceptance: at least two races each with a VoicePack; packs route only within their declared race; the Race list contains no Ratkin special-casing.
+- [ ] Rebuild runtime sources under `Source/UniversalSqueaker/` from the SR reference: catalog/resolver/settings/logging/comp/production patches; delete product-domain-filter equivalents and HAR Ratkin special-casing.
+- [ ] Prefix migration `SR_` -> `US_`, `[SqueakyRatkin]` -> `[UniversalSqueaker]`, re-freeze `usdiag` protocol v1/v2 for US.
+- [ ] US data surface: `1.6/Defs/` fallback-profile defs, `1.6/Languages/*/Keyed/UniversalSqueaker.xml`, production patches only (no race-specific patch).
+- [ ] Gate: Dev and Release builds green; Source + 1.6 free of SR literals.
+
+### Phase 3 - minimal UI + componentization
+
+- [ ] Evaluation doc `docs/ui-componentization-evaluation-zh.md`: IMGUI reality, options A/B/C, recommend reactive view-model + declarative immediate-mode components (batch 1-B).
+- [ ] Implement Plan A minimal UI with `UI/Model`, `UI/Components`, `VoicePacksPage`; write bridges unchanged; Scribe schema unchanged.
+- [ ] Crash-safety matrix and race-generic acceptance checklist.
+
+### Phase 4 - cleanup and memory closeout
+
+- [ ] Final gates green (kernel tests + both build flavors).
+- [ ] One atomic cleanup commit: delete `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, `tools/KernelCharacterization/`; update `.gitattributes`, `README.md`, docs reference tree, `HANDOFF.md`, `MEMORY.md`.
+- [ ] `OBLIVIONIS.md`: cold-archive entry pointing to baseline commit (snapshots remain in git history).
+- [ ] Privacy review of the complete reachable tree.
+
+## Done (pre-rebuild migration)
+
+- [x] Migrate Kernel/Pure/harness/fixtures and the memory agreement from SR `0.3.x` `b19d68a`; local git only.
+- [x] Adapt harness links to local Kernel+Pure; SR content snapshot under `sr_reference/`.
+- [x] Add `docs/mod-structure-reference-zh.md`; scaffold About/LoadFolders/1.6/Source/scripts/.github.
+- [x] Migrate the SR release flow into `docs/release-runbook-zh.md`; write `HANDOFF.md`.
 
 ## Pending decisions
 
-- [ ] Workshop display name and license; US starting version number (suggested local `0.1.0-dev`, unified to `0.4.0` for the 0.4 dual release).
-- [ ] Whether to perform full history/tag privacy cleanup in SR (decided on the SR side only; not executed here).
+- [ ] Workshop display name and license (maintainer only; do not invent).
+- [ ] SR-side full history/tag privacy cleanup (decided and executed on the SR side only).
+- [ ] scripts/CI migration and release copy adaptation (deferred until after the rebuild).

@@ -16,7 +16,7 @@
 - Kernel compile set: `Kernel/` (zero-Verse snapshot; not yet de-SR-ized).
 - Pure funnel logic: `Pure/SqueakActionPlan.cs`, `Pure/SqueakTimingModel.cs`.
 - Kernel harness: `tools/KernelCharacterization/` (linked to local `Kernel/`+`Pure/`; fixtures and SR reference snapshot migrated; passes locally).
-- SR upstream (read-only evidence source): `<workspace>\squeaky_ratkin`. Do not write there and do not infer its external state from this repo.
+- SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff
 
@@ -25,3 +25,14 @@
 - **Inherited technical debt (from the SR snapshot)**: Kernel/Pure namespaces are still `SqueakyRatkin*`; `BuiltInFallbackTable` contains the Ratkin seed and `SR_*` sound keys; the harness `ActionAudioKeyMirror` and five-way sync still reference SR content under `sr_reference/`. These must be removed in the first US generalization phase.
 - **Target baseline**: kernel with zero product literals (race/sound-key/prefix all injected as data); UI only needs VoicePack assignment to work, all other pages may be removed but must not crash; every race routes equally with no Ratkin special-casing.
 - **UI adaptation decision (per HANDOFF.md)**: Plan A (vertical cut) is recommended — keep settings shell, Off/Fallback/Remix mode cards, Race layer, and VoicePack domain checkboxes; remove SoundMood workbench, Diagnostics, audio browser, statistics/overlay/mote diagnostics, and the Xenotype behavior editor without changing any Scribe schema.
+
+## Rebuild plan decisions (approved 2026-08-23)
+
+- D1 Version: csproj `<Version>0.1.0-dev` is primary; `About.xml <modVersion>` follows it.
+- D2 Rebuilt pure code lives under `Source/UniversalSqueaker/Kernel/` (zero-Verse compile set) and `Source/UniversalSqueaker/Pure/` (funnel pure logic); the old root `Kernel/`+`Pure/` are reference-only and will be deleted.
+- D3 SR 0.2.4 settings-migration fixtures are not replicated now: US is a new mod with no legacy config; the legacy bridge is deferred to the takeover version.
+- D4 New verification project: `tools/UniversalSqueakerKernelTests/` with a new US 0.1.0 golden corpus; old `tools/KernelCharacterization/` is reference-only.
+- D5 Kernel product literals: remove `BuiltInFallbackCatalog` (Ratkin seed + `SR_*` keys) and `DomainFilter` whitelist semantics; keep `BuiltInFallbackTable.Empty` plus data injection.
+- D5b Comp attach: VoicePacks attach `CompProperties_Squeaker` via their own XML patch for their declared race; US ships no race-specific patch.
+- D6 UI: reactive view-model + declarative immediate-mode components over Verse widgets (evaluation: `docs/ui-componentization-evaluation-zh.md`).
+- D7 Cleanup: after new gates are green, one atomic commit deletes `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, old `tools/KernelCharacterization/`; `OBLIVIONIS.md` records the pre-rebuild baseline commit SHA. Pre-rebuild baseline commit: `dc8c598`.
