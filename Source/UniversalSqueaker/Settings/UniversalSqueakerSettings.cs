@@ -74,16 +74,16 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (announceChange) SqueakLog.LoggingModeChanged(devLoggingMode, SqueakLog.EffectiveDevLogging);
     }
 
-    // Settings window session scaffolding. Phase 3 replaces the placeholder draw with the componentized
-    // minimal UI; these hooks exist now so the Mod shell and its close/save lifecycle compile and run.
-    internal void BeginSettingsSession() { }
-    internal void EndSettingsSession() { }
+    // Settings window session scaffolding. Opening/closing the window resets page-local UI state and
+    // keeps the Mod shell flush-on-close lifecycle intact.
+    internal void BeginSettingsSession() => UniversalSqueaker.UI.VoicePacksPage.BeginSession();
+    internal void EndSettingsSession() => UniversalSqueaker.UI.VoicePacksPage.EndSession();
     internal void RequestXenotypeTabOnNextDraw() { }
     internal void ClearXenotypeTabRequest() { }
 
     public void DrawSettings(Rect inRect)
     {
-        Widgets.Label(inRect, SqueakLabels.SettingsCategory);
+        UniversalSqueaker.UI.VoicePacksPage.Draw(inRect);
     }
 
     public void ApplyToRuntime()
