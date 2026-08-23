@@ -7,9 +7,9 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 ### Phase 0 - memory / privacy / baseline
 
 - [x] Empty baseline commit `dc8c598` recorded as the OBLIVIONIS archive pointer candidate.
-- [ ] Replace the personal absolute SR path in `MEMORY.md` with repo-relative `../squeaky_ratkin`.
-- [ ] Record D1-D7 rebuild decisions in `MEMORY.md`.
-- [ ] Rewrite this TODO to the rebuild action surface.
+- [x] Replace the personal absolute SR path in `MEMORY.md` with repo-relative `../squeaky_ratkin`.
+- [x] Record D1-D7 rebuild decisions in `MEMORY.md`.
+- [x] Rewrite this TODO to the rebuild action surface.
 
 ### Phase 1 - de-SR-ize kernel/pure + US test gate (batch 1-A)
 
