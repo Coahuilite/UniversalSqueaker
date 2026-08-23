@@ -49,7 +49,7 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 ## Pending decisions / follow-ups
 
 - [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).
-- [x] VoicePack authoring skill migrated from SR to `.github/skills/us-voicepack-authoring/SKILL.md` and adapted for dual-mode authoring (canonical `US_` / legacy `SR_`).
+- [x] VoicePack authoring skill migrated from SR to `.github/skills/us-voicepack-authoring/SKILL.md`; canonical `US_` authoring only, with a legacy auto-compat section (old `SR_` packs need no author changes).
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [ ] SR-side full history/tag privacy cleanup (decided and executed on the SR side only).
 - [ ] scripts/CI migration: dev scripts migrated (`scripts/verify-local.ps1`/`build-dev.ps1`/`pack-dev.ps1`/`stage-package.ps1`); GitHub/Steam build-pack scripts and CI workflows remain deferred until first release prep.

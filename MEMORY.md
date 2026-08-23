@@ -19,7 +19,7 @@
 - Runtime assembly (rebuilt): `Source/UniversalSqueaker/` builds Dev/Release clean (0 warnings). Catalog/resolver/settings/logging/comp/production patches all US-namespaced; `usdiag` protocol re-frozen; no `SqueakProductDomainFilter`, no HAR Ratkin special-casing (HAR discovery deferred TODO).
 - Data surface: `UniversalSqueakerFallbackProfileDef` injects fallback profiles from DefDatabase (no shipped seed Defs; empty = valid); `1.6/Languages/*/Keyed/UniversalSqueaker.xml` committed.
 - Tool gates: `tools/UniversalSqueakerConfigCopyTests/` and `tools/UniversalSqueakerLogTests/` both pass; they link Source kernel/fallback/logging files.
-- VoicePack authoring skill (dual-mode canonical US_/legacy SR_): `.github/skills/us-voicepack-authoring/SKILL.md` (migrated and adapted from SR's `squeaky-voicepack-authoring`).
+- VoicePack authoring skill: `.github/skills/us-voicepack-authoring/SKILL.md` (migrated from SR; canonical `US_` authoring only — legacy `SR_` packs need no author action because the bridge auto-loads, defaults to Ratkin, auto-attaches the comp, and marks them `Legacy SR`).
 - SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff
