@@ -46,6 +46,17 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 - [x] Add `docs/mod-structure-reference-zh.md`; scaffold About/LoadFolders/1.6/Source/scripts/.github.
 - [x] Migrate the SR release flow into `docs/release-runbook-zh.md`; write `HANDOFF.md`.
 
+## Next session — resume here (2026-08-24 checkpoint)
+
+- [ ] Install `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-bf9cf26.zip` (or the staged `dist/dev/UniversalSqueaker` folder) over the game Mods copy.
+- [ ] Install/refresh test packs from `dist/`: `Kiiro-US-EXP`, `SqueakyRatkinExampleVoices`, `SqueakyRatkinLegacyVoices`, `Nivarian-US-EXP` (new packageIds must be re-enabled in the mod list).
+- [ ] Re-test and read `Player.log`:
+  - legacy pack: expect ONE `voicepack.pack.legacy_admitted` and ONE `voicepack.comp.legacy_auto_attached`, NO `duplicate_key`;
+  - Ratkin/Kiiro_Race/NivarianRace_Pawn: expect `audio.route.selected` dispatches;
+  - settings UI: opens, legacy rows show `Legacy SR` tag + banner count.
+- [ ] Send the new `Player.log` back for review before any further code changes.
+- [ ] After log confirmation: decide whether to also auto-attach comp for canonical packs (currently canonical packs must carry their own comp patch), then final release-prep items below.
+
 ## Pending decisions / follow-ups
 
 - [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).

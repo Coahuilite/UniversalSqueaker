@@ -40,3 +40,27 @@
 - D5b Comp attach: VoicePacks may attach `CompProperties_Squeaker` via their own XML patch; the legacy bridge additionally auto-attaches a default comp to every race declared by an admitted legacy pack when none exists (Ratkin in practice), so old SR packs work with no pack-side patch.
 - D6 UI: reactive view-model + declarative immediate-mode components over Verse widgets (evaluation: `docs/ui-componentization-evaluation-zh.md`; implementation notes: `docs/ui-phase3-implementation-notes-zh.md`).
 - D7 Cleanup executed in an atomic commit: `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, old `tools/KernelCharacterization/` deleted; `OBLIVIONIS.md` records the pre-rebuild baseline commit `dc8c598`.
+
+## Session resume checkpoint (2026-08-24 — keep detailed, do not compress away)
+
+- Human maintainer is mid-testing and may compress the session; this section is the resume anchor. Read it together with `TODO.md`'s "Next session" section before doing anything else.
+- Latest commit chain (local only, no remote): `... 8c2f056 → 31fcf50 → 6bde39a → 8a65840 → b00b8bf → 5f3fd62 → bf9cf26 → 5ba8ce4`.
+  - `6bde39a`: UI empty-catalog NRE fix.
+  - `8a65840`: legacy bridge activation (thin `SqueakyRatkin.SqueakVoicePackDef`, SR_/US_ prefix contexts, `voicepack.pack.legacy_admitted`, UI `Legacy SR` tag + banner).
+  - `b00b8bf`: legacy auto-attach default `CompProperties_Squeaker` to races declared by legacy packs (`voicepack.comp.legacy_auto_attached` / `legacy_auto_attach_failed`).
+  - `5f3fd62`: legacy packs with missing `raceDefName` default to `Ratkin`.
+  - `bf9cf26`: de-duplicate pack enumeration (fixes in-game `duplicate_key count=2` for the legacy test pack) + migrate authoring skill.
+  - `5ba8ce4`: skill simplified to canonical-only authoring with legacy auto-compat note.
+- In-game evidence (latest `Player.log`, build `b00b8bf`, before `bf9cf26` dedup fix):
+  - Canonical routing works: Ratkin (`US_ExampleTemplate_Race`), `Kiiro_Race` (`US_MeowingKiiroExp`), `NivarianRace_Pawn` (`US_NivarianExp`) all dispatched successfully; one summary line showed `dispatched=65`.
+  - Legacy test pack (`coahuilite.squeakyratkin.legacyvoices:SR_ExampleTemplate_Race`) was admitted with race Ratkin, then enumerated twice and rejected with `duplicate_key count=2`. Root cause fixed in `bf9cf26`; retest pending.
+  - Non-fatal warnings: local EXP packs lack `<downloadUrl>`/`<steamWorkshopUrl>` in About; harmless, clean up before any release.
+- Latest dev package: `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-bf9cf26.zip` (six gates green; contains everything up to `bf9cf26`). The skill/doc changes in `5ba8ce4` are under `.github/` and do not enter the mod package.
+- Test pack inventory under `dist/` (gitignored, NOT committed):
+  - `Kiiro-US-EXP/` — canonical, `raceDefName=Kiiro_Race`, packageId `coahuilite.squeakyratkin.meowingkiiroexp` (kept for ModsConfig continuity), comp patch included.
+  - `SqueakyRatkinExampleVoices/` — canonical US-converted, `raceDefName=Ratkin`, packageId kept `coahuilite.squeakyratkin.examplevoices`, comp patch included.
+  - `SqueakyRatkinLegacyVoices/` — legacy test pack, packageId `coahuilite.squeakyratkin.legacyvoices`, keeps `SqueakyRatkin.SqueakVoicePackDef` + `SR_`; `<raceDefName>` deliberately removed to exercise the Ratkin default; has its own comp patch (auto-attach will skip it).
+  - `Nivarian-US-EXP/` — canonical, `raceDefName=NivarianRace_Pawn`, packageId `coahuilite.nivarian-us-exp`, comp patch included.
+- Installation note for resume: copy `dist/dev/UniversalSqueaker` over the game's Mods `UniversalSqueaker` folder, then copy each desired pack folder from `dist/` into the game Mods folder. Do NOT enable the original SR mod together with the US legacy bridge (first-wins type conflict for `SqueakyRatkin.SqueakVoicePackDef`).
+- Expected log after retest with `bf9cf26`: exactly one `voicepack.pack.legacy_admitted` and one `voicepack.comp.legacy_auto_attached` per legacy race, zero `voicepack.pack.rejected`.
+- Do not treat `dist/` as source of truth for anything; it is ignored build/test output. All product decisions live in `AGENTS.md`/`MEMORY.md`/`TODO.md` and the Source tree.
