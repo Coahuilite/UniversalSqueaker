@@ -210,7 +210,7 @@ public static class VoicePacksPageModel
             if (race.RaceDefName != null) return BuildRaceDomain(settings, catalog, race.RaceDefName);
         }
 
-        return xenotypes.FirstOrDefault();
+        return xenotypes.Count > 0 ? xenotypes[0] : (VoicePackDomainView?)null;
     }
 
     private static VoicePackDomainView BuildRaceDomain(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, string raceDefName)

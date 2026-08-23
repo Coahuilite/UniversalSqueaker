@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace UniversalSqueaker.UI;
 
@@ -41,10 +42,11 @@ public static class VoicePacksLayout
 
     public static int CountShownPacks(VoicePackDomainView domain, string search)
     {
+        IReadOnlyList<VoicePackRowView> packs = domain.Packs ?? Array.Empty<VoicePackRowView>();
         string query = search?.Trim() ?? "";
-        if (query.Length == 0) return domain.Packs.Count;
+        if (query.Length == 0) return packs.Count;
         int count = 0;
-        foreach (VoicePackRowView row in domain.Packs)
+        foreach (VoicePackRowView row in packs)
         {
             if (row.SearchText.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
                 || row.Label.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
