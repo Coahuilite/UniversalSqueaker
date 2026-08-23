@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
+  <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
+
+  <US.Action.Call>呼叫</US.Action.Call>
+  <US.Action.Eat>进食</US.Action.Eat>
+  <US.Action.Sleep>睡眠</US.Action.Sleep>
+  <US.Action.Wounded>受伤</US.Action.Wounded>
+  <US.Action.Select>选中</US.Action.Select>
+  <US.Action.Move>移动</US.Action.Move>
+  <US.Action.Social>社交</US.Action.Social>
+  <US.Action.Joy>娱乐</US.Action.Joy>
+  <US.Action.Death>死亡</US.Action.Death>
+  <US.Action.Draft>征召</US.Action.Draft>
+  <US.Action.Undraft>解除征召</US.Action.Undraft>
+  <US.Action.Attack>攻击</US.Action.Attack>
+  <US.Action.Work>工作</US.Action.Work>
+  <US.Action.Equip>装备</US.Action.Equip>
+  <US.Action.MentalBreak>精神崩溃</US.Action.MentalBreak>
+  <US.Action.Crying>哭泣</US.Action.Crying>
+  <US.Action.Giggling>咯咯笑</US.Action.Giggling>
+
+  <US.Mood.Good>良好</US.Mood.Good>
+  <US.Mood.Neutral>中性</US.Mood.Neutral>
+  <US.Mood.Bad>低落</US.Mood.Bad>
+  <US.Mood.Break>崩溃</US.Mood.Break>
+
+  <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
+  <US.Notice.TargetUnavailable>目标不可用</US.Notice.TargetUnavailable>
+  <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
+</LanguageData>

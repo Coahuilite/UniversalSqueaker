@@ -21,10 +21,10 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 
 ### Phase 2 - runtime/assembly generalization
 
-- [ ] Rebuild runtime sources under `Source/UniversalSqueaker/` from the SR reference: catalog/resolver/settings/logging/comp/production patches; delete product-domain-filter equivalents and HAR Ratkin special-casing.
-- [ ] Prefix migration `SR_` -> `US_`, `[SqueakyRatkin]` -> `[UniversalSqueaker]`, re-freeze `usdiag` protocol v1/v2 for US.
-- [ ] US data surface: `1.6/Defs/` fallback-profile defs, `1.6/Languages/*/Keyed/UniversalSqueaker.xml`, production patches only (no race-specific patch).
-- [ ] Gate: Dev and Release builds green; Source + 1.6 free of SR literals.
+- [x] Rebuild runtime sources under `Source/UniversalSqueaker/` from the SR reference: catalog/resolver/settings/logging/comp/production patches; delete product-domain-filter equivalents and HAR Ratkin special-casing.
+- [x] Prefix migration `SR_` -> `US_`, `[SqueakyRatkin]` -> `[UniversalSqueaker]`, re-freeze `usdiag` protocol v1/v2 for US.
+- [x] US data surface: data-driven `UniversalSqueakerFallbackProfileDef` (no shipped seed Defs), `1.6/Languages/*/Keyed/UniversalSqueaker.xml`, production patches only (no race-specific patch).
+- [x] Gate: Dev and Release builds green; Source + 1.6 free of SR literals; three tool gates green.
 
 ### Phase 3 - minimal UI + componentization
 
@@ -51,4 +51,4 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [ ] SR-side full history/tag privacy cleanup (decided and executed on the SR side only).
 - [ ] scripts/CI migration and release copy adaptation (deferred until after the rebuild).
-- [ ] Subagent model dispatch policy: workflow cannot pass `reasoningEffort`; await maintainer decision (see parent session report).
+- [ ] HAR reflection discovery generalization (currently assembled-only TODO in catalog).

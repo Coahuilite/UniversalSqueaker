@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerLogTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.LogCharacterization</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+char</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
+    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 日志编译集 = Source/UniversalSqueaker/Logging/*.cs；Verse 由本工具 stub 提供。 -->
+    <Compile Include="..\..\Source\UniversalSqueaker\Logging\SqueakLog.cs" Link="SqueakLog.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Logging\SqueakLogProtocol.cs" Link="SqueakLogProtocol.cs" />
+  </ItemGroup>
+
+</Project>

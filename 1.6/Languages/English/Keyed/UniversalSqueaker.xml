@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
+  <US.Settings.Save.Failed>Squeak settings could not be saved.</US.Settings.Save.Failed>
+
+  <US.Action.Call>Call</US.Action.Call>
+  <US.Action.Eat>Eat</US.Action.Eat>
+  <US.Action.Sleep>Sleep</US.Action.Sleep>
+  <US.Action.Wounded>Wounded</US.Action.Wounded>
+  <US.Action.Select>Select</US.Action.Select>
+  <US.Action.Move>Move</US.Action.Move>
+  <US.Action.Social>Social</US.Action.Social>
+  <US.Action.Joy>Joy</US.Action.Joy>
+  <US.Action.Death>Death</US.Action.Death>
+  <US.Action.Draft>Draft</US.Action.Draft>
+  <US.Action.Undraft>Undraft</US.Action.Undraft>
+  <US.Action.Attack>Attack</US.Action.Attack>
+  <US.Action.Work>Work</US.Action.Work>
+  <US.Action.Equip>Equip</US.Action.Equip>
+  <US.Action.MentalBreak>Mental break</US.Action.MentalBreak>
+  <US.Action.Crying>Crying</US.Action.Crying>
+  <US.Action.Giggling>Giggling</US.Action.Giggling>
+
+  <US.Mood.Good>Good</US.Mood.Good>
+  <US.Mood.Neutral>Neutral</US.Mood.Neutral>
+  <US.Mood.Bad>Bad</US.Mood.Bad>
+  <US.Mood.Break>Break</US.Mood.Break>
+
+  <US.Notice.RaceDomain>Race domain</US.Notice.RaceDomain>
+  <US.Notice.TargetUnavailable>target unavailable</US.Notice.TargetUnavailable>
+  <US.Notice.AudioPool.Body>Some VoicePack domains have no enabled pack:</US.Notice.AudioPool.Body>
+</LanguageData>
