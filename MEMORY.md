@@ -13,9 +13,9 @@
 - Fork handoff and UI adaptation evaluation: `HANDOFF.md` (single entry point).
 - Mod structure reference: `docs/mod-structure-reference-zh.md` (RimWorld Wiki + SR-minus-Extras/audio baseline).
 - Release flow: `docs/release-runbook-zh.md` (same process as SR).
-- Kernel compile set: `Kernel/` (zero-Verse snapshot; not yet de-SR-ized).
-- Pure funnel logic: `Pure/SqueakActionPlan.cs`, `Pure/SqueakTimingModel.cs`.
-- Kernel harness: `tools/KernelCharacterization/` (linked to local `Kernel/`+`Pure/`; fixtures and SR reference snapshot migrated; passes locally).
+- Kernel compile set (rebuilt, zero-Verse, de-SR-ized): `Source/UniversalSqueaker/Kernel/`. Legacy root `Kernel/` remains only as reference until Phase 4 cleanup.
+- Pure funnel logic (rebuilt, zero-Verse): `Source/UniversalSqueaker/Pure/SqueakActionPlan.cs`, `Source/UniversalSqueaker/Pure/SqueakTimingModel.cs`. Legacy root `Pure/` remains only as reference until Phase 4 cleanup.
+- Kernel harness (rebuilt): `tools/UniversalSqueakerKernelTests/` links `Source/UniversalSqueaker/Kernel/`+`Pure/`; US 0.1.0 golden corpus committed and replay-green. Legacy `tools/KernelCharacterization/`, `fixtures/`, and `sr_reference/` remain only as references until Phase 4 cleanup.
 - SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff

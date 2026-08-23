@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueaker</AssemblyName>
+    <RootNamespace>UniversalSqueaker</RootNamespace>
+    <Version>0.1.0-dev</Version>
+    <!-- VersionPrefix=$(Version) 会产生非法 AssemblyVersion "0.1.0-dev.0"；
+         此处拆分为纯数字前缀 + dev 后缀，程序集版本保持 0.1.0.0。 -->
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>dev</VersionSuffix>
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).0</FileVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免 NU1900 在无网时被提升为错误。 -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
+    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与本地 NuGet 缓存/SR 参考项目解析结果一致的固定版本；离线可还原。 -->
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+</Project>

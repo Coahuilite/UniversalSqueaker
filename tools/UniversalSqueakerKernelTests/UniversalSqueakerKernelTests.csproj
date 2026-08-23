@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerKernelTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.KernelTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+us-kernel</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <!-- 纯度门：内核编译集 = Source/UniversalSqueaker/Kernel/*.cs（零 Verse 依赖）。
+       另链接漏斗纯文件（执行层纯逻辑）只为纯度门；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
+  <ItemGroup>
+    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakActionPlan.cs" Link="Pure\SqueakActionPlan.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakTimingModel.cs" Link="Pure\SqueakTimingModel.cs" />
+  </ItemGroup>
+
+</Project>

@@ -13,11 +13,11 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 
 ### Phase 1 - de-SR-ize kernel/pure + US test gate (batch 1-A)
 
-- [ ] Rebuild `Source/UniversalSqueaker/Kernel/*.cs` (9 files): namespace `UniversalSqueaker.Kernel`; remove Ratkin seed, `SR_*` keys, and `DomainFilter` whitelist semantics.
-- [ ] Rebuild `Source/UniversalSqueaker/Pure/*.cs` (2 files): namespace `UniversalSqueaker`; math byte-equivalent, zero Verse.
-- [ ] Create `Source/UniversalSqueaker/UniversalSqueaker.csproj`: net472, `<Version>0.1.0-dev`, TreatWarningsAsErrors, Dev/Release flavors.
-- [ ] Create `tools/UniversalSqueakerKernelTests/` linking the new Kernel+Pure; scenarios use RaceA/RaceB equal routing, neutral test sound keys, three-way sync, new US 0.1.0 corpus.
-- [ ] Gate: `dotnet run --project tools/UniversalSqueakerKernelTests -c Release` green; new code free of `SqueakyRatkin`/`Ratkin`/`SR_`.
+- [x] Rebuild `Source/UniversalSqueaker/Kernel/*.cs` (9 files): namespace `UniversalSqueaker.Kernel`; remove Ratkin seed, `SR_*` keys, and `DomainFilter` whitelist semantics.
+- [x] Rebuild `Source/UniversalSqueaker/Pure/*.cs` (2 files): namespace `UniversalSqueaker`; math byte-equivalent, zero Verse.
+- [x] Create `Source/UniversalSqueaker/UniversalSqueaker.csproj`: net472, `<Version>0.1.0-dev` (VersionPrefix 0.1.0 + VersionSuffix dev), TreatWarningsAsErrors, Dev/Release flavors.
+- [x] Create `tools/UniversalSqueakerKernelTests/` linking the new Kernel+Pure; scenarios use RaceA/RaceB equal routing, neutral test sound keys, three-way sync, new US 0.1.0 corpus.
+- [x] Gate: `dotnet run --project tools/UniversalSqueakerKernelTests -c Release` green; new code free of `SqueakyRatkin`/`Ratkin`/`SR_`.
 
 ### Phase 2 - runtime/assembly generalization
 
@@ -28,7 +28,7 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 
 ### Phase 3 - minimal UI + componentization
 
-- [ ] Evaluation doc `docs/ui-componentization-evaluation-zh.md`: IMGUI reality, options A/B/C, recommend reactive view-model + declarative immediate-mode components (batch 1-B).
+- [x] Evaluation doc `docs/ui-componentization-evaluation-zh.md`: IMGUI reality, options A/B/C, recommend reactive view-model + declarative immediate-mode components (batch 1-B).
 - [ ] Implement Plan A minimal UI with `UI/Model`, `UI/Components`, `VoicePacksPage`; write bridges unchanged; Scribe schema unchanged.
 - [ ] Crash-safety matrix and race-generic acceptance checklist.
 
@@ -51,3 +51,4 @@ Decisions D1-D7 live in `MEMORY.md`. Subagents edit only their assigned file set
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [ ] SR-side full history/tag privacy cleanup (decided and executed on the SR side only).
 - [ ] scripts/CI migration and release copy adaptation (deferred until after the rebuild).
+- [ ] Subagent model dispatch policy: workflow cannot pass `reasoningEffort`; await maintainer decision (see parent session report).
