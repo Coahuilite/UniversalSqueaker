@@ -1,25 +1,27 @@
 # MEMORY
 
-## 当前耐久状态
-- 本仓库是 Squeaky Ratkin（SR）的 **Universal Squeaker（US）本地分叉**，2026-08-23 建立；**无 remote、未发布**。
-- 分叉源 = SR `0.3.x` 分支 tip `b19d68a`（0.3.2-pre1 发布后的 `.slim` 清理提交，提交链 C34–C42）。
-- 已确认身份：repo=`coahuilite/UniversalSqueaker`、packageId=`coahuilite.universalsqueaker`、命名空间/前缀/日志 = `UniversalSqueaker`/`US_`/`usdiag`；Workshop 显示名与许可待最终确认。
-- 0.4 共存策略（已定案）：SR 独占 Ratkin、US 只服务其他种族、可同时启用、不写 `incompatibleWith`；US 0.4 不含任何 Ratkin 装配/profile/attachment。
-- SR 1.0.0 时 SR 收缩为纯音频包、US 成为前置；legacy 桥离线原型在 SR 仓库（`tools/LegacyBridgePrototype`/`LegacyBridgeHarness`），US 接管版本再启用。
+## Current durable state
 
-## 权威入口
-- 分叉交接与 UI 改造评估：`HANDOFF.md`（本次分叉的单一入口）。
-- 内核编译集：`Kernel/`（零 Verse 编译集，当前仍为 SR 快照：命名空间/种子未迁移）。
-- 内核 harness：`tools/KernelCharacterization/`（已改链本地 `Kernel/`+`Pure/`，fixtures 与 SR 参考快照已迁移）。
-- SR 权威上游（只读证据源）：`<workspace>\squeaky_ratkin`（不写入、不凭本仓库推断其外部状态）。
+- This repository is the **Universal Squeaker (US)** local fork of Squeaky Ratkin (SR), created 2026-08-23. It has **no remote** and is **not published**.
+- Fork source: SR branch `0.3.x` tip `b19d68a` (post-0.3.2-pre1, including the `.slim` cleanup commits C34–C42).
+- Confirmed identity: repo `coahuilite/UniversalSqueaker`, packageId `coahuilite.universalsqueaker`, namespace/prefix/log = `UniversalSqueaker` / `US_` / `usdiag`. Workshop display name and license are pending maintainer confirmation.
+- 0.4 co-existence policy (decided): SR owns Ratkin exclusively; US serves other races only; both mods may be enabled together; no `incompatibleWith`; US 0.4 ships no Ratkin assemblies/profiles/attachments.
+- SR 1.0.0 will shrink SR into a pure audio pack with US as prerequisite. The legacy bridge offline prototype lives in the SR repository (`tools/LegacyBridgePrototype` / `tools/LegacyBridgeHarness`) and will be activated only in the US takeover version.
 
-## 工程决定与交接
-- **本分叉只做本地**：不配置 remote、不 push；`git init` 后的本地提交是唯一允许的 git 操作，直到维护者授权。
-- **迁移清单（2026-08-23）**：`Kernel/*.cs`（9 文件）、`Pure/SqueakActionPlan.cs`+`SqueakTimingModel.cs`、`tools/KernelCharacterization/*`（7 文件 + fixtures + `sr_reference/`）、记忆协定（AGENTS/MEMORY/TODO/HANDOFF/README）。
-- **当前技术债（继承自 SR 快照）**：内核/纯文件命名空间仍是 `SqueakyRatkin*`；`BuiltInFallbackTable` 含 Ratkin 种子与 `SR_*` 音键；harness 的 `ActionAudioKeyMirror`/五处同步仍以 SR 内容为参照。这些必须在 US 通用化第一阶段清除。
-- **目标基线**：内核零产品字面量（race/音键/前缀均数据注入）；UI 只需语音包分配可用，其余页面允许摘除但不得崩溃；全部种族平等路由，不对 Ratkin 特判。
+## Authoritative entries
 
-## 结构参考
-- 模组结构参考：[docs/mod-structure-reference-zh.md](./docs/mod-structure-reference-zh.md)（RimWorld Wiki + SR 去 Extras/内置音频基线）。
-- 发布流程：与 SR 同一套，已迁移 [docs/release-runbook-zh.md](./docs/release-runbook-zh.md)。
-- 仓库骨架已按参考建立：About/、LoadFolders.xml、1.6/{Assemblies,Defs,Patches,Languages}、Source/UniversalSqueaker/、scripts/、.github/workflows/（占位）。
+- Fork handoff and UI adaptation evaluation: `HANDOFF.md` (single entry point).
+- Mod structure reference: `docs/mod-structure-reference-zh.md` (RimWorld Wiki + SR-minus-Extras/audio baseline).
+- Release flow: `docs/release-runbook-zh.md` (same process as SR).
+- Kernel compile set: `Kernel/` (zero-Verse snapshot; not yet de-SR-ized).
+- Pure funnel logic: `Pure/SqueakActionPlan.cs`, `Pure/SqueakTimingModel.cs`.
+- Kernel harness: `tools/KernelCharacterization/` (linked to local `Kernel/`+`Pure/`; fixtures and SR reference snapshot migrated; passes locally).
+- SR upstream (read-only evidence source): `<workspace>\squeaky_ratkin`. Do not write there and do not infer its external state from this repo.
+
+## Engineering decisions and handoff
+
+- **Local fork only**: no remote is configured; local commits are the only permitted git operations until the maintainer authorizes remote/push.
+- **Migration inventory (2026-08-23)**: `Kernel/*.cs` (9 files), `Pure/` (2 files), `tools/KernelCharacterization/*` (7 files) plus `fixtures/` and `sr_reference/`, memory agreement (AGENTS/MEMORY/TODO/HANDOFF/README), mod skeleton (`About/`, `LoadFolders.xml`, `1.6/`, `Source/UniversalSqueaker/`, `scripts/`, `.github/workflows/`), and `docs/` references/runbook.
+- **Inherited technical debt (from the SR snapshot)**: Kernel/Pure namespaces are still `SqueakyRatkin*`; `BuiltInFallbackTable` contains the Ratkin seed and `SR_*` sound keys; the harness `ActionAudioKeyMirror` and five-way sync still reference SR content under `sr_reference/`. These must be removed in the first US generalization phase.
+- **Target baseline**: kernel with zero product literals (race/sound-key/prefix all injected as data); UI only needs VoicePack assignment to work, all other pages may be removed but must not crash; every race routes equally with no Ratkin special-casing.
+- **UI adaptation decision (per HANDOFF.md)**: Plan A (vertical cut) is recommended — keep settings shell, Off/Fallback/Remix mode cards, Race layer, and VoicePack domain checkboxes; remove SoundMood workbench, Diagnostics, audio browser, statistics/overlay/mote diagnostics, and the Xenotype behavior editor without changing any Scribe schema.

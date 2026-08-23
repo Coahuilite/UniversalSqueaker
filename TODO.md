@@ -1,32 +1,36 @@
 # TODO
 
-## 当前（本地分叉阶段）
-- [x] 从 SR `0.3.x` `b19d68a` 迁移 Kernel/Pure/harness/fixtures/记忆协定到本地仓库并 `git init`。
-- [x] 适配 harness 链接到本地 `Kernel/`+`Pure/`，SR 内容快照放 `sr_reference/`。
-- [x] 留下 `HANDOFF.md`：UI 最小适配评估（语音包分配可用、其余可摘除、不崩溃、种族通用）。
+## Current phase (local fork)
 
-## 第一阶段 · 内核去 SR 化（US 通用状态）
-- [ ] 命名空间迁移：`SqueakyRatkin.Kernel`/`SqueakyRatkin` → `UniversalSqueaker.Kernel`/`UniversalSqueaker`；harness 与引用同步。
-- [ ] 清除内核产品字面量：`BuiltInFallbackTable` 的 Ratkin 种子与 `SR_*` 音键移出内核（改数据注入/空表启动）；`ActionAudioKeyMirror` 与五处同步改 US 数据面或暂时冻结为迁移护栏。
-- [ ] 重建 harness 语料基线：去 SR 参考后仍零 delta；新增「两种族平等路由」场景（非 Ratkin 专用断言）。
-- [ ] 建立 US 程序集骨架（csproj/About/packageId）——暂不发布，仅本地可构建。
+- [x] Migrate Kernel/Pure/harness/fixtures and the memory agreement from SR `0.3.x` `b19d68a` into this local repository; `git init` and local commits only.
+- [x] Adapt the harness links to local `Kernel/`+`Pure/`; keep the SR content snapshot under `sr_reference/`.
+- [x] Add `docs/mod-structure-reference-zh.md` and scaffold `About/`, `LoadFolders.xml`, `1.6/`, `Source/UniversalSqueaker/`, `scripts/`, `.github/workflows/`.
+- [x] Migrate the SR release flow into `docs/release-runbook-zh.md`.
+- [x] Write `HANDOFF.md` with the minimal-UI adaptation evaluation (VoicePack assignment works; other UI removable without crashes; race-generic, no Ratkin limits).
+- [x] Maintain the three memory files (`AGENTS.md`, `MEMORY.md`, `TODO.md`) in accurate English.
 
-## 第二阶段 · 运行时与装配通用化
-- [ ] `SqueakProductDomainFilter` 等价物删除：catalog/resolver 不再白名单 `{Ratkin}`；域由 pack `raceDefName` 数据驱动，全部种族默认可装配。
-- [ ] 种族发现：Race 层从 VoicePack/fallback profile 数据枚举，不读 HAR Ratkin 特判；Xenotype 层保持 Biotech 门控与 `targetDefName` 精确匹配。
-- [ ] 内置 fallback profile 机制通用化：无产品种子；profile 源改为数据文件/内容包。
-- [ ] 日志与键前缀迁移：`SR_`→`US_`、`[SqueakyRatkin]`→`[UniversalSqueaker]`（或 `usdiag` 协议前缀）；v1/v2 协议按 US 重新冻结。
+## Phase 1 — De-SR-ize the kernel (US-general state)
 
-## 第三阶段 · UI 最小可用改造（按 HANDOFF.md 评估执行）
-- [ ] 保留：模式选择（Off/Fallback/Remix）+ Race/Xenotype 语音包勾选页 + 基本保存/刷新。
-- [ ] 摘除/降级：SoundMood 工作台、Debug/Diagnostics 页、音频浏览器、统计/overlay/mote 诊断、行为编辑器；确保无引用、无崩溃。
-- [ ] 崩溃安全矩阵：空目录/无候选/无 Biotech/无 HAR/无选中 pawn/损坏设置全部可打开设置页。
-- [ ] 种族通用验收：至少两种族各挂 VoicePack，同域只路由同种族，Race 列表不出现 Ratkin 特判。
+- [ ] Migrate namespaces: `SqueakyRatkin.Kernel` / `SqueakyRatkin` → `UniversalSqueaker.Kernel` / `UniversalSqueaker`; update the harness and all references.
+- [ ] Remove product literals from the kernel: move the Ratkin seed and `SR_*` sound keys out of `BuiltInFallbackTable` (data-injected or empty-table startup); replace `ActionAudioKeyMirror` and the five-way sync with a US data surface or freeze them as temporary migration guards.
+- [ ] Rebuild the harness corpus baseline after removing the SR reference; keep zero-delta replay and add an explicit two-race equal-routing scenario (no Ratkin-specific assertions).
+- [ ] Create the US assembly skeleton (csproj/About/packageId) — buildable locally only, not published.
 
-## 待确认
-- [ ] Workshop 显示名与许可；US 起始版本号（建议本地 0.1.0-dev，0.4 双发时统一抬 0.4.0）。
-- [ ] 是否在本仓库做完整历史/tag 隐私清理（SR 仓库由 SR 侧单独决策，不在本仓库执行）。
+## Phase 2 — Generalize runtime and assembly
 
-## 当前（模组结构阶段补充）
-- [x] 建立 mod 结构参考 docs/mod-structure-reference-zh.md 并按参考落仓库骨架（About/LoadFolders/1.6/Source/scripts/.github）。
-- [x] 迁移 SR 发布流程到 docs/release-runbook-zh.md（US 采用同一套；脚本/CI 后续按需从 SR 移植）。
+- [ ] Delete the `SqueakProductDomainFilter` equivalent: catalog/resolver must not whitelist `{Ratkin}`; domains are data-driven from each pack's `raceDefName`, and every race is assemblable by default.
+- [ ] Generalize race discovery: Race layer enumerates from VoicePack/fallback-profile data, with no HAR Ratkin special-casing; Xenotype layer keeps Biotech gating and exact `targetDefName` matching.
+- [ ] Generalize the built-in fallback-profile mechanism: no product seed; profiles come from data files/content packs.
+- [ ] Migrate logging and key prefixes: `SR_` → `US_`, `[SqueakyRatkin]` → `[UniversalSqueaker]` (`usdiag` protocol prefix); re-freeze the v1/v2 protocol for US.
+
+## Phase 3 — Minimal-UI adaptation (execute HANDOFF Plan A)
+
+- [ ] Keep: settings shell, Off/Fallback/Remix mode cards, Race layer, and Race/Xenotype VoicePack checkbox paths (`SetVoicePackSelection` write bridges).
+- [ ] Remove/degrade: SoundMood workbench, Diagnostics page, audio browser, statistics/overlay/mote diagnostics, camera indicator, DebugActions, and the Xenotype behavior editor; delete the corresponding diagnostics patches only.
+- [ ] Crash-safety matrix: settings page must open and close cleanly with no candidate packs, no Biotech, no HAR, no selected pawn, and corrupted settings.
+- [ ] Race-generic acceptance: at least two races each with a VoicePack; packs route only within their declared race; the Race list contains no Ratkin special-casing.
+
+## Pending decisions
+
+- [ ] Workshop display name and license; US starting version number (suggested local `0.1.0-dev`, unified to `0.4.0` for the 0.4 dual release).
+- [ ] Whether to perform full history/tag privacy cleanup in SR (decided on the SR side only; not executed here).
