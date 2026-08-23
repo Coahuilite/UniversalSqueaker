@@ -6,7 +6,7 @@
 
 - Project: RimWorld 1.6 mod **Universal Squeaker** (local fork; no remote configured).
 - Confirmed identity: repo `coahuilite/UniversalSqueaker`; permanent `packageId` `coahuilite.universalsqueaker`; target C# namespace `UniversalSqueaker`; Def/log/debug-key prefix `US_`; diagnostic log prefix `usdiag`. Workshop display name and license remain pending maintainer confirmation; this repository is not published.
-- Squeaky Ratkin (`coahuilite.squeakyratkin`) is a separate product. Never reuse its brand, packageId, namespace, or `SR_` prefix here. During the 0.4 co-existence window US must not define any `SqueakyRatkin.*` types and must not ship Ratkin assemblies, profiles, or attachments.
+- Squeaky Ratkin (`coahuilite.squeakyratkin`) is a separate product. Never reuse its brand, packageId, namespace, or `SR_` prefix here. Exception (maintainer-authorized 2026-08-24): the legacy compatibility bridge may define exactly one thin empty `SqueakyRatkin.SqueakVoicePackDef : UniversalSqueaker.SqueakVoicePackDef` shim in the US assembly so old SR VoicePack XML loads; every such legacy pack must be explicitly marked as old SR content in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner). No other `SqueakyRatkin.*` types and no Ratkin assemblies, profiles, attachments, or content may ship with US.
 - Product version source: once the product csproj exists, its `<Version>` is primary and `About/About.xml <modVersion>` must follow it.
 
 ## Project philosophy

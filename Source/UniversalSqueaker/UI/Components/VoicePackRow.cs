@@ -22,10 +22,21 @@ public static class VoicePackRow
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
+        float legacyTagWidth = row.IsLegacy ? 86f : 0f;
         Text.Font = GameFont.Small;
         GUI.color = row.IsSelected ? new Color(1f, .86f, .58f) : Color.white;
-        Rect primaryRect = new(rect.x + 50f, rect.y + 3f, Math.Max(1f, rect.width - 58f), 25f);
+        Rect primaryRect = new(rect.x + 50f, rect.y + 3f, Math.Max(1f, rect.width - 58f - legacyTagWidth), 25f);
         Widgets.Label(primaryRect, row.Label);
+        if (row.IsLegacy)
+        {
+            Text.Font = GameFont.Tiny;
+            GUI.color = UiPalette.Gold;
+            Rect legacyRect = new(rect.xMax - legacyTagWidth, rect.y + 5f, legacyTagWidth - 4f, 18f);
+            Widgets.Label(legacyRect, "Legacy SR");
+            TooltipHandler.TipRegion(legacyRect, "Old Squeaky Ratkin VoicePack loaded through the compatibility bridge.");
+            Text.Font = GameFont.Small;
+            GUI.color = row.IsSelected ? new Color(1f, .86f, .58f) : Color.white;
+        }
         Text.Font = GameFont.Tiny;
         GUI.color = UiPalette.Muted;
         Rect secondaryRect = new(rect.x + 50f, rect.y + 27f, Math.Max(1f, rect.width - 58f), 20f);

@@ -61,7 +61,8 @@ internal static class SqueakVoicePackValidator
     {
         if (pack == null) { yield return "SqueakVoicePackDef is null."; yield break; }
         string name = string.IsNullOrWhiteSpace(pack.defName) ? "SqueakVoicePackDef" : pack.defName;
-        if (string.IsNullOrWhiteSpace(pack.defName) || !pack.defName.StartsWith("US_")) yield return name + " defName must begin with US_.";
+        string prefix = LegacyVoicePackBridge.RequiredPrefixFor(pack);
+        if (string.IsNullOrWhiteSpace(pack.defName) || !pack.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " defName must begin with " + prefix + ".";
         if (string.IsNullOrWhiteSpace(pack.raceDefName)) yield return name + " is missing raceDefName; every VoicePack must declare the exact race defName it serves.";
         if (pack.scope == SqueakVoicePackScope.Unspecified) yield return name + " has an unspecified scope.";
         if (pack.scope == SqueakVoicePackScope.Race && !string.IsNullOrEmpty(pack.targetDefName)) yield return name + " Race scope must not specify targetDefName.";
@@ -75,7 +76,7 @@ internal static class SqueakVoicePackValidator
             if (!SqueakActionDefinitions.IsKnown(fallback.action)) yield return name + " fallback contains unknown action " + fallback.action + ".";
             if (!fallbackActions.Add(fallback.action)) yield return name + " contains duplicate fallback action " + fallback.action + ".";
             if (fallback.sound == null) { yield return name + " fallback " + fallback.action + " has a null SoundDef."; continue; }
-            if (string.IsNullOrWhiteSpace(fallback.sound.defName) || !fallback.sound.defName.StartsWith("US_")) yield return name + " fallback " + fallback.action + " references a SoundDef without US_ prefix.";
+            if (string.IsNullOrWhiteSpace(fallback.sound.defName) || !fallback.sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " fallback " + fallback.action + " references a SoundDef without " + prefix + " prefix.";
         }
 
         if (pack.actions == null || pack.actions.Count == 0) { yield return name + " has no action sounds."; yield break; }
@@ -100,7 +101,7 @@ internal static class SqueakVoicePackValidator
             foreach (SoundDef sound in entry.sounds)
             {
                 if (sound == null) { yield return name + " action " + entry.action + " contains a null SoundDef."; continue; }
-                if (string.IsNullOrWhiteSpace(sound.defName) || !sound.defName.StartsWith("US_")) yield return name + " action " + entry.action + " references a SoundDef without US_ prefix.";
+                if (string.IsNullOrWhiteSpace(sound.defName) || !sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " action " + entry.action + " references a SoundDef without " + prefix + " prefix.";
                 if (sound.sustain) yield return name + " action " + entry.action + " references sustained SoundDef " + sound.defName + "; production voice sounds must be one-shot.";
                 if (sound.context != SoundContext.MapOnly) yield return name + " action " + entry.action + " references SoundDef " + sound.defName + " with context other than MapOnly.";
                 if (sound.subSounds == null || sound.subSounds.Count == 0) { yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has no SubSounds."; continue; }

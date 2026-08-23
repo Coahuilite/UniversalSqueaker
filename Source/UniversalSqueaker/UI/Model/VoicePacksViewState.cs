@@ -113,6 +113,7 @@ public readonly struct VoicePackRowView
     public readonly string Coverage;
     public readonly string SearchText;
     public readonly bool IsSelected;
+    public readonly bool IsLegacy;
 
     public VoicePackRowView(
         string key,
@@ -122,7 +123,8 @@ public readonly struct VoicePackRowView
         string defName,
         string coverage,
         string searchText,
-        bool isSelected)
+        bool isSelected,
+        bool isLegacy = false)
     {
         Key = key ?? "";
         Label = label ?? defName ?? key ?? "";
@@ -132,5 +134,6 @@ public readonly struct VoicePackRowView
         Coverage = coverage ?? "";
         SearchText = searchText ?? "";
         IsSelected = isSelected;
+        IsLegacy = isLegacy;
     }
 }

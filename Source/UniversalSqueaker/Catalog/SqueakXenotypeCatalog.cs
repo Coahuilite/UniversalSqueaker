@@ -21,12 +21,14 @@ public static class SqueakXenotypeCatalog
         try
         {
             Dictionary<string, List<SqueakVoicePackDef>> groups = new(StringComparer.Ordinal);
-            foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs)
+            foreach (SqueakVoicePackDef pack in EnumerateAllPackDefs())
             {
                 if (!SqueakVoicePackValidator.IsValid(pack)) continue;
                 if (pack.scope != SqueakVoicePackScope.Race && pack.scope != SqueakVoicePackScope.Xenotype) continue;
                 // Catalog admission is neutral: every pack's declared raceDefName is a valid routing domain.
                 if (!pack.TryGetPackKey(out string key)) continue;
+                if (LegacyVoicePackBridge.IsLegacy(pack))
+                    SqueakLog.LegacyVoicePackAdmitted(key, pack.raceDefName);
                 if (!groups.TryGetValue(key, out List<SqueakVoicePackDef>? entries)) { entries = new List<SqueakVoicePackDef>(); groups.Add(key, entries); }
                 entries.Add(pack);
             }
@@ -94,6 +96,12 @@ public static class SqueakXenotypeCatalog
             SqueakLog.CatalogRefreshFailed(ex);
             Volatile.Write(ref current, SqueakXenotypeCatalogSnapshot.Empty);
         }
+    }
+
+    private static IEnumerable<SqueakVoicePackDef> EnumerateAllPackDefs()
+    {
+        foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs) yield return pack;
+        foreach (SqueakVoicePackDef legacy in LegacyVoicePackSource.CollectLegacy()) yield return legacy;
     }
 
     private static void WarnDuplicatePackKey(string key, int count)

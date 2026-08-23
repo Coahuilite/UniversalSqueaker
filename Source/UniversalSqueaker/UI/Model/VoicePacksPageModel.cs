@@ -246,9 +246,10 @@ public static class VoicePacksPageModel
         if (string.IsNullOrEmpty(author)) author = modName;
         int playable = CountPlayableActions(pack);
         string coverage = "Actions " + playable + "/" + SqueakActionDefinitions.Count;
-        string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
+        bool isLegacy = LegacyVoicePackBridge.IsLegacy(pack);
+        string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key + (isLegacy ? "\nlegacy sr" : "");
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
-        return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
+        return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected, isLegacy);
     }
 
     private static int CountOrphanKeys(IReadOnlyList<string>? enabledKeys, IReadOnlyList<SqueakVoicePackDef> packs)
@@ -273,6 +274,9 @@ public static class VoicePacksPageModel
         List<string> messages = new();
         if (races.Count == 0 && xenotypes.Count == 0)
             messages.Add("No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.");
+        int legacyCount = catalog.PackByKey.Values.Count(LegacyVoicePackBridge.IsLegacy);
+        if (legacyCount > 0)
+            messages.Add(legacyCount + " legacy Squeaky Ratkin VoicePack(s) are loaded through the compatibility bridge and marked as old SR content.");
         if (!biotech && xenotypes.Count > 0)
             messages.Add("Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.");
         if (mode == SqueakVoicePackMode.Off)

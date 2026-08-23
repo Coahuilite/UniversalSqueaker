@@ -55,7 +55,7 @@ UniversalSqueaker/
 
 - **没有** `Extras/SqueakyRatkinExampleVoices`（内容示例属于 SR/VoicePack 侧）。
 - **没有** `1.6/Sounds/coahuilite.squeakyratkin/...` 内置音频镜像；US 永远不随包分发音频种子。
-- 仓库内不允许出现 `SqueakyRatkin.*` 类型、`SR_` Def 前缀、Ratkin 装配/profile/attachment（0.4 共存规则）。
+- 仓库内不允许出现 `SqueakyRatkin.*` 类型、`SR_` Def 前缀、Ratkin 装配/profile/attachment（0.4 共存规则）。唯一例外（维护者授权 2026-08-24）：legacy 兼容桥的薄空类 `SqueakyRatkin.SqueakVoicePackDef`，旧 SR 包经此加载时必须在日志与 UI 显式标记为旧 SR 内容。
 - `dist/`、`1.6/Assemblies/*.dll|*.pdb` 为 gitignored 构建态。
 
 ## 快速创建清单（新仓库或重建时）
