@@ -101,7 +101,13 @@ public static class SqueakXenotypeCatalog
 
     private static IEnumerable<SqueakVoicePackDef> EnumerateAllPackDefs()
     {
-        foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs) yield return pack;
+        // DefDatabase<SqueakVoicePackDef>.AllDefs also returns legacy subclasses; enumerate each def
+        // exactly once so legacy packs are not counted twice and rejected as duplicate keys.
+        foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs)
+        {
+            if (pack is SqueakyRatkin.SqueakVoicePackDef) continue;
+            yield return pack;
+        }
         foreach (SqueakVoicePackDef legacy in LegacyVoicePackSource.CollectLegacy()) yield return legacy;
     }
 
