@@ -23,6 +23,7 @@ public static class SqueakXenotypeCatalog
             Dictionary<string, List<SqueakVoicePackDef>> groups = new(StringComparer.Ordinal);
             foreach (SqueakVoicePackDef pack in EnumerateAllPackDefs())
             {
+                LegacyVoicePackBridge.EnsureLegacyRaceDeclared(pack);
                 if (!SqueakVoicePackValidator.IsValid(pack)) continue;
                 if (pack.scope != SqueakVoicePackScope.Race && pack.scope != SqueakVoicePackScope.Xenotype) continue;
                 // Catalog admission is neutral: every pack's declared raceDefName is a valid routing domain.
