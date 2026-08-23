@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, FallbackProfileStoreFailed }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, LegacyCompAutoAttached, LegacyCompAutoAttachFailed, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, FallbackProfileStoreFailed }
 
 internal readonly struct SqueakLogData
 {
@@ -54,6 +54,8 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.CatalogRefreshFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Error, "VoicePack catalog refresh failed."),
         SqueakLogEvent.PackRejected => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "A VoicePack was rejected."),
         SqueakLogEvent.LegacyVoicePackAdmitted => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Legacy SR VoicePack admitted: <pack> (race <race>).", 2),
+        SqueakLogEvent.LegacyCompAutoAttached => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Legacy compatibility auto-attached the squeak comp to race <race>.", 2),
+        SqueakLogEvent.LegacyCompAutoAttachFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "Legacy compatibility auto-attach failed.", 2),
         SqueakLogEvent.ResolverRebuildFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Error, "VoicePack resolver rebuild failed."),
         SqueakLogEvent.TargetRejected => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "A Xenotype VoicePack target was rejected."),
         SqueakLogEvent.XenotypeDiscoveryUnavailable => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Xenotype discovery is unavailable."),
@@ -88,6 +90,8 @@ internal static class SqueakLogRegistry
             return "Mod settings origin: " + (data.SettingsOrigin == SqueakSettingsOrigin.LoadedFromFile ? "LoadedFromFile" : "FreshCreated") + ".";
         if (e == SqueakLogEvent.LegacyVoicePackAdmitted)
             return "Legacy SR VoicePack admitted: " + (string.IsNullOrEmpty(data.Pack) ? "-" : data.Pack) + " (race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + ").";
+        if (e == SqueakLogEvent.LegacyCompAutoAttached)
+            return "Legacy compatibility auto-attached the squeak comp to race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + ".";
         if (e == SqueakLogEvent.AudioRouteSelected)
         {
             string actionText = string.IsNullOrEmpty(data.Action) ? "-" : data.Action!;
@@ -112,6 +116,8 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.CatalogRefreshFailed => "voicepack.catalog.refresh_failed",
         SqueakLogEvent.PackRejected => "voicepack.pack.rejected",
         SqueakLogEvent.LegacyVoicePackAdmitted => "voicepack.pack.legacy_admitted",
+        SqueakLogEvent.LegacyCompAutoAttached => "voicepack.comp.legacy_auto_attached",
+        SqueakLogEvent.LegacyCompAutoAttachFailed => "voicepack.comp.legacy_auto_attach_failed",
         SqueakLogEvent.ResolverRebuildFailed => "voicepack.resolver.rebuild_failed",
         SqueakLogEvent.TargetRejected => "voicepack.target.rejected",
         SqueakLogEvent.XenotypeDiscoveryUnavailable => "xenotype.discovery.unavailable",
@@ -221,6 +227,16 @@ internal static class SqueakLogFormatter
                 break;
             case SqueakLogEvent.LegacyVoicePackAdmitted:
                 Add(builder, "legacy_type", "SqueakyRatkin.SqueakVoicePackDef");
+                break;
+            case SqueakLogEvent.LegacyCompAutoAttachFailed:
+                if (data.Exception != null)
+                {
+                    var legacySite = data.Exception.TargetSite;
+                    Add(builder, "ex_type", data.Exception.GetType().FullName);
+                    Add(builder, "ex_inner", data.Exception.InnerException?.GetType().FullName);
+                    Add(builder, "ex_site", legacySite == null ? null : legacySite.DeclaringType?.FullName + "." + legacySite.Name);
+                    Add(builder, "ex_msg", SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
+                }
                 break;
             case SqueakLogEvent.FallbackProfileStoreFailed:
                 if (data.Exception != null)

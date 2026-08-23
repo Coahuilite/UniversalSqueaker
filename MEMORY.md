@@ -36,6 +36,6 @@
 - D3 SR 0.2.4 settings-migration fixtures are not replicated now: US is a new mod with no legacy config; the legacy bridge is deferred to the takeover version.
 - D4 Verification project: `tools/UniversalSqueakerKernelTests/` with the US 0.1.0 golden corpus; old `tools/KernelCharacterization/` was reference-only and is now deleted.
 - D5 Kernel product literals: `BuiltInFallbackCatalog` (Ratkin seed + `SR_*` keys) and `DomainFilter` whitelist semantics removed; `BuiltInFallbackTable.Empty` plus data injection remain.
-- D5b Comp attach: VoicePacks attach `CompProperties_Squeaker` via their own XML patch for their declared race; US ships no race-specific patch.
+- D5b Comp attach: VoicePacks may attach `CompProperties_Squeaker` via their own XML patch; the legacy bridge additionally auto-attaches a default comp to every race declared by an admitted legacy pack when none exists (Ratkin in practice), so old SR packs work with no pack-side patch.
 - D6 UI: reactive view-model + declarative immediate-mode components over Verse widgets (evaluation: `docs/ui-componentization-evaluation-zh.md`; implementation notes: `docs/ui-phase3-implementation-notes-zh.md`).
 - D7 Cleanup executed in an atomic commit: `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, old `tools/KernelCharacterization/` deleted; `OBLIVIONIS.md` records the pre-rebuild baseline commit `dc8c598`.

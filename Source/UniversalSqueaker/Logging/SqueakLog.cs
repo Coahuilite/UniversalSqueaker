@@ -52,6 +52,8 @@ public static class SqueakLog
     public static void CatalogRefreshFailed(Exception ex) => Emit(SqueakLogEvent.CatalogRefreshFailed, new SqueakLogData(exception: ex), true);
     public static void PackRejected(string pack, int count, string reason = "duplicate_key") => Emit(SqueakLogEvent.PackRejected, new SqueakLogData(pack: pack, reason: reason, count: count), true);
     public static void LegacyVoicePackAdmitted(string pack, string race) => Emit(SqueakLogEvent.LegacyVoicePackAdmitted, new SqueakLogData(pack: pack, race: race), false);
+    public static void LegacyCompAutoAttached(string race) => Emit(SqueakLogEvent.LegacyCompAutoAttached, new SqueakLogData(race: race), false);
+    public static void LegacyCompAutoAttachFailed(Exception ex) => Emit(SqueakLogEvent.LegacyCompAutoAttachFailed, new SqueakLogData(exception: ex), true);
     public static void ResolverRebuildFailed(Exception ex) => Emit(SqueakLogEvent.ResolverRebuildFailed, new SqueakLogData(exception: ex), true);
     public static void TargetRejected(string target, string reason) => Emit(SqueakLogEvent.TargetRejected, new SqueakLogData(target: target, reason: reason), true);
     public static void XenotypeDiscoveryUnavailable(string reason) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.XenotypeDiscoveryUnavailable, new SqueakLogData(reason: reason), true); }
