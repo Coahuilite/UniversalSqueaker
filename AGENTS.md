@@ -18,10 +18,21 @@
 
 ## Memory protocol
 
-- Read `MEMORY.md` before claiming project context and `TODO.md` before continuing work.
-- The three memory files (`AGENTS.md`, `MEMORY.md`, `TODO.md`) are the memory agreement and are maintained in accurate English.
-- `MEMORY.md` keeps durable facts and open-action pointers only; `TODO.md` keeps current goals, open actions, blockers, and explicit deferrals. Settled details live under `docs/` (`HANDOFF.md`, references, runbook).
+At every non-trivial session:
+
+- Read `MEMORY.md` before claiming project context; it stores confirmed durable facts, decisions, constraints, and evidence pointers.
+- Read `TODO.md` before continuing work; it stores only current goals, open actions, blockers, and explicit deferrals.
+- Read `OBLIVIONIS.md` only for a historical conflict or explicit request; it is cold archive evidence and cannot override current sources.
+- The three active memory files (`AGENTS.md`, `MEMORY.md`, `TODO.md`) are maintained in accurate English; `OBLIVIONIS.md` is the cold archive and follows the same language rule when appended.
 - This is a local fork of SR. SR state must be sourced from the SR repository and never inferred from this repository.
+
+Maintain these boundaries:
+
+- Update `MEMORY.md` only when durable facts or the open action surface changes; keep it compact.
+- Compact by default: settled release/implementation details live in `docs/release_review/` (Claim Packs, process review) and the runbook; MEMORY keeps only pointers. Do not grow MEMORY with finished work.
+- Update `TODO.md` only when its current task surface changes.
+- Do not store session narratives, transient artifacts, raw logs, completed test matrices, commit chains, or release checklists in either active memory file.
+- Documentation edits alone are not memory events; external-state summaries never override their authoritative source.
 
 ## Privacy and security
 
@@ -34,3 +45,4 @@
 
 - Local commits are permitted. `git remote`, push, PR, tag, release, and all publication actions require explicit maintainer authorization.
 - Never claim that this repository's evidence proves SR, GitHub, or Workshop external state.
+
