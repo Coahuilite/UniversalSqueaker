@@ -2,7 +2,7 @@
 <!-- 模组结构参考：docs/mod-structure-reference-zh.md。显示名与许可待维护者确认后替换。 -->
 <ModMetaData>
   <packageId>coahuilite.universalsqueaker</packageId>
-  <modVersion>0.1.0</modVersion>
+  <modVersion>0.1.0-dev</modVersion>
   <name>Universal Squeaker</name>
   <author>Coahuilite</author>
   <supportedVersions><li>1.6</li></supportedVersions>

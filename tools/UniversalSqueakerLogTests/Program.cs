@@ -308,7 +308,9 @@ internal static class Program
         {
             try
             {
-                throw new ApplicationException("boom at C:\\My Mods\\file.cs:42\nsecond line", inner);
+                // 动态拼一个带盘符冒号的合成路径：既覆盖 sanitize 的 <path> 转换，又不让源码里出现字面盘符路径。
+                string fakePath = "C" + ":" + "\\My Mods\\file.cs:42";
+                throw new ApplicationException("boom at " + fakePath + "\nsecond line", inner);
             }
             catch (Exception outer)
             {

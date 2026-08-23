@@ -61,7 +61,7 @@ UniversalSqueaker/
 ## 快速创建清单（新仓库或重建时）
 
 1. 根目录：`About/`、`LoadFolders.xml`、`1.6/`、`Source/`、`docs/`、`scripts/`、`tools/`、`.github/workflows/`。
-2. `About/About.xml`：packageId 固定 `coahuilite.universalsqueaker`；modVersion 与 csproj `<Version>` 一致（当前占位 0.1.0）；显示名/许可待定。
+2. `About/About.xml`：packageId 固定 `coahuilite.universalsqueaker`；modVersion 与 csproj `<Version>` 一致（当前 0.1.0-dev）；显示名/许可待定。
 3. `LoadFolders.xml`：`<li>/</li>` 与 `<li>1.6</li>`；**不得**加 Ratkin/任何内容包的 `IfModActive` 门控。
 4. `1.6/`：四个子目录 `Assemblies/Defs/Patches/Languages`；Languages 已有 Keyed XML，其余保留 `.gitkeep` 占位。
 5. `.gitignore`：`dist/`、`About/PublishedFileId.txt`、`*.dll`、`*.pdb`、`bin/`、`obj/`、`.slim/`。
