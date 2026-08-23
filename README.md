@@ -21,3 +21,6 @@ dotnet run --project tools/KernelCharacterization -c Release
 - packageId：`coahuilite.universalsqueaker`（已确认）
 - 目标命名空间/前缀/日志：`UniversalSqueaker` / `US_` / `usdiag`
 - Workshop 显示名与许可：待维护者确认
+
+- 模组结构参考：docs/mod-structure-reference-zh.md（SR 去 Extras/内置音频后的基本结构 + RimWorld Wiki 教程）
+- 发布流程：docs/release-runbook-zh.md（与 SR 同一套）

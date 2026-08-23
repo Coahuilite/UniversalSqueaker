@@ -26,3 +26,7 @@
 ## 待确认
 - [ ] Workshop 显示名与许可；US 起始版本号（建议本地 0.1.0-dev，0.4 双发时统一抬 0.4.0）。
 - [ ] 是否在本仓库做完整历史/tag 隐私清理（SR 仓库由 SR 侧单独决策，不在本仓库执行）。
+
+## 当前（模组结构阶段补充）
+- [x] 建立 mod 结构参考 docs/mod-structure-reference-zh.md 并按参考落仓库骨架（About/LoadFolders/1.6/Source/scripts/.github）。
+- [x] 迁移 SR 发布流程到 docs/release-runbook-zh.md（US 采用同一套；脚本/CI 后续按需从 SR 移植）。

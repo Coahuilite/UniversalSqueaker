@@ -18,3 +18,8 @@
 - **迁移清单（2026-08-23）**：`Kernel/*.cs`（9 文件）、`Pure/SqueakActionPlan.cs`+`SqueakTimingModel.cs`、`tools/KernelCharacterization/*`（7 文件 + fixtures + `sr_reference/`）、记忆协定（AGENTS/MEMORY/TODO/HANDOFF/README）。
 - **当前技术债（继承自 SR 快照）**：内核/纯文件命名空间仍是 `SqueakyRatkin*`；`BuiltInFallbackTable` 含 Ratkin 种子与 `SR_*` 音键；harness 的 `ActionAudioKeyMirror`/五处同步仍以 SR 内容为参照。这些必须在 US 通用化第一阶段清除。
 - **目标基线**：内核零产品字面量（race/音键/前缀均数据注入）；UI 只需语音包分配可用，其余页面允许摘除但不得崩溃；全部种族平等路由，不对 Ratkin 特判。
+
+## 结构参考
+- 模组结构参考：[docs/mod-structure-reference-zh.md](./docs/mod-structure-reference-zh.md)（RimWorld Wiki + SR 去 Extras/内置音频基线）。
+- 发布流程：与 SR 同一套，已迁移 [docs/release-runbook-zh.md](./docs/release-runbook-zh.md)。
+- 仓库骨架已按参考建立：About/、LoadFolders.xml、1.6/{Assemblies,Defs,Patches,Languages}、Source/UniversalSqueaker/、scripts/、.github/workflows/（占位）。
