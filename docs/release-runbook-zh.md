@@ -1,6 +1,7 @@
 # Release Runbook（版本无关）
 
 > 唯一发布流程入口。版本相关事实以当次 `docs/release_review/release-<version>-review-zh.md`（Claim Pack）为准；本文只描述流程与门禁。
+> 本流程**继承自 Squeaky Ratkin 的 runbook**，并按 US 红线适配：无 `Extras/`、无内置音频/OGG 镜像、无 `codemap.md`；`version.txt` 首行产品名为 `UniversalSqueaker`；本地脚本已迁入 `scripts/`（`build-dev.ps1`/`pack-dev.ps1`/`stage-package.ps1`/`verify-local.ps1`）。
 > 每一步的 git/外部影响操作都需要维护者明确授权（见 `AGENTS.md`）。
 
 ## 阶段 0 · dev 发布前准备
@@ -12,8 +13,8 @@
    - Workshop 页面文案（如页面内容有变）：中英对称、英文以中文版为准、页面专注模组本身（无音频统计/开发者排障/迁移说明/制作步骤，作者内容只留指南链接）、俏皮句不加解释、字符数刷新。
 3. **隐私审查**：工作树全扫描（凭据/API key/token/本地路径/`PublishedFileId`）。
 4. **构建 + 打包核验**：
-   - Dev / GitHub flavor 构建 0 errors；
-   - pack 后**包内容逐项核验**：文件数（含 `version.txt`）、排除项（`*.pdb`/`*.gitkeep`/`codemap.md`）、关键文件内容（`LoadFolders.xml` 无门控、DLL 版本/flavor/身份）、**包内 `version.txt` 三行与预期一致**（`SqueakyRatkin <版本>`/`build=<flavor>`/`commit=<sha>`）。
+   - Dev / Release 构建 0 errors；
+   - pack 后**包内容逐项核验**：文件数（含 `version.txt`）、排除项（`*.pdb`/`*.gitkeep`；US 无 `codemap.md`、无 OGG 镜像、无 `Extras/`）、关键文件内容（`LoadFolders.xml` 无门控、DLL 版本/flavor/身份、`About.xml <modVersion>` == csproj `<Version>`）、**包内 `version.txt` 三行与预期一致**（`UniversalSqueaker <版本>`/`build=<flavor>`/`commit=<sha>`）。
 
 ## 阶段 1 · PR 与 merge
 
@@ -65,7 +66,7 @@
 | CI | Release workflow run <id> success |
 | 资产 | <zip 名>（<字节数> B） |
 | DLL SHA256 | <hash> |
-| 包内容 | 文件数；0 PDB；0 PublishedFileId.txt；0 codemap.md；关键文件内容核验；OGG 镜像校验；包内 version.txt（版本/flavor/commit） |
+| 包内容 | 文件数；0 PDB；0 PublishedFileId.txt；无 codemap/OGG 镜像（US 不含内置音频）；关键文件内容核验；包内 version.txt（版本/flavor/commit） |
 | 隐私审计 | 完整树扫描 0 命中；dev↔main 树一致 |
 
 ## Steam staging / 发布观察
