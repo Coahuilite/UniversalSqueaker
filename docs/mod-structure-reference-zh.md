@@ -26,23 +26,30 @@ UniversalSqueaker/
 |- LoadFolders.xml                  # / + 1.6 无条件加载
 |- 1.6/
 |  |- Assemblies/                   # 构建产物（DLL，gitignored；仓库内仅 .gitkeep）
-|  |- Defs/                         # US_ 前缀 Def（后续）
-|  |- Patches/                      # US 事件/装配 patch（后续）
+|  |- Defs/                         # 内容包注入 US_ Defs（本体无种子 Def；保留 .gitkeep）
+|  |- Patches/                      # 生产 patch 在 C#；本目录无种族硬编码 patch（.gitkeep）
 |  `- Languages/
-|     |- English/Keyed/
-|     `- ChineseSimplified/Keyed/
-|- Source/UniversalSqueaker/        # 未来主程序集（net472）
-|- Kernel/                          # 零 Verse 内核编译集（已迁移，待去 SR 化）
-|- Pure/                            # 执行层纯逻辑（已迁移）
-|- tools/                           # harness（KernelCharacterization 等）
-|- fixtures/                        # 语料与期望文件（byte-stable）
+|     |- English/Keyed/UniversalSqueaker.xml
+|     `- ChineseSimplified/Keyed/UniversalSqueaker.xml
+|- Source/UniversalSqueaker/        # 主程序集（net472，0.1.0-dev）
+|  |- Kernel/                       # 零 Verse 内核编译集（去 SR 化）
+|  |- Pure/                         # 漏斗纯逻辑（零 Verse）
+|  |- Catalog/ Fallback/ Models/ Settings/ Labels/ Logging/ Patches/ Runtime/ Diagnostics/ UI/
+|- tools/
+|  |- UniversalSqueakerKernelTests/     # 纯度门 + 单测 + US 0.1.0 语料（fixtures 在工具内）
+|  |- UniversalSqueakerConfigCopyTests/ # fallback profile Config 副本生命周期门
+|  `- UniversalSqueakerLogTests/        # usdiag 日志协议 v1/v2 门
 |- scripts/                         # build/pack/verify（与 SR 同流程，后续迁移）
 |- .github/workflows/               # CI/Release（与 SR 同流程，后续迁移）
 |- docs/
 |  |- mod-structure-reference-zh.md # 本文件
-|  `- release-runbook-zh.md         # 与 SR 同一套发布流程（已迁移）
-|- AGENTS.md / MEMORY.md / TODO.md / HANDOFF.md / README.md
+|  |- release-runbook-zh.md         # 与 SR 同一套发布流程（首次发布前 US 文案适配）
+|  |- ui-componentization-evaluation-zh.md
+|  `- ui-phase3-implementation-notes-zh.md
+|- AGENTS.md / MEMORY.md / TODO.md / OBLIVIONIS.md / HANDOFF.md / README.md
 ```
+
+> 重建后 `Kernel/`、`Pure/`、`fixtures/`、`sr_reference/`、旧 `tools/KernelCharacterization/` 已不在工作树中（用后即删，git 历史可查，见 `OBLIVIONIS.md`）。
 
 与 SR 的差异红线：
 
@@ -56,11 +63,11 @@ UniversalSqueaker/
 1. 根目录：`About/`、`LoadFolders.xml`、`1.6/`、`Source/`、`docs/`、`scripts/`、`tools/`、`.github/workflows/`。
 2. `About/About.xml`：packageId 固定 `coahuilite.universalsqueaker`；modVersion 与 csproj `<Version>` 一致（当前占位 0.1.0）；显示名/许可待定。
 3. `LoadFolders.xml`：`<li>/</li>` 与 `<li>1.6</li>`；**不得**加 Ratkin/任何内容包的 `IfModActive` 门控。
-4. `1.6/`：四个子目录 `Assemblies/Defs/Patches/Languages`，除 Assemblies 构建态外都保留 `.gitkeep` 占位。
+4. `1.6/`：四个子目录 `Assemblies/Defs/Patches/Languages`；Languages 已有 Keyed XML，其余保留 `.gitkeep` 占位。
 5. `.gitignore`：`dist/`、`About/PublishedFileId.txt`、`*.dll`、`*.pdb`、`bin/`、`obj/`、`.slim/`。
 6. 发布流程：直接沿用 `docs/release-runbook-zh.md`；脚本与 CI 从 SR 仓库迁移时按同一套 stage/pack 纪律执行。
 
 ## 下一步使用
 
-- 建立 `Source/UniversalSqueaker/UniversalSqueaker.csproj` 时，把 `1.6/Assemblies/.gitkeep` 替换为构建输出路径。
+- `Source/UniversalSqueaker/UniversalSqueaker.csproj` 已建立（Version 0.1.0-dev 主源）；`1.6/Assemblies/` 为构建输出路径。
 - 首次 `About.xml` 定稿前，维护者确认 Workshop 显示名与许可，然后同步 `docs/release-runbook-zh.md` 与页面文案。
