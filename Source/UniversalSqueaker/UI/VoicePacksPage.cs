@@ -19,8 +19,21 @@ public static class VoicePacksPage
     private static readonly VoicePacksPageState State = new();
     private static bool sessionActive;
 
+    /// <summary>
+    /// Phase A integration switch. When true the page renders through FerriteLib.UiKit
+    /// (<see cref="FerriteVoicePacksPage"/>) instead of the legacy componentized path below.
+    /// </summary>
+    public static bool UseFerriteUi = false;
+
     public static void BeginSession()
     {
+        if (UseFerriteUi)
+        {
+            UsWidgetRegistrar.EnsureRegistered();
+            FerriteVoicePacksPage.BeginSession();
+            return;
+        }
+
         if (!sessionActive) State.Reset();
         sessionActive = true;
     }
@@ -29,11 +42,20 @@ public static class VoicePacksPage
     {
         State.Reset();
         sessionActive = false;
+        FerriteVoicePacksPage.EndSession();
     }
 
     public static void Draw(Rect rect)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
+
+        if (UseFerriteUi)
+        {
+            UsWidgetRegistrar.EnsureRegistered();
+            FerriteVoicePacksPage.Draw(rect);
+            return;
+        }
+
         try
         {
             UniversalSqueakerSettings settings = UniversalSqueakerMod.Settings;

@@ -20,6 +20,7 @@
 - Data surface: `UniversalSqueakerFallbackProfileDef` injects fallback profiles from DefDatabase (no shipped seed Defs; empty = valid); `1.6/Languages/*/Keyed/UniversalSqueaker.xml` committed.
 - Tool gates: `tools/UniversalSqueakerConfigCopyTests/` and `tools/UniversalSqueakerLogTests/` both pass; they link Source kernel/fallback/logging files.
 - VoicePack authoring skill: `.github/skills/us-voicepack-authoring/SKILL.md` (migrated from SR; canonical `US_` authoring only — legacy `SR_` packs need no author action because the bridge auto-loads, defaults to Ratkin, auto-attaches the comp, and marks them `Legacy SR`).
+- Phase A FerriteLib UiKit (2026-08-24): standalone neutral DLL `Source/FerriteLib.UiKit/` (assembly/DLL `FerriteLib.UiKit`, packageId/XML scope `coahuilite.ferritelib.uikit`, C# namespace `FerriteLib.UiKit`), core two-pass XML layout engine + core widgets, tests at `tools/FerriteLib.UiKit.Tests/`. US integration is behind `VoicePacksPage.UseFerriteUi` (default false) with embedded `Source/UniversalSqueaker/UI/Layout.xml`; `scripts/verify-local.ps1` now includes UiKit tests/builds/neutrality grep and both-DLL presence. Phase B (split into private dependency mod) is deferred.
 - SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff

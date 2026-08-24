@@ -13,13 +13,21 @@ $ErrorActionPreference = "Stop"
 #   2   config-copy lifecycle characterization
 #   3   log protocol characterization, Release
 #   4   log protocol characterization, Dev (US_DEV)
-#   5   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
-#   6   main assembly Release build (TreatWarningsAsErrors)
+#   5   FerriteLib.UiKit tests, Release
+#   6   FerriteLib.UiKit Dev build (TreatWarningsAsErrors)
+#   7   FerriteLib.UiKit Release build (TreatWarningsAsErrors)
+#   8   FerriteLib.UiKit neutrality grep (no US/SR product literals)
+#   9   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
+#  10   main assembly Release build (TreatWarningsAsErrors)
+#  11   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
+#  12   UI layout manifest XML well-formedness
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
+$uikitProjectFile = Join-Path $root 'Source\FerriteLib.UiKit\FerriteLib.UiKit.csproj'
+$uikitTestsProject = Join-Path $root 'tools\FerriteLib.UiKit.Tests\FerriteLib.UiKit.Tests.csproj'
 $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
 $buildExtraArgs = @()
 if ($NoRestore) { $buildExtraArgs += '--no-restore' }
@@ -29,12 +37,15 @@ function Invoke-Check {
 
     Write-Host -NoNewline "[run] $Name ... "
     $previousEap = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try { & $Action *> $tempLog } finally { $ErrorActionPreference = $previousEap }
+    $ErrorActionPreference = 'Stop'
+    $failed = $false
+    try { & $Action *> $tempLog } catch { $failed = $true } finally { $ErrorActionPreference = $previousEap }
     $code = $LASTEXITCODE
-    if ($code -ne 0) {
+    if ($failed -or $code -ne 0) {
         Write-Host 'FAIL'
-        Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
+        if (Test-Path -LiteralPath $tempLog) {
+            Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
+        }
         Write-Host "  retry: $Retry"
         Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
         exit 1
@@ -58,6 +69,33 @@ Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     'dotnet run --project tools/UniversalSqueakerLogTests -c Dev' `
     { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
+Invoke-Check 'FerriteLib.UiKit.Tests Release' `
+    'dotnet run --project tools/FerriteLib.UiKit.Tests -c Release' `
+    { dotnet run --project $uikitTestsProject -c Release }
+
+Invoke-Check 'FerriteLib.UiKit Dev build (warnings as errors)' `
+    'dotnet build Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Dev' `
+    { dotnet build $uikitProjectFile -c Dev @buildExtraArgs }
+
+Invoke-Check 'FerriteLib.UiKit Release build (warnings as errors)' `
+    'dotnet build Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release' `
+    { dotnet build $uikitProjectFile -c Release @buildExtraArgs }
+
+Invoke-Check 'FerriteLib.UiKit neutrality grep (no US/SR product literals)' `
+    'dotnet run --project tools/FerriteLib.UiKit.Tests -c Release' `
+    {
+        $uikitSrc = Join-Path $root 'Source\FerriteLib.UiKit'
+        $uikitTests = Join-Path $root 'tools\FerriteLib.UiKit.Tests'
+        $pattern = 'UniversalSqueaker|SqueakyRatkin|Ratkin|Kiiro|SR_|US_'
+        $hits = Get-ChildItem -LiteralPath $uikitSrc, $uikitTests -Recurse -File |
+            Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' -and $_.Name -match '\.(cs|csproj|xml|md|json|props|targets|sln|txt)$' } |
+            Select-String -Pattern $pattern -CaseSensitive
+        if ($hits) {
+            $first = $hits | Select-Object -First 5 | ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
+            throw "Neutrality violation(s):`n$($first -join "`n")"
+        }
+    }
+
 Invoke-Check 'main assembly Dev build (US_DEV, warnings as errors)' `
     'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev' `
     { dotnet build $projectFile -c Dev @buildExtraArgs }
@@ -65,6 +103,28 @@ Invoke-Check 'main assembly Dev build (US_DEV, warnings as errors)' `
 Invoke-Check 'main assembly Release build (warnings as errors)' `
     'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
     { dotnet build $projectFile -c Release @buildExtraArgs }
+
+Invoke-Check 'built assemblies present (FerriteLib.UiKit.dll + UniversalSqueaker.dll)' `
+    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
+    {
+        $assembliesDir = Join-Path $root '1.6\Assemblies'
+        if (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'FerriteLib.UiKit.dll') -PathType Leaf)) {
+            throw "Missing built assembly: $assembliesDir\FerriteLib.UiKit.dll"
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'UniversalSqueaker.dll') -PathType Leaf)) {
+            throw "Missing built assembly: $assembliesDir\UniversalSqueaker.dll"
+        }
+    }
+
+Invoke-Check 'UI layout manifest XML well-formedness' `
+    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
+    {
+        $layoutPath = Join-Path $root 'Source\UniversalSqueaker\UI\Layout.xml'
+        if (-not (Test-Path -LiteralPath $layoutPath -PathType Leaf)) {
+            throw "Missing UI layout manifest: $layoutPath"
+        }
+        $null = [xml](Get-Content -LiteralPath $layoutPath -Raw)
+    }
 
 Write-Host '[verify] all checks passed.'
 

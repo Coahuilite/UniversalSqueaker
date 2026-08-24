@@ -18,6 +18,7 @@ $aboutSource = Join-Path $root 'About'
 $loadFoldersSource = Join-Path $root 'LoadFolders.xml'
 $versionedSource = Join-Path $root '1.6'
 $assemblyPath = Join-Path $versionedSource 'Assemblies\UniversalSqueaker.dll'
+$uikitAssemblyPath = Join-Path $versionedSource 'Assemblies\FerriteLib.UiKit.dll'
 
 # US red lines: no Extras content packs and no built-in audio mirror may ever enter a package.
 if (Test-Path -LiteralPath (Join-Path $root 'Extras') -PathType Container) { throw "US must not ship Extras content packs: $root\Extras" }
@@ -36,6 +37,7 @@ if (-not [string]::IsNullOrWhiteSpace($VersionLabel)) {
     }
 }
 if (-not (Test-Path -LiteralPath $assemblyPath -PathType Leaf)) { throw "Missing built assembly: $assemblyPath. Build the desired flavor before staging." }
+if (-not (Test-Path -LiteralPath $uikitAssemblyPath -PathType Leaf)) { throw "Missing built assembly: $uikitAssemblyPath. Build FerriteLib.UiKit before staging." }
 
 if (Test-Path -LiteralPath $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force }
 $null = New-Item -ItemType Directory -Path $stageDir -Force

@@ -5,11 +5,8 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <AssemblyName>UniversalSqueaker</AssemblyName>
-    <RootNamespace>UniversalSqueaker</RootNamespace>
-    <Version>0.1.0-dev</Version>
-    <!-- VersionPrefix=$(Version) 会产生非法 AssemblyVersion "0.1.0-dev.0"；
-         此处拆分为纯数字前缀 + dev 后缀，程序集版本保持 0.1.0.0。 -->
+    <AssemblyName>FerriteLib.UiKit</AssemblyName>
+    <RootNamespace>FerriteLib.UiKit</RootNamespace>
     <VersionPrefix>0.1.0</VersionPrefix>
     <VersionSuffix>dev</VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
@@ -27,24 +24,12 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
-    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+    <DefineConstants>$(DefineConstants);FER_DEV</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- 与本地 NuGet 缓存/SR 参考项目解析结果一致的固定版本；离线可还原。 -->
+    <!-- 与 US 主程序集相同的固定 RimWorld 引用集；库只依赖 Verse/UnityEngine 的 IMGUI 类型。 -->
     <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
-    <PackageReference Include="Lib.Harmony" Version="2.4.2" ExcludeAssets="runtime" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Phase A UiKit integration: US 主程序集引用中性通用 UI 库。 -->
-    <ProjectReference Include="..\FerriteLib.UiKit\FerriteLib.UiKit.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- 新 Ferrite 渲染路径的权威页面清单（嵌入资源，运行时经 Assembly.GetManifestResourceStream 读取）。 -->
-    <EmbeddedResource Include="UI\Layout.xml" />
-    <None Remove="UI\Layout.xml" />
   </ItemGroup>
 
 </Project>

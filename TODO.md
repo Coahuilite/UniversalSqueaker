@@ -62,11 +62,12 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 Spec + development outline: `docs/ui-shared-library-design-zh.md` (packageId `coahuilite.ferritelib.uikit`; C# `FerriteLib.UiKit`; neutral core).
 
 - [x] Maintainer chose final name: `coahuilite.ferritelib.uikit` / `FerriteLib.UiKit`.
-- [ ] Create `Source/FerriteLib.UiKit/` project + core interfaces (`IWidget`, `WidgetRegistry`, `WidgetContext`, `UiCommand`, `ITextMetrics`, `UiPageState`).
-- [ ] Implement `LayoutManifest` + `LayoutEngine` two-pass Measure/Draw.
-- [ ] Migrate baseline components (`StatusBanner`, `Footer`, `ModeCard`) into `core` widgets.
-- [ ] Add `tools/FerriteLib.UiKit.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
-- [ ] Wire US settings page to the new engine (old UI may coexist briefly).
+- [x] Create `Source/FerriteLib.UiKit/` project + core interfaces (`IWidget`, `WidgetRegistry`, `WidgetContext`, `UiCommand`, `ITextMetrics`, `UiPageState`).
+- [x] Implement `LayoutManifest` + `LayoutEngine` two-pass Measure/Draw.
+- [x] Migrate baseline components (`StatusBanner`, `Footer`, `ModeCard`) into `core` widgets.
+- [x] Add `tools/FerriteLib.UiKit.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
+- [x] Wire US settings page to the new engine (old UI may coexist briefly) via `VoicePacksPage.UseFerriteUi` (default false) + embedded `UI/Layout.xml`.
+- [ ] Stabilize the Ferrite UI path in-game (player/maintainer step; enable `UseFerriteUi`).
 - [ ] After stabilization: split into private dependency mod `coahuilite.ferritelib.uikit` (phase B).
 
 ## Pending decisions / follow-ups
