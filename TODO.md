@@ -67,7 +67,7 @@ Spec + development outline: `docs/ui-shared-library-design-zh.md` (packageId `co
 - [x] Migrate baseline components (`StatusBanner`, `Footer`, `ModeCard`) into `core` widgets.
 - [x] Add `tools/FerriteLib.UiKit.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
 - [x] Wire US settings page to the new engine (old UI may coexist briefly) via `VoicePacksPage.UseFerriteUi` (default false) + embedded `UI/Layout.xml`.
-- [ ] Stabilize the Ferrite UI path in-game (player/maintainer step; enable `UseFerriteUi`).
+- [ ] Stabilize the Ferrite UI path in-game (player/maintainer step; `UseFerriteUi` is now `true` by default).
 - [ ] After stabilization: split into private dependency mod `coahuilite.ferritelib.uikit` (phase B).
 
 ## Old UI retirement (evaluated 2026-08-24)
@@ -75,9 +75,9 @@ Spec + development outline: `docs/ui-shared-library-design-zh.md` (packageId `co
 Minimum visible feature set documented in `docs/ui-audio-pack-management-minimum-zh.md`.
 
 - [x] Evaluate minimum visible features for audio pack management.
-- [ ] Ferrite path: add Xenotype domain list entry (reuse `VoicePacksViewState.XenotypeDomains`; emit `SelectDomain` Xenotype).
+- [x] Ferrite path: add Xenotype domain list entry (reuse `VoicePacksViewState.XenotypeDomains`; emit `SelectDomain` Xenotype).
 - [ ] In-game matrix incl. Race + Xenotype domain switch (extend `docs/ui-phase3-implementation-notes-zh.md` §4).
-- [ ] Flip `VoicePacksPage.UseFerriteUi` default to `true` after matrix passes; keep old branch one release as fallback.
+- [x] Flip `VoicePacksPage.UseFerriteUi` default to `true`; old branch retained as fallback (in-game matrix confirmation still required before deleting old UI).
 - [ ] After stable release: delete old UI branch and obsolete legacy components; update docs/TODO.
 
 ## Pending decisions / follow-ups

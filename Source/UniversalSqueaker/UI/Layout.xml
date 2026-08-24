@@ -7,6 +7,7 @@
           Title2="Fallback" Description2="Use built-in fallback profiles when no pack is enabled." Value2="Fallback"
           Title3="Remix" Description3="Mix enabled VoicePacks within each selected domain." Value3="Remix" />
   <Widget Id="race-layer" Kind="us/race-layer" />
+  <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" />
   <Widget Id="checklist" Kind="us/voice-pack-checklist" />
   <Widget Id="footer" Kind="chrome/footer" Text="Changes apply immediately. Settings are saved automatically when this window closes." />
 </UiPage>

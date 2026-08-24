@@ -23,7 +23,7 @@ public static class VoicePacksPage
     /// Phase A integration switch. When true the page renders through FerriteLib.UiKit
     /// (<see cref="FerriteVoicePacksPage"/>) instead of the legacy componentized path below.
     /// </summary>
-    public static bool UseFerriteUi = false;
+    public static bool UseFerriteUi = true;
 
     public static void BeginSession()
     {

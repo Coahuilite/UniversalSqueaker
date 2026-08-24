@@ -22,6 +22,7 @@ public static class UsWidgetRegistrar
             if (registered) return;
 
             WidgetRegistry.Register(Scope, RaceLayerWidget.Kind, () => new RaceLayerWidget());
+            WidgetRegistry.Register(Scope, XenotypeLayerWidget.Kind, () => new XenotypeLayerWidget());
             WidgetRegistry.Register(Scope, VoicePackChecklistWidget.Kind, () => new VoicePackChecklistWidget());
             WidgetRegistry.Register(Scope, PageTitleWidget.Kind, () => new PageTitleWidget());
 

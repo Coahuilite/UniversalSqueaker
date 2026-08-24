@@ -67,6 +67,7 @@ public static class FerriteVoicePacksPage
                 ["BannerText"] = view.BannerText,
                 ["Mode"] = view.Mode.ToString(),
                 ["Races"] = view.Races,
+                ["XenotypeDomains"] = view.XenotypeDomains,
                 ["SelectedDomain"] = view.SelectedDomain,
                 ["EmptyText"] = EmptyDomainText,
                 ["HelpText"] = HelpText
