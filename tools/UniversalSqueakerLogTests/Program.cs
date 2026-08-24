@@ -204,6 +204,7 @@ internal static class Program
         SqueakLog.AudioRouteSelected("Move", "RaceA", null, "1", "US_Move_1", "vanilla", null, pawnControlled: true, pawnFaction: "PlayerColony");
         // 0.3.2 egg/log 重排：audio.route.selected 承载 egg/pawn/suppressed/faction/pawn_ctrl 完整明细。
         SqueakLog.AudioRouteSelected("Joy", "RaceA", null, "888", "US_EggTest_Select_Joy", "race_pack", "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", true, 3, "Mousy", "Thing_Race888", false, "Pirate");
+        SqueakLog.AudioVanillaFallback("Move", "RaceA", null, "99", "US_Move_Vanilla", "vanilla", null, false, "Mousy", "Thing_Race99");
         SqueakLog.FallbackProfileStoreFailed("RaceA", new Exception("profile write failed"));
         SqueakLog.HookMentalFitUnavailable();
         SqueakLog.LegacyVoicePackAdmitted("coahuilite.squeakyratkin:SR_OldPack", "Ratkin");
@@ -216,6 +217,7 @@ internal static class Program
             V2("info", "dev_only", "audio.route.selected", "Audio route: coahuilite.universalsqueaker.external_action -> US_Baseliner_Select (xenotype_pack, nonplayer).", action: "coahuilite.universalsqueaker.external_action", target: "777", pack: "coahuilite.universalsqueaker:US_Baseliner", race: "RaceA", xenotype: "Baseliner", trailing: " sound=US_Baseliner_Select tier=xenotype_pack egg=false suppressed_detail=0 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("info", "dev_only", "audio.route.selected", "Audio route: Move -> US_Move_1 (vanilla).", action: "Move", target: "1", pack: "-", race: "RaceA", trailing: " sound=US_Move_1 tier=vanilla egg=false suppressed_detail=0 pawn_faction=PlayerColony pawn_ctrl=player"),
             V2("info", "dev_only", "audio.route.selected", "Audio route: Joy -> US_EggTest_Select_Joy (race_pack, egg, nonplayer).", action: "Joy", target: "888", pack: "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", race: "RaceA", trailing: " sound=US_EggTest_Select_Joy tier=race_pack egg=true suppressed_detail=3 pawn=Mousy pawn_id=Thing_Race888 pawn_faction=Pirate pawn_ctrl=nonplayer"),
+            V2("warning", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99"),
             V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20write%20failed"),
             V2("error", "daily", "hook.mental_fit.unavailable", "Baby-fits squeak hook is unavailable."),
             V2("info", "daily", "voicepack.pack.legacy_admitted", "Legacy SR VoicePack admitted: coahuilite.squeakyratkin:SR_OldPack (race Ratkin).", pack: "coahuilite.squeakyratkin:SR_OldPack", race: "Ratkin", trailing: " legacy_type=SqueakyRatkin.SqueakVoicePackDef"),
@@ -294,7 +296,7 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(7, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(8, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)

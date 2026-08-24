@@ -1,21 +1,13 @@
-using System;
-using System.Collections.Generic;
-using UnityEngine;
 using Verse;
 
 namespace UniversalSqueaker;
 
 /// <summary>
-/// Minimal production-facing debug surface. US 0.1.x has no statistics, overlay, mote, camera indicator,
-/// or audio-path diagnostic classes; only the successful-dispatch log wiring survives so the usdiag
-/// routing record keeps working. Business code must not reference this class for diagnostics UI.
+/// Minimal production-facing debug surface. Every successful audio dispatch emits one dev-level route
+/// record; vanilla fallback dispatches are warning-level. No statistical/UI diagnostics are retained.
 /// </summary>
 public static class SqueakDebug
 {
-    private sealed class AudioSample { public float nextDetail; public int dispatched; public int suppressed; }
-    private static readonly Dictionary<SqueakAction, AudioSample> audioSamples = new();
-    private static float nextSummary;
-
     /// <summary>usdiag v2 tier vocabulary: xenotype_pack / race_pack / vanilla / "-" for none.
     /// PackFallback folds into RacePack and BuiltInFallback into Vanilla.</summary>
     private static string ProtocolTier(SqueakSoundSource source) => source switch
@@ -31,40 +23,53 @@ public static class SqueakDebug
         NotifyAudioDispatched(pawn, action, choice);
     }
 
-    /// <summary>Detailed logging is independent from any future visual diagnostics. One route record per
-    /// action per 5-second window; suppressed counts roll up into a 60-second summary.</summary>
+    /// <summary>Log MVP: one dev-level record per actual dispatch. Vanilla fallback is warning-level;
+    /// normal pack routing stays info-level. No rate limiting or suppression in this MVP.</summary>
     private static void NotifyAudioDispatched(Pawn pawn, SqueakAction action, SqueakSoundChoice choice)
     {
         if (!SqueakLog.EffectiveDevLogging) return;
         SoundDef? def = choice.Sound;
         if (def == null) return;
-        float now = Time.realtimeSinceStartup;
-        if (!audioSamples.TryGetValue(action, out AudioSample? sample)) { sample = new AudioSample(); audioSamples.Add(action, sample); }
-        sample.dispatched++;
-        if (now >= sample.nextDetail)
+
+        string actionKey = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
+        string race = pawn.def?.defName ?? "";
+        string? xenotype = pawn.genes?.Xenotype?.defName;
+        string target = pawn.thingIDNumber.ToString();
+        string pawnId = pawn.ThingID;
+        string? pawnFaction = pawn.Faction?.def?.defName ?? "-";
+        bool? pawnControlled = pawn.IsPlayerControlled;
+
+        if (choice.Source == SqueakSoundSource.Vanilla)
         {
-            SqueakLog.AudioRouteSelected(
-                UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(),
-                pawn.def?.defName ?? "",
-                pawn.genes?.Xenotype?.defName,
-                pawn.thingIDNumber.ToString(),
+            SqueakLog.AudioVanillaFallback(
+                actionKey,
+                race,
+                xenotype,
+                target,
                 def.defName,
-                ProtocolTier(choice.Source),
+                "vanilla",
                 choice.PoolStableKey,
                 choice.IsEgg,
-                sample.suppressed,
                 pawn.LabelShort,
-                pawn.ThingID,
-                pawn.IsPlayerControlled,
-                pawn.Faction?.def?.defName ?? "-");
-            sample.suppressed = 0;
-            sample.nextDetail = now + 5f;
+                pawnId,
+                pawnControlled,
+                pawnFaction);
+            return;
         }
-        else sample.suppressed++;
-        if (now < nextSummary) return;
-        int dispatched = 0, suppressed = 0;
-        foreach (AudioSample item in audioSamples.Values) { dispatched += item.dispatched; suppressed += item.suppressed; item.dispatched = 0; item.suppressed = 0; }
-        nextSummary = now + 60f;
-        SqueakLog.TriggerOutcomeSummary(dispatched, suppressed);
+
+        SqueakLog.AudioRouteSelected(
+            actionKey,
+            race,
+            xenotype,
+            target,
+            def.defName,
+            ProtocolTier(choice.Source),
+            choice.PoolStableKey,
+            choice.IsEgg,
+            0,
+            pawn.LabelShort,
+            pawnId,
+            pawnControlled,
+            pawnFaction);
     }
 }

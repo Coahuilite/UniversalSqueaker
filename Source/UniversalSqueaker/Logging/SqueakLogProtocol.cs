@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, LegacyCompAutoAttached, LegacyCompAutoAttachFailed, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, FallbackProfileStoreFailed }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, LegacyCompAutoAttached, LegacyCompAutoAttachFailed, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed }
 
 internal readonly struct SqueakLogData
 {
@@ -77,6 +77,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.WorkbenchOpenFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "Animal Voice Workbench could not be opened."),
         SqueakLogEvent.SettingsOrigin => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Mod settings origin was recorded.", 2),
         SqueakLogEvent.AudioRouteSelected => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Audio route: <action> -> <sound> (<tier>[, egg]).", 2),
+        SqueakLogEvent.AudioVanillaFallback => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Audio dispatch fell back to vanilla: <action> -> <sound> (<tier>[, egg]).", 2),
         SqueakLogEvent.FallbackProfileStoreFailed => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Fallback profile store operation failed.", 2),
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
@@ -99,6 +100,14 @@ internal static class SqueakLogRegistry
             string tierText = string.IsNullOrEmpty(data.Tier) ? "-" : data.Tier!;
             string marker = (data.Egg == true ? ", egg" : "") + (data.PawnControlled == false ? ", nonplayer" : "");
             return "Audio route: " + actionText + " -> " + soundText + " (" + tierText + marker + ").";
+        }
+        if (e == SqueakLogEvent.AudioVanillaFallback)
+        {
+            string actionText = string.IsNullOrEmpty(data.Action) ? "-" : data.Action!;
+            string soundText = string.IsNullOrEmpty(data.Sound) ? "-" : data.Sound!;
+            string tierText = string.IsNullOrEmpty(data.Tier) ? "-" : data.Tier!;
+            string marker = (data.Egg == true ? ", egg" : "") + (data.PawnControlled == false ? ", nonplayer" : "");
+            return "Audio dispatch fell back to vanilla: " + actionText + " -> " + soundText + " (" + tierText + marker + ").";
         }
         return definition.Human;
     }
@@ -140,6 +149,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.WorkbenchOpenFailed => "devtools.workbench.open_failed",
         SqueakLogEvent.SettingsOrigin => "settings.origin",
         SqueakLogEvent.AudioRouteSelected => "audio.route.selected",
+        SqueakLogEvent.AudioVanillaFallback => "audio.dispatch.vanilla_fallback",
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 }
@@ -224,6 +234,13 @@ internal static class SqueakLogFormatter
                 Add(builder, "pawn_id", data.PawnId);
                 Add(builder, "pawn_faction", data.PawnFaction);
                 Add(builder, "pawn_ctrl", data.PawnControlled == null ? null : (data.PawnControlled.Value ? "player" : "nonplayer"));
+                break;
+            case SqueakLogEvent.AudioVanillaFallback:
+                Add(builder, "sound", data.Sound);
+                Add(builder, "tier", data.Tier);
+                Add(builder, "egg", data.Egg);
+                Add(builder, "pawn", data.PawnName);
+                Add(builder, "pawn_id", data.PawnId);
                 break;
             case SqueakLogEvent.LegacyVoicePackAdmitted:
                 Add(builder, "legacy_type", "SqueakyRatkin.SqueakVoicePackDef");

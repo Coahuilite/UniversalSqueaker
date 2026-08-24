@@ -80,6 +80,15 @@ Minimum visible feature set documented in `docs/ui-audio-pack-management-minimum
 - [x] Flip `VoicePacksPage.UseFerriteUi` default to `true`; old branch retained as fallback (in-game matrix confirmation still required before deleting old UI).
 - [ ] After stable release: delete old UI branch and obsolete legacy components; update docs/TODO.
 
+## Logging MVP (2026-08-24)
+
+- [x] Per-dispatch dev log: one `audio.route.selected` per successful dispatch (no 5s rate limit).
+- [x] Vanilla fallback dispatch: new warning event `audio.dispatch.vanilla_fallback` (yellow).
+- [x] Keep pack info key-only in log MVP (`pack=<packageId:defName>`; no label/author metadata yet).
+- [ ] Future: simplify SR-style assembled route line for human reading (current `usdiag` suffix is machine-heavy).
+- [ ] Future: optional pack label/scope/mod metadata in route logs (not in MVP).
+- [ ] Reserve mood/faction/controlled fields for later diagnostics.
+
 ## Pending decisions / follow-ups
 
 - [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).
