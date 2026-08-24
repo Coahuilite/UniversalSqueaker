@@ -45,7 +45,8 @@
 ## Session resume checkpoint (2026-08-24 — keep detailed, do not compress away)
 
 - Human maintainer is mid-testing and may compress the session; this section is the resume anchor. Read it together with `TODO.md`'s "Next session" section before doing anything else.
-- Latest commit chain (local only, no remote): `... 8c2f056 → 31fcf50 → 6bde39a → 8a65840 → b00b8bf → 5f3fd62 → bf9cf26 → 5ba8ce4`.
+- Latest commit chain (local only, no remote): `... 6bde39a → 8a65840 → b00b8bf → 5f3fd62 → bf9cf26 → 5ba8ce4 → bb55156 → ec4d49e → d6862e4 → 4a6a1ce`.
+  - `4a6a1ce`: FerriteLib UiKit Phase A (neutral library + tests + US integration behind `UseFerriteUi` + script gates; verify-local all green).
   - `6bde39a`: UI empty-catalog NRE fix.
   - `8a65840`: legacy bridge activation (thin `SqueakyRatkin.SqueakVoicePackDef`, SR_/US_ prefix contexts, `voicepack.pack.legacy_admitted`, UI `Legacy SR` tag + banner).
   - `b00b8bf`: legacy auto-attach default `CompProperties_Squeaker` to races declared by legacy packs (`voicepack.comp.legacy_auto_attached` / `legacy_auto_attach_failed`).
