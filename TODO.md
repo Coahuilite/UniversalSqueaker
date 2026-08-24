@@ -70,6 +70,16 @@ Spec + development outline: `docs/ui-shared-library-design-zh.md` (packageId `co
 - [ ] Stabilize the Ferrite UI path in-game (player/maintainer step; enable `UseFerriteUi`).
 - [ ] After stabilization: split into private dependency mod `coahuilite.ferritelib.uikit` (phase B).
 
+## Old UI retirement (evaluated 2026-08-24)
+
+Minimum visible feature set documented in `docs/ui-audio-pack-management-minimum-zh.md`.
+
+- [x] Evaluate minimum visible features for audio pack management.
+- [ ] Ferrite path: add Xenotype domain list entry (reuse `VoicePacksViewState.XenotypeDomains`; emit `SelectDomain` Xenotype).
+- [ ] In-game matrix incl. Race + Xenotype domain switch (extend `docs/ui-phase3-implementation-notes-zh.md` §4).
+- [ ] Flip `VoicePacksPage.UseFerriteUi` default to `true` after matrix passes; keep old branch one release as fallback.
+- [ ] After stable release: delete old UI branch and obsolete legacy components; update docs/TODO.
+
 ## Pending decisions / follow-ups
 
 - [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).
