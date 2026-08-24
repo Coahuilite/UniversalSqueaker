@@ -57,17 +57,17 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 - [ ] Send the new `Player.log` back for review before any further code changes.
 - [ ] After log confirmation: decide whether to also auto-attach comp for canonical packs (currently canonical packs must carry their own comp patch), then final release-prep items below.
 
-## UI shared library (accepted 2026-08-24) — phase A pending name
+## UI shared library (accepted 2026-08-24) — FerriteLib UiKit
 
-Spec: `docs/ui-shared-library-design-zh.md` (placeholder `Coahuilite.Ui`, neutral core).
+Spec + development outline: `docs/ui-shared-library-design-zh.md` (packageId `coahuilite.ferritelib.uikit`; C# `FerriteLib.UiKit`; neutral core).
 
-- [ ] Maintainer chooses the generic UI library final name before development starts.
-- [ ] Create `Source/Coahuilite.Ui/` (or final name) project + core interfaces (`IWidget`, `WidgetRegistry`, `WidgetContext`, `UiCommand`, `ITextMetrics`, `UiPageState`).
+- [x] Maintainer chose final name: `coahuilite.ferritelib.uikit` / `FerriteLib.UiKit`.
+- [ ] Create `Source/FerriteLib.UiKit/` project + core interfaces (`IWidget`, `WidgetRegistry`, `WidgetContext`, `UiCommand`, `ITextMetrics`, `UiPageState`).
 - [ ] Implement `LayoutManifest` + `LayoutEngine` two-pass Measure/Draw.
 - [ ] Migrate baseline components (`StatusBanner`, `Footer`, `ModeCard`) into `core` widgets.
+- [ ] Add `tools/FerriteLib.UiKit.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
 - [ ] Wire US settings page to the new engine (old UI may coexist briefly).
-- [ ] Add `tools/Coahuilite.Ui.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
-- [ ] After stabilization: split into private dependency mod `coahuilite.usui` (phase B).
+- [ ] After stabilization: split into private dependency mod `coahuilite.ferritelib.uikit` (phase B).
 
 ## Pending decisions / follow-ups
 
