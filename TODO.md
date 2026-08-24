@@ -57,6 +57,18 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 - [ ] Send the new `Player.log` back for review before any further code changes.
 - [ ] After log confirmation: decide whether to also auto-attach comp for canonical packs (currently canonical packs must carry their own comp patch), then final release-prep items below.
 
+## UI shared library (accepted 2026-08-24) — phase A pending name
+
+Spec: `docs/ui-shared-library-design-zh.md` (placeholder `Coahuilite.Ui`, neutral core).
+
+- [ ] Maintainer chooses the generic UI library final name before development starts.
+- [ ] Create `Source/Coahuilite.Ui/` (or final name) project + core interfaces (`IWidget`, `WidgetRegistry`, `WidgetContext`, `UiCommand`, `ITextMetrics`, `UiPageState`).
+- [ ] Implement `LayoutManifest` + `LayoutEngine` two-pass Measure/Draw.
+- [ ] Migrate baseline components (`StatusBanner`, `Footer`, `ModeCard`) into `core` widgets.
+- [ ] Wire US settings page to the new engine (old UI may coexist briefly).
+- [ ] Add `tools/Coahuilite.Ui.Tests/` + verify-local gates (both DLLs present, neutrality grep, registry/manifest consistency).
+- [ ] After stabilization: split into private dependency mod `coahuilite.usui` (phase B).
+
 ## Pending decisions / follow-ups
 
 - [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).
