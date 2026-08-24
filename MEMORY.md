@@ -45,8 +45,10 @@
 ## Session resume checkpoint (2026-08-24 — keep detailed, do not compress away)
 
 - Human maintainer is mid-testing and may compress the session; this section is the resume anchor. Read it together with `TODO.md`'s "Next session" section before doing anything else.
-- Latest commit chain (local only, no remote): `... 6bde39a → 8a65840 → b00b8bf → 5f3fd62 → bf9cf26 → 5ba8ce4 → bb55156 → ec4d49e → d6862e4 → 4a6a1ce`.
-  - `4a6a1ce`: FerriteLib UiKit Phase A (neutral library + tests + US integration behind `UseFerriteUi` + script gates; verify-local all green).
+- Latest commit chain (local only, no remote): `... bf9cf26 → 5ba8ce4 → bb55156 → ec4d49e → d6862e4 → 4a6a1ce → bb1c5c0 → 75dcb95 → a385698 → 4638807`.
+  - `4a6a1ce`: FerriteLib UiKit Phase A (neutral library + tests + US integration + script gates; verify-local all green).
+  - `a385698`: Ferrite UI MVP - Xenotype domain layer added, `UseFerriteUi=true` by default, old UI kept as fallback.
+  - `4638807`: logging MVP - one `audio.route.selected` per dispatch (no rate limit), new `audio.dispatch.vanilla_fallback` warning, pack key-only.
   - `6bde39a`: UI empty-catalog NRE fix.
   - `8a65840`: legacy bridge activation (thin `SqueakyRatkin.SqueakVoicePackDef`, SR_/US_ prefix contexts, `voicepack.pack.legacy_admitted`, UI `Legacy SR` tag + banner).
   - `b00b8bf`: legacy auto-attach default `CompProperties_Squeaker` to races declared by legacy packs (`voicepack.comp.legacy_auto_attached` / `legacy_auto_attach_failed`).
@@ -57,12 +59,14 @@
   - Canonical routing works: Ratkin (`US_ExampleTemplate_Race`), `Kiiro_Race` (`US_MeowingKiiroExp`), `NivarianRace_Pawn` (`US_NivarianExp`) all dispatched successfully; one summary line showed `dispatched=65`.
   - Legacy test pack (`coahuilite.squeakyratkin.legacyvoices:SR_ExampleTemplate_Race`) was admitted with race Ratkin, then enumerated twice and rejected with `duplicate_key count=2`. Root cause fixed in `bf9cf26`; retest pending.
   - Non-fatal warnings: local EXP packs lack `<downloadUrl>`/`<steamWorkshopUrl>` in About; harmless, clean up before any release.
-- Latest dev package: `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-bf9cf26.zip` (six gates green; contains everything up to `bf9cf26`). The skill/doc changes in `5ba8ce4` are under `.github/` and do not enter the mod package.
+- Latest dev package: `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-a385698-dirty.zip` (contains everything up to UI MVP `a385698`; log MVP `4638807` is NOT yet in this zip — repack before next in-game log test).
 - Test pack inventory under `dist/` (gitignored, NOT committed):
   - `Kiiro-US-EXP/` — canonical, `raceDefName=Kiiro_Race`, packageId `coahuilite.squeakyratkin.meowingkiiroexp` (kept for ModsConfig continuity), comp patch included.
   - `SqueakyRatkinExampleVoices/` — canonical US-converted, `raceDefName=Ratkin`, packageId kept `coahuilite.squeakyratkin.examplevoices`, comp patch included.
   - `SqueakyRatkinLegacyVoices/` — legacy test pack, packageId `coahuilite.squeakyratkin.legacyvoices`, keeps `SqueakyRatkin.SqueakVoicePackDef` + `SR_`; `<raceDefName>` deliberately removed to exercise the Ratkin default; has its own comp patch (auto-attach will skip it).
   - `Nivarian-US-EXP/` — canonical, `raceDefName=NivarianRace_Pawn`, packageId `coahuilite.nivarian-us-exp`, comp patch included.
+  - `KiiroSiamese-XenoRoutingTest-US-EXP/` — Kiiro_Race race uses Kiiro-US-EXP audio; `KiiroXenotype_Siamese` xenotype uses SqueakyRatkinExampleVoices audio; tests Race↔Xenotype routing.
+  - `RatkinOA-XenoRoutingTest-US-EXP/` — Ratkin race uses SqueakyRatkinExampleVoices audio; `OAGene_LowlandRatkin` xenotype (from `OARK.RatkinFaction.GeneExpand`) uses Kiiro-US-EXP audio; tests Race↔Xenotype routing.
 - Installation note for resume: copy `dist/dev/UniversalSqueaker` over the game's Mods `UniversalSqueaker` folder, then copy each desired pack folder from `dist/` into the game Mods folder. Do NOT enable the original SR mod together with the US legacy bridge (first-wins type conflict for `SqueakyRatkin.SqueakVoicePackDef`).
-- Expected log after retest with `bf9cf26`: exactly one `voicepack.pack.legacy_admitted` and one `voicepack.comp.legacy_auto_attached` per legacy race, zero `voicepack.pack.rejected`.
+- Expected log after next retest with `4638807`: per successful dispatch one `usdiag ... evt=audio.route.selected` (contains race/xenotype/pawn/pawn_id/sound/tier/pack key); vanilla fallback one `evt=audio.dispatch.vanilla_fallback` warning; legacy pack one `voicepack.pack.legacy_admitted` + one `voicepack.comp.legacy_auto_attached`; zero `voicepack.pack.rejected`.
 - Do not treat `dist/` as source of truth for anything; it is ignored build/test output. All product decisions live in `AGENTS.md`/`MEMORY.md`/`TODO.md` and the Source tree.
