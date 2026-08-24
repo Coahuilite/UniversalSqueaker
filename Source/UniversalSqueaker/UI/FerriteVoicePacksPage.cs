@@ -29,6 +29,9 @@ public static class FerriteVoicePacksPage
     private const string EmptyDomainText =
         "No VoicePack domains are available yet. Install a VoicePack that declares a raceDefName.";
 
+    /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
+    private const float ScrollbarWidth = 16f;
+
     private static readonly VoicePacksPageState State = new();
     private static bool sessionActive;
     private static KitLayoutEngine? engine;
@@ -83,14 +86,21 @@ public static class FerriteVoicePacksPage
             KitWidgetContext ctx = new(Source, viewState, VerseFerriteTextMetrics.Instance, uiState);
             KitLayoutEngine layoutEngine = GetEngine();
 
-            float contentHeight = layoutEngine.Measure(ctx, rect.width);
+            float layoutWidth = rect.width;
+            float contentHeight = layoutEngine.Measure(ctx, layoutWidth);
+            if (contentHeight > rect.height + 0.01f)
+            {
+                layoutWidth = Math.Max(1f, rect.width - ScrollbarWidth);
+                contentHeight = layoutEngine.Measure(ctx, layoutWidth);
+            }
+
             layoutEngine.ClampScroll(uiState, rect.height);
 
             var kitCommands = new List<KitUiCommand>();
-            Widgets.BeginScrollView(rect, ref uiState.ScrollPosition, new Rect(0f, 0f, rect.width, contentHeight));
+            Widgets.BeginScrollView(rect, ref uiState.ScrollPosition, new Rect(0f, 0f, layoutWidth, contentHeight));
             try
             {
-                layoutEngine.Draw(new Rect(0f, 0f, rect.width, contentHeight), ctx, kitCommands.Add);
+                layoutEngine.Draw(new Rect(0f, 0f, layoutWidth, contentHeight), ctx, kitCommands.Add);
             }
             finally
             {

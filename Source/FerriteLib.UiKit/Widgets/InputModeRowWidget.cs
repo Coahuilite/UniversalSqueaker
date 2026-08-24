@@ -32,7 +32,35 @@ public sealed class InputModeRowWidget : IWidget
 
     public float Measure(WidgetContext ctx)
     {
-        return 64f;
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+
+        var cards = new List<ModeCardData>();
+        for (int i = 1; i <= 3; i++)
+        {
+            string suffix = i.ToString(CultureInfo.InvariantCulture);
+            if (!HasAnyCardAttribute(suffix)) continue;
+
+            cards.Add(new ModeCardData(
+                Read("Title" + suffix),
+                Read("Description" + suffix),
+                Read("Value" + suffix)));
+        }
+
+        if (cards.Count == 0) return 64f;
+
+        float rowWidth = Math.Max(1f, ctx.ViewWidth);
+        float cardWidth = Math.Max(1f, (rowWidth - CardGap * (cards.Count - 1)) / cards.Count);
+        float maxHeight = 64f;
+        foreach (ModeCardData card in cards)
+        {
+            float textWidth = Math.Max(1f, cardWidth - 20f);
+            float titleHeight = ctx.Metrics.MeasureText(card.Title, UiFont.Small, textWidth);
+            float descHeight = ctx.Metrics.MeasureText(card.Description, UiFont.Tiny, textWidth);
+            float cardHeight = 7f + Math.Max(24f, titleHeight) + 6f + descHeight + 8f;
+            if (cardHeight > maxHeight) maxHeight = cardHeight;
+        }
+
+        return maxHeight;
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<UiCommand> emit)

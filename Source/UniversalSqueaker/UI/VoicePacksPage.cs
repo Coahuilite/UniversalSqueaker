@@ -25,6 +25,9 @@ public static class VoicePacksPage
     /// </summary>
     public static bool UseFerriteUi = true;
 
+    /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
+    private const float ScrollbarWidth = 16f;
+
     public static void BeginSession()
     {
         if (UseFerriteUi)
@@ -69,8 +72,15 @@ public static class VoicePacksPage
             List<UiCommand> commands = new();
             Action<UiCommand> emit = commands.Add;
             ITextMetrics metrics = VerseTextMetrics.Instance;
-            float contentHeight = VoicePacksLayout.MeasureContentHeight(rect.width, view, State, metrics);
-            Rect content = new(0f, 0f, rect.width, contentHeight);
+            float layoutWidth = rect.width;
+            float contentHeight = VoicePacksLayout.MeasureContentHeight(layoutWidth, view, State, metrics);
+            if (contentHeight > rect.height + 0.01f)
+            {
+                layoutWidth = Math.Max(1f, rect.width - ScrollbarWidth);
+                contentHeight = VoicePacksLayout.MeasureContentHeight(layoutWidth, view, State, metrics);
+            }
+
+            Rect content = new(0f, 0f, layoutWidth, contentHeight);
             Widgets.BeginScrollView(rect, ref State.ScrollPosition, content);
             try
             {

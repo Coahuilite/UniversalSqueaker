@@ -32,7 +32,14 @@ public sealed class InputModeCardWidget : IWidget
 
     public float Measure(WidgetContext ctx)
     {
-        return 64f;
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+
+        string title = Read(TitleAttribute);
+        string description = Read(DescriptionAttribute);
+        float textWidth = Math.Max(1f, ctx.ViewWidth - 20f);
+        float titleHeight = ctx.Metrics.MeasureText(title, UiFont.Small, textWidth);
+        float descHeight = ctx.Metrics.MeasureText(description, UiFont.Tiny, textWidth);
+        return Math.Max(64f, 7f + Math.Max(24f, titleHeight) + 6f + descHeight + 8f);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
