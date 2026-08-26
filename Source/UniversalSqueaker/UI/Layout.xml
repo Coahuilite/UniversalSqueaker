@@ -8,6 +8,7 @@
           Title3="Remix" Description3="Mix enabled VoicePacks within each selected domain." Value3="Remix"
           Title4="Disabled" Description4="Fully bypass the mod; play nothing." Value4="Disabled" />
   <Widget Id="basic-tuning" Kind="us/basic-tuning" />
+  <Widget Id="scope-tree" Kind="us/scope-tree" />
   <Widget Id="race-layer" Kind="us/race-layer" />
   <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" />
   <Widget Id="checklist" Kind="us/voice-pack-checklist" />

@@ -18,6 +18,7 @@ public sealed class VoicePacksViewState
     public IReadOnlyList<RaceLayerRowView> Races { get; }
     public IReadOnlyList<VoicePackDomainView> XenotypeDomains { get; }
     public VoicePackDomainView? SelectedDomain { get; }
+    public IReadOnlyList<ActionScopeRowView> ActionScopes { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -31,7 +32,8 @@ public sealed class VoicePacksViewState
         string bannerText,
         IReadOnlyList<RaceLayerRowView> races,
         IReadOnlyList<VoicePackDomainView> xenotypeDomains,
-        VoicePackDomainView? selectedDomain)
+        VoicePackDomainView? selectedDomain,
+        IReadOnlyList<ActionScopeRowView> actionScopes)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -45,6 +47,7 @@ public sealed class VoicePacksViewState
         Races = races ?? Array.Empty<RaceLayerRowView>();
         XenotypeDomains = xenotypeDomains ?? Array.Empty<VoicePackDomainView>();
         SelectedDomain = selectedDomain;
+        ActionScopes = actionScopes ?? Array.Empty<ActionScopeRowView>();
     }
 }
 
@@ -118,6 +121,25 @@ public readonly struct VoicePackDomainView
     }
 
     public string DomainIdentity => (Scope == SqueakVoicePackScope.Xenotype ? TargetDefName : RaceDefName) ?? "";
+}
+
+/// <summary>One built-in action's effective Global-layer scope, projected for the scope tree.
+/// Carries the built-in <see cref="SqueakAction"/> so the widget can skip scope states the action
+/// does not support (e.g. Draft/Undraft/Equip are ActiveCommand-only).</summary>
+public readonly struct ActionScopeRowView
+{
+    public readonly string ActionKey;
+    public readonly string DisplayName;
+    public readonly SqueakActionScope Scope;
+    public readonly SqueakAction Action;
+
+    public ActionScopeRowView(string actionKey, string displayName, SqueakActionScope scope, SqueakAction action)
+    {
+        ActionKey = actionKey ?? "";
+        DisplayName = displayName ?? actionKey ?? "";
+        Scope = scope;
+        Action = action;
+    }
 }
 
 /// <summary>One VoicePack row inside a domain checklist.</summary>

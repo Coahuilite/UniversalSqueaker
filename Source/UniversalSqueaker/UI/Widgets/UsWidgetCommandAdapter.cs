@@ -21,6 +21,7 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.ToggleEgg => "ToggleEgg",
                 UiCommandKind.SetDistancePreset => "SetDistancePreset",
                 UiCommandKind.ToggleBasic => "ToggleBasic",
+                UiCommandKind.SetActionTuningScope => "SetActionTuningScope",
                 _ => ""
             };
 

@@ -78,7 +78,8 @@ public static class FerriteVoicePacksPage
                 ["DistancePreset"] = view.DistancePreset.ToString(),
                 ["ScaleCooldownWithTimeSpeed"] = view.ScaleCooldownWithTimeSpeed,
                 ["ScaleFrequencyWithTalking"] = view.ScaleFrequencyWithTalking,
-                ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation
+                ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation,
+                ["ActionScopes"] = view.ActionScopes
             };
 
             KitUiPageState uiState = new()

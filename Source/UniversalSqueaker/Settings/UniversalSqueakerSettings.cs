@@ -185,6 +185,46 @@ public partial class UniversalSqueakerSettings : ModSettings
         else { record.enabled = scope != SqueakActionScope.Disabled; record.scope = scope; record.scopeWasLoaded = true; }
     }
 
+    /// <summary>写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。scope == null 表示清该层记录（移除）；走离散 resolver 重建 + 排队持久化。</summary>
+    internal void SetActionTuningScope(string actionKey, string raceDefName, string xenotypeDefName, SqueakActionScope? scope)
+    {
+        actionTuning ??= new List<ActionTuningRecord>();
+        // 按 IsValidLayer 语义归一：raceDefName 空 + xenotypeDefName 非空 = 非法，直接忽略。
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return;
+        if (string.IsNullOrEmpty(actionKey)) return;
+
+        ActionTuningRecord? record = null;
+        foreach (ActionTuningRecord candidate in actionTuning)
+            if (candidate != null
+                && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
+                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+                record = candidate;
+
+        if (scope == null)
+        {
+            if (record != null) actionTuning.Remove(record);
+        }
+        else
+        {
+            SqueakActionScope effective = scope.Value;
+            // 内置键按 SupportedScopes 归一（Draft/Undraft/Equip 仅支持 ActiveCommand），避免写入运行时永远不匹配的作用域。
+            if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
+                effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
+            if (record == null)
+            {
+                record = new ActionTuningRecord { actionKey = actionKey, raceDefName = raceDefName ?? "", xenotypeDefName = xenotypeDefName ?? "" };
+                actionTuning.Add(record);
+            }
+            record.hasScope = true;
+            record.scope = effective;
+        }
+        NotifyDiscreteResolverRuntimeChanged();
+        QueuePersistence();
+    }
+
     /// <summary>0.3.1 波 3c 彩蛋开关读取（决策 §2.4：默认关，路由输入随快照）。</summary>
     public bool AllowEasterEggSounds => allowEasterEggSounds;
 

@@ -41,7 +41,8 @@ public static class VoicePacksPageModel
 
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
         string banner = BuildBannerText(catalog, races, xenotypes, mode, biotech);
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected);
+        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -82,6 +83,16 @@ public static class VoicePacksPageModel
             case UiCommandKind.ToggleBasic:
                 settings.SetBasicTuning(command.Arg, command.Flag);
                 break;
+            case UiCommandKind.SetActionTuningScope:
+                if (!string.IsNullOrEmpty(command.Arg))
+                {
+                    string[] parts = command.Arg.Split('|');
+                    SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
+                        && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
+                    string actionKey = parts.Length > 1 ? parts[1] : "";
+                    settings.SetActionTuningScope(actionKey, "", "", scope);
+                }
+                break;
         }
     }
 
@@ -120,6 +131,29 @@ public static class VoicePacksPageModel
             .Where(key => domainKeys.Contains(key))
             .ToList();
         settings.SetVoicePackSelection(command.Scope, command.RaceDefName, command.TargetDefName, retained);
+    }
+
+    /// <summary>Project the 17 built-in actions' effective Global-layer scope (actionTuning layer 0 hasScope, else DefaultScope).</summary>
+    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings)
+    {
+        List<ActionScopeRowView> rows = new();
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+        {
+            if (!SqueakActionDefinitions.IsKnown(action)) continue;
+            string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
+            SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
+            foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
+            {
+                if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
+                if (string.Equals(record.actionKey, key, StringComparison.Ordinal) && record.hasScope)
+                {
+                    scope = record.scope;
+                    break;
+                }
+            }
+            rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), scope, action));
+        }
+        return rows;
     }
 
     private static List<VoicePackDomainView> BuildXenotypeDomains(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
