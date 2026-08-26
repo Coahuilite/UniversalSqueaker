@@ -18,6 +18,9 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.SelectDomain => "SelectDomain",
                 UiCommandKind.TogglePack => "TogglePack",
                 UiCommandKind.ForgetUnavailable => "ForgetUnavailable",
+                UiCommandKind.ToggleEgg => "ToggleEgg",
+                UiCommandKind.SetDistancePreset => "SetDistancePreset",
+                UiCommandKind.ToggleBasic => "ToggleBasic",
                 _ => ""
             };
 

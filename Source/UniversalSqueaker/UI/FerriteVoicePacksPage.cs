@@ -73,7 +73,12 @@ public static class FerriteVoicePacksPage
                 ["XenotypeDomains"] = view.XenotypeDomains,
                 ["SelectedDomain"] = view.SelectedDomain,
                 ["EmptyText"] = EmptyDomainText,
-                ["HelpText"] = HelpText
+                ["HelpText"] = HelpText,
+                ["AllowEasterEggs"] = view.AllowEasterEggs,
+                ["DistancePreset"] = view.DistancePreset.ToString(),
+                ["ScaleCooldownWithTimeSpeed"] = view.ScaleCooldownWithTimeSpeed,
+                ["ScaleFrequencyWithTalking"] = view.ScaleFrequencyWithTalking,
+                ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation
             };
 
             KitUiPageState uiState = new()

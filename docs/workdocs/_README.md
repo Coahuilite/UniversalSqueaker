@@ -9,6 +9,7 @@
 | s3-sustainer-external.md | S3 | commandcode / deepseek-v4-flash / max | ✅ 完成并提交 f492e6c |
 | s4-tuning-baseline-design.md | —（设计契约） | — | 已定稿 |
 | s4-tuning-backend.md | S4-Tuning-Backend | commandcode / deepseek-v4-flash / max | 已派发（后台） |
+| s4-orphan-sync.md | S4-Orphan-Sync | commandcode / deepseek-v4-flash / max | 已派发（后台，验证 widget 扩展模式） |
 | s4-plan.md | —（规划稿） | — | 待分块 |
 
 ## 通用门禁命令（worker 自行执行）
@@ -24,3 +25,4 @@
 3. worker 用 commandcode + deepseek/deepseek-v4-flash + max 思考强度。
 4. 主会话只做设计 + 验证 + 提交；worker 做编码。
 5. S4-Tuning-Backend 依赖设计契约 s4-tuning-baseline-design.md（已定稿）；S3 与 S4 都 build 同一 csproj，串行派发避免 obj 争用。
+6. S4-Orphan-Sync 先行（验证 Ferrite widget 扩展模式：新 widget + adapter 映射 + viewState 键 + 注册 + Layout.xml 行）；落地后作为 Scope-Tree/Debug-Panel 的模板，再并行派发其余三块。

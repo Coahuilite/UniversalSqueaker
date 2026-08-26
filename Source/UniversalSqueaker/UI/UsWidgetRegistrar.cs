@@ -25,6 +25,7 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, XenotypeLayerWidget.Kind, () => new XenotypeLayerWidget());
             WidgetRegistry.Register(Scope, VoicePackChecklistWidget.Kind, () => new VoicePackChecklistWidget());
             WidgetRegistry.Register(Scope, PageTitleWidget.Kind, () => new PageTitleWidget());
+            WidgetRegistry.Register(Scope, BasicTuningWidget.Kind, () => new BasicTuningWidget());
 
             registered = true;
         }
