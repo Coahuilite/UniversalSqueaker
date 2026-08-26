@@ -47,4 +47,12 @@ public static class SqueakActionPlanFactory
     public static SqueakActionPlan Unconfigured(SqueakAction action) => new(SqueakActionDefinitions.Get(action), false, SqueakTriggerMode.RandomOneShot, 300, .02f, false, SqueakCooldownClock.GameTicks);
 
     public static SqueakActionPlan FromLegacy(SqueakActionConfig config) => new(SqueakActionDefinitions.Get(config.action), true, config.mode, config.minIntervalTicks, config.probabilityPerCheck, config.ignoreGlobalCooldown, config.cooldownClock);
+
+    /// <summary>外部动作的运行时合成 plan：动作键是任意字符串，无内置 Definition。
+    /// .Action 传 <see cref="SqueakAction.Call"/> 作哨兵（外部动作不读 .Action），冷却/键一律走
+    /// plan.ActionKey，避免外部动作共享 Call 的冷却槽。</summary>
+    public static SqueakActionPlan External(string actionKey) => new(
+        new SqueakActionDefinition(SqueakAction.Call, actionKey, actionKey, "",
+            SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),
+        true, SqueakTriggerMode.RandomOneShot, 300, 0.02f, false, SqueakCooldownClock.GameTicks);
 }

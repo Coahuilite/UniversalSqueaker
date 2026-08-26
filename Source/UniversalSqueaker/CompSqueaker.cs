@@ -165,6 +165,9 @@ public class CompSqueaker : ThingComp
     private readonly Dictionary<string, bool> periodicStartupPhaseMaterialized = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> periodicStartupReadyTicks = new(StringComparer.Ordinal);
     private Map? registeredMap;
+    // S3：当前激活的 Sustainer 及其动作键（运行期状态，永远不 Scribe）。
+    private Sustainer? activeSustainer;
+    private string activeSustainerKey = "";
 
     private Pawn Pawn => (Pawn)parent;
     internal Pawn RegisteredPawn => Pawn;
@@ -227,6 +230,10 @@ public class CompSqueaker : ThingComp
     public override void CompTick()
     {
         SynchronizePeriodicMembership();
+        SqueakAction? action = CurrentAction;
+        // S3 每帧维护：先于任何早退执行，确保 pawn 离开地图/离屏/持续状态消失时 sustainer 被 End。
+        MaintainSustainer(action);
+
         if (!Pawn.Spawned || Pawn.MapHeld == null || Pawn.MapHeld != Find.CurrentMap)
         {
             return;
@@ -237,7 +244,6 @@ public class CompSqueaker : ThingComp
             return;
         }
 
-        SqueakAction? action = CurrentAction;
         if (action == null) return;
         if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
         {
@@ -245,7 +251,7 @@ public class CompSqueaker : ThingComp
             return;
         }
         string? actionKey = ActionKeyOf(action.Value);
-        if (actionKey == null || !actionPlans.TryGetValue(actionKey, out SqueakActionPlan plan)) return;
+        if (actionKey == null || !TryGetPlan(actionKey, out SqueakActionPlan plan)) return;
         if (!plan.Configured) return;
 
         switch (plan.Mode)
@@ -257,7 +263,10 @@ public class CompSqueaker : ThingComp
                 TryTrigger(plan, PeriodicInvocationFor(action.Value));
                 break;
             case SqueakTriggerMode.External:
+                break;
+            // S3：Sustained 模式在周期状态下持续发声；状态消失（Probe 不再返回该动作）→ End。
             case SqueakTriggerMode.Sustained:
+                MaintainSustained(actionKey);
                 break;
         }
     }
@@ -290,9 +299,20 @@ public class CompSqueaker : ThingComp
 
     public override void PostDestroy(DestroyMode mode, Map previousMap)
     {
+        EndActiveSustainer();
         SqueakPeriodicPopulation.Unregister(this, previousMap);
         registeredMap = null;
         base.PostDestroy(mode, previousMap);
+    }
+
+    private void EndActiveSustainer()
+    {
+        if (activeSustainer != null)
+        {
+            if (!activeSustainer.Ended) activeSustainer.End();
+            activeSustainer = null;
+            activeSustainerKey = "";
+        }
     }
     internal void NotifyPeriodicDespawn(Map map)
     {
@@ -328,7 +348,7 @@ public class CompSqueaker : ThingComp
             return;
         }
 
-        if (!actionPlans.TryGetValue(actionKey, out SqueakActionPlan plan)) return;
+        if (!TryGetPlan(actionKey, out SqueakActionPlan plan)) return;
         if (!plan.Configured) return;
 
         SqueakTriggerInvocation invocation = new(origin, source);
@@ -375,6 +395,21 @@ public class CompSqueaker : ThingComp
         ActionEntry? entry = ActionEntryRegistry.Current.Get(actionKey!);
         if (entry == null) return false;
         return entry.IsBuiltIn || ActionEntryRegistry.Current.AllowExternalActions;
+    }
+
+    /// <summary>动作 plan 解析：先查静态 actionPlans（内置 17 键）；未命中且为已注册的外部
+    /// ActionEntry 时按需合成外部 plan（动作门由 IsActionAllowedByKey 另行校验）。</summary>
+    private bool TryGetPlan(string actionKey, out SqueakActionPlan plan)
+    {
+        if (actionPlans.TryGetValue(actionKey, out plan)) return true;
+        ActionEntry? entry = ActionEntryRegistry.Current.Get(actionKey);
+        if (entry != null && !entry.IsBuiltIn)
+        {
+            plan = SqueakActionPlanFactory.External(actionKey);
+            return true;
+        }
+        plan = default;
+        return false;
     }
 
     private void TryTrigger(SqueakActionPlan plan, SqueakTriggerInvocation invocation)
@@ -454,7 +489,9 @@ public class CompSqueaker : ThingComp
                 return;
             }
 
-            SqueakPlaybackAttempt attempt = PlayOneShot(actionKey, CurrentMood, context, snapshot);
+            SqueakPlaybackAttempt attempt = plan.Mode == SqueakTriggerMode.Sustained
+                ? TryPlaySustained(actionKey, CurrentMood, context, snapshot)
+                : PlayOneShot(actionKey, CurrentMood, context, snapshot);
             ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
             SqueakTriggerOutcome outcome = attempt.Result switch
             {
@@ -487,9 +524,11 @@ public class CompSqueaker : ThingComp
     {
         // 0.3.1 波 4a：SqueakTimingModel 已提取为纯逻辑（Kernel/SqueakTimingModel.cs）；
         // 适配层在此把 Context/ActionDelta 投影为模型读取的两个标量乘数。
+        // 冷却键一律用 plan.ActionKey：内置 plan 的 ActionKey 即规范内置键；外部合成 plan 的
+        // .Action 是 Call 哨兵，若用 ActionKeyOf(.Action) 会让所有外部动作错误共享 Call 冷却槽。
         return SqueakTimingModel.Evaluate(new SqueakTimingInput(nowTick, nowRealtime, timeSpeedMultiplier, plan,
             context.OverallIntervalMultiplier, actionDelta.IntervalMultiplier,
-            lastTriggerTick.GetValueOrDefault(ActionKeyOf(plan.Definition.Action) ?? ""), lastTriggerRealTime.GetValueOrDefault(ActionKeyOf(plan.Definition.Action) ?? ""), lastAnyTriggerTick,
+            lastTriggerTick.GetValueOrDefault(plan.ActionKey), lastTriggerRealTime.GetValueOrDefault(plan.ActionKey), lastAnyTriggerTick,
             GlobalMinIntervalTicks, GlobalCooldownMultiplier, ScaleCooldownWithTimeSpeed, periodicScale));
     }
 
@@ -603,6 +642,109 @@ public class CompSqueaker : ThingComp
             def.PlayOneShot(info);
             SqueakDebug.NotifySqueakByKey(Pawn, actionKey, mood, choice);
             return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
+        }
+        catch (Exception ex)
+        {
+            string soundKey = def?.defName ?? actionKey;
+            SqueakLog.AudioDispatchFailed(actionKey, soundKey, ex);
+            return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Exception, choice);
+        }
+    }
+
+    /// <summary>CompTick 每帧维护当前 Sustainer：持续状态仍在（当前 probe 动作键与 sustainer 键一致）
+    /// 且 pawn 在当前地图、未摧毁、可视范围内则 Maintain()，否则 End() 并置空。
+    /// Sustainer 生命周期完全收敛在本组件（不强制走 TriggerBinding）。
+    /// 原版自身会结束长期未 Maintain 的 sustainer，此处同步清理自终结的残留状态。</summary>
+    private void MaintainSustainer(SqueakAction? currentAction)
+    {
+        Sustainer? sustainer = activeSustainer;
+        if (sustainer == null) return;
+        if (sustainer.Ended)
+        {
+            activeSustainer = null;
+            activeSustainerKey = "";
+            return;
+        }
+        string? currentKey = currentAction == null ? null : ActionKeyOf(currentAction.Value);
+        bool modeSustained = currentKey != null && TryGetPlan(currentKey, out SqueakActionPlan currentPlan)
+            && currentPlan.Mode == SqueakTriggerMode.Sustained;
+        bool valid = modeSustained && currentKey == activeSustainerKey
+            && Pawn.Spawned && !Pawn.Destroyed && Pawn.MapHeld != null
+            && Pawn.MapHeld == Find.CurrentMap
+            && Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(Pawn.Position);
+        if (valid)
+        {
+            sustainer.Maintain();
+        }
+        else
+        {
+            sustainer.End();
+            activeSustainer = null;
+            activeSustainerKey = "";
+        }
+    }
+
+    /// <summary>周期性 Sustained 状态驱动：状态仍持续时保证 sustainer 存在（缺则生成），
+    /// 状态消失（Probe 不再返回该动作）则 End。动作门/冷却/身份门由调用方（TryTrigger）负责。</summary>
+    private void MaintainSustained(string actionKey)
+    {
+        if (activeSustainer != null && !activeSustainer.Ended
+            && !string.IsNullOrEmpty(activeSustainerKey) && activeSustainerKey == actionKey)
+        {
+            return;
+        }
+        if (activeSustainer != null && !activeSustainer.Ended)
+        {
+            activeSustainer.End();
+        }
+        activeSustainer = null;
+        activeSustainerKey = "";
+
+        ResolvedSqueakContext context = GetRuntimeContext(out SqueakRuntimeSnapshot snapshot);
+        TryPlaySustained(actionKey, CurrentMood, context, snapshot);
+    }
+
+    /// <summary>Sustained 模式的发声入口：选中音为 sustained SoundDef → TrySpawnSustainer 存入
+    /// activeSustainer（按 pawn 位置、PerTick 维护）；非 sustain → 优雅降级为一次性 PlayOneShot。</summary>
+    private SqueakPlaybackAttempt TryPlaySustained(string actionKey, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
+    {
+        SqueakSoundChoice choice = SqueakSoundChoice.None;
+        SoundDef? def = null;
+        try
+        {
+            choice = snapshot.ChooseProductionSoundByKey(context, actionKey, Pawn);
+            def = choice.Sound;
+            if (def == null)
+            {
+                if (MissingSoundWarnings.Add(actionKey))
+                {
+                    SqueakLog.AudioNoSound(actionKey);
+                }
+                return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.NoEligibleSound, choice);
+            }
+
+            SqueakMoodMod mod = ResolveMoodMod(mood, context);
+            if (def.sustain)
+            {
+                if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(def, Pawn, out SoundInfo info, out _))
+                {
+                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
+                }
+                info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
+                info.volumeFactor = mod.volumeFactor;
+                Sustainer? sustainer = def.TrySpawnSustainer(SoundInfo.InMap(new TargetInfo(Pawn), MaintenanceType.PerTick));
+                if (sustainer == null)
+                {
+                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
+                }
+                activeSustainer = sustainer;
+                activeSustainerKey = actionKey;
+                SqueakDebug.NotifySqueakByKey(Pawn, actionKey, mood, choice);
+                return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
+            }
+
+            // 非 sustain 音在 Sustained 模式下优雅降级为一次性播放，不崩。
+            return PlayOneShot(actionKey, mood, context, snapshot);
         }
         catch (Exception ex)
         {

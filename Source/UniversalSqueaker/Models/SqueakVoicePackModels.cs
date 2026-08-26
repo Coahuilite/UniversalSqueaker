@@ -102,7 +102,8 @@ internal static class SqueakVoicePackValidator
             {
                 if (sound == null) { yield return name + " action " + entry.action + " contains a null SoundDef."; continue; }
                 if (string.IsNullOrWhiteSpace(sound.defName) || !sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " action " + entry.action + " references a SoundDef without " + prefix + " prefix.";
-                if (sound.sustain) yield return name + " action " + entry.action + " references sustained SoundDef " + sound.defName + "; production voice sounds must be one-shot.";
+                // S3：sustained SoundDef 允许进生产池（Sustained 模式经 Sustainer 播放，一次性模式在
+                // 运行时优雅降级为 PlayOneShot）；prefix/context/SubSounds 校验保持原样。
                 if (sound.context != SoundContext.MapOnly) yield return name + " action " + entry.action + " references SoundDef " + sound.defName + " with context other than MapOnly.";
                 if (sound.subSounds == null || sound.subSounds.Count == 0) { yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has no SubSounds."; continue; }
                 foreach (SubSoundDef subSound in sound.subSounds)

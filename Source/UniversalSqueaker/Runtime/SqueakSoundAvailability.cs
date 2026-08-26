@@ -130,7 +130,14 @@ public static class SqueakSoundAvailabilityCache
         SqueakSoundAvailability availability = Resolve(sound);
         if (availability.State == SqueakSoundAvailabilityState.Empty) return SqueakSoundPlayability.NoAudio;
         if (availability.State == SqueakSoundAvailabilityState.Failed) return SqueakSoundPlayability.Failed;
-        if (sound == null || sound.sustain) return SqueakSoundPlayability.SustainerUnsupported;
+        if (sound == null) return SqueakSoundPlayability.SustainerUnsupported;
+        // S3：sustained SoundDef 走 Sustainer 通路（MapOnly + 当前地图即可播），不再一刀切拒绝。
+        if (sound.sustain)
+        {
+            return sound.context == SoundContext.MapOnly && availability.Context == SqueakSoundContextKind.InMapOnly
+                ? GetMapPlayability(sourceMap, sourceTarget)
+                : SqueakSoundPlayability.UnsafeSoundContext;
+        }
         return GetPlayability(sound.context, availability.Context, sourceMap, sourceTarget);
     }
 
@@ -139,12 +146,13 @@ public static class SqueakSoundAvailabilityCache
         SqueakSoundAvailability availability = Resolve(sound);
         if (availability.State == SqueakSoundAvailabilityState.Empty) return SqueakSoundPlayability.NoAudio;
         if (availability.State == SqueakSoundAvailabilityState.Failed) return SqueakSoundPlayability.Failed;
-        if (sound == null || sound.sustain || sound.context != SoundContext.MapOnly
+        if (sound == null || sound.context != SoundContext.MapOnly
             || availability.Context != SqueakSoundContextKind.InMapOnly)
         {
             return SqueakSoundPlayability.UnsafeSoundContext;
         }
-
+        // S3：sustained SoundDef 的生产可播判定与一次性一致（pawn 存活、已生成、当前地图、Playing、MapOnly）；
+        // 具体播放形态（Sustainer vs PlayOneShot）由触发模式的 TryPlaySustained 决定。
         return pawn != null && !pawn.Dead && pawn.Spawned && pawn.MapHeld != null
             && pawn.MapHeld == Find.CurrentMap && Current.ProgramState == ProgramState.Playing && Find.CurrentMap != null
             ? SqueakSoundPlayability.Playable
