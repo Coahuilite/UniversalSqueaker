@@ -46,13 +46,16 @@ public class BaselineMoodTuning
 
 当前：result[key] = new RuntimeActionDelta(settings.GetActionGlobalScope(action), 1f, 1f)，再叠加 actionTuning Global 层。
 
-改为：
+改为（作用域优先级 低→高：C# DefaultScope < baseline Def < 旧 globalActionEnabled 玩家覆盖 < actionTuning Global 层）：
 1. 新增静态辅助 BaselineTuningTable（合并所有 Def，last-wins，按 actionKey 存 BaselineActionTuning；按 SqueakMood 存 BaselineMoodTuning）。
 2. BuildGlobalActions 初值：
-   - scope = baseline.TryGetScope(key) ?? SqueakActionDefinitions.Get(action).DefaultScope；
+   - scope = settings.GetActionGlobalScope(action)（保留旧 globalActionEnabled 玩家覆盖，勿删）；
+   - 若 scope == DefaultScope（即无显式旧覆盖）且 baseline.TryGetScope 命中，则 scope = baselineScope；
    - interval = baseline.TryGetInterval(key) ?? 1f；
    - prob = baseline.TryGetProb(key) ?? 1f。
 3. actionTuning Global 层记录仍叠加其上（保持现状，勿动）。
+
+> 注意：不能直接删 settings.GetActionGlobalScope(action)——那会让 globalActionEnabled 存量存档失去作用域覆盖（S5 才删该链路）。
 
 ### 3.2 mood 调制（CompSqueaker.ResolveMoodMod）
 

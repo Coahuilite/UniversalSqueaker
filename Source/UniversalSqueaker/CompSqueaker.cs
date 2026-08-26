@@ -583,13 +583,22 @@ public class CompSqueaker : ThingComp
     }
 
 
-    /// <summary>三层合并取心情调制:ModSettings.override > CompProperties.default > 内置默认。</summary>
+    /// <summary>四层合并取心情调制:ModSettings.override > baseline Def > CompProperties.default > 内置默认。</summary>
     private SqueakMoodMod ResolveMoodMod(SqueakMood mood, ResolvedSqueakContext context)
     {
         SqueakMoodMod mod = new() { mood = mood };
         if (moodModMap.TryGetValue(mood, out SqueakMoodMod? def))
         {
             mod = def.Clone();
+        }
+
+        // S4: baseline Def layer (player-tunable baseline floor) sits between the author comp defaults
+        // and the player's global overrides. Field-level overwrite with the same semantics as moodOverrides.
+        if (BaselineTuningTable.TryGetMood(mood, out BaselineMoodTuning? baseline) && baseline != null)
+        {
+            mod.pitchFactor = baseline.pitchFactor;
+            mod.volumeFactor = baseline.volumeFactor;
+            mod.pitchJitter = baseline.pitchJitter;
         }
 
         Dictionary<SqueakMood, SqueakMoodMod>? ov = UniversalSqueakerMod.Settings?.moodOverrides;

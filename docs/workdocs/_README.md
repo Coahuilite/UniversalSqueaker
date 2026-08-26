@@ -6,9 +6,9 @@
 
 | 任务书 | worker | provider / model / effort | 状态 |
 | --- | --- | --- | --- |
-| s3-sustainer-external.md | S3 | commandcode / deepseek-v4-flash / max | 已派发（后台） |
+| s3-sustainer-external.md | S3 | commandcode / deepseek-v4-flash / max | ✅ 完成并提交 f492e6c |
 | s4-tuning-baseline-design.md | —（设计契约） | — | 已定稿 |
-| s4-tuning-backend.md | S4-Tuning-Backend | commandcode / deepseek-v4-flash / max | 待派发（S3 落地后） |
+| s4-tuning-backend.md | S4-Tuning-Backend | commandcode / deepseek-v4-flash / max | 已派发（后台） |
 | s4-plan.md | —（规划稿） | — | 待分块 |
 
 ## 通用门禁命令（worker 自行执行）
