@@ -33,12 +33,14 @@ public readonly struct SqueakRecentOutcome
     public readonly bool CooldownConsumed;
     public readonly SoundDef? Sound;
     public readonly SqueakSoundSource SoundSource;
+    public readonly string? PoolStableKey;
 
     internal SqueakRecentOutcome(SqueakTriggerOutcome outcome, string action, int tick, float realtime,
-        bool cooldownConsumed, SoundDef? sound, SqueakSoundSource soundSource)
+        bool cooldownConsumed, SoundDef? sound, SqueakSoundSource soundSource, string? poolStableKey = null)
     {
         Outcome = outcome; Action = action; Tick = tick; Realtime = realtime;
         CooldownConsumed = cooldownConsumed; Sound = sound; SoundSource = soundSource;
+        PoolStableKey = poolStableKey;
     }
 }
 
@@ -500,7 +502,7 @@ public class CompSqueaker : ThingComp
                 SqueakPlaybackAttemptResult.Dispatched => SqueakTriggerOutcome.Dispatched,
                 _ => SqueakTriggerOutcome.PlaybackFailed,
             };
-            RecordOutcome(outcome, actionKey, invocation.IsExternal, true, attempt.Choice.Sound, attempt.Choice.Source, nowRealtime);
+            RecordOutcome(outcome, actionKey, invocation.IsExternal, true, attempt.Choice.Sound, attempt.Choice.Source, nowRealtime, attempt.Choice.PoolStableKey);
         }
         catch (Exception ex)
         {
@@ -838,12 +840,12 @@ public class CompSqueaker : ThingComp
     }
 
     private void RecordOutcome(SqueakTriggerOutcome outcome, string actionKey, bool external, bool cooldownConsumed,
-        SoundDef? sound, SqueakSoundSource source, float nowRealtime)
+        SoundDef? sound, SqueakSoundSource source, float nowRealtime, string? poolStableKey = null)
     {
         if (DiagnosticsEnabled)
         {
             SqueakRecentOutcome evaluation = new(outcome, actionKey, Find.TickManager.TicksGame,
-                nowRealtime, cooldownConsumed, sound, source);
+                nowRealtime, cooldownConsumed, sound, source, poolStableKey);
             lastEvaluation = evaluation;
             if (external || IsSignificantOutcome(outcome))
             {
