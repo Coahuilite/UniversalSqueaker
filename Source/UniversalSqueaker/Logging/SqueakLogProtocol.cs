@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, LegacyCompAutoAttached, LegacyCompAutoAttachFailed, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, LegacyVoicePackAdmitted, LegacyCompAutoAttached, LegacyCompAutoAttachFailed, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled }
 
 internal readonly struct SqueakLogData
 {
@@ -79,6 +79,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.AudioRouteSelected => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Audio route: <action> -> <sound> (<tier>[, egg]).", 2),
         SqueakLogEvent.AudioVanillaFallback => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Audio dispatch fell back to vanilla: <action> -> <sound> (<tier>[, egg]).", 2),
         SqueakLogEvent.FallbackProfileStoreFailed => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Fallback profile store operation failed.", 2),
+        SqueakLogEvent.AudioDisabled => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Squeak audio is disabled (true bypass): <action> not intercepted.", 2),
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 
@@ -108,6 +109,11 @@ internal static class SqueakLogRegistry
             string tierText = string.IsNullOrEmpty(data.Tier) ? "-" : data.Tier!;
             string marker = (data.Egg == true ? ", egg" : "") + (data.PawnControlled == false ? ", nonplayer" : "");
             return "Audio dispatch fell back to vanilla: " + actionText + " -> " + soundText + " (" + tierText + marker + ").";
+        }
+        if (e == SqueakLogEvent.AudioDisabled)
+        {
+            string actionText = string.IsNullOrEmpty(data.Action) ? "-" : data.Action!;
+            return "Squeak audio is disabled (true bypass): " + actionText + " not intercepted.";
         }
         return definition.Human;
     }
@@ -150,6 +156,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.SettingsOrigin => "settings.origin",
         SqueakLogEvent.AudioRouteSelected => "audio.route.selected",
         SqueakLogEvent.AudioVanillaFallback => "audio.dispatch.vanilla_fallback",
+        SqueakLogEvent.AudioDisabled => "audio.disabled",
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 }

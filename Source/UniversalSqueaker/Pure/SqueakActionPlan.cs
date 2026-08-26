@@ -15,14 +15,19 @@ public enum SqueakActionScopeSupport { None = 0, AnyOccurrence = 1, ActiveComman
 public readonly struct SqueakActionDefinition
 {
     public readonly SqueakAction Action;
+    public readonly string ActionKey;
     public readonly string DisplayKey;
     public readonly string AudioKey;
     public readonly SqueakVocalGatePolicy VocalGatePolicy;
     public readonly SqueakActionScopeSupport SupportedScopes;
     public readonly SqueakActionScope DefaultScope;
 
+    public SqueakActionDefinition(SqueakAction action, string actionKey, string displayKey, string audioKey, SqueakVocalGatePolicy vocalGatePolicy, SqueakActionScopeSupport supportedScopes, SqueakActionScope defaultScope)
+    { Action = action; ActionKey = actionKey; DisplayKey = displayKey; AudioKey = audioKey; VocalGatePolicy = vocalGatePolicy; SupportedScopes = supportedScopes; DefaultScope = defaultScope; }
+
+    // 向后兼容：外部动作无枚举，但内置动作仍可从枚举推导键。
     public SqueakActionDefinition(SqueakAction action, string displayKey, string audioKey, SqueakVocalGatePolicy vocalGatePolicy, SqueakActionScopeSupport supportedScopes, SqueakActionScope defaultScope)
-    { Action = action; DisplayKey = displayKey; AudioKey = audioKey; VocalGatePolicy = vocalGatePolicy; SupportedScopes = supportedScopes; DefaultScope = defaultScope; }
+        : this(action, action.ToString(), displayKey, audioKey, vocalGatePolicy, supportedScopes, defaultScope) { }
 }
 
 /// <summary>Per-Comp fixed action plan populated from XML. Missing actions remain unconfigured.
@@ -30,6 +35,7 @@ public readonly struct SqueakActionDefinition
 public readonly struct SqueakActionPlan
 {
     public readonly SqueakActionDefinition Definition;
+    public readonly string ActionKey;
     public readonly bool Configured;
     public readonly SqueakTriggerMode Mode;
     public readonly int MinIntervalTicks;
@@ -38,10 +44,10 @@ public readonly struct SqueakActionPlan
     public readonly SqueakCooldownClock CooldownClock;
 
     public SqueakActionPlan(SqueakActionDefinition definition, bool configured, SqueakTriggerMode mode, int minIntervalTicks, float probabilityPerCheck, bool ignoreGlobalCooldown, SqueakCooldownClock cooldownClock)
-    { Definition = definition; Configured = configured; Mode = mode; MinIntervalTicks = minIntervalTicks; ProbabilityPerCheck = probabilityPerCheck; IgnoreGlobalCooldown = ignoreGlobalCooldown; CooldownClock = cooldownClock; }
+    { Definition = definition; ActionKey = definition.ActionKey; Configured = configured; Mode = mode; MinIntervalTicks = minIntervalTicks; ProbabilityPerCheck = probabilityPerCheck; IgnoreGlobalCooldown = ignoreGlobalCooldown; CooldownClock = cooldownClock; }
 }
 
-public enum SqueakTriggerOrigin { Periodic, Wounded, Select, Death, Draft, Undraft, Attack, Equip, MentalBreak, Crying, Giggling }
+public enum SqueakTriggerOrigin { Periodic, Wounded, Select, Death, Draft, Undraft, Attack, Equip, MentalBreak, Crying, Giggling, External }
 public enum SqueakInvocationSource { Periodic, StateEvent, PlayerSelection, ActiveCommand }
 
 /// <summary>Explicit trigger source; non-periodic hooks preserve legacy probability skipping.

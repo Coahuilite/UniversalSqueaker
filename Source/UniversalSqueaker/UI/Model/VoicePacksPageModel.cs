@@ -41,7 +41,7 @@ public static class VoicePacksPageModel
 
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
         string banner = BuildBannerText(catalog, races, xenotypes, mode, biotech);
-        return new VoicePacksViewState(mode, biotech, banner, races, xenotypes, selected);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -72,6 +72,15 @@ public static class VoicePacksPageModel
                 break;
             case UiCommandKind.ForgetUnavailable:
                 ExecuteForgetUnavailable(settings, command);
+                break;
+            case UiCommandKind.ToggleEgg:
+                settings.SetAllowEasterEggSounds(command.Flag);
+                break;
+            case UiCommandKind.SetDistancePreset:
+                if (Enum.TryParse(command.Arg, true, out SqueakDistancePreset preset)) settings.SetDistancePreset(preset);
+                break;
+            case UiCommandKind.ToggleBasic:
+                settings.SetBasicTuning(command.Arg, command.Flag);
                 break;
         }
     }
@@ -279,8 +288,8 @@ public static class VoicePacksPageModel
             messages.Add(legacyCount + " legacy Squeaky Ratkin VoicePack(s) are loaded through the compatibility bridge and marked as old SR content.");
         if (!biotech && xenotypes.Count > 0)
             messages.Add("Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.");
-        if (mode == SqueakVoicePackMode.Off)
-            messages.Add("VoicePack mode is Off. Enabled packs are retained, but VoicePack audio is not routed.");
+        if (mode == SqueakVoicePackMode.Vanilla)
+            messages.Add("VoicePack mode is Vanilla. Enabled packs are retained, but VoicePack audio is not routed.");
         return string.Join("\n", messages);
     }
 
@@ -314,9 +323,9 @@ public static class VoicePacksPageModel
 
     private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode)
     {
-        return mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix
+        return mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled
             ? mode
-            : SqueakVoicePackMode.Off;
+            : SqueakVoicePackMode.Vanilla;
     }
 
     private readonly struct XenotypeDomainKey

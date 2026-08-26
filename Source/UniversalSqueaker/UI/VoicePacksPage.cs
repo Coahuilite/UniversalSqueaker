@@ -129,20 +129,43 @@ public static class VoicePacksPage
         {
             float bannerHeight = VoicePacksLayout.BannerHeight(view.BannerText, innerWidth, metrics);
             StatusBanner.Draw(new Rect(innerX, y, innerWidth, bannerHeight), view.BannerText,
-                view.Mode == SqueakVoicePackMode.Off ? SectionFrame.SurfaceKind.Warning : SectionFrame.SurfaceKind.Base);
+                view.Mode == SqueakVoicePackMode.Vanilla ? SectionFrame.SurfaceKind.Warning : SectionFrame.SurfaceKind.Base);
             y += bannerHeight + VoicePacksLayout.Gap;
         }
 
         // Mode cards.
         float modeGap = VoicePacksLayout.Gap;
-        float modeWidth = (innerWidth - modeGap * 2f) / 3f;
-        DrawModeCard(innerX, y, modeWidth, VoicePacksLayout.ModeCardHeight, view.Mode, SqueakVoicePackMode.Off,
-            "Off", "Disable VoicePack audio routing.", emit);
+        float modeWidth = (innerWidth - modeGap * 3f) / 4f;
+        DrawModeCard(innerX, y, modeWidth, VoicePacksLayout.ModeCardHeight, view.Mode, SqueakVoicePackMode.Vanilla,
+            "Vanilla", "Route only vanilla audio; keep VoicePacks disabled.", emit);
         DrawModeCard(innerX + modeWidth + modeGap, y, modeWidth, VoicePacksLayout.ModeCardHeight, view.Mode,
             SqueakVoicePackMode.Fallback, "Fallback", "Use built-in fallback profiles when no pack is enabled.", emit);
         DrawModeCard(innerX + (modeWidth + modeGap) * 2f, y, modeWidth, VoicePacksLayout.ModeCardHeight, view.Mode,
             SqueakVoicePackMode.Remix, "Remix", "Mix enabled VoicePacks within each selected domain.", emit);
+        DrawModeCard(innerX + (modeWidth + modeGap) * 3f, y, modeWidth, VoicePacksLayout.ModeCardHeight, view.Mode,
+            SqueakVoicePackMode.Disabled, "Disabled", "Fully bypass the mod; play nothing.", emit);
         y += VoicePacksLayout.ModeCardHeight + VoicePacksLayout.Gap;
+
+        // Easter-egg toggle (A7): main settings, alongside the mode cards, default off.
+        float eggRowHeight = 28f;
+        Rect eggRect = new(innerX, y, innerWidth, eggRowHeight);
+        DrawEasterEggToggle(eggRect, view.AllowEasterEggs, emit);
+        y += eggRowHeight + VoicePacksLayout.Gap;
+
+        // Distance preset (A3): conservative/balanced/strong quick switch.
+        float distRowHeight = 28f;
+        Rect distRect = new(innerX, y, innerWidth, distRowHeight);
+        DrawDistancePresetRow(distRect, view.DistancePreset, emit);
+        y += distRowHeight + VoicePacksLayout.Gap;
+
+        // Basic global tuning (A4/A5): three scaling toggles.
+        float basicRowHeight = 26f;
+        DrawBasicToggle(new Rect(innerX, y, innerWidth, basicRowHeight), "ScaleCooldown", "Scale cooldown with time speed", view.ScaleCooldownWithTimeSpeed, emit);
+        y += basicRowHeight + 2f;
+        DrawBasicToggle(new Rect(innerX, y, innerWidth, basicRowHeight), "ScaleTalking", "Scale frequency with talking", view.ScaleFrequencyWithTalking, emit);
+        y += basicRowHeight + 2f;
+        DrawBasicToggle(new Rect(innerX, y, innerWidth, basicRowHeight), "ScalePopulation", "Scale periodic with audible population", view.ScalePeriodicWithAudiblePopulation, emit);
+        y += basicRowHeight + VoicePacksLayout.Gap;
 
         // Race layer.
         if (view.Races.Count > 0)
@@ -190,6 +213,85 @@ public static class VoicePacksPage
         string title, string description, Action<UiCommand> emit)
     {
         ModeCard.Draw(new Rect(x, y, width, height), current, target, title, description, emit);
+    }
+
+    private static void DrawEasterEggToggle(Rect rect, bool enabled, Action<UiCommand> emit)
+    {
+        bool next = !enabled;
+        bool hovered = Mouse.IsOver(rect);
+        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
+        SectionFrame.DrawBorder(rect);
+        Rect labelRect = new(rect.x + 10f, rect.y + 4f, rect.width - 20f, 20f);
+        Color oldColor = GUI.color;
+        GameFont oldFont = Text.Font;
+        Text.Font = GameFont.Small;
+        GUI.color = Color.white;
+        Widgets.Label(labelRect, "Easter egg sounds");
+        Text.Font = GameFont.Tiny;
+        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        Widgets.Label(new Rect(rect.x + 10f, rect.y + 20f, rect.width - 20f, 20f), enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)");
+        Text.Font = oldFont;
+        GUI.color = oldColor;
+        bool toggled = Widgets.ButtonInvisible(rect);
+        if (toggled)
+            emit?.Invoke(new UiCommand(UiCommandKind.ToggleEgg, flag: next));
+    }
+
+    private static void DrawDistancePresetRow(Rect rect, SqueakDistancePreset current, Action<UiCommand> emit)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
+        SectionFrame.DrawBorder(rect);
+        Rect labelRect = new(rect.x + 10f, rect.y + 4f, rect.width - 20f, 20f);
+        Color oldColor = GUI.color;
+        GameFont oldFont = Text.Font;
+        Text.Font = GameFont.Small;
+        GUI.color = Color.white;
+        Widgets.Label(labelRect, "Distance preset");
+        Text.Font = GameFont.Tiny;
+        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        string desc = current switch
+        {
+            SqueakDistancePreset.Conservative => "Conservative (15~65)",
+            SqueakDistancePreset.Strong => "Strong (15~40)",
+            SqueakDistancePreset.Balanced => "Balanced (15~50)",
+            _ => "Custom",
+        };
+        Widgets.Label(new Rect(rect.x + 10f, rect.y + 20f, rect.width - 20f, 20f), desc);
+        Text.Font = oldFont;
+        GUI.color = oldColor;
+        if (Widgets.ButtonInvisible(rect))
+        {
+            SqueakDistancePreset next = current switch
+            {
+                SqueakDistancePreset.Conservative => SqueakDistancePreset.Balanced,
+                SqueakDistancePreset.Balanced => SqueakDistancePreset.Strong,
+                SqueakDistancePreset.Strong => SqueakDistancePreset.Conservative,
+                _ => SqueakDistancePreset.Balanced,
+            };
+            emit?.Invoke(new UiCommand(UiCommandKind.SetDistancePreset, arg: next.ToString()));
+        }
+    }
+
+    private static void DrawBasicToggle(Rect rect, string key, string label, bool enabled, Action<UiCommand> emit)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
+        SectionFrame.DrawBorder(rect);
+        Color oldColor = GUI.color;
+        GameFont oldFont = Text.Font;
+        Text.Font = GameFont.Small;
+        GUI.color = Color.white;
+        Widgets.Label(new Rect(rect.x + 10f, rect.y + 3f, rect.width - 60f, 20f), label);
+        // checkbox on the right
+        Rect checkRect = new(rect.xMax - 40f, rect.y + 4f, 20f, 20f);
+        bool value = enabled;
+        Widgets.Checkbox(checkRect.position, ref value, 20f);
+        GUI.color = oldColor;
+        Text.Font = oldFont;
+        bool toggled = Widgets.ButtonInvisible(rect);
+        if (toggled)
+            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: key, flag: !enabled));
     }
 
     private static void DrawTitle(Rect rect, string text)

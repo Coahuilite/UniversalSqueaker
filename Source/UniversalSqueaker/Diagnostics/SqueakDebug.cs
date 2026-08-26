@@ -19,19 +19,18 @@ public static class SqueakDebug
     };
 
     public static void NotifySqueak(Pawn pawn, SqueakAction action, SqueakMood mood, SqueakSoundChoice choice)
-    {
-        NotifyAudioDispatched(pawn, action, choice);
-    }
+        => NotifyAudioDispatched(pawn, UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(), choice);
+
+    public static void NotifySqueakByKey(Pawn pawn, string actionKey, SqueakMood mood, SqueakSoundChoice choice)
+        => NotifyAudioDispatched(pawn, actionKey, choice);
 
     /// <summary>Log MVP: one dev-level record per actual dispatch. Vanilla fallback is warning-level;
     /// normal pack routing stays info-level. No rate limiting or suppression in this MVP.</summary>
-    private static void NotifyAudioDispatched(Pawn pawn, SqueakAction action, SqueakSoundChoice choice)
+    private static void NotifyAudioDispatched(Pawn pawn, string actionKey, SqueakSoundChoice choice)
     {
         if (!SqueakLog.EffectiveDevLogging) return;
         SoundDef? def = choice.Sound;
         if (def == null) return;
-
-        string actionKey = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
         string race = pawn.def?.defName ?? "";
         string? xenotype = pawn.genes?.Xenotype?.defName;
         string target = pawn.thingIDNumber.ToString();

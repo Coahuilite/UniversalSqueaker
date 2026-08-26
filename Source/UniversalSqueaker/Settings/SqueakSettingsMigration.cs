@@ -179,4 +179,64 @@ internal static class SqueakSettingsMigration
             }
         }
     }
+
+    /// <summary>
+    /// S2: 迁移旧 globalActionEnabled + xenotypePresets.actionOverrides → 统一分层 ActionTuningRecord。
+    /// 只创建替换列表；调用方成功后才原子发布。Global 层记录 race/xeno 为空；Xenotype 层携带 raceDefName+xenotypeDefName。
+    /// </summary>
+    internal static bool TryCreateActionTuningRecords(
+        IEnumerable<GlobalActionEnabledRecord>? sourceGlobal,
+        IEnumerable<XenotypePresetRecord>? sourcePresets,
+        out List<ActionTuningRecord> tuning,
+        out string failure)
+    {
+        tuning = new List<ActionTuningRecord>();
+        failure = "";
+        try
+        {
+            foreach (GlobalActionEnabledRecord? record in sourceGlobal ?? Array.Empty<GlobalActionEnabledRecord>())
+            {
+                if (record == null) continue;
+                string? actionKey = UniversalSqueaker.Kernel.ActionKey.For(record.action);
+                if (actionKey == null) continue;
+                tuning.Add(new ActionTuningRecord
+                {
+                    actionKey = actionKey,
+                    raceDefName = "",
+                    xenotypeDefName = "",
+                    hasScope = true,
+                    scope = record.scope,
+                });
+            }
+            foreach (XenotypePresetRecord? record in sourcePresets ?? Array.Empty<XenotypePresetRecord>())
+            {
+                if (record == null || record.actionOverrides == null) continue;
+                foreach (XenotypeActionBehaviorOverride? action in record.actionOverrides)
+                {
+                    if (action == null) continue;
+                    string? actionKey = UniversalSqueaker.Kernel.ActionKey.For(action.action);
+                    if (actionKey == null) continue;
+                    tuning.Add(new ActionTuningRecord
+                    {
+                        actionKey = actionKey,
+                        raceDefName = record.raceDefName ?? "",
+                        xenotypeDefName = record.xenotypeDefName ?? "",
+                        hasScope = action.hasEnabled,
+                        scope = action.hasEnabled ? (action.enabled ? SqueakActionScope.AnyOccurrence : SqueakActionScope.Disabled) : SqueakActionScope.AnyOccurrence,
+                        hasIntervalMultiplier = action.hasIntervalMultiplier,
+                        intervalMultiplier = action.intervalMultiplier,
+                        hasProbabilityMultiplier = action.hasProbabilityMultiplier,
+                        probabilityMultiplier = action.probabilityMultiplier,
+                    });
+                }
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            tuning = new List<ActionTuningRecord>();
+            failure = ex.GetType().Name + ": " + ex.Message;
+            return false;
+        }
+    }
 }

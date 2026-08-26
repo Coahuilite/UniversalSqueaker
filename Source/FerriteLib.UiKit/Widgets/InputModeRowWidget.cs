@@ -35,10 +35,10 @@ public sealed class InputModeRowWidget : IWidget
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
         var cards = new List<ModeCardData>();
-        for (int i = 1; i <= 3; i++)
+        for (int i = 1; ; i++)
         {
             string suffix = i.ToString(CultureInfo.InvariantCulture);
-            if (!HasAnyCardAttribute(suffix)) continue;
+            if (!HasAnyCardAttribute(suffix)) break;
 
             cards.Add(new ModeCardData(
                 Read("Title" + suffix),
@@ -73,10 +73,10 @@ public sealed class InputModeRowWidget : IWidget
         string emitName = ReadEmitName();
 
         var cards = new List<ModeCardData>();
-        for (int i = 1; i <= 3; i++)
+        for (int i = 1; ; i++)
         {
             string suffix = i.ToString(CultureInfo.InvariantCulture);
-            if (!HasAnyCardAttribute(suffix)) continue;
+            if (!HasAnyCardAttribute(suffix)) break;
 
             cards.Add(new ModeCardData(
                 Read("Title" + suffix),

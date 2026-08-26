@@ -7,6 +7,12 @@ namespace UniversalSqueaker.UI;
 public sealed class VoicePacksViewState
 {
     public SqueakVoicePackMode Mode { get; }
+    public bool AllowEasterEggs { get; }
+    public SqueakDistancePreset DistancePreset { get; }
+    public bool ScaleCooldownWithTimeSpeed { get; }
+    public bool ScaleFrequencyWithTalking { get; }
+    public bool ScalePeriodicWithAudiblePopulation { get; }
+    public float GlobalCooldownMultiplier { get; }
     public bool BiotechActive { get; }
     public string BannerText { get; }
     public IReadOnlyList<RaceLayerRowView> Races { get; }
@@ -15,6 +21,12 @@ public sealed class VoicePacksViewState
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
+        bool allowEasterEggs,
+        SqueakDistancePreset distancePreset,
+        bool scaleCooldownWithTimeSpeed,
+        bool scaleFrequencyWithTalking,
+        bool scalePeriodicWithAudiblePopulation,
+        float globalCooldownMultiplier,
         bool biotechActive,
         string bannerText,
         IReadOnlyList<RaceLayerRowView> races,
@@ -22,6 +34,12 @@ public sealed class VoicePacksViewState
         VoicePackDomainView? selectedDomain)
     {
         Mode = mode;
+        AllowEasterEggs = allowEasterEggs;
+        DistancePreset = distancePreset;
+        ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
+        ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
+        ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
+        GlobalCooldownMultiplier = globalCooldownMultiplier;
         BiotechActive = biotechActive;
         BannerText = bannerText ?? "";
         Races = races ?? Array.Empty<RaceLayerRowView>();

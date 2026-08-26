@@ -27,14 +27,14 @@ public enum SqueakTriggerOutcome
 public readonly struct SqueakRecentOutcome
 {
     public readonly SqueakTriggerOutcome Outcome;
-    public readonly SqueakAction Action;
+    public readonly string Action;
     public readonly int Tick;
     public readonly float Realtime;
     public readonly bool CooldownConsumed;
     public readonly SoundDef? Sound;
     public readonly SqueakSoundSource SoundSource;
 
-    internal SqueakRecentOutcome(SqueakTriggerOutcome outcome, SqueakAction action, int tick, float realtime,
+    internal SqueakRecentOutcome(SqueakTriggerOutcome outcome, string action, int tick, float realtime,
         bool cooldownConsumed, SoundDef? sound, SqueakSoundSource soundSource)
     {
         Outcome = outcome; Action = action; Tick = tick; Realtime = realtime;
@@ -130,12 +130,6 @@ public class SqueakActionConfig
     public SqueakCooldownClock cooldownClock = SqueakCooldownClock.GameTicks;
 }
 
-public class SqueakDistancePresetConfig
-{
-    public SqueakDistancePreset preset = SqueakDistancePreset.Balanced;
-    public FloatRange range = new(15f, 50f);
-}
-
 /// <summary>
 /// 挂在带 Squeaker 组件的 pawn 上的自驱动发声组件。
 /// 配置三层:CompProperties(XML默认) ← ModSettings(玩家override) ← 运行时。
@@ -143,21 +137,21 @@ public class SqueakDistancePresetConfig
 /// </summary>
 public class CompSqueaker : ThingComp
 {
-    private static readonly string[] SocialJobMarkers = { "Chat", "Social", "Visit", "Lovin", "Entertain" };
     public static bool ScaleCooldownWithTimeSpeed = true;
     public static bool ScaleFrequencyWithTalking = true;
     public static bool ScalePeriodicWithAudiblePopulation = true;
     public static float GlobalCooldownMultiplier = 1f;
+    public static int GlobalMinIntervalTicks = 216;
     public static bool DiagnosticsEnabled;
 
-    private static readonly Dictionary<SqueakAction, SoundDef?> SoundCacheMixed = new();
-    private static readonly HashSet<SqueakAction> MissingSoundWarnings = new();
+    private static readonly Dictionary<string, SoundDef?> SoundCacheMixed = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> MissingSoundWarnings = new(StringComparer.Ordinal);
     private static bool soundCacheInitialized;
     private static FloatRange activeDistanceRange = new(15f, 50f);
 
-    private readonly SqueakActionPlan[] actionPlans = new SqueakActionPlan[SqueakActionDefinitions.Count];
-    private readonly int[] lastTriggerTick = new int[SqueakActionDefinitions.Count];
-    private readonly float[] lastTriggerRealTime = new float[SqueakActionDefinitions.Count];
+    private readonly Dictionary<string, SqueakActionPlan> actionPlans = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> lastTriggerTick = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, float> lastTriggerRealTime = new(StringComparer.Ordinal);
     private readonly Dictionary<SqueakMood, SqueakMoodMod> moodModMap = new();
     private int lastAnyTriggerTick = int.MinValue / 2;
     private SqueakRuntimeSnapshot? cachedRuntimeSnapshot;
@@ -168,27 +162,33 @@ public class CompSqueaker : ThingComp
     // Runtime-only, non-Scribe anchor. Every Periodic action phase remains rooted at this spawn tick.
     private int startupAnchorTick;
     private bool startupAnchorRecorded;
-    private readonly bool[] periodicStartupPhaseMaterialized = new bool[SqueakActionDefinitions.Count];
-    private readonly int[] periodicStartupReadyTicks = new int[SqueakActionDefinitions.Count];
+    private readonly Dictionary<string, bool> periodicStartupPhaseMaterialized = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> periodicStartupReadyTicks = new(StringComparer.Ordinal);
     private Map? registeredMap;
 
     private Pawn Pawn => (Pawn)parent;
     internal Pawn RegisteredPawn => Pawn;
     private CompProperties_Squeaker Props => (CompProperties_Squeaker)props;
 
+    private static string? ActionKeyOf(SqueakAction action) => UniversalSqueaker.Kernel.ActionKey.For(action);
+
     public override void Initialize(CompProperties props)
     {
         base.Initialize(props);
         lastAnyTriggerTick = int.MinValue / 2;
-        for (int i = 0; i < SqueakActionDefinitions.Count; i++)
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
-            actionPlans[i] = SqueakActionPlanFactory.Unconfigured((SqueakAction)i);
-            lastTriggerTick[i] = int.MinValue / 2;
-            lastTriggerRealTime[i] = -1_000_000f;
+            string? key = UniversalSqueaker.Kernel.ActionKey.For(action);
+            if (key == null) continue;
+            actionPlans[key] = SqueakActionPlanFactory.Unconfigured(action);
+            lastTriggerTick[key] = int.MinValue / 2;
+            lastTriggerRealTime[key] = -1_000_000f;
         }
         foreach (SqueakActionConfig cfg in Props.actions)
         {
-            if (cfg != null && SqueakActionDefinitions.IsKnown(cfg.action)) actionPlans[(int)cfg.action] = SqueakActionPlanFactory.FromLegacy(cfg);
+            if (cfg == null || !SqueakActionDefinitions.IsKnown(cfg.action)) continue;
+            string? key = UniversalSqueaker.Kernel.ActionKey.For(cfg.action);
+            if (key != null) actionPlans[key] = SqueakActionPlanFactory.FromLegacy(cfg);
         }
 
         foreach (SqueakMoodMod mod in Props.moodMods)
@@ -222,43 +222,7 @@ public class CompSqueaker : ThingComp
         }
     }
 
-    private SqueakAction? CurrentAction
-    {
-        get
-        {
-            if (IsSleeping())
-            {
-                return SqueakAction.Sleep;
-            }
-
-            if (IsEating())
-            {
-                return SqueakAction.Eat;
-            }
-
-            if (IsSocializing())
-            {
-                return SqueakAction.Social;
-            }
-
-            if (IsJoyJob())
-            {
-                return SqueakAction.Joy;
-            }
-
-            if (IsMoving())
-            {
-                return SqueakAction.Move;
-            }
-
-            if (IsWorking())
-            {
-                return SqueakAction.Work;
-            }
-
-            return SqueakAction.Call;
-        }
-    }
+    private SqueakAction? CurrentAction => PeriodicStateBinding.Probe(Pawn);
 
     public override void CompTick()
     {
@@ -275,7 +239,13 @@ public class CompSqueaker : ThingComp
 
         SqueakAction? action = CurrentAction;
         if (action == null) return;
-        SqueakActionPlan plan = actionPlans[(int)action.Value];
+        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
+        {
+            SqueakLog.AudioDisabled(UniversalSqueaker.Kernel.ActionKey.For(action.Value) ?? action.Value.ToString());
+            return;
+        }
+        string? actionKey = ActionKeyOf(action.Value);
+        if (actionKey == null || !actionPlans.TryGetValue(actionKey, out SqueakActionPlan plan)) return;
         if (!plan.Configured) return;
 
         switch (plan.Mode)
@@ -292,17 +262,17 @@ public class CompSqueaker : ThingComp
         }
     }
 
-    public void Notify_Wounded() => NotifyExternal(SqueakAction.Wounded, SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-    public void Notify_Select() => NotifyExternal(SqueakAction.Select, SqueakTriggerOrigin.Select, SqueakInvocationSource.PlayerSelection);
-    public void Notify_Death() => NotifyExternal(SqueakAction.Death, SqueakTriggerOrigin.Death, SqueakInvocationSource.StateEvent);
-    public void Notify_Draft(bool drafted) => NotifyExternal(drafted ? SqueakAction.Draft : SqueakAction.Undraft, drafted ? SqueakTriggerOrigin.Draft : SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand);
-    public void Notify_Attack() => NotifyExternal(SqueakAction.Attack, SqueakTriggerOrigin.Attack, IsCurrentJobPlayerCommand() ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
+    public void Notify_Wounded() => NotifyExternal(SqueakAction.Wounded, VerseEventBinding.OriginFor(SqueakAction.Wounded), SqueakInvocationSource.StateEvent);
+    public void Notify_Select() => NotifyExternal(SqueakAction.Select, VerseEventBinding.OriginFor(SqueakAction.Select), SqueakInvocationSource.PlayerSelection);
+    public void Notify_Death() => NotifyExternal(SqueakAction.Death, VerseEventBinding.OriginFor(SqueakAction.Death), SqueakInvocationSource.StateEvent);
+    public void Notify_Draft(bool drafted) => NotifyExternal(drafted ? SqueakAction.Draft : SqueakAction.Undraft, VerseEventBinding.OriginFor(drafted ? SqueakAction.Draft : SqueakAction.Undraft), SqueakInvocationSource.ActiveCommand);
+    public void Notify_Attack() => NotifyExternal(SqueakAction.Attack, VerseEventBinding.OriginFor(SqueakAction.Attack), IsCurrentJobPlayerCommand() ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
     public void Notify_Equip()
     {
         // Equipment tracker notifications also cover AI, loading, and system equipment changes.
         // Equip is deliberately only the player's ordered Core Equip job, regardless of its scope.
         if (!IsCurrentEquipJobPlayerCommand()) return;
-        NotifyExternal(SqueakAction.Equip, SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
+        NotifyExternal(SqueakAction.Equip, VerseEventBinding.OriginFor(SqueakAction.Equip), SqueakInvocationSource.ActiveCommand);
     }
 
     public override void PostSpawnSetup(bool respawningAfterLoad)
@@ -329,16 +299,25 @@ public class CompSqueaker : ThingComp
         SqueakPeriodicPopulation.Unregister(this, map);
         if (ReferenceEquals(registeredMap, map)) registeredMap = null;
     }
-    public void Notify_MentalBreak() => NotifyExternal(SqueakAction.MentalBreak, SqueakTriggerOrigin.MentalBreak, SqueakInvocationSource.StateEvent);
+    public void Notify_MentalBreak() => NotifyExternal(SqueakAction.MentalBreak, VerseEventBinding.OriginFor(SqueakAction.MentalBreak), SqueakInvocationSource.StateEvent);
 
     /// <summary>0.3.1 波 3c：BabyFits 窄 hook 入口（Patch_MentalFit 已用 MentalFitDef 反向 map 验证状态）。</summary>
     public void Notify_MentalFit(SqueakAction action) => NotifyExternal(action,
-        action == SqueakAction.Crying ? SqueakTriggerOrigin.Crying : SqueakTriggerOrigin.Giggling,
+        VerseEventBinding.OriginFor(action),
         SqueakInvocationSource.StateEvent);
 
     private void NotifyExternal(SqueakAction action, SqueakTriggerOrigin origin, SqueakInvocationSource source)
+        => NotifyExternalByKey(UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(), origin, source);
+
+    /// <summary>外部动作（string 键）的触发入口：与内置动作走同一 NotifyExternal 通路。</summary>
+    public void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
     {
         SynchronizePeriodicMembership();
+        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
+        {
+            SqueakLog.AudioDisabled(actionKey);
+            return;
+        }
         if (!Pawn.Spawned || Pawn.MapHeld != Find.CurrentMap)
         {
             return;
@@ -349,7 +328,7 @@ public class CompSqueaker : ThingComp
             return;
         }
 
-        SqueakActionPlan plan = actionPlans[(int)action];
+        if (!actionPlans.TryGetValue(actionKey, out SqueakActionPlan plan)) return;
         if (!plan.Configured) return;
 
         SqueakTriggerInvocation invocation = new(origin, source);
@@ -388,14 +367,23 @@ public class CompSqueaker : ThingComp
         SqueakPeriodicPopulation.Register(this, registeredMap);
     }
 
+    private bool IsActionAllowed(SqueakAction action) => IsActionAllowedByKey(UniversalSqueaker.Kernel.ActionKey.For(action));
+
+    private bool IsActionAllowedByKey(string? actionKey)
+    {
+        if (string.IsNullOrEmpty(actionKey)) return false;
+        ActionEntry? entry = ActionEntryRegistry.Current.Get(actionKey!);
+        if (entry == null) return false;
+        return entry.IsBuiltIn || ActionEntryRegistry.Current.AllowExternalActions;
+    }
+
     private void TryTrigger(SqueakActionPlan plan, SqueakTriggerInvocation invocation)
     {
-        SqueakAction action = plan.Definition.Action;
-        // This is deliberately before clock/RNG/context/resolver/vocal/playback work. A global disable is
-        // production silence, while settings preview remains an explicit non-production path.
-        SqueakActionScope scope = SqueakGlobalActionPolicy.Current.GetScope(action);
-        if (scope == SqueakActionScope.Disabled) return;
-        if (scope == SqueakActionScope.ActiveCommand && !invocation.IsActiveCommand) return;
+        string actionKey = plan.ActionKey;
+        // Action gate (Goal A): a non-built-in action requires allowExternalActions before it can fire.
+        if (!IsActionAllowedByKey(actionKey)) return;
+        // H1 fix: the global early-return is gone. Action scope now resolves from the layered context
+        // (Xeno > Race > Global > Default), so a global disable no longer suppresses a xenotype enable.
         int now = 0;
         float nowRealtime = 0f;
         bool hasAttemptRealtime = false;
@@ -405,10 +393,10 @@ public class CompSqueaker : ThingComp
             nowRealtime = Time.realtimeSinceStartup;
             hasAttemptRealtime = true;
             ResolvedSqueakContext context = GetRuntimeContext(out SqueakRuntimeSnapshot snapshot);
-            RuntimeActionDelta actionDelta = context.GetAction(action);
+            RuntimeActionDelta actionDelta = context.GetActionByKey(actionKey);
             if (!actionDelta.Enabled)
             {
-                RecordOutcome(SqueakTriggerOutcome.Disabled, action, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
+                RecordOutcome(SqueakTriggerOutcome.Disabled, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
                 return;
             }
             if (actionDelta.Scope == SqueakActionScope.ActiveCommand && !invocation.IsActiveCommand) return;
@@ -424,9 +412,9 @@ public class CompSqueaker : ThingComp
                 ? SanitizePeriodicPopulationScale(periodicPopulation.Scale) : 1f;
             SqueakTimingEvaluation timing = EvaluateTiming(plan, context, actionDelta, now, nowRealtime,
                 Find.TickManager.TickRateMultiplier, periodicScale);
-            if (invocation.Origin == SqueakTriggerOrigin.Periodic && IsPeriodicStartupPending(action, timing, now))
+            if (invocation.Origin == SqueakTriggerOrigin.Periodic && IsPeriodicStartupPending(actionKey, timing, now))
             {
-                RecordOutcome(SqueakTriggerOutcome.PeriodicStartupPending, action, false, false, null, SqueakSoundSource.None, nowRealtime);
+                RecordOutcome(SqueakTriggerOutcome.PeriodicStartupPending, actionKey, false, false, null, SqueakSoundSource.None, nowRealtime);
                 return;
             }
 
@@ -436,20 +424,20 @@ public class CompSqueaker : ThingComp
                 bool passed = Rand.Value < probability;
                 if (!passed)
                 {
-                    RecordOutcome(SqueakTriggerOutcome.ProbabilityRejected, action, false, false, null, SqueakSoundSource.None, nowRealtime);
+                    RecordOutcome(SqueakTriggerOutcome.ProbabilityRejected, actionKey, false, false, null, SqueakSoundSource.None, nowRealtime);
                     return;
                 }
             }
 
             if (!timing.ActionReady)
             {
-                RecordOutcome(SqueakTriggerOutcome.ActionCooldown, action, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
+                RecordOutcome(SqueakTriggerOutcome.ActionCooldown, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
                 return;
             }
 
             if (timing.GlobalApplicable && !timing.GlobalReady)
             {
-                RecordOutcome(SqueakTriggerOutcome.GlobalCooldown, action, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
+                RecordOutcome(SqueakTriggerOutcome.GlobalCooldown, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
                 return;
             }
 
@@ -459,15 +447,15 @@ public class CompSqueaker : ThingComp
             SqueakVocalGateDecision vocalDecision = capability.Decide(applyTalkingGate, roll);
             if (vocalDecision != SqueakVocalGateDecision.Allowed)
             {
-                ConsumeAttemptCooldowns(action, now, nowRealtime);
+                ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
                 RecordOutcome(vocalDecision == SqueakVocalGateDecision.VocalOrgansSilent
                     ? SqueakTriggerOutcome.VocalOrgansSilent : SqueakTriggerOutcome.TalkingRejected,
-                    action, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
+                    actionKey, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
                 return;
             }
 
-            SqueakPlaybackAttempt attempt = PlayOneShot(action, CurrentMood, context, snapshot);
-            ConsumeAttemptCooldowns(action, now, nowRealtime);
+            SqueakPlaybackAttempt attempt = PlayOneShot(actionKey, CurrentMood, context, snapshot);
+            ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
             SqueakTriggerOutcome outcome = attempt.Result switch
             {
                 SqueakPlaybackAttemptResult.NoEligibleSound => SqueakTriggerOutcome.NoSoundFallback,
@@ -475,11 +463,11 @@ public class CompSqueaker : ThingComp
                 SqueakPlaybackAttemptResult.Dispatched => SqueakTriggerOutcome.Dispatched,
                 _ => SqueakTriggerOutcome.PlaybackFailed,
             };
-            RecordOutcome(outcome, action, invocation.IsExternal, true, attempt.Choice.Sound, attempt.Choice.Source, nowRealtime);
+            RecordOutcome(outcome, actionKey, invocation.IsExternal, true, attempt.Choice.Sound, attempt.Choice.Source, nowRealtime);
         }
         catch (Exception ex)
         {
-            SqueakLog.TriggerAttemptFailed(action.ToString(), ex);
+            SqueakLog.TriggerAttemptFailed(actionKey, ex);
             try
             {
                 if (!hasAttemptRealtime)
@@ -487,8 +475,8 @@ public class CompSqueaker : ThingComp
                     nowRealtime = Time.realtimeSinceStartup;
                 }
                 if (!hasAttemptTick) now = Find.TickManager.TicksGame;
-                ConsumeAttemptCooldowns(action, now, nowRealtime);
-                RecordOutcome(SqueakTriggerOutcome.PlaybackFailed, action, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
+                ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
+                RecordOutcome(SqueakTriggerOutcome.PlaybackFailed, actionKey, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
             }
             catch { }
         }
@@ -501,26 +489,25 @@ public class CompSqueaker : ThingComp
         // 适配层在此把 Context/ActionDelta 投影为模型读取的两个标量乘数。
         return SqueakTimingModel.Evaluate(new SqueakTimingInput(nowTick, nowRealtime, timeSpeedMultiplier, plan,
             context.OverallIntervalMultiplier, actionDelta.IntervalMultiplier,
-            lastTriggerTick[(int)plan.Definition.Action], lastTriggerRealTime[(int)plan.Definition.Action], lastAnyTriggerTick,
-            Props.globalMinIntervalTicks, GlobalCooldownMultiplier, ScaleCooldownWithTimeSpeed, periodicScale));
+            lastTriggerTick.GetValueOrDefault(ActionKeyOf(plan.Definition.Action) ?? ""), lastTriggerRealTime.GetValueOrDefault(ActionKeyOf(plan.Definition.Action) ?? ""), lastAnyTriggerTick,
+            GlobalMinIntervalTicks, GlobalCooldownMultiplier, ScaleCooldownWithTimeSpeed, periodicScale));
     }
 
-    private bool IsPeriodicStartupPending(SqueakAction action, SqueakTimingEvaluation timing, int now)
+    private bool IsPeriodicStartupPending(string actionKey, SqueakTimingEvaluation timing, int now)
     {
         if (!startupAnchorRecorded) return false;
-        if (!periodicStartupPhaseMaterialized[(int)action]) MaterializePeriodicStartupPhase(action, timing, Find.TickManager.TickRateMultiplier);
-        return now < periodicStartupReadyTicks[(int)action];
+        if (!periodicStartupPhaseMaterialized.GetValueOrDefault(actionKey)) MaterializePeriodicStartupPhase(actionKey, timing, Find.TickManager.TickRateMultiplier);
+        return now < periodicStartupReadyTicks.GetValueOrDefault(actionKey);
     }
 
-    private void MaterializePeriodicStartupPhase(SqueakAction action, SqueakTimingEvaluation timing, float tickRateMultiplier)
+    private void MaterializePeriodicStartupPhase(string actionKey, SqueakTimingEvaluation timing, float tickRateMultiplier)
     {
-        int index = (int)action;
-        if (periodicStartupPhaseMaterialized[index] || !startupAnchorRecorded) return;
-        periodicStartupPhaseMaterialized[index] = true;
-        periodicStartupReadyTicks[index] = CalculatePeriodicStartupReadyTick(action, timing, tickRateMultiplier);
+        if (periodicStartupPhaseMaterialized.GetValueOrDefault(actionKey) || !startupAnchorRecorded) return;
+        periodicStartupPhaseMaterialized[actionKey] = true;
+        periodicStartupReadyTicks[actionKey] = CalculatePeriodicStartupReadyTick(actionKey, timing, tickRateMultiplier);
     }
 
-    private int CalculatePeriodicStartupReadyTick(SqueakAction action, SqueakTimingEvaluation timing, float tickRateMultiplier)
+    private int CalculatePeriodicStartupReadyTick(string actionKey, SqueakTimingEvaluation timing, float tickRateMultiplier)
     {
         if (!startupAnchorRecorded) return int.MinValue;
         int actionTicks = timing.ActionIntervalTicks.GetValueOrDefault();
@@ -530,20 +517,20 @@ public class CompSqueaker : ThingComp
         }
         int governingTicks = timing.GlobalApplicable ? Math.Max(actionTicks, timing.GlobalCooldownTicks) : actionTicks;
         return governingTicks > 0
-            ? startupAnchorTick + 1 + (int)(StablePawnActionPhase(Pawn.ThingID, action) % (uint)governingTicks)
+            ? startupAnchorTick + 1 + (int)(StablePawnActionPhase(Pawn.ThingID, actionKey) % (uint)governingTicks)
             : startupAnchorTick;
     }
 
     private static float SafeTickRateMultiplier(float value) => float.IsNaN(value) || float.IsInfinity(value) || value <= 0f ? 1f : value;
     private static float SanitizePeriodicPopulationScale(float value) => float.IsNaN(value) || float.IsInfinity(value) || value < 1f ? 1f : value;
 
-    private static uint StablePawnActionPhase(string identity, SqueakAction action)
+    private static uint StablePawnActionPhase(string identity, string actionKey)
     {
         unchecked
         {
             uint hash = 2166136261u;
             foreach (char c in identity ?? string.Empty) { hash ^= c; hash *= 16777619u; }
-            hash ^= (uint)action; hash *= 16777619u;
+            foreach (char c in actionKey ?? string.Empty) { hash ^= c; hash *= 16777619u; }
             return hash;
         }
     }
@@ -589,19 +576,19 @@ public class CompSqueaker : ThingComp
         return mod;
     }
 
-    private SqueakPlaybackAttempt PlayOneShot(SqueakAction action, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
+    private SqueakPlaybackAttempt PlayOneShot(string actionKey, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
     {
         SqueakSoundChoice choice = SqueakSoundChoice.None;
         SoundDef? def = null;
         try
         {
-            choice = snapshot.ChooseProductionSound(context, action, Pawn);
+            choice = snapshot.ChooseProductionSoundByKey(context, actionKey, Pawn);
             def = choice.Sound;
         if (def == null)
         {
-            if (MissingSoundWarnings.Add(action))
+            if (MissingSoundWarnings.Add(actionKey))
             {
-                SqueakLog.AudioNoSound(action.ToString());
+                SqueakLog.AudioNoSound(actionKey);
             }
             return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.NoEligibleSound, choice);
         }
@@ -614,13 +601,13 @@ public class CompSqueaker : ThingComp
             info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
             info.volumeFactor = mod.volumeFactor;
             def.PlayOneShot(info);
-            SqueakDebug.NotifySqueak(Pawn, action, mood, choice);
+            SqueakDebug.NotifySqueakByKey(Pawn, actionKey, mood, choice);
             return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
         }
         catch (Exception ex)
         {
-            string soundKey = def?.defName ?? action.ToString();
-            SqueakLog.AudioDispatchFailed(action.ToString(), soundKey, ex);
+            string soundKey = def?.defName ?? actionKey;
+            SqueakLog.AudioDispatchFailed(actionKey, soundKey, ex);
             return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Exception, choice);
         }
     }
@@ -692,19 +679,19 @@ public class CompSqueaker : ThingComp
         return cachedSqueakContext;
     }
 
-    private void ConsumeAttemptCooldowns(SqueakAction action, int nowTick, float nowRealtime)
+    private void ConsumeAttemptCooldowns(string actionKey, int nowTick, float nowRealtime)
     {
-        lastTriggerTick[(int)action] = nowTick;
-        lastTriggerRealTime[(int)action] = nowRealtime;
+        lastTriggerTick[actionKey] = nowTick;
+        lastTriggerRealTime[actionKey] = nowRealtime;
         lastAnyTriggerTick = nowTick;
     }
 
-    private void RecordOutcome(SqueakTriggerOutcome outcome, SqueakAction action, bool external, bool cooldownConsumed,
+    private void RecordOutcome(SqueakTriggerOutcome outcome, string actionKey, bool external, bool cooldownConsumed,
         SoundDef? sound, SqueakSoundSource source, float nowRealtime)
     {
         if (DiagnosticsEnabled)
         {
-            SqueakRecentOutcome evaluation = new(outcome, action, Find.TickManager.TicksGame,
+            SqueakRecentOutcome evaluation = new(outcome, actionKey, Find.TickManager.TicksGame,
                 nowRealtime, cooldownConsumed, sound, source);
             lastEvaluation = evaluation;
             if (external || IsSignificantOutcome(outcome))
@@ -740,7 +727,11 @@ public class CompSqueaker : ThingComp
                 lastEvaluation, lastSignificantOutcome);
         }
 
-        SqueakActionPlan plan = actionPlans[(int)action.Value];
+        string? key = ActionKeyOf(action.Value);
+        if (key == null || !actionPlans.TryGetValue(key, out SqueakActionPlan plan))
+        {
+            return new SqueakDiagnosticSnapshot(action, false, null, null, 1f, default, default, SqueakPeriodicPopulation.GetSnapshot(), GlobalCooldownMultiplier, context.Xenotype, context.OverallIntervalMultiplier, timeSpeed, 0f, 0f, false, false, SampleVocalCapability(), false, false, lastEvaluation, lastSignificantOutcome);
+        }
         if (!plan.Configured)
         {
             return new SqueakDiagnosticSnapshot(action, false, null, null, 1f, default, default, SqueakPeriodicPopulation.GetSnapshot(), GlobalCooldownMultiplier,
@@ -760,9 +751,10 @@ public class CompSqueaker : ThingComp
             ? Mathf.Clamp01(plan.ProbabilityPerCheck * delta.ProbabilityMultiplier) : 1f;
         float probability = baseProbability / periodicScale;
         bool isPeriodic = plan.Mode == SqueakTriggerMode.EachTime || plan.Mode == SqueakTriggerMode.RandomOneShot;
-        int startupReadyTick = periodicStartupPhaseMaterialized[(int)action.Value]
-            ? periodicStartupReadyTicks[(int)action.Value]
-            : CalculatePeriodicStartupReadyTick(action.Value, timing, timeSpeed);
+        string? dk = ActionKeyOf(action.Value);
+        int startupReadyTick = periodicStartupPhaseMaterialized.GetValueOrDefault(dk ?? "")
+            ? periodicStartupReadyTicks.GetValueOrDefault(dk ?? "")
+            : CalculatePeriodicStartupReadyTick(dk ?? "", timing, timeSpeed);
         bool startupPending = isPeriodic && startupAnchorRecorded && nowTick < startupReadyTick;
         return new SqueakDiagnosticSnapshot(action, actionEnabled, plan.Mode, plan.CooldownClock, delta.IntervalMultiplier,
             timing, baseTiming, population, GlobalCooldownMultiplier, context.Xenotype, context.OverallIntervalMultiplier, timeSpeed, probability, baseProbability, startupPending, timing.TimingReady && !startupPending,
@@ -773,8 +765,7 @@ public class CompSqueaker : ThingComp
     /// <summary>Mirrors production's global and runtime scope gates without resolving audio or mutating trigger state.</summary>
     private static bool IsScopeEligible(SqueakAction action, RuntimeActionDelta delta, SqueakTriggerInvocation invocation)
     {
-        SqueakActionScope globalScope = SqueakGlobalActionPolicy.Current.GetScope(action);
-        if (globalScope == SqueakActionScope.Disabled || (globalScope == SqueakActionScope.ActiveCommand && !invocation.IsActiveCommand)) return false;
+        // H1 fix: scope comes only from the layered context delta, not a separate global policy early-return.
         return delta.Enabled && (delta.Scope != SqueakActionScope.ActiveCommand || invocation.IsActiveCommand);
     }
 
@@ -829,7 +820,8 @@ public class CompSqueaker : ThingComp
 
         foreach (SqueakAction a in Enum.GetValues(typeof(SqueakAction)))
         {
-            SoundCacheMixed[a] = DefDatabase<SoundDef>.GetNamedSilentFail(SqueakActionDefinitions.Get(a).AudioKey);
+            string key = UniversalSqueaker.Kernel.ActionKey.For(a) ?? a.ToString();
+            SoundCacheMixed[key] = DefDatabase<SoundDef>.GetNamedSilentFail(SqueakActionDefinitions.Get(a).AudioKey);
         }
 
         soundCacheInitialized = true;
@@ -871,38 +863,15 @@ public class CompSqueaker : ThingComp
         }
     }
 
-    private bool IsEating() => Pawn.CurJob?.def == JobDefOf.Ingest;
-    private bool IsSleeping() => Pawn.GetPosture() == PawnPosture.LayingInBed && Pawn.needs?.rest != null;
-    private bool IsMoving() => Pawn.pather != null && Pawn.pather.Moving;
-    private bool IsJoyJob() => Pawn.CurJob?.def?.joyKind != null;
-    private bool IsWorking() => Pawn.CurJob?.workGiverDef != null;
     private bool IsCurrentJobPlayerCommand() => Pawn.CurJob?.playerForced == true;
     private bool IsCurrentEquipJobPlayerCommand() => Pawn.CurJob?.playerForced == true && Pawn.CurJob.def == JobDefOf.Equip;
-
-    private bool IsSocializing()
-    {
-        string? d = Pawn.CurJob?.def?.defName;
-        if (d == null)
-        {
-            return false;
-        }
-
-        foreach (string marker in SocialJobMarkers)
-            if (d.IndexOf(marker, StringComparison.OrdinalIgnoreCase) >= 0) return true;
-        return false;
-    }
 
 }
 
 public class CompProperties_Squeaker : CompProperties
 {
-    // XML is authoritative. This only aligns a missing-XML fallback with the shipped 216-tick baseline;
-    // it is not a migration of the historical C# 120-tick fallback.
-    public int globalMinIntervalTicks = 216;
-    public bool scaleFrequencyWithTalking = true;
     public List<SqueakActionConfig> actions = new();
     public List<SqueakMoodMod> moodMods = new();
-    public List<SqueakDistancePresetConfig> distancePresets = new();
 
     public CompProperties_Squeaker()
     {
@@ -917,8 +886,6 @@ public class CompProperties_Squeaker : CompProperties
     {
         return new CompProperties_Squeaker
         {
-            globalMinIntervalTicks = 216,
-            scaleFrequencyWithTalking = true,
             actions = new List<SqueakActionConfig>
             {
                 new() { action = SqueakAction.Eat, mode = SqueakTriggerMode.EachTime, minIntervalTicks = 144 },
@@ -943,12 +910,6 @@ public class CompProperties_Squeaker : CompProperties
                 new() { mood = SqueakMood.Neutral, pitchFactor = 1.0f, pitchJitter = new FloatRange(0.97f, 1.03f), volumeFactor = 1.0f },
                 new() { mood = SqueakMood.Bad, pitchFactor = 0.8f, pitchJitter = new FloatRange(0.97f, 1.03f), volumeFactor = 0.7f },
                 new() { mood = SqueakMood.Break, pitchFactor = 1.1f, pitchJitter = new FloatRange(0.6f, 1.5f), volumeFactor = 1.5f },
-            },
-            distancePresets = new List<SqueakDistancePresetConfig>
-            {
-                new() { preset = SqueakDistancePreset.Conservative, range = new FloatRange(15f, 65f) },
-                new() { preset = SqueakDistancePreset.Balanced, range = new FloatRange(15f, 50f) },
-                new() { preset = SqueakDistancePreset.Strong, range = new FloatRange(15f, 40f) },
             },
         };
     }

@@ -10,7 +10,10 @@ public enum UiCommandKind
     SetMode,
     SelectDomain,
     TogglePack,
-    ForgetUnavailable
+    ForgetUnavailable,
+    ToggleEgg,
+    SetDistancePreset,
+    ToggleBasic
 }
 
 /// <summary>

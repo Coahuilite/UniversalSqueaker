@@ -79,6 +79,7 @@ public static class SqueakLog
     /// info route. Every detected vanilla fallback emits one line while detailed logging is effective.</summary>
     public static void AudioVanillaFallback(string actionKey, string race, string? xenotype, string target, string sound, string tier = "vanilla", string? pack = null, bool isEgg = false, string? pawnName = null, string? pawnId = null, bool? pawnControlled = null, string? pawnFaction = null) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.AudioVanillaFallback, new SqueakLogData(action: actionKey, race: race, xenotype: xenotype, target: target, sound: sound, tier: tier, pack: pack, egg: isEgg, pawnName: pawnName, pawnId: pawnId, pawnControlled: pawnControlled, pawnFaction: pawnFaction), false); }
     public static void FallbackProfileStoreFailed(string race, Exception ex) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.FallbackProfileStoreFailed, new SqueakLogData(race: race, exception: ex), true); }
+    public static void AudioDisabled(string action) => Emit(SqueakLogEvent.AudioDisabled, new SqueakLogData(action: action), true);
 
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {

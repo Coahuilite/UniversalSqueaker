@@ -16,10 +16,6 @@ public partial class UniversalSqueakerSettings
     // US has no product legacy race. Explicit-race records can migrate; records that need a default fail closed.
     private const string LegacyDefaultRaceDefName = "";
 
-    // Kept for Scribe schema compatibility. US catalog admission is data-driven from every admitted pack;
-    // this list no longer gates races and is never rendered by Settings UI.
-    public List<string> experimentalRaceAllowlist = new();
-
     // 0.3.1 波 3c 彩蛋开关（决策 §2.4）：默认关；开时 IsEgg 条目以加性池成员身份参与抽取，关时候选池只含普通条目。
     // 0.3.1 为隐藏 Scribe 开关（UI 不渲染）；0.3.2 UI 专项正式化。false = 序列化省略（fixture 字节稳定）。
     public bool allowEasterEggSounds;
@@ -66,15 +62,14 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref scaleCooldownWithTimeSpeed, "scaleCooldownWithTimeSpeed", true);
         Scribe_Values.Look(ref scaleFrequencyWithTalking, "scaleFrequencyWithTalking", GetDefaultScaleFrequencyWithTalking());
         Scribe_Values.Look(ref scalePeriodicWithAudiblePopulation, "scalePeriodicWithAudiblePopulation", true);
+        Scribe_Values.Look(ref globalMinIntervalTicks, "globalMinIntervalTicks", 216);
         Scribe_Values.Look(ref localizeDebugActions, "localizeDebugActions", false);
-        Scribe_Values.Look(ref developerToolsEnabled, "developerToolsEnabled", false);
         Scribe_Values.Look(ref devLoggingMode, "devLoggingMode", SqueakDevLoggingMode.Auto);
         Scribe_Values.Look(ref globalCooldownMultiplier, "globalCooldownMultiplier", 1f);
         Scribe_Values.Look(ref distancePreset, "distancePreset", SqueakDistancePreset.Balanced);
         Scribe_Values.Look(ref distanceRange, "distanceRange", GetDistancePresetRange(SqueakDistancePreset.Balanced));
-        // Hidden compatibility roster; nonempty data is preserved but does not gate catalog admission.
-        Scribe_Collections.Look(ref experimentalRaceAllowlist, "experimentalRaceAllowlist", LookMode.Value);
         Scribe_Values.Look(ref allowEasterEggSounds, "allowEasterEggSounds", false);
+        Scribe_Values.Look(ref allowExternalActions, "allowExternalActions", false);
 #if US_EXPERIMENTAL
         Scribe_Values.Look(ref experimentalKiiroCompat, "experimentalKiiroCompat", false);
 #endif
@@ -92,12 +87,13 @@ public partial class UniversalSqueakerSettings
         Scribe_Collections.Look(ref voicePackSelections, "voicePackSelections", LookMode.Deep);
         Scribe_Collections.Look(ref xenotypePresets, "xenotypePresets", LookMode.Deep);
         Scribe_Collections.Look(ref globalActionEnabled, "globalActionEnabled", LookMode.Deep);
+        Scribe_Collections.Look(ref actionTuning, "actionTuning", LookMode.Deep);
         if (Scribe.mode == LoadSaveMode.LoadingVars && moodOverrides == null)
             moodOverrides = new Dictionary<SqueakMood, SqueakMoodMod>();
 
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
 
-        if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Off;
+        if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Vanilla;
         if (!Enum.IsDefined(typeof(SqueakDevLoggingMode), devLoggingMode)) devLoggingMode = SqueakDevLoggingMode.Auto;
         SqueakLog.Configure(devLoggingMode);
 
@@ -111,8 +107,8 @@ public partial class UniversalSqueakerSettings
         if (!distanceRangeWasLoaded) distanceRange = GetDistancePresetRange(SqueakDistancePreset.Balanced);
         distanceRange = ClampDistanceRange(distanceRange);
 
-        if (experimentalRaceAllowlist == null) experimentalRaceAllowlist = new List<string>();
         if (globalActionEnabled == null) globalActionEnabled = new List<GlobalActionEnabledRecord>();
+        if (actionTuning == null) actionTuning = new List<ActionTuningRecord>();
         foreach (GlobalActionEnabledRecord record in globalActionEnabled)
         {
             if (record == null || !SqueakActionDefinitions.IsKnown(record.action)) continue;
@@ -128,6 +124,23 @@ public partial class UniversalSqueakerSettings
         {
             if (voicePackSelections == null) voicePackSelections = new List<VoicePackSelectionRecord>();
             if (xenotypePresets == null) xenotypePresets = new List<XenotypePresetRecord>();
+        }
+
+        // S2: migrate legacy action scope records into the unified layered table (idempotent; empty source is valid).
+        if (actionTuning == null || actionTuning.Count == 0)
+        {
+            if (SqueakSettingsMigration.TryCreateActionTuningRecords(
+                    globalActionEnabled,
+                    xenotypePresets,
+                    out List<ActionTuningRecord> migratedTuning,
+                    out string tuningFailure))
+            {
+                actionTuning = migratedTuning;
+            }
+            else
+            {
+                SqueakLog.TargetRejected("settings_schema_migration", "action_tuning_migration_failed:" + tuningFailure);
+            }
         }
     }
 

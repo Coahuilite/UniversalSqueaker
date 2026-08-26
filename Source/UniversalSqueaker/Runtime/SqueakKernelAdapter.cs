@@ -50,6 +50,8 @@ internal static class SqueakKernelAdapter
     {
         SqueakVoicePackMode.Fallback => SelectionMode.Fallback,
         SqueakVoicePackMode.Remix => SelectionMode.Remix,
+        SqueakVoicePackMode.Vanilla => SelectionMode.Off,
+        SqueakVoicePackMode.Disabled => SelectionMode.Off,
         _ => SelectionMode.Off,
     };
 

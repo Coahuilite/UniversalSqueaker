@@ -128,8 +128,6 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
     <xpath>/Defs/AlienRace.ThingDef_AlienRace[defName="目标defName"]/comps</xpath>
     <value>
       <li Class="UniversalSqueaker.CompProperties_Squeaker">
-        <globalMinIntervalTicks>216</globalMinIntervalTicks>
-        <scaleFrequencyWithTalking>true</scaleFrequencyWithTalking>
         <actions>
           <li><action>Call</action><mode>RandomOneShot</mode><minIntervalTicks>864</minIntervalTicks><probabilityPerCheck>0.012</probabilityPerCheck></li>
           <!-- 其余动作可选；省略的动作走未配置默认 -->
@@ -138,9 +136,6 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
           <li><mood>Good</mood><pitchFactor>1.2</pitchFactor><pitchJitter>0.97~1.03</pitchJitter><volumeFactor>1.3</volumeFactor></li>
           <li><mood>Neutral</mood><pitchFactor>1.0</pitchFactor><pitchJitter>0.97~1.03</pitchJitter><volumeFactor>1.0</volumeFactor></li>
         </moodMods>
-        <distancePresets>
-          <li><preset>Balanced</preset><range>15~50</range></li>
-        </distancePresets>
       </li>
     </value>
   </Operation>

@@ -12,6 +12,7 @@ public static class UnitTests
     {
         DomainKeys(ref failures);
         ActionKeyMapping(ref failures);
+        VerseEventBindingContract(ref failures);
         ActionSync(ref failures);
         BuiltInTable(ref failures);
         FailurePathFallback(ref failures);
@@ -81,6 +82,27 @@ public static class UnitTests
             "Crying key is enum-mappable after append", ref failures);
         Check(!ActionKey.TryParseBuiltIn("other.mod:US_X", out _), "TryParseBuiltIn external key false", ref failures);
         Check(!ActionKey.TryParseBuiltIn("call", out _), "TryParseBuiltIn wrong case false", ref failures);
+    }
+
+    /// <summary>VerseEvent 绑定契约（行为等价回归）：8 个外部动作的 Origin 固定映射 + 默认 Source，
+    /// 与 us-s0-worknotes-zh.md §8 的 patch 行为基线逐条对齐。外部动作键回落 SqueakTriggerOrigin.External。</summary>
+    private static void VerseEventBindingContract(ref int failures)
+    {
+        Check(VerseEventBinding.OriginFor(SqueakAction.Wounded) == SqueakTriggerOrigin.Wounded, "OriginFor Wounded", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Select) == SqueakTriggerOrigin.Select, "OriginFor Select", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Death) == SqueakTriggerOrigin.Death, "OriginFor Death", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Draft) == SqueakTriggerOrigin.Draft, "OriginFor Draft", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Undraft) == SqueakTriggerOrigin.Undraft, "OriginFor Undraft", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Attack) == SqueakTriggerOrigin.Attack, "OriginFor Attack", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Equip) == SqueakTriggerOrigin.Equip, "OriginFor Equip", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.MentalBreak) == SqueakTriggerOrigin.MentalBreak, "OriginFor MentalBreak", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Crying) == SqueakTriggerOrigin.Crying, "OriginFor Crying", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Giggling) == SqueakTriggerOrigin.Giggling, "OriginFor Giggling", ref failures);
+        Check(VerseEventBinding.OriginFor(SqueakAction.Call) == SqueakTriggerOrigin.External, "OriginFor periodic Call falls back External", ref failures);
+        Check(VerseEventBinding.DefaultSource(SqueakAction.Select) == SqueakInvocationSource.PlayerSelection, "DefaultSource Select", ref failures);
+        Check(VerseEventBinding.DefaultSource(SqueakAction.Draft) == SqueakInvocationSource.ActiveCommand, "DefaultSource Draft", ref failures);
+        Check(VerseEventBinding.DefaultSource(SqueakAction.Equip) == SqueakInvocationSource.ActiveCommand, "DefaultSource Equip", ref failures);
+        Check(VerseEventBinding.DefaultSource(SqueakAction.Wounded) == SqueakInvocationSource.StateEvent, "DefaultSource Wounded", ref failures);
     }
 
     /// <summary>三方同步离线断言：① 枚举名序 == BuiltInActionKeys 17 键序 == 动作名镜像序；

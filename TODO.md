@@ -46,6 +46,41 @@ Decisions D1-D7 live in `MEMORY.md`. Rebuild commits: `a00bbfa` (Phase 1), `9de2
 - [x] Add `docs/mod-structure-reference-zh.md`; scaffold About/LoadFolders/1.6/Source/scripts/.github.
 - [x] Migrate the SR release flow into `docs/release-runbook-zh.md`; write `HANDOFF.md`.
 
+## Next development plan — UI migration + orphan features (decided 2026-08-24)
+
+Full plan with decision table, orphan inventory, and implementation order: `docs/us-ui-migration-plan-zh.md`.
+
+Key decisions locked:
+- Mode set is `Vanilla / Fallback / Remix / Disabled` (Off renamed to Vanilla; `Disabled` = true bypass, sampling-layer short-circuit, no `ThingDef.comps` mutation; only one `usdiag` notice while disabled, no repeated trigger logging).
+- Tuning editor (behavior + mood merged): author baseline = standalone read-only XML Def (NOT `CompProperties_Squeaker`, NOT `SqueakVoicePackDef`), player overrides = layered Global→Race→Xenotype table (Plan A, single record type replacing `globalActionEnabled` + `xenotypePresets.actionOverrides`), import/export = player delta feedback.
+- Action scope: one layered table, `Xenotype > Race > Global > DefaultScope`, supports "global off + xenotype individually on"; merged with the action-gate design.
+- Action entry wrapper (new): `ActionEntry` + `TriggerBinding` replace hardcoded `Notify_*`+Harmony patches; faithful routing of the original RimWorld path underneath; `Disabled` bypass = wrapper short-circuits and lets vanilla sound. `Sustained` is currently a dead mode; enable via the `Sustainer` binding kind in S3. Three-segment architecture (从哪来 TriggerBinding → 我是谁 PawnIdentity/ResolveContext → 到哪去 Registry.Select) with neutral-kernel vs external-adapter split locked in plan doc §13.4–13.5.
+- Implementation order: S1 global-layer removal (distance/interval/talking-scaling to US settings) → S2 action-entry wrapper + action-gate → S3 Sustainer path → S4 tuning editor + layered override + feedback + UI face → S5 cleanup.
+- Easter-egg toggle in main settings alongside mode cards, default off.
+- Delete `experimentalRaceAllowlist`, `voicePackDefaultSeeded` (evaluate), `<description>`+`Name` localization patch; keep+restore `localizeDebugActions` (re-add `Patch_DebugTabMenu_Actions` + `US_` keys).
+- Filtering (author/race/conflict/legacy + dropdown quick-filter), componentized help (widget-attached help content), narrow responsive (Race page + dedicated settings page), visual modernization (no vanilla black/gray boxes, RimWorld-style modern UI), build identity in footer — see doc §10.
+- Developer page replaced by DebugAction panel.
+
+
+### Progress checkpoint (2026-08-25) — implemented & gated green
+
+Executed in this session, all passing `scripts/verify-local.ps1` (12 gates) + Dev/Release builds (0 warnings):
+
+- **S0** — 5 design docs landed: `docs/us-s0-scribe-migration-zh.md`, `docs/us-s0-data-model-zh.md`, `docs/us-s0-key-and-race-context-zh.md`, `docs/us-s0-log-protocol-zh.md`, `docs/us-action-wrapper-interface-zh.md`.
+- **S1** — global-layer removal: `globalMinIntervalTicks`/`scaleFrequencyWithTalking`/`distancePresets` removed from the author comp face; new `UniversalSqueakerSettings.globalMinIntervalTicks=216` + Scribe + runtime publish; skill template cleaned.
+- **S2a** — enum `Off→Vanilla` + new `Disabled(3)`; UI mode cards now 4 (Vanilla/Fallback/Remix/Disabled); `Disabled` true-bypass short-circuit in `CompTick`/`NotifyExternal`; new v2 log event `audio.disabled` + LogTests (registry 8→9).
+- **S2b (semantics)** — H1 fix: action scope now field-level last-wins `X > R > G > Default` (覆盖) instead of logical AND; removed the global early-return in `TryTrigger`/`IsScopeEligible`. New `ActionTuningRecord` layered table + `actionTuning` settings field + migration `TryCreateActionTuningRecords` + consumption in `BuildGlobalActions`/`BuildBehavior`. H3: Race-layer contexts + `ResolvedSqueakContext.Overlay` + three-tier `ResolveContext`.
+- **S5** — deleted `SqueakGlobalActionPolicy.cs`, `experimentalRaceAllowlist`, `Patch_ModMetaData_LocalizedMetadata.cs`, dead `EnsureBuiltInRaceDefault`, `developerToolsEnabled`; restored `Patch_DebugTabMenu_Actions` + `localizeDebugActions` wiring.
+- **Goal A (wrapper 化 H4, COMPLETE)** — `ActionEntry`/`TriggerBinding`/`ActionEntryRegistry` types + `Binding` property; `allowExternalActions` gate (settings + Scribe + `IsActionAllowedByKey` + registry publish); `CompSqueaker` 5 fixed arrays → `Dictionary<string,...>`; enum-keyed consumption → `ActionKey` string throughout (resolver + trigger chain + `SoundCacheMixed`); external-action end-to-end firing via `NotifyExternalByKey`; behavior-equivalence via `VerseEventBindingContract` test + golden-corpus replay zero-delta. Patch shape: 8 patches stay thin wrappers; Origin hardcoding removed via `VerseEventBinding` static aggregated binding.
+
+### Remaining (next goal, do NOT rush in remaining rounds)
+
+- **S3 Sustainer** — validator allow sustain + playability branch + `TrySpawnSustainer`/`Maintain`/`End` path + Sustainer lifecycle state machine.
+- **S4 UI** — tuning editor + tree action-scope switch (`TreeRowWidget`) + distance preview + filtering/help/narrow/visual + feedback import/export.
+- **专项测试缺口** — "global off + xenotype on" coverage needs the merge logic extracted to Kernel/Pure (or a Runtime test harness) before it can live in `UniversalSqueakerKernelTests`.
+
+- **S4 UI (partial)** — orphan controls re-wired to the old UI path (`VoicePacksPage`): A7 easter-egg toggle, A3 distance preset switch, A4 three scaling toggles (A5 cooldown multiplier data was already wired). Ferrite-path sync + A1/A2 tuning editor + A6 tree action-scope + A8 DebugAction panel remain.
+
 ## Next session — resume here (2026-08-24 checkpoint)
 
 - [ ] Install `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-bf9cf26.zip` (or the staged `dist/dev/UniversalSqueaker` folder) over the game Mods copy.

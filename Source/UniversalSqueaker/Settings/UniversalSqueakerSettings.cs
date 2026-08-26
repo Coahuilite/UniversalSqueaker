@@ -48,8 +48,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     public bool scaleCooldownWithTimeSpeed = true;
     public bool scaleFrequencyWithTalking = true;
     public bool scalePeriodicWithAudiblePopulation = true;
+    public int globalMinIntervalTicks = 216;
     public bool localizeDebugActions = false;
-    public bool developerToolsEnabled = false;
     public SqueakDevLoggingMode devLoggingMode = SqueakDevLoggingMode.Auto;
     public float globalCooldownMultiplier = 1f;
     public SqueakDistancePreset distancePreset = SqueakDistancePreset.Balanced;
@@ -59,6 +59,10 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<XenotypePresetRecord> xenotypePresets = new();
     // Canonical persisted list keeps old saves (with no records) enabled by default.
     public List<GlobalActionEnabledRecord> globalActionEnabled = new();
+    // S2 layered action tuning table (Global/Race/Xenotype); replaces globalActionEnabled + xenotypePresets.actionOverrides.
+    public List<ActionTuningRecord> actionTuning = new();
+    // Action gate (Goal A): non-built-in ActionEntry fires only when true. Default false (closed).
+    public bool allowExternalActions = false;
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
     {
@@ -88,14 +92,14 @@ public partial class UniversalSqueakerSettings : ModSettings
 
     public void ApplyToRuntime()
     {
-        // Publish this independent gate before resolver rebuilding. A disabled production action must not
-        // need resolver/catalog/context access merely to decide that it is silent.
-        SqueakGlobalActionPolicy.Publish(this);
         SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
+        ActionEntryRegistry.Current.AllowExternalActions = allowExternalActions;
+        Patch_DebugTabMenu_Actions.SetEnabled(localizeDebugActions);
         CompSqueaker.ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         CompSqueaker.ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
+        CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
         CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
     }
 
@@ -106,30 +110,38 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
+        CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
     }
 
     public void NotifyDistanceRuntimeChanged() => CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
+
+    /// <summary>A3: switch the distance preset and republish the effective range (cheap, no resolver rebuild).</summary>
+    internal void SetDistancePreset(SqueakDistancePreset preset)
+    {
+        if (preset == SqueakDistancePreset.Custom || !Enum.IsDefined(typeof(SqueakDistancePreset), preset)) return;
+        if (preset == distancePreset) return;
+        distancePreset = preset;
+        distanceRange = GetDistancePresetRange(preset);
+        NotifyDistanceRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>A4/A5: cheap global scaling toggles and cooldown multiplier (no resolver rebuild; runtime static values).</summary>
+    internal void SetBasicTuning(string key, bool value)
+    {
+        switch (key)
+        {
+            case "ScaleCooldown": if (scaleCooldownWithTimeSpeed != value) { scaleCooldownWithTimeSpeed = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
+            case "ScaleTalking": if (scaleFrequencyWithTalking != value) { scaleFrequencyWithTalking = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
+            case "ScalePopulation": if (scalePeriodicWithAudiblePopulation != value) { scalePeriodicWithAudiblePopulation = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
+        }
+    }
     /// <summary>Global mood is read directly by CompSqueaker during playback; no resolver rebuild is needed.</summary>
     public void NotifyGlobalMoodRuntimeChanged() { }
     public void NotifyContinuousXenotypeRuntimeChanged() => SqueakRuntimeResolver.NotifyContinuousResolverChange(this, SqueakXenotypeCatalog.Current);
     public void NotifyDiscreteResolverRuntimeChanged() => SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
     public void QueuePersistence() => UniversalSqueakerMod.Instance?.QueueSettingsSave();
     public void FlushPendingRuntimeForPreview() => SqueakRuntimeResolver.FlushPendingRuntimeChanges(true);
-
-    /// <summary>
-    /// Kept for call-site compatibility. US has no product race seed; the legacy single-target overload
-    /// resolves the race from the catalog when there is exactly one admitted race. Multi-race callers must
-    /// use the race-aware overload.
-    /// </summary>
-    internal void EnsureBuiltInRaceDefault()
-    {
-        // A failed v3/v1 transaction must remain untouched until its next startup retry.
-        if (settingsSchemaVersion < CurrentSettingsSchemaVersion || voicePackSchemaVersion < CurrentVoicePackSchemaVersion) return;
-        if (voicePackDefaultSeeded) return;
-        voicePackDefaultSeeded = true;
-        // US is data-driven and has no built-in race seed. The catalog derives all race domains from
-        // loaded VoicePack declarations; an empty source starts with no seeded selection.
-    }
 
     /// <summary>Consumes a PostLoadInit migration only from the main-thread startup callback.</summary>
     internal void QueuePendingMigrationPersistence()
@@ -285,40 +297,9 @@ public partial class UniversalSqueakerSettings : ModSettings
         return races.Count == 1 ? races[0] : "";
     }
 
-    // 数据驱动:mood/action 列表从所有挂 CompProperties_Squeaker 的 ThingDef 读(XML actions/moodMods)。
-    // XML 加配置自动出现在运行时默认值,无需改 C# 数组。DefDatabase 加载后不变,首次访问懒加载缓存。
-    internal static IEnumerable<CompProperties_Squeaker> ConfiguredSqueakers()
-    {
-        foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
-        {
-            if (def.comps == null)
-            {
-                continue;
-            }
-
-            foreach (CompProperties cp in def.comps)
-            {
-                if (cp is CompProperties_Squeaker sq)
-                {
-                    yield return sq;
-                }
-            }
-        }
-    }
-
     private static FloatRange GetDistancePresetRange(SqueakDistancePreset preset)
     {
-        foreach (CompProperties_Squeaker sq in ConfiguredSqueakers())
-        {
-            foreach (SqueakDistancePresetConfig cfg in sq.distancePresets)
-            {
-                if (cfg.preset == preset)
-                {
-                    return cfg.range;
-                }
-            }
-        }
-
+        // S1: distance presets are now US-global settings; the author comp face no longer carries them.
         return preset switch
         {
             SqueakDistancePreset.Conservative => new FloatRange(15f, 65f),
@@ -329,11 +310,7 @@ public partial class UniversalSqueakerSettings : ModSettings
 
     private static bool GetDefaultScaleFrequencyWithTalking()
     {
-        foreach (CompProperties_Squeaker sq in ConfiguredSqueakers())
-        {
-            return sq.scaleFrequencyWithTalking;
-        }
-
+        // S1: talking-frequency scaling is now a US-global setting; no author comp face read-back.
         return true;
     }
 

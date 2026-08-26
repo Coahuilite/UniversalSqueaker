@@ -210,6 +210,7 @@ internal static class Program
         SqueakLog.LegacyVoicePackAdmitted("coahuilite.squeakyratkin:SR_OldPack", "Ratkin");
         SqueakLog.LegacyCompAutoAttached("Ratkin");
         SqueakLog.LegacyCompAutoAttachFailed(new Exception("auto attach failed"));
+        SqueakLog.AudioDisabled("Select");
 
         AssertLines(nameof(VerifyV2Protocol) + " enabled",
             V2("info", "daily", "settings.origin", "Mod settings origin: FreshCreated.", trailing: " settings_origin=FreshCreated"),
@@ -222,7 +223,8 @@ internal static class Program
             V2("error", "daily", "hook.mental_fit.unavailable", "Baby-fits squeak hook is unavailable."),
             V2("info", "daily", "voicepack.pack.legacy_admitted", "Legacy SR VoicePack admitted: coahuilite.squeakyratkin:SR_OldPack (race Ratkin).", pack: "coahuilite.squeakyratkin:SR_OldPack", race: "Ratkin", trailing: " legacy_type=SqueakyRatkin.SqueakVoicePackDef"),
             V2("info", "daily", "voicepack.comp.legacy_auto_attached", "Legacy compatibility auto-attached the squeak comp to race Ratkin.", race: "Ratkin"),
-            V2("warning", "daily", "voicepack.comp.legacy_auto_attach_failed", "Legacy compatibility auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=auto%20attach%20failed"));
+            V2("warning", "daily", "voicepack.comp.legacy_auto_attach_failed", "Legacy compatibility auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=auto%20attach%20failed"),
+            V2("info", "daily", "audio.disabled", "Squeak audio is disabled (true bypass): Select not intercepted.", action: "Select"));
         CaptureV2Coverage();
         // log-v2 once: the first settings.origin claim wins per session; ResetSession reopens the domain.
         Reset(SqueakDevLoggingMode.Enabled);
@@ -296,7 +298,7 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(8, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(9, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)

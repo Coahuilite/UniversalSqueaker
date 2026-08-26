@@ -13,7 +13,8 @@ public enum SqueakVoicePackScope
 /// <summary>Audio selection policy. It is intentionally versioned separately from retired remix settings.</summary>
 public enum SqueakVoicePackMode
 {
-    Off,
+    Vanilla,
     Fallback,
-    Remix
+    Remix,
+    Disabled
 }

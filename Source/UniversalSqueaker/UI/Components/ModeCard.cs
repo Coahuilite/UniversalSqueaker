@@ -4,7 +4,7 @@ using Verse;
 
 namespace UniversalSqueaker.UI;
 
-/// <summary>One selectable mode card (Off / Fallback / Remix). Stateless; emits SetMode on click.</summary>
+/// <summary>One selectable mode card (Vanilla / Fallback / Remix / Disabled). Stateless; emits SetMode on click.</summary>
 public static class ModeCard
 {
     public static void Draw(Rect rect, SqueakVoicePackMode current, SqueakVoicePackMode target,
