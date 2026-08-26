@@ -79,6 +79,7 @@ public static class FerriteVoicePacksPage
                 ["ScaleCooldownWithTimeSpeed"] = view.ScaleCooldownWithTimeSpeed,
                 ["ScaleFrequencyWithTalking"] = view.ScaleFrequencyWithTalking,
                 ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation,
+                ["ShowCameraIndicator"] = view.ShowCameraIndicator,
                 ["ActionScopes"] = view.ActionScopes
             };
 

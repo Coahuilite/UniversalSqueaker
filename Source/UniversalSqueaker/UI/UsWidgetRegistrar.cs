@@ -26,6 +26,7 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, VoicePackChecklistWidget.Kind, () => new VoicePackChecklistWidget());
             WidgetRegistry.Register(Scope, PageTitleWidget.Kind, () => new PageTitleWidget());
             WidgetRegistry.Register(Scope, BasicTuningWidget.Kind, () => new BasicTuningWidget());
+            WidgetRegistry.Register(Scope, CameraIndicatorWidget.Kind, () => new CameraIndicatorWidget());
             WidgetRegistry.Register(Scope, ScopeTreeWidget.Kind, () => new ScopeTreeWidget());
 
             registered = true;

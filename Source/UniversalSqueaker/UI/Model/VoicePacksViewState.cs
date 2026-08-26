@@ -12,6 +12,7 @@ public sealed class VoicePacksViewState
     public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
     public bool ScalePeriodicWithAudiblePopulation { get; }
+    public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
     public bool BiotechActive { get; }
     public string BannerText { get; }
@@ -27,6 +28,7 @@ public sealed class VoicePacksViewState
         bool scaleCooldownWithTimeSpeed,
         bool scaleFrequencyWithTalking,
         bool scalePeriodicWithAudiblePopulation,
+        bool showCameraIndicator,
         float globalCooldownMultiplier,
         bool biotechActive,
         string bannerText,
@@ -41,6 +43,7 @@ public sealed class VoicePacksViewState
         ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
         ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
+        ShowCameraIndicator = showCameraIndicator;
         GlobalCooldownMultiplier = globalCooldownMultiplier;
         BiotechActive = biotechActive;
         BannerText = bannerText ?? "";

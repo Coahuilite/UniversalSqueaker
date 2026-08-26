@@ -3,6 +3,10 @@
   <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
   <US.Settings.Save.Failed>Squeak settings could not be saved.</US.Settings.Save.Failed>
 
+  <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
+  <DebugAction_DiagnosticsSelected>Diagnostics: selected pawn</DebugAction_DiagnosticsSelected>
+  <US.Debug.CameraIndicator>Camera: height {0}, view size {1}</US.Debug.CameraIndicator>
+
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>
   <US.Action.Sleep>Sleep</US.Action.Sleep>

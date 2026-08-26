@@ -64,6 +64,7 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref scalePeriodicWithAudiblePopulation, "scalePeriodicWithAudiblePopulation", true);
         Scribe_Values.Look(ref globalMinIntervalTicks, "globalMinIntervalTicks", 216);
         Scribe_Values.Look(ref localizeDebugActions, "localizeDebugActions", false);
+        Scribe_Values.Look(ref showCameraIndicator, "showCameraIndicator", false);
         Scribe_Values.Look(ref devLoggingMode, "devLoggingMode", SqueakDevLoggingMode.Auto);
         Scribe_Values.Look(ref globalCooldownMultiplier, "globalCooldownMultiplier", 1f);
         Scribe_Values.Look(ref distancePreset, "distancePreset", SqueakDistancePreset.Balanced);

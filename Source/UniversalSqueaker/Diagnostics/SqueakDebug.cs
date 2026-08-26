@@ -8,6 +8,23 @@ namespace UniversalSqueaker;
 /// </summary>
 public static class SqueakDebug
 {
+    /// <summary>
+    /// S4 diagnostics foundation: player-facing camera indicator. Owned by the settings
+    /// toggle (<see cref="UniversalSqueakerSettings.SetCameraIndicator"/>) and consumed by
+    /// <see cref="Patch_GlobalControlsUtility_CameraIndicator"/> — no DevMode gating.
+    /// </summary>
+    public static bool ShowCameraIndicator = false;
+
+    /// <summary>
+    /// S4 diagnostics foundation: DebugAction entry point (panel body lands in the next block).
+    /// Empty until the diagnostics panel exists; the DebugAction menu item still validates
+    /// selection state so the entry is reachable.
+    /// </summary>
+    public static void OpenSelectedDiagnostics()
+    {
+        if (Find.Selector.SingleSelectedThing == null) return;
+    }
+
     /// <summary>usdiag v2 tier vocabulary: xenotype_pack / race_pack / vanilla / "-" for none.
     /// PackFallback folds into RacePack and BuiltInFallback into Vanilla.</summary>
     private static string ProtocolTier(SqueakSoundSource source) => source switch

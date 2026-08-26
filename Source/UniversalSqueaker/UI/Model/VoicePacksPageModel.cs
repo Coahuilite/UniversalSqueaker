@@ -42,7 +42,7 @@ public static class VoicePacksPageModel
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
         string banner = BuildBannerText(catalog, races, xenotypes, mode, biotech);
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings);
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)

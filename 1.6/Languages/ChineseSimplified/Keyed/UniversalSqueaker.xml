@@ -3,6 +3,10 @@
   <US.SettingsCategory>Universal Squeaker</US.SettingsCategory>
   <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
 
+  <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
+  <DebugAction_DiagnosticsSelected>诊断：选中 pawn</DebugAction_DiagnosticsSelected>
+  <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
+
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>

@@ -50,6 +50,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     public bool scalePeriodicWithAudiblePopulation = true;
     public int globalMinIntervalTicks = 216;
     public bool localizeDebugActions = false;
+    // S4 diagnostics foundation: player-facing camera indicator readout (no DevMode gating).
+    public bool showCameraIndicator = false;
     public SqueakDevLoggingMode devLoggingMode = SqueakDevLoggingMode.Auto;
     public float globalCooldownMultiplier = 1f;
     public SqueakDistancePreset distancePreset = SqueakDistancePreset.Balanced;
@@ -95,6 +97,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
         ActionEntryRegistry.Current.AllowExternalActions = allowExternalActions;
         Patch_DebugTabMenu_Actions.SetEnabled(localizeDebugActions);
+        SqueakDebug.ShowCameraIndicator = showCameraIndicator;
         CompSqueaker.ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         CompSqueaker.ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
@@ -134,7 +137,20 @@ public partial class UniversalSqueakerSettings : ModSettings
             case "ScaleCooldown": if (scaleCooldownWithTimeSpeed != value) { scaleCooldownWithTimeSpeed = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
             case "ScaleTalking": if (scaleFrequencyWithTalking != value) { scaleFrequencyWithTalking = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
             case "ScalePopulation": if (scalePeriodicWithAudiblePopulation != value) { scalePeriodicWithAudiblePopulation = value; NotifyCheapRuntimeChanged(); QueuePersistence(); } break;
+            case "CameraIndicator": SetCameraIndicator(value); break;
         }
+    }
+
+    /// <summary>
+    /// S4 diagnostics foundation: player-facing camera indicator toggle. Cheap: updates the runtime
+    /// static directly (no resolver rebuild) and queues persistence.
+    /// </summary>
+    internal void SetCameraIndicator(bool value)
+    {
+        if (showCameraIndicator == value) return;
+        showCameraIndicator = value;
+        SqueakDebug.ShowCameraIndicator = value;
+        QueuePersistence();
     }
     /// <summary>Global mood is read directly by CompSqueaker during playback; no resolver rebuild is needed.</summary>
     public void NotifyGlobalMoodRuntimeChanged() { }
