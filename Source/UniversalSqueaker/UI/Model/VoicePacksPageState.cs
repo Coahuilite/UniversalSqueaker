@@ -19,6 +19,11 @@ public sealed class VoicePacksPageState
     public Vector2 ScrollPosition;
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
 
+    // S5 调音编辑器（选项 ①）：当前编辑层（0=Global,1=Race,2=Xenotype）与层域身份。
+    public int TuningLayer;
+    public string TuningRaceDefName = "";
+    public string TuningXenotypeDefName = "";
+
     public VoicePacksPageState()
     {
     }
@@ -31,6 +36,9 @@ public sealed class VoicePacksPageState
         HelpOpen = false;
         ScrollPosition = Vector2.zero;
         BaselinePresets.Clear();
+        TuningLayer = 0;
+        TuningRaceDefName = "";
+        TuningXenotypeDefName = "";
     }
 }
 

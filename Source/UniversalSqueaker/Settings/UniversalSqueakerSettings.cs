@@ -209,6 +209,63 @@ public partial class UniversalSqueakerSettings : ModSettings
         QueuePersistence();
     }
 
+    /// <summary>写一条分层心情调音：Upsert 到 moodTuning（last-wins 按 (mood,raceDefName,xenotypeDefName)）。
+    /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 移除整行
+    /// 记录（恢复继承）。走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
+    internal void SetMoodTuning(SqueakMood mood, string raceDefName, string xenotypeDefName, string factor, float? value)
+    {
+        moodTuning ??= new List<MoodTuningRecord>();
+        // 按 IsValidLayer 语义归一：raceDefName 空 + xenotypeDefName 非空 = 非法，直接忽略。
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return;
+
+        int index = -1;
+        for (int i = 0; i < moodTuning.Count; i++)
+        {
+            MoodTuningRecord candidate = moodTuning[i];
+            if (candidate != null
+                && candidate.mood == mood
+                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (string.Equals(factor, "clear", StringComparison.Ordinal))
+        {
+            // 清本层记录 = 恢复继承。
+            if (index >= 0) moodTuning.RemoveAt(index);
+            NotifyContinuousXenotypeRuntimeChanged();
+            QueuePersistence();
+            return;
+        }
+
+        if (value == null || float.IsNaN(value.Value) || float.IsInfinity(value.Value)) return;
+
+        MoodTuningRecord record;
+        if (index >= 0)
+        {
+            record = moodTuning[index];
+        }
+        else
+        {
+            record = new MoodTuningRecord { mood = mood, raceDefName = raceDefName ?? "", xenotypeDefName = xenotypeDefName ?? "" };
+            moodTuning.Add(record);
+        }
+
+        // 字段级写入：只落被编辑的因子，其余 hasX 保持（继承语义不受影响）。
+        if (string.Equals(factor, "pitch", StringComparison.Ordinal)) { record.hasPitchFactor = true; record.pitchFactor = Mathf.Clamp(value.Value, 0.5f, 2f); }
+        else if (string.Equals(factor, "volume", StringComparison.Ordinal)) { record.hasVolumeFactor = true; record.volumeFactor = Mathf.Clamp(value.Value, 0.1f, 2f); }
+        else if (string.Equals(factor, "jitter", StringComparison.Ordinal)) { float half = Mathf.Clamp(value.Value, 0f, 0.5f); record.hasPitchJitter = true; record.pitchJitter = new FloatRange(Math.Max(0.02f, 1f - half), 1f + half); }
+        else return;
+
+        NotifyContinuousXenotypeRuntimeChanged();
+        QueuePersistence();
+    }
+
     /// <summary>增量导入调音预设：将选中 race/xeno 行写入 actionTuning 与 moodOverrides，然后离散重建 resolver 并排队持久化。</summary>
     internal BaselineImportResult ImportBaselinePreset(UniversalSqueakerTuningBaselineDef preset, BaselinePresetImporter.Selection selection)
     {

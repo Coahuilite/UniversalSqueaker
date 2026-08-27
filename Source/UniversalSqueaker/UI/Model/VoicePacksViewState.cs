@@ -21,6 +21,11 @@ public sealed class VoicePacksViewState
     public VoicePackDomainView? SelectedDomain { get; }
     public IReadOnlyList<ActionScopeRowView> ActionScopes { get; }
     public IReadOnlyList<BaselinePresetView> BaselinePresets { get; }
+    public int TuningLayer { get; }
+    public string TuningRaceDefName { get; }
+    public string TuningXenotypeDefName { get; }
+    public IReadOnlyList<TuningDomainOptionView> TuningDomains { get; }
+    public IReadOnlyList<MoodTuningRowView> MoodTuningRows { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -37,6 +42,11 @@ public sealed class VoicePacksViewState
         IReadOnlyList<VoicePackDomainView> xenotypeDomains,
         VoicePackDomainView? selectedDomain,
         IReadOnlyList<ActionScopeRowView> actionScopes,
+        int tuningLayer,
+        string tuningRaceDefName,
+        string tuningXenotypeDefName,
+        IReadOnlyList<TuningDomainOptionView> tuningDomains,
+        IReadOnlyList<MoodTuningRowView> moodTuningRows,
         IReadOnlyList<BaselinePresetView> baselinePresets)
     {
         Mode = mode;
@@ -53,6 +63,11 @@ public sealed class VoicePacksViewState
         XenotypeDomains = xenotypeDomains ?? Array.Empty<VoicePackDomainView>();
         SelectedDomain = selectedDomain;
         ActionScopes = actionScopes ?? Array.Empty<ActionScopeRowView>();
+        TuningLayer = tuningLayer;
+        TuningRaceDefName = tuningRaceDefName ?? "";
+        TuningXenotypeDefName = tuningXenotypeDefName ?? "";
+        TuningDomains = tuningDomains ?? Array.Empty<TuningDomainOptionView>();
+        MoodTuningRows = moodTuningRows ?? Array.Empty<MoodTuningRowView>();
         BaselinePresets = baselinePresets ?? Array.Empty<BaselinePresetView>();
     }
 }
@@ -136,15 +151,22 @@ public readonly struct ActionScopeRowView
 {
     public readonly string ActionKey;
     public readonly string DisplayName;
+    /// <summary>本层记录的作用域（HasOwnScope=false 时无意义）。</summary>
     public readonly SqueakActionScope Scope;
     public readonly SqueakAction Action;
+    /// <summary>S5 分层：本层是否存在显式记录（false = 继承底层）。</summary>
+    public readonly bool HasOwnScope;
+    /// <summary>S5 分层：有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins）。</summary>
+    public readonly SqueakActionScope EffectiveScope;
 
-    public ActionScopeRowView(string actionKey, string displayName, SqueakActionScope scope, SqueakAction action)
+    public ActionScopeRowView(string actionKey, string displayName, SqueakActionScope scope, SqueakAction action, bool hasOwnScope = false, SqueakActionScope effectiveScope = default)
     {
         ActionKey = actionKey ?? "";
         DisplayName = displayName ?? actionKey ?? "";
         Scope = scope;
         Action = action;
+        HasOwnScope = hasOwnScope;
+        EffectiveScope = hasOwnScope ? scope : effectiveScope;
     }
 }
 
@@ -244,5 +266,42 @@ public sealed class BaselineXenotypeView
         Selected = selected;
         ActionCount = actionCount;
         MoodCount = moodCount;
+    }
+}
+
+/// <summary>S5 调音层域选项：Race 层 = 单 race；Xenotype 层 = (race, xenotype) 域。</summary>
+public readonly struct TuningDomainOptionView
+{
+    public readonly string RaceDefName;
+    public readonly string TargetDefName;
+    public readonly string DisplayName;
+
+    public TuningDomainOptionView(string raceDefName, string displayName, string targetDefName = "")
+    {
+        RaceDefName = raceDefName ?? "";
+        TargetDefName = targetDefName ?? "";
+        DisplayName = displayName ?? raceDefName ?? targetDefName ?? "";
+    }
+}
+
+/// <summary>S5 分层心情编辑器行：本层记录（Own，null = 继承）+ 有效值（编辑器显示/滑块起点）。</summary>
+public readonly struct MoodTuningRowView
+{
+    public readonly SqueakMood Mood;
+    public readonly string DisplayName;
+    public readonly MoodTuningRecord? Own;
+    public readonly float EffectivePitch;
+    public readonly float EffectiveVolume;
+    /// <summary>有效 jitter 半宽（pitchJitter.max-1，≥0），默认 0。</summary>
+    public readonly float EffectiveJitterHalf;
+
+    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf)
+    {
+        Mood = mood;
+        DisplayName = displayName ?? mood.ToString();
+        Own = own;
+        EffectivePitch = effectivePitch;
+        EffectiveVolume = effectiveVolume;
+        EffectiveJitterHalf = Math.Max(0f, effectiveJitterHalf);
     }
 }

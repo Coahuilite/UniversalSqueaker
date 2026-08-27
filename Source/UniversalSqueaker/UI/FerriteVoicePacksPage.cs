@@ -81,7 +81,12 @@ public static class FerriteVoicePacksPage
                 ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation,
                 ["ShowCameraIndicator"] = view.ShowCameraIndicator,
                 ["ActionScopes"] = view.ActionScopes,
-                ["BaselinePresets"] = view.BaselinePresets
+                ["BaselinePresets"] = view.BaselinePresets,
+                ["TuningLayer"] = view.TuningLayer,
+                ["TuningRace"] = view.TuningRaceDefName,
+                ["TuningXeno"] = view.TuningXenotypeDefName,
+                ["TuningDomains"] = view.TuningDomains,
+                ["MoodTuningRows"] = view.MoodTuningRows
             };
 
             KitUiPageState uiState = new()

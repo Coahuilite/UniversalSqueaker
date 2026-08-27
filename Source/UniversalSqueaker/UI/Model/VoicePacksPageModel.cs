@@ -41,9 +41,16 @@ public static class VoicePacksPageModel
 
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
         string banner = BuildBannerText(races, xenotypes, mode, biotech);
-        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings);
+        // S5 调音编辑器：当前层 + 层域归一（未选中时取首个选项），再投影分层 scope 与心情行。
+        string tuningRace = state.TuningRaceDefName;
+        string tuningXeno = state.TuningXenotypeDefName;
+        IReadOnlyList<TuningDomainOptionView> tuningDomains = BuildTuningDomains(settings, catalog, state.TuningLayer, ref tuningRace, ref tuningXeno);
+        state.TuningRaceDefName = tuningRace;
+        state.TuningXenotypeDefName = tuningXeno;
+        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
+        IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes, baselinePresets);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -85,14 +92,21 @@ public static class VoicePacksPageModel
                 settings.SetBasicTuning(command.Arg, command.Flag);
                 break;
             case UiCommandKind.SetActionTuningScope:
-                if (!string.IsNullOrEmpty(command.Arg))
+                ExecuteSetActionTuningScope(settings, command);
+                break;
+            case UiCommandKind.SetTuningLayer:
+                if (int.TryParse(command.Arg, out int tuningLayer) && tuningLayer >= 0 && tuningLayer <= 2)
+                    state.TuningLayer = tuningLayer;
+                break;
+            case UiCommandKind.SetTuningDomain:
+                if (!string.IsNullOrEmpty(command.RaceDefName))
                 {
-                    string[] parts = command.Arg.Split('|');
-                    SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
-                        && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
-                    string actionKey = parts.Length > 1 ? parts[1] : "";
-                    settings.SetActionTuningScope(actionKey, "", "", scope);
+                    state.TuningRaceDefName = command.RaceDefName;
+                    state.TuningXenotypeDefName = command.TargetDefName ?? "";
                 }
+                break;
+            case UiCommandKind.SetMoodTuning:
+                ExecuteSetMoodTuning(settings, command);
                 break;
             case UiCommandKind.ToggleBaselinePreset:
                 ToggleBaselinePreset(state, command.Arg);
@@ -107,6 +121,32 @@ public static class VoicePacksPageModel
                 ImportBaselinePreset(settings, command.Arg, state);
                 break;
         }
+    }
+
+    /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录），
+    /// 层域身份取命令自带的 (raceDefName, xenotypeDefName)。</summary>
+    private static void ExecuteSetActionTuningScope(UniversalSqueakerSettings settings, UiCommand command)
+    {
+        if (string.IsNullOrEmpty(command.Arg)) return;
+        string[] parts = command.Arg.Split('|');
+        SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
+            && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
+        string actionKey = parts.Length > 1 ? parts[1] : "";
+        if (string.IsNullOrEmpty(actionKey)) return;
+        settings.SetActionTuningScope(actionKey, command.RaceDefName, command.TargetDefName, scope);
+    }
+
+    /// <summary>S5 心情调音执行：arg = "MoodName|factor|value" | "MoodName|clear"。</summary>
+    private static void ExecuteSetMoodTuning(UniversalSqueakerSettings settings, UiCommand command)
+    {
+        string[] parts = command.Arg.Split('|');
+        if (parts.Length < 2) return;
+        if (!Enum.TryParse(parts[0], true, out SqueakMood mood)) return;
+        string factor = parts[1];
+        float? value = null;
+        if (parts.Length > 2 && float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed))
+            value = parsed;
+        settings.SetMoodTuning(mood, command.RaceDefName, command.TargetDefName, factor, value);
     }
 
     private static void ExecuteTogglePack(UniversalSqueakerSettings settings, UiCommand command)
@@ -146,25 +186,127 @@ public static class VoicePacksPageModel
         settings.SetVoicePackSelection(command.Scope, command.RaceDefName, command.TargetDefName, retained);
     }
 
-    /// <summary>Project the 17 built-in actions' effective Global-layer scope (actionTuning layer 0 hasScope, else DefaultScope).</summary>
-    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings)
+    /// <summary>S5 调音层域选项：Global 层空；Race 层 = catalog 全 race；Xenotype 层 = (race,xeno) 域联合。
+    /// 未选中/失效时自动归一为首个选项（空 catalog → 空域）。</summary>
+    private static IReadOnlyList<TuningDomainOptionView> BuildTuningDomains(
+        UniversalSqueakerSettings settings,
+        SqueakXenotypeCatalogSnapshot catalog,
+        int layer,
+        ref string race,
+        ref string xeno)
+    {
+        // ref 参数不得被 lambda 捕获（CS1628）：先取局部副本，结束时写回。
+        string currentRace = race;
+        string currentXeno = xeno;
+        List<TuningDomainOptionView> options = new();
+        if (layer == 1)
+        {
+            foreach (string raceDefName in catalog.RaceDefNames)
+            {
+                if (string.IsNullOrEmpty(raceDefName)) continue;
+                options.Add(new TuningDomainOptionView(raceDefName, ResolveRaceLabel(raceDefName)));
+            }
+            if (string.IsNullOrEmpty(currentRace) || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal)))
+            {
+                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
+            }
+            currentXeno = "";
+        }
+        else if (layer == 2)
+        {
+            foreach (XenotypeDomainKey key in CollectXenotypeDomains(settings, catalog))
+            {
+                options.Add(new TuningDomainOptionView(
+                    key.RaceDefName,
+                    ResolveXenotypeLabel(catalog, key.TargetDefName) + " (" + key.TargetDefName + ")",
+                    key.TargetDefName));
+            }
+            if (string.IsNullOrEmpty(currentRace) || string.IsNullOrEmpty(currentXeno)
+                || !options.Any(o => string.Equals(o.RaceDefName, currentRace, StringComparison.Ordinal) && string.Equals(o.TargetDefName, currentXeno, StringComparison.Ordinal)))
+            {
+                currentRace = options.Count > 0 ? options[0].RaceDefName : "";
+                currentXeno = options.Count > 0 ? options[0].TargetDefName : "";
+            }
+        }
+        else
+        {
+            currentRace = "";
+            currentXeno = "";
+        }
+        race = currentRace;
+        xeno = currentXeno;
+        return options;
+    }
+
+    /// <summary>S5 分层 scope 投影：17 内置动作 × 当前调音层。行携带本层记录（HasOwnScope/Scope）与
+    /// 有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins，与运行时同规则）。
+    /// 外部动作键不在编辑器范围内（与 BuildGlobalActions 的 YAGNI 契约一致）。</summary>
+    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno)
     {
         List<ActionScopeRowView> rows = new();
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             if (!SqueakActionDefinitions.IsKnown(action)) continue;
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
-            SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
+            SqueakActionScope effective = SqueakActionDefinitions.Get(action).DefaultScope;
+            bool hasOwn = false;
+            SqueakActionScope own = effective;
             foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
             {
-                if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
-                if (string.Equals(record.actionKey, key, StringComparison.Ordinal) && record.hasScope)
+                if (record == null || record.IsValidLayer(out int recordLayer) == false || !record.hasScope) continue;
+                if (!string.Equals(record.actionKey, key, StringComparison.Ordinal)) continue;
+                bool layer0 = recordLayer == 0;
+                bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
+                bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
+                    && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
+                if (layer0 || layer1 || layer2) effective = record.scope;
+                bool isOwn = recordLayer == layer
+                    && (layer == 0
+                        || (layer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal))
+                        || (layer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal) && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal)));
+                if (isOwn)
                 {
-                    scope = record.scope;
-                    break;
+                    hasOwn = true;
+                    own = record.scope;
                 }
             }
-            rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), scope, action));
+            rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), own, action, hasOwn, effective));
+        }
+        return rows;
+    }
+
+    /// <summary>S5 分层心情编辑器投影：4 档心情 × 当前调音层。Own = 本层记录（null = 继承），
+    /// Effective = 默认(1/1/One) &lt; Global &lt; Race &lt; Xeno 字段级 last-wins（与运行时同规则）。</summary>
+    private static IReadOnlyList<MoodTuningRowView> BuildMoodTuningRows(UniversalSqueakerSettings settings, int layer, string race, string xeno)
+    {
+        List<MoodTuningRowView> rows = new();
+        foreach (SqueakMood mood in Enum.GetValues(typeof(SqueakMood)))
+        {
+            float pitch = 1f;
+            float volume = 1f;
+            bool hasJitter = false; FloatRange jitter = FloatRange.One;
+            MoodTuningRecord? own = null;
+            foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+            {
+                if (record == null || record.mood != mood || record.IsValidLayer(out int recordLayer) == false) continue;
+                bool layer0 = recordLayer == 0;
+                bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
+                bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
+                    && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
+                if (layer0 || layer1 || layer2)
+                {
+                    if (record.hasPitchFactor) pitch = record.pitchFactor;
+                    if (record.hasVolumeFactor) volume = record.volumeFactor;
+                    if (record.hasPitchJitter) { hasJitter = true; jitter = record.pitchJitter; }
+                }
+                bool isOwn = recordLayer == layer
+                    && (layer == 0
+                        || (layer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal))
+                        || (layer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal) && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal)));
+                if (isOwn) own = record;
+            }
+            float jitterHalf = hasJitter ? Math.Max(0f, jitter.max - 1f) : 0f;
+            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf));
         }
         return rows;
     }
