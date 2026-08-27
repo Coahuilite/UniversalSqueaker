@@ -58,7 +58,7 @@ Key decisions locked:
 - Implementation order: S1 global-layer removal (distance/interval/talking-scaling to US settings) → S2 action-entry wrapper + action-gate → S3 Sustainer path → S4 tuning editor + layered override + feedback + UI face → S5 cleanup.
 - Easter-egg toggle in main settings alongside mode cards, default off.
 - Delete `experimentalRaceAllowlist`, `voicePackDefaultSeeded` (evaluate), `<description>`+`Name` localization patch; keep+restore `localizeDebugActions` (re-add `Patch_DebugTabMenu_Actions` + `US_` keys).
-- Filtering (author/race/conflict/legacy + dropdown quick-filter), componentized help (widget-attached help content), narrow responsive (Race page + dedicated settings page), visual modernization (no vanilla black/gray boxes, RimWorld-style modern UI), build identity in footer — see doc §10.
+- Filtering (author/race/conflict + dropdown quick-filter), componentized help (widget-attached help content), narrow responsive (Race page + dedicated settings page), visual modernization (no vanilla black/gray boxes, RimWorld-style modern UI), build identity in footer — see doc §10.
 - Developer page replaced by DebugAction panel.
 
 
@@ -79,7 +79,7 @@ Executed in this session, all passing `scripts/verify-local.ps1` (12 gates) + De
 - **清理：`voicePackDefaultSeeded`** — Scribe 兼容哨兵，评估后删。
 - **清理：`dist/` 残留** — 7 个测试包残留旧 comp 字段 XML（`globalMinIntervalTicks`/`scaleFrequencyWithTalking`/`distancePresets`），误导作者。
 - **专项测试缺口** — "global off + xenotype on" 覆盖语义需抽 Kernel/Pure 或 Runtime harness 才能进 `UniversalSqueakerKernelTests`。
-- **S4-Polish（纯视觉，最后）** — 过滤（作者/种族/冲突/Legacy）、组件化帮助、窄屏响应式、美化（先出 `docs/ui-visual-modernization-zh.md` 评估稿）、footer build identity、距离预览折线图、A1/A2 调音编辑器 UI（依赖 baseline Def 已就绪）、Race/Xenotype 层 scope UI（当前 A6 只做 Global 层）。
+- **S4-Polish（纯视觉，最后）** — 过滤（作者/种族/冲突）、组件化帮助、窄屏响应式、美化（先出 `docs/ui-visual-modernization-zh.md` 评估稿）、footer build identity、距离预览折线图、A1/A2 调音编辑器 UI（依赖 baseline Def 已就绪）、Race/Xenotype 层 scope UI（当前 A6 只做 Global 层）。
 
 ### 已完成（2026-08-25b 会话，8 commit，verify-local 全绿）
 
@@ -89,11 +89,10 @@ Executed in this session, all passing `scripts/verify-local.ps1` (12 gates) + De
 ## Next session — resume here (2026-08-24 checkpoint)
 
 - [ ] Install `dist/dev/UniversalSqueaker-dev-v0.1.0-dev-bf9cf26.zip` (or the staged `dist/dev/UniversalSqueaker` folder) over the game Mods copy.
-- [ ] Install/refresh test packs from `dist/`: `Kiiro-US-EXP`, `SqueakyRatkinExampleVoices`, `SqueakyRatkinLegacyVoices`, `Nivarian-US-EXP` (new packageIds must be re-enabled in the mod list).
+- [ ] Install/refresh test packs from `dist/`: `Kiiro-US-EXP`, `Nivarian-US-EXP` (new packageIds must be re-enabled in the mod list).
 - [ ] Re-test and read `Player.log`:
-  - legacy pack: expect ONE `voicepack.pack.legacy_admitted` and ONE `voicepack.comp.legacy_auto_attached`, NO `duplicate_key`;
   - Ratkin/Kiiro_Race/NivarianRace_Pawn: expect `audio.route.selected` dispatches;
-  - settings UI: opens, legacy rows show `Legacy SR` tag + banner count.
+  - settings UI: opens and renders pack rows.
 - [ ] Send the new `Player.log` back for review before any further code changes.
 - [ ] After log confirmation: decide whether to also auto-attach comp for canonical packs (currently canonical packs must carry their own comp patch), then final release-prep items below.
 
@@ -131,8 +130,8 @@ Minimum visible feature set documented in `docs/ui-audio-pack-management-minimum
 
 ## Pending decisions / follow-ups
 
-- [x] Legacy bridge activated (maintainer authorization 2026-08-24): thin `SqueakyRatkin.SqueakVoicePackDef` shim + catalog upcast + SR_/US_ prefix context; old SR packs are explicitly marked in logs (`usdiag voicepack.pack.legacy_admitted`) and UI (`Legacy SR` row tag + banner); missing `raceDefName` defaults to `Ratkin` for legacy packs; bridge auto-attaches the default comp to legacy pack races when absent (`usdiag voicepack.comp.legacy_auto_attached`).
-- [x] VoicePack authoring skill migrated from SR to `.github/skills/us-voicepack-authoring/SKILL.md`; canonical `US_` authoring only, with a legacy auto-compat section (old `SR_` packs need no author changes).
+- [x] Legacy SR compatibility bridge dropped (maintainer decision): old SR VoicePack XML is no longer auto-loaded; authors must migrate to the canonical `US_` form.
+- [x] VoicePack authoring skill migrated from SR to `.github/skills/us-voicepack-authoring/SKILL.md`; canonical `US_` authoring only.
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [ ] SR-side full history/tag privacy cleanup (decided and executed on the SR side only).
 - [ ] scripts/CI migration: dev scripts migrated (`scripts/verify-local.ps1`/`build-dev.ps1`/`pack-dev.ps1`/`stage-package.ps1`); GitHub/Steam build-pack scripts and CI workflows remain deferred until first release prep.

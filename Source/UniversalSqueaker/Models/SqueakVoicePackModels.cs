@@ -61,7 +61,7 @@ internal static class SqueakVoicePackValidator
     {
         if (pack == null) { yield return "SqueakVoicePackDef is null."; yield break; }
         string name = string.IsNullOrWhiteSpace(pack.defName) ? "SqueakVoicePackDef" : pack.defName;
-        string prefix = LegacyVoicePackBridge.RequiredPrefixFor(pack);
+        string prefix = "US_";
         if (string.IsNullOrWhiteSpace(pack.defName) || !pack.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " defName must begin with " + prefix + ".";
         if (string.IsNullOrWhiteSpace(pack.raceDefName)) yield return name + " is missing raceDefName; every VoicePack must declare the exact race defName it serves.";
         if (pack.scope == SqueakVoicePackScope.Unspecified) yield return name + " has an unspecified scope.";

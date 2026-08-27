@@ -3,10 +3,9 @@ name: us-voicepack-authoring
 description: >-
   制作、修改或诊断 Universal Squeaker（coahuilite.universalsqueaker）VoicePack 音频包的完整流程。
   新包一律使用 canonical 形态（UniversalSqueaker.SqueakVoicePackDef + US_ 前缀，面向任意种族）。
-  旧 Squeaky Ratkin 包（SR_ 前缀）无需作者改写：US legacy bridge 自动加载、默认 Ratkin、
-  自动挂 comp，并打 Legacy SR 标记。
+  旧 Squeaky Ratkin 包（SR_ 前缀）需迁移到 canonical 形态：US 已放弃 legacy 兼容，不再自动加载。
   触发词：制作语音包、新建 VoicePack、语音包 XML、语音包报错、语音包校验、PackDef、clipFolderPath、
-  US_ 前缀、SR_ 前缀、legacy 语音包、Legacy SR、IsEgg 彩蛋、ageTag、fallbacks、Xenotype 语音包、
+  US_ 前缀、SR_ 前缀、legacy 语音包、IsEgg 彩蛋、ageTag、fallbacks、Xenotype 语音包、
   发布语音包。
 ---
 
@@ -16,14 +15,9 @@ description: >-
 
 一个 VoicePack 是**独立 RimWorld 模组**，只包含 XML 和音频，不写 C#。它依赖 Universal Squeaker 与目标种族模组，不修改主模组、不把音频装进主模组目录。
 
-## 0. 旧 SR 包怎么办（无需作者操作）
+## 0. 旧 SR 包怎么办（需迁移到 canonical）
 
-历史 Squeaky Ratkin 语音包（`SqueakyRatkin.SqueakVoicePackDef` + `SR_` 前缀）**不需要改写**：
-
-- US legacy bridge 自动加载它们并打上 `Legacy SR` 标记（设置行金色标签 + 页顶计数，日志 `usdiag voicepack.pack.legacy_admitted`）；
-- 未声明 `raceDefName` 的旧包一律按 `Ratkin` 处理（SR 依赖语义）；作者显式声明了别的种族则按声明走；
-- bridge 会自动给这些种族挂默认 `CompProperties_Squeaker`（日志 `usdiag voicepack.comp.legacy_auto_attached`），包侧无需 patch；
-- 唯一注意：不要与 SR 本体同时启用（`SqueakyRatkin.SqueakVoicePackDef` first-wins）。
+历史 Squeaky Ratkin 语音包（`SqueakyRatkin.SqueakVoicePackDef` + `SR_` 前缀）**不再自动加载**：US 已放弃旧 SR 包兼容，作者需按本指南迁移到 canonical 形态（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀 + 自带 comp patch）。
 
 因此本指南的**唯一作者模式是 canonical**：新包、新种族、新音频都走 `US_` 形态。
 
@@ -197,7 +191,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 2. 设置选 **FALLBACK**，勾选 PackDef（发现 ≠ 自动启用）。
 3. 先测 Race `Call`；确认后移除该动作验证回退，再测 Xenotype/部分覆盖。
 4. dev 日志成功派发：`Audio route: <action> -> <sound> (<tier>[, egg][, nonplayer]).`
-5. 诊断旧 SR 包时看 daily 日志：`voicepack.pack.legacy_admitted`（带 Legacy SR 标记）与 `voicepack.comp.legacy_auto_attached`。
+5. 迁移旧 SR 包时：将其 Def 根节点与 defName 改为 canonical（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀），并补上第 3.5 节 comp patch。
 
 ## 10. 排错
 
@@ -208,7 +202,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 | 有包仍听到 Vanilla | 模式不是 OFF、PackDef 已勾选、动作已覆盖、目录有可播放文件 |
 | Xenotype 不匹配 | `targetDefName` 精确等于 `XenotypeDef.defName` |
 | 与其他包串音 | 每个 DefName 与音频根使用自己的稳定 token |
-| 旧 SR 包加载红字 | 确认没有同时启用 SR 本体与 US legacy bridge（`SqueakyRatkin.SqueakVoicePackDef` first-wins） |
+| 旧 SR 包加载红字 | 旧 SR 形态已不再受支持；按第 0 节迁移到 canonical（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀） |
 
 ## 11. 发布检查清单
 
@@ -224,7 +218,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 
 触发：用户请求制作/修改/诊断 US 语音包。按顺序执行：
 
-1. 新包一律 canonical：`US_` 前缀 + 精确 `raceDefName` + 自带 comp patch；旧 SR 包原则上不改写，只在诊断时引用第 0 节。
+1. 新包一律 canonical：`US_` 前缀 + 精确 `raceDefName` + 自带 comp patch；旧 SR 包需按第 0 节迁移到 canonical。
 2. 校验 packageId（全小写）与 defName；音频路径 = `<lowercase packageId>/<PackDef.defName>/<Action>/`；提醒作者替换占位文件并声明许可。
 3. 用 XML 解析器检查生成物；对照第 4–5 节逐项检查；不要替作者声称实机测试，要求按第 9 节验证。
 4. 排错优先查第 10 节；引用本文件具体小节编号，不要凭记忆改写契约。

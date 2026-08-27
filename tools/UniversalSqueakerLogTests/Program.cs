@@ -207,9 +207,6 @@ internal static class Program
         SqueakLog.AudioVanillaFallback("Move", "RaceA", null, "99", "US_Move_Vanilla", "vanilla", null, false, "Mousy", "Thing_Race99");
         SqueakLog.FallbackProfileStoreFailed("RaceA", new Exception("profile write failed"));
         SqueakLog.HookMentalFitUnavailable();
-        SqueakLog.LegacyVoicePackAdmitted("coahuilite.squeakyratkin:SR_OldPack", "Ratkin");
-        SqueakLog.LegacyCompAutoAttached("Ratkin");
-        SqueakLog.LegacyCompAutoAttachFailed(new Exception("auto attach failed"));
         SqueakLog.AudioDisabled("Select");
 
         AssertLines(nameof(VerifyV2Protocol) + " enabled",
@@ -221,9 +218,6 @@ internal static class Program
             V2("warning", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99"),
             V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20write%20failed"),
             V2("error", "daily", "hook.mental_fit.unavailable", "Baby-fits squeak hook is unavailable."),
-            V2("info", "daily", "voicepack.pack.legacy_admitted", "Legacy SR VoicePack admitted: coahuilite.squeakyratkin:SR_OldPack (race Ratkin).", pack: "coahuilite.squeakyratkin:SR_OldPack", race: "Ratkin", trailing: " legacy_type=SqueakyRatkin.SqueakVoicePackDef"),
-            V2("info", "daily", "voicepack.comp.legacy_auto_attached", "Legacy compatibility auto-attached the squeak comp to race Ratkin.", race: "Ratkin"),
-            V2("warning", "daily", "voicepack.comp.legacy_auto_attach_failed", "Legacy compatibility auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=auto%20attach%20failed"),
             V2("info", "daily", "audio.disabled", "Squeak audio is disabled (true bypass): Select not intercepted.", action: "Select"));
         CaptureV2Coverage();
         // log-v2 once: the first settings.origin claim wins per session; ResetSession reopens the domain.
@@ -298,7 +292,7 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(9, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(6, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)

@@ -40,7 +40,7 @@ public static class VoicePacksPageModel
         List<VoicePackDomainView> xenotypes = BuildXenotypeDomains(settings, catalog);
 
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
-        string banner = BuildBannerText(catalog, races, xenotypes, mode, biotech);
+        string banner = BuildBannerText(races, xenotypes, mode, biotech);
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings);
         return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes);
     }
@@ -289,10 +289,9 @@ public static class VoicePacksPageModel
         if (string.IsNullOrEmpty(author)) author = modName;
         int playable = CountPlayableActions(pack);
         string coverage = "Actions " + playable + "/" + SqueakActionDefinitions.Count;
-        bool isLegacy = LegacyVoicePackBridge.IsLegacy(pack);
-        string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key + (isLegacy ? "\nlegacy sr" : "");
+        string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
-        return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected, isLegacy);
+        return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
     }
 
     private static int CountOrphanKeys(IReadOnlyList<string>? enabledKeys, IReadOnlyList<SqueakVoicePackDef> packs)
@@ -308,7 +307,6 @@ public static class VoicePacksPageModel
     }
 
     private static string BuildBannerText(
-        SqueakXenotypeCatalogSnapshot catalog,
         IReadOnlyList<RaceLayerRowView> races,
         IReadOnlyList<VoicePackDomainView> xenotypes,
         SqueakVoicePackMode mode,
@@ -317,9 +315,6 @@ public static class VoicePacksPageModel
         List<string> messages = new();
         if (races.Count == 0 && xenotypes.Count == 0)
             messages.Add("No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.");
-        int legacyCount = catalog.PackByKey.Values.Count(LegacyVoicePackBridge.IsLegacy);
-        if (legacyCount > 0)
-            messages.Add(legacyCount + " legacy Squeaky Ratkin VoicePack(s) are loaded through the compatibility bridge and marked as old SR content.");
         if (!biotech && xenotypes.Count > 0)
             messages.Add("Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.");
         if (mode == SqueakVoicePackMode.Vanilla)

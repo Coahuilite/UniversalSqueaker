@@ -23,13 +23,10 @@ public static class SqueakXenotypeCatalog
             Dictionary<string, List<SqueakVoicePackDef>> groups = new(StringComparer.Ordinal);
             foreach (SqueakVoicePackDef pack in EnumerateAllPackDefs())
             {
-                LegacyVoicePackBridge.EnsureLegacyRaceDeclared(pack);
                 if (!SqueakVoicePackValidator.IsValid(pack)) continue;
                 if (pack.scope != SqueakVoicePackScope.Race && pack.scope != SqueakVoicePackScope.Xenotype) continue;
                 // Catalog admission is neutral: every pack's declared raceDefName is a valid routing domain.
                 if (!pack.TryGetPackKey(out string key)) continue;
-                if (LegacyVoicePackBridge.IsLegacy(pack))
-                    SqueakLog.LegacyVoicePackAdmitted(key, pack.raceDefName);
                 if (!groups.TryGetValue(key, out List<SqueakVoicePackDef>? entries)) { entries = new List<SqueakVoicePackDef>(); groups.Add(key, entries); }
                 entries.Add(pack);
             }
@@ -101,14 +98,8 @@ public static class SqueakXenotypeCatalog
 
     private static IEnumerable<SqueakVoicePackDef> EnumerateAllPackDefs()
     {
-        // DefDatabase<SqueakVoicePackDef>.AllDefs also returns legacy subclasses; enumerate each def
-        // exactly once so legacy packs are not counted twice and rejected as duplicate keys.
         foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs)
-        {
-            if (pack is SqueakyRatkin.SqueakVoicePackDef) continue;
             yield return pack;
-        }
-        foreach (SqueakVoicePackDef legacy in LegacyVoicePackSource.CollectLegacy()) yield return legacy;
     }
 
     private static void WarnDuplicatePackKey(string key, int count)

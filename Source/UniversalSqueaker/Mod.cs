@@ -64,9 +64,6 @@ public class UniversalSqueakerMod : Mod
             BuiltInActionEntries.EnsureRegistered();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
-            // Legacy SR packs never carried their own comp patch; attach the comp to their declared
-            // races (Ratkin in practice) unless a pack/race already provides one.
-            LegacyAutoCompAttach.Apply(SqueakXenotypeCatalog.Current);
             // Profile copies are independent Config artifacts; load/rebuild before the first resolver snapshot.
             // BuildBuiltIn consumes the resolved table and remains outside the ModSettings debounce/write path.
             SqueakFallbackProfileStore.LoadOrRebuild(SqueakKernelAdapter.BuildBuiltInSource());
