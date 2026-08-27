@@ -59,9 +59,7 @@ public partial class UniversalSqueakerSettings : ModSettings
     public Dictionary<SqueakMood, SqueakMoodMod> moodOverrides = new();
     public List<VoicePackSelectionRecord> voicePackSelections = new();
     public List<XenotypePresetRecord> xenotypePresets = new();
-    // Canonical persisted list keeps old saves (with no records) enabled by default.
-    public List<GlobalActionEnabledRecord> globalActionEnabled = new();
-    // S2 layered action tuning table (Global/Race/Xenotype); replaces globalActionEnabled + xenotypePresets.actionOverrides.
+    // S2 layered action tuning table (Global/Race/Xenotype).
     public List<ActionTuningRecord> actionTuning = new();
     // Action gate (Goal A): non-built-in ActionEntry fires only when true. Default false (closed).
     public bool allowExternalActions = false;
@@ -171,34 +169,6 @@ public partial class UniversalSqueakerSettings : ModSettings
     internal void ApplySettingsRuntimeSideEffects(bool announceLoggingChange = true)
     {
         ApplyDevLoggingModeToRuntime(announceLoggingChange);
-    }
-
-    public bool IsActionGloballyEnabled(SqueakAction action)
-    {
-        return GetActionGlobalScope(action) != SqueakActionScope.Disabled;
-    }
-
-    public SqueakActionScope GetActionGlobalScope(SqueakAction action)
-    {
-        SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
-        foreach (GlobalActionEnabledRecord record in globalActionEnabled ?? new List<GlobalActionEnabledRecord>())
-            if (record != null && record.action == action) scope = SqueakActionDefinitions.NormalizeScope(action, record.scope);
-        return scope;
-    }
-
-    internal void SetActionGloballyEnabled(SqueakAction action, bool enabled)
-    {
-        SetActionGlobalScope(action, enabled ? SqueakActionDefinitions.Get(action).DefaultScope : SqueakActionScope.Disabled);
-    }
-
-    internal void SetActionGlobalScope(SqueakAction action, SqueakActionScope scope)
-    {
-        scope = SqueakActionDefinitions.NormalizeScope(action, scope);
-        GlobalActionEnabledRecord? record = null;
-        foreach (GlobalActionEnabledRecord candidate in globalActionEnabled)
-            if (candidate != null && candidate.action == action) record = candidate;
-        if (record == null) globalActionEnabled.Add(new GlobalActionEnabledRecord { action = action, enabled = scope != SqueakActionScope.Disabled, scope = scope, scopeWasLoaded = true });
-        else { record.enabled = scope != SqueakActionScope.Disabled; record.scope = scope; record.scopeWasLoaded = true; }
     }
 
     /// <summary>写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。scope == null 表示清该层记录（移除）；走离散 resolver 重建 + 排队持久化。</summary>

@@ -113,11 +113,9 @@ public static class SqueakRuntimeResolver
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
-            // S4 作用域优先级（低→高）：C# DefaultScope < baseline Def < 旧 globalActionEnabled（玩家覆盖，
-            // 保留至 S5）< actionTuning Global 层。baseline 只在无显式旧覆盖时填充底层。
-            SqueakActionScope scope = settings.GetActionGlobalScope(action);
-            if (BaselineTuningTable.TryGetScope(key, out SqueakActionScope baselineScope)
-                && scope == SqueakActionDefinitions.Get(action).DefaultScope)
+            // S4 作用域优先级（低→高）：C# DefaultScope < baseline Def < actionTuning Global 层。
+            SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
+            if (BaselineTuningTable.TryGetScope(key, out SqueakActionScope baselineScope))
             {
                 scope = baselineScope;
             }
@@ -125,7 +123,7 @@ public static class SqueakRuntimeResolver
             float prob = BaselineTuningTable.TryGetProb(key, out float baselineProb) ? baselineProb : 1f;
             result[key] = new RuntimeActionDelta(scope, interval, prob);
         }
-        // S2: actionTuning 的 Global 层记录优先覆盖旧 globalActionEnabled 派生值（键已 string，外部动作键也适用）。
+        // actionTuning 的 Global 层记录优先覆盖 baseline 派生值（键已 string，外部动作键也适用）。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;

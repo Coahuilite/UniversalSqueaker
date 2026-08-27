@@ -4,7 +4,7 @@ using Verse;
 namespace UniversalSqueaker;
 
 /// <summary>
-/// S2 分层动作调音记录（替换 globalActionEnabled + xenotypePresets.actionOverrides 的统一数据面）。
+/// S2 分层动作调音记录（Global/Race/Xenotype 统一数据面）。
 /// 三态分层：全空=Global，仅 race=Race，race+xeno=Xenotype；hasX=false = 该层不决定、向下继承。
 /// actionKey 是字符串（内置键 = BuiltInActionKeys，与 SqueakAction 枚举序数对齐）。
 /// </summary>

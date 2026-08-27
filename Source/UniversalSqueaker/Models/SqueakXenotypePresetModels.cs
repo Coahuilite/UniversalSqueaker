@@ -52,22 +52,6 @@ public class XenotypeActionBehaviorOverride : IExposable
     internal static XenotypeActionBehaviorOverride Clone(XenotypeActionBehaviorOverride value) => new() { action = value.action, hasEnabled = value.hasEnabled, enabled = value.enabled, hasIntervalMultiplier = value.hasIntervalMultiplier, intervalMultiplier = value.intervalMultiplier, hasProbabilityMultiplier = value.hasProbabilityMultiplier, probabilityMultiplier = value.probabilityMultiplier };
 }
 
-/// <summary>Global action scope. Legacy bool-only records migrate during PostLoadInit.</summary>
-public class GlobalActionEnabledRecord : IExposable
-{
-    public SqueakAction action = SqueakAction.Call;
-    public bool enabled = true;
-    public SqueakActionScope scope = SqueakActionScope.AnyOccurrence;
-    [System.NonSerialized] public bool scopeWasLoaded;
-    public void ExposeData()
-    {
-        if (Scribe.mode == LoadSaveMode.LoadingVars) scopeWasLoaded = Scribe.loader?.curXmlParent?["scope"] != null;
-        Scribe_Values.Look(ref action, "action");
-        Scribe_Values.Look(ref enabled, "enabled", true);
-        Scribe_Values.Look(ref scope, "scope", SqueakActionScope.AnyOccurrence);
-    }
-}
-
 /// <summary>Persisted behavioral and mood overrides; audio-pool selection remains in a separate record.</summary>
 public class XenotypePresetRecord : IExposable
 {

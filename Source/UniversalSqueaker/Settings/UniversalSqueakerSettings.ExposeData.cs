@@ -87,7 +87,6 @@ public partial class UniversalSqueakerSettings
         Scribe_Collections.Look(ref moodOverrides, "moodOverrides", LookMode.Value, LookMode.Deep);
         Scribe_Collections.Look(ref voicePackSelections, "voicePackSelections", LookMode.Deep);
         Scribe_Collections.Look(ref xenotypePresets, "xenotypePresets", LookMode.Deep);
-        Scribe_Collections.Look(ref globalActionEnabled, "globalActionEnabled", LookMode.Deep);
         Scribe_Collections.Look(ref actionTuning, "actionTuning", LookMode.Deep);
         if (Scribe.mode == LoadSaveMode.LoadingVars && moodOverrides == null)
             moodOverrides = new Dictionary<SqueakMood, SqueakMoodMod>();
@@ -108,16 +107,7 @@ public partial class UniversalSqueakerSettings
         if (!distanceRangeWasLoaded) distanceRange = GetDistancePresetRange(SqueakDistancePreset.Balanced);
         distanceRange = ClampDistanceRange(distanceRange);
 
-        if (globalActionEnabled == null) globalActionEnabled = new List<GlobalActionEnabledRecord>();
         if (actionTuning == null) actionTuning = new List<ActionTuningRecord>();
-        foreach (GlobalActionEnabledRecord record in globalActionEnabled)
-        {
-            if (record == null || !SqueakActionDefinitions.IsKnown(record.action)) continue;
-            record.scope = record.scopeWasLoaded
-                ? SqueakActionDefinitions.NormalizeScope(record.action, record.scope)
-                : record.enabled ? SqueakActionDefinitions.Get(record.action).DefaultScope : SqueakActionScope.Disabled;
-            record.enabled = record.scope != SqueakActionScope.Disabled;
-        }
 
         bool migrationNeeded = settingsSchemaVersion < CurrentSettingsSchemaVersion || voicePackSchemaVersion < CurrentVoicePackSchemaVersion;
         if (migrationNeeded) MigrateV3RecordsTransactionally();
@@ -127,11 +117,10 @@ public partial class UniversalSqueakerSettings
             if (xenotypePresets == null) xenotypePresets = new List<XenotypePresetRecord>();
         }
 
-        // S2: migrate legacy action scope records into the unified layered table (idempotent; empty source is valid).
+        // S2: migrate legacy xenotype action overrides into the unified layered table (idempotent; empty source is valid).
         if (actionTuning == null || actionTuning.Count == 0)
         {
             if (SqueakSettingsMigration.TryCreateActionTuningRecords(
-                    globalActionEnabled,
                     xenotypePresets,
                     out List<ActionTuningRecord> migratedTuning,
                     out string tuningFailure))
