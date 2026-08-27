@@ -41,7 +41,7 @@ US 的路由实际是两件事，本文档只讨论第二件：
 2. **补诊断**：声明未命中（种族不存在 / `def.race == null`）时打一条 usdiag 告警（如 `voicepack.comp.attach_skipped` + 原因），替代静默 continue。
 3. **中性化观测**：新增通用成功/失败事件（如 `voicepack.comp.auto_attached` / `..._failed`），legacy 包继续走旧事件保兼容；新事件必须同步 `SqueakLogProtocol.cs` + LogTests（协议只加不改）。
 4. **归属更名**：类移出 `Legacy/`、更名（如 `VoicePackCompAttach`），注释同步。
-5. **保留逃生舱**：`Any()` 去重 = 作者自带 patch 的自定义配置优先，auto-attach 让位。patch 从「必写」降级为「可选高级用法」。
+5. **作者自定义优先（escape hatch）**：`Any()` 去重 = 作者自带 patch 的自定义配置优先，auto-attach 让位。patch 从「必写」降级为「可选高级用法」。
 
 ### 3.2 边界规则（固化为契约）
 
