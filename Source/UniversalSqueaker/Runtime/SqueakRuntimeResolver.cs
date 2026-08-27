@@ -269,7 +269,8 @@ public static class SqueakRuntimeResolver
             UniversalSqueaker.Kernel.SqueakPoolRegistry registry = new(
                 Array.Empty<UniversalSqueaker.Kernel.VoicePackEntry>(),
                 SqueakKernelAdapter.BuildBuiltIn());
-            return new SqueakRuntimeSnapshot(new Dictionary<string, ResolvedSqueakContext>(), registry, known, SqueakVoicePackMode.Vanilla, actions, null, settings.AllowEasterEggSounds);
+            // M1: 保留原模式——Disabled 真旁路不得被崩溃兜底改写（否则旁路 gate 失效，内置表可能发声）。
+            return new SqueakRuntimeSnapshot(new Dictionary<string, ResolvedSqueakContext>(), registry, known, NormalizeMode(settings.voicePackMode), actions, null, settings.AllowEasterEggSounds);
         }
         catch { return SqueakRuntimeSnapshot.GlobalOnly; }
     }
