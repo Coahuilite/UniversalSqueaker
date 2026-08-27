@@ -77,6 +77,9 @@ public static class SqueakLog
     public static void AudioVanillaFallback(string actionKey, string race, string? xenotype, string target, string sound, string tier = "vanilla", string? pack = null, bool isEgg = false, string? pawnName = null, string? pawnId = null, bool? pawnControlled = null, string? pawnFaction = null) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.AudioVanillaFallback, new SqueakLogData(action: actionKey, race: race, xenotype: xenotype, target: target, sound: sound, tier: tier, pack: pack, egg: isEgg, pawnName: pawnName, pawnId: pawnId, pawnControlled: pawnControlled, pawnFaction: pawnFaction), false); }
     public static void FallbackProfileStoreFailed(string race, Exception ex) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.FallbackProfileStoreFailed, new SqueakLogData(race: race, exception: ex), true); }
     public static void AudioDisabled(string action) => Emit(SqueakLogEvent.AudioDisabled, new SqueakLogData(action: action), true);
+    public static void CompAutoAttached(string race) => Emit(SqueakLogEvent.VoicePackCompAutoAttached, new SqueakLogData(race: race), false);
+    public static void CompAttachSkipped(string race, string reason) => Emit(SqueakLogEvent.VoicePackCompAttachSkipped, new SqueakLogData(race: race, reason: reason), false);
+    public static void CompAttachFailed(Exception ex) => Emit(SqueakLogEvent.VoicePackCompAttachFailed, new SqueakLogData(exception: ex), true);
 
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {

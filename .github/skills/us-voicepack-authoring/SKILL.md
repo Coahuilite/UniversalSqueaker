@@ -17,14 +17,14 @@ description: >-
 
 ## 0. 旧 SR 包怎么办（需迁移到 canonical）
 
-历史 Squeaky Ratkin 语音包（`SqueakyRatkin.SqueakVoicePackDef` + `SR_` 前缀）**不再自动加载**：US 已放弃旧 SR 包兼容，作者需按本指南迁移到 canonical 形态（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀 + 自带 comp patch）。
+历史 Squeaky Ratkin 语音包（`SqueakyRatkin.SqueakVoicePackDef` + `SR_` 前缀）**不再自动加载**：US 已放弃旧 SR 包兼容，作者需按本指南迁移到 canonical 形态（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀；comp 由 US 路由表自动挂载，见第 3.5 节）。
 
 因此本指南的**唯一作者模式是 canonical**：新包、新种族、新音频都走 `US_` 形态。
 
 ## 1. 快速开始（三步能响）
 
 1. 建目录：`About/About.xml` + `LoadFolders.xml` + `1.6/Race/Defs/SoundDefs/*.xml` + `1.6/Race/Sounds/<lowercase packageId>/<PackDef.defName>/<Action>/`。
-2. 写最小 XML（第 3 节）与 comp 挂载 patch（第 3.5 节）。
+2. 写最小 XML（第 3 节）；comp 由 US 路由表自动挂载（第 3.5 节），无需自带 patch。
 3. 装进游戏：排序在 US 与目标种族模组之后，设置选 **FALLBACK**，在对应 Race 下勾选 PackDef，触发 `Call` 听音。
 
 先只做 **Race + Call**，跑通后再加动作、年龄变体、彩蛋或 Xenotype。
@@ -38,7 +38,6 @@ MyStudioVoices/
 `- 1.6/
    |- Race/
    |  |- Defs/SoundDefs/MyStudio_Race_Sounds.xml
-   |  |- Patches/MyStudio_AddSqueakComp.xml
    |  `- Sounds/com.example.mystudio.voices/US_MyStudio_Race/Call/call_01.ogg
    `- Biotech/                                     # 仅 Xenotype 包需要
       `- Defs/SoundDefs/MyStudio_Xenotype_Sounds.xml
@@ -104,9 +103,9 @@ MyStudioVoices/
 
 细节：根节点严格写 `UniversalSqueaker.SqueakVoicePackDef`；`fallbacks` 不要写成单数 `fallback`；`IsEgg` 保持大小写；`FloatRange` 用 `~`，不要用逗号或圆括号。
 
-## 3.5 必读：comp 挂载 patch
+## 3.5 comp 挂载（默认自动；patch 仅高级自定义）
 
-US 本体不发布任何种族 patch；canonical 包必须自己把 `CompProperties_Squeaker` 挂到目标种族。模板：
+US 启动时按路由表自动挂载：每个 canonical 包声明的 `raceDefName` 种族都会自动获得默认 `CompProperties_Squeaker`（15 个生产动作 + 4 档心情默认，无种族/声音字面量），作者不需要写任何 patch。下面这份 patch 仅当你要自定义触发配置（动作/节奏/心情）时才需要。模板：
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -136,7 +135,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 </Patch>
 ```
 
-若目标种族已有该 comp（例如别的包已挂），RimWorld 会按 patch 语义追加或你可用条件 patch 避免重复；US 运行时不会自动替 canonical 包挂载。
+自动挂载遇到目标种族已有 squeak comp 时会直接跳过（逃生舱），你的自定义配置永不被覆盖；要自定义触发配置时以此模板为准。
 
 ## 4. PackDef 字段参考
 
@@ -191,13 +190,13 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 2. 设置选 **FALLBACK**，勾选 PackDef（发现 ≠ 自动启用）。
 3. 先测 Race `Call`；确认后移除该动作验证回退，再测 Xenotype/部分覆盖。
 4. dev 日志成功派发：`Audio route: <action> -> <sound> (<tier>[, egg][, nonplayer]).`
-5. 迁移旧 SR 包时：将其 Def 根节点与 defName 改为 canonical（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀），并补上第 3.5 节 comp patch。
+5. 迁移旧 SR 包时：将其 Def 根节点与 defName 改为 canonical（`UniversalSqueaker.SqueakVoicePackDef` + `US_` 前缀）；comp 由 US 路由表自动挂载，无需补 patch，如需自定义触发配置再按第 3.5 节。
 
 ## 10. 排错
 
 | 现象 | 处理 |
 | --- | --- |
-| canonical 包不响 | 检查第 3.5 节 comp patch 目标 defName 与 patch 是否生效；`raceDefName` 精确匹配 |
+| canonical 包不响 | 检查 `raceDefName` 是否精确匹配（路由表据此自动挂载）；声明未命中时 usdiag 打 `voicepack.comp.attach_skipped` 告警；仅自定义触发配置时检查第 3.5 节 patch |
 | 包被拒 `duplicate_key` | 同 `packageId:defName` 出现多份；检查是否新旧两版包同时安装 |
 | 有包仍听到 Vanilla | 模式不是 OFF、PackDef 已勾选、动作已覆盖、目录有可播放文件 |
 | Xenotype 不匹配 | `targetDefName` 精确等于 `XenotypeDef.defName` |
@@ -207,7 +206,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 ## 11. 发布检查清单
 
 - [ ] 自己的 packageId/名称/作者；defName 以 `US_` 开头且全局唯一。
-- [ ] 声明 exact raceDefName + 自带 comp patch。
+- [ ] 声明 exact raceDefName（US 据此自动挂载默认 comp）；仅自定义触发配置时才写 comp patch。
 - [ ] `clipFolderPath`、实际目录、`<lowercase packageId>/<PackDef.defName>/<Action>/` 一致。
 - [ ] 每个生产 SoundDef 满足第 5 节契约；每个已列 action 有可播放音频。
 - [ ] OFF/FALLBACK/REMIX 与回退已实机验证。
@@ -218,7 +217,7 @@ US 本体不发布任何种族 patch；canonical 包必须自己把 `CompPropert
 
 触发：用户请求制作/修改/诊断 US 语音包。按顺序执行：
 
-1. 新包一律 canonical：`US_` 前缀 + 精确 `raceDefName` + 自带 comp patch；旧 SR 包需按第 0 节迁移到 canonical。
+1. 新包一律 canonical：`US_` 前缀 + 精确 `raceDefName`（comp 由 US 路由表自动挂载，见第 3.5 节）；旧 SR 包需按第 0 节迁移到 canonical。
 2. 校验 packageId（全小写）与 defName；音频路径 = `<lowercase packageId>/<PackDef.defName>/<Action>/`；提醒作者替换占位文件并声明许可。
 3. 用 XML 解析器检查生成物；对照第 4–5 节逐项检查；不要替作者声称实机测试，要求按第 9 节验证。
 4. 排错优先查第 10 节；引用本文件具体小节编号，不要凭记忆改写契约。

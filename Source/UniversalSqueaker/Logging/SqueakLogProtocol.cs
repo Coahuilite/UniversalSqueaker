@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled, VoicePackCompAutoAttached, VoicePackCompAttachSkipped, VoicePackCompAttachFailed }
 
 internal readonly struct SqueakLogData
 {
@@ -77,6 +77,9 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.AudioVanillaFallback => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Audio dispatch fell back to vanilla: <action> -> <sound> (<tier>[, egg]).", 2),
         SqueakLogEvent.FallbackProfileStoreFailed => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Fallback profile store operation failed.", 2),
         SqueakLogEvent.AudioDisabled => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "Squeak audio is disabled (true bypass): <action> not intercepted.", 2),
+        SqueakLogEvent.VoicePackCompAutoAttached => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "VoicePack comp auto-attached to race <race>.", 2),
+        SqueakLogEvent.VoicePackCompAttachSkipped => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "VoicePack comp auto-attach skipped for race <race> (<reason>).", 2),
+        SqueakLogEvent.VoicePackCompAttachFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "VoicePack comp auto-attach failed.", 2),
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 
@@ -108,6 +111,10 @@ internal static class SqueakLogRegistry
             string actionText = string.IsNullOrEmpty(data.Action) ? "-" : data.Action!;
             return "Squeak audio is disabled (true bypass): " + actionText + " not intercepted.";
         }
+        if (e == SqueakLogEvent.VoicePackCompAutoAttached)
+            return "VoicePack comp auto-attached to race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + ".";
+        if (e == SqueakLogEvent.VoicePackCompAttachSkipped)
+            return "VoicePack comp auto-attach skipped for race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + " (" + (string.IsNullOrEmpty(data.Reason) ? "-" : data.Reason) + ").";
         return definition.Human;
     }
 
@@ -147,6 +154,9 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.AudioRouteSelected => "audio.route.selected",
         SqueakLogEvent.AudioVanillaFallback => "audio.dispatch.vanilla_fallback",
         SqueakLogEvent.AudioDisabled => "audio.disabled",
+        SqueakLogEvent.VoicePackCompAutoAttached => "voicepack.comp.auto_attached",
+        SqueakLogEvent.VoicePackCompAttachSkipped => "voicepack.comp.attach_skipped",
+        SqueakLogEvent.VoicePackCompAttachFailed => "voicepack.comp.attach_failed",
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 }
@@ -240,6 +250,19 @@ internal static class SqueakLogFormatter
                 Add(builder, "pawn_id", data.PawnId);
                 break;
             case SqueakLogEvent.FallbackProfileStoreFailed:
+                if (data.Exception != null)
+                {
+                    var site = data.Exception.TargetSite;
+                    Add(builder, "ex_type", data.Exception.GetType().FullName);
+                    Add(builder, "ex_inner", data.Exception.InnerException?.GetType().FullName);
+                    Add(builder, "ex_site", site == null ? null : site.DeclaringType?.FullName + "." + site.Name);
+                    Add(builder, "ex_msg", SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
+                }
+                break;
+            case SqueakLogEvent.VoicePackCompAttachSkipped:
+                Add(builder, "reason", data.Reason);
+                break;
+            case SqueakLogEvent.VoicePackCompAttachFailed:
                 if (data.Exception != null)
                 {
                     var site = data.Exception.TargetSite;

@@ -64,6 +64,10 @@ public class UniversalSqueakerMod : Mod
             BuiltInActionEntries.EnsureRegistered();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
+            // Route table: mount the default squeak comp on every race declared by an admitted pack,
+            // replacing the canonical author patch. Reads the refreshed snapshot; runs on the main
+            // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
+            VoicePackCompAttach.Apply(SqueakXenotypeCatalog.Current);
             // Profile copies are independent Config artifacts; load/rebuild before the first resolver snapshot.
             // BuildBuiltIn consumes the resolved table and remains outside the ModSettings debounce/write path.
             SqueakFallbackProfileStore.LoadOrRebuild(SqueakKernelAdapter.BuildBuiltInSource());

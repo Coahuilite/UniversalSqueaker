@@ -252,6 +252,18 @@ internal static class Program
             V2("info", "dev_only", "audio.route.selected", "Audio route: some package.action -> US_1 (race_pack).", action: "some%20package.action", target: "t%201", race: "Ra%20tin", trailing: " sound=US_1 tier=race_pack egg=false suppressed_detail=0"));
         CaptureV2Coverage();
 
+        // Routing-table auto-attach: one line per mounted race, one warning per skipped declaration
+        // (race missing / no race props), one error per whole-pass failure (v2 surface).
+        Reset(SqueakDevLoggingMode.Enabled);
+        SqueakLog.CompAutoAttached("RaceA");
+        SqueakLog.CompAttachSkipped("RaceMissing", "race_not_found");
+        SqueakLog.CompAttachFailed(new Exception("attach failed"));
+        AssertLines(nameof(VerifyV2Protocol) + " comp attach",
+            V2("info", "daily", "voicepack.comp.auto_attached", "VoicePack comp auto-attached to race RaceA.", race: "RaceA"),
+            V2("warning", "daily", "voicepack.comp.attach_skipped", "VoicePack comp auto-attach skipped for race RaceMissing (race_not_found).", race: "RaceMissing", trailing: " reason=race_not_found"),
+            V2("warning", "daily", "voicepack.comp.attach_failed", "VoicePack comp auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=attach%20failed"));
+        CaptureV2Coverage();
+
         // Gating: v2 Daily keeps the human-only shape while detailed logging is ineffective; v2 DevOnly is silent.
         Reset(SqueakDevLoggingMode.Disabled);
         SqueakLog.SettingsOrigin(SqueakSettingsOrigin.FreshCreated);
@@ -292,7 +304,7 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(6, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(9, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)
