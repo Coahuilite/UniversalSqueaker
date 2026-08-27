@@ -57,7 +57,6 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref voicePackMode, "voicePackMode", SqueakVoicePackMode.Fallback);
         // v2 is intentionally non-default at the Scribe boundary so the completed 1→2 migration is durable.
         Scribe_Values.Look(ref voicePackSchemaVersion, "voicePackSchemaVersion", LegacyVoicePackSchemaVersion);
-        Scribe_Values.Look(ref voicePackDefaultSeeded, "voicePackDefaultSeeded", false);
         Scribe_Values.Look(ref settingsSchemaVersion, "settingsSchemaVersion", CurrentSettingsSchemaVersion, forceSave: true);
         Scribe_Values.Look(ref scaleCooldownWithTimeSpeed, "scaleCooldownWithTimeSpeed", true);
         Scribe_Values.Look(ref scaleFrequencyWithTalking, "scaleFrequencyWithTalking", GetDefaultScaleFrequencyWithTalking());

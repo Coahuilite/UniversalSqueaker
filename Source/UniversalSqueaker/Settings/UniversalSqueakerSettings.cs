@@ -41,8 +41,6 @@ public partial class UniversalSqueakerSettings : ModSettings
     // 因此"从未显式选择"的配置(无 voicePackMode 节点)天然落到 Fallback;显式 Off 仍写入节点并保留。
     public SqueakVoicePackMode voicePackMode = SqueakVoicePackMode.Fallback;
     public int voicePackSchemaVersion = CurrentVoicePackSchemaVersion;
-    // 保留的 Scribe 标记：US 是数据驱动产品，没有内置 race 种子；该字段仅为旧 Scribe 形状兼容而保留。
-    public bool voicePackDefaultSeeded;
     // v4 owns the race-aware selection/preset record identity migration.
     public int settingsSchemaVersion = CurrentSettingsSchemaVersion;
     public bool scaleCooldownWithTimeSpeed = true;
