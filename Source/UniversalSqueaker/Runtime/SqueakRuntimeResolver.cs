@@ -117,7 +117,9 @@ public static class SqueakRuntimeResolver
             SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
             result[key] = new RuntimeActionDelta(scope, 1f, 1f);
         }
-        // actionTuning 的 Global 层记录优先覆盖默认派生值（键已 string，外部动作键也适用）。
+        // actionTuning 的 Global 层记录优先覆盖默认派生值。作用域仅为已 seed 的内置键：
+        // 外部动作键不进入本表（Race/Xeno 层经 TryParseBuiltIn 同限内置）；支持外部动作调音
+        // 待其生态出现后再评估（YAGNI）。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
