@@ -59,6 +59,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<XenotypePresetRecord> xenotypePresets = new();
     // S2 layered action tuning table (Global/Race/Xenotype).
     public List<ActionTuningRecord> actionTuning = new();
+    // S5 layered mood tuning table (Global/Race/Xenotype); supersedes moodOverrides / preset mood rows.
+    public List<MoodTuningRecord> moodTuning = new();
     // Action gate (Goal A): non-built-in ActionEntry fires only when true. Default false (closed).
     public bool allowExternalActions = false;
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
@@ -148,8 +150,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         SqueakDebug.ShowCameraIndicator = value;
         QueuePersistence();
     }
-    /// <summary>Global mood is read directly by CompSqueaker during playback; no resolver rebuild is needed.</summary>
-    public void NotifyGlobalMoodRuntimeChanged() { }
     public void NotifyContinuousXenotypeRuntimeChanged() => SqueakRuntimeResolver.NotifyContinuousResolverChange(this, SqueakXenotypeCatalog.Current);
     public void NotifyDiscreteResolverRuntimeChanged() => SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
     public void QueuePersistence() => UniversalSqueakerMod.Instance?.QueueSettingsSave();

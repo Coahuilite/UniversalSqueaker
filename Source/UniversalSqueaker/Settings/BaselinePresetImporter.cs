@@ -10,11 +10,11 @@ namespace UniversalSqueaker;
 /// <see cref="UniversalSqueakerTuningBaselineDef"/> tree and merges the player-selected race/xenotype
 /// rows into the settings' layered tuning tables:
 ///   - actions → <see cref="UniversalSqueakerSettings.actionTuning"/> (Race layer 1 / Xenotype layer 2)
-///   - moods   → <see cref="UniversalSqueakerSettings.moodOverrides"/> (global, for race rows) and
-///               <see cref="XenotypePresetRecord.moodOverrides"/> (per-xenotype, for xenotype rows)
+///   - moods   → <see cref="UniversalSqueakerSettings.moodTuning"/> (Race layer 1 / Xenotype layer 2;
+///               S5 起 race.moods 不再进全局 moodOverrides，xenotype 层覆盖 race 层)
 /// Merge semantics are "same key overwrites, new key appends", both within the preset (race baseline →
 /// xenotype delta when <see cref="BaselineXenotypeEntry.inheritFromRace"/>) and against the existing
-/// settings rows. Every imported <see cref="ActionTuningRecord"/> carries
+/// settings rows. Every imported <see cref="ActionTuningRecord"/> / <see cref="MoodTuningRecord"/> carries
 /// <see cref="ActionTuningRecord.sourcePresetDefName"/>.
 /// </summary>
 public static class BaselinePresetImporter
@@ -35,8 +35,7 @@ public static class BaselinePresetImporter
             return BaselineImportResult.Empty;
 
         settings.actionTuning ??= new List<ActionTuningRecord>();
-        settings.moodOverrides ??= new Dictionary<SqueakMood, SqueakMoodMod>();
-        settings.xenotypePresets ??= new List<XenotypePresetRecord>();
+        settings.moodTuning ??= new List<MoodTuningRecord>();
 
         int actionsImported = 0;
         int moodsImported = 0;
@@ -56,8 +55,8 @@ public static class BaselinePresetImporter
                     UpsertAction(settings, record);
                     actionsImported++;
                 }
-                // Race moods → global moodOverrides (the only non-xenotype mood path).
-                moodsImported += MergeGlobalMoods(settings, raceMoods);
+                // S5: Race moods → moodTuning Race 层（层 1）；不再折叠进全局 moodOverrides。
+                moodsImported += MergeRaceMoods(settings, preset, race.raceDefName, raceMoods);
             }
 
             foreach (BaselineXenotypeEntry xenotype in race.xenotypes ?? new List<BaselineXenotypeEntry>())
@@ -77,7 +76,7 @@ public static class BaselinePresetImporter
                     UpsertAction(settings, record);
                     actionsImported++;
                 }
-                moodsImported += MergeXenotypeMoods(settings, race.raceDefName, xenotype.xenotypeDefName, baseMoods, xenoMoods);
+                moodsImported += MergeXenotypeMoods(settings, preset, race.raceDefName, xenotype.xenotypeDefName, baseMoods, xenoMoods);
             }
         }
 
@@ -149,19 +148,24 @@ public static class BaselinePresetImporter
         settings.actionTuning.Add(incoming);
     }
 
-    private static int MergeGlobalMoods(UniversalSqueakerSettings settings, IEnumerable<BaselineMoodTuning> moods)
+    private static int MergeRaceMoods(UniversalSqueakerSettings settings, UniversalSqueakerTuningBaselineDef preset, string raceDefName, IEnumerable<BaselineMoodTuning> moods)
     {
         int count = 0;
         foreach (BaselineMoodTuning tuning in moods)
         {
             if (tuning == null) continue;
-            settings.moodOverrides[tuning.mood] = new SqueakMoodMod
+            UpsertMood(settings, new MoodTuningRecord
             {
                 mood = tuning.mood,
+                raceDefName = raceDefName ?? "",
+                sourcePresetDefName = preset.defName,
+                hasPitchFactor = true,
                 pitchFactor = tuning.pitchFactor,
+                hasVolumeFactor = true,
                 volumeFactor = tuning.volumeFactor,
-                pitchJitter = tuning.pitchJitter
-            };
+                hasPitchJitter = true,
+                pitchJitter = tuning.pitchJitter,
+            });
             count++;
         }
         return count;
@@ -169,60 +173,62 @@ public static class BaselinePresetImporter
 
     private static int MergeXenotypeMoods(
         UniversalSqueakerSettings settings,
+        UniversalSqueakerTuningBaselineDef preset,
         string raceDefName,
         string xenotypeDefName,
         IEnumerable<BaselineMoodTuning> baseMoods,
         IEnumerable<BaselineMoodTuning> deltaMoods)
     {
-        Dictionary<SqueakMood, XenotypeMoodOverride> byMood = new();
+        Dictionary<SqueakMood, BaselineMoodTuning> byMood = new();
         void Add(IEnumerable<BaselineMoodTuning> list)
         {
             foreach (BaselineMoodTuning tuning in list)
             {
                 if (tuning == null) continue;
-                byMood[tuning.mood] = new XenotypeMoodOverride
-                {
-                    mood = tuning.mood,
-                    hasPitchFactor = true,
-                    pitchFactor = tuning.pitchFactor,
-                    hasVolumeFactor = true,
-                    volumeFactor = tuning.volumeFactor,
-                    hasPitchJitter = true,
-                    pitchJitter = tuning.pitchJitter
-                };
+                byMood[tuning.mood] = tuning;
             }
         }
         Add(baseMoods);
         Add(deltaMoods);
         if (byMood.Count == 0) return 0;
 
-        XenotypePresetRecord record = FindOrCreatePreset(settings, raceDefName, xenotypeDefName);
         int count = 0;
-        foreach (KeyValuePair<SqueakMood, XenotypeMoodOverride> pair in byMood)
+        foreach (KeyValuePair<SqueakMood, BaselineMoodTuning> pair in byMood)
         {
-            int index = record.moodOverrides.FindIndex(existing => existing != null && existing.mood == pair.Key);
-            if (index >= 0) record.moodOverrides[index] = pair.Value;
-            else record.moodOverrides.Add(pair.Value);
+            BaselineMoodTuning tuning = pair.Value;
+            UpsertMood(settings, new MoodTuningRecord
+            {
+                mood = tuning.mood,
+                raceDefName = raceDefName ?? "",
+                xenotypeDefName = xenotypeDefName ?? "",
+                sourcePresetDefName = preset.defName,
+                hasPitchFactor = true,
+                pitchFactor = tuning.pitchFactor,
+                hasVolumeFactor = true,
+                volumeFactor = tuning.volumeFactor,
+                hasPitchJitter = true,
+                pitchJitter = tuning.pitchJitter,
+            });
             count++;
         }
         return count;
     }
 
-    private static XenotypePresetRecord FindOrCreatePreset(UniversalSqueakerSettings settings, string raceDefName, string xenotypeDefName)
+    private static void UpsertMood(UniversalSqueakerSettings settings, MoodTuningRecord incoming)
     {
-        foreach (XenotypePresetRecord record in settings.xenotypePresets)
-            if (record != null
-                && string.Equals(record.raceDefName, raceDefName, StringComparison.Ordinal)
-                && string.Equals(record.xenotypeDefName, xenotypeDefName, StringComparison.Ordinal))
-                return record;
-
-        XenotypePresetRecord created = new()
+        for (int i = 0; i < settings.moodTuning.Count; i++)
         {
-            raceDefName = raceDefName,
-            xenotypeDefName = xenotypeDefName
-        };
-        settings.xenotypePresets.Add(created);
-        return created;
+            MoodTuningRecord existing = settings.moodTuning[i];
+            if (existing != null
+                && existing.mood == incoming.mood
+                && string.Equals(existing.raceDefName ?? "", incoming.raceDefName ?? "", StringComparison.Ordinal)
+                && string.Equals(existing.xenotypeDefName ?? "", incoming.xenotypeDefName ?? "", StringComparison.Ordinal))
+            {
+                settings.moodTuning[i] = incoming;
+                return;
+            }
+        }
+        settings.moodTuning.Add(incoming);
     }
 }
 

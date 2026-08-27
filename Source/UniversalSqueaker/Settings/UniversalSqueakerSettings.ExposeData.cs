@@ -10,7 +10,7 @@ namespace UniversalSqueaker;
 /// </summary>
 public partial class UniversalSqueakerSettings
 {
-    private const int CurrentSettingsSchemaVersion = 4;
+    private const int CurrentSettingsSchemaVersion = 5;
     private const int CurrentVoicePackSchemaVersion = 2;
     private const int LegacyVoicePackSchemaVersion = 1;
     // US has no product legacy race. Explicit-race records can migrate; records that need a default fail closed.
@@ -87,8 +87,11 @@ public partial class UniversalSqueakerSettings
         Scribe_Collections.Look(ref voicePackSelections, "voicePackSelections", LookMode.Deep);
         Scribe_Collections.Look(ref xenotypePresets, "xenotypePresets", LookMode.Deep);
         Scribe_Collections.Look(ref actionTuning, "actionTuning", LookMode.Deep);
+        Scribe_Collections.Look(ref moodTuning, "moodTuning", LookMode.Deep);
         if (Scribe.mode == LoadSaveMode.LoadingVars && moodOverrides == null)
             moodOverrides = new Dictionary<SqueakMood, SqueakMoodMod>();
+        if (Scribe.mode == LoadSaveMode.LoadingVars && moodTuning == null)
+            moodTuning = new List<MoodTuningRecord>();
 
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
 
@@ -107,6 +110,7 @@ public partial class UniversalSqueakerSettings
         distanceRange = ClampDistanceRange(distanceRange);
 
         if (actionTuning == null) actionTuning = new List<ActionTuningRecord>();
+        if (moodTuning == null) moodTuning = new List<MoodTuningRecord>();
 
         bool migrationNeeded = settingsSchemaVersion < CurrentSettingsSchemaVersion || voicePackSchemaVersion < CurrentVoicePackSchemaVersion;
         if (migrationNeeded) MigrateV3RecordsTransactionally();
@@ -157,6 +161,20 @@ public partial class UniversalSqueakerSettings
             return false;
         }
 
+        // S5: 旧心情存储 → 统一分层 MoodTuningRecord（moodOverrides → 层 0；xenotypePresets[].moodOverrides → 层 2）。
+        // 与记录迁移同事务：任一失败整体不提交，schema 标记保持旧值，下次启动可重试。
+        if (!SqueakSettingsMigration.TryCreateMoodTuningRecords(
+                moodOverrides,
+                xenotypePresets,
+                out List<MoodTuningRecord> migratedMoods,
+                out string moodFailure))
+        {
+            migrationPersistenceBlocked = true;
+            SqueakLog.TargetRejected("settings_schema_migration", "mood_tuning_migration_failed:" + moodFailure);
+            return false;
+        }
+
+        moodTuning = migratedMoods;
         voicePackSelections = migratedSelections;
         xenotypePresets = migratedPresets;
         migrationPersistenceBlocked = false;

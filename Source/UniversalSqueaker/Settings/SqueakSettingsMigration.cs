@@ -224,4 +224,66 @@ internal static class SqueakSettingsMigration
             return false;
         }
     }
+
+    /// <summary>S5: 迁移旧心情存储 → 统一分层 MoodTuningRecord。
+    /// moodOverrides（全局 dict）→ 层 0；xenotypePresets[].moodOverrides → 层 2（race+xeno）。
+    /// race 空的预设行跳过（无法构成合法层）——旧字段保留但不再被运行时消费。
+    /// 失败仅可能来自异常；与 v4 记录迁移同事务（由调用方决定是否原子发布）。</summary>
+    internal static bool TryCreateMoodTuningRecords(
+        Dictionary<SqueakMood, SqueakMoodMod>? globalMoods,
+        IEnumerable<XenotypePresetRecord>? sourcePresets,
+        out List<MoodTuningRecord> tuning,
+        out string failure)
+    {
+        tuning = new List<MoodTuningRecord>();
+        failure = "";
+        try
+        {
+            if (globalMoods != null)
+            {
+                foreach (KeyValuePair<SqueakMood, SqueakMoodMod> entry in globalMoods)
+                {
+                    if (entry.Value == null) continue;
+                    tuning.Add(new MoodTuningRecord
+                    {
+                        mood = entry.Key,
+                        hasPitchFactor = true,
+                        pitchFactor = entry.Value.pitchFactor,
+                        hasVolumeFactor = true,
+                        volumeFactor = entry.Value.volumeFactor,
+                        hasPitchJitter = true,
+                        pitchJitter = entry.Value.pitchJitter,
+                    });
+                }
+            }
+
+            foreach (XenotypePresetRecord? record in sourcePresets ?? Array.Empty<XenotypePresetRecord>())
+            {
+                if (record == null || string.IsNullOrWhiteSpace(record.raceDefName) || string.IsNullOrWhiteSpace(record.xenotypeDefName)) continue;
+                foreach (XenotypeMoodOverride? mood in record.moodOverrides ?? new List<XenotypeMoodOverride>())
+                {
+                    if (mood == null) continue;
+                    tuning.Add(new MoodTuningRecord
+                    {
+                        mood = mood.mood,
+                        raceDefName = record.raceDefName,
+                        xenotypeDefName = record.xenotypeDefName,
+                        hasPitchFactor = mood.hasPitchFactor,
+                        pitchFactor = mood.pitchFactor,
+                        hasVolumeFactor = mood.hasVolumeFactor,
+                        volumeFactor = mood.volumeFactor,
+                        hasPitchJitter = mood.hasPitchJitter,
+                        pitchJitter = mood.pitchJitter,
+                    });
+                }
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            tuning = new List<MoodTuningRecord>();
+            failure = ex.GetType().Name + ": " + ex.Message;
+            return false;
+        }
+    }
 }

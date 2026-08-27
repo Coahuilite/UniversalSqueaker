@@ -619,19 +619,14 @@ public class CompSqueaker : ThingComp
     }
 
 
-    /// <summary>心情调制合并:CompProperties 默认 → 玩家全局 moodOverrides → xenotype 层 delta，最后合成年龄调制。</summary>
+    /// <summary>心情调制合并:CompProperties 默认 → 分层 context delta（Global < Race < Xenotype，
+    /// 快照层已合并——S5 起不再实时读 settings.moodOverrides，H3 完成），最后合成年龄调制。</summary>
     private SqueakMoodMod ResolveMoodMod(SqueakMood mood, ResolvedSqueakContext context)
     {
         SqueakMoodMod mod = new() { mood = mood };
         if (moodModMap.TryGetValue(mood, out SqueakMoodMod? def))
         {
             mod = def.Clone();
-        }
-
-        Dictionary<SqueakMood, SqueakMoodMod>? ov = UniversalSqueakerMod.Settings?.moodOverrides;
-        if (ov != null && ov.TryGetValue(mood, out SqueakMoodMod? ovm) && ovm != null)
-        {
-            mod = ovm.Clone();
         }
 
         RuntimeMoodDelta? delta = context.GetMoodDelta(mood);
