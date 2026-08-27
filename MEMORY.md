@@ -59,17 +59,19 @@
 - Next action on resume: read `docs/us-ui-migration-plan-zh.md` §14, then either start the Scribe+data-model design or S1 global-layer removal; collect maintainer answers to the three pending confirmations first if possible.
 
 
-## Session resume checkpoint (2026-08-25c — 硬债清理 + 路由表评估会话；跨 harness 压缩锚点)
+## Session resume checkpoint (2026-08-25c — 第三次会话；跨 harness 压缩锚点)
 
-- This session executed **双源统一 + voicePackDefaultSeeded 删除 + dist/ 残留清理**（Task 3 仅工作区清理，dist/ 被 .gitignore 排除）and committed as 2 LOCAL commits: `1c64146`(双源统一) → `55b6990`(voicePackDefaultSeeded), on top of `a4db6f4` + `801792e`. Design doc `docs/us-routing-table-baseline-design-zh.md` tracked at `50bb2ed`. All green: verify-local 12 gates + Dev/Release 0 warnings + kernel golden-corpus replay zero-delta. Working tree clean.
+- This session executed **双源统一 + voicePackDefaultSeeded 删除 + dist/ 残留 + Legacy 兼容桥删除 + Baseline 预设系统 + 路由表评估**，committed as 7 LOCAL commits: `1c64146` → `55b6990` → `50bb2ed` → `65b4611` → `6aaeeea` → `a4b90c0` → `e86388e` → `3291672`, on top of `801792e`. All green: verify-local 12 gates + Dev/Release 0 warnings + kernel golden-corpus replay zero-delta. Working tree clean.
 - Durable facts established this session (do not re-derive):
-  - **双源统一完成**：`globalActionEnabled` / `GlobalActionEnabledRecord` / `GetActionGlobalScope` / `SetActionGlobalScope` / `IsActionGloballyEnabled` 全部删除。`BuildGlobalActions` 现在是 `C# DefaultScope < baseline Def < actionTuning Global 层`，不再有中间旧 globalActionEnabled 层。`xenotypePresets.actionOverrides` 保留（仍是运行时消费源）。`IsActionAllowedByKey`（CompSqueaker.cs:422）是 external-action 门，与 globalActionEnabled 无关，未动。
-  - **voicePackDefaultSeeded** 哨兵字段已删除（字段 + Scribe 行）。
-  - **dist/ 残留清理**：6 个测试包 XML 中 `globalMinIntervalTicks` / `scaleFrequencyWithTalking` / `distancePresets` 已删除（工作区生效，dist/ 被 .gitignore 排除无法提交）。
-  - **路由表机制评估**：四维度分析完成。**baseline 是全局的**（不是 per-pack），叠加是**字段级覆盖**（不是叠乘），baseline 不适合 per-pack 音色修正。最大风险：canonical 包从"声明即静默"变成"声明即挂默认 comp"——设计目标，需发布说明。
-  - **subagent 配置**：后续使用 `deepseek-official` / `deepseek-v4-flash`；scout `low`，审阅 `high`，开发 `max`。`commandcode` provider 已弃用。
-  - **RimWorld enum Scribe is by-name**（前会话已定案，保留供参考）：Scribe_Values writes `value.ToString()`，ParseHelper parses `Enum.Parse`，`Off→Vanilla` ABI-safe。
-  - **Ferrite widget 扩展模板（五步）**（前会话已定案，保留供参考）：implement `IWidget` → `UsWidgetCommandAdapter.For` 映射 → `FerriteVoicePacksPage` viewState 键 → `UsWidgetRegistrar` 注册 → `UI/Layout.xml` 行。
-  - **Diagnostics panel**（前会话已定案，保留供参考）：`CompSqueaker.PostDraw()` 公开钩子，非模态 Window，17 门禁链三态。
-- Remaining: (1) **路由表开放**（~20 行 C# + LogTests `AssertEqual(9→12)`，独立小块）；(2) **专项测试** "global off + xenotype on" 需提取 Pure 函数或 Runtime harness；(3) **S4-Polish**（过滤/帮助/窄屏/美化/footer/距离预览/A1-A2 调音编辑器 UI/Race-Xenotype 层 scope UI）；(4) **`docs/workdocs/` 移除**（所有剩余块落地后）；(5) **Ferrite UI 游戏内稳定化**（maintainer step）。
+  - **双源统一完成**：`globalActionEnabled` 全链路删除。`BuildGlobalActions` = `C# DefaultScope < actionTuning Global 层`。
+  - **Legacy SR 兼容桥已删除**（维护者裁决）。`Legacy/` 目录全删，`SqueakyRatkin.*` 类型不再存在，3 个 legacy 日志事件删除，UI Legacy SR 标记删除。LogTests V2 事件计数 9→6。
+  - **Baseline 预设系统（方案 C）**：`UniversalSqueakerTuningBaselineDef` 重构为 race/xeno 树形结构 + `inheritFromRace`。`BaselineTuningTable` 运行时消费删除。新增 `BaselinePresetImporter`（增量导入 + 合并）。`ActionTuningRecord` 新增 `sourcePresetDefName` 来源标记。新增 `PresetListWidget`（五步模板）。mood 预设走现有 `moodOverrides`/`XenotypePresetRecord.moodOverrides` 路径。
+  - **路由表机制评估**：四维度分析完成。路由表不是新机制，是开放现有 `CreateDefault()` 给所有包。`IsLegacy` 已随 legacy 桥删除。baseline 是全局的，叠加是字段级覆盖（不是叠乘），不适合 per-pack 音色修正。
+  - **subagent 配置**：代码开发用 `dispatch_subagents`（不要用 `subagent`——它复用主 agent 的 pro model，太贵）。provider `qwen-token-plan-cn`，model `deepseek-v4-flash`。scout `low` / 审阅 `high` / 开发 `max`。
+  - **RimWorld enum Scribe is by-name**（前会话）：Scribe_Values writes `value.ToString()`，`Off→Vanilla` ABI-safe。
+  - **Ferrite widget 扩展模板（五步）**（前会话）：`IWidget` → `UsWidgetCommandAdapter.For` → `FerriteVoicePacksPage` viewState → `UsWidgetRegistrar` → `UI/Layout.xml`。
+  - **Diagnostics panel**（前会话）：`CompSqueaker.PostDraw()` 公开钩子，非模态 Window，17 门禁链三态。
+- Remaining: (1) **路由表开放**（~20 行 C# + LogTests `AssertEqual(6→9)`）；(2) **专项测试** "global off + xenotype on" Pure 提取或 Runtime harness；(3) **S4-Polish**（过滤/帮助/窄屏/美化/footer/距离预览/A1-A2 调音编辑器/Race-Xenotype scope UI）；(4) **`docs/workdocs/` 移除**（所有剩余块落地后）；(5) **Ferrite UI 游戏内稳定化**（maintainer step）。
+- Known residuals: BaselinePresetImporter 无单测；PresetListWidget 无游戏内验证；未 ship 示例预设 Def XML；`sourcePresetDefName` 为增量 Scribe 字段（旧存档可直接加载）。
+
 
