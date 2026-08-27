@@ -98,41 +98,59 @@ public static class SqueakRuntimeResolver
     private static bool TryPublish(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, out SqueakRuntimeSnapshot published)
     {
         if (!EnsureMainThread()) { published = Current; return false; }
-        Dictionary<string, RuntimeActionDelta> globalActions = BuildGlobalActions(settings);
-        Dictionary<SqueakMood, RuntimeMoodDelta> globalMoods = BuildGlobalMoods(settings);
-        try { published = BuildSnapshot(settings, catalog, globalActions, globalMoods); }
-        catch (Exception ex) { SqueakLog.ResolverRebuildFailed(ex); published = BuildFallback(globalActions, globalMoods, settings); }
+        Dictionary<string, LayerActionDelta> globalActionLayers = BuildGlobalActionLayers(settings);
+        Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers = BuildGlobalMoodLayers(settings);
+        try { published = BuildSnapshot(settings, catalog, globalActionLayers, globalMoodLayers); }
+        catch (Exception ex) { SqueakLog.ResolverRebuildFailed(ex); published = BuildFallback(globalActionLayers, globalMoodLayers, settings); }
         Volatile.Write(ref current, published);
         ResolverRebuildCount++;
         RuntimeFlushCount++;
         return true;
     }
 
-    private static Dictionary<string, RuntimeActionDelta> BuildGlobalActions(UniversalSqueakerSettings settings)
+    /// <summary>S5 纯折叠：Global 层动作源数据（层 0 记录，同键字段级合并）。
+    /// 外部动作键不进入本表（与 Pure 层契约一致；支持外部动作调音待生态出现后评估，YAGNI）。</summary>
+    private static Dictionary<string, LayerActionDelta> BuildGlobalActionLayers(UniversalSqueakerSettings settings)
+    {
+        Dictionary<string, LayerActionDelta> layers = new(StringComparer.Ordinal);
+        foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
+        {
+            if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
+            if (string.IsNullOrEmpty(record.actionKey)) continue;
+            LayerActionDelta delta = FromActionRecord(record);
+            layers[record.actionKey] = layers.TryGetValue(record.actionKey, out LayerActionDelta existing) ? existing.Merge(delta) : delta;
+        }
+        return layers;
+    }
+
+    /// <summary>Global 层解析结果（DefaultScope &lt; Global 折叠，17 内置键全量具体化）。</summary>
+    private static Dictionary<string, RuntimeActionDelta> ResolveGlobalActions(Dictionary<string, LayerActionDelta> layers)
     {
         Dictionary<string, RuntimeActionDelta> result = new(StringComparer.Ordinal);
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
-            // S4 作用域优先级（低→高）：C# DefaultScope < actionTuning Global 层。
-            SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
-            result[key] = new RuntimeActionDelta(scope, 1f, 1f);
-        }
-        // actionTuning 的 Global 层记录优先覆盖默认派生值。作用域仅为已 seed 的内置键：
-        // 外部动作键不进入本表（Race/Xeno 层经 TryParseBuiltIn 同限内置）；支持外部动作调音
-        // 待其生态出现后再评估（YAGNI）。
-        foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
-        {
-            if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
-            if (string.IsNullOrEmpty(record.actionKey)) continue;
-            if (!result.TryGetValue(record.actionKey, out RuntimeActionDelta existing)) continue;
-            SqueakActionScope scope = record.hasScope ? record.scope : existing.Scope;
-            result[record.actionKey] = new RuntimeActionDelta(scope, record.hasIntervalMultiplier ? record.intervalMultiplier : existing.IntervalMultiplier, record.hasProbabilityMultiplier ? record.probabilityMultiplier : existing.ProbabilityMultiplier);
+            LayerActionDelta? layer = layers.TryGetValue(key, out LayerActionDelta value) ? value : (LayerActionDelta?)null;
+            result[key] = ToRuntime(ResolvedActionDelta.Resolve(SqueakActionDefinitions.Get(action).DefaultScope, layer, null, null));
         }
         return result;
     }
 
-    private static SqueakRuntimeSnapshot BuildSnapshot(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, Dictionary<string, RuntimeActionDelta> globalActions, Dictionary<SqueakMood, RuntimeMoodDelta> globalMoods)
+    private static LayerActionDelta FromActionRecord(ActionTuningRecord record) => new(
+        record.scope, record.hasScope,
+        record.hasIntervalMultiplier, Sanitize(record.intervalMultiplier),
+        record.hasProbabilityMultiplier, Sanitize(record.probabilityMultiplier));
+
+    private static LayerMoodDelta FromMoodRecord(MoodTuningRecord record) => new(
+        record.hasPitchFactor, record.pitchFactor,
+        record.hasVolumeFactor, record.volumeFactor,
+        record.hasPitchJitter, record.pitchJitter.min, record.pitchJitter.max);
+
+    private static RuntimeActionDelta ToRuntime(ResolvedActionDelta delta) => new(delta.Scope, delta.IntervalMultiplier, delta.ProbabilityMultiplier);
+
+    private static RuntimeMoodDelta ToRuntime(ResolvedMoodDelta delta) => new(delta.HasPitchFactor, delta.PitchFactor, delta.HasVolumeFactor, delta.VolumeFactor, delta.HasPitchJitter, new FloatRange(delta.JitterMin, delta.JitterMax));
+
+    private static SqueakRuntimeSnapshot BuildSnapshot(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, Dictionary<string, LayerActionDelta> globalActionLayers, Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers)
     {
         Dictionary<string, RuntimeBuilder> behavior = BuildBehavior(settings);
         Dictionary<string, RuntimeBuilder> raceBehavior = BuildRaceBehavior(settings);
@@ -140,10 +158,12 @@ public static class SqueakRuntimeResolver
         HashSet<SoundDef> known = SqueakKernelAdapter.CollectKnownSounds(catalog);
         List<UniversalSqueaker.Kernel.VoicePackEntry> entries = SqueakKernelAdapter.BuildEntries(catalog, selection);
         UniversalSqueaker.Kernel.SqueakPoolRegistry registry = new(entries, SqueakKernelAdapter.BuildBuiltIn());
+        Dictionary<string, RuntimeActionDelta> globalActions = ResolveGlobalActions(globalActionLayers);
+        Dictionary<SqueakMood, RuntimeMoodDelta> globalMoods = ResolveGlobalMoods(globalMoodLayers);
         Dictionary<string, ResolvedSqueakContext> contexts = new(StringComparer.Ordinal);
         Dictionary<string, ResolvedSqueakContext> raceContexts = new(StringComparer.Ordinal);
         foreach (KeyValuePair<string, RuntimeBuilder> raceEntry in raceBehavior)
-            raceContexts.Add(raceEntry.Key, BuildContext(null, raceEntry.Value, globalActions, globalMoods));
+            raceContexts.Add(raceEntry.Key, BuildContext(null, raceEntry.Value, null, globalActionLayers, globalMoodLayers, 1f));
         if (ModsConfig.BiotechActive)
         {
             HashSet<string> targets = new(catalog.XenotypePacksByDefName.Keys, StringComparer.Ordinal);
@@ -154,18 +174,12 @@ public static class SqueakRuntimeResolver
             {
                 catalog.XenotypeByDefName.TryGetValue(target, out XenotypeDef? xenotype);
                 if (catalog.AmbiguousCanonicalDefNames.Contains(target)) xenotype = null;
-                // H3 fix (review 2.1): the xeno layer inherits from the RACE-resolved actions, not global,
-                // so a race-level enable is not swallowed by the xeno layer's global-inherited default.
-                Dictionary<string, RuntimeActionDelta> xenoBase = globalActions;
-                Dictionary<SqueakMood, RuntimeMoodDelta> xenoMoodBase = globalMoods;
+                // H3 fix (review 2.1) + S5 纯折叠：xeno 层继承 race 层（DefaultScope < Global < Race < Xeno）。
                 string raceName = xenotype == null ? "" : SqueakRaceForXenotype(catalog, xenotype, behavior, settings);
-                if (!string.IsNullOrEmpty(raceName) && raceContexts.TryGetValue(raceName, out ResolvedSqueakContext raceCtx))
-                {
-                    xenoBase = raceCtx.ActionSnapshot();
-                    // S5: 心情与动作同规则——xeno 层继承 race 层心情基础（H3 完成）。
-                    xenoMoodBase = raceCtx.MoodSnapshot();
-                }
-                ResolvedSqueakContext xenoContext = BuildContext(xenotype, behavior.TryGetValue(target, out RuntimeBuilder? builder) ? builder : null, xenoBase, xenoMoodBase);
+                RuntimeBuilder? raceBuilder = null;
+                if (!string.IsNullOrEmpty(raceName) && raceBehavior.TryGetValue(raceName, out RuntimeBuilder? raceB)) raceBuilder = raceB;
+                RuntimeBuilder? xenoBuilder = behavior.TryGetValue(target, out RuntimeBuilder? xenoB) ? xenoB : null;
+                ResolvedSqueakContext xenoContext = BuildContext(xenotype, raceBuilder, xenoBuilder, globalActionLayers, globalMoodLayers, xenoBuilder?.overallIntervalMultiplier ?? 1f);
                 contexts.Add(target, xenoContext);
             }
         }
@@ -177,20 +191,29 @@ public static class SqueakRuntimeResolver
         return new SqueakRuntimeSnapshot(contexts, raceContexts, registry, known, NormalizeMode(settings.voicePackMode), globalActions, globalMoods, catalog.AmbiguousCanonicalDefNames, settings.AllowEasterEggSounds);
     }
 
-    /// <summary>S5: Global 层心情（层 0）——moodTuning 层 0 记录 → RuntimeMoodDelta 字典（字段级 last-wins）。</summary>
-    private static Dictionary<SqueakMood, RuntimeMoodDelta> BuildGlobalMoods(UniversalSqueakerSettings settings)
+    /// <summary>S5 纯折叠：Global 层心情源数据（层 0 记录，同 mood 字段级合并）。</summary>
+    private static Dictionary<SqueakMood, LayerMoodDelta> BuildGlobalMoodLayers(UniversalSqueakerSettings settings)
     {
-        Dictionary<SqueakMood, RuntimeMoodBuilder> builders = new();
+        Dictionary<SqueakMood, LayerMoodDelta> layers = new();
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
-            if (!builders.TryGetValue(record.mood, out RuntimeMoodBuilder? b)) { b = new RuntimeMoodBuilder(); builders.Add(record.mood, b); }
-            if (record.hasPitchFactor) b.SetPitch(record.pitchFactor);
-            if (record.hasVolumeFactor) b.SetVolume(record.volumeFactor);
-            if (record.hasPitchJitter) b.SetJitter(record.pitchJitter);
+            LayerMoodDelta delta = FromMoodRecord(record);
+            layers[record.mood] = layers.TryGetValue(record.mood, out LayerMoodDelta existing) ? existing.Merge(delta) : delta;
         }
+        return layers;
+    }
+
+    /// <summary>Global 层解析结果（仅含被显式决定的因子——GetMoodDelta 空语义保持：全默认 = 无 delta）。</summary>
+    private static Dictionary<SqueakMood, RuntimeMoodDelta> ResolveGlobalMoods(Dictionary<SqueakMood, LayerMoodDelta> layers)
+    {
         Dictionary<SqueakMood, RuntimeMoodDelta> result = new();
-        foreach (KeyValuePair<SqueakMood, RuntimeMoodBuilder> kv in builders) result[kv.Key] = kv.Value.Build();
+        foreach (SqueakMood mood in Enum.GetValues(typeof(SqueakMood)))
+        {
+            LayerMoodDelta? layer = layers.TryGetValue(mood, out LayerMoodDelta value) ? value : (LayerMoodDelta?)null;
+            ResolvedMoodDelta resolved = ResolvedMoodDelta.Resolve(layer, null, null);
+            if (!resolved.IsDefault) result[mood] = ToRuntime(resolved);
+        }
         return result;
     }
 
@@ -203,7 +226,16 @@ public static class SqueakRuntimeResolver
             if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder); }
             if (record.hasOverallIntervalMultiplier) builder.overallIntervalMultiplier = Sanitize(record.overallIntervalMultiplier);
             // S5: XenotypePresetRecord.moodOverrides 已迁移至 moodTuning 层 2，本字段不再被运行时消费。
-            foreach (XenotypeActionBehaviorOverride action in record.actionOverrides ?? new List<XenotypeActionBehaviorOverride>()) { if (action == null) continue; RuntimeActionBuilder b = builder.GetAction(action.action); if (action.hasEnabled) { b.HasEnabled = true; b.Enabled = action.enabled; } if (action.hasIntervalMultiplier) { b.HasIntervalMultiplier = true; b.IntervalMultiplier = Sanitize(action.intervalMultiplier); } if (action.hasProbabilityMultiplier) { b.HasProbabilityMultiplier = true; b.ProbabilityMultiplier = Sanitize(action.probabilityMultiplier); } }
+            foreach (XenotypeActionBehaviorOverride action in record.actionOverrides ?? new List<XenotypeActionBehaviorOverride>())
+            {
+                if (action == null) continue;
+                string actionKey = UniversalSqueaker.Kernel.ActionKey.For(action.action) ?? action.action.ToString();
+                builder.ApplyAction(actionKey, new LayerActionDelta(
+                    action.hasEnabled ? (action.enabled ? SqueakActionScope.AnyOccurrence : SqueakActionScope.Disabled) : SqueakActionScope.AnyOccurrence,
+                    action.hasEnabled,
+                    action.hasIntervalMultiplier, Sanitize(action.intervalMultiplier),
+                    action.hasProbabilityMultiplier, Sanitize(action.probabilityMultiplier)));
+            }
         }
         // S2: actionTuning 的 Xenotype 层记录叠加（layer==2），字段级覆盖旧 actionOverrides 派生值。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
@@ -212,10 +244,7 @@ public static class SqueakRuntimeResolver
             if (string.IsNullOrEmpty(record.xenotypeDefName)) continue;
             if (!UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(record.actionKey, out SqueakAction action)) continue;
             if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder2)) { builder2 = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder2); }
-            RuntimeActionBuilder b = builder2.GetAction(action);
-            if (record.hasScope) { b.HasEnabled = true; b.Enabled = record.scope != SqueakActionScope.Disabled; }
-            if (record.hasIntervalMultiplier) { b.HasIntervalMultiplier = true; b.IntervalMultiplier = Sanitize(record.intervalMultiplier); }
-            if (record.hasProbabilityMultiplier) { b.HasProbabilityMultiplier = true; b.ProbabilityMultiplier = Sanitize(record.probabilityMultiplier); }
+            builder2.ApplyAction(record.actionKey, FromActionRecord(record));
         }
         // S5: moodTuning 的 Xenotype 层心情记录叠加（layer==2），字段级覆盖迁移后的预设派生值。
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
@@ -223,10 +252,7 @@ public static class SqueakRuntimeResolver
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 2) continue;
             if (string.IsNullOrEmpty(record.xenotypeDefName)) continue;
             if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder2)) { builder2 = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder2); }
-            RuntimeMoodBuilder mb = builder2.GetMood(record.mood);
-            if (record.hasPitchFactor) mb.SetPitch(record.pitchFactor);
-            if (record.hasVolumeFactor) mb.SetVolume(record.volumeFactor);
-            if (record.hasPitchJitter) mb.SetJitter(record.pitchJitter);
+            builder2.ApplyMood(record.mood, FromMoodRecord(record));
         }
         return builders;
     }
@@ -241,10 +267,7 @@ public static class SqueakRuntimeResolver
             if (string.IsNullOrEmpty(record.raceDefName)) continue;
             if (!UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(record.actionKey, out SqueakAction action)) continue;
             if (!builders.TryGetValue(record.raceDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.raceDefName, builder); }
-            RuntimeActionBuilder b = builder.GetAction(action);
-            if (record.hasScope) { b.HasEnabled = true; b.Enabled = record.scope != SqueakActionScope.Disabled; }
-            if (record.hasIntervalMultiplier) { b.HasIntervalMultiplier = true; b.IntervalMultiplier = Sanitize(record.intervalMultiplier); }
-            if (record.hasProbabilityMultiplier) { b.HasProbabilityMultiplier = true; b.ProbabilityMultiplier = Sanitize(record.probabilityMultiplier); }
+            builder.ApplyAction(record.actionKey, FromActionRecord(record));
         }
         // S5: moodTuning 的 Race 层心情记录聚合（layer==1）。
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
@@ -252,10 +275,7 @@ public static class SqueakRuntimeResolver
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 1) continue;
             if (string.IsNullOrEmpty(record.raceDefName)) continue;
             if (!builders.TryGetValue(record.raceDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.raceDefName, builder); }
-            RuntimeMoodBuilder mb = builder.GetMood(record.mood);
-            if (record.hasPitchFactor) mb.SetPitch(record.pitchFactor);
-            if (record.hasVolumeFactor) mb.SetVolume(record.volumeFactor);
-            if (record.hasPitchJitter) mb.SetJitter(record.pitchJitter);
+            builder.ApplyMood(record.mood, FromMoodRecord(record));
         }
         return builders;
     }
@@ -291,25 +311,41 @@ public static class SqueakRuntimeResolver
         return result;
     }
 
-    private static ResolvedSqueakContext BuildContext(XenotypeDef? xenotype, RuntimeBuilder? builder, Dictionary<string, RuntimeActionDelta> globals, Dictionary<SqueakMood, RuntimeMoodDelta>? baseMoods = null)
+    /// <summary>S5 纯折叠上下文构建：DefaultScope &lt; Global &lt; Race &lt; Xenotype（动作与心情同规则）。
+    /// raceBuilder = Race 层源（null 时跳过）；xenoBuilder = Xenotype 层源（null 时跳过）。
+    /// 心情仅收录被任何层显式决定的因子（GetMoodDelta 空语义保持：全默认 = 无 delta）。</summary>
+    private static ResolvedSqueakContext BuildContext(
+        XenotypeDef? xenotype,
+        RuntimeBuilder? raceBuilder,
+        RuntimeBuilder? xenoBuilder,
+        Dictionary<string, LayerActionDelta> globalActionLayers,
+        Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers,
+        float overallIntervalMultiplier)
     {
-        // H1 fix: Xeno overrides are field-level last-wins over Global (覆盖), not a logical AND (与).
-        Dictionary<string, RuntimeActionDelta> actions = builder == null
-            ? new Dictionary<string, RuntimeActionDelta>(globals)
-            : builder.BuildActionsOver(globals);
-        // S5: 心情与动作同规则——层继承（baseMoods）+ 字段级 last-wins。
-        Dictionary<SqueakMood, RuntimeMoodDelta> moods = builder == null ? CopyMoods(baseMoods) : builder.BuildMoodsOver(baseMoods);
-        return new ResolvedSqueakContext(xenotype, builder?.overallIntervalMultiplier ?? 1f, actions, moods);
+        Dictionary<string, RuntimeActionDelta> actions = new(StringComparer.Ordinal);
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+        {
+            string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
+            LayerActionDelta? global = globalActionLayers.TryGetValue(key, out LayerActionDelta g) ? g : (LayerActionDelta?)null;
+            LayerActionDelta? race = raceBuilder != null && raceBuilder.Actions.TryGetValue(key, out LayerActionDelta r) ? r : (LayerActionDelta?)null;
+            LayerActionDelta? xeno = xenoBuilder != null && xenoBuilder.Actions.TryGetValue(key, out LayerActionDelta x) ? x : (LayerActionDelta?)null;
+            actions[key] = ToRuntime(ResolvedActionDelta.Resolve(SqueakActionDefinitions.Get(action).DefaultScope, global, race, xeno));
+        }
+
+        Dictionary<SqueakMood, RuntimeMoodDelta> moods = new();
+        foreach (SqueakMood mood in Enum.GetValues(typeof(SqueakMood)))
+        {
+            LayerMoodDelta? global = globalMoodLayers.TryGetValue(mood, out LayerMoodDelta g) ? g : (LayerMoodDelta?)null;
+            LayerMoodDelta? race = raceBuilder != null && raceBuilder.Moods.TryGetValue(mood, out LayerMoodDelta r) ? r : (LayerMoodDelta?)null;
+            LayerMoodDelta? xeno = xenoBuilder != null && xenoBuilder.Moods.TryGetValue(mood, out LayerMoodDelta x) ? x : (LayerMoodDelta?)null;
+            ResolvedMoodDelta resolved = ResolvedMoodDelta.Resolve(global, race, xeno);
+            if (!resolved.IsDefault) moods[mood] = ToRuntime(resolved);
+        }
+
+        return new ResolvedSqueakContext(xenotype, overallIntervalMultiplier, actions, moods);
     }
 
-    private static Dictionary<SqueakMood, RuntimeMoodDelta> CopyMoods(Dictionary<SqueakMood, RuntimeMoodDelta>? source)
-    {
-        Dictionary<SqueakMood, RuntimeMoodDelta> result = new();
-        if (source != null) foreach (KeyValuePair<SqueakMood, RuntimeMoodDelta> kv in source) result[kv.Key] = kv.Value;
-        return result;
-    }
-
-    private static SqueakRuntimeSnapshot BuildFallback(Dictionary<string, RuntimeActionDelta> actions, Dictionary<SqueakMood, RuntimeMoodDelta> globalMoods, UniversalSqueakerSettings settings)
+    private static SqueakRuntimeSnapshot BuildFallback(Dictionary<string, LayerActionDelta> globalActionLayers, Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers, UniversalSqueakerSettings settings)
     {
         try
         {
@@ -323,7 +359,7 @@ public static class SqueakRuntimeResolver
                 Array.Empty<UniversalSqueaker.Kernel.VoicePackEntry>(),
                 SqueakKernelAdapter.BuildBuiltIn());
             // M1: 保留原模式——Disabled 真旁路不得被崩溃兜底改写（否则旁路 gate 失效，内置表可能发声）。
-            return new SqueakRuntimeSnapshot(new Dictionary<string, ResolvedSqueakContext>(), new Dictionary<string, ResolvedSqueakContext>(), registry, known, NormalizeMode(settings.voicePackMode), actions, globalMoods, null, settings.AllowEasterEggSounds);
+            return new SqueakRuntimeSnapshot(new Dictionary<string, ResolvedSqueakContext>(), new Dictionary<string, ResolvedSqueakContext>(), registry, known, NormalizeMode(settings.voicePackMode), ResolveGlobalActions(globalActionLayers), ResolveGlobalMoods(globalMoodLayers), null, settings.AllowEasterEggSounds);
         }
         catch { return SqueakRuntimeSnapshot.GlobalOnly; }
     }
@@ -331,9 +367,25 @@ public static class SqueakRuntimeResolver
     private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode) => mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled ? mode : SqueakVoicePackMode.Vanilla;
     private static float Sanitize(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
 
-    private sealed class RuntimeBuilder { public float overallIntervalMultiplier = 1f; private readonly Dictionary<string, RuntimeActionBuilder> actions = new(StringComparer.Ordinal); private readonly Dictionary<SqueakMood, RuntimeMoodBuilder> moods = new(); public RuntimeActionBuilder GetActionByKey(string key) { if (!actions.TryGetValue(key, out RuntimeActionBuilder? v)) { v = new RuntimeActionBuilder(); actions.Add(key, v); } return v; } public RuntimeActionBuilder GetAction(SqueakAction a) => GetActionByKey(UniversalSqueaker.Kernel.ActionKey.For(a) ?? a.ToString()); public RuntimeMoodBuilder GetMood(SqueakMood m) { if (!moods.TryGetValue(m, out RuntimeMoodBuilder? v)) { v = new RuntimeMoodBuilder(); moods.Add(m, v); } return v; } public Dictionary<string, RuntimeActionDelta> BuildActions() => actions.ToDictionary(x => x.Key, x => x.Value.Build()); public Dictionary<string, RuntimeActionDelta> BuildActionsOver(Dictionary<string, RuntimeActionDelta> globals) { Dictionary<string, RuntimeActionDelta> result = new(globals); foreach (KeyValuePair<string, RuntimeActionBuilder> kv in actions) result[kv.Key] = kv.Value.ApplyOver(globals.GetValueOrDefault(kv.Key)); return result; } public Dictionary<SqueakMood, RuntimeMoodDelta> BuildMoodsOver(Dictionary<SqueakMood, RuntimeMoodDelta>? baseMoods) { Dictionary<SqueakMood, RuntimeMoodDelta> result = new(); if (baseMoods != null) foreach (KeyValuePair<SqueakMood, RuntimeMoodDelta> kv in baseMoods) result[kv.Key] = kv.Value; foreach (KeyValuePair<SqueakMood, RuntimeMoodBuilder> kv in moods) result[kv.Key] = kv.Value.BuildOver(result.GetValueOrDefault(kv.Key)); return result; } }
-    private sealed class RuntimeActionBuilder { public bool HasEnabled; public bool Enabled = true; public bool HasIntervalMultiplier; public float IntervalMultiplier = 1f; public bool HasProbabilityMultiplier; public float ProbabilityMultiplier = 1f; public RuntimeActionDelta Build() => new(Enabled ? SqueakActionScope.AnyOccurrence : SqueakActionScope.Disabled, IntervalMultiplier, ProbabilityMultiplier); public RuntimeActionDelta ApplyOver(RuntimeActionDelta global) { SqueakActionScope scope = HasEnabled ? (Enabled ? SqueakActionScope.AnyOccurrence : SqueakActionScope.Disabled) : global.Scope; return new RuntimeActionDelta(scope, HasIntervalMultiplier ? IntervalMultiplier : global.IntervalMultiplier, HasProbabilityMultiplier ? ProbabilityMultiplier : global.ProbabilityMultiplier); } }
-    private sealed class RuntimeMoodBuilder { private bool hp, hv, hj; private float p = 1f, v = 1f; private FloatRange j = FloatRange.One; public void SetPitch(float x) { hp = true; p = x; } public void SetVolume(float x) { hv = true; v = x; } public void SetJitter(FloatRange x) { hj = true; j = x; } public RuntimeMoodDelta Build() => new(hp, p, hv, v, hj, j); public RuntimeMoodDelta BuildOver(RuntimeMoodDelta? baseDelta) { bool hasPitch = hp || (baseDelta?.HasPitchFactor ?? false); float pitch = hp ? p : (baseDelta?.PitchFactor ?? 1f); bool hasVolume = hv || (baseDelta?.HasVolumeFactor ?? false); float volume = hv ? v : (baseDelta?.VolumeFactor ?? 1f); bool hasJitter = hj || (baseDelta?.HasPitchJitter ?? false); FloatRange jitter = hj ? j : (baseDelta?.PitchJitter ?? FloatRange.One); return new RuntimeMoodDelta(hasPitch, pitch, hasVolume, volume, hasJitter, jitter); } }
+    /// <summary>层源数据累加器（Layer* 不可变；Apply* 做同键字段级 Merge）。</summary>
+    private sealed class RuntimeBuilder
+    {
+        public float overallIntervalMultiplier = 1f;
+        public readonly Dictionary<string, LayerActionDelta> Actions = new(StringComparer.Ordinal);
+        public readonly Dictionary<SqueakMood, LayerMoodDelta> Moods = new();
+
+        public void ApplyAction(string key, LayerActionDelta delta)
+        {
+            if (Actions.TryGetValue(key, out LayerActionDelta existing)) Actions[key] = existing.Merge(delta);
+            else Actions[key] = delta;
+        }
+
+        public void ApplyMood(SqueakMood mood, LayerMoodDelta delta)
+        {
+            if (Moods.TryGetValue(mood, out LayerMoodDelta existing)) Moods[mood] = existing.Merge(delta);
+            else Moods[mood] = delta;
+        }
+    }
 }
 
 public sealed class SqueakRuntimeSnapshot

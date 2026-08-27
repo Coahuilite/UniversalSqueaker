@@ -37,12 +37,76 @@ public static class UnitTests
         TriggerInvocationRules(ref failures);
         PerRacePoolIsolation(ref failures);
         EqualRouting(ref failures);
+        LayeredTuning(ref failures);
     }
 
     private static void Check(bool condition, string name, ref int failures)
     {
         if (condition) Console.WriteLine("  ok: " + name);
         else { Console.Error.WriteLine("  FAIL: " + name); failures++; }
+    }
+
+    /// <summary>S5 分层调音纯折叠（Pure/SqueakLayeredTuning）：H1 回归 + race→xeno 心情继承 + 字段级 last-wins。</summary>
+    private static void LayeredTuning(ref int failures)
+    {
+        // H1 回归：global off + xeno on —— 层折叠后 xeno 显式启用胜出（真旁路语义只在外置 gate，与折叠无关）。
+        ResolvedActionDelta h1 = ResolvedActionDelta.Resolve(
+            SqueakActionScope.AnyOccurrence,
+            new LayerActionDelta(SqueakActionScope.Disabled, true, false, 1f, false, 1f),
+            null,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f));
+        Check(h1.Enabled && h1.Scope == SqueakActionScope.AnyOccurrence, "layered: global off + xeno on wins (H1)", ref failures);
+
+        // 优先级：DefaultScope < Global < Race < Xenotype。
+        ResolvedActionDelta prio = ResolvedActionDelta.Resolve(
+            SqueakActionScope.ActiveCommand,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f),
+            new LayerActionDelta(SqueakActionScope.Disabled, true, false, 1f, false, 1f),
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f));
+        Check(prio.Scope == SqueakActionScope.AnyOccurrence, "layered: xeno overrides race over global over default", ref failures);
+
+        // 字段级 last-wins：race 只写 scope，interval 继承 global。
+        ResolvedActionDelta field = ResolvedActionDelta.Resolve(
+            SqueakActionScope.AnyOccurrence,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, false, true, 2f, false, 1f),
+            new LayerActionDelta(SqueakActionScope.Disabled, true, false, 1f, false, 1f),
+            null);
+        Check(field.Scope == SqueakActionScope.Disabled && Math.Abs(field.IntervalMultiplier - 2f) < 0.0001f,
+            "layered: field-level last-wins (scope overridden, interval inherited)", ref failures);
+
+        // 空层记录 = 恒等（不吞继承）。
+        ResolvedActionDelta empty = ResolvedActionDelta.Resolve(
+            SqueakActionScope.AnyOccurrence,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f),
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, false, false, 1f, false, 1f),
+            null);
+        Check(empty.Scope == SqueakActionScope.AnyOccurrence, "layered: empty layer is identity", ref failures);
+
+        // 同层多记录合并：后写覆盖先写字段，HasX 取并集。
+        LayerActionDelta merged = new LayerActionDelta(SqueakActionScope.Disabled, true, true, 1.5f, false, 1f)
+            .Merge(new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f));
+        Check(merged.HasScope && merged.Scope == SqueakActionScope.AnyOccurrence
+            && merged.HasIntervalMultiplier && Math.Abs(merged.IntervalMultiplier - 1.5f) < 0.0001f,
+            "layered: same-layer merge last-wins per field", ref failures);
+
+        // 心情：xeno pitch 覆盖 global，race volume 继承（三层各写一因子）。
+        ResolvedMoodDelta mood = ResolvedMoodDelta.Resolve(
+            new LayerMoodDelta(true, 1.2f, false, 1f, false, 1f, 1f),
+            new LayerMoodDelta(false, 1f, true, 0.8f, false, 1f, 1f),
+            new LayerMoodDelta(true, 0.9f, false, 1f, false, 1f, 1f));
+        Check(Math.Abs(mood.PitchFactor - 0.9f) < 0.0001f && Math.Abs(mood.VolumeFactor - 0.8f) < 0.0001f,
+            "layered: mood xeno pitch overrides, race volume inherited", ref failures);
+
+        // race→xeno 心情继承：xeno 无记录 → race 因子生效（H3 完成面）。
+        ResolvedMoodDelta inherited = ResolvedMoodDelta.Resolve(null,
+            new LayerMoodDelta(true, 1.1f, false, 1f, false, 1f, 1f), null);
+        Check(Math.Abs(inherited.PitchFactor - 1.1f) < 0.0001f && inherited.HasPitchFactor,
+            "layered: xeno inherits race mood when no xeno record", ref failures);
+
+        // 心情默认：无任何层记录 = 全默认且 IsDefault（GetMoodDelta 空语义 = 无 delta）。
+        ResolvedMoodDelta defaults = ResolvedMoodDelta.Resolve(null, null, null);
+        Check(defaults.IsDefault && Math.Abs(defaults.PitchFactor - 1f) < 0.0001f,
+            "layered: mood default identity", ref failures);
     }
 
     private static void DomainKeys(ref int failures)
