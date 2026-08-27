@@ -11,7 +11,7 @@ namespace UniversalSqueaker.UI;
 /// Draws five stable rows — the Easter-egg toggle, the distance preset cycle, and the three
 /// runtime scaling toggles — reading every value from the page view state and emitting
 /// business <see cref="UiCommand"/>s through <see cref="UsWidgetCommandAdapter.For"/>.
-/// Row heights mirror the legacy VoicePacks page (egg 28f, distance 28f, basic 26f).
+/// Row heights mirror the componentized VoicePacks page (egg 28f, distance 28f, basic 26f).
 /// </summary>
 public sealed class BasicTuningWidget : IWidget
 {

@@ -12,8 +12,8 @@ using KitWidgetContext = FerriteLib.UiKit.WidgetContext;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// FerriteLib.UiKit-backed VoicePacks page. Builds the same read-only view state as the legacy
-/// page, projects it into a neutral dictionary, then runs the two-pass layout engine over the
+/// FerriteLib.UiKit-backed VoicePacks page. Builds the same read-only view state as the
+/// componentized page, projects it into a neutral dictionary, then runs the two-pass layout engine over the
 /// embedded manifest. Collected neutral commands are translated back into the existing business
 /// <see cref="UiCommand"/> stream and executed through <see cref="VoicePacksPageModel"/>.
 /// </summary>
