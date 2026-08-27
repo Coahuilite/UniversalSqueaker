@@ -42,7 +42,8 @@ public static class VoicePacksPageModel
         VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
         string banner = BuildBannerText(races, xenotypes, mode, biotech);
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings);
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes);
+        IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes, baselinePresets);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -92,6 +93,18 @@ public static class VoicePacksPageModel
                     string actionKey = parts.Length > 1 ? parts[1] : "";
                     settings.SetActionTuningScope(actionKey, "", "", scope);
                 }
+                break;
+            case UiCommandKind.ToggleBaselinePreset:
+                ToggleBaselinePreset(state, command.Arg);
+                break;
+            case UiCommandKind.ToggleBaselineRace:
+                ToggleBaselineRace(state, command.Arg, command.RaceDefName, command.Flag);
+                break;
+            case UiCommandKind.ToggleBaselineXenotype:
+                ToggleBaselineXenotype(state, command.Arg, command.TargetDefName, command.Flag);
+                break;
+            case UiCommandKind.ImportBaselinePreset:
+                ImportBaselinePreset(settings, command.Arg, state);
                 break;
         }
     }
@@ -154,6 +167,118 @@ public static class VoicePacksPageModel
             rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), scope, action));
         }
         return rows;
+    }
+
+    /// <summary>Project the tuning-baseline preset Defs into a selectable tree for the import widget.</summary>
+    private static IReadOnlyList<BaselinePresetView> BuildBaselinePresets(VoicePacksPageState state)
+    {
+        List<BaselinePresetView> result = new();
+        foreach (UniversalSqueakerTuningBaselineDef preset in DefDatabase<UniversalSqueakerTuningBaselineDef>.AllDefs)
+        {
+            if (preset == null) continue;
+            BaselinePresetSelection selection = GetOrCreatePresetSelection(state, preset.defName);
+
+            List<BaselineRaceView> races = new();
+            int selectedRaces = 0;
+            int selectedXenotypes = 0;
+            foreach (BaselineRaceEntry race in preset.races ?? new List<BaselineRaceEntry>())
+            {
+                if (race == null || string.IsNullOrWhiteSpace(race.raceDefName)) continue;
+
+                List<BaselineXenotypeView> xenotypes = new();
+                foreach (BaselineXenotypeEntry xenotype in race.xenotypes ?? new List<BaselineXenotypeEntry>())
+                {
+                    if (xenotype == null || string.IsNullOrWhiteSpace(xenotype.xenotypeDefName)) continue;
+                    bool xenoSelected = selection.SelectedXenotypeDefNames.Contains(xenotype.xenotypeDefName);
+                    if (xenoSelected) selectedXenotypes++;
+                    xenotypes.Add(new BaselineXenotypeView(
+                        xenotype.xenotypeDefName,
+                        ResolveXenotypeDisplayName(xenotype.xenotypeDefName),
+                        xenotype.inheritFromRace,
+                        xenoSelected,
+                        (xenotype.actions ?? new List<BaselineActionTuning>()).Count(t => t != null && !string.IsNullOrWhiteSpace(t.actionKey)),
+                        (xenotype.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null)));
+                }
+
+                bool raceSelected = selection.SelectedRaceDefNames.Contains(race.raceDefName);
+                if (raceSelected) selectedRaces++;
+                races.Add(new BaselineRaceView(
+                    race.raceDefName,
+                    ResolveRaceLabel(race.raceDefName),
+                    raceSelected,
+                    (race.actions ?? new List<BaselineActionTuning>()).Count(t => t != null && !string.IsNullOrWhiteSpace(t.actionKey)),
+                    (race.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null),
+                    xenotypes));
+            }
+
+            result.Add(new BaselinePresetView(
+                preset.defName,
+                ResolvePresetLabel(preset),
+                preset.presetDescription,
+                selection.Expanded,
+                races,
+                selectedRaces,
+                selectedXenotypes));
+        }
+        return result;
+    }
+
+    private static BaselinePresetSelection GetOrCreatePresetSelection(VoicePacksPageState state, string defName)
+    {
+        if (!state.BaselinePresets.TryGetValue(defName, out BaselinePresetSelection? selection))
+        {
+            selection = new BaselinePresetSelection();
+            state.BaselinePresets[defName] = selection;
+        }
+        return selection;
+    }
+
+    private static string ResolvePresetLabel(UniversalSqueakerTuningBaselineDef preset)
+    {
+        if (!string.IsNullOrEmpty(preset.presetLabel)) return preset.presetLabel;
+        if (!string.IsNullOrEmpty(preset.label)) return preset.label;
+        return preset.defName;
+    }
+
+    private static string ResolveXenotypeDisplayName(string xenotypeDefName)
+    {
+        XenotypeDef? def = DefDatabase<XenotypeDef>.GetNamedSilentFail(xenotypeDefName);
+        return def != null && !string.IsNullOrEmpty(def.LabelCap) ? def.LabelCap : xenotypeDefName;
+    }
+
+    private static void ToggleBaselinePreset(VoicePacksPageState state, string presetDefName)
+    {
+        if (string.IsNullOrEmpty(presetDefName)) return;
+        BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
+        selection.Expanded = !selection.Expanded;
+    }
+
+    private static void ToggleBaselineRace(VoicePacksPageState state, string presetDefName, string raceDefName, bool selected)
+    {
+        if (string.IsNullOrEmpty(presetDefName) || string.IsNullOrEmpty(raceDefName)) return;
+        BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
+        if (selected) selection.SelectedRaceDefNames.Add(raceDefName);
+        else selection.SelectedRaceDefNames.Remove(raceDefName);
+    }
+
+    private static void ToggleBaselineXenotype(VoicePacksPageState state, string presetDefName, string xenotypeDefName, bool selected)
+    {
+        if (string.IsNullOrEmpty(presetDefName) || string.IsNullOrEmpty(xenotypeDefName)) return;
+        BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
+        if (selected) selection.SelectedXenotypeDefNames.Add(xenotypeDefName);
+        else selection.SelectedXenotypeDefNames.Remove(xenotypeDefName);
+    }
+
+    private static void ImportBaselinePreset(UniversalSqueakerSettings settings, string presetDefName, VoicePacksPageState state)
+    {
+        if (string.IsNullOrEmpty(presetDefName)) return;
+        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(presetDefName);
+        if (preset == null) return;
+        BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
+        BaselinePresetImporter.Selection importSelection = new();
+        foreach (string race in selection.SelectedRaceDefNames) importSelection.RaceDefNames.Add(race);
+        foreach (string xenotype in selection.SelectedXenotypeDefNames) importSelection.XenotypeDefNames.Add(xenotype);
+        settings.ImportBaselinePreset(preset, importSelection);
     }
 
     private static List<VoicePackDomainView> BuildXenotypeDomains(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)

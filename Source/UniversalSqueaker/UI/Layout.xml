@@ -10,6 +10,7 @@
   <Widget Id="basic-tuning" Kind="us/basic-tuning" />
   <Widget Id="camera-indicator" Kind="us/camera-indicator" />
   <Widget Id="scope-tree" Kind="us/scope-tree" />
+  <Widget Id="preset-list" Kind="us/preset-list" />
   <Widget Id="race-layer" Kind="us/race-layer" />
   <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" />
   <Widget Id="checklist" Kind="us/voice-pack-checklist" />

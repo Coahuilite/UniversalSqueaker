@@ -28,6 +28,7 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, BasicTuningWidget.Kind, () => new BasicTuningWidget());
             WidgetRegistry.Register(Scope, CameraIndicatorWidget.Kind, () => new CameraIndicatorWidget());
             WidgetRegistry.Register(Scope, ScopeTreeWidget.Kind, () => new ScopeTreeWidget());
+            WidgetRegistry.Register(Scope, PresetListWidget.Kind, () => new PresetListWidget());
 
             registered = true;
         }

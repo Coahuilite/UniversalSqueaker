@@ -113,17 +113,11 @@ public static class SqueakRuntimeResolver
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
-            // S4 作用域优先级（低→高）：C# DefaultScope < baseline Def < actionTuning Global 层。
+            // S4 作用域优先级（低→高）：C# DefaultScope < actionTuning Global 层。
             SqueakActionScope scope = SqueakActionDefinitions.Get(action).DefaultScope;
-            if (BaselineTuningTable.TryGetScope(key, out SqueakActionScope baselineScope))
-            {
-                scope = baselineScope;
-            }
-            float interval = BaselineTuningTable.TryGetInterval(key, out float baselineInterval) ? baselineInterval : 1f;
-            float prob = BaselineTuningTable.TryGetProb(key, out float baselineProb) ? baselineProb : 1f;
-            result[key] = new RuntimeActionDelta(scope, interval, prob);
+            result[key] = new RuntimeActionDelta(scope, 1f, 1f);
         }
-        // actionTuning 的 Global 层记录优先覆盖 baseline 派生值（键已 string，外部动作键也适用）。
+        // actionTuning 的 Global 层记录优先覆盖默认派生值（键已 string，外部动作键也适用）。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;

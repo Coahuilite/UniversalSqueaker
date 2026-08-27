@@ -20,6 +20,7 @@ public sealed class VoicePacksViewState
     public IReadOnlyList<VoicePackDomainView> XenotypeDomains { get; }
     public VoicePackDomainView? SelectedDomain { get; }
     public IReadOnlyList<ActionScopeRowView> ActionScopes { get; }
+    public IReadOnlyList<BaselinePresetView> BaselinePresets { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -35,7 +36,8 @@ public sealed class VoicePacksViewState
         IReadOnlyList<RaceLayerRowView> races,
         IReadOnlyList<VoicePackDomainView> xenotypeDomains,
         VoicePackDomainView? selectedDomain,
-        IReadOnlyList<ActionScopeRowView> actionScopes)
+        IReadOnlyList<ActionScopeRowView> actionScopes,
+        IReadOnlyList<BaselinePresetView> baselinePresets)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -51,6 +53,7 @@ public sealed class VoicePacksViewState
         XenotypeDomains = xenotypeDomains ?? Array.Empty<VoicePackDomainView>();
         SelectedDomain = selectedDomain;
         ActionScopes = actionScopes ?? Array.Empty<ActionScopeRowView>();
+        BaselinePresets = baselinePresets ?? Array.Empty<BaselinePresetView>();
     }
 }
 
@@ -175,5 +178,71 @@ public readonly struct VoicePackRowView
         Coverage = coverage ?? "";
         SearchText = searchText ?? "";
         IsSelected = isSelected;
+    }
+}
+
+/// <summary>One tuning-baseline preset projected for the import UI.</summary>
+public sealed class BaselinePresetView
+{
+    public readonly string DefName;
+    public readonly string Label;
+    public readonly string Description;
+    public readonly bool Expanded;
+    public readonly IReadOnlyList<BaselineRaceView> Races;
+    public readonly int SelectedRaceCount;
+    public readonly int SelectedXenotypeCount;
+
+    public BaselinePresetView(string defName, string label, string description, bool expanded,
+        IReadOnlyList<BaselineRaceView> races, int selectedRaceCount, int selectedXenotypeCount)
+    {
+        DefName = defName ?? "";
+        Label = label ?? defName ?? "";
+        Description = description ?? "";
+        Expanded = expanded;
+        Races = races ?? Array.Empty<BaselineRaceView>();
+        SelectedRaceCount = selectedRaceCount;
+        SelectedXenotypeCount = selectedXenotypeCount;
+    }
+}
+
+/// <summary>One race row inside a baseline preset tree.</summary>
+public sealed class BaselineRaceView
+{
+    public readonly string RaceDefName;
+    public readonly string DisplayName;
+    public readonly bool Selected;
+    public readonly int ActionCount;
+    public readonly int MoodCount;
+    public readonly IReadOnlyList<BaselineXenotypeView> Xenotypes;
+
+    public BaselineRaceView(string raceDefName, string displayName, bool selected, int actionCount, int moodCount, IReadOnlyList<BaselineXenotypeView> xenotypes)
+    {
+        RaceDefName = raceDefName ?? "";
+        DisplayName = displayName ?? raceDefName ?? "";
+        Selected = selected;
+        ActionCount = actionCount;
+        MoodCount = moodCount;
+        Xenotypes = xenotypes ?? Array.Empty<BaselineXenotypeView>();
+    }
+}
+
+/// <summary>One xenotype row inside a baseline preset race block.</summary>
+public sealed class BaselineXenotypeView
+{
+    public readonly string XenotypeDefName;
+    public readonly string DisplayName;
+    public readonly bool InheritFromRace;
+    public readonly bool Selected;
+    public readonly int ActionCount;
+    public readonly int MoodCount;
+
+    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int moodCount)
+    {
+        XenotypeDefName = xenotypeDefName ?? "";
+        DisplayName = displayName ?? xenotypeDefName ?? "";
+        InheritFromRace = inheritFromRace;
+        Selected = selected;
+        ActionCount = actionCount;
+        MoodCount = moodCount;
     }
 }

@@ -209,6 +209,15 @@ public partial class UniversalSqueakerSettings : ModSettings
         QueuePersistence();
     }
 
+    /// <summary>增量导入调音预设：将选中 race/xeno 行写入 actionTuning 与 moodOverrides，然后离散重建 resolver 并排队持久化。</summary>
+    internal BaselineImportResult ImportBaselinePreset(UniversalSqueakerTuningBaselineDef preset, BaselinePresetImporter.Selection selection)
+    {
+        BaselineImportResult result = BaselinePresetImporter.Import(preset, selection, this);
+        NotifyDiscreteResolverRuntimeChanged();
+        QueuePersistence();
+        return result;
+    }
+
     /// <summary>0.3.1 波 3c 彩蛋开关读取（决策 §2.4：默认关，路由输入随快照）。</summary>
     public bool AllowEasterEggSounds => allowEasterEggSounds;
 

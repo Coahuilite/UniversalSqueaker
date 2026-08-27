@@ -14,7 +14,11 @@ public enum UiCommandKind
     ToggleEgg,
     SetDistancePreset,
     ToggleBasic,
-    SetActionTuningScope
+    SetActionTuningScope,
+    ToggleBaselinePreset,
+    ToggleBaselineRace,
+    ToggleBaselineXenotype,
+    ImportBaselinePreset
 }
 
 /// <summary>

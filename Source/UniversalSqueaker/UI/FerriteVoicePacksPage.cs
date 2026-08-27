@@ -80,7 +80,8 @@ public static class FerriteVoicePacksPage
                 ["ScaleFrequencyWithTalking"] = view.ScaleFrequencyWithTalking,
                 ["ScalePeriodicWithAudiblePopulation"] = view.ScalePeriodicWithAudiblePopulation,
                 ["ShowCameraIndicator"] = view.ShowCameraIndicator,
-                ["ActionScopes"] = view.ActionScopes
+                ["ActionScopes"] = view.ActionScopes,
+                ["BaselinePresets"] = view.BaselinePresets
             };
 
             KitUiPageState uiState = new()

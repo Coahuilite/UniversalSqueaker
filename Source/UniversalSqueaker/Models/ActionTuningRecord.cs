@@ -13,6 +13,8 @@ public class ActionTuningRecord : IExposable
     public string actionKey = "";
     public string raceDefName = "";
     public string xenotypeDefName = "";
+    // 来源标记：由预设导入器写入的预设 Def.defName；手工编辑的记录保持空串。
+    public string sourcePresetDefName = "";
 
     public bool hasScope;
     public SqueakActionScope scope = SqueakActionScope.AnyOccurrence;
@@ -26,6 +28,7 @@ public class ActionTuningRecord : IExposable
         Scribe_Values.Look(ref actionKey, "actionKey", "");
         Scribe_Values.Look(ref raceDefName, "raceDefName", "");
         Scribe_Values.Look(ref xenotypeDefName, "xenotypeDefName", "");
+        Scribe_Values.Look(ref sourcePresetDefName, "sourcePresetDefName", "");
         Scribe_Values.Look(ref hasScope, "hasScope", false);
         Scribe_Values.Look(ref scope, "scope", SqueakActionScope.AnyOccurrence);
         Scribe_Values.Look(ref hasIntervalMultiplier, "hasIntervalMultiplier", false);
@@ -50,6 +53,7 @@ public class ActionTuningRecord : IExposable
         actionKey = value.actionKey,
         raceDefName = value.raceDefName,
         xenotypeDefName = value.xenotypeDefName,
+        sourcePresetDefName = value.sourcePresetDefName,
         hasScope = value.hasScope,
         scope = value.scope,
         hasIntervalMultiplier = value.hasIntervalMultiplier,

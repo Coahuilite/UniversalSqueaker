@@ -22,6 +22,10 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.SetDistancePreset => "SetDistancePreset",
                 UiCommandKind.ToggleBasic => "ToggleBasic",
                 UiCommandKind.SetActionTuningScope => "SetActionTuningScope",
+                UiCommandKind.ToggleBaselinePreset => "ToggleBaselinePreset",
+                UiCommandKind.ToggleBaselineRace => "ToggleBaselineRace",
+                UiCommandKind.ToggleBaselineXenotype => "ToggleBaselineXenotype",
+                UiCommandKind.ImportBaselinePreset => "ImportBaselinePreset",
                 _ => ""
             };
 

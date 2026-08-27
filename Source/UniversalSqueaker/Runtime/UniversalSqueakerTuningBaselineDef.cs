@@ -4,15 +4,39 @@ using Verse;
 namespace UniversalSqueaker;
 
 /// <summary>
-/// Read-only tuning-baseline Def: the player-tunable baseline overlap introduced by S4.
-/// XML Defs of this class declare per-action scope/interval/probability baselines and per-mood
-/// modulation baselines. The Def never writes back and never enters saves; empty source data is a
-/// valid startup (callers fall back to built-in defaults). Use the same data-driven pattern as
-/// <see cref="UniversalSqueakerFallbackProfileDef"/>: no product literals, no race seeds, so third
-/// parties may ship their own baseline Defs to override the default.
+/// Read-only tuning-baseline preset Def: a layered tree of per-race and per-xenotype action/mood
+/// baselines. The Def never writes back and never enters saves; empty source data is a valid
+/// startup. Use the same data-driven pattern as <see cref="UniversalSqueakerFallbackProfileDef"/>:
+/// no product literals, no race seeds, so third parties may ship their own preset Defs.
 /// </summary>
 public class UniversalSqueakerTuningBaselineDef : Def
 {
+    /// <summary>Human-facing preset name. Falls back to <see cref="Def.defName"/> when empty.</summary>
+    public string presetLabel = "";
+
+    /// <summary>Human-facing preset description shown in the import UI.</summary>
+    public string presetDescription = "";
+
+    /// <summary>Race-scoped baseline blocks. Each selected race imports into the Race layer.</summary>
+    public List<BaselineRaceEntry> races = new();
+}
+
+/// <summary>One race's baseline block inside a preset.</summary>
+public class BaselineRaceEntry
+{
+    public string raceDefName = "";
+    public List<BaselineActionTuning> actions = new();
+    public List<BaselineMoodTuning> moods = new();
+    public List<BaselineXenotypeEntry> xenotypes = new();
+}
+
+/// <summary>One xenotype's baseline block nested under a race block.</summary>
+public class BaselineXenotypeEntry
+{
+    public string xenotypeDefName = "";
+    /// <summary>When true (default), the parent race's baseline is imported as this xenotype's base
+    /// before the xenotype's own delta is applied on top.</summary>
+    public bool inheritFromRace = true;
     public List<BaselineActionTuning> actions = new();
     public List<BaselineMoodTuning> moods = new();
 }
