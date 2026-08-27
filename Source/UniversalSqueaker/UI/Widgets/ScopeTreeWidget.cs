@@ -296,6 +296,11 @@ public sealed class ScopeTreeWidget : IWidget
         bool hovered = Mouse.IsOver(rect);
         Widgets.DrawBoxSolid(rect, hovered ? new Color(.135f, .126f, .105f, .94f) : UiPalette.Raised);
         SectionFrame.DrawBorder(rect);
+        DrawMoodRowBody(rect, row, race, xeno, emit);
+    }
+
+    private static void DrawMoodRowBody(Rect rect, MoodTuningRowView row, string race, string xeno, Action<UiCommand> emit)
+    {
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
@@ -308,6 +313,17 @@ public sealed class ScopeTreeWidget : IWidget
         float clearX = rect.xMax - MoodClearWidth - 8f;
         float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
+        // 每个因子簇固定占用 86px（label 16 + minus 18 + value 34 + plus 18）；放不下时降级为提示行，
+        // 避免三簇与 Auto 按钮互相重叠（窄窗口安全）。
+        if (groupWidth < 86f)
+        {
+            Text.Font = GameFont.Tiny;
+            GUI.color = UiPalette.Muted;
+            Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 8f, rect.width - LeftPadding - 8f, 14f), "Window too narrow for mood controls");
+            Text.Font = GameFont.Small;
+            GUI.color = Color.white;
+            return;
+        }
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
 
         float pitch = row.Own?.hasPitchFactor == true ? row.Own.pitchFactor : row.EffectivePitch;
@@ -346,9 +362,10 @@ public sealed class ScopeTreeWidget : IWidget
         string xeno,
         Action<UiCommand> emit)
     {
-        Rect minusRect = new(rect.x, rect.y + 5f, 18f, 18f);
-        Rect valueRect = new(rect.x + 20f, rect.y + 8f, MoodValueWidth, 14f);
-        Rect plusRect = new(rect.x + 20f + MoodValueWidth, rect.y + 5f, 18f, 18f);
+        // 标签独占左侧列（16px），控件右移避免被 − 按钮的不透明背景盖住。
+        Rect minusRect = new(rect.x + 16f, rect.y + 5f, 18f, 18f);
+        Rect valueRect = new(rect.x + 36f, rect.y + 8f, MoodValueWidth, 14f);
+        Rect plusRect = new(rect.x + 36f + MoodValueWidth, rect.y + 5f, 18f, 18f);
 
         Text.Font = GameFont.Tiny;
         GUI.color = new Color(.82f, .80f, .74f, .92f);
@@ -365,7 +382,7 @@ public sealed class ScopeTreeWidget : IWidget
         if (Widgets.ButtonInvisible(plusRect))
             EmitMoodFactor(row, factor, Mathf.Min(max, value + step), race, xeno, emit);
 
-        return rect.x + 20f + MoodValueWidth + 18f;
+        return rect.x + 16f + 20f + MoodValueWidth + 18f;
     }
 
     private static void EmitMoodFactor(MoodTuningRowView row, string factor, float value, string race, string xeno, Action<UiCommand> emit)

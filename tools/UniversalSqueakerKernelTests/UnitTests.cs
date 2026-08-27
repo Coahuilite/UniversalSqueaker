@@ -74,13 +74,34 @@ public static class UnitTests
         Check(field.Scope == SqueakActionScope.Disabled && Math.Abs(field.IntervalMultiplier - 2f) < 0.0001f,
             "layered: field-level last-wins (scope overridden, interval inherited)", ref failures);
 
-        // 空层记录 = 恒等（不吞继承）。
+        // 空层记录 = 恒等（不吞继承）：基座用非默认值，空层不得破坏任何字段。
         ResolvedActionDelta empty = ResolvedActionDelta.Resolve(
-            SqueakActionScope.AnyOccurrence,
-            new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f),
+            SqueakActionScope.ActiveCommand,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, false, true, 2f, true, 1.5f),
             new LayerActionDelta(SqueakActionScope.AnyOccurrence, false, false, 1f, false, 1f),
             null);
-        Check(empty.Scope == SqueakActionScope.AnyOccurrence, "layered: empty layer is identity", ref failures);
+        Check(empty.Scope == SqueakActionScope.ActiveCommand
+            && Math.Abs(empty.IntervalMultiplier - 2f) < 0.0001f
+            && Math.Abs(empty.ProbabilityMultiplier - 1.5f) < 0.0001f,
+            "layered: empty layer is identity (non-default base preserved)", ref failures);
+
+        // 概率乘数跨层继承。
+        ResolvedActionDelta prob = ResolvedActionDelta.Resolve(
+            SqueakActionScope.AnyOccurrence,
+            new LayerActionDelta(SqueakActionScope.AnyOccurrence, false, false, 1f, true, 1.5f),
+            new LayerActionDelta(SqueakActionScope.Disabled, true, false, 1f, false, 1f),
+            null);
+        Check(Math.Abs(prob.ProbabilityMultiplier - 1.5f) < 0.0001f && prob.Scope == SqueakActionScope.Disabled,
+            "layered: probability inherited across layers", ref failures);
+
+        // 显式 ActiveCommand 在 race 层保真（旧 builder 曾拍平为 Any；这是有意的语义修复）。
+        ResolvedActionDelta command = ResolvedActionDelta.Resolve(
+            SqueakActionScope.AnyOccurrence,
+            null,
+            new LayerActionDelta(SqueakActionScope.ActiveCommand, true, false, 1f, false, 1f),
+            null);
+        Check(command.Scope == SqueakActionScope.ActiveCommand,
+            "layered: explicit ActiveCommand survives race layer (old builder flattened to Any; intentional)", ref failures);
 
         // 同层多记录合并：后写覆盖先写字段，HasX 取并集。
         LayerActionDelta merged = new LayerActionDelta(SqueakActionScope.Disabled, true, true, 1.5f, false, 1f)
@@ -96,6 +117,24 @@ public static class UnitTests
             new LayerMoodDelta(true, 0.9f, false, 1f, false, 1f, 1f));
         Check(Math.Abs(mood.PitchFactor - 0.9f) < 0.0001f && Math.Abs(mood.VolumeFactor - 0.8f) < 0.0001f,
             "layered: mood xeno pitch overrides, race volume inherited", ref failures);
+
+        // jitter 跨层继承：global 设抖动，xeno 只写 pitch → 抖动保留（HasPitchJitter 沿链合并）。
+        ResolvedMoodDelta jittered = ResolvedMoodDelta.Resolve(
+            new LayerMoodDelta(false, 1f, false, 1f, true, 0.9f, 1.1f),
+            null,
+            new LayerMoodDelta(true, 0.95f, false, 1f, false, 1f, 1f));
+        Check(Math.Abs(jittered.PitchFactor - 0.95f) < 0.0001f
+            && jittered.HasPitchJitter
+            && Math.Abs(jittered.JitterMin - 0.9f) < 0.0001f
+            && Math.Abs(jittered.JitterMax - 1.1f) < 0.0001f,
+            "layered: jitter inherited from global while xeno overrides pitch", ref failures);
+
+        // 心情同层合并：后写因子覆盖，未写因子保留。
+        LayerMoodDelta moodMerged = new LayerMoodDelta(true, 1.1f, false, 1f, false, 1f, 1f)
+            .Merge(new LayerMoodDelta(true, 1.3f, true, 0.7f, false, 1f, 1f));
+        Check(Math.Abs(moodMerged.PitchFactor - 1.3f) < 0.0001f
+            && moodMerged.HasVolumeFactor && Math.Abs(moodMerged.VolumeFactor - 0.7f) < 0.0001f,
+            "layered: mood same-layer merge last-wins per factor", ref failures);
 
         // race→xeno 心情继承：xeno 无记录 → race 因子生效（H3 完成面）。
         ResolvedMoodDelta inherited = ResolvedMoodDelta.Resolve(null,

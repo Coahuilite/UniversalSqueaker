@@ -216,18 +216,11 @@ public static class BaselinePresetImporter
 
     private static void UpsertMood(UniversalSqueakerSettings settings, MoodTuningRecord incoming)
     {
-        for (int i = 0; i < settings.moodTuning.Count; i++)
-        {
-            MoodTuningRecord existing = settings.moodTuning[i];
-            if (existing != null
-                && existing.mood == incoming.mood
-                && string.Equals(existing.raceDefName ?? "", incoming.raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(existing.xenotypeDefName ?? "", incoming.xenotypeDefName ?? "", StringComparison.Ordinal))
-            {
-                settings.moodTuning[i] = incoming;
-                return;
-            }
-        }
+        // 规范化：清全部同身份行（含陈旧重复）后追加——列表末位 = 同层 Merge 的胜出行，无残留旧值。
+        settings.moodTuning.RemoveAll(c => c != null
+            && c.mood == incoming.mood
+            && string.Equals(c.raceDefName ?? "", incoming.raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(c.xenotypeDefName ?? "", incoming.xenotypeDefName ?? "", StringComparison.Ordinal));
         settings.moodTuning.Add(incoming);
     }
 }

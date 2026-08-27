@@ -112,6 +112,8 @@ public partial class UniversalSqueakerSettings
         if (actionTuning == null) actionTuning = new List<ActionTuningRecord>();
         if (moodTuning == null) moodTuning = new List<MoodTuningRecord>();
 
+        // 迁移前快照：仅 pre-v4（S2 之前）配置需要从遗留 actionOverrides 派生 actionTuning。
+        bool migratedFromPreV4 = settingsSchemaVersion < 4;
         bool migrationNeeded = settingsSchemaVersion < CurrentSettingsSchemaVersion || voicePackSchemaVersion < CurrentVoicePackSchemaVersion;
         if (migrationNeeded) MigrateV3RecordsTransactionally();
         else
@@ -120,8 +122,9 @@ public partial class UniversalSqueakerSettings
             if (xenotypePresets == null) xenotypePresets = new List<XenotypePresetRecord>();
         }
 
-        // S2: migrate legacy xenotype action overrides into the unified layered table (idempotent; empty source is valid).
-        if (actionTuning == null || actionTuning.Count == 0)
+        // S2: migrate legacy xenotype action overrides into the unified layered table (one-time, pre-v4 only).
+        // 门控 migratedFromPreV4：v4+ 配置中空表 = 用户已清空，不得从遗留 actionOverrides 复活。
+        if (migratedFromPreV4 && (actionTuning == null || actionTuning.Count == 0))
         {
             if (SqueakSettingsMigration.TryCreateActionTuningRecords(
                     xenotypePresets,
@@ -163,6 +166,8 @@ public partial class UniversalSqueakerSettings
 
         // S5: 旧心情存储 → 统一分层 MoodTuningRecord（moodOverrides → 层 0；xenotypePresets[].moodOverrides → 层 2）。
         // 与记录迁移同事务：任一失败整体不提交，schema 标记保持旧值，下次启动可重试。
+        // 注意：迁移失败当次启动中旧心情字段不再被运行时消费（单一来源 = moodTuning），
+        // 会在下次启动重试；失败仅可能来自异常（纯数据拷贝，无校验），TargetRejected 已落日志。
         if (!SqueakSettingsMigration.TryCreateMoodTuningRecords(
                 moodOverrides,
                 xenotypePresets,

@@ -141,10 +141,18 @@ public static class SqueakRuntimeResolver
         record.hasIntervalMultiplier, Sanitize(record.intervalMultiplier),
         record.hasProbabilityMultiplier, Sanitize(record.probabilityMultiplier));
 
-    private static LayerMoodDelta FromMoodRecord(MoodTuningRecord record) => new(
-        record.hasPitchFactor, record.pitchFactor,
-        record.hasVolumeFactor, record.volumeFactor,
-        record.hasPitchJitter, record.pitchJitter.min, record.pitchJitter.max);
+    private static LayerMoodDelta FromMoodRecord(MoodTuningRecord record)
+    {
+        // 防御性消毒（所有来源的单一入口：Scribe 旧档、预设导入、手编文件）：
+        // 非有限值回退 1；jitter 反序交换（FloatRange.RandomInRange 需 min<=max）。
+        float pitch = float.IsFinite(record.pitchFactor) ? record.pitchFactor : 1f;
+        float volume = float.IsFinite(record.volumeFactor) ? record.volumeFactor : 1f;
+        float jMin = record.pitchJitter.min;
+        float jMax = record.pitchJitter.max;
+        if (!float.IsFinite(jMin) || !float.IsFinite(jMax)) { jMin = 1f; jMax = 1f; }
+        else if (jMin > jMax) { (jMin, jMax) = (jMax, jMin); }
+        return new LayerMoodDelta(record.hasPitchFactor, pitch, record.hasVolumeFactor, volume, record.hasPitchJitter, jMin, jMax);
+    }
 
     private static RuntimeActionDelta ToRuntime(ResolvedActionDelta delta) => new(delta.Scope, delta.IntervalMultiplier, delta.ProbabilityMultiplier);
 

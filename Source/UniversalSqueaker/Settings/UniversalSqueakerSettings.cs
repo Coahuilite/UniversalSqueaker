@@ -220,6 +220,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
         if (!hasRace && hasXeno) return;
 
+        // last-wins：扫描到末个匹配（与运行时同层 Merge 的列表序一致；SetActionTuningScope 同规则）。
         int index = -1;
         for (int i = 0; i < moodTuning.Count; i++)
         {
@@ -230,14 +231,16 @@ public partial class UniversalSqueakerSettings : ModSettings
                 && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
             {
                 index = i;
-                break;
             }
         }
 
         if (string.Equals(factor, "clear", StringComparison.Ordinal))
         {
-            // 清本层记录 = 恢复继承。
-            if (index >= 0) moodTuning.RemoveAt(index);
+            // 清全部匹配行（含陈旧重复）= 恢复继承。
+            moodTuning.RemoveAll(c => c != null
+                && c.mood == mood
+                && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+                && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
             NotifyContinuousXenotypeRuntimeChanged();
             QueuePersistence();
             return;

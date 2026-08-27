@@ -166,7 +166,8 @@ public readonly struct ActionScopeRowView
         Scope = scope;
         Action = action;
         HasOwnScope = hasOwnScope;
-        EffectiveScope = hasOwnScope ? scope : effectiveScope;
+        // 无条件保存有效值：本层有记录时，更高层（Race/Xeno）的覆盖也必须展示（折叠只认层优先级，与列表顺序无关）。
+        EffectiveScope = effectiveScope;
     }
 }
 

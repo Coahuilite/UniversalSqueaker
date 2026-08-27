@@ -251,6 +251,8 @@ public static class VoicePacksPageModel
             SqueakActionScope effective = SqueakActionDefinitions.Get(action).DefaultScope;
             bool hasOwn = false;
             SqueakActionScope own = effective;
+            // 按层优先级折叠（Default < Global < Race < Xeno）；同层多条按列表顺序后写胜出（与运行时 Merge 一致）。
+            int bestLayer = -1;
             foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
             {
                 if (record == null || record.IsValidLayer(out int recordLayer) == false || !record.hasScope) continue;
@@ -259,7 +261,11 @@ public static class VoicePacksPageModel
                 bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
                 bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
                     && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
-                if (layer0 || layer1 || layer2) effective = record.scope;
+                if ((layer0 || layer1 || layer2) && recordLayer >= bestLayer)
+                {
+                    bestLayer = recordLayer;
+                    effective = record.scope;
+                }
                 bool isOwn = recordLayer == layer
                     && (layer == 0
                         || (layer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal))
@@ -284,8 +290,12 @@ public static class VoicePacksPageModel
         {
             float pitch = 1f;
             float volume = 1f;
-            bool hasJitter = false; FloatRange jitter = FloatRange.One;
+            FloatRange jitter = FloatRange.One;
             MoodTuningRecord? own = null;
+            // 按层优先级逐因子折叠（Global < Race < Xeno）；同层多条按列表顺序后写胜出（与运行时 Merge 一致）。
+            int bestPitchLayer = -1;
+            int bestVolumeLayer = -1;
+            int bestJitterLayer = -1;
             foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
             {
                 if (record == null || record.mood != mood || record.IsValidLayer(out int recordLayer) == false) continue;
@@ -295,9 +305,9 @@ public static class VoicePacksPageModel
                     && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
                 if (layer0 || layer1 || layer2)
                 {
-                    if (record.hasPitchFactor) pitch = record.pitchFactor;
-                    if (record.hasVolumeFactor) volume = record.volumeFactor;
-                    if (record.hasPitchJitter) { hasJitter = true; jitter = record.pitchJitter; }
+                    if (record.hasPitchFactor && recordLayer >= bestPitchLayer) { bestPitchLayer = recordLayer; pitch = record.pitchFactor; }
+                    if (record.hasVolumeFactor && recordLayer >= bestVolumeLayer) { bestVolumeLayer = recordLayer; volume = record.volumeFactor; }
+                    if (record.hasPitchJitter && recordLayer >= bestJitterLayer) { bestJitterLayer = recordLayer; jitter = record.pitchJitter; }
                 }
                 bool isOwn = recordLayer == layer
                     && (layer == 0
@@ -305,7 +315,7 @@ public static class VoicePacksPageModel
                         || (layer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal) && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal)));
                 if (isOwn) own = record;
             }
-            float jitterHalf = hasJitter ? Math.Max(0f, jitter.max - 1f) : 0f;
+            float jitterHalf = bestJitterLayer >= 0 ? Math.Max(0f, jitter.max - 1f) : 0f;
             rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf));
         }
         return rows;
