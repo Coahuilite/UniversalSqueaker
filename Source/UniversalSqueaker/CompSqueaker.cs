@@ -1051,7 +1051,7 @@ public class CompProperties_Squeaker : CompProperties
     }
 
     /// <summary>
-    /// Programmatic default used by the legacy auto-attach path. It mirrors the shipped 216-tick
+    /// Programmatic default used by the canonical auto-attach path. It mirrors the shipped 216-tick
     /// baseline and the 15 production-action plan of the example packs; no race or sound-key literals.
     /// </summary>
     public static CompProperties_Squeaker CreateDefault()
