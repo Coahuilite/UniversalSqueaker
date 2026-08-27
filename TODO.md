@@ -73,13 +73,18 @@ Executed in this session, all passing `scripts/verify-local.ps1` (12 gates) + De
 - **S5** — deleted `SqueakGlobalActionPolicy.cs`, `experimentalRaceAllowlist`, `Patch_ModMetaData_LocalizedMetadata.cs`, dead `EnsureBuiltInRaceDefault`, `developerToolsEnabled`; restored `Patch_DebugTabMenu_Actions` + `localizeDebugActions` wiring.
 - **Goal A (wrapper 化 H4, COMPLETE)** — `ActionEntry`/`TriggerBinding`/`ActionEntryRegistry` types + `Binding` property; `allowExternalActions` gate (settings + Scribe + `IsActionAllowedByKey` + registry publish); `CompSqueaker` 5 fixed arrays → `Dictionary<string,...>`; enum-keyed consumption → `ActionKey` string throughout (resolver + trigger chain + `SoundCacheMixed`); external-action end-to-end firing via `NotifyExternalByKey`; behavior-equivalence via `VerseEventBindingContract` test + golden-corpus replay zero-delta. Patch shape: 8 patches stay thin wrappers; Origin hardcoding removed via `VerseEventBinding` static aggregated binding.
 
-### Remaining (next goal, do NOT rush in remaining rounds)
+### Remaining (next goal — hard debt first, per HANDOFF.md §4)
 
-- **S3 Sustainer** — validator allow sustain + playability branch + `TrySpawnSustainer`/`Maintain`/`End` path + Sustainer lifecycle state machine.
-- **S4 UI** — tuning editor + tree action-scope switch (`TreeRowWidget`) + distance preview + filtering/help/narrow/visual + feedback import/export.
-- **专项测试缺口** — "global off + xenotype on" coverage needs the merge logic extracted to Kernel/Pure (or a Runtime test harness) before it can live in `UniversalSqueakerKernelTests`.
+- **清理：双源统一** — S4 UI 已让 `actionTuning` 可写（`Settings.SetActionTuningScope`），现可删旧链路 `globalActionEnabled`/`GlobalActionEnabledRecord`/`GetActionGlobalScope`/`SetActionGlobalScope`（含 Scribe 迁移；`BuildGlobalActions` 当前初值仍读 `GetActionGlobalScope`，删除时需改回 baseline Def + actionTuning 双层）。
+- **清理：`voicePackDefaultSeeded`** — Scribe 兼容哨兵，评估后删。
+- **清理：`dist/` 残留** — 7 个测试包残留旧 comp 字段 XML（`globalMinIntervalTicks`/`scaleFrequencyWithTalking`/`distancePresets`），误导作者。
+- **专项测试缺口** — "global off + xenotype on" 覆盖语义需抽 Kernel/Pure 或 Runtime harness 才能进 `UniversalSqueakerKernelTests`。
+- **S4-Polish（纯视觉，最后）** — 过滤（作者/种族/冲突/Legacy）、组件化帮助、窄屏响应式、美化（先出 `docs/ui-visual-modernization-zh.md` 评估稿）、footer build identity、距离预览折线图、A1/A2 调音编辑器 UI（依赖 baseline Def 已就绪）、Race/Xenotype 层 scope UI（当前 A6 只做 Global 层）。
 
-- **S4 UI (partial)** — orphan controls re-wired to the old UI path (`VoicePacksPage`): A7 easter-egg toggle, A3 distance preset switch, A4 three scaling toggles (A5 cooldown multiplier data was already wired). Ferrite-path sync + A1/A2 tuning editor + A6 tree action-scope + A8 DebugAction panel remain.
+### 已完成（2026-08-25b 会话，8 commit，verify-local 全绿）
+
+- **S3 Sustainer + 外部动作端到端**（`f492e6c`）、**S4-Tuning-Backend**（`ace23a3`）、**S4-Orphan-Sync**（`f6a7ca9`）、**S4-Scope-Tree**（`f580ec0`）、**PoolStableKey 地基**（`84c7a64`）、**S4-Diag-Foundation**（`70329d5`）、**S4-Diag-Panel**（`801792e`）。详见 HANDOFF.md §3 与 MEMORY checkpoint。
+
 
 ## Next session — resume here (2026-08-24 checkpoint)
 
