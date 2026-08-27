@@ -6,6 +6,14 @@
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
   <DebugAction_DiagnosticsSelected>Diagnostics: selected pawn</DebugAction_DiagnosticsSelected>
   <US.Debug.CameraIndicator>Camera: height {0}, view size {1}</US.Debug.CameraIndicator>
+  <US.Diagnostics.Title>Universal Squeaker Diagnostics</US.Diagnostics.Title>
+  <US.Diagnostics.Mode.Selected>Selected</US.Diagnostics.Mode.Selected>
+  <US.Diagnostics.Mode.Visible>Visible</US.Diagnostics.Mode.Visible>
+  <US.Diagnostics.CloseHint>Press Esc again to close</US.Diagnostics.CloseHint>
+  <US.Diagnostics.Ready>Ready</US.Diagnostics.Ready>
+  <US.Diagnostics.Blocked>Blocked</US.Diagnostics.Blocked>
+  <US.Diagnostics.Panel.Empty>No diagnostics data</US.Diagnostics.Panel.Empty>
+  <US.Diagnostics.Panel.NoPawn>No pawn selected</US.Diagnostics.Panel.NoPawn>
 
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>

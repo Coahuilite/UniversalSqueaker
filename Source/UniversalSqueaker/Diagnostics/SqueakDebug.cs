@@ -16,13 +16,19 @@ public static class SqueakDebug
     public static bool ShowCameraIndicator = false;
 
     /// <summary>
-    /// S4 diagnostics foundation: DebugAction entry point (panel body lands in the next block).
-    /// Empty until the diagnostics panel exists; the DebugAction menu item still validates
-    /// selection state so the entry is reachable.
+    /// S4 diagnostics: DebugAction entry point. Opens the diagnostics panel in Selected mode
+    /// when a single pawn with a Squeaker comp is selected; otherwise falls back to Visible mode.
     /// </summary>
     public static void OpenSelectedDiagnostics()
     {
-        if (Find.Selector.SingleSelectedThing == null) return;
+        if (Find.Selector.SingleSelectedThing is Pawn pawn && pawn.GetComp<CompSqueaker>() != null)
+        {
+            SqueakDiagnosticsOverlay.SetMode(SqueakDiagnosticsMode.Selected);
+        }
+        else
+        {
+            SqueakDiagnosticsOverlay.SetMode(SqueakDiagnosticsMode.Visible);
+        }
     }
 
     /// <summary>usdiag v2 tier vocabulary: xenotype_pack / race_pack / vanilla / "-" for none.

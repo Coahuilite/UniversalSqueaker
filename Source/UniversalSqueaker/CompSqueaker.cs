@@ -299,6 +299,34 @@ public class CompSqueaker : ThingComp
         }
     }
 
+    /// <summary>
+    /// S4 diagnostics: draws the head mark through the public ThingComp draw hook instead of a
+    /// MapInterface reflection hook (US red line). Naturally follows the pawn; the actual text
+    /// draw is a 4-direction black outline plus the main color above the pawn's slot.
+    /// </summary>
+    public override void PostDraw()
+    {
+        if (SqueakDiagnosticsOverlay.Mode == SqueakDiagnosticsMode.Off || !Pawn.Spawned || Pawn.Destroyed || Pawn.MapHeld == null)
+        {
+            return;
+        }
+
+        if (!SqueakDiagnosticsOverlay.TryGetMark(Pawn, out string mark, out Color color))
+        {
+            return;
+        }
+
+        Vector2 position = new(Pawn.DrawPos.x, Pawn.DrawPos.z + 1.15f);
+        // GenMapUI.DrawText is locked to Tiny font, so visibility comes from a 4-direction
+        // black outline (same pattern as the overlay's DrawMark).
+        const float edge = 0.05f;
+        GenMapUI.DrawText(position + new Vector2(-edge, 0f), mark, Color.black);
+        GenMapUI.DrawText(position + new Vector2(edge, 0f), mark, Color.black);
+        GenMapUI.DrawText(position + new Vector2(0f, -edge), mark, Color.black);
+        GenMapUI.DrawText(position + new Vector2(0f, edge), mark, Color.black);
+        GenMapUI.DrawText(position, mark, color);
+    }
+
     public override void PostDestroy(DestroyMode mode, Map previousMap)
     {
         EndActiveSustainer();

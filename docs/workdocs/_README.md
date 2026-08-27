@@ -11,7 +11,8 @@
 | s4-tuning-backend.md | S4-Tuning-Backend | commandcode / deepseek-v4-flash / max | 已派发（后台） |
 | s4-orphan-sync.md | S4-Orphan-Sync | commandcode / deepseek-v4-flash / max | ✅ 完成并提交 f6a7ca9（widget 模板确立） |
 | s4-scope-tree.md | S4-Scope-Tree | commandcode / deepseek-v4-flash / max | ✅ 完成并提交 f580ec0（含 SupportedScopes 归一） |
-| s4-diag-foundation.md | S4-Diag-Foundation | commandcode / deepseek-v4-flash / max | 已派发（后台，串行） |
+| s4-diag-foundation.md | S4-Diag-Foundation | commandcode / deepseek-v4-flash / max | ✅ 完成并提交 70329d5 |
+| s4-diag-panel.md | S4-Diag-Panel | commandcode / deepseek-v4-flash / max | 已派发（后台，串行） |
 | s4-plan.md | —（规划稿） | — | 待分块 |
 
 ## 通用门禁命令（worker 自行执行）

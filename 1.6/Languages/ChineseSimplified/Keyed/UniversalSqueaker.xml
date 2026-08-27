@@ -6,6 +6,14 @@
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
   <DebugAction_DiagnosticsSelected>诊断：选中 pawn</DebugAction_DiagnosticsSelected>
   <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
+  <US.Diagnostics.Title>Universal Squeaker 诊断</US.Diagnostics.Title>
+  <US.Diagnostics.Mode.Selected>选中</US.Diagnostics.Mode.Selected>
+  <US.Diagnostics.Mode.Visible>可见</US.Diagnostics.Mode.Visible>
+  <US.Diagnostics.CloseHint>再次按 Esc 关闭</US.Diagnostics.CloseHint>
+  <US.Diagnostics.Ready>就绪</US.Diagnostics.Ready>
+  <US.Diagnostics.Blocked>阻塞</US.Diagnostics.Blocked>
+  <US.Diagnostics.Panel.Empty>无诊断数据</US.Diagnostics.Panel.Empty>
+  <US.Diagnostics.Panel.NoPawn>未选中 pawn</US.Diagnostics.Panel.NoPawn>
 
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
