@@ -233,6 +233,17 @@ public class CompSqueaker : ThingComp
     {
         SynchronizePeriodicMembership();
         SqueakAction? action = CurrentAction;
+        // Disabled = 真旁路：gate 置于任何发声状态维护之前（与 NotifyExternalByKey 头部 gate 对仗，
+        // 治本而非在分支补 End）。已激活的 Sustainer 不再被 Maintain，由原版未维护生命周期自动 End
+        // （约 1–2 秒尾音）；activeSustainer 字段持有已结束引用，重新启用后首个 MaintainSustainer 自清。
+        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
+        {
+            if (action != null)
+            {
+                SqueakLog.AudioDisabled(UniversalSqueaker.Kernel.ActionKey.For(action.Value) ?? action.Value.ToString());
+            }
+            return;
+        }
         // S3 每帧维护：先于任何早退执行，确保 pawn 离开地图/离屏/持续状态消失时 sustainer 被 End。
         MaintainSustainer(action);
 
@@ -247,11 +258,6 @@ public class CompSqueaker : ThingComp
         }
 
         if (action == null) return;
-        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
-        {
-            SqueakLog.AudioDisabled(UniversalSqueaker.Kernel.ActionKey.For(action.Value) ?? action.Value.ToString());
-            return;
-        }
         string? actionKey = ActionKeyOf(action.Value);
         if (actionKey == null || !TryGetPlan(actionKey, out SqueakActionPlan plan)) return;
         if (!plan.Configured) return;
