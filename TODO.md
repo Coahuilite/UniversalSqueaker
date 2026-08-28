@@ -28,15 +28,18 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **Legacy 兼容桥删除** — delete entire Legacy/ directory + 11 file references + 3 legacy log events + UI Legacy SR tags
 - **Baseline 预设系统** — tree-shaped Def + BaselinePresetImporter + sourcePresetDefName + PresetListWidget
 - **路由表开放** — VoicePackCompAttach canonical auto-attach + 3 new v2 events + LogTests registry 6→9 + SKILL sync (456b2a4)
-- **审计修复 A1–A3** — actionTuning built-in-only contract (24f958c); BuildFallback preserves mode / true bypass survives crash (23785a3); CompTick head bypass gate before sustainer maintenance (11904d5)
+- **分层心情调音（B1）** — MoodTuningRecord three-layer table + schema 5 transactional migration + runtime fold + importer decision flip (81e7bb9)
+- **三层调音编辑器 UI（B3，选项①）** — layer segment + domain picker + scope ring + mood rows; SetTuningLayer/SetTuningDomain/SetMoodTuning (2ce5dd9)
+- **专项测试（B4）** — Pure/SqueakLayeredTuning + 13 kernel assertions (43835ea)
+- **三 reviewer 审查修复** — 8 fixes across UI/data/fold (f4d8448)
 
 ### Remaining (next goal)
 
-- **分层心情调音 + Race/Xeno scope UI（B1+B3 并块，方案 A）** — unified MoodTuningRecord three-layer table; race.moods → Race layer (decision flip, no longer global moodOverrides); xenotype overlays race; migration moodOverrides→layer 0 + XenotypePresetRecord.moodOverrides→layer 2; fold mood resolution into snapshot contexts; importer rewrite; UI three-layer scope tree + mood editor v1. Commit split: 1 data+migration+runtime+importer, 2 UI, 3 docs.
-- **专项测试** — layered merge semantics ('global off + xeno on' actions; race→xeno mood inheritance). Extract merge logic to Kernel/Pure alongside the layered-mood block; Runtime harness for Verse-coupled residue (includes BaselinePresetImporter merge extraction).
+- **【待维护者拍板】xeno 层调音 race 身份** — layer-2 records are (race,xeno) two-key but runtime xeno contexts are xenotypeDefName-keyed (pre-existing since S2): same xenotype across races shares layer-2 tuning while UI suggests race-specific. ① accept as documented limitation / ② re-key runtime contexts by (race,xeno) — large change (ResolveContext/H3 chain). Must be decided before/at S4-Polish start (HANDOFF §5 item 0).
 - **S4-Polish（纯视觉，最后）** — filtering (author/race/conflict), componentized help, narrow responsive, visual modernization (eval doc first), footer build identity, distance preview chart.
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
 - **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime).
+- **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
 ## Pending decisions / follow-ups
 
@@ -48,3 +51,4 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] scripts/CI migration: GitHub/Steam build-pack scripts and CI workflows remain deferred until first release prep.
 - [ ] Baseline preset system: no unit tests (BaselinePresetImporter couples Verse/Scribe), no in-game validation (PresetListWidget), no shipped example preset Def XML.
 - [ ] Builtin fallback table maintenance review (2026-08-27): per-race Defs already support race-level independent maintenance; same-race multi-Def last-wins = single-owner contract (no Def-level field merge); BuiltInActionKeys whitelist closes external keys out of the builtin table; decide whether to publish example fallback/baseline Def XML as doc fixture (currently zero shipped Defs, empty = valid).
+- [ ] **xeno 层调音 race 身份（维护者拍板，下一会话第一件事）** — ① accept as documented limitation (add comment + memory note) / ② re-key runtime xeno contexts by (race,xeno). See HANDOFF §5 item 0.
