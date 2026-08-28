@@ -32,10 +32,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **三层调音编辑器 UI（B3，选项①）** — layer segment + domain picker + scope ring + mood rows; SetTuningLayer/SetTuningDomain/SetMoodTuning (2ce5dd9)
 - **专项测试（B4）** — Pure/SqueakLayeredTuning + 13 kernel assertions (43835ea)
 - **三 reviewer 审查修复** — 8 fixes across UI/data/fold (f4d8448)
+- **双键 context（2026-08-28）** — `AudioDomains` 域键工具 + Pure 聚合器/选择器 + resolver 薄适配层 + kernel 测试（设计稿 `docs/us-xeno-double-key-context-zh.md`）
 
 ### Remaining (next goal)
 
-- **【待维护者拍板】xeno 层调音 race 身份** — layer-2 records are (race,xeno) two-key but runtime xeno contexts are xenotypeDefName-keyed (pre-existing since S2): same xenotype across races shares layer-2 tuning while UI suggests race-specific. ① accept as documented limitation / ② re-key runtime contexts by (race,xeno) — large change (ResolveContext/H3 chain). Must be decided before/at S4-Polish start (HANDOFF §5 item 0).
 - **S4-Polish（纯视觉，最后）** — filtering (author/race/conflict), componentized help, narrow responsive, visual modernization (eval doc first), footer build identity, distance preview chart.
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
 - **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime).
@@ -51,4 +51,4 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] scripts/CI migration: GitHub/Steam build-pack scripts and CI workflows remain deferred until first release prep.
 - [ ] Baseline preset system: no unit tests (BaselinePresetImporter couples Verse/Scribe), no in-game validation (PresetListWidget), no shipped example preset Def XML.
 - [ ] Builtin fallback table maintenance review (2026-08-27): per-race Defs already support race-level independent maintenance; same-race multi-Def last-wins = single-owner contract (no Def-level field merge); BuiltInActionKeys whitelist closes external keys out of the builtin table; decide whether to publish example fallback/baseline Def XML as doc fixture (currently zero shipped Defs, empty = valid).
-- [ ] **xeno 层调音 race 身份（维护者拍板，下一会话第一件事）** — ① accept as documented limitation (add comment + memory note) / ② re-key runtime xeno contexts by (race,xeno). See HANDOFF §5 item 0.
+- [x] **xeno 层调音 race 身份（2026-08-28 已拍板）** — 采用 ② 运行时双键 context；开发项见 Remaining。调研结论：HAR 通过 race 侧 `raceRestriction` 白/黑名单绑定 xenotype，`XenotypeDef` 无 race 字段，同一 xenotype 可被多 race 白名单；兼容补丁将多 gene mod 的 xenotype union 到同一 race，因此按运行时 pawn race+xeno 路由对玩家最友好。

@@ -21,6 +21,7 @@
     <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakActionPlan.cs" Link="Pure\SqueakActionPlan.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakTimingModel.cs" Link="Pure\SqueakTimingModel.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakLayeredTuning.cs" Link="Pure\SqueakLayeredTuning.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakTuningDomains.cs" Link="Pure\SqueakTuningDomains.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Runtime\VerseEventBinding.cs" Link="Runtime\VerseEventBinding.cs" />
   </ItemGroup>
 

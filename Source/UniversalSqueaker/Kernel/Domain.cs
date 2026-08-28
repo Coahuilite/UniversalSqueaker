@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace UniversalSqueaker.Kernel;
 
@@ -75,5 +76,45 @@ public static class AudioDomainStatuses
         if (!biotechActive && domain.Xenotype != null) return AudioDomainStatus.Dormant;
         if (!assembled) return selectionExists ? AudioDomainStatus.TargetUnavailable : AudioDomainStatus.Orphan;
         return selectionExists ? AudioDomainStatus.Available : AudioDomainStatus.Orphan;
+    }
+}
+
+/// <summary>域键工具：构造/校验/去重/排序 <see cref="AudioDomain"/>。只处理键，不判断音频归属。</summary>
+public static class AudioDomains
+{
+    public static bool TryCreate(string? raceDefName, string? xenotypeDefName, out AudioDomain domain)
+    {
+        domain = default;
+        if (string.IsNullOrEmpty(raceDefName)) return false;
+        RaceKey race = new(raceDefName!);
+        if (string.IsNullOrEmpty(xenotypeDefName))
+        {
+            domain = new AudioDomain(race, null);
+            return true;
+        }
+        domain = new AudioDomain(race, new XenotypeKey(xenotypeDefName!));
+        return true;
+    }
+
+    public static AudioDomain RaceOnly(string raceDefName) => new(new RaceKey(raceDefName), null);
+
+    public static IReadOnlyList<AudioDomain> Collect(IEnumerable<(string race, string? xeno)> sources)
+    {
+        List<AudioDomain> result = new();
+        HashSet<AudioDomain> seen = new();
+        foreach ((string race, string? xeno) in sources ?? Array.Empty<(string, string?)>())
+        {
+            if (!TryCreate(race, xeno, out AudioDomain domain)) continue;
+            if (seen.Add(domain)) result.Add(domain);
+        }
+        result.Sort(static (a, b) =>
+        {
+            int byRace = StringComparer.Ordinal.Compare(a.Race.DefName, b.Race.DefName);
+            if (byRace != 0) return byRace;
+            string aXeno = a.Xenotype?.DefName ?? "";
+            string bXeno = b.Xenotype?.DefName ?? "";
+            return StringComparer.Ordinal.Compare(aXeno, bXeno);
+        });
+        return result;
     }
 }

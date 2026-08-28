@@ -38,6 +38,7 @@ public static class UnitTests
         PerRacePoolIsolation(ref failures);
         EqualRouting(ref failures);
         LayeredTuning(ref failures);
+        XenoDoubleKeyDomains(ref failures);
     }
 
     private static void Check(bool condition, string name, ref int failures)
@@ -847,6 +848,71 @@ public static class UnitTests
             }
         }
         Check(true, "equal routing: same input with only race swapped yields same tier chain and own-pack resolution", ref failures);
+    }
+
+    /// <summary>双键域工具 + Pure 聚合器 + context 选择器：同 xeno 多 race 不串音、缺失/ambiguous/空 race 回退。</summary>
+    private static void XenoDoubleKeyDomains(ref int failures)
+    {
+        AudioDomain ratkinX = new(new RaceKey("Ratkin"), new XenotypeKey("X"));
+        AudioDomain felineX = new(new RaceKey("Feline"), new XenotypeKey("X"));
+        AudioDomain ratkinOnly = new(new RaceKey("Ratkin"), null);
+
+        // AudioDomains：构造/去重/排序。
+        Check(AudioDomains.TryCreate("Ratkin", "X", out AudioDomain created) && created == ratkinX,
+            "double-key: AudioDomains.TryCreate builds exact AudioDomain", ref failures);
+        Check(!AudioDomains.TryCreate("", "X", out _) && !AudioDomains.TryCreate(null, "X", out _),
+            "double-key: empty race rejected", ref failures);
+        var collected = AudioDomains.Collect(new[] { ("Ratkin", "X"), ("Feline", "X"), ("Ratkin", "X"), ("Ratkin", (string?)null) });
+        Check(collected.Count == 3 && collected[0] == felineX && collected[1] == ratkinOnly && collected[2] == ratkinX,
+            "double-key: AudioDomains.Collect dedupes and sorts deterministically", ref failures);
+
+        // 聚合器：同 xeno 不同 race 各自独立；同域后写覆盖。
+        IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> table = SqueakTuningAggregator.Aggregate(
+            new[]
+            {
+                (ratkinX, "Call", new LayerActionDelta(SqueakActionScope.Disabled, true, false, 1f, false, 1f)),
+                (felineX, "Call", new LayerActionDelta(SqueakActionScope.ActiveCommand, true, false, 1f, false, 1f)),
+                (ratkinX, "Call", new LayerActionDelta(SqueakActionScope.AnyOccurrence, true, false, 1f, false, 1f)),
+            },
+            Array.Empty<(AudioDomain, SqueakMood, LayerMoodDelta)>(),
+            Array.Empty<(AudioDomain, float)>());
+        Check(table[ratkinX].Actions["Call"].Scope == SqueakActionScope.AnyOccurrence
+            && table[felineX].Actions["Call"].Scope == SqueakActionScope.ActiveCommand,
+            "double-key: aggregator keeps same xeno per-race independent and same-domain last-wins", ref failures);
+
+        IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> multipliers = SqueakTuningAggregator.Aggregate(
+            Array.Empty<(AudioDomain, string, LayerActionDelta)>(),
+            Array.Empty<(AudioDomain, SqueakMood, LayerMoodDelta)>(),
+            new[] { (ratkinX, 2f), (felineX, 3f) });
+        Check(Math.Abs(multipliers[ratkinX].OverallIntervalMultiplier - 2f) < 0.0001f
+            && Math.Abs(multipliers[felineX].OverallIntervalMultiplier - 3f) < 0.0001f,
+            "double-key: overall interval multiplier is per (race,xeno) domain", ref failures);
+
+        // 选择器：命中精确 (race,xeno)。
+        ContextSelection hit = SqueakContextSelector.Select("Ratkin", "X", new[] { ratkinX, felineX }, Array.Empty<string>(), true);
+        Check(hit.Kind == ContextSelectionKind.Xeno && hit.XenoDomain == ratkinX,
+            "double-key: selector hits exact (race,xeno) domain", ref failures);
+
+        // 选择器：同 xeno 但 race 不匹配 → 回退 Race，绝不跨 race。
+        ContextSelection wrongRace = SqueakContextSelector.Select("Human", "X", new[] { ratkinX, felineX }, Array.Empty<string>(), true);
+        Check(wrongRace.Kind == ContextSelectionKind.Race,
+            "double-key: selector falls back to Race when (race,xeno) absent; never crosses race", ref failures);
+
+        // 选择器：无 raceContext → Global。
+        ContextSelection noRace = SqueakContextSelector.Select("Human", "X", new[] { ratkinX }, Array.Empty<string>(), false);
+        Check(noRace.Kind == ContextSelectionKind.Global,
+            "double-key: selector falls back to Global when no race context", ref failures);
+
+        // 选择器：ambiguous xeno → Global（fail-closed）。
+        ContextSelection ambiguous = SqueakContextSelector.Select("Ratkin", "X", new[] { ratkinX }, new[] { "X" }, true);
+        Check(ambiguous.Kind == ContextSelectionKind.Global,
+            "double-key: selector fails closed on ambiguous xenotype", ref failures);
+
+        // 选择器：无 xeno / 空 race 分支。
+        ContextSelection noXeno = SqueakContextSelector.Select("Ratkin", null, new[] { ratkinX }, Array.Empty<string>(), true);
+        Check(noXeno.Kind == ContextSelectionKind.Race, "double-key: no xeno uses Race", ref failures);
+        ContextSelection emptyRace = SqueakContextSelector.Select("", "X", new[] { ratkinX }, Array.Empty<string>(), true);
+        Check(emptyRace.Kind == ContextSelectionKind.Global, "double-key: empty race uses Global", ref failures);
     }
 
     // ---- helpers ----

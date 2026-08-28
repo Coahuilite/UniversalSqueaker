@@ -7,6 +7,7 @@ using UnityEngine;
 using RimWorld;
 using Verse;
 using Verse.Sound;
+using UniversalSqueaker.Kernel;
 
 namespace UniversalSqueaker;
 
@@ -160,35 +161,31 @@ public static class SqueakRuntimeResolver
 
     private static SqueakRuntimeSnapshot BuildSnapshot(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, Dictionary<string, LayerActionDelta> globalActionLayers, Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers)
     {
-        Dictionary<string, RuntimeBuilder> behavior = BuildBehavior(settings);
-        Dictionary<string, RuntimeBuilder> raceBehavior = BuildRaceBehavior(settings);
-        Dictionary<UniversalSqueaker.Kernel.AudioDomain, HashSet<string>> selection = BuildSelections(settings.voicePackSelections);
+        IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> behavior = BuildBehavior(settings);
+        IReadOnlyDictionary<RaceKey, LayerBehaviorAggregate> raceBehavior = BuildRaceBehavior(settings);
+        Dictionary<AudioDomain, HashSet<string>> selection = BuildSelections(settings.voicePackSelections);
         HashSet<SoundDef> known = SqueakKernelAdapter.CollectKnownSounds(catalog);
-        List<UniversalSqueaker.Kernel.VoicePackEntry> entries = SqueakKernelAdapter.BuildEntries(catalog, selection);
-        UniversalSqueaker.Kernel.SqueakPoolRegistry registry = new(entries, SqueakKernelAdapter.BuildBuiltIn());
+        List<VoicePackEntry> entries = SqueakKernelAdapter.BuildEntries(catalog, selection);
+        SqueakPoolRegistry registry = new(entries, SqueakKernelAdapter.BuildBuiltIn());
         Dictionary<string, RuntimeActionDelta> globalActions = ResolveGlobalActions(globalActionLayers);
         Dictionary<SqueakMood, RuntimeMoodDelta> globalMoods = ResolveGlobalMoods(globalMoodLayers);
-        Dictionary<string, ResolvedSqueakContext> contexts = new(StringComparer.Ordinal);
-        Dictionary<string, ResolvedSqueakContext> raceContexts = new(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, RuntimeBuilder> raceEntry in raceBehavior)
+        Dictionary<AudioDomain, ResolvedSqueakContext> contexts = new();
+        Dictionary<RaceKey, ResolvedSqueakContext> raceContexts = new();
+        foreach (KeyValuePair<RaceKey, LayerBehaviorAggregate> raceEntry in raceBehavior)
             raceContexts.Add(raceEntry.Key, BuildContext(null, raceEntry.Value, null, globalActionLayers, globalMoodLayers, 1f));
         if (ModsConfig.BiotechActive)
         {
-            HashSet<string> targets = new(catalog.XenotypePacksByDefName.Keys, StringComparer.Ordinal);
-            foreach (VoicePackSelectionRecord record in settings.voicePackSelections ?? new List<VoicePackSelectionRecord>())
-                if (record != null && record.scope == SqueakVoicePackScope.Xenotype && !string.IsNullOrEmpty(record.xenotypeDefName)) targets.Add(record.xenotypeDefName);
-            foreach (string target in behavior.Keys) targets.Add(target);
-            foreach (string target in targets)
+            foreach (AudioDomain domain in CollectXenoDomains(settings, catalog, behavior))
             {
-                catalog.XenotypeByDefName.TryGetValue(target, out XenotypeDef? xenotype);
-                if (catalog.AmbiguousCanonicalDefNames.Contains(target)) xenotype = null;
-                // H3 fix (review 2.1) + S5 纯折叠：xeno 层继承 race 层（DefaultScope < Global < Race < Xeno）。
-                string raceName = xenotype == null ? "" : SqueakRaceForXenotype(catalog, xenotype, behavior, settings);
-                RuntimeBuilder? raceBuilder = null;
-                if (!string.IsNullOrEmpty(raceName) && raceBehavior.TryGetValue(raceName, out RuntimeBuilder? raceB)) raceBuilder = raceB;
-                RuntimeBuilder? xenoBuilder = behavior.TryGetValue(target, out RuntimeBuilder? xenoB) ? xenoB : null;
-                ResolvedSqueakContext xenoContext = BuildContext(xenotype, raceBuilder, xenoBuilder, globalActionLayers, globalMoodLayers, xenoBuilder?.overallIntervalMultiplier ?? 1f);
-                contexts.Add(target, xenoContext);
+                string xenoName = domain.Xenotype?.DefName ?? "";
+                XenotypeDef? xenotype = null;
+                if (!string.IsNullOrEmpty(xenoName) && catalog.XenotypeByDefName.TryGetValue(xenoName, out XenotypeDef? xd))
+                    xenotype = xd;
+                if (!string.IsNullOrEmpty(xenoName) && catalog.AmbiguousCanonicalDefNames.Contains(xenoName)) xenotype = null;
+                raceBehavior.TryGetValue(domain.Race, out LayerBehaviorAggregate? raceBuilder);
+                behavior.TryGetValue(domain, out LayerBehaviorAggregate? xenoBuilder);
+                ResolvedSqueakContext xenoContext = BuildContext(xenotype, raceBuilder, xenoBuilder, globalActionLayers, globalMoodLayers, xenoBuilder?.OverallIntervalMultiplier ?? 1f);
+                contexts.Add(domain, xenoContext);
             }
         }
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
@@ -197,6 +194,30 @@ public static class SqueakRuntimeResolver
             if (sound != null) known.Add(sound);
         }
         return new SqueakRuntimeSnapshot(contexts, raceContexts, registry, known, NormalizeMode(settings.voicePackMode), globalActions, globalMoods, catalog.AmbiguousCanonicalDefNames, settings.AllowEasterEggSounds);
+    }
+
+    /// <summary>收集所有应构建 xeno context 的 (race, xeno) 域：catalog 包声明、选择记录、已有调音域。</summary>
+    private static IReadOnlyList<AudioDomain> CollectXenoDomains(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> behavior)
+    {
+        List<(string race, string? xeno)> sources = new();
+        foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+        {
+            foreach (SqueakVoicePackDef pack in pair.Value)
+            {
+                if (pack == null || string.IsNullOrEmpty(pack.raceDefName) || string.IsNullOrEmpty(pack.targetDefName)) continue;
+                sources.Add((pack.raceDefName, pack.targetDefName));
+            }
+        }
+        foreach (VoicePackSelectionRecord record in settings.voicePackSelections ?? new List<VoicePackSelectionRecord>())
+        {
+            if (record == null || record.scope != SqueakVoicePackScope.Xenotype) continue;
+            sources.Add((record.raceDefName ?? "", record.xenotypeDefName ?? ""));
+        }
+        foreach (AudioDomain domain in behavior.Keys)
+        {
+            if (domain.Xenotype != null) sources.Add((domain.Race.DefName, domain.Xenotype.Value.DefName));
+        }
+        return AudioDomains.Collect(sources);
     }
 
     /// <summary>S5 纯折叠：Global 层心情源数据（层 0 记录，同 mood 字段级合并）。</summary>
@@ -225,79 +246,71 @@ public static class SqueakRuntimeResolver
         return result;
     }
 
-    private static Dictionary<string, RuntimeBuilder> BuildBehavior(UniversalSqueakerSettings settings)
+    private static IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> BuildBehavior(UniversalSqueakerSettings settings)
     {
-        Dictionary<string, RuntimeBuilder> builders = new(StringComparer.Ordinal);
+        List<(AudioDomain domain, string actionKey, LayerActionDelta delta)> actions = new();
+        List<(AudioDomain domain, SqueakMood mood, LayerMoodDelta delta)> moods = new();
+        List<(AudioDomain domain, float overallMultiplier)> multipliers = new();
+
         foreach (XenotypePresetRecord record in settings.xenotypePresets ?? new List<XenotypePresetRecord>())
         {
             if (record == null || string.IsNullOrEmpty(record.xenotypeDefName)) continue;
-            if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder); }
-            if (record.hasOverallIntervalMultiplier) builder.overallIntervalMultiplier = Sanitize(record.overallIntervalMultiplier);
+            if (!AudioDomains.TryCreate(record.raceDefName, record.xenotypeDefName, out AudioDomain domain)) continue;
+            if (record.hasOverallIntervalMultiplier) multipliers.Add((domain, Sanitize(record.overallIntervalMultiplier)));
             // S5: XenotypePresetRecord.moodOverrides 已迁移至 moodTuning 层 2，本字段不再被运行时消费。
             foreach (XenotypeActionBehaviorOverride action in record.actionOverrides ?? new List<XenotypeActionBehaviorOverride>())
             {
                 if (action == null) continue;
-                string actionKey = UniversalSqueaker.Kernel.ActionKey.For(action.action) ?? action.action.ToString();
-                builder.ApplyAction(actionKey, new LayerActionDelta(
+                string actionKey = ActionKey.For(action.action) ?? action.action.ToString();
+                actions.Add((domain, actionKey, new LayerActionDelta(
                     action.hasEnabled ? (action.enabled ? SqueakActionScope.AnyOccurrence : SqueakActionScope.Disabled) : SqueakActionScope.AnyOccurrence,
                     action.hasEnabled,
                     action.hasIntervalMultiplier, Sanitize(action.intervalMultiplier),
-                    action.hasProbabilityMultiplier, Sanitize(action.probabilityMultiplier)));
+                    action.hasProbabilityMultiplier, Sanitize(action.probabilityMultiplier))));
             }
         }
         // S2: actionTuning 的 Xenotype 层记录叠加（layer==2），字段级覆盖旧 actionOverrides 派生值。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 2) continue;
-            if (string.IsNullOrEmpty(record.xenotypeDefName)) continue;
-            if (!UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(record.actionKey, out SqueakAction action)) continue;
-            if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder2)) { builder2 = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder2); }
-            builder2.ApplyAction(record.actionKey, FromActionRecord(record));
+            if (!AudioDomains.TryCreate(record.raceDefName, record.xenotypeDefName, out AudioDomain domain)) continue;
+            if (!ActionKey.TryParseBuiltIn(record.actionKey, out _)) continue;
+            actions.Add((domain, record.actionKey, FromActionRecord(record)));
         }
         // S5: moodTuning 的 Xenotype 层心情记录叠加（layer==2），字段级覆盖迁移后的预设派生值。
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 2) continue;
-            if (string.IsNullOrEmpty(record.xenotypeDefName)) continue;
-            if (!builders.TryGetValue(record.xenotypeDefName, out RuntimeBuilder? builder2)) { builder2 = new RuntimeBuilder(); builders.Add(record.xenotypeDefName, builder2); }
-            builder2.ApplyMood(record.mood, FromMoodRecord(record));
+            if (!AudioDomains.TryCreate(record.raceDefName, record.xenotypeDefName, out AudioDomain domain)) continue;
+            moods.Add((domain, record.mood, FromMoodRecord(record)));
         }
-        return builders;
+        return SqueakTuningAggregator.Aggregate(actions, moods, multipliers);
     }
 
     /// <summary>H3 + S5: aggregate actionTuning/moodTuning Race-layer records (layer==1) into per-race builders.</summary>
-    private static Dictionary<string, RuntimeBuilder> BuildRaceBehavior(UniversalSqueakerSettings settings)
+    private static IReadOnlyDictionary<RaceKey, LayerBehaviorAggregate> BuildRaceBehavior(UniversalSqueakerSettings settings)
     {
-        Dictionary<string, RuntimeBuilder> builders = new(StringComparer.Ordinal);
+        List<(AudioDomain domain, string actionKey, LayerActionDelta delta)> actions = new();
+        List<(AudioDomain domain, SqueakMood mood, LayerMoodDelta delta)> moods = new();
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 1) continue;
             if (string.IsNullOrEmpty(record.raceDefName)) continue;
-            if (!UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(record.actionKey, out SqueakAction action)) continue;
-            if (!builders.TryGetValue(record.raceDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.raceDefName, builder); }
-            builder.ApplyAction(record.actionKey, FromActionRecord(record));
+            if (!ActionKey.TryParseBuiltIn(record.actionKey, out _)) continue;
+            actions.Add((AudioDomains.RaceOnly(record.raceDefName), record.actionKey, FromActionRecord(record)));
         }
         // S5: moodTuning 的 Race 层心情记录聚合（layer==1）。
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
         {
             if (record == null || record.IsValidLayer(out int layer) == false || layer != 1) continue;
             if (string.IsNullOrEmpty(record.raceDefName)) continue;
-            if (!builders.TryGetValue(record.raceDefName, out RuntimeBuilder? builder)) { builder = new RuntimeBuilder(); builders.Add(record.raceDefName, builder); }
-            builder.ApplyMood(record.mood, FromMoodRecord(record));
+            moods.Add((AudioDomains.RaceOnly(record.raceDefName), record.mood, FromMoodRecord(record)));
         }
-        return builders;
-    }
-
-    /// <summary>H3: resolve a xenotype's owning race for race-layer lookup. Falls back to a single-race catalog or empty.</summary>
-    private static string SqueakRaceForXenotype(SqueakXenotypeCatalogSnapshot catalog, XenotypeDef xenotype, Dictionary<string, RuntimeBuilder> behavior, UniversalSqueakerSettings settings)
-    {
-        // Prefer the race declared by the xenotype pack/selection that carries this xenotype target.
-        foreach (VoicePackSelectionRecord record in settings.voicePackSelections ?? new List<VoicePackSelectionRecord>())
-            if (record != null && record.scope == SqueakVoicePackScope.Xenotype && string.Equals(record.xenotypeDefName, xenotype.defName, StringComparison.Ordinal) && !string.IsNullOrEmpty(record.raceDefName))
-                return record.raceDefName!;
-        foreach (SqueakVoicePackDef pack in catalog.XenotypePacksByDefName.TryGetValue(xenotype.defName, out IReadOnlyList<SqueakVoicePackDef>? packs) ? packs : new List<SqueakVoicePackDef>())
-            if (pack != null && !string.IsNullOrEmpty(pack.raceDefName)) return pack.raceDefName;
-        return catalog.RaceDefNames.Count == 1 ? catalog.RaceDefNames[0] : "";
+        IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> table = SqueakTuningAggregator.Aggregate(actions, moods, Array.Empty<(AudioDomain, float)>());
+        Dictionary<RaceKey, LayerBehaviorAggregate> result = new();
+        foreach (KeyValuePair<AudioDomain, LayerBehaviorAggregate> pair in table)
+            if (pair.Key.IsRaceOnly) result[pair.Key.Race] = pair.Value;
+        return result;
     }
 
     /// <summary>记录 → AudioDomain 键的 last-wins 选择集。域身份来自记录自身 (raceDefName, xenotypeDefName)。</summary>
@@ -324,8 +337,8 @@ public static class SqueakRuntimeResolver
     /// 心情仅收录被任何层显式决定的因子（GetMoodDelta 空语义保持：全默认 = 无 delta）。</summary>
     private static ResolvedSqueakContext BuildContext(
         XenotypeDef? xenotype,
-        RuntimeBuilder? raceBuilder,
-        RuntimeBuilder? xenoBuilder,
+        LayerBehaviorAggregate? raceBuilder,
+        LayerBehaviorAggregate? xenoBuilder,
         Dictionary<string, LayerActionDelta> globalActionLayers,
         Dictionary<SqueakMood, LayerMoodDelta> globalMoodLayers,
         float overallIntervalMultiplier)
@@ -363,85 +376,87 @@ public static class SqueakRuntimeResolver
                 SoundDef? sound = DefDatabase<SoundDef>.GetNamedSilentFail(SqueakActionDefinitions.Get(action).AudioKey);
                 if (sound != null) known.Add(sound);
             }
-            UniversalSqueaker.Kernel.SqueakPoolRegistry registry = new(
-                Array.Empty<UniversalSqueaker.Kernel.VoicePackEntry>(),
+            SqueakPoolRegistry registry = new(
+                Array.Empty<VoicePackEntry>(),
                 SqueakKernelAdapter.BuildBuiltIn());
             // M1: 保留原模式——Disabled 真旁路不得被崩溃兜底改写（否则旁路 gate 失效，内置表可能发声）。
-            return new SqueakRuntimeSnapshot(new Dictionary<string, ResolvedSqueakContext>(), new Dictionary<string, ResolvedSqueakContext>(), registry, known, NormalizeMode(settings.voicePackMode), ResolveGlobalActions(globalActionLayers), ResolveGlobalMoods(globalMoodLayers), null, settings.AllowEasterEggSounds);
+            return new SqueakRuntimeSnapshot(new Dictionary<AudioDomain, ResolvedSqueakContext>(), new Dictionary<RaceKey, ResolvedSqueakContext>(), registry, known, NormalizeMode(settings.voicePackMode), ResolveGlobalActions(globalActionLayers), ResolveGlobalMoods(globalMoodLayers), null, settings.AllowEasterEggSounds);
         }
         catch { return SqueakRuntimeSnapshot.GlobalOnly; }
     }
 
     private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode) => mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled ? mode : SqueakVoicePackMode.Vanilla;
     private static float Sanitize(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
-
-    /// <summary>层源数据累加器（Layer* 不可变；Apply* 做同键字段级 Merge）。</summary>
-    private sealed class RuntimeBuilder
-    {
-        public float overallIntervalMultiplier = 1f;
-        public readonly Dictionary<string, LayerActionDelta> Actions = new(StringComparer.Ordinal);
-        public readonly Dictionary<SqueakMood, LayerMoodDelta> Moods = new();
-
-        public void ApplyAction(string key, LayerActionDelta delta)
-        {
-            if (Actions.TryGetValue(key, out LayerActionDelta existing)) Actions[key] = existing.Merge(delta);
-            else Actions[key] = delta;
-        }
-
-        public void ApplyMood(SqueakMood mood, LayerMoodDelta delta)
-        {
-            if (Moods.TryGetValue(mood, out LayerMoodDelta existing)) Moods[mood] = existing.Merge(delta);
-            else Moods[mood] = delta;
-        }
-    }
 }
 
 public sealed class SqueakRuntimeSnapshot
 {
-    public static readonly SqueakRuntimeSnapshot GlobalOnly = new(new Dictionary<string, ResolvedSqueakContext>(), UniversalSqueaker.Kernel.SqueakPoolRegistry.Empty, new HashSet<SoundDef>(), SqueakVoicePackMode.Vanilla, null, null, false);
-    private readonly IReadOnlyDictionary<string, ResolvedSqueakContext> contexts; private readonly IReadOnlyDictionary<string, ResolvedSqueakContext> raceContexts; private readonly IReadOnlyDictionary<string, RuntimeActionDelta> globalActions; private readonly ResolvedSqueakContext globalContext;
-    public readonly SqueakVoicePackMode VoicePackMode; public readonly IReadOnlyCollection<SoundDef> KnownMapSoundDefs;
-    public readonly UniversalSqueaker.Kernel.SqueakPoolRegistry Registry;
+    public static readonly SqueakRuntimeSnapshot GlobalOnly = new(new Dictionary<AudioDomain, ResolvedSqueakContext>(), SqueakPoolRegistry.Empty, new HashSet<SoundDef>(), SqueakVoicePackMode.Vanilla, null, null, false);
+    private readonly IReadOnlyDictionary<AudioDomain, ResolvedSqueakContext> contexts;
+    private readonly IReadOnlyDictionary<RaceKey, ResolvedSqueakContext> raceContexts;
+    private readonly IReadOnlyDictionary<string, RuntimeActionDelta> globalActions;
+    private readonly ResolvedSqueakContext globalContext;
+    public readonly SqueakVoicePackMode VoicePackMode;
+    public readonly IReadOnlyCollection<SoundDef> KnownMapSoundDefs;
+    public readonly SqueakPoolRegistry Registry;
     public readonly bool AllowEggs;
     private readonly IReadOnlyCollection<string> ambiguousCanonicalNames;
-    internal SqueakRuntimeSnapshot(Dictionary<string, ResolvedSqueakContext> contexts, UniversalSqueaker.Kernel.SqueakPoolRegistry registry, HashSet<SoundDef> known, SqueakVoicePackMode mode, Dictionary<string, RuntimeActionDelta>? globals, IEnumerable<string>? ambiguousNames, bool allowEggs)
-        : this(contexts, new Dictionary<string, ResolvedSqueakContext>(), registry, known, mode, globals, null, ambiguousNames, allowEggs) { }
-    internal SqueakRuntimeSnapshot(Dictionary<string, ResolvedSqueakContext> contexts, Dictionary<string, ResolvedSqueakContext> raceContexts, UniversalSqueaker.Kernel.SqueakPoolRegistry registry, HashSet<SoundDef> known, SqueakVoicePackMode mode, Dictionary<string, RuntimeActionDelta>? globals, Dictionary<SqueakMood, RuntimeMoodDelta>? globalMoods, IEnumerable<string>? ambiguousNames, bool allowEggs) { this.contexts = new ReadOnlyDictionary<string, ResolvedSqueakContext>(contexts); this.raceContexts = new ReadOnlyDictionary<string, ResolvedSqueakContext>(raceContexts ?? new Dictionary<string, ResolvedSqueakContext>()); this.Registry = registry; globalActions = new ReadOnlyDictionary<string, RuntimeActionDelta>(globals ?? new Dictionary<string, RuntimeActionDelta>()); globalContext = new ResolvedSqueakContext(null, 1f, globals, globalMoods); VoicePackMode = mode; AllowEggs = allowEggs; KnownMapSoundDefs = new ReadOnlyCollection<SoundDef>(known.ToList()); ambiguousCanonicalNames = new ReadOnlyCollection<string>((ambiguousNames ?? Array.Empty<string>()).ToList()); }
+
+    internal SqueakRuntimeSnapshot(Dictionary<AudioDomain, ResolvedSqueakContext> contexts, SqueakPoolRegistry registry, HashSet<SoundDef> known, SqueakVoicePackMode mode, Dictionary<string, RuntimeActionDelta>? globals, IEnumerable<string>? ambiguousNames, bool allowEggs)
+        : this(contexts, new Dictionary<RaceKey, ResolvedSqueakContext>(), registry, known, mode, globals, null, ambiguousNames, allowEggs) { }
+
+    internal SqueakRuntimeSnapshot(Dictionary<AudioDomain, ResolvedSqueakContext> contexts, Dictionary<RaceKey, ResolvedSqueakContext> raceContexts, SqueakPoolRegistry registry, HashSet<SoundDef> known, SqueakVoicePackMode mode, Dictionary<string, RuntimeActionDelta>? globals, Dictionary<SqueakMood, RuntimeMoodDelta>? globalMoods, IEnumerable<string>? ambiguousNames, bool allowEggs)
+    {
+        this.contexts = new ReadOnlyDictionary<AudioDomain, ResolvedSqueakContext>(contexts);
+        this.raceContexts = new ReadOnlyDictionary<RaceKey, ResolvedSqueakContext>(raceContexts ?? new Dictionary<RaceKey, ResolvedSqueakContext>());
+        Registry = registry;
+        globalActions = new ReadOnlyDictionary<string, RuntimeActionDelta>(globals ?? new Dictionary<string, RuntimeActionDelta>());
+        globalContext = new ResolvedSqueakContext(null, 1f, globals, globalMoods);
+        VoicePackMode = mode;
+        AllowEggs = allowEggs;
+        KnownMapSoundDefs = new ReadOnlyCollection<SoundDef>(known.ToList());
+        ambiguousCanonicalNames = new ReadOnlyCollection<string>((ambiguousNames ?? Array.Empty<string>()).ToList());
+    }
+
     public ResolvedSqueakContext ResolveContext(Pawn pawn)
     {
-        // H3: layered resolution — Race context (if any) underlies Xenotype context; a pure-Race pawn gets its Race context.
+        // 双键：域身份 = (pawn race, pawn xenotype)。规则由 Pure SqueakContextSelector 决定，绝不跨 race。
         string raceDefName = pawn?.def?.defName ?? "";
-        ResolvedSqueakContext raceContext = !string.IsNullOrEmpty(raceDefName) && raceContexts.TryGetValue(raceDefName, out ResolvedSqueakContext? rc) ? rc : globalContext;
+        bool hasRaceContext = !string.IsNullOrEmpty(raceDefName) && raceContexts.TryGetValue(new RaceKey(raceDefName), out _);
+        ResolvedSqueakContext raceContext = hasRaceContext ? raceContexts[new RaceKey(raceDefName)] : globalContext;
         if (!ModsConfig.BiotechActive) return raceContext;
         XenotypeDef? xenotype = pawn?.genes?.Xenotype;
         string? defName = xenotype?.defName;
-        if (string.IsNullOrEmpty(defName)) return raceContext;
-        string exactDefName = defName!;
-        if (!contexts.TryGetValue(exactDefName, out ResolvedSqueakContext? context)) return raceContext;
-        if (ambiguousCanonicalNames.Contains(exactDefName)) return WarnAndFallback(exactDefName, "multiple loaded XenotypeDef instances");
-        if (context.Xenotype != null && !ReferenceEquals(context.Xenotype, xenotype)) return WarnAndFallback(exactDefName, "runtime XenotypeDef differs from the unique canonical instance");
+        ContextSelection selection = SqueakContextSelector.Select(raceDefName, defName, contexts.Keys, ambiguousCanonicalNames, hasRaceContext);
+        if (selection.Kind != ContextSelectionKind.Xeno || selection.XenoDomain == null)
+            return selection.Kind == ContextSelectionKind.Race ? raceContext : globalContext;
+        ResolvedSqueakContext context = contexts[selection.XenoDomain.Value];
+        if (context.Xenotype != null && !ReferenceEquals(context.Xenotype, xenotype))
+            return WarnAndFallback(defName ?? "", "runtime XenotypeDef differs from the unique canonical instance");
         return context;
     }
+
     private ResolvedSqueakContext WarnAndFallback(string defName, string reason)
     {
         SqueakLog.TargetRejected(defName, reason);
         return globalContext;
     }
+
     public SqueakSoundChoice ChooseProductionSound(ResolvedSqueakContext context, SqueakAction action, Pawn pawn) => Choose(context, action, pawn, pawn.MapHeld, new TargetInfo(pawn), true);
     public SqueakSoundChoice ChooseProductionSoundByKey(ResolvedSqueakContext context, string actionKey, Pawn pawn) => ChooseByKey(context, actionKey, pawn, pawn.MapHeld, new TargetInfo(pawn), true);
     private SqueakSoundChoice Choose(ResolvedSqueakContext context, SqueakAction action, Pawn? pawn, Map? map, TargetInfo? target, bool production)
-        => ChooseByKey(context, UniversalSqueaker.Kernel.ActionKey.For(action) ?? "", pawn, map, target, production);
+        => ChooseByKey(context, ActionKey.For(action) ?? "", pawn, map, target, production);
 
     private SqueakSoundChoice ChooseByKey(ResolvedSqueakContext context, string actionKey, Pawn? pawn, Map? map, TargetInfo? target, bool production)
     {
         if (string.IsNullOrEmpty(actionKey)) return SqueakSoundChoice.None;
         // 中性路由：域身份 = pawn 真实 raceDefName。不可得时为空域，池空/无内置 profile = 无声，绝不跨种族。
         string raceDefName = pawn?.def?.defName ?? "";
-        UniversalSqueaker.Kernel.AudioDomain domain = context.Xenotype != null
-            ? new UniversalSqueaker.Kernel.AudioDomain(new UniversalSqueaker.Kernel.RaceKey(raceDefName), new UniversalSqueaker.Kernel.XenotypeKey(context.Xenotype.defName))
-            : new UniversalSqueaker.Kernel.AudioDomain(new UniversalSqueaker.Kernel.RaceKey(raceDefName), null);
-        UniversalSqueaker.Kernel.SelectionContext ctx = new(domain, actionKey, SqueakLifeStageResolver.Resolve(pawn), production, AllowEggs);
-        UniversalSqueaker.Kernel.ChainResult result = Registry.Select(ctx, SqueakKernelAdapter.ToSelectionMode(VoicePackMode), SqueakKernelAdapter.GateFor(pawn, map, target), SqueakKernelAdapter.Rolls);
+        AudioDomain domain = context.Xenotype != null
+            ? new AudioDomain(new RaceKey(raceDefName), new XenotypeKey(context.Xenotype.defName))
+            : new AudioDomain(new RaceKey(raceDefName), null);
+        SelectionContext ctx = new(domain, actionKey, SqueakLifeStageResolver.Resolve(pawn), production, AllowEggs);
+        ChainResult result = Registry.Select(ctx, SqueakKernelAdapter.ToSelectionMode(VoicePackMode), SqueakKernelAdapter.GateFor(pawn, map, target), SqueakKernelAdapter.Rolls);
         return SqueakKernelAdapter.ToChoice(result);
     }
 }
