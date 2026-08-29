@@ -4,7 +4,6 @@ using System.IO;
 using System.Xml.Linq;
 using UnityEngine;
 using Verse;
-using KitFooterWidget = FerriteLib.UiKit.Widgets.ChromeFooterWidget;
 using KitLayoutEngine = FerriteLib.UiKit.LayoutEngine;
 using KitLayoutManifest = FerriteLib.UiKit.LayoutManifest;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
@@ -30,9 +29,6 @@ public static class FerriteVoicePacksPage
 
     private const string EmptyDomainText =
         "No VoicePack domains are available yet. Install a VoicePack that declares a raceDefName.";
-
-    private const string FooterText =
-        "Changes apply immediately. Settings are saved automatically when this window closes.";
 
     /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
     private const float ScrollbarWidth = 16f;
@@ -96,7 +92,10 @@ public static class FerriteVoicePacksPage
                 ["TuningRace"] = view.TuningRaceDefName,
                 ["TuningXeno"] = view.TuningXenotypeDefName,
                 ["TuningDomains"] = view.TuningDomains,
-                ["MoodTuningRows"] = view.MoodTuningRows
+                ["MoodTuningRows"] = view.MoodTuningRows,
+                ["BuildIdentity"] = view.BuildIdentity,
+                ["SaveStatus"] = view.SaveStatus,
+                ["IsDirty"] = view.IsDirty
             };
 
             KitUiPageState uiState = new()
@@ -255,11 +254,8 @@ public static class FerriteVoicePacksPage
 
     private static void DrawFooter(Rect footerRect, KitWidgetContext ctx)
     {
-        var footerSpec = new FerriteLib.UiKit.UiElementSpec(
-            "footer",
-            KitFooterWidget.Kind,
-            new Dictionary<string, string> { ["Text"] = FooterText });
-        KitFooterWidget footer = new();
+        var footerSpec = new FerriteLib.UiKit.UiElementSpec("footer", UsFooterWidget.Kind);
+        UsFooterWidget footer = new();
         footer.Configure(footerSpec);
         footer.Draw(footerRect, ctx, _ => { });
     }

@@ -32,6 +32,7 @@ public class UniversalSqueakerMod : Mod
 
     internal enum SettingsSaveState { Idle, Saving, Saved, Failed }
     internal SettingsSaveState SaveState => saveState;
+    internal bool IsSettingsDirty => requestedSaveGeneration > persistedSaveGeneration;
     internal bool SaveStatusVisible => saveState == SettingsSaveState.Saving || saveState == SettingsSaveState.Failed || Time.realtimeSinceStartup < saveStatusUntil;
 
 #if US_STEAM
@@ -80,7 +81,7 @@ public class UniversalSqueakerMod : Mod
         });
     }
 
-    private static string BuildIdentity()
+    internal static string BuildIdentity()
     {
         Assembly asm = typeof(UniversalSqueakerMod).Assembly;
         string informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion

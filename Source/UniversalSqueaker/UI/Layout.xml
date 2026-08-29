@@ -17,4 +17,5 @@
   <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" />
   <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" Tab="Packs" />
   <Widget Id="checklist" Kind="us/voice-pack-checklist" Tab="Packs" />
+  <Widget Id="footer" Kind="us/footer" Tab="Footer" />
 </UiPage>

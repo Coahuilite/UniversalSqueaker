@@ -29,6 +29,9 @@ public sealed class VoicePacksViewState
     public string TuningXenotypeDefName { get; }
     public IReadOnlyList<TuningDomainOptionView> TuningDomains { get; }
     public IReadOnlyList<MoodTuningRowView> MoodTuningRows { get; }
+    public string BuildIdentity { get; }
+    public string SaveStatus { get; }
+    public bool IsDirty { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -53,7 +56,10 @@ public sealed class VoicePacksViewState
         string tuningXenotypeDefName,
         IReadOnlyList<TuningDomainOptionView> tuningDomains,
         IReadOnlyList<MoodTuningRowView> moodTuningRows,
-        IReadOnlyList<BaselinePresetView> baselinePresets)
+        IReadOnlyList<BaselinePresetView> baselinePresets,
+        string buildIdentity,
+        string saveStatus,
+        bool isDirty)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -78,6 +84,9 @@ public sealed class VoicePacksViewState
         TuningDomains = tuningDomains ?? Array.Empty<TuningDomainOptionView>();
         MoodTuningRows = moodTuningRows ?? Array.Empty<MoodTuningRowView>();
         BaselinePresets = baselinePresets ?? Array.Empty<BaselinePresetView>();
+        BuildIdentity = buildIdentity ?? "";
+        SaveStatus = saveStatus ?? "";
+        IsDirty = isDirty;
     }
 }
 

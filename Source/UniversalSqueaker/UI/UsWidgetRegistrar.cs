@@ -31,6 +31,7 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, CameraIndicatorWidget.Kind, () => new CameraIndicatorWidget());
             WidgetRegistry.Register(Scope, ScopeTreeWidget.Kind, () => new ScopeTreeWidget());
             WidgetRegistry.Register(Scope, PresetListWidget.Kind, () => new PresetListWidget());
+            WidgetRegistry.Register(Scope, UsFooterWidget.Kind, () => new UsFooterWidget());
 
             registered = true;
         }
