@@ -126,7 +126,7 @@ public static class FerriteVoicePacksPage
             var businessCommands = new List<UiCommand>();
 
             Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
-            DrawNav(navRect, activeTab, kitCommands.Add);
+            DrawNav(navRect, activeTab, businessCommands.Add);
 
             float contentWidth = Math.Max(1f, rect.width - NavWidth);
             float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
@@ -253,14 +253,14 @@ public static class FerriteVoicePacksPage
         return "Basic";
     }
 
-    private static void DrawNav(Rect navRect, string activeTab, Action<KitUiCommand> addCommand)
+    private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
         const float buttonHeight = 32f;
         const float gap = 4f;
         const float sidePadding = 4f;
-        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(addCommand);
 
-        UsSurface.DrawSurface(navRect, UsSurface.SurfaceKind.Panel);
+        Widgets.DrawBoxSolid(navRect, UiPalette.Panel);
+        SectionFrame.DrawBorder(navRect);
 
         float y = navRect.y + 8f;
         foreach ((string tab, string label) in new[] { ("Basic", "基础设置"), ("Tuning", "调音"), ("Packs", "包清单") })
@@ -273,12 +273,12 @@ public static class FerriteVoicePacksPage
 
             if (string.Equals(tab, activeTab, StringComparison.Ordinal))
             {
-                UsSurface.DrawSurface(buttonRect, UsSurface.SurfaceKind.Selected);
+                Widgets.DrawBoxSolid(buttonRect, new Color(.20f, .17f, .10f, .8f));
             }
 
             if (Widgets.ButtonText(buttonRect, label, drawBackground: false))
             {
-                businessEmit(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
+                addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
             }
 
             y += buttonHeight + gap;
