@@ -1,6 +1,7 @@
 using System;
 using FerriteLib.UiKit;
 using UnityEngine;
+using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
 
 namespace UniversalSqueaker.UI;
@@ -51,6 +52,15 @@ public sealed class VoicePackChecklistWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => Widgets.Label(fallback, HeaderText + " (unavailable)"),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         if (!ctx.TryGetViewValue("SelectedDomain", out object? value)) return;
 
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);

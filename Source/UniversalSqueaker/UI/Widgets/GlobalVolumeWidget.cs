@@ -36,7 +36,7 @@ public sealed class GlobalVolumeWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return RowHeight;
+        return UsGuard.MeasureOrFallback(() => RowHeight, RowHeight, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -45,26 +45,46 @@ public sealed class GlobalVolumeWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float value = ReadValue(ctx);
 
-        Widgets.DrawBoxSolid(rect, UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 70f, LabelHeight), Label);
 
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.xMax - 60f, rect.y + 4f, 50f, LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
         Text.Font = oldFont;
         GUI.color = oldColor;
 
         Rect sliderRect = new(rect.x + LeftPadding, rect.y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
         float next = Widgets.HorizontalSlider(sliderRect, value, 0f, 1f, middleAlignment: true);
+        if (Math.Abs(next - value) > 0.0001f)
+        {
+            businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: next.ToString("0.###", CultureInfo.InvariantCulture)));
+        }
+    }
+
+    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        float value = ReadValue(ctx);
+        Widgets.Label(new Rect(rect.x + 6f, rect.y + 3f, rect.width - 12f, 18f), Label + "  " + Mathf.RoundToInt(value * 100f) + "%");
+        float next = Widgets.HorizontalSlider(new Rect(rect.x + 6f, rect.y + 22f, rect.width - 12f, 18f), value, 0f, 1f, middleAlignment: true);
         if (Math.Abs(next - value) > 0.0001f)
         {
             businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: next.ToString("0.###", CultureInfo.InvariantCulture)));

@@ -8,9 +8,11 @@ internal enum SurfaceKind
 {
     Base,
     Raised,
-    Emphasized,
+    Panel,
+    Selected,
     Warning,
-    Success
+    Success,
+    Danger
 }
 
 /// <summary>Neutral framed surface: background fill + 1px border.</summary>
@@ -21,13 +23,23 @@ internal static class SurfaceFrame
         Color fill = kind switch
         {
             SurfaceKind.Raised => Palette.Raised,
-            SurfaceKind.Emphasized => Palette.Emphasized,
+            SurfaceKind.Panel => Palette.Panel,
+            SurfaceKind.Selected => Palette.Selected,
             SurfaceKind.Warning => Palette.Warning,
             SurfaceKind.Success => Palette.Success,
-            _ => Palette.Ink
+            SurfaceKind.Danger => Palette.Danger,
+            _ => Palette.Base,
+        };
+        Color border = kind switch
+        {
+            SurfaceKind.Selected => Palette.BorderStrong,
+            SurfaceKind.Warning => Palette.Danger,
+            SurfaceKind.Danger => Palette.Danger,
+            SurfaceKind.Success => Palette.BorderStrong,
+            _ => Palette.Border,
         };
         VerseWidgets.DrawBoxSolid(rect, fill);
-        DrawBorder(rect, Palette.Border);
+        DrawBorder(rect, border);
     }
 
     public static void DrawBorder(Rect rect)

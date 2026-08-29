@@ -41,8 +41,11 @@ public sealed class BasicTuningWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        return TopPadding + EggRowHeight + DistanceRowHeight
-            + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding;
+        return UsGuard.MeasureOrFallback(
+            () => TopPadding + EggRowHeight + DistanceRowHeight
+                + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding,
+            TopPadding + EggRowHeight + DistanceRowHeight + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding,
+            Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -51,6 +54,15 @@ public sealed class BasicTuningWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
@@ -69,12 +81,53 @@ public sealed class BasicTuningWidget : IWidget
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScalePopulation", "Scale periodic with audible population", "ScalePeriodicWithAudiblePopulation");
     }
 
+    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        bool egg = ctx.TryGetViewValue("AllowEasterEggs", out object? eggValue) && eggValue is true;
+        bool eggChecked = egg;
+        Widgets.Checkbox(new Vector2(rect.x + 6f, rect.y + 5f), ref eggChecked, 18f);
+        Widgets.Label(new Rect(rect.x + 30f, rect.y + 5f, rect.width - 36f, 20f), EggLabel);
+        if (Widgets.ButtonInvisible(rect))
+            businessEmit(new UiCommand(UiCommandKind.ToggleEgg, flag: !egg));
+
+        float y = rect.y + EggRowHeight;
+        Rect distanceRect = new(rect.x, y, rect.width, DistanceRowHeight);
+        string raw = ctx.TryGetViewValue("DistancePreset", out object? value) && value is string text ? text : "";
+        if (!Enum.TryParse(raw, true, out SqueakDistancePreset current)) current = SqueakDistancePreset.Custom;
+        string desc = current switch
+        {
+            SqueakDistancePreset.Conservative => "Conservative (15~65)",
+            SqueakDistancePreset.Strong => "Strong (15~40)",
+            SqueakDistancePreset.Balanced => "Balanced (15~50)",
+            _ => "Custom",
+        };
+        Widgets.Label(distanceRect, DistanceLabel + "  " + desc);
+        if (Widgets.ButtonInvisible(distanceRect))
+        {
+            SqueakDistancePreset next = current switch
+            {
+                SqueakDistancePreset.Conservative => SqueakDistancePreset.Balanced,
+                SqueakDistancePreset.Balanced => SqueakDistancePreset.Strong,
+                SqueakDistancePreset.Strong => SqueakDistancePreset.Conservative,
+                _ => SqueakDistancePreset.Balanced,
+            };
+            businessEmit(new UiCommand(UiCommandKind.SetDistancePreset, arg: next.ToString()));
+        }
+
+        y += DistanceRowHeight;
+        DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScaleCooldown", "Scale cooldown with time speed", "ScaleCooldownWithTimeSpeed");
+        y += BasicRowHeight + BasicRowGap;
+        DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScaleTalking", "Scale frequency with talking", "ScaleFrequencyWithTalking");
+        y += BasicRowHeight + BasicRowGap;
+        DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScalePopulation", "Scale periodic with audible population", "ScalePeriodicWithAudiblePopulation");
+    }
+
     private static void DrawEggRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
     {
         bool enabled = ctx.TryGetViewValue("AllowEasterEggs", out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
         DrawLabel(rect, EggLabel, enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)");
 
         if (Widgets.ButtonInvisible(rect))
@@ -90,8 +143,7 @@ public sealed class BasicTuningWidget : IWidget
             current = SqueakDistancePreset.Custom;
 
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
         string desc = current switch
         {
             SqueakDistancePreset.Conservative => "Conservative (15~65)",
@@ -124,21 +176,35 @@ public sealed class BasicTuningWidget : IWidget
     {
         bool enabled = ctx.TryGetViewValue(viewKey, out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - 60f, 20f), label);
 
-        Rect checkRect = new(rect.xMax - 40f, rect.y + 4f, 20f, 20f);
-        bool checkboxValue = enabled;
-        Widgets.Checkbox(checkRect.position, ref checkboxValue, 20f);
+        Rect checkRect = new(rect.xMax - 34f, rect.y + 4f, 18f, 18f);
+        UsSurface.DrawCheckbox(checkRect, enabled);
         GUI.color = oldColor;
         Text.Font = oldFont;
 
+        if (Widgets.ButtonInvisible(rect))
+            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled));
+    }
+
+    private static void DrawVanillaBasicRow(
+        Rect rect,
+        WidgetContext ctx,
+        Action<UiCommand> emit,
+        string arg,
+        string label,
+        string viewKey)
+    {
+        bool enabled = ctx.TryGetViewValue(viewKey, out object? value) && value is true;
+        bool checkboxValue = enabled;
+        Widgets.Checkbox(new Vector2(rect.xMax - 34f, rect.y + 4f), ref checkboxValue, 18f);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - 60f, 20f), label);
         if (Widgets.ButtonInvisible(rect))
             emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled));
     }
@@ -148,10 +214,10 @@ public sealed class BasicTuningWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 20f, 20f), label);
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 20f, rect.width - 20f, 20f), subLabel);
         Text.Font = oldFont;
         GUI.color = oldColor;

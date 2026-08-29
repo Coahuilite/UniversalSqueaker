@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FerriteLib.UiKit;
 using UnityEngine;
+using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
 
 namespace UniversalSqueaker.UI;
@@ -48,6 +49,15 @@ public sealed class RaceLayerWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => Widgets.Label(fallback, HeaderText + " (unavailable)"),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         if (!ctx.TryGetViewValue("Races", out object? value)
             || value is not IReadOnlyList<RaceLayerRowView> races
             || races.Count == 0)

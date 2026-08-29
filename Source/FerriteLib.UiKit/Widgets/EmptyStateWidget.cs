@@ -47,7 +47,7 @@ public sealed class EmptyStateWidget : IWidget
         string text = ResolveText(ctx);
         if (text.Length == 0) return;
 
-        UiKitGui.Label(rect.ContractedBy(16f), text, ReadFont(), TextAnchor.MiddleCenter, Palette.Muted);
+        UiKitGui.Label(rect.ContractedBy(16f), text, ReadFont(), TextAnchor.MiddleCenter, Palette.TextSecondary);
     }
 
     private string ResolveText(WidgetContext ctx)

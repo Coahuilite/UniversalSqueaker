@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using UnityEngine;
 using Verse;
+using VerseWidgets = Verse.Widgets;
 
 namespace FerriteLib.UiKit.Widgets;
 
@@ -45,7 +46,8 @@ public sealed class SectionHeaderWidget : IWidget
         string text = ResolveText(ctx);
         if (text.Length == 0) return;
 
-        UiKitGui.Label(rect, text, ReadFont(), TextAnchor.MiddleLeft, Palette.TextLight);
+        UiKitGui.Label(rect, text, ReadFont(), TextAnchor.MiddleLeft, Palette.TextPrimary);
+        VerseWidgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Palette.Border);
     }
 
     private string ResolveText(WidgetContext ctx)

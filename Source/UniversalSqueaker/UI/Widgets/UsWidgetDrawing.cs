@@ -11,7 +11,7 @@ internal static class UsWidgetDrawing
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Medium;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(rect, text);
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -22,8 +22,9 @@ internal static class UsWidgetDrawing
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = new Color(.95f, .92f, .84f);
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(rect, text);
+        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), UsVisualTokens.Border);
         Text.Font = oldFont;
         GUI.color = oldColor;
     }

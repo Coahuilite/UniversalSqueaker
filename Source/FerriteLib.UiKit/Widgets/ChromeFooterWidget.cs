@@ -45,7 +45,7 @@ public sealed class ChromeFooterWidget : IWidget
         string text = ResolveText(ctx);
         if (text.Length == 0) return;
 
-        UiKitGui.Label(rect.ContractedBy(2f, 0f), text, ReadFont(), TextAnchor.MiddleLeft, Palette.Muted);
+        UiKitGui.Label(rect.ContractedBy(2f, 0f), text, ReadFont(), TextAnchor.MiddleLeft, Palette.TextSecondary);
     }
 
     private string ResolveText(WidgetContext ctx)

@@ -1,11 +1,14 @@
 using UnityEngine;
 
-namespace FerriteLib.UiKit.Widgets;
+namespace UniversalSqueaker.UI;
 
-/// <summary>Neutral role-based visual palette for the modern built-in skin. Values match the approved P0 palette.</summary>
-internal static class Palette
+/// <summary>
+/// Role-based visual tokens for the modern US settings skin. Pure presentation values; no state.
+/// Values match the approved P0 palette and the neutral FerriteLib palette.
+/// </summary>
+internal static class UsVisualTokens
 {
-    internal static readonly Color Base = new(0.10f, 0.10f, 0.10f, 1f);
+    internal static readonly Color SurfaceBase = new(0.10f, 0.10f, 0.10f, 1f);
     internal static readonly Color Panel = new(0.14f, 0.14f, 0.14f, 1f);
     internal static readonly Color Raised = new(0.18f, 0.18f, 0.18f, 1f);
     internal static readonly Color Hover = new(0.22f, 0.22f, 0.22f, 1f);
@@ -24,4 +27,15 @@ internal static class Palette
     internal static readonly Color AccentGoldAlpha20 = new(0.92f, 0.68f, 0.30f, 0.20f);
     internal static readonly Color Border = new(0.30f, 0.30f, 0.28f, 1f);
     internal static readonly Color BorderStrong = new(0.45f, 0.45f, 0.42f, 1f);
+
+    internal const float Spacing2 = 2f;
+    internal const float Spacing4 = 4f;
+    internal const float Spacing6 = 6f;
+    internal const float Spacing8 = 8f;
+    internal const float Spacing10 = 10f;
+
+    internal const float RowHeightS = 22f;
+    internal const float RowHeightM = 26f;
+    internal const float RowHeightL = 32f;
+    internal const float RowHeightXl = 50f;
 }

@@ -76,6 +76,15 @@ public sealed class PresetListWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => Widgets.Label(fallback, HeaderText + " (preset import unavailable)"),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         if (!ctx.TryGetViewValue("BaselinePresets", out object? value)
             || value is not IReadOnlyList<BaselinePresetView> presets
             || presets.Count == 0)
@@ -123,8 +132,7 @@ public sealed class PresetListWidget : IWidget
     private static void DrawPresetHeader(Rect rect, BaselinePresetView preset, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
 
@@ -137,7 +145,7 @@ public sealed class PresetListWidget : IWidget
         Widgets.Label(labelRect, label);
 
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         string summary = preset.SelectedRaceCount + " races · " + preset.SelectedXenotypeCount + " xenotypes";
         Rect summaryRect = new(rect.x + LeftPadding + 4f, rect.y + 20f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), 11f);
         Widgets.Label(summaryRect, summary);
@@ -155,8 +163,7 @@ public sealed class PresetListWidget : IWidget
     private static void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.14f, .132f, .11f, .94f) : UiPalette.Raised);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
@@ -178,8 +185,7 @@ public sealed class PresetListWidget : IWidget
     private static void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.135f, .126f, .105f, .94f) : UiPalette.Ink);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
@@ -205,7 +211,7 @@ public sealed class PresetListWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 2f, Math.Max(1f, rect.width - LeftPadding - 8f), Math.Max(1f, rect.height - 4f)), text);
         Text.Font = oldFont;
         GUI.color = oldColor;

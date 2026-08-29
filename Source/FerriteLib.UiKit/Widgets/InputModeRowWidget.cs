@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using VerseWidgets = Verse.Widgets;
 
 namespace FerriteLib.UiKit.Widgets;
 
@@ -69,6 +70,15 @@ public sealed class InputModeRowWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        FerriteGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private void DrawCore(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    {
         string current = ResolveCurrent(ctx);
         string emitName = ReadEmitName();
 
@@ -97,6 +107,38 @@ public sealed class InputModeRowWidget : IWidget
             bool selected = string.Equals(current, card.Value, StringComparison.Ordinal);
             ModeCardRenderer.Draw(cardRect, selected, card.Title, card.Description,
                 () => emit(new UiCommand(emitName, card.Value)));
+        }
+    }
+
+    private void DrawVanilla(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    {
+        string current = ResolveCurrent(ctx);
+        string emitName = ReadEmitName();
+
+        var cards = new List<ModeCardData>();
+        for (int i = 1; ; i++)
+        {
+            string suffix = i.ToString(CultureInfo.InvariantCulture);
+            if (!HasAnyCardAttribute(suffix)) break;
+
+            cards.Add(new ModeCardData(
+                Read("Title" + suffix),
+                Read("Description" + suffix),
+                Read("Value" + suffix)));
+        }
+
+        if (cards.Count == 0) return;
+
+        float cardWidth = Math.Max(1f, (rect.width - CardGap * (cards.Count - 1)) / cards.Count);
+        for (int i = 0; i < cards.Count; i++)
+        {
+            ModeCardData card = cards[i];
+            Rect cardRect = new(rect.x + i * (cardWidth + CardGap), rect.y, cardWidth, rect.height);
+            bool selected = string.Equals(current, card.Value, StringComparison.Ordinal);
+            if (VerseWidgets.ButtonText(cardRect, (selected ? "● " : "") + card.Title))
+            {
+                emit(new UiCommand(emitName, card.Value));
+            }
         }
     }
 

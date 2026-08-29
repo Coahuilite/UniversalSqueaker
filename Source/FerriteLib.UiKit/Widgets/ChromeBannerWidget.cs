@@ -53,9 +53,10 @@ public sealed class ChromeBannerWidget : IWidget
 
         Color textColor = surface switch
         {
-            SurfaceKind.Warning => new Color(1f, 0.67f, 0.48f),
-            SurfaceKind.Success => Palette.Gold,
-            _ => Palette.Muted
+            SurfaceKind.Warning => Palette.TextOnDanger,
+            SurfaceKind.Danger => Palette.TextOnDanger,
+            SurfaceKind.Success => Palette.TextOnGold,
+            _ => Palette.TextSecondary
         };
 
         UiKitGui.Label(rect.ContractedBy(8f, 4f), text, ReadFont(), TextAnchor.MiddleLeft, textColor);

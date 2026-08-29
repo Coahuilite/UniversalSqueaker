@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using UnityEngine;
+using VerseWidgets = Verse.Widgets;
 
 namespace FerriteLib.UiKit.Widgets;
 
@@ -48,6 +49,15 @@ public sealed class InputModeCardWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        FerriteGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private void DrawCore(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    {
         string title = Read(TitleAttribute);
         string description = Read(DescriptionAttribute);
         string current = ResolveCurrent(ctx);
@@ -56,6 +66,19 @@ public sealed class InputModeCardWidget : IWidget
 
         bool selected = string.Equals(current, target, StringComparison.Ordinal);
         ModeCardRenderer.Draw(rect, selected, title, description, () => emit(new UiCommand(emitName, target)));
+    }
+
+    private void DrawVanilla(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    {
+        string title = Read(TitleAttribute);
+        string current = ResolveCurrent(ctx);
+        string target = Read(TargetAttribute);
+        string emitName = ReadEmitName();
+        bool selected = string.Equals(current, target, StringComparison.Ordinal);
+        if (VerseWidgets.ButtonText(rect, (selected ? "● " : "") + title))
+        {
+            emit(new UiCommand(emitName, target));
+        }
     }
 
     private string ResolveCurrent(WidgetContext ctx)

@@ -13,13 +13,13 @@ internal static class ModeCardRenderer
         bool hovered = Mouse.IsOver(rect);
         Color fill = selected ? Palette.Selected : hovered ? Palette.Hover : Palette.Panel;
         VerseWidgets.DrawBoxSolid(rect, fill);
-        SurfaceFrame.DrawBorder(rect);
+        SurfaceFrame.DrawBorder(rect, selected ? Palette.BorderStrong : Palette.Border);
 
         if (selected)
         {
             VerseWidgets.DrawBoxSolid(
                 new Rect(rect.x + 1f, rect.yMax - 4f, Math.Max(1f, rect.width - 2f), 3f),
-                Palette.Gold);
+                Palette.AccentGold);
         }
 
         UiKitGui.Label(
@@ -27,7 +27,7 @@ internal static class ModeCardRenderer
             title,
             UiFont.Small,
             TextAnchor.UpperLeft,
-            selected ? Palette.TextSelected : Color.white);
+            selected ? Palette.TextOnGold : Palette.TextPrimary);
 
         UiKitGui.Label(
             new Rect(rect.x + 10f, rect.y + 31f, Math.Max(1f, rect.width - 20f), Math.Max(1f, rect.height - 38f)),

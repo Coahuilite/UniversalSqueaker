@@ -65,6 +65,15 @@ public sealed class AttenuationEditorWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         if (rect.width < MinWidth)
         {
             DrawNarrowSummary(rect, ctx);
@@ -98,12 +107,20 @@ public sealed class AttenuationEditorWidget : IWidget
         DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);
     }
 
+    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        string preset = ReadString(ctx, "DistancePreset", "Custom");
+        float min = ReadFloat(ctx, "DistanceRangeMin", MinDistance);
+        float max = ReadFloat(ctx, "DistanceRangeMax", 50f);
+        SanitizeRange(ref min, ref max);
+        Widgets.Label(rect, "Attenuation " + preset + "  " + FormatRangeDisplay(min, max));
+    }
+
     private static void DrawChart(Rect chartRect, float min, float max)
     {
-        Widgets.DrawBoxSolid(chartRect, new Color(0.10f, 0.10f, 0.10f, 0.55f));
-        SectionFrame.DrawBorder(chartRect);
+        UsSurface.DrawSurface(chartRect, UsSurface.SurfaceKind.Base);
 
-        Color curveColor = new(0.92f, 0.68f, 0.30f, 0.85f);
+        Color curveColor = UsVisualTokens.AccentGold;
         IReadOnlyList<DistanceSample> samples = DistancePreview.SampleAudibilityCurve(min, max, 96, MinDistance, MaxDistance);
         float barWidth = Math.Max(1f, chartRect.width / samples.Count);
         for (int i = 0; i < samples.Count; i++)
@@ -116,7 +133,7 @@ public sealed class AttenuationEditorWidget : IWidget
 
         float startX = ChartX(chartRect, min);
         float endX = ChartX(chartRect, max);
-        Widgets.DrawLine(new Vector2(startX, chartRect.yMax), new Vector2(endX, chartRect.y), Color.white, 1f);
+        Widgets.DrawLine(new Vector2(startX, chartRect.yMax), new Vector2(endX, chartRect.y), UsVisualTokens.TextPrimary, 1f);
         DrawHandle(new Vector2(startX, chartRect.y));
         DrawHandle(new Vector2(endX, chartRect.yMax));
     }
@@ -124,8 +141,8 @@ public sealed class AttenuationEditorWidget : IWidget
     private static void DrawHandle(Vector2 position)
     {
         Rect handleRect = new(position.x - 4f, position.y - 4f, 8f, 8f);
-        Widgets.DrawBoxSolid(handleRect, Color.white);
-        SectionFrame.DrawBorder(handleRect);
+        Widgets.DrawBoxSolid(handleRect, UsVisualTokens.TextPrimary);
+        UsSurface.DrawBorder(handleRect);
     }
 
     private static void HandleDrag(Rect chartRect, ref float min, ref float max, Action<UiCommand> emit)
@@ -195,7 +212,7 @@ public sealed class AttenuationEditorWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(rect, preset + "  " + FormatRangeDisplay(min, max));
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -230,7 +247,7 @@ public sealed class AttenuationEditorWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(rect, "Attenuation " + preset + "  " + FormatRangeDisplay(min, max));
         Text.Font = oldFont;
         GUI.color = oldColor;

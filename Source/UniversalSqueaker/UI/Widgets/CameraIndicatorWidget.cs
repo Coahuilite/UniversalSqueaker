@@ -35,7 +35,7 @@ public sealed class CameraIndicatorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return RowHeight;
+        return UsGuard.MeasureOrFallback(() => RowHeight, RowHeight, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -44,25 +44,43 @@ public sealed class CameraIndicatorWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
         bool enabled = ctx.TryGetViewValue(ViewKey, out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 60f, 20f), Label);
 
-        Rect checkRect = new(rect.xMax - 40f, rect.y + 4f, 20f, 20f);
-        bool checkboxValue = enabled;
-        Widgets.Checkbox(checkRect.position, ref checkboxValue, 20f);
+        Rect checkRect = new(rect.xMax - 34f, rect.y + 4f, 18f, 18f);
+        UsSurface.DrawCheckbox(checkRect, enabled);
         GUI.color = oldColor;
         Text.Font = oldFont;
 
+        if (Widgets.ButtonInvisible(rect))
+            businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled));
+    }
+
+    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        bool enabled = ctx.TryGetViewValue(ViewKey, out object? value) && value is true;
+        bool checkboxValue = enabled;
+        Widgets.Checkbox(new Vector2(rect.xMax - 34f, rect.y + 4f), ref checkboxValue, 18f);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 60f, 20f), Label);
         if (Widgets.ButtonInvisible(rect))
             businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled));
     }

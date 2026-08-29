@@ -89,6 +89,15 @@ public sealed class ScopeTreeWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => Widgets.Label(fallback, "Tuning editor (unavailable)"),
+            Kind);
+    }
+
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         int layer = ReadLayer(ctx);
         if (!ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
             || scopesValue is not IReadOnlyList<ActionScopeRowView> rows)
@@ -157,13 +166,12 @@ public sealed class ScopeTreeWidget : IWidget
     private static void DrawLayerRow(Rect rect, int layer, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Tuning layer");
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -185,8 +193,7 @@ public sealed class ScopeTreeWidget : IWidget
     private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         TuningDomainOptionView? current = null;
         int currentIndex = -1;
@@ -208,7 +215,7 @@ public sealed class ScopeTreeWidget : IWidget
         GUI.color = Color.white;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Layer domain");
         Text.Font = GameFont.Tiny;
-        GUI.color = current == null ? UiPalette.Muted : new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, rect.width - 132f - ButtonWidth - 20f, 16f),
             current != null ? current.Value.DisplayName : "No domain available");
         Text.Font = oldFont;
@@ -228,20 +235,19 @@ public sealed class ScopeTreeWidget : IWidget
     private static void DrawScopeRow(Rect rect, ActionScopeRowView row, string race, string xeno, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.16f, .145f, .12f, .94f) : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - LeftPadding - ButtonWidth - 90f, ButtonHeight), row.DisplayName);
 
         // 继承提示：本层无记录或与有效值不同时显示有效（生效）作用域。
         if (!row.HasOwnScope || row.Scope != row.EffectiveScope)
         {
             Text.Font = GameFont.Tiny;
-            GUI.color = new Color(.82f, .80f, .74f, .92f);
+            GUI.color = UsVisualTokens.TextSecondary;
             Widgets.Label(new Rect(rect.x + rect.width - ButtonWidth - 96f, rect.y + 6f, 86f, 14f), "→ " + ShortName(row.EffectiveScope));
         }
         Text.Font = oldFont;
@@ -294,8 +300,7 @@ public sealed class ScopeTreeWidget : IWidget
     private static void DrawMoodRow(Rect rect, MoodTuningRowView row, string race, string xeno, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? new Color(.135f, .126f, .105f, .94f) : UiPalette.Raised);
-        SectionFrame.DrawBorder(rect);
+        UsSurface.DrawRowSurface(rect, hovered, false, false);
         DrawMoodRowBody(rect, row, race, xeno, emit);
     }
 
@@ -318,7 +323,7 @@ public sealed class ScopeTreeWidget : IWidget
         if (groupWidth < 86f)
         {
             Text.Font = GameFont.Tiny;
-            GUI.color = UiPalette.Muted;
+            GUI.color = UsVisualTokens.TextSecondary;
             Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 8f, rect.width - LeftPadding - 8f, 14f), "Window too narrow for mood controls");
             Text.Font = GameFont.Small;
             GUI.color = Color.white;
@@ -335,11 +340,12 @@ public sealed class ScopeTreeWidget : IWidget
         DrawMoodFactor(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, 0.05f, row, "jitter", race, xeno, emit);
 
         bool clearHover = Mouse.IsOver(new Rect(clearX, rect.y, MoodClearWidth, rect.height));
-        Widgets.DrawBoxSolid(new Rect(clearX, rect.y, MoodClearWidth, rect.height), clearHover ? new Color(.45f, .28f, .22f, .96f) : UiPalette.Selected);
-        SectionFrame.DrawBorder(new Rect(clearX, rect.y, MoodClearWidth, rect.height), UiPalette.Gold);
+        Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
+        UsSurface.DrawSurface(clearRect, clearHover ? UsSurface.SurfaceKind.Danger : UsSurface.SurfaceKind.Selected);
+        UsSurface.DrawBorder(clearRect, UsVisualTokens.AccentGold);
         Rect labelRect = new(clearX, rect.y + 7f, MoodClearWidth, 16f);
         Text.Font = GameFont.Tiny;
-        GUI.color = UiPalette.Muted;
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(labelRect, "Auto");
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -368,7 +374,7 @@ public sealed class ScopeTreeWidget : IWidget
         Rect plusRect = new(rect.x + 36f + MoodValueWidth, rect.y + 5f, 18f, 18f);
 
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(.82f, .80f, .74f, .92f);
+        GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x, rect.y + 4f, 14f, 16f), label);
         DrawSegment(minusRect, "-", false);
         GUI.color = Color.white;
@@ -394,11 +400,11 @@ public sealed class ScopeTreeWidget : IWidget
     private static void DrawSegment(Rect rect, string label, bool off)
     {
         bool selectedHover = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, off
-            ? (selectedHover ? new Color(.45f, .28f, .22f, .96f) : UiPalette.Selected)
-            : (selectedHover ? new Color(.20f, .30f, .22f, .96f) : UiPalette.Raised));
-        SectionFrame.DrawBorder(rect, UiPalette.Gold);
-        GUI.color = off ? UiPalette.Muted : UiPalette.Gold;
+        UsSurface.DrawSurface(rect, off
+            ? (selectedHover ? UsSurface.SurfaceKind.Danger : UsSurface.SurfaceKind.Selected)
+            : (selectedHover ? UsSurface.SurfaceKind.Hover : UsSurface.SurfaceKind.Raised));
+        UsSurface.DrawBorder(rect, UsVisualTokens.AccentGold);
+        GUI.color = off ? UsVisualTokens.TextSecondary : UsVisualTokens.AccentGold;
         Text.Font = GameFont.Tiny;
         Widgets.Label(new Rect(rect.x, rect.y + 3f, rect.width, 16f), label);
     }

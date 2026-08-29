@@ -9,21 +9,28 @@ public static class XenotypeLayerRow
 {
     public static void Draw(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit)
     {
-        Widgets.DrawBoxSolid(rect, selected ? UiPalette.Selected : Mouse.IsOver(rect) ? UiPalette.Raised : UiPalette.Panel);
-        SectionFrame.DrawBorder(rect);
-        Widgets.DrawBoxSolid(new Rect(rect.x + 1f, rect.y + 1f, 4f, rect.height - 2f),
-            selected ? UiPalette.Gold : UiPalette.Border);
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, domain, selected, emit),
+            fallback => DrawVanilla(fallback, domain, emit),
+            "us/xenotype-layer-row");
+    }
+
+    private static void DrawCore(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        UsSurface.DrawRowSurface(rect, hovered, selected, false);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         TextAnchor oldAnchor = Text.Anchor;
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleLeft;
-        GUI.color = selected ? new Color(1f, .86f, .58f) : Color.white;
+        GUI.color = selected ? UsVisualTokens.TextOnGold : UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + 12f, rect.y, Math.Max(1f, rect.width - 220f), 25f), domain.DisplayName);
         Text.Font = GameFont.Tiny;
         Text.Anchor = TextAnchor.MiddleRight;
-        GUI.color = UiPalette.Muted;
+        GUI.color = UsVisualTokens.TextSecondary;
         string detail = domain.EnabledCount + " / " + domain.CandidateCount + " enabled" + StateSuffix(domain.State);
         Widgets.Label(new Rect(rect.x + 12f, rect.y + 25f, Math.Max(1f, rect.width - 24f), 18f), detail);
         Text.Font = oldFont;
@@ -41,6 +48,19 @@ public static class XenotypeLayerRow
         }
     }
 
+    private static void DrawVanilla(Rect rect, VoicePackDomainView domain, Action<UiCommand> emit)
+    {
+        if (Widgets.ButtonText(rect, domain.DisplayName))
+        {
+            emit?.Invoke(new UiCommand(
+                UiCommandKind.SelectDomain,
+                scope: SqueakVoicePackScope.Xenotype,
+                raceDefName: domain.RaceDefName,
+                targetDefName: domain.TargetDefName,
+                arg: domain.TargetDefName));
+        }
+    }
+
     private static string StateSuffix(SqueakVoicePackDomainState state)
     {
         return state switch
@@ -48,7 +68,7 @@ public static class XenotypeLayerRow
             SqueakVoicePackDomainState.Orphan => " · orphan",
             SqueakVoicePackDomainState.TargetUnavailable => " · target unavailable",
             SqueakVoicePackDomainState.Dormant => " · dormant",
-            _ => ""
+            _ => "",
         };
     }
 }

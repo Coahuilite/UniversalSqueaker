@@ -1,6 +1,7 @@
 using System;
 using FerriteLib.UiKit;
 using UnityEngine;
+using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
 
 namespace UniversalSqueaker.UI;
@@ -53,6 +54,15 @@ public sealed class PageTitleWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UsGuard.DrawOrFallback(
+            rect,
+            () => DrawCore(rect, ctx, emit),
+            fallback => DrawVanilla(fallback, ctx, emit),
+            Kind);
+    }
+
+    private void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
@@ -104,9 +114,23 @@ public sealed class PageTitleWidget : IWidget
                 StatusBanner.Draw(
                     new Rect(x, y, innerWidth, helpHeight),
                     helpText,
-                    SectionFrame.SurfaceKind.Base);
+                    UsSurface.SurfaceKind.Panel);
             }
         }
+    }
+
+    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        Widgets.Label(rect, ResolveTitleStatic());
+        if (Widgets.ButtonText(new Rect(rect.xMax - 24f, rect.y, 22f, 22f), "?"))
+        {
+            emit(new KitUiCommand("ToggleHelp"));
+        }
+    }
+
+    private static string ResolveTitleStatic()
+    {
+        return "VoicePack Routing";
     }
 
     private static bool NeedsHelpOnNextLine(float innerWidth) => innerWidth < MinimumTitleAndHelpWidth;

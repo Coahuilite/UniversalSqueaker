@@ -16,11 +16,11 @@ public static class VoicePackChecklist
         float y = rect.y;
 
         if (domain.IsDormant)
-            y = DrawBanner(rect, y, "Biotech is not active; this Xenotype domain is dormant.", SectionFrame.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "Biotech is not active; this Xenotype domain is dormant.", UsSurface.SurfaceKind.Warning);
         if (domain.IsTargetUnavailable)
-            y = DrawBanner(rect, y, "The selected Xenotype target is not loaded. Selections are retained for recovery.", SectionFrame.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "The selected Xenotype target is not loaded. Selections are retained for recovery.", UsSurface.SurfaceKind.Warning);
         if (domain.HasCanonicalConflict)
-            y = DrawBanner(rect, y, "Multiple Xenotype Defs share this target; routing fails closed until resolved.", SectionFrame.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "Multiple Xenotype Defs share this target; routing fails closed until resolved.", UsSurface.SurfaceKind.Warning);
 
         Rect searchRect = new(rect.x, y, rect.width, VoicePacksLayout.SearchFieldHeight);
         SearchField.Draw(searchRect, ref search, "Search VoicePacks…");
@@ -56,7 +56,7 @@ public static class VoicePackChecklist
         }
     }
 
-    private static float DrawBanner(Rect outer, float y, string text, SectionFrame.SurfaceKind kind)
+    private static float DrawBanner(Rect outer, float y, string text, UsSurface.SurfaceKind kind)
     {
         float height = VoicePacksLayout.BannerHeight(text, outer.width, VerseTextMetrics.Instance);
         StatusBanner.Draw(new Rect(outer.x, y, outer.width, height), text, kind);
@@ -65,13 +65,13 @@ public static class VoicePackChecklist
 
     private static void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, Action<UiCommand> emit)
     {
-        SectionFrame.Draw(rect, SectionFrame.SurfaceKind.Warning);
+        UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Warning);
         Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
         Rect text = new(rect.x + 8f, rect.y + 5f, Math.Max(1f, button.x - rect.x - 16f), Math.Max(1f, rect.height - 10f));
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
-        GUI.color = new Color(1f, .67f, .48f);
+        GUI.color = UsVisualTokens.TextOnDanger;
         Widgets.Label(text, "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.");
         Text.Font = oldFont;
         GUI.color = oldColor;
