@@ -41,15 +41,12 @@ public static class XenotypeLayerRow
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-        {
-            emit?.Invoke(new UiCommand(
-                UiCommandKind.SelectDomain,
-                scope: SqueakVoicePackScope.Xenotype,
-                raceDefName: domain.RaceDefName,
-                targetDefName: domain.TargetDefName,
-                arg: domain.TargetDefName));
-        }
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(
+            UiCommandKind.SelectDomain,
+            scope: SqueakVoicePackScope.Xenotype,
+            raceDefName: domain.RaceDefName,
+            targetDefName: domain.TargetDefName,
+            arg: domain.TargetDefName)));
     }
 
     private static void DrawVanilla(Rect rect, VoicePackDomainView domain, Action<UiCommand> emit)

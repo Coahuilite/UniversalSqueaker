@@ -14,6 +14,7 @@ internal static class InteractionTests
     {
         failures = 0;
         VerifyLayerHit();
+        VerifyTopActionBeatsRow();
         VerifySameLayerOrder();
         VerifyProtectWins();
         VerifyNoHit();
@@ -37,6 +38,23 @@ internal static class InteractionTests
         UiInteract.ProcessEvents();
 
         Check(background == 0 && top == 1, "overlapping TopAction wins over Background");
+        UiInteract.EndFrame();
+    }
+
+    private static void VerifyTopActionBeatsRow()
+    {
+        ResetDebug();
+        UiInteract.BeginFrame();
+        int row = 0;
+        int help = 0;
+        UiInteract.Row(new Rect(0f, 0f, 200f, 200f), () => row++);
+        UiInteract.Button(new Rect(150f, 0f, 50f, 50f), UiLayer.TopAction, () => help++);
+
+        SetMouse(160f, 20f);
+        UiInteract.DebugClick = true;
+        UiInteract.ProcessEvents();
+
+        Check(row == 0 && help == 1, "TopAction help beats overlapping Row");
         UiInteract.EndFrame();
     }
 

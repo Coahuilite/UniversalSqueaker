@@ -117,6 +117,7 @@ public sealed class AttenuationEditorWidget : IWidget
         }
 
         Rect chartRect = new(x, y, innerWidth, ChartHeight);
+        UiInteract.Protect(chartRect);
         HandleDrag(chartRect, ref min, ref max, businessEmit);
         DrawChart(chartRect, min, max);
         y += ChartHeight + Gap;
@@ -241,20 +242,14 @@ public sealed class AttenuationEditorWidget : IWidget
     private static void DrawPresetButtons(Rect rect, Action<UiCommand> emit)
     {
         float buttonWidth = (rect.width - Gap * 2f) / 3f;
-        if (Widgets.ButtonText(new Rect(rect.x, rect.y, buttonWidth, rect.height), "Conservative"))
-        {
-            emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Conservative.ToString()));
-        }
+        UiInteract.Button(new Rect(rect.x, rect.y, buttonWidth, rect.height), UiLayer.Content,
+            () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Conservative.ToString())));
 
-        if (Widgets.ButtonText(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), "Balanced"))
-        {
-            emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Balanced.ToString()));
-        }
+        UiInteract.Button(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), UiLayer.Content,
+            () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Balanced.ToString())));
 
-        if (Widgets.ButtonText(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), "Strong"))
-        {
-            emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Strong.ToString()));
-        }
+        UiInteract.Button(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), UiLayer.Content,
+            () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Strong.ToString())));
     }
 
     private static void DrawNarrowSummary(Rect rect, WidgetContext ctx)

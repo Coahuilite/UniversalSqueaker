@@ -146,8 +146,7 @@ public sealed class BasicTuningWidget : IWidget
         UsSurface.DrawRowSurface(rect, hovered, false, false);
         DrawLabel(rect, EggLabel, enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)");
 
-        if (Widgets.ButtonInvisible(rect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleEgg, flag: !enabled));
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleEgg, flag: !enabled)));
     }
 
     private static void DrawDistanceRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
@@ -169,7 +168,7 @@ public sealed class BasicTuningWidget : IWidget
         };
         DrawLabel(rect, DistanceLabel, desc);
 
-        if (Widgets.ButtonInvisible(rect))
+        UiInteract.Row(rect, () =>
         {
             SqueakDistancePreset next = current switch
             {
@@ -179,7 +178,7 @@ public sealed class BasicTuningWidget : IWidget
                 _ => SqueakDistancePreset.Balanced,
             };
             emit?.Invoke(new UiCommand(UiCommandKind.SetDistancePreset, arg: next.ToString()));
-        }
+        });
     }
 
     private static void DrawBasicRow(
@@ -205,8 +204,7 @@ public sealed class BasicTuningWidget : IWidget
         GUI.color = oldColor;
         Text.Font = oldFont;
 
-        if (Widgets.ButtonInvisible(rect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled));
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled)));
     }
 
     private static void DrawVanillaBasicRow(

@@ -11,6 +11,8 @@ public static class SearchField
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        UiInteract.Protect(rect);
+
         string current = value ?? "";
         UiGuard.DrawOrFallback(
             rect,

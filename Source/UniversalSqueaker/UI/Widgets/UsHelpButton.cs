@@ -12,11 +12,11 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsHelpButton
 {
-    public static bool Draw(Rect rect, string helpKey, UiPageState state, Action<KitUiCommand> emit)
+    public static void Draw(Rect rect, string helpKey, UiPageState state, Action<KitUiCommand> emit)
     {
         if (string.IsNullOrEmpty(helpKey) || UsHelpCatalog.Get(helpKey) == null)
         {
-            return false;
+            return;
         }
 
         bool active = state.OpenHelpKeys.Contains(helpKey);
@@ -38,12 +38,6 @@ public static class UsHelpButton
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-        {
-            emit?.Invoke(new KitUiCommand("ToggleHelp", helpKey));
-            return true;
-        }
-
-        return false;
+        UiInteract.Button(rect, UiLayer.TopAction, () => emit?.Invoke(new KitUiCommand("ToggleHelp", helpKey)));
     }
 }

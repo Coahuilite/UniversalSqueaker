@@ -41,15 +41,12 @@ public static class RaceLayerRow
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-        {
-            emit?.Invoke(new UiCommand(
-                UiCommandKind.SelectDomain,
-                scope: SqueakVoicePackScope.Race,
-                raceDefName: row.RaceDefName,
-                targetDefName: "",
-                arg: row.RaceDefName));
-        }
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(
+            UiCommandKind.SelectDomain,
+            scope: SqueakVoicePackScope.Race,
+            raceDefName: row.RaceDefName,
+            targetDefName: "",
+            arg: row.RaceDefName)));
     }
 
     private static void DrawVanilla(Rect rect, RaceLayerRowView row, Action<UiCommand> emit)

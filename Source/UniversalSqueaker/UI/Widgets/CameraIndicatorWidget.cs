@@ -90,8 +90,7 @@ public sealed class CameraIndicatorWidget : IWidget
         GUI.color = oldColor;
         Text.Font = oldFont;
 
-        if (Widgets.ButtonInvisible(rect))
-            businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled));
+        UiInteract.Row(rect, () => businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled)));
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

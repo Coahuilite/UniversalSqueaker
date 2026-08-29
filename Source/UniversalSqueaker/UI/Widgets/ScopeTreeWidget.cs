@@ -207,8 +207,8 @@ public sealed class ScopeTreeWidget : IWidget
                 bool selected = layer == i;
                 DrawSegment(buttonRect, LayerNames[i], selected);
                 int captured = i;
-                if (Widgets.ButtonInvisible(buttonRect))
-                    emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture)));
+                UiInteract.Button(buttonRect, UiLayer.Content,
+                    () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
                 y += ButtonHeight + RowGap;
             }
             return;
@@ -221,8 +221,8 @@ public sealed class ScopeTreeWidget : IWidget
             bool selected = layer == i;
             DrawSegment(buttonRect, LayerNames[i], selected);
             int captured = i;
-            if (Widgets.ButtonInvisible(buttonRect))
-                emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture)));
+            UiInteract.Button(buttonRect, UiLayer.Content,
+                () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
             buttonX += buttonWidth + RowGap;
         }
     }
@@ -271,8 +271,8 @@ public sealed class ScopeTreeWidget : IWidget
             DrawSegment(buttonRect, "Next domain >", false);
             int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % domains.Count;
             TuningDomainOptionView next = domains[nextIndex];
-            if (Widgets.ButtonInvisible(buttonRect))
-                emit?.Invoke(new UiCommand(UiCommandKind.SetTuningDomain, raceDefName: next.RaceDefName, targetDefName: next.TargetDefName));
+            UiInteract.Button(buttonRect, UiLayer.Content,
+                () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningDomain, raceDefName: next.RaceDefName, targetDefName: next.TargetDefName)));
         }
     }
 
@@ -303,10 +303,7 @@ public sealed class ScopeTreeWidget : IWidget
         Rect buttonRect = new(rect.xMax - ButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, ButtonWidth, ButtonHeight);
         DrawSegment(buttonRect, label, off);
 
-        if (Widgets.ButtonInvisible(buttonRect))
-        {
-            CycleScope(rect, row, race, xeno, emit);
-        }
+        UiInteract.Button(buttonRect, UiLayer.Content, () => CycleScope(rect, row, race, xeno, emit));
     }
 
     /// <summary>态环：[inherit] + 动作支持的 [Off/Any/Command]（NormalizeFor 过滤）。环到尾部回 inherit =
@@ -394,8 +391,8 @@ public sealed class ScopeTreeWidget : IWidget
         Widgets.Label(labelRect, "Auto");
         Text.Font = oldFont;
         GUI.color = oldColor;
-        if (Widgets.ButtonInvisible(new Rect(clearX, rect.y, MoodClearWidth, rect.height)))
-            emit?.Invoke(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: row.Mood + "|clear"));
+        UiInteract.Button(new Rect(clearX, rect.y, MoodClearWidth, rect.height), UiLayer.Content,
+            () => emit?.Invoke(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: row.Mood + "|clear")));
     }
 
     /// <summary>心情因子 −/＋ 步进控制（与本页按钮式交互一致，无滑块 API 依赖）。
@@ -428,10 +425,10 @@ public sealed class ScopeTreeWidget : IWidget
         Text.Font = GameFont.Small;
         GUI.color = Color.white;
 
-        if (Widgets.ButtonInvisible(minusRect))
-            EmitMoodFactor(row, factor, Mathf.Max(min, value - step), race, xeno, emit);
-        if (Widgets.ButtonInvisible(plusRect))
-            EmitMoodFactor(row, factor, Mathf.Min(max, value + step), race, xeno, emit);
+        UiInteract.Button(minusRect, UiLayer.Content,
+            () => EmitMoodFactor(row, factor, Mathf.Max(min, value - step), race, xeno, emit));
+        UiInteract.Button(plusRect, UiLayer.Content,
+            () => EmitMoodFactor(row, factor, Mathf.Min(max, value + step), race, xeno, emit));
 
         return rect.x + 16f + 20f + MoodValueWidth + 18f;
     }

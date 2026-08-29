@@ -141,23 +141,23 @@ public sealed class FilterBarWidget : IWidget
         bool hasAuthors = authors != null && authors.Count > 0;
         UsSurface.DrawSegment(rect, label, !string.IsNullOrEmpty(currentAuthor));
 
-        if (authors != null && hasAuthors && Widgets.ButtonInvisible(rect))
+        if (authors != null && hasAuthors)
         {
-            string next = NextAuthor(authors, currentAuthor);
-            emit(new UiCommand(
-                UiCommandKind.SetPackFilter,
-                arg: next.Length == 0 ? "Author|" : "Author|" + next,
-                flag: next.Length > 0));
+            UiInteract.Button(rect, UiLayer.Content, () =>
+            {
+                string next = NextAuthor(authors, currentAuthor);
+                emit(new UiCommand(
+                    UiCommandKind.SetPackFilter,
+                    arg: next.Length == 0 ? "Author|" : "Author|" + next,
+                    flag: next.Length > 0));
+            });
         }
     }
 
     private static void DrawSegmentButton(Rect rect, string label, bool selected, Action onClick)
     {
         UsSurface.DrawSegment(rect, label, selected);
-        if (Widgets.ButtonInvisible(rect))
-        {
-            onClick?.Invoke();
-        }
+        UiInteract.Button(rect, UiLayer.Content, () => onClick?.Invoke());
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

@@ -92,6 +92,7 @@ public sealed class GlobalVolumeWidget : IWidget
         GUI.color = oldColor;
 
         Rect sliderRect = new(rect.x + LeftPadding, y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
+        UiInteract.Protect(sliderRect);
         float next = Widgets.HorizontalSlider(sliderRect, value, 0f, 1f, middleAlignment: true);
         if (Math.Abs(next - value) > 0.0001f)
         {

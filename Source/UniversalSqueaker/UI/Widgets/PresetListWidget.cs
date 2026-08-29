@@ -174,12 +174,11 @@ public sealed class PresetListWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonText(importRect, "Import"))
-            emit?.Invoke(new UiCommand(UiCommandKind.ImportBaselinePreset, arg: preset.DefName));
+        UiInteract.Button(importRect, UiLayer.Content,
+            () => emit?.Invoke(new UiCommand(UiCommandKind.ImportBaselinePreset, arg: preset.DefName)));
 
         Rect expandRect = new(rect.x, rect.y, Math.Max(1f, importRect.x - rect.x - 8f), rect.height);
-        if (Widgets.ButtonInvisible(expandRect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselinePreset, arg: preset.DefName));
+        UiInteract.Row(expandRect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselinePreset, arg: preset.DefName)));
     }
 
     private static void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, Action<UiCommand> emit)
@@ -200,8 +199,7 @@ public sealed class PresetListWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineRace, arg: presetDefName, raceDefName: race.RaceDefName, flag: !race.Selected));
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineRace, arg: presetDefName, raceDefName: race.RaceDefName, flag: !race.Selected)));
     }
 
     private static void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit)
@@ -223,8 +221,7 @@ public sealed class PresetListWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineXenotype, arg: presetDefName, raceDefName: raceDefName, targetDefName: xenotype.XenotypeDefName, flag: !xenotype.Selected));
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineXenotype, arg: presetDefName, raceDefName: raceDefName, targetDefName: xenotype.XenotypeDefName, flag: !xenotype.Selected)));
     }
 
     private static void DrawDescription(Rect rect, string text)

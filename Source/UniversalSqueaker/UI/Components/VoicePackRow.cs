@@ -45,16 +45,13 @@ public static class VoicePackRow
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        if (Widgets.ButtonInvisible(rect))
-        {
-            emit?.Invoke(new UiCommand(
-                UiCommandKind.TogglePack,
-                scope: scope,
-                raceDefName: raceDefName,
-                targetDefName: targetDefName,
-                arg: row.Key,
-                flag: !row.IsSelected));
-        }
+        UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(
+            UiCommandKind.TogglePack,
+            scope: scope,
+            raceDefName: raceDefName,
+            targetDefName: targetDefName,
+            arg: row.Key,
+            flag: !row.IsSelected)));
     }
 
     private static void DrawVanilla(Rect rect, VoicePackRowView row, SqueakVoicePackScope scope,

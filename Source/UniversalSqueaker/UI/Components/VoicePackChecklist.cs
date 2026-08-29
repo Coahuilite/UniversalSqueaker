@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -75,16 +76,13 @@ public static class VoicePackChecklist
         Widgets.Label(text, "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.");
         Text.Font = oldFont;
         GUI.color = oldColor;
-        if (Widgets.ButtonText(button, "Forget Unavailable"))
-        {
-            emit?.Invoke(new UiCommand(
-                UiCommandKind.ForgetUnavailable,
-                scope: domain.Scope,
-                raceDefName: domain.RaceDefName,
-                targetDefName: domain.TargetDefName,
-                arg: "",
-                flag: false));
-        }
+        UiInteract.Button(button, UiLayer.Content, () => emit?.Invoke(new UiCommand(
+            UiCommandKind.ForgetUnavailable,
+            scope: domain.Scope,
+            raceDefName: domain.RaceDefName,
+            targetDefName: domain.TargetDefName,
+            arg: "",
+            flag: false)));
     }
 
     private static bool MatchesSearch(VoicePackRowView row, string query)
