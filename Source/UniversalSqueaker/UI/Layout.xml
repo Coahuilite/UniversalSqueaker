@@ -2,6 +2,7 @@
 <UiPage Schema="1" Source="coahuilite.universalsqueaker">
   <Widget Id="title" Kind="us/page-title" Title="VoicePack Routing" Bind="HelpText" />
   <Widget Id="banner" Kind="chrome/banner" Bind="BannerText" Font="Tiny" />
+  <Widget Id="filter-bar" Kind="us/filter-bar" Tab="Packs" />
   <Widget Id="mode-row" Kind="input/mode-row" Bind="Mode" EmitName="SetMode"
           Title1="Vanilla" Description1="Route only vanilla audio; keep VoicePacks disabled." Value1="Vanilla"
           Title2="Fallback" Description2="Use built-in fallback profiles when no pack is enabled." Value2="Fallback"

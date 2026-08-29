@@ -95,7 +95,10 @@ public static class FerriteVoicePacksPage
                 ["MoodTuningRows"] = view.MoodTuningRows,
                 ["BuildIdentity"] = view.BuildIdentity,
                 ["SaveStatus"] = view.SaveStatus,
-                ["IsDirty"] = view.IsDirty
+                ["IsDirty"] = view.IsDirty,
+                ["Authors"] = view.Authors,
+                ["DomainFilter"] = State.DomainFilter,
+                ["PackFilter"] = State.PackFilter
             };
 
             KitUiPageState uiState = new()

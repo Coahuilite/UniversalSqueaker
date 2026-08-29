@@ -24,7 +24,9 @@ public enum UiCommandKind
     ToggleBaselineRace,
     ToggleBaselineXenotype,
     ImportBaselinePreset,
-    SetActiveTab
+    SetActiveTab,
+    SetDomainFilter,
+    SetPackFilter
 }
 
 /// <summary>

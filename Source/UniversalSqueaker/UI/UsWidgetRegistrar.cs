@@ -32,6 +32,7 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, ScopeTreeWidget.Kind, () => new ScopeTreeWidget());
             WidgetRegistry.Register(Scope, PresetListWidget.Kind, () => new PresetListWidget());
             WidgetRegistry.Register(Scope, UsFooterWidget.Kind, () => new UsFooterWidget());
+            WidgetRegistry.Register(Scope, FilterBarWidget.Kind, () => new FilterBarWidget());
 
             registered = true;
         }

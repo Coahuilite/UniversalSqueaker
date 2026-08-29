@@ -25,6 +25,8 @@ public sealed class VoicePacksPageState
     public string TuningRaceDefName = "";
     public string TuningXenotypeDefName = "";
     public string ActiveTab = "Basic";
+    public UiDomainFilter DomainFilter;
+    public UiPackFilter PackFilter;
 
     public VoicePacksPageState()
     {
@@ -43,6 +45,8 @@ public sealed class VoicePacksPageState
         TuningRaceDefName = "";
         TuningXenotypeDefName = "";
         ActiveTab = "Basic";
+        DomainFilter = default;
+        PackFilter = default;
     }
 }
 

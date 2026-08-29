@@ -31,6 +31,9 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.ToggleBaselineRace => "ToggleBaselineRace",
                 UiCommandKind.ToggleBaselineXenotype => "ToggleBaselineXenotype",
                 UiCommandKind.ImportBaselinePreset => "ImportBaselinePreset",
+                UiCommandKind.SetActiveTab => "SetActiveTab",
+                UiCommandKind.SetDomainFilter => "SetDomainFilter",
+                UiCommandKind.SetPackFilter => "SetPackFilter",
                 _ => ""
             };
 

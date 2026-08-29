@@ -32,6 +32,7 @@ public sealed class VoicePacksViewState
     public string BuildIdentity { get; }
     public string SaveStatus { get; }
     public bool IsDirty { get; }
+    public IReadOnlyList<string> Authors { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -59,7 +60,8 @@ public sealed class VoicePacksViewState
         IReadOnlyList<BaselinePresetView> baselinePresets,
         string buildIdentity,
         string saveStatus,
-        bool isDirty)
+        bool isDirty,
+        IReadOnlyList<string> authors)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -87,6 +89,7 @@ public sealed class VoicePacksViewState
         BuildIdentity = buildIdentity ?? "";
         SaveStatus = saveStatus ?? "";
         IsDirty = isDirty;
+        Authors = authors ?? Array.Empty<string>();
     }
 }
 

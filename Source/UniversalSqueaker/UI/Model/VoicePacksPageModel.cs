@@ -40,8 +40,36 @@ public static class VoicePacksPageModel
 
         List<VoicePackDomainView> xenotypes = BuildXenotypeDomains(settings, catalog);
 
-        VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, races, xenotypes);
-        string banner = BuildBannerText(races, xenotypes, mode, biotech);
+        List<RaceLayerRowView> filteredRaces = races
+            .Where(race => VoicePacksFilters.DomainMatches(
+                false,
+                false,
+                false,
+                race.State == SqueakVoicePackDomainState.Orphan,
+                race.EnabledCount > 0,
+                "",
+                in state.DomainFilter))
+            .ToList();
+        List<VoicePackDomainView> filteredXenotypes = xenotypes
+            .Where(domain => VoicePacksFilters.DomainMatches(
+                domain.HasCanonicalConflict,
+                domain.IsDormant,
+                domain.IsTargetUnavailable,
+                domain.OrphanCount > 0,
+                domain.EnabledCount > 0,
+                "",
+                in state.DomainFilter))
+            .ToList();
+
+        IReadOnlyList<string> authors = CollectAuthors(settings, catalog);
+
+        VoicePackDomainView? selected = ResolveSelectedDomain(settings, catalog, state, filteredRaces, filteredXenotypes);
+        if (selected != null)
+        {
+            selected = FilterDomainPacks(selected.Value, in state.PackFilter);
+        }
+
+        string banner = BuildBannerText(filteredRaces, filteredXenotypes, mode, biotech);
         // S5 调音编辑器：当前层 + 层域归一（未选中时取首个选项），再投影分层 scope 与心情行。
         string tuningRace = state.TuningRaceDefName;
         string tuningXeno = state.TuningXenotypeDefName;
@@ -54,7 +82,7 @@ public static class VoicePacksPageModel
         string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "unknown";
         string saveStatus = UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, races, xenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -135,7 +163,56 @@ public static class VoicePacksPageModel
             case UiCommandKind.SetActiveTab:
                 ExecuteSetActiveTab(state, command.Arg);
                 break;
+            case UiCommandKind.SetDomainFilter:
+                ExecuteSetDomainFilter(state, command);
+                break;
+            case UiCommandKind.SetPackFilter:
+                ExecuteSetPackFilter(state, command);
+                break;
         }
+    }
+
+    private static void ExecuteSetDomainFilter(VoicePacksPageState state, UiCommand command)
+    {
+        UiDomainFilter filter = state.DomainFilter;
+        if (string.Equals(command.Arg, "EnabledOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            filter = new UiDomainFilter(command.Flag, filter.ConflictOnly, filter.OrphanOnly, filter.Author);
+        }
+        else if (string.Equals(command.Arg, "ConflictOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            filter = new UiDomainFilter(filter.EnabledOnly, command.Flag, filter.OrphanOnly, filter.Author);
+        }
+        else if (string.Equals(command.Arg, "OrphanOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            filter = new UiDomainFilter(filter.EnabledOnly, filter.ConflictOnly, command.Flag, filter.Author);
+        }
+        else
+        {
+            return;
+        }
+
+        state.DomainFilter = filter;
+    }
+
+    private static void ExecuteSetPackFilter(VoicePacksPageState state, UiCommand command)
+    {
+        UiPackFilter filter = state.PackFilter;
+        if (string.Equals(command.Arg, "EnabledOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            filter = new UiPackFilter(command.Flag, filter.Author);
+        }
+        else if (command.Arg.StartsWith("Author|", StringComparison.OrdinalIgnoreCase))
+        {
+            string author = command.Arg.Substring("Author|".Length);
+            filter = new UiPackFilter(filter.EnabledOnly, author);
+        }
+        else
+        {
+            return;
+        }
+
+        state.PackFilter = filter;
     }
 
     private static void ExecuteSetActiveTab(VoicePacksPageState state, string tab)
@@ -627,6 +704,56 @@ public static class VoicePacksPageModel
         string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
         return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
+    }
+
+    private static IReadOnlyList<string> CollectAuthors(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
+    {
+        HashSet<string> authors = new(StringComparer.Ordinal);
+        foreach (string race in catalog.RaceDefNames)
+        {
+            if (string.IsNullOrEmpty(race)) continue;
+            foreach (SqueakVoicePackDef pack in catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race))
+            {
+                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
+                if (!string.IsNullOrEmpty(author)) authors.Add(author);
+            }
+        }
+
+        foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+        {
+            foreach (SqueakVoicePackDef pack in pair.Value)
+            {
+                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
+                if (!string.IsNullOrEmpty(author)) authors.Add(author);
+            }
+        }
+
+        List<string> result = authors.ToList();
+        result.Sort(StringComparer.Ordinal);
+        return result;
+    }
+
+    private static VoicePackDomainView FilterDomainPacks(VoicePackDomainView domain, in UiPackFilter filter)
+    {
+        UiPackFilter localFilter = filter;
+        List<VoicePackRowView> filteredPacks = domain.Packs
+            .Where(pack => VoicePacksFilters.PackMatches(pack.Author, pack.ModName, pack.IsSelected, in localFilter))
+            .ToList();
+        return new VoicePackDomainView(
+            domain.Scope,
+            domain.RaceDefName,
+            domain.TargetDefName,
+            domain.DisplayName,
+            domain.SourceText,
+            domain.State,
+            domain.IsDormant,
+            domain.IsTargetUnavailable,
+            domain.HasCanonicalConflict,
+            domain.EnabledCount,
+            domain.CandidateCount,
+            domain.OrphanCount,
+            domain.EnabledKeys,
+            filteredPacks);
     }
 
     private static int CountOrphanKeys(IReadOnlyList<string>? enabledKeys, IReadOnlyList<SqueakVoicePackDef> packs)
