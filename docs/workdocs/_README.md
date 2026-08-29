@@ -6,7 +6,8 @@
 
 > **UiKit 交互路由与值控件任务书索引：`docs/workdocs/uikit-interaction-index.md`。** 实施延后，按 B1 → B2 → B3 → B4 串行派发。
 
-> **US UI 大修评估（基于 UiKit 当前状态）：`docs/workdocs/us-ui-overhaul-assessment.md`。** 待实施，建议按 U1→U6 分块。
+> **US UI 大修评估（基于 UiKit 当前状态）：`docs/workdocs/us-ui-overhaul-assessment.md`。**
+> **US UI 大修 Stage 任务书索引：`docs/workdocs/us-ui-overhaul-index.md`（U0→U6 + Review）。**
 
 ## 派发状态
 
