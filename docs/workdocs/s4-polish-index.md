@@ -17,7 +17,7 @@
 | 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | ✅ 完成并提交 `1fb7688`（已验收） |
 | 5 | s4-polish-p5-help.md | C-Agent | 同上 / max | P4 通过 | ✅ 完成并提交 `663f7d0`（已验收） |
 | 6 | s4-polish-p6-responsive.md | C-Agent | 同上 / max | P5 通过 | ✅ 完成并提交 `268da1f`（已验收） |
-| 7 | s4-polish-p7-fallback.md | C-Agent | 同上 / max | P6 通过 | 🔄 已派发（C-Agent 执行中） |
+| 7 | s4-polish-p7-fallback.md | C-Agent | 同上 / max | P6 通过 | ✅ 完成并提交 `1ddfdb2`（已验收） |
 
 ## 通用门禁命令（worker 自跑，调度者复跑）
 
