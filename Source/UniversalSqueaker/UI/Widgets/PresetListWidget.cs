@@ -31,11 +31,13 @@ public sealed class PresetListWidget : IWidget
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
 
+    private UiElementSpec? _spec;
+
     string IWidget.Kind => Kind;
 
     public void Configure(UiElementSpec spec)
     {
-        _ = spec ?? throw new ArgumentNullException(nameof(spec));
+        _spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
     public float Measure(WidgetContext ctx)
@@ -67,6 +69,11 @@ public sealed class PresetListWidget : IWidget
             }
         }
 
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+        }
         return height + BottomPadding;
     }
 
@@ -76,14 +83,15 @@ public sealed class PresetListWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => Widgets.Label(fallback, HeaderText + " (preset import unavailable)"),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         if (!ctx.TryGetViewValue("BaselinePresets", out object? value)
             || value is not IReadOnlyList<BaselinePresetView> presets
@@ -98,8 +106,21 @@ public sealed class PresetListWidget : IWidget
 
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
         float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, innerWidth, metrics);
-        UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, headerHeight), HeaderText);
+        Rect headerRect = new(x, y, innerWidth, headerHeight);
+        UsWidgetDrawing.DrawSectionHeader(headerRect, HeaderText);
+        Rect helpRect = new(headerRect.xMax - 22f, headerRect.y, 22f, Math.Min(22f, headerHeight));
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
         y += headerHeight + VoicePacksLayout.Gap;
+
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         foreach (BaselinePresetView preset in presets)

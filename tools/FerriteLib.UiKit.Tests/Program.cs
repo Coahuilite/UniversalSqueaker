@@ -57,6 +57,9 @@ internal static class Program
 
         Console.WriteLine("LayoutEngine scroll clamp...");
         VerifyEngineScrollClamp();
+
+        Console.WriteLine("UiPageState help keys...");
+        VerifyUiPageStateHelpKeys();
     }
 
     private static void VerifyRegistryCoreFallback()
@@ -233,6 +236,25 @@ internal static class Program
         state = new UiPageState { ScrollPosition = new Vector2(0f, -5f) };
         largeEngine.ClampScroll(state, 40f);
         CheckEqual(0f, state.ScrollPosition.y, "negative scroll clamps to 0");
+    }
+
+    private static void VerifyUiPageStateHelpKeys()
+    {
+        var state = new UiPageState();
+        Check(state.OpenHelpKeys.Count == 0, "UiPageState help keys start empty");
+
+        state.ToggleHelpKey("us/test");
+        Check(state.OpenHelpKeys.Contains("us/test"), "UiPageState ToggleHelpKey adds key");
+
+        state.ToggleHelpKey("us/test");
+        Check(!state.OpenHelpKeys.Contains("us/test"), "UiPageState ToggleHelpKey removes existing key");
+
+        state.ToggleHelpKey("us/test");
+        state.ToggleHelpKey("");
+        Check(state.OpenHelpKeys.Count == 1, "UiPageState ToggleHelpKey ignores empty key");
+
+        state.Reset();
+        Check(state.OpenHelpKeys.Count == 0, "UiPageState Reset clears help keys");
     }
 
     private static void Check(bool condition, string name)

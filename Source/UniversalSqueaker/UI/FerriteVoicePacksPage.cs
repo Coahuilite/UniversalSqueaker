@@ -107,6 +107,10 @@ public static class FerriteVoicePacksPage
                 SearchText = State.SearchText,
                 HelpOpen = State.HelpOpen
             };
+            foreach (string helpKey in State.OpenHelpKeys)
+            {
+                uiState.OpenHelpKeys.Add(helpKey);
+            }
 
             KitWidgetContext ctx = new(Source, viewState, VerseFerriteTextMetrics.Instance, uiState);
             string activeTab = NormalizeTab(State.ActiveTab);
@@ -145,6 +149,11 @@ public static class FerriteVoicePacksPage
             State.ScrollPosition = uiState.ScrollPosition;
             State.SearchText = uiState.SearchText;
             State.HelpOpen = uiState.HelpOpen;
+            State.OpenHelpKeys.Clear();
+            foreach (string helpKey in uiState.OpenHelpKeys)
+            {
+                State.OpenHelpKeys.Add(helpKey);
+            }
 
             Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, contentWidth, FooterHeight);
             DrawFooter(footerRect, ctx);
@@ -154,7 +163,14 @@ public static class FerriteVoicePacksPage
             {
                 if (kitCommand.Name == "ToggleHelp")
                 {
-                    toggleHelp = !toggleHelp;
+                    if (kitCommand.Payload is string helpKey)
+                    {
+                        uiState.ToggleHelpKey(helpKey);
+                    }
+                    else
+                    {
+                        toggleHelp = !toggleHelp;
+                    }
                     continue;
                 }
 

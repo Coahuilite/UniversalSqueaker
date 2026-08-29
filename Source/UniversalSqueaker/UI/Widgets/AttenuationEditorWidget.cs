@@ -55,8 +55,14 @@ public sealed class AttenuationEditorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        if (ctx.ViewWidth < MinWidth) return NarrowHeight;
-        return TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
+        float height = ctx.ViewWidth < MinWidth ? NarrowHeight
+            : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+        }
+        return height;
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -65,15 +71,19 @@ public sealed class AttenuationEditorWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
+
         if (rect.width < MinWidth)
         {
             DrawNarrowSummary(rect, ctx);
@@ -95,6 +105,16 @@ public sealed class AttenuationEditorWidget : IWidget
         float innerWidth = Math.Max(1f, rect.width - LeftPadding - RightPadding);
         float x = rect.x + LeftPadding;
         float y = rect.y + TopPadding;
+
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         Rect chartRect = new(x, y, innerWidth, ChartHeight);
         HandleDrag(chartRect, ref min, ref max, businessEmit);

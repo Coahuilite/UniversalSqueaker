@@ -41,11 +41,14 @@ public sealed class BasicTuningWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        return UsGuard.MeasureOrFallback(
-            () => TopPadding + EggRowHeight + DistanceRowHeight
-                + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding,
-            TopPadding + EggRowHeight + DistanceRowHeight + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding,
-            Kind);
+        float height = TopPadding + EggRowHeight + DistanceRowHeight
+            + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding;
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+        }
+        return UsGuard.MeasureOrFallback(() => height, height, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -54,19 +57,32 @@ public sealed class BasicTuningWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         DrawEggRow(new Rect(x, y, innerWidth, EggRowHeight), ctx, businessEmit);
         y += EggRowHeight;

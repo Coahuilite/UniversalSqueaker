@@ -36,7 +36,13 @@ public sealed class GlobalVolumeWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return UsGuard.MeasureOrFallback(() => RowHeight, RowHeight, Kind);
+        float height = RowHeight;
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+        }
+        return UsGuard.MeasureOrFallback(() => height, height, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -45,33 +51,47 @@ public sealed class GlobalVolumeWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float value = ReadValue(ctx);
+        float y = rect.y;
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
 
         UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width - LeftPadding - RightPadding);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, rect.width - LeftPadding - RightPadding, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 70f, LabelHeight), Label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, rect.width - 70f, LabelHeight), Label);
 
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.xMax - 60f, rect.y + 4f, 50f, LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
+        Widgets.Label(new Rect(rect.xMax - 60f, y + 4f, 50f, LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        Rect sliderRect = new(rect.x + LeftPadding, rect.y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
+        Rect sliderRect = new(rect.x + LeftPadding, y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
         float next = Widgets.HorizontalSlider(sliderRect, value, 0f, 1f, middleAlignment: true);
         if (Math.Abs(next - value) > 0.0001f)
         {

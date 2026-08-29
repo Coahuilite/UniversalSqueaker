@@ -80,6 +80,11 @@ public sealed class ScopeTreeWidget : IWidget
             height += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
                 + moodCount * (MoodRowHeight + RowGap);
         }
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+        }
         return height + BottomPadding;
     }
 
@@ -89,14 +94,15 @@ public sealed class ScopeTreeWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => Widgets.Label(fallback, "Tuning editor (unavailable)"),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         int layer = ReadLayer(ctx);
         if (!ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
@@ -116,6 +122,18 @@ public sealed class ScopeTreeWidget : IWidget
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);

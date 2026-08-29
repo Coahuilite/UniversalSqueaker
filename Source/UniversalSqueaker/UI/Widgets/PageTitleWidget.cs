@@ -36,14 +36,10 @@ public sealed class PageTitleWidget : IWidget
         if (NeedsHelpOnNextLine(width))
             height += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
 
-        if (ctx.State.HelpOpen)
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
         {
-            string helpText = ResolveHelpText(ctx);
-            if (helpText.Length > 0)
-            {
-                var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-                height += VoicePacksLayout.BannerHeight(helpText, width, metrics) + VoicePacksLayout.Gap;
-            }
+            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
         }
         return height;
     }
@@ -66,6 +62,7 @@ public sealed class PageTitleWidget : IWidget
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
+        string helpKey = UsHelp.ResolveKey(_spec);
 
         if (NeedsHelpOnNextLine(innerWidth))
         {
@@ -75,10 +72,7 @@ public sealed class PageTitleWidget : IWidget
             y += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
 
             Rect helpRect = new(x, y, VoicePacksLayout.TitleHeight, VoicePacksLayout.TitleHeight);
-            if (HelpToggle.Draw(helpRect, ctx.State.HelpOpen))
-            {
-                emit(new KitUiCommand("ToggleHelp"));
-            }
+            UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
 
             y += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
         }
@@ -96,41 +90,28 @@ public sealed class PageTitleWidget : IWidget
                 y,
                 VoicePacksLayout.TitleHeight,
                 VoicePacksLayout.TitleHeight);
-            if (HelpToggle.Draw(helpRect, ctx.State.HelpOpen))
-            {
-                emit(new KitUiCommand("ToggleHelp"));
-            }
+            UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
 
             y += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
         }
 
-        if (ctx.State.HelpOpen)
+        if (UsHelp.IsOpen(ctx, helpKey))
         {
-            string helpText = ResolveHelpText(ctx);
-            if (helpText.Length > 0)
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
+            if (helpHeight > 0f)
             {
-                var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-                float helpHeight = VoicePacksLayout.BannerHeight(helpText, innerWidth, metrics);
-                StatusBanner.Draw(
-                    new Rect(x, y, innerWidth, helpHeight),
-                    helpText,
-                    UsSurface.SurfaceKind.Panel);
+                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
             }
         }
     }
 
-    private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
-        Widgets.Label(rect, ResolveTitleStatic());
+        Widgets.Label(rect, ResolveTitle());
         if (Widgets.ButtonText(new Rect(rect.xMax - 24f, rect.y, 22f, 22f), "?"))
         {
-            emit(new KitUiCommand("ToggleHelp"));
+            emit(new KitUiCommand("ToggleHelp", UsHelp.ResolveKey(_spec)));
         }
-    }
-
-    private static string ResolveTitleStatic()
-    {
-        return "VoicePack Routing";
     }
 
     private static bool NeedsHelpOnNextLine(float innerWidth) => innerWidth < MinimumTitleAndHelpWidth;

@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <UiPage Schema="1" Source="coahuilite.universalsqueaker">
-  <Widget Id="title" Kind="us/page-title" Title="VoicePack Routing" Bind="HelpText" />
+  <Widget Id="title" Kind="us/page-title" Title="VoicePack Routing" Bind="HelpText" HelpKey="us/page-title" />
   <Widget Id="banner" Kind="chrome/banner" Bind="BannerText" Font="Tiny" />
-  <Widget Id="filter-bar" Kind="us/filter-bar" Tab="Packs" />
+  <Widget Id="filter-bar" Kind="us/filter-bar" Tab="Packs" HelpKey="us/filter-bar" />
   <Widget Id="mode-row" Kind="input/mode-row" Bind="Mode" EmitName="SetMode"
           Title1="Vanilla" Description1="Route only vanilla audio; keep VoicePacks disabled." Value1="Vanilla"
           Title2="Fallback" Description2="Use built-in fallback profiles when no pack is enabled." Value2="Fallback"
           Title3="Remix" Description3="Mix enabled VoicePacks within each selected domain." Value3="Remix"
           Title4="Disabled" Description4="Fully bypass the mod; play nothing." Value4="Disabled"
-          Tab="Basic" />
-  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" />
-  <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Tab="Basic" />
-  <Widget Id="basic-tuning" Kind="us/basic-tuning" Tab="Basic" />
-  <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" />
-  <Widget Id="scope-tree" Kind="us/scope-tree" Tab="Tuning" />
-  <Widget Id="preset-list" Kind="us/preset-list" Tab="Tuning" />
-  <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" />
-  <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" Tab="Packs" />
-  <Widget Id="checklist" Kind="us/voice-pack-checklist" Tab="Packs" />
+          Tab="Basic" HelpKey="us/mode-row" />
+  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" HelpKey="us/global-volume" />
+  <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Tab="Basic" HelpKey="us/attenuation-editor" />
+  <Widget Id="basic-tuning" Kind="us/basic-tuning" Tab="Basic" HelpKey="us/basic-tuning" />
+  <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" HelpKey="us/camera-indicator" />
+  <Widget Id="scope-tree" Kind="us/scope-tree" Tab="Tuning" HelpKey="us/scope-tree" />
+  <Widget Id="preset-list" Kind="us/preset-list" Tab="Tuning" HelpKey="us/preset-list" />
+  <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" HelpKey="us/race-layer" />
+  <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" Tab="Packs" HelpKey="us/xenotype-layer" />
+  <Widget Id="checklist" Kind="us/voice-pack-checklist" Tab="Packs" HelpKey="us/voice-pack-checklist" />
   <Widget Id="footer" Kind="us/footer" Tab="Footer" />
 </UiPage>

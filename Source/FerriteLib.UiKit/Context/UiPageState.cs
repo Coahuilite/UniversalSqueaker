@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FerriteLib.UiKit;
@@ -13,11 +15,23 @@ public sealed class UiPageState
 
     public object? Selected;
 
+    public readonly HashSet<string> OpenHelpKeys = new(StringComparer.Ordinal);
+
+    public void ToggleHelpKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return;
+        if (!OpenHelpKeys.Add(key))
+        {
+            OpenHelpKeys.Remove(key);
+        }
+    }
+
     public void Reset()
     {
         ScrollPosition = default;
         SearchText = "";
         HelpOpen = false;
         Selected = null;
+        OpenHelpKeys.Clear();
     }
 }

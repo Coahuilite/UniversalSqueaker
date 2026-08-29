@@ -27,6 +27,7 @@ public sealed class VoicePacksPageState
     public string ActiveTab = "Basic";
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
+    public readonly HashSet<string> OpenHelpKeys = new(StringComparer.Ordinal);
 
     public VoicePacksPageState()
     {
@@ -47,6 +48,7 @@ public sealed class VoicePacksPageState
         ActiveTab = "Basic";
         DomainFilter = default;
         PackFilter = default;
+        OpenHelpKeys.Clear();
     }
 }
 

@@ -33,6 +33,11 @@ public sealed class FilterBarWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
         float height = ctx.ViewWidth < NarrowWidth ? TwoRowHeight : SingleRowHeight;
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+        }
         return UsGuard.MeasureOrFallback(() => height, height, Kind);
     }
 
@@ -42,29 +47,45 @@ public sealed class FilterBarWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         UiDomainFilter domainFilter = ReadDomainFilter(ctx);
         UiPackFilter packFilter = ReadPackFilter(ctx);
         IReadOnlyList<string> authors = ReadAuthors(ctx);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
+
+        float y = rect.y;
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(rect.x, y, rect.width, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
+
+        Rect rowRect = new(rect.x, y, rect.width, rect.height - (y - rect.y));
         if (rect.width < NarrowWidth)
         {
-            DrawRow(rect, domainFilter, packFilter, authors, businessEmit, includeAuthor: false);
-            Rect authorRect = new(rect.x, rect.y + SingleRowHeight, rect.width, SingleRowHeight);
+            DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: false);
+            Rect authorRect = new(rowRect.x, rowRect.y + SingleRowHeight, rowRect.width, SingleRowHeight);
             DrawAuthorButton(authorRect, authors, packFilter.Author, businessEmit);
             return;
         }
 
-        DrawRow(rect, domainFilter, packFilter, authors, businessEmit, includeAuthor: true);
+        DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: true);
     }
 
     private static void DrawRow(

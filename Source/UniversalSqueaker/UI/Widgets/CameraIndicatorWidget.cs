@@ -35,7 +35,13 @@ public sealed class CameraIndicatorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return UsGuard.MeasureOrFallback(() => RowHeight, RowHeight, Kind);
+        float height = RowHeight;
+        string helpKey = UsHelp.ResolveKey(_spec);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+        }
+        return UsGuard.MeasureOrFallback(() => height, height, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -44,28 +50,42 @@ public sealed class CameraIndicatorWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        string helpKey = UsHelp.ResolveKey(_spec);
         UsGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind);
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        float y = rect.y;
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
 
         bool enabled = ctx.TryGetViewValue(ViewKey, out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
+        if (UsHelp.IsOpen(ctx, helpKey))
+        {
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width - LeftPadding - 8f);
+            if (helpHeight > 0f)
+            {
+                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, rect.width - LeftPadding - 8f, helpHeight), helpKey, ctx);
+                y += helpHeight + VoicePacksLayout.Gap;
+            }
+        }
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 60f, 20f), Label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, rect.width - 60f, 20f), Label);
 
-        Rect checkRect = new(rect.xMax - 34f, rect.y + 4f, 18f, 18f);
+        Rect checkRect = new(rect.xMax - 34f, y + 4f, 18f, 18f);
         UsSurface.DrawCheckbox(checkRect, enabled);
         GUI.color = oldColor;
         Text.Font = oldFont;
