@@ -34,7 +34,7 @@ public static class FerriteVoicePacksPage
     /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
     private const float ScrollbarWidth = 16f;
     private const float NavWidth = 140f;
-    private const float FooterHeight = 28f;
+    private const float FooterHeight = UsFooterWidget.FooterHeight;
 
     private static readonly VoicePacksPageState State = new();
     private static readonly Dictionary<string, KitLayoutEngine> Engines = new(StringComparer.Ordinal);
@@ -55,7 +55,7 @@ public static class FerriteVoicePacksPage
     public static void Draw(Rect rect)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
-        if (rect.width < VoicePacksLayout.MinMinimalWidth)
+        if (rect.width - NavWidth < VoicePacksLayout.MinMinimalWidth)
         {
             EmptyState.Draw(rect, "Window too narrow");
             return;
@@ -126,7 +126,7 @@ public static class FerriteVoicePacksPage
             var businessCommands = new List<UiCommand>();
 
             Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
-            DrawNav(navRect, activeTab, businessCommands.Add);
+            DrawNav(navRect, activeTab, kitCommands.Add);
 
             float contentWidth = Math.Max(1f, rect.width - NavWidth);
             float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
@@ -253,11 +253,12 @@ public static class FerriteVoicePacksPage
         return "Basic";
     }
 
-    private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
+    private static void DrawNav(Rect navRect, string activeTab, Action<KitUiCommand> addCommand)
     {
         const float buttonHeight = 32f;
         const float gap = 4f;
         const float sidePadding = 4f;
+        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(addCommand);
 
         Widgets.DrawBoxSolid(navRect, UiPalette.Panel);
         SectionFrame.DrawBorder(navRect);
@@ -278,7 +279,7 @@ public static class FerriteVoicePacksPage
 
             if (Widgets.ButtonText(buttonRect, label, drawBackground: false))
             {
-                addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
+                businessEmit(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
             }
 
             y += buttonHeight + gap;

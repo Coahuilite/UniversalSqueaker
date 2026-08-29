@@ -200,7 +200,7 @@ public sealed class ScopeTreeWidget : IWidget
         if (stacked)
         {
             float y = rect.y + 22f;
-            buttonWidth = Math.Max(56f, (rect.width - LeftPadding * 2f - RowGap * 2f) / 3f);
+            buttonWidth = Math.Max(1f, (rect.width - LeftPadding * 2f - RowGap * 2f) / 3f);
             for (int i = 0; i < LayerNames.Length; i++)
             {
                 Rect buttonRect = new(rect.x + LeftPadding, y, buttonWidth, ButtonHeight);
@@ -231,7 +231,7 @@ public sealed class ScopeTreeWidget : IWidget
     {
         float available = width - LeftPadding * 2f - 120f - RowGap * 2f;
         float buttonWidth = (available - RowGap * 2f) / 3f;
-        return buttonWidth < 56f ? LayerRowHeight + 22f : LayerRowHeight;
+        return buttonWidth < 56f ? 22f + ButtonHeight * 3f + RowGap * 2f : LayerRowHeight;
     }
 
     private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, Action<UiCommand> emit)
@@ -253,6 +253,7 @@ public sealed class ScopeTreeWidget : IWidget
             }
         }
 
+        float domainButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 160f));
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
@@ -260,14 +261,14 @@ public sealed class ScopeTreeWidget : IWidget
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Layer domain");
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, Math.Max(1f, rect.width - 132f - ButtonWidth - 20f), 16f),
+        Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, Math.Max(1f, rect.width - 132f - domainButtonWidth - 20f), 16f),
             current != null ? current.Value.DisplayName : "No domain available");
         Text.Font = oldFont;
         GUI.color = oldColor;
 
         if (domains.Count > 1)
         {
-            Rect buttonRect = new(rect.xMax - ButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, ButtonWidth, ButtonHeight);
+            Rect buttonRect = new(rect.xMax - domainButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, domainButtonWidth, ButtonHeight);
             DrawSegment(buttonRect, "Next domain >", false);
             int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % domains.Count;
             TuningDomainOptionView next = domains[nextIndex];
@@ -281,11 +282,12 @@ public sealed class ScopeTreeWidget : IWidget
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
 
+        float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 120f));
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - ButtonWidth - 90f), ButtonHeight), row.DisplayName);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - scopeButtonWidth - 90f), ButtonHeight), row.DisplayName);
 
         // 继承提示：本层无记录或与有效值不同时显示有效（生效）作用域；窄屏隐藏。
         LayoutTier tier = VoicePacksLayout.ForWidth(rect.width);
@@ -293,14 +295,14 @@ public sealed class ScopeTreeWidget : IWidget
         {
             Text.Font = GameFont.Tiny;
             GUI.color = UsVisualTokens.TextSecondary;
-            Widgets.Label(new Rect(rect.x + rect.width - ButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), 14f), "→ " + ShortName(row.EffectiveScope));
+            Widgets.Label(new Rect(rect.x + rect.width - scopeButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), 14f), "→ " + ShortName(row.EffectiveScope));
         }
         Text.Font = oldFont;
         GUI.color = oldColor;
 
         string label = row.HasOwnScope ? ShortName(row.Scope) : "Auto";
         bool off = row.HasOwnScope && row.Scope == SqueakActionScope.Disabled;
-        Rect buttonRect = new(rect.xMax - ButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, ButtonWidth, ButtonHeight);
+        Rect buttonRect = new(rect.xMax - scopeButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, scopeButtonWidth, ButtonHeight);
         DrawSegment(buttonRect, label, off);
 
         UiInteract.Button(buttonRect, UiLayer.Content, () => CycleScope(rect, row, race, xeno, emit));

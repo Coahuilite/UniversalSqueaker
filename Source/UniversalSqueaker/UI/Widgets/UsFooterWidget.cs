@@ -14,7 +14,7 @@ public sealed class UsFooterWidget : IWidget
 {
     public const string Kind = "us/footer";
 
-    private const float FooterHeight = 24f;
+    public const float FooterHeight = 28f;
     private const float Padding = 10f;
 
     private UiElementSpec? _spec;

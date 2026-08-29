@@ -68,10 +68,11 @@ public sealed class FilterBarWidget : IWidget
         float y = rect.y;
         if (UsHelp.IsOpen(ctx, helpKey))
         {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width);
+            float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
             if (helpHeight > 0f)
             {
-                UsHelp.DrawBanner(new Rect(rect.x, y, rect.width, helpHeight), helpKey, ctx);
+                UsHelp.DrawBanner(new Rect(rect.x, y, innerWidth, helpHeight), helpKey, ctx);
                 y += helpHeight + VoicePacksLayout.Gap;
             }
         }
@@ -97,17 +98,19 @@ public sealed class FilterBarWidget : IWidget
         bool includeAuthor)
     {
         int count = includeAuthor ? 5 : 4;
-        float buttonWidth = Math.Max(56f, (rect.width - Gap * (count - 1)) / count);
+        float buttonWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
         float x = rect.x;
 
         DrawSegmentButton(new Rect(x, rect.y, buttonWidth, rect.height),
             "All",
-            !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly,
+            !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
+                && string.IsNullOrEmpty(packFilter.Author),
             () =>
             {
                 emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "EnabledOnly", flag: false));
                 emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "ConflictOnly", flag: false));
                 emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: false));
+                emit(new UiCommand(UiCommandKind.SetPackFilter, arg: "Author|", flag: false));
             });
         x += buttonWidth + Gap;
 
@@ -167,13 +170,14 @@ public sealed class FilterBarWidget : IWidget
         UiPackFilter packFilter = ReadPackFilter(ctx);
         IReadOnlyList<string> authors = ReadAuthors(ctx);
 
-        float buttonWidth = (rect.width - Gap * 4f) / 5f;
+        float buttonWidth = Math.Max(1f, (rect.width - Gap * 4f) / 5f);
         float x = rect.x;
         if (Widgets.ButtonText(new Rect(x, rect.y, buttonWidth, rect.height), "All"))
         {
             businessEmit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "EnabledOnly", flag: false));
             businessEmit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "ConflictOnly", flag: false));
             businessEmit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: false));
+            businessEmit(new UiCommand(UiCommandKind.SetPackFilter, arg: "Author|", flag: false));
         }
         x += buttonWidth + Gap;
         if (Widgets.ButtonText(new Rect(x, rect.y, buttonWidth, rect.height), "Enabled"))

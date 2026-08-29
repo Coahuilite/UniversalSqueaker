@@ -99,6 +99,16 @@ public sealed class AttenuationEditorWidget : IWidget
 
         if (rect.width < MinWidth)
         {
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                float narrowInnerWidth = VoicePacksLayout.InnerWidth(rect.width);
+                float helpHeight = UsHelp.BannerHeight(ctx, helpKey, narrowInnerWidth);
+                if (helpHeight > 0f)
+                {
+                    UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, rect.y + TopPadding, narrowInnerWidth, helpHeight), helpKey, ctx);
+                }
+            }
+
             DrawNarrowSummary(rect, ctx);
             return;
         }
@@ -136,7 +146,7 @@ public sealed class AttenuationEditorWidget : IWidget
         DrawChart(chartRect, min, max);
         y += ChartHeight + Gap;
 
-        DrawStatus(new Rect(x, y, innerWidth, StatusHeight), preset, min, max);
+        DrawStatus(new Rect(x, y, innerWidth, StatusHeight), drag.Mode != DragNone ? "Custom" : preset, min, max);
         y += StatusHeight + Gap;
 
         DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);

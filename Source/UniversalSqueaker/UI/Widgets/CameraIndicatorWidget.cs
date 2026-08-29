@@ -71,10 +71,11 @@ public sealed class CameraIndicatorWidget : IWidget
         UsSurface.DrawRowSurface(rect, hovered, false, false);
         if (UsHelp.IsOpen(ctx, helpKey))
         {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width - LeftPadding - 8f);
+            float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
             if (helpHeight > 0f)
             {
-                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, rect.width - LeftPadding - 8f, helpHeight), helpKey, ctx);
+                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, innerWidth, helpHeight), helpKey, ctx);
                 y += helpHeight + VoicePacksLayout.Gap;
             }
         }

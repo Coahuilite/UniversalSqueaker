@@ -92,74 +92,54 @@ internal static class Program
     private static void TestVoicePacksFilters()
     {
         UiDomainFilter emptyDomain = new UiDomainFilter();
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, false, null, in emptyDomain),
+        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, false, in emptyDomain),
             "empty domain filter should match an all-false row");
-        Assert(VoicePacksFilters.DomainMatches(true, true, true, true, true, "Some Author", in emptyDomain),
+        Assert(VoicePacksFilters.DomainMatches(true, true, true, true, true, in emptyDomain),
             "empty domain filter should match a mixed row");
 
         UiPackFilter emptyPack = new UiPackFilter();
-        Assert(VoicePacksFilters.PackMatches(null, null, false, in emptyPack),
-            "empty pack filter should match an unselected row");
+        Assert(VoicePacksFilters.PackMatches(null, null, in emptyPack),
+            "empty pack filter should match any row");
 
         UiDomainFilter enabledOnlyDomain = new UiDomainFilter(enabledOnly: true);
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, true, null, in enabledOnlyDomain),
+        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, true, in enabledOnlyDomain),
             "EnabledOnly domain filter should keep enabled rows");
-        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, false, null, in enabledOnlyDomain),
+        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, false, in enabledOnlyDomain),
             "EnabledOnly domain filter should drop disabled rows");
 
-        UiPackFilter enabledOnlyPack = new UiPackFilter(enabledOnly: true);
-        Assert(VoicePacksFilters.PackMatches(null, null, true, in enabledOnlyPack),
-            "EnabledOnly pack filter should keep selected rows");
-        Assert(!VoicePacksFilters.PackMatches(null, null, false, in enabledOnlyPack),
-            "EnabledOnly pack filter should drop unselected rows");
-
         UiDomainFilter conflictOnly = new UiDomainFilter(conflictOnly: true);
-        Assert(VoicePacksFilters.DomainMatches(true, false, false, false, false, null, in conflictOnly),
+        Assert(VoicePacksFilters.DomainMatches(true, false, false, false, false, in conflictOnly),
             "ConflictOnly should match hasConflict");
-        Assert(VoicePacksFilters.DomainMatches(false, true, false, false, false, null, in conflictOnly),
+        Assert(VoicePacksFilters.DomainMatches(false, true, false, false, false, in conflictOnly),
             "ConflictOnly should match isDormant");
-        Assert(VoicePacksFilters.DomainMatches(false, false, true, false, false, null, in conflictOnly),
+        Assert(VoicePacksFilters.DomainMatches(false, false, true, false, false, in conflictOnly),
             "ConflictOnly should match isTargetUnavailable");
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, true, false, null, in conflictOnly),
+        Assert(VoicePacksFilters.DomainMatches(false, false, false, true, false, in conflictOnly),
             "ConflictOnly should match isOrphan");
-        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, false, null, in conflictOnly),
+        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, false, in conflictOnly),
             "ConflictOnly should drop rows with no conflict-like flag");
 
         UiDomainFilter orphanOnly = new UiDomainFilter(orphanOnly: true);
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, true, false, null, in orphanOnly),
+        Assert(VoicePacksFilters.DomainMatches(false, false, false, true, false, in orphanOnly),
             "OrphanOnly should match isOrphan");
-        Assert(!VoicePacksFilters.DomainMatches(true, true, true, false, true, null, in orphanOnly),
+        Assert(!VoicePacksFilters.DomainMatches(true, true, true, false, true, in orphanOnly),
             "OrphanOnly should ignore other flags when isOrphan is false");
 
-        UiDomainFilter authorDomain = new UiDomainFilter(author: "AUTHOR");
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, true, "My Author", in authorDomain),
-            "Domain author filter should match case-insensitive contains");
-        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, true, "Someone Else", in authorDomain),
-            "Domain author filter should drop non-matching authors");
-
         UiPackFilter authorPack = new UiPackFilter(author: "AUTHOR");
-        Assert(VoicePacksFilters.PackMatches("My Author", null, false, in authorPack),
+        Assert(VoicePacksFilters.PackMatches("My Author", null, in authorPack),
             "Pack author filter should match author");
-        Assert(VoicePacksFilters.PackMatches(null, "AUTHOR MOD", false, in authorPack),
+        Assert(VoicePacksFilters.PackMatches(null, "AUTHOR MOD", in authorPack),
             "Pack author filter should match modName");
-        Assert(!VoicePacksFilters.PackMatches("Other", "Other Mod", false, in authorPack),
+        Assert(!VoicePacksFilters.PackMatches("Other", "Other Mod", in authorPack),
             "Pack author filter should drop rows where neither author nor modName matches");
 
-        UiDomainFilter combinedDomain = new UiDomainFilter(enabledOnly: true, author: "AUTHOR");
-        Assert(VoicePacksFilters.DomainMatches(false, false, false, false, true, "My Author", in combinedDomain),
+        UiDomainFilter combinedDomain = new UiDomainFilter(enabledOnly: true, conflictOnly: true);
+        Assert(VoicePacksFilters.DomainMatches(true, false, false, false, true, in combinedDomain),
             "Combined domain filter should keep rows satisfying both conditions");
-        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, false, "My Author", in combinedDomain),
+        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, true, in combinedDomain),
+            "Combined domain filter should drop rows failing ConflictOnly");
+        Assert(!VoicePacksFilters.DomainMatches(true, false, false, false, false, in combinedDomain),
             "Combined domain filter should drop rows failing EnabledOnly");
-        Assert(!VoicePacksFilters.DomainMatches(false, false, false, false, true, "Other", in combinedDomain),
-            "Combined domain filter should drop rows failing Author");
-
-        UiPackFilter combinedPack = new UiPackFilter(enabledOnly: true, author: "AUTHOR");
-        Assert(VoicePacksFilters.PackMatches("My Author", null, true, in combinedPack),
-            "Combined pack filter should keep rows satisfying both conditions");
-        Assert(!VoicePacksFilters.PackMatches("My Author", null, false, in combinedPack),
-            "Combined pack filter should drop rows failing EnabledOnly");
-        Assert(!VoicePacksFilters.PackMatches("Other", null, true, in combinedPack),
-            "Combined pack filter should drop rows failing Author");
     }
 
     private static void TestAttenuationMath()

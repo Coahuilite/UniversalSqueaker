@@ -71,10 +71,11 @@ public sealed class GlobalVolumeWidget : IWidget
         UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
         if (UsHelp.IsOpen(ctx, helpKey))
         {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, rect.width - LeftPadding - RightPadding);
+            float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
+            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
             if (helpHeight > 0f)
             {
-                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, rect.width - LeftPadding - RightPadding, helpHeight), helpKey, ctx);
+                UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, y, innerWidth, helpHeight), helpKey, ctx);
                 y += helpHeight + VoicePacksLayout.Gap;
             }
         }

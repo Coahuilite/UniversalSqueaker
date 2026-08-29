@@ -4,21 +4,19 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Pure filter state for voice-pack domain rows. Zero Verse/Unity dependencies.
-/// An empty filter (all flags false and Author empty) matches everything.
+/// An empty filter (all flags false) matches everything.
 /// </summary>
 public readonly struct UiDomainFilter
 {
     public readonly bool EnabledOnly;
     public readonly bool ConflictOnly;
     public readonly bool OrphanOnly;
-    public readonly string Author;
 
-    public UiDomainFilter(bool enabledOnly = false, bool conflictOnly = false, bool orphanOnly = false, string? author = null)
+    public UiDomainFilter(bool enabledOnly = false, bool conflictOnly = false, bool orphanOnly = false)
     {
         EnabledOnly = enabledOnly;
         ConflictOnly = conflictOnly;
         OrphanOnly = orphanOnly;
-        Author = author ?? "";
     }
 }
 
@@ -27,12 +25,10 @@ public readonly struct UiDomainFilter
 /// </summary>
 public readonly struct UiPackFilter
 {
-    public readonly bool EnabledOnly;
     public readonly string Author;
 
-    public UiPackFilter(bool enabledOnly = false, string? author = null)
+    public UiPackFilter(string? author = null)
     {
-        EnabledOnly = enabledOnly;
         Author = author ?? "";
     }
 }
@@ -48,7 +44,6 @@ public static class VoicePacksFilters
         bool isTargetUnavailable,
         bool isOrphan,
         bool isEnabled,
-        string? author,
         in UiDomainFilter filter)
     {
         if (filter.ConflictOnly && !(hasConflict || isDormant || isTargetUnavailable || isOrphan))
@@ -66,25 +61,14 @@ public static class VoicePacksFilters
             return false;
         }
 
-        if (!string.IsNullOrEmpty(filter.Author) && !ContainsIgnoreCase(author, filter.Author))
-        {
-            return false;
-        }
-
         return true;
     }
 
     public static bool PackMatches(
         string? author,
         string? modName,
-        bool isSelected,
         in UiPackFilter filter)
     {
-        if (filter.EnabledOnly && !isSelected)
-        {
-            return false;
-        }
-
         if (!string.IsNullOrEmpty(filter.Author)
             && !ContainsIgnoreCase(author, filter.Author)
             && !ContainsIgnoreCase(modName, filter.Author))
