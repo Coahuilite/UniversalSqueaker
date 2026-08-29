@@ -12,8 +12,8 @@
 | U3 | `us-ui-u3-layout-narrow.md` | 布局/窄屏修复 | ✅ 完成 `f84fe8a` |
 | U4 | `us-ui-u4-fallback-robustness.md` | Fallback/健壮性 | ✅ 完成 `44b45ee` |
 | U5 | `us-ui-u5-skin-tokens.md` | Skin/令牌化 | ✅ 完成 `74ccfe2` |
-| U6 | `us-ui-u6-tests-gates.md` | 测试/门禁补齐 | ⏳ 待执行 |
-| Review | — | 全部完成后对照任务书做最终 review | ⏳ 待执行 |
+| U6 | `us-ui-u6-tests-gates.md` | 测试/门禁补齐 | ✅ 完成 `4fefba4` |
+| Review | `us-ui-overhaul-review.md` | 全部完成后对照任务书做最终 review | ✅ 完成 |
 
 ## 门禁（每 stage 至少）
 
