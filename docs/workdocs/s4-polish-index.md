@@ -7,8 +7,8 @@
 
 | 顺序 | 任务书 | worker | provider / model / effort | 依赖 | 状态 |
 |---|---|---|---|---|---|
-| 0a | s4-polish-p0-visual-spec.md | D-Agent（one-shot） | qwen-token-plan-cn / deepseek-v4-flash / low | 无 | 待派发 |
-| 0b | s4-polish-pure-logic.md | C-Agent（worker） | qwen-token-plan-cn / deepseek-v4-flash / max | 无 | 待派发 |
+| 0a | s4-polish-p0-visual-spec.md | D-Agent（one-shot） | deepseek-official / deepseek-v4-flash / high（qwen-token-plan-cn 不可用回退） | 无 | ✅ 已交付并提交 `599f5da`（待维护者批准） |
+| 0b | s4-polish-pure-logic.md | C-Agent（worker） | deepseek-official / deepseek-v4-flash / max（qwen-token-plan-cn 不可用回退） | 无 | 🔄 进行中（已派发） |
 | 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + P纯通过 | 待派发 |
 | 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | 待派发 |
 | 3 | s4-polish-p3-distance-chart.md | C-Agent | 同上 / max | P2 通过 | 待派发 |
