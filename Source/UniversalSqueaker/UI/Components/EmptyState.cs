@@ -11,11 +11,13 @@ public static class EmptyState
         if (rect.width <= 1f || rect.height <= 1f) return;
         UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
         Color oldColor = GUI.color;
+        GameFont oldFont = Text.Font;
         TextAnchor oldAnchor = Text.Anchor;
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleCenter;
         GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(rect.ContractedBy(16f), text);
+        Text.Font = oldFont;
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;
     }

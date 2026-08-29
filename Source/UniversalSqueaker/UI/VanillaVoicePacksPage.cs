@@ -18,12 +18,11 @@ public static class VanillaVoicePacksPage
     private const float SectionGap = 6f;
     private const float Padding = 8f;
 
-    private static readonly VoicePacksPageState State = new();
     private static readonly List<UiCommand> Commands = new();
 
     internal static void ResetSession()
     {
-        State.Reset();
+        FerriteVoicePacksPage.State.Reset();
     }
 
     public static void Draw(Rect rect)
@@ -31,15 +30,19 @@ public static class VanillaVoicePacksPage
         if (rect.width <= 1f || rect.height <= 1f) return;
 
         UniversalSqueakerSettings settings = UniversalSqueakerMod.Settings;
-        if (settings == null) return;
+        if (settings == null)
+        {
+            EmptyState.Draw(rect, "Universal Squeaker settings are unavailable.");
+            return;
+        }
 
-        VoicePacksViewState view = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, State);
+        VoicePacksViewState view = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, FerriteVoicePacksPage.State);
         Commands.Clear();
 
         float contentHeight = ComputeContentHeight(view);
         Rect contentRect = new(0f, 0f, rect.width, Math.Max(rect.height, contentHeight));
 
-        Widgets.BeginScrollView(rect, ref State.ScrollPosition, contentRect);
+        Widgets.BeginScrollView(rect, ref FerriteVoicePacksPage.State.ScrollPosition, contentRect);
         try
         {
             float y = 0f;
@@ -68,7 +71,7 @@ public static class VanillaVoicePacksPage
             Widgets.EndScrollView();
         }
 
-        VoicePacksPageModel.ExecuteAll(settings, Commands, State);
+        VoicePacksPageModel.ExecuteAll(settings, Commands, FerriteVoicePacksPage.State);
     }
 
     private static float DrawModeRow(Rect rect, VoicePacksViewState view, float startY)

@@ -68,14 +68,17 @@ public sealed class AttenuationEditorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        float height = ctx.ViewWidth < MinWidth ? NarrowHeight
-            : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
+        return UiGuard.MeasureOrFallback(() =>
         {
-            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
-        }
-        return height;
+            float height = ctx.ViewWidth < MinWidth ? NarrowHeight
+                : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
+            }
+            return height;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

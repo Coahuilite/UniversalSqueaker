@@ -31,30 +31,33 @@ public sealed class VoicePackChecklistWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        if (!ctx.TryGetViewValue("SelectedDomain", out object? value)) return 0f;
+        return UiGuard.MeasureOrFallback(() =>
+        {
+            if (!ctx.TryGetViewValue("SelectedDomain", out object? value)) return 0f;
 
-        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-        float height;
-        if (value is not VoicePackDomainView domain)
-        {
-            height = headerHeight + VoicePacksLayout.Gap
-                + VoicePacksLayout.EmptyStateHeight + VoicePacksLayout.Gap;
-        }
-        else
-        {
-            height = headerHeight + VoicePacksLayout.Gap
-                + VoicePacksLayout.ChecklistHeight(domain, ctx.State.SearchText, width, metrics)
-                + VoicePacksLayout.Gap;
-        }
+            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
+            float height;
+            if (value is not VoicePackDomainView domain)
+            {
+                height = headerHeight + VoicePacksLayout.Gap
+                    + VoicePacksLayout.EmptyStateHeight + VoicePacksLayout.Gap;
+            }
+            else
+            {
+                height = headerHeight + VoicePacksLayout.Gap
+                    + VoicePacksLayout.ChecklistHeight(domain, ctx.State.SearchText, width, metrics)
+                    + VoicePacksLayout.Gap;
+            }
 
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-        }
-        return height;
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+            }
+            return height;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

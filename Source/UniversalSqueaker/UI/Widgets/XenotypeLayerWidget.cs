@@ -30,24 +30,27 @@ public sealed class XenotypeLayerWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        if (!ctx.TryGetViewValue("XenotypeDomains", out object? value)
-            || value is not IReadOnlyList<VoicePackDomainView> xenotypes
-            || xenotypes.Count == 0)
+        return UiGuard.MeasureOrFallback(() =>
         {
-            return 0f;
-        }
+            if (!ctx.TryGetViewValue("XenotypeDomains", out object? value)
+                || value is not IReadOnlyList<VoicePackDomainView> xenotypes
+                || xenotypes.Count == 0)
+            {
+                return 0f;
+            }
 
-        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-        float height = headerHeight + VoicePacksLayout.Gap
-            + xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-        }
-        return height;
+            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
+            float height = headerHeight + VoicePacksLayout.Gap
+                + xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+            }
+            return height;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

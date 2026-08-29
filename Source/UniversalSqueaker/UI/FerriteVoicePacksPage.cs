@@ -36,7 +36,7 @@ public static class FerriteVoicePacksPage
     private const float NavWidth = 140f;
     private const float FooterHeight = UsFooterWidget.FooterHeight;
 
-    private static readonly VoicePacksPageState State = new();
+    internal static readonly VoicePacksPageState State = new();
     private static readonly Dictionary<string, KitLayoutEngine> Engines = new(StringComparer.Ordinal);
     private static bool sessionActive;
 

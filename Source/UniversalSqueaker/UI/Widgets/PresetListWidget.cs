@@ -44,37 +44,40 @@ public sealed class PresetListWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        if (!ctx.TryGetViewValue("BaselinePresets", out object? value)
-            || value is not IReadOnlyList<BaselinePresetView> presets
-            || presets.Count == 0)
+        return UiGuard.MeasureOrFallback(() =>
         {
-            return 0f;
-        }
-
-        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-        float height = TopPadding + headerHeight + VoicePacksLayout.Gap;
-
-        foreach (BaselinePresetView preset in presets)
-        {
-            height += PresetHeaderHeight + VoicePacksLayout.Gap;
-            if (!preset.Expanded) continue;
-            if (!string.IsNullOrEmpty(preset.Description))
-                height += metrics.CalcHeight(preset.Description, Math.Max(1f, width - 16f)) + 6f + VoicePacksLayout.Gap;
-            foreach (BaselineRaceView race in preset.Races)
+            if (!ctx.TryGetViewValue("BaselinePresets", out object? value)
+                || value is not IReadOnlyList<BaselinePresetView> presets
+                || presets.Count == 0)
             {
-                height += RaceRowHeight + RowGap;
-                height += race.Xenotypes.Count * (XenotypeRowHeight + RowGap);
+                return 0f;
             }
-        }
 
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-        }
-        return height + BottomPadding;
+            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
+            float height = TopPadding + headerHeight + VoicePacksLayout.Gap;
+
+            foreach (BaselinePresetView preset in presets)
+            {
+                height += PresetHeaderHeight + VoicePacksLayout.Gap;
+                if (!preset.Expanded) continue;
+                if (!string.IsNullOrEmpty(preset.Description))
+                    height += metrics.CalcHeight(preset.Description, Math.Max(1f, width - 16f)) + 6f + VoicePacksLayout.Gap;
+                foreach (BaselineRaceView race in preset.Races)
+                {
+                    height += RaceRowHeight + RowGap;
+                    height += race.Xenotypes.Count * (XenotypeRowHeight + RowGap);
+                }
+            }
+
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+            }
+            return height + BottomPadding;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -87,7 +90,7 @@ public sealed class PresetListWidget : IWidget
         UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
-            fallback => Widgets.Label(fallback, HeaderText + " (preset import unavailable)"),
+            fallback => Widgets.Label(fallback, HeaderText + " unavailable in fallback mode. Basic settings remain available."),
             Kind);
     }
 

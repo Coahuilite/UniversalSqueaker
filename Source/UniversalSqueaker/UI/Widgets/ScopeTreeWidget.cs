@@ -57,35 +57,38 @@ public sealed class ScopeTreeWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        int layer = ReadLayer(ctx);
-        bool hasDomains = ctx.TryGetViewValue("TuningDomains", out object? value)
-            && value is IReadOnlyList<TuningDomainOptionView> domains
-            && domains.Count > 0;
-        int scopeCount = ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
-            && scopesValue is IReadOnlyList<ActionScopeRowView> rows
-            ? rows.Count : 0;
-        int moodCount = ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue)
-            && moodsValue is IReadOnlyList<MoodTuningRowView> moodRows
-            ? moodRows.Count : 0;
-
-        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-
-        float height = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
-        if (layer > 0) height += DomainRowHeight + VoicePacksLayout.Gap;
-        height += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
-            + scopeCount * (RowHeight + RowGap);
-        if (scopeCount > 0)
+        return UiGuard.MeasureOrFallback(() =>
         {
-            height += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
-                + moodCount * (MoodRowHeight + RowGap);
-        }
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-        }
-        return height + BottomPadding;
+            int layer = ReadLayer(ctx);
+            bool hasDomains = ctx.TryGetViewValue("TuningDomains", out object? value)
+                && value is IReadOnlyList<TuningDomainOptionView> domains
+                && domains.Count > 0;
+            int scopeCount = ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
+                && scopesValue is IReadOnlyList<ActionScopeRowView> rows
+                ? rows.Count : 0;
+            int moodCount = ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue)
+                && moodsValue is IReadOnlyList<MoodTuningRowView> moodRows
+                ? moodRows.Count : 0;
+
+            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+
+            float height = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
+            if (layer > 0) height += DomainRowHeight + VoicePacksLayout.Gap;
+            height += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
+                + scopeCount * (RowHeight + RowGap);
+            if (scopeCount > 0)
+            {
+                height += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
+                    + moodCount * (MoodRowHeight + RowGap);
+            }
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+            }
+            return height + BottomPadding;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -98,7 +101,7 @@ public sealed class ScopeTreeWidget : IWidget
         UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
-            fallback => Widgets.Label(fallback, "Tuning editor (unavailable)"),
+            fallback => Widgets.Label(fallback, "Tuning editor unavailable in fallback mode. Basic settings remain available."),
             Kind);
     }
 

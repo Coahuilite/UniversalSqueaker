@@ -31,17 +31,20 @@ public sealed class PageTitleWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-        float height = VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
-        if (NeedsHelpOnNextLine(width))
-            height += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
-
-        string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
+        return UiGuard.MeasureOrFallback(() =>
         {
-            height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-        }
-        return height;
+            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            float height = VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
+            if (NeedsHelpOnNextLine(width))
+                height += VoicePacksLayout.TitleHeight + VoicePacksLayout.Gap;
+
+            string helpKey = UsHelp.ResolveKey(_spec);
+            if (UsHelp.IsOpen(ctx, helpKey))
+            {
+                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
+            }
+            return height;
+        }, 0f, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
