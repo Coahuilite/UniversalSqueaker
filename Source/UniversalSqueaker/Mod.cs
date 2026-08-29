@@ -123,40 +123,25 @@ public class UniversalSqueakerMod : Mod
 
         try
         {
-            Type? dialogType = typeof(Mod).Assembly.GetType("Verse.Dialog_Options")
-                ?? typeof(Mod).Assembly.GetType("RimWorld.Dialog_Options");
-            ConstructorInfo? constructor = dialogType?.GetConstructor(new[] { typeof(Mod) });
-            if (constructor?.Invoke(new object[] { this }) is Window dialog)
+            var window = new UniversalSqueaker.UI.UniversalSqueakerSettingsWindow(this);
+            RegisterSettingsWindow(window);
+            if (selectXenotypeTab)
             {
-                try
-                {
-                    // This instance is opened by UniversalSqueaker rather than the mod-list UI.
-                    // Keep its native close affordances, but do not dismiss it on a stray click.
-                    dialog.closeOnClickedOutside = false;
-                    dialog.doCloseX = true;
-                    settingsWindows.Add(dialog);
-                    if (selectXenotypeTab)
-                    {
-                        Settings.RequestXenotypeTabOnNextDraw();
-                    }
-
-                    Find.WindowStack.Add(dialog);
-                    return;
-                }
-                catch
-                {
-                    Settings.ClearXenotypeTabRequest();
-                    throw;
-                }
+                Settings.RequestXenotypeTabOnNextDraw();
             }
 
-            SqueakLog.SettingsOpenApiUnavailable();
+            Find.WindowStack.Add(window);
         }
         catch (Exception ex)
         {
             Settings.ClearXenotypeTabRequest();
             SqueakLog.SettingsOpenFailed(ex);
         }
+    }
+
+    internal void RegisterSettingsWindow(Window window)
+    {
+        settingsWindows.Add(window);
     }
 
     /// <summary>Framework entry point. Persistence always reaches the base implementation directly, never this override recursively.</summary>

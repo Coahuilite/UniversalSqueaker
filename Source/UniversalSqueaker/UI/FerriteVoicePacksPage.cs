@@ -120,7 +120,6 @@ public static class FerriteVoicePacksPage
 
             KitWidgetContext ctx = new(Source, viewState, VerseFerriteTextMetrics.Instance, uiState);
             string activeTab = NormalizeTab(State.ActiveTab);
-            KitLayoutEngine layoutEngine = GetEngine(activeTab);
 
             var kitCommands = new List<KitUiCommand>();
             var businessCommands = new List<UiCommand>();
@@ -132,25 +131,7 @@ public static class FerriteVoicePacksPage
             float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
             Rect contentRect = new(rect.x + NavWidth, rect.y, contentWidth, contentAreaHeight);
 
-            float layoutWidth = contentRect.width;
-            float contentHeight = layoutEngine.Measure(ctx, layoutWidth);
-            if (contentHeight > contentRect.height + 0.01f)
-            {
-                layoutWidth = Math.Max(1f, contentRect.width - ScrollbarWidth);
-                contentHeight = layoutEngine.Measure(ctx, layoutWidth);
-            }
-
-            layoutEngine.ClampScroll(uiState, contentRect.height);
-
-            Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, layoutWidth, contentHeight));
-            try
-            {
-                layoutEngine.Draw(new Rect(0f, 0f, layoutWidth, contentHeight), ctx, kitCommands.Add);
-            }
-            finally
-            {
-                Widgets.EndScrollView();
-            }
+            DrawContent(contentRect, ctx, activeTab, uiState, kitCommands.Add);
 
             State.ScrollPosition = uiState.ScrollPosition;
             State.SearchText = uiState.SearchText;
@@ -205,9 +186,10 @@ public static class FerriteVoicePacksPage
         }
     }
 
-    private static KitLayoutEngine GetEngine(string activeTab)
+    private static KitLayoutEngine GetEngine(string activeTab, string? column = null)
     {
-        if (Engines.TryGetValue(activeTab, out KitLayoutEngine? engine)) return engine;
+        string cacheKey = activeTab + "\n" + (column ?? "");
+        if (Engines.TryGetValue(cacheKey, out KitLayoutEngine? engine)) return engine;
 
         XDocument doc = XDocument.Parse(ReadLayoutXml());
         XElement? root = doc.Root;
@@ -224,12 +206,23 @@ public static class FerriteVoicePacksPage
             if (!string.IsNullOrEmpty(tab) && !string.Equals(tab, activeTab, StringComparison.OrdinalIgnoreCase))
             {
                 widget.Remove();
+                continue;
+            }
+
+            if (column != null)
+            {
+                string? widgetColumn = (string?)widget.Attribute("Column");
+                string effective = widgetColumn ?? "";
+                if (!string.Equals(effective, column, StringComparison.OrdinalIgnoreCase))
+                {
+                    widget.Remove();
+                }
             }
         }
 
         KitLayoutManifest manifest = KitLayoutManifest.Parse(doc.ToString(SaveOptions.DisableFormatting));
         KitLayoutEngine created = new(manifest);
-        Engines[activeTab] = created;
+        Engines[cacheKey] = created;
         return created;
     }
 
@@ -251,6 +244,103 @@ public static class FerriteVoicePacksPage
         if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase)) return "Tuning";
         if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase)) return "Packs";
         return "Basic";
+    }
+
+    private static void DrawContent(
+        Rect contentRect,
+        KitWidgetContext ctx,
+        string activeTab,
+        KitUiPageState uiState,
+        Action<KitUiCommand> emit)
+    {
+        if (string.Equals(activeTab, "Packs", StringComparison.Ordinal) && contentRect.width >= 1000f)
+        {
+            DrawPacksSplit(contentRect, ctx, uiState, emit);
+            return;
+        }
+
+        KitLayoutEngine engine = GetEngine(activeTab);
+        float layoutWidth = contentRect.width;
+        float contentHeight = engine.Measure(ctx, layoutWidth);
+        if (contentHeight > contentRect.height + 0.01f)
+        {
+            layoutWidth = Math.Max(1f, contentRect.width - ScrollbarWidth);
+            contentHeight = engine.Measure(ctx, layoutWidth);
+        }
+
+        engine.ClampScroll(uiState, contentRect.height);
+
+        Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, layoutWidth, contentHeight));
+        try
+        {
+            engine.Draw(new Rect(0f, 0f, layoutWidth, contentHeight), ctx, emit);
+        }
+        finally
+        {
+            Widgets.EndScrollView();
+        }
+    }
+
+    private static void DrawPacksSplit(
+        Rect contentRect,
+        KitWidgetContext ctx,
+        KitUiPageState uiState,
+        Action<KitUiCommand> emit)
+    {
+        const float gap = 12f;
+        const float minColumnWidth = 260f;
+        const float leftRatio = 0.38f;
+
+        KitLayoutEngine topEngine = GetEngine("Packs", "");
+        KitLayoutEngine leftEngine = GetEngine("Packs", "Left");
+        KitLayoutEngine rightEngine = GetEngine("Packs", "Right");
+
+        float contentWidth = contentRect.width;
+        float leftWidth = Mathf.Max(minColumnWidth, (contentWidth - gap) * leftRatio);
+        float rightWidth = Mathf.Max(minColumnWidth, contentWidth - leftWidth - gap);
+        if (leftWidth + rightWidth + gap > contentWidth)
+        {
+            rightWidth = Mathf.Max(1f, contentWidth - leftWidth - gap);
+        }
+
+        float topHeight = topEngine.Measure(ctx, contentWidth);
+        float leftHeight = leftEngine.Measure(ctx, leftWidth);
+        float rightHeight = rightEngine.Measure(ctx, rightWidth);
+        float columnsHeight = Mathf.Max(leftHeight, rightHeight);
+        float contentHeight = topHeight + (columnsHeight > 0f ? columnsHeight + gap : 0f);
+
+        if (contentHeight > contentRect.height + 0.01f)
+        {
+            contentWidth = Mathf.Max(1f, contentRect.width - ScrollbarWidth);
+            leftWidth = Mathf.Max(minColumnWidth, (contentWidth - gap) * leftRatio);
+            rightWidth = Mathf.Max(minColumnWidth, contentWidth - leftWidth - gap);
+            if (leftWidth + rightWidth + gap > contentWidth)
+            {
+                rightWidth = Mathf.Max(1f, contentWidth - leftWidth - gap);
+            }
+
+            topHeight = topEngine.Measure(ctx, contentWidth);
+            leftHeight = leftEngine.Measure(ctx, leftWidth);
+            rightHeight = rightEngine.Measure(ctx, rightWidth);
+            columnsHeight = Mathf.Max(leftHeight, rightHeight);
+            contentHeight = topHeight + (columnsHeight > 0f ? columnsHeight + gap : 0f);
+        }
+
+        float maxY = Mathf.Max(0f, contentHeight - contentRect.height);
+        uiState.ScrollPosition.y = Mathf.Min(Mathf.Max(0f, uiState.ScrollPosition.y), maxY);
+
+        Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, contentWidth, contentHeight));
+        try
+        {
+            topEngine.Draw(new Rect(0f, 0f, contentWidth, topHeight), ctx, emit);
+            float y = topHeight + (columnsHeight > 0f ? gap : 0f);
+            leftEngine.Draw(new Rect(0f, y, leftWidth, leftHeight), ctx, emit);
+            rightEngine.Draw(new Rect(leftWidth + gap, y, rightWidth, rightHeight), ctx, emit);
+        }
+        finally
+        {
+            Widgets.EndScrollView();
+        }
     }
 
     private static void DrawNavWithFrame(Rect navRect, string activeTab, Action<UiCommand> addCommand)

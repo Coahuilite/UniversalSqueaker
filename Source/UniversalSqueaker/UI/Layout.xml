@@ -15,7 +15,7 @@
   <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" HelpKey="us/camera-indicator" />
   <Widget Id="scope-tree" Kind="us/scope-tree" Tab="Tuning" HelpKey="us/scope-tree" />
   <Widget Id="preset-list" Kind="us/preset-list" Tab="Tuning" HelpKey="us/preset-list" />
-  <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" HelpKey="us/race-layer" />
-  <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" Tab="Packs" HelpKey="us/xenotype-layer" />
-  <Widget Id="checklist" Kind="us/voice-pack-checklist" Tab="Packs" HelpKey="us/voice-pack-checklist" />
+  <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" Column="Left" HelpKey="us/race-layer" />
+  <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="Xenotype Layer" Tab="Packs" Column="Left" HelpKey="us/xenotype-layer" />
+  <Widget Id="checklist" Kind="us/voice-pack-checklist" Tab="Packs" Column="Right" HelpKey="us/voice-pack-checklist" />
 </UiPage>
