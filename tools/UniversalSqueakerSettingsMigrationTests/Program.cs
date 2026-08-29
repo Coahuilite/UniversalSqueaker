@@ -327,6 +327,18 @@ internal static class Program
         Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f
             && Math.Abs(CompSqueaker.GlobalVolumeFactor - 0.37f) < 0.0001f,
             "global-volume: valid value writes field and runtime", ref failures);
+
+        settings.SetGlobalVolume(float.NaN);
+        Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f,
+            "global-volume: NaN is rejected", ref failures);
+
+        settings.SetGlobalVolume(float.PositiveInfinity);
+        Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f,
+            "global-volume: Infinity is rejected", ref failures);
+
+        settings.SetGlobalVolume(0.37f);
+        Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f,
+            "global-volume: same-value no-op keeps current", ref failures);
     }
 
     private static void GlobalVolumeScribeRoundTrip()
@@ -375,6 +387,19 @@ internal static class Program
         settings.SetDistanceRange(20f, 22f);
         Check(settings.distanceRange.max >= settings.distanceRange.min + 5f - 0.0001f,
             "distance-range: close endpoints enforce minimum gap", ref failures);
+
+        FloatRange beforeNan = settings.distanceRange;
+        settings.SetDistanceRange(float.NaN, float.PositiveInfinity);
+        Check(Math.Abs(settings.distanceRange.min - beforeNan.min) < 0.0001f
+            && Math.Abs(settings.distanceRange.max - beforeNan.max) < 0.0001f,
+            "distance-range: NaN/Infinity is rejected", ref failures);
+
+        settings.distancePreset = SqueakDistancePreset.Custom;
+        FloatRange beforeNoop = settings.distanceRange;
+        settings.SetDistanceRange(beforeNoop.min, beforeNoop.max);
+        Check(Math.Abs(settings.distanceRange.min - beforeNoop.min) < 0.0001f
+            && Math.Abs(settings.distanceRange.max - beforeNoop.max) < 0.0001f,
+            "distance-range: same Custom range is no-op", ref failures);
     }
 
     // ---- helpers ----

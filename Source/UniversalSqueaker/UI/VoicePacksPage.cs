@@ -14,6 +14,7 @@ public static class VoicePacksPage
     {
         UsWidgetRegistrar.EnsureRegistered();
         UiGuard.ResetSessionLog();
+        AttenuationEditorWidget.ResetSession();
         VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.BeginSession();
     }
@@ -21,6 +22,7 @@ public static class VoicePacksPage
     public static void EndSession()
     {
         UiGuard.ResetSessionLog();
+        AttenuationEditorWidget.ResetSession();
         VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.EndSession();
     }

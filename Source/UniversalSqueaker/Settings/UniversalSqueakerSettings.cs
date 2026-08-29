@@ -101,7 +101,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
-        CompSqueaker.GlobalVolumeFactor = Mathf.Clamp(globalVolumeFactor, 0f, 1f);
+        ApplyGlobalVolumeStatic();
         CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
     }
 
@@ -113,7 +113,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
-        CompSqueaker.GlobalVolumeFactor = Mathf.Clamp(globalVolumeFactor, 0f, 1f);
+        ApplyGlobalVolumeStatic();
     }
 
     public void NotifyDistanceRuntimeChanged() => CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
@@ -132,17 +132,29 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// <summary>S4-Vol: global volume 0..1. Cheap runtime write, no resolver rebuild.</summary>
     internal void SetGlobalVolume(float value)
     {
+        if (float.IsNaN(value) || float.IsInfinity(value)) return;
         float clamped = Mathf.Clamp(value, 0f, 1f);
+        if (System.Math.Abs(clamped - globalVolumeFactor) < 0.0001f) return;
         globalVolumeFactor = clamped;
-        CompSqueaker.GlobalVolumeFactor = clamped;
+        ApplyGlobalVolumeStatic();
         QueuePersistence();
+    }
+
+    private void ApplyGlobalVolumeStatic()
+    {
+        CompSqueaker.GlobalVolumeFactor = Mathf.Clamp(globalVolumeFactor, 0f, 1f);
     }
 
     /// <summary>S4-Vol: camera-height attenuation range. Clamped with the existing distance-range
     /// constraints; any manual edit switches the preset to Custom.</summary>
     internal void SetDistanceRange(float start, float end)
     {
+        if (float.IsNaN(start) || float.IsInfinity(start)
+            || float.IsNaN(end) || float.IsInfinity(end)) return;
         FloatRange clamped = ClampDistanceRange(new FloatRange(start, end));
+        if (System.Math.Abs(clamped.min - distanceRange.min) < 0.0001f
+            && System.Math.Abs(clamped.max - distanceRange.max) < 0.0001f
+            && distancePreset == SqueakDistancePreset.Custom) return;
         distanceRange = clamped;
         distancePreset = SqueakDistancePreset.Custom;
         NotifyDistanceRuntimeChanged();
@@ -445,8 +457,8 @@ public partial class UniversalSqueakerSettings : ModSettings
 
     private static FloatRange ClampDistanceRange(FloatRange range)
     {
-        float min = Mathf.Clamp(range.min, 15f, 60f);
-        float max = Mathf.Clamp(range.max, 20f, 65f);
+        float min = float.IsNaN(range.min) || float.IsInfinity(range.min) ? 15f : Mathf.Clamp(range.min, 15f, 60f);
+        float max = float.IsNaN(range.max) || float.IsInfinity(range.max) ? 50f : Mathf.Clamp(range.max, 20f, 65f);
         if (max < min + 5f)
         {
             max = Mathf.Min(65f, min + 5f);

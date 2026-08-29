@@ -83,21 +83,23 @@ public sealed class GlobalVolumeWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, Math.Max(1f, rect.width - 70f), LabelHeight), Label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, Math.Max(1f, rect.width - 80f), LabelHeight), Label);
 
-        Text.Font = GameFont.Tiny;
-        GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.xMax - 60f, y + 4f, Math.Max(1f, 50f), LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
+        var id = new UiControlId(Kind, "global-volume");
+        Rect fieldRect = new(rect.xMax - RightPadding - 64f, y + 2f, 64f, LabelHeight);
+        Rect sliderRect = new(rect.x + LeftPadding, y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
+
+        float sliderValue = UiInteract.Slider(sliderRect, id, value, 0f, 1f, out bool sliderChanged);
+        UiInteract.NumberField(fieldRect, id, sliderValue, 0f, 1f, "0%", out bool committed);
+
+        if (sliderChanged || committed)
+        {
+            float current = UiValueStore.GetOrCreate(id).FloatValue;
+            businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: current.ToString("0.###", CultureInfo.InvariantCulture)));
+        }
+
         Text.Font = oldFont;
         GUI.color = oldColor;
-
-        Rect sliderRect = new(rect.x + LeftPadding, y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
-        UiInteract.Protect(sliderRect);
-        float next = Widgets.HorizontalSlider(sliderRect, value, 0f, 1f, middleAlignment: true);
-        if (Math.Abs(next - value) > 0.0001f)
-        {
-            businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: next.ToString("0.###", CultureInfo.InvariantCulture)));
-        }
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

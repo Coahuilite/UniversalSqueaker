@@ -30,6 +30,7 @@ internal static class Program
         TestDistancePreview();
         TestVoicePacksFilters();
         TestUiLayoutTier();
+        TestAttenuationMath();
     }
 
     private static void TestUiLayoutTier()
@@ -159,6 +160,38 @@ internal static class Program
             "Combined pack filter should drop rows failing EnabledOnly");
         Assert(!VoicePacksFilters.PackMatches("Other", null, true, in combinedPack),
             "Combined pack filter should drop rows failing Author");
+    }
+
+    private static void TestAttenuationMath()
+    {
+        const float tolerance = 0.0001f;
+
+        AssertEqual(0f, AttenuationMath.ChartX(0f, 100f, AttenuationMath.MinDistance), tolerance, "ChartX min maps to chart left");
+        AssertEqual(100f, AttenuationMath.ChartX(0f, 100f, AttenuationMath.MaxDistance), tolerance, "ChartX max maps to chart right");
+        AssertEqual(50f, AttenuationMath.ChartX(0f, 100f, 40f), tolerance, "ChartX 40/65 maps to middle");
+        AssertEqual(AttenuationMath.MinDistance, AttenuationMath.DistanceFromX(0f, 100f, 0f), tolerance, "DistanceFromX left maps to MinDistance");
+        AssertEqual(AttenuationMath.MaxDistance, AttenuationMath.DistanceFromX(0f, 100f, 100f), tolerance, "DistanceFromX right maps to MaxDistance");
+        AssertEqual(40f, AttenuationMath.DistanceFromX(0f, 100f, 50f), tolerance, "DistanceFromX middle maps to 40");
+
+        float min = float.NaN;
+        float max = float.PositiveInfinity;
+        AttenuationMath.SanitizeRange(ref min, ref max);
+        AssertEqual(AttenuationMath.MinDistance, min, tolerance, "SanitizeRange NaN min becomes MinDistance");
+        AssertEqual(50f, max, tolerance, "SanitizeRange Infinity max becomes 50");
+
+        min = 10f;
+        max = 70f;
+        AttenuationMath.SanitizeRange(ref min, ref max);
+        AssertEqual(AttenuationMath.MinDistance, min, tolerance, "SanitizeRange clamps min to 15");
+        AssertEqual(AttenuationMath.MaxDistance, max, tolerance, "SanitizeRange clamps max to 65");
+
+        min = 60f;
+        max = 61f;
+        AttenuationMath.SanitizeRange(ref min, ref max);
+        Assert(max >= min + AttenuationMath.MinRange, "SanitizeRange enforces MinRange");
+
+        Assert(AttenuationMath.FormatRange(15f, 50f) == "15|50", "FormatRange uses | separator");
+        Assert(AttenuationMath.FormatRangeDisplay(15f, 50f).Contains("–"), "FormatRangeDisplay uses en dash");
     }
 
     private static void AssertMonotonicNonIncreasing(IReadOnlyList<DistanceSample> samples, string message)
