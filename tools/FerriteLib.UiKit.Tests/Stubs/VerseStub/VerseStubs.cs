@@ -29,6 +29,25 @@ public static class Widgets
     {
         return false;
     }
+
+    public static float HorizontalSlider(
+        Rect rect,
+        float value,
+        float min,
+        float max,
+        bool middleAlignment = false,
+        string? label = null,
+        string? leftAlignedLabel = null,
+        string? rightAlignedLabel = null,
+        float roundTo = -1f)
+    {
+        return value;
+    }
+
+    public static string TextField(Rect rect, string text)
+    {
+        return text ?? "";
+    }
 }
 
 public static class Mouse

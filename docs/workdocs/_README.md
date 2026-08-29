@@ -4,6 +4,10 @@
 
 > **S4-Polish 任务书已另立索引：`docs/workdocs/s4-polish-index.md`；开工会话调度书：`docs/workdocs/s4-polish-kickoff.md`。** 下方旧 S3/S4 派发状态保留至清理。
 
+> **UiKit 交互路由与值控件任务书索引：`docs/workdocs/uikit-interaction-index.md`。** 实施延后，按 B1 → B2 → B3 → B4 串行派发。
+
+> **US UI 大修评估（基于 UiKit 当前状态）：`docs/workdocs/us-ui-overhaul-assessment.md`。** 待实施，建议按 U1→U6 分块。
+
 ## 派发状态
 
 | 任务书 | worker | provider / model / effort | 状态 |

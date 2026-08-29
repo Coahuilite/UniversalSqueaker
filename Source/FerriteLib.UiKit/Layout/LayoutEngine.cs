@@ -74,17 +74,27 @@ public sealed class LayoutEngine
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
         if (emit == null) throw new ArgumentNullException(nameof(emit));
 
-        if (!HasUsableCache(ctx, viewRect.width))
-            Measure(ctx, viewRect.width);
-
-        foreach (MeasuredElement element in measured)
+        UiInteract.BeginFrame();
+        try
         {
-            Rect rect = new(
-                viewRect.x + element.Rect.x,
-                viewRect.y + element.Rect.y,
-                element.Rect.width,
-                element.Rect.height);
-            element.Widget.Draw(rect, ctx, emit);
+            if (!HasUsableCache(ctx, viewRect.width))
+                Measure(ctx, viewRect.width);
+
+            foreach (MeasuredElement element in measured)
+            {
+                Rect rect = new(
+                    viewRect.x + element.Rect.x,
+                    viewRect.y + element.Rect.y,
+                    element.Rect.width,
+                    element.Rect.height);
+                element.Widget.Draw(rect, ctx, emit);
+            }
+
+            UiInteract.ProcessEvents();
+        }
+        finally
+        {
+            UiInteract.EndFrame();
         }
     }
 

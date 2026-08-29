@@ -64,6 +64,15 @@ internal static class Program
 
         Console.WriteLine("InputModeRowWidget responsive columns...");
         VerifyInputModeRowResponsive();
+
+        Console.WriteLine("B1 Interaction routing...");
+        failures += InteractionTests.RunAll();
+
+        Console.WriteLine("B2 Value controls...");
+        failures += ValueControlTests.RunAll();
+
+        Console.WriteLine("B3 SliderNumberField widget...");
+        failures += SliderNumberFieldTests.RunAll();
     }
 
     private static void VerifyRegistryCoreFallback()
