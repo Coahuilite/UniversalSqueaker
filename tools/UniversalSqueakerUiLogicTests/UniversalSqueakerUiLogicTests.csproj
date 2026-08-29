@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerUiLogicTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.UiLogicTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+us-ui-logic</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+  </PropertyGroup>
+
+  <!-- 零 Verse 门：链接 UI 纯逻辑文件；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
+  <ItemGroup>
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\VoicePacksFilters.cs" Link="VoicePacksFilters.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\DistancePreview.cs" Link="DistancePreview.cs" />
+  </ItemGroup>
+
+</Project>

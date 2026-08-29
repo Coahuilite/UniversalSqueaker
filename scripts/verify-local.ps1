@@ -22,6 +22,7 @@ $ErrorActionPreference = "Stop"
 #  11   main assembly Release build (TreatWarningsAsErrors)
 #  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
 #  13   UI layout manifest XML well-formedness
+#  14   UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview)
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -29,6 +30,7 @@ $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $uikitProjectFile = Join-Path $root 'Source\FerriteLib.UiKit\FerriteLib.UiKit.csproj'
 $uikitTestsProject = Join-Path $root 'tools\FerriteLib.UiKit.Tests\FerriteLib.UiKit.Tests.csproj'
+$uiLogicTestsProject = Join-Path $root 'tools\UniversalSqueakerUiLogicTests\UniversalSqueakerUiLogicTests.csproj'
 $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
 $buildExtraArgs = @()
 if ($NoRestore) { $buildExtraArgs += '--no-restore' }
@@ -130,6 +132,10 @@ Invoke-Check 'UI layout manifest XML well-formedness' `
         }
         $null = [xml](Get-Content -LiteralPath $layoutPath -Raw)
     }
+
+Invoke-Check 'UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview)' `
+    'dotnet run --project tools/UniversalSqueakerUiLogicTests -c Release' `
+    { dotnet run --project $uiLogicTestsProject -c Release }
 
 Write-Host '[verify] all checks passed.'
 
