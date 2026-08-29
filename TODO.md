@@ -33,6 +33,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **专项测试（B4）** — Pure/SqueakLayeredTuning + 13 kernel assertions (43835ea)
 - **三 reviewer 审查修复** — 8 fixes across UI/data/fold (f4d8448)
 - **双键 context（2026-08-28）** — `AudioDomains` 域键工具 + Pure 聚合器/选择器 + resolver 薄适配层 + kernel 测试（设计稿 `docs/us-xeno-double-key-context-zh.md`）
+- **S4-Polish（2026-08-30）** — S4-Vol/S4-Nav/P1–P7 全部完成并验收
+- **FerriteLib.UiKit B1–B4（2026-08-30）** — `UiInteract` 分层输入路由、`UiValueStore`、`input/number-slider`
+- **US UI 大修 U0–U6（2026-08-30）** — `UiGuard` 公开/删 `UsGuard`/`FerriteGuard`、交互迁移、值控件、布局、Fallback、Skin、测试门禁；见 `docs/workdocs/us-ui-overhaul-*`
+- **dist voicepack 整理（2026-08-30）** — `dist/voicepacks/final-test/` 三包独立，`archive/` 归档；Ratkin 包重命名/清 legacy
 
 ### Review-fix phases (2026-08-28) — completed
 
@@ -46,9 +50,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 ### Remaining (next goal)
 
-- **S4-Polish（纯视觉，最后）** — filtering (author/race/conflict), componentized help, narrow responsive, visual modernization (eval doc first), footer build identity, distance preview chart.
+- **U7 — UiKit 级绘制顺序 + 导航接入** — 用 UiKit 顶层绘制阶段/统一交互帧替代 US 侧 hotfix（当前 nav 用 `ButtonInvisible`、help 手动后置，均绕过 UiKit）。
+- **Backlog** — `docs/workdocs/us-ui-overhaul-backlog.md`：OB-01 Surface/Theme 收敛、OB-02 ClampWidth 接入、OB-03 加载 clamp 测试、OB-04 VoicePacksLayout 测试。
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
-- **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime).
+- **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime)；U7 后需重新实机验证。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
 ## Review tracking (2026-08-28 — 6-way isolated review, except S4-Polish)

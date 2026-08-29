@@ -115,4 +115,15 @@
 - **Review-fix phases (2026-08-28, landed)**: Phase 0–6 completed after 6-way review. Legacy UI removed; full `(race,xeno)` domain identity across Settings/UI/Baseline/Notification/resolver; single tuning authority + unified upsert/clear; transactional settings migration + new `tools/UniversalSqueakerSettingsMigrationTests`; YAGNI removed `ActionEntry`/`TriggerBinding`; Sustained trigger/playback pipeline unified; kernel variant mixing/corpus/PackFallback boundary; diagnostics/logging/fail-closed fixes. `scripts/verify-local.ps1` now has 13 gates, all green.
 - Next: S4-Polish, `docs/workdocs/` removal, Ferrite in-game validation, optional Runtime harness.
 
+## Session resume checkpoint (2026-08-30 — US UI overhaul + in-game trial hotfix)
+
+- **S4-Polish + US UI 大修 U0–U6 全部完成**：verify-local 14 门全绿，Dev/Release 0 警告；任务书/评估/最终 review 在 `docs/workdocs/us-ui-overhaul-*`。
+- **UiKit B1–B4 已落地**：`UiInteract` 分层输入路由、`UiValueStore`、`input/number-slider`；`UiGuard` 公开，`UsGuard`/`FerriteGuard` 已删除。
+- **游戏内试用发现**：左导航不可点击、帮助按钮被内容覆盖、部分控件错位。已做 **US 侧 hotfix**（nav 改 `ButtonInvisible` + 手绘 label；help 在 US widget 内移到 surface 之后绘制），提交 `1ae7dd6`。
+- **架构警告**：hotfix 是绕过 UiKit 的 workaround；正确方案应回到 UiKit 层（顶层绘制阶段 + 导航纳入统一交互帧），记为 **U7**，尚未实现。
+- **dist voicepack 已整理**：`dist/voicepacks/final-test/` 只保留三个独立当前 US 包（`Ratkin-US-EXP`、`Kiiro-US-EXP`、`Nivarian-US-EXP`），`archive/` 放其它测试/legacy 包；包间不互相引用。Ratkin 包已删除 legacy `SqueakyRatkin_ExampleTemplate_Race.xml` 并重命名为 `US_RatkinExp`；Nivarian packageId 修复为 `coahuilite.nivarianusexp`。
+- **日志红字**：旧 SR ABI `SqueakyRatkin.SqueakVoicePackDef` 红字来自旧 Ratkin/legacy 包，当前 US 不再存在该类型；final-test 包已清理。
+- **最新 dev 包**：`dist/dev/UniversalSqueaker-dev-v0.1.0-dev-1ae7dd6.zip`。
+- **Backlog**：`docs/workdocs/us-ui-overhaul-backlog.md`（OB-01..OB-04）+ U7。
+
 
