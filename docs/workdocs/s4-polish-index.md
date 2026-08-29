@@ -12,9 +12,9 @@
 | 0c | s4-polish-s4-vol.md | C-Agent（worker） | 同上 / max | 无（P纯 已过；可与 P0 修订并行设计） | ✅ 完成并提交 `73be00e`（已验收） |
 | 0d | s4-polish-s4-nav.md | C-Agent（worker） | 同上 / max | S4-Vol 通过 | ✅ 完成并提交 `b3810d2`（已验收） |
 | 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + S4-Nav 通过 | ✅ 完成并提交 `b166ca9`（已验收） |
-| 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | 🔄 已派发（C-Agent 执行中） |
+| 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | ✅ 完成并提交 `5f5196c`（已验收） |
 | 3 | s4-polish-p3-distance-chart.md | — | — | — | ✅ 已并入 S4-Vol，不再单独派发 |
-| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | 待派发 |
+| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | 🔄 已派发（C-Agent 执行中） |
 | 5 | s4-polish-p5-help.md | C-Agent | 同上 / max | P4 通过 | 待派发 |
 | 6 | s4-polish-p6-responsive.md | C-Agent | 同上 / max | P5 通过 | 待派发 |
 | 7 | s4-polish-p7-fallback.md | C-Agent | 同上 / max | P6 通过 | 待派发 |
