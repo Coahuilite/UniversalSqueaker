@@ -13,12 +13,14 @@ public static class VoicePacksPage
     {
         UsWidgetRegistrar.EnsureRegistered();
         UsGuard.ResetSessionLog();
+        VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.BeginSession();
     }
 
     public static void EndSession()
     {
         UsGuard.ResetSessionLog();
+        VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.EndSession();
     }
 

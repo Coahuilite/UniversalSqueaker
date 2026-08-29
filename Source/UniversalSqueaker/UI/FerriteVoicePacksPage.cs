@@ -192,7 +192,15 @@ public static class FerriteVoicePacksPage
         catch (Exception ex)
         {
             Log.Warning("[UniversalSqueaker] Ferrite VoicePacks settings UI render failed: " + ex);
-            EmptyState.Draw(rect, "VoicePacks settings UI failed to render. Settings are safe; check the log.");
+            try
+            {
+                VanillaVoicePacksPage.Draw(rect);
+            }
+            catch (Exception fallbackEx)
+            {
+                Log.Warning("[UniversalSqueaker] Vanilla fallback page also failed: " + fallbackEx);
+                EmptyState.Draw(rect, "VoicePacks settings UI failed to render. Settings are safe; check the log.");
+            }
         }
     }
 
