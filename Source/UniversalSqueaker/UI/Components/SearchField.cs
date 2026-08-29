@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -11,7 +12,7 @@ public static class SearchField
         if (rect.width <= 1f || rect.height <= 1f) return;
 
         string current = value ?? "";
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => { current = DrawCore(rect, current, hint); },
             fallback => { current = Widgets.TextField(fallback, current) ?? ""; },

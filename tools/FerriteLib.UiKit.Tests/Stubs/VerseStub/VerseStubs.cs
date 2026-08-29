@@ -13,6 +13,8 @@ public enum GameFont
 public static class Text
 {
     public static GameFont Font { get; set; }
+
+    public static TextAnchor Anchor { get; set; }
 }
 
 public static class Widgets
@@ -55,5 +57,12 @@ public static class Mouse
     public static bool IsOver(Rect rect)
     {
         return false;
+    }
+}
+
+public static class Log
+{
+    public static void Warning(string message)
+    {
     }
 }

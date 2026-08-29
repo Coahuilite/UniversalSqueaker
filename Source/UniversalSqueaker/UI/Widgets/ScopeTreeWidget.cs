@@ -95,7 +95,7 @@ public sealed class ScopeTreeWidget : IWidget
         if (rect.width <= 1f || rect.height <= 1f) return;
 
         string helpKey = UsHelp.ResolveKey(_spec);
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
             fallback => Widgets.Label(fallback, "Tuning editor (unavailable)"),

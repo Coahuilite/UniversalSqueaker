@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -9,7 +10,7 @@ public static class RaceLayerRow
 {
     public static void Draw(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit)
     {
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, row, selected, emit),
             fallback => DrawVanilla(fallback, row, emit),

@@ -29,7 +29,7 @@ public sealed class UsFooterWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return UsGuard.MeasureOrFallback(() => FooterHeight, FooterHeight, Kind);
+        return UiGuard.MeasureOrFallback(() => FooterHeight, FooterHeight, Kind);
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -37,7 +37,7 @@ public sealed class UsFooterWidget : IWidget
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx),
             fallback => DrawVanilla(fallback, ctx),

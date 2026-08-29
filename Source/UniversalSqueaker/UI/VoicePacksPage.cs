@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -12,14 +13,14 @@ public static class VoicePacksPage
     public static void BeginSession()
     {
         UsWidgetRegistrar.EnsureRegistered();
-        UsGuard.ResetSessionLog();
+        UiGuard.ResetSessionLog();
         VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.BeginSession();
     }
 
     public static void EndSession()
     {
-        UsGuard.ResetSessionLog();
+        UiGuard.ResetSessionLog();
         VanillaVoicePacksPage.ResetSession();
         FerriteVoicePacksPage.EndSession();
     }

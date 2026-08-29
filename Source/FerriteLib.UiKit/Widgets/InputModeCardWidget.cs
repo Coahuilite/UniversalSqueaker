@@ -49,11 +49,12 @@ public sealed class InputModeCardWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        FerriteGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx, emit),
             fallback => DrawVanilla(fallback, ctx, emit),
-            Kind);
+            Kind,
+            "FerriteLib");
     }
 
     private void DrawCore(Rect rect, WidgetContext ctx, Action<UiCommand> emit)

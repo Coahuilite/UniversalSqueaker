@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -10,7 +11,7 @@ public static class VoicePackRow
     public static void Draw(Rect rect, VoicePackRowView row, SqueakVoicePackScope scope,
         string raceDefName, string targetDefName, Action<UiCommand> emit)
     {
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, row, scope, raceDefName, targetDefName, emit),
             fallback => DrawVanilla(fallback, row, scope, raceDefName, targetDefName, emit),

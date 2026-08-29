@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -9,7 +10,7 @@ public static class HelpToggle
     public static bool Draw(Rect rect, bool active)
     {
         bool clicked = false;
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () =>
             {

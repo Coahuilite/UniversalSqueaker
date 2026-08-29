@@ -65,6 +65,9 @@ internal static class Program
         Console.WriteLine("InputModeRowWidget responsive columns...");
         VerifyInputModeRowResponsive();
 
+        Console.WriteLine("U0 UiGuard fallback...");
+        failures += UiGuardTests.RunAll();
+
         Console.WriteLine("B1 Interaction routing...");
         failures += InteractionTests.RunAll();
 

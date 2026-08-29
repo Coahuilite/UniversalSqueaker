@@ -4,6 +4,7 @@ using System.IO;
 using System.Xml.Linq;
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 using KitLayoutEngine = FerriteLib.UiKit.LayoutEngine;
 using KitLayoutManifest = FerriteLib.UiKit.LayoutManifest;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
@@ -191,14 +192,14 @@ public static class FerriteVoicePacksPage
         }
         catch (Exception ex)
         {
-            Log.Warning("[UniversalSqueaker] Ferrite VoicePacks settings UI render failed: " + ex);
+            UiGuard.LogFallback("us/ferrite-page", "UniversalSqueaker", ex);
             try
             {
                 VanillaVoicePacksPage.Draw(rect);
             }
             catch (Exception fallbackEx)
             {
-                Log.Warning("[UniversalSqueaker] Vanilla fallback page also failed: " + fallbackEx);
+                UiGuard.LogFallback("us/vanilla-fallback", "UniversalSqueaker", fallbackEx);
                 EmptyState.Draw(rect, "VoicePacks settings UI failed to render. Settings are safe; check the log.");
             }
         }

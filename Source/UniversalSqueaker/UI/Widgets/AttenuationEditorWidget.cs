@@ -72,7 +72,7 @@ public sealed class AttenuationEditorWidget : IWidget
         if (rect.width <= 1f || rect.height <= 1f) return;
 
         string helpKey = UsHelp.ResolveKey(_spec);
-        UsGuard.DrawOrFallback(
+        UiGuard.DrawOrFallback(
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
