@@ -164,7 +164,7 @@ public sealed class PresetListWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         string label = (preset.Expanded ? "− " : "+ ") + preset.Label;
         Rect labelRect = new(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), 16f);
         Widgets.Label(labelRect, label);
@@ -192,13 +192,12 @@ public sealed class PresetListWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         string label = race.DisplayName + "  (" + race.ActionCount + " actions, " + race.MoodCount + " moods)";
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), 18f), label);
 
         Rect checkRect = new(rect.xMax - 40f, rect.y + 2f, 20f, 20f);
-        bool checkboxValue = race.Selected;
-        Widgets.Checkbox(checkRect.position, ref checkboxValue, 20f);
+        UsSurface.DrawCheckbox(checkRect, race.Selected);
         Text.Font = oldFont;
         GUI.color = oldColor;
 
@@ -213,14 +212,13 @@ public sealed class PresetListWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         string inheritTag = xenotype.InheritFromRace ? " (inherits race)" : " (own only)";
         string label = xenotype.DisplayName + inheritTag + "  (" + xenotype.ActionCount + " actions, " + xenotype.MoodCount + " moods)";
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), 14f), label);
 
         Rect checkRect = new(rect.xMax - 40f, rect.y + 1f, 20f, 20f);
-        bool checkboxValue = xenotype.Selected;
-        Widgets.Checkbox(checkRect.position, ref checkboxValue, 20f);
+        UsSurface.DrawCheckbox(checkRect, xenotype.Selected);
         Text.Font = oldFont;
         GUI.color = oldColor;
 

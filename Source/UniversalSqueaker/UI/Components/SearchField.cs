@@ -24,7 +24,7 @@ public static class SearchField
 
     private static string DrawCore(Rect rect, string value, string hint)
     {
-        UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Base);
+        UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
         string controlName = "US_VoicePackSearch_" + hint.GetHashCode();
         GUI.SetNextControlName(controlName);
         string next = Widgets.TextField(rect, value ?? "");

@@ -260,7 +260,7 @@ public sealed class ScopeTreeWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Layer domain");
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
@@ -357,7 +357,7 @@ public sealed class ScopeTreeWidget : IWidget
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 7f, MoodLabelWidth, 16f), row.DisplayName);
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -373,7 +373,7 @@ public sealed class ScopeTreeWidget : IWidget
             GUI.color = UsVisualTokens.TextSecondary;
             Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 8f, rect.width - LeftPadding - 8f, 14f), "Window too narrow for mood controls");
             Text.Font = GameFont.Small;
-            GUI.color = Color.white;
+            GUI.color = UsVisualTokens.TextPrimary;
             return;
         }
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
@@ -424,11 +424,11 @@ public sealed class ScopeTreeWidget : IWidget
         GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x, rect.y + 4f, 14f, 16f), label);
         DrawSegment(minusRect, "-", false);
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(valueRect, value.ToString("0.###", CultureInfo.InvariantCulture));
         DrawSegment(plusRect, "+", false);
         Text.Font = GameFont.Small;
-        GUI.color = Color.white;
+        GUI.color = UsVisualTokens.TextPrimary;
 
         UiInteract.Button(minusRect, UiLayer.Content,
             () => EmitMoodFactor(row, factor, Mathf.Max(min, value - step), race, xeno, emit));
@@ -450,7 +450,7 @@ public sealed class ScopeTreeWidget : IWidget
         UsSurface.DrawSurface(rect, off
             ? (selectedHover ? UsSurface.SurfaceKind.Danger : UsSurface.SurfaceKind.Selected)
             : (selectedHover ? UsSurface.SurfaceKind.Hover : UsSurface.SurfaceKind.Raised));
-        UsSurface.DrawBorder(rect, UsVisualTokens.AccentGold);
+        UsSurface.DrawBorder(rect, off ? UsVisualTokens.Danger : UsVisualTokens.AccentGold);
         GUI.color = off ? UsVisualTokens.TextSecondary : UsVisualTokens.AccentGold;
         Text.Font = GameFont.Tiny;
         Widgets.Label(new Rect(rect.x, rect.y + 3f, rect.width, 16f), label);

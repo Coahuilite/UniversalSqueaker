@@ -99,11 +99,12 @@ public static class UsSurface
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
+        TextAnchor oldAnchor = Text.Anchor;
         Text.Font = GameFont.Tiny;
         GUI.color = text;
         Text.Anchor = TextAnchor.MiddleCenter;
         Widgets.Label(rect, label);
-        Text.Anchor = TextAnchor.UpperLeft;
+        Text.Anchor = oldAnchor;
         Text.Font = oldFont;
         GUI.color = oldColor;
     }
@@ -112,7 +113,7 @@ public static class UsSurface
     {
         bool hovered = Mouse.IsOver(rect);
         Color fill = value ? UsVisualTokens.Selected : hovered ? UsVisualTokens.Hover : UsVisualTokens.Panel;
-        Color border = value || hovered ? UsVisualTokens.BorderStrong : UsVisualTokens.Border;
+        Color border = value ? UsVisualTokens.AccentGold : hovered ? UsVisualTokens.BorderStrong : UsVisualTokens.Border;
 
         Widgets.DrawBoxSolid(rect, fill);
         DrawBorder(rect, border);
@@ -133,12 +134,13 @@ public static class UsSurface
     {
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
+        TextAnchor oldAnchor = Text.Anchor;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
         Text.Anchor = TextAnchor.MiddleLeft;
         Widgets.Label(rect, text);
         Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), UsVisualTokens.Border);
-        Text.Anchor = TextAnchor.UpperLeft;
+        Text.Anchor = oldAnchor;
         Text.Font = oldFont;
         GUI.color = oldColor;
     }

@@ -25,14 +25,14 @@ public static class UsHelpButton
             active ? UsSurface.SurfaceKind.Selected
             : hovered ? UsSurface.SurfaceKind.Hover
             : UsSurface.SurfaceKind.Panel);
-        UsSurface.DrawBorder(rect, active || hovered ? UsVisualTokens.AccentGold : UsVisualTokens.Border);
+        UsSurface.DrawBorder(rect, active ? UsVisualTokens.AccentGold : hovered ? UsVisualTokens.BorderStrong : UsVisualTokens.Border);
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         TextAnchor oldAnchor = Text.Anchor;
         Text.Font = GameFont.Tiny;
         Text.Anchor = TextAnchor.MiddleCenter;
-        GUI.color = active || hovered ? UsVisualTokens.AccentGold : UsVisualTokens.TextSecondary;
+        GUI.color = active ? UsVisualTokens.AccentGold : hovered ? UsVisualTokens.TextPrimary : UsVisualTokens.TextSecondary;
         Widgets.Label(rect, "?");
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;

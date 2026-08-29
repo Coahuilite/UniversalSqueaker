@@ -260,8 +260,7 @@ public static class FerriteVoicePacksPage
         const float sidePadding = 4f;
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(addCommand);
 
-        Widgets.DrawBoxSolid(navRect, UiPalette.Panel);
-        SectionFrame.DrawBorder(navRect);
+        UsSurface.DrawSurface(navRect, UsSurface.SurfaceKind.Panel);
 
         float y = navRect.y + 8f;
         foreach ((string tab, string label) in new[] { ("Basic", "基础设置"), ("Tuning", "调音"), ("Packs", "包清单") })
@@ -274,7 +273,7 @@ public static class FerriteVoicePacksPage
 
             if (string.Equals(tab, activeTab, StringComparison.Ordinal))
             {
-                Widgets.DrawBoxSolid(buttonRect, new Color(.20f, .17f, .10f, .8f));
+                UsSurface.DrawSurface(buttonRect, UsSurface.SurfaceKind.Selected);
             }
 
             if (Widgets.ButtonText(buttonRect, label, drawBackground: false))
