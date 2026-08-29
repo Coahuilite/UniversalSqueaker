@@ -1,8 +1,8 @@
 # UI 视觉现代化评估稿（S4-Polish P0）
 
-> 状态：评估稿，等待维护者批准。不修改任何代码。
-> 依据：`docs/s4-polish-plan-zh.md`（权威计划）、`Source/UniversalSqueaker/UI/Layout.xml`、`Source/UniversalSqueaker/UI/Components/*.cs`、`Source/UniversalSqueaker/UI/Widgets/*.cs`、`Source/FerriteLib.UiKit/Widgets/*.cs`。
-> 范围：以纯视觉/UI-UX 评估与规格为主，并纳入 S4-Vol 的全局音量 slider 与相机高度衰减编辑器组件规格（功能实现由 S4-Vol 任务书负责）。不涉及运行时路由、Kernel/Pure 音频语义、发布操作。
+> 状态：评估稿（已纳入 S4-Vol 与 S4-Nav 需求），等待维护者批准。不修改任何代码。
+> 依据：`docs/s4-polish-plan-zh.md`（权威计划；§1.3 S4-Vol、§1.4 S4-Nav、§4 S4-Vol/S4-Nav、§3.7）、`docs/workdocs/s4-polish-p0-visual-spec.md`、`docs/workdocs/s4-polish-s4-vol.md`、`docs/workdocs/s4-polish-s4-nav.md`、`Source/UniversalSqueaker/UI/Layout.xml`、`Source/UniversalSqueaker/UI/Components/*.cs`、`Source/UniversalSqueaker/UI/Widgets/*.cs`、`Source/FerriteLib.UiKit/Widgets/*.cs`。
+> 范围：以纯视觉/UI-UX 评估与规格为主，并纳入 S4-Vol 的全局音量 slider 与相机高度衰减编辑器组件规格，以及 S4-Nav 的左侧导航 + 三页签 + 右侧 sticky footer 窗口外壳布局（功能实现分别由 S4-Vol / S4-Nav 任务书负责）。不涉及运行时路由、Kernel/Pure 音频语义、发布操作。
 
 ---
 
@@ -47,13 +47,14 @@ US 侧实际绘制手段：
 - **US Widgets**：`PageTitleWidget`、`BasicTuningWidget`、`CameraIndicatorWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`ScopeTreeWidget`、`PresetListWidget`。
 - **FerriteLib Widgets**：`ChromeBannerWidget`、`ChromeFooterWidget`、`SectionHeaderWidget`、`EmptyStateWidget`、`InputModeCardWidget`、`InputModeRowWidget`。
 - **共享底层**：`SurfaceFrame`、`ModeCardRenderer`、`UiKitGui`、`UiKitFonts`、`CoreWidgetRegistrar`。
+- **计划新增**（S4-Vol / S4-Nav / P2）：`GlobalVolumeWidget`、`AttenuationEditorWidget`、`UsNavWidget`、`UsFooterWidget`。
 
 ### 1.4 问题清单（只列现状，不含修复方案）
 
 1. **调色板双份**：`UiPalette` 与 FerriteLib `Palette` 值重复；US 侧还有多处 `new Color(...)` 硬编码 hover/文本色。
 2. **hover 色散落**：`BasicTuningWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget` 中重复出现 `new Color(.16f,.145f,.12f,.94f)`；mood/clear/段按钮另有多个局部色值。
 3. **选中/警示态不统一**：模式卡用底部 3px 金条，race/xeno 行用左侧 4px 竖条，scope 段按钮用金边框，mood 行用 `Raised` 底 + 金边，checklist 用自绘小开关，`VoicePackRow` 无统一 selected 语义。
-4. **版式节奏弱**：单页滚动，除 section header 外几乎全为同质行；没有分区表面、分隔线、焦点态分层。
+4. **版式节奏弱 / 缺少导航外壳**：单页滚动，除 section header 外几乎全为同质行；没有左侧导航与三页签分区，footer 不随右侧可视底部 sticky；没有分区表面、分隔线、焦点态分层。
 5. **字体/行高魔法数**：Tiny/Small/Medium 混用，行高与间距散落在各 widget 常量（3f/4f/5f/7f/20f/25f 等），无统一行高令牌。
 6. **过滤缺失**：仅 checklist 内有文本搜索；无作者/冲突/orphan/已启用过滤。
 7. **帮助缺失**：只有一个页级 `?` 与页级 HelpText；widget 无就地帮助。
@@ -202,9 +203,38 @@ US 侧实际绘制手段：
 - 最小尺寸：高 34px，宽自适应；内 padding 8×4。
 - 非交互：不绘制 `ButtonInvisible`，天然不拦截点击。
 
-### 3.7 Footer 双槽（Footer Dual Slot）
+### 3.7 窗口外壳 + 左侧导航 + 右侧 sticky footer（S4-Nav）
 
-左槽版本/build 身份，右槽保存状态。
+S4-Nav 的窗口外壳不是换肤项，但它是所有现代组件的承载结构；P0 规格一并纳入，作为 P1/P6 的布局约束。
+
+**窗口外壳约束**：
+
+- 保留 RimWorld `Window` 标题栏、关闭按钮与内容视口；自定义内容只绘制在窗口内容视口内，不溢出、不遮挡、不超出可视区。
+- 内容区采用「左侧导航 + 右侧内容 + 右侧底部 sticky footer」三段式：
+  - 左侧导航：固定宽度建议 160px（响应式降级见 §4），垂直排列三枚页签按钮。
+  - 右侧内容区：独立滚动区；只渲染当前 `ActiveTab` 对应的页签内容；滚动不带动 footer。
+  - 右侧底部 footer：钉在右侧可视区底部，宽度与右侧内容区一致，顶部 1px `Border` 分隔线；不随内容滚走。
+- 三页签固定：`基础设置` / `调音` / `包清单`；页签状态为 ephemeral（`VoicePacksPageState.ActiveTab`），Reset 回基础设置。
+
+**页签按钮规格**（`us/nav` 或 `FerriteVoicePacksPage` 直接绘制）：
+
+| 状态 | 表面 | 边框 | 文本 |
+|---|---|---|---|
+| normal | `Base` | `Border` | `TextSecondary` |
+| hover | `Hover` | `BorderStrong` | `TextPrimary` |
+| active | `Selected` | `AccentGold` | `TextOnGold`；左侧 4px `AccentGold` 竖条 |
+
+- 最小尺寸：高 32px（L），宽 140px（在 160px 左栏内左右 padding 10px）；三枚按钮纵向间距 4px。
+- 交互：点击 emit `SetActiveTab`（`Basic` / `Tuning` / `Packs`）。
+
+**右侧 sticky footer（双槽内容见 §3.8）**：
+
+- footer 属于右侧内容区布局，不进入滚动容器；始终位于右侧可视区底部。
+- 若右侧可视高度不足，内容滚动区收缩，footer 高度保持 26px 不被压缩。
+
+### 3.8 Footer 双槽（Footer Dual Slot，sticky）
+
+位于右侧底部 sticky 容器（外壳见 §3.7）；左槽版本/build 身份，右槽保存状态。
 
 | 槽 | 内容 | 颜色 |
 |---|---|---|
@@ -214,7 +244,7 @@ US 侧实际绘制手段：
 - 最小尺寸：高 26px（M），顶部 1px `Border` 分隔线，左/右 padding 10px。
 - 右槽仅在空间不足时截断文本，不换行。
 
-### 3.8 全局音量 Slider + 相机高度衰减编辑器
+### 3.9 全局音量 Slider + 相机高度衰减编辑器
 
 **全局音量 Slider**（`us/global-volume`）：
 
@@ -245,7 +275,7 @@ US 侧实际绘制手段：
 
 - 语义为玩家可调的线性衰减模型，不等于引擎物理 rolloff；UI 文案注明。
 
-### 3.9 Help `?`
+### 3.10 Help `?`
 
 用于 widget 头行就地帮助入口。
 
@@ -257,7 +287,7 @@ US 侧实际绘制手段：
 
 - 最小尺寸：22×22；点击热区同视觉尺寸。
 
-### 3.10 小节头 / 空态（复用现有语义）
+### 3.11 小节头 / 空态（复用现有语义）
 
 - **SectionHeader**：无表面，文本 `Small` + `TextPrimary`，最小高 22px（S），底部 1px `Border` 分隔线。
 - **EmptyState**：`Panel` 表面 + `Border`，文本 `Small` + `TextSecondary`，最小高 44px，文本居中。
@@ -287,7 +317,8 @@ US 侧实际绘制手段：
 | 模式卡 | 4 卡 1 行（每卡 ≥140） | 2×2 网格 | 1 列 |
 | 文本输入 | 完整宽 | 宽度随容器收缩，placeholder 可省略 | 宽度随容器收缩，placeholder 省略 |
 | Banner | 完整文本 | 文本自动换行 | 只显示第一段/关键短语 |
-| Footer | 左版本 / 右状态同槽 | 右状态截断 | 右状态显示为单字符状态点（如 `●`） |
+| 左侧导航/页签 | 160px 左栏，三枚全宽标签 | 左栏缩至 56px，显示短标签/图标 | 改为顶部横排页签条（或极窄 40px 左栏仅图标） |
+| Footer | 左版本 / 右状态同槽（右侧底部 sticky） | 右状态截断 | 右状态显示为单字符状态点（如 `●`） |
 | 全局音量 Slider | 完整滑条 + 百分比 | 滑条收缩，百分比保留 | 只显示百分比文本 + 单步按钮 |
 | 衰减编辑器 | ≥200px 可拖拽两点图 | ≥200px 可拖拽两点图；<200px 文本摘要 | 一律文本摘要 + 三快速预设按钮 |
 | Help `?` | 头行右端 | 头行右端 | 头行右端 |
@@ -325,6 +356,7 @@ US 侧实际绘制手段：
 | Import 按钮 | 已用 `Widgets.ButtonText`，无额外风险 | L1 | 无需 fallback |
 | 全局音量 Slider | `Widgets.HorizontalSlider` + `Widgets.Label` | L1 | 命令 `SetGlobalVolume` 不变 |
 | 衰减编辑器 | `Widgets.Label` 文本摘要（`Conservative 15–65` 等） + 三快速预设按钮 | L2 | 非拖拽，保留预设入口 |
+| 左侧导航/三页签 | 三个 `Widgets.ButtonText`，选中项前缀 `●` | L1 | `SetActiveTab` 命令不变 |
 | Footer 双槽 | 两个 `Widgets.Label` | L2 | 非交互 |
 | Banner / SectionHeader / EmptyState | `Widgets.Label`（banner 加简单 `DrawBoxSolid`） | L2 | 非交互 |
 | 整页 | `VanillaVoicePacksPage` | L3 | 见 P7 |
@@ -346,16 +378,19 @@ US 侧实际绘制手段：
 |---|---|---|---|
 | D1 | 视觉路线 | **已拍板：全量换肤（简洁现代 RimWorld 配色组件）** | 全文按全量换肤编写；§2 色板/间距/行高、§3 组件库、§4 响应式、§5 fallback 均直接供 P1/P7 引用 |
 | D2 | FerriteLib 中性边界 | **FerriteLib 只做中性现代 skin + 中性能力**（帮助键集合、响应式），不引入 US/SR 产品字面量 | §2.2 说明两侧各自持有相同令牌；§3 组件规格对库内组件保持中性；§4 的 2×2/1 列模式卡为库中性能力 |
-| D3 | 帮助展开状态归属 | **`UiPageState.OpenHelpKeys`（中性通用容器）**，不放 US 业务 state | §3.9 Help `?` 与 §5.2 映射；US 持有 `HelpKey` 键名，展开状态由库通用容器管理 |
-| D4 | 衰减编辑器曲线语义 | **可拖拽两点衰减**：开始点 y=100%、结束点 y=0%，两点连线线性衰减；最终音量 = 全局音量 × 衰减系数 | §3.8 明确定义编辑器规格与标注要求；不读 `SubSoundDef.distRange`、不碰 Unity 音频 |
+| D3 | 帮助展开状态归属 | **`UiPageState.OpenHelpKeys`（中性通用容器）**，不放 US 业务 state | §3.10 Help `?` 与 §5.2 映射；US 持有 `HelpKey` 键名，展开状态由库通用容器管理 |
+| D4 | 衰减编辑器曲线语义 | **可拖拽两点衰减**：开始点 y=100%、结束点 y=0%，两点连线线性衰减；最终音量 = 全局音量 × 衰减系数 | §3.9 明确定义编辑器规格与标注要求；不读 `SubSoundDef.distRange`、不碰 Unity 音频 |
 | D5 | `VoicePacksPageModel.BuildView` 写回 state | 本计划保持现有写回（避免扩大改动）；过滤/帮助不新增写回 | 本文档不修改该行为；§1.4 问题 11 记录为后续，S4 范围内不做纯化 |
 | D6 | 原版 fallback 粒度 | **推荐 L1+L2+L3 三级** | §5 完整矩阵与实现要点，供 P1/P7 落地 |
+| D7 | S4-Nav 窗口外壳布局 | **已拍板：B 方案（左侧导航 + 右侧内容 + 右侧底部 sticky footer）** | §3.7 定义外壳/页签/导航规格；§4 纳入响应式；§5.2 纳入页签 fallback |
 
 ---
 
 ## 7. 验收自检
 
 - [x] 覆盖任务书 6 点：现状盘点（§1）、现代简洁设计语言（§2）、自绘组件库规格（§3）、响应式三档规则（§4）、原版 fallback 矩阵（§5）、维护者决策摘要（§6）。
+- [x] 已纳入 S4-Vol：全局音量 slider（0–100%）与相机高度衰减编辑器（可拖拽两点、开始 100%/结束 0%、横轴 15–65）。
+- [x] 已纳入 S4-Nav：左侧导航 + 三页签（基础设置/调音/包清单）+ 右侧 sticky footer 的窗口外壳布局。
 - [x] 色板值、组件规格均为具体值，无「待定」。
 - [x] 全文不含 Workshop ID、个人路径、凭据。
-- [x] 未修改任何代码；仅新增本文档；未提交。
+- [x] 未修改任何代码；仅修订本文档；未提交。
