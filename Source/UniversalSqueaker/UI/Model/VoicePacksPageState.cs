@@ -24,6 +24,7 @@ public sealed class VoicePacksPageState
     public int TuningLayer;
     public string TuningRaceDefName = "";
     public string TuningXenotypeDefName = "";
+    public string ActiveTab = "Basic";
 
     public VoicePacksPageState()
     {
@@ -41,6 +42,7 @@ public sealed class VoicePacksPageState
         TuningLayer = 0;
         TuningRaceDefName = "";
         TuningXenotypeDefName = "";
+        ActiveTab = "Basic";
     }
 }
 

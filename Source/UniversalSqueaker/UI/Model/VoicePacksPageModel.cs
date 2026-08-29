@@ -129,7 +129,20 @@ public static class VoicePacksPageModel
             case UiCommandKind.ImportBaselinePreset:
                 ImportBaselinePreset(settings, command.Arg, state);
                 break;
+            case UiCommandKind.SetActiveTab:
+                ExecuteSetActiveTab(state, command.Arg);
+                break;
         }
+    }
+
+    private static void ExecuteSetActiveTab(VoicePacksPageState state, string tab)
+    {
+        if (string.Equals(tab, "Basic", StringComparison.OrdinalIgnoreCase))
+            state.ActiveTab = "Basic";
+        else if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase))
+            state.ActiveTab = "Tuning";
+        else if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase))
+            state.ActiveTab = "Packs";
     }
 
     /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录），

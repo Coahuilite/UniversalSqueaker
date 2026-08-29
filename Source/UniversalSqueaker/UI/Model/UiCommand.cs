@@ -23,7 +23,8 @@ public enum UiCommandKind
     ToggleBaselinePreset,
     ToggleBaselineRace,
     ToggleBaselineXenotype,
-    ImportBaselinePreset
+    ImportBaselinePreset,
+    SetActiveTab
 }
 
 /// <summary>
