@@ -9,7 +9,7 @@
 |---|---|---|---|---|---|
 | 0a | s4-polish-p0-visual-spec.md | D-Agent（one-shot） | deepseek-official / deepseek-v4-flash / high（qwen-token-plan-cn 不可用回退） | 无 | ✅ 已修订并提交 `36eeb57`（维护者已批准） |
 | 0b | s4-polish-pure-logic.md | C-Agent（worker） | deepseek-official / deepseek-v4-flash / max（qwen-token-plan-cn 不可用回退） | 无 | ✅ 完成并提交 `ef44a0f`（已验收） |
-| 0c | s4-polish-s4-vol.md | C-Agent（worker） | 同上 / max | 无（P纯 已过；可与 P0 修订并行设计） | 🔄 已派发（C-Agent 执行中） |
+| 0c | s4-polish-s4-vol.md | C-Agent（worker） | 同上 / max | 无（P纯 已过；可与 P0 修订并行设计） | ✅ 完成并提交 `73be00e`（已验收） |
 | 0d | s4-polish-s4-nav.md | C-Agent（worker） | 同上 / max | S4-Vol 通过 | 待派发 |
 | 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + S4-Nav 通过 | 待派发 |
 | 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | 待派发 |
