@@ -2,6 +2,8 @@
 
 > 临时目录，任务全部落地后随清理提交移除。每个 worker 只读自己的任务书，不读本目录其它文件，不读 docs 下其它长篇文档。
 
+> **S4-Polish 任务书已另立索引：`docs/workdocs/s4-polish-index.md`；开工会话调度书：`docs/workdocs/s4-polish-kickoff.md`。** 下方旧 S3/S4 派发状态保留至清理。
+
 ## 派发状态
 
 | 任务书 | worker | provider / model / effort | 状态 |
