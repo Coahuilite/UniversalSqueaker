@@ -72,8 +72,6 @@ public sealed class BasicTuningWidget : IWidget
         float y = rect.y + TopPadding;
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
         if (UsHelp.IsOpen(ctx, helpKey))
         {
             float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
@@ -95,6 +93,9 @@ public sealed class BasicTuningWidget : IWidget
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScaleTalking", "Scale frequency with talking", "ScaleFrequencyWithTalking");
         y += BasicRowHeight + BasicRowGap;
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScalePopulation", "Scale periodic with audible population", "ScalePeriodicWithAudiblePopulation");
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

@@ -276,7 +276,18 @@ public static class FerriteVoicePacksPage
                 Widgets.DrawBoxSolid(buttonRect, new Color(.20f, .17f, .10f, .8f));
             }
 
-            if (Widgets.ButtonText(buttonRect, label, drawBackground: false))
+            Color oldColor = GUI.color;
+            GameFont oldFont = Text.Font;
+            TextAnchor oldAnchor = Text.Anchor;
+            Text.Font = GameFont.Small;
+            Text.Anchor = TextAnchor.MiddleCenter;
+            GUI.color = string.Equals(tab, activeTab, StringComparison.Ordinal) ? Color.yellow : Color.white;
+            Widgets.Label(buttonRect, label);
+            Text.Font = oldFont;
+            Text.Anchor = oldAnchor;
+            GUI.color = oldColor;
+
+            if (Widgets.ButtonInvisible(buttonRect))
             {
                 addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
             }

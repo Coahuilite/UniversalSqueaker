@@ -63,9 +63,6 @@ public sealed class CameraIndicatorWidget : IWidget
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float y = rect.y;
 
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-
         bool enabled = ctx.TryGetViewValue(ViewKey, out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -92,6 +89,9 @@ public sealed class CameraIndicatorWidget : IWidget
         Text.Font = oldFont;
 
         UiInteract.Row(rect, () => businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled)));
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

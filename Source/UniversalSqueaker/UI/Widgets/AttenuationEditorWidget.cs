@@ -97,9 +97,6 @@ public sealed class AttenuationEditorWidget : IWidget
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-
         if (rect.width < MinWidth)
         {
             if (UsHelp.IsOpen(ctx, helpKey))
@@ -113,6 +110,8 @@ public sealed class AttenuationEditorWidget : IWidget
             }
 
             DrawNarrowSummary(rect, ctx);
+            Rect narrowHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+            UsHelp.DrawHelpButton(narrowHelpRect, helpKey, ctx, emit);
             return;
         }
 
@@ -153,6 +152,9 @@ public sealed class AttenuationEditorWidget : IWidget
         y += StatusHeight + Gap;
 
         DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

@@ -62,9 +62,6 @@ public sealed class FilterBarWidget : IWidget
         IReadOnlyList<string> authors = ReadAuthors(ctx);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-
         float y = rect.y;
         if (UsHelp.IsOpen(ctx, helpKey))
         {
@@ -83,10 +80,15 @@ public sealed class FilterBarWidget : IWidget
             DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: false);
             Rect authorRect = new(rowRect.x, rowRect.y + SingleRowHeight, rowRect.width, SingleRowHeight);
             DrawAuthorButton(authorRect, authors, packFilter.Author, businessEmit);
+            Rect narrowHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+            UsHelp.DrawHelpButton(narrowHelpRect, helpKey, ctx, emit);
             return;
         }
 
         DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: true);
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawRow(

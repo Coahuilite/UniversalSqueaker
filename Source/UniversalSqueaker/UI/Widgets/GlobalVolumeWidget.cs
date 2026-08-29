@@ -65,9 +65,6 @@ public sealed class GlobalVolumeWidget : IWidget
         float value = ReadValue(ctx);
         float y = rect.y;
 
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-
         UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Panel);
         if (UsHelp.IsOpen(ctx, helpKey))
         {
@@ -98,6 +95,9 @@ public sealed class GlobalVolumeWidget : IWidget
             float current = UiValueStore.GetOrCreate(id).FloatValue;
             businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: current.ToString("0.###", CultureInfo.InvariantCulture)));
         }
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
 
         Text.Font = oldFont;
         GUI.color = oldColor;

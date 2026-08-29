@@ -126,8 +126,6 @@ public sealed class ScopeTreeWidget : IWidget
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
 
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
         if (UsHelp.IsOpen(ctx, helpKey))
         {
             float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
@@ -160,7 +158,12 @@ public sealed class ScopeTreeWidget : IWidget
             y += RowHeight + RowGap;
         }
 
-        if (rows.Count == 0) return;
+        if (rows.Count == 0)
+        {
+            Rect emptyHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+            UsHelp.DrawHelpButton(emptyHelpRect, helpKey, ctx, emit);
+            return;
+        }
 
         float moodHeader = VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, innerWidth, metrics);
         UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, moodHeader), MoodHeaderText);
@@ -171,6 +174,9 @@ public sealed class ScopeTreeWidget : IWidget
             DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, businessEmit);
             y += MoodRowHeight + RowGap;
         }
+
+        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
+        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static int ReadLayer(WidgetContext ctx)
