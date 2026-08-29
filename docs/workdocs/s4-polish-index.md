@@ -14,8 +14,8 @@
 | 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + S4-Nav 通过 | ✅ 完成并提交 `b166ca9`（已验收） |
 | 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | ✅ 完成并提交 `5f5196c`（已验收） |
 | 3 | s4-polish-p3-distance-chart.md | — | — | — | ✅ 已并入 S4-Vol，不再单独派发 |
-| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | 🔄 已派发（C-Agent 执行中） |
-| 5 | s4-polish-p5-help.md | C-Agent | 同上 / max | P4 通过 | 待派发 |
+| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | ✅ 完成并提交 `1fb7688`（已验收） |
+| 5 | s4-polish-p5-help.md | C-Agent | 同上 / max | P4 通过 | 🔄 已派发（C-Agent 执行中） |
 | 6 | s4-polish-p6-responsive.md | C-Agent | 同上 / max | P5 通过 | 待派发 |
 | 7 | s4-polish-p7-fallback.md | C-Agent | 同上 / max | P6 通过 | 待派发 |
 
