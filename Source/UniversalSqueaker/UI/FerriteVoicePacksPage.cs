@@ -126,7 +126,7 @@ public static class FerriteVoicePacksPage
             var businessCommands = new List<UiCommand>();
 
             Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
-            DrawNav(navRect, activeTab, businessCommands.Add);
+            DrawNavWithFrame(navRect, activeTab, businessCommands.Add);
 
             float contentWidth = Math.Max(1f, rect.width - NavWidth);
             float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
@@ -195,7 +195,7 @@ public static class FerriteVoicePacksPage
             UiGuard.LogFallback("us/ferrite-page", "UniversalSqueaker", ex);
             try
             {
-                VanillaVoicePacksPage.Draw(rect);
+                DrawFallback(rect);
             }
             catch (Exception fallbackEx)
             {
@@ -253,14 +253,28 @@ public static class FerriteVoicePacksPage
         return "Basic";
     }
 
+    private static void DrawNavWithFrame(Rect navRect, string activeTab, Action<UiCommand> addCommand)
+    {
+        UiInteract.BeginFrame();
+        try
+        {
+            DrawNav(navRect, activeTab, addCommand);
+            UiInteract.ProcessEvents();
+        }
+        finally
+        {
+            UiInteract.EndFrame();
+        }
+    }
+
     private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
         const float buttonHeight = 32f;
         const float gap = 4f;
         const float sidePadding = 4f;
 
-        Widgets.DrawBoxSolid(navRect, UiPalette.Panel);
-        SectionFrame.DrawBorder(navRect);
+        UsSurface.DrawSurface(navRect, UsSurface.SurfaceKind.Panel);
+        UsSurface.DrawBorder(navRect);
 
         float y = navRect.y + 8f;
         foreach ((string tab, string label) in new[] { ("Basic", "基础设置"), ("Tuning", "调音"), ("Packs", "包清单") })
@@ -271,28 +285,63 @@ public static class FerriteVoicePacksPage
                 Math.Max(1f, navRect.width - sidePadding * 2f),
                 buttonHeight);
 
-            if (string.Equals(tab, activeTab, StringComparison.Ordinal))
-            {
-                Widgets.DrawBoxSolid(buttonRect, new Color(.20f, .17f, .10f, .8f));
-            }
+            bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
+            bool hovered = Mouse.IsOver(buttonRect);
+            UsSurface.DrawSurface(
+                buttonRect,
+                active ? UsSurface.SurfaceKind.Selected
+                : hovered ? UsSurface.SurfaceKind.Hover
+                : UsSurface.SurfaceKind.Raised);
+            UsSurface.DrawBorder(
+                buttonRect,
+                active ? UsVisualTokens.AccentGold
+                : hovered ? UsVisualTokens.BorderStrong
+                : UsVisualTokens.Border);
 
             Color oldColor = GUI.color;
             GameFont oldFont = Text.Font;
             TextAnchor oldAnchor = Text.Anchor;
             Text.Font = GameFont.Small;
             Text.Anchor = TextAnchor.MiddleCenter;
-            GUI.color = string.Equals(tab, activeTab, StringComparison.Ordinal) ? Color.yellow : Color.white;
+            GUI.color = active ? UsVisualTokens.AccentGold
+                : hovered ? UsVisualTokens.TextPrimary
+                : UsVisualTokens.TextSecondary;
             Widgets.Label(buttonRect, label);
             Text.Font = oldFont;
             Text.Anchor = oldAnchor;
             GUI.color = oldColor;
 
-            if (Widgets.ButtonInvisible(buttonRect))
-            {
-                addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: tab));
-            }
+            string capturedTab = tab;
+            UiInteract.Button(buttonRect, UiLayer.TopAction,
+                () => addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab)));
 
             y += buttonHeight + gap;
+        }
+    }
+
+    private static void DrawFallback(Rect rect)
+    {
+        if (rect.width - NavWidth < VoicePacksLayout.MinMinimalWidth)
+        {
+            EmptyState.Draw(rect, "Window too narrow");
+            return;
+        }
+
+        var commands = new List<UiCommand>();
+        Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
+        DrawNavWithFrame(navRect, NormalizeTab(State.ActiveTab), commands.Add);
+
+        Rect contentRect = new(
+            rect.x + NavWidth,
+            rect.y,
+            Math.Max(1f, rect.width - NavWidth),
+            Math.Max(1f, rect.height));
+        VanillaVoicePacksPage.Draw(contentRect);
+
+        UniversalSqueakerSettings settings = UniversalSqueakerMod.Settings;
+        if (settings != null)
+        {
+            VoicePacksPageModel.ExecuteAll(settings, commands, State);
         }
     }
 

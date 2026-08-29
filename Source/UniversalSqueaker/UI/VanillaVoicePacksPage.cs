@@ -47,7 +47,7 @@ public static class VanillaVoicePacksPage
         {
             float y = 0f;
             float innerWidth = Math.Max(1f, rect.width - Padding * 2f);
-            float x = rect.x + Padding;
+            float x = Padding;
 
             y = DrawModeRow(new Rect(x, y, innerWidth, RowHeight), view, y);
             y += SectionGap;

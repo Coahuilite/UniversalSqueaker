@@ -50,7 +50,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 ### Remaining (next goal)
 
-- **U7 — UiKit 级绘制顺序 + 导航接入** — 用 UiKit 顶层绘制阶段/统一交互帧替代 US 侧 hotfix（当前 nav 用 `ButtonInvisible`、help 手动后置，均绕过 UiKit）。
+- **U7 — UiKit 级绘制顺序 + 导航接入（部分落地）** — nav 已改走 `UiInteract`（独立帧，因滚动坐标空间限制未做单一统一帧）；Ferrite 异常时 fallback 保留左侧导航；Vanilla fallback 修正为滚动区局部坐标。仍待：真正 UiKit 顶层绘制阶段/统一交互帧（如需）。
 - **Backlog** — `docs/workdocs/us-ui-overhaul-backlog.md`：OB-01 Surface/Theme 收敛、OB-02 ClampWidth 接入、OB-03 加载 clamp 测试、OB-04 VoicePacksLayout 测试。
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
 - **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime)；U7 后需重新实机验证。
