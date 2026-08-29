@@ -31,7 +31,8 @@
   - `us/mode-row`：解释四种模式的语义（Vanilla/Fallback/Remix/Disabled）。
   - `us/filter-bar`：解释域过滤与作者过滤。
   - `us/basic-tuning`：解释彩蛋、距离预设、三个缩放开关。
-  - `us/distance-chart`：解释示意曲线（min 内全响、min→max 线性衰减、max 外静默）。
+  - `us/global-volume`：解释全局音量 0–100% 与 `Disabled` 的区别。
+  - `us/attenuation-editor`：解释相机高度 15–65、开始点 100%、结束点 0%、线性衰减、三快速预设。
   - `us/camera-indicator`：解释相机指示器。
   - `us/scope-tree`：解释 Global/Race/Xenotype 三层与 Auto/Off/Any/Command。
   - `us/preset-list`：解释 baseline 预设导入。
@@ -47,7 +48,7 @@
 
 ### 4. 各 widget 接入
 
-- `Layout.xml` 给以下根节点加 `HelpKey="..."`：`us/page-title`（`us/page-title`）、`input/mode-row`（`us/mode-row`）、`us/filter-bar`、`us/basic-tuning`、`us/distance-chart`、`us/camera-indicator`、`us/scope-tree`、`us/preset-list`、`us/race-layer`、`us/xenotype-layer`、`us/voice-pack-checklist`。
+- `Layout.xml` 给以下根节点加 `HelpKey="..."`：`us/page-title`（`us/page-title`）、`input/mode-row`（`us/mode-row`）、`us/filter-bar`、`us/basic-tuning`、`us/global-volume`、`us/attenuation-editor`、`us/camera-indicator`、`us/scope-tree`、`us/preset-list`、`us/race-layer`、`us/xenotype-layer`、`us/voice-pack-checklist`。
 - 每个 widget 的 `Measure`：当 `ctx.State.OpenHelpKeys.Contains(helpKey)` 时，在头高基础上加 `VoicePacksLayout.BannerHeight(helpText, width, metrics) + Gap`。
 - 每个 widget 的 `Draw`：在 section header 行右侧画 `?`（复用 `UsHelpButton`）；展开时在 header 下方、内容上方画帮助 banner（现代 banner 表面，不可点击、不拦截）。
 - `PageTitleWidget`：迁移到新机制（移除旧的页级 `HelpOpen` 使用；`FerriteVoicePacksPage` 的页级 `HelpOpen` 键可保留兼容但不再被新 UI 使用）。

@@ -18,9 +18,9 @@
 | Agent | 类型 | provider / model / effort | 职责 |
 |---|---|---|---|
 | D-Agent（文档） | `dispatch_subagents` one-shot | qwen-token-plan-cn / deepseek-v4-flash / low（文档任务） | P0 视觉评估稿，一次交付 |
-| C-Agent（编码） | `dispatch_subagents` **worker（持久）** | qwen-token-plan-cn / deepseek-v4-flash / max | 串行执行 P纯 → P1 → P2 → P3 → P4 → P5 → P6 → P7 |
+| C-Agent（编码） | `dispatch_subagents` **worker（持久）** | qwen-token-plan-cn / deepseek-v4-flash / max | 串行执行 P纯 → S4-Vol → S4-Nav → P1 → P2 → P4 → P5 → P6 → P7 |
 
-- **最小并行为 2 个 subagent**：D-Agent 与 C-Agent 的第一棒（P纯）可并行。P纯只新增纯逻辑文件 + 新测试项目，与 D-Agent 的文档写作无文件冲突。
+- **最小并行为 2 个 subagent**：D-Agent（文档）与 C-Agent（编码）可并行。P纯 只新增纯逻辑文件 + 新测试项目，与 D-Agent 的文档写作无文件冲突；P0 修订也可与 S4-Vol/S4-Nav 并行设计。
 - **编码 lane 只允许 1 个 worker**：所有代码块都 build 同一个 `UniversalSqueaker.csproj`，且 P1 之后每块都触碰 `UI/*`、`Layout.xml`、`UsWidgetRegistrar.cs`、`FerriteVoicePacksPage.cs` 中的多数文件。并行会产生 obj 争用与文件冲突。不要因为赶进度开第二个编码 agent。
 - 总 worker 数：**2 个 subagent（1 文档 + 1 编码）+ 你（调度者）**。每块完成后 C-Agent 继续下一棒（`send_message` 发下一本任务书）；只有 C-Agent 失联/上下文过长时才可新建 worker 并附上已完成块清单。
 
@@ -28,17 +28,19 @@
 
 ```text
 D-Agent:  P0 视觉评估稿 ──────────────► 维护者批准 ◄── 门禁：P1 不得提前开工
-C-Agent:  P纯（纯逻辑脚手架）──────────► 你验收 ──► P1（等 P0 批准）─► P2 ─► P3 ─► P4 ─► P5 ─► P6 ─► P7
+C-Agent:  P纯 ──► S4-Vol ──► S4-Nav ──► P1（等 P0 批准）─► P2 ─► P4 ─► P5 ─► P6 ─► P7
 ```
 
 | 顺序 | 任务书 | 依赖 | 由谁做 | 开工条件 |
 |---|---|---|---|---|
-| 0a | `s4-polish-p0-visual-spec.md` | 无 | D-Agent | 立即派发 |
+| 0a | `s4-polish-p0-visual-spec.md` | 无 | D-Agent | 立即派发（需按新需求修订） |
 | 0b | `s4-polish-pure-logic.md` | 无 | C-Agent | 立即派发（与 0a 并行） |
-| 1 | `s4-polish-p1-skin-foundation.md` | P0 批准 + P纯验收通过 | C-Agent | P0 获维护者批准后，先验收 P纯，再发 P1 |
+| 0c | `s4-polish-s4-vol.md` | P纯验收通过 | C-Agent | P纯通过后派发 |
+| 0d | `s4-polish-s4-nav.md` | S4-Vol 验收通过 | C-Agent | 前一棒通过 |
+| 1 | `s4-polish-p1-skin-foundation.md` | P0 批准 + S4-Nav 验收通过 | C-Agent | P0 获维护者批准后，先验收 S4-Nav，再发 P1 |
 | 2 | `s4-polish-p2-footer.md` | P1 验收通过 | C-Agent | 前一棒通过 |
-| 3 | `s4-polish-p3-distance-chart.md` | P2 验收通过 | C-Agent | 前一棒通过 |
-| 4 | `s4-polish-p4-filter.md` | P3 验收通过 | C-Agent | 前一棒通过 |
+| 3 | `s4-polish-p3-distance-chart.md` | — | — | ✅ 已并入 S4-Vol，不再派发 |
+| 4 | `s4-polish-p4-filter.md` | P2 验收通过 | C-Agent | 前一棒通过 |
 | 5 | `s4-polish-p5-help.md` | P4 验收通过 | C-Agent | 前一棒通过 |
 | 6 | `s4-polish-p6-responsive.md` | P5 验收通过 | C-Agent | 前一棒通过 |
 | 7 | `s4-polish-p7-fallback.md` | P6 验收通过 | C-Agent | 前一棒通过 |
@@ -52,13 +54,13 @@ C-Agent:  P纯（纯逻辑脚手架）──────────► 你验�
    - `dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev`
    - `dotnet run --project tools/UniversalSqueakerKernelTests -c Release`
    - `pwsh -File scripts/verify-local.ps1`
-   - P3 起：`dotnet run --project tools/UniversalSqueakerUiLogicTests -c Release`
+   - P纯 起：`dotnet run --project tools/UniversalSqueakerUiLogicTests -c Release`
 5. 通过后记录到 `docs/workdocs/s4-polish-index.md` 的状态列（状态：✅ 完成并提交 <hash>）。
 
 ## 5. 维护者批准门
 
 - **P0 批准是硬门**：D-Agent 交付 `docs/ui-visual-modernization-zh.md` 后，你必须请维护者确认（色板/组件库/响应式/fallback 矩阵 6 点）。维护者批准前，**不得**给 C-Agent 发 P1。
-- P0 若不批准：把维护者意见作为修订意见发回 D-Agent（同一 one-shot 的后续消息或新 one-shot），改到批准为止；C-Agent 只能停在 P纯完成态等待。
+- P0 若不批准：把维护者意见作为修订意见发回 D-Agent（同一 one-shot 的后续消息或新 one-shot），改到批准为止；C-Agent 只能停在 S4-Nav 完成态等待（若尚未到 S4-Nav，则停在当前已完成棒）。
 
 ## 6. 派发模板（给 C-Agent 发每一棒）
 

@@ -2,7 +2,7 @@
 
 > 状态：规划稿（2026-08-28）。**维护者已拍板：视觉路线 = 全量换肤（简洁现代 RimWorld 配色组件）；原版 fallback 策略见 §10（当前仍在开工前评估）。**
 > 入口依据：`docs/s4-polish-brief.md`、`HANDOFF.md` §5 第 1 项、`docs/us-ui-migration-plan-zh.md` §10/§12 S4、`docs/review/review-05-ui-ferrite.md`。
-> 性质：纯视觉/UI-UX 块。不碰运行时路由、不碰 settings schema、不碰 Kernel/Pure 音频语义（仅新增零 Verse 的可测 UI 纯函数）。
+> 性质：以纯视觉/UI-UX 为主，另含一个维护者确认的 S4-Vol 功能块（全局音量 + 相机高度衰减编辑器）。视觉部分不碰运行时路由；S4-Vol 按 §1.3 明确的小范围新增 settings/运行时音量。
 > 术语：本计划所有「换肤/重做」均指视觉皮肤与绘制代码的替换程度；RimWorld 1.6 mod UI 只有 Unity IMGUI + `Verse.Widgets` 一条路，每帧全量重画，不存在新的保留模式 GUI 系统。FerriteLib.UiKit 只是 IMGUI 之上的布局/测量结构，不改变底层绘制方式。
 
 ---
@@ -11,7 +11,7 @@
 
 ### 1.1 目标
 
-把当前「功能已完整、视觉仍粗放」的 Ferrite VoicePacks 设置页，**全量换肤**为一套简洁、现代、RimWorld 配色语境的设置 UI：扁平表面、清晰层级、统一状态表达、窄屏可降级、就地帮助、build 身份 footer、距离预览图，并且在任何自绘组件异常时仍有原版功能兜底。
+把当前「功能已完整、视觉仍粗放」的 Ferrite VoicePacks 设置页，**全量换肤**为一套简洁、现代、RimWorld 配色语境的设置 UI：扁平表面、清晰层级、统一状态表达、窄屏可降级、就地帮助、build 身份 footer、全局音量与相机高度衰减编辑器，并且在任何自绘组件异常时仍有原版功能兜底。
 
 ### 1.2 六项范围（与 brief 对齐）
 
@@ -22,16 +22,36 @@
 | S4c | 窄屏响应式 | 全页面宽度守卫 + 布局降级，覆盖每个 Ferrite widget |
 | S4d | 视觉现代化 | 全量换肤：现代简洁 RimWorld 配色 + 自绘组件库 + FerriteLib 中性现代 skin |
 | S4e | Footer build identity | 左版本 / 右保存状态 + dirty 标记 |
-| S4f | 距离预览折线图 | `distancePreset` / `distanceRange` 的可视化预览 |
+| S4f | 相机高度衰减编辑器（S4-Vol） | `globalVolumeFactor` + 可拖拽衰减曲线 + 三快速预设按钮 |
 | S4g | 原版 fallback | 自绘组件异常时降级到原版 `Widgets.*` 对应物，保持设置页可用（§10） |
 
-### 1.3 非目标
+### 1.3 S4-Vol 功能块（新增，先于视觉主链）
+
+维护者确认新增一个独立小功能块，放在 S4-Polish 视觉主链之前：
+
+- **全局音量**：`0%–100%`，默认 `100%`。语义：在衰减系数为 100%（相机高度 ≤ 开始点）时听到的音量；`0%` 不是 `Disabled` 短路，只是最终音量 0，正常发声流程仍执行。
+- **相机高度衰减编辑器**：横轴相机高度固定 `15–65`，纵轴音量百分比 `0–100`；两个可水平拖拽的点——开始点 y 锁死 `100%`、结束点 y 锁死 `0%`；两点连线线性衰减；最终音量 = 全局音量 × 衰减系数。
+- **快速预设**：保留 `Conservative / Balanced / Strong` 三个按钮；拖拽编辑器后自动进入 `Custom`。
+- 本块不是纯视觉：会新增 settings 字段、运行时静态音量、UI 命令/投影/新 widget；但仍是小改动，不 bump settings schema（新字段默认值，旧存档自动兼容）。
+
+### 1.4 S4-Nav 布局重构（新增，先于皮肤地基）
+
+维护者确认采用 **B 方案：左侧导航 + 右侧内容 + 右侧底部 sticky footer**：
+
+- **窗口外壳**：保留 RimWorld `Window` 标题栏/关闭按钮/内容视口；自定义内容必须不溢出、不遮挡、不超出窗口可视区。
+- **左侧导航**：固定三页签 `基础设置 / 调音 / 包清单`。
+- **右侧内容**：当前页签内容在独立滚动区；底部 footer 始终钉在右侧可视区底部，不随内容滚走。
+- **footer**：左槽版本/build，右槽保存状态（Dirty/Saving/Saved/Failed）。
+- 本块是布局结构重构：会改 `Layout.xml`、`FerriteVoicePacksPage`、`VoicePacksPageState`（当前页签）、`UsWidgetRegistrar`，并可能新增 `UsNavWidget`/页签容器。
+- 本块不做现代皮肤（P1 做）、不做响应式细节（P6 做）。
+
+### 1.5 非目标
 
 - 不修改 `MEMORY.md` / `TODO.md` / `HANDOFF.md` / `AGENTS.md` / `OBLIVIONIS.md`。
 - 不引入 Legacy UI；Ferrite 是唯一渲染路径（vanilla fallback 只是 Ferrite 内部的降级绘制，不是第二条产品路径）。
 - 不把 US 产品字面量、文案、帮助内容放进 `FerriteLib.UiKit`（库保持中性；库内只允许中性现代 skin 与中性能力）。
 - 不改 `voicePackSelections` / `voicePackMode` / `actionTuning` / `moodTuning` 的 Scribe 形状；只读展示。
-- 不做运行时音频逻辑改动；距离图只是可视化，不改变 `CompSqueaker.ApplyDistanceRange`。
+- 除 S4-Vol 明确新增的全局音量与衰减编辑器外，不做其它运行时音频逻辑改动；衰减编辑器会写 `distanceRange` 并置 `Custom`，这是 S4-Vol 的预期行为。
 - 不发布、不 push、不碰 remote。
 
 ---
@@ -59,9 +79,9 @@
 
 ## 3. 对 brief 第 6 节 8 个问题的回答（规划决策）
 
-1. **依赖顺序**：`视觉评估稿 → 现代皮肤地基（含 fallback guard）→ footer → 距离图 → 过滤 → 组件化帮助 → 窄屏响应式 → 全量换肤收口（含页面级 vanilla 兜底页）`。
+1. **依赖顺序**：`S4-Vol 全局音量/衰减编辑器 → 视觉评估稿 → 现代皮肤地基（含 fallback guard）→ footer → 过滤 → 组件化帮助 → 窄屏响应式 → 全量换肤收口（含页面级 vanilla 兜底页）`。
    - 现代皮肤地基必须先做（否则每个后续块都要返工）。
-   - footer、距离图、过滤、帮助四块之间文件重叠少，但都触碰 `FerriteVoicePacksPage.cs` 的 view state 字典与 `Layout.xml`。**建议串行提交、小步合入**；若要并行，只把「距离图」与「过滤」拆给两个 subagent，footer/help/responsive/fallback 必须串行（都改全部 widget）。
+   - S4-Vol、footer、过滤、帮助之间文件重叠少，但都触碰 `FerriteVoicePacksPage.cs` 的 view state 字典与 `Layout.xml`。**建议串行提交、小步合入**；若要并行，只把「S4-Vol」与「过滤」拆给两个 subagent，footer/help/responsive/fallback 必须串行（都改全部 widget）。
    - 窄屏响应式最后做：它要为每个 widget 的 Measure/Draw 增加宽度守卫，等其它块的最终高度逻辑（尤其帮助展开高度）稳定后再做，避免二次返工。
 2. **过滤放哪层**：**投影层 `VoicePacksPageModel.BuildView`**。过滤是视图投影的一部分，widget 保持无状态渲染。过滤状态（ephemeral）放 `VoicePacksPageState`。判定谓词抽为零 Verse 纯函数（`UI/Layout/VoicePacksFilters.cs`，基于 primitive 输入），由新测试项目锁住；`BuildView` 只做薄适配调用。
 3. **组件化帮助数据模型**：**独立帮助表 + widget 元数据键**。
@@ -78,7 +98,7 @@
    - 版本：`UniversalSqueakerMod.BuildIdentity()`（当前 private static，需提为 `internal static`）。
    - 保存状态：`UniversalSqueakerMod.SaveState`（internal enum，已存在）、dirty = `requestedSaveGeneration > persistedSaveGeneration`（需暴露 `internal bool IsSettingsDirty`）。
    - 现有 settings 无「版本」概念，版本来自程序集；保存状态来自 Mod 的防抖写桥。全部只读，S4e 不改持久化。
-7. **距离预览折线图数据输入**：`settings.distanceRange`（`FloatRange`，15–65 clamp 后）+ `settings.distancePreset`。纯函数画曲线：新 `UI/Layout/DistancePreview.cs`（零 Verse，输入 `(min,max)` 输出归一化采样点），绘制用 Verse `Widgets.DrawBoxSolid` 像素条。**不读 `SubSoundDef.distRange`、不碰 Unity 音频回滚**；文档注明这是示意曲线（min 内全响、min→max 线性衰减、max 外静默），不等于引擎实际 rolloff。需要测试：是，零 Verse 纯函数进新 UI 逻辑测试项目。
+7. **相机高度衰减编辑器数据输入**：`settings.globalVolumeFactor`（0–100%）+ `settings.distanceRange`（`FloatRange`，15–65 clamp 后）+ `settings.distancePreset`。纯函数 `UI/Layout/DistancePreview.cs`（零 Verse，输入 `(min,max)` 输出归一化采样点）仍复用；绘制层升级为可拖拽两点编辑器。**不读 `SubSoundDef.distRange`、不碰 Unity 音频回滚**；语义：开始点 y=100%、结束点 y=0%，两点连线线性衰减；最终音量 = 全局音量 × 衰减系数。需要测试：是，零 Verse 纯函数进 UI 逻辑测试项目。
 8. **验收标准**：见 §6 每块验收；总闸 = `verify-local` 全绿 + Dev/Release 0 警告 + kernel golden-corpus 零差 + 新增 UI 逻辑测试全绿 + maintainer 游戏内矩阵（见 §6.3，含 fallback 触发项）。
 
 ---
@@ -86,6 +106,41 @@
 ## 4. 拆解顺序与文件范围
 
 > 每块一个原子提交。提交前跑 §6.1 门禁；提交说明用 `feat(S4-*)` / `docs(S4-*)`。
+
+### S4-Vol — 全局音量 + 相机高度衰减编辑器（功能块，先于 P0/P1）
+
+- **文件范围**：
+  - `Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.cs`：新增 `globalVolumeFactor = 1f`；新增 `SetGlobalVolume(float)`（clamp 0–1、同步 `CompSqueaker.GlobalVolumeFactor`、`QueuePersistence`）；新增 `SetDistanceRange(float start, float end)`（clamp 15–65、start < end、置 `distancePreset = Custom`、`NotifyDistanceRuntimeChanged` + `QueuePersistence`）。
+  - `Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.ExposeData.cs`：`Scribe_Values.Look(ref globalVolumeFactor, "globalVolumeFactor", 1f)`；`PostLoadInit` clamp 0–1；`distanceRange` 沿用现有 clamp。
+  - `Source/UniversalSqueaker/CompSqueaker.cs`：新增 `public static float GlobalVolumeFactor = 1f`；在 `ResolveMoodMod` 最终返回前 `mod.volumeFactor *= GlobalVolumeFactor`。
+  - `Source/UniversalSqueaker/UI/Model/UiCommand.cs`：新增 `SetGlobalVolume`、`SetDistanceRange`。
+  - `Source/UniversalSqueaker/UI/Model/VoicePacksViewState.cs`：新增 `GlobalVolumeFactor`、`DistanceRangeMin`、`DistanceRangeMax`。
+  - `Source/UniversalSqueaker/UI/Model/VoicePacksPageModel.cs`：投影三值；`Execute` 处理两个新命令。
+  - `Source/UniversalSqueaker/UI/FerriteVoicePacksPage.cs`：view state 字典加三键。
+  - `Source/UniversalSqueaker/UI/Widgets/UsWidgetCommandAdapter.cs`：映射两个新命令。
+  - `Source/UniversalSqueaker/UI/Widgets/GlobalVolumeWidget.cs`（新，Kind=`us/global-volume`）：0–100% slider，写 `SetGlobalVolume`。
+  - `Source/UniversalSqueaker/UI/Widgets/AttenuationEditorWidget.cs`（新，Kind=`us/attenuation-editor`）：横轴 15–65、纵轴 0–100，两个可水平拖拽点（开始 y=100、结束 y=0），线性衰减；拖动写 `SetDistanceRange`；下方三按钮 `Conservative/Balanced/Strong` 写 `SetDistancePreset`；拖拽后自动 `Custom`。
+  - `Source/UniversalSqueaker/UI/UsWidgetRegistrar.cs` / `Layout.xml`：注册并插入基础设置区。
+  - `tools/UniversalSqueakerSettingsMigrationTests`：新增全局音量默认/round-trip/clamp、`SetDistanceRange` clamp/start<end/Custom 断言。
+- **不做**：不做现代皮肤（P1 做）；不做窄屏/帮助/fallback（P5/P6/P7 做）。
+- **验收**：Dev/Release 0 警告；kernel 全绿；UiLogicTests ALL GREEN；verify-local 14 门全绿；SettingsMigrationTests 覆盖新字段与写桥。
+
+### S4-Nav — 左侧导航 + 三页签 + sticky footer（布局结构重构，先于 P1）
+
+- **文件范围**：
+  - `Source/UniversalSqueaker/UI/Model/VoicePacksPageState.cs`：新增当前页签字段（如 `ActiveTab`，ephemeral，Reset 回基础设置）。
+  - `Source/UniversalSqueaker/UI/FerriteVoicePacksPage.cs`：绘制窗口内容视口；左侧导航区 + 右侧滚动区 + 底部 footer；按 `ActiveTab` 只渲染当前页签内容；footer 固定右侧可视底部。
+  - `Source/UniversalSqueaker/UI/Layout.xml`：重组为三个页签容器（`basic` / `tuning` / `packs`），现有 root widget 分别归入对应页签；加入左侧导航 widget（或由 `FerriteVoicePacksPage` 直接绘制导航，不一定要进 Layout.xml）。
+  - `Source/UniversalSqueaker/UI/Widgets/UsNavWidget.cs`（新，Kind=`us/nav`，可选）：画三枚导航按钮，emit `SetActiveTab`。
+  - `Source/UniversalSqueaker/UI/Model/UiCommand.cs`：新增 `SetActiveTab`。
+  - `Source/UniversalSqueaker/UI/Model/VoicePacksPageModel.cs`：`Execute` 处理 `SetActiveTab`。
+  - `Source/UniversalSqueaker/UI/UsWidgetRegistrar.cs`：如新增 nav widget 则注册。
+- **归属**：
+  - 基础设置：mode row、global volume、attenuation editor、basic toggles。
+  - 调音：scope tree、mood tuning、preset import。
+  - 包清单：filter bar、race layer、xenotype layer、voice pack checklist。
+- **不做**：不做现代皮肤（P1 做）；不做响应式细节（P6 做）；不改变业务写桥。
+- **验收**：三个页签可切换；各页签内容正确归属；footer 在右侧可视底部；窗口内容不溢出/不遮挡；Dev/Release 0 警告；kernel 全绿；UiLogicTests ALL GREEN；verify-local 14 门全绿。
 
 ### P0 — 视觉现代化评估稿（纯文档，先行门）
 
@@ -96,7 +151,7 @@
      - 色板：中性炭黑基面（Base/Panel/Raised/Hover/Selected）+ 单一金色强调 + Danger/Success/Warning 语义色；扁平、1px 边框、无渐变/圆角/贴图。
      - 参考值（P0 可微调）：Base `(0.10,0.10,0.10)`、Panel `(0.14,0.14,0.14)`、Raised `(0.18,0.18,0.18)`、Hover `(0.22,0.22,0.22)`、Selected `(0.20,0.17,0.10)`、AccentGold `(0.92,0.68,0.30)`、TextPrimary `(0.92,0.92,0.90)`、TextSecondary `(0.65,0.65,0.62)`、Danger `(0.55,0.18,0.15)`、Success `(0.16,0.35,0.22)`、Border `(0.30,0.30,0.28)`、BorderStrong `(0.45,0.45,0.42)`。
      - 间距：2/4/6/8/10；行高 S=22，M=26，L=32，XL=50。
-  3. **自绘组件库规格**：现代行（hover/selected/左竖条/右操作）、segmented button、modern checkbox（18px 方框 + 金勾）、mode card（下金线选中）、text field 皮肤（外壳包 `Widgets.TextField`）、banner、footer 双槽、折线图、help `?`。
+  3. **自绘组件库规格**：现代行（hover/selected/左竖条/右操作）、segmented button、modern checkbox（18px 方框 + 金勾）、mode card（下金线选中）、text field 皮肤（外壳包 `Widgets.TextField`）、banner、footer 双槽、全局音量 slider、可拖拽衰减编辑器、help `?`。
   4. 响应式三档规则（§3.4）。
   5. 原版 fallback 矩阵（§10）。
   6. 维护者决策项（§5 D1–D6）。
@@ -109,7 +164,7 @@
   - `Source/UniversalSqueaker/UI/Visuals/UsSurface.cs`（新）：`DrawSurface`、`DrawRowSurface(rect, hover, selected, danger, leftAccent)`、`DrawSegment(rect, label, state)`、`DrawCheckbox(rect, value)`、`DrawHeader(rect, text, helpOpen?)`——统一收编现有 `DrawBoxSolid + DrawBorder` 组合，并成为后续所有 widget 的唯一表面入口。
   - `Source/UniversalSqueaker/UI/Visuals/UsGuard.cs`（新）：`MeasureOrFallback` / `DrawOrFallback`，catch 后先恢复 `Text.Font/Text.Anchor/GUI.color` 再画原版 fallback；按 widget+session 只 log 一次。
   - `Source/UniversalSqueaker/UI/Components/UiPalette.cs`：改为 `[Obsolete]` 薄转发到 `UsVisualTokens`（过渡期），随后删除。
-  - 切换范围：`BasicTuningWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`VoicePackRow`、`VoicePackChecklist`、`SearchField`、`EmptyState`、`StatusBanner`、`HelpToggle`、`SectionFrame`。
+  - 切换范围：`BasicTuningWidget`、`GlobalVolumeWidget`、`AttenuationEditorWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`VoicePackRow`、`VoicePackChecklist`、`SearchField`、`EmptyState`、`StatusBanner`、`HelpToggle`、`SectionFrame`。
   - **FerriteLib.UiKit 中性现代 skin**：`Widgets/Palette.cs` 重命名角色化并更新色值；`SurfaceFrame` / `ModeCardRenderer` / `ChromeBannerWidget` / `ChromeFooterWidget` / `SectionHeaderWidget` / `EmptyStateWidget` / `InputModeRowWidget` 跟随新 skin（仍无 US/SR 产品字面量）。
 - **不做**：不改变任何交互/命令/布局高度。
 - **验收**：Dev/Release 0 警告；`verify-local` 13 门全绿 + neutrality grep 通过；grep 确认 US widget 不再直接 `new Color(...)` 画表面（允许图表/文本特殊色）；行高/间距与 P0 令牌一致。
@@ -126,16 +181,13 @@
   - `Source/UniversalSqueaker/UI/Layout.xml`：`chrome/footer` → `us/footer`。
 - **验收**：footer 显示 `dev-<rev>/<informational>` 或版本号；编辑任一开关后右槽进入 Saving→Saved，0 警告；手动把写桥制造失败时显示 Failed（maintainer 游戏内可选项，不强制）。
 
-### P3 — 距离预览折线图
+### P3 — 已并入 S4-Vol（原距离预览折线图取消）
 
-- **文件范围**：
-  - `Source/UniversalSqueaker/UI/Layout/DistancePreview.cs`（新，零 Verse）：`SampleAudibilityCurve(float min, float max, int samples, float graphMin, float graphMax)` → `IReadOnlyList<Point>`（归一化 0..1）；语义：`d≤min` 全响、`min→max` 线性衰减、`d≥max` 静默。
-  - `Source/UniversalSqueaker/UI/Widgets/DistanceChartWidget.cs`（新，Kind=`us/distance-chart`）：64px 高图表，画 min/max 刻度、填充曲线、当前预设名；点击图表 = 循环预设（复用 `UiCommandKind.SetDistancePreset`）；宽度 < 200px 时降级为一行文本「Too narrow for chart」；fallback = 文本摘要。
-  - `Source/UniversalSqueaker/UI/Model/VoicePacksViewState.cs`：新增 `DistanceRangeMin/Max`（或 `FloatRange DistanceRange`；本块只读）。
-  - `VoicePacksPageModel.cs` / `FerriteVoicePacksPage.cs`：投影 `DistanceRangeMin`、`DistanceRangeMax`。
-  - `BasicTuningWidget.cs`：在距离行下方嵌入 `DistanceChartWidget` 的绘制（或 `Layout.xml` 独立 root——**推荐独立 root `us/distance-chart` 插在 basic-tuning 与 camera-indicator 之间**，widget 内部自绘，不膨胀 BasicTuningWidget）。
-  - `UsWidgetRegistrar.cs` / `Layout.xml` 注册与排版。
-- **验收**：`DistancePreview` 纯函数测试通过（端点、单调非增、min=max 退化、样本数 2 和 200）；三档预设显示 15–65 / 15–50 / 15–40 对应曲线；Custom 显示当前 range。
+原 P3 的“距离预览折线图”已被 `S4-Vol` 的 **相机高度衰减编辑器** 取代：
+
+- `DistancePreview.cs` 纯函数继续保留（线性 min→max 语义不变）。
+- `DistanceChartWidget` 不再单独派发；改为 `AttenuationEditorWidget`（可拖拽两点编辑器 + 三快速预设按钮），在 S4-Vol 中落地。
+- 视觉皮肤、窄屏降级、帮助、fallback 分别由 P1/P5/P6/P7 覆盖。
 
 ### P4 — 过滤系统
 
@@ -158,9 +210,9 @@
 
 - **文件范围**：
   - `Source/FerriteLib.UiKit/Context/UiPageState.cs`：新增 `public readonly HashSet<string> OpenHelpKeys = new(StringComparer.Ordinal);`（中性，无产品字面量）+ `ToggleHelpKey(key)`；`Reset` 清空。
-  - `Source/UniversalSqueaker/UI/Help/UsHelpCatalog.cs`（新）：`Get(key)`；首批键：`us/mode-row`、`us/basic-tuning`、`us/distance-chart`、`us/camera-indicator`、`us/scope-tree`、`us/preset-list`、`us/filter-bar`、`us/race-layer`、`us/xenotype-layer`、`us/voice-pack-checklist`。
+  - `Source/UniversalSqueaker/UI/Help/UsHelpCatalog.cs`（新）：`Get(key)`；首批键：`us/mode-row`、`us/basic-tuning`、`us/global-volume`、`us/attenuation-editor`、`us/camera-indicator`、`us/scope-tree`、`us/preset-list`、`us/filter-bar`、`us/race-layer`、`us/xenotype-layer`、`us/voice-pack-checklist`。
   - `Source/UniversalSqueaker/UI/Widgets/UsHelpButton.cs`（新）：`Draw(Rect, string helpKey, UiPageState state, Action<KitUiCommand> emit)`——无帮助键则返回 false。
-  - 各 widget 头行：`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`BasicTuningWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`FilterBarWidget`、`DistanceChartWidget`、`PageTitleWidget`（page title 改用新机制，迁移到 `us/page-title` 键）。
+  - 各 widget 头行：`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`BasicTuningWidget`、`GlobalVolumeWidget`、`AttenuationEditorWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`FilterBarWidget`、`PageTitleWidget`（page title 改用新机制，迁移到 `us/page-title` 键）。
   - `UiElementSpec` 已支持任意属性；`Layout.xml` 各 widget 增加 `HelpKey`。
   - `Measure`：各 widget 在 `HelpOpen` 时加 `BannerHeight(helpText, width, metrics) + Gap`；`Draw` 就地渲染帮助 banner（在 section header 之下、内容之上）。帮助 banner 使用现代 banner 表面，不可点击、不拦截按钮（无 `ButtonInvisible`，天然不点穿）。
   - `FerriteVoicePacksPage.cs`：处理 `ToggleHelp` 命令时优先按 payload 的 key 调 `UiPageState.ToggleHelpKey`；旧的页级 `HelpOpen` 保留兼容或迁移。
@@ -174,7 +226,7 @@
   - `BasicTuningWidget` / `CameraIndicatorWidget`：label 宽 `Math.Max(1f, ...)`，checkbox 在 Minimal 下移到左列，行高不变。
   - `RaceLayerRow` / `XenotypeLayerRow`：Compact 下隐藏 detail 行（或截断），保留主标签 + 状态点。
   - `PresetListWidget`：xeno 缩进从 18px 降到 12px；Import 按钮宽固定 76px，标签宽 clamp。
-  - `FilterBarWidget` / `DistanceChartWidget` / `UsFooterWidget`：按 P6 规则自适配。
+  - `FilterBarWidget` / `GlobalVolumeWidget` / `AttenuationEditorWidget` / `UsFooterWidget`：按 P6 规则自适配。
   - `FerriteLib.UiKit/Widgets/InputModeRowWidget.cs`（中性增强）：卡片行在宽度不足以容纳 4 张卡（每张 < 140px）时自动 2×2 网格；仍不够则 1 列。属库的中性响应式改进，不含产品字面量。
   - `FerriteVoicePacksPage.cs`：当 `rect.width < 240px` 时直接 `EmptyState.Draw("Window too narrow")` 早退（scrollbar 计算之前）。
 - **验收**：新 UI 逻辑测试锁定 `ForWidth` 与 tier 边界；在 480/360/300/240 四档宽度下人工走查矩阵（maintainer 游戏内）；任何 widget 不产生负宽度绘制。
@@ -182,7 +234,7 @@
 ### P7 — 全量换肤收口 + 页面级 vanilla 兜底页
 
 - **文件范围**：
-  - `Source/UniversalSqueaker/UI/VanillaVoicePacksPage.cs`（新）：纯 `Verse.Widgets` 的简化功能兜底页。复用 `VoicePacksPageModel.BuildView/Execute` 投影与命令，只换绘制层（原版 checkbox / button / text field / label）。覆盖关键功能：模式 4 选、距离预设循环、三个缩放开关、彩蛋、相机指示、race/xeno 域选择 + VoicePack 勾选。
+  - `Source/UniversalSqueaker/UI/VanillaVoicePacksPage.cs`（新）：纯 `Verse.Widgets` 的简化功能兜底页。复用 `VoicePacksPageModel.BuildView/Execute` 投影与命令，只换绘制层（原版 checkbox / button / text field / label）。覆盖关键功能：模式 4 选、全局音量、衰减快速预设、三个缩放开关、彩蛋、相机指示、race/xeno 域选择 + VoicePack 勾选。
   - `FerriteVoicePacksPage.Draw`：把现有整页 catch 从「画 EmptyState 错误」升级为「log + 绘制 `VanillaVoicePacksPage`」；Layout.xml 解析/引擎构建失败同样走兜底页。
   - 全量换肤收口：对照 P0 规格逐 widget 走查，补齐 hover/selected/danger/focus 细节。
 - **验收**：人为在 dev 构建中注入「某 widget 抛异常」与「Layout.xml 损坏」两类故障，确认兜底页出现且可完成核心设置操作；恢复正常后 Ferrite 页面照常。
@@ -196,7 +248,7 @@
 | D1 | 视觉路线 | **已拍板：全量换肤（简洁现代 RimWorld 配色组件）** | P0 规格将直接按全量换肤编写；P1/P7 范围扩大 |
 | D2 | FerriteLib 中性边界 | **FerriteLib 只做中性现代 skin + 中性能力**（帮助键集合、响应式），不引入 US/SR 产品字面量 | 保持库可复用 |
 | D3 | 帮助展开状态归属 | **`UiPageState.OpenHelpKeys`（中性通用容器）**，不放 US 业务 state | 库仍中性，US 持有键名 |
-| D4 | 距离图曲线语义 | **示意曲线**（min 内 1、min→max 线性衰减、max 外 0），文档注明非引擎物理 | 真实 rolloff 属 Verse/Unity，无预览必要 |
+| D4 | 衰减编辑器曲线语义 | **可拖拽两点衰减**：开始点 y=100%、结束点 y=0%，两点连线线性衰减；最终音量 = 全局音量 × 衰减系数 | 真实 rolloff 属 Verse/Unity，编辑器只表达玩家可调的线性模型 |
 | D5 | `VoicePacksPageModel.BuildView` 写回 state | 本计划保持现有写回（避免扩大改动）；过滤/帮助不新增写回，只读投影 | review-05 M3 的纯化不在 S4 范围内，记录为后续 |
 | D6 | 原版 fallback 粒度 | **推荐 L1+L2+L3 三级（§10）**：交互组件级 fallback + 信息组件文本降级 + 页面级 vanilla 兜底页 | 保证任何自绘故障下设置页仍可用；成本约 +450–600 行 |
 | R1 | 皮肤地基是跨文件重构 | 用 `[Obsolete]` 转发 + 逐文件切换，不一次删 `UiPalette` | 每步可编译、可回滚 |
@@ -219,7 +271,7 @@
 - 隐私预检：无 `PublishedFileId`/个人路径/凭据。
 - 每块原子提交。
 
-### 6.2 新增测试项目（P3/P4 落地）
+### 6.2 新增测试项目（S4-Vol/P4 落地）
 
 - **`tools/UniversalSqueakerUiLogicTests`**（新，仿 kernel-tests 的零 Verse 链接模式）：
   - 链接 `Source/UniversalSqueaker/UI/Layout/DistancePreview.cs`、`UI/Layout/VoicePacksFilters.cs`（以及未来新增的零 Verse UI 布局文件）。
@@ -235,10 +287,10 @@
 
 ### 6.3 游戏内人工矩阵（maintainer step）
 
-- 空 catalog：过滤条、帮助、footer、距离图均不崩溃，空态优雅。
+- 空 catalog：过滤条、帮助、footer、全局音量/衰减编辑器均不崩溃，空态优雅。
 - 无 Biotech：Xenotype 域 dormant，帮助/过滤与 Dormant banner 并存。
 - 同 xeno 多 race：Xenotype 行带 race 标识（现有）且过滤/帮助/窄屏不破坏其可读性。
-- 极窄窗口：480 / 360 / 300 / 240 四档，ScopeTreeWidget / BasicTuning / FilterBar / DistanceChart 不重叠、不异常。
+- 极窄窗口：480 / 360 / 300 / 240 四档，ScopeTreeWidget / BasicTuning / GlobalVolume / AttenuationEditor / FilterBar 不重叠、不异常。
 - 编辑任一设置：footer 右侧出现 Saving→Saved；重开窗口持久化正常。
 - 每个带 `?` 的 widget：展开帮助后滚动到底部，确认帮助 banner 不覆盖下一区块。
 - **fallback 触发**：dev 构建注入单 widget 异常 → 该区段降级为原版控件且可操作；注入整页/Layout.xml 异常 → `VanillaVoicePacksPage` 兜底页出现且核心设置可改。
@@ -250,9 +302,9 @@
 | 层 | 文件 | 改动类型 |
 |---|---|---|
 | FerriteLib.UiKit | `Widgets/Palette.cs`、`SurfaceFrame.cs`、`ModeCardRenderer.cs`、`ChromeBannerWidget.cs`、`ChromeFooterWidget.cs`、`SectionHeaderWidget.cs`、`EmptyStateWidget.cs`、`InputModeRowWidget.cs`、`Context/UiPageState.cs`、`tools/FerriteLib.UiKit.Tests/*` | 中性现代 skin + 中性能力 + 测试 |
-| US UI 新文件 | `UI/Visuals/UsVisualTokens.cs`、`UI/Visuals/UsSurface.cs`、`UI/Visuals/UsGuard.cs`、`UI/Help/UsHelpCatalog.cs`、`UI/Widgets/UsHelpButton.cs`、`UI/Widgets/UsFooterWidget.cs`、`UI/Widgets/FilterBarWidget.cs`、`UI/Widgets/DistanceChartWidget.cs`、`UI/Layout/VoicePacksFilters.cs`、`UI/Layout/DistancePreview.cs`、`UI/VanillaVoicePacksPage.cs` | 新增 |
+| US UI 新文件 | `UI/Visuals/UsVisualTokens.cs`、`UI/Visuals/UsSurface.cs`、`UI/Visuals/UsGuard.cs`、`UI/Help/UsHelpCatalog.cs`、`UI/Widgets/UsHelpButton.cs`、`UI/Widgets/UsFooterWidget.cs`、`UI/Widgets/FilterBarWidget.cs`、`UI/Widgets/GlobalVolumeWidget.cs`、`UI/Widgets/AttenuationEditorWidget.cs`、`UI/Widgets/UsNavWidget.cs`、`UI/Layout/VoicePacksFilters.cs`、`UI/Layout/DistancePreview.cs`、`UI/VanillaVoicePacksPage.cs` | 新增 |
 | US UI 修改 | `FerriteVoicePacksPage.cs`、`VoicePacksPageModel.cs`、`VoicePacksViewState.cs`、`VoicePacksPageState.cs`、`UiCommand.cs`、`UsWidgetRegistrar.cs`、`Layout.xml`、`VoicePacksLayout.cs`、全部现有 widget/component | 修改 |
-| US 其它 | `Mod.cs`（BuildIdentity/IsSettingsDirty 暴露） | 只读暴露 |
+| US 其它 | `Mod.cs`（BuildIdentity/IsSettingsDirty 暴露）、`Settings/UniversalSqueakerSettings.cs`、`Settings/UniversalSqueakerSettings.ExposeData.cs`、`CompSqueaker.cs`（S4-Vol） | 只读暴露 / S4-Vol 功能新增 |
 | 工具 | `tools/UniversalSqueakerUiLogicTests/**`、`scripts/verify-local.ps1`（+1 门） | 新增 |
 | 文档 | `docs/ui-visual-modernization-zh.md`、本计划 | 新增 |
 
@@ -263,13 +315,15 @@
 ## 8. 建议执行顺序汇总
 
 ```text
-P0 视觉评估稿（全量换肤规格 + fallback 矩阵，维护者批准 D1–D6）
+S4-Vol 全局音量 + 相机高度衰减编辑器（功能块，先于视觉链）
+  │
+S4-Nav 左侧导航 + 三页签 + sticky footer（布局结构重构）
+  │
+P0 视觉评估稿（全量换肤规格 + fallback 矩阵；可并行修订，P1 前需维护者批准）
   │
 P1 现代皮肤地基（UsVisualTokens + UsSurface + UsGuard + FerriteLib 中性现代 skin）
   │
 P2 footer build identity（小，端到端验证 view 键 + Mod 暴露）
-  │
-P3 距离预览折线图（纯函数 + DistanceChartWidget + 测试项目）
   │
 P4 过滤系统（纯函数 + FilterBarWidget + 模型投影 + 测试）
   │
@@ -280,8 +334,9 @@ P6 窄屏响应式（三档规则 + 全 widget 加固 + FerriteLib 中性响应�
 P7 全量换肤收口 + VanillaVoicePacksPage 兜底页
 ```
 
-- 串行主链：P0 → P1 → P2 → P3 → P4 → P5 → P6 → P7。
-- 可并行窗口：P3 与 P4 在 P2 后可由两个 subagent 并行（文件冲突仅 `Layout.xml`/`UsWidgetRegistrar.cs`/view state 字典，需协调或串行收口）。
+- 串行主链：S4-Vol → S4-Nav → P0（批准门）→ P1 → P2 → P4 → P5 → P6 → P7。
+- 原 P3 距离图已并入 S4-Vol，不再单独派发。
+- 可并行窗口：P0 文档修订可与 S4-Vol/S4-Nav 并行（S4-Vol/S4-Nav 不依赖 P0；但编码 lane 仍只有 1 个 worker，因此代码仍串行派发，除非维护者批准临时开第二个编码 worker）。
 - P5、P6 必须串行且 P6 最后（所有 widget 的最终 Measure 逻辑稳定后再加固）。
 - P7 的页面级兜底页可与 P1 的 `UsGuard` 并行设计，但代码合入放在最后（避免早期分心）。
 
@@ -304,7 +359,7 @@ P7 全量换肤收口 + VanillaVoicePacksPage 兜底页
 | 级别 | 覆盖 | 触发 | 降级形态 |
 |---|---|---|---|
 | L1 交互组件级 | 有原版对应物的交互控件（checkbox 行、段按钮、mode 卡、mood 步进、VoicePack 开关、搜索框、帮助 `?`、Import 按钮） | 该 widget 的 `Measure`/`Draw` 抛异常 | 同一 rect 内改画原版 `Widgets.Checkbox` / `ButtonText` / `TextField`，命令流不变 |
-| L2 信息组件级 | 无交互的自绘内容（距离图、footer、banner、section header、empty state） | 同上 | 文本摘要 / 原版 `Widgets.Label` / 简单 `DrawBoxSolid` |
+| L2 信息组件级 | 无交互的自绘内容（衰减编辑器、footer、banner、section header、empty state） | 同上 | 文本摘要 / 原版 `Widgets.Label` / 简单 `DrawBoxSolid` |
 | L3 页面级 | 整页（Ferrite 引擎、注册表、Layout.xml 解析、未知异常） | `FerriteVoicePacksPage.Draw` 外层 catch | 新 `VanillaVoicePacksPage`：纯 `Verse.Widgets` 的简化功能页，复用 `VoicePacksPageModel.BuildView/Execute` |
 
 ### 10.2 组件 → 原版 fallback 映射
@@ -319,7 +374,7 @@ P7 全量换肤收口 + VanillaVoicePacksPage 兜底页
 | 现代 help `?` | `Widgets.ButtonText("?")` | L1 | `ToggleHelp` 命令不变 |
 | mood −/＋ 步进 | 两个 `Widgets.ButtonText`（−/＋）+ `Widgets.Label` 值 | L1 | `SetMoodTuning` 命令不变 |
 | Import 按钮 | 已用 `Widgets.ButtonText`，无额外风险 | L1 | 无需 fallback |
-| 距离折线图 | `Widgets.Label` 文本摘要（`Conservative 15–65` 等） | L2 | 非交互 |
+| 衰减编辑器 / 全局音量 slider | `Widgets.Label` 文本摘要（`Conservative 15–65` 等）/ 原版 `Widgets.HorizontalSlider` + `Widgets.Label` | L2 | 非交互或简化交互 |
 | footer 双槽 | 两个 `Widgets.Label` | L2 | 非交互 |
 | banner / section header / empty state | `Widgets.Label`（banner 加简单 `DrawBoxSolid`） | L2 | 非交互 |
 | 整页 | `VanillaVoicePacksPage` | L3 | 见 P7 |

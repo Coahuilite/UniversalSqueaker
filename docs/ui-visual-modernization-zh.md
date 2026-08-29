@@ -2,7 +2,7 @@
 
 > 状态：评估稿，等待维护者批准。不修改任何代码。
 > 依据：`docs/s4-polish-plan-zh.md`（权威计划）、`Source/UniversalSqueaker/UI/Layout.xml`、`Source/UniversalSqueaker/UI/Components/*.cs`、`Source/UniversalSqueaker/UI/Widgets/*.cs`、`Source/FerriteLib.UiKit/Widgets/*.cs`。
-> 范围：纯视觉/UI-UX 评估与规格。不涉及运行时路由、settings schema、Kernel/Pure 音频语义、发布操作。
+> 范围：以纯视觉/UI-UX 评估与规格为主，并纳入 S4-Vol 的全局音量 slider 与相机高度衰减编辑器组件规格（功能实现由 S4-Vol 任务书负责）。不涉及运行时路由、Kernel/Pure 音频语义、发布操作。
 
 ---
 
@@ -104,7 +104,7 @@ US 侧实际绘制手段：
 | `TextOnGold` / `TextSelected` | 1.00 | 0.86 | 0.58 | 1.00 | 选中态主文字 |
 | `TextOnDanger` | 1.00 | 0.67 | 0.48 | 1.00 | danger/warning banner 文字 |
 | `TextDisabled` | 0.45 | 0.45 | 0.42 | 1.00 | disabled 文字 |
-| `AccentGoldAlpha20` | 0.92 | 0.68 | 0.30 | 0.20 | 折线图填充（纯色 alpha，非渐变） |
+| `AccentGoldAlpha20` | 0.92 | 0.68 | 0.30 | 0.20 | 衰减编辑器填充（纯色 alpha，非渐变） |
 
 > 实现说明：所有令牌以 `UnityEngine.Color(r, g, b, a)` 常量存在；US 侧 `UsVisualTokens` 与 FerriteLib `Palette` 各自持有相同值，保持中性边界。
 
@@ -214,22 +214,36 @@ US 侧实际绘制手段：
 - 最小尺寸：高 26px（M），顶部 1px `Border` 分隔线，左/右 padding 10px。
 - 右槽仅在空间不足时截断文本，不换行。
 
-### 3.8 折线图（Distance Preview Chart）
+### 3.8 全局音量 Slider + 相机高度衰减编辑器
 
-示意曲线：横轴距离、纵轴可听度；`d ≤ min` 全响（1.0），`min → max` 线性衰减，`d ≥ max` 静默（0.0）。
+**全局音量 Slider**（`us/global-volume`）：
 
 | 元素 | 规格 |
 |---|---|
+| 范围 | 0%–100%，默认 100%；不提供 200%（YAGNI） |
+| 视觉 | 扁平轨道 + 金色游标；normal/hover/focus 三态 |
+| 最小尺寸 | 高 26px（M），宽 120px |
+| 文本 | 当前百分比 `TextPrimary` Tiny |
+| 交互 | 拖动/点击 emit `SetGlobalVolume` |
+| 语义 | `0%` 不是 `Disabled` 短路，只是最终音量 0 |
+
+**相机高度衰减编辑器**（`us/attenuation-editor`）：
+
+| 元素 | 规格 |
+|---|---|
+| 横轴 | 相机高度，固定 15–65 |
+| 纵轴 | 音量百分比 0–100 |
 | 高度 | 64px |
 | 最小宽度 | 200px；<200 时降级为文本摘要 |
 | 网格/坐标线 | 1px `Border` |
-| min/max 刻度 | `TextSecondary` Tiny |
-| 曲线 | `AccentGold` 2px 实心条序列（逐采样点竖条） |
-| 填充 | `AccentGoldAlpha20` 纯色填充（无渐变） |
-| 当前预设名 | 图内右上角 `TextSecondary` Tiny |
-| 交互 | 整图点击 = 循环距离预设（复用 `SetDistancePreset`） |
+| 开始点 | y 锁死 100%，x 可水平拖拽 |
+| 结束点 | y 锁死 0%，x 可水平拖拽 |
+| 曲线 | 两点连线线性衰减；`AccentGold` 2px 实心条序列 + `AccentGoldAlpha20` 填充 |
+| 快速预设 | 三个按钮 `Conservative / Balanced / Strong`（15–65 / 15–50 / 15–40） |
+| 拖拽后 | `distancePreset = Custom`，写 `SetDistanceRange` |
+| 最终音量 | 全局音量 × 衰减系数 |
 
-- 采样语义为示意曲线，不等于引擎物理 rolloff；文档与 UI 文案注明。
+- 语义为玩家可调的线性衰减模型，不等于引擎物理 rolloff；UI 文案注明。
 
 ### 3.9 Help `?`
 
@@ -274,7 +288,8 @@ US 侧实际绘制手段：
 | 文本输入 | 完整宽 | 宽度随容器收缩，placeholder 可省略 | 宽度随容器收缩，placeholder 省略 |
 | Banner | 完整文本 | 文本自动换行 | 只显示第一段/关键短语 |
 | Footer | 左版本 / 右状态同槽 | 右状态截断 | 右状态显示为单字符状态点（如 `●`） |
-| 折线图 | ≥200px 画图 | ≥200px 画图；<200px 文本摘要 | 一律文本摘要 |
+| 全局音量 Slider | 完整滑条 + 百分比 | 滑条收缩，百分比保留 | 只显示百分比文本 + 单步按钮 |
+| 衰减编辑器 | ≥200px 可拖拽两点图 | ≥200px 可拖拽两点图；<200px 文本摘要 | 一律文本摘要 + 三快速预设按钮 |
 | Help `?` | 头行右端 | 头行右端 | 头行右端 |
 | ScopeTree mood 行 | 三因子簇完整 | 三因子簇 86px 守卫，不重叠 | 显示「Window too narrow for mood controls」文本 |
 | Race/Xeno 行 | 主标签 + enabled 统计 + 状态后缀 | 主标签 + 状态点；统计截断 | 主标签 |
@@ -308,7 +323,8 @@ US 侧实际绘制手段：
 | 现代 help `?` | `Widgets.ButtonText("?")` | L1 | `ToggleHelp` 命令不变 |
 | mood −/＋ 步进 | 两个 `Widgets.ButtonText`（−/＋）+ `Widgets.Label` 值 | L1 | `SetMoodTuning` 命令不变 |
 | Import 按钮 | 已用 `Widgets.ButtonText`，无额外风险 | L1 | 无需 fallback |
-| 距离折线图 | `Widgets.Label` 文本摘要（`Conservative 15–65` 等） | L2 | 非交互 |
+| 全局音量 Slider | `Widgets.HorizontalSlider` + `Widgets.Label` | L1 | 命令 `SetGlobalVolume` 不变 |
+| 衰减编辑器 | `Widgets.Label` 文本摘要（`Conservative 15–65` 等） + 三快速预设按钮 | L2 | 非拖拽，保留预设入口 |
 | Footer 双槽 | 两个 `Widgets.Label` | L2 | 非交互 |
 | Banner / SectionHeader / EmptyState | `Widgets.Label`（banner 加简单 `DrawBoxSolid`） | L2 | 非交互 |
 | 整页 | `VanillaVoicePacksPage` | L3 | 见 P7 |
@@ -319,7 +335,7 @@ US 侧实际绘制手段：
 - catch 后**先恢复 GUI 状态**（`Text.Font = GameFont.Small`、`Text.Anchor = UpperLeft`、`GUI.color = Color.white`）再画 fallback。
 - 每个 widget 每会话只 log 一次。
 - fallback 不吞业务异常：命令执行（`ExecuteAll`）仍在渲染循环外。
-- `VanillaVoicePacksPage` 只做简化功能面：模式、距离、三开关、彩蛋、相机、域选择 + pack 勾选；scope tree / mood 调音 / preset import 可省略。
+- `VanillaVoicePacksPage` 只做简化功能面：模式、全局音量、衰减快速预设、三开关、彩蛋、相机、域选择 + pack 勾选；scope tree / mood 调音 / preset import 可省略。
 - FerriteLib 侧中性组件同样按 L1/L2 在库内实现 fallback，不出现产品字面量。
 
 ---
@@ -331,7 +347,7 @@ US 侧实际绘制手段：
 | D1 | 视觉路线 | **已拍板：全量换肤（简洁现代 RimWorld 配色组件）** | 全文按全量换肤编写；§2 色板/间距/行高、§3 组件库、§4 响应式、§5 fallback 均直接供 P1/P7 引用 |
 | D2 | FerriteLib 中性边界 | **FerriteLib 只做中性现代 skin + 中性能力**（帮助键集合、响应式），不引入 US/SR 产品字面量 | §2.2 说明两侧各自持有相同令牌；§3 组件规格对库内组件保持中性；§4 的 2×2/1 列模式卡为库中性能力 |
 | D3 | 帮助展开状态归属 | **`UiPageState.OpenHelpKeys`（中性通用容器）**，不放 US 业务 state | §3.9 Help `?` 与 §5.2 映射；US 持有 `HelpKey` 键名，展开状态由库通用容器管理 |
-| D4 | 距离图曲线语义 | **示意曲线**（min 内 1、min→max 线性衰减、max 外 0），文档注明非引擎物理 | §3.8 明确定义采样语义与标注要求；不读 `SubSoundDef.distRange`、不碰 Unity 音频 |
+| D4 | 衰减编辑器曲线语义 | **可拖拽两点衰减**：开始点 y=100%、结束点 y=0%，两点连线线性衰减；最终音量 = 全局音量 × 衰减系数 | §3.8 明确定义编辑器规格与标注要求；不读 `SubSoundDef.distRange`、不碰 Unity 音频 |
 | D5 | `VoicePacksPageModel.BuildView` 写回 state | 本计划保持现有写回（避免扩大改动）；过滤/帮助不新增写回 | 本文档不修改该行为；§1.4 问题 11 记录为后续，S4 范围内不做纯化 |
 | D6 | 原版 fallback 粒度 | **推荐 L1+L2+L3 三级** | §5 完整矩阵与实现要点，供 P1/P7 落地 |
 

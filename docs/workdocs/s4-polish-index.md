@@ -7,12 +7,14 @@
 
 | 顺序 | 任务书 | worker | provider / model / effort | 依赖 | 状态 |
 |---|---|---|---|---|---|
-| 0a | s4-polish-p0-visual-spec.md | D-Agent（one-shot） | deepseek-official / deepseek-v4-flash / high（qwen-token-plan-cn 不可用回退） | 无 | ✅ 已交付并提交 `599f5da`（待维护者批准） |
+| 0a | s4-polish-p0-visual-spec.md | D-Agent（one-shot） | deepseek-official / deepseek-v4-flash / high（qwen-token-plan-cn 不可用回退） | 无 | ✅ 已交付并提交 `599f5da`（待维护者批准 / 需按新需求修订） |
 | 0b | s4-polish-pure-logic.md | C-Agent（worker） | deepseek-official / deepseek-v4-flash / max（qwen-token-plan-cn 不可用回退） | 无 | ✅ 完成并提交 `ef44a0f`（已验收） |
-| 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + P纯通过 | 待派发 |
+| 0c | s4-polish-s4-vol.md | C-Agent（worker） | 同上 / max | 无（P纯 已过；可与 P0 修订并行设计） | 待派发 |
+| 0d | s4-polish-s4-nav.md | C-Agent（worker） | 同上 / max | S4-Vol 通过 | 待派发 |
+| 1 | s4-polish-p1-skin-foundation.md | C-Agent | 同上 / max | P0 批准 + S4-Nav 通过 | 待派发 |
 | 2 | s4-polish-p2-footer.md | C-Agent | 同上 / max | P1 通过 | 待派发 |
-| 3 | s4-polish-p3-distance-chart.md | C-Agent | 同上 / max | P2 通过 | 待派发 |
-| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P3 通过 | 待派发 |
+| 3 | s4-polish-p3-distance-chart.md | — | — | — | ✅ 已并入 S4-Vol，不再单独派发 |
+| 4 | s4-polish-p4-filter.md | C-Agent | 同上 / max | P2 通过 | 待派发 |
 | 5 | s4-polish-p5-help.md | C-Agent | 同上 / max | P4 通过 | 待派发 |
 | 6 | s4-polish-p6-responsive.md | C-Agent | 同上 / max | P5 通过 | 待派发 |
 | 7 | s4-polish-p7-fallback.md | C-Agent | 同上 / max | P6 通过 | 待派发 |
@@ -27,7 +29,7 @@
 
 ## 派发原则（Polish 专用）
 
-1. 编码 lane 只有 1 个 worker，全部串行；唯一并行是 P0 文档与 P纯 编码。
+1. 编码 lane 只有 1 个 worker，全部串行；唯一并行是文档任务（P0/D-Agent）与编码任务（C-Agent）。
 2. P1 的开工硬门 = 维护者批准 `docs/ui-visual-modernization-zh.md`。
 3. 每本任务书自包含；worker 不读本目录其它任务书，不读 docs 下其它长篇文档（任务书点名的文件除外）。
 4. 每棒一个原子提交；提交信息在任务书内指定。

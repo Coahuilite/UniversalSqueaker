@@ -1,7 +1,7 @@
 # S4-Polish P1 — 现代皮肤地基（编码任务书）
 
 > 状态：待派发。执行者：C-Agent（持久 worker，第二棒）。
-> 依赖：维护者已批准 `docs/ui-visual-modernization-zh.md`（P0），且 P纯已验收通过。
+> 依赖：维护者已批准 `docs/ui-visual-modernization-zh.md`（P0），且 S4-Nav 已验收通过。
 > 目标：全量换肤地基——US 层令牌/表面/守卫助手 + FerriteLib 中性现代 skin + 全部现有 widget 切换到新皮肤 + 每 widget 原版 fallback（L1/L2）。**不改变任何交互、命令、布局高度。**
 
 ## 先读
@@ -29,7 +29,7 @@
 
 ### 2. US 层现有组件/ widget 全部切换
 
-- 切换范围：`BasicTuningWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`VoicePackRow`、`VoicePackChecklist`、`SearchField`、`EmptyState`、`StatusBanner`、`HelpToggle`、`SectionFrame`。
+- 切换范围：`BasicTuningWidget`、`GlobalVolumeWidget`、`AttenuationEditorWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`VoicePackRow`、`VoicePackChecklist`、`SearchField`、`EmptyState`、`StatusBanner`、`HelpToggle`、`SectionFrame`。
 - 每个文件：用 `UsVisualTokens`/`UsSurface` 重写绘制；**不改变行高、间距、命令流、Measure 结果**（P1 是纯视觉替换）。
 - `SectionFrame`/`UiPalette` 处理：先让 `UiPalette` `[Obsolete]` 转发到 `UsVisualTokens`，全部切换完成后本提交内删除 `UiPalette` 与旧 `SectionFrame`（若已无引用）。
 - 每个交互 widget 增加 `DrawVanillaFallback(Rect, WidgetContext, Action<KitUiCommand>)`（按 P0 fallback 矩阵）：
@@ -38,7 +38,7 @@
   - VoicePack 开关 → `Widgets.Checkbox` + 两行 `Widgets.Label`（`TogglePack` 命令不变）。
   - 搜索框 → 原版 `Widgets.TextField`（`SearchField` 的 fallback 就是去掉皮肤外壳）。
   - help `?` → `Widgets.ButtonText("?")`。
-  - 非交互组件 fallback：banner/header/empty/footer 前身 → `Widgets.Label`（banner 加简单 `DrawBoxSolid`）；chart 尚无。
+  - 非交互组件 fallback：banner/header/empty/footer 前身 → `Widgets.Label`（banner 加简单 `DrawBoxSolid`）；全局音量 slider → `Widgets.HorizontalSlider` + `Widgets.Label`；衰减编辑器 → `Widgets.Label` 文本摘要（`Conservative 15–65` 等）。
   - 在 `Draw` 里用 `UsGuard.DrawOrFallback` 包住自定义绘制与 fallback。
 
 ### 3. FerriteLib.UiKit 中性现代 skin

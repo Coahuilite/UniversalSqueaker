@@ -7,7 +7,7 @@
 
 - `docs/s4-polish-plan-zh.md` §4 P6、§3.4。
 - `Source/UniversalSqueaker/UI/Layout/VoicePacksLayout.cs`
-- 全部 US widget（重点 `ScopeTreeWidget`、`BasicTuningWidget`、`CameraIndicatorWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`PresetListWidget`、`FilterBarWidget`、`DistanceChartWidget`、`UsFooterWidget`、`VoicePackChecklist`、`VoicePackRow`）
+- 全部 US widget（重点 `ScopeTreeWidget`、`BasicTuningWidget`、`GlobalVolumeWidget`、`AttenuationEditorWidget`、`CameraIndicatorWidget`、`RaceLayerRow`、`XenotypeLayerRow`、`PresetListWidget`、`FilterBarWidget`、`UsFooterWidget`、`VoicePackChecklist`、`VoicePackRow`）
 - `Source/FerriteLib.UiKit/Widgets/InputModeRowWidget.cs`
 - `docs/ui-visual-modernization-zh.md` 响应式三档规格（P0 稿）。
 - 不要读其它 workdocs。
@@ -29,11 +29,11 @@
   - `DrawDomainRow`：域文本宽 `Math.Max(1f, ...)`；`Next domain >` 按钮宽固定 96f，放不下时移到第二行（`Measure` 加高）。
   - `DrawScopeRow`：Compact 下隐藏「→ effective」提示；主标签宽 clamp。
   - mood 因子簇保持 86px 守卫不变。
-- `BasicTuningWidget` / `CameraIndicatorWidget`：label 宽 `Math.Max(1f, ...)`；Minimal 下 checkbox 移到左侧第二列（不重叠）。
+- `BasicTuningWidget` / `GlobalVolumeWidget` / `AttenuationEditorWidget` / `CameraIndicatorWidget`：label 宽 `Math.Max(1f, ...)`；Minimal 下 checkbox/slider 移到左侧第二列（不重叠）；衰减编辑器 <200px 文本降级已实现。
 - `RaceLayerRow` / `XenotypeLayerRow`：Compact 下隐藏 detail 行；主标签宽 clamp。
 - `PresetListWidget`：xeno 缩进 Compact 下 12px；Import 按钮固定 76f；label 宽 clamp。
 - `FilterBarWidget`：<320px 两行（域过滤一行、作者一行）；段按钮最小 56f。
-- `DistanceChartWidget`：<200px 文本降级已实现；确认无负 rect。
+- `GlobalVolumeWidget` / `AttenuationEditorWidget`：<200px 文本降级已实现；确认无负 rect。
 - `UsFooterWidget`：两槽各自 `Math.Max(1f, rect.width/2-8f)`。
 - `VoicePackChecklist`/`VoicePackRow`：开关与文本 rect 全部 clamp；Compact 下隐藏 coverage 行。
 

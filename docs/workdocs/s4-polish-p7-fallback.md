@@ -20,7 +20,8 @@
 - 复用 `VoicePacksPageModel.BuildView(settings, catalog, state)` 与 `VoicePacksPageModel.Execute(settings, command, state)`，但只画原版控件。
 - 覆盖关键功能：
   - 模式四选：四个 `Widgets.ButtonText`（选中项前缀 `●`），emit `UiCommand(SetMode, mode)`。
-  - 距离预设循环：一个 `Widgets.ButtonText` 显示当前预设，点击循环，emit `SetDistancePreset`。
+  - 全局音量：原版 `Widgets.HorizontalSlider` + `Widgets.Label`，emit `SetGlobalVolume`。
+  - 衰减快速预设：三个 `Widgets.ButtonText`（Conservative/Balanced/Strong），emit `SetDistancePreset`。
   - 三个缩放开关 + 彩蛋 + 相机指示：`Widgets.Checkbox` + `Widgets.Label`，emit `ToggleEgg` / `ToggleBasic`。
   - 域选择：race/xenotype 行用 `Widgets.ButtonText`，emit `SelectDomain`。
   - VoicePack 勾选：`Widgets.Checkbox` 列表，emit `TogglePack`。
@@ -38,7 +39,7 @@
 
 ### 3. L1/L2 fallback 覆盖核对与补齐
 
-- 逐一检查 P1 要求过的 fallback 是否都存在：`BasicTuningWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`FilterBarWidget`、`DistanceChartWidget`、`UsFooterWidget`。缺的在本任务补齐。
+- 逐一检查 P1 要求过的 fallback 是否都存在：`BasicTuningWidget`、`GlobalVolumeWidget`、`AttenuationEditorWidget`、`CameraIndicatorWidget`、`ScopeTreeWidget`、`PresetListWidget`、`RaceLayerWidget`、`XenotypeLayerWidget`、`VoicePackChecklistWidget`、`PageTitleWidget`、`FilterBarWidget`、`UsFooterWidget`。缺的在本任务补齐。
 - `UsGuard` 的每会话 once 清理钩子确认已接在 `VoicePacksPage.BeginSession/EndSession`。
 
 ### 4. 最终换肤收口
