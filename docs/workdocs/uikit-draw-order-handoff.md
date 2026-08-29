@@ -3,6 +3,7 @@
 > 状态：待另一个会话处理。
 > 来源：S4-Polish 开发后 review（R4/R3）发现的系统性绘制顺序缺陷。
 > 目标：把“widget 内部绘制顺序”提升到 FerriteLib.UiKit 层解决，而不是在 US 各 widget 里逐个打补丁。
+> **范围约束：先读 `docs/workdocs/uikit-draw-order-handoff-briefing.md`，只做绘制顺序/help 可见性，禁止顺手修其它问题。**
 
 ## 1. 问题
 
