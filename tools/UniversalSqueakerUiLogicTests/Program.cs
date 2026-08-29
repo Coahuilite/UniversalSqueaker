@@ -29,6 +29,17 @@ internal static class Program
     {
         TestDistancePreview();
         TestVoicePacksFilters();
+        TestUiLayoutTier();
+    }
+
+    private static void TestUiLayoutTier()
+    {
+        Assert(UiLayoutTier.ForWidth(480f) == LayoutTier.Comfortable, "480 is Comfortable");
+        Assert(UiLayoutTier.ForWidth(320f) == LayoutTier.Compact, "320 is Compact");
+        Assert(UiLayoutTier.ForWidth(240f) == LayoutTier.Minimal, "240 is Minimal");
+        Assert(UiLayoutTier.ForWidth(239f) == LayoutTier.Fallback, "239 is Fallback");
+        AssertEqual(10f, UiLayoutTier.ClampWidth(5f, 10f), 0.0001f, "ClampWidth raises below min");
+        AssertEqual(20f, UiLayoutTier.ClampWidth(20f, 10f), 0.0001f, "ClampWidth keeps above min");
     }
 
     private static void TestDistancePreview()

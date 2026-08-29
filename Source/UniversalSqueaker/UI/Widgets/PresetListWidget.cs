@@ -123,6 +123,7 @@ public sealed class PresetListWidget : IWidget
         }
 
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        float xenoIndent = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable ? XenotypeIndent : 12f;
         foreach (BaselinePresetView preset in presets)
         {
             DrawPresetHeader(new Rect(x, y, innerWidth, PresetHeaderHeight), preset, businessEmit);
@@ -143,7 +144,7 @@ public sealed class PresetListWidget : IWidget
                 y += RaceRowHeight + RowGap;
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    DrawXenotypeRow(new Rect(x + XenotypeIndent, y, innerWidth - XenotypeIndent, XenotypeRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
+                    DrawXenotypeRow(new Rect(x + xenoIndent, y, Math.Max(1f, innerWidth - xenoIndent), XenotypeRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
                     y += XenotypeRowHeight + RowGap;
                 }
             }

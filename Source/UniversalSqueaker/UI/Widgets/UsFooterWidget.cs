@@ -74,7 +74,7 @@ public sealed class UsFooterWidget : IWidget
         string prefix = saveStatus == "Saving" || isDirty ? "● " : "";
         Text.Anchor = TextAnchor.MiddleRight;
         GUI.color = statusColor;
-        Widgets.Label(new Rect(rect.xMax - rect.width * 0.5f, rect.y, rect.width * 0.5f - Padding, rect.height), prefix + saveStatus);
+        Widgets.Label(new Rect(rect.xMax - rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height), prefix + saveStatus);
 
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;
@@ -85,8 +85,8 @@ public sealed class UsFooterWidget : IWidget
     {
         string buildIdentity = ReadString(ctx, "BuildIdentity");
         string saveStatus = ReadString(ctx, "SaveStatus");
-        Widgets.Label(new Rect(rect.x + 4f, rect.y, rect.width * 0.5f - 8f, rect.height), buildIdentity);
-        Widgets.Label(new Rect(rect.x + rect.width * 0.5f, rect.y, rect.width * 0.5f - 8f, rect.height), saveStatus);
+        Widgets.Label(new Rect(rect.x + 4f, rect.y, Math.Max(1f, rect.width * 0.5f - 8f), rect.height), buildIdentity);
+        Widgets.Label(new Rect(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - 8f), rect.height), saveStatus);
     }
 
     private static string ReadString(WidgetContext ctx, string key)

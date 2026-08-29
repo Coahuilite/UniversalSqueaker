@@ -71,7 +71,7 @@ public sealed class ScopeTreeWidget : IWidget
         float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
 
-        float height = TopPadding + LayerRowHeight + VoicePacksLayout.Gap;
+        float height = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
         if (layer > 0) height += DomainRowHeight + VoicePacksLayout.Gap;
         height += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
             + scopeCount * (RowHeight + RowGap);
@@ -194,7 +194,26 @@ public sealed class ScopeTreeWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        float buttonWidth = (rect.width - LeftPadding * 2f - 120f - RowGap * 2f) / 3f;
+        float available = rect.width - LeftPadding * 2f - 120f - RowGap * 2f;
+        float buttonWidth = (available - RowGap * 2f) / 3f;
+        bool stacked = buttonWidth < 56f;
+        if (stacked)
+        {
+            float y = rect.y + 22f;
+            buttonWidth = Math.Max(56f, (rect.width - LeftPadding * 2f - RowGap * 2f) / 3f);
+            for (int i = 0; i < LayerNames.Length; i++)
+            {
+                Rect buttonRect = new(rect.x + LeftPadding, y, buttonWidth, ButtonHeight);
+                bool selected = layer == i;
+                DrawSegment(buttonRect, LayerNames[i], selected);
+                int captured = i;
+                if (Widgets.ButtonInvisible(buttonRect))
+                    emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture)));
+                y += ButtonHeight + RowGap;
+            }
+            return;
+        }
+
         float buttonX = rect.x + rect.width - LeftPadding - buttonWidth * 3f - RowGap * 2f;
         for (int i = 0; i < LayerNames.Length; i++)
         {
@@ -206,6 +225,13 @@ public sealed class ScopeTreeWidget : IWidget
                 emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture)));
             buttonX += buttonWidth + RowGap;
         }
+    }
+
+    private static float LayerRowHeightFor(float width)
+    {
+        float available = width - LeftPadding * 2f - 120f - RowGap * 2f;
+        float buttonWidth = (available - RowGap * 2f) / 3f;
+        return buttonWidth < 56f ? LayerRowHeight + 22f : LayerRowHeight;
     }
 
     private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, Action<UiCommand> emit)
@@ -234,7 +260,7 @@ public sealed class ScopeTreeWidget : IWidget
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Layer domain");
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, rect.width - 132f - ButtonWidth - 20f, 16f),
+        Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, Math.Max(1f, rect.width - 132f - ButtonWidth - 20f), 16f),
             current != null ? current.Value.DisplayName : "No domain available");
         Text.Font = oldFont;
         GUI.color = oldColor;
@@ -259,14 +285,15 @@ public sealed class ScopeTreeWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - LeftPadding - ButtonWidth - 90f, ButtonHeight), row.DisplayName);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - ButtonWidth - 90f), ButtonHeight), row.DisplayName);
 
-        // 继承提示：本层无记录或与有效值不同时显示有效（生效）作用域。
-        if (!row.HasOwnScope || row.Scope != row.EffectiveScope)
+        // 继承提示：本层无记录或与有效值不同时显示有效（生效）作用域；窄屏隐藏。
+        LayoutTier tier = VoicePacksLayout.ForWidth(rect.width);
+        if (tier == LayoutTier.Comfortable && (!row.HasOwnScope || row.Scope != row.EffectiveScope))
         {
             Text.Font = GameFont.Tiny;
             GUI.color = UsVisualTokens.TextSecondary;
-            Widgets.Label(new Rect(rect.x + rect.width - ButtonWidth - 96f, rect.y + 6f, 86f, 14f), "→ " + ShortName(row.EffectiveScope));
+            Widgets.Label(new Rect(rect.x + rect.width - ButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), 14f), "→ " + ShortName(row.EffectiveScope));
         }
         Text.Font = oldFont;
         GUI.color = oldColor;

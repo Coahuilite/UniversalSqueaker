@@ -198,7 +198,7 @@ public sealed class BasicTuningWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - 60f, 20f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 60f), 20f), label);
 
         Rect checkRect = new(rect.xMax - 34f, rect.y + 4f, 18f, 18f);
         UsSurface.DrawCheckbox(checkRect, enabled);
@@ -220,7 +220,7 @@ public sealed class BasicTuningWidget : IWidget
         bool enabled = ctx.TryGetViewValue(viewKey, out object? value) && value is true;
         bool checkboxValue = enabled;
         Widgets.Checkbox(new Vector2(rect.xMax - 34f, rect.y + 4f), ref checkboxValue, 18f);
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, rect.width - 60f, 20f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 60f), 20f), label);
         if (Widgets.ButtonInvisible(rect))
             emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled));
     }
@@ -231,10 +231,10 @@ public sealed class BasicTuningWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, rect.width - 20f, 20f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 20f), 20f), label);
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 20f, rect.width - 20f, 20f), subLabel);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 20f, Math.Max(1f, rect.width - 20f), 20f), subLabel);
         Text.Font = oldFont;
         GUI.color = oldColor;
     }

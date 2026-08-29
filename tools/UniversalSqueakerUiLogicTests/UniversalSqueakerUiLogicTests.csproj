@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\VoicePacksFilters.cs" Link="VoicePacksFilters.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\DistancePreview.cs" Link="DistancePreview.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\UiLayoutTier.cs" Link="UiLayoutTier.cs" />
   </ItemGroup>
 
 </Project>

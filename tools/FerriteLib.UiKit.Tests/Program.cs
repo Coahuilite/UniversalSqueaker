@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FerriteLib.UiKit;
+using FerriteLib.UiKit.Widgets;
 using UnityEngine;
 
 namespace FerriteLib.UiKit.Tests;
@@ -60,6 +61,9 @@ internal static class Program
 
         Console.WriteLine("UiPageState help keys...");
         VerifyUiPageStateHelpKeys();
+
+        Console.WriteLine("InputModeRowWidget responsive columns...");
+        VerifyInputModeRowResponsive();
     }
 
     private static void VerifyRegistryCoreFallback()
@@ -236,6 +240,30 @@ internal static class Program
         state = new UiPageState { ScrollPosition = new Vector2(0f, -5f) };
         largeEngine.ClampScroll(state, 40f);
         CheckEqual(0f, state.ScrollPosition.y, "negative scroll clamps to 0");
+    }
+
+    private static void VerifyInputModeRowResponsive()
+    {
+        WidgetRegistry.Clear();
+        WidgetRegistry.Register("responsive", "input/mode-row", () => new InputModeRowWidget());
+
+        string xml = "<UiPage Schema=\"1\" Source=\"responsive\">"
+            + "<Widget Kind=\"input/mode-row\""
+            + " Title1=\"A\" Description1=\"a\" Value1=\"A\""
+            + " Title2=\"B\" Description2=\"b\" Value2=\"B\""
+            + " Title3=\"C\" Description3=\"c\" Value3=\"C\""
+            + " Title4=\"D\" Description4=\"d\" Value4=\"D\" />"
+            + "</UiPage>";
+
+        LayoutManifest manifest = LayoutManifest.Parse(xml);
+        LayoutEngine engine = new(manifest);
+        WidgetContext ctx = new("responsive", null, new StubMetrics(), new UiPageState());
+
+        float wide = engine.Measure(ctx, 600f);
+        float compact = engine.Measure(ctx, 300f);
+        float narrow = engine.Measure(ctx, 150f);
+        Check(compact > wide, "compact mode uses more rows than wide");
+        Check(narrow > compact, "narrow mode uses more rows than compact");
     }
 
     private static void VerifyUiPageStateHelpKeys()

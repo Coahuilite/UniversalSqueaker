@@ -27,12 +27,15 @@ public static class XenotypeLayerRow
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleLeft;
         GUI.color = selected ? UsVisualTokens.TextOnGold : UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + 12f, rect.y, Math.Max(1f, rect.width - 220f), 25f), domain.DisplayName);
-        Text.Font = GameFont.Tiny;
-        Text.Anchor = TextAnchor.MiddleRight;
-        GUI.color = UsVisualTokens.TextSecondary;
-        string detail = domain.EnabledCount + " / " + domain.CandidateCount + " enabled" + StateSuffix(domain.State);
-        Widgets.Label(new Rect(rect.x + 12f, rect.y + 25f, Math.Max(1f, rect.width - 24f), 18f), detail);
+        Widgets.Label(new Rect(rect.x + 12f, rect.y, Math.Max(1f, rect.width - 24f), 25f), domain.DisplayName);
+        if (VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable)
+        {
+            Text.Font = GameFont.Tiny;
+            Text.Anchor = TextAnchor.MiddleRight;
+            GUI.color = UsVisualTokens.TextSecondary;
+            string detail = domain.EnabledCount + " / " + domain.CandidateCount + " enabled" + StateSuffix(domain.State);
+            Widgets.Label(new Rect(rect.x + 12f, rect.y + 25f, Math.Max(1f, rect.width - 24f), 18f), detail);
+        }
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;

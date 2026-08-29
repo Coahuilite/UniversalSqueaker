@@ -83,7 +83,7 @@ public sealed class CameraIndicatorWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, rect.width - 60f, 20f), Label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, Math.Max(1f, rect.width - 60f), 20f), Label);
 
         Rect checkRect = new(rect.xMax - 34f, y + 4f, 18f, 18f);
         UsSurface.DrawCheckbox(checkRect, enabled);

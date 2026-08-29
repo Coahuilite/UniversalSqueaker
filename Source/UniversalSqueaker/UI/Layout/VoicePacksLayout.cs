@@ -19,6 +19,13 @@ public static class VoicePacksLayout
     public const float VoicePackRowHeight = 74f;
     public const float EmptyStateHeight = 44f;
     public const float SectionHeaderHeight = 24f;
+    public const float MinComfortableWidth = UiLayoutTier.MinComfortableWidth;
+    public const float MinCompactWidth = UiLayoutTier.MinCompactWidth;
+    public const float MinMinimalWidth = UiLayoutTier.MinMinimalWidth;
+
+    public static LayoutTier ForWidth(float width) => UiLayoutTier.ForWidth(width);
+
+    public static float ClampWidth(float width, float min) => UiLayoutTier.ClampWidth(width, min);
 
     public static float InnerWidth(float pageWidth)
     {

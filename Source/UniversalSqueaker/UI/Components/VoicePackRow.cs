@@ -36,8 +36,11 @@ public static class VoicePackRow
         GUI.color = UsVisualTokens.TextSecondary;
         Rect secondaryRect = new(rect.x + 36f, rect.y + 27f, Math.Max(1f, rect.width - 44f), 20f);
         Widgets.Label(secondaryRect, row.ModName + " · " + row.Author);
-        Rect coverageRect = new(rect.x + 36f, rect.y + 48f, Math.Max(1f, rect.width - 44f), 20f);
-        Widgets.Label(coverageRect, row.Coverage);
+        if (VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable)
+        {
+            Rect coverageRect = new(rect.x + 36f, rect.y + 48f, Math.Max(1f, rect.width - 44f), 20f);
+            Widgets.Label(coverageRect, row.Coverage);
+        }
         Text.Font = oldFont;
         GUI.color = oldColor;
 

@@ -97,7 +97,7 @@ public sealed class FilterBarWidget : IWidget
         bool includeAuthor)
     {
         int count = includeAuthor ? 5 : 4;
-        float buttonWidth = (rect.width - Gap * (count - 1)) / count;
+        float buttonWidth = Math.Max(56f, (rect.width - Gap * (count - 1)) / count);
         float x = rect.x;
 
         DrawSegmentButton(new Rect(x, rect.y, buttonWidth, rect.height),

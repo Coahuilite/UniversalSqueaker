@@ -54,6 +54,11 @@ public static class FerriteVoicePacksPage
     public static void Draw(Rect rect)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
+        if (rect.width < VoicePacksLayout.MinMinimalWidth)
+        {
+            EmptyState.Draw(rect, "Window too narrow");
+            return;
+        }
 
         try
         {

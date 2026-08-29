@@ -83,11 +83,11 @@ public sealed class GlobalVolumeWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, rect.width - 70f, LabelHeight), Label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, y + 4f, Math.Max(1f, rect.width - 70f), LabelHeight), Label);
 
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.xMax - 60f, y + 4f, 50f, LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
+        Widgets.Label(new Rect(rect.xMax - 60f, y + 4f, Math.Max(1f, 50f), LabelHeight), Mathf.RoundToInt(value * 100f) + "%");
         Text.Font = oldFont;
         GUI.color = oldColor;
 

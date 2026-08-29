@@ -50,7 +50,9 @@ public sealed class InputModeRowWidget : IWidget
         if (cards.Count == 0) return 64f;
 
         float rowWidth = Math.Max(1f, ctx.ViewWidth);
-        float cardWidth = Math.Max(1f, (rowWidth - CardGap * (cards.Count - 1)) / cards.Count);
+        int columns = CardColumns(rowWidth, cards.Count);
+        int rows = (cards.Count + columns - 1) / columns;
+        float cardWidth = Math.Max(1f, (rowWidth - CardGap * (columns - 1)) / columns);
         float maxHeight = 64f;
         foreach (ModeCardData card in cards)
         {
@@ -61,7 +63,7 @@ public sealed class InputModeRowWidget : IWidget
             if (cardHeight > maxHeight) maxHeight = cardHeight;
         }
 
-        return maxHeight;
+        return rows * maxHeight + (rows - 1) * CardGap;
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
@@ -96,13 +98,19 @@ public sealed class InputModeRowWidget : IWidget
 
         if (cards.Count == 0) return;
 
-        float cardWidth = Math.Max(1f, (rect.width - CardGap * (cards.Count - 1)) / cards.Count);
+        int columns = CardColumns(rect.width, cards.Count);
+        int rows = (cards.Count + columns - 1) / columns;
+        float cardWidth = Math.Max(1f, (rect.width - CardGap * (columns - 1)) / columns);
+        float cardHeight = (rect.height - CardGap * (rows - 1)) / rows;
 
         for (int i = 0; i < cards.Count; i++)
         {
             ModeCardData card = cards[i];
-            float x = rect.x + i * (cardWidth + CardGap);
-            var cardRect = new Rect(x, rect.y, cardWidth, rect.height);
+            int row = i / columns;
+            int col = i % columns;
+            float x = rect.x + col * (cardWidth + CardGap);
+            float y = rect.y + row * (cardHeight + CardGap);
+            var cardRect = new Rect(x, y, cardWidth, cardHeight);
 
             bool selected = string.Equals(current, card.Value, StringComparison.Ordinal);
             ModeCardRenderer.Draw(cardRect, selected, card.Title, card.Description,
@@ -129,17 +137,36 @@ public sealed class InputModeRowWidget : IWidget
 
         if (cards.Count == 0) return;
 
-        float cardWidth = Math.Max(1f, (rect.width - CardGap * (cards.Count - 1)) / cards.Count);
+        int columns = CardColumns(rect.width, cards.Count);
+        int rows = (cards.Count + columns - 1) / columns;
+        float cardWidth = Math.Max(1f, (rect.width - CardGap * (columns - 1)) / columns);
+        float cardHeight = (rect.height - CardGap * (rows - 1)) / rows;
         for (int i = 0; i < cards.Count; i++)
         {
             ModeCardData card = cards[i];
-            Rect cardRect = new(rect.x + i * (cardWidth + CardGap), rect.y, cardWidth, rect.height);
+            int row = i / columns;
+            int col = i % columns;
+            Rect cardRect = new(rect.x + col * (cardWidth + CardGap), rect.y + row * (cardHeight + CardGap), cardWidth, cardHeight);
             bool selected = string.Equals(current, card.Value, StringComparison.Ordinal);
             if (VerseWidgets.ButtonText(cardRect, (selected ? "● " : "") + card.Title))
             {
                 emit(new UiCommand(emitName, card.Value));
             }
         }
+    }
+
+    private static int CardColumns(float width, int count)
+    {
+        int columns = Math.Max(1, count);
+        if (columns > 1 && (width - CardGap * (columns - 1)) / columns < 140f)
+        {
+            columns = 2;
+        }
+        if (columns > 1 && (width - CardGap * (columns - 1)) / columns < 100f)
+        {
+            columns = 1;
+        }
+        return Math.Max(1, Math.Min(columns, count));
     }
 
     private bool HasAnyCardAttribute(string suffix)
