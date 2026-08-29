@@ -143,6 +143,7 @@ public class CompSqueaker : ThingComp
     public static bool ScaleFrequencyWithTalking = true;
     public static bool ScalePeriodicWithAudiblePopulation = true;
     public static float GlobalCooldownMultiplier = 1f;
+    public static float GlobalVolumeFactor = 1f;
     public static int GlobalMinIntervalTicks = 216;
     public static bool DiagnosticsEnabled;
 
@@ -657,6 +658,7 @@ public class CompSqueaker : ThingComp
         mod.pitchFactor = composed.Pitch;
         mod.volumeFactor = composed.Volume;
         mod.pitchJitter = new FloatRange(composed.Jitter.Min, composed.Jitter.Max);
+        mod.volumeFactor *= GlobalVolumeFactor;
         return mod;
     }
 

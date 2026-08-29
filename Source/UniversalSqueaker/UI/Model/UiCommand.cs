@@ -13,6 +13,8 @@ public enum UiCommandKind
     ForgetUnavailable,
     ToggleEgg,
     SetDistancePreset,
+    SetGlobalVolume,
+    SetDistanceRange,
     ToggleBasic,
     SetActionTuningScope,
     SetTuningLayer,

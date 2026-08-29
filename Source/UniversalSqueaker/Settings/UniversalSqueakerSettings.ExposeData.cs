@@ -66,6 +66,7 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref showCameraIndicator, "showCameraIndicator", false);
         Scribe_Values.Look(ref devLoggingMode, "devLoggingMode", SqueakDevLoggingMode.Auto);
         Scribe_Values.Look(ref globalCooldownMultiplier, "globalCooldownMultiplier", 1f);
+        Scribe_Values.Look(ref globalVolumeFactor, "globalVolumeFactor", 1f);
         Scribe_Values.Look(ref distancePreset, "distancePreset", SqueakDistancePreset.Balanced);
         Scribe_Values.Look(ref distanceRange, "distanceRange", GetDistancePresetRange(SqueakDistancePreset.Balanced));
         Scribe_Values.Look(ref allowEasterEggSounds, "allowEasterEggSounds", false);
@@ -105,6 +106,7 @@ public partial class UniversalSqueakerSettings
             if (Math.Abs(globalCooldownMultiplier - 1.2f) <= .0001f) globalCooldownMultiplier = 1f;
         }
         globalCooldownMultiplier = Math.Max(0f, Math.Min(globalCooldownMultiplier, 3f));
+        globalVolumeFactor = Math.Max(0f, Math.Min(globalVolumeFactor, 1f));
         if (!scaleFrequencyWithTalkingWasLoaded) scaleFrequencyWithTalking = GetDefaultScaleFrequencyWithTalking();
         if (!distanceRangeWasLoaded) distanceRange = GetDistancePresetRange(SqueakDistancePreset.Balanced);
         distanceRange = ClampDistanceRange(distanceRange);

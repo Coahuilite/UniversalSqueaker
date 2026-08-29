@@ -141,6 +141,7 @@ namespace UniversalSqueaker
         public static bool ScaleFrequencyWithTalking;
         public static bool ScalePeriodicWithAudiblePopulation;
         public static float GlobalCooldownMultiplier = 1f;
+        public static float GlobalVolumeFactor = 1f;
         public static int GlobalMinIntervalTicks = 216;
 
         public static void ApplyDistanceRange(Verse.FloatRange range)

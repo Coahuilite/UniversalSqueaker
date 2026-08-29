@@ -52,6 +52,7 @@ public partial class UniversalSqueakerSettings : ModSettings
     public bool showCameraIndicator = false;
     public SqueakDevLoggingMode devLoggingMode = SqueakDevLoggingMode.Auto;
     public float globalCooldownMultiplier = 1f;
+    public float globalVolumeFactor = 1f;
     public SqueakDistancePreset distancePreset = SqueakDistancePreset.Balanced;
     public FloatRange distanceRange = new(15f, 50f);
     public Dictionary<SqueakMood, SqueakMoodMod> moodOverrides = new();
@@ -100,6 +101,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
+        CompSqueaker.GlobalVolumeFactor = Mathf.Clamp(globalVolumeFactor, 0f, 1f);
         CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
     }
 
@@ -111,6 +113,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
+        CompSqueaker.GlobalVolumeFactor = Mathf.Clamp(globalVolumeFactor, 0f, 1f);
     }
 
     public void NotifyDistanceRuntimeChanged() => CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
@@ -122,6 +125,26 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (preset == distancePreset) return;
         distancePreset = preset;
         distanceRange = GetDistancePresetRange(preset);
+        NotifyDistanceRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>S4-Vol: global volume 0..1. Cheap runtime write, no resolver rebuild.</summary>
+    internal void SetGlobalVolume(float value)
+    {
+        float clamped = Mathf.Clamp(value, 0f, 1f);
+        globalVolumeFactor = clamped;
+        CompSqueaker.GlobalVolumeFactor = clamped;
+        QueuePersistence();
+    }
+
+    /// <summary>S4-Vol: camera-height attenuation range. Clamped with the existing distance-range
+    /// constraints; any manual edit switches the preset to Custom.</summary>
+    internal void SetDistanceRange(float start, float end)
+    {
+        FloatRange clamped = ClampDistanceRange(new FloatRange(start, end));
+        distanceRange = clamped;
+        distancePreset = SqueakDistancePreset.Custom;
         NotifyDistanceRuntimeChanged();
         QueuePersistence();
     }

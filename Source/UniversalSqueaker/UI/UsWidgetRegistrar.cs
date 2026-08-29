@@ -25,6 +25,8 @@ public static class UsWidgetRegistrar
             WidgetRegistry.Register(Scope, XenotypeLayerWidget.Kind, () => new XenotypeLayerWidget());
             WidgetRegistry.Register(Scope, VoicePackChecklistWidget.Kind, () => new VoicePackChecklistWidget());
             WidgetRegistry.Register(Scope, PageTitleWidget.Kind, () => new PageTitleWidget());
+            WidgetRegistry.Register(Scope, GlobalVolumeWidget.Kind, () => new GlobalVolumeWidget());
+            WidgetRegistry.Register(Scope, AttenuationEditorWidget.Kind, () => new AttenuationEditorWidget());
             WidgetRegistry.Register(Scope, BasicTuningWidget.Kind, () => new BasicTuningWidget());
             WidgetRegistry.Register(Scope, CameraIndicatorWidget.Kind, () => new CameraIndicatorWidget());
             WidgetRegistry.Register(Scope, ScopeTreeWidget.Kind, () => new ScopeTreeWidget());

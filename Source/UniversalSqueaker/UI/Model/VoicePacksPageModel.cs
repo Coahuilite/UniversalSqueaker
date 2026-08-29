@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using RimWorld;
 using Verse;
@@ -50,7 +51,7 @@ public static class VoicePacksPageModel
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, biotech, banner, races, xenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, races, xenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets);
     }
 
     public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
@@ -88,6 +89,13 @@ public static class VoicePacksPageModel
                 break;
             case UiCommandKind.SetDistancePreset:
                 if (Enum.TryParse(command.Arg, true, out SqueakDistancePreset preset)) settings.SetDistancePreset(preset);
+                break;
+            case UiCommandKind.SetGlobalVolume:
+                if (float.TryParse(command.Arg, NumberStyles.Float, CultureInfo.InvariantCulture, out float globalVolume))
+                    settings.SetGlobalVolume(globalVolume);
+                break;
+            case UiCommandKind.SetDistanceRange:
+                ExecuteSetDistanceRange(settings, command);
                 break;
             case UiCommandKind.ToggleBasic:
                 settings.SetBasicTuning(command.Arg, command.Flag);
@@ -153,6 +161,18 @@ public static class VoicePacksPageModel
         if (parts.Length > 2 && float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed))
             value = parsed;
         settings.SetMoodTuning(mood, command.RaceDefName, command.TargetDefName, factor, value);
+    }
+
+    private static void ExecuteSetDistanceRange(UniversalSqueakerSettings settings, UiCommand command)
+    {
+        if (string.IsNullOrEmpty(command.Arg)) return;
+        string[] parts = command.Arg.Split('|');
+        if (parts.Length < 2) return;
+        if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float start)
+            && float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float end))
+        {
+            settings.SetDistanceRange(start, end);
+        }
     }
 
     private static void ExecuteTogglePack(UniversalSqueakerSettings settings, UiCommand command)

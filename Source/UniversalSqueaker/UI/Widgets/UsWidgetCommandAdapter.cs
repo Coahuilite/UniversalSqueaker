@@ -20,6 +20,8 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.ForgetUnavailable => "ForgetUnavailable",
                 UiCommandKind.ToggleEgg => "ToggleEgg",
                 UiCommandKind.SetDistancePreset => "SetDistancePreset",
+                UiCommandKind.SetGlobalVolume => "SetGlobalVolume",
+                UiCommandKind.SetDistanceRange => "SetDistanceRange",
                 UiCommandKind.ToggleBasic => "ToggleBasic",
                 UiCommandKind.SetActionTuningScope => "SetActionTuningScope",
                 UiCommandKind.SetTuningLayer => "SetTuningLayer",

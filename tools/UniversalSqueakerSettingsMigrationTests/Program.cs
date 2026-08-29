@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UniversalSqueaker;
 using UniversalSqueaker.Kernel;
 using Verse;
@@ -32,6 +33,9 @@ internal static class Program
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             AudioDomainsRejectWhitespace();
+            GlobalVolumeDefaultsAndClamps();
+            GlobalVolumeScribeRoundTrip();
+            SetDistanceRangeClampsAndMarksCustom();
 
             if (failures == 0)
             {
@@ -299,6 +303,78 @@ internal static class Program
             "audio-domains: empty xeno remains race-only", ref failures);
         Check(AudioDomains.TryCreate("RaceA", "XenoA", out AudioDomain xeno) && xeno.Xenotype?.DefName == "XenoA",
             "audio-domains: non-empty xeno creates xenotype domain", ref failures);
+    }
+
+    private static void GlobalVolumeDefaultsAndClamps()
+    {
+        Scenario("8-global-volume-default-and-clamp");
+        UniversalSqueakerSettings settings = NewSettings();
+        Check(Math.Abs(settings.globalVolumeFactor - 1f) < 0.0001f,
+            "global-volume: default is 1", ref failures);
+
+        CompSqueaker.GlobalVolumeFactor = 1f;
+        settings.SetGlobalVolume(-0.5f);
+        Check(Math.Abs(settings.globalVolumeFactor) < 0.0001f
+            && Math.Abs(CompSqueaker.GlobalVolumeFactor) < 0.0001f,
+            "global-volume: negative clamps to 0 and syncs runtime", ref failures);
+
+        settings.SetGlobalVolume(1.5f);
+        Check(Math.Abs(settings.globalVolumeFactor - 1f) < 0.0001f
+            && Math.Abs(CompSqueaker.GlobalVolumeFactor - 1f) < 0.0001f,
+            "global-volume: >1 clamps to 1 and syncs runtime", ref failures);
+
+        settings.SetGlobalVolume(0.37f);
+        Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f
+            && Math.Abs(CompSqueaker.GlobalVolumeFactor - 0.37f) < 0.0001f,
+            "global-volume: valid value writes field and runtime", ref failures);
+    }
+
+    private static void GlobalVolumeScribeRoundTrip()
+    {
+        Scenario("9-global-volume-scribe-round-trip");
+        UniversalSqueakerSettings source = NewSettings();
+        source.globalVolumeFactor = 0.42f;
+        string path = Path.Combine(Path.GetTempPath(), "us-settings-global-volume-roundtrip.xml");
+        try
+        {
+            SafeSaver.Save(path, "Settings", () => source.ExposeData());
+            UniversalSqueakerSettings loaded = NewSettings();
+            Scribe.loader.InitLoading(path);
+            loaded.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(Math.Abs(loaded.globalVolumeFactor - 0.42f) < 0.0001f,
+                "global-volume: Scribe round-trip preserves value", ref failures);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    private static void SetDistanceRangeClampsAndMarksCustom()
+    {
+        Scenario("10-distance-range-clamp-custom");
+        UniversalSqueakerSettings settings = NewSettings();
+        settings.distancePreset = SqueakDistancePreset.Balanced;
+        settings.distanceRange = new FloatRange(15f, 50f);
+
+        settings.SetDistanceRange(10f, 80f);
+        Check(settings.distancePreset == SqueakDistancePreset.Custom,
+            "distance-range: manual edit marks Custom", ref failures);
+        Check(settings.distanceRange.min >= 15f - 0.0001f && settings.distanceRange.max <= 65f + 0.0001f,
+            "distance-range: clamps into 15..65", ref failures);
+        Check(settings.distanceRange.max >= settings.distanceRange.min + 5f - 0.0001f,
+            "distance-range: enforces 5-unit minimum gap", ref failures);
+
+        settings.SetDistanceRange(70f, 70f);
+        Check(settings.distanceRange.min >= 15f - 0.0001f && settings.distanceRange.max <= 65f + 0.0001f,
+            "distance-range: out-of-range endpoints clamp", ref failures);
+        Check(settings.distanceRange.max >= settings.distanceRange.min + 5f - 0.0001f,
+            "distance-range: equal endpoints enforce minimum gap", ref failures);
+
+        settings.SetDistanceRange(20f, 22f);
+        Check(settings.distanceRange.max >= settings.distanceRange.min + 5f - 0.0001f,
+            "distance-range: close endpoints enforce minimum gap", ref failures);
     }
 
     // ---- helpers ----

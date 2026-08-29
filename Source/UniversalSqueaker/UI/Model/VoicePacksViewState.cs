@@ -14,6 +14,9 @@ public sealed class VoicePacksViewState
     public bool ScalePeriodicWithAudiblePopulation { get; }
     public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
+    public float GlobalVolumeFactor { get; }
+    public float DistanceRangeMin { get; }
+    public float DistanceRangeMax { get; }
     public bool BiotechActive { get; }
     public string BannerText { get; }
     public IReadOnlyList<RaceLayerRowView> Races { get; }
@@ -36,6 +39,9 @@ public sealed class VoicePacksViewState
         bool scalePeriodicWithAudiblePopulation,
         bool showCameraIndicator,
         float globalCooldownMultiplier,
+        float globalVolumeFactor,
+        float distanceRangeMin,
+        float distanceRangeMax,
         bool biotechActive,
         string bannerText,
         IReadOnlyList<RaceLayerRowView> races,
@@ -57,6 +63,9 @@ public sealed class VoicePacksViewState
         ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         ShowCameraIndicator = showCameraIndicator;
         GlobalCooldownMultiplier = globalCooldownMultiplier;
+        GlobalVolumeFactor = globalVolumeFactor;
+        DistanceRangeMin = distanceRangeMin;
+        DistanceRangeMax = distanceRangeMax;
         BiotechActive = biotechActive;
         BannerText = bannerText ?? "";
         Races = races ?? Array.Empty<RaceLayerRowView>();
