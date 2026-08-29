@@ -10,7 +10,7 @@
 | U1 | `us-ui-u1-interaction-routing.md` | 交互路由迁移（help/row/button/protect） | ✅ 完成 `4e20f84` |
 | U2 | `us-ui-u2-value-controls.md` | 全局音量 + 衰减编辑器值控件/状态 | ✅ 完成 `0f13322` |
 | U3 | `us-ui-u3-layout-narrow.md` | 布局/窄屏修复 | ✅ 完成 `f84fe8a` |
-| U4 | `us-ui-u4-fallback-robustness.md` | Fallback/健壮性 | ⏳ 待执行 |
+| U4 | `us-ui-u4-fallback-robustness.md` | Fallback/健壮性 | ✅ 完成 `44b45ee` |
 | U5 | `us-ui-u5-skin-tokens.md` | Skin/令牌化 | ⏳ 待执行 |
 | U6 | `us-ui-u6-tests-gates.md` | 测试/门禁补齐 | ⏳ 待执行 |
 | Review | — | 全部完成后对照任务书做最终 review | ⏳ 待执行 |
