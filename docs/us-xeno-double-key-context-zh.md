@@ -132,6 +132,9 @@ public static class SqueakContextSelector
 - `ambiguousCanonicalDefNames` 包含该 xeno → globalContext + 日志。
 - 命中 xeno 后 `context.Xenotype` 与 pawn 的 `Xenotype` 引用不一致 → globalContext + 日志（沿用现状）。
 - 空 race 或非法 layer-2 记录 → 忽略，不参与聚合。
+- **PackFallback 是精确域边界（intentional）**：`SqueakPoolRegistry.SelectPackFallback` 只查询 `ctx.Domain` 的精确池。
+  xeno context 即使同 race 的 race-pool 声明了同一 action 的 pack fallback，也不会读取该 race-pool fallback；
+  race context 只读取 race 精确池的 pack fallback。这是设计定案，不是缺口。
 
 ## 9. 测试矩阵
 

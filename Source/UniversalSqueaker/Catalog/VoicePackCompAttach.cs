@@ -39,20 +39,32 @@ public static class VoicePackCompAttach
             // selection is irrelevant — a mounted comp with an empty pool is silent, same as a patch.
             foreach (string raceDefName in catalog.RaceDefNames)
             {
-                ThingDef? def = DefDatabase<ThingDef>.GetNamedSilentFail(raceDefName);
-                if (def == null)
+                try
                 {
-                    SqueakLog.CompAttachSkipped(raceDefName, "race_not_found");
-                    continue;
+                    ThingDef? def = DefDatabase<ThingDef>.GetNamedSilentFail(raceDefName);
+                    if (def == null)
+                    {
+                        SqueakLog.CompAttachSkipped(raceDefName, "race_not_found");
+                        continue;
+                    }
+                    if (def.race == null)
+                    {
+                        SqueakLog.CompAttachSkipped(raceDefName, "no_race_props");
+                        continue;
+                    }
+                    if (def.comps.Any(comp => comp is CompProperties_Squeaker))
+                    {
+                        SqueakLog.CompAttachSkipped(raceDefName, "author_patch");
+                        continue;
+                    }
+                    def.comps.Add(CompProperties_Squeaker.CreateDefault());
+                    SqueakLog.CompAutoAttached(raceDefName);
                 }
-                if (def.race == null)
+                catch (Exception ex)
                 {
-                    SqueakLog.CompAttachSkipped(raceDefName, "no_race_props");
-                    continue;
+                    SqueakLog.CompAttachSkipped(raceDefName, "exception");
+                    SqueakLog.CompAttachFailed(ex);
                 }
-                if (def.comps.Any(comp => comp is CompProperties_Squeaker)) continue;
-                def.comps.Add(CompProperties_Squeaker.CreateDefault());
-                SqueakLog.CompAutoAttached(raceDefName);
             }
         }
         catch (Exception ex)

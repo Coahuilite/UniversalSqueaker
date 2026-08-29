@@ -273,8 +273,11 @@ public class CompSqueaker : ThingComp
             case SqueakTriggerMode.External:
                 break;
             // S3：Sustained 模式在周期状态下持续发声；状态消失（Probe 不再返回该动作）→ End。
+            // Blocker 修复：首次/缺失时走 TryTrigger（完整 gate/cooldown/outcome），已有 sustainer 时只由
+            // MaintainSustainer 维持，不再每 tick 直接 TryPlaySustained 绕过触发门。
             case SqueakTriggerMode.Sustained:
-                MaintainSustained(actionKey);
+                if (activeSustainer != null && !activeSustainer.Ended && activeSustainerKey == actionKey) break;
+                TryTrigger(plan, PeriodicInvocationFor(action.Value));
                 break;
         }
     }
@@ -311,6 +314,19 @@ public class CompSqueaker : ThingComp
     /// draw is a 4-direction black outline plus the main color above the pawn's slot.
     /// </summary>
     public override void PostDraw()
+    {
+        try
+        {
+            PostDrawCore();
+        }
+        catch (Exception ex)
+        {
+            // Diagnostics must fail closed: a modded pawn/draw exception never breaks the game frame.
+            Log.Warning("[UniversalSqueaker] Diagnostics draw failed for " + Pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+        }
+    }
+
+    private void PostDrawCore()
     {
         if (SqueakDiagnosticsOverlay.Mode == SqueakDiagnosticsMode.Off || !Pawn.Spawned || Pawn.Destroyed || Pawn.MapHeld == null)
         {
@@ -428,18 +444,16 @@ public class CompSqueaker : ThingComp
     private bool IsActionAllowedByKey(string? actionKey)
     {
         if (string.IsNullOrEmpty(actionKey)) return false;
-        ActionEntry? entry = ActionEntryRegistry.Current.Get(actionKey!);
-        if (entry == null) return false;
-        return entry.IsBuiltIn || ActionEntryRegistry.Current.AllowExternalActions;
+        bool isBuiltIn = UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(actionKey);
+        return isBuiltIn || UniversalSqueakerMod.Settings?.allowExternalActions == true;
     }
 
-    /// <summary>动作 plan 解析：先查静态 actionPlans（内置 17 键）；未命中且为已注册的外部
-    /// ActionEntry 时按需合成外部 plan（动作门由 IsActionAllowedByKey 另行校验）。</summary>
+    /// <summary>动作 plan 解析：先查静态 actionPlans（内置 17 键）；未命中且为非内置键时按需合成外部
+    /// 默认 plan（动作门由 IsActionAllowedByKey 另行校验）。YAGNI：不保留 ActionEntry/TriggerBinding 半成品。</summary>
     private bool TryGetPlan(string actionKey, out SqueakActionPlan plan)
     {
         if (actionPlans.TryGetValue(actionKey, out plan)) return true;
-        ActionEntry? entry = ActionEntryRegistry.Current.Get(actionKey);
-        if (entry != null && !entry.IsBuiltIn)
+        if (!UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(actionKey))
         {
             plan = SqueakActionPlanFactory.External(actionKey);
             return true;
@@ -715,26 +729,6 @@ public class CompSqueaker : ThingComp
         }
     }
 
-    /// <summary>周期性 Sustained 状态驱动：状态仍持续时保证 sustainer 存在（缺则生成），
-    /// 状态消失（Probe 不再返回该动作）则 End。动作门/冷却/身份门由调用方（TryTrigger）负责。</summary>
-    private void MaintainSustained(string actionKey)
-    {
-        if (activeSustainer != null && !activeSustainer.Ended
-            && !string.IsNullOrEmpty(activeSustainerKey) && activeSustainerKey == actionKey)
-        {
-            return;
-        }
-        if (activeSustainer != null && !activeSustainer.Ended)
-        {
-            activeSustainer.End();
-        }
-        activeSustainer = null;
-        activeSustainerKey = "";
-
-        ResolvedSqueakContext context = GetRuntimeContext(out SqueakRuntimeSnapshot snapshot);
-        TryPlaySustained(actionKey, CurrentMood, context, snapshot);
-    }
-
     /// <summary>Sustained 模式的发声入口：选中音为 sustained SoundDef → TrySpawnSustainer 存入
     /// activeSustainer（按 pawn 位置、PerTick 维护）；非 sustain → 优雅降级为一次性 PlayOneShot。</summary>
     private SqueakPlaybackAttempt TryPlaySustained(string actionKey, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
@@ -743,6 +737,16 @@ public class CompSqueaker : ThingComp
         SoundDef? def = null;
         try
         {
+            // 外部/周期重复触发保护：同键已激活则直接视为已派发；异键旧 sustainer 先 End，避免重叠发声。
+            if (activeSustainer != null && !activeSustainer.Ended)
+            {
+                if (activeSustainerKey == actionKey)
+                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, SqueakSoundChoice.None);
+                activeSustainer.End();
+                activeSustainer = null;
+                activeSustainerKey = "";
+            }
+
             choice = snapshot.ChooseProductionSoundByKey(context, actionKey, Pawn);
             def = choice.Sound;
             if (def == null)
@@ -757,13 +761,14 @@ public class CompSqueaker : ThingComp
             SqueakMoodMod mod = ResolveMoodMod(mood, context);
             if (def.sustain)
             {
-                if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(def, Pawn, out SoundInfo info, out _))
+                if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(def, Pawn, out _, out _))
                 {
                     return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
                 }
+                SoundInfo info = SoundInfo.InMap(new TargetInfo(Pawn), MaintenanceType.PerTick);
                 info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
                 info.volumeFactor = mod.volumeFactor;
-                Sustainer? sustainer = def.TrySpawnSustainer(SoundInfo.InMap(new TargetInfo(Pawn), MaintenanceType.PerTick));
+                Sustainer? sustainer = def.TrySpawnSustainer(info);
                 if (sustainer == null)
                 {
                     return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
@@ -774,7 +779,8 @@ public class CompSqueaker : ThingComp
                 return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
             }
 
-            // 非 sustain 音在 Sustained 模式下优雅降级为一次性播放，不崩。
+            // 非 sustain 音在 Sustained 模式下优雅降级为一次性播放；仍由 TryTrigger 的冷却/概率门控，
+            // 不会在无 activeSustainer 时每 tick 无界重放。
             return PlayOneShot(actionKey, mood, context, snapshot);
         }
         catch (Exception ex)

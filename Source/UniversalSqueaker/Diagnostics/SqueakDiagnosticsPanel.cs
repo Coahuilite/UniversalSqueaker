@@ -327,24 +327,25 @@ internal sealed class SqueakDiagnosticsPanel : Window
             GameFont oldFont = Text.Font;
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Small;
-            // Columns: dot | PawnText (flexible) | Action (short) | Cooldown | Audio | Ready/Blocked (right).
-            float stateX = rowRect.xMax - StateTextWidth;
-            float audioX = stateX - 96f;
+            // Columns: dot | PawnText (flexible) | Action | Cooldown | Audio | Ready/Blocked (right).
+            float statusX = rowRect.xMax - StateTextWidth;
+            float audioX = statusX - 96f;
             float cooldownX = audioX - 66f;
-            float actionX = rowRect.x + DotWidth + SpaceSm;
-            float actionW = Mathf.Max(1f, cooldownX - actionX - SpaceSm);
+            float actionX = cooldownX - 60f;
+            float pawnX = rowRect.x + DotWidth + SpaceSm;
+            float pawnW = Mathf.Max(1f, actionX - pawnX - SpaceSm);
             GUI.color = row.Dot;
             Widgets.Label(new Rect(rowRect.x + 2f, rowRect.y, DotWidth, rowRect.height), SqueakDiagnosticsOverlay.Mark);
             GUI.color = Color.white;
-            Widgets.Label(new Rect(actionX, rowRect.y, actionW, rowRect.height), row.PawnText);
+            Widgets.Label(new Rect(pawnX, rowRect.y, pawnW, rowRect.height), row.PawnText);
             GUI.color = UiPalette.Muted;
-            Widgets.Label(new Rect(cooldownX, rowRect.y, 60f, rowRect.height), row.Action);
-            Widgets.Label(new Rect(audioX, rowRect.y, 60f, rowRect.height), row.Cooldown);
+            Widgets.Label(new Rect(actionX, rowRect.y, 60f, rowRect.height), row.Action);
+            Widgets.Label(new Rect(cooldownX, rowRect.y, 60f, rowRect.height), row.Cooldown);
             Text.Anchor = TextAnchor.MiddleRight;
             GUI.color = Color.white;
-            Widgets.Label(new Rect(stateX, rowRect.y, Mathf.Max(1f, rowRect.xMax - stateX), rowRect.height), row.Audio);
+            Widgets.Label(new Rect(audioX, rowRect.y, 90f, rowRect.height), row.Audio);
             GUI.color = row.Ready ? UiPalette.Success : UiPalette.Gold;
-            Widgets.Label(new Rect(stateX, rowRect.y, Mathf.Max(1f, rowRect.xMax - stateX), rowRect.height),
+            Widgets.Label(new Rect(statusX, rowRect.y, Mathf.Max(1f, rowRect.xMax - statusX), rowRect.height),
                 row.Ready ? "US.Diagnostics.Ready".Translate().ToString() : "US.Diagnostics.Blocked".Translate().ToString());
             Text.Anchor = oldAnchor;
             Text.Font = oldFont;
@@ -435,9 +436,10 @@ internal sealed class SqueakDiagnosticsPanel : Window
             ? SqueakLabels.Action(s.CurrentTimingAction.Value)
             : "—";
         cachedAudioText = "—";
-        if (s.LastSignificantOutcome.HasValue && s.LastSignificantOutcome.Value.Outcome == SqueakTriggerOutcome.Dispatched)
+        SqueakRecentOutcome? currentSignificant = OutcomeForCurrentAction(s, s.LastSignificantOutcome);
+        if (currentSignificant.HasValue && currentSignificant.Value.Outcome == SqueakTriggerOutcome.Dispatched)
         {
-            cachedAudioText = FormatDispatched(s.LastSignificantOutcome.Value);
+            cachedAudioText = FormatDispatched(currentSignificant.Value);
         }
 
         gates.Clear();
@@ -458,21 +460,6 @@ internal sealed class SqueakDiagnosticsPanel : Window
             result.Add(new GateLine { Name = name, Value = value, State = state });
         }
 
-        string Cooldown(int? remainingTicks, float? remainingSeconds)
-        {
-            if (remainingTicks.HasValue)
-            {
-                return showSeconds ? $"{remainingTicks.Value / 60f:0.00}s" : $"{remainingTicks.Value}t";
-            }
-
-            if (remainingSeconds.HasValue)
-            {
-                return showSeconds ? $"{remainingSeconds.Value:0.00}s" : $"{remainingSeconds.Value * 60f:0.00}t";
-            }
-
-            return "—";
-        }
-
         // Gate G0: Disabled bypass. The panel only opens in DevMode; when the mode is Disabled
         // the whole trigger chain is bypassed, so that is the current blocker.
         bool modeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled;
@@ -490,7 +477,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
         // G3: plan present/configured. Snapshot timing is only computed along the configured-plan
         // path, so a non-null CurrentTimingAction implies a usable plan; no action => N/A.
         bool hasAction = s.CurrentTimingAction.HasValue;
-        Add("Plan", hasAction ? GateState.Pass : GateState.Pass, hasAction ? "Pass" : "N/A");
+        Add("Plan", GateState.Pass, hasAction ? "Pass" : "N/A");
 
         // G4: identity gate (external path only). Non-external => N/A; external => evaluate
         // IsPlayerControlled / Downed / Awake.
@@ -522,7 +509,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
             }
             else
             {
-                bool allowed = ActionEntryRegistry.Current.AllowExternalActions;
+                bool allowed = UniversalSqueakerMod.Settings?.allowExternalActions == true;
                 Add("Action gate", allowed ? GateState.Pass : GateState.Block,
                     allowed ? "Pass" : "Blocked");
             }
@@ -532,19 +519,27 @@ internal sealed class SqueakDiagnosticsPanel : Window
         Add("Scope enabled", s.CurrentActionEnabled ? GateState.Pass : GateState.Block,
             s.CurrentActionEnabled ? "Pass" : "Blocked");
 
-        // G7: scope match (ActiveCommand). Only ActiveCommand-scope actions are evaluated;
-        // everything else is N/A.
-        bool activeCommandScope = hasAction && s.CurrentTimingAction.HasValue
-            && SqueakActionDefinitions.Get(s.CurrentTimingAction.Value).DefaultScope == SqueakActionScope.ActiveCommand;
-        if (!activeCommandScope)
+        // G7: scope match (ActiveCommand). Use the runtime resolved scope (not the static DefaultScope)
+        // and the same invocation source semantics as production.
+        if (!hasAction)
         {
             Add("Scope match", GateState.Pass, "N/A");
         }
         else
         {
-            bool isActive = pawn.Drafted || (pawn.CurJob?.playerForced ?? false);
-            Add("Scope match", isActive ? GateState.Pass : GateState.Block,
-                isActive ? "Pass" : "Blocked");
+            SqueakAction currentAction = s.CurrentTimingAction!.Value;
+            RuntimeActionDelta delta = SqueakRuntimeResolver.Current.ResolveContext(pawn).GetAction(currentAction);
+            bool activeCommandScope = delta.Scope == SqueakActionScope.ActiveCommand;
+            if (!activeCommandScope)
+            {
+                Add("Scope match", GateState.Pass, "N/A");
+            }
+            else
+            {
+                bool isActive = DiagnosticInvocationFor(currentAction, pawn).IsActiveCommand;
+                Add("Scope match", isActive ? GateState.Pass : GateState.Block,
+                    isActive ? "Pass" : "Blocked");
+            }
         }
 
         // G8: startup phase.
@@ -556,12 +551,12 @@ internal sealed class SqueakDiagnosticsPanel : Window
 
         // G10: action cooldown.
         Add("Action cooldown", s.Timing.ActionReady ? GateState.Pass : GateState.Block,
-            Cooldown(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds));
+            FormatCooldownDisplay(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds, showSeconds));
 
         // G11: global cooldown.
         bool globalApplicable = s.Timing.GlobalApplicable;
         Add("Global cooldown", !globalApplicable || s.Timing.GlobalReady ? GateState.Pass : GateState.Block,
-            Cooldown(s.Timing.GlobalRemainingTicks, null));
+            FormatCooldownDisplay(s.Timing.GlobalRemainingTicks, null, showSeconds));
 
         // G12: vocal organ gate.
         bool vocalOk = s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold;
@@ -571,20 +566,37 @@ internal sealed class SqueakDiagnosticsPanel : Window
         // G13: talking gate (probability, blue).
         Add("Talking", GateState.Pending, FormatPercent(s.VocalCapability.TalkingChance, null));
 
+        // G14/G15/G16 only reflect the current action's last evaluation; an older result from a
+        // different action is not shown as if it belonged to the current gate chain.
+        SqueakRecentOutcome? evaluation = OutcomeForCurrentAction(s, s.LastEvaluation);
+
         // G14: audio pool no candidate.
-        bool noCandidate = s.LastEvaluation.HasValue && s.LastEvaluation.Value.Outcome == SqueakTriggerOutcome.NoSoundFallback;
+        bool noCandidate = evaluation.HasValue && evaluation.Value.Outcome == SqueakTriggerOutcome.NoSoundFallback;
         Add("Audio pool", noCandidate ? GateState.Block : GateState.Pass,
-            noCandidate ? "Blocked" : "Pass");
+            noCandidate ? "Blocked" : evaluation.HasValue ? "Pass" : "N/A");
 
         // G15: playability rejected.
-        bool eligibilityRejected = s.LastEvaluation.HasValue && s.LastEvaluation.Value.Outcome == SqueakTriggerOutcome.EligibilityRejected;
+        bool eligibilityRejected = evaluation.HasValue && evaluation.Value.Outcome == SqueakTriggerOutcome.EligibilityRejected;
         Add("Playability", eligibilityRejected ? GateState.Block : GateState.Pass,
-            eligibilityRejected ? "Blocked" : "Pass");
+            eligibilityRejected ? "Blocked" : evaluation.HasValue ? "Pass" : "N/A");
 
         // G16: dispatch success.
-        bool dispatched = s.LastEvaluation.HasValue && s.LastEvaluation.Value.Outcome == SqueakTriggerOutcome.Dispatched;
-        Add("Dispatch", GateState.Pass,
-            dispatched && s.LastEvaluation.HasValue ? FormatDispatched(s.LastEvaluation.Value) : "Pass");
+        if (!evaluation.HasValue)
+        {
+            Add("Dispatch", GateState.Pass, "N/A");
+        }
+        else if (evaluation.Value.Outcome == SqueakTriggerOutcome.Dispatched)
+        {
+            Add("Dispatch", GateState.Pass, FormatDispatched(evaluation.Value));
+        }
+        else if (evaluation.Value.Outcome == SqueakTriggerOutcome.PlaybackFailed)
+        {
+            Add("Dispatch", GateState.Block, "Blocked");
+        }
+        else
+        {
+            Add("Dispatch", GateState.Pass, "N/A");
+        }
 
         return result;
     }
@@ -615,7 +627,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
             : $"{outcome.PoolStableKey} : {sound}";
     }
 
-    private string FormatCooldownDisplay(int? remainingTicks, float? remainingSeconds)
+    private static string FormatCooldownDisplay(int? remainingTicks, float? remainingSeconds, bool showSeconds)
     {
         if (remainingTicks.HasValue)
         {
@@ -630,6 +642,45 @@ internal sealed class SqueakDiagnosticsPanel : Window
         return "—";
     }
 
+    /// <summary>Mirrors CompSqueaker.PeriodicInvocationFor plus the external action sources used by
+    /// Notify_Draft/Notify_Attack/Notify_Equip, so the diagnostic Scope-match gate uses the same
+    /// SqueakTriggerInvocation.IsActiveCommand semantics as production.</summary>
+    private static SqueakTriggerInvocation DiagnosticInvocationFor(SqueakAction action, Pawn pawn)
+    {
+        switch (action)
+        {
+            case SqueakAction.Work:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic,
+                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.Periodic);
+            case SqueakAction.Attack:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Attack,
+                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
+            case SqueakAction.Draft:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Draft, SqueakInvocationSource.ActiveCommand);
+            case SqueakAction.Undraft:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand);
+            case SqueakAction.Equip:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
+            default:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic, SqueakInvocationSource.Periodic);
+        }
+    }
+
+    private static string? CurrentActionKey(SqueakDiagnosticSnapshot s)
+    {
+        if (!s.CurrentTimingAction.HasValue) return null;
+        return UniversalSqueaker.Kernel.ActionKey.For(s.CurrentTimingAction.Value) ?? s.CurrentTimingAction.Value.ToString();
+    }
+
+    /// <summary>Returns the supplied outcome only when it belongs to the currently displayed action;
+    /// otherwise returns null so stale results from other actions are not shown in this action's gates.</summary>
+    private static SqueakRecentOutcome? OutcomeForCurrentAction(SqueakDiagnosticSnapshot s, SqueakRecentOutcome? outcome)
+    {
+        string? key = CurrentActionKey(s);
+        if (key == null || !outcome.HasValue) return null;
+        return string.Equals(outcome.Value.Action, key, StringComparison.Ordinal) ? outcome : null;
+    }
+
     private void RebuildVisible()
     {
         rows.Clear();
@@ -641,12 +692,13 @@ internal sealed class SqueakDiagnosticsPanel : Window
             bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
             string pawnText = $"{entry.Pawn.LabelShort} ({entry.Pawn.def.defName})";
             string action = s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : "—";
-            string cooldown = FormatCooldownDisplay(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds);
-            string globalCooldown = FormatCooldownDisplay(s.Timing.GlobalRemainingTicks, null);
+            string cooldown = FormatCooldownDisplay(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds, showSeconds);
+            string globalCooldown = FormatCooldownDisplay(s.Timing.GlobalRemainingTicks, null, showSeconds);
             string audio = "—";
-            if (s.LastSignificantOutcome.HasValue && s.LastSignificantOutcome.Value.Outcome == SqueakTriggerOutcome.Dispatched)
+            SqueakRecentOutcome? currentSignificant = OutcomeForCurrentAction(s, s.LastSignificantOutcome);
+            if (currentSignificant.HasValue && currentSignificant.Value.Outcome == SqueakTriggerOutcome.Dispatched)
             {
-                audio = FormatDispatched(s.LastSignificantOutcome.Value);
+                audio = FormatDispatched(currentSignificant.Value);
             }
 
             rows.Add(new VisibleRow(entry.MarkColor, pawnText, action, $"{cooldown}/{globalCooldown}", audio, ready));

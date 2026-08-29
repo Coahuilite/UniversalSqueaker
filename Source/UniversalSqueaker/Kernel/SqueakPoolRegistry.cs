@@ -22,9 +22,9 @@ public sealed class DomainPool
 ///   Off       → 仅内置表
 ///   Fallback  → XenotypePack → RacePack → PackFallback → BuiltInFallback 四级短路
 ///   Remix     → 四级（非 None）等权折叠，固定序 [xeno, race, pack fallback, builtin]
-///   entry 级过滤 = 年龄变体选定 → egg 资格 → gate；sound 级过滤 = 旧 pack.Choose 内过滤；
-///   等权抽取 = floor(rolls.Next01() * N) 的分布等价。
-///   带权 = entry.Weight 累计权重；ageTag 未声明、egg 关闭、无 PackFallback 时严格保留 0.3.0 行为。
+///   entry 级过滤 = 年龄变体候选集 → egg 资格 → gate；variant 级带权 = ActionSoundSet.Weight 累计权重；
+///   sound 级过滤 = 旧 pack.Choose 内过滤；等权抽取 = floor(rolls.Next01() * N) 的分布等价。
+///   带权 = entry.Weight 累计权重 + ActionSoundSet.Weight 累计权重；ageTag 未声明、egg 关闭、无 PackFallback 时严格保留 0.3.0 行为。
 /// </summary>
 public sealed class SqueakPoolRegistry
 {
@@ -53,11 +53,15 @@ public sealed class SqueakPoolRegistry
         poolsByDomain = pools;
     }
 
-    /// <summary>选择链求值。<see cref="SelectionMode"/> 是内核 API，适配层负责从设置枚举映射。</summary>
+    /// <summary>选择链求值。<see cref="SelectionMode"/> 是内核 API，适配层负责从设置枚举映射。
+    /// 空/空白 ActionKey 与未知 SelectionMode 均显式返回 None，绝不落入 Remix 或字典异常路径。</summary>
     public ChainResult Select(SelectionContext ctx, SelectionMode mode, ISoundGate gate, IRollSource rolls)
     {
         if (gate == null) throw new ArgumentNullException(nameof(gate));
         if (rolls == null) throw new ArgumentNullException(nameof(rolls));
+        if (string.IsNullOrWhiteSpace(ctx.ActionKey)) return ChainResult.None;
+        if (mode != SelectionMode.Off && mode != SelectionMode.Fallback && mode != SelectionMode.Remix)
+            return ChainResult.None;
         ChainResult vanilla = SelectBuiltIn(ctx, gate);
         if (mode == SelectionMode.Off) return vanilla;
 
@@ -150,21 +154,31 @@ public sealed class SqueakPoolRegistry
     private static ChainResult SelectTier(DomainPool? pool, ChainTier tier, SelectionContext ctx, ISoundGate gate, IRollSource rolls)
     {
         if (pool == null || pool.Entries.Count == 0) return ChainResult.None;
-        // 每个 pack 先按年龄选一个变体，再按 egg 资格与 playability 过滤；绝不跨变体回退。
+        // 每个 pack 先收集年龄候选（exact-age 优先，无 exact 才 all-age），
+        // 再按 egg 资格与 playability 过滤；exact 存在即使全部不可用也绝不退回 all-age。
+        // entry 选中后才在候选变体中按 ActionSoundSet.Weight 抽一个，再做 sound 级抽取。
         List<VoicePackEntry> valid = new(pool.Entries.Count);
-        Dictionary<VoicePackEntry, ActionSoundSet> selectedSets = new();
+        Dictionary<VoicePackEntry, List<ActionSoundSet>> selectedVariants = new();
         foreach (VoicePackEntry entry in pool.Entries)
         {
             if (!entry.TryGetAction(ctx.ActionKey, out IReadOnlyList<ActionSoundSet>? variants)) continue;
-            ActionSoundSet? set = SelectVariant(variants, ctx);
-            if (set == null || !set.HasSounds || (set.IsEgg && !ctx.AllowEggs)) continue;
-            if (!HasPlayableKey(set, ctx, gate)) continue;
+            List<ActionSoundSet>? candidates = SelectVariantCandidates(variants, ctx);
+            if (candidates == null) continue;
+            List<ActionSoundSet> available = new(candidates.Count);
+            foreach (ActionSoundSet set in candidates)
+            {
+                if (set == null || !set.HasSounds) continue;
+                if (set.IsEgg && !ctx.AllowEggs) continue;
+                if (!HasPlayableKey(set, ctx, gate)) continue;
+                available.Add(set);
+            }
+            if (available.Count == 0) continue;
             valid.Add(entry);
-            selectedSets.Add(entry, set);
+            selectedVariants.Add(entry, available);
         }
         if (valid.Count == 0) return ChainResult.None;
         VoicePackEntry chosen = DrawEntry(valid, rolls);
-        ActionSoundSet chosenSet = selectedSets[chosen];
+        ActionSoundSet chosenSet = DrawVariant(selectedVariants[chosen], rolls);
         string? key = DrawSoundKey(chosenSet, ctx, gate, rolls);
         return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg);
     }
@@ -185,16 +199,38 @@ public sealed class SqueakPoolRegistry
         return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey);
     }
 
-    /// <summary>exact age 优先；exact 存在即使 egg 关闭或全 mute 也不退回 all-age。</summary>
-    private static ActionSoundSet? SelectVariant(IReadOnlyList<ActionSoundSet>? variants, SelectionContext ctx)
+    /// <summary>exact age 优先；exact 存在即使 egg 关闭或全 mute 也不退回 all-age。
+    /// 返回候选变体列表（exact 全部或 all-age 全部），由调用方过滤可用性后再加权抽取。</summary>
+    private static List<ActionSoundSet>? SelectVariantCandidates(IReadOnlyList<ActionSoundSet>? variants, SelectionContext ctx)
     {
-        if (variants == null) return null;
+        if (variants == null || variants.Count == 0) return null;
+        List<ActionSoundSet> exact = new();
         foreach (ActionSoundSet set in variants)
-            if (set != null && set.AgeTag == ctx.Age) return set;
+            if (set != null && set.AgeTag == ctx.Age) exact.Add(set);
+        if (exact.Count > 0) return exact;
+        List<ActionSoundSet> allAge = new();
         foreach (ActionSoundSet set in variants)
-            if (set != null && set.AgeTag == null) return set;
-        return null;
+            if (set != null && set.AgeTag == null) allAge.Add(set);
+        return allAge.Count == 0 ? null : allAge;
     }
+
+    /// <summary>变体级带权抽取：ActionSoundSet.Weight 累计权重；非法权重按 1f 等权处理，避免 NaN/0 清空候选。</summary>
+    private static ActionSoundSet DrawVariant(List<ActionSoundSet> variants, IRollSource rolls)
+    {
+        if (variants.Count == 1) return variants[0];
+        double total = 0;
+        foreach (ActionSoundSet set in variants) total += EffectiveVariantWeight(set.Weight);
+        double roll = rolls.Next01() * total;
+        double cumulative = 0;
+        foreach (ActionSoundSet set in variants)
+        {
+            cumulative += EffectiveVariantWeight(set.Weight);
+            if (roll < cumulative) return set;
+        }
+        return variants[variants.Count - 1];
+    }
+
+    private static double EffectiveVariantWeight(float weight) => IsPositiveFinite(weight) ? weight : 1.0;
 
     private static bool HasPlayableKey(ActionSoundSet set, SelectionContext ctx, ISoundGate gate)
     {

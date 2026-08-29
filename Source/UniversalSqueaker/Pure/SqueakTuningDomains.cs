@@ -68,11 +68,15 @@ public static class SqueakTuningAggregator
                 aggregate = new LayerBehaviorAggregate();
                 result.Add(domain, aggregate);
             }
-            aggregate.OverallIntervalMultiplier = overallMultiplier;
+            aggregate.OverallIntervalMultiplier = SanitizeOverallMultiplier(overallMultiplier);
         }
 
         return result;
     }
+
+    /// <summary>与 resolver 的 Sanitize 一致：NaN/Infinity → 1f，其余 clamp 到 ≥0。</summary>
+    private static float SanitizeOverallMultiplier(float value)
+        => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
 }
 
 public enum ContextSelectionKind { Global, Race, Xeno }

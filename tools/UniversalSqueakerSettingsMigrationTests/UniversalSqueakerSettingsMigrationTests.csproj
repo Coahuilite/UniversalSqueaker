@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerSettingsMigrationTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.SettingsMigrationTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+settings-migration</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Settings migration / baseline import harness.
+         Production Settings files reference runtime/UI/catalog types; those are provided by
+         Stubs/UniversalSqueakerStubs.cs (test-side shims only, never product code). -->
+    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Settings\*.cs" Link="Settings\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerTuningBaselineDef.cs" Link="Runtime\UniversalSqueakerTuningBaselineDef.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerFallbackProfileDef.cs" Link="Runtime\UniversalSqueakerFallbackProfileDef.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Fallback\SqueakFallbackProfileStore.cs" Link="Fallback\SqueakFallbackProfileStore.cs" />
+  </ItemGroup>
+
+</Project>

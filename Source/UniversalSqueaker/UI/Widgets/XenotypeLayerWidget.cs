@@ -68,6 +68,7 @@ public sealed class XenotypeLayerWidget : IWidget
             bool selected = ctx.TryGetViewValue("SelectedDomain", out object? selectedValue)
                 && selectedValue is VoicePackDomainView selectedDomain
                 && selectedDomain.Scope == SqueakVoicePackScope.Xenotype
+                && string.Equals(selectedDomain.RaceDefName, domain.RaceDefName, StringComparison.Ordinal)
                 && string.Equals(selectedDomain.TargetDefName, domain.TargetDefName, StringComparison.Ordinal);
 
             XenotypeLayerRow.Draw(

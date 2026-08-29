@@ -106,10 +106,15 @@ public static class Scenarios
 
     public static AudioDomain[] DomainsFor(string scenario)
     {
-        // S3 的域注入面含 (RaceA,XenoA)；S7 含 RaceB race 域；其余场景只有 (RaceA,null)。
+        // S3 的域注入面含 (RaceA,XenoA)；S4 的 orphan 语义需要同时查询 RaceDomain 与 XenoDomain，
+        // 以覆盖“xeno 域选择存在但池空 → RacePack/BuiltIn 回退”；S7 含 RaceB race 域。
+        // S5 dormant 表示适配层不注入也不查询 xeno 域，因此只保留 RaceDomain；把 XenoDomain 加入会
+        // 把它误标成可查询状态并与 S4 重复（S4/S5 的 BuildRegistry 虽同形，但语义角色不同）。
         switch (scenario)
         {
             case "S3-builtin-plus-xeno":
+                return new[] { RaceDomain, XenoDomain };
+            case "S4-orphan-xeno":
                 return new[] { RaceDomain, XenoDomain };
             case "S7-two-races":
                 return new[] { RaceDomain, RaceBDomain };
@@ -134,7 +139,8 @@ public static class Scenarios
     }
 
     /// <summary>彩蛋 pack：Call = 普通 + 彩蛋变体（同权混抽）；Move = 仅彩蛋变体；
-    /// 其余动作 = 普通变体。条目级 IsEgg 由 SelectionContext.AllowEggs 过滤。</summary>
+    /// 其余动作 = 普通变体。条目级 IsEgg 由 SelectionContext.AllowEggs 过滤。
+    /// 条目 Weight 设为 4，使 S6 语料在固定 3 个 seed 下确定采样到 EggPack（M2 要求）。</summary>
     private static VoicePackEntry EggRaceEntry()
     {
         Dictionary<string, IReadOnlyList<ActionSoundSet>> actions = new();
@@ -167,7 +173,7 @@ public static class Scenarios
             }
             actions[ActionKeyFor(action)] = sets;
         }
-        return new VoicePackEntry(EggPack, RaceDomain, 1f, actions);
+        return new VoicePackEntry(EggPack, RaceDomain, 4f, actions);
     }
 
     private static VoicePackEntry Entry(string packKey, AudioDomain domain, int soundCount, bool muteLast)

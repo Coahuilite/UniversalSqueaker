@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -98,6 +99,19 @@ public static class SqueakDiagnosticsOverlay
     /// <summary>Layout-only lifecycle and snapshot work. Never call from a draw path.</summary>
     public static void RefreshIfDue()
     {
+        try
+        {
+            RefreshIfDueCore();
+        }
+        catch (Exception ex)
+        {
+            // Diagnostics must fail closed: a modded pawn/snapshot exception never breaks the game frame.
+            Log.Warning("[UniversalSqueaker] Diagnostics refresh failed: " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+        }
+    }
+
+    private static void RefreshIfDueCore()
+    {
         MaintainLifecycle();
 
         if (mode == SqueakDiagnosticsMode.Off)
@@ -173,19 +187,27 @@ public static class SqueakDiagnosticsOverlay
 
     private static void RefreshSnapshot(Pawn pawn, CompSqueaker comp)
     {
-        if (!entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
+        try
         {
-            comp.ResetDiagnosticState();
-            entry = new CachedPawn { Pawn = pawn, Comp = comp };
-            entriesByPawn.Add(pawn, entry);
-            cachedPawns.Add(entry);
-        }
+            if (!entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
+            {
+                comp.ResetDiagnosticState();
+                entry = new CachedPawn { Pawn = pawn, Comp = comp };
+                entriesByPawn.Add(pawn, entry);
+                cachedPawns.Add(entry);
+            }
 
-        refreshedPawns.Add(pawn);
-        entry.Snapshot = comp.GetDiagnosticSnapshot();
-        entry.MarkText = Mark;
-        entry.MarkColor = MarkColorFor(entry.Snapshot);
-        revision++;
+            refreshedPawns.Add(pawn);
+            entry.Snapshot = comp.GetDiagnosticSnapshot();
+            entry.MarkText = Mark;
+            entry.MarkColor = MarkColorFor(entry.Snapshot);
+            revision++;
+        }
+        catch (Exception ex)
+        {
+            // Fail closed: do not let one pawn's snapshot exception abort the overlay refresh loop.
+            Log.Warning("[UniversalSqueaker] Diagnostics snapshot failed for " + pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+        }
     }
 
     /// <summary>Three-state mark color: green = ready; amber = deterministic block; blue = random/parameter gate pending.</summary>
@@ -203,18 +225,6 @@ public static class SqueakDiagnosticsOverlay
         }
 
         return PendingColor;
-    }
-
-    private static void DrawMark(Vector2 position, string mark, Color color)
-    {
-        // GenMapUI.DrawText is locked to Tiny font, so visibility comes from a 4-direction
-        // black outline (same pattern as the SR overlay's DrawMark).
-        const float edge = 0.05f;
-        GenMapUI.DrawText(position + new Vector2(-edge, 0f), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(edge, 0f), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(0f, -edge), mark, Color.black);
-        GenMapUI.DrawText(position + new Vector2(0f, edge), mark, Color.black);
-        GenMapUI.DrawText(position, mark, color);
     }
 
     /// <summary>Read-side mark lookup used by CompSqueaker.PostDraw (public draw path).</summary>

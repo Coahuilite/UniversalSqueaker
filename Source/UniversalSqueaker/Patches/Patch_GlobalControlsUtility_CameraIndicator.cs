@@ -27,10 +27,17 @@ public static class Patch_GlobalControlsUtility_CameraIndicator
 
         curBaseY -= RowHeight;
         Rect rect = new(leftX, curBaseY, width, RowHeight);
+        TextAnchor previousAnchor = Text.Anchor;
         Text.Anchor = TextAnchor.UpperRight;
-        Widgets.Label(rect, "US.Debug.CameraIndicator".Translate(
-            height.ToString("0.0", CultureInfo.InvariantCulture),
-            viewSize.ToString("0.0", CultureInfo.InvariantCulture)));
-        Text.Anchor = TextAnchor.UpperLeft;
+        try
+        {
+            Widgets.Label(rect, "US.Debug.CameraIndicator".Translate(
+                height.ToString("0.0", CultureInfo.InvariantCulture),
+                viewSize.ToString("0.0", CultureInfo.InvariantCulture)));
+        }
+        finally
+        {
+            Text.Anchor = previousAnchor;
+        }
     }
 }

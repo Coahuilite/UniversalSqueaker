@@ -113,7 +113,7 @@ public sealed class PresetListWidget : IWidget
                 y += RaceRowHeight + RowGap;
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    DrawXenotypeRow(new Rect(x + XenotypeIndent, y, innerWidth - XenotypeIndent, XenotypeRowHeight), preset.DefName, xenotype, businessEmit);
+                    DrawXenotypeRow(new Rect(x + XenotypeIndent, y, innerWidth - XenotypeIndent, XenotypeRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
                     y += XenotypeRowHeight + RowGap;
                 }
             }
@@ -175,7 +175,7 @@ public sealed class PresetListWidget : IWidget
             emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineRace, arg: presetDefName, raceDefName: race.RaceDefName, flag: !race.Selected));
     }
 
-    private static void DrawXenotypeRow(Rect rect, string presetDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit)
+    private static void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
         Widgets.DrawBoxSolid(rect, hovered ? new Color(.135f, .126f, .105f, .94f) : UiPalette.Ink);
@@ -196,7 +196,7 @@ public sealed class PresetListWidget : IWidget
         GUI.color = oldColor;
 
         if (Widgets.ButtonInvisible(rect))
-            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineXenotype, arg: presetDefName, targetDefName: xenotype.XenotypeDefName, flag: !xenotype.Selected));
+            emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineXenotype, arg: presetDefName, raceDefName: raceDefName, targetDefName: xenotype.XenotypeDefName, flag: !xenotype.Selected));
     }
 
     private static void DrawDescription(Rect rect, string text)

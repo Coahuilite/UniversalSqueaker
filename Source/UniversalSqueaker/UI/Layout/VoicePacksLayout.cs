@@ -14,11 +14,9 @@ public static class VoicePacksLayout
     public const float Gap = 6f;
     public const float SmallGap = 3f;
     public const float TitleHeight = 26f;
-    public const float ModeCardHeight = 64f;
     public const float RaceLayerRowHeight = 50f;
     public const float SearchFieldHeight = 30f;
     public const float VoicePackRowHeight = 74f;
-    public const float FooterHeight = 26f;
     public const float EmptyStateHeight = 44f;
     public const float SectionHeaderHeight = 24f;
 
@@ -75,29 +73,4 @@ public static class VoicePacksLayout
         return height + Gap;
     }
 
-    public static float MeasureContentHeight(float pageWidth, VoicePacksViewState view, VoicePacksPageState state, ITextMetrics metrics)
-    {
-        float width = InnerWidth(pageWidth);
-        float height = Padding * 2f + TitleHeight + Gap;
-
-        if (!string.IsNullOrEmpty(view.BannerText))
-            height += BannerHeight(view.BannerText, width, metrics) + Gap;
-
-        height += ModeCardHeight + Gap;
-
-        if (view.Races.Count > 0)
-        {
-            height += SectionHeaderHeightFor("Race Layer", width, metrics) + Gap;
-            height += view.Races.Count * (RaceLayerRowHeight + Gap);
-        }
-
-        if (view.SelectedDomain != null)
-        {
-            height += SectionHeaderHeightFor("VoicePack Checklist", width, metrics) + Gap;
-            height += ChecklistHeight(view.SelectedDomain.Value, state.SearchText, width, metrics) + Gap;
-        }
-
-        height += FooterHeight + Padding;
-        return height;
-    }
 }

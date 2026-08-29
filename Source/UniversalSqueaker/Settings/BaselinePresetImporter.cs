@@ -19,12 +19,14 @@ namespace UniversalSqueaker;
 /// </summary>
 public static class BaselinePresetImporter
 {
-    /// <summary>Player-checked rows to import, keyed by defName.</summary>
+    /// <summary>Player-checked rows to import, keyed by defName. Xenotype selection is (race,xeno) composite.</summary>
     public sealed class Selection
     {
         public readonly HashSet<string> RaceDefNames = new(StringComparer.Ordinal);
-        public readonly HashSet<string> XenotypeDefNames = new(StringComparer.Ordinal);
+        public readonly HashSet<string> XenotypeDomainKeys = new(StringComparer.Ordinal);
     }
+
+    public static string XenotypeDomainKey(string raceDefName, string xenotypeDefName) => raceDefName + "\n" + xenotypeDefName;
 
     public static BaselineImportResult Import(
         UniversalSqueakerTuningBaselineDef preset,
@@ -62,7 +64,7 @@ public static class BaselinePresetImporter
             foreach (BaselineXenotypeEntry xenotype in race.xenotypes ?? new List<BaselineXenotypeEntry>())
             {
                 if (xenotype == null || string.IsNullOrWhiteSpace(xenotype.xenotypeDefName)) continue;
-                if (!selection.XenotypeDefNames.Contains(xenotype.xenotypeDefName)) continue;
+                if (!selection.XenotypeDomainKeys.Contains(XenotypeDomainKey(race.raceDefName, xenotype.xenotypeDefName))) continue;
 
                 List<BaselineActionTuning> xenoActions = xenotype.actions ?? new List<BaselineActionTuning>();
                 List<BaselineMoodTuning> xenoMoods = xenotype.moods ?? new List<BaselineMoodTuning>();
@@ -133,18 +135,11 @@ public static class BaselinePresetImporter
 
     private static void UpsertAction(UniversalSqueakerSettings settings, ActionTuningRecord incoming)
     {
-        for (int i = 0; i < settings.actionTuning.Count; i++)
-        {
-            ActionTuningRecord existing = settings.actionTuning[i];
-            if (existing != null
-                && string.Equals(existing.actionKey, incoming.actionKey, StringComparison.Ordinal)
-                && string.Equals(existing.raceDefName ?? "", incoming.raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(existing.xenotypeDefName ?? "", incoming.xenotypeDefName ?? "", StringComparison.Ordinal))
-            {
-                settings.actionTuning[i] = incoming;
-                return;
-            }
-        }
+        // 规范化：清全部同身份行（含陈旧重复）后追加——列表末位 = 同层 Merge 的胜出行，与 UpsertMood/SetActionTuningScope 一致。
+        settings.actionTuning.RemoveAll(c => c != null
+            && string.Equals(c.actionKey, incoming.actionKey, StringComparison.Ordinal)
+            && string.Equals(c.raceDefName ?? "", incoming.raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(c.xenotypeDefName ?? "", incoming.xenotypeDefName ?? "", StringComparison.Ordinal));
         settings.actionTuning.Add(incoming);
     }
 

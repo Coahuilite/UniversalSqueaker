@@ -18,10 +18,7 @@
        另链接漏斗纯文件（执行层纯逻辑）只为纯度门；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
   <ItemGroup>
     <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakActionPlan.cs" Link="Pure\SqueakActionPlan.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakTimingModel.cs" Link="Pure\SqueakTimingModel.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakLayeredTuning.cs" Link="Pure\SqueakLayeredTuning.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakTuningDomains.cs" Link="Pure\SqueakTuningDomains.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Runtime\VerseEventBinding.cs" Link="Runtime\VerseEventBinding.cs" />
   </ItemGroup>
 

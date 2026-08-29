@@ -61,12 +61,12 @@ internal static class SqueakVoicePackValidator
     {
         if (pack == null) { yield return "SqueakVoicePackDef is null."; yield break; }
         string name = string.IsNullOrWhiteSpace(pack.defName) ? "SqueakVoicePackDef" : pack.defName;
-        string prefix = "US_";
+        const string prefix = "US_";
         if (string.IsNullOrWhiteSpace(pack.defName) || !pack.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " defName must begin with " + prefix + ".";
-        if (string.IsNullOrWhiteSpace(pack.raceDefName)) yield return name + " is missing raceDefName; every VoicePack must declare the exact race defName it serves.";
+        if (string.IsNullOrWhiteSpace(pack.raceDefName) || !string.Equals(pack.raceDefName, pack.raceDefName.Trim(), StringComparison.Ordinal)) yield return name + " has an invalid raceDefName; defName must be exact and contain no leading/trailing whitespace.";
         if (pack.scope == SqueakVoicePackScope.Unspecified) yield return name + " has an unspecified scope.";
-        if (pack.scope == SqueakVoicePackScope.Race && !string.IsNullOrEmpty(pack.targetDefName)) yield return name + " Race scope must not specify targetDefName.";
-        if (pack.scope == SqueakVoicePackScope.Xenotype && string.IsNullOrWhiteSpace(pack.targetDefName)) yield return name + " Xenotype scope requires targetDefName.";
+        if (pack.scope == SqueakVoicePackScope.Race && !string.IsNullOrWhiteSpace(pack.targetDefName)) yield return name + " Race scope must not specify targetDefName.";
+        if (pack.scope == SqueakVoicePackScope.Xenotype && (string.IsNullOrWhiteSpace(pack.targetDefName) || !string.Equals(pack.targetDefName, pack.targetDefName.Trim(), StringComparison.Ordinal))) yield return name + " Xenotype scope requires an exact targetDefName without leading/trailing whitespace.";
         if (!IsPositiveFinite(pack.weight)) yield return name + " has an invalid weight; weight must be finite and greater than zero.";
 
         HashSet<SqueakAction> fallbackActions = new();

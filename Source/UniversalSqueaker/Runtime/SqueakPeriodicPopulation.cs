@@ -84,8 +84,9 @@ internal static class SqueakPeriodicPopulation
         if (map == null) return EmptySnapshot;
         int now = Find.TickManager.TicksGame;
         // The first caller owns this tick. Membership changes afterwards defer to the next tick,
-        // rather than allowing batch spawning to repeatedly rescan the registry.
-        if (lastMaintenanceTick == now) return snapshot;
+        // rather than allowing batch spawning to repeatedly rescan the registry. If the map changed
+        // within the same tick, the old snapshot belongs to a different map, so fall through and rebuild.
+        if (lastMaintenanceTick == now && snapshotMap == map) return snapshot;
         lastMaintenanceTick = now;
         CellRect view = Find.CameraDriver.CurrentViewRect.ExpandedBy(10);
         Vector3 listener = Find.Camera.transform.position;

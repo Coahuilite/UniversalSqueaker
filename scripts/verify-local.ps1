@@ -11,16 +11,17 @@ $ErrorActionPreference = "Stop"
 # Fail-fast order:
 #   1   kernel gate: unit tests + US 0.1.0 golden corpus byte replay + determinism
 #   2   config-copy lifecycle characterization
-#   3   log protocol characterization, Release
-#   4   log protocol characterization, Dev (US_DEV)
-#   5   FerriteLib.UiKit tests, Release
-#   6   FerriteLib.UiKit Dev build (TreatWarningsAsErrors)
-#   7   FerriteLib.UiKit Release build (TreatWarningsAsErrors)
-#   8   FerriteLib.UiKit neutrality grep (no US/SR product literals)
-#   9   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
-#  10   main assembly Release build (TreatWarningsAsErrors)
-#  11   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
-#  12   UI layout manifest XML well-formedness
+#   3   settings migration characterization (schema migration, write bridges, baseline importer)
+#   4   log protocol characterization, Release
+#   5   log protocol characterization, Dev (US_DEV)
+#   6   FerriteLib.UiKit tests, Release
+#   7   FerriteLib.UiKit Dev build (TreatWarningsAsErrors)
+#   8   FerriteLib.UiKit Release build (TreatWarningsAsErrors)
+#   9   FerriteLib.UiKit neutrality grep (no US/SR product literals)
+#  10   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
+#  11   main assembly Release build (TreatWarningsAsErrors)
+#  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
+#  13   UI layout manifest XML well-formedness
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -60,6 +61,10 @@ Invoke-Check 'UniversalSqueakerKernelTests (unit asserts + US 0.1.0 corpus repla
 Invoke-Check 'UniversalSqueakerConfigCopyTests (store lifecycle A-F)' `
     'dotnet run --project tools/UniversalSqueakerConfigCopyTests -c Release' `
     { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerConfigCopyTests') -c Release }
+
+Invoke-Check 'UniversalSqueakerSettingsMigrationTests (schema migration + write bridges + baseline)' `
+    'dotnet run --project tools/UniversalSqueakerSettingsMigrationTests -c Release' `
+    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerSettingsMigrationTests') -c Release }
 
 Invoke-Check 'UniversalSqueakerLogTests Release (usdiag v1/v2 protocol)' `
     'dotnet run --project tools/UniversalSqueakerLogTests -c Release' `

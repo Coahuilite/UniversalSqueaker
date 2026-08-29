@@ -112,31 +112,15 @@ public partial class UniversalSqueakerSettings
         if (actionTuning == null) actionTuning = new List<ActionTuningRecord>();
         if (moodTuning == null) moodTuning = new List<MoodTuningRecord>();
 
-        // 迁移前快照：仅 pre-v4（S2 之前）配置需要从遗留 actionOverrides 派生 actionTuning。
-        bool migratedFromPreV4 = settingsSchemaVersion < 4;
+        // 迁移事务：v3/v1 → v5/v2 统一在 MigrateV3RecordsTransactionally 内完成，含 actionTuning 与 moodTuning。
+        // US 0.1.x 未发布过 pre-v4 配置；globalActionEnabled 旧字段不支持（无 legacy 用户），
+        // 若未来需要支持，必须恢复 load-only 读取并纳入同一事务迁移。
         bool migrationNeeded = settingsSchemaVersion < CurrentSettingsSchemaVersion || voicePackSchemaVersion < CurrentVoicePackSchemaVersion;
         if (migrationNeeded) MigrateV3RecordsTransactionally();
         else
         {
             if (voicePackSelections == null) voicePackSelections = new List<VoicePackSelectionRecord>();
             if (xenotypePresets == null) xenotypePresets = new List<XenotypePresetRecord>();
-        }
-
-        // S2: migrate legacy xenotype action overrides into the unified layered table (one-time, pre-v4 only).
-        // 门控 migratedFromPreV4：v4+ 配置中空表 = 用户已清空，不得从遗留 actionOverrides 复活。
-        if (migratedFromPreV4 && (actionTuning == null || actionTuning.Count == 0))
-        {
-            if (SqueakSettingsMigration.TryCreateActionTuningRecords(
-                    xenotypePresets,
-                    out List<ActionTuningRecord> migratedTuning,
-                    out string tuningFailure))
-            {
-                actionTuning = migratedTuning;
-            }
-            else
-            {
-                SqueakLog.TargetRejected("settings_schema_migration", "action_tuning_migration_failed:" + tuningFailure);
-            }
         }
     }
 
@@ -165,25 +149,45 @@ public partial class UniversalSqueakerSettings
         }
 
         // S5: 旧心情存储 → 统一分层 MoodTuningRecord（moodOverrides → 层 0；xenotypePresets[].moodOverrides → 层 2）。
+        // 仅当 settings schema 真正落后时重建 moodTuning；voicePackSchema 单独落后不得用旧字段覆盖用户新编辑。
         // 与记录迁移同事务：任一失败整体不提交，schema 标记保持旧值，下次启动可重试。
-        // 注意：迁移失败当次启动中旧心情字段不再被运行时消费（单一来源 = moodTuning），
-        // 会在下次启动重试；失败仅可能来自异常（纯数据拷贝，无校验），TargetRejected 已落日志。
-        if (!SqueakSettingsMigration.TryCreateMoodTuningRecords(
-                moodOverrides,
-                xenotypePresets,
-                out List<MoodTuningRecord> migratedMoods,
-                out string moodFailure))
+        bool settingsMigrationNeeded = settingsSchemaVersion < CurrentSettingsSchemaVersion;
+        List<ActionTuningRecord>? migratedActionTuning = null;
+        if (settingsMigrationNeeded)
         {
-            migrationPersistenceBlocked = true;
-            SqueakLog.TargetRejected("settings_schema_migration", "mood_tuning_migration_failed:" + moodFailure);
-            return false;
+            if (settingsSchemaVersion < 4 && (actionTuning == null || actionTuning.Count == 0))
+            {
+                if (!SqueakSettingsMigration.TryCreateActionTuningRecords(
+                        migratedPresets,
+                        out List<ActionTuningRecord> actionTuningRecords,
+                        out string actionFailure))
+                {
+                    migrationPersistenceBlocked = true;
+                    SqueakLog.TargetRejected("settings_schema_migration", "action_tuning_migration_failed:" + actionFailure);
+                    return false;
+                }
+                migratedActionTuning = actionTuningRecords;
+            }
+
+            if (!SqueakSettingsMigration.TryCreateMoodTuningRecords(
+                    moodOverrides,
+                    migratedPresets,
+                    out List<MoodTuningRecord> migratedMoods,
+                    out string moodFailure))
+            {
+                migrationPersistenceBlocked = true;
+                SqueakLog.TargetRejected("settings_schema_migration", "mood_tuning_migration_failed:" + moodFailure);
+                return false;
+            }
+
+            moodTuning = migratedMoods;
         }
 
-        moodTuning = migratedMoods;
         voicePackSelections = migratedSelections;
         xenotypePresets = migratedPresets;
+        if (migratedActionTuning != null) actionTuning = migratedActionTuning;
         migrationPersistenceBlocked = false;
-        if (settingsSchemaVersion < CurrentSettingsSchemaVersion) settingsSchemaVersion = CurrentSettingsSchemaVersion;
+        if (settingsMigrationNeeded) settingsSchemaVersion = CurrentSettingsSchemaVersion;
         if (voicePackSchemaVersion < CurrentVoicePackSchemaVersion) voicePackSchemaVersion = CurrentVoicePackSchemaVersion;
         // This is consumed only by the main-thread startup callback, which queues the existing base.WriteSettings path.
         migrationPersistencePending = true;

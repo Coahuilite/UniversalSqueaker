@@ -13,6 +13,7 @@ namespace UniversalSqueaker.UI;
 public sealed class VoicePacksPageState
 {
     public SqueakVoicePackScope SelectedScope = SqueakVoicePackScope.Race;
+    public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
     public string SearchText = "";
     public bool HelpOpen;
@@ -31,6 +32,7 @@ public sealed class VoicePacksPageState
     public void Reset()
     {
         SelectedScope = SqueakVoicePackScope.Race;
+        SelectedRaceDefName = "";
         SelectedTargetName = "";
         SearchText = "";
         HelpOpen = false;
@@ -47,5 +49,5 @@ public sealed class BaselinePresetSelection
 {
     public bool Expanded;
     public readonly HashSet<string> SelectedRaceDefNames = new(StringComparer.Ordinal);
-    public readonly HashSet<string> SelectedXenotypeDefNames = new(StringComparer.Ordinal);
+    public readonly HashSet<string> SelectedXenotypeDomainKeys = new(StringComparer.Ordinal);
 }

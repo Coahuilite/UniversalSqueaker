@@ -61,7 +61,7 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<ActionTuningRecord> actionTuning = new();
     // S5 layered mood tuning table (Global/Race/Xenotype); supersedes moodOverrides / preset mood rows.
     public List<MoodTuningRecord> moodTuning = new();
-    // Action gate (Goal A): non-built-in ActionEntry fires only when true. Default false (closed).
+    // Action gate: non-built-in external actions fire only when true. Default false (closed).
     public bool allowExternalActions = false;
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
@@ -93,7 +93,6 @@ public partial class UniversalSqueakerSettings : ModSettings
     public void ApplyToRuntime()
     {
         SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
-        ActionEntryRegistry.Current.AllowExternalActions = allowExternalActions;
         Patch_DebugTabMenu_Actions.SetEnabled(localizeDebugActions);
         SqueakDebug.ShowCameraIndicator = showCameraIndicator;
         CompSqueaker.ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
@@ -179,32 +178,40 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (!hasRace && hasXeno) return;
         if (string.IsNullOrEmpty(actionKey)) return;
 
-        ActionTuningRecord? record = null;
+        ActionTuningRecord? existing = null;
         foreach (ActionTuningRecord candidate in actionTuning)
             if (candidate != null
                 && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
                 && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
                 && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
-                record = candidate;
+                existing = candidate;
+
+        // 统一 last-wins：清除全部同身份行（含陈旧重复）后追加/不再追加，与 SetMoodTuning/UpsertMood 一致。
+        actionTuning.RemoveAll(c => c != null
+            && string.Equals(c.actionKey, actionKey, StringComparison.Ordinal)
+            && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
 
         if (scope == null)
         {
-            if (record != null) actionTuning.Remove(record);
+            NotifyDiscreteResolverRuntimeChanged();
+            QueuePersistence();
+            return;
         }
-        else
+
+        SqueakActionScope effective = scope.Value;
+        // 内置键按 SupportedScopes 归一（Draft/Undraft/Equip 仅支持 ActiveCommand），避免写入运行时永远不匹配的作用域。
+        if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
+            effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
+        actionTuning.Add(new ActionTuningRecord
         {
-            SqueakActionScope effective = scope.Value;
-            // 内置键按 SupportedScopes 归一（Draft/Undraft/Equip 仅支持 ActiveCommand），避免写入运行时永远不匹配的作用域。
-            if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
-                effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
-            if (record == null)
-            {
-                record = new ActionTuningRecord { actionKey = actionKey, raceDefName = raceDefName ?? "", xenotypeDefName = xenotypeDefName ?? "" };
-                actionTuning.Add(record);
-            }
-            record.hasScope = true;
-            record.scope = effective;
-        }
+            actionKey = actionKey,
+            raceDefName = raceDefName ?? "",
+            xenotypeDefName = xenotypeDefName ?? "",
+            sourcePresetDefName = existing?.sourcePresetDefName ?? "",
+            hasScope = true,
+            scope = effective,
+        });
         NotifyDiscreteResolverRuntimeChanged();
         QueuePersistence();
     }
@@ -246,6 +253,10 @@ public partial class UniversalSqueakerSettings : ModSettings
             return;
         }
 
+        bool validFactor = string.Equals(factor, "pitch", StringComparison.Ordinal)
+            || string.Equals(factor, "volume", StringComparison.Ordinal)
+            || string.Equals(factor, "jitter", StringComparison.Ordinal);
+        if (!validFactor) return;
         if (value == null || float.IsNaN(value.Value) || float.IsInfinity(value.Value)) return;
 
         MoodTuningRecord record;
@@ -263,7 +274,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (string.Equals(factor, "pitch", StringComparison.Ordinal)) { record.hasPitchFactor = true; record.pitchFactor = Mathf.Clamp(value.Value, 0.5f, 2f); }
         else if (string.Equals(factor, "volume", StringComparison.Ordinal)) { record.hasVolumeFactor = true; record.volumeFactor = Mathf.Clamp(value.Value, 0.1f, 2f); }
         else if (string.Equals(factor, "jitter", StringComparison.Ordinal)) { float half = Mathf.Clamp(value.Value, 0f, 0.5f); record.hasPitchJitter = true; record.pitchJitter = new FloatRange(Math.Max(0.02f, 1f - half), 1f + half); }
-        else return;
 
         NotifyContinuousXenotypeRuntimeChanged();
         QueuePersistence();
@@ -369,6 +379,9 @@ public partial class UniversalSqueakerSettings : ModSettings
         SqueakXenotypeCatalogSnapshot catalog = SqueakXenotypeCatalog.Current;
         if (scope == SqueakVoicePackScope.Xenotype && !ModsConfig.BiotechActive) return new SqueakVoicePackDomainStatus(SqueakVoicePackDomainState.Dormant, keys);
         IEnumerable<SqueakVoicePackDef> domainPacks = catalog.GetVoicePackDomainPacks(scope, scope == SqueakVoicePackScope.Race ? raceDefName : target);
+        // 双键域身份：Xenotype 状态必须按 (race, xeno) 过滤，避免同 xeno 跨 race 的包串扰。
+        if (scope == SqueakVoicePackScope.Xenotype)
+            domainPacks = domainPacks.Where(pack => string.Equals(pack.raceDefName, raceDefName, StringComparison.Ordinal));
         HashSet<string> domainKeys = new(StringComparer.Ordinal);
         foreach (SqueakVoicePackDef pack in domainPacks)
         {

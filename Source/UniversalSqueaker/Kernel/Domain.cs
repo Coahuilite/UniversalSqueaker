@@ -13,7 +13,7 @@ public readonly struct RaceKey : IEquatable<RaceKey>
 
     public RaceKey(string defName) => DefName = defName;
 
-    public static bool IsValid(string? defName) => !string.IsNullOrEmpty(defName);
+    public static bool IsValid(string? defName) => !string.IsNullOrWhiteSpace(defName);
 
     public bool Equals(RaceKey other) => string.Equals(DefName, other.DefName, StringComparison.Ordinal);
     public override bool Equals(object? obj) => obj is RaceKey other && Equals(other);
@@ -85,18 +85,25 @@ public static class AudioDomains
     public static bool TryCreate(string? raceDefName, string? xenotypeDefName, out AudioDomain domain)
     {
         domain = default;
-        if (string.IsNullOrEmpty(raceDefName)) return false;
+        if (string.IsNullOrWhiteSpace(raceDefName)) return false;
         RaceKey race = new(raceDefName!);
+        // 空字符串继续视为“无 xeno”（race-only）；纯空白 xeno 是非法 defName，拒绝。
         if (string.IsNullOrEmpty(xenotypeDefName))
         {
             domain = new AudioDomain(race, null);
             return true;
         }
+        if (string.IsNullOrWhiteSpace(xenotypeDefName)) return false;
         domain = new AudioDomain(race, new XenotypeKey(xenotypeDefName!));
         return true;
     }
 
-    public static AudioDomain RaceOnly(string raceDefName) => new(new RaceKey(raceDefName), null);
+    public static AudioDomain RaceOnly(string raceDefName)
+    {
+        if (string.IsNullOrWhiteSpace(raceDefName))
+            throw new ArgumentException("Race defName must not be null or whitespace.", nameof(raceDefName));
+        return new AudioDomain(new RaceKey(raceDefName), null);
+    }
 
     public static IReadOnlyList<AudioDomain> Collect(IEnumerable<(string race, string? xeno)> sources)
     {

@@ -13,8 +13,12 @@ public sealed class FallbackDelta
 
     public FallbackDelta(IReadOnlyDictionary<string, string> overrides)
     {
-        Overrides = overrides ?? throw new ArgumentNullException(nameof(overrides));
-        foreach (KeyValuePair<string, string> entry in Overrides)
+        // Defensive copy: constructor must not retain caller-mutated dictionary references.
+        if (overrides == null) throw new ArgumentNullException(nameof(overrides));
+        Dictionary<string, string> copy = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in overrides) copy.Add(entry.Key, entry.Value);
+        Overrides = copy;
+        foreach (KeyValuePair<string, string> entry in copy)
         {
             if (!BuiltInActionKeys.Contains(entry.Key))
                 throw new ArgumentException("Fallback delta contains a non-built-in action key: " + entry.Key, nameof(overrides));
@@ -74,8 +78,12 @@ public sealed class FallbackProfile
     {
         Race = race;
         Version = version;
-        SoundKeys = soundKeys ?? throw new ArgumentNullException(nameof(soundKeys));
-        foreach (KeyValuePair<string, string> entry in SoundKeys)
+        // Defensive copy: constructor must not retain caller-mutated dictionary references.
+        if (soundKeys == null) throw new ArgumentNullException(nameof(soundKeys));
+        Dictionary<string, string> copy = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in soundKeys) copy.Add(entry.Key, entry.Value);
+        SoundKeys = copy;
+        foreach (KeyValuePair<string, string> entry in copy)
         {
             if (!BuiltInActionKeys.Contains(entry.Key))
                 throw new ArgumentException("Fallback profile contains a non-built-in action key: " + entry.Key, nameof(soundKeys));

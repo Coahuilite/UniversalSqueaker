@@ -72,9 +72,10 @@ public static class VoicePacksPageModel
                 break;
             case UiCommandKind.SelectDomain:
                 state.SelectedScope = command.Scope;
+                state.SelectedRaceDefName = command.RaceDefName ?? "";
                 state.SelectedTargetName = command.Scope == SqueakVoicePackScope.Xenotype
-                    ? command.TargetDefName
-                    : command.RaceDefName;
+                    ? command.TargetDefName ?? ""
+                    : "";
                 break;
             case UiCommandKind.TogglePack:
                 ExecuteTogglePack(settings, command);
@@ -92,7 +93,7 @@ public static class VoicePacksPageModel
                 settings.SetBasicTuning(command.Arg, command.Flag);
                 break;
             case UiCommandKind.SetActionTuningScope:
-                ExecuteSetActionTuningScope(settings, command);
+                ExecuteSetActionTuningScope(settings, command, state);
                 break;
             case UiCommandKind.SetTuningLayer:
                 if (int.TryParse(command.Arg, out int tuningLayer) && tuningLayer >= 0 && tuningLayer <= 2)
@@ -106,7 +107,7 @@ public static class VoicePacksPageModel
                 }
                 break;
             case UiCommandKind.SetMoodTuning:
-                ExecuteSetMoodTuning(settings, command);
+                ExecuteSetMoodTuning(settings, command, state);
                 break;
             case UiCommandKind.ToggleBaselinePreset:
                 ToggleBaselinePreset(state, command.Arg);
@@ -115,7 +116,7 @@ public static class VoicePacksPageModel
                 ToggleBaselineRace(state, command.Arg, command.RaceDefName, command.Flag);
                 break;
             case UiCommandKind.ToggleBaselineXenotype:
-                ToggleBaselineXenotype(state, command.Arg, command.TargetDefName, command.Flag);
+                ToggleBaselineXenotype(state, command.Arg, command.RaceDefName, command.TargetDefName, command.Flag);
                 break;
             case UiCommandKind.ImportBaselinePreset:
                 ImportBaselinePreset(settings, command.Arg, state);
@@ -125,9 +126,12 @@ public static class VoicePacksPageModel
 
     /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录），
     /// 层域身份取命令自带的 (raceDefName, xenotypeDefName)。</summary>
-    private static void ExecuteSetActionTuningScope(UniversalSqueakerSettings settings, UiCommand command)
+    private static void ExecuteSetActionTuningScope(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
     {
         if (string.IsNullOrEmpty(command.Arg)) return;
+        // 非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(command.RaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(command.RaceDefName) || string.IsNullOrEmpty(command.TargetDefName))) return;
         string[] parts = command.Arg.Split('|');
         SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
             && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
@@ -137,8 +141,10 @@ public static class VoicePacksPageModel
     }
 
     /// <summary>S5 心情调音执行：arg = "MoodName|factor|value" | "MoodName|clear"。</summary>
-    private static void ExecuteSetMoodTuning(UniversalSqueakerSettings settings, UiCommand command)
+    private static void ExecuteSetMoodTuning(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
     {
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(command.RaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(command.RaceDefName) || string.IsNullOrEmpty(command.TargetDefName))) return;
         string[] parts = command.Arg.Split('|');
         if (parts.Length < 2) return;
         if (!Enum.TryParse(parts[0], true, out SqueakMood mood)) return;
@@ -341,7 +347,8 @@ public static class VoicePacksPageModel
                 foreach (BaselineXenotypeEntry xenotype in race.xenotypes ?? new List<BaselineXenotypeEntry>())
                 {
                     if (xenotype == null || string.IsNullOrWhiteSpace(xenotype.xenotypeDefName)) continue;
-                    bool xenoSelected = selection.SelectedXenotypeDefNames.Contains(xenotype.xenotypeDefName);
+                    bool xenoSelected = selection.SelectedXenotypeDomainKeys.Contains(
+                        BaselinePresetImporter.XenotypeDomainKey(race.raceDefName, xenotype.xenotypeDefName));
                     if (xenoSelected) selectedXenotypes++;
                     xenotypes.Add(new BaselineXenotypeView(
                         xenotype.xenotypeDefName,
@@ -413,12 +420,13 @@ public static class VoicePacksPageModel
         else selection.SelectedRaceDefNames.Remove(raceDefName);
     }
 
-    private static void ToggleBaselineXenotype(VoicePacksPageState state, string presetDefName, string xenotypeDefName, bool selected)
+    private static void ToggleBaselineXenotype(VoicePacksPageState state, string presetDefName, string raceDefName, string xenotypeDefName, bool selected)
     {
-        if (string.IsNullOrEmpty(presetDefName) || string.IsNullOrEmpty(xenotypeDefName)) return;
+        if (string.IsNullOrEmpty(presetDefName) || string.IsNullOrEmpty(raceDefName) || string.IsNullOrEmpty(xenotypeDefName)) return;
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
-        if (selected) selection.SelectedXenotypeDefNames.Add(xenotypeDefName);
-        else selection.SelectedXenotypeDefNames.Remove(xenotypeDefName);
+        string key = BaselinePresetImporter.XenotypeDomainKey(raceDefName, xenotypeDefName);
+        if (selected) selection.SelectedXenotypeDomainKeys.Add(key);
+        else selection.SelectedXenotypeDomainKeys.Remove(key);
     }
 
     private static void ImportBaselinePreset(UniversalSqueakerSettings settings, string presetDefName, VoicePacksPageState state)
@@ -429,7 +437,7 @@ public static class VoicePacksPageModel
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
         BaselinePresetImporter.Selection importSelection = new();
         foreach (string race in selection.SelectedRaceDefNames) importSelection.RaceDefNames.Add(race);
-        foreach (string xenotype in selection.SelectedXenotypeDefNames) importSelection.XenotypeDefNames.Add(xenotype);
+        foreach (string key in selection.SelectedXenotypeDomainKeys) importSelection.XenotypeDomainKeys.Add(key);
         settings.ImportBaselinePreset(preset, importSelection);
     }
 
@@ -492,6 +500,16 @@ public static class VoicePacksPageModel
             if (record != null && record.scope == SqueakVoicePackScope.Xenotype)
                 Add(record.raceDefName, record.xenotypeDefName);
 
+        foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
+            if (record != null && record.IsValidLayer(out int actionLayer) && actionLayer == 2)
+                Add(record.raceDefName, record.xenotypeDefName);
+        foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+            if (record != null && record.IsValidLayer(out int moodLayer) && moodLayer == 2)
+                Add(record.raceDefName, record.xenotypeDefName);
+        foreach (XenotypePresetRecord record in settings.xenotypePresets ?? new List<XenotypePresetRecord>())
+            if (record != null && !string.IsNullOrEmpty(record.xenotypeDefName))
+                Add(record.raceDefName, record.xenotypeDefName);
+
         result.Sort((left, right) =>
         {
             int byTarget = StringComparer.Ordinal.Compare(left.TargetDefName, right.TargetDefName);
@@ -509,25 +527,29 @@ public static class VoicePacksPageModel
     {
         if (state.SelectedScope == SqueakVoicePackScope.Xenotype)
         {
-            VoicePackDomainView? match = null;
-            foreach (VoicePackDomainView domain in xenotypes)
-            {
-                if (string.Equals(domain.TargetDefName, state.SelectedTargetName, StringComparison.Ordinal))
-                {
-                    match = domain;
-                    break;
-                }
-            }
+            VoicePackDomainView? match = xenotypes.FirstOrDefault(domain =>
+                string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal)
+                && string.Equals(domain.TargetDefName, state.SelectedTargetName, StringComparison.Ordinal));
             if (match == null && xenotypes.Count > 0) match = xenotypes[0];
-            if (match != null) return match;
+            if (match != null)
+            {
+                state.SelectedRaceDefName = match.Value.RaceDefName;
+                state.SelectedTargetName = match.Value.TargetDefName;
+                return match;
+            }
         }
 
         if (state.SelectedScope == SqueakVoicePackScope.Race || races.Count > 0)
         {
             RaceLayerRowView race = races.FirstOrDefault(row =>
-                string.Equals(row.RaceDefName, state.SelectedTargetName, StringComparison.Ordinal));
+                string.Equals(row.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal));
             if (race.RaceDefName == null) race = races.FirstOrDefault();
-            if (race.RaceDefName != null) return BuildRaceDomain(settings, catalog, race.RaceDefName);
+            if (race.RaceDefName != null)
+            {
+                state.SelectedRaceDefName = race.RaceDefName;
+                state.SelectedTargetName = "";
+                return BuildRaceDomain(settings, catalog, race.RaceDefName);
+            }
         }
 
         return xenotypes.Count > 0 ? xenotypes[0] : (VoicePackDomainView?)null;

@@ -18,8 +18,19 @@ public static class SqueakAudioPoolNotificationService
         foreach (string race in catalog.RaceDefNames)
             result.Add(settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, race));
         if (ModsConfig.BiotechActive)
-            foreach (string target in catalog.XenotypePacksByDefName.Keys.OrderBy(x => x, StringComparer.Ordinal))
-                result.Add(settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Xenotype, target));
+        {
+            HashSet<string> seen = new(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+            {
+                foreach (SqueakVoicePackDef pack in pair.Value)
+                {
+                    if (pack == null || string.IsNullOrEmpty(pack.raceDefName) || string.IsNullOrEmpty(pair.Key)) continue;
+                    string identity = pack.raceDefName + "\n" + pair.Key;
+                    if (!seen.Add(identity)) continue;
+                    result.Add(settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Xenotype, pack.raceDefName, pair.Key));
+                }
+            }
+        }
         return result;
     }
 

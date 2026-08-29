@@ -60,8 +60,6 @@ public class UniversalSqueakerMod : Mod
             // ExecuteWhenFinished is the first Unity-main-thread operation in this startup path.
             // Bind before catalog/settings code can call any resolver mutator.
             SqueakRuntimeResolver.InitializeMainThread();
-            // Goal A: register the 17 built-in action entries before any resolver/trigger consumption.
-            BuiltInActionEntries.EnsureRegistered();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
             // Route table: mount the default squeak comp on every race declared by an admitted pack,

@@ -112,6 +112,7 @@
   - Ratkin gene compatibility patch (`Ratkin Gene Patch`) unions `Ratkin_*` (EoralMilk) and `OAGene_*` (OA) into the same `Ratkin` `whiteXenotypeList` and generation sets, confirming “ignore mod source, route by xenotype identity”.
 - **Decision (maintainer agreed)**: adopt option ② — runtime xeno tuning contexts become `(raceDefName, xenotypeDefName)` double-keyed. This aligns runtime with the existing data/UI/audio-domain identity and HAR’s race-restriction model.
 - **Implementation (2026-08-28, landed)**: `AudioDomains` (Kernel), `SqueakTuningAggregator`/`SqueakContextSelector` (Pure), resolver thin adapter; `contexts` keyed by `AudioDomain`, `raceContexts` by `RaceKey`; `SqueakRaceForXenotype` removed from main path; public runtime API unchanged. Design doc: `docs/us-xeno-double-key-context-zh.md`.
+- **Review-fix phases (2026-08-28, landed)**: Phase 0–6 completed after 6-way review. Legacy UI removed; full `(race,xeno)` domain identity across Settings/UI/Baseline/Notification/resolver; single tuning authority + unified upsert/clear; transactional settings migration + new `tools/UniversalSqueakerSettingsMigrationTests`; YAGNI removed `ActionEntry`/`TriggerBinding`; Sustained trigger/playback pipeline unified; kernel variant mixing/corpus/PackFallback boundary; diagnostics/logging/fail-closed fixes. `scripts/verify-local.ps1` now has 13 gates, all green.
 - Next: S4-Polish, `docs/workdocs/` removal, Ferrite in-game validation, optional Runtime harness.
 
 

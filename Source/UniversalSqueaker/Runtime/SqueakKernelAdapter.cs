@@ -62,7 +62,6 @@ internal static class SqueakKernelAdapter
     public static BuiltInFallbackTable BuildBuiltInSource()
     {
         List<FallbackProfile> profiles = new();
-        Dictionary<RaceKey, FallbackProfile> byRace = new();
         try
         {
             foreach (UniversalSqueakerFallbackProfileDef def in DefDatabase<UniversalSqueakerFallbackProfileDef>.AllDefs)
@@ -73,7 +72,6 @@ internal static class SqueakKernelAdapter
                     SqueakLog.TargetRejected(def.raceDefName, "invalid_fallback_profile");
                     continue;
                 }
-                byRace[profile.Race] = profile;
                 profiles.Add(profile);
             }
         }
@@ -137,7 +135,7 @@ internal static class SqueakKernelAdapter
     }
 
     /// <summary>ChainResult → SqueakSoundChoice（tier → source 映射；key 查表缺失 → None 防御）。</summary>
-    public static SqueakSoundChoice ToChoice(ChainResult result)
+    public static SqueakSoundChoice ToChoice(ChainResult result, AudioDomain domain)
     {
         if (result.SoundKey == null) return SqueakSoundChoice.None;
         SoundDef? sound = DefDatabase<SoundDef>.GetNamedSilentFail(result.SoundKey);
@@ -146,7 +144,7 @@ internal static class SqueakKernelAdapter
         {
             ChainTier.XenotypePack => SqueakSoundSource.XenotypePack,
             ChainTier.RacePack => SqueakSoundSource.RacePack,
-            ChainTier.PackFallback => SqueakSoundSource.RacePack,
+            ChainTier.PackFallback => domain.Xenotype != null ? SqueakSoundSource.XenotypePack : SqueakSoundSource.RacePack,
             _ => SqueakSoundSource.Vanilla,
         };
         return new SqueakSoundChoice(sound, source, result.PoolStableKey, result.IsEgg);

@@ -176,7 +176,9 @@ internal static class SqueakLogOnce
     {
         // Once domains are namespaced per protocol version: fmt=1 records claim log-v1 (byte-identical to the
         // locked v1 surface), fmt=2 records claim log-v2, so the two domains never collide.
-        string key = "coahuilite.universalsqueaker|log-v" + version + "|" + evt + "|" + SqueakLogFormatter.Value(data.Action) + "|" + SqueakLogFormatter.Value(data.Target) + "|" + SqueakLogFormatter.Value(data.Pack) + "|" + SqueakLogFormatter.Value(data.Reason) + "|" + (data.Exception?.GetType().FullName ?? "-");
+        // Per-domain/per-sound events include their domain/sound dimensions in the claim key so one race or
+        // sound failure does not suppress the same failure for a different race/sound.
+        string key = "coahuilite.universalsqueaker|log-v" + version + "|" + evt + "|" + SqueakLogFormatter.Value(data.Action) + "|" + SqueakLogFormatter.Value(data.Target) + "|" + SqueakLogFormatter.Value(data.Pack) + "|" + SqueakLogFormatter.Value(data.Reason) + "|" + SqueakLogFormatter.Value(data.Race) + "|" + SqueakLogFormatter.Value(data.Xenotype) + "|" + SqueakLogFormatter.Value(data.Sound) + "|" + (data.Exception?.GetType().FullName ?? "-");
         lock (sync)
         {
             if (keys.Contains(key)) return false;
@@ -248,6 +250,8 @@ internal static class SqueakLogFormatter
                 Add(builder, "egg", data.Egg);
                 Add(builder, "pawn", data.PawnName);
                 Add(builder, "pawn_id", data.PawnId);
+                Add(builder, "pawn_faction", data.PawnFaction);
+                Add(builder, "pawn_ctrl", data.PawnControlled == null ? null : (data.PawnControlled.Value ? "player" : "nonplayer"));
                 break;
             case SqueakLogEvent.FallbackProfileStoreFailed:
                 if (data.Exception != null)

@@ -34,12 +34,36 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **三 reviewer 审查修复** — 8 fixes across UI/data/fold (f4d8448)
 - **双键 context（2026-08-28）** — `AudioDomains` 域键工具 + Pure 聚合器/选择器 + resolver 薄适配层 + kernel 测试（设计稿 `docs/us-xeno-double-key-context-zh.md`）
 
+### Review-fix phases (2026-08-28) — completed
+
+- **Phase 0** — Legacy UI 删除（`UseFerriteUi` 开关与旧绘制路径移除）
+- **Phase 1** — 全链路统一 `(race,xeno)` 域身份（Settings/UI/Baseline/Notification/resolver）
+- **Phase 2** — 调音单一权威 + 统一 upsert/clear（停用 `xenotypePresets.actionOverrides`）
+- **Phase 3** — Settings 迁移事务化 + `tools/UniversalSqueakerSettingsMigrationTests`
+- **Phase 4** — YAGNI 删除 ActionEntry/TriggerBinding；Sustained 触发/播放管线统一
+- **Phase 5** — Kernel 变体混抽/corpus/PackFallback 边界 + 健壮性
+- **Phase 6** — 诊断/日志/fail-closed 修复
+
 ### Remaining (next goal)
 
 - **S4-Polish（纯视觉，最后）** — filtering (author/race/conflict), componentized help, narrow responsive, visual modernization (eval doc first), footer build identity, distance preview chart.
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
 - **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime).
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
+
+## Review tracking (2026-08-28 — 6-way isolated review, except S4-Polish)
+
+- [x] review-01 kernel-pure — `docs/review/review-01-kernel-pure.md` — note: no blocker; M1 same-pack variant mixing, M2 S4/S5 corpus xeno coverage, M3 PackFallback domain boundary
+- [x] review-02 runtime-resolver — `docs/review/review-02-runtime-resolver.md`
+  - note: major DiscoveryAvailable unused / null-Xenotype xeno context misroutes audio; kernel tests pass.
+- [x] review-03 settings-migration — `docs/review/review-03-settings-migration.md`
+  - note: top findings = pre-v4 globalActionEnabled migration gap, v5+stale-voice clobber risk, Baseline upsert first-match inconsistency.
+- [x] review-04 catalog-attach — `docs/review/review-04-catalog-attach.md`
+  - note: no blockers; M1 xeno status race-dimension gap + minor attach/validation/log findings.
+- [x] review-05 ui-ferrite — `docs/review/review-05-ui-ferrite.md`
+  - note: top findings = xeno domain selection/status race-blind, empty-domain writes Global, actionTuning clear removes one only, legacy actionOverrides still runtime-consumed.
+- [x] review-06 comp-events-diag — `docs/review/review-06-comp-events-diag.md`
+  - note: blocker = Sustained 周期路径绕过触发门；M1 sustainer 丢弃 SoundInfo 调制；M2 ActionEntry.DefaultPlan/TriggerBinding 未接入；M3 external sustained 可重叠；M4 Visible 音频列被状态覆盖。
 
 ## Pending decisions / follow-ups
 
@@ -49,6 +73,6 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
 - [ ] Before any first push: maintainer decides how to handle the reachable-history personal absolute path (pre-fix `MEMORY.md` line in commits `eb2ac90..dc8c598`); no remote exists so there is no external exposure today.
 - [ ] scripts/CI migration: GitHub/Steam build-pack scripts and CI workflows remain deferred until first release prep.
-- [ ] Baseline preset system: no unit tests (BaselinePresetImporter couples Verse/Scribe), no in-game validation (PresetListWidget), no shipped example preset Def XML.
+- [ ] Baseline preset system: unit tests now in `UniversalSqueakerSettingsMigrationTests`; still no in-game validation (PresetListWidget) and no shipped example preset Def XML.
 - [ ] Builtin fallback table maintenance review (2026-08-27): per-race Defs already support race-level independent maintenance; same-race multi-Def last-wins = single-owner contract (no Def-level field merge); BuiltInActionKeys whitelist closes external keys out of the builtin table; decide whether to publish example fallback/baseline Def XML as doc fixture (currently zero shipped Defs, empty = valid).
 - [x] **xeno 层调音 race 身份（2026-08-28 已拍板）** — 采用 ② 运行时双键 context；开发项见 Remaining。调研结论：HAR 通过 race 侧 `raceRestriction` 白/黑名单绑定 xenotype，`XenotypeDef` 无 race 字段，同一 xenotype 可被多 race 白名单；兼容补丁将多 gene mod 的 xenotype union 到同一 race，因此按运行时 pawn race+xeno 路由对玩家最友好。

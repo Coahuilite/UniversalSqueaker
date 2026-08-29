@@ -30,9 +30,12 @@ public static class UnitTests
         ModulationRules(ref failures);
         AgeDefault(ref failures);
         AgePriority(ref failures);
+        VariantWeightMixing(ref failures);
         PackFallbackTier(ref failures);
+        PackFallbackExactDomainOnly(ref failures);
         EggFiltering(ref failures);
         PackWeight(ref failures);
+        SelectInvalidGuards(ref failures);
         TimingModelRules(ref failures);
         TriggerInvocationRules(ref failures);
         PerRacePoolIsolation(ref failures);
@@ -161,6 +164,23 @@ public static class UnitTests
         Check(new AudioDomain(a, null) != new AudioDomain(a, new XenotypeKey("US_Xeno_A")), "AudioDomain null-vs-xeno distinct", ref failures);
         Check(new AudioDomain(a, null).ToString() == "US_Race_A", "AudioDomain ToString race", ref failures);
         Check(new AudioDomain(a, new XenotypeKey("US_Xeno_A")).ToString() == "US_Race_A+US_Xeno_A", "AudioDomain ToString xeno", ref failures);
+
+        Check(!AudioDomains.TryCreate("   ", "X", out _) && !AudioDomains.TryCreate("", "X", out _),
+            "AudioDomains.TryCreate rejects whitespace/empty race", ref failures);
+        Check(!AudioDomains.TryCreate("Ratkin", "   ", out _),
+            "AudioDomains.TryCreate rejects whitespace-only xeno", ref failures);
+        Check(AudioDomains.TryCreate("Ratkin", "", out AudioDomain emptyXeno) && emptyXeno.IsRaceOnly,
+            "AudioDomains.TryCreate keeps empty xeno as race-only", ref failures);
+        bool raceOnlyRejected = false;
+        try
+        {
+            _ = AudioDomains.RaceOnly("   ");
+        }
+        catch (ArgumentException)
+        {
+            raceOnlyRejected = true;
+        }
+        Check(raceOnlyRejected, "AudioDomains.RaceOnly rejects whitespace-only race", ref failures);
     }
 
     private static void ActionKeyMapping(ref int failures)
@@ -294,6 +314,18 @@ public static class UnitTests
             rejected = true;
         }
         Check(rejected, "fallback delta rejects external action key", ref failures);
+
+        Dictionary<string, string> mutableProfileKeys = new() { ["Call"] = "US_Call_Original" };
+        FallbackProfile copiedProfile = new(Scenarios.RaceA, 3, mutableProfileKeys);
+        mutableProfileKeys["Call"] = "US_Call_Mutated";
+        Check(copiedProfile.SoundKeys["Call"] == "US_Call_Original",
+            "FallbackProfile defensively copies input dictionary", ref failures);
+
+        Dictionary<string, string> mutableDeltaKeys = new() { ["Call"] = "US_Delta_Original" };
+        FallbackDelta copiedDelta = new(mutableDeltaKeys);
+        mutableDeltaKeys["Call"] = "US_Delta_Mutated";
+        Check(copiedDelta.Overrides["Call"] == "US_Delta_Original",
+            "FallbackDelta defensively copies input dictionary", ref failures);
     }
 
     /// <summary>错误路径回归：无池条目 + 种子内置表 + Off 仍放内置兜底；
@@ -572,6 +604,49 @@ public static class UnitTests
         Check(muted.IsNone, "muted exact age does not fall through to all-age", ref failures);
     }
 
+    /// <summary>M1：同 pack 多 all-age 变体按 ActionSoundSet.Weight 混抽；彩蛋开时普通+彩蛋都出现。</summary>
+    private static void VariantWeightMixing(ref int failures)
+    {
+        VoicePackEntry samePack = Entry("variant.test:US_SamePack", Scenarios.RaceDomain,
+            Variant("Call", "US_SamePack_Normal", null),
+            Variant("Call", "US_SamePack_Egg", null, true));
+        SqueakPoolRegistry registry = new(new[] { samePack }, BuiltInFallbackTable.Empty);
+
+        HashSet<string> enabled = new();
+        for (int seed = 1; seed <= 200; seed++)
+        {
+            ChainResult result = registry.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call, allowEggs: true), SelectionMode.Fallback, SimGate.All, new LcgRandom(seed));
+            if (result.SoundKey == null) { Check(false, "same-pack variants enabled never none", ref failures); return; }
+            enabled.Add(result.SoundKey);
+        }
+        Check(enabled.Contains("US_SamePack_Normal") && enabled.Contains("US_SamePack_Egg"),
+            "same-pack normal+egg all-age variants both drawn when eggs enabled", ref failures);
+
+        for (int seed = 1; seed <= 100; seed++)
+        {
+            ChainResult disabled = registry.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call, allowEggs: false), SelectionMode.Fallback, SimGate.All, new LcgRandom(seed));
+            if (disabled.SoundKey != "US_SamePack_Normal")
+            {
+                Check(false, "same-pack egg disabled always selects non-egg variant", ref failures);
+                return;
+            }
+        }
+        Check(true, "same-pack egg disabled filters egg before variant draw", ref failures);
+
+        VoicePackEntry weighted = Entry("variant.test:US_Weighted", Scenarios.RaceDomain,
+            new TestVariant("Call", new ActionSoundSet(new[] { "US_Weighted_Light" }, null, 1f)),
+            new TestVariant("Call", new ActionSoundSet(new[] { "US_Weighted_Heavy" }, null, 3f)));
+        SqueakPoolRegistry weightedRegistry = new(new[] { weighted }, BuiltInFallbackTable.Empty);
+        int heavy = 0;
+        for (int seed = 1; seed <= 800; seed++)
+        {
+            ChainResult result = weightedRegistry.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call), SelectionMode.Fallback, SimGate.All, new LcgRandom(seed));
+            if (result.SoundKey == "US_Weighted_Heavy") heavy++;
+        }
+        double ratio = heavy / 800.0;
+        Check(ratio > 0.6 && ratio < 0.85, "variant ActionSoundSet.Weight drives weighted draw: " + ratio.ToString("0.000"), ref failures);
+    }
+
     private static void PackFallbackTier(ref int failures)
     {
         VoicePackEntry raceFallback = Entry("fallback.test:US_Race", Scenarios.RaceDomain,
@@ -599,6 +674,22 @@ public static class UnitTests
             tiers.Add(result.Tier);
         }
         Check(tiers.Contains(ChainTier.PackFallback) && tiers.Contains(ChainTier.BuiltInFallback), "remix includes pack fallback as a fourth tier", ref failures);
+    }
+
+    /// <summary>M3：PackFallback 只读精确 ctx.Domain 池；xeno context 不会读取同 race 的 race-pool fallback。</summary>
+    private static void PackFallbackExactDomainOnly(ref int failures)
+    {
+        VoicePackEntry raceFallback = Entry("fallback.test:US_RaceOnly", Scenarios.RaceDomain,
+            fallback: new Dictionary<string, string> { ["Call"] = "US_PackFallback_RaceOnly" });
+        SqueakPoolRegistry registry = new(new[] { raceFallback }, Scenarios.BuildBuiltIn());
+
+        ChainResult xeno = registry.Select(Ctx(Scenarios.XenoDomain, SqueakAction.Call), SelectionMode.Fallback, SimGate.All, new LcgRandom(1));
+        Check(xeno.Tier == ChainTier.BuiltInFallback && xeno.SoundKey == "US_Fallback_Call",
+            "xeno context with no xeno pack fallback does NOT read race pack fallback", ref failures);
+
+        ChainResult race = registry.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call), SelectionMode.Fallback, SimGate.All, new LcgRandom(1));
+        Check(race.Tier == ChainTier.PackFallback && race.SoundKey == "US_PackFallback_RaceOnly" && race.PoolStableKey == "fallback.test:US_RaceOnly",
+            "race context still reads its own exact pool pack fallback", ref failures);
     }
 
     private static void EggFiltering(ref int failures)
@@ -646,6 +737,17 @@ public static class UnitTests
         SqueakPoolRegistry rejectsInvalid = new(new[] { invalid }, BuiltInFallbackTable.Empty);
         ChainResult none = rejectsInvalid.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call), SelectionMode.Fallback, SimGate.All, new LcgRandom(1));
         Check(none.IsNone, "nonpositive direct pack weight is rejected", ref failures);
+    }
+
+    private static void SelectInvalidGuards(ref int failures)
+    {
+        SqueakPoolRegistry registry = Scenarios.BuildRegistry("S2-builtin-seed");
+        ChainResult nullKey = registry.Select(new SelectionContext(Scenarios.RaceDomain, null!, AgeBucket.Adult, false, false), SelectionMode.Fallback, SimGate.All, new LcgRandom(1));
+        Check(nullKey.IsNone, "null ActionKey returns None", ref failures);
+        ChainResult whitespaceKey = registry.Select(new SelectionContext(Scenarios.RaceDomain, "   ", AgeBucket.Adult, false, false), SelectionMode.Fallback, SimGate.All, new LcgRandom(1));
+        Check(whitespaceKey.IsNone, "whitespace ActionKey returns None", ref failures);
+        ChainResult unknownMode = registry.Select(Ctx(Scenarios.RaceDomain, SqueakAction.Call), (SelectionMode)999, SimGate.All, new LcgRandom(1));
+        Check(unknownMode.IsNone, "unknown SelectionMode returns None instead of falling into Remix", ref failures);
     }
 
     /// <summary>漏斗纯逻辑：SqueakTimingModel 纯求值语义逐条断言。数学与旧内嵌实现逐字节等价。</summary>
@@ -887,6 +989,15 @@ public static class UnitTests
         Check(Math.Abs(multipliers[ratkinX].OverallIntervalMultiplier - 2f) < 0.0001f
             && Math.Abs(multipliers[felineX].OverallIntervalMultiplier - 3f) < 0.0001f,
             "double-key: overall interval multiplier is per (race,xeno) domain", ref failures);
+
+        IReadOnlyDictionary<AudioDomain, LayerBehaviorAggregate> sanitized = SqueakTuningAggregator.Aggregate(
+            Array.Empty<(AudioDomain, string, LayerActionDelta)>(),
+            Array.Empty<(AudioDomain, SqueakMood, LayerMoodDelta)>(),
+            new[] { (ratkinX, float.NaN), (felineX, float.PositiveInfinity), (ratkinOnly, -2f) });
+        Check(Math.Abs(sanitized[ratkinX].OverallIntervalMultiplier - 1f) < 0.0001f
+            && Math.Abs(sanitized[felineX].OverallIntervalMultiplier - 1f) < 0.0001f
+            && Math.Abs(sanitized[ratkinOnly].OverallIntervalMultiplier - 0f) < 0.0001f,
+            "double-key: aggregator sanitizes NaN/Infinity to 1 and negative to 0", ref failures);
 
         // 选择器：命中精确 (race,xeno)。
         ContextSelection hit = SqueakContextSelector.Select("Ratkin", "X", new[] { ratkinX, felineX }, Array.Empty<string>(), true);
