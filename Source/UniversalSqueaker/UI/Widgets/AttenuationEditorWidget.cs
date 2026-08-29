@@ -78,7 +78,7 @@ public sealed class AttenuationEditorWidget : IWidget
                 height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
             }
             return height;
-        }, 0f, Kind);
+        }, 0f, Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -92,7 +92,7 @@ public sealed class AttenuationEditorWidget : IWidget
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
-            Kind);
+            Kind, "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)

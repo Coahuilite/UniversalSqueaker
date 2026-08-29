@@ -18,7 +18,8 @@ public static class SearchField
             rect,
             () => { current = DrawCore(rect, current, hint); },
             fallback => { current = Widgets.TextField(fallback, current) ?? ""; },
-            "us/search-field");
+            "us/search-field",
+            "UniversalSqueaker");
         value = current;
     }
 

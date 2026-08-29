@@ -92,12 +92,12 @@ internal static class UiGuardTests
         UiGuard.MeasureOrFallback(
             () => throw new InvalidOperationException("detail"),
             1f,
-            "us/scope-tree",
-            "UniversalSqueaker");
+            "test/component",
+            "TestScope");
 
         Check(captured != null
-            && captured.Contains("us/scope-tree")
-            && captured.Contains("UniversalSqueaker")
+            && captured.Contains("test/component")
+            && captured.Contains("TestScope")
             && captured.Contains("[FerriteLib.UiKit]"),
             "log message contains UiKit channel, component id, and scope");
 

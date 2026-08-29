@@ -90,14 +90,7 @@ public static class UiGuard
 
     private static string? ResolveScope(string componentId, string? logScope)
     {
-        if (!string.IsNullOrEmpty(logScope)) return logScope;
-        if (!string.IsNullOrEmpty(componentId)
-            && componentId.StartsWith("us/", StringComparison.Ordinal))
-        {
-            return "UniversalSqueaker";
-        }
-
-        return null;
+        return string.IsNullOrEmpty(logScope) ? null : logScope;
     }
 
     private static void RestoreGuiState()

@@ -44,7 +44,7 @@ public sealed class PageTitleWidget : IWidget
                 height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
             }
             return height;
-        }, 0f, Kind);
+        }, 0f, Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -57,7 +57,7 @@ public sealed class PageTitleWidget : IWidget
             rect,
             () => DrawCore(rect, ctx, emit),
             fallback => DrawVanilla(fallback, ctx, emit),
-            Kind);
+            Kind, "UniversalSqueaker");
     }
 
     private void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

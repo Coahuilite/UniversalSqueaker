@@ -15,7 +15,8 @@ public static class VoicePackRow
             rect,
             () => DrawCore(rect, row, scope, raceDefName, targetDefName, emit),
             fallback => DrawVanilla(fallback, row, scope, raceDefName, targetDefName, emit),
-            "us/voice-pack-row");
+            "us/voice-pack-row",
+            "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, VoicePackRowView row, SqueakVoicePackScope scope,

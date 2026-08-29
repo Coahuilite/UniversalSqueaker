@@ -13,6 +13,7 @@
     <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
     <NuGetAudit>false</NuGetAudit>
     <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <!-- 零 Verse 门：链接 UI 纯逻辑文件；任一引用 Verse/Unity/RimWorld 即编译失败。 -->

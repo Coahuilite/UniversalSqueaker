@@ -14,7 +14,8 @@ public static class XenotypeLayerRow
             rect,
             () => DrawCore(rect, domain, selected, emit),
             fallback => DrawVanilla(fallback, domain, emit),
-            "us/xenotype-layer-row");
+            "us/xenotype-layer-row",
+            "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit)

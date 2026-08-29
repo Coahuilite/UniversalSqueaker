@@ -12,6 +12,7 @@
     <NuGetAudit>false</NuGetAudit>
     <!-- 动态 MSBuild 项目遍历在本机 SDK 10 工作负载解析器下会静默失败；静态图恢复可稳定通过。 -->
     <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

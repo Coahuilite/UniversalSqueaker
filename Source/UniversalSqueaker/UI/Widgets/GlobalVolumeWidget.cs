@@ -42,7 +42,7 @@ public sealed class GlobalVolumeWidget : IWidget
         {
             height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
         }
-        return UiGuard.MeasureOrFallback(() => height, height, Kind);
+        return UiGuard.MeasureOrFallback(() => height, height, Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -56,7 +56,7 @@ public sealed class GlobalVolumeWidget : IWidget
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
             fallback => DrawVanilla(fallback, ctx, emit),
-            Kind);
+            Kind, "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)

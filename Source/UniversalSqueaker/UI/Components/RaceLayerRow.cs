@@ -14,7 +14,8 @@ public static class RaceLayerRow
             rect,
             () => DrawCore(rect, row, selected, emit),
             fallback => DrawVanilla(fallback, row, emit),
-            "us/race-layer-row");
+            "us/race-layer-row",
+            "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit)

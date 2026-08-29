@@ -346,7 +346,7 @@ internal static class Program
         Scenario("9-global-volume-scribe-round-trip");
         UniversalSqueakerSettings source = NewSettings();
         source.globalVolumeFactor = 0.42f;
-        string path = Path.Combine(Path.GetTempPath(), "us-settings-global-volume-roundtrip.xml");
+        string path = Path.Combine(Path.GetTempPath(), "us-settings-global-volume-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
         try
         {
             SafeSaver.Save(path, "Settings", () => source.ExposeData());

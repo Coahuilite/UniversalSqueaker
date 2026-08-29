@@ -56,6 +56,9 @@ internal static class Program
         Console.WriteLine("LayoutEngine hidden elements...");
         VerifyEngineHiddenElements();
 
+        Console.WriteLine("LayoutEngine width-change cache invalidation...");
+        VerifyEngineWidthChangeInvalidatesCache();
+
         Console.WriteLine("LayoutEngine scroll clamp...");
         VerifyEngineScrollClamp();
 
@@ -222,6 +225,35 @@ internal static class Program
             "draw rect heights skip hidden elements");
     }
 
+    private static void VerifyEngineWidthChangeInvalidatesCache()
+    {
+        WidgetRegistry.Clear();
+        var drawnRects = new List<Rect>();
+        WidgetRegistry.Register("engine", "width-sensitive",
+            () => new WidthSensitiveWidget(drawnRects));
+
+        LayoutManifest manifest = LayoutManifest.Parse(
+            "<UiPage Schema=\"1\" Source=\"engine\"><Widget id=\"a\" Kind=\"width-sensitive\" /></UiPage>");
+        LayoutEngine engine = new(manifest);
+        WidgetContext ctx = new("engine", null, new StubMetrics(), new UiPageState());
+
+        float wide = engine.Measure(ctx, 400f);
+        CheckEqual(20f, wide, "wide measure uses wide height");
+
+        drawnRects.Clear();
+        engine.Draw(new Rect(0f, 0f, 400f, 300f), ctx, _ => { });
+        Check(drawnRects.Count == 1 && drawnRects[0].height == 20f,
+            "draw after wide measure uses wide height");
+
+        float narrow = engine.Measure(ctx, 200f);
+        CheckEqual(10f, narrow, "narrow measure uses narrow height");
+
+        drawnRects.Clear();
+        engine.Draw(new Rect(0f, 0f, 200f, 300f), ctx, _ => { });
+        Check(drawnRects.Count == 1 && drawnRects[0].height == 10f,
+            "draw after width change uses invalidated narrow height");
+    }
+
     private static void VerifyEngineScrollClamp()
     {
         WidgetRegistry.Clear();
@@ -358,6 +390,32 @@ internal static class Program
                 UiFont.Small => 24f,
                 _ => 32f
             };
+        }
+    }
+
+    private sealed class WidthSensitiveWidget : IWidget
+    {
+        private readonly List<Rect> drawnRects;
+
+        public WidthSensitiveWidget(List<Rect> drawnRects)
+        {
+            this.drawnRects = drawnRects;
+        }
+
+        public string Kind => "width-sensitive";
+
+        public void Configure(UiElementSpec spec)
+        {
+        }
+
+        public float Measure(WidgetContext ctx)
+        {
+            return ctx.ViewWidth < 300f ? 10f : 20f;
+        }
+
+        public void Draw(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+        {
+            drawnRects.Add(rect);
         }
     }
 

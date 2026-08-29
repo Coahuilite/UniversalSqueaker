@@ -88,7 +88,7 @@ public sealed class ScopeTreeWidget : IWidget
                 height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
             }
             return height + BottomPadding;
-        }, 0f, Kind);
+        }, 0f, Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -102,7 +102,7 @@ public sealed class ScopeTreeWidget : IWidget
             rect,
             () => DrawCore(rect, ctx, emit, helpKey),
             fallback => Widgets.Label(fallback, "Tuning editor unavailable in fallback mode. Basic settings remain available."),
-            Kind);
+            Kind, "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)

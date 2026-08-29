@@ -57,28 +57,28 @@ function Invoke-Check {
 }
 
 Invoke-Check 'UniversalSqueakerKernelTests (unit asserts + US 0.1.0 corpus replay + determinism)' `
-    'dotnet run --project tools/UniversalSqueakerKernelTests -c Release' `
-    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerKernelTests') -c Release }
+    'dotnet run --no-restore --project tools/UniversalSqueakerKernelTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerKernelTests') -c Release }
 
 Invoke-Check 'UniversalSqueakerConfigCopyTests (store lifecycle A-F)' `
-    'dotnet run --project tools/UniversalSqueakerConfigCopyTests -c Release' `
-    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerConfigCopyTests') -c Release }
+    'dotnet run --no-restore --project tools/UniversalSqueakerConfigCopyTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerConfigCopyTests') -c Release }
 
 Invoke-Check 'UniversalSqueakerSettingsMigrationTests (schema migration + write bridges + baseline)' `
-    'dotnet run --project tools/UniversalSqueakerSettingsMigrationTests -c Release' `
-    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerSettingsMigrationTests') -c Release }
+    'dotnet run --no-restore --project tools/UniversalSqueakerSettingsMigrationTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerSettingsMigrationTests') -c Release }
 
 Invoke-Check 'UniversalSqueakerLogTests Release (usdiag v1/v2 protocol)' `
-    'dotnet run --project tools/UniversalSqueakerLogTests -c Release' `
-    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Release }
+    'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Release }
 
 Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
-    'dotnet run --project tools/UniversalSqueakerLogTests -c Dev' `
-    { dotnet run --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
+    'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Dev' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
 Invoke-Check 'FerriteLib.UiKit.Tests Release' `
-    'dotnet run --project tools/FerriteLib.UiKit.Tests -c Release' `
-    { dotnet run --project $uikitTestsProject -c Release }
+    'dotnet run --no-restore --project tools/FerriteLib.UiKit.Tests -c Release' `
+    { dotnet run --no-restore --project $uikitTestsProject -c Release }
 
 Invoke-Check 'FerriteLib.UiKit Dev build (warnings as errors)' `
     'dotnet build Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Dev' `
@@ -89,7 +89,7 @@ Invoke-Check 'FerriteLib.UiKit Release build (warnings as errors)' `
     { dotnet build $uikitProjectFile -c Release @buildExtraArgs }
 
 Invoke-Check 'FerriteLib.UiKit neutrality grep (no US/SR product literals)' `
-    'dotnet run --project tools/FerriteLib.UiKit.Tests -c Release' `
+    'dotnet run --no-restore --project tools/FerriteLib.UiKit.Tests -c Release' `
     {
         $uikitSrc = Join-Path $root 'Source\FerriteLib.UiKit'
         $uikitTests = Join-Path $root 'tools\FerriteLib.UiKit.Tests'
@@ -133,9 +133,11 @@ Invoke-Check 'UI layout manifest XML well-formedness' `
         $null = [xml](Get-Content -LiteralPath $layoutPath -Raw)
     }
 
-Invoke-Check 'UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview)' `
-    'dotnet run --project tools/UniversalSqueakerUiLogicTests -c Release' `
-    { dotnet run --project $uiLogicTestsProject -c Release }
+# VanillaVoicePacksPage is intentionally not unit-tested here: it is a fallback-only page that
+# requires the Verse IMGUI runtime and is covered by the maintainer in-game matrix.
+Invoke-Check 'UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview + attenuation math + layout tiers)' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerUiLogicTests -c Release' `
+    { dotnet run --no-restore --project $uiLogicTestsProject -c Release }
 
 Write-Host '[verify] all checks passed.'
 
