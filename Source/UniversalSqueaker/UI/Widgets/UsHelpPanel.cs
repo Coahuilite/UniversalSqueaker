@@ -8,15 +8,17 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// Right-hand help panel in the style of modern RimWorld settings mods (Camera+ pattern).
 /// Shows the help text for the currently selected section, or a neutral hint when nothing is
-/// selected. Pure visual chrome; it does not own any state.
+/// selected. Pure visual chrome; it does not own any state beyond the shared help scroll
+/// position on <see cref="UiPageState"/>.
 /// </summary>
 public static class UsHelpPanel
 {
     private const string DefaultTitle = "Help";
     private const string EmptyText = "Select a section to see its help here.";
 
-    private const float Padding = 12f;
-    private const float TitleHeight = 24f;
+    private const float Padding = 8f;
+    private const float TitleHeight = 20f;
+    private const float TitleGap = 6f;
 
     public static void Draw(Rect rect, string helpKey, WidgetContext ctx)
     {
@@ -29,34 +31,43 @@ public static class UsHelpPanel
 
         UiText.DrawLabel(new Rect(x, y, Math.Max(1f, rect.width - Padding * 2f), TitleHeight), DefaultTitle);
         UiPanel.DrawDivider(new Rect(x, y + TitleHeight, Math.Max(1f, rect.width - Padding * 2f), 1f));
-        y += TitleHeight + 10f;
+        y += TitleHeight + TitleGap;
 
         string? text = UsHelpCatalog.Get(helpKey);
-        if (string.IsNullOrEmpty(text))
-        {
-            text = EmptyText;
-        }
+        string resolvedText = string.IsNullOrEmpty(text) ? EmptyText : text!;
 
-        Rect textRect = new(
+        float textWidth = Math.Max(1f, rect.width - Padding * 2f);
+        float textHeight = Math.Max(1f, ctx.Metrics.MeasureText(resolvedText, UiFont.Tiny, textWidth));
+        Rect bodyRect = new(
             x,
             y,
-            Math.Max(1f, rect.width - Padding * 2f),
+            textWidth,
             Math.Max(1f, rect.yMax - Padding - y));
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        TextAnchor oldAnchor = Text.Anchor;
+        Rect contentRect = new(0f, 0f, textWidth, textHeight);
+
+        Widgets.BeginScrollView(bodyRect, ref ctx.State.HelpScrollPosition, contentRect);
         try
         {
-            Text.Font = GameFont.Tiny;
-            Text.Anchor = TextAnchor.UpperLeft;
-            GUI.color = UsVisualTokens.TextSecondary;
-            Widgets.Label(textRect, text);
+            Color oldColor = GUI.color;
+            GameFont oldFont = Text.Font;
+            TextAnchor oldAnchor = Text.Anchor;
+            try
+            {
+                Text.Font = GameFont.Tiny;
+                Text.Anchor = TextAnchor.UpperLeft;
+                GUI.color = UsVisualTokens.TextSecondary;
+                Widgets.Label(contentRect, resolvedText);
+            }
+            finally
+            {
+                Text.Font = oldFont;
+                Text.Anchor = oldAnchor;
+                GUI.color = oldColor;
+            }
         }
         finally
         {
-            Text.Font = oldFont;
-            Text.Anchor = oldAnchor;
-            GUI.color = oldColor;
+            Widgets.EndScrollView();
         }
     }
 }

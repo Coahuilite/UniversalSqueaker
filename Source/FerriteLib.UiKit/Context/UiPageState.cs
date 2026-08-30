@@ -9,6 +9,8 @@ public sealed class UiPageState
 {
     public Vector2 ScrollPosition;
 
+    public Vector2 HelpScrollPosition;
+
     public string SearchText = "";
 
     public bool HelpOpen;
@@ -29,6 +31,7 @@ public sealed class UiPageState
     public void Reset()
     {
         ScrollPosition = default;
+        HelpScrollPosition = default;
         SearchText = "";
         HelpOpen = false;
         Selected = null;
