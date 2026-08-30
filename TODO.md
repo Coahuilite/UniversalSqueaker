@@ -86,6 +86,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] Action Scope 分组与过滤（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：区分自主行为/可操作行为；隐藏 Biotech 防御性动作（哭泣、咯咯笑）。
 - [ ] 恢复 SR 按钮/导航高亮样式（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Tuning layer 等按钮恢复底部发光条；左侧导航保留左高亮条；SR 证据在 `../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`。
 - [ ] 衰减图可拖节点高亮提示（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：可拖动控制点需要包边/悬停高亮，让玩家知道节点可拖动。
+- [ ] 切换/选取按钮改原版设计语言（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：当前自绘切换按钮不如原版，直接用原版设计语言包装成 UiKit 组件。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
