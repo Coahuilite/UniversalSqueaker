@@ -80,6 +80,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] 全局行高/文字截断修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Basic toggles 等多行内容下半截断，问题普遍存在于整个设置。
 - [ ] 包管理筛选联动（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：race/xenotype 并列放置，选择 race 后自动筛选对应 xeno，下方为包列表。
 - [ ] 未列出 xenotype 黯淡显示（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：无可用异种语音包的 xenotype 应黯淡处理，防止玩家误认为“没列出 = 不支持”。
+- [ ] 包管理作者筛选下拉（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：作者筛选也应做成下拉列表。
+- [ ] 下拉弹层定位修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：下拉列表没有在下拉框正下方展开，滚动视图内坐标/偏移需修正。
+- [ ] Tuning Editor 高度协调（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：高度不对/不协调，有些高度偏矮。
+- [ ] Action Scope 分组与过滤（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：区分自主行为/可操作行为；隐藏 Biotech 防御性动作（哭泣、咯咯笑）。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
