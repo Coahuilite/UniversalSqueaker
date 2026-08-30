@@ -55,6 +55,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 - **UI 实施计划 Phase 0–2（2026-08-30 完成）** — 内联 `?` 已移除；右侧帮助始终保留（800×600 三栏）；功能块独立滚动 + 包过滤器归位；Tuning Editor 下拉 + Mood stepper-slider；衰减图改为 UiKit `chart/line`；UiKit 容器化/控件基础设施已落地；`docs/workdocs/` 已移除。
 - **独立 review agent 审查** — 等待审查结果并修复发现。
+- **反馈汇总与全局风险** — `docs/ui-feedback-consolidated-zh.md`；高优先：不可用控件、下拉定位、文本裁剪、按钮视觉统一。
 - **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、衰减图拖拽）。
 - **Backlog** — OB-02 `UiLayoutTier.ClampWidth` 接入、OB-03 加载 clamp 测试、OB-04 `VoicePacksLayout` 测试（可在游戏内验证后处理）。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).

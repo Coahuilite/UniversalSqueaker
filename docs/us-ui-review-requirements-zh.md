@@ -3,6 +3,7 @@
 > 来源：维护者 2026-08-30 UI 审阅（反馈原文见 `docs/ui-feedback.md`）。
 > 状态：本次审阅已结束，需求已整理；帮助入口继续讨论中，UiKit 改动已列为最高优先。
 > 设计调研：`docs/ui-ux-research-zh.md`（Camera+ 三栏布局与窄屏降级参考）。
+> 反馈结束后的汇总与全局风险分析：`docs/ui-feedback-consolidated-zh.md`。
 
 ## 需求总览
 
