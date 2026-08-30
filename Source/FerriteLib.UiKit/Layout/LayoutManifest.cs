@@ -8,7 +8,8 @@ namespace FerriteLib.UiKit;
 /// <summary>
 /// Parsed UI layout manifest. Parsing is strict and safe: root must be
 /// <c>&lt;UiPage Schema="1" Source="..."&gt;</c>, external entities are prohibited, and every
-/// Widget Kind is validated against <see cref="WidgetRegistry"/>.
+/// Widget Kind is validated against <see cref="WidgetRegistry"/>. Nested container elements
+/// (<c>Block</c>, <c>Section</c>, <c>Column</c>) are supported and are parsed recursively.
 /// </summary>
 public sealed class LayoutManifest
 {
@@ -111,11 +112,12 @@ public sealed class LayoutManifest
                         throw ParseError(lineInfo, $"UI layout exceeds the maximum depth of {MaxDepth}.");
                     if (reader.Depth != 1)
                         throw ParseError(lineInfo,
-                            $"Unexpected nested element <{reader.Name}> at depth {reader.Depth}; only direct <Widget> children of <UiPage> are supported.");
-                    if (!string.Equals(reader.Name, "Widget", StringComparison.Ordinal))
-                        throw ParseError(lineInfo, $"Expected <Widget> but found <{reader.Name}>.");
+                            $"Unexpected nested element <{reader.Name}> at depth {reader.Depth}; expected a root-level element.");
+                    if (!IsSupportedElementName(reader.Name))
+                        throw ParseError(lineInfo,
+                            $"Expected <Widget>, <Block>, <Section>, or <Column> but found <{reader.Name}>.");
 
-                    roots.Add(ReadWidget(reader, source, lineInfo, ref nodeCount));
+                    roots.Add(ReadElement(reader, source, lineInfo, ref nodeCount));
                     break;
 
                 case XmlNodeType.EndElement:
@@ -125,7 +127,7 @@ public sealed class LayoutManifest
 
                 case XmlNodeType.Text:
                 case XmlNodeType.CDATA:
-                    throw ParseError(lineInfo, "Text content is not allowed inside <UiPage>; expected <Widget> elements only.");
+                    throw ParseError(lineInfo, "Text content is not allowed inside <UiPage>; expected layout elements only.");
 
                 default:
                     continue;
@@ -135,18 +137,38 @@ public sealed class LayoutManifest
         throw new FormatException("UI layout XML ended before the <UiPage> element was closed.");
     }
 
-    private static UiElementSpec ReadWidget(
+    private static UiElementSpec ReadElement(
         XmlReader reader,
         string source,
         IXmlLineInfo lineInfo,
         ref int nodeCount)
     {
-        int widgetLine = lineInfo.LineNumber;
-        string id = reader.GetAttribute("id") ?? "";
-        string kind = reader.GetAttribute("Kind") ?? "";
+        string elementName = reader.Name;
+        int elementLine = lineInfo.LineNumber;
+        string id = reader.GetAttribute("id") ?? reader.GetAttribute("Id") ?? "";
+        string kind = elementName;
 
-        if (kind.Length == 0)
-            throw ParseError(lineInfo, $"<Widget id=\"{id}\"> is missing the required Kind attribute.");
+        if (string.Equals(elementName, "Widget", StringComparison.Ordinal))
+        {
+            kind = reader.GetAttribute("Kind") ?? "";
+            if (kind.Length == 0)
+                throw ParseError(lineInfo, $"<Widget id=\"{id}\"> is missing the required Kind attribute.");
+
+            // Validate resolvability before consuming children so an unknown Kind fails fast.
+            try
+            {
+                _ = WidgetRegistry.Resolve(source, kind);
+            }
+            catch (UnknownWidgetKindException ex)
+            {
+                throw new UnknownWidgetKindException(ex.Scope, ex.Kind, $"Widget id=\"{id}\" at line {elementLine}.");
+            }
+        }
+        else if (!IsSupportedElementName(elementName))
+        {
+            throw ParseError(lineInfo,
+                $"Expected <Widget>, <Block>, <Section>, or <Column> but found <{elementName}>.");
+        }
 
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (reader.HasAttributes)
@@ -159,18 +181,10 @@ public sealed class LayoutManifest
             reader.MoveToElement();
         }
 
-        // Validate resolvability before consuming children so an unknown Kind fails fast.
-        try
-        {
-            _ = WidgetRegistry.Resolve(source, kind);
-        }
-        catch (UnknownWidgetKindException ex)
-        {
-            throw new UnknownWidgetKindException(ex.Scope, ex.Kind, $"Widget id=\"{id}\" at line {widgetLine}.");
-        }
-
         if (reader.IsEmptyElement)
             return new UiElementSpec(id, kind, attributes, Array.Empty<UiElementSpec>());
+
+        var children = new List<UiElementSpec>();
 
         while (reader.Read())
         {
@@ -181,24 +195,41 @@ public sealed class LayoutManifest
                 case XmlNodeType.Element:
                     if (reader.Depth > MaxDepth)
                         throw ParseError(lineInfo, $"UI layout exceeds the maximum depth of {MaxDepth}.");
-                    throw ParseError(lineInfo,
-                        $"<Widget id=\"{id}\" Kind=\"{kind}\"> must not contain nested elements; found <{reader.Name}> at line {lineInfo.LineNumber}.");
+
+                    if (string.Equals(elementName, "Widget", StringComparison.Ordinal))
+                        throw ParseError(lineInfo,
+                            $"<Widget id=\"{id}\" Kind=\"{kind}\"> must not contain nested elements; found <{reader.Name}> at line {lineInfo.LineNumber}.");
+
+                    if (!IsSupportedElementName(reader.Name))
+                        throw ParseError(lineInfo,
+                            $"Expected <Widget>, <Block>, <Section>, or <Column> inside <{elementName} id=\"{id}\"> but found <{reader.Name}>.");
+
+                    children.Add(ReadElement(reader, source, lineInfo, ref nodeCount));
+                    break;
 
                 case XmlNodeType.EndElement:
-                    if (!string.Equals(reader.Name, "Widget", StringComparison.Ordinal))
-                        throw ParseError(lineInfo, $"Unexpected end element </{reader.Name}> inside <Widget id=\"{id}\">.");
-                    return new UiElementSpec(id, kind, attributes, Array.Empty<UiElementSpec>());
+                    if (!string.Equals(reader.Name, elementName, StringComparison.Ordinal))
+                        throw ParseError(lineInfo, $"Unexpected end element </{reader.Name}> inside <{elementName} id=\"{id}\">.");
+                    return new UiElementSpec(id, kind, attributes, children);
 
                 case XmlNodeType.Text:
                 case XmlNodeType.CDATA:
-                    throw ParseError(lineInfo, $"<Widget id=\"{id}\" Kind=\"{kind}\"> must not contain text content.");
+                    throw ParseError(lineInfo, $"<{elementName} id=\"{id}\" Kind=\"{kind}\"> must not contain text content.");
 
                 default:
                     continue;
             }
         }
 
-        throw new FormatException($"UI layout XML ended inside <Widget id=\"{id}\" Kind=\"{kind}\">.");
+        throw new FormatException($"UI layout XML ended inside <{elementName} id=\"{id}\" Kind=\"{kind}\">.");
+    }
+
+    private static bool IsSupportedElementName(string name)
+    {
+        return string.Equals(name, "Widget", StringComparison.Ordinal)
+            || string.Equals(name, "Block", StringComparison.Ordinal)
+            || string.Equals(name, "Section", StringComparison.Ordinal)
+            || string.Equals(name, "Column", StringComparison.Ordinal);
     }
 
     private static int BumpNode(int count, IXmlLineInfo lineInfo)
