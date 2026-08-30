@@ -126,4 +126,10 @@
 - **最新 dev 包**：`dist/dev/UniversalSqueaker-dev-v0.1.0-dev-1ae7dd6.zip`。
 - **Backlog**：`docs/workdocs/us-ui-overhaul-backlog.md`（OB-01..OB-04）+ U7。
 
+## Session resume checkpoint (2026-08-30b — 现代 UI 重构落地)
+
+- **现代 UI 重构（`514efb2`）**：UiKit 新增 `UiPanel`/`UiText` 中性原语 + `Palette` 深色/金色 token；US 新增 `UsCard` 卡片外壳覆盖主要设置区块；设置窗口近全屏 shell（92% + 48px 安全边距）；左侧导航现代侧边栏（品牌区/hover/active/金色 accent）。verify-local 14 门全绿，Dev/Release 0 警告。
+- **未实机审阅**：`514efb2` 仅通过构建/测试门禁，需维护者在游戏内确认视觉效果与交互。
+- **后续 backlog 不变**：OB-02/03/04 + `docs/workdocs/` 移除 + Ferrite 游戏内稳定化 + 可选 Runtime harness。
+
 
