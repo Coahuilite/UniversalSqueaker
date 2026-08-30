@@ -102,6 +102,23 @@
   - Action Scope 增加分组/分类（自主行为 vs 可操作行为），并隐藏 Biotech 防御性动作（哭泣、咯咯笑）。
 - **状态**：已记录，待处理。
 
+## 2026-08-30 — 恢复 SR 的按钮/导航高亮样式（Routing mod 被夸赞的样式）
+
+- **来源**：维护者反馈。
+- **观察**：
+  - Tuning layer 的标签按钮本可以做得像 routing mod 那样好看，属于被夸赞的 UI 样式，应作为保留项目。
+  - routing mod 的按钮样式：发光条在下方。
+  - 左侧导航栏的按钮：按钮/高亮条在左侧。
+- **SR 原始实现证据**（`../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`）：
+  - `Button` 的 `Primary`/`Danger` 在底部绘制金色/红色发光条（`rect.yMax - 3f`，第 90–93 行）。
+  - `SettingSelector` 在左侧绘制金色竖条表示 active（`rect.x + 1, rect.y + 1, 3, height - 2`，第 166–167 行）。
+  - `SelectableCard` 选中时底部金色条（第 47–50 行）。
+- **当前 US 状态**：Tuning layer 的 segment 按钮使用 `DrawSegment`，没有恢复底部发光条；左侧导航已有左 accent bar（`UiPanel.DrawAccentBar`），但其它按钮/卡片未统一采用 SR 风格。
+- **建议方向（待处理）**：
+  - 把 SR 的底部发光条样式带回 Tuning layer / 主按钮。
+  - 保持左侧导航左高亮条，并统一所有选中态使用相同视觉语言。
+- **状态**：已记录，待处理。
+
 ## 2026-08-30 — 功能区块应独立成连续滚动区域，过滤器应属于包管理块
 
 - **来源**：维护者审阅当前单页布局后的反馈。

@@ -84,6 +84,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] 下拉弹层定位修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：下拉列表没有在下拉框正下方展开，滚动视图内坐标/偏移需修正。
 - [ ] Tuning Editor 高度协调（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：高度不对/不协调，有些高度偏矮。
 - [ ] Action Scope 分组与过滤（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：区分自主行为/可操作行为；隐藏 Biotech 防御性动作（哭泣、咯咯笑）。
+- [ ] 恢复 SR 按钮/导航高亮样式（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Tuning layer 等按钮恢复底部发光条；左侧导航保留左高亮条；SR 证据在 `../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
