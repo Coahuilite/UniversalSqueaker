@@ -40,6 +40,7 @@ public static class FerriteVoicePacksPage
     internal static readonly VoicePacksPageState State = new();
     private static readonly Dictionary<string, KitLayoutEngine> Engines = new(StringComparer.Ordinal);
     private static bool sessionActive;
+    private static int sessionRetryCount;
 
     public static void BeginSession()
     {
@@ -47,6 +48,7 @@ public static class FerriteVoicePacksPage
         {
             State.Reset();
             UiGuard.ResetSessionLog();
+            sessionRetryCount = 0;
         }
         sessionActive = true;
     }
@@ -55,6 +57,7 @@ public static class FerriteVoicePacksPage
     {
         State.Reset();
         sessionActive = false;
+        sessionRetryCount = 0;
     }
 
     public static void Draw(Rect rect)
@@ -182,6 +185,17 @@ public static class FerriteVoicePacksPage
         }
         catch (Exception ex)
         {
+            // First failure in a session: reset ephemeral UI state and let the next frame retry.
+            // This mirrors the observed "close and reopen works" recovery without forcing the user
+            // to close the window. If the second frame also fails, fall back to the vanilla page.
+            if (sessionRetryCount == 0)
+            {
+                sessionRetryCount++;
+                UiGuard.LogFallback("us/ferrite-page-retry", "UniversalSqueaker", ex);
+                State.Reset();
+                return;
+            }
+
             UiGuard.LogFallback("us/ferrite-page", "UniversalSqueaker", ex);
             try
             {
