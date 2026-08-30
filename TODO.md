@@ -37,7 +37,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **FerriteLib.UiKit B1–B4（2026-08-30）** — `UiInteract` 分层输入路由、`UiValueStore`、`input/number-slider`
 - **US UI 大修 U0–U6（2026-08-30）** — `UiGuard` 公开/删 `UsGuard`/`FerriteGuard`、交互迁移、值控件、布局、Fallback、Skin、测试门禁；见 `docs/workdocs/us-ui-overhaul-*`
 - **dist voicepack 整理（2026-08-30）** — `dist/voicepacks/final-test/` 三包独立，`archive/` 归档；Ratkin 包重命名/清 legacy
-- **全屏自绘设置窗口 + Packs 宽屏双栏（2026-08-30）** — `UniversalSqueakerSettingsWindow` 自绘背景（`doWindowBackground=false`），窗口改为居中 60% 并保留边缘安全距离；`WindowStack.Add` 重定向 US 的 `Dialog_ModSettings` 入口；Packs 页在宽屏下拆为左 race/xeno 列 + 右 checklist 列（Layout.xml `Column` + 多 LayoutEngine 并排）；导航命令改为内容绘制前立即执行；启动提示改 `SilentInput` 消除 `Message_NeutralEvent` 红字
+- **全屏自绘设置窗口 + Packs 宽屏双栏（2026-08-30）** — `UniversalSqueakerSettingsWindow` 自绘背景（`doWindowBackground=false`），窗口改为居中 60% 并保留边缘安全距离；`WindowStack.Add` 重定向 US 的 `Dialog_ModSettings` 入口；Packs 页在宽屏下拆为左 race/xeno 列 + 右 checklist 列（Layout.xml `Column` + 多 LayoutEngine 并排）；导航命令改为内容绘制前立即执行；启动提示改 `SilentInput` 消除 `Message_NeutralEvent` 红字；**修复根因：`VoicePacksPage.BeginSession` 每帧调用 `VanillaVoicePacksPage.ResetSession()` 导致 `State` 每帧重置，导航切页永远被清回 Basic**
 
 ### Review-fix phases (2026-08-28) — completed
 

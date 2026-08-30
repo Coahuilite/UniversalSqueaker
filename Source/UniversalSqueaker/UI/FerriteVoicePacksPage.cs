@@ -347,16 +347,10 @@ public static class FerriteVoicePacksPage
 
     private static void DrawNavWithFrame(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
-        UiInteract.BeginFrame();
-        try
-        {
-            DrawNav(navRect, activeTab, addCommand);
-            UiInteract.ProcessEvents();
-        }
-        finally
-        {
-            UiInteract.EndFrame();
-        }
+        // Navigation uses native Widgets.ButtonInvisible so clicks are handled by Unity's IMGUI
+        // control pipeline, which is reliable inside GUI.Window even when the rest of the page is
+        // rendered by UiKit's deferred interaction frame.
+        DrawNav(navRect, activeTab, addCommand);
     }
 
     private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
@@ -404,8 +398,10 @@ public static class FerriteVoicePacksPage
             GUI.color = oldColor;
 
             string capturedTab = tab;
-            UiInteract.Button(buttonRect, UiLayer.TopAction,
-                () => addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab)));
+            if (Widgets.ButtonInvisible(buttonRect))
+            {
+                addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab));
+            }
 
             y += buttonHeight + gap;
         }
