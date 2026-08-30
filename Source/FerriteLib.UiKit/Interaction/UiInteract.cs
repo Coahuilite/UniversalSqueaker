@@ -208,6 +208,42 @@ public static class UiInteract
         return state.Focused ? state.EditText : FormatValue(state.FloatValue, format);
     }
 
+    /// <summary>Returns the current pointer position in GUI coordinates.</summary>
+    public static Vector2 PointerPosition()
+    {
+        if (DebugMousePositionEnabled) return DebugMousePosition;
+
+        Event? current = Event.current;
+        return current != null ? current.mousePosition : default;
+    }
+
+    /// <summary>Returns true while the primary pointer button is pressed over the current frame.</summary>
+    public static bool IsPointerDown()
+    {
+        if (DebugMousePositionEnabled) return DebugMouseDown;
+
+        Event? current = Event.current;
+        return current != null && current.type == EventType.MouseDown && current.button == 0;
+    }
+
+    /// <summary>Returns true while the primary pointer is being dragged during the current frame.</summary>
+    public static bool IsPointerDragging()
+    {
+        if (DebugMousePositionEnabled) return DebugMouseDrag;
+
+        Event? current = Event.current;
+        return current != null && current.type == EventType.MouseDrag && current.button == 0;
+    }
+
+    /// <summary>Returns true when the primary pointer button is released during the current frame.</summary>
+    public static bool IsPointerUp()
+    {
+        if (DebugMousePositionEnabled) return DebugMouseUp;
+
+        Event? current = Event.current;
+        return current != null && current.type == EventType.MouseUp && current.button == 0;
+    }
+
     internal static bool TryParseNumber(string text, out float value)
     {
         if (text != null && text.Trim().Length > 0

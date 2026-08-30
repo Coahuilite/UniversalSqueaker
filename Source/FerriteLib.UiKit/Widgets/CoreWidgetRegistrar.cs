@@ -14,5 +14,6 @@ public static class CoreWidgetRegistrar
         WidgetRegistry.Register(WidgetRegistry.CoreScope, SliderNumberFieldWidget.Kind, () => new SliderNumberFieldWidget());
         WidgetRegistry.Register(WidgetRegistry.CoreScope, DropdownWidget.Kind, () => new DropdownWidget());
         WidgetRegistry.Register(WidgetRegistry.CoreScope, StepperSliderWidget.Kind, () => new StepperSliderWidget());
+        WidgetRegistry.Register(WidgetRegistry.CoreScope, LineChartWidget.Kind, () => new LineChartWidget());
     }
 }
