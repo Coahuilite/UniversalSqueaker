@@ -40,10 +40,9 @@ public sealed class XenotypeLayerWidget : IWidget
             }
 
             float bodyHeight = xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
-            string helpKey = UsHelp.ResolveKey(_spec);
             return UiGuard.MeasureOrFallback(
-                () => UsCard.Measure(bodyHeight, helpKey, ctx),
-                UsCard.Measure(bodyHeight, helpKey, ctx),
+                () => UsCard.Measure(bodyHeight, ctx),
+                UsCard.Measure(bodyHeight, ctx),
                 Kind, "UniversalSqueaker");
         }, 0f, Kind, "UniversalSqueaker");
     }
@@ -54,15 +53,14 @@ public sealed class XenotypeLayerWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        string helpKey = UsHelp.ResolveKey(_spec);
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit, helpKey),
+            () => DrawCore(rect, ctx, emit),
             fallback => Widgets.Label(fallback, HeaderText + " (unavailable)"),
             Kind, "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
         if (!ctx.TryGetViewValue("XenotypeDomains", out object? value)
             || value is not IReadOnlyList<VoicePackDomainView> xenotypes
@@ -71,7 +69,7 @@ public sealed class XenotypeLayerWidget : IWidget
             return;
         }
 
-        UsCard.Draw(rect, HeaderText, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+        UsCard.Draw(rect, HeaderText, ctx, body => DrawBody(body, ctx, emit));
     }
 
     private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

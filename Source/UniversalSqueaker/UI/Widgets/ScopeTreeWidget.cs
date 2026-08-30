@@ -80,10 +80,9 @@ public sealed class ScopeTreeWidget : IWidget
         }
         bodyHeight += BottomPadding;
 
-        string helpKey = UsHelp.ResolveKey(_spec);
         return UiGuard.MeasureOrFallback(
-            () => UsCard.Measure(bodyHeight, helpKey, ctx),
-            UsCard.Measure(bodyHeight, helpKey, ctx),
+            () => UsCard.Measure(bodyHeight, ctx),
+            UsCard.Measure(bodyHeight, ctx),
             Kind, "UniversalSqueaker");
     }
 
@@ -93,17 +92,16 @@ public sealed class ScopeTreeWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        string helpKey = UsHelp.ResolveKey(_spec);
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit, helpKey),
+            () => DrawCore(rect, ctx, emit),
             fallback => Widgets.Label(fallback, "Tuning editor unavailable in fallback mode. Basic settings remain available."),
             Kind, "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
-        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+        UsCard.Draw(rect, Title, ctx, body => DrawBody(body, ctx, emit));
     }
 
     private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

@@ -69,12 +69,11 @@ public sealed class AttenuationEditorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        string helpKey = UsHelp.ResolveKey(_spec);
         float bodyHeight = ctx.ViewWidth < MinWidth ? NarrowHeight
             : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
         return UiGuard.MeasureOrFallback(
-            () => UsCard.Measure(bodyHeight, helpKey, ctx),
-            UsCard.Measure(bodyHeight, helpKey, ctx),
+            () => UsCard.Measure(bodyHeight, ctx),
+            UsCard.Measure(bodyHeight, ctx),
             Kind, "UniversalSqueaker");
     }
 
@@ -84,17 +83,16 @@ public sealed class AttenuationEditorWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        string helpKey = UsHelp.ResolveKey(_spec);
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit, helpKey),
+            () => DrawCore(rect, ctx, emit),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind, "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
-        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+        UsCard.Draw(rect, Title, ctx, body => DrawBody(body, ctx, emit));
     }
 
     private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

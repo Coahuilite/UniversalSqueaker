@@ -112,13 +112,8 @@ public static class FerriteVoicePacksPage
             KitUiPageState uiState = new()
             {
                 ScrollPosition = State.ScrollPosition,
-                SearchText = State.SearchText,
-                HelpOpen = State.HelpOpen
+                SearchText = State.SearchText
             };
-            foreach (string helpKey in State.OpenHelpKeys)
-            {
-                uiState.OpenHelpKeys.Add(helpKey);
-            }
 
             KitWidgetContext ctx = new(Source, viewState, VerseFerriteTextMetrics.Instance, uiState);
             string activeTab = NormalizeTab(State.ActiveTab);
@@ -153,41 +148,19 @@ public static class FerriteVoicePacksPage
 
                 State.ScrollPosition = uiState.ScrollPosition;
                 State.SearchText = uiState.SearchText;
-                State.HelpOpen = uiState.HelpOpen;
-                State.OpenHelpKeys.Clear();
-                foreach (string helpKey in uiState.OpenHelpKeys)
-                {
-                    State.OpenHelpKeys.Add(helpKey);
-                }
 
                 Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, Math.Max(1f, rect.width - NavWidth), FooterHeight);
                 DrawFooter(footerRect, ctx);
 
                 UiInteract.ProcessEvents();
 
-                bool toggleHelp = false;
                 foreach (KitUiCommand kitCommand in kitCommands)
                 {
-                    if (kitCommand.Name == "ToggleHelp")
-                    {
-                        if (kitCommand.Payload is string helpKey)
-                        {
-                            uiState.ToggleHelpKey(helpKey);
-                        }
-                        else
-                        {
-                            toggleHelp = !toggleHelp;
-                        }
-                        continue;
-                    }
-
                     if (TryTranslate(kitCommand, out UiCommand businessCommand))
                     {
                         businessCommands.Add(businessCommand);
                     }
                 }
-
-                if (toggleHelp) State.HelpOpen = !State.HelpOpen;
 
                 VoicePacksPageModel.ExecuteAll(settings, navCommands, State);
                 VoicePacksPageModel.ExecuteAll(settings, businessCommands, State);

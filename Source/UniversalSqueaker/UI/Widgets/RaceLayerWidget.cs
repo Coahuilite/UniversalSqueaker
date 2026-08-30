@@ -41,10 +41,9 @@ public sealed class RaceLayerWidget : IWidget
             }
 
             float bodyHeight = races.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
-            string helpKey = UsHelp.ResolveKey(_spec);
             return UiGuard.MeasureOrFallback(
-                () => UsCard.Measure(bodyHeight, helpKey, ctx),
-                UsCard.Measure(bodyHeight, helpKey, ctx),
+                () => UsCard.Measure(bodyHeight, ctx),
+                UsCard.Measure(bodyHeight, ctx),
                 Kind, "UniversalSqueaker");
         }, 0f, Kind, "UniversalSqueaker");
     }
@@ -55,15 +54,14 @@ public sealed class RaceLayerWidget : IWidget
         if (emit == null) throw new ArgumentNullException(nameof(emit));
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        string helpKey = UsHelp.ResolveKey(_spec);
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit, helpKey),
+            () => DrawCore(rect, ctx, emit),
             fallback => Widgets.Label(fallback, HeaderText + " (unavailable)"),
             Kind, "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
         if (!ctx.TryGetViewValue("Races", out object? value)
             || value is not IReadOnlyList<RaceLayerRowView> races
@@ -72,7 +70,7 @@ public sealed class RaceLayerWidget : IWidget
             return;
         }
 
-        UsCard.Draw(rect, HeaderText, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+        UsCard.Draw(rect, HeaderText, ctx, body => DrawBody(body, ctx, emit));
     }
 
     private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

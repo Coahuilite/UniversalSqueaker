@@ -16,7 +16,6 @@ public sealed class VoicePacksPageState
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
     public string SearchText = "";
-    public bool HelpOpen;
     public Vector2 ScrollPosition;
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
 
@@ -29,7 +28,6 @@ public sealed class VoicePacksPageState
     public string ScrollTargetKey = "";
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
-    public readonly HashSet<string> OpenHelpKeys = new(StringComparer.Ordinal);
 
     public VoicePacksPageState()
     {
@@ -41,7 +39,6 @@ public sealed class VoicePacksPageState
         SelectedRaceDefName = "";
         SelectedTargetName = "";
         SearchText = "";
-        HelpOpen = false;
         ScrollPosition = Vector2.zero;
         BaselinePresets.Clear();
         TuningLayer = 0;
@@ -52,7 +49,6 @@ public sealed class VoicePacksPageState
         ScrollTargetKey = "";
         DomainFilter = default;
         PackFilter = default;
-        OpenHelpKeys.Clear();
     }
 }
 
