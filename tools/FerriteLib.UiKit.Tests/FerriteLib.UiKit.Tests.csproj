@@ -31,11 +31,14 @@
           WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Exec Command="dotnet build &quot;Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="dotnet build &quot;Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Exec Command="dotnet build &quot;Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
     <ItemGroup>
       <UiKitRuntimeStub Include="$(MSBuildProjectDirectory)\bin\stubs\unityengine\UnityEngine.CoreModule.dll" />
       <UiKitRuntimeStub Include="$(MSBuildProjectDirectory)\bin\stubs\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <UiKitRuntimeStub Include="$(MSBuildProjectDirectory)\bin\stubs\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
       <UiKitRuntimeStub Include="$(MSBuildProjectDirectory)\bin\stubs\verse\Assembly-CSharp.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(UiKitRuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />

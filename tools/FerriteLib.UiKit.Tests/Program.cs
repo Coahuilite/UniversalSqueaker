@@ -79,6 +79,18 @@ internal static class Program
 
         Console.WriteLine("B3 SliderNumberField widget...");
         failures += SliderNumberFieldTests.RunAll();
+
+        Console.WriteLine("B4 Nested container layout...");
+        failures += ContainerLayoutTests.RunAll();
+
+        Console.WriteLine("B5 Dropdown widget...");
+        failures += DropdownWidgetTests.RunAll();
+
+        Console.WriteLine("B6 Stepper-slider widget...");
+        failures += StepperSliderWidgetTests.RunAll();
+
+        Console.WriteLine("B7 Line chart widget...");
+        failures += LineChartWidgetTests.RunAll();
     }
 
     private static void VerifyRegistryCoreFallback()
