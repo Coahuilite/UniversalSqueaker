@@ -34,6 +34,8 @@ public static class FerriteVoicePacksPage
     /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
     private const float ScrollbarWidth = 16f;
     private const float NavWidth = 176f;
+    private const float HelpPanelMinTotalWidth = 1200f;
+    private const float HelpPanelWidth = 200f;
     private const float FooterHeight = UsFooterWidget.FooterHeight;
 
     internal static readonly VoicePacksPageState State = new();
@@ -131,11 +133,23 @@ public static class FerriteVoicePacksPage
                 Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
                 DrawNav(navRect, activeTab, navCommands.Add);
 
-                float contentWidth = Math.Max(1f, rect.width - NavWidth);
+                bool showHelpPanel = rect.width >= HelpPanelMinTotalWidth;
+                float helpWidth = showHelpPanel ? HelpPanelWidth : 0f;
+                float contentWidth = Math.Max(1f, rect.width - NavWidth - helpWidth);
                 float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
                 Rect contentRect = new(rect.x + NavWidth, rect.y, contentWidth, contentAreaHeight);
 
                 DrawContent(contentRect, ctx, uiState, kitCommands.Add);
+
+                if (showHelpPanel)
+                {
+                    Rect helpRect = new(
+                        rect.x + NavWidth + contentWidth + 12f,
+                        rect.y,
+                        Math.Max(1f, helpWidth - 12f),
+                        contentAreaHeight);
+                    UsHelpPanel.Draw(helpRect, SectionHelpKey(State.ActiveSectionKey), ctx);
+                }
 
                 State.ScrollPosition = uiState.ScrollPosition;
                 State.SearchText = uiState.SearchText;
@@ -146,7 +160,7 @@ public static class FerriteVoicePacksPage
                     State.OpenHelpKeys.Add(helpKey);
                 }
 
-                Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, contentWidth, FooterHeight);
+                Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, Math.Max(1f, rect.width - NavWidth), FooterHeight);
                 DrawFooter(footerRect, ctx);
 
                 UiInteract.ProcessEvents();
@@ -289,6 +303,25 @@ public static class FerriteVoicePacksPage
         if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase)) return "Tuning";
         if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase)) return "Packs";
         return "Basic";
+    }
+
+    private static string SectionHelpKey(string sectionKey)
+    {
+        return sectionKey switch
+        {
+            "mode-row" => "us/mode-row",
+            "global-volume" => "us/global-volume",
+            "attenuation-editor" => "us/attenuation-editor",
+            "basic-tuning" => "us/basic-tuning",
+            "camera-indicator" => "us/camera-indicator",
+            "scope-tree" => "us/scope-tree",
+            "preset-list" => "us/preset-list",
+            "filter-bar" => "us/filter-bar",
+            "race-layer" => "us/race-layer",
+            "xenotype-layer" => "us/xenotype-layer",
+            "checklist" => "us/voice-pack-checklist",
+            _ => "us/page-title",
+        };
     }
 
     private static void DrawContent(
