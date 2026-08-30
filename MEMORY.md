@@ -132,6 +132,7 @@
 - **Camera+ 参考（`b86fc97`）**：参考 Workshop Camera+ 设置界面，宽屏时增加右侧帮助面板（`UsHelpPanel`，≥1200px 显示，窄屏隐藏）。
 - **UI 帮助方案反馈（2026-08-30）**：维护者认为 Camera+ 右侧帮助面板优于内联 `?` 按钮 + banner；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **UI 功能块分区反馈（2026-08-30）**：维护者认为三个功能块应各自独立连续滚动，包过滤器应属于包管理块而非全局顶部；已记录到 `docs/ui-feedback.md`，待拍板后实施。
+- **Tuning Editor 交互反馈（2026-08-30）**：维护者希望 domain/action scope 改下拉菜单，mood 控件升级为 滑条 + 数值输入 + −/+ 微调复合控件；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **未实机审阅**：`514efb2`/`b86fc97` 仅通过构建/测试门禁，需维护者在游戏内确认视觉效果与交互。
 - **后续 backlog 不变**：OB-02/03/04 + `docs/workdocs/` 移除 + Ferrite 游戏内稳定化 + 可选 Runtime harness。
 
