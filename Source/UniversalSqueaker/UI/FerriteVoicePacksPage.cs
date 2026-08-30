@@ -43,7 +43,11 @@ public static class FerriteVoicePacksPage
 
     public static void BeginSession()
     {
-        if (!sessionActive) State.Reset();
+        if (!sessionActive)
+        {
+            State.Reset();
+            UiGuard.ResetSessionLog();
+        }
         sessionActive = true;
     }
 

@@ -29,7 +29,8 @@ public static class VoicePacksPageModel
         foreach (string race in catalog.RaceDefNames)
         {
             if (string.IsNullOrEmpty(race)) continue;
-            IReadOnlyList<SqueakVoicePackDef> packs = catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race);
+            IReadOnlyList<SqueakVoicePackDef> packs = catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race)
+                ?? Array.Empty<SqueakVoicePackDef>();
             SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, race);
             races.Add(new RaceLayerRowView(
                 race,
@@ -365,8 +366,8 @@ public static class VoicePacksPageModel
             command.Scope, command.RaceDefName, command.TargetDefName);
         HashSet<string> domainKeys = new(StringComparer.Ordinal);
         IReadOnlyList<SqueakVoicePackDef> domainPacks = command.Scope == SqueakVoicePackScope.Race
-            ? catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, command.RaceDefName)
-            : catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Xenotype, command.TargetDefName)
+            ? catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, command.RaceDefName) ?? Array.Empty<SqueakVoicePackDef>()
+            : (catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Xenotype, command.TargetDefName) ?? Array.Empty<SqueakVoicePackDef>())
                 .Where(pack => string.Equals(pack.raceDefName, command.RaceDefName, StringComparison.Ordinal))
                 .ToList();
         foreach (SqueakVoicePackDef pack in domainPacks)
@@ -636,7 +637,7 @@ public static class VoicePacksPageModel
         foreach (XenotypeDomainKey key in keys)
         {
             IReadOnlyList<SqueakVoicePackDef> allTargetPacks = catalog.GetVoicePackDomainPacks(
-                SqueakVoicePackScope.Xenotype, key.TargetDefName);
+                SqueakVoicePackScope.Xenotype, key.TargetDefName) ?? Array.Empty<SqueakVoicePackDef>();
             List<SqueakVoicePackDef> packs = allTargetPacks
                 .Where(pack => string.Equals(pack.raceDefName, key.RaceDefName, StringComparison.Ordinal))
                 .ToList();
@@ -670,6 +671,7 @@ public static class VoicePacksPageModel
 
     private static List<FilterOptionView> BuildRaceFilterOptions(IReadOnlyList<RaceLayerRowView> races)
     {
+        races ??= Array.Empty<RaceLayerRowView>();
         var result = new List<FilterOptionView>();
         foreach (RaceLayerRowView race in races)
         {
@@ -684,6 +686,7 @@ public static class VoicePacksPageModel
         IReadOnlyList<VoicePackDomainView> xenotypes,
         string raceFilter)
     {
+        xenotypes ??= Array.Empty<VoicePackDomainView>();
         var result = new List<FilterOptionView>();
         HashSet<string> seen = new(StringComparer.Ordinal);
         foreach (VoicePackDomainView domain in xenotypes)
@@ -747,6 +750,9 @@ public static class VoicePacksPageModel
         IReadOnlyList<RaceLayerRowView> races,
         IReadOnlyList<VoicePackDomainView> xenotypes)
     {
+        races ??= Array.Empty<RaceLayerRowView>();
+        xenotypes ??= Array.Empty<VoicePackDomainView>();
+
         if (state.SelectedScope == SqueakVoicePackScope.Xenotype)
         {
             VoicePackDomainView? match = xenotypes.FirstOrDefault(domain =>
@@ -789,7 +795,8 @@ public static class VoicePacksPageModel
 
     private static VoicePackDomainView BuildRaceDomain(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, string raceDefName)
     {
-        IReadOnlyList<SqueakVoicePackDef> packs = catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, raceDefName);
+        IReadOnlyList<SqueakVoicePackDef> packs = catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, raceDefName)
+            ?? Array.Empty<SqueakVoicePackDef>();
         SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, raceDefName);
         List<VoicePackRowView> rows = packs
             .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
@@ -831,7 +838,9 @@ public static class VoicePacksPageModel
         foreach (string race in catalog.RaceDefNames)
         {
             if (string.IsNullOrEmpty(race)) continue;
-            foreach (SqueakVoicePackDef pack in catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race))
+            IReadOnlyList<SqueakVoicePackDef> racePacks = catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race)
+                ?? Array.Empty<SqueakVoicePackDef>();
+            foreach (SqueakVoicePackDef pack in racePacks)
             {
                 string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
                 if (!string.IsNullOrEmpty(author)) authors.Add(author);
@@ -855,7 +864,7 @@ public static class VoicePacksPageModel
     private static VoicePackDomainView FilterDomainPacks(VoicePackDomainView domain, in UiPackFilter filter)
     {
         UiPackFilter localFilter = filter;
-        List<VoicePackRowView> filteredPacks = domain.Packs
+        List<VoicePackRowView> filteredPacks = (domain.Packs ?? Array.Empty<VoicePackRowView>())
             .Where(pack => VoicePacksFilters.PackMatches(pack.Author, pack.ModName, in localFilter))
             .ToList();
         return new VoicePackDomainView(

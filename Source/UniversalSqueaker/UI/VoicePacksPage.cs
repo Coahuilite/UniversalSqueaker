@@ -13,11 +13,11 @@ public static class VoicePacksPage
     public static void BeginSession()
     {
         UsWidgetRegistrar.EnsureRegistered();
-        UiGuard.ResetSessionLog();
         AttenuationEditorWidget.ResetSession();
-        // FerriteVoicePacksPage.BeginSession resets page state only on the first frame of a session.
-        // VanillaVoicePacksPage.ResetSession must NOT be called here every frame: it would wipe
-        // ActiveTab/scroll/help state on every DrawSettings call and make navigation appear dead.
+        // FerriteVoicePacksPage.BeginSession resets page state (and the UiGuard session log) only
+        // on the first frame of a session. VanillaVoicePacksPage.ResetSession must NOT be called
+        // here every frame: it would wipe ActiveTab/scroll/help state on every DrawSettings call
+        // and make navigation appear dead.
         FerriteVoicePacksPage.BeginSession();
     }
 

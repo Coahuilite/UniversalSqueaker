@@ -409,7 +409,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     public SqueakVoicePackDomainStatus GetVoicePackSelectionStatus(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
     {
         string target = scope == SqueakVoicePackScope.Race ? "" : targetDefName ?? "";
-        VoicePackSelectionRecord? record = voicePackSelections.LastOrDefault(x => VoicePackSelectionRecord.SameDomain(x, scope, raceDefName, target));
+        VoicePackSelectionRecord? record = (voicePackSelections ?? new List<VoicePackSelectionRecord>())
+            .LastOrDefault(x => VoicePackSelectionRecord.SameDomain(x, scope, raceDefName, target));
         List<string> keys = new(record?.enabledPackKeys ?? new List<string>());
         SqueakXenotypeCatalogSnapshot catalog = SqueakXenotypeCatalog.Current;
         if (scope == SqueakVoicePackScope.Xenotype && !ModsConfig.BiotechActive) return new SqueakVoicePackDomainStatus(SqueakVoicePackDomainState.Dormant, keys);

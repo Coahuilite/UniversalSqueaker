@@ -64,7 +64,8 @@ public static class SqueakAudioPoolNotificationService
 
     private static bool HasEnabledKnownPack(UniversalSqueakerSettings settings, SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
     {
-        VoicePackSelectionRecord? record = settings.voicePackSelections.LastOrDefault(x => VoicePackSelectionRecord.SameDomain(x, scope, raceDefName, targetDefName));
+        VoicePackSelectionRecord? record = (settings.voicePackSelections ?? new List<VoicePackSelectionRecord>())
+            .LastOrDefault(x => VoicePackSelectionRecord.SameDomain(x, scope, raceDefName, targetDefName));
         if (record == null) return false;
         HashSet<string> enabledKeys = new(record.enabledPackKeys ?? new List<string>(), StringComparer.Ordinal);
         return enabledKeys.Contains(packKey);

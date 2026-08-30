@@ -76,7 +76,7 @@ public static class UiGuard
         if (!LoggedThisSession.Add(key)) return;
 
         string scopeText = string.IsNullOrEmpty(resolvedScope) ? "" : " (" + resolvedScope + ")";
-        string message = "[FerriteLib.UiKit] fallback triggered for component '" + componentId + "'" + scopeText + ": " + ex.Message;
+        string message = "[FerriteLib.UiKit] fallback triggered for component '" + componentId + "'" + scopeText + ": " + ex;
 
         if (LogWarningOverride != null)
         {
