@@ -135,7 +135,7 @@ public static class FerriteVoicePacksPage
                 float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
                 Rect contentRect = new(rect.x + NavWidth, rect.y, contentWidth, contentAreaHeight);
 
-                DrawContent(contentRect, ctx, activeTab, uiState, kitCommands.Add);
+                DrawContent(contentRect, ctx, uiState, kitCommands.Add);
 
                 State.ScrollPosition = uiState.ScrollPosition;
                 State.SearchText = uiState.SearchText;
@@ -238,6 +238,39 @@ public static class FerriteVoicePacksPage
         return created;
     }
 
+    private static KitLayoutEngine GetEngineAll(string? column = null)
+    {
+        string cacheKey = "ALL\n" + (column ?? "");
+        if (Engines.TryGetValue(cacheKey, out KitLayoutEngine? engine)) return engine;
+
+        XDocument doc = XDocument.Parse(ReadLayoutXml());
+        XElement? root = doc.Root;
+        if (root == null)
+        {
+            throw new InvalidOperationException("UI layout XML has no root element.");
+        }
+
+        List<XElement> widgets = new();
+        foreach (XElement widget in root.Elements("Widget")) widgets.Add(widget);
+        if (column != null)
+        {
+            foreach (XElement widget in widgets)
+            {
+                string? widgetColumn = (string?)widget.Attribute("Column");
+                string effective = widgetColumn ?? "";
+                if (!string.Equals(effective, column, StringComparison.OrdinalIgnoreCase))
+                {
+                    widget.Remove();
+                }
+            }
+        }
+
+        KitLayoutManifest manifest = KitLayoutManifest.Parse(doc.ToString(SaveOptions.DisableFormatting));
+        KitLayoutEngine created = new(manifest);
+        Engines[cacheKey] = created;
+        return created;
+    }
+
     private static string ReadLayoutXml()
     {
         using Stream? stream = typeof(FerriteVoicePacksPage).Assembly.GetManifestResourceStream(ManifestResourceName);
@@ -261,17 +294,26 @@ public static class FerriteVoicePacksPage
     private static void DrawContent(
         Rect contentRect,
         KitWidgetContext ctx,
-        string activeTab,
         KitUiPageState uiState,
         Action<KitUiCommand> emit)
     {
-        if (string.Equals(activeTab, "Packs", StringComparison.Ordinal) && contentRect.width >= 1000f)
+        if (contentRect.width >= 1000f)
         {
-            DrawPacksSplit(contentRect, ctx, uiState, emit);
-            return;
+            DrawMultiColumn(contentRect, ctx, uiState, emit);
         }
+        else
+        {
+            DrawSingleColumn(contentRect, ctx, uiState, emit);
+        }
+    }
 
-        KitLayoutEngine engine = GetEngine(activeTab);
+    private static void DrawSingleColumn(
+        Rect contentRect,
+        KitWidgetContext ctx,
+        KitUiPageState uiState,
+        Action<KitUiCommand> emit)
+    {
+        KitLayoutEngine engine = GetEngineAll();
         float layoutWidth = contentRect.width;
         float contentHeight = engine.Measure(ctx, layoutWidth);
         if (contentHeight > contentRect.height + 0.01f)
@@ -280,6 +322,7 @@ public static class FerriteVoicePacksPage
             contentHeight = engine.Measure(ctx, layoutWidth);
         }
 
+        ApplyScrollTarget(engine, contentRect, uiState, contentHeight);
         engine.ClampScroll(uiState, contentRect.height);
 
         Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, layoutWidth, contentHeight));
@@ -295,7 +338,7 @@ public static class FerriteVoicePacksPage
         }
     }
 
-    private static void DrawPacksSplit(
+    private static void DrawMultiColumn(
         Rect contentRect,
         KitWidgetContext ctx,
         KitUiPageState uiState,
@@ -305,9 +348,9 @@ public static class FerriteVoicePacksPage
         const float minColumnWidth = 260f;
         const float leftRatio = 0.38f;
 
-        KitLayoutEngine topEngine = GetEngine("Packs", "");
-        KitLayoutEngine leftEngine = GetEngine("Packs", "Left");
-        KitLayoutEngine rightEngine = GetEngine("Packs", "Right");
+        KitLayoutEngine topEngine = GetEngineAll("");
+        KitLayoutEngine leftEngine = GetEngineAll("Left");
+        KitLayoutEngine rightEngine = GetEngineAll("Right");
 
         float contentWidth = contentRect.width;
         float leftWidth = Mathf.Max(minColumnWidth, (contentWidth - gap) * leftRatio);
@@ -340,6 +383,8 @@ public static class FerriteVoicePacksPage
             contentHeight = topHeight + (columnsHeight > 0f ? columnsHeight + gap : 0f);
         }
 
+        ApplyScrollTarget(topEngine, leftEngine, rightEngine, topHeight, gap, contentRect, uiState, contentHeight);
+
         float maxY = Mathf.Max(0f, contentHeight - contentRect.height);
         uiState.ScrollPosition.y = Mathf.Min(Mathf.Max(0f, uiState.ScrollPosition.y), maxY);
 
@@ -357,6 +402,56 @@ public static class FerriteVoicePacksPage
             UiInteract.PopScrollView();
             Widgets.EndScrollView();
         }
+    }
+
+    private static void ApplyScrollTarget(
+        KitLayoutEngine engine,
+        Rect contentRect,
+        KitUiPageState uiState,
+        float contentHeight)
+    {
+        if (string.IsNullOrEmpty(State.ScrollTargetKey)) return;
+        string key = State.ScrollTargetKey;
+        State.ScrollTargetKey = "";
+        if (engine.TryGetElementY(key, out float y))
+        {
+            uiState.ScrollPosition.y = Mathf.Clamp(y, 0f, Mathf.Max(0f, contentHeight - contentRect.height));
+        }
+    }
+
+    private static void ApplyScrollTarget(
+        KitLayoutEngine topEngine,
+        KitLayoutEngine leftEngine,
+        KitLayoutEngine rightEngine,
+        float topHeight,
+        float gap,
+        Rect contentRect,
+        KitUiPageState uiState,
+        float contentHeight)
+    {
+        if (string.IsNullOrEmpty(State.ScrollTargetKey)) return;
+        string key = State.ScrollTargetKey;
+        State.ScrollTargetKey = "";
+
+        float targetY;
+        if (topEngine.TryGetElementY(key, out float topY))
+        {
+            targetY = topY;
+        }
+        else if (leftEngine.TryGetElementY(key, out float leftY))
+        {
+            targetY = topHeight + (leftY > 0f ? gap : 0f) + leftY;
+        }
+        else if (rightEngine.TryGetElementY(key, out float rightY))
+        {
+            targetY = topHeight + (rightY > 0f ? gap : 0f) + rightY;
+        }
+        else
+        {
+            return;
+        }
+
+        uiState.ScrollPosition.y = Mathf.Clamp(targetY, 0f, Mathf.Max(0f, contentHeight - contentRect.height));
     }
 
     private static void DrawNavWithFrame(Rect navRect, string activeTab, Action<UiCommand> addCommand)
@@ -377,54 +472,112 @@ public static class FerriteVoicePacksPage
 
     private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
-        const float buttonHeight = 32f;
-        const float gap = 4f;
-        const float sidePadding = 4f;
+        const float groupHeaderHeight = 24f;
+        const float itemHeight = 26f;
+        const float gap = 2f;
+        const float sidePadding = 6f;
 
         UsSurface.DrawSurface(navRect, UsSurface.SurfaceKind.Panel);
         UsSurface.DrawBorder(navRect);
 
         float y = navRect.y + 8f;
-        foreach ((string tab, string label) in new[] { ("Basic", "基础设置"), ("Tuning", "调音"), ("Packs", "包清单") })
+        foreach ((string group, string groupLabel) in NavGroups)
         {
-            Rect buttonRect = new(
-                navRect.x + sidePadding,
-                y,
-                Math.Max(1f, navRect.width - sidePadding * 2f),
-                buttonHeight);
+            bool groupActive = string.Equals(group, activeTab, StringComparison.Ordinal);
+            DrawNavGroupHeader(new Rect(navRect.x + sidePadding, y, Math.Max(1f, navRect.width - sidePadding * 2f), groupHeaderHeight), groupLabel, groupActive);
+            y += groupHeaderHeight + gap;
 
-            bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
-            bool hovered = Mouse.IsOver(buttonRect);
-            UsSurface.DrawSurface(
-                buttonRect,
-                active ? UsSurface.SurfaceKind.Selected
-                : hovered ? UsSurface.SurfaceKind.Hover
-                : UsSurface.SurfaceKind.Raised);
-            UsSurface.DrawBorder(
-                buttonRect,
-                active ? UsVisualTokens.AccentGold
-                : hovered ? UsVisualTokens.BorderStrong
-                : UsVisualTokens.Border);
+            foreach ((string sectionKey, string itemLabel) in NavItemsByGroup(group))
+            {
+                Rect itemRect = new(
+                    navRect.x + sidePadding + 4f,
+                    y,
+                    Math.Max(1f, navRect.width - sidePadding * 2f - 4f),
+                    itemHeight);
 
-            Color oldColor = GUI.color;
-            GameFont oldFont = Text.Font;
-            TextAnchor oldAnchor = Text.Anchor;
-            Text.Font = GameFont.Small;
-            Text.Anchor = TextAnchor.MiddleCenter;
-            GUI.color = active ? UsVisualTokens.AccentGold
-                : hovered ? UsVisualTokens.TextPrimary
-                : UsVisualTokens.TextSecondary;
-            Widgets.Label(buttonRect, label);
-            Text.Font = oldFont;
-            Text.Anchor = oldAnchor;
-            GUI.color = oldColor;
+                bool active = string.Equals(State.ActiveSectionKey, sectionKey, StringComparison.Ordinal);
+                bool hovered = Mouse.IsOver(itemRect);
+                UsSurface.DrawSurface(
+                    itemRect,
+                    active ? UsSurface.SurfaceKind.Selected
+                    : hovered ? UsSurface.SurfaceKind.Hover
+                    : UsSurface.SurfaceKind.Base);
+                UsSurface.DrawBorder(
+                    itemRect,
+                    active ? UsVisualTokens.AccentGold
+                    : hovered ? UsVisualTokens.BorderStrong
+                    : UsVisualTokens.Border);
 
-            string capturedTab = tab;
-            UiInteract.Button(buttonRect, UiLayer.TopAction,
-                () => addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab)));
+                Color oldColor = GUI.color;
+                GameFont oldFont = Text.Font;
+                TextAnchor oldAnchor = Text.Anchor;
+                Text.Font = GameFont.Tiny;
+                Text.Anchor = TextAnchor.MiddleLeft;
+                GUI.color = active ? UsVisualTokens.AccentGold
+                    : hovered ? UsVisualTokens.TextPrimary
+                    : UsVisualTokens.TextSecondary;
+                Widgets.Label(new Rect(itemRect.x + 4f, itemRect.y, Math.Max(1f, itemRect.width - 8f), itemRect.height), itemLabel);
+                Text.Font = oldFont;
+                Text.Anchor = oldAnchor;
+                GUI.color = oldColor;
 
-            y += buttonHeight + gap;
+                string capturedKey = sectionKey;
+                UiInteract.Button(itemRect, UiLayer.TopAction,
+                    () => addCommand(new UiCommand(UiCommandKind.ScrollToSection, arg: capturedKey)));
+
+                y += itemHeight + gap;
+            }
+
+            y += 6f;
         }
+    }
+
+    private static void DrawNavGroupHeader(Rect rect, string label, bool active)
+    {
+        Color oldColor = GUI.color;
+        GameFont oldFont = Text.Font;
+        TextAnchor oldAnchor = Text.Anchor;
+        Text.Font = GameFont.Small;
+        Text.Anchor = TextAnchor.MiddleLeft;
+        GUI.color = active ? UsVisualTokens.AccentGold : UsVisualTokens.TextSecondary;
+        Widgets.Label(rect, label);
+        Text.Font = oldFont;
+        Text.Anchor = oldAnchor;
+        GUI.color = oldColor;
+    }
+
+    private static readonly (string Group, string Label)[] NavGroups =
+    {
+        ("Basic", "基础设置"),
+        ("Tuning", "调音"),
+        ("Packs", "包清单")
+    };
+
+    private static (string Key, string Label)[] NavItemsByGroup(string group)
+    {
+        return group switch
+        {
+            "Basic" => new[]
+            {
+                ("mode-row", "路由模式"),
+                ("global-volume", "全局音量"),
+                ("attenuation-editor", "距离/衰减"),
+                ("basic-tuning", "基础开关"),
+                ("camera-indicator", "相机指示")
+            },
+            "Tuning" => new[]
+            {
+                ("scope-tree", "动作作用域"),
+                ("preset-list", "预设导入")
+            },
+            _ => new[]
+            {
+                ("filter-bar", "筛选"),
+                ("race-layer", "种族层"),
+                ("xenotype-layer", "异种层"),
+                ("checklist", "语音包清单")
+            }
+        };
     }
 
     private static void DrawFallback(Rect rect)

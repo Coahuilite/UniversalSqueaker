@@ -9,10 +9,10 @@
           Title3="Remix" Description3="Mix enabled VoicePacks within each selected domain." Value3="Remix"
           Title4="Disabled" Description4="Fully bypass the mod; play nothing." Value4="Disabled"
           Tab="Basic" HelpKey="us/mode-row" />
-  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" HelpKey="us/global-volume" />
-  <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Tab="Basic" HelpKey="us/attenuation-editor" />
-  <Widget Id="basic-tuning" Kind="us/basic-tuning" Tab="Basic" HelpKey="us/basic-tuning" />
-  <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" HelpKey="us/camera-indicator" />
+  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" Column="Left" HelpKey="us/global-volume" />
+  <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Tab="Basic" Column="Right" HelpKey="us/attenuation-editor" />
+  <Widget Id="basic-tuning" Kind="us/basic-tuning" Tab="Basic" Column="Left" HelpKey="us/basic-tuning" />
+  <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" Column="Left" HelpKey="us/camera-indicator" />
   <Widget Id="scope-tree" Kind="us/scope-tree" Tab="Tuning" HelpKey="us/scope-tree" />
   <Widget Id="preset-list" Kind="us/preset-list" Tab="Tuning" HelpKey="us/preset-list" />
   <Widget Id="race-layer" Kind="us/race-layer" Tab="Packs" Column="Left" HelpKey="us/race-layer" />

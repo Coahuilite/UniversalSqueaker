@@ -162,6 +162,9 @@ public static class VoicePacksPageModel
             case UiCommandKind.SetActiveTab:
                 ExecuteSetActiveTab(state, command.Arg);
                 break;
+            case UiCommandKind.ScrollToSection:
+                ExecuteScrollToSection(state, command.Arg);
+                break;
             case UiCommandKind.SetDomainFilter:
                 ExecuteSetDomainFilter(state, command);
                 break;
@@ -227,6 +230,34 @@ public static class VoicePacksPageModel
             state.ActiveTab = normalized;
             state.ScrollPosition = Vector2.zero;
         }
+    }
+
+    private static void ExecuteScrollToSection(VoicePacksPageState state, string sectionKey)
+    {
+        if (string.IsNullOrEmpty(sectionKey)) return;
+        state.ScrollTargetKey = sectionKey;
+        state.ActiveSectionKey = sectionKey;
+        state.ActiveTab = SectionGroup(sectionKey);
+    }
+
+    private static string SectionGroup(string sectionKey)
+    {
+        if (string.Equals(sectionKey, "mode-row", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "global-volume", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "basic-tuning", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "camera-indicator", StringComparison.Ordinal))
+        {
+            return "Basic";
+        }
+
+        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "preset-list", StringComparison.Ordinal))
+        {
+            return "Tuning";
+        }
+
+        return "Packs";
     }
 
     /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录），

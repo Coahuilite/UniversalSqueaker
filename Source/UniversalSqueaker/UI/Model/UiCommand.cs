@@ -25,6 +25,7 @@ public enum UiCommandKind
     ToggleBaselineXenotype,
     ImportBaselinePreset,
     SetActiveTab,
+    ScrollToSection,
     SetDomainFilter,
     SetPackFilter
 }

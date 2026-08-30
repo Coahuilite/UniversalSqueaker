@@ -25,6 +25,8 @@ public sealed class VoicePacksPageState
     public string TuningRaceDefName = "";
     public string TuningXenotypeDefName = "";
     public string ActiveTab = "Basic";
+    public string ActiveSectionKey = "";
+    public string ScrollTargetKey = "";
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
     public readonly HashSet<string> OpenHelpKeys = new(StringComparer.Ordinal);
@@ -46,6 +48,8 @@ public sealed class VoicePacksPageState
         TuningRaceDefName = "";
         TuningXenotypeDefName = "";
         ActiveTab = "Basic";
+        ActiveSectionKey = "";
+        ScrollTargetKey = "";
         DomainFilter = default;
         PackFilter = default;
         OpenHelpKeys.Clear();

@@ -118,6 +118,28 @@ public sealed class LayoutEngine
         }
     }
 
+    /// <summary>
+    /// Returns the vertical position of a measured widget by its XML id, if present in the last
+    /// measure pass. Used for scroll-to-section navigation.
+    /// </summary>
+    public bool TryGetElementY(string id, out float y)
+    {
+        if (id != null)
+        {
+            foreach (MeasuredElement element in measured)
+            {
+                if (string.Equals(element.Spec.Id, id, StringComparison.Ordinal))
+                {
+                    y = element.Rect.y;
+                    return true;
+                }
+            }
+        }
+
+        y = 0f;
+        return false;
+    }
+
     /// <summary>Clamps <see cref="UiPageState.ScrollPosition"/> against the last measured content height.</summary>
     public void ClampScroll(UiPageState state, float viewHeight)
     {
