@@ -126,6 +126,3 @@ public enum TextAnchor
     LowerCenter = 7,
     LowerRight = 8
 }
-
-
-

@@ -103,43 +103,46 @@ public sealed class DropdownWidget : IWidget
 
         if (state.Open)
         {
-            UiInteract.Button(new Rect(-100000f, -100000f, 200000f, 200000f), UiLayer.Background,
-                () => state.Open = false);
-
-            float listTop = rect.yMax;
-            var listRect = new Rect(rect.x, listTop, rect.width, options.Count * OptionHeight);
-            SurfaceFrame.Draw(listRect, SurfaceFrame.SurfaceKind.Panel);
-
-            for (int i = 0; i < options.Count; i++)
+            UiInteract.RegisterPopup(() =>
             {
-                Rect rowRect = new(rect.x, listTop + i * OptionHeight, rect.width, OptionHeight);
-                bool selected = string.Equals(options[i].Value, current, StringComparison.Ordinal);
+                UiInteract.Button(new Rect(-100000f, -100000f, 200000f, 200000f), UiLayer.Background,
+                    () => state.Open = false);
 
-                if (selected)
+                float listTop = rect.yMax;
+                var listRect = new Rect(rect.x, listTop, rect.width, options.Count * OptionHeight);
+                SurfaceFrame.Draw(listRect, SurfaceFrame.SurfaceKind.Panel);
+
+                for (int i = 0; i < options.Count; i++)
                 {
-                    VerseWidgets.DrawBoxSolid(rowRect, Palette.Selected);
+                    Rect rowRect = new(rect.x, listTop + i * OptionHeight, rect.width, OptionHeight);
+                    bool selected = string.Equals(options[i].Value, current, StringComparison.Ordinal);
+
+                    if (selected)
+                    {
+                        VerseWidgets.DrawBoxSolid(rowRect, Palette.Selected);
+                    }
+                    else
+                    {
+                        VerseWidgets.DrawBoxSolid(rowRect, Palette.Raised);
+                    }
+
+                    SurfaceFrame.DrawBorder(rowRect);
+                    UiKitGui.Label(
+                        new Rect(rowRect.x + TextPadding, rowRect.y, rowRect.width - TextPadding * 2f, rowRect.height),
+                        options[i].Text,
+                        UiFont.Small,
+                        TextAnchor.MiddleLeft,
+                        selected ? Palette.AccentGold : Palette.TextPrimary);
+
+                    int captured = i;
+                    UiInteract.Button(rowRect, UiLayer.TopAction, () =>
+                    {
+                        state.Open = false;
+                        state.StringValue = options[captured].Value;
+                        emit(new UiCommand(emitName, options[captured].Value));
+                    });
                 }
-                else
-                {
-                    VerseWidgets.DrawBoxSolid(rowRect, Palette.Raised);
-                }
-
-                SurfaceFrame.DrawBorder(rowRect);
-                UiKitGui.Label(
-                    new Rect(rowRect.x + TextPadding, rowRect.y, rowRect.width - TextPadding * 2f, rowRect.height),
-                    options[i].Text,
-                    UiFont.Small,
-                    TextAnchor.MiddleLeft,
-                    selected ? Palette.AccentGold : Palette.TextPrimary);
-
-                int captured = i;
-                UiInteract.Button(rowRect, UiLayer.TopAction, () =>
-                {
-                    state.Open = false;
-                    state.StringValue = options[captured].Value;
-                    emit(new UiCommand(emitName, options[captured].Value));
-                });
-            }
+            });
         }
     }
 

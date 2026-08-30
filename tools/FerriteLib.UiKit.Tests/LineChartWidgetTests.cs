@@ -17,6 +17,7 @@ internal static class LineChartWidgetTests
         VerifyParsePoints();
         VerifyDrawDoesNotThrow();
         VerifyDragControlPointEmits();
+        VerifyEditablePointsRestrictsDrag();
         return failures;
     }
 
@@ -90,6 +91,40 @@ internal static class LineChartWidgetTests
             && Math.Abs(change.Point.x - 0.77173913f) < 0.001f
             && Math.Abs(change.Point.y - 0.88461538f) < 0.001f,
             "chart command payload contains index and normalized point");
+    }
+
+    private static void VerifyEditablePointsRestrictsDrag()
+    {
+        ResetDebug();
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Points"] = "0,0;0.5,0.5;1,1",
+            ["Editable"] = "true",
+            ["EditablePoints"] = "1",
+            ["Height"] = "120"
+        };
+        var spec = new UiElementSpec("chart-editable-points", LineChartWidget.Kind, attributes);
+        var widget = new LineChartWidget();
+        widget.Configure(spec);
+        var ctx = new WidgetContext("test", null, new StubMetrics(), new UiPageState());
+        UiValueState state = UiValueStore.GetOrCreate(new UiControlId("chart-editable-points", "chart"));
+
+        // Point 0 is at pixel (8,112). It is not in EditablePoints, so it must not start a drag.
+        UiInteract.BeginFrame();
+        SetMouse(8f, 112f);
+        UiInteract.DebugMouseDown = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 120f), ctx, _ => { });
+        Check(!state.Dragging, "non-editable point does not start drag");
+        UiInteract.EndFrame();
+
+        ResetDebug();
+        // Point 1 is at pixel (100,60) and is editable.
+        UiInteract.BeginFrame();
+        SetMouse(100f, 60f);
+        UiInteract.DebugMouseDown = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 120f), ctx, _ => { });
+        Check(state.Dragging && state.Cursor == 1, "editable point starts drag");
+        UiInteract.EndFrame();
     }
 
     private static LineChartWidget MakeWidget(string id, string points, bool editable, float height)

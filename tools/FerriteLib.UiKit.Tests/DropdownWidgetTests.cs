@@ -84,6 +84,7 @@ internal static class DropdownWidgetTests
         SetMouse(100f, 14f);
         UiInteract.DebugClick = true;
         widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.DrawPopups();
         UiInteract.ProcessEvents();
         UiInteract.EndFrame();
 
@@ -94,6 +95,7 @@ internal static class DropdownWidgetTests
         SetMouse(100f, 52f + 12f);
         UiInteract.DebugClick = true;
         widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.DrawPopups();
         UiInteract.ProcessEvents();
         UiInteract.EndFrame();
 
@@ -137,6 +139,7 @@ internal static class DropdownWidgetTests
         SetMouse(100f, 14f);
         UiInteract.DebugClick = true;
         widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.DrawPopups();
         UiInteract.ProcessEvents();
         UiInteract.EndFrame();
 
@@ -146,6 +149,7 @@ internal static class DropdownWidgetTests
         SetMouse(100f, 52f + 12f);
         UiInteract.DebugClick = true;
         widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.DrawPopups();
         UiInteract.ProcessEvents();
         UiInteract.EndFrame();
 

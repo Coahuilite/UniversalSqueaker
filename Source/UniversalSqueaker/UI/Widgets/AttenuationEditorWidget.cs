@@ -12,8 +12,8 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// S4-Vol camera-height attenuation editor. Draws a 15..65 by 0..100 chart with two horizontally
 /// draggable endpoints (start locked at 100%, end locked at 0%), three quick presets, and a current
-/// preset label. Drag release emits <see cref="UiCommandKind.SetDistanceRange"/>; preset buttons emit
-/// <see cref="UiCommandKind.SetDistancePreset"/>.
+/// preset label. Dragging emits live <see cref="UiCommandKind.SetDistanceRange"/> updates; preset
+/// buttons emit <see cref="UiCommandKind.SetDistancePreset"/>.
 /// </summary>
 public sealed class AttenuationEditorWidget : IWidget
 {
@@ -120,8 +120,10 @@ public sealed class AttenuationEditorWidget : IWidget
         float maxNorm = Mathf.InverseLerp(MinDistance, MaxDistance, max);
         var points = new List<Vector2>
         {
+            new Vector2(0f, 1f),
             new Vector2(Mathf.Clamp01(minNorm), 1f),
-            new Vector2(Mathf.Clamp01(maxNorm), 0f)
+            new Vector2(Mathf.Clamp01(maxNorm), 0f),
+            new Vector2(1f, 0f)
         };
 
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -129,7 +131,8 @@ public sealed class AttenuationEditorWidget : IWidget
             ["Bind"] = "Points",
             ["EmitName"] = "AttenuationPoint",
             ["Height"] = ChartHeight.ToString(CultureInfo.InvariantCulture),
-            ["Editable"] = "true"
+            ["Editable"] = "true",
+            ["EditablePoints"] = "1,2"
         };
         var spec = new UiElementSpec(Kind + "-chart", LineChartWidget.Kind, attributes);
         var view = new Dictionary<string, object?> { ["Points"] = points };
@@ -140,13 +143,17 @@ public sealed class AttenuationEditorWidget : IWidget
         {
             if (cmd.Name != "AttenuationPoint" || cmd.Payload is not LineChartPointChange change) return;
             float distance = Mathf.Lerp(MinDistance, MaxDistance, Mathf.Clamp01(change.Point.x));
-            if (change.Index == 0)
+            if (change.Index == 1)
             {
                 min = Mathf.Clamp(distance, MinDistance, max - MinRange);
             }
-            else
+            else if (change.Index == 2)
             {
                 max = Mathf.Clamp(distance, min + MinRange, MaxDistance);
+            }
+            else
+            {
+                return;
             }
             emit(new UiCommand(UiCommandKind.SetDistanceRange, arg: FormatRange(min, max)));
         });
@@ -166,14 +173,18 @@ public sealed class AttenuationEditorWidget : IWidget
     private static void DrawPresetButtons(Rect rect, Action<UiCommand> emit)
     {
         float buttonWidth = (rect.width - Gap * 2f) / 3f;
-        UiInteract.Button(new Rect(rect.x, rect.y, buttonWidth, rect.height), UiLayer.Content,
+        DrawPresetButton(new Rect(rect.x, rect.y, buttonWidth, rect.height), "Conservative",
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Conservative.ToString())));
-
-        UiInteract.Button(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), UiLayer.Content,
+        DrawPresetButton(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), "Balanced",
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Balanced.ToString())));
-
-        UiInteract.Button(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), UiLayer.Content,
+        DrawPresetButton(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), "Strong",
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Strong.ToString())));
+    }
+
+    private static void DrawPresetButton(Rect rect, string label, Action onClick)
+    {
+        UsSurface.DrawSegment(rect, label, false);
+        UiInteract.Button(rect, UiLayer.Content, onClick);
     }
 
     private static void DrawNarrowSummary(Rect rect, WidgetContext ctx)

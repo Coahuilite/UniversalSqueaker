@@ -20,6 +20,7 @@ public sealed class LineChartWidget : IWidget
     private const string PointsAttribute = "Points";
     private const string HeightAttribute = "Height";
     private const string EditableAttribute = "Editable";
+    private const string EditablePointsAttribute = "EditablePoints";
     private const string EmitNameAttribute = "EmitName";
     private const string DefaultEmitName = "PointChanged";
     private const float DefaultHeight = 120f;
@@ -75,8 +76,11 @@ public sealed class LineChartWidget : IWidget
 
         if (editable)
         {
+            bool hasEditablePoints = _spec.TryGetAttribute(EditablePointsAttribute, out string editableRaw)
+                && editableRaw.Trim().Length > 0;
+            HashSet<int>? editablePoints = hasEditablePoints ? ParseEditablePoints(editableRaw) : null;
             UiInteract.Protect(rect);
-            HandleDrag(plotRect, points, id, state, emitName, emit);
+            HandleDrag(plotRect, points, id, state, emitName, emit, editablePoints);
         }
     }
 
@@ -156,7 +160,8 @@ public sealed class LineChartWidget : IWidget
         UiControlId id,
         UiValueState state,
         string emitName,
-        Action<UiCommand> emit)
+        Action<UiCommand> emit,
+        HashSet<int>? editablePoints)
     {
         Vector2 pointer = UiInteract.PointerPosition();
 
@@ -164,11 +169,13 @@ public sealed class LineChartWidget : IWidget
         {
             for (int i = 0; i < points.Count; i++)
             {
+                if (editablePoints != null && !editablePoints.Contains(i)) continue;
                 Vector2 pixel = ToPixel(plotRect, points[i]);
                 if (Distance(pointer, pixel) <= HitRadius)
                 {
                     state.Dragging = true;
                     state.Cursor = i;
+                    Event.current?.Use();
                     break;
                 }
             }
@@ -185,13 +192,29 @@ public sealed class LineChartWidget : IWidget
                     points[state.Cursor] = updated;
                     emit(new UiCommand(emitName, new LineChartPointChange(state.Cursor, updated)));
                 }
+
+                Event.current?.Use();
             }
         }
 
         if (UiInteract.IsPointerUp())
         {
             state.Dragging = false;
+            Event.current?.Use();
         }
+    }
+
+    private static HashSet<int> ParseEditablePoints(string raw)
+    {
+        var result = new HashSet<int>();
+        string[] parts = raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string part in parts)
+        {
+            if (int.TryParse(part.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out int index))
+                result.Add(index);
+        }
+
+        return result;
     }
 
     private static void DrawGrid(Rect plotRect)

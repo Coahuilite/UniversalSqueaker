@@ -112,6 +112,7 @@ public static class FerriteVoicePacksPage
             KitUiPageState uiState = new()
             {
                 ScrollPosition = State.ScrollPosition,
+                HelpScrollPosition = State.HelpScrollPosition,
                 SearchText = State.SearchText
             };
 
@@ -143,11 +144,13 @@ public static class FerriteVoicePacksPage
                 UsHelpPanel.Draw(helpRect, SectionHelpKey(State.ActiveSectionKey), ctx);
 
                 State.ScrollPosition = uiState.ScrollPosition;
+                State.HelpScrollPosition = uiState.HelpScrollPosition;
                 State.SearchText = uiState.SearchText;
 
                 Rect footerRect = new(rect.x + navWidth, rect.y + contentRect.height, Math.Max(1f, rect.width - navWidth), FooterHeight);
                 DrawFooter(footerRect, ctx);
 
+                UiInteract.DrawPopups();
                 UiInteract.ProcessEvents();
 
                 foreach (KitUiCommand kitCommand in kitCommands)

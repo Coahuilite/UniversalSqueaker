@@ -134,6 +134,7 @@ public sealed class LayoutEngine
 
             if (processEvents)
             {
+                UiInteract.DrawPopups();
                 UiInteract.ProcessEvents();
             }
         }

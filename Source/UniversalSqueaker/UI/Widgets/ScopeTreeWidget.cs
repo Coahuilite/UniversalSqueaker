@@ -42,7 +42,6 @@ public sealed class ScopeTreeWidget : IWidget
     private const float MoodLabelWidth = 64f;
     private const float MoodClearWidth = 46f;
     private const float MoodGap = 6f;
-    private const float MoodValueWidth = 34f;
     private const string ValueSeparator = "\u0001";
 
     private static readonly string[] LayerNames = { "Global", "Race", "Xenotype" };

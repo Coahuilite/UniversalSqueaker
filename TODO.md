@@ -76,12 +76,6 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 ## Pending decisions / follow-ups
 
 - [ ] Workshop display name and license (maintainer only; do not invent).
-- [ ] UI 帮助方案拍板（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：是否移除内联 `?` 帮助按钮/help banner，统一使用右侧帮助面板；窄屏降级方案待定。
-- [ ] UI 功能块分区拍板（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：三个功能块应各自独立连续滚动；包过滤器移入包管理块内部，不能放在全局顶部。
-- [ ] 800×600 三栏帮助方案（2026-08-30，记录见 `docs/us-ui-review-requirements-zh.md` R18）：硬下限 800×600，右侧帮助始终保留，不使用帮助按钮；三栏宽度按窗口响应式收缩。
-- [ ] Tuning Editor 交互拍板（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：domain/action scope 改下拉；mood 控件升级为 滑条 + 数值输入 + −/+ 微调复合控件。
-- [ ] 衰减折线图重做（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：当前图表破碎不可用，需至少达到旧 SR 可用水平。
-- [ ] 功能块标题 + 组合式功能块（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：每个功能块要有标题作为导航锚点；评估 UiKit 容器化以支持 XML 层级组合。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.

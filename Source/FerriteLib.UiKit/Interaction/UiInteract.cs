@@ -31,6 +31,7 @@ public static class UiInteract
     private static readonly List<Rect> ProtectedRects = new();
     private static readonly List<RegisteredButton> Buttons = new();
     private static readonly List<ScrollTransform> ScrollTransforms = new();
+    private static readonly List<Action> Popups = new();
     private static bool frameActive;
 
     // Test seams. They are internal and only used by the FerriteLib.UiKit.Tests assembly.
@@ -51,6 +52,7 @@ public static class UiInteract
         ProtectedRects.Clear();
         Buttons.Clear();
         ScrollTransforms.Clear();
+        Popups.Clear();
         frameActive = true;
     }
 
@@ -60,6 +62,7 @@ public static class UiInteract
         ProtectedRects.Clear();
         Buttons.Clear();
         ScrollTransforms.Clear();
+        Popups.Clear();
         frameActive = false;
     }
 
@@ -92,6 +95,26 @@ public static class UiInteract
     {
         if (!frameActive) return;
         ProtectedRects.Add(ToPageSpace(rect));
+    }
+
+    /// <summary>
+    /// Registers a deferred popup/overlay draw callback. Callbacks run after normal content has been
+    /// drawn (via <see cref="DrawPopups"/>) but before <see cref="ProcessEvents"/>, so popups render
+    /// above later content and their buttons participate in the same deferred input frame.
+    /// </summary>
+    public static void RegisterPopup(Action draw)
+    {
+        if (draw == null) throw new ArgumentNullException(nameof(draw));
+        if (!frameActive) return;
+        Popups.Add(draw);
+    }
+
+    /// <summary>Draws all registered popups in registration order. Call before <see cref="ProcessEvents"/>.</summary>
+    public static void DrawPopups()
+    {
+        if (!frameActive) return;
+        foreach (Action draw in Popups)
+            draw();
     }
 
     /// <summary>Registers a click target. The callback is invoked later by <see cref="ProcessEvents"/>.</summary>
