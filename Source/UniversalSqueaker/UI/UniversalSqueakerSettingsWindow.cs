@@ -40,12 +40,18 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     {
         get
         {
-            float safeWidth = Verse.UI.screenWidth - 48f;
-            float safeHeight = Verse.UI.screenHeight - 48f;
-            float width = Mathf.Min(Verse.UI.screenWidth * 0.92f, safeWidth);
-            float height = Mathf.Min(Verse.UI.screenHeight * 0.92f, safeHeight);
-            width = Mathf.Max(960f, width);
-            height = Mathf.Max(640f, height);
+            // 维护者指定的安全区域：窗口在屏幕的 60%～75% 之间浮动，默认偏 72%/66%，
+            // 不盖满全屏，也不退回原版那种正中心小方窗。
+            float width = Mathf.Clamp(
+                Verse.UI.screenWidth * 0.72f,
+                Verse.UI.screenWidth * 0.60f,
+                Verse.UI.screenWidth * 0.75f);
+            float height = Mathf.Clamp(
+                Verse.UI.screenHeight * 0.66f,
+                Verse.UI.screenHeight * 0.60f,
+                Verse.UI.screenHeight * 0.75f);
+            width = Mathf.Max(800f, width);
+            height = Mathf.Max(600f, height);
             return new Vector2(width, height);
         }
     }
