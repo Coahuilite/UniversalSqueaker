@@ -8,20 +8,33 @@ namespace UniversalSqueaker.UI;
 /// <summary>One Xenotype domain row in the Xenotype layer. Stateless; emits SelectDomain when clicked.</summary>
 public static class XenotypeLayerRow
 {
-    public static void Draw(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit)
+    public static void Draw(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit, ITextMetrics? metrics = null)
     {
+        ITextMetrics effectiveMetrics = metrics ?? VerseTextMetrics.Instance;
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, domain, selected, emit),
+            () => DrawCore(rect, domain, selected, emit, effectiveMetrics),
             fallback => DrawVanilla(fallback, domain, emit),
             "us/xenotype-layer-row",
             "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit)
+    private static void DrawCore(Rect rect, VoicePackDomainView domain, bool selected, Action<UiCommand> emit, ITextMetrics metrics)
     {
         bool hovered = Mouse.IsOver(rect);
+        bool dimmed = domain.CandidateCount <= 0;
         UsSurface.DrawRowSurface(rect, hovered, selected, false);
+        if (dimmed)
+        {
+            // Dim the whole row so "no packs installed" reads as unavailable-content, not unsupported.
+            Widgets.DrawBoxSolid(rect, new Color(0f, 0f, 0f, 0.35f));
+        }
+
+        float textWidth = Math.Max(1f, rect.width - 24f);
+        bool showDetail = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable;
+        string detail = VoicePacksLayout.LayerDetailText(domain.EnabledCount, domain.CandidateCount, StateSuffix(domain.State));
+        float labelHeight = Math.Max(20f, metrics.CalcHeight(domain.DisplayName, textWidth));
+        float detailHeight = showDetail ? Math.Max(16f, metrics.CalcHeight(detail, textWidth)) : 0f;
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
@@ -29,15 +42,24 @@ public static class XenotypeLayerRow
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleLeft;
         GUI.color = selected ? UsVisualTokens.TextOnGold : UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + 12f, rect.y, Math.Max(1f, rect.width - 24f), 25f), domain.DisplayName);
-        if (VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable)
+        if (dimmed) GUI.color = new Color(GUI.color.r, GUI.color.g, GUI.color.b, 0.55f);
+        Rect labelRect = new(rect.x + 12f, rect.y + 4f, textWidth, labelHeight);
+        Widgets.Label(labelRect, domain.DisplayName);
+
+        if (showDetail)
         {
+            Rect detailRect = new(
+                rect.x + 12f,
+                rect.y + 4f + labelHeight + 2f,
+                textWidth,
+                detailHeight);
             Text.Font = GameFont.Tiny;
-            Text.Anchor = TextAnchor.MiddleRight;
+            Text.Anchor = TextAnchor.MiddleLeft;
             GUI.color = UsVisualTokens.TextSecondary;
-            string detail = domain.EnabledCount + " / " + domain.CandidateCount + " enabled" + StateSuffix(domain.State);
-            Widgets.Label(new Rect(rect.x + 12f, rect.y + 25f, Math.Max(1f, rect.width - 24f), 18f), detail);
+            if (dimmed) GUI.color = new Color(GUI.color.r, GUI.color.g, GUI.color.b, 0.55f);
+            Widgets.Label(detailRect, detail);
         }
+
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;

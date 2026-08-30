@@ -33,6 +33,10 @@ public sealed class VoicePacksViewState
     public string SaveStatus { get; }
     public bool IsDirty { get; }
     public IReadOnlyList<string> Authors { get; }
+    public string RaceFilter { get; }
+    public string XenotypeFilter { get; }
+    public IReadOnlyList<FilterOptionView> RaceFilterOptions { get; }
+    public IReadOnlyList<FilterOptionView> XenotypeFilterOptions { get; }
 
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
@@ -61,7 +65,11 @@ public sealed class VoicePacksViewState
         string buildIdentity,
         string saveStatus,
         bool isDirty,
-        IReadOnlyList<string> authors)
+        IReadOnlyList<string> authors,
+        string raceFilter,
+        string xenotypeFilter,
+        IReadOnlyList<FilterOptionView> raceFilterOptions,
+        IReadOnlyList<FilterOptionView> xenotypeFilterOptions)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -90,6 +98,23 @@ public sealed class VoicePacksViewState
         SaveStatus = saveStatus ?? "";
         IsDirty = isDirty;
         Authors = authors ?? Array.Empty<string>();
+        RaceFilter = raceFilter ?? "";
+        XenotypeFilter = xenotypeFilter ?? "";
+        RaceFilterOptions = raceFilterOptions ?? Array.Empty<FilterOptionView>();
+        XenotypeFilterOptions = xenotypeFilterOptions ?? Array.Empty<FilterOptionView>();
+    }
+}
+
+/// <summary>Simple display/value pair used by the pack-page filter dropdowns.</summary>
+public readonly struct FilterOptionView
+{
+    public readonly string DisplayName;
+    public readonly string Value;
+
+    public FilterOptionView(string displayName, string value)
+    {
+        DisplayName = displayName ?? value ?? "";
+        Value = value ?? "";
     }
 }
 
@@ -172,6 +197,8 @@ public readonly struct ActionScopeRowView
 {
     public readonly string ActionKey;
     public readonly string DisplayName;
+    /// <summary>M2 分组：自主行为（Autonomous）或可操作行为（Operable/Command）。</summary>
+    public readonly ActionScopeGroup Group;
     /// <summary>本层记录的作用域（HasOwnScope=false 时无意义）。</summary>
     public readonly SqueakActionScope Scope;
     public readonly SqueakAction Action;
@@ -180,10 +207,11 @@ public readonly struct ActionScopeRowView
     /// <summary>S5 分层：有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins）。</summary>
     public readonly SqueakActionScope EffectiveScope;
 
-    public ActionScopeRowView(string actionKey, string displayName, SqueakActionScope scope, SqueakAction action, bool hasOwnScope = false, SqueakActionScope effectiveScope = default)
+    public ActionScopeRowView(string actionKey, string displayName, ActionScopeGroup group, SqueakActionScope scope, SqueakAction action, bool hasOwnScope = false, SqueakActionScope effectiveScope = default)
     {
         ActionKey = actionKey ?? "";
         DisplayName = displayName ?? actionKey ?? "";
+        Group = group;
         Scope = scope;
         Action = action;
         HasOwnScope = hasOwnScope;

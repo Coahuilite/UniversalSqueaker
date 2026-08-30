@@ -79,6 +79,25 @@ public static class VoicePacksFilters
         return true;
     }
 
+    /// <summary>True when a race filter (empty = All) accepts the given race.</summary>
+    public static bool RaceFilterMatches(string? filter, string raceDefName)
+    {
+        return string.IsNullOrEmpty(filter)
+            || string.Equals(filter, raceDefName, StringComparison.Ordinal);
+    }
+
+    /// <summary>True when a (race,xenotype) domain passes both parallel race and xenotype filters.</summary>
+    public static bool XenotypeFilterMatches(
+        string? raceFilter,
+        string? xenotypeFilter,
+        string domainRaceDefName,
+        string domainXenotypeDefName)
+    {
+        return RaceFilterMatches(raceFilter, domainRaceDefName)
+            && (string.IsNullOrEmpty(xenotypeFilter)
+                || string.Equals(xenotypeFilter, domainXenotypeDefName, StringComparison.Ordinal));
+    }
+
     private static bool ContainsIgnoreCase(string? value, string search)
     {
         if (value == null || value.Length == 0)

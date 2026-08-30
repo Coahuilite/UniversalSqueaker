@@ -21,6 +21,8 @@ internal static class InteractionTests
         VerifyHoverWithoutClickDoesNotFire();
         VerifyCleanup();
         VerifyScrollTransform();
+        VerifyToPageSpace();
+        VerifyTryGetCurrentScrollView();
         VerifyLayoutEngineIntegration();
         return failures;
     }
@@ -160,6 +162,45 @@ internal static class InteractionTests
         UiInteract.ProcessEvents();
 
         Check(clicked == 1, "scroll transform maps content-local rect to page-local hit test");
+        UiInteract.EndFrame();
+    }
+
+    private static void VerifyToPageSpace()
+    {
+        ResetDebug();
+        UiInteract.BeginFrame();
+        UiInteract.PushScrollView(new Rect(100f, 50f, 200f, 300f), new Vector2(10f, 20f));
+
+        Rect page = UiInteract.ToPageSpace(new Rect(0f, 0f, 50f, 50f));
+        Check(Math.Abs(page.x - 90f) < 0.001f && Math.Abs(page.y - 30f) < 0.001f,
+            "ToPageSpace applies outRect offset and scroll delta while a scroll transform is active");
+
+        UiInteract.PopScrollView();
+        UiInteract.EndFrame();
+    }
+
+    private static void VerifyTryGetCurrentScrollView()
+    {
+        ResetDebug();
+        UiInteract.BeginFrame();
+
+        bool before = UiInteract.TryGetCurrentScrollView(out Rect beforeRect, out Vector2 beforeScroll);
+        Check(!before, "TryGetCurrentScrollView returns false outside a scroll view");
+
+        var outRect = new Rect(100f, 50f, 200f, 300f);
+        var scroll = new Vector2(10f, 20f);
+        UiInteract.PushScrollView(outRect, scroll);
+        bool inside = UiInteract.TryGetCurrentScrollView(out Rect actualRect, out Vector2 actualScroll);
+        Check(inside
+                && Math.Abs(actualRect.x - outRect.x) < 0.001f
+                && Math.Abs(actualRect.y - outRect.y) < 0.001f
+                && Math.Abs(actualRect.width - outRect.width) < 0.001f
+                && Math.Abs(actualRect.height - outRect.height) < 0.001f
+                && Math.Abs(actualScroll.x - scroll.x) < 0.001f
+                && Math.Abs(actualScroll.y - scroll.y) < 0.001f,
+            "TryGetCurrentScrollView returns the active outRect and scroll position");
+
+        UiInteract.PopScrollView();
         UiInteract.EndFrame();
     }
 

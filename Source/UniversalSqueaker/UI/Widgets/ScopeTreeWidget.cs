@@ -27,20 +27,22 @@ public sealed class ScopeTreeWidget : IWidget
 
     private const string Title = "Tuning editor";
     private const string ScopeHeaderText = "Action Scope";
+    private const string AutonomousHeaderText = "Autonomous";
+    private const string OperableHeaderText = "Operable / Command";
     private const string MoodHeaderText = "Mood Tuning";
 
-    private const float LayerRowHeight = 28f;
-    private const float DomainRowHeight = 24f;
-    private const float RowHeight = 24f;
-    private const float MoodRowHeight = 30f;
+    private const float LayerRowHeight = 30f;
+    private const float DomainRowHeight = 28f;
+    private const float RowHeight = 28f;
+    private const float MoodRowHeight = 32f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
     private const float LeftPadding = 10f;
     private const float ButtonWidth = 96f;
-    private const float ButtonHeight = 20f;
+    private const float ButtonHeight = 24f;
     private const float MoodLabelWidth = 64f;
-    private const float MoodClearWidth = 46f;
+    private const float MoodClearWidth = 52f;
     private const float MoodGap = 6f;
     private const string ValueSeparator = "\u0001";
 
@@ -60,20 +62,41 @@ public sealed class ScopeTreeWidget : IWidget
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
         int layer = ReadLayer(ctx);
-        int scopeCount = ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
-            && scopesValue is IReadOnlyList<ActionScopeRowView> rows
-            ? rows.Count : 0;
-        int moodCount = ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue)
-            && moodsValue is IReadOnlyList<MoodTuningRowView> moodRows
-            ? moodRows.Count : 0;
+        ctx.TryGetViewValue("ActionScopes", out object? scopesValue);
+        IReadOnlyList<ActionScopeRowView> scopeRows = scopesValue as IReadOnlyList<ActionScopeRowView>
+            ?? Array.Empty<ActionScopeRowView>();
+        int scopeCount = scopeRows.Count;
+        ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue);
+        IReadOnlyList<MoodTuningRowView> moodRows = moodsValue as IReadOnlyList<MoodTuningRowView>
+            ?? Array.Empty<MoodTuningRowView>();
+        int moodCount = moodRows.Count;
 
         float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+
+        float autonomousRowsHeight = 0f;
+        float operableRowsHeight = 0f;
+        foreach (ActionScopeRowView row in scopeRows)
+        {
+            float rowHeight = ScopeRowHeightFor(width, row.DisplayName, smallMetrics) + RowGap;
+            if (row.Group == ActionScopeGroup.Operable) operableRowsHeight += rowHeight;
+            else autonomousRowsHeight += rowHeight;
+        }
 
         float bodyHeight = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
         if (layer > 0) bodyHeight += DomainRowHeight + VoicePacksLayout.Gap;
-        bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
-            + scopeCount * (RowHeight + RowGap);
+        bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap;
+        if (autonomousRowsHeight > 0f)
+        {
+            bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(AutonomousHeaderText, width, smallMetrics) + VoicePacksLayout.Gap
+                + autonomousRowsHeight;
+        }
+        if (operableRowsHeight > 0f)
+        {
+            bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(OperableHeaderText, width, smallMetrics) + VoicePacksLayout.Gap
+                + operableRowsHeight;
+        }
         if (scopeCount > 0)
         {
             bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
@@ -125,9 +148,11 @@ public sealed class ScopeTreeWidget : IWidget
         float y = rect.y + TopPadding;
 
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
         float layerRowHeight = LayerRowHeightFor(innerWidth);
+        float layerRowY = y;
         DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, businessEmit);
         y += layerRowHeight + VoicePacksLayout.Gap;
 
@@ -141,23 +166,68 @@ public sealed class ScopeTreeWidget : IWidget
         UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, scopeHeader), ScopeHeaderText);
         y += scopeHeader + VoicePacksLayout.Gap;
 
-        foreach (ActionScopeRowView row in rows)
+        bool anyScopeDrawn = false;
+        for (int group = 0; group < 2; group++)
         {
-            DrawScopeRow(new Rect(x, y, innerWidth, RowHeight), row, race, xeno, ctx, emit);
-            y += RowHeight + RowGap;
+            ActionScopeGroup targetGroup = group == 0 ? ActionScopeGroup.Autonomous : ActionScopeGroup.Operable;
+            bool hasGroupRows = false;
+            foreach (ActionScopeRowView row in rows)
+            {
+                if (row.Group != targetGroup) continue;
+                hasGroupRows = true;
+                break;
+            }
+
+            if (!hasGroupRows) continue;
+
+            string groupHeaderText = targetGroup == ActionScopeGroup.Operable ? OperableHeaderText : AutonomousHeaderText;
+            float groupHeaderHeight = VoicePacksLayout.SectionHeaderHeightFor(groupHeaderText, innerWidth, smallMetrics);
+            UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, groupHeaderHeight), groupHeaderText);
+            y += groupHeaderHeight + VoicePacksLayout.Gap;
+
+            foreach (ActionScopeRowView row in rows)
+            {
+                if (row.Group != targetGroup) continue;
+                float scopeRowHeight = ScopeRowHeightFor(innerWidth, row.DisplayName, smallMetrics);
+                DrawScopeRow(new Rect(x, y, innerWidth, scopeRowHeight), row, race, xeno, ctx, emit);
+                y += scopeRowHeight + RowGap;
+            }
+
+            anyScopeDrawn = true;
         }
 
-        if (rows.Count == 0) return;
-
-        float moodHeader = VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, innerWidth, metrics);
-        UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, moodHeader), MoodHeaderText);
-        y += moodHeader + VoicePacksLayout.Gap;
-
-        foreach (MoodTuningRowView mood in moodRows)
+        if (anyScopeDrawn)
         {
-            DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, ctx, emit);
-            y += MoodRowHeight + RowGap;
+            float moodHeader = VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, innerWidth, metrics);
+            UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, moodHeader), MoodHeaderText);
+            y += moodHeader + VoicePacksLayout.Gap;
+
+            foreach (MoodTuningRowView mood in moodRows)
+            {
+                DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, ctx, emit);
+                y += MoodRowHeight + RowGap;
+            }
         }
+
+        DrawStickyLayerRowIfNeeded(new Rect(x, layerRowY, innerWidth, layerRowHeight), layer, layerRowHeight, businessEmit);
+    }
+
+    /// <summary>
+    /// Draws a pinned copy of the layer row at the viewport top once the editor has been scrolled
+    /// past its normal layer row. This keeps the Global/Race/Xenotype selector visible while the
+    /// Tuning page scrolls. Drawing happens after normal content so the opaque row overlays the
+    /// scrolled content, and its buttons are registered after the normal row so they win hits.
+    /// </summary>
+    private static void DrawStickyLayerRowIfNeeded(Rect layerRowRect, int layer, float layerRowHeight, Action<UiCommand> emit)
+    {
+        if (!UiInteract.TryGetCurrentScrollView(out Rect outRect, out Vector2 scroll)) return;
+        float layerRowPageY = outRect.y + layerRowRect.y - scroll.y;
+        if (layerRowPageY >= outRect.y) return;
+        if (layerRowPageY + layerRowHeight <= outRect.y) return;
+
+        float pinnedY = scroll.y;
+        Rect pinnedRect = new(layerRowRect.x, pinnedY, layerRowRect.width, layerRowHeight);
+        DrawLayerRow(pinnedRect, layer, emit);
     }
 
     private static int ReadLayer(WidgetContext ctx)
@@ -195,7 +265,7 @@ public sealed class ScopeTreeWidget : IWidget
             {
                 Rect buttonRect = new(rect.x + LeftPadding, y, buttonWidth, ButtonHeight);
                 bool selected = layer == i;
-                DrawSegment(buttonRect, LayerNames[i], selected);
+                SelectionButton.Draw(buttonRect, LayerNames[i], selected, font: UiFont.Tiny);
                 int captured = i;
                 UiInteract.Button(buttonRect, UiLayer.Content,
                     () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
@@ -209,7 +279,7 @@ public sealed class ScopeTreeWidget : IWidget
         {
             Rect buttonRect = new(buttonX, rect.y + (rect.height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
             bool selected = layer == i;
-            DrawSegment(buttonRect, LayerNames[i], selected);
+            SelectionButton.Draw(buttonRect, LayerNames[i], selected, font: UiFont.Tiny);
             int captured = i;
             UiInteract.Button(buttonRect, UiLayer.Content,
                 () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
@@ -222,6 +292,17 @@ public sealed class ScopeTreeWidget : IWidget
         float available = width - LeftPadding * 2f - 120f - RowGap * 2f;
         float buttonWidth = (available - RowGap * 2f) / 3f;
         return buttonWidth < 56f ? 22f + ButtonHeight * 3f + RowGap * 2f : LayerRowHeight;
+    }
+
+    private static float ScopeRowHeightFor(float rowWidth, string displayName, ITextMetrics metrics)
+    {
+        return VoicePacksLayout.MeasuredRowHeight(displayName, ScopeLabelWidth(rowWidth), metrics, RowHeight);
+    }
+
+    private static float ScopeLabelWidth(float rowWidth)
+    {
+        float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rowWidth - 120f));
+        return Math.Max(1f, rowWidth - LeftPadding - scopeButtonWidth - 90f);
     }
 
     private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
@@ -282,7 +363,7 @@ public sealed class ScopeTreeWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - scopeButtonWidth - 90f), ButtonHeight), row.DisplayName);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - scopeButtonWidth - 90f), Math.Max(ButtonHeight, rect.height - 6f)), row.DisplayName);
 
         LayoutTier tier = VoicePacksLayout.ForWidth(rect.width);
         if (tier == LayoutTier.Comfortable && (!row.HasOwnScope || row.Scope != row.EffectiveScope))
@@ -375,9 +456,11 @@ public sealed class ScopeTreeWidget : IWidget
         GUI.color = oldColor;
 
         float clearX = rect.xMax - MoodClearWidth - 8f;
+        Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
         float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
-        // Each factor uses a compact stepper-slider; if it cannot fit, show a narrow-screen hint.
+        // Each factor uses a compact stepper-slider; if it cannot fit, show a narrow-screen hint
+        // but keep the Auto clear button visible and clickable (it must never disappear on narrow widths).
         if (groupWidth < 96f)
         {
             Text.Font = GameFont.Tiny;
@@ -385,6 +468,7 @@ public sealed class ScopeTreeWidget : IWidget
             Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 8f, rect.width - LeftPadding - 8f, 14f), "Window too narrow for mood controls");
             Text.Font = GameFont.Small;
             GUI.color = UsVisualTokens.TextPrimary;
+            DrawAutoClearButton(clearRect, row, race, xeno, kitEmit);
             return;
         }
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
@@ -397,17 +481,13 @@ public sealed class ScopeTreeWidget : IWidget
         factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "V", volume, 0.1f, 2f, 0.05f, row, "volume", race, xeno, ctx, kitEmit);
         DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, 0.05f, row, "jitter", race, xeno, ctx, kitEmit);
 
-        bool clearHover = Mouse.IsOver(new Rect(clearX, rect.y, MoodClearWidth, rect.height));
-        Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
-        UsSurface.DrawSurface(clearRect, clearHover ? UsSurface.SurfaceKind.Danger : UsSurface.SurfaceKind.Selected);
-        UsSurface.DrawBorder(clearRect, UsVisualTokens.AccentGold);
-        Rect labelRect = new(clearX, rect.y + 7f, MoodClearWidth, 16f);
-        Text.Font = GameFont.Tiny;
-        GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(labelRect, "Auto");
-        Text.Font = oldFont;
-        GUI.color = oldColor;
-        UiInteract.Button(new Rect(clearX, rect.y, MoodClearWidth, rect.height), UiLayer.Content,
+        DrawAutoClearButton(clearRect, row, race, xeno, kitEmit);
+    }
+
+    private static void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, string race, string xeno, Action<KitUiCommand> kitEmit)
+    {
+        SelectionButton.Draw(clearRect, "Auto", selected: false, danger: true, font: UiFont.Tiny);
+        UiInteract.Button(clearRect, UiLayer.Content,
             () =>
             {
                 Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
@@ -444,8 +524,8 @@ public sealed class ScopeTreeWidget : IWidget
             ["Format"] = "0.###",
             ["EmitName"] = "Mood",
             ["Height"] = rect.height.ToString(CultureInfo.InvariantCulture),
-            ["ButtonWidth"] = "16",
-            ["FieldWidth"] = "36"
+            ["ButtonWidth"] = "22",
+            ["FieldWidth"] = "40"
         };
         var spec = new UiElementSpec(id, StepperSliderWidget.Kind, attributes);
         var view = new Dictionary<string, object?> { ["Value"] = value };
@@ -466,18 +546,6 @@ public sealed class ScopeTreeWidget : IWidget
         string arg = string.Format(CultureInfo.InvariantCulture, "{0}|{1}|{2}", row.Mood, factor, value.ToString("0.###", CultureInfo.InvariantCulture));
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
         businessEmit(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: arg));
-    }
-
-    private static void DrawSegment(Rect rect, string label, bool off)
-    {
-        bool selectedHover = Mouse.IsOver(rect);
-        UsSurface.DrawSurface(rect, off
-            ? (selectedHover ? UsSurface.SurfaceKind.Danger : UsSurface.SurfaceKind.Selected)
-            : (selectedHover ? UsSurface.SurfaceKind.Hover : UsSurface.SurfaceKind.Raised));
-        UsSurface.DrawBorder(rect, off ? UsVisualTokens.Danger : UsVisualTokens.AccentGold);
-        GUI.color = off ? UsVisualTokens.TextSecondary : UsVisualTokens.AccentGold;
-        Text.Font = GameFont.Tiny;
-        Widgets.Label(new Rect(rect.x, rect.y + 3f, rect.width, 16f), label);
     }
 
     private static string ShortName(SqueakActionScope scope)

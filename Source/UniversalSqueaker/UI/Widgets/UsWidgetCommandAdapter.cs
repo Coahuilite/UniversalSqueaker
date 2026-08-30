@@ -35,6 +35,8 @@ internal static class UsWidgetCommandAdapter
                 UiCommandKind.ScrollToSection => "ScrollToSection",
                 UiCommandKind.SetDomainFilter => "SetDomainFilter",
                 UiCommandKind.SetPackFilter => "SetPackFilter",
+                UiCommandKind.SetRaceFilter => "SetRaceFilter",
+                UiCommandKind.SetXenotypeFilter => "SetXenotypeFilter",
                 _ => ""
             };
 

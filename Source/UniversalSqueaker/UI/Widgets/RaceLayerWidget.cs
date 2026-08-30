@@ -10,7 +10,7 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// US composite widget: draws the "Race Layer" section header plus every race row.
 /// Dynamic list content lives inside this widget because the Phase A engine only supports flat,
-/// static roots.
+/// static roots. Row heights are measured from the display/detail text so wrapped names never clip.
 /// </summary>
 public sealed class RaceLayerWidget : IWidget
 {
@@ -40,7 +40,15 @@ public sealed class RaceLayerWidget : IWidget
                 return 0f;
             }
 
-            float bodyHeight = races.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
+            float innerWidth = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+            float bodyHeight = 0f;
+            foreach (RaceLayerRowView race in races)
+            {
+                string detail = race.EnabledCount + " / " + race.CandidateCount + " enabled" + StateSuffix(race.State);
+                bodyHeight += VoicePacksLayout.LayerRowHeightFor(race.DisplayName, detail, innerWidth, metrics) + VoicePacksLayout.Gap;
+            }
+
             return UiGuard.MeasureOrFallback(
                 () => UsCard.Measure(bodyHeight, ctx),
                 UsCard.Measure(bodyHeight, ctx),
@@ -85,6 +93,7 @@ public sealed class RaceLayerWidget : IWidget
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
+        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
 
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         foreach (RaceLayerRowView race in races)
@@ -94,13 +103,27 @@ public sealed class RaceLayerWidget : IWidget
                 && domain.Scope == SqueakVoicePackScope.Race
                 && string.Equals(domain.RaceDefName, race.RaceDefName, StringComparison.Ordinal);
 
+            string detail = race.EnabledCount + " / " + race.CandidateCount + " enabled" + StateSuffix(race.State);
+            float rowHeight = VoicePacksLayout.LayerRowHeightFor(race.DisplayName, detail, innerWidth, metrics);
             RaceLayerRow.Draw(
-                new Rect(x, y, innerWidth, VoicePacksLayout.RaceLayerRowHeight),
+                new Rect(x, y, innerWidth, rowHeight),
                 race,
                 selected,
-                businessEmit);
+                businessEmit,
+                metrics);
 
-            y += VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap;
+            y += rowHeight + VoicePacksLayout.Gap;
         }
+    }
+
+    private static string StateSuffix(SqueakVoicePackDomainState state)
+    {
+        return state switch
+        {
+            SqueakVoicePackDomainState.Orphan => " · orphan",
+            SqueakVoicePackDomainState.TargetUnavailable => " · target unavailable",
+            SqueakVoicePackDomainState.Dormant => " · dormant",
+            _ => "",
+        };
     }
 }

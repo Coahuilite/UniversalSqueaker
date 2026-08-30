@@ -10,6 +10,7 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// US composite widget: draws the "Xenotype Layer" section header plus every Xenotype domain row.
 /// Hides itself (returns 0 height / no draw) when the view model has no Xenotype domains.
+/// Row heights are measured from the display/detail text so wrapped names never clip.
 /// </summary>
 public sealed class XenotypeLayerWidget : IWidget
 {
@@ -39,7 +40,15 @@ public sealed class XenotypeLayerWidget : IWidget
                 return 0f;
             }
 
-            float bodyHeight = xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
+            float innerWidth = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+            float bodyHeight = 0f;
+            foreach (VoicePackDomainView domain in xenotypes)
+            {
+                string detail = VoicePacksLayout.LayerDetailText(domain.EnabledCount, domain.CandidateCount, StateSuffix(domain.State));
+                bodyHeight += VoicePacksLayout.LayerRowHeightFor(domain.DisplayName, detail, innerWidth, metrics) + VoicePacksLayout.Gap;
+            }
+
             return UiGuard.MeasureOrFallback(
                 () => UsCard.Measure(bodyHeight, ctx),
                 UsCard.Measure(bodyHeight, ctx),
@@ -84,6 +93,7 @@ public sealed class XenotypeLayerWidget : IWidget
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
+        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
 
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         foreach (VoicePackDomainView domain in xenotypes)
@@ -94,13 +104,27 @@ public sealed class XenotypeLayerWidget : IWidget
                 && string.Equals(selectedDomain.RaceDefName, domain.RaceDefName, StringComparison.Ordinal)
                 && string.Equals(selectedDomain.TargetDefName, domain.TargetDefName, StringComparison.Ordinal);
 
+            string detail = VoicePacksLayout.LayerDetailText(domain.EnabledCount, domain.CandidateCount, StateSuffix(domain.State));
+            float rowHeight = VoicePacksLayout.LayerRowHeightFor(domain.DisplayName, detail, innerWidth, metrics);
             XenotypeLayerRow.Draw(
-                new Rect(x, y, innerWidth, VoicePacksLayout.RaceLayerRowHeight),
+                new Rect(x, y, innerWidth, rowHeight),
                 domain,
                 selected,
-                businessEmit);
+                businessEmit,
+                metrics);
 
-            y += VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap;
+            y += rowHeight + VoicePacksLayout.Gap;
         }
+    }
+
+    private static string StateSuffix(SqueakVoicePackDomainState state)
+    {
+        return state switch
+        {
+            SqueakVoicePackDomainState.Orphan => " · orphan",
+            SqueakVoicePackDomainState.TargetUnavailable => " · target unavailable",
+            SqueakVoicePackDomainState.Dormant => " · dormant",
+            _ => "",
+        };
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FerriteLib.UiKit;
+using FerriteLib.UiKit.Widgets;
 using UnityEngine;
 using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
@@ -19,7 +20,6 @@ public sealed class FilterBarWidget : IWidget
     private const float SingleRowHeight = 24f;
     private const float TwoRowHeight = 48f;
     private const float Gap = 4f;
-    private const float NarrowWidth = 320f;
 
     private UiElementSpec? _spec;
 
@@ -33,7 +33,8 @@ public sealed class FilterBarWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        float bodyHeight = ctx.ViewWidth < NarrowWidth ? TwoRowHeight : SingleRowHeight;
+        // Packs filter area: row 1 = domain chips; row 2 = Race / Xenotype / Author dropdowns.
+        float bodyHeight = TwoRowHeight;
         return UiGuard.MeasureOrFallback(
             () => UsCard.Measure(bodyHeight, ctx),
             UsCard.Measure(bodyHeight, ctx),
@@ -63,29 +64,26 @@ public sealed class FilterBarWidget : IWidget
         UiDomainFilter domainFilter = ReadDomainFilter(ctx);
         UiPackFilter packFilter = ReadPackFilter(ctx);
         IReadOnlyList<string> authors = ReadAuthors(ctx);
+        string raceFilter = ReadString(ctx, "RaceFilter");
+        string xenotypeFilter = ReadString(ctx, "XenotypeFilter");
+        IReadOnlyList<FilterOptionView> raceOptions = ReadFilterOptions(ctx, "RaceFilterOptions");
+        IReadOnlyList<FilterOptionView> xenotypeOptions = ReadFilterOptions(ctx, "XenotypeFilterOptions");
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        Rect rowRect = new(rect.x, rect.y, rect.width, SingleRowHeight);
-        if (rect.width < NarrowWidth)
-        {
-            DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: false);
-            Rect authorRect = new(rowRect.x, rowRect.y + SingleRowHeight, rowRect.width, SingleRowHeight);
-            DrawAuthorButton(authorRect, authors, packFilter.Author, businessEmit);
-            return;
-        }
+        Rect domainRow = new(rect.x, rect.y, rect.width, SingleRowHeight);
+        DrawDomainRow(domainRow, domainFilter, packFilter, businessEmit);
 
-        DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: true);
+        Rect filterRow = new(rect.x, rect.y + SingleRowHeight, rect.width, SingleRowHeight);
+        DrawFilterDropdownRow(filterRow, raceFilter, xenotypeFilter, raceOptions, xenotypeOptions, authors, packFilter.Author, ctx, businessEmit);
     }
 
-    private static void DrawRow(
+    private static void DrawDomainRow(
         Rect rect,
         UiDomainFilter domainFilter,
         UiPackFilter packFilter,
-        IReadOnlyList<string> authors,
-        Action<UiCommand> emit,
-        bool includeAuthor)
+        Action<UiCommand> emit)
     {
-        int count = includeAuthor ? 5 : 4;
+        const int count = 4;
         float buttonWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
         float x = rect.x;
 
@@ -118,36 +116,134 @@ public sealed class FilterBarWidget : IWidget
             "Orphan only",
             domainFilter.OrphanOnly,
             () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: !domainFilter.OrphanOnly)));
-        x += buttonWidth + Gap;
-
-        if (includeAuthor)
-        {
-            DrawAuthorButton(new Rect(x, rect.y, buttonWidth, rect.height), authors, packFilter.Author, emit);
-        }
     }
 
-    private static void DrawAuthorButton(Rect rect, IReadOnlyList<string> authors, string currentAuthor, Action<UiCommand> emit)
+    private static void DrawFilterDropdownRow(
+        Rect rect,
+        string raceFilter,
+        string xenotypeFilter,
+        IReadOnlyList<FilterOptionView> raceOptions,
+        IReadOnlyList<FilterOptionView> xenotypeOptions,
+        IReadOnlyList<string> authors,
+        string currentAuthor,
+        WidgetContext ctx,
+        Action<UiCommand> emit)
     {
-        string label = "Author: " + (string.IsNullOrEmpty(currentAuthor) ? "All" : currentAuthor);
-        bool hasAuthors = authors != null && authors.Count > 0;
-        UsSurface.DrawSegment(rect, label, !string.IsNullOrEmpty(currentAuthor));
+        const int count = 3;
+        float dropdownWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
+        float x = rect.x;
 
-        if (authors != null && hasAuthors)
+        DrawFilterDropdown(
+            new Rect(x, rect.y, dropdownWidth, rect.height),
+            "race-filter",
+            "Race",
+            raceFilter,
+            ToDropdownOptions(raceOptions),
+            ctx,
+            value => emit(new UiCommand(UiCommandKind.SetRaceFilter, arg: value)));
+        x += dropdownWidth + Gap;
+
+        DrawFilterDropdown(
+            new Rect(x, rect.y, dropdownWidth, rect.height),
+            "xenotype-filter",
+            "Xenotype",
+            xenotypeFilter,
+            ToDropdownOptions(xenotypeOptions),
+            ctx,
+            value => emit(new UiCommand(UiCommandKind.SetXenotypeFilter, arg: value)));
+        x += dropdownWidth + Gap;
+
+        DrawAuthorDropdown(
+            new Rect(x, rect.y, dropdownWidth, rect.height),
+            currentAuthor,
+            authors,
+            ctx,
+            emit);
+    }
+
+    private static void DrawFilterDropdown(
+        Rect rect,
+        string idSuffix,
+        string label,
+        string current,
+        IReadOnlyList<KeyValuePair<string, string>> options,
+        WidgetContext ctx,
+        Action<string> onSelected)
+    {
+        if (options.Count == 0) return;
+
+        string id = "filter-bar-" + idSuffix;
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            UiInteract.Button(rect, UiLayer.Content, () =>
+            ["Label"] = label,
+            ["Bind"] = "Current",
+            ["OptionsBind"] = "Options",
+            ["EmitName"] = "Select",
+            ["Height"] = rect.height.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+        var spec = new UiElementSpec(id, DropdownWidget.Kind, attributes);
+        var view = new Dictionary<string, object?>
+        {
+            ["Current"] = current,
+            ["Options"] = options
+        };
+        var dropdownCtx = new WidgetContext(ctx.Source, view, ctx.Metrics, ctx.State);
+        var dropdown = new DropdownWidget();
+        dropdown.Configure(spec);
+        dropdown.Draw(rect, dropdownCtx, cmd =>
+        {
+            if (cmd.Name == "Select" && cmd.Payload is string selected)
+                onSelected(selected);
+        });
+    }
+
+    private static void DrawAuthorDropdown(
+        Rect rect,
+        string currentAuthor,
+        IReadOnlyList<string> authors,
+        WidgetContext ctx,
+        Action<UiCommand> emit)
+    {
+        var options = new List<KeyValuePair<string, string>>
+        {
+            new KeyValuePair<string, string>("All", "")
+        };
+        if (authors != null)
+        {
+            foreach (string author in authors)
             {
-                string next = NextAuthor(authors, currentAuthor);
-                emit(new UiCommand(
-                    UiCommandKind.SetPackFilter,
-                    arg: next.Length == 0 ? "Author|" : "Author|" + next,
-                    flag: next.Length > 0));
-            });
+                if (string.IsNullOrEmpty(author)) continue;
+                options.Add(new KeyValuePair<string, string>(author, author));
+            }
         }
+
+        DrawFilterDropdown(rect, "author", "Author", currentAuthor ?? "", options, ctx, value =>
+        {
+            emit(new UiCommand(
+                UiCommandKind.SetPackFilter,
+                arg: value.Length == 0 ? "Author|" : "Author|" + value,
+                flag: value.Length > 0));
+        });
+    }
+
+    private static List<KeyValuePair<string, string>> ToDropdownOptions(IReadOnlyList<FilterOptionView> options)
+    {
+        var result = new List<KeyValuePair<string, string>>
+        {
+            new KeyValuePair<string, string>("All", "")
+        };
+        if (options == null) return result;
+        foreach (FilterOptionView option in options)
+        {
+            result.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+        }
+
+        return result;
     }
 
     private static void DrawSegmentButton(Rect rect, string label, bool selected, Action onClick)
     {
-        UsSurface.DrawSegment(rect, label, selected);
+        SelectionButton.Draw(rect, label, selected, font: UiFont.Tiny);
         UiInteract.Button(rect, UiLayer.Content, () => onClick?.Invoke());
     }
 
@@ -232,5 +328,17 @@ public sealed class FilterBarWidget : IWidget
         return ctx.TryGetViewValue("Authors", out object? value) && value is IReadOnlyList<string> authors
             ? authors
             : Array.Empty<string>();
+    }
+
+    private static string ReadString(WidgetContext ctx, string key)
+    {
+        return ctx.TryGetViewValue(key, out object? value) && value is string text ? text : "";
+    }
+
+    private static IReadOnlyList<FilterOptionView> ReadFilterOptions(WidgetContext ctx, string key)
+    {
+        return ctx.TryGetViewValue(key, out object? value) && value is IReadOnlyList<FilterOptionView> options
+            ? options
+            : Array.Empty<FilterOptionView>();
     }
 }

@@ -11,16 +11,14 @@ internal static class ModeCardRenderer
     public static void Draw(Rect rect, bool selected, string title, string description, Action? onClick)
     {
         bool hovered = Mouse.IsOver(rect);
-        Color fill = selected ? Palette.Selected : hovered ? Palette.Hover : Palette.Panel;
-        VerseWidgets.DrawBoxSolid(rect, fill);
-        SurfaceFrame.DrawBorder(rect, selected ? Palette.BorderStrong : Palette.Border);
-
-        if (selected)
-        {
-            VerseWidgets.DrawBoxSolid(
-                new Rect(rect.x + 1f, rect.yMax - 4f, Math.Max(1f, rect.width - 2f), 3f),
-                Palette.AccentGold);
-        }
+        SelectionButton.DrawSurface(
+            rect,
+            selected,
+            danger: false,
+            enabled: true,
+            accent: SelectionButton.SelectionAccent.Bottom,
+            hovered: hovered,
+            baseColor: Palette.Panel);
 
         UiKitGui.Label(
             new Rect(rect.x + 10f, rect.y + 7f, Math.Max(1f, rect.width - 20f), 24f),

@@ -11,14 +11,13 @@ namespace UniversalSqueaker.UI;
 /// Draws five stable rows — the Easter-egg toggle, the distance preset cycle, and the three
 /// runtime scaling toggles — reading every value from the page view state and emitting
 /// business <see cref="UiCommand"/>s through <see cref="UsWidgetCommandAdapter.For"/>.
-/// Row heights mirror the componentized VoicePacks page (egg 28f, distance 28f, basic 26f).
+/// The two-line rows (egg/distance) are measured through <see cref="VoicePacksLayout.TwoLineRowHeight"/>
+/// so Measure and Draw stay in sync and never clip the secondary caption.
 /// </summary>
 public sealed class BasicTuningWidget : IWidget
 {
     public const string Kind = "us/basic-tuning";
 
-    private const float EggRowHeight = 28f;
-    private const float DistanceRowHeight = 28f;
     private const float BasicRowHeight = 26f;
     private const float BasicRowGap = 2f;
     private const float TopPadding = 2f;
@@ -42,7 +41,12 @@ public sealed class BasicTuningWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        float bodyHeight = TopPadding + EggRowHeight + DistanceRowHeight
+        float innerWidth = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+        float eggHeight = VoicePacksLayout.TwoLineRowHeight(EggLabel, EggSubLabel(ctx), innerWidth, smallMetrics);
+        float distanceHeight = VoicePacksLayout.TwoLineRowHeight(DistanceLabel, DistanceDescription(ctx), innerWidth, smallMetrics);
+
+        float bodyHeight = TopPadding + eggHeight + distanceHeight
             + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding;
         return UiGuard.MeasureOrFallback(
             () => UsCard.Measure(bodyHeight, ctx),
@@ -73,13 +77,16 @@ public sealed class BasicTuningWidget : IWidget
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        DrawEggRow(new Rect(x, y, innerWidth, EggRowHeight), ctx, businessEmit);
-        y += EggRowHeight;
+        float eggHeight = VoicePacksLayout.TwoLineRowHeight(EggLabel, EggSubLabel(ctx), innerWidth, smallMetrics);
+        DrawEggRow(new Rect(x, y, innerWidth, eggHeight), ctx, businessEmit, smallMetrics);
+        y += eggHeight;
 
-        DrawDistanceRow(new Rect(x, y, innerWidth, DistanceRowHeight), ctx, businessEmit);
-        y += DistanceRowHeight;
+        float distanceHeight = VoicePacksLayout.TwoLineRowHeight(DistanceLabel, DistanceDescription(ctx), innerWidth, smallMetrics);
+        DrawDistanceRow(new Rect(x, y, innerWidth, distanceHeight), ctx, businessEmit, smallMetrics);
+        y += distanceHeight;
 
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScaleCooldown", "Scale cooldown with time speed", "ScaleCooldownWithTimeSpeed");
         y += BasicRowHeight + BasicRowGap;
@@ -91,15 +98,20 @@ public sealed class BasicTuningWidget : IWidget
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
     {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+        float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
+        float eggHeight = VoicePacksLayout.TwoLineRowHeight(EggLabel, EggSubLabel(ctx), innerWidth, smallMetrics);
+        float distanceHeight = VoicePacksLayout.TwoLineRowHeight(DistanceLabel, DistanceDescription(ctx), innerWidth, smallMetrics);
+
         bool egg = ctx.TryGetViewValue("AllowEasterEggs", out object? eggValue) && eggValue is true;
         bool eggChecked = egg;
         Widgets.Checkbox(new Vector2(rect.x + 6f, rect.y + 5f), ref eggChecked, 18f);
         Widgets.Label(new Rect(rect.x + 30f, rect.y + 5f, rect.width - 36f, 20f), EggLabel);
-        if (Widgets.ButtonInvisible(rect))
+        if (Widgets.ButtonInvisible(new Rect(rect.x, rect.y, rect.width, eggHeight)))
             businessEmit(new UiCommand(UiCommandKind.ToggleEgg, flag: !egg));
 
-        float y = rect.y + EggRowHeight;
-        Rect distanceRect = new(rect.x, y, rect.width, DistanceRowHeight);
+        float y = rect.y + eggHeight;
+        Rect distanceRect = new(rect.x, y, rect.width, distanceHeight);
         string raw = ctx.TryGetViewValue("DistancePreset", out object? value) && value is string text ? text : "";
         if (!Enum.TryParse(raw, true, out SqueakDistancePreset current)) current = SqueakDistancePreset.Custom;
         string desc = current switch
@@ -122,7 +134,7 @@ public sealed class BasicTuningWidget : IWidget
             businessEmit(new UiCommand(UiCommandKind.SetDistancePreset, arg: next.ToString()));
         }
 
-        y += DistanceRowHeight;
+        y += distanceHeight;
         DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScaleCooldown", "Scale cooldown with time speed", "ScaleCooldownWithTimeSpeed");
         y += BasicRowHeight + BasicRowGap;
         DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScaleTalking", "Scale frequency with talking", "ScaleFrequencyWithTalking");
@@ -130,17 +142,17 @@ public sealed class BasicTuningWidget : IWidget
         DrawVanillaBasicRow(new Rect(rect.x, y, rect.width, BasicRowHeight), ctx, businessEmit, "ScalePopulation", "Scale periodic with audible population", "ScalePeriodicWithAudiblePopulation");
     }
 
-    private static void DrawEggRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    private static void DrawEggRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit, ITextMetrics metrics)
     {
         bool enabled = ctx.TryGetViewValue("AllowEasterEggs", out object? value) && value is true;
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
-        DrawLabel(rect, EggLabel, enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)");
+        DrawLabel(rect, EggLabel, enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)", metrics);
 
         UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleEgg, flag: !enabled)));
     }
 
-    private static void DrawDistanceRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit)
+    private static void DrawDistanceRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit, ITextMetrics metrics)
     {
         string raw = ctx.TryGetViewValue("DistancePreset", out object? value) && value is string text
             ? text
@@ -150,14 +162,7 @@ public sealed class BasicTuningWidget : IWidget
 
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
-        string desc = current switch
-        {
-            SqueakDistancePreset.Conservative => "Conservative (15~65)",
-            SqueakDistancePreset.Strong => "Strong (15~40)",
-            SqueakDistancePreset.Balanced => "Balanced (15~50)",
-            _ => "Custom",
-        };
-        DrawLabel(rect, DistanceLabel, desc);
+        DrawLabel(rect, DistanceLabel, DistanceDescription(ctx), metrics);
 
         UiInteract.Row(rect, () =>
         {
@@ -214,17 +219,45 @@ public sealed class BasicTuningWidget : IWidget
             emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled));
     }
 
-    private static void DrawLabel(Rect rect, string label, string subLabel)
+    private static void DrawLabel(Rect rect, string label, string subLabel, ITextMetrics metrics)
     {
+        float contentWidth = Math.Max(1f, rect.width - 20f);
+        float labelHeight = Math.Max(20f, metrics.CalcHeight(label, contentWidth));
+
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 20f), 20f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, contentWidth, labelHeight), label);
+
+        float subLabelY = rect.y + 4f + labelHeight + 2f;
+        float subLabelHeight = Math.Max(16f, rect.yMax - subLabelY - 4f);
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 20f, Math.Max(1f, rect.width - 20f), 20f), subLabel);
+        Widgets.Label(new Rect(rect.x + LeftPadding, subLabelY, contentWidth, subLabelHeight), subLabel);
         Text.Font = oldFont;
         GUI.color = oldColor;
+    }
+
+    private static string EggSubLabel(WidgetContext ctx)
+    {
+        bool enabled = ctx.TryGetViewValue("AllowEasterEggs", out object? value) && value is true;
+        return enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)";
+    }
+
+    private static string DistanceDescription(WidgetContext ctx)
+    {
+        string raw = ctx.TryGetViewValue("DistancePreset", out object? value) && value is string text
+            ? text
+            : "";
+        if (!Enum.TryParse(raw, true, out SqueakDistancePreset current))
+            current = SqueakDistancePreset.Custom;
+        return current switch
+        {
+            SqueakDistancePreset.Conservative => "Conservative (15~65)",
+            SqueakDistancePreset.Strong => "Strong (15~40)",
+            SqueakDistancePreset.Balanced => "Balanced (15~50)",
+            _ => "Custom",
+        };
     }
 }

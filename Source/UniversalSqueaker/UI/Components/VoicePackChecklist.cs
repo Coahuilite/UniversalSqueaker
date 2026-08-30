@@ -11,17 +11,18 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class VoicePackChecklist
 {
-    public static void Draw(Rect rect, VoicePackDomainView domain, ref string search, Action<UiCommand> emit)
+    public static void Draw(Rect rect, VoicePackDomainView domain, ref string search, Action<UiCommand> emit, ITextMetrics? metrics = null)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
+        ITextMetrics effectiveMetrics = metrics ?? VerseTextMetrics.Instance;
         float y = rect.y;
 
         if (domain.IsDormant)
-            y = DrawBanner(rect, y, "Biotech is not active; this Xenotype domain is dormant.", UsSurface.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "Biotech is not active; this Xenotype domain is dormant.", UsSurface.SurfaceKind.Warning, effectiveMetrics);
         if (domain.IsTargetUnavailable)
-            y = DrawBanner(rect, y, "The selected Xenotype target is not loaded. Selections are retained for recovery.", UsSurface.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "The selected Xenotype target is not loaded. Selections are retained for recovery.", UsSurface.SurfaceKind.Warning, effectiveMetrics);
         if (domain.HasCanonicalConflict)
-            y = DrawBanner(rect, y, "Multiple Xenotype Defs share this target; routing fails closed until resolved.", UsSurface.SurfaceKind.Warning);
+            y = DrawBanner(rect, y, "Multiple Xenotype Defs share this target; routing fails closed until resolved.", UsSurface.SurfaceKind.Warning, effectiveMetrics);
 
         Rect searchRect = new(rect.x, y, rect.width, VoicePacksLayout.SearchFieldHeight);
         SearchField.Draw(searchRect, ref search, "Search VoicePacks…");
@@ -32,9 +33,10 @@ public static class VoicePackChecklist
         foreach (VoicePackRowView row in domain.Packs)
         {
             if (!MatchesSearch(row, query)) continue;
-            Rect rowRect = new(rect.x, y, rect.width, VoicePacksLayout.VoicePackRowHeight);
-            VoicePackRow.Draw(rowRect, row, domain.Scope, domain.RaceDefName, domain.TargetDefName, emit);
-            y += VoicePacksLayout.VoicePackRowHeight;
+            float rowHeight = VoicePacksLayout.VoicePackRowHeightFor(row, rect.width, effectiveMetrics);
+            Rect rowRect = new(rect.x, y, rect.width, rowHeight);
+            VoicePackRow.Draw(rowRect, row, domain.Scope, domain.RaceDefName, domain.TargetDefName, emit, effectiveMetrics);
+            y += rowHeight;
             shown++;
         }
 
@@ -51,15 +53,15 @@ public static class VoicePackChecklist
         {
             float bannerHeight = VoicePacksLayout.BannerHeight(
                 "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.",
-                rect.width, VerseTextMetrics.Instance);
+                rect.width, effectiveMetrics);
             Rect banner = new(rect.x, y, rect.width, bannerHeight);
             DrawOrphanBanner(banner, domain, emit);
         }
     }
 
-    private static float DrawBanner(Rect outer, float y, string text, UsSurface.SurfaceKind kind)
+    private static float DrawBanner(Rect outer, float y, string text, UsSurface.SurfaceKind kind, ITextMetrics metrics)
     {
-        float height = VoicePacksLayout.BannerHeight(text, outer.width, VerseTextMetrics.Instance);
+        float height = VoicePacksLayout.BannerHeight(text, outer.width, metrics);
         StatusBanner.Draw(new Rect(outer.x, y, outer.width, height), text, kind);
         return y + height + VoicePacksLayout.Gap;
     }
@@ -76,6 +78,12 @@ public static class VoicePackChecklist
         Widgets.Label(text, "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.");
         Text.Font = oldFont;
         GUI.color = oldColor;
+        DrawForgetButton(button, domain, emit);
+    }
+
+    private static void DrawForgetButton(Rect button, VoicePackDomainView domain, Action<UiCommand> emit)
+    {
+        SelectionButton.Draw(button, "Forget Unavailable", selected: true, danger: true, font: UiFont.Tiny);
         UiInteract.Button(button, UiLayer.Content, () => emit?.Invoke(new UiCommand(
             UiCommandKind.ForgetUnavailable,
             scope: domain.Scope,

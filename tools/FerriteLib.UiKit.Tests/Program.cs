@@ -91,6 +91,9 @@ internal static class Program
 
         Console.WriteLine("B7 Line chart widget...");
         failures += LineChartWidgetTests.RunAll();
+
+        Console.WriteLine("G4 SelectionButton visual accent...");
+        failures += SelectionButtonTests.RunAll();
     }
 
     private static void VerifyRegistryCoreFallback()

@@ -25,6 +25,7 @@ public static class Palette
 
     // Accents
     public static readonly Color AccentGold = new(0.85f, 0.64f, 0.25f, 1f);
+    public static readonly Color HoverPoint = new(0.96f, 0.80f, 0.42f, 1f);
     public static readonly Color AccentGoldAlpha20 = new(0.85f, 0.64f, 0.25f, 0.20f);
     public static readonly Color AccentGoldAlpha10 = new(0.85f, 0.64f, 0.25f, 0.10f);
 

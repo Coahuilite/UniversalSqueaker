@@ -54,10 +54,11 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 ### Remaining (next goal)
 
 - **UI 实施计划 Phase 0–2（2026-08-30 完成）** — 内联 `?` 已移除；右侧帮助始终保留（800×600 三栏）；功能块独立滚动 + 包过滤器归位；Tuning Editor 下拉 + Mood stepper-slider；衰减图改为 UiKit `chart/line`；UiKit 容器化/控件基础设施已落地；`docs/workdocs/` 已移除。
-- **独立 review agent 审查** — 等待审查结果并修复发现。
-- **反馈汇总与全局风险** — `docs/ui-feedback-consolidated-zh.md`；高优先：不可用控件、下拉定位、文本裁剪、按钮视觉统一。
-- **修复前排查工序** — `docs/ui-fix-triage-plan-zh.md`；先做系统性排查（交互通路、下拉定位、文本高度、视觉语言）再进入修复批次。
-- **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、衰减图拖拽）。
+- **独立 review agent 审查** — ✅ 已完成并修复（B1/M1–M4）。
+- **反馈汇总与全局风险** — ✅ `docs/ui-feedback-consolidated-zh.md`。
+- **修复前排查工序** — ✅ `docs/ui-fix-triage-report.md` 已生成；批次 A–D 已调度完成。
+- **UI 反馈修复批次 A–D（2026-08-30 调度完成）** — G2/G3（交互通路+下拉定位）、G1（文本高度）、G4（原版/SR 视觉统一）、M1/M2+低风险全部落地；`scripts/verify-local.ps1` 14 门全绿。任务书：`docs/ui-fix-task-books-zh.md`；行业调研：`docs/ui-ux-industry-review-zh.md`。
+- **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、下拉、Mood stepper、衰减图拖拽、sticky layer）。
 - **Backlog** — OB-02 `UiLayoutTier.ClampWidth` 接入、OB-03 加载 clamp 测试、OB-04 `VoicePacksLayout` 测试（可在游戏内验证后处理）。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
@@ -79,18 +80,17 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [ ] Camera+ 帮助机制调研（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：大标题显式展示整个功能区帮助；每个单独项目有高亮指示和独立帮助条目；晚点调研。
-- [ ] 全局行高/文字截断修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Basic toggles 等多行内容下半截断，问题普遍存在于整个设置。
-- [ ] 包管理筛选联动（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：race/xenotype 并列放置，选择 race 后自动筛选对应 xeno，下方为包列表。
-- [ ] 未列出 xenotype 黯淡显示（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：无可用异种语音包的 xenotype 应黯淡处理，防止玩家误认为“没列出 = 不支持”。
-- [ ] 包管理作者筛选下拉（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：作者筛选也应做成下拉列表。
-- [ ] 下拉弹层定位修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：下拉列表没有在下拉框正下方展开，滚动视图内坐标/偏移需修正。
-- [ ] Tuning Editor 高度协调（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：高度不对/不协调，有些高度偏矮。
-- [ ] Action Scope 分组与过滤（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：区分自主行为/可操作行为；隐藏 Biotech 防御性动作（哭泣、咯咯笑）。
-- [ ] 恢复 SR 按钮/导航高亮样式（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Tuning layer 等按钮恢复底部发光条；左侧导航保留左高亮条；SR 证据在 `../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`。
-- [ ] 衰减图可拖节点高亮提示（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：可拖动控制点需要包边/悬停高亮，让玩家知道节点可拖动。
-- [ ] 切换/选取按钮改原版设计语言（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：当前自绘切换按钮不如原版，直接用原版设计语言包装成 UiKit 组件。
-- [ ] 不可用控件通路排查（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：相机高度指示器/预设、忘记包按钮等控件可能普遍存在不可用问题；红色提示无法消掉，需全面排查。
-- [ ] Tuning Layer 常驻置顶（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Tuning Editor 的 layer 分段应 sticky 置顶，滚动时始终可见。
+- [x] 全局行高/文字截断修复（2026-08-30 维护者反馈）— 已修复：`VoicePacksLayout` 动态测量行高；Basic toggles/VoicePackRow/Race/Xeno 行均按文本测量。
+- [x] 包管理筛选联动（2026-08-30 维护者反馈）— 已修复：race/xenotype 并列筛选 + 自动收窄 xeno。
+- [x] 未列出 xenotype 黯淡显示（2026-08-30 维护者反馈）— 已修复：`CandidateCount == 0` 显示 “No available packs” 并黯淡。
+- [x] 包管理作者筛选下拉（2026-08-30 维护者反馈）— 已修复：FilterBar 作者下拉。
+- [x] 下拉弹层定位修复（2026-08-30 维护者反馈）— 已修复：`UiInteract.ToPageSpace` + popup 页面坐标。
+- [x] Tuning Editor 高度协调（2026-08-30 维护者反馈）— 已修复：统一行高/控件尺寸。
+- [x] Action Scope 分组与过滤（2026-08-30 维护者反馈）— 已修复：`ActionScopeRules` 分组；隐藏 Crying/Giggling。
+- [x] 恢复 SR 按钮/导航高亮样式（2026-08-30 维护者反馈）— 已修复：`SelectionButton` 底部/左侧高亮条；替换模式卡/Tuning layer/FilterBar/预设等。
+- [x] 衰减图可拖节点高亮提示（2026-08-30 维护者反馈）— 已修复：LineChart hover 高亮。
+- [x] 切换/选取按钮改原版设计语言（2026-08-30 维护者反馈）— 已修复：UiKit `SelectionButton`。
+- [x] 不可用控件通路排查（2026-08-30 维护者反馈）— 已修复：Forget/Import/Auto 可见可点；LineChart 滚动拖拽修复。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.

@@ -26,6 +26,7 @@ public sealed class LineChartWidget : IWidget
     private const float DefaultHeight = 120f;
     private const float PlotPadding = 8f;
     private const float PointSize = 5f;
+    private const float HoverPointSize = 9f;
     private const float HitRadius = 6f;
     private const float Epsilon = 0.0001f;
 
@@ -72,15 +73,21 @@ public sealed class LineChartWidget : IWidget
         if (points.Count >= 2)
             DrawPolyline(plotRect, points);
 
-        DrawPoints(plotRect, points);
-
         if (editable)
         {
             bool hasEditablePoints = _spec.TryGetAttribute(EditablePointsAttribute, out string editableRaw)
                 && editableRaw.Trim().Length > 0;
             HashSet<int>? editablePoints = hasEditablePoints ? ParseEditablePoints(editableRaw) : null;
+            Rect pagePlotRect = UiInteract.ToPageSpace(plotRect);
+            int? hoveredPoint = FindHoveredPoint(pagePlotRect, points, UiInteract.PointerPosition(), editablePoints);
+            DrawPoints(plotRect, points, hoveredPoint);
+
             UiInteract.Protect(rect);
-            HandleDrag(plotRect, points, id, state, emitName, emit, editablePoints);
+            HandleDrag(pagePlotRect, points, id, state, emitName, emit, editablePoints);
+        }
+        else
+        {
+            DrawPoints(plotRect, points, null);
         }
     }
 
@@ -251,15 +258,43 @@ public sealed class LineChartWidget : IWidget
         }
     }
 
-    private static void DrawPoints(Rect plotRect, IReadOnlyList<Vector2> points)
+    internal static void DrawPoints(Rect plotRect, IReadOnlyList<Vector2> points, int? hoveredPoint = null)
     {
-        foreach (Vector2 point in points)
+        int hovered = hoveredPoint ?? -1;
+        for (int i = 0; i < points.Count; i++)
         {
-            Vector2 pixel = ToPixel(plotRect, point);
-            VerseWidgets.DrawBoxSolid(
-                new Rect(pixel.x - PointSize * 0.5f, pixel.y - PointSize * 0.5f, PointSize, PointSize),
-                Palette.AccentGold);
+            Vector2 pixel = ToPixel(plotRect, points[i]);
+            bool isHovered = i == hovered;
+            float size = isHovered ? HoverPointSize : PointSize;
+            var pointRect = new Rect(pixel.x - size * 0.5f, pixel.y - size * 0.5f, size, size);
+            VerseWidgets.DrawBoxSolid(pointRect, isHovered ? Palette.HoverPoint : Palette.AccentGold);
+            if (isHovered)
+            {
+                SurfaceFrame.DrawBorder(pointRect, Palette.AccentGold);
+            }
         }
+    }
+
+    /// <summary>
+    /// Returns the editable control point whose page-space handle contains <paramref name="pointer"/>.
+    /// Used both for hover visuals and for drag start hit-testing.
+    /// </summary>
+    internal static int? FindHoveredPoint(
+        Rect pagePlotRect,
+        IReadOnlyList<Vector2> points,
+        Vector2 pointer,
+        HashSet<int>? editablePoints)
+    {
+        for (int i = 0; i < points.Count; i++)
+        {
+            if (editablePoints != null && !editablePoints.Contains(i)) continue;
+            if (Distance(pointer, ToPixel(pagePlotRect, points[i])) <= HitRadius)
+            {
+                return i;
+            }
+        }
+
+        return null;
     }
 
     private static Vector2 ToPixel(Rect plotRect, Vector2 normalized)

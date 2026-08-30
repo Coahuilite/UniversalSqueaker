@@ -87,34 +87,31 @@ public sealed class DropdownWidget : IWidget
             UiKitGui.Label(labelRect, label, UiFont.Small, TextAnchor.MiddleLeft, Palette.TextPrimary);
         }
 
-        DrawField(fieldRect, display, state.Open);
-
-        int currentIndex = FindOptionIndex(options, current);
-        if (currentIndex >= 0)
-        {
-            DrawOptionText(fieldRect, options[currentIndex].Text);
-        }
-        else if (display.Length > 0)
-        {
-            DrawOptionText(fieldRect, display);
-        }
+        // A closed dropdown still shows the active-value accent when a non-empty value is
+        // selected (e.g. ScopeTree's per-action scope); opening also marks the trigger selected.
+        bool fieldSelected = state.Open || current.Length > 0;
+        DrawField(fieldRect, display, fieldSelected);
 
         UiInteract.Button(fieldRect, UiLayer.Content, () => state.Open = !state.Open);
 
         if (state.Open)
         {
+            // DrawPopups runs after PopScrollView, so content-local coordinates are no longer
+            // valid there. Convert once while the scroll transform is active; the popup closure
+            // draws and registers buttons directly in page coordinates.
+            Rect popupRect = UiInteract.ToPageSpace(rect);
             UiInteract.RegisterPopup(() =>
             {
                 UiInteract.Button(new Rect(-100000f, -100000f, 200000f, 200000f), UiLayer.Background,
                     () => state.Open = false);
 
-                float listTop = rect.yMax;
-                var listRect = new Rect(rect.x, listTop, rect.width, options.Count * OptionHeight);
+                float listTop = popupRect.yMax;
+                var listRect = new Rect(popupRect.x, listTop, popupRect.width, options.Count * OptionHeight);
                 SurfaceFrame.Draw(listRect, SurfaceFrame.SurfaceKind.Panel);
 
                 for (int i = 0; i < options.Count; i++)
                 {
-                    Rect rowRect = new(rect.x, listTop + i * OptionHeight, rect.width, OptionHeight);
+                    Rect rowRect = new(popupRect.x, listTop + i * OptionHeight, popupRect.width, OptionHeight);
                     bool selected = string.Equals(options[i].Value, current, StringComparison.Ordinal);
 
                     if (selected)
@@ -312,29 +309,9 @@ public sealed class DropdownWidget : IWidget
         return _spec.TryGetAttribute(CurrentAttribute, out string literal) ? literal : "";
     }
 
-    private static void DrawField(Rect rect, string display, bool open)
+    private static void DrawField(Rect rect, string display, bool selected)
     {
-        SurfaceFrame.Draw(rect, open ? SurfaceFrame.SurfaceKind.Selected : SurfaceFrame.SurfaceKind.Raised);
-
-        // Draw a simple neutral caret in the right edge.
-        float caretX = rect.xMax - 12f;
-        float caretY = rect.y + rect.height * 0.5f;
-        VerseWidgets.DrawBoxSolid(new Rect(caretX, caretY - 1f, 8f, 1f), Palette.TextSecondary);
-        VerseWidgets.DrawBoxSolid(new Rect(caretX, caretY, 8f, 1f), Palette.TextSecondary);
-        VerseWidgets.DrawBoxSolid(new Rect(caretX, caretY + 1f, 8f, 1f), Palette.TextSecondary);
-
-        if (display.Length == 0) return;
-        DrawOptionText(rect, display);
-    }
-
-    private static void DrawOptionText(Rect rect, string text)
-    {
-        UiKitGui.Label(
-            new Rect(rect.x + TextPadding, rect.y, rect.width - TextPadding * 2f, rect.height),
-            text,
-            UiFont.Small,
-            TextAnchor.MiddleLeft,
-            Palette.TextPrimary);
+        SelectionButton.DrawField(rect, display, selected, font: UiFont.Small);
     }
 
     private float ReadHeight()

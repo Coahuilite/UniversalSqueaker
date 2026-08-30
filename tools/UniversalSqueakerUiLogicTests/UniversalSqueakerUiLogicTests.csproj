@@ -18,10 +18,15 @@
 
   <!-- 零 Verse 门：链接 UI 纯逻辑文件；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
   <ItemGroup>
+    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\SqueakActionDomain.cs" Link="SqueakActionDomain.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakActionPlan.cs" Link="SqueakActionPlan.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\VoicePacksFilters.cs" Link="VoicePacksFilters.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\DistancePreview.cs" Link="DistancePreview.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\UiLayoutTier.cs" Link="UiLayoutTier.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\AttenuationMath.cs" Link="AttenuationMath.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\ITextMetrics.cs" Link="ITextMetrics.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\VoicePacksLayout.cs" Link="VoicePacksLayout.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\ActionScopeRules.cs" Link="ActionScopeRules.cs" />
   </ItemGroup>
 
 </Project>

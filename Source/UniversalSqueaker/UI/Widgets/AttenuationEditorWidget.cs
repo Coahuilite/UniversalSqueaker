@@ -102,7 +102,7 @@ public sealed class AttenuationEditorWidget : IWidget
         DrawStatus(new Rect(x, y, innerWidth, StatusHeight), preset, min, max);
         y += StatusHeight + Gap;
 
-        DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);
+        DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), preset, businessEmit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -170,21 +170,29 @@ public sealed class AttenuationEditorWidget : IWidget
         GUI.color = oldColor;
     }
 
-    private static void DrawPresetButtons(Rect rect, Action<UiCommand> emit)
+    private static void DrawPresetButtons(Rect rect, string currentPreset, Action<UiCommand> emit)
     {
         float buttonWidth = (rect.width - Gap * 2f) / 3f;
         DrawPresetButton(new Rect(rect.x, rect.y, buttonWidth, rect.height), "Conservative",
+            IsCurrentPreset(currentPreset, SqueakDistancePreset.Conservative),
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Conservative.ToString())));
         DrawPresetButton(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), "Balanced",
+            IsCurrentPreset(currentPreset, SqueakDistancePreset.Balanced),
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Balanced.ToString())));
         DrawPresetButton(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), "Strong",
+            IsCurrentPreset(currentPreset, SqueakDistancePreset.Strong),
             () => emit(new UiCommand(UiCommandKind.SetDistancePreset, arg: SqueakDistancePreset.Strong.ToString())));
     }
 
-    private static void DrawPresetButton(Rect rect, string label, Action onClick)
+    private static void DrawPresetButton(Rect rect, string label, bool selected, Action onClick)
     {
-        UsSurface.DrawSegment(rect, label, false);
+        SelectionButton.Draw(rect, label, selected, font: UiFont.Tiny);
         UiInteract.Button(rect, UiLayer.Content, onClick);
+    }
+
+    private static bool IsCurrentPreset(string currentPreset, SqueakDistancePreset preset)
+    {
+        return string.Equals(currentPreset, preset.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static void DrawNarrowSummary(Rect rect, WidgetContext ctx)

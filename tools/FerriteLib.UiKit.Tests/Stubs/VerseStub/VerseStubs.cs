@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Verse;
@@ -19,12 +20,25 @@ public static class Text
 
 public static class Widgets
 {
+    // Recording hooks used by visual regression tests. The test assembly compiles against the
+    // Krafs ref assembly, so these are only accessible through reflection at runtime.
+    public static readonly List<Rect> DrawBoxSolidRects = new();
+    public static readonly List<Color> DrawBoxSolidColors = new();
+
     public static void Label(Rect rect, string text)
     {
     }
 
     public static void DrawBoxSolid(Rect rect, Color color)
     {
+        DrawBoxSolidRects.Add(rect);
+        DrawBoxSolidColors.Add(color);
+    }
+
+    public static void ClearDrawBoxSolidCalls()
+    {
+        DrawBoxSolidRects.Clear();
+        DrawBoxSolidColors.Clear();
     }
 
     public static bool ButtonInvisible(Rect rect)

@@ -106,7 +106,11 @@ public static class FerriteVoicePacksPage
                 ["IsDirty"] = view.IsDirty,
                 ["Authors"] = view.Authors,
                 ["DomainFilter"] = State.DomainFilter,
-                ["PackFilter"] = State.PackFilter
+                ["PackFilter"] = State.PackFilter,
+                ["RaceFilter"] = State.RaceFilter,
+                ["XenotypeFilter"] = State.XenotypeFilter,
+                ["RaceFilterOptions"] = view.RaceFilterOptions,
+                ["XenotypeFilterOptions"] = view.XenotypeFilterOptions
             };
 
             KitUiPageState uiState = new()

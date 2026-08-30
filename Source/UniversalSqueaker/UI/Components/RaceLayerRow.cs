@@ -8,20 +8,27 @@ namespace UniversalSqueaker.UI;
 /// <summary>One race row in the Race layer. Stateless; emits SelectDomain when clicked.</summary>
 public static class RaceLayerRow
 {
-    public static void Draw(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit)
+    public static void Draw(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit, ITextMetrics? metrics = null)
     {
+        ITextMetrics effectiveMetrics = metrics ?? VerseTextMetrics.Instance;
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, row, selected, emit),
+            () => DrawCore(rect, row, selected, emit, effectiveMetrics),
             fallback => DrawVanilla(fallback, row, emit),
             "us/race-layer-row",
             "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit)
+    private static void DrawCore(Rect rect, RaceLayerRowView row, bool selected, Action<UiCommand> emit, ITextMetrics metrics)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, selected, false);
+
+        float textWidth = Math.Max(1f, rect.width - 24f);
+        bool showDetail = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable;
+        string detail = row.EnabledCount + " / " + row.CandidateCount + " enabled" + StateSuffix(row.State);
+        float labelHeight = Math.Max(20f, metrics.CalcHeight(row.DisplayName, textWidth));
+        float detailHeight = showDetail ? Math.Max(16f, metrics.CalcHeight(detail, textWidth)) : 0f;
 
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
@@ -29,15 +36,22 @@ public static class RaceLayerRow
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleLeft;
         GUI.color = selected ? UsVisualTokens.TextOnGold : UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + 12f, rect.y, Math.Max(1f, rect.width - 24f), 25f), row.DisplayName);
-        if (VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable)
+        Rect labelRect = new(rect.x + 12f, rect.y + 4f, textWidth, labelHeight);
+        Widgets.Label(labelRect, row.DisplayName);
+
+        if (showDetail)
         {
+            Rect detailRect = new(
+                rect.x + 12f,
+                rect.y + 4f + labelHeight + 2f,
+                textWidth,
+                detailHeight);
             Text.Font = GameFont.Tiny;
-            Text.Anchor = TextAnchor.MiddleRight;
+            Text.Anchor = TextAnchor.MiddleLeft;
             GUI.color = UsVisualTokens.TextSecondary;
-            string detail = row.EnabledCount + " / " + row.CandidateCount + " enabled" + StateSuffix(row.State);
-            Widgets.Label(new Rect(rect.x + 12f, rect.y + 25f, Math.Max(1f, rect.width - 24f), 18f), detail);
+            Widgets.Label(detailRect, detail);
         }
+
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;

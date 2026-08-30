@@ -87,6 +87,26 @@ public static class UiInteract
     }
 
     /// <summary>
+    /// Returns the active scroll-view viewport and scroll position, if any. Widgets that need to
+    /// draw fixed/sticky content inside a scroll view can use this to convert content-local rects
+    /// into page coordinates or to compute the content-space y that maps to the viewport top.
+    /// </summary>
+    public static bool TryGetCurrentScrollView(out Rect outRect, out Vector2 scrollPosition)
+    {
+        if (ScrollTransforms.Count > 0)
+        {
+            ScrollTransform transform = ScrollTransforms[ScrollTransforms.Count - 1];
+            outRect = transform.OutRect;
+            scrollPosition = transform.ScrollPosition;
+            return true;
+        }
+
+        outRect = default;
+        scrollPosition = default;
+        return false;
+    }
+
+    /// <summary>
     /// Registers a rect whose native input handling must be preserved. While the mouse is inside any
     /// protected rect, <see cref="ProcessEvents"/> will not trigger registered buttons and will not
     /// consume the event.
@@ -295,7 +315,7 @@ public static class UiInteract
         return value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private static Rect ToPageSpace(Rect rect)
+    internal static Rect ToPageSpace(Rect rect)
     {
         if (ScrollTransforms.Count == 0)
         {

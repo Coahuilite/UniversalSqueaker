@@ -30,6 +30,10 @@ public sealed class VoicePacksPageState
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
+    // Packs 页 race/xenotype 并列筛选：空字符串 = All。
+    public string RaceFilter = "";
+    public string XenotypeFilter = "";
+
     public VoicePacksPageState()
     {
     }
@@ -51,6 +55,8 @@ public sealed class VoicePacksPageState
         ScrollTargetKey = "";
         DomainFilter = default;
         PackFilter = default;
+        RaceFilter = "";
+        XenotypeFilter = "";
     }
 }
 

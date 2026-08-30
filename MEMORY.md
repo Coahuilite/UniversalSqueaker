@@ -140,3 +140,12 @@
 - **后续 backlog 不变**：OB-02/03/04 + `docs/workdocs/` 移除 + Ferrite 游戏内稳定化 + 可选 Runtime harness。
 - **UI 实施计划 Phase 0–2 完成（2026-08-30）**：内联 `?` 已移除（`fe4a77f`）；右侧帮助始终保留、800×600 三栏响应式（`1ef4249`）；功能块独立滚动 + 包过滤器归位（`ebd3b5c`）；Tuning Editor 下拉 + Mood stepper-slider（`1d898b3`，含 UiKit `OptionsBind` 与紧凑宽度支持）；衰减图改为 UiKit `chart/line`（`f718db5`）；`docs/workdocs/` 已移除；verify-local 14 门全绿。待独立 review agent 审查与游戏内实机验证。
 
+## Session resume checkpoint (2026-08-30c — UI 反馈修复批次 A–D 调度完成)
+
+- **修复前排查 + 批次调度全部完成**：任务书 `docs/ui-fix-task-books-zh.md`；排查报告 `docs/ui-fix-triage-report.md`；行业调研 `docs/ui-ux-industry-review-zh.md`。`scripts/verify-local.ps1` 14 门全绿，Dev/Release 0 警告。
+- **T2（G2/G3）**：`UiInteract.ToPageSpace` 改 internal；`DropdownWidget` popup 注册前转页面坐标，滚动视图内下拉正下方展开；`LineChartWidget` 滚动内拖拽命中用页面坐标；Forget Unavailable / Preset Import / Mood Auto 窄屏补可见按钮；新增滚动内 dropdown/line chart/ToPageSpace 测试。
+- **T3（G1）**：`VoicePacksLayout` 新增动态行高基线（`MeasuredRowHeight`/`TwoLineRowHeight`/`VoicePackRowHeightFor`/`LayerRowHeightFor`）；BasicTuningWidget、VoicePackRow、Race/Xenotype 行、Scope/Preset 行均按 `ITextMetrics` 测量；新增纯逻辑高度测试。
+- **T4（G4）**：新增中性 `SelectionButton`（底部/左侧高亮条，Palette token）；`ModeCardRenderer`/`DropdownWidget`/`UsSurface`/`ScopeTreeWidget`/`FilterBarWidget`/`AttenuationEditorWidget`/`PresetListWidget`/`VoicePackChecklist` 全部收敛到统一视觉；新增 SelectionButtonTests 与源码不变式。
+- **T5（中低风险）**：Tuning Layer sticky；`ActionScopeRules` 动作分组（Autonomous/Operable）并默认隐藏 Crying/Giggling；race/xenotype 并列筛选 + 自动收窄；作者筛选下拉；无可用包 xenotype 黯淡显示；LineChart 可拖节点 hover 高亮；Tuning Editor 高度协调。新增纯逻辑与交互测试。
+- **待办**：维护者游戏内实机验证（800×600 三栏、Tuning Editor sticky/dropdown、Mood stepper、衰减图拖拽、FilterBar 下拉）；Camera+ 分层帮助（M3）仍未实现，行业调研已给出建议；`docs/workdocs/` 已移除。
+

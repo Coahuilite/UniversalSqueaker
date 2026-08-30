@@ -27,7 +27,9 @@ public enum UiCommandKind
     SetActiveTab,
     ScrollToSection,
     SetDomainFilter,
-    SetPackFilter
+    SetPackFilter,
+    SetRaceFilter,
+    SetXenotypeFilter
 }
 
 /// <summary>

@@ -13,15 +13,17 @@ namespace UniversalSqueaker.UI;
 internal sealed class FerriteTextMetricsAdapter : ITextMetrics
 {
     private readonly FerriteLib.UiKit.ITextMetrics inner;
+    private readonly UiFont font;
 
-    internal FerriteTextMetricsAdapter(FerriteLib.UiKit.ITextMetrics inner)
+    internal FerriteTextMetricsAdapter(FerriteLib.UiKit.ITextMetrics inner, UiFont font = UiFont.Tiny)
     {
         this.inner = inner;
+        this.font = font;
     }
 
     public float CalcHeight(string text, float width)
     {
-        return inner.MeasureText(text ?? "", UiFont.Tiny, Mathf.Max(1f, width));
+        return inner.MeasureText(text ?? "", font, Mathf.Max(1f, width));
     }
 
     public float CalcWidth(string text)

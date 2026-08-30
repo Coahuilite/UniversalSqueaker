@@ -56,6 +56,8 @@ public sealed class PresetListWidget : IWidget
 
             float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
             var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+            var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
+            float xenoIndent = VoicePacksLayout.ForWidth(width) == LayoutTier.Comfortable ? XenotypeIndent : 12f;
             float bodyHeight = TopPadding;
 
             foreach (BaselinePresetView preset in presets)
@@ -66,8 +68,12 @@ public sealed class PresetListWidget : IWidget
                     bodyHeight += metrics.CalcHeight(preset.Description, Math.Max(1f, width - 16f)) + 6f + VoicePacksLayout.Gap;
                 foreach (BaselineRaceView race in preset.Races)
                 {
-                    bodyHeight += RaceRowHeight + RowGap;
-                    bodyHeight += race.Xenotypes.Count * (XenotypeRowHeight + RowGap);
+                    bodyHeight += RaceRowHeightFor(width, race, smallMetrics) + RowGap;
+                    float xenoWidth = Math.Max(1f, width - xenoIndent);
+                    foreach (BaselineXenotypeView xenotype in race.Xenotypes)
+                    {
+                        bodyHeight += XenotypeRowHeightFor(xenoWidth, xenotype, smallMetrics) + RowGap;
+                    }
                 }
             }
             bodyHeight += BottomPadding;
@@ -118,6 +124,7 @@ public sealed class PresetListWidget : IWidget
         float y = rect.y + TopPadding;
 
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+        var smallMetrics = new FerriteTextMetricsAdapter(ctx.Metrics, UiFont.Small);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float xenoIndent = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable ? XenotypeIndent : 12f;
         foreach (BaselinePresetView preset in presets)
@@ -136,21 +143,46 @@ public sealed class PresetListWidget : IWidget
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                DrawRaceRow(new Rect(x, y, innerWidth, RaceRowHeight), preset.DefName, race, businessEmit);
-                y += RaceRowHeight + RowGap;
+                float raceRowHeight = RaceRowHeightFor(innerWidth, race, smallMetrics);
+                DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, businessEmit);
+                y += raceRowHeight + RowGap;
+
+                float xenoWidth = Math.Max(1f, innerWidth - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    DrawXenotypeRow(new Rect(x + xenoIndent, y, Math.Max(1f, innerWidth - xenoIndent), XenotypeRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
-                    y += XenotypeRowHeight + RowGap;
+                    float xenoRowHeight = XenotypeRowHeightFor(xenoWidth, xenotype, smallMetrics);
+                    DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
+                    y += xenoRowHeight + RowGap;
                 }
             }
         }
     }
 
+    private static float RaceRowHeightFor(float rowWidth, BaselineRaceView race, ITextMetrics metrics)
+    {
+        return VoicePacksLayout.MeasuredRowHeight(RaceLabel(race), Math.Max(1f, rowWidth - 64f), metrics, RaceRowHeight);
+    }
+
+    private static float XenotypeRowHeightFor(float rowWidth, BaselineXenotypeView xenotype, ITextMetrics metrics)
+    {
+        return VoicePacksLayout.MeasuredRowHeight(XenotypeLabel(xenotype), Math.Max(1f, rowWidth - 64f), metrics, XenotypeRowHeight);
+    }
+
+    private static string RaceLabel(BaselineRaceView race)
+    {
+        return race.DisplayName + "  (" + race.ActionCount + " actions, " + race.MoodCount + " moods)";
+    }
+
+    private static string XenotypeLabel(BaselineXenotypeView xenotype)
+    {
+        string inheritTag = xenotype.InheritFromRace ? " (inherits race)" : " (own only)";
+        return xenotype.DisplayName + inheritTag + "  (" + xenotype.ActionCount + " actions, " + xenotype.MoodCount + " moods)";
+    }
+
     private static void DrawPresetHeader(Rect rect, BaselinePresetView preset, Action<UiCommand> emit)
     {
         bool hovered = Mouse.IsOver(rect);
-        UsSurface.DrawRowSurface(rect, hovered, false, false);
+        UsSurface.DrawRowSurface(rect, hovered, preset.Expanded, false);
 
         Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
 
@@ -170,11 +202,17 @@ public sealed class PresetListWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        UiInteract.Button(importRect, UiLayer.Content,
-            () => emit?.Invoke(new UiCommand(UiCommandKind.ImportBaselinePreset, arg: preset.DefName)));
+        DrawImportButton(importRect, preset.DefName, emit);
 
         Rect expandRect = new(rect.x, rect.y, Math.Max(1f, importRect.x - rect.x - 8f), rect.height);
         UiInteract.Row(expandRect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselinePreset, arg: preset.DefName)));
+    }
+
+    private static void DrawImportButton(Rect button, string presetDefName, Action<UiCommand> emit)
+    {
+        SelectionButton.Draw(button, "Import", selected: true, font: UiFont.Tiny);
+        UiInteract.Button(button, UiLayer.Content,
+            () => emit?.Invoke(new UiCommand(UiCommandKind.ImportBaselinePreset, arg: presetDefName)));
     }
 
     private static void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, Action<UiCommand> emit)
@@ -186,8 +224,7 @@ public sealed class PresetListWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
-        string label = race.DisplayName + "  (" + race.ActionCount + " actions, " + race.MoodCount + " moods)";
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), 18f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), Math.Max(18f, rect.height - 6f)), RaceLabel(race));
 
         Rect checkRect = new(rect.xMax - 40f, rect.y + 2f, 20f, 20f);
         UsSurface.DrawCheckbox(checkRect, race.Selected);
@@ -206,9 +243,7 @@ public sealed class PresetListWidget : IWidget
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextPrimary;
-        string inheritTag = xenotype.InheritFromRace ? " (inherits race)" : " (own only)";
-        string label = xenotype.DisplayName + inheritTag + "  (" + xenotype.ActionCount + " actions, " + xenotype.MoodCount + " moods)";
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), 14f), label);
+        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), Math.Max(14f, rect.height - 6f)), XenotypeLabel(xenotype));
 
         Rect checkRect = new(rect.xMax - 40f, rect.y + 1f, 20f, 20f);
         UsSurface.DrawCheckbox(checkRect, xenotype.Selected);

@@ -17,6 +17,7 @@ internal static class DropdownWidgetTests
         VerifyParseOptionsAndValues();
         VerifyParseOptionNAttributes();
         VerifySelectionEmitsCommand();
+        VerifySelectionEmitsCommandInsideScrollView();
         VerifyDynamicOptionsFromViewState();
         return failures;
     }
@@ -104,6 +105,59 @@ internal static class DropdownWidgetTests
         Check(commands.Count == 1 && commands[0].Name == "Picked"
             && commands[0].Payload is string payload && payload == "b",
             "dropdown command carries the selected submitted value");
+    }
+
+    private static void VerifySelectionEmitsCommandInsideScrollView()
+    {
+        ResetDebug();
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Options"] = "Alpha, Beta, Gamma",
+            ["Values"] = "a,b,c",
+            ["EmitName"] = "Picked"
+        };
+        var spec = new UiElementSpec("dropdown-scroll", DropdownWidget.Kind, attributes);
+        var widget = new DropdownWidget();
+        widget.Configure(spec);
+
+        var commands = new List<UiCommand>();
+        var ctx = new WidgetContext("test", null, new StubMetrics(), new UiPageState());
+        UiValueState state = UiValueStore.GetOrCreate(new UiControlId("dropdown-scroll", "dropdown"));
+        state.Open = false;
+        state.StringValue = null;
+
+        // Page scroll view: content rect (0,0,200,28) maps to page (100,30,200,28) with scroll (0,20).
+        Rect outRect = new(100f, 50f, 300f, 300f);
+        Vector2 scroll = new(0f, 20f);
+
+        UiInteract.BeginFrame();
+        UiInteract.PushScrollView(outRect, scroll);
+        SetMouse(200f, 44f);
+        UiInteract.DebugClick = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.PopScrollView();
+        UiInteract.DrawPopups();
+        UiInteract.ProcessEvents();
+        UiInteract.EndFrame();
+
+        Check(state.Open, "dropdown inside a scroll view opens when the field is clicked in page coordinates");
+
+        UiInteract.BeginFrame();
+        UiInteract.PushScrollView(outRect, scroll);
+        // Option rows are registered in page coordinates: listTop = 58, second row = 82..106.
+        SetMouse(200f, 94f);
+        UiInteract.DebugClick = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.PopScrollView();
+        UiInteract.DrawPopups();
+        UiInteract.ProcessEvents();
+        UiInteract.EndFrame();
+
+        Check(!state.Open, "scroll-view dropdown selection closes");
+        Check(commands.Count == 1, "scroll-view dropdown selection emits exactly one command");
+        Check(commands.Count == 1 && commands[0].Name == "Picked"
+            && commands[0].Payload is string payload && payload == "b",
+            "scroll-view dropdown command carries the selected submitted value");
     }
 
     private static void VerifyDynamicOptionsFromViewState()

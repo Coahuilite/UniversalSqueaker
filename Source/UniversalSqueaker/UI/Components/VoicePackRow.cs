@@ -9,18 +9,19 @@ namespace UniversalSqueaker.UI;
 public static class VoicePackRow
 {
     public static void Draw(Rect rect, VoicePackRowView row, SqueakVoicePackScope scope,
-        string raceDefName, string targetDefName, Action<UiCommand> emit)
+        string raceDefName, string targetDefName, Action<UiCommand> emit, ITextMetrics? metrics = null)
     {
+        ITextMetrics effectiveMetrics = metrics ?? VerseTextMetrics.Instance;
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, row, scope, raceDefName, targetDefName, emit),
+            () => DrawCore(rect, row, scope, raceDefName, targetDefName, emit, effectiveMetrics),
             fallback => DrawVanilla(fallback, row, scope, raceDefName, targetDefName, emit),
             "us/voice-pack-row",
             "UniversalSqueaker");
     }
 
     private static void DrawCore(Rect rect, VoicePackRowView row, SqueakVoicePackScope scope,
-        string raceDefName, string targetDefName, Action<UiCommand> emit)
+        string raceDefName, string targetDefName, Action<UiCommand> emit, ITextMetrics metrics)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -28,21 +29,34 @@ public static class VoicePackRow
         Rect checkRect = new(rect.x + 10f, rect.y + (rect.height - 18f) * .5f, 18f, 18f);
         UsSurface.DrawCheckbox(checkRect, row.IsSelected);
 
+        float textWidth = Math.Max(1f, rect.width - 44f);
+        string meta = row.ModName + " · " + row.Author;
+        bool showCoverage = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable;
+        float labelHeight = Math.Max(20f, metrics.CalcHeight(row.Label, textWidth));
+        float metaHeight = Math.Max(16f, metrics.CalcHeight(meta, textWidth));
+        float y = rect.y + 3f;
+
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = row.IsSelected ? UsVisualTokens.TextOnGold : UsVisualTokens.TextPrimary;
-        Rect primaryRect = new(rect.x + 36f, rect.y + 3f, Math.Max(1f, rect.width - 44f), 25f);
+        Rect primaryRect = new(rect.x + 36f, y, textWidth, labelHeight);
         Widgets.Label(primaryRect, row.Label);
+        y += labelHeight + 2f;
+
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
-        Rect secondaryRect = new(rect.x + 36f, rect.y + 27f, Math.Max(1f, rect.width - 44f), 20f);
-        Widgets.Label(secondaryRect, row.ModName + " · " + row.Author);
-        if (VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable)
+        Rect secondaryRect = new(rect.x + 36f, y, textWidth, metaHeight);
+        Widgets.Label(secondaryRect, meta);
+        y += metaHeight + 2f;
+
+        if (showCoverage)
         {
-            Rect coverageRect = new(rect.x + 36f, rect.y + 48f, Math.Max(1f, rect.width - 44f), 20f);
+            float coverageHeight = Math.Max(16f, metrics.CalcHeight(row.Coverage, textWidth));
+            Rect coverageRect = new(rect.x + 36f, y, textWidth, coverageHeight);
             Widgets.Label(coverageRect, row.Coverage);
         }
+
         Text.Font = oldFont;
         GUI.color = oldColor;
 

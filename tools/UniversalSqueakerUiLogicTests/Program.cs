@@ -31,6 +31,70 @@ internal static class Program
         TestVoicePacksFilters();
         TestUiLayoutTier();
         TestAttenuationMath();
+        TestVoicePacksLayoutHeights();
+        TestActionScopeRules();
+        TestRaceXenotypeFiltering();
+        TestLayerDetailText();
+        UiSourceInvariantTests.RunAll();
+    }
+
+    private static void TestVoicePacksLayoutHeights()
+    {
+        const float tolerance = 0.0001f;
+        var metrics = new StubMetrics(10f, 5f);
+
+        float twoLine = VoicePacksLayout.TwoLineRowHeight("Primary", "Secondary", 300f, metrics);
+        Assert(twoLine >= VoicePacksLayout.MinTwoLineRowHeight, "two-line row respects its minimum height");
+        Assert(twoLine >= 4f + metrics.CalcHeight("Primary", 280f) + 2f + metrics.CalcHeight("Secondary", 280f) + 4f - tolerance,
+            "two-line row covers both measured text lines");
+
+        float voicePackRow = VoicePacksLayout.VoicePackRowHeightFor("Long VoicePack label", "Mod · Author", "Actions 5/17", 500f, metrics);
+        Assert(voicePackRow >= VoicePacksLayout.MinVoicePackRowHeight, "voice pack row respects its three-line minimum height");
+        Assert(voicePackRow >= 3f + 20f + 2f + 16f + 2f + 16f + 4f - tolerance,
+            "voice pack row covers the three fixed line minima plus padding");
+
+        float compactRow = VoicePacksLayout.VoicePackRowHeightFor("Label", "Mod · Author", "Actions 5/17", 300f, metrics);
+        Assert(compactRow < voicePackRow, "compact voice pack row omits coverage and is shorter than the comfortable row");
+
+        float layerRow = VoicePacksLayout.LayerRowHeightFor("Race Display Name", "1 / 2 enabled", 500f, metrics);
+        Assert(layerRow >= VoicePacksLayout.MinLayerRowHeight, "layer row respects its minimum height");
+        Assert(layerRow >= 4f + metrics.CalcHeight("Race Display Name", 476f) + 2f + metrics.CalcHeight("1 / 2 enabled", 476f) + 4f - tolerance,
+            "layer row covers display name plus detail line");
+
+        float measuredRow = VoicePacksLayout.MeasuredRowHeight("Wrapped text", 100f, metrics, 26f);
+        Assert(measuredRow >= 4f + metrics.CalcHeight("Wrapped text", 100f) + 4f - tolerance,
+            "generic measured row height covers the text plus padding");
+
+        var pack = new VoicePackRowView(
+            "pack-key",
+            "Long VoicePack label",
+            "Some Mod",
+            "Some Author",
+            "VoicePackDef",
+            "Actions 5/17",
+            "search text",
+            false);
+        var domain = new VoicePackDomainView(
+            SqueakVoicePackScope.Race,
+            "race",
+            "",
+            "Race",
+            "Race",
+            SqueakVoicePackDomainState.Normal,
+            false,
+            false,
+            false,
+            0,
+            1,
+            0,
+            Array.Empty<string>(),
+            new[] { pack });
+
+        float checklistHeight = VoicePacksLayout.ChecklistHeight(domain, "", 500f, metrics);
+        float expectedChecklist = VoicePacksLayout.SearchFieldHeight + VoicePacksLayout.Gap
+            + VoicePacksLayout.VoicePackRowHeightFor(pack, 500f, metrics) + VoicePacksLayout.Gap;
+        Assert(checklistHeight >= expectedChecklist - tolerance,
+            "checklist height uses the dynamic voice pack row height for each shown row");
     }
 
     private static void TestUiLayoutTier()
@@ -142,6 +206,78 @@ internal static class Program
             "Combined domain filter should drop rows failing EnabledOnly");
     }
 
+    private static void TestActionScopeRules()
+    {
+        var draft = new SqueakActionDefinition(
+            SqueakAction.Draft,
+            "Draft",
+            "US_Draft",
+            SqueakVocalGatePolicy.ApplyTalkingGate,
+            SqueakActionScopeSupport.ActiveCommand,
+            SqueakActionScope.ActiveCommand);
+        var attack = new SqueakActionDefinition(
+            SqueakAction.Attack,
+            "Attack",
+            "US_Attack",
+            SqueakVocalGatePolicy.ApplyTalkingGate,
+            SqueakActionScopeSupport.AnyOccurrence | SqueakActionScopeSupport.ActiveCommand,
+            SqueakActionScope.AnyOccurrence);
+        var call = new SqueakActionDefinition(
+            SqueakAction.Call,
+            "Call",
+            "US_Call",
+            SqueakVocalGatePolicy.ApplyTalkingGate,
+            SqueakActionScopeSupport.AnyOccurrence,
+            SqueakActionScope.AnyOccurrence);
+
+        Assert(ActionScopeRules.GroupFor(draft) == ActionScopeGroup.Operable,
+            "ActiveCommand-only actions group as Operable");
+        Assert(ActionScopeRules.GroupFor(attack) == ActionScopeGroup.Operable,
+            "actions supporting ActiveCommand group as Operable even when default is AnyOccurrence");
+        Assert(ActionScopeRules.GroupFor(call) == ActionScopeGroup.Autonomous,
+            "AnyOccurrence-only actions group as Autonomous");
+
+        Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Crying),
+            "Crying is hidden from the Action Scope editor by default");
+        Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Giggling),
+            "Giggling is hidden from the Action Scope editor by default");
+        Assert(!ActionScopeRules.IsHiddenByDefault(SqueakAction.Call),
+            "regular actions remain visible in the Action Scope editor");
+        Assert(!ActionScopeRules.ShowBiotechDefensiveActions,
+            "the Biotech defensive action UI switch defaults to hidden");
+    }
+
+    private static void TestRaceXenotypeFiltering()
+    {
+        Assert(VoicePacksFilters.RaceFilterMatches("", "Human"),
+            "empty race filter matches every race");
+        Assert(VoicePacksFilters.RaceFilterMatches("Human", "Human"),
+            "race filter matches the selected race");
+        Assert(!VoicePacksFilters.RaceFilterMatches("Human", "Ratkin"),
+            "race filter drops other races");
+
+        Assert(VoicePacksFilters.XenotypeFilterMatches("", "", "Human", "Sanguophage"),
+            "empty race+xeno filters match every xenotype domain");
+        Assert(VoicePacksFilters.XenotypeFilterMatches("Human", "", "Human", "Sanguophage"),
+            "race filter narrows xenotype domains to that race");
+        Assert(VoicePacksFilters.XenotypeFilterMatches("Human", "Sanguophage", "Human", "Sanguophage"),
+            "race+xeno filters keep the matching domain");
+        Assert(!VoicePacksFilters.XenotypeFilterMatches("Human", "Sanguophage", "Human", "Genie"),
+            "xenotype filter drops other xenotypes on the same race");
+        Assert(!VoicePacksFilters.XenotypeFilterMatches("Human", "Sanguophage", "Ratkin", "Sanguophage"),
+            "race filter drops the same xenotype on another race");
+    }
+
+    private static void TestLayerDetailText()
+    {
+        Assert(VoicePacksLayout.LayerDetailText(0, 0) == "No available packs",
+            "zero-candidate xenotype rows read as no available packs");
+        Assert(VoicePacksLayout.LayerDetailText(1, 2) == "1 / 2 enabled",
+            "rows with candidates keep the enabled/candidate caption");
+        Assert(VoicePacksLayout.LayerDetailText(0, 0, " · dormant") == "No available packs · dormant",
+            "no-available-packs caption preserves state suffix");
+    }
+
     private static void TestAttenuationMath()
     {
         const float tolerance = 0.0001f;
@@ -201,6 +337,28 @@ internal static class Program
         if (!condition)
         {
             throw new InvalidOperationException(message);
+        }
+    }
+
+    private sealed class StubMetrics : ITextMetrics
+    {
+        private readonly float height;
+        private readonly float widthPerChar;
+
+        public StubMetrics(float height, float widthPerChar)
+        {
+            this.height = height;
+            this.widthPerChar = widthPerChar;
+        }
+
+        public float CalcHeight(string text, float width)
+        {
+            return height;
+        }
+
+        public float CalcWidth(string text)
+        {
+            return (text ?? "").Length * widthPerChar;
         }
     }
 }

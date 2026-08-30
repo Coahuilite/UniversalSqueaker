@@ -40,44 +40,31 @@ public static class UsSurface
 
     public static void DrawRowSurface(Rect rect, bool hover, bool selected, bool danger)
     {
-        Color fill = danger ? Palette.Danger
-            : selected ? Palette.Selected
-            : hover ? Palette.Hover
-            : Palette.Panel;
-        Color border = danger ? Palette.Danger
-            : selected ? Palette.BorderStrong
-            : Palette.Border;
-        Widgets.DrawBoxSolid(rect, fill);
-        DrawBorder(rect, border);
-
-        if (selected)
-        {
-            UiPanel.DrawAccentBar(
-                new Rect(rect.x + 1f, rect.y + 1f, 4f, Mathf.Max(1f, rect.height - 2f)),
-                Palette.AccentGold);
-        }
+        SelectionButton.DrawSurface(
+            rect,
+            selected,
+            danger,
+            enabled: true,
+            accent: SelectionButton.SelectionAccent.Left,
+            hovered: hover,
+            baseColor: Palette.Panel);
     }
 
     public static void DrawCardSurface(Rect rect, bool hover, bool selected)
     {
-        Color fill = selected ? Palette.Selected
-            : hover ? Palette.Hover
-            : Palette.Panel;
-        Color border = selected ? Palette.BorderStrong : Palette.Border;
-        Widgets.DrawBoxSolid(rect, fill);
-        DrawBorder(rect, border);
-
-        if (selected)
-        {
-            Widgets.DrawBoxSolid(
-                new Rect(rect.x + 1f, rect.yMax - 4f, Mathf.Max(1f, rect.width - 2f), 3f),
-                Palette.AccentGold);
-        }
+        SelectionButton.DrawSurface(
+            rect,
+            selected,
+            danger: false,
+            enabled: true,
+            accent: SelectionButton.SelectionAccent.Bottom,
+            hovered: hover,
+            baseColor: Palette.Panel);
     }
 
     public static void DrawSegment(Rect rect, string label, bool selected)
     {
-        UiPanel.DrawPill(rect, label, selected);
+        SelectionButton.Draw(rect, label, selected, font: UiFont.Tiny);
     }
 
     public static void DrawCheckbox(Rect rect, bool value)

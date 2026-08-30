@@ -59,49 +59,25 @@ public struct Rect
 
 public struct Color
 {
-    private float _r;
-    private float _g;
-    private float _b;
-    private float _a;
+    public float r;
+    public float g;
+    public float b;
+    public float a;
 
     public Color(float r, float g, float b)
     {
-        _r = r;
-        _g = g;
-        _b = b;
-        _a = 1f;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        a = 1f;
     }
 
     public Color(float r, float g, float b, float a)
     {
-        _r = r;
-        _g = g;
-        _b = b;
-        _a = a;
-    }
-
-    public float r
-    {
-        get => _r;
-        set => _r = value;
-    }
-
-    public float g
-    {
-        get => _g;
-        set => _g = value;
-    }
-
-    public float b
-    {
-        get => _b;
-        set => _b = value;
-    }
-
-    public float a
-    {
-        get => _a;
-        set => _a = value;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
     }
 
     public static Color white => new(1f, 1f, 1f, 1f);

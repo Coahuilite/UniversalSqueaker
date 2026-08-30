@@ -98,6 +98,7 @@ public sealed class VoicePackChecklistWidget : IWidget
             new Rect(x, y, innerWidth, checklistHeight),
             domain,
             ref pageState.SearchText,
-            UsWidgetCommandAdapter.For(emit));
+            UsWidgetCommandAdapter.For(emit),
+            metrics);
     }
 }
