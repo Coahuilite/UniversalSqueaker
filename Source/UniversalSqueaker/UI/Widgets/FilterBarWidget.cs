@@ -15,6 +15,7 @@ public sealed class FilterBarWidget : IWidget
 {
     public const string Kind = "us/filter-bar";
 
+    private const string Title = "Quick filters";
     private const float SingleRowHeight = 24f;
     private const float TwoRowHeight = 48f;
     private const float Gap = 4f;
@@ -32,13 +33,12 @@ public sealed class FilterBarWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        float height = ctx.ViewWidth < NarrowWidth ? TwoRowHeight : SingleRowHeight;
+        float bodyHeight = ctx.ViewWidth < NarrowWidth ? TwoRowHeight : SingleRowHeight;
         string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
-        }
-        return UiGuard.MeasureOrFallback(() => height, height, Kind, "UniversalSqueaker");
+        return UiGuard.MeasureOrFallback(
+            () => UsCard.Measure(bodyHeight, helpKey, ctx),
+            UsCard.Measure(bodyHeight, helpKey, ctx),
+            Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -57,38 +57,26 @@ public sealed class FilterBarWidget : IWidget
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
+        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawFilterBody(body, ctx, emit));
+    }
+
+    private static void DrawFilterBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         UiDomainFilter domainFilter = ReadDomainFilter(ctx);
         UiPackFilter packFilter = ReadPackFilter(ctx);
         IReadOnlyList<string> authors = ReadAuthors(ctx);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        float y = rect.y;
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(rect.x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
-
-        Rect rowRect = new(rect.x, y, rect.width, rect.height - (y - rect.y));
+        Rect rowRect = new(rect.x, rect.y, rect.width, SingleRowHeight);
         if (rect.width < NarrowWidth)
         {
             DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: false);
             Rect authorRect = new(rowRect.x, rowRect.y + SingleRowHeight, rowRect.width, SingleRowHeight);
             DrawAuthorButton(authorRect, authors, packFilter.Author, businessEmit);
-            Rect narrowHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-            UsHelp.DrawHelpButton(narrowHelpRect, helpKey, ctx, emit);
             return;
         }
 
         DrawRow(rowRect, domainFilter, packFilter, authors, businessEmit, includeAuthor: true);
-
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawRow(

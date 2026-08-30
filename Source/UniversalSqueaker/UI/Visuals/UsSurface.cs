@@ -52,7 +52,7 @@ public static class UsSurface
 
         if (selected)
         {
-            Widgets.DrawBoxSolid(
+            UiPanel.DrawAccentBar(
                 new Rect(rect.x + 1f, rect.y + 1f, 4f, Mathf.Max(1f, rect.height - 2f)),
                 Palette.AccentGold);
         }
@@ -77,64 +77,17 @@ public static class UsSurface
 
     public static void DrawSegment(Rect rect, string label, bool selected)
     {
-        bool hovered = Mouse.IsOver(rect);
-        Color fill = selected ? Palette.Selected
-            : hovered ? Palette.Hover
-            : Palette.Raised;
-        Color border = selected ? Palette.AccentGold
-            : hovered ? Palette.BorderStrong
-            : Palette.Border;
-        Color text = selected ? Palette.AccentGold : hovered ? Palette.TextPrimary : Palette.TextSecondary;
-
-        Widgets.DrawBoxSolid(rect, fill);
-        DrawBorder(rect, border);
-
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        TextAnchor oldAnchor = Text.Anchor;
-        Text.Font = GameFont.Tiny;
-        GUI.color = text;
-        Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(rect, label);
-        Text.Anchor = oldAnchor;
-        Text.Font = oldFont;
-        GUI.color = oldColor;
+        UiPanel.DrawPill(rect, label, selected);
     }
 
     public static void DrawCheckbox(Rect rect, bool value)
     {
-        bool hovered = Mouse.IsOver(rect);
-        Color fill = value ? Palette.Selected : hovered ? Palette.Hover : Palette.Panel;
-        Color border = value ? Palette.AccentGold : hovered ? Palette.BorderStrong : Palette.Border;
-
-        Widgets.DrawBoxSolid(rect, fill);
-        DrawBorder(rect, border);
-
-        if (value)
-        {
-            // Approximate a gold check with two 2px solid bars.
-            Widgets.DrawBoxSolid(new Rect(rect.x + 3f, rect.y + rect.height * 0.55f, 4f, 2f), Palette.AccentGold);
-            Widgets.DrawBoxSolid(new Rect(rect.x + 5f, rect.y + rect.height * 0.45f, 2f, 4f), Palette.AccentGold);
-            Widgets.DrawBoxSolid(new Rect(rect.x + 7f, rect.y + rect.height * 0.35f, 2f, 5f), Palette.AccentGold);
-            Widgets.DrawBoxSolid(new Rect(rect.x + 9f, rect.y + rect.height * 0.25f, 2f, 5f), Palette.AccentGold);
-            Widgets.DrawBoxSolid(new Rect(rect.x + 11f, rect.y + rect.height * 0.35f, 2f, 4f), Palette.AccentGold);
-            Widgets.DrawBoxSolid(new Rect(rect.x + 13f, rect.y + rect.height * 0.45f, 2f, 3f), Palette.AccentGold);
-        }
+        UiPanel.DrawCheckbox(rect, value);
     }
 
     public static void DrawHeader(Rect rect, string text)
     {
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        TextAnchor oldAnchor = Text.Anchor;
-        Text.Font = GameFont.Small;
-        GUI.color = Palette.TextPrimary;
-        Text.Anchor = TextAnchor.MiddleLeft;
-        Widgets.Label(rect, text);
-        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Palette.Border);
-        Text.Anchor = oldAnchor;
-        Text.Font = oldFont;
-        GUI.color = oldColor;
+        UiText.DrawSection(rect, text);
     }
 
     private static SurfaceFrame.SurfaceKind ToUi(SurfaceKind kind)

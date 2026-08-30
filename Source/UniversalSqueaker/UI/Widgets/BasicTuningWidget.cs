@@ -25,6 +25,7 @@ public sealed class BasicTuningWidget : IWidget
     private const float BottomPadding = 2f;
     private const float LeftPadding = 10f;
 
+    private const string Title = "Basic toggles";
     private const string EggLabel = "Easter egg sounds";
     private const string DistanceLabel = "Distance preset";
 
@@ -41,14 +42,13 @@ public sealed class BasicTuningWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        float height = TopPadding + EggRowHeight + DistanceRowHeight
+        float bodyHeight = TopPadding + EggRowHeight + DistanceRowHeight
             + BasicRowHeight * 3f + BasicRowGap * 2f + BottomPadding;
         string helpKey = UsHelp.ResolveKey(_spec);
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
-        }
-        return UiGuard.MeasureOrFallback(() => height, height, Kind, "UniversalSqueaker");
+        return UiGuard.MeasureOrFallback(
+            () => UsCard.Measure(bodyHeight, helpKey, ctx),
+            UsCard.Measure(bodyHeight, helpKey, ctx),
+            Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -67,20 +67,15 @@ public sealed class BasicTuningWidget : IWidget
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
+        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
-
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
 
         DrawEggRow(new Rect(x, y, innerWidth, EggRowHeight), ctx, businessEmit);
         y += EggRowHeight;
@@ -93,9 +88,6 @@ public sealed class BasicTuningWidget : IWidget
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScaleTalking", "Scale frequency with talking", "ScaleFrequencyWithTalking");
         y += BasicRowHeight + BasicRowGap;
         DrawBasicRow(new Rect(x, y, innerWidth, BasicRowHeight), ctx, businessEmit, "ScalePopulation", "Scale periodic with audible population", "ScalePeriodicWithAudiblePopulation");
-
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

@@ -37,26 +37,21 @@ public sealed class VoicePackChecklistWidget : IWidget
 
             float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
             var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-            float height;
+            float bodyHeight;
             if (value is not VoicePackDomainView domain)
             {
-                height = headerHeight + VoicePacksLayout.Gap
-                    + VoicePacksLayout.EmptyStateHeight + VoicePacksLayout.Gap;
+                bodyHeight = VoicePacksLayout.EmptyStateHeight;
             }
             else
             {
-                height = headerHeight + VoicePacksLayout.Gap
-                    + VoicePacksLayout.ChecklistHeight(domain, ctx.State.SearchText, width, metrics)
-                    + VoicePacksLayout.Gap;
+                bodyHeight = VoicePacksLayout.ChecklistHeight(domain, ctx.State.SearchText, width, metrics);
             }
 
             string helpKey = UsHelp.ResolveKey(_spec);
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-            }
-            return height;
+            return UiGuard.MeasureOrFallback(
+                () => UsCard.Measure(bodyHeight, helpKey, ctx),
+                UsCard.Measure(bodyHeight, helpKey, ctx),
+                Kind, "UniversalSqueaker");
         }, 0f, Kind, "UniversalSqueaker");
     }
 
@@ -77,27 +72,17 @@ public sealed class VoicePackChecklistWidget : IWidget
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
         if (!ctx.TryGetViewValue("SelectedDomain", out object? value)) return;
+        UsCard.Draw(rect, HeaderText, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        if (!ctx.TryGetViewValue("SelectedDomain", out object? value)) return;
 
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, innerWidth, metrics);
-        Rect headerRect = new(x, y, innerWidth, headerHeight);
-        UsWidgetDrawing.DrawSectionHeader(headerRect, HeaderText);
-        Rect helpRect = new(headerRect.xMax - 22f, headerRect.y, 22f, Math.Min(22f, headerHeight));
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-        y += headerHeight + VoicePacksLayout.Gap;
-
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
 
         if (value is not VoicePackDomainView domain)
         {

@@ -33,7 +33,7 @@ public static class FerriteVoicePacksPage
 
     /// <summary>Width reserved for the vertical scrollbar so content is not clipped by it.</summary>
     private const float ScrollbarWidth = 16f;
-    private const float NavWidth = 140f;
+    private const float NavWidth = 176f;
     private const float FooterHeight = UsFooterWidget.FooterHeight;
 
     internal static readonly VoicePacksPageState State = new();
@@ -472,54 +472,64 @@ public static class FerriteVoicePacksPage
 
     private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
-        const float groupHeaderHeight = 24f;
-        const float itemHeight = 26f;
-        const float gap = 2f;
-        const float sidePadding = 6f;
+        const float groupHeaderHeight = 22f;
+        const float itemHeight = 30f;
+        const float gap = 3f;
+        const float sidePadding = 10f;
+        const float itemIndent = 6f;
+        const float brandHeight = 52f;
 
-        UsSurface.DrawSurface(navRect, UsSurface.SurfaceKind.Panel);
-        UsSurface.DrawBorder(navRect);
+        Widgets.DrawBoxSolid(navRect, Palette.Base);
+        SurfaceFrame.DrawBorder(navRect, Palette.Border);
 
-        float y = navRect.y + 8f;
+        float y = navRect.y + 12f;
+
+        // Brand / page identity.
+        Rect brandRect = new(navRect.x + sidePadding, y, Math.Max(1f, navRect.width - sidePadding * 2f), brandHeight);
+        UiText.DrawLabel(new Rect(brandRect.x, brandRect.y, brandRect.width, 20f), "Universal Squeaker", Palette.TextPrimary);
+        UiText.DrawCaption(new Rect(brandRect.x, brandRect.y + 20f, brandRect.width, 16f), "VoicePack Routing", Palette.TextSecondary);
+        UiPanel.DrawDivider(new Rect(brandRect.x, brandRect.yMax - 1f, brandRect.width, 1f));
+        y += brandHeight + 8f;
+
         foreach ((string group, string groupLabel) in NavGroups)
         {
             bool groupActive = string.Equals(group, activeTab, StringComparison.Ordinal);
-            DrawNavGroupHeader(new Rect(navRect.x + sidePadding, y, Math.Max(1f, navRect.width - sidePadding * 2f), groupHeaderHeight), groupLabel, groupActive);
+            DrawNavGroupHeader(
+                new Rect(navRect.x + sidePadding, y, Math.Max(1f, navRect.width - sidePadding * 2f), groupHeaderHeight),
+                groupLabel,
+                groupActive);
             y += groupHeaderHeight + gap;
 
             foreach ((string sectionKey, string itemLabel) in NavItemsByGroup(group))
             {
                 Rect itemRect = new(
-                    navRect.x + sidePadding + 4f,
+                    navRect.x + sidePadding + itemIndent,
                     y,
-                    Math.Max(1f, navRect.width - sidePadding * 2f - 4f),
+                    Math.Max(1f, navRect.width - sidePadding * 2f - itemIndent),
                     itemHeight);
 
                 bool active = string.Equals(State.ActiveSectionKey, sectionKey, StringComparison.Ordinal);
                 bool hovered = Mouse.IsOver(itemRect);
-                UsSurface.DrawSurface(
-                    itemRect,
-                    active ? UsSurface.SurfaceKind.Selected
-                    : hovered ? UsSurface.SurfaceKind.Hover
-                    : UsSurface.SurfaceKind.Base);
-                UsSurface.DrawBorder(
-                    itemRect,
-                    active ? UsVisualTokens.AccentGold
-                    : hovered ? UsVisualTokens.BorderStrong
-                    : UsVisualTokens.Border);
+                Color fill = active ? Palette.Selected : hovered ? Palette.Hover : Color.clear;
+                if (fill.a > 0f)
+                {
+                    Widgets.DrawBoxSolid(itemRect, fill);
+                }
+                SurfaceFrame.DrawBorder(itemRect, active ? Palette.BorderStrong : hovered ? Palette.Border : Color.clear);
+                if (active)
+                {
+                    UiPanel.DrawAccentBar(
+                        new Rect(itemRect.x - itemIndent + 2f, itemRect.y + 2f, 3f, Math.Max(1f, itemRect.height - 4f)),
+                        Palette.AccentGold);
+                }
 
-                Color oldColor = GUI.color;
-                GameFont oldFont = Text.Font;
-                TextAnchor oldAnchor = Text.Anchor;
-                Text.Font = GameFont.Tiny;
-                Text.Anchor = TextAnchor.MiddleLeft;
-                GUI.color = active ? UsVisualTokens.AccentGold
-                    : hovered ? UsVisualTokens.TextPrimary
-                    : UsVisualTokens.TextSecondary;
-                Widgets.Label(new Rect(itemRect.x + 4f, itemRect.y, Math.Max(1f, itemRect.width - 8f), itemRect.height), itemLabel);
-                Text.Font = oldFont;
-                Text.Anchor = oldAnchor;
-                GUI.color = oldColor;
+                Color textColor = active ? Palette.TextOnGold
+                    : hovered ? Palette.TextPrimary
+                    : Palette.TextSecondary;
+                UiText.DrawLabel(
+                    new Rect(itemRect.x + 8f, itemRect.y, Math.Max(1f, itemRect.width - 12f), itemRect.height),
+                    itemLabel,
+                    textColor);
 
                 string capturedKey = sectionKey;
                 UiInteract.Button(itemRect, UiLayer.TopAction,
@@ -528,22 +538,13 @@ public static class FerriteVoicePacksPage
                 y += itemHeight + gap;
             }
 
-            y += 6f;
+            y += 8f;
         }
     }
 
     private static void DrawNavGroupHeader(Rect rect, string label, bool active)
     {
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        TextAnchor oldAnchor = Text.Anchor;
-        Text.Font = GameFont.Small;
-        Text.Anchor = TextAnchor.MiddleLeft;
-        GUI.color = active ? UsVisualTokens.AccentGold : UsVisualTokens.TextSecondary;
-        Widgets.Label(rect, label);
-        Text.Font = oldFont;
-        Text.Anchor = oldAnchor;
-        GUI.color = oldColor;
+        UiText.DrawCaption(rect, label, active ? Palette.AccentGold : Palette.TextSecondary);
     }
 
     private static readonly (string Group, string Label)[] NavGroups =

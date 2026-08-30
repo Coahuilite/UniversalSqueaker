@@ -24,6 +24,7 @@ public sealed class ScopeTreeWidget : IWidget
 {
     public const string Kind = "us/scope-tree";
 
+    private const string Title = "Tuning editor";
     private const string ScopeHeaderText = "Action Scope";
     private const string MoodHeaderText = "Mood Tuning";
 
@@ -57,38 +58,33 @@ public sealed class ScopeTreeWidget : IWidget
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        return UiGuard.MeasureOrFallback(() =>
+        int layer = ReadLayer(ctx);
+        int scopeCount = ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
+            && scopesValue is IReadOnlyList<ActionScopeRowView> rows
+            ? rows.Count : 0;
+        int moodCount = ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue)
+            && moodsValue is IReadOnlyList<MoodTuningRowView> moodRows
+            ? moodRows.Count : 0;
+
+        float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
+        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
+
+        float bodyHeight = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
+        if (layer > 0) bodyHeight += DomainRowHeight + VoicePacksLayout.Gap;
+        bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
+            + scopeCount * (RowHeight + RowGap);
+        if (scopeCount > 0)
         {
-            int layer = ReadLayer(ctx);
-            bool hasDomains = ctx.TryGetViewValue("TuningDomains", out object? value)
-                && value is IReadOnlyList<TuningDomainOptionView> domains
-                && domains.Count > 0;
-            int scopeCount = ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
-                && scopesValue is IReadOnlyList<ActionScopeRowView> rows
-                ? rows.Count : 0;
-            int moodCount = ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue)
-                && moodsValue is IReadOnlyList<MoodTuningRowView> moodRows
-                ? moodRows.Count : 0;
+            bodyHeight += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
+                + moodCount * (MoodRowHeight + RowGap);
+        }
+        bodyHeight += BottomPadding;
 
-            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-
-            float height = TopPadding + LayerRowHeightFor(width) + VoicePacksLayout.Gap;
-            if (layer > 0) height += DomainRowHeight + VoicePacksLayout.Gap;
-            height += VoicePacksLayout.SectionHeaderHeightFor(ScopeHeaderText, width, metrics) + VoicePacksLayout.Gap
-                + scopeCount * (RowHeight + RowGap);
-            if (scopeCount > 0)
-            {
-                height += VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, width, metrics) + VoicePacksLayout.Gap
-                    + moodCount * (MoodRowHeight + RowGap);
-            }
-            string helpKey = UsHelp.ResolveKey(_spec);
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-            }
-            return height + BottomPadding;
-        }, 0f, Kind, "UniversalSqueaker");
+        string helpKey = UsHelp.ResolveKey(_spec);
+        return UiGuard.MeasureOrFallback(
+            () => UsCard.Measure(bodyHeight, helpKey, ctx),
+            UsCard.Measure(bodyHeight, helpKey, ctx),
+            Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -107,12 +103,15 @@ public sealed class ScopeTreeWidget : IWidget
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
+        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         int layer = ReadLayer(ctx);
-        if (!ctx.TryGetViewValue("ActionScopes", out object? scopesValue)
-            || scopesValue is not IReadOnlyList<ActionScopeRowView> rows)
-        {
-            return;
-        }
+        ctx.TryGetViewValue("ActionScopes", out object? scopesValue);
+        IReadOnlyList<ActionScopeRowView> rows = scopesValue as IReadOnlyList<ActionScopeRowView>
+            ?? Array.Empty<ActionScopeRowView>();
         ctx.TryGetViewValue("MoodTuningRows", out object? moodsValue);
         IReadOnlyList<MoodTuningRowView> moodRows = moodsValue as IReadOnlyList<MoodTuningRowView>
             ?? Array.Empty<MoodTuningRowView>();
@@ -126,21 +125,12 @@ public sealed class ScopeTreeWidget : IWidget
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
 
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
-
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
-        DrawLayerRow(new Rect(x, y, innerWidth, LayerRowHeight), layer, businessEmit);
-        y += LayerRowHeight + VoicePacksLayout.Gap;
+        float layerRowHeight = LayerRowHeightFor(innerWidth);
+        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, businessEmit);
+        y += layerRowHeight + VoicePacksLayout.Gap;
 
         if (layer > 0)
         {
@@ -158,12 +148,7 @@ public sealed class ScopeTreeWidget : IWidget
             y += RowHeight + RowGap;
         }
 
-        if (rows.Count == 0)
-        {
-            Rect emptyHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-            UsHelp.DrawHelpButton(emptyHelpRect, helpKey, ctx, emit);
-            return;
-        }
+        if (rows.Count == 0) return;
 
         float moodHeader = VoicePacksLayout.SectionHeaderHeightFor(MoodHeaderText, innerWidth, metrics);
         UsWidgetDrawing.DrawSectionHeader(new Rect(x, y, innerWidth, moodHeader), MoodHeaderText);
@@ -174,9 +159,6 @@ public sealed class ScopeTreeWidget : IWidget
             DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, businessEmit);
             y += MoodRowHeight + RowGap;
         }
-
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static int ReadLayer(WidgetContext ctx)

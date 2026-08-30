@@ -39,17 +39,12 @@ public sealed class XenotypeLayerWidget : IWidget
                 return 0f;
             }
 
-            float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
-            var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-            float height = headerHeight + VoicePacksLayout.Gap
-                + xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
+            float bodyHeight = xenotypes.Count * (VoicePacksLayout.RaceLayerRowHeight + VoicePacksLayout.Gap);
             string helpKey = UsHelp.ResolveKey(_spec);
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-            }
-            return height;
+            return UiGuard.MeasureOrFallback(
+                () => UsCard.Measure(bodyHeight, helpKey, ctx),
+                UsCard.Measure(bodyHeight, helpKey, ctx),
+                Kind, "UniversalSqueaker");
         }, 0f, Kind, "UniversalSqueaker");
     }
 
@@ -76,26 +71,21 @@ public sealed class XenotypeLayerWidget : IWidget
             return;
         }
 
+        UsCard.Draw(rect, HeaderText, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        if (!ctx.TryGetViewValue("XenotypeDomains", out object? value)
+            || value is not IReadOnlyList<VoicePackDomainView> xenotypes
+            || xenotypes.Count == 0)
+        {
+            return;
+        }
+
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y;
-        var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, innerWidth, metrics);
-        Rect headerRect = new(x, y, innerWidth, headerHeight);
-        UsWidgetDrawing.DrawSectionHeader(headerRect, HeaderText);
-        Rect helpRect = new(headerRect.xMax - 22f, headerRect.y, 22f, Math.Min(22f, headerHeight));
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-        y += headerHeight + VoicePacksLayout.Gap;
-
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
 
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         foreach (VoicePackDomainView domain in xenotypes)

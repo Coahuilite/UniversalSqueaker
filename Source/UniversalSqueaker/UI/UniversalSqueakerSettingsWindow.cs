@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
@@ -7,16 +8,16 @@ namespace UniversalSqueaker.UI;
 /// Full-screen, custom-drawn settings window for Universal Squeaker.
 ///
 /// RimWorld's stock <c>Dialog_ModSettings</c>/<c>Dialog_Options</c> are fixed-size centered
-/// dialogs with the vanilla gray-black frame. This window instead covers the whole screen,
-/// disables the vanilla window background, and draws its own surface so the VoicePacks page can
-/// use the full resolution (1920x1080, 2560x1440, etc.).
+/// dialogs with the vanilla gray-black frame. This window covers nearly the whole screen,
+/// disables the vanilla window background, and draws its own modern surface so the VoicePacks
+/// page can use the full resolution while retaining a safe margin around the play field.
 /// </summary>
 public sealed class UniversalSqueakerSettingsWindow : Window
 {
-    private const float TitleBarHeight = 48f;
-    private const float SidePadding = 16f;
-    private const float CloseButtonWidth = 120f;
-    private const float CloseButtonHeight = 32f;
+    private const float TitleBarHeight = 56f;
+    private const float SidePadding = 20f;
+    private const float CloseButtonWidth = 110f;
+    private const float CloseButtonHeight = 30f;
     private const float AccentBarHeight = 3f;
 
     private readonly UniversalSqueakerMod mod;
@@ -39,10 +40,12 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     {
         get
         {
-            float width = Mathf.Min(Verse.UI.screenWidth * 0.6f, Verse.UI.screenWidth - 80f);
-            float height = Mathf.Min(Verse.UI.screenHeight * 0.6f, Verse.UI.screenHeight - 80f);
-            width = Mathf.Max(800f, width);
-            height = Mathf.Max(600f, height);
+            float safeWidth = Verse.UI.screenWidth - 48f;
+            float safeHeight = Verse.UI.screenHeight - 48f;
+            float width = Mathf.Min(Verse.UI.screenWidth * 0.92f, safeWidth);
+            float height = Mathf.Min(Verse.UI.screenHeight * 0.92f, safeHeight);
+            width = Mathf.Max(960f, width);
+            height = Mathf.Max(640f, height);
             return new Vector2(width, height);
         }
     }
@@ -64,35 +67,47 @@ public sealed class UniversalSqueakerSettingsWindow : Window
 
     private void DrawBackground(Rect rect)
     {
-        Widgets.DrawBoxSolid(rect, UsVisualTokens.SurfaceBase);
+        Widgets.DrawBoxSolid(rect, Palette.Canvas);
         Widgets.DrawBoxSolid(
             new Rect(rect.x, rect.y, rect.width, AccentBarHeight),
-            UsVisualTokens.AccentGold);
+            Palette.AccentGold);
     }
 
     private void DrawTitleBar(Rect rect)
     {
         Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
         TextAnchor oldAnchor = Text.Anchor;
+        GameFont oldFont = Text.Font;
 
-        Text.Font = GameFont.Medium;
-        Text.Anchor = TextAnchor.MiddleLeft;
-        GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(
-            new Rect(rect.x + SidePadding, rect.y + 8f, Mathf.Max(1f, rect.width * 0.6f), TitleBarHeight - 16f),
-            mod.SettingsCategory());
+        Rect titleRect = new(
+            rect.x + SidePadding,
+            rect.y + 8f,
+            Mathf.Max(1f, rect.width * 0.6f),
+            TitleBarHeight - 16f);
+
+        UiText.DrawTitle(new Rect(titleRect.x, titleRect.y, titleRect.width, 24f), mod.SettingsCategory());
+        UiText.DrawCaption(new Rect(titleRect.x, titleRect.y + 24f, titleRect.width, 16f), "Universal Squeaker — VoicePack Routing");
+
+        Rect closeRect = new(
+            rect.xMax - CloseButtonWidth - SidePadding,
+            rect.y + (TitleBarHeight - CloseButtonHeight) * 0.5f,
+            CloseButtonWidth,
+            CloseButtonHeight);
+        DrawCloseButton(closeRect);
 
         Text.Font = oldFont;
         Text.Anchor = oldAnchor;
         GUI.color = oldColor;
+    }
 
-        Rect closeRect = new Rect(
-            rect.xMax - CloseButtonWidth - SidePadding,
-            rect.y + 8f,
-            CloseButtonWidth,
-            CloseButtonHeight);
-        if (Widgets.ButtonText(closeRect, "Close".Translate()))
+    private void DrawCloseButton(Rect rect)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        Widgets.DrawBoxSolid(rect, hovered ? Palette.Hover : Palette.Panel);
+        SurfaceFrame.DrawBorder(rect, hovered ? Palette.BorderStrong : Palette.Border);
+
+        UiText.DrawCaption(rect, "Close", hovered ? Palette.TextPrimary : Palette.TextSecondary);
+        if (Widgets.ButtonInvisible(rect))
         {
             Close();
         }

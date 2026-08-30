@@ -18,6 +18,7 @@ public sealed class AttenuationEditorWidget : IWidget
 {
     public const string Kind = "us/attenuation-editor";
 
+    private const string Title = "Camera height attenuation";
     private const float ChartHeight = 64f;
     private const float StatusHeight = 20f;
     private const float ButtonsHeight = 26f;
@@ -68,17 +69,13 @@ public sealed class AttenuationEditorWidget : IWidget
     public float Measure(WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-        return UiGuard.MeasureOrFallback(() =>
-        {
-            float height = ctx.ViewWidth < MinWidth ? NarrowHeight
-                : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
-            string helpKey = UsHelp.ResolveKey(_spec);
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                height += UsHelp.BannerHeight(ctx, helpKey, VoicePacksLayout.InnerWidth(ctx.ViewWidth)) + VoicePacksLayout.Gap;
-            }
-            return height;
-        }, 0f, Kind, "UniversalSqueaker");
+        string helpKey = UsHelp.ResolveKey(_spec);
+        float bodyHeight = ctx.ViewWidth < MinWidth ? NarrowHeight
+            : TopPadding + ChartHeight + Gap + StatusHeight + Gap + ButtonsHeight + BottomPadding;
+        return UiGuard.MeasureOrFallback(
+            () => UsCard.Measure(bodyHeight, helpKey, ctx),
+            UsCard.Measure(bodyHeight, helpKey, ctx),
+            Kind, "UniversalSqueaker");
     }
 
     public void Draw(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
@@ -97,21 +94,14 @@ public sealed class AttenuationEditorWidget : IWidget
 
     private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, string helpKey)
     {
+        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
         if (rect.width < MinWidth)
         {
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                float narrowInnerWidth = VoicePacksLayout.InnerWidth(rect.width);
-                float helpHeight = UsHelp.BannerHeight(ctx, helpKey, narrowInnerWidth);
-                if (helpHeight > 0f)
-                {
-                    UsHelp.DrawBanner(new Rect(rect.x + LeftPadding, rect.y + TopPadding, narrowInnerWidth, helpHeight), helpKey, ctx);
-                }
-            }
-
             DrawNarrowSummary(rect, ctx);
-            Rect narrowHelpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-            UsHelp.DrawHelpButton(narrowHelpRect, helpKey, ctx, emit);
             return;
         }
 
@@ -132,16 +122,6 @@ public sealed class AttenuationEditorWidget : IWidget
         float x = rect.x + LeftPadding;
         float y = rect.y + TopPadding;
 
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
-
         Rect chartRect = new(x, y, innerWidth, ChartHeight);
         UiInteract.Protect(chartRect);
         HandleDrag(chartRect, ref min, ref max, drag, businessEmit);
@@ -152,9 +132,6 @@ public sealed class AttenuationEditorWidget : IWidget
         y += StatusHeight + Gap;
 
         DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);
-
-        Rect helpRect = new(rect.xMax - 22f, rect.y, 22f, 22f);
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

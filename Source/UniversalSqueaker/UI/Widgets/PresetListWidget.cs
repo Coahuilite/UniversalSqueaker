@@ -19,6 +19,7 @@ public sealed class PresetListWidget : IWidget
 {
     public const string Kind = "us/preset-list";
 
+    private const string Title = "Tuning Baseline Presets";
     private const string HeaderText = "Tuning Baseline Presets";
     private const float PresetHeaderHeight = 32f;
     private const float RaceRowHeight = 24f;
@@ -55,28 +56,27 @@ public sealed class PresetListWidget : IWidget
 
             float width = VoicePacksLayout.InnerWidth(ctx.ViewWidth);
             var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-            float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, width, metrics);
-            float height = TopPadding + headerHeight + VoicePacksLayout.Gap;
+            float bodyHeight = TopPadding;
 
             foreach (BaselinePresetView preset in presets)
             {
-                height += PresetHeaderHeight + VoicePacksLayout.Gap;
+                bodyHeight += PresetHeaderHeight + VoicePacksLayout.Gap;
                 if (!preset.Expanded) continue;
                 if (!string.IsNullOrEmpty(preset.Description))
-                    height += metrics.CalcHeight(preset.Description, Math.Max(1f, width - 16f)) + 6f + VoicePacksLayout.Gap;
+                    bodyHeight += metrics.CalcHeight(preset.Description, Math.Max(1f, width - 16f)) + 6f + VoicePacksLayout.Gap;
                 foreach (BaselineRaceView race in preset.Races)
                 {
-                    height += RaceRowHeight + RowGap;
-                    height += race.Xenotypes.Count * (XenotypeRowHeight + RowGap);
+                    bodyHeight += RaceRowHeight + RowGap;
+                    bodyHeight += race.Xenotypes.Count * (XenotypeRowHeight + RowGap);
                 }
             }
+            bodyHeight += BottomPadding;
 
             string helpKey = UsHelp.ResolveKey(_spec);
-            if (UsHelp.IsOpen(ctx, helpKey))
-            {
-                height += UsHelp.BannerHeight(ctx, helpKey, width) + VoicePacksLayout.Gap;
-            }
-            return height + BottomPadding;
+            return UiGuard.MeasureOrFallback(
+                () => UsCard.Measure(bodyHeight, helpKey, ctx),
+                UsCard.Measure(bodyHeight, helpKey, ctx),
+                Kind, "UniversalSqueaker");
         }, 0f, Kind, "UniversalSqueaker");
     }
 
@@ -103,28 +103,23 @@ public sealed class PresetListWidget : IWidget
             return;
         }
 
+        UsCard.Draw(rect, Title, helpKey, ctx, emit, body => DrawBody(body, ctx, emit));
+    }
+
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    {
+        if (!ctx.TryGetViewValue("BaselinePresets", out object? value)
+            || value is not IReadOnlyList<BaselinePresetView> presets
+            || presets.Count == 0)
+        {
+            return;
+        }
+
         float innerWidth = VoicePacksLayout.InnerWidth(rect.width);
         float x = rect.x + VoicePacksLayout.Padding;
         float y = rect.y + TopPadding;
 
         var metrics = new FerriteTextMetricsAdapter(ctx.Metrics);
-        float headerHeight = VoicePacksLayout.SectionHeaderHeightFor(HeaderText, innerWidth, metrics);
-        Rect headerRect = new(x, y, innerWidth, headerHeight);
-        UsWidgetDrawing.DrawSectionHeader(headerRect, HeaderText);
-        Rect helpRect = new(headerRect.xMax - 22f, headerRect.y, 22f, Math.Min(22f, headerHeight));
-        UsHelp.DrawHelpButton(helpRect, helpKey, ctx, emit);
-        y += headerHeight + VoicePacksLayout.Gap;
-
-        if (UsHelp.IsOpen(ctx, helpKey))
-        {
-            float helpHeight = UsHelp.BannerHeight(ctx, helpKey, innerWidth);
-            if (helpHeight > 0f)
-            {
-                UsHelp.DrawBanner(new Rect(x, y, innerWidth, helpHeight), helpKey, ctx);
-                y += helpHeight + VoicePacksLayout.Gap;
-            }
-        }
-
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float xenoIndent = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable ? XenotypeIndent : 12f;
         foreach (BaselinePresetView preset in presets)
