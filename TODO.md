@@ -59,7 +59,8 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **修复前排查工序** — ✅ `docs/ui-fix-triage-report.md` 已生成；批次 A–D 已调度完成。
 - **UI 反馈修复批次 A–D（2026-08-30 调度完成）** — G2/G3（交互通路+下拉定位）、G1（文本高度）、G4（原版/SR 视觉统一）、M1/M2+低风险全部落地；`scripts/verify-local.ps1` 14 门全绿。任务书：`docs/ui-fix-task-books-zh.md`；行业调研：`docs/ui-ux-industry-review-zh.md`。
 - **Camera+ 分层帮助 + 标题去重（2026-08-30 完成）** — 右侧帮助升级为分区总览+单项列表+悬停/选中联动高亮；左侧导航品牌区隐藏；Global Volume 隐藏体内重复标签；`UsCard` 新增 `TitleHidden` 能力。计划：`docs/ui-camera-help-and-title-hide-plan-zh.md`；`verify-local.ps1` 14 门全绿。
-- **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、下拉、Mood stepper、衰减图拖拽、sticky layer、分层帮助 hover/选中联动）。
+- **UI 首次打开故障排查（2026-08-30 处理中）** — 已加 null 来源防御、完整堆栈日志、`ResetSessionLog` 每帧刷屏修复、首次绘制失败自动重试（`0a936f6` + `acc854d`）。待维护者用 `dist/dev/UniversalSqueaker`（commit `acc854d`）确认首次打开是否恢复；若仍失败，新 `Player.log` 带完整堆栈。
+- **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、下拉、Mood stepper、衰减图拖拽、sticky layer、分层帮助 hover/选中联动、首次打开自动重试）。
 - **Backlog** — OB-02 `UiLayoutTier.ClampWidth` 接入、OB-03 加载 clamp 测试、OB-04 `VoicePacksLayout` 测试（可在游戏内验证后处理）。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
