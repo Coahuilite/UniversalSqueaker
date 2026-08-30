@@ -122,7 +122,8 @@
 
 ## 3. 建议处理顺序
 
-1. **先修全局风险 G2（不可用控件）与 G3（下拉定位）**：它们直接破坏核心交互。
+0. **先执行系统性排查工序**（见 `docs/ui-fix-triage-plan-zh.md`），输出问题清单与回归测试。
+1. **再修全局风险 G2（不可用控件）与 G3（下拉定位）**：它们直接破坏核心交互。
 2. **再修 G1（文本裁剪）**：影响整个设置的可读性。
 3. **统一视觉 G4**：恢复 SR/原版设计语言，作为后续按钮/卡片的基础。
 4. **随后处理中风险 M1/M2/M3**。
@@ -132,5 +133,6 @@
 
 - 反馈原文：`docs/ui-feedback.md`
 - 实施计划：`docs/us-ui-implementation-plan-zh.md`
+- 排查工序：`docs/ui-fix-triage-plan-zh.md`
 - 设计调研：`docs/ui-ux-research-zh.md`
 - SR 样式证据：`../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`
