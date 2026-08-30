@@ -2,27 +2,29 @@ using UnityEngine;
 using Verse;
 using VerseWidgets = Verse.Widgets;
 
-namespace FerriteLib.UiKit.Widgets;
-
-internal enum SurfaceKind
-{
-    Base,
-    Raised,
-    Panel,
-    Selected,
-    Warning,
-    Success,
-    Danger
-}
+namespace FerriteLib.UiKit;
 
 /// <summary>Neutral framed surface: background fill + 1px border.</summary>
-internal static class SurfaceFrame
+public static class SurfaceFrame
 {
+    public enum SurfaceKind
+    {
+        Base,
+        Raised,
+        Hover,
+        Panel,
+        Selected,
+        Warning,
+        Success,
+        Danger
+    }
+
     public static void Draw(Rect rect, SurfaceKind kind = SurfaceKind.Base)
     {
         Color fill = kind switch
         {
             SurfaceKind.Raised => Palette.Raised,
+            SurfaceKind.Hover => Palette.Hover,
             SurfaceKind.Panel => Palette.Panel,
             SurfaceKind.Selected => Palette.Selected,
             SurfaceKind.Warning => Palette.Warning,

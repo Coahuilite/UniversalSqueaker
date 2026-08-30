@@ -1,10 +1,11 @@
 using UnityEngine;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Compatibility surface frame forwarding to <see cref="UsSurface"/>. Kept only while external page
-/// shell code still references the old surface entry point.
+/// Compatibility surface frame forwarding to the neutral UiKit <see cref="SurfaceFrame"/>.
+/// Kept only while diagnostics/shell code still references the old names.
 /// </summary>
 public static class SectionFrame
 {
@@ -19,28 +20,28 @@ public static class SectionFrame
 
     public static void Draw(Rect rect, SurfaceKind kind = SurfaceKind.Base)
     {
-        UsSurface.DrawSurface(rect, ToUs(kind));
+        SurfaceFrame.Draw(rect, ToUi(kind));
     }
 
     public static void DrawBorder(Rect rect)
     {
-        UsSurface.DrawBorder(rect);
+        SurfaceFrame.DrawBorder(rect);
     }
 
     public static void DrawBorder(Rect rect, Color color)
     {
-        UsSurface.DrawBorder(rect, color);
+        SurfaceFrame.DrawBorder(rect, color);
     }
 
-    private static UsSurface.SurfaceKind ToUs(SurfaceKind kind)
+    private static SurfaceFrame.SurfaceKind ToUi(SurfaceKind kind)
     {
         return kind switch
         {
-            SurfaceKind.Raised => UsSurface.SurfaceKind.Raised,
-            SurfaceKind.Emphasized => UsSurface.SurfaceKind.Raised,
-            SurfaceKind.Warning => UsSurface.SurfaceKind.Warning,
-            SurfaceKind.Success => UsSurface.SurfaceKind.Success,
-            _ => UsSurface.SurfaceKind.Base,
+            SurfaceKind.Raised => SurfaceFrame.SurfaceKind.Raised,
+            SurfaceKind.Emphasized => SurfaceFrame.SurfaceKind.Raised,
+            SurfaceKind.Warning => SurfaceFrame.SurfaceKind.Warning,
+            SurfaceKind.Success => SurfaceFrame.SurfaceKind.Success,
+            _ => SurfaceFrame.SurfaceKind.Base,
         };
     }
 }

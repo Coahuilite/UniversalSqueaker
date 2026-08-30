@@ -125,53 +125,63 @@ public static class FerriteVoicePacksPage
             var businessCommands = new List<UiCommand>();
             var navCommands = new List<UiCommand>();
 
-            Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
-            DrawNavWithFrame(navRect, activeTab, navCommands.Add);
-            VoicePacksPageModel.ExecuteAll(settings, navCommands, State);
-
-            float contentWidth = Math.Max(1f, rect.width - NavWidth);
-            float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
-            Rect contentRect = new(rect.x + NavWidth, rect.y, contentWidth, contentAreaHeight);
-
-            DrawContent(contentRect, ctx, activeTab, uiState, kitCommands.Add);
-
-            State.ScrollPosition = uiState.ScrollPosition;
-            State.SearchText = uiState.SearchText;
-            State.HelpOpen = uiState.HelpOpen;
-            State.OpenHelpKeys.Clear();
-            foreach (string helpKey in uiState.OpenHelpKeys)
+            UiInteract.BeginFrame();
+            try
             {
-                State.OpenHelpKeys.Add(helpKey);
-            }
+                Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
+                DrawNav(navRect, activeTab, navCommands.Add);
 
-            Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, contentWidth, FooterHeight);
-            DrawFooter(footerRect, ctx);
+                float contentWidth = Math.Max(1f, rect.width - NavWidth);
+                float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
+                Rect contentRect = new(rect.x + NavWidth, rect.y, contentWidth, contentAreaHeight);
 
-            bool toggleHelp = false;
-            foreach (KitUiCommand kitCommand in kitCommands)
-            {
-                if (kitCommand.Name == "ToggleHelp")
+                DrawContent(contentRect, ctx, activeTab, uiState, kitCommands.Add);
+
+                State.ScrollPosition = uiState.ScrollPosition;
+                State.SearchText = uiState.SearchText;
+                State.HelpOpen = uiState.HelpOpen;
+                State.OpenHelpKeys.Clear();
+                foreach (string helpKey in uiState.OpenHelpKeys)
                 {
-                    if (kitCommand.Payload is string helpKey)
-                    {
-                        uiState.ToggleHelpKey(helpKey);
-                    }
-                    else
-                    {
-                        toggleHelp = !toggleHelp;
-                    }
-                    continue;
+                    State.OpenHelpKeys.Add(helpKey);
                 }
 
-                if (TryTranslate(kitCommand, out UiCommand businessCommand))
+                Rect footerRect = new(rect.x + NavWidth, rect.y + contentRect.height, contentWidth, FooterHeight);
+                DrawFooter(footerRect, ctx);
+
+                UiInteract.ProcessEvents();
+
+                bool toggleHelp = false;
+                foreach (KitUiCommand kitCommand in kitCommands)
                 {
-                    businessCommands.Add(businessCommand);
+                    if (kitCommand.Name == "ToggleHelp")
+                    {
+                        if (kitCommand.Payload is string helpKey)
+                        {
+                            uiState.ToggleHelpKey(helpKey);
+                        }
+                        else
+                        {
+                            toggleHelp = !toggleHelp;
+                        }
+                        continue;
+                    }
+
+                    if (TryTranslate(kitCommand, out UiCommand businessCommand))
+                    {
+                        businessCommands.Add(businessCommand);
+                    }
                 }
+
+                if (toggleHelp) State.HelpOpen = !State.HelpOpen;
+
+                VoicePacksPageModel.ExecuteAll(settings, navCommands, State);
+                VoicePacksPageModel.ExecuteAll(settings, businessCommands, State);
             }
-
-            if (toggleHelp) State.HelpOpen = !State.HelpOpen;
-
-            VoicePacksPageModel.ExecuteAll(settings, businessCommands, State);
+            finally
+            {
+                UiInteract.EndFrame();
+            }
         }
         catch (Exception ex)
         {
@@ -273,12 +283,14 @@ public static class FerriteVoicePacksPage
         engine.ClampScroll(uiState, contentRect.height);
 
         Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, layoutWidth, contentHeight));
+        UiInteract.PushScrollView(contentRect, uiState.ScrollPosition);
         try
         {
-            engine.Draw(new Rect(0f, 0f, layoutWidth, contentHeight), ctx, emit);
+            engine.Draw(new Rect(0f, 0f, layoutWidth, contentHeight), ctx, emit, processEvents: false);
         }
         finally
         {
+            UiInteract.PopScrollView();
             Widgets.EndScrollView();
         }
     }
@@ -332,25 +344,35 @@ public static class FerriteVoicePacksPage
         uiState.ScrollPosition.y = Mathf.Min(Mathf.Max(0f, uiState.ScrollPosition.y), maxY);
 
         Widgets.BeginScrollView(contentRect, ref uiState.ScrollPosition, new Rect(0f, 0f, contentWidth, contentHeight));
+        UiInteract.PushScrollView(contentRect, uiState.ScrollPosition);
         try
         {
-            topEngine.Draw(new Rect(0f, 0f, contentWidth, topHeight), ctx, emit);
+            topEngine.Draw(new Rect(0f, 0f, contentWidth, topHeight), ctx, emit, processEvents: false);
             float y = topHeight + (columnsHeight > 0f ? gap : 0f);
-            leftEngine.Draw(new Rect(0f, y, leftWidth, leftHeight), ctx, emit);
-            rightEngine.Draw(new Rect(leftWidth + gap, y, rightWidth, rightHeight), ctx, emit);
+            leftEngine.Draw(new Rect(0f, y, leftWidth, leftHeight), ctx, emit, processEvents: false);
+            rightEngine.Draw(new Rect(leftWidth + gap, y, rightWidth, rightHeight), ctx, emit, processEvents: false);
         }
         finally
         {
+            UiInteract.PopScrollView();
             Widgets.EndScrollView();
         }
     }
 
     private static void DrawNavWithFrame(Rect navRect, string activeTab, Action<UiCommand> addCommand)
     {
-        // Navigation uses native Widgets.ButtonInvisible so clicks are handled by Unity's IMGUI
-        // control pipeline, which is reliable inside GUI.Window even when the rest of the page is
-        // rendered by UiKit's deferred interaction frame.
-        DrawNav(navRect, activeTab, addCommand);
+        // Standalone nav frame used by the safety-net fallback page. The normal Ferrite page owns a
+        // single UiInteract frame around nav + content + footer and calls DrawNav directly.
+        UiInteract.BeginFrame();
+        try
+        {
+            DrawNav(navRect, activeTab, addCommand);
+            UiInteract.ProcessEvents();
+        }
+        finally
+        {
+            UiInteract.EndFrame();
+        }
     }
 
     private static void DrawNav(Rect navRect, string activeTab, Action<UiCommand> addCommand)
@@ -398,10 +420,8 @@ public static class FerriteVoicePacksPage
             GUI.color = oldColor;
 
             string capturedTab = tab;
-            if (Widgets.ButtonInvisible(buttonRect))
-            {
-                addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab));
-            }
+            UiInteract.Button(buttonRect, UiLayer.TopAction,
+                () => addCommand(new UiCommand(UiCommandKind.SetActiveTab, arg: capturedTab)));
 
             y += buttonHeight + gap;
         }

@@ -22,8 +22,15 @@ public static class UiInteract
         internal Action Callback = null!;
     }
 
+    private sealed class ScrollTransform
+    {
+        internal Rect OutRect;
+        internal Vector2 ScrollPosition;
+    }
+
     private static readonly List<Rect> ProtectedRects = new();
     private static readonly List<RegisteredButton> Buttons = new();
+    private static readonly List<ScrollTransform> ScrollTransforms = new();
     private static bool frameActive;
 
     // Test seams. They are internal and only used by the FerriteLib.UiKit.Tests assembly.
@@ -43,6 +50,7 @@ public static class UiInteract
     {
         ProtectedRects.Clear();
         Buttons.Clear();
+        ScrollTransforms.Clear();
         frameActive = true;
     }
 
@@ -51,7 +59,28 @@ public static class UiInteract
     {
         ProtectedRects.Clear();
         Buttons.Clear();
+        ScrollTransforms.Clear();
         frameActive = false;
+    }
+
+    /// <summary>
+    /// Marks the start of a scroll-view content area. While active, rects registered by widgets are
+    /// transformed from content-local coordinates into page-local coordinates so a single
+    /// <see cref="ProcessEvents"/> call can handle fixed chrome (nav/footer) and scroll content in one frame.
+    /// </summary>
+    public static void PushScrollView(Rect outRect, Vector2 scrollPosition)
+    {
+        if (!frameActive) return;
+        ScrollTransforms.Add(new ScrollTransform { OutRect = outRect, ScrollPosition = scrollPosition });
+    }
+
+    /// <summary>Ends the current scroll-view content area.</summary>
+    public static void PopScrollView()
+    {
+        if (ScrollTransforms.Count > 0)
+        {
+            ScrollTransforms.RemoveAt(ScrollTransforms.Count - 1);
+        }
     }
 
     /// <summary>
@@ -62,7 +91,7 @@ public static class UiInteract
     public static void Protect(Rect rect)
     {
         if (!frameActive) return;
-        ProtectedRects.Add(rect);
+        ProtectedRects.Add(ToPageSpace(rect));
     }
 
     /// <summary>Registers a click target. The callback is invoked later by <see cref="ProcessEvents"/>.</summary>
@@ -70,7 +99,7 @@ public static class UiInteract
     {
         if (callback == null) throw new ArgumentNullException(nameof(callback));
         if (!frameActive) return;
-        Buttons.Add(new RegisteredButton { Rect = rect, Layer = layer, Callback = callback });
+        Buttons.Add(new RegisteredButton { Rect = ToPageSpace(rect), Layer = layer, Callback = callback });
     }
 
     /// <summary>Registers a large content row button. Equivalent to <see cref="Button"/> at Content layer.</summary>
@@ -205,6 +234,21 @@ public static class UiInteract
     {
         if (string.IsNullOrEmpty(format)) format = "0.##";
         return value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static Rect ToPageSpace(Rect rect)
+    {
+        if (ScrollTransforms.Count == 0)
+        {
+            return rect;
+        }
+
+        ScrollTransform transform = ScrollTransforms[ScrollTransforms.Count - 1];
+        return new Rect(
+            transform.OutRect.x + rect.x - transform.ScrollPosition.x,
+            transform.OutRect.y + rect.y - transform.ScrollPosition.y,
+            rect.width,
+            rect.height);
     }
 
     private static RegisteredButton? FindTarget()

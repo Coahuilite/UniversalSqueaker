@@ -48,14 +48,14 @@ public sealed class ChromeBannerWidget : IWidget
         string text = ResolveText(ctx);
         if (text.Length == 0) return;
 
-        SurfaceKind surface = ReadColorHint();
+        SurfaceFrame.SurfaceKind surface = ReadColorHint();
         SurfaceFrame.Draw(rect, surface);
 
         Color textColor = surface switch
         {
-            SurfaceKind.Warning => Palette.TextOnDanger,
-            SurfaceKind.Danger => Palette.TextOnDanger,
-            SurfaceKind.Success => Palette.TextOnGold,
+            SurfaceFrame.SurfaceKind.Warning => Palette.TextOnDanger,
+            SurfaceFrame.SurfaceKind.Danger => Palette.TextOnDanger,
+            SurfaceFrame.SurfaceKind.Success => Palette.TextOnGold,
             _ => Palette.TextSecondary
         };
 
@@ -85,14 +85,14 @@ public sealed class ChromeBannerWidget : IWidget
         return UiFont.Tiny;
     }
 
-    private SurfaceKind ReadColorHint()
+    private SurfaceFrame.SurfaceKind ReadColorHint()
     {
         if (_spec.TryGetAttribute(ColorHintAttribute, out string raw))
         {
             string value = raw.Trim();
-            if (string.Equals(value, "warning", StringComparison.OrdinalIgnoreCase)) return SurfaceKind.Warning;
-            if (string.Equals(value, "success", StringComparison.OrdinalIgnoreCase)) return SurfaceKind.Success;
+            if (string.Equals(value, "warning", StringComparison.OrdinalIgnoreCase)) return SurfaceFrame.SurfaceKind.Warning;
+            if (string.Equals(value, "success", StringComparison.OrdinalIgnoreCase)) return SurfaceFrame.SurfaceKind.Success;
         }
-        return SurfaceKind.Base;
+        return SurfaceFrame.SurfaceKind.Base;
     }
 }

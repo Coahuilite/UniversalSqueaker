@@ -71,10 +71,24 @@ public sealed class LayoutEngine
     /// <summary>Draws all visible roots using the last measured rects. Emits commands through <paramref name="emit"/>.</summary>
     public void Draw(Rect viewRect, WidgetContext ctx, Action<UiCommand> emit)
     {
+        Draw(viewRect, ctx, emit, processEvents: true);
+    }
+
+    /// <summary>
+    /// Draws all visible roots using the last measured rects. When <paramref name="processEvents"/> is
+    /// false, the caller owns the <see cref="UiInteract"/> frame and must call
+    /// <see cref="UiInteract.ProcessEvents"/> after all page chrome has been drawn.
+    /// </summary>
+    public void Draw(Rect viewRect, WidgetContext ctx, Action<UiCommand> emit, bool processEvents)
+    {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
         if (emit == null) throw new ArgumentNullException(nameof(emit));
 
-        UiInteract.BeginFrame();
+        if (processEvents)
+        {
+            UiInteract.BeginFrame();
+        }
+
         try
         {
             if (!HasUsableCache(ctx, viewRect.width))
@@ -90,11 +104,17 @@ public sealed class LayoutEngine
                 element.Widget.Draw(rect, ctx, emit);
             }
 
-            UiInteract.ProcessEvents();
+            if (processEvents)
+            {
+                UiInteract.ProcessEvents();
+            }
         }
         finally
         {
-            UiInteract.EndFrame();
+            if (processEvents)
+            {
+                UiInteract.EndFrame();
+            }
         }
     }
 

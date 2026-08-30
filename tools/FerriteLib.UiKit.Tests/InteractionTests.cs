@@ -20,6 +20,7 @@ internal static class InteractionTests
         VerifyNoHit();
         VerifyHoverWithoutClickDoesNotFire();
         VerifyCleanup();
+        VerifyScrollTransform();
         VerifyLayoutEngineIntegration();
         return failures;
     }
@@ -141,6 +142,24 @@ internal static class InteractionTests
         UiInteract.DebugClick = true;
         UiInteract.ProcessEvents();
         Check(clicked == 0, "EndFrame leaves no registrations for a later frame");
+        UiInteract.EndFrame();
+    }
+
+    private static void VerifyScrollTransform()
+    {
+        ResetDebug();
+        UiInteract.BeginFrame();
+        int clicked = 0;
+        UiInteract.PushScrollView(new Rect(100f, 50f, 200f, 300f), new Vector2(0f, 10f));
+        UiInteract.Button(new Rect(0f, 0f, 50f, 50f), UiLayer.Content, () => clicked++);
+        UiInteract.PopScrollView();
+
+        // Content-local (0,0) maps to page-local (100, 40) when scrolled down by 10.
+        SetMouse(105f, 45f);
+        UiInteract.DebugClick = true;
+        UiInteract.ProcessEvents();
+
+        Check(clicked == 1, "scroll transform maps content-local rect to page-local hit test");
         UiInteract.EndFrame();
     }
 

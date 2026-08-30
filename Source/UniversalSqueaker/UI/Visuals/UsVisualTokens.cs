@@ -1,32 +1,34 @@
 using UnityEngine;
+using FerriteLib.UiKit;
 
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Role-based visual tokens for the modern US settings skin. Pure presentation values; no state.
-/// Values match the approved P0 palette and the neutral FerriteLib palette.
+/// Backwards-compatible US token names forwarding to the neutral UiKit <see cref="Palette"/>.
+/// New code should use <see cref="Palette"/> directly; this shim exists only to keep the current
+/// US widget surface untouched during the OB-01 convergence.
 /// </summary>
 internal static class UsVisualTokens
 {
-    internal static readonly Color SurfaceBase = new(0.10f, 0.10f, 0.10f, 1f);
-    internal static readonly Color Panel = new(0.14f, 0.14f, 0.14f, 1f);
-    internal static readonly Color Raised = new(0.18f, 0.18f, 0.18f, 1f);
-    internal static readonly Color Hover = new(0.22f, 0.22f, 0.22f, 1f);
-    internal static readonly Color Selected = new(0.20f, 0.17f, 0.10f, 1f);
-    internal static readonly Color Warning = new(0.55f, 0.18f, 0.15f, 1f);
-    internal static readonly Color Success = new(0.16f, 0.35f, 0.22f, 1f);
-    internal static readonly Color Danger = new(0.55f, 0.18f, 0.15f, 1f);
+    internal static readonly Color SurfaceBase = Palette.Base;
+    internal static readonly Color Panel = Palette.Panel;
+    internal static readonly Color Raised = Palette.Raised;
+    internal static readonly Color Hover = Palette.Hover;
+    internal static readonly Color Selected = Palette.Selected;
+    internal static readonly Color Warning = Palette.Warning;
+    internal static readonly Color Success = Palette.Success;
+    internal static readonly Color Danger = Palette.Danger;
 
-    internal static readonly Color TextPrimary = new(0.92f, 0.92f, 0.90f, 1f);
-    internal static readonly Color TextSecondary = new(0.65f, 0.65f, 0.62f, 1f);
-    internal static readonly Color TextOnGold = new(1f, 0.86f, 0.58f, 1f);
-    internal static readonly Color TextOnDanger = new(1f, 0.67f, 0.48f, 1f);
-    internal static readonly Color TextDisabled = new(0.45f, 0.45f, 0.42f, 1f);
+    internal static readonly Color TextPrimary = Palette.TextPrimary;
+    internal static readonly Color TextSecondary = Palette.TextSecondary;
+    internal static readonly Color TextOnGold = Palette.TextOnGold;
+    internal static readonly Color TextOnDanger = Palette.TextOnDanger;
+    internal static readonly Color TextDisabled = Palette.TextDisabled;
 
-    internal static readonly Color AccentGold = new(0.92f, 0.68f, 0.30f, 1f);
-    internal static readonly Color AccentGoldAlpha20 = new(0.92f, 0.68f, 0.30f, 0.20f);
-    internal static readonly Color Border = new(0.30f, 0.30f, 0.28f, 1f);
-    internal static readonly Color BorderStrong = new(0.45f, 0.45f, 0.42f, 1f);
+    internal static readonly Color AccentGold = Palette.AccentGold;
+    internal static readonly Color AccentGoldAlpha20 = Palette.AccentGoldAlpha20;
+    internal static readonly Color Border = Palette.Border;
+    internal static readonly Color BorderStrong = Palette.BorderStrong;
 
     internal const float Spacing2 = 2f;
     internal const float Spacing4 = 4f;
