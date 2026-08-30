@@ -130,7 +130,7 @@
 
 - **现代 UI 重构（`514efb2`）**：UiKit 新增 `UiPanel`/`UiText` 中性原语 + `Palette` 深色/金色 token；US 新增 `UsCard` 卡片外壳覆盖主要设置区块；设置窗口按维护者安全区在 60%～75% 之间浮动（默认 72%×66%），不盖满全屏；左侧导航现代侧边栏（品牌区/hover/active/金色 accent）。verify-local 14 门全绿，Dev/Release 0 警告。
 - **Camera+ 参考（`b86fc97`）**：参考 Workshop Camera+ 设置界面，宽屏时增加右侧帮助面板（`UsHelpPanel`，≥1200px 显示，窄屏隐藏）。
-- **UI 审阅结束（2026-08-30）**：本次审阅需求已整理到 `docs/us-ui-review-requirements-zh.md`（反馈原文 `docs/ui-feedback.md`）；**UiKit 容器化/控件基础设施列为最高优先**，衰减图作为可复用 UiKit 控件，帮助入口继续讨论中，待维护者确认后实施。
+- **UI 审阅结束（2026-08-30）**：本次审阅需求已整理到 `docs/us-ui-review-requirements-zh.md`（反馈原文 `docs/ui-feedback.md`，设计调研 `docs/ui-ux-research-zh.md`）；**UiKit 容器化/控件基础设施列为最高优先**，衰减图作为可复用 UiKit 控件，帮助入口继续讨论中，待维护者确认后实施。
 - **UI 帮助方案反馈（2026-08-30）**：维护者认为 Camera+ 右侧帮助面板优于内联 `?` 按钮 + banner；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **UI 功能块分区反馈（2026-08-30）**：维护者认为三个功能块应各自独立连续滚动，包过滤器应属于包管理块而非全局顶部；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **Tuning Editor 交互反馈（2026-08-30）**：维护者希望 domain/action scope 改下拉菜单，mood 控件升级为 滑条 + 数值输入 + −/+ 微调复合控件；已记录到 `docs/ui-feedback.md`，待拍板后实施。
