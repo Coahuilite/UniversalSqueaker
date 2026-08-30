@@ -17,6 +17,7 @@ internal static class DropdownWidgetTests
         VerifyParseOptionsAndValues();
         VerifyParseOptionNAttributes();
         VerifySelectionEmitsCommand();
+        VerifyDynamicOptionsFromViewState();
         return failures;
     }
 
@@ -101,6 +102,57 @@ internal static class DropdownWidgetTests
         Check(commands.Count == 1 && commands[0].Name == "Picked"
             && commands[0].Payload is string payload && payload == "b",
             "dropdown command carries the selected submitted value");
+    }
+
+    private static void VerifyDynamicOptionsFromViewState()
+    {
+        ResetDebug();
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Bind"] = "Current",
+            ["OptionsBind"] = "Options",
+            ["EmitName"] = "Picked"
+        };
+        var spec = new UiElementSpec("dropdown-dynamic", DropdownWidget.Kind, attributes);
+        var widget = new DropdownWidget();
+        widget.Configure(spec);
+
+        var options = new List<KeyValuePair<string, string>>
+        {
+            new KeyValuePair<string, string>("Alpha", "a"),
+            new KeyValuePair<string, string>("Beta", "b")
+        };
+        var view = new Dictionary<string, object?>
+        {
+            ["Current"] = "a",
+            ["Options"] = options
+        };
+        var ctx = new WidgetContext("test", view, new StubMetrics(), new UiPageState());
+        var commands = new List<UiCommand>();
+        UiValueState state = UiValueStore.GetOrCreate(new UiControlId("dropdown-dynamic", "dropdown"));
+        state.Open = false;
+        state.StringValue = null;
+
+        UiInteract.BeginFrame();
+        SetMouse(100f, 14f);
+        UiInteract.DebugClick = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.ProcessEvents();
+        UiInteract.EndFrame();
+
+        Check(state.Open, "dynamic dropdown opens from OptionsBind view state");
+
+        UiInteract.BeginFrame();
+        SetMouse(100f, 52f + 12f);
+        UiInteract.DebugClick = true;
+        widget.Draw(new Rect(0f, 0f, 200f, 28f), ctx, commands.Add);
+        UiInteract.ProcessEvents();
+        UiInteract.EndFrame();
+
+        Check(!state.Open, "dynamic dropdown selection closes");
+        Check(commands.Count == 1 && commands[0].Name == "Picked"
+            && commands[0].Payload is string payload && payload == "b",
+            "dynamic dropdown emits selected value");
     }
 
     private static void ResetDebug()

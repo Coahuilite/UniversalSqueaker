@@ -18,6 +18,7 @@ internal static class StepperSliderWidgetTests
         VerifyMinusButtonSteps();
         VerifyPlusButtonClamps();
         VerifySliderSyncsFieldAndEmits();
+        VerifyCustomWidthsDoNotBreakLayout();
         return failures;
     }
 
@@ -100,6 +101,46 @@ internal static class StepperSliderWidgetTests
         Check(commands.Count == 1 && commands[0].Name == "ValueChanged"
             && Math.Abs((float)commands[0].Payload! - 65f) < 0.0001f,
             "slider change emits ValueChanged");
+    }
+
+    private static void VerifyCustomWidthsDoNotBreakLayout()
+    {
+        ResetDebug();
+        var commands = new List<UiCommand>();
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Min"] = "0",
+            ["Max"] = "10",
+            ["Step"] = "1",
+            ["Format"] = "0.##",
+            ["Height"] = "28",
+            ["ButtonWidth"] = "16",
+            ["FieldWidth"] = "36"
+        };
+        var spec = new UiElementSpec("stepper-compact", StepperSliderWidget.Kind, attributes);
+        var widget = new StepperSliderWidget();
+        widget.Configure(spec);
+        var ctx = new WidgetContext("test", null, new StubMetrics(), new UiPageState());
+        UiValueState state = UiValueStore.GetOrCreate(new UiControlId("stepper-compact", "value"));
+        state.FloatValue = 5f;
+        state.EditText = "5";
+
+        UiInteract.BeginFrame();
+        UiInteract.SliderOverride = (_, _, _, _) => 5f;
+        UiInteract.TextFieldOverride = (_, text) => text;
+        bool threw = false;
+        try
+        {
+            widget.Draw(new Rect(0f, 0f, 100f, 28f), ctx, commands.Add);
+        }
+        catch (Exception ex)
+        {
+            threw = true;
+            Console.Error.WriteLine("  FAIL: compact stepper draw threw " + ex);
+        }
+        UiInteract.EndFrame();
+
+        Check(!threw, "compact stepper-slider draws without throwing");
     }
 
     private static StepperSliderWidget MakeWidget(string id, float min, float max, float step, string format, float height)

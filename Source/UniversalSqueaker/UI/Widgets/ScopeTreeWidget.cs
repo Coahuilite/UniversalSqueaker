@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using FerriteLib.UiKit;
+using FerriteLib.UiKit.Widgets;
 using UnityEngine;
 using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
@@ -42,6 +43,7 @@ public sealed class ScopeTreeWidget : IWidget
     private const float MoodClearWidth = 46f;
     private const float MoodGap = 6f;
     private const float MoodValueWidth = 34f;
+    private const string ValueSeparator = "\u0001";
 
     private static readonly string[] LayerNames = { "Global", "Race", "Xenotype" };
 
@@ -132,7 +134,7 @@ public sealed class ScopeTreeWidget : IWidget
 
         if (layer > 0)
         {
-            DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), domains, race, xeno, businessEmit);
+            DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), domains, race, xeno, ctx, emit);
             y += DomainRowHeight + VoicePacksLayout.Gap;
         }
 
@@ -142,7 +144,7 @@ public sealed class ScopeTreeWidget : IWidget
 
         foreach (ActionScopeRowView row in rows)
         {
-            DrawScopeRow(new Rect(x, y, innerWidth, RowHeight), row, race, xeno, businessEmit);
+            DrawScopeRow(new Rect(x, y, innerWidth, RowHeight), row, race, xeno, ctx, emit);
             y += RowHeight + RowGap;
         }
 
@@ -154,7 +156,7 @@ public sealed class ScopeTreeWidget : IWidget
 
         foreach (MoodTuningRowView mood in moodRows)
         {
-            DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, businessEmit);
+            DrawMoodRow(new Rect(x, y, innerWidth, MoodRowHeight), mood, race, xeno, ctx, emit);
             y += MoodRowHeight + RowGap;
         }
     }
@@ -223,13 +225,12 @@ public sealed class ScopeTreeWidget : IWidget
         return buttonWidth < 56f ? 22f + ButtonHeight * 3f + RowGap * 2f : LayerRowHeight;
     }
 
-    private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, Action<UiCommand> emit)
+    private static void DrawDomainRow(Rect rect, IReadOnlyList<TuningDomainOptionView> domains, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
 
         TuningDomainOptionView? current = null;
-        int currentIndex = -1;
         for (int i = 0; i < domains.Count; i++)
         {
             TuningDomainOptionView option = domains[i];
@@ -237,36 +238,42 @@ public sealed class ScopeTreeWidget : IWidget
                 && string.Equals(option.TargetDefName, xeno, StringComparison.Ordinal))
             {
                 current = option;
-                currentIndex = i;
                 break;
             }
         }
 
-        float domainButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 160f));
+        string currentValue = current != null
+            ? current.Value.RaceDefName + ValueSeparator + current.Value.TargetDefName
+            : "";
+
+        float dropdownWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 160f));
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
         GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, 120f, 20f), "Layer domain");
-        Text.Font = GameFont.Tiny;
-        GUI.color = UsVisualTokens.TextSecondary;
-        Widgets.Label(new Rect(rect.x + 120f + 12f, rect.y + 5f, Math.Max(1f, rect.width - 132f - domainButtonWidth - 20f), 16f),
-            current != null ? current.Value.DisplayName : "No domain available");
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        if (domains.Count > 1)
+        var options = new List<KeyValuePair<string, string>>();
+        foreach (TuningDomainOptionView option in domains)
         {
-            Rect buttonRect = new(rect.xMax - domainButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, domainButtonWidth, ButtonHeight);
-            DrawSegment(buttonRect, "Next domain >", false);
-            int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % domains.Count;
-            TuningDomainOptionView next = domains[nextIndex];
-            UiInteract.Button(buttonRect, UiLayer.Content,
-                () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningDomain, raceDefName: next.RaceDefName, targetDefName: next.TargetDefName)));
+            options.Add(new KeyValuePair<string, string>(
+                option.DisplayName,
+                option.RaceDefName + ValueSeparator + option.TargetDefName));
         }
+
+        Rect dropdownRect = new(rect.xMax - dropdownWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, dropdownWidth, ButtonHeight);
+        DrawDropdown(dropdownRect, "domain", currentValue, options, ctx, kitEmit, selected =>
+        {
+            string[] parts = selected.Split(new[] { ValueSeparator }, StringSplitOptions.None);
+            if (parts.Length != 2) return;
+            Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
+            businessEmit(new UiCommand(UiCommandKind.SetTuningDomain, raceDefName: parts[0], targetDefName: parts[1]));
+        });
     }
 
-    private static void DrawScopeRow(Rect rect, ActionScopeRowView row, string race, string xeno, Action<UiCommand> emit)
+    private static void DrawScopeRow(Rect rect, ActionScopeRowView row, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -278,7 +285,6 @@ public sealed class ScopeTreeWidget : IWidget
         GUI.color = UsVisualTokens.TextPrimary;
         Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - LeftPadding - scopeButtonWidth - 90f), ButtonHeight), row.DisplayName);
 
-        // 继承提示：本层无记录或与有效值不同时显示有效（生效）作用域；窄屏隐藏。
         LayoutTier tier = VoicePacksLayout.ForWidth(rect.width);
         if (tier == LayoutTier.Comfortable && (!row.HasOwnScope || row.Scope != row.EffectiveScope))
         {
@@ -289,35 +295,57 @@ public sealed class ScopeTreeWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        string label = row.HasOwnScope ? ShortName(row.Scope) : "Auto";
-        bool off = row.HasOwnScope && row.Scope == SqueakActionScope.Disabled;
-        Rect buttonRect = new(rect.xMax - scopeButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, scopeButtonWidth, ButtonHeight);
-        DrawSegment(buttonRect, label, off);
+        var options = new List<KeyValuePair<string, string>>
+        {
+            new KeyValuePair<string, string>("Auto", "")
+        };
+        foreach (SqueakActionScope scope in SupportedStates(row.Action))
+        {
+            options.Add(new KeyValuePair<string, string>(ShortName(scope), scope.ToString()));
+        }
 
-        UiInteract.Button(buttonRect, UiLayer.Content, () => CycleScope(rect, row, race, xeno, emit));
+        string current = row.HasOwnScope ? row.Scope.ToString() : "";
+        Rect dropdownRect = new(rect.xMax - scopeButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, scopeButtonWidth, ButtonHeight);
+        DrawDropdown(dropdownRect, "scope-" + row.ActionKey, current, options, ctx, kitEmit, selected =>
+        {
+            Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
+            businessEmit(new UiCommand(UiCommandKind.SetActionTuningScope, raceDefName: race, targetDefName: xeno, arg: (selected ?? "") + "|" + row.ActionKey));
+        });
     }
 
-    /// <summary>态环：[inherit] + 动作支持的 [Off/Any/Command]（NormalizeFor 过滤）。环到尾部回 inherit =
-    /// 清本层记录（恢复继承）。</summary>
-    private static void CycleScope(Rect rect, ActionScopeRowView row, string race, string xeno, Action<UiCommand> emit)
+    private static void DrawDropdown(
+        Rect rect,
+        string idSuffix,
+        string current,
+        IReadOnlyList<KeyValuePair<string, string>> options,
+        WidgetContext ctx,
+        Action<KitUiCommand> kitEmit,
+        Action<string> onSelected)
     {
-        SqueakActionScope[] states = SupportedStates(row.Action);
-        bool currentIsInherit = !row.HasOwnScope;
-        string scopeText;
-        if (states.Length == 0 || (!currentIsInherit && Array.IndexOf(states, row.Scope) == states.Length - 1))
+        if (options.Count == 0) return;
+
+        string id = "scope-tree-" + idSuffix;
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            scopeText = "";
-        }
-        else if (currentIsInherit)
+            ["Bind"] = "Current",
+            ["OptionsBind"] = "Options",
+            ["EmitName"] = "Select",
+            ["Height"] = rect.height.ToString(CultureInfo.InvariantCulture)
+        };
+        var spec = new UiElementSpec(id, DropdownWidget.Kind, attributes);
+        var view = new Dictionary<string, object?>
         {
-            scopeText = states[0].ToString();
-        }
-        else
+            ["Current"] = current,
+            ["Options"] = options
+        };
+        var dropdownCtx = new WidgetContext(ctx.Source, view, ctx.Metrics, ctx.State);
+        var dropdown = new DropdownWidget();
+        dropdown.Configure(spec);
+        dropdown.Draw(rect, dropdownCtx, cmd =>
         {
-            int index = Array.IndexOf(states, row.Scope);
-            scopeText = states[(index + 1) % states.Length].ToString();
-        }
-        emit?.Invoke(new UiCommand(UiCommandKind.SetActionTuningScope, raceDefName: race, targetDefName: xeno, arg: scopeText + "|" + row.ActionKey));
+            if (cmd.Name == "Select" && cmd.Payload is string selected)
+                onSelected(selected);
+        });
     }
 
     private static SqueakActionScope[] SupportedStates(SqueakAction action)
@@ -330,16 +358,15 @@ public sealed class ScopeTreeWidget : IWidget
         return states.ToArray();
     }
 
-    private static void DrawMoodRow(Rect rect, MoodTuningRowView row, string race, string xeno, Action<UiCommand> emit)
+    private static void DrawMoodRow(Rect rect, MoodTuningRowView row, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
-        DrawMoodRowBody(rect, row, race, xeno, emit);
+        DrawMoodRowBody(rect, row, race, xeno, ctx, kitEmit);
     }
 
-    private static void DrawMoodRowBody(Rect rect, MoodTuningRowView row, string race, string xeno, Action<UiCommand> emit)
+    private static void DrawMoodRowBody(Rect rect, MoodTuningRowView row, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
     {
-
         Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Small;
@@ -351,9 +378,8 @@ public sealed class ScopeTreeWidget : IWidget
         float clearX = rect.xMax - MoodClearWidth - 8f;
         float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
-        // 每个因子簇固定占用 86px（label 16 + minus 18 + value 34 + plus 18）；放不下时降级为提示行，
-        // 避免三簇与 Auto 按钮互相重叠（窄窗口安全）。
-        if (groupWidth < 86f)
+        // Each factor uses a compact stepper-slider; if it cannot fit, show a narrow-screen hint.
+        if (groupWidth < 96f)
         {
             Text.Font = GameFont.Tiny;
             GUI.color = UsVisualTokens.TextSecondary;
@@ -368,9 +394,9 @@ public sealed class ScopeTreeWidget : IWidget
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
         float jitter = row.Own?.hasPitchJitter == true ? Math.Max(0f, row.Own.pitchJitter.max - 1f) : row.EffectiveJitterHalf;
 
-        factorX = DrawMoodFactor(new Rect(factorX, rect.y, groupWidth, rect.height), "P", pitch, 0.5f, 2f, 0.05f, row, "pitch", race, xeno, emit);
-        factorX = DrawMoodFactor(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "V", volume, 0.1f, 2f, 0.05f, row, "volume", race, xeno, emit);
-        DrawMoodFactor(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, 0.05f, row, "jitter", race, xeno, emit);
+        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, rect.height), "P", pitch, 0.5f, 2f, 0.05f, row, "pitch", race, xeno, ctx, kitEmit);
+        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "V", volume, 0.1f, 2f, 0.05f, row, "volume", race, xeno, ctx, kitEmit);
+        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, 0.05f, row, "jitter", race, xeno, ctx, kitEmit);
 
         bool clearHover = Mouse.IsOver(new Rect(clearX, rect.y, MoodClearWidth, rect.height));
         Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
@@ -383,12 +409,14 @@ public sealed class ScopeTreeWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
         UiInteract.Button(new Rect(clearX, rect.y, MoodClearWidth, rect.height), UiLayer.Content,
-            () => emit?.Invoke(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: row.Mood + "|clear")));
+            () =>
+            {
+                Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
+                businessEmit(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: row.Mood + "|clear"));
+            });
     }
 
-    /// <summary>心情因子 −/＋ 步进控制（与本页按钮式交互一致，无滑块 API 依赖）。
-    /// 值取本层记录（hasX）否则有效（继承）值；每次点击写该因子（字段级 hasX）。</summary>
-    private static float DrawMoodFactor(
+    private static float DrawMoodStepper(
         Rect rect,
         string label,
         float value,
@@ -399,35 +427,46 @@ public sealed class ScopeTreeWidget : IWidget
         string factor,
         string race,
         string xeno,
-        Action<UiCommand> emit)
+        WidgetContext ctx,
+        Action<KitUiCommand> kitEmit)
     {
-        // 标签独占左侧列（16px），控件右移避免被 − 按钮的不透明背景盖住。
-        Rect minusRect = new(rect.x + 16f, rect.y + 5f, 18f, 18f);
-        Rect valueRect = new(rect.x + 36f, rect.y + 8f, MoodValueWidth, 14f);
-        Rect plusRect = new(rect.x + 36f + MoodValueWidth, rect.y + 5f, 18f, 18f);
-
         Text.Font = GameFont.Tiny;
         GUI.color = UsVisualTokens.TextSecondary;
         Widgets.Label(new Rect(rect.x, rect.y + 4f, 14f, 16f), label);
-        DrawSegment(minusRect, "-", false);
-        GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(valueRect, value.ToString("0.###", CultureInfo.InvariantCulture));
-        DrawSegment(plusRect, "+", false);
-        Text.Font = GameFont.Small;
-        GUI.color = UsVisualTokens.TextPrimary;
 
-        UiInteract.Button(minusRect, UiLayer.Content,
-            () => EmitMoodFactor(row, factor, Mathf.Max(min, value - step), race, xeno, emit));
-        UiInteract.Button(plusRect, UiLayer.Content,
-            () => EmitMoodFactor(row, factor, Mathf.Min(max, value + step), race, xeno, emit));
+        Rect stepperRect = new(rect.x + 14f, rect.y, Math.Max(1f, rect.width - 14f), rect.height);
+        string id = "mood-" + row.Mood + "-" + factor;
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Bind"] = "Value",
+            ["Min"] = min.ToString(CultureInfo.InvariantCulture),
+            ["Max"] = max.ToString(CultureInfo.InvariantCulture),
+            ["Step"] = step.ToString(CultureInfo.InvariantCulture),
+            ["Format"] = "0.###",
+            ["EmitName"] = "Mood",
+            ["Height"] = rect.height.ToString(CultureInfo.InvariantCulture),
+            ["ButtonWidth"] = "16",
+            ["FieldWidth"] = "36"
+        };
+        var spec = new UiElementSpec(id, StepperSliderWidget.Kind, attributes);
+        var view = new Dictionary<string, object?> { ["Value"] = value };
+        var stepperCtx = new WidgetContext(ctx.Source, view, ctx.Metrics, ctx.State);
+        var stepper = new StepperSliderWidget();
+        stepper.Configure(spec);
+        stepper.Draw(stepperRect, stepperCtx, cmd =>
+        {
+            if (cmd.Name == "Mood" && cmd.Payload is float newValue)
+                EmitMoodFactor(row, factor, newValue, race, xeno, kitEmit);
+        });
 
-        return rect.x + 16f + 20f + MoodValueWidth + 18f;
+        return rect.x + rect.width;
     }
 
-    private static void EmitMoodFactor(MoodTuningRowView row, string factor, float value, string race, string xeno, Action<UiCommand> emit)
+    private static void EmitMoodFactor(MoodTuningRowView row, string factor, float value, string race, string xeno, Action<KitUiCommand> kitEmit)
     {
         string arg = string.Format(CultureInfo.InvariantCulture, "{0}|{1}|{2}", row.Mood, factor, value.ToString("0.###", CultureInfo.InvariantCulture));
-        emit?.Invoke(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: arg));
+        Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
+        businessEmit(new UiCommand(UiCommandKind.SetMoodTuning, raceDefName: race, targetDefName: xeno, arg: arg));
     }
 
     private static void DrawSegment(Rect rect, string label, bool off)

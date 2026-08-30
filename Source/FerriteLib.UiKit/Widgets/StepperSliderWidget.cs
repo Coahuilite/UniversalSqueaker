@@ -24,12 +24,14 @@ public sealed class StepperSliderWidget : IWidget
     private const string EmitNameAttribute = "EmitName";
     private const string LiveAttribute = "Live";
     private const string HeightAttribute = "Height";
+    private const string ButtonWidthAttribute = "ButtonWidth";
+    private const string FieldWidthAttribute = "FieldWidth";
     private const string DefaultEmitName = "ValueChanged";
     private const string DefaultFormat = "0.##";
     private const float DefaultHeight = 28f;
     private const float LabelWidth = 80f;
-    private const float ButtonWidth = 24f;
-    private const float FieldWidth = 64f;
+    private const float DefaultButtonWidth = 24f;
+    private const float DefaultFieldWidth = 64f;
     private const float Gap = 6f;
 
     private UiElementSpec _spec = UiElementSpec.Empty;
@@ -63,6 +65,8 @@ public sealed class StepperSliderWidget : IWidget
         string emitName = Read(EmitNameAttribute);
         if (emitName.Length == 0) emitName = DefaultEmitName;
         bool live = ReadBool(LiveAttribute, true);
+        float buttonWidth = Math.Max(1f, ReadFloat(ButtonWidthAttribute, DefaultButtonWidth));
+        float fieldWidth = Math.Max(1f, ReadFloat(FieldWidthAttribute, DefaultFieldWidth));
 
         string scope = _spec.Id.Length > 0 ? _spec.Id : Kind;
         var id = new UiControlId(scope, "value");
@@ -83,17 +87,17 @@ public sealed class StepperSliderWidget : IWidget
             x += LabelWidth + Gap;
         }
 
-        Rect minusRect = new(x, y, ButtonWidth, height);
-        x += ButtonWidth + Gap;
+        Rect minusRect = new(x, y, buttonWidth, height);
+        x += buttonWidth + Gap;
 
-        float remainingWidth = Math.Max(1f, rect.xMax - x - FieldWidth - Gap * 2f - ButtonWidth);
+        float remainingWidth = Math.Max(1f, rect.xMax - x - fieldWidth - Gap * 2f - buttonWidth);
         Rect sliderRect = new(x, y, remainingWidth, height);
         x += remainingWidth + Gap;
 
-        Rect fieldRect = new(x, y, FieldWidth, height);
-        x += FieldWidth + Gap;
+        Rect fieldRect = new(x, y, fieldWidth, height);
+        x += fieldWidth + Gap;
 
-        Rect plusRect = new(x, y, ButtonWidth, height);
+        Rect plusRect = new(x, y, buttonWidth, height);
 
         DrawButton(minusRect, "−");
         DrawButton(plusRect, "+");

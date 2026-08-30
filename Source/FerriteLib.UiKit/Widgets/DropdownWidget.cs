@@ -20,6 +20,7 @@ public sealed class DropdownWidget : IWidget
     private const string BindAttribute = "Bind";
     private const string CurrentAttribute = "Current";
     private const string OptionsAttribute = "Options";
+    private const string OptionsBindAttribute = "OptionsBind";
     private const string ValuesAttribute = "Values";
     private const string EmitNameAttribute = "EmitName";
     private const string HeightAttribute = "Height";
@@ -66,7 +67,7 @@ public sealed class DropdownWidget : IWidget
         string emitName = Read(EmitNameAttribute);
         if (emitName.Length == 0) emitName = DefaultEmitName;
 
-        IReadOnlyList<DropdownOption> options = ParseOptions(_spec);
+        IReadOnlyList<DropdownOption> options = BuildOptions(_spec, ctx);
         if (options.Count == 0) return;
 
         string scope = _spec.Id.Length > 0 ? _spec.Id : Kind;
@@ -140,6 +141,41 @@ public sealed class DropdownWidget : IWidget
                 });
             }
         }
+    }
+
+    private static IReadOnlyList<DropdownOption> BuildOptions(UiElementSpec spec, WidgetContext ctx)
+    {
+        if (spec.TryGetAttribute(OptionsBindAttribute, out string key)
+            && key.Length > 0
+            && ctx.TryGetViewValue(key, out object? value)
+            && value != null)
+        {
+            var dynamic = new List<DropdownOption>();
+            switch (value)
+            {
+                case IEnumerable<KeyValuePair<string, string>> pairs:
+                    foreach (KeyValuePair<string, string> pair in pairs)
+                        dynamic.Add(new DropdownOption(pair.Key, pair.Value));
+                    break;
+                case IEnumerable<string> strings:
+                    foreach (string item in strings)
+                        dynamic.Add(new DropdownOption(item, item));
+                    break;
+                case IEnumerable<object> objects:
+                    foreach (object item in objects)
+                    {
+                        if (item is string text)
+                            dynamic.Add(new DropdownOption(text, text));
+                        else if (item is KeyValuePair<string, string> pair)
+                            dynamic.Add(new DropdownOption(pair.Key, pair.Value));
+                    }
+                    break;
+            }
+
+            if (dynamic.Count > 0) return dynamic;
+        }
+
+        return ParseOptions(spec);
     }
 
     internal static IReadOnlyList<DropdownOption> ParseOptions(UiElementSpec spec)
