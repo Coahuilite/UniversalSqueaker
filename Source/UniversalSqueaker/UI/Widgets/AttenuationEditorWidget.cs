@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using FerriteLib.UiKit;
+using FerriteLib.UiKit.Widgets;
 using UnityEngine;
 using Verse;
 using KitUiCommand = FerriteLib.UiKit.UiCommand;
@@ -34,27 +35,8 @@ public sealed class AttenuationEditorWidget : IWidget
     private const float MaxDistance = AttenuationMath.MaxDistance;
     private const float MinRange = AttenuationMath.MinRange;
 
-    private const int DragNone = 0;
-    private const int DragStart = 1;
-    private const int DragEnd = 2;
-
-    private static readonly Dictionary<UiControlId, AttenuationDragState> DragStates = new();
-
     internal static void ResetSession()
     {
-        DragStates.Clear();
-    }
-
-    private static AttenuationDragState GetOrCreateDragState()
-    {
-        var id = new UiControlId(Kind, "drag");
-        if (!DragStates.TryGetValue(id, out AttenuationDragState? state))
-        {
-            state = new AttenuationDragState();
-            DragStates[id] = state;
-        }
-
-        return state;
     }
 
     private UiElementSpec? _spec;
@@ -109,24 +91,15 @@ public sealed class AttenuationEditorWidget : IWidget
         string preset = ReadString(ctx, "DistancePreset", "Custom");
         SanitizeRange(ref min, ref max);
 
-        AttenuationDragState drag = GetOrCreateDragState();
-        if (drag.Mode != DragNone)
-        {
-            min = drag.DragMin;
-            max = drag.DragMax;
-        }
-
         float innerWidth = Math.Max(1f, rect.width - LeftPadding - RightPadding);
         float x = rect.x + LeftPadding;
         float y = rect.y + TopPadding;
 
         Rect chartRect = new(x, y, innerWidth, ChartHeight);
-        UiInteract.Protect(chartRect);
-        HandleDrag(chartRect, ref min, ref max, drag, businessEmit);
-        DrawChart(chartRect, min, max);
+        DrawAttenuationChart(chartRect, min, max, ctx, businessEmit);
         y += ChartHeight + Gap;
 
-        DrawStatus(new Rect(x, y, innerWidth, StatusHeight), drag.Mode != DragNone ? "Custom" : preset, min, max);
+        DrawStatus(new Rect(x, y, innerWidth, StatusHeight), preset, min, max);
         y += StatusHeight + Gap;
 
         DrawPresetButtons(new Rect(x, y, innerWidth, ButtonsHeight), businessEmit);
@@ -141,95 +114,42 @@ public sealed class AttenuationEditorWidget : IWidget
         Widgets.Label(rect, "Attenuation " + preset + "  " + FormatRangeDisplay(min, max));
     }
 
-    private static void DrawChart(Rect chartRect, float min, float max)
+    private static void DrawAttenuationChart(Rect chartRect, float min, float max, WidgetContext ctx, Action<UiCommand> emit)
     {
-        UsSurface.DrawSurface(chartRect, UsSurface.SurfaceKind.Base);
-
-        Color curveColor = UsVisualTokens.AccentGold;
-        IReadOnlyList<DistanceSample> samples = DistancePreview.SampleAudibilityCurve(min, max, 96, MinDistance, MaxDistance);
-        float barWidth = Math.Max(1f, chartRect.width / samples.Count);
-        for (int i = 0; i < samples.Count; i++)
+        float minNorm = Mathf.InverseLerp(MinDistance, MaxDistance, min);
+        float maxNorm = Mathf.InverseLerp(MinDistance, MaxDistance, max);
+        var points = new List<Vector2>
         {
-            float x = ChartX(chartRect, samples[i].Distance);
-            float audibility = Mathf.Clamp01(samples[i].Audibility);
-            float top = chartRect.yMax - audibility * chartRect.height;
-            Widgets.DrawBoxSolid(new Rect(x, top, barWidth, Math.Max(1f, chartRect.yMax - top)), curveColor);
-        }
+            new Vector2(Mathf.Clamp01(minNorm), 1f),
+            new Vector2(Mathf.Clamp01(maxNorm), 0f)
+        };
 
-        float startX = ChartX(chartRect, min);
-        float endX = ChartX(chartRect, max);
-        Widgets.DrawLine(new Vector2(startX, chartRect.yMax), new Vector2(endX, chartRect.y), UsVisualTokens.TextPrimary, 1f);
-        DrawHandle(new Vector2(startX, chartRect.y));
-        DrawHandle(new Vector2(endX, chartRect.yMax));
-    }
-
-    private static void DrawHandle(Vector2 position)
-    {
-        Rect handleRect = new(position.x - 4f, position.y - 4f, 8f, 8f);
-        Widgets.DrawBoxSolid(handleRect, UsVisualTokens.TextPrimary);
-        UsSurface.DrawBorder(handleRect);
-    }
-
-    private static void HandleDrag(Rect chartRect, ref float min, ref float max, AttenuationDragState drag, Action<UiCommand> emit)
-    {
-        if (Event.current.type == EventType.MouseDown)
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            Vector2 startPosition = new(ChartX(chartRect, min), chartRect.y);
-            Vector2 endPosition = new(ChartX(chartRect, max), chartRect.yMax);
-            Rect startHandle = new(startPosition.x - 5f, startPosition.y - 5f, 10f, 10f);
-            Rect endHandle = new(endPosition.x - 5f, endPosition.y - 5f, 10f, 10f);
-
-            if (Mouse.IsOver(startHandle))
-            {
-                drag.Mode = DragStart;
-                drag.DragMin = min;
-                drag.DragMax = max;
-                drag.OriginalMin = min;
-                drag.OriginalMax = max;
-                Event.current.Use();
-            }
-            else if (Mouse.IsOver(endHandle))
-            {
-                drag.Mode = DragEnd;
-                drag.DragMin = min;
-                drag.DragMax = max;
-                drag.OriginalMin = min;
-                drag.OriginalMax = max;
-                Event.current.Use();
-            }
-        }
-
-        if (drag.Mode == DragNone) return;
-
-        if (Event.current.type == EventType.MouseUp)
+            ["Bind"] = "Points",
+            ["EmitName"] = "AttenuationPoint",
+            ["Height"] = ChartHeight.ToString(CultureInfo.InvariantCulture),
+            ["Editable"] = "true"
+        };
+        var spec = new UiElementSpec(Kind + "-chart", LineChartWidget.Kind, attributes);
+        var view = new Dictionary<string, object?> { ["Points"] = points };
+        var chartCtx = new WidgetContext(ctx.Source, view, ctx.Metrics, ctx.State);
+        var chart = new LineChartWidget();
+        chart.Configure(spec);
+        chart.Draw(chartRect, chartCtx, cmd =>
         {
-            bool changed = Math.Abs(drag.DragMin - drag.OriginalMin) > 0.001f || Math.Abs(drag.DragMax - drag.OriginalMax) > 0.001f;
-            if (changed)
+            if (cmd.Name != "AttenuationPoint" || cmd.Payload is not LineChartPointChange change) return;
+            float distance = Mathf.Lerp(MinDistance, MaxDistance, Mathf.Clamp01(change.Point.x));
+            if (change.Index == 0)
             {
-                emit(new UiCommand(UiCommandKind.SetDistanceRange, arg: FormatRange(drag.DragMin, drag.DragMax)));
-            }
-
-            drag.Mode = DragNone;
-            Event.current.Use();
-            return;
-        }
-
-        if (Event.current.type == EventType.MouseDrag)
-        {
-            float distance = DistanceFromX(chartRect, Event.current.mousePosition.x);
-            if (drag.Mode == DragStart)
-            {
-                drag.DragMin = Mathf.Clamp(distance, MinDistance, max - MinRange);
+                min = Mathf.Clamp(distance, MinDistance, max - MinRange);
             }
             else
             {
-                drag.DragMax = Mathf.Clamp(distance, min + MinRange, MaxDistance);
+                max = Mathf.Clamp(distance, min + MinRange, MaxDistance);
             }
-
-            min = drag.DragMin;
-            max = drag.DragMax;
-            Event.current.Use();
-        }
+            emit(new UiCommand(UiCommandKind.SetDistanceRange, arg: FormatRange(min, max)));
+        });
     }
 
     private static void DrawStatus(Rect rect, string preset, float min, float max)
@@ -272,16 +192,6 @@ public sealed class AttenuationEditorWidget : IWidget
         GUI.color = oldColor;
     }
 
-    private static float ChartX(Rect chartRect, float distance)
-    {
-        return AttenuationMath.ChartX(chartRect.x, chartRect.width, distance);
-    }
-
-    private static float DistanceFromX(Rect chartRect, float mouseX)
-    {
-        return AttenuationMath.DistanceFromX(chartRect.x, chartRect.width, mouseX);
-    }
-
     private static string FormatRange(float start, float end)
     {
         return AttenuationMath.FormatRange(start, end);
@@ -305,14 +215,5 @@ public sealed class AttenuationEditorWidget : IWidget
     private static string ReadString(WidgetContext ctx, string key, string fallback)
     {
         return ctx.TryGetViewValue(key, out object? value) && value is string s ? s : fallback;
-    }
-
-    private sealed class AttenuationDragState
-    {
-        internal int Mode;
-        internal float DragMin = MinDistance;
-        internal float DragMax = 50f;
-        internal float OriginalMin = MinDistance;
-        internal float OriginalMax = 50f;
     }
 }
