@@ -133,7 +133,7 @@ public static class FerriteVoicePacksPage
                 float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
                 Rect contentRect = new(rect.x + navWidth, rect.y, contentWidth, contentAreaHeight);
 
-                DrawContent(contentRect, ctx, uiState, kitCommands.Add);
+                DrawContent(contentRect, activeTab, ctx, uiState, kitCommands.Add);
 
                 Rect helpRect = new(
                     rect.x + navWidth + contentWidth + 12f,
@@ -309,27 +309,29 @@ public static class FerriteVoicePacksPage
 
     private static void DrawContent(
         Rect contentRect,
+        string activeTab,
         KitWidgetContext ctx,
         KitUiPageState uiState,
         Action<KitUiCommand> emit)
     {
         if (contentRect.width >= 1000f)
         {
-            DrawMultiColumn(contentRect, ctx, uiState, emit);
+            DrawMultiColumn(contentRect, activeTab, ctx, uiState, emit);
         }
         else
         {
-            DrawSingleColumn(contentRect, ctx, uiState, emit);
+            DrawSingleColumn(contentRect, activeTab, ctx, uiState, emit);
         }
     }
 
     private static void DrawSingleColumn(
         Rect contentRect,
+        string activeTab,
         KitWidgetContext ctx,
         KitUiPageState uiState,
         Action<KitUiCommand> emit)
     {
-        KitLayoutEngine engine = GetEngineAll();
+        KitLayoutEngine engine = GetEngine(activeTab);
         float layoutWidth = contentRect.width;
         float contentHeight = engine.Measure(ctx, layoutWidth);
         if (contentHeight > contentRect.height + 0.01f)
@@ -356,6 +358,7 @@ public static class FerriteVoicePacksPage
 
     private static void DrawMultiColumn(
         Rect contentRect,
+        string activeTab,
         KitWidgetContext ctx,
         KitUiPageState uiState,
         Action<KitUiCommand> emit)
@@ -364,9 +367,9 @@ public static class FerriteVoicePacksPage
         const float minColumnWidth = 260f;
         const float leftRatio = 0.38f;
 
-        KitLayoutEngine topEngine = GetEngineAll("");
-        KitLayoutEngine leftEngine = GetEngineAll("Left");
-        KitLayoutEngine rightEngine = GetEngineAll("Right");
+        KitLayoutEngine topEngine = GetEngine(activeTab, "");
+        KitLayoutEngine leftEngine = GetEngine(activeTab, "Left");
+        KitLayoutEngine rightEngine = GetEngine(activeTab, "Right");
 
         float contentWidth = contentRect.width;
         float leftWidth = Mathf.Max(minColumnWidth, (contentWidth - gap) * leftRatio);
