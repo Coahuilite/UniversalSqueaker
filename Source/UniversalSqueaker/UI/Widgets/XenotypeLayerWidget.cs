@@ -106,12 +106,14 @@ public sealed class XenotypeLayerWidget : IWidget
 
             string detail = VoicePacksLayout.LayerDetailText(domain.EnabledCount, domain.CandidateCount, StateSuffix(domain.State));
             float rowHeight = VoicePacksLayout.LayerRowHeightFor(domain.DisplayName, detail, innerWidth, metrics);
+            Rect rowRect = new(x, y, innerWidth, rowHeight);
             XenotypeLayerRow.Draw(
-                new Rect(x, y, innerWidth, rowHeight),
+                rowRect,
                 domain,
                 selected,
                 businessEmit,
                 metrics);
+            UsHelpHighlight.DrawFor(rowRect, "us/xenotype-layer/row", ctx.State);
 
             y += rowHeight + VoicePacksLayout.Gap;
         }

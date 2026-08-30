@@ -49,7 +49,7 @@ internal static class UiSourceInvariantTests
             "Mood Auto must draw through the neutral SelectionButton helper and keep its UiInteract button");
         CheckSourceCountAtLeast(
             scopeTree,
-            "DrawAutoClearButton(clearRect, row, race, xeno, kitEmit);",
+            "DrawAutoClearButton(clearRect, row, race, xeno, kitEmit, ctx.State);",
             2,
             "Mood Auto must be drawn both in the narrow-screen branch and in the normal-width branch");
 
@@ -150,7 +150,7 @@ internal static class UiSourceInvariantTests
             {
                 "private static void DrawStickyLayerRowIfNeeded",
                 "UiInteract.TryGetCurrentScrollView",
-                "DrawLayerRow(pinnedRect, layer, emit)"
+                "DrawLayerRow(pinnedRect, layer, emit, ctx)"
             },
             "ScopeTree must draw a pinned Tuning layer row when its normal row scrolls above the viewport");
 
@@ -223,6 +223,77 @@ internal static class UiSourceInvariantTests
                 "private const float MoodRowHeight = 32f;"
             },
             "Tuning editor interactive heights must stay coordinated (no 20px buttons / cramped mood rows)");
+
+        // Camera+ layered help: structured catalog + pure panel resolution.
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Help", "UsHelpCatalog.cs"),
+            new[]
+            {
+                "internal sealed class HelpSection",
+                "internal sealed class HelpItem",
+                "TryGetSection",
+                "TryGetItem"
+            },
+            "UsHelpCatalog must expose structured HelpSection/HelpItem lookup APIs");
+
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Help", "UsHelpPanelLogic.cs"),
+            new[]
+            {
+                "internal static HelpPanelDisplay Resolve",
+                "helpSelectionKey",
+                "helpHoverKey"
+            },
+            "UsHelpPanel must resolve overview/hover/selection through a pure helper");
+
+        // Title hiding: UsCard must measure hidden-title cards without HeaderHeight/HeaderGap.
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Components", "UsCard.cs"),
+            new[]
+            {
+                "public static float Measure(float bodyHeight, WidgetContext ctx, bool titleHidden)",
+                "UsCardLayout.MeasureBody",
+                "if (!titleHidden)"
+            },
+            "UsCard must provide a TitleHidden measure/draw pair backed by the pure layout helper");
+
+        // Nav brand removal: DrawNav no longer draws the Universal Squeaker brand line.
+        CheckSourceDoesNotContain(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "FerriteVoicePacksPage.cs"),
+            "UiText.DrawLabel(new Rect(brandRect.x, brandRect.y, brandRect.width, 20f), \"Universal Squeaker\"",
+            "DrawNav must not draw the left navigation brand label");
+
+        // Global Volume: HideBodyLabel declared in Layout.xml, supported by the widget, and the
+        // duplicate in-body label is gone. The widget also registers slider help hover/highlight.
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.xml"),
+            new[] { "HideBodyLabel=\"true\"" },
+            "Layout.xml must declare HideBodyLabel on us/global-volume");
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Widgets", "GlobalVolumeWidget.cs"),
+            new[]
+            {
+                "private bool HideBodyLabel",
+                "UsHelpHighlight.DrawFor(sliderRect, SliderHelpKey",
+                "UsHelpHighlight.DrawFor(fieldRect, FieldHelpKey"
+            },
+            "GlobalVolumeWidget must support HideBodyLabel and register slider/number help keys");
+        CheckSourceDoesNotContain(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Widgets", "GlobalVolumeWidget.cs"),
+            "Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f",
+            "GlobalVolumeWidget must not draw the duplicate in-body Global volume label");
+
+        // At least one control hover help key + highlight call (GlobalVolume is covered above);
+        // mode cards in the neutral UiKit widget also feed HelpHoverKey/HelpSelectionKey.
+        CheckSourceContains(
+            Path.Combine(root, "Source", "FerriteLib.UiKit", "Widgets", "InputModeRowWidget.cs"),
+            new[]
+            {
+                "HelpKeysAttribute",
+                "ctx.State.HelpHoverKey = helpKey",
+                "SurfaceFrame.DrawBorder(cardRect, Palette.AccentGold)"
+            },
+            "InputModeRowWidget must set card help hover keys and draw the gold highlight");
     }
 
     private static void CheckSourceContains(string path, string[] requiredFragments, string message)

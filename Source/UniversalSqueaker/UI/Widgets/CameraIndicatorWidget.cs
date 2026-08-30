@@ -81,6 +81,7 @@ public sealed class CameraIndicatorWidget : IWidget
         Text.Font = oldFont;
 
         UiInteract.Row(rect, () => businessEmit(new UiCommand(UiCommandKind.ToggleBasic, arg: ToggleArg, flag: !enabled)));
+        UsHelpHighlight.DrawFor(rect, "us/camera-indicator/toggle", ctx.State);
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

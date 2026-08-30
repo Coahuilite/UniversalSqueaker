@@ -150,6 +150,7 @@ public sealed class BasicTuningWidget : IWidget
         DrawLabel(rect, EggLabel, enabled ? "On (eggs join the pool)" : "Off (ordinary entries only)", metrics);
 
         UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleEgg, flag: !enabled)));
+        UsHelpHighlight.DrawFor(rect, "us/basic-tuning/egg", ctx.State);
     }
 
     private static void DrawDistanceRow(Rect rect, WidgetContext ctx, Action<UiCommand> emit, ITextMetrics metrics)
@@ -175,6 +176,7 @@ public sealed class BasicTuningWidget : IWidget
             };
             emit?.Invoke(new UiCommand(UiCommandKind.SetDistancePreset, arg: next.ToString()));
         });
+        UsHelpHighlight.DrawFor(rect, "us/basic-tuning/distance", ctx.State);
     }
 
     private static void DrawBasicRow(
@@ -201,6 +203,7 @@ public sealed class BasicTuningWidget : IWidget
         Text.Font = oldFont;
 
         UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBasic, arg: arg, flag: !enabled)));
+        UsHelpHighlight.DrawFor(rect, "us/basic-tuning/scaling", ctx.State);
     }
 
     private static void DrawVanillaBasicRow(

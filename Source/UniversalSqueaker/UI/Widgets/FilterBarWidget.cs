@@ -71,7 +71,7 @@ public sealed class FilterBarWidget : IWidget
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
 
         Rect domainRow = new(rect.x, rect.y, rect.width, SingleRowHeight);
-        DrawDomainRow(domainRow, domainFilter, packFilter, businessEmit);
+        DrawDomainRow(domainRow, domainFilter, packFilter, businessEmit, ctx);
 
         Rect filterRow = new(rect.x, rect.y + SingleRowHeight, rect.width, SingleRowHeight);
         DrawFilterDropdownRow(filterRow, raceFilter, xenotypeFilter, raceOptions, xenotypeOptions, authors, packFilter.Author, ctx, businessEmit);
@@ -81,7 +81,8 @@ public sealed class FilterBarWidget : IWidget
         Rect rect,
         UiDomainFilter domainFilter,
         UiPackFilter packFilter,
-        Action<UiCommand> emit)
+        Action<UiCommand> emit,
+        WidgetContext ctx)
     {
         const int count = 4;
         float buttonWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
@@ -97,25 +98,29 @@ public sealed class FilterBarWidget : IWidget
                 emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "ConflictOnly", flag: false));
                 emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: false));
                 emit(new UiCommand(UiCommandKind.SetPackFilter, arg: "Author|", flag: false));
-            });
+            },
+            ctx.State);
         x += buttonWidth + Gap;
 
         DrawSegmentButton(new Rect(x, rect.y, buttonWidth, rect.height),
             "Enabled only",
             domainFilter.EnabledOnly,
-            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "EnabledOnly", flag: !domainFilter.EnabledOnly)));
+            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "EnabledOnly", flag: !domainFilter.EnabledOnly)),
+            ctx.State);
         x += buttonWidth + Gap;
 
         DrawSegmentButton(new Rect(x, rect.y, buttonWidth, rect.height),
             "Conflicts",
             domainFilter.ConflictOnly,
-            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "ConflictOnly", flag: !domainFilter.ConflictOnly)));
+            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "ConflictOnly", flag: !domainFilter.ConflictOnly)),
+            ctx.State);
         x += buttonWidth + Gap;
 
         DrawSegmentButton(new Rect(x, rect.y, buttonWidth, rect.height),
             "Orphan only",
             domainFilter.OrphanOnly,
-            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: !domainFilter.OrphanOnly)));
+            () => emit(new UiCommand(UiCommandKind.SetDomainFilter, arg: "OrphanOnly", flag: !domainFilter.OrphanOnly)),
+            ctx.State);
     }
 
     private static void DrawFilterDropdownRow(
@@ -195,6 +200,11 @@ public sealed class FilterBarWidget : IWidget
             if (cmd.Name == "Select" && cmd.Payload is string selected)
                 onSelected(selected);
         });
+
+        string helpKey = string.Equals(idSuffix, "author", StringComparison.Ordinal)
+            ? "us/filter-bar/author"
+            : "us/filter-bar/race-xeno";
+        UsHelpHighlight.DrawFor(rect, helpKey, ctx.State);
     }
 
     private static void DrawAuthorDropdown(
@@ -241,9 +251,10 @@ public sealed class FilterBarWidget : IWidget
         return result;
     }
 
-    private static void DrawSegmentButton(Rect rect, string label, bool selected, Action onClick)
+    private static void DrawSegmentButton(Rect rect, string label, bool selected, Action onClick, UiPageState state)
     {
         SelectionButton.Draw(rect, label, selected, font: UiFont.Tiny);
+        UsHelpHighlight.DrawFor(rect, "us/filter-bar/domain", state);
         UiInteract.Button(rect, UiLayer.Content, () => onClick?.Invoke());
     }
 

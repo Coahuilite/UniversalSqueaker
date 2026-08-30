@@ -340,8 +340,12 @@ internal static class Program
         state.ToggleHelpKey("");
         Check(state.OpenHelpKeys.Count == 1, "UiPageState ToggleHelpKey ignores empty key");
 
+        state.HelpHoverKey = "us/hover";
+        state.HelpSelectionKey = "us/selected";
         state.Reset();
         Check(state.OpenHelpKeys.Count == 0, "UiPageState Reset clears help keys");
+        Check(state.HelpHoverKey.Length == 0, "UiPageState Reset clears HelpHoverKey");
+        Check(state.HelpSelectionKey.Length == 0, "UiPageState Reset clears HelpSelectionKey");
     }
 
     private static void Check(bool condition, string name)

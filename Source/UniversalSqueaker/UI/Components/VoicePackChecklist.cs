@@ -11,7 +11,13 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class VoicePackChecklist
 {
-    public static void Draw(Rect rect, VoicePackDomainView domain, ref string search, Action<UiCommand> emit, ITextMetrics? metrics = null)
+    public static void Draw(
+        Rect rect,
+        VoicePackDomainView domain,
+        ref string search,
+        Action<UiCommand> emit,
+        ITextMetrics? metrics = null,
+        UiPageState? state = null)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
         ITextMetrics effectiveMetrics = metrics ?? VerseTextMetrics.Instance;
@@ -26,6 +32,10 @@ public static class VoicePackChecklist
 
         Rect searchRect = new(rect.x, y, rect.width, VoicePacksLayout.SearchFieldHeight);
         SearchField.Draw(searchRect, ref search, "Search VoicePacks…");
+        if (state != null)
+        {
+            UsHelpHighlight.DrawFor(searchRect, "us/voice-pack-checklist/search", state);
+        }
         y += VoicePacksLayout.SearchFieldHeight + VoicePacksLayout.Gap;
 
         string query = search?.Trim() ?? "";
@@ -36,6 +46,10 @@ public static class VoicePackChecklist
             float rowHeight = VoicePacksLayout.VoicePackRowHeightFor(row, rect.width, effectiveMetrics);
             Rect rowRect = new(rect.x, y, rect.width, rowHeight);
             VoicePackRow.Draw(rowRect, row, domain.Scope, domain.RaceDefName, domain.TargetDefName, emit, effectiveMetrics);
+            if (state != null)
+            {
+                UsHelpHighlight.DrawFor(rowRect, "us/voice-pack-checklist/row", state);
+            }
             y += rowHeight;
             shown++;
         }
@@ -55,7 +69,7 @@ public static class VoicePackChecklist
                 "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.",
                 rect.width, effectiveMetrics);
             Rect banner = new(rect.x, y, rect.width, bannerHeight);
-            DrawOrphanBanner(banner, domain, emit);
+            DrawOrphanBanner(banner, domain, emit, state);
         }
     }
 
@@ -66,7 +80,7 @@ public static class VoicePackChecklist
         return y + height + VoicePacksLayout.Gap;
     }
 
-    private static void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, Action<UiCommand> emit)
+    private static void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, Action<UiCommand> emit, UiPageState? state)
     {
         UsSurface.DrawSurface(rect, UsSurface.SurfaceKind.Warning);
         Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
@@ -78,12 +92,16 @@ public static class VoicePackChecklist
         Widgets.Label(text, "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.");
         Text.Font = oldFont;
         GUI.color = oldColor;
-        DrawForgetButton(button, domain, emit);
+        DrawForgetButton(button, domain, emit, state);
     }
 
-    private static void DrawForgetButton(Rect button, VoicePackDomainView domain, Action<UiCommand> emit)
+    private static void DrawForgetButton(Rect button, VoicePackDomainView domain, Action<UiCommand> emit, UiPageState? state)
     {
         SelectionButton.Draw(button, "Forget Unavailable", selected: true, danger: true, font: UiFont.Tiny);
+        if (state != null)
+        {
+            UsHelpHighlight.DrawFor(button, "us/voice-pack-checklist/forget", state);
+        }
         UiInteract.Button(button, UiLayer.Content, () => emit?.Invoke(new UiCommand(
             UiCommandKind.ForgetUnavailable,
             scope: domain.Scope,

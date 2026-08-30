@@ -117,7 +117,8 @@ public static class FerriteVoicePacksPage
             {
                 ScrollPosition = State.ScrollPosition,
                 HelpScrollPosition = State.HelpScrollPosition,
-                SearchText = State.SearchText
+                SearchText = State.SearchText,
+                HelpSelectionKey = State.HelpSelectionKey
             };
 
             KitWidgetContext ctx = new(Source, viewState, VerseFerriteTextMetrics.Instance, uiState);
@@ -156,6 +157,8 @@ public static class FerriteVoicePacksPage
 
                 UiInteract.DrawPopups();
                 UiInteract.ProcessEvents();
+
+                State.HelpSelectionKey = uiState.HelpSelectionKey;
 
                 foreach (KitUiCommand kitCommand in kitCommands)
                 {
@@ -503,19 +506,11 @@ public static class FerriteVoicePacksPage
         const float gap = 3f;
         const float sidePadding = 10f;
         const float itemIndent = 6f;
-        const float brandHeight = 52f;
 
         Widgets.DrawBoxSolid(navRect, Palette.Base);
         SurfaceFrame.DrawBorder(navRect, Palette.Border);
 
         float y = navRect.y + 12f;
-
-        // Brand / page identity.
-        Rect brandRect = new(navRect.x + sidePadding, y, Math.Max(1f, navRect.width - sidePadding * 2f), brandHeight);
-        UiText.DrawLabel(new Rect(brandRect.x, brandRect.y, brandRect.width, 20f), "Universal Squeaker", Palette.TextPrimary);
-        UiText.DrawCaption(new Rect(brandRect.x, brandRect.y + 20f, brandRect.width, 16f), "VoicePack Routing", Palette.TextSecondary);
-        UiPanel.DrawDivider(new Rect(brandRect.x, brandRect.yMax - 1f, brandRect.width, 1f));
-        y += brandHeight + 8f;
 
         foreach ((string group, string groupLabel) in NavGroups)
         {

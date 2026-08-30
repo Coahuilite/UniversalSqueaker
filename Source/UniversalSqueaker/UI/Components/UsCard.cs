@@ -13,15 +13,26 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsCard
 {
-    public const float Padding = 12f;
-    public const float HeaderHeight = 26f;
-    public const float HeaderGap = 6f;
+    public const float Padding = UsCardLayout.Padding;
+    public const float HeaderHeight = UsCardLayout.HeaderHeight;
+    public const float HeaderGap = UsCardLayout.HeaderGap;
 
     public static float Measure(float bodyHeight, WidgetContext ctx)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        return Padding + HeaderHeight + HeaderGap + Math.Max(0f, bodyHeight) + Padding;
+        return Measure(bodyHeight, ctx, titleHidden: false);
+    }
+
+    /// <summary>
+    /// Measures a card. When <paramref name="titleHidden"/> is true the header row and its gap
+    /// are removed so Measure matches <see cref="Draw(Rect,string,WidgetContext,Action{Rect},bool)"/>.
+    /// </summary>
+    public static float Measure(float bodyHeight, WidgetContext ctx, bool titleHidden)
+    {
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+
+        return UsCardLayout.MeasureBody(bodyHeight, titleHidden);
     }
 
     public static void Draw(
@@ -29,6 +40,20 @@ public static class UsCard
         string title,
         WidgetContext ctx,
         Action<Rect> drawBody)
+    {
+        Draw(rect, title, ctx, drawBody, titleHidden: false);
+    }
+
+    /// <summary>
+    /// Draws a card. When <paramref name="titleHidden"/> is true the header row and its gap are
+    /// skipped; the body starts immediately below the top padding.
+    /// </summary>
+    public static void Draw(
+        Rect rect,
+        string title,
+        WidgetContext ctx,
+        Action<Rect> drawBody,
+        bool titleHidden)
     {
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
         if (drawBody == null) throw new ArgumentNullException(nameof(drawBody));
@@ -39,9 +64,12 @@ public static class UsCard
         float x = rect.x + Padding;
         float y = rect.y + Padding;
 
-        Rect headerRect = new(x, y, Math.Max(1f, rect.width - Padding * 2f), HeaderHeight);
-        DrawHeader(headerRect, title);
-        y += HeaderHeight + HeaderGap;
+        if (!titleHidden)
+        {
+            Rect headerRect = new(x, y, Math.Max(1f, rect.width - Padding * 2f), HeaderHeight);
+            DrawHeader(headerRect, title);
+            y += HeaderHeight + HeaderGap;
+        }
 
         Rect bodyRect = new(
             x,
@@ -49,6 +77,15 @@ public static class UsCard
             Math.Max(1f, rect.width - Padding * 2f),
             Math.Max(1f, rect.yMax - Padding - y));
         drawBody(bodyRect);
+    }
+
+    /// <summary>Parses a boolean XML-style attribute used by US widgets.</summary>
+    public static bool IsTrueAttribute(UiElementSpec? spec, string name)
+    {
+        if (spec == null || string.IsNullOrEmpty(name)) return false;
+        return spec.TryGetAttribute(name, out string value)
+            && (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "1", StringComparison.Ordinal));
     }
 
     private static void DrawHeader(Rect rect, string title)

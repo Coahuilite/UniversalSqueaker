@@ -13,6 +13,12 @@ public sealed class UiPageState
 
     public string SearchText = "";
 
+    /// <summary>Help key of the control/item currently under the pointer. Recomputed every frame.</summary>
+    public string HelpHoverKey = "";
+
+    /// <summary>Help key of the item the user pinned in the help panel. Persists across frames.</summary>
+    public string HelpSelectionKey = "";
+
     public bool HelpOpen;
 
     public object? Selected;
@@ -33,6 +39,8 @@ public sealed class UiPageState
         ScrollPosition = default;
         HelpScrollPosition = default;
         SearchText = "";
+        HelpHoverKey = "";
+        HelpSelectionKey = "";
         HelpOpen = false;
         Selected = null;
         OpenHelpKeys.Clear();

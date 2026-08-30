@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using Verse;
 using VerseWidgets = Verse.Widgets;
 
 namespace FerriteLib.UiKit.Widgets;
@@ -18,6 +19,7 @@ public sealed class InputModeRowWidget : IWidget
     private const string CurrentAttribute = "Current";
     private const string BindAttribute = "Bind";
     private const string EmitNameAttribute = "EmitName";
+    private const string HelpKeysAttribute = "HelpKeys";
     private const string DefaultEmitName = "SelectMode";
 
     private const float CardGap = 6f;
@@ -104,6 +106,7 @@ public sealed class InputModeRowWidget : IWidget
         float cardWidth = Math.Max(1f, (rect.width - CardGap * (columns - 1)) / columns);
         float cardHeight = (rect.height - CardGap * (rows - 1)) / rows;
 
+        string[] helpKeys = ReadHelpKeys();
         for (int i = 0; i < cards.Count; i++)
         {
             ModeCardData card = cards[i];
@@ -113,9 +116,22 @@ public sealed class InputModeRowWidget : IWidget
             float y = rect.y + row * (cardHeight + CardGap);
             var cardRect = new Rect(x, y, cardWidth, cardHeight);
 
+            string helpKey = i < helpKeys.Length ? helpKeys[i] : "";
+            if (!string.IsNullOrEmpty(helpKey) && Mouse.IsOver(cardRect))
+            {
+                ctx.State.HelpHoverKey = helpKey;
+            }
+
             bool selected = string.Equals(current, card.Value, StringComparison.Ordinal);
             ModeCardRenderer.Draw(cardRect, selected, card.Title, card.Description,
                 () => emit(new UiCommand(emitName, card.Value)));
+
+            if (!string.IsNullOrEmpty(helpKey)
+                && (string.Equals(ctx.State.HelpHoverKey, helpKey, StringComparison.Ordinal)
+                    || string.Equals(ctx.State.HelpSelectionKey, helpKey, StringComparison.Ordinal)))
+            {
+                SurfaceFrame.DrawBorder(cardRect, Palette.AccentGold);
+            }
         }
     }
 
@@ -193,6 +209,17 @@ public sealed class InputModeRowWidget : IWidget
     private string Read(string name)
     {
         return _spec.TryGetAttribute(name, out string value) ? value : "";
+    }
+
+    private string[] ReadHelpKeys()
+    {
+        if (!_spec.TryGetAttribute(HelpKeysAttribute, out string value)
+            || string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<string>();
+        }
+
+        return value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
     }
 
     private string ReadEmitName()

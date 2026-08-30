@@ -129,7 +129,7 @@ public sealed class PresetListWidget : IWidget
         float xenoIndent = VoicePacksLayout.ForWidth(rect.width) == LayoutTier.Comfortable ? XenotypeIndent : 12f;
         foreach (BaselinePresetView preset in presets)
         {
-            DrawPresetHeader(new Rect(x, y, innerWidth, PresetHeaderHeight), preset, businessEmit);
+            DrawPresetHeader(new Rect(x, y, innerWidth, PresetHeaderHeight), preset, businessEmit, ctx.State);
             y += PresetHeaderHeight + VoicePacksLayout.Gap;
 
             if (!preset.Expanded) continue;
@@ -144,14 +144,14 @@ public sealed class PresetListWidget : IWidget
             foreach (BaselineRaceView race in preset.Races)
             {
                 float raceRowHeight = RaceRowHeightFor(innerWidth, race, smallMetrics);
-                DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, businessEmit);
+                DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, businessEmit, ctx.State);
                 y += raceRowHeight + RowGap;
 
                 float xenoWidth = Math.Max(1f, innerWidth - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
                     float xenoRowHeight = XenotypeRowHeightFor(xenoWidth, xenotype, smallMetrics);
-                    DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit);
+                    DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, businessEmit, ctx.State);
                     y += xenoRowHeight + RowGap;
                 }
             }
@@ -179,7 +179,7 @@ public sealed class PresetListWidget : IWidget
         return xenotype.DisplayName + inheritTag + "  (" + xenotype.ActionCount + " actions, " + xenotype.MoodCount + " moods)";
     }
 
-    private static void DrawPresetHeader(Rect rect, BaselinePresetView preset, Action<UiCommand> emit)
+    private static void DrawPresetHeader(Rect rect, BaselinePresetView preset, Action<UiCommand> emit, UiPageState state)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, preset.Expanded, false);
@@ -202,20 +202,22 @@ public sealed class PresetListWidget : IWidget
         Text.Font = oldFont;
         GUI.color = oldColor;
 
-        DrawImportButton(importRect, preset.DefName, emit);
+        DrawImportButton(importRect, preset.DefName, emit, state);
 
         Rect expandRect = new(rect.x, rect.y, Math.Max(1f, importRect.x - rect.x - 8f), rect.height);
         UiInteract.Row(expandRect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselinePreset, arg: preset.DefName)));
+        UsHelpHighlight.DrawFor(rect, "us/preset-list/tree", state);
     }
 
-    private static void DrawImportButton(Rect button, string presetDefName, Action<UiCommand> emit)
+    private static void DrawImportButton(Rect button, string presetDefName, Action<UiCommand> emit, UiPageState state)
     {
         SelectionButton.Draw(button, "Import", selected: true, font: UiFont.Tiny);
+        UsHelpHighlight.DrawFor(button, "us/preset-list/import", state);
         UiInteract.Button(button, UiLayer.Content,
             () => emit?.Invoke(new UiCommand(UiCommandKind.ImportBaselinePreset, arg: presetDefName)));
     }
 
-    private static void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, Action<UiCommand> emit)
+    private static void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, Action<UiCommand> emit, UiPageState state)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -232,9 +234,10 @@ public sealed class PresetListWidget : IWidget
         GUI.color = oldColor;
 
         UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineRace, arg: presetDefName, raceDefName: race.RaceDefName, flag: !race.Selected)));
+        UsHelpHighlight.DrawFor(rect, "us/preset-list/tree", state);
     }
 
-    private static void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit)
+    private static void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, Action<UiCommand> emit, UiPageState state)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -251,6 +254,7 @@ public sealed class PresetListWidget : IWidget
         GUI.color = oldColor;
 
         UiInteract.Row(rect, () => emit?.Invoke(new UiCommand(UiCommandKind.ToggleBaselineXenotype, arg: presetDefName, raceDefName: raceDefName, targetDefName: xenotype.XenotypeDefName, flag: !xenotype.Selected)));
+        UsHelpHighlight.DrawFor(rect, "us/preset-list/tree", state);
     }
 
     private static void DrawDescription(Rect rect, string text)

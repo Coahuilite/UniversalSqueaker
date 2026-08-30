@@ -24,7 +24,12 @@ public sealed class GlobalVolumeWidget : IWidget
 
     private const string ViewKey = "GlobalVolumeFactor";
 
+    private const string SliderHelpKey = "us/global-volume/slider";
+    private const string FieldHelpKey = "us/global-volume/number";
+
     private UiElementSpec? _spec;
+
+    private bool HideBodyLabel => UsCard.IsTrueAttribute(_spec, "HideBodyLabel");
 
     string IWidget.Kind => Kind;
 
@@ -51,42 +56,46 @@ public sealed class GlobalVolumeWidget : IWidget
 
         UiGuard.DrawOrFallback(
             rect,
-            () => DrawCore(rect, ctx, emit),
+            () => DrawCore(rect, ctx, emit, HideBodyLabel),
             fallback => DrawVanilla(fallback, ctx, emit),
             Kind, "UniversalSqueaker");
     }
 
-    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawCore(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, bool hideBodyLabel)
     {
-        UsCard.Draw(rect, Title, ctx, body => DrawBody(body, ctx, emit));
+        UsCard.Draw(rect, Title, ctx, body => DrawBody(body, ctx, emit, hideBodyLabel));
     }
 
-    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)
+    private static void DrawBody(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit, bool hideBodyLabel)
     {
         Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(emit);
         float value = ReadValue(ctx);
-
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        Text.Font = GameFont.Small;
-        GUI.color = UsVisualTokens.TextPrimary;
-        Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 80f), LabelHeight), Title);
 
         var id = new UiControlId(Kind, "global-volume");
         Rect fieldRect = new(rect.xMax - RightPadding - 64f, rect.y + 2f, 64f, LabelHeight);
         Rect sliderRect = new(rect.x + LeftPadding, rect.y + LabelHeight + 2f, rect.width - LeftPadding - RightPadding, SliderHeight);
 
+        if (hideBodyLabel)
+        {
+            // Hide the duplicate in-body label; vertically center the slider and number field.
+            float controlHeight = Math.Max(SliderHeight, LabelHeight);
+            float y = rect.y + Math.Max(0f, (rect.height - controlHeight) * 0.5f);
+            fieldRect.y = y;
+            sliderRect.y = y + (controlHeight - SliderHeight) * 0.5f;
+            sliderRect.height = SliderHeight;
+        }
+
         float sliderValue = UiInteract.Slider(sliderRect, id, value, 0f, 1f, out bool sliderChanged);
         UiInteract.NumberField(fieldRect, id, sliderValue, 0f, 1f, "0%", out bool committed);
+
+        UsHelpHighlight.DrawFor(sliderRect, SliderHelpKey, ctx.State);
+        UsHelpHighlight.DrawFor(fieldRect, FieldHelpKey, ctx.State);
 
         if (sliderChanged || committed)
         {
             float current = UiValueStore.GetOrCreate(id).FloatValue;
             businessEmit(new UiCommand(UiCommandKind.SetGlobalVolume, arg: current.ToString("0.###", CultureInfo.InvariantCulture)));
         }
-
-        Text.Font = oldFont;
-        GUI.color = oldColor;
     }
 
     private static void DrawVanilla(Rect rect, WidgetContext ctx, Action<KitUiCommand> emit)

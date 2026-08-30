@@ -35,7 +35,92 @@ internal static class Program
         TestActionScopeRules();
         TestRaceXenotypeFiltering();
         TestLayerDetailText();
+        TestUsCardLayoutHeight();
+        TestHelpCatalog();
+        TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
+    }
+
+    private static void TestUsCardLayoutHeight()
+    {
+        const float tolerance = 0.0001f;
+
+        float withTitle = UsCardLayout.MeasureBody(10f, titleHidden: false);
+        float withoutTitle = UsCardLayout.MeasureBody(10f, titleHidden: true);
+        AssertEqual(
+            UsCardLayout.Padding + UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap + 10f + UsCardLayout.Padding,
+            withTitle,
+            tolerance,
+            "UsCard with title includes header height and gap");
+        AssertEqual(
+            UsCardLayout.Padding + 10f + UsCardLayout.Padding,
+            withoutTitle,
+            tolerance,
+            "UsCard with hidden title removes header height and gap");
+        Assert(withoutTitle < withTitle, "TitleHidden cards measure shorter than titled cards");
+        AssertEqual(withTitle - withoutTitle, UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap, tolerance,
+            "TitleHidden removes exactly HeaderHeight + HeaderGap");
+        AssertEqual(
+            UsCardLayout.Padding + UsCardLayout.Padding,
+            UsCardLayout.MeasureBody(-5f, titleHidden: true),
+            tolerance,
+            "UsCard clamps negative body heights to zero");
+    }
+
+    private static void TestHelpCatalog()
+    {
+        Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
+            "TryGetSection finds us/scope-tree");
+        Assert(scopeTree.Title.Length > 0, "scope-tree section has a title");
+        Assert(scopeTree.Overview.Length > 0, "scope-tree section has an overview");
+        Assert(scopeTree.Items.Count >= 1, "every section has at least one item");
+
+        string[] sectionKeys =
+        {
+            "us/page-title", "us/mode-row", "us/global-volume", "us/attenuation-editor",
+            "us/basic-tuning", "us/camera-indicator", "us/scope-tree", "us/preset-list",
+            "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
+        };
+        foreach (string key in sectionKeys)
+        {
+            Assert(UsHelpCatalog.TryGetSection(key, out HelpSection section), "section exists: " + key);
+            Assert(section.Items.Count >= 1, "section has at least one item: " + key);
+        }
+
+        Assert(UsHelpCatalog.TryGetItem("us/scope-tree", "us/scope-tree/action-scope", out HelpItem item),
+            "TryGetItem finds an item by section and item key");
+        Assert(item.Label.Length > 0 && item.Text.Length > 0, "help item has label and text");
+
+        Assert(!UsHelpCatalog.TryGetSection("missing/section", out _), "missing section returns false");
+        Assert(!UsHelpCatalog.TryGetItem("us/scope-tree", "us/scope-tree/not-real", out _),
+            "missing item returns false");
+    }
+
+    private static void TestHelpPanelLogic()
+    {
+        Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
+            "help panel logic test uses an existing section");
+
+        UsHelpPanelLogic.HelpPanelDisplay overview = UsHelpPanelLogic.Resolve(scopeTree, "", "");
+        Assert(overview.Title == scopeTree.Title, "overview display uses section title");
+        Assert(overview.IsOverview, "empty hover/selection resolves to overview");
+        Assert(overview.Text == scopeTree.Overview, "overview display uses section overview");
+
+        UsHelpPanelLogic.HelpPanelDisplay hover = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/action-scope", "");
+        Assert(!hover.IsOverview, "valid hover key resolves to an item");
+        Assert(hover.Label == "Action Scope", "hover display uses the hovered item label");
+        Assert(hover.ItemKey == "us/scope-tree/action-scope", "hover display carries the item key");
+
+        UsHelpPanelLogic.HelpPanelDisplay selection = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/layer", "us/scope-tree/action-scope");
+        Assert(!selection.IsOverview, "valid selection wins over hover");
+        Assert(selection.ItemKey == "us/scope-tree/action-scope", "selection display uses selection key");
+
+        UsHelpPanelLogic.HelpPanelDisplay foreignHover = UsHelpPanelLogic.Resolve(scopeTree, "us/global-volume/slider", "");
+        Assert(foreignHover.IsOverview, "hover key outside the current section falls back to overview");
+
+        UsHelpPanelLogic.HelpPanelDisplay noSection = UsHelpPanelLogic.Resolve(null, "", "");
+        Assert(noSection.Title == UsHelpPanelLogic.EmptyTitle, "missing section uses Help title");
+        Assert(noSection.Text == UsHelpPanelLogic.EmptyText, "missing section uses empty text");
     }
 
     private static void TestVoicePacksLayoutHeights()

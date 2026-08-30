@@ -8,8 +8,9 @@
           Title2="Fallback" Description2="Use built-in fallback profiles when no pack is enabled." Value2="Fallback"
           Title3="Remix" Description3="Mix enabled VoicePacks within each selected domain." Value3="Remix"
           Title4="Disabled" Description4="Fully bypass the mod; play nothing." Value4="Disabled"
-          Tab="Basic" HelpKey="us/mode-row" />
-  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" Column="Left" HelpKey="us/global-volume" />
+          Tab="Basic" HelpKey="us/mode-row"
+          HelpKeys="us/mode-row/vanilla,us/mode-row/fallback,us/mode-row/remix,us/mode-row/disabled" />
+  <Widget Id="global-volume" Kind="us/global-volume" Tab="Basic" Column="Left" HelpKey="us/global-volume" HideBodyLabel="true" />
   <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Tab="Basic" Column="Right" HelpKey="us/attenuation-editor" />
   <Widget Id="basic-tuning" Kind="us/basic-tuning" Tab="Basic" Column="Left" HelpKey="us/basic-tuning" />
   <Widget Id="camera-indicator" Kind="us/camera-indicator" Tab="Basic" Column="Left" HelpKey="us/camera-indicator" />

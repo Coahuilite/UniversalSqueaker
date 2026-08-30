@@ -105,12 +105,14 @@ public sealed class RaceLayerWidget : IWidget
 
             string detail = race.EnabledCount + " / " + race.CandidateCount + " enabled" + StateSuffix(race.State);
             float rowHeight = VoicePacksLayout.LayerRowHeightFor(race.DisplayName, detail, innerWidth, metrics);
+            Rect rowRect = new(x, y, innerWidth, rowHeight);
             RaceLayerRow.Draw(
-                new Rect(x, y, innerWidth, rowHeight),
+                rowRect,
                 race,
                 selected,
                 businessEmit,
                 metrics);
+            UsHelpHighlight.DrawFor(rowRect, "us/race-layer/row", ctx.State);
 
             y += rowHeight + VoicePacksLayout.Gap;
         }

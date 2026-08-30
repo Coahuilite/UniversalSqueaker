@@ -149,3 +149,13 @@
 - **T5（中低风险）**：Tuning Layer sticky；`ActionScopeRules` 动作分组（Autonomous/Operable）并默认隐藏 Crying/Giggling；race/xenotype 并列筛选 + 自动收窄；作者筛选下拉；无可用包 xenotype 黯淡显示；LineChart 可拖节点 hover 高亮；Tuning Editor 高度协调。新增纯逻辑与交互测试。
 - **待办**：维护者游戏内实机验证（800×600 三栏、Tuning Editor sticky/dropdown、Mood stepper、衰减图拖拽、FilterBar 下拉）；Camera+ 分层帮助（M3）仍未实现，行业调研已给出建议；`docs/workdocs/` 已移除。
 
+## Session resume checkpoint (2026-08-30d — Camera+ 分层帮助 + 标题去重落地)
+
+- **维护者确认**：隐藏整个导航品牌区；Global Volume 隐藏卡片体内重复标签；分层帮助做完整版（总览+单项列表+悬停/选中联动高亮）。
+- **隐藏**：`FerriteVoicePacksPage.DrawNav` 移除品牌区；`GlobalVolumeWidget` 支持 `HideBodyLabel`，`Layout.xml` 已声明；`UsCard` 新增 `TitleHidden` 能力（`UsCardLayout.MeasureBody` 零 Verse 高度计算）。
+- **分层帮助**：`UsHelpCatalog` 结构化（`HelpSection`/`HelpItem`，保留 `Get` 兼容）；`UiPageState` 新增 `HelpHoverKey`/`HelpSelectionKey`；`UsHelpPanel` 显示分区标题、Overview、item 列表，支持 hover/selection 切换；新增 `UsHelpHighlight` 控件高亮；`VoicePacksPageState` 持久化 `HelpSelectionKey`。
+- **覆盖**：模式卡、Global Volume、Attenuation、Basic toggles、Camera indicator、ScopeTree、PresetList、FilterBar、Race/Xenotype 行、VoicePack 搜索/行/Forget 均已接入 help key 与高亮。
+- **测试**：`TestUsCardLayoutHeight`、`TestHelpCatalog`、`TestHelpPanelLogic`、`UiPageState` help keys reset、源码不变式（导航品牌区不绘制、GlobalVolume 隐藏标签、UsCard TitleHidden、InputModeRowWidget help hover 高亮）。
+- **验证**：`scripts/verify-local.ps1` 14 门全绿，Dev/Release 0 警告。
+- **待办**：维护者游戏内实机验证新增分层帮助 hover/选中联动与隐藏效果；`docs/workdocs/` 已移除。
+

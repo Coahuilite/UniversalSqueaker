@@ -99,6 +99,7 @@ public sealed class VoicePackChecklistWidget : IWidget
             domain,
             ref pageState.SearchText,
             UsWidgetCommandAdapter.For(emit),
-            metrics);
+            metrics,
+            state: pageState);
     }
 }

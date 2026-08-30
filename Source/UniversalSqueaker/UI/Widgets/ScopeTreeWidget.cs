@@ -153,7 +153,7 @@ public sealed class ScopeTreeWidget : IWidget
 
         float layerRowHeight = LayerRowHeightFor(innerWidth);
         float layerRowY = y;
-        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, businessEmit);
+        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, businessEmit, ctx);
         y += layerRowHeight + VoicePacksLayout.Gap;
 
         if (layer > 0)
@@ -209,7 +209,7 @@ public sealed class ScopeTreeWidget : IWidget
             }
         }
 
-        DrawStickyLayerRowIfNeeded(new Rect(x, layerRowY, innerWidth, layerRowHeight), layer, layerRowHeight, businessEmit);
+        DrawStickyLayerRowIfNeeded(new Rect(x, layerRowY, innerWidth, layerRowHeight), layer, layerRowHeight, businessEmit, ctx);
     }
 
     /// <summary>
@@ -218,7 +218,7 @@ public sealed class ScopeTreeWidget : IWidget
     /// Tuning page scrolls. Drawing happens after normal content so the opaque row overlays the
     /// scrolled content, and its buttons are registered after the normal row so they win hits.
     /// </summary>
-    private static void DrawStickyLayerRowIfNeeded(Rect layerRowRect, int layer, float layerRowHeight, Action<UiCommand> emit)
+    private static void DrawStickyLayerRowIfNeeded(Rect layerRowRect, int layer, float layerRowHeight, Action<UiCommand> emit, WidgetContext ctx)
     {
         if (!UiInteract.TryGetCurrentScrollView(out Rect outRect, out Vector2 scroll)) return;
         float layerRowPageY = outRect.y + layerRowRect.y - scroll.y;
@@ -227,7 +227,7 @@ public sealed class ScopeTreeWidget : IWidget
 
         float pinnedY = scroll.y;
         Rect pinnedRect = new(layerRowRect.x, pinnedY, layerRowRect.width, layerRowHeight);
-        DrawLayerRow(pinnedRect, layer, emit);
+        DrawLayerRow(pinnedRect, layer, emit, ctx);
     }
 
     private static int ReadLayer(WidgetContext ctx)
@@ -241,7 +241,7 @@ public sealed class ScopeTreeWidget : IWidget
         return ctx.TryGetViewValue(key, out object? value) && value is string text ? text : "";
     }
 
-    private static void DrawLayerRow(Rect rect, int layer, Action<UiCommand> emit)
+    private static void DrawLayerRow(Rect rect, int layer, Action<UiCommand> emit, WidgetContext ctx)
     {
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
@@ -271,6 +271,7 @@ public sealed class ScopeTreeWidget : IWidget
                     () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
                 y += ButtonHeight + RowGap;
             }
+            UsHelpHighlight.DrawFor(rect, "us/scope-tree/layer", ctx.State);
             return;
         }
 
@@ -285,6 +286,7 @@ public sealed class ScopeTreeWidget : IWidget
                 () => emit?.Invoke(new UiCommand(UiCommandKind.SetTuningLayer, arg: captured.ToString(CultureInfo.InvariantCulture))));
             buttonX += buttonWidth + RowGap;
         }
+        UsHelpHighlight.DrawFor(rect, "us/scope-tree/layer", ctx.State);
     }
 
     private static float LayerRowHeightFor(float width)
@@ -351,6 +353,8 @@ public sealed class ScopeTreeWidget : IWidget
             Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
             businessEmit(new UiCommand(UiCommandKind.SetTuningDomain, raceDefName: parts[0], targetDefName: parts[1]));
         });
+
+        UsHelpHighlight.DrawFor(rect, "us/scope-tree/domain", ctx.State);
     }
 
     private static void DrawScopeRow(Rect rect, ActionScopeRowView row, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
@@ -391,6 +395,8 @@ public sealed class ScopeTreeWidget : IWidget
             Action<UiCommand> businessEmit = UsWidgetCommandAdapter.For(kitEmit);
             businessEmit(new UiCommand(UiCommandKind.SetActionTuningScope, raceDefName: race, targetDefName: xeno, arg: (selected ?? "") + "|" + row.ActionKey));
         });
+
+        UsHelpHighlight.DrawFor(rect, "us/scope-tree/action-scope", ctx.State);
     }
 
     private static void DrawDropdown(
@@ -443,6 +449,7 @@ public sealed class ScopeTreeWidget : IWidget
         bool hovered = Mouse.IsOver(rect);
         UsSurface.DrawRowSurface(rect, hovered, false, false);
         DrawMoodRowBody(rect, row, race, xeno, ctx, kitEmit);
+        UsHelpHighlight.DrawFor(rect, "us/scope-tree/mood-tuning", ctx.State);
     }
 
     private static void DrawMoodRowBody(Rect rect, MoodTuningRowView row, string race, string xeno, WidgetContext ctx, Action<KitUiCommand> kitEmit)
@@ -468,7 +475,7 @@ public sealed class ScopeTreeWidget : IWidget
             Widgets.Label(new Rect(rect.x + LeftPadding, rect.y + 8f, rect.width - LeftPadding - 8f, 14f), "Window too narrow for mood controls");
             Text.Font = GameFont.Small;
             GUI.color = UsVisualTokens.TextPrimary;
-            DrawAutoClearButton(clearRect, row, race, xeno, kitEmit);
+            DrawAutoClearButton(clearRect, row, race, xeno, kitEmit, ctx.State);
             return;
         }
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
@@ -481,12 +488,13 @@ public sealed class ScopeTreeWidget : IWidget
         factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "V", volume, 0.1f, 2f, 0.05f, row, "volume", race, xeno, ctx, kitEmit);
         DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, 0.05f, row, "jitter", race, xeno, ctx, kitEmit);
 
-        DrawAutoClearButton(clearRect, row, race, xeno, kitEmit);
+        DrawAutoClearButton(clearRect, row, race, xeno, kitEmit, ctx.State);
     }
 
-    private static void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, string race, string xeno, Action<KitUiCommand> kitEmit)
+    private static void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, string race, string xeno, Action<KitUiCommand> kitEmit, UiPageState state)
     {
         SelectionButton.Draw(clearRect, "Auto", selected: false, danger: true, font: UiFont.Tiny);
+        UsHelpHighlight.DrawFor(clearRect, "us/scope-tree/auto", state);
         UiInteract.Button(clearRect, UiLayer.Content,
             () =>
             {
