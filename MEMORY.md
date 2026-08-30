@@ -138,5 +138,5 @@
 - **衰减图/功能块标题/组合式功能块反馈（2026-08-30）**：衰减折线图需重做；每个功能块要有标题作为导航锚点；维护者提出组合式功能块思路，需评估 UiKit 容器化以支持 XML 层级；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **未实机审阅**：`514efb2`/`b86fc97` 仅通过构建/测试门禁，需维护者在游戏内确认视觉效果与交互。
 - **后续 backlog 不变**：OB-02/03/04 + `docs/workdocs/` 移除 + Ferrite 游戏内稳定化 + 可选 Runtime harness。
-
+- **UI 实施计划 Phase 0–2 完成（2026-08-30）**：内联 `?` 已移除（`fe4a77f`）；右侧帮助始终保留、800×600 三栏响应式（`1ef4249`）；功能块独立滚动 + 包过滤器归位（`ebd3b5c`）；Tuning Editor 下拉 + Mood stepper-slider（`1d898b3`，含 UiKit `OptionsBind` 与紧凑宽度支持）；衰减图改为 UiKit `chart/line`（`f718db5`）；`docs/workdocs/` 已移除；verify-local 14 门全绿。待独立 review agent 审查与游戏内实机验证。
 

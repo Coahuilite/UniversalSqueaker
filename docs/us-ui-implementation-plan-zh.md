@@ -1,7 +1,7 @@
 # US UI 实施计划
 
 > 来源：2026-08-30 UI 审阅需求（`docs/us-ui-review-requirements-zh.md`）与设计调研（`docs/ui-ux-research-zh.md`）。
-> 状态：任务规划中，待维护者确认后开始实施。
+> 状态：已完成（Phase 0–2 已落地，待独立审查与游戏内实机验证）。
 
 ## 目标
 

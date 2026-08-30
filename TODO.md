@@ -53,11 +53,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 ### Remaining (next goal)
 
-- **UI 审阅需求（2026-08-30 审阅结束）** — 整理后见 `docs/us-ui-review-requirements-zh.md`；实施计划见 `docs/us-ui-implementation-plan-zh.md`；反馈原文见 `docs/ui-feedback.md`；设计调研见 `docs/ui-ux-research-zh.md`；**UiKit 容器化/控件基础设施已列为最高优先**；帮助入口已确定移除内联 `?`，右侧帮助始终保留。
-- **U7 — UiKit 级绘制顺序 + 导航接入（完成 2026-08-30）** — 单一 `UiInteract` 帧覆盖 nav/content/footer；`UiInteract.PushScrollView` 将滚动区内容坐标变换到页面坐标，`LayoutEngine.Draw(processEvents:false)` 由页面统一派发；Ferrite 异常时 fallback 保留左侧导航。
-- **Backlog** — `docs/workdocs/us-ui-overhaul-backlog.md`：OB-02 ClampWidth 接入、OB-03 加载 clamp 测试、OB-04 VoicePacksLayout 测试（OB-01 Surface/Theme 收敛已落地：UiKit `Palette`/`SurfaceFrame` 公开，US 侧 `UsVisualTokens`/`UsSurface` 变为转发 shim）。
-- **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
-- **Ferrite UI 游戏内稳定化** — maintainer step (requires RimWorld runtime)；U7 后需重新实机验证。
+- **UI 实施计划 Phase 0–2（2026-08-30 完成）** — 内联 `?` 已移除；右侧帮助始终保留（800×600 三栏）；功能块独立滚动 + 包过滤器归位；Tuning Editor 下拉 + Mood stepper-slider；衰减图改为 UiKit `chart/line`；UiKit 容器化/控件基础设施已落地；`docs/workdocs/` 已移除。
+- **独立 review agent 审查** — 等待审查结果并修复发现。
+- **Ferrite UI 游戏内稳定化** — maintainer step（尤其 800×600 三栏、Tuning Editor、衰减图拖拽）。
+- **Backlog** — OB-02 `UiLayoutTier.ClampWidth` 接入、OB-03 加载 clamp 测试、OB-04 `VoicePacksLayout` 测试（可在游戏内验证后处理）。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
 ## Review tracking (2026-08-28 — 6-way isolated review, except S4-Polish)
