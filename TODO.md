@@ -76,6 +76,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 ## Pending decisions / follow-ups
 
 - [ ] Workshop display name and license (maintainer only; do not invent).
+- [ ] Camera+ 帮助机制调研（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：大标题显式展示整个功能区帮助；每个单独项目有高亮指示和独立帮助条目；晚点调研。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
