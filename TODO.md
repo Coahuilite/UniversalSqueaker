@@ -53,7 +53,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 ### Remaining (next goal)
 
-- **UI 审阅需求（2026-08-30 审阅结束）** — 整理后见 `docs/us-ui-review-requirements-zh.md`；反馈原文见 `docs/ui-feedback.md`；设计调研见 `docs/ui-ux-research-zh.md`；**UiKit 容器化/控件基础设施已列为最高优先**；帮助入口继续讨论中，待维护者确认后实施。
+- **UI 审阅需求（2026-08-30 审阅结束）** — 整理后见 `docs/us-ui-review-requirements-zh.md`；实施计划见 `docs/us-ui-implementation-plan-zh.md`；反馈原文见 `docs/ui-feedback.md`；设计调研见 `docs/ui-ux-research-zh.md`；**UiKit 容器化/控件基础设施已列为最高优先**；帮助入口已确定移除内联 `?`，右侧帮助始终保留。
 - **U7 — UiKit 级绘制顺序 + 导航接入（完成 2026-08-30）** — 单一 `UiInteract` 帧覆盖 nav/content/footer；`UiInteract.PushScrollView` 将滚动区内容坐标变换到页面坐标，`LayoutEngine.Draw(processEvents:false)` 由页面统一派发；Ferrite 异常时 fallback 保留左侧导航。
 - **Backlog** — `docs/workdocs/us-ui-overhaul-backlog.md`：OB-02 ClampWidth 接入、OB-03 加载 clamp 测试、OB-04 VoicePacksLayout 测试（OB-01 Surface/Theme 收敛已落地：UiKit `Palette`/`SurfaceFrame` 公开，US 侧 `UsVisualTokens`/`UsSurface` 变为转发 shim）。
 - **docs/workdocs/ 移除** — delete temporary task-book directory after all remaining blocks land.
