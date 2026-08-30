@@ -79,6 +79,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] Camera+ 帮助机制调研（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：大标题显式展示整个功能区帮助；每个单独项目有高亮指示和独立帮助条目；晚点调研。
 - [ ] 全局行高/文字截断修复（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：Basic toggles 等多行内容下半截断，问题普遍存在于整个设置。
 - [ ] 包管理筛选联动（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：race/xenotype 并列放置，选择 race 后自动筛选对应 xeno，下方为包列表。
+- [ ] 未列出 xenotype 黯淡显示（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：无可用异种语音包的 xenotype 应黯淡处理，防止玩家误认为“没列出 = 不支持”。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
