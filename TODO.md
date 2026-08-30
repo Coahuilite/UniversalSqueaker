@@ -76,6 +76,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 ## Pending decisions / follow-ups
 
 - [ ] Workshop display name and license (maintainer only; do not invent).
+- [ ] UI 帮助方案拍板（2026-08-30 维护者反馈，记录见 `docs/ui-feedback.md`）：是否移除内联 `?` 帮助按钮/help banner，统一使用右侧帮助面板；窄屏降级方案待定。
 - [ ] HAR reflection discovery generalization (currently a catalog-side TODO; assembled-only).
 - [ ] In-game crash/assignment matrix per `docs/ui-phase3-implementation-notes-zh.md` (maintainer step).
 - [ ] First release prep: About icon/preview, final description, runbook US copy adaptation.
