@@ -12,5 +12,6 @@ public static class CoreWidgetRegistrar
         WidgetRegistry.Register(WidgetRegistry.CoreScope, InputModeRowWidget.Kind, () => new InputModeRowWidget());
         WidgetRegistry.Register(WidgetRegistry.CoreScope, SectionHeaderWidget.Kind, () => new SectionHeaderWidget());
         WidgetRegistry.Register(WidgetRegistry.CoreScope, SliderNumberFieldWidget.Kind, () => new SliderNumberFieldWidget());
+        WidgetRegistry.Register(WidgetRegistry.CoreScope, DropdownWidget.Kind, () => new DropdownWidget());
     }
 }
