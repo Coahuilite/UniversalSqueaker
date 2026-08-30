@@ -35,7 +35,17 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         preventCameraMotion = true;
     }
 
-    public override Vector2 InitialSize => new Vector2(Verse.UI.screenWidth, Verse.UI.screenHeight);
+    public override Vector2 InitialSize
+    {
+        get
+        {
+            float width = Mathf.Min(Verse.UI.screenWidth * 0.6f, Verse.UI.screenWidth - 80f);
+            float height = Mathf.Min(Verse.UI.screenHeight * 0.6f, Verse.UI.screenHeight - 80f);
+            width = Mathf.Max(800f, width);
+            height = Mathf.Max(600f, height);
+            return new Vector2(width, height);
+        }
+    }
 
     protected override float Margin => 0f;
 

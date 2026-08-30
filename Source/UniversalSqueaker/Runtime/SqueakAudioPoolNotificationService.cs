@@ -58,7 +58,7 @@ public static class SqueakAudioPoolNotificationService
             }
         }
         if (missing.Count == 0) return;
-        Messages.Message("US.Notice.AudioPool.Body".Translate() + "\n• " + string.Join("\n• ", missing), MessageTypeDefOf.NeutralEvent, false);
+        Messages.Message("US.Notice.AudioPool.Body".Translate() + "\n• " + string.Join("\n• ", missing), MessageTypeDefOf.SilentInput, false);
         shownThisProcess = true;
     }
 

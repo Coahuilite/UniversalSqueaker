@@ -123,9 +123,11 @@ public static class FerriteVoicePacksPage
 
             var kitCommands = new List<KitUiCommand>();
             var businessCommands = new List<UiCommand>();
+            var navCommands = new List<UiCommand>();
 
             Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
-            DrawNavWithFrame(navRect, activeTab, businessCommands.Add);
+            DrawNavWithFrame(navRect, activeTab, navCommands.Add);
+            VoicePacksPageModel.ExecuteAll(settings, navCommands, State);
 
             float contentWidth = Math.Max(1f, rect.width - NavWidth);
             float contentAreaHeight = Math.Max(1f, rect.height - FooterHeight);
@@ -421,18 +423,18 @@ public static class FerriteVoicePacksPage
         Rect navRect = new(rect.x, rect.y, NavWidth, Math.Max(1f, rect.height));
         DrawNavWithFrame(navRect, NormalizeTab(State.ActiveTab), commands.Add);
 
+        UniversalSqueakerSettings settings = UniversalSqueakerMod.Settings;
+        if (settings != null)
+        {
+            VoicePacksPageModel.ExecuteAll(settings, commands, State);
+        }
+
         Rect contentRect = new(
             rect.x + NavWidth,
             rect.y,
             Math.Max(1f, rect.width - NavWidth),
             Math.Max(1f, rect.height));
         VanillaVoicePacksPage.Draw(contentRect);
-
-        UniversalSqueakerSettings settings = UniversalSqueakerMod.Settings;
-        if (settings != null)
-        {
-            VoicePacksPageModel.ExecuteAll(settings, commands, State);
-        }
     }
 
     private static void DrawFooter(Rect footerRect, KitWidgetContext ctx)
