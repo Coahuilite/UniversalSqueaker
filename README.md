@@ -12,7 +12,7 @@ RimWorld 1.6 通用语音包内核（本地分叉，未发布）。
 ## 本地验证
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1          # 六项门禁（工具三连 + Dev/Release 构建）
+pwsh -NoProfile -File scripts/verify-local.ps1          # 15 道门禁（7 个 harness + 两程序集 Dev/Release + DLL 与 Schema=2 清单校验）
 pwsh -NoProfile -File scripts/build-dev.ps1             # Dev 构建 + 打 dev 包（dist/dev/）
 dotnet run --project tools/UniversalSqueakerKernelTests -c Release
 ```
@@ -24,5 +24,5 @@ dotnet run --project tools/UniversalSqueakerKernelTests -c Release
 - Workshop 显示名与许可：待维护者确认
 
 - 模组结构参考：docs/mod-structure-reference-zh.md
-- UI 组件化评估与实现笔记：docs/ui-componentization-evaluation-zh.md、docs/ui-phase3-implementation-notes-zh.md
+- UI 组件化评估与实现笔记（历史资料：描述已于 2026-09-02 删除的旧 UI 实现）：docs/ui-componentization-evaluation-zh.md、docs/ui-phase3-implementation-notes-zh.md
 - 发布流程：docs/release-runbook-zh.md（与 SR 同一套，首次发布前需 US 文案适配）
