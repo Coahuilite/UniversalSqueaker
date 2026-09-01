@@ -23,6 +23,7 @@ $ErrorActionPreference = "Stop"
 #  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
 #  13   UI layout manifest XML well-formedness
 #  14   UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview)
+#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host creation + typed bindings)
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -31,6 +32,7 @@ $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.cspro
 $uikitProjectFile = Join-Path $root 'Source\FerriteLib.UiKit\FerriteLib.UiKit.csproj'
 $uikitTestsProject = Join-Path $root 'tools\FerriteLib.UiKit.Tests\FerriteLib.UiKit.Tests.csproj'
 $uiLogicTestsProject = Join-Path $root 'tools\UniversalSqueakerUiLogicTests\UniversalSqueakerUiLogicTests.csproj'
+$kernelHostTestsProject = Join-Path $root 'tools\UniversalSqueakerKernelHostTests\UniversalSqueakerKernelHostTests.csproj'
 $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
 $buildExtraArgs = @()
 if ($NoRestore) { $buildExtraArgs += '--no-restore' }
@@ -138,6 +140,12 @@ Invoke-Check 'UI layout manifest XML well-formedness' `
 Invoke-Check 'UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview + attenuation math + layout tiers)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerUiLogicTests -c Release' `
     { dotnet run --no-restore --project $uiLogicTestsProject -c Release }
+
+# Real embedded Schema=2 Host creation regression: the production Host adapter runs against the
+# real resource, real US widget registrations and the real typed binding table (recording source).
+Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host creation + typed bindings + 3-viewport layout)' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c Release' `
+    { dotnet run --no-restore --project $kernelHostTestsProject -c Release }
 
 Write-Host '[verify] all checks passed.'
 

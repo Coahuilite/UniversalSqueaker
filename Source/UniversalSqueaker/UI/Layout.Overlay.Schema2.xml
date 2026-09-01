@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UiPage Schema="2" Source="coahuilite.universalsqueaker">
+  <Row Id="overlay-root" Height="26">
+    <Widget Id="camera-readout" Kind="us/camera-readout" />
+  </Row>
+</UiPage>

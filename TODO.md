@@ -64,6 +64,18 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - **Backlog** — OB-02 `UiLayoutTier.ClampWidth` 接入、OB-03 加载 clamp 测试、OB-04 `VoicePacksLayout` 测试（可在游戏内验证后处理）。
 - **（可选尾部）Runtime harness** — adapter fold/converters/BuildFallback mode pass-through untested by kernel gate (ReviewResolverFold P3 residual).
 
+## UiKit / US 设置 UI 重建计划（2026-08-31，Gate U 自动部分成立）
+
+- 已完成调查：UiKit 源码、测试 harness、US UI 调用链与依赖切割审计。
+- 已冻结行为不变量：IMGUI 原生事件唯一权威；XML 只负责结构/布局/静态属性/翻译键/有限响应式；typed binding；Window/Overlay 独立 session；Dark Gold theme-ready。
+- 权威入口：`docs/uikit-rebuild/README.md`、`07-rebuild-reset-and-execution-contract-zh.md`、`tasks/MAIN-ORCHESTRATOR.md`。
+- Gate R：`PASS`。自动证据与维护者实机验证均完成；首开、Kernel banner、global-volume 操作、关闭/重开及其余场景无异常。
+- Gate U 自动证据：`PASS（现有 harness/源码范围）`。真实嵌入 Schema2 Host、17 个 US Kind、typed binding/action、Host session 隔离、五工作区×三视口、scope cleanup、disposed session 和创建期失败均通过；主代理独立复现 `verify-local.ps1 -NoRestore` 15 门全绿与 `build-dev.ps1` 0 warning/0 error。
+- DeepSeek UI 收口：`PASS（自动/源码范围）`。800 宽 Mood 已改为 stacked compact 布局，Pitch/Volume/Jitter 各保留 minus/slider/number/plus，Auto 独立；`MoodLayoutFocusedTests` 验证 2 行共 26 个控件在 card 内且不重叠，并覆盖全部 typed `set-mood-tuning` 交互。
+- Gate U Basic 实机：`PASS`。设置页正常开启、global volume 正常修改、attenuation graph 可拖动、关闭重开正常、无红字。
+- Gate U 整体：`LIMITED/未通过`。下一步仅为维护者实机验证 Tuning、Packs、Camera Indicator、真实数据/翻译、popup/chart/hotControl、fallback 与 800×600/1280×720/1920×1080；证据齐全后再执行旧路径 clean-cutover inventory 审查。
+- 最新候选包由 `scripts/build-dev.ps1` 生成；旧 Settings/Overlay fallback 在实机 Gate U 闭环前必须保留，不得宣称 clean cutover。
+
 ## Review tracking (2026-08-28 — 6-way isolated review, except S4-Polish)
 
 - [x] review-01 kernel-pure — `docs/review/review-01-kernel-pure.md` — note: no blocker; M1 same-pack variant mixing, M2 S4/S5 corpus xeno coverage, M3 PackFallback domain boundary

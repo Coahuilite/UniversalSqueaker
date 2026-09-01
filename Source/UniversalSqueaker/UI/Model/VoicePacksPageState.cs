@@ -16,6 +16,7 @@ public sealed class VoicePacksPageState
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
     public string SearchText = "";
+    public string HelpHoverKey = "";
     public string HelpSelectionKey = "";
     public Vector2 ScrollPosition;
     public Vector2 HelpScrollPosition;
@@ -25,8 +26,8 @@ public sealed class VoicePacksPageState
     public int TuningLayer;
     public string TuningRaceDefName = "";
     public string TuningXenotypeDefName = "";
-    public string ActiveTab = "Basic";
-    public string ActiveSectionKey = "";
+    public string ActiveTab = "Overview";
+    public string ActiveSectionKey = "mode-row";
     public string ScrollTargetKey = "";
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
@@ -45,6 +46,7 @@ public sealed class VoicePacksPageState
         SelectedRaceDefName = "";
         SelectedTargetName = "";
         SearchText = "";
+        HelpHoverKey = "";
         HelpSelectionKey = "";
         ScrollPosition = Vector2.zero;
         HelpScrollPosition = Vector2.zero;
@@ -52,8 +54,8 @@ public sealed class VoicePacksPageState
         TuningLayer = 0;
         TuningRaceDefName = "";
         TuningXenotypeDefName = "";
-        ActiveTab = "Basic";
-        ActiveSectionKey = "";
+        ActiveTab = "Overview";
+        ActiveSectionKey = "mode-row";
         ScrollTargetKey = "";
         DomainFilter = default;
         PackFilter = default;

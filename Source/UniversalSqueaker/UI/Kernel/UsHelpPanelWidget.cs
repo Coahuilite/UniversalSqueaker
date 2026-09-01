@@ -1,0 +1,175 @@
+using System;
+using UnityEngine;
+using Verse;
+using FerriteLib.UiKit;
+using FerriteLib.UiKit.Kernel;
+
+namespace UniversalSqueaker.UI;
+
+/// <summary>
+/// Kernel-owned US help panel content widget. It lives inside the XML "help-scroll" Scroll
+/// container (the engine owns BeginScrollView), so this widget only measures and draws the catalog
+/// content for the current section and emits typed hover/selection actions. All help content comes
+/// from the existing <see cref="UsHelpCatalog"/> / <see cref="UsHelpPanelLogic"/> pure sources.
+/// </summary>
+public sealed class UsHelpPanelWidget : IUiWidget
+{
+    public const string Kind = "us/help-panel";
+
+    private const float Padding = 8f;
+    private const float TitleHeight = 20f;
+    private const float TitleGap = 6f;
+    private const float ItemHeight = 20f;
+    private const float ItemGap = 2f;
+    private const float ContentGap = 6f;
+    private const float ContentLabelHeight = 18f;
+
+    private UiElementSpec spec = UiElementSpec.Empty;
+
+    string IUiWidget.Kind => Kind;
+
+    public static void Register()
+    {
+        UiWidgetRegistry.Register(
+            UsKernelWidgetRegistrar.Scope,
+            Kind,
+            () => new UsHelpPanelWidget(),
+            new[] { "Id", "Kind", "Tab", "Hidden" });
+    }
+
+    public void Configure(UiElementSpec spec)
+    {
+        this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
+    }
+
+    public void Validate(IUiBindings bindings, string elementPath)
+    {
+        bindings.ValidateValue<string>("help-section-key", elementPath);
+        bindings.ValidateValue<string>("help-hover", elementPath);
+        bindings.ValidateValue<string>("help-selection", elementPath);
+        bindings.ValidateAction<string>("set-help-hover", elementPath);
+        bindings.ValidateAction<string>("set-help-selection", elementPath);
+    }
+
+    public float Measure(UiWidgetContext ctx)
+    {
+        float textWidth = Math.Max(1f, ctx.ViewWidth - Padding * 2f);
+        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
+        UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
+
+        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
+        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
+        UsHelpPanelLogic.HelpPanelDisplay display = UsHelpPanelLogic.Resolve(section, hover, selection);
+
+        float listHeight = ItemHeight;
+        if (section != null && section.Items.Count > 0)
+        {
+            listHeight = ItemHeight + (ItemHeight + ItemGap) * section.Items.Count;
+        }
+
+        float textHeight = Math.Max(1f, ctx.Metrics.MeasureText(display.Text, UiFont.Tiny, textWidth));
+        return Padding * 2f + TitleHeight + TitleGap + listHeight + ContentGap + ContentLabelHeight + 2f + textHeight + 4f;
+    }
+
+    public void Draw(Rect rect, UiWidgetContext ctx)
+    {
+        if (rect.width <= 1f || rect.height <= 1f) return;
+
+        UiThemeDraw.Panel(rect, ctx.Theme);
+
+        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
+        UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
+
+        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
+        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
+        UsHelpPanelLogic.HelpPanelDisplay display = UsHelpPanelLogic.Resolve(section, hover, selection);
+
+        float x = rect.x + Padding;
+        float y = rect.y + Padding;
+        float textWidth = Math.Max(1f, rect.width - Padding * 2f);
+
+        // Keep the context header fixed at the top of the help surface; the index and body below
+        // follow the active section, hover, or selection without changing the panel's hierarchy.
+        Rect headerRect = new(x, y, textWidth, TitleHeight);
+        UiThemeDraw.SectionHeader(headerRect, "HELP  ·  " + display.Title, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
+        UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
+        y += TitleHeight + TitleGap;
+
+        DrawItemRow(new Rect(x, y, textWidth, ItemHeight), UsHelpPanelLogic.OverviewLabel,
+            selected: display.IsOverview, itemKey: null, ctx);
+        y += ItemHeight;
+
+        if (section != null)
+        {
+            foreach (HelpItem item in section.Items)
+            {
+                y += ItemGap;
+                DrawItemRow(
+                    new Rect(x, y, textWidth, ItemHeight),
+                    item.Label,
+                    selected: !display.IsOverview && string.Equals(display.ItemKey, item.Key, StringComparison.Ordinal),
+                    itemKey: item.Key,
+                    ctx);
+                y += ItemHeight;
+            }
+        }
+
+        y += ContentGap;
+        UsKernelDraw.Label(
+            new Rect(x, y, textWidth, ContentLabelHeight),
+            display.Label,
+            ctx.Theme,
+            ctx.Theme.TextPrimary,
+            UiFont.Small,
+            TextAnchor.UpperLeft);
+        y += ContentLabelHeight + 2f;
+        float textHeight = Math.Max(1f, ctx.Metrics.MeasureText(display.Text, UiFont.Tiny, textWidth));
+        UsKernelDraw.Label(
+            new Rect(x, y, textWidth, textHeight),
+            display.Text,
+            ctx.Theme,
+            ctx.Theme.TextSecondary,
+            UiFont.Tiny,
+            TextAnchor.UpperLeft);
+    }
+
+    private void DrawItemRow(Rect rect, string label, bool selected, string? itemKey, UiWidgetContext ctx)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        bool wasHovering = ctx.Bindings.TryGet("help-hover", out string currentHover)
+            && string.Equals(currentHover, itemKey ?? "", StringComparison.Ordinal);
+
+        if (hovered && !wasHovering)
+        {
+            // Hover changes the resolved help text, which changes the panel height; bump the
+            // revision only when the display text actually changes so transient hover events do
+            // not invalidate layout. Selection changes are bumped by the Host binding boundary.
+            string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
+            UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
+            string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
+            string before = UsHelpPanelLogic.Resolve(section, currentHover, selection).Text;
+            string after = UsHelpPanelLogic.Resolve(section, itemKey ?? "", selection).Text;
+            ctx.Bindings.Invoke("set-help-hover", itemKey ?? "");
+            if (!string.Equals(after, before, StringComparison.Ordinal))
+            {
+                ctx.Session.BumpContentRevision();
+            }
+        }
+
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
+        UsKernelDraw.Label(
+            new Rect(rect.x + 6f, rect.y, Math.Max(1f, rect.width - 12f), rect.height),
+            label,
+            ctx.Theme,
+            selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft);
+
+        string capturedKey = itemKey ?? "";
+        if (UiNative.Button(rect))
+        {
+            // set-help-selection bumps the session revision through the Host binding boundary.
+            ctx.Bindings.Invoke("set-help-selection", capturedKey);
+        }
+    }
+}

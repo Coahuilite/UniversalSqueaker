@@ -1,16 +1,22 @@
 using UnityEngine;
 using Verse;
 using FerriteLib.UiKit;
+using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Full-screen, custom-drawn settings window for Universal Squeaker.
 ///
-/// RimWorld's stock <c>Dialog_ModSettings</c>/<c>Dialog_Options</c> are fixed-size centered
-/// dialogs with the vanilla gray-black frame. This window covers nearly the whole screen,
-/// disables the vanilla window background, and draws its own modern surface so the VoicePacks
-/// page can use the full resolution while retaining a safe margin around the play field.
+/// Normal path: the window owns exactly one kernel <see cref="UiHost"/> (created from the real
+/// embedded Schema=2 page resource) and draws ONLY the kernel page. Closing the window disposes the
+/// host and its session; reopening creates a fresh host/session. Creation-time contract failures
+/// (schema/binding/kind/attribute) and whole-frame draw failures fall back to the legacy full page,
+/// which is never drawn together with the kernel page.
+///
+/// RimWorld default input stays intact: Escape closes via the window stack and Enter closes the
+/// window through the stock Mod Settings behavior. US deliberately does not intercept Enter; the
+/// only kernel-owned input handling is the per-text-field focus/commit logic inside widgets.
 /// </summary>
 public sealed class UniversalSqueakerSettingsWindow : Window
 {
@@ -20,7 +26,14 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     private const float CloseButtonHeight = 30f;
     private const float AccentBarHeight = 3f;
 
+    private UiHost? kernelHost;
+    private IUsKernelSettingsSource? kernelSource;
+    private bool kernelPageFailed;
+    private bool fallbackNextFrame;
+    private bool legacySessionActive;
     private readonly UniversalSqueakerMod mod;
+
+    internal bool UsesLegacySettingsSession => legacySessionActive;
 
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
@@ -35,6 +48,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         closeOnClickedOutside = false;
         preventCameraMotion = true;
     }
+    protected override float Margin => 0f;
 
     public override Vector2 InitialSize
     {
@@ -56,8 +70,6 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         }
     }
 
-    protected override float Margin => 0f;
-
     public override void DoWindowContents(Rect inRect)
     {
         DrawBackground(inRect);
@@ -68,7 +80,54 @@ public sealed class UniversalSqueakerSettingsWindow : Window
             inRect.y + TitleBarHeight,
             Mathf.Max(1f, inRect.width - SidePadding * 2f),
             Mathf.Max(1f, inRect.height - TitleBarHeight - SidePadding));
-        mod.DoSettingsWindowContents(contentRect);
+        mod.TickSettingsSaveForWindow();
+        if (fallbackNextFrame)
+        {
+            fallbackNextFrame = false;
+            kernelPageFailed = true;
+            DrawLegacyPage(contentRect);
+            return;
+        }
+
+        if (kernelPageFailed)
+        {
+            DrawLegacyPage(contentRect);
+            return;
+        }
+
+        try
+        {
+            kernelHost ??= CreateKernelHost();
+            kernelHost.DrawFrame(contentRect);
+        }
+        catch (System.Exception ex)
+        {
+            fallbackNextFrame = true;
+            kernelHost?.Dispose();
+            kernelHost = null;
+            kernelSource = null;
+            SqueakLog.SettingsOpenFailed(ex);
+        }
+    }
+
+    private UiHost CreateKernelHost()
+    {
+        kernelSource = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
+        return UsKernelSettingsHost.Create(kernelSource);
+    }
+
+    private void DrawLegacyPage(Rect rect)
+    {
+        legacySessionActive = true;
+        mod.DoSettingsWindowContents(rect);
+    }
+
+    public override void PreClose()
+    {
+        kernelHost?.Dispose();
+        kernelHost = null;
+        kernelSource = null;
+        base.PreClose();
     }
 
     private void DrawBackground(Rect rect)

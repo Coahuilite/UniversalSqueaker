@@ -17,6 +17,7 @@ public class UniversalSqueakerMod : Mod
     public static UniversalSqueakerMod? Instance { get; private set; }
     private readonly HashSet<Window> settingsWindows = new();
     private readonly Dictionary<Type, FieldInfo?> optionsOwnerFields = new();
+    private UniversalSqueaker.UI.UniversalSqueakerSettingsWindow? activeSettingsWindow;
     private long requestedSaveGeneration;
     private long persistedSaveGeneration;
     private long failedSaveGeneration = -1;
@@ -116,25 +117,25 @@ public class UniversalSqueakerMod : Mod
 
     public void OpenSettings(bool selectXenotypeTab = false)
     {
-        if (Find.WindowStack == null)
+        if (Find.WindowStack == null) return;
+        if (activeSettingsWindow != null)
         {
-            return;
+            Find.WindowStack.TryRemove(activeSettingsWindow, true);
+            activeSettingsWindow = null;
         }
 
         try
         {
             var window = new UniversalSqueaker.UI.UniversalSqueakerSettingsWindow(this);
+            activeSettingsWindow = window;
             RegisterSettingsWindow(window);
-            if (selectXenotypeTab)
-            {
-                Settings.RequestXenotypeTabOnNextDraw();
-            }
-
+            if (selectXenotypeTab) Settings.RequestXenotypeTabOnNextDraw();
             Find.WindowStack.Add(window);
         }
         catch (Exception ex)
         {
             Settings.ClearXenotypeTabRequest();
+            activeSettingsWindow = null;
             SqueakLog.SettingsOpenFailed(ex);
         }
     }
@@ -169,7 +170,11 @@ public class UniversalSqueakerMod : Mod
         if (Instance == null) return;
         if (!Instance.IsOwnedSettingsWindow(window)) return;
         Instance.settingsWindows.Remove(window);
-        Settings.EndSettingsSession();
+        if (ReferenceEquals(Instance.activeSettingsWindow, window)) Instance.activeSettingsWindow = null;
+        if (window is UniversalSqueaker.UI.UniversalSqueakerSettingsWindow custom && custom.UsesLegacySettingsSession)
+        {
+            Settings.EndSettingsSession();
+        }
         Instance.FlushQueuedSettingsSave(true, true);
     }
 
@@ -225,6 +230,11 @@ public class UniversalSqueakerMod : Mod
         failedSaveGeneration = -1;
         saveQueued = true;
         FlushQueuedSettingsSave(true);
+    }
+
+    internal void TickSettingsSaveForWindow()
+    {
+        TickQueuedSettingsSave();
     }
 
     private void TickQueuedSettingsSave()

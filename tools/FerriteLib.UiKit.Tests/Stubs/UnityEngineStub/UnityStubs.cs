@@ -11,6 +11,22 @@ public struct Vector2
         this.x = x;
         this.y = y;
     }
+
+    public static Vector2 zero => new(0f, 0f);
+
+    public static Vector2 one => new(1f, 1f);
+
+    public static float Distance(Vector2 a, Vector2 b)
+    {
+        float dx = a.x - b.x;
+        float dy = a.y - b.y;
+        return (float)System.Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    public static Vector2 Lerp(Vector2 a, Vector2 b, float t)
+    {
+        return new Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+    }
 }
 
 public struct Rect
@@ -55,6 +71,8 @@ public struct Rect
     public float xMax => _x + _width;
 
     public float yMax => _y + _height;
+
+    public Vector2 position => new(_x, _y);
 }
 
 public struct Color
@@ -81,6 +99,38 @@ public struct Color
     }
 
     public static Color white => new(1f, 1f, 1f, 1f);
+
+    public static Color clear => new(0f, 0f, 0f, 0f);
+}
+
+public static class Mathf
+{
+    public const float PI = 3.14159274f;
+
+    public static float Abs(float value) => System.Math.Abs(value);
+
+    public static float Min(float a, float b) => a < b ? a : b;
+
+    public static float Max(float a, float b) => a > b ? a : b;
+
+    public static int Max(int a, int b) => a > b ? a : b;
+
+    public static int CeilToInt(float value) => (int)System.Math.Ceiling(value);
+
+    public static int RoundToInt(float value) => (int)System.Math.Round(value);
+
+    public static float Clamp(float value, float min, float max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    public static float Clamp01(float value) => Clamp(value, 0f, 1f);
+
+    public static float Lerp(float a, float b, float t) => a + (b - a) * t;
+
+    public static float InverseLerp(float a, float b, float value) => a == b ? 0f : (value - a) / (b - a);
 }
 
 public enum KeyCode

@@ -61,7 +61,7 @@ public sealed class UiElementSpec
         return attributes.TryGetValue(name, out value);
     }
 
-    internal static UiElementSpec Empty { get; } = new UiElementSpec();
+    public static UiElementSpec Empty { get; } = new UiElementSpec();
 
     private UiElementSpec()
     {

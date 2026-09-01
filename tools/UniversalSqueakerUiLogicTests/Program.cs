@@ -36,9 +36,10 @@ internal static class Program
         TestRaceXenotypeFiltering();
         TestLayerDetailText();
         TestUsCardLayoutHeight();
+        TestUsFilterBarLayout();
         TestHelpCatalog();
-        TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
+        UsKernelContractInvariantTests.RunAll();
     }
 
     private static void TestUsCardLayoutHeight()
@@ -65,6 +66,45 @@ internal static class Program
             UsCardLayout.MeasureBody(-5f, titleHidden: true),
             tolerance,
             "UsCard clamps negative body heights to zero");
+    }
+
+    private static void TestUsFilterBarLayout()
+    {
+        const float tolerance = 0.0001f;
+
+        // 800px source window: content column leaves the filter bar a ~320px card body, so the
+        // three dropdowns must stack full-width instead of three-up with a ~24px field.
+        Assert(UsFilterBarLayout.DropdownsStack(320f), "800px-window body width stacks the dropdowns");
+        AssertEqual(
+            UsFilterBarLayout.RowHeight * 2f + UsFilterBarLayout.RowHeight * 2f + UsFilterBarLayout.Gap * 2f,
+            UsFilterBarLayout.BodyHeight(320f),
+            tolerance,
+            "stacked body height covers the domain row plus three full-width dropdown rows");
+        AssertEqual(
+            UsFilterBarLayout.BodyHeight(320f),
+            UsFilterBarLayout.ExtraDropdownRows(320f) + UsFilterBarLayout.RowHeight * 2f,
+            tolerance,
+            "BodyHeight is the two base rows plus the stacking delta");
+        Assert(
+            UsFilterBarLayout.BodyHeight(320f) > UsFilterBarLayout.RowHeight * 2f,
+            "stacked layout is taller than the fixed two-row layout (old bug: always 2 rows)");
+        Assert(
+            320f - UsFilterBarLayout.DropdownLabelWidth >= UsFilterBarLayout.MinDropdownFieldWidth,
+            "a stacked dropdown keeps a usable full-width field (label + >=96 field)");
+
+        // Wide body: three-up layout is preserved (one dropdown row).
+        Assert(!UsFilterBarLayout.DropdownsStack(800f), "wide body keeps the three-up dropdown row");
+        AssertEqual(
+            UsFilterBarLayout.RowHeight * 2f,
+            UsFilterBarLayout.BodyHeight(800f),
+            tolerance,
+            "wide body height stays the two base rows");
+
+        // Boundary: three-up is only kept while each dropdown gets label + field.
+        Assert(!UsFilterBarLayout.DropdownsStack(536f),
+            "536 body still fits label(80) + field(96) per dropdown");
+        Assert(UsFilterBarLayout.DropdownsStack(535f),
+            "535 body stacks: a dropdown would fall below label(80) + field(96)");
     }
 
     private static void TestHelpCatalog()

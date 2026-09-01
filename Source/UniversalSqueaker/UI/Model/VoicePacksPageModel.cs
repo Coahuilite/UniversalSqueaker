@@ -191,18 +191,35 @@ public static class VoicePacksPageModel
 
     private static void ExecuteSetDomainFilter(VoicePacksPageState state, UiCommand command)
     {
+        ApplyDomainFilter(state, command.Arg, command.Flag);
+    }
+
+    private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
+    {
         UiDomainFilter filter = state.DomainFilter;
-        if (string.Equals(command.Arg, "EnabledOnly", StringComparison.OrdinalIgnoreCase))
+        state.DomainFilter = kind switch
         {
-            filter = new UiDomainFilter(command.Flag, filter.ConflictOnly, filter.OrphanOnly);
+            SqueakDomainFilterKind.EnabledOnly => new UiDomainFilter(flag, filter.ConflictOnly, filter.OrphanOnly),
+            SqueakDomainFilterKind.ConflictOnly => new UiDomainFilter(filter.EnabledOnly, flag, filter.OrphanOnly),
+            SqueakDomainFilterKind.OrphanOnly => new UiDomainFilter(filter.EnabledOnly, filter.ConflictOnly, flag),
+            _ => filter
+        };
+    }
+
+    private static void ApplyDomainFilter(VoicePacksPageState state, string kind, bool flag)
+    {
+        UiDomainFilter filter = state.DomainFilter;
+        if (string.Equals(kind, "EnabledOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            filter = new UiDomainFilter(flag, filter.ConflictOnly, filter.OrphanOnly);
         }
-        else if (string.Equals(command.Arg, "ConflictOnly", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(kind, "ConflictOnly", StringComparison.OrdinalIgnoreCase))
         {
-            filter = new UiDomainFilter(filter.EnabledOnly, command.Flag, filter.OrphanOnly);
+            filter = new UiDomainFilter(filter.EnabledOnly, flag, filter.OrphanOnly);
         }
-        else if (string.Equals(command.Arg, "OrphanOnly", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(kind, "OrphanOnly", StringComparison.OrdinalIgnoreCase))
         {
-            filter = new UiDomainFilter(filter.EnabledOnly, filter.ConflictOnly, command.Flag);
+            filter = new UiDomainFilter(filter.EnabledOnly, filter.ConflictOnly, flag);
         }
         else
         {
@@ -214,18 +231,13 @@ public static class VoicePacksPageModel
 
     private static void ExecuteSetPackFilter(VoicePacksPageState state, UiCommand command)
     {
-        UiPackFilter filter = state.PackFilter;
-        if (command.Arg.StartsWith("Author|", StringComparison.OrdinalIgnoreCase))
-        {
-            string author = command.Arg.Substring("Author|".Length);
-            filter = new UiPackFilter(author);
-        }
-        else
-        {
-            return;
-        }
+        if (!command.Arg.StartsWith("Author|", StringComparison.OrdinalIgnoreCase)) return;
+        ApplyPackFilter(state, command.Arg.Substring("Author|".Length));
+    }
 
-        state.PackFilter = filter;
+    private static void ApplyPackFilter(VoicePacksPageState state, string author)
+    {
+        state.PackFilter = new UiPackFilter(author);
     }
 
     private static void ExecuteSetRaceFilter(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
@@ -254,20 +266,39 @@ public static class VoicePacksPageModel
     private static void ExecuteSetActiveTab(VoicePacksPageState state, string tab)
     {
         string normalized;
-        if (string.Equals(tab, "Basic", StringComparison.OrdinalIgnoreCase))
-            normalized = "Basic";
-        else if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase))
-            normalized = "Tuning";
+        if (string.Equals(tab, "Overview", StringComparison.OrdinalIgnoreCase))
+            normalized = "Overview";
+        else if (string.Equals(tab, "Distance", StringComparison.OrdinalIgnoreCase))
+            normalized = "Distance";
         else if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase))
             normalized = "Packs";
+        else if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase))
+            normalized = "Tuning";
+        else if (string.Equals(tab, "Presets", StringComparison.OrdinalIgnoreCase))
+            normalized = "Presets";
         else
             return;
 
         if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
         {
             state.ActiveTab = normalized;
+            state.ActiveSectionKey = WorkspacePrimarySection(normalized);
+            state.HelpHoverKey = "";
+            state.HelpSelectionKey = "";
             state.ScrollPosition = Vector2.zero;
         }
+    }
+
+    private static string WorkspacePrimarySection(string workspace)
+    {
+        return workspace switch
+        {
+            "Distance" => "attenuation-editor",
+            "Packs" => "filter-bar",
+            "Tuning" => "scope-tree",
+            "Presets" => "preset-list",
+            _ => "mode-row",
+        };
     }
 
     private static void ExecuteScrollToSection(VoicePacksPageState state, string sectionKey)
@@ -280,53 +311,72 @@ public static class VoicePacksPageModel
 
     private static string SectionGroup(string sectionKey)
     {
-        if (string.Equals(sectionKey, "mode-row", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "global-volume", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "basic-tuning", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "camera-indicator", StringComparison.Ordinal))
+        if (string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)) return "Distance";
+        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
+        if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
+        if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "race-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "xenotype-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
         {
-            return "Basic";
+            return "Packs";
         }
 
-        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "preset-list", StringComparison.Ordinal))
-        {
-            return "Tuning";
-        }
-
-        return "Packs";
+        return "Overview";
     }
 
-    /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录），
-    /// 层域身份取命令自带的 (raceDefName, xenotypeDefName)。</summary>
+    /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录）。</summary>
     private static void ExecuteSetActionTuningScope(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
     {
         if (string.IsNullOrEmpty(command.Arg)) return;
-        // 非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(command.RaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(command.RaceDefName) || string.IsNullOrEmpty(command.TargetDefName))) return;
         string[] parts = command.Arg.Split('|');
         SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
             && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
         string actionKey = parts.Length > 1 ? parts[1] : "";
+        ApplyActionTuningScope(settings, state, actionKey, scope);
+    }
+
+    /// <summary>Typed scope write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。
+    /// 非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。</summary>
+    private static void ApplyActionTuningScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
+    {
         if (string.IsNullOrEmpty(actionKey)) return;
-        settings.SetActionTuningScope(actionKey, command.RaceDefName, command.TargetDefName, scope);
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        settings.SetActionTuningScope(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, scope);
     }
 
     /// <summary>S5 心情调音执行：arg = "MoodName|factor|value" | "MoodName|clear"。</summary>
     private static void ExecuteSetMoodTuning(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
     {
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(command.RaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(command.RaceDefName) || string.IsNullOrEmpty(command.TargetDefName))) return;
         string[] parts = command.Arg.Split('|');
         if (parts.Length < 2) return;
         if (!Enum.TryParse(parts[0], true, out SqueakMood mood)) return;
         string factor = parts[1];
         float? value = null;
-        if (parts.Length > 2 && float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed))
+        if (parts.Length > 2 && float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
             value = parsed;
-        settings.SetMoodTuning(mood, command.RaceDefName, command.TargetDefName, factor, value);
+        ApplyMoodTuning(settings, state, mood, factor, value);
+    }
+
+    /// <summary>Typed field-level mood write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。</summary>
+    private static void ApplyMoodTuning(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood, string factor, float? value)
+    {
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
+    }
+
+    private static void ApplyMoodTuning(
+        UniversalSqueakerSettings settings,
+        VoicePacksPageState state,
+        SqueakMood mood,
+        SqueakMoodFactor factor,
+        float? value)
+    {
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
     }
 
     private static void ExecuteSetDistanceRange(UniversalSqueakerSettings settings, UiCommand command)
@@ -344,38 +394,59 @@ public static class VoicePacksPageModel
     private static void ExecuteTogglePack(UniversalSqueakerSettings settings, UiCommand command)
     {
         if (string.IsNullOrEmpty(command.Arg) || string.IsNullOrEmpty(command.RaceDefName)) return;
-        SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(
-            command.Scope, command.RaceDefName, command.TargetDefName);
+        ApplyTogglePack(settings, command.Scope, command.RaceDefName, command.TargetDefName, command.Arg, command.Flag);
+    }
+
+    /// <summary>Typed VoicePack checkbox write inside one domain.</summary>
+    private static void ApplyTogglePack(
+        UniversalSqueakerSettings settings,
+        SqueakVoicePackScope scope,
+        string raceDefName,
+        string targetDefName,
+        string packKey,
+        bool enabled)
+    {
+        if (string.IsNullOrEmpty(packKey) || string.IsNullOrEmpty(raceDefName)) return;
+        SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(scope, raceDefName, targetDefName);
         List<string> next = new(status.EnabledKeys ?? Array.Empty<string>());
-        if (command.Flag)
+        if (enabled)
         {
-            if (!next.Contains(command.Arg, StringComparer.Ordinal)) next.Add(command.Arg);
+            if (!next.Contains(packKey, StringComparer.Ordinal)) next.Add(packKey);
         }
         else
         {
-            next.RemoveAll(key => string.Equals(key, command.Arg, StringComparison.Ordinal));
+            next.RemoveAll(key => string.Equals(key, packKey, StringComparison.Ordinal));
         }
-        settings.SetVoicePackSelection(command.Scope, command.RaceDefName, command.TargetDefName, next);
+        settings.SetVoicePackSelection(scope, raceDefName, targetDefName, next);
     }
 
     private static void ExecuteForgetUnavailable(UniversalSqueakerSettings settings, UiCommand command)
     {
-        if (string.IsNullOrEmpty(command.RaceDefName)) return;
+        ApplyForgetUnavailable(settings, command.Scope, command.RaceDefName, command.TargetDefName);
+    }
+
+    /// <summary>Typed Forget Unavailable for one domain identity.</summary>
+    private static void ApplyForgetUnavailable(
+        UniversalSqueakerSettings settings,
+        SqueakVoicePackScope scope,
+        string raceDefName,
+        string targetDefName)
+    {
+        if (string.IsNullOrEmpty(raceDefName)) return;
         SqueakXenotypeCatalogSnapshot catalog = SqueakXenotypeCatalog.Current;
-        SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(
-            command.Scope, command.RaceDefName, command.TargetDefName);
+        SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(scope, raceDefName, targetDefName);
         HashSet<string> domainKeys = new(StringComparer.Ordinal);
-        IReadOnlyList<SqueakVoicePackDef> domainPacks = command.Scope == SqueakVoicePackScope.Race
-            ? catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, command.RaceDefName) ?? Array.Empty<SqueakVoicePackDef>()
-            : (catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Xenotype, command.TargetDefName) ?? Array.Empty<SqueakVoicePackDef>())
-                .Where(pack => string.Equals(pack.raceDefName, command.RaceDefName, StringComparison.Ordinal))
+        IReadOnlyList<SqueakVoicePackDef> domainPacks = scope == SqueakVoicePackScope.Race
+            ? catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, raceDefName) ?? Array.Empty<SqueakVoicePackDef>()
+            : (catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Xenotype, targetDefName) ?? Array.Empty<SqueakVoicePackDef>())
+                .Where(pack => string.Equals(pack.raceDefName, raceDefName, StringComparison.Ordinal))
                 .ToList();
         foreach (SqueakVoicePackDef pack in domainPacks)
             if (pack.TryGetPackKey(out string key)) domainKeys.Add(key);
         List<string> retained = (status.EnabledKeys ?? Array.Empty<string>())
             .Where(key => domainKeys.Contains(key))
             .ToList();
-        settings.SetVoicePackSelection(command.Scope, command.RaceDefName, command.TargetDefName, retained);
+        settings.SetVoicePackSelection(scope, raceDefName, targetDefName, retained);
     }
 
     /// <summary>S5 调音层域选项：Global 层空；Race 层 = catalog 全 race；Xenotype 层 = (race,xeno) 域联合。
@@ -945,6 +1016,177 @@ public static class VoicePacksPageModel
         return mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled
             ? mode
             : SqueakVoicePackMode.Vanilla;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Typed facade used by the kernel settings Host. Every method delegates to the same private
+    // implementations as the UiCommand path, so the old page and the new Host share one business
+    // source of truth. No string command bridge is involved: callers pass typed values.
+    // ---------------------------------------------------------------------------------------------
+
+    public static void SetActiveTab(VoicePacksPageState state, string tab)
+    {
+        if (state == null) return;
+        ExecuteSetActiveTab(state, tab);
+    }
+
+    public static void ScrollToSection(VoicePacksPageState state, string sectionKey)
+    {
+        if (state == null) return;
+        ExecuteScrollToSection(state, sectionKey);
+    }
+
+    public static string SectionGroupOf(string sectionKey)
+    {
+        return SectionGroup(sectionKey ?? "");
+    }
+
+    public static string SectionHelpKeyOf(string sectionKey)
+    {
+        return sectionKey switch
+        {
+            "mode-row" => "us/mode-row",
+            "global-volume" => "us/global-volume",
+            "attenuation-editor" => "us/attenuation-editor",
+            "basic-tuning" => "us/basic-tuning",
+            "camera-indicator" => "us/camera-indicator",
+            "scope-tree" => "us/scope-tree",
+            "preset-list" => "us/preset-list",
+            "filter-bar" => "us/filter-bar",
+            "race-layer" => "us/race-layer",
+            "xenotype-layer" => "us/xenotype-layer",
+            "checklist" => "us/voice-pack-checklist",
+            _ => "us/page-title",
+        };
+    }
+
+    public static void SetTuningLayer(VoicePacksPageState state, int layer)
+    {
+        if (state == null) return;
+        if (layer >= 0 && layer <= 2) state.TuningLayer = layer;
+    }
+
+    public static void SetTuningDomain(VoicePacksPageState state, string raceDefName, string targetDefName)
+    {
+        if (state == null) return;
+        if (!string.IsNullOrEmpty(raceDefName))
+        {
+            state.TuningRaceDefName = raceDefName;
+            state.TuningXenotypeDefName = targetDefName ?? "";
+        }
+    }
+
+    public static void SelectDomain(VoicePacksPageState state, SqueakVoicePackScope scope, string raceDefName, string targetDefName)
+    {
+        if (state == null) return;
+        state.SelectedScope = scope;
+        state.SelectedRaceDefName = raceDefName ?? "";
+        state.SelectedTargetName = scope == SqueakVoicePackScope.Xenotype ? targetDefName ?? "" : "";
+    }
+
+    public static void SetDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
+    {
+        if (state == null) return;
+        ApplyDomainFilter(state, kind, flag);
+    }
+
+    public static void SetPackFilter(VoicePacksPageState state, string author)
+    {
+        if (state == null) return;
+        ApplyPackFilter(state, author ?? "");
+    }
+
+    public static void SetRaceFilter(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
+    {
+        if (state == null) return;
+        ExecuteSetRaceFilter(settings, state, raceDefName ?? "");
+    }
+
+    public static void SetXenotypeFilter(VoicePacksPageState state, string xenotypeDefName)
+    {
+        if (state == null) return;
+        state.XenotypeFilter = xenotypeDefName ?? "";
+    }
+
+    public static void SetSearchText(VoicePacksPageState state, string text)
+    {
+        if (state == null) return;
+        state.SearchText = text ?? "";
+    }
+
+    public static void SetHelpHover(VoicePacksPageState state, string key)
+    {
+        if (state == null) return;
+        state.HelpHoverKey = key ?? "";
+    }
+
+    public static void SetHelpSelection(VoicePacksPageState state, string key)
+    {
+        if (state == null) return;
+        state.HelpSelectionKey = key ?? "";
+    }
+
+    public static void SetActionScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
+    {
+        if (state == null || string.IsNullOrEmpty(actionKey)) return;
+        ApplyActionTuningScope(settings, state, actionKey, scope);
+    }
+
+    public static void SetMoodTuning(
+        UniversalSqueakerSettings settings,
+        VoicePacksPageState state,
+        SqueakMood mood,
+        SqueakMoodFactor factor,
+        float? value)
+    {
+        if (state == null) return;
+        ApplyMoodTuning(settings, state, mood, factor, value);
+    }
+
+    public static void ToggleBaselinePresetSelection(VoicePacksPageState state, string presetDefName)
+    {
+        if (state == null) return;
+        ToggleBaselinePreset(state, presetDefName);
+    }
+
+    public static void ToggleBaselineRaceSelection(VoicePacksPageState state, string presetDefName, string raceDefName, bool selected)
+    {
+        if (state == null) return;
+        ToggleBaselineRace(state, presetDefName, raceDefName, selected);
+    }
+
+    public static void ToggleBaselineXenotypeSelection(VoicePacksPageState state, string presetDefName, string raceDefName, string xenotypeDefName, bool selected)
+    {
+        if (state == null) return;
+        ToggleBaselineXenotype(state, presetDefName, raceDefName, xenotypeDefName, selected);
+    }
+
+    public static void ImportBaselinePresetSelection(UniversalSqueakerSettings settings, string presetDefName, VoicePacksPageState state)
+    {
+        if (state == null) return;
+        ImportBaselinePreset(settings, presetDefName, state);
+    }
+
+    public static void ToggleVoicePack(
+        UniversalSqueakerSettings settings,
+        SqueakVoicePackScope scope,
+        string raceDefName,
+        string targetDefName,
+        string packKey,
+        bool enabled)
+    {
+        if (string.IsNullOrEmpty(packKey) || string.IsNullOrEmpty(raceDefName)) return;
+        ApplyTogglePack(settings, scope, raceDefName, targetDefName, packKey, enabled);
+    }
+
+    public static void ForgetUnavailable(
+        UniversalSqueakerSettings settings,
+        SqueakVoicePackScope scope,
+        string raceDefName,
+        string targetDefName)
+    {
+        if (string.IsNullOrEmpty(raceDefName)) return;
+        ApplyForgetUnavailable(settings, scope, raceDefName, targetDefName);
     }
 
     private readonly struct XenotypeDomainKey

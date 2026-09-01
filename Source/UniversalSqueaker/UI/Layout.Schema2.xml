@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UiPage Schema="2" Source="coahuilite.universalsqueaker">
+  <Column Id="page-root" Gap="8" Padding="12">
+    <Row Id="body-row" Gap="12">
+      <Column Id="nav-column" Width="192" Fill="true">
+        <Widget Id="nav" Kind="us/nav" />
+      </Column>
+      <Scroll Id="content-scroll" Fill="true" Gap="8">
+        <Widget Id="page-title" Kind="us/page-title" Title="VoicePack Routing" Caption="Configure routing, distance, packs, tuning, and Def-provided baselines." />
+        <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
+        <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
+        <Widget Id="global-volume" Kind="us/global-volume" Title="Output level" HelpKey="us/global-volume" Tab="Overview" />
+        <Widget Id="basic-tuning" Kind="us/basic-tuning" Title="Playback behaviour" HelpKey="us/basic-tuning" Tab="Overview" />
+        <Widget Id="camera-indicator" Kind="us/camera-indicator" Title="In-world indicator" HelpKey="us/camera-indicator" Tab="Overview" />
+        <Widget Id="attenuation-editor" Kind="us/attenuation-editor" Title="Distance attenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
+        <Widget Id="filter-bar" Kind="us/filter-bar" Title="1. Filter domains" HelpKey="us/filter-bar" Tab="Packs" />
+        <Widget Id="race-layer" Kind="us/race-layer" Title="2. Choose a race domain" HelpKey="us/race-layer" Tab="Packs" />
+        <Widget Id="xenotype-layer" Kind="us/xenotype-layer" Title="2. Or choose a xenotype domain" HelpKey="us/xenotype-layer" Tab="Packs" />
+        <Widget Id="checklist" Kind="us/voice-pack-checklist" Title="3. Choose VoicePacks" HelpKey="us/voice-pack-checklist" Tab="Packs" />
+        <Widget Id="scope-tree" Kind="us/scope-tree" Title="Layered tuning" HelpKey="us/scope-tree" Tab="Tuning" />
+        <Widget Id="preset-list" Kind="us/preset-list" Title="Def baseline presets" HelpKey="us/preset-list" Tab="Presets" />
+      </Scroll>
+      <Scroll Id="help-scroll" Width="232" Fill="true">
+        <Widget Id="help-panel" Kind="us/help-panel" />
+      </Scroll>
+    </Row>
+    <Widget Id="footer" Kind="us/footer" Height="28" />
+  </Column>
+</UiPage>

@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Verse;
+using UniversalSqueaker.UI;
 
 namespace UniversalSqueaker;
 
@@ -19,5 +20,9 @@ public static class Patch_Root_DiagnosticsLifecycle
         // driver. Without this the cached snapshot set is never filled (the SR MapInterface hook was
         // deliberately not restored), so RefreshIfDue must be driven here too.
         SqueakDiagnosticsOverlay.RefreshIfDue();
+        // Camera indicator overlay (second UiKit host): same per-frame teardown gate. The host is
+        // disposed as soon as the toggle is off or the map is gone, even in frames where the date
+        // bar (and therefore the draw dispatcher) does not run.
+        UsCameraIndicatorOverlay.Maintain();
     }
 }

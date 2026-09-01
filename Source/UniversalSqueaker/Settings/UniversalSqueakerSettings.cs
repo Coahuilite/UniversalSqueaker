@@ -25,8 +25,6 @@ public class SqueakMoodMod : IExposable
     public SqueakMoodMod Clone() => new() { mood = mood, pitchFactor = pitchFactor, volumeFactor = volumeFactor, pitchJitter = pitchJitter };
 }
 
-public enum SqueakDistancePreset { Conservative, Balanced, Strong, Custom }
-
 /// <summary>
 /// 玩家配置。承载:
 ///  - voicePackMode:运行时 VoicePack 音源策略
@@ -173,6 +171,23 @@ public partial class UniversalSqueakerSettings : ModSettings
         }
     }
 
+    internal void SetBasicTuning(SqueakBasicToggle key, bool value)
+    {
+        switch (key)
+        {
+            case SqueakBasicToggle.ScaleCooldown:
+                if (scaleCooldownWithTimeSpeed != value) { scaleCooldownWithTimeSpeed = value; NotifyCheapRuntimeChanged(); QueuePersistence(); }
+                break;
+            case SqueakBasicToggle.ScaleTalking:
+                if (scaleFrequencyWithTalking != value) { scaleFrequencyWithTalking = value; NotifyCheapRuntimeChanged(); QueuePersistence(); }
+                break;
+            case SqueakBasicToggle.ScalePopulation:
+                if (scalePeriodicWithAudiblePopulation != value) { scalePeriodicWithAudiblePopulation = value; NotifyCheapRuntimeChanged(); QueuePersistence(); }
+                break;
+        }
+    }
+
+
     /// <summary>
     /// S4 diagnostics foundation: player-facing camera indicator toggle. Cheap: updates the runtime
     /// static directly (no resolver rebuild) and queues persistence.
@@ -312,6 +327,25 @@ public partial class UniversalSqueakerSettings : ModSettings
 
         NotifyContinuousXenotypeRuntimeChanged();
         QueuePersistence();
+    }
+
+    internal void SetMoodTuning(
+        SqueakMood mood,
+        string raceDefName,
+        string xenotypeDefName,
+        SqueakMoodFactor factor,
+        float? value)
+    {
+        string legacyFactor = factor switch
+        {
+            SqueakMoodFactor.Clear => "clear",
+            SqueakMoodFactor.Pitch => "pitch",
+            SqueakMoodFactor.Volume => "volume",
+            SqueakMoodFactor.Jitter => "jitter",
+            _ => ""
+        };
+        if (legacyFactor.Length == 0) return;
+        SetMoodTuning(mood, raceDefName, xenotypeDefName, legacyFactor, value);
     }
 
     /// <summary>增量导入调音预设：将选中 race/xeno 行写入 actionTuning 与 moodOverrides，然后离散重建 resolver 并排队持久化。</summary>

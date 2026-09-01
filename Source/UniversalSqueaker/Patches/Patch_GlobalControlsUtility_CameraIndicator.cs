@@ -3,6 +3,7 @@ using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using UniversalSqueaker.UI;
 
 namespace UniversalSqueaker;
 
@@ -11,6 +12,12 @@ namespace UniversalSqueaker;
 /// date bar. US-adapted from the SR CameraIndicator patch: the <c>Prefs.DevMode</c> gate is
 /// removed, and the show is driven by the player settings toggle
 /// (<see cref="SqueakDebug.ShowCameraIndicator"/> / <see cref="UniversalSqueakerSettings.SetCameraIndicator"/>).
+///
+/// This postfix is the SINGLE draw dispatcher for the camera readout: it first asks the UiKit
+/// overlay Host (second host, <see cref="UsCameraIndicatorOverlay"/>) to draw; the legacy
+/// pure-Verse readout below runs only when the kernel path did not draw (disabled by contract
+/// failure or permanent session fallback). The two paths are therefore mutually exclusive by
+/// construction — never drawn in parallel — and both use the same already-proven date-bar rect.
 /// </summary>
 [HarmonyPatch(typeof(GlobalControlsUtility), nameof(GlobalControlsUtility.DoDate))]
 public static class Patch_GlobalControlsUtility_CameraIndicator
@@ -22,6 +29,9 @@ public static class Patch_GlobalControlsUtility_CameraIndicator
         if (!SqueakDebug.ShowCameraIndicator || Find.CurrentMap == null) return;
         if (Event.current?.type == EventType.Layout) return;
 
+        if (UsCameraIndicatorOverlay.TryDraw(leftX, width, ref curBaseY)) return;
+
+        // Legacy pure-Verse fallback: draws only when the kernel overlay did not draw.
         float height = Find.Camera.transform.position.y;
         float viewSize = Find.Camera.orthographicSize;
 

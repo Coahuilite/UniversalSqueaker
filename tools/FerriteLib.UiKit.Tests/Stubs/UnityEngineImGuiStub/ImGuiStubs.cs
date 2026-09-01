@@ -67,8 +67,34 @@ public sealed class Event
     }
 }
 
+public enum FocusType
+{
+    Keyboard = 0,
+    Passive = 1,
+    Native = 2
+}
+
+public static class GUIUtility
+{
+    private static int controlIdCounter;
+
+    public static int hotControl { get; set; }
+
+    public static int GetControlID(int hint, FocusType focusType)
+    {
+        controlIdCounter++;
+        return controlIdCounter;
+    }
+}
+
 public static class GUI
 {
+    // Recording hooks for structural scope cleanup tests. The test assembly compiles against the
+    // Krafs ref assembly, so these are only accessible through reflection at runtime.
+    public static int GroupDepth;
+    public static int BeginGroupCalls;
+    public static int EndGroupCalls;
+
     public static Color color { get; set; } = Color.white;
 
     public static void SetNextControlName(string name)
@@ -78,5 +104,17 @@ public static class GUI
     public static string GetNameOfFocusedControl()
     {
         return "";
+    }
+
+    public static void BeginGroup(Rect position)
+    {
+        GroupDepth++;
+        BeginGroupCalls++;
+    }
+
+    public static void EndGroup()
+    {
+        if (GroupDepth > 0) GroupDepth--;
+        EndGroupCalls++;
     }
 }

@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerKernelHostTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.KernelHostTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+us-kernel-host</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- 真实 Schema2 Host creation regression：引用生产主程序集（连同 FerriteLib.UiKit 与
+       Krafs.Rimworld.Ref 编译期引用）。运行时用与 FerriteLib.UiKit.Tests 相同的最小可执行
+       桩程序集替换 Verse/Unity，Host 创建/测量/绘制路径因此可在本地无游戏环境执行。
+       说明：本项目刻意使用“先构建生产 DLL + 直接 Reference”而不是 ProjectReference。本机
+       dotnet SDK 10 在嵌套 MSBuild 解析 UniversalSqueaker.csproj 的 SDK workload locator 时
+       会静默失败（MSB4276），但直接构建生产项目成功；直接引用保持“使用真实生产代码”且可在
+       no-restore 的 focused harness 中稳定复现。 -->
+  <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences">
+    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
+    <Reference Include="UniversalSqueaker">
+      <HintPath>..\..\1.6\Assemblies\UniversalSqueaker.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FerriteLib.UiKit">
+      <HintPath>..\..\1.6\Assemblies\FerriteLib.UiKit.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 桩项目源码位于 FerriteLib.UiKit.Tests 目录树下；它们是独立桩程序集，不能参与本项目编译。
+       与 FerriteLib.UiKit.Tests 相同：主构建后显式构建并复制可执行桩到输出目录。 -->
+  <Target Name="BuildAndCopyRuntimeStubs" AfterTargets="Build">
+    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <ItemGroup>
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine\UnityEngine.CoreModule.dll" />
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\verse\Assembly-CSharp.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

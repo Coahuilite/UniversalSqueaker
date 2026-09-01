@@ -22,6 +22,16 @@
 - VoicePack authoring skill: `.github/skills/us-voicepack-authoring/SKILL.md` (migrated from SR; canonical `US_` authoring only).
 - UI migration & orphan-feature development plan (locked 2026-08-24): `docs/us-ui-migration-plan-zh.md` (decision table §2, orphan inventory §3, tuning editor §4, layered action table §5, Disabled bypass §6, implementation order S1–S5 §12, action-entry wrapper + three-segment architecture + neutral/external split §13, review findings §14). `TODO.md` "Next development plan" mirrors it.
 - Phase A FerriteLib UiKit (2026-08-24): standalone DLL `Source/FerriteLib.UiKit/` (neutrality = no US/SR product literals — the DLL still references `Krafs.Rimworld.Ref` and `using UnityEngine/Verse` IMGUI types by design, per `docs/ui-shared-library-design-zh.md` "production uses Verse, tests use stubs") (assembly/DLL `FerriteLib.UiKit`, packageId/XML scope `coahuilite.ferritelib.uikit`, C# namespace `FerriteLib.UiKit`), core two-pass XML layout engine + core widgets, tests at `tools/FerriteLib.UiKit.Tests/`. US integration now uses Ferrite UI by default (`VoicePacksPage.UseFerriteUi = true`) with embedded `Source/UniversalSqueaker/UI/Layout.xml`, US-registered widgets include `us/page-title`, `us/race-layer`, `us/xenotype-layer`, `us/voice-pack-checklist`; old UI is retained as `UseFerriteUi = false` fallback pending in-game matrix. `scripts/verify-local.ps1` includes UiKit tests/builds/neutrality grep and both-DLL presence. Phase B (split into private dependency mod) is deferred.
+
+## UiKit / US settings rebuild checkpoint (2026-08-31)
+
+- Architecture audit completed for `Source/FerriteLib.UiKit/**`, its runtime-stub harness, and US UI consumers. The current implementation is a flat rect/deferred-interaction brownfield, not the target kernel.
+- Maintainer-approved behavior baseline is `docs/uikit-rebuild/05-p0-contract-baseline-zh.md`: native IMGUI is the sole event authority; XML owns structure/static props/translation keys/limited responsive constraints; typed bindings; per-Window/Overlay session; injectable Dark Gold theme; session fallback.
+- P0 freezes invariants and offers a recommended API baseline without prescribing one implementation. The DeepSeek implementation lead may choose API shape, file decomposition, algorithms, focused vertical slices, and local migration order, provided it records tradeoffs and preserves invariants.
+- Rebuild execution is documented in `docs/uikit-rebuild/README.md`, 01–07, `tasks/MAIN-ORCHESTRATOR.md`, and the DeepSeek task books. The old P0 implementation plan is historical only.
+- Gate R 窄切片已于 2026-08-31 接入真实生产窗口：`Layout.Schema2.xml`（banner + global-volume）→ `UsKernelSettingsHost` → `UniversalSqueakerSettingsWindow` 持有的 `UiHost`/`UiSession`；自动 build、嵌入资源、focused harness 与完整本地门禁均通过。
+- Gate R 实机结果为 `PASS`：维护者确认首开、Kernel banner、global-volume 交互、关闭/重开及其余场景无异常。数字框按 Enter 关闭窗口与其他 Mod Settings 一致，是 RimWorld 默认行为，不做 US 特殊拦截。证据记录：`docs/uikit-rebuild/gates/GATE-R-2026-08-31.md`。
+- Gate U 已获准启动，但完整 Basic/Tuning/Packs Settings Host 尚未迁移；旧完整 Settings 路径继续作为明确过渡 fallback，直至 Gate U 验收和 clean cutover。后续代码实现交给 DeepSeek，主代理只负责任务书、调度、契约裁决与验收。
 - SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff
@@ -168,4 +178,15 @@
 - **验证**：`verify-local.ps1` 14 门全绿，Dev/Release 0 警告。
 - **最新 dev 包**：`dist/dev/UniversalSqueaker`（commit `acc854d`，无 zip）。
 - **待办**：维护者实机确认首次打开是否恢复；若仍失败，新 `Player.log` 带完整堆栈可直接定位根因。
+
+## Gate U migration checkpoint (2026-08-31)
+
+- 首轮 Gate U 源码审查判定 `LIMITED/未通过`：完整 US Kernel Host 已接入，但暴露 section card 外框测量缺失、800px ScopeTree/FilterBar 窄屏几何缺陷、Kernel 异常帧可能与 legacy 同帧输出、保存 tick/legacy 生命周期耦合及自动/实机证据缺口。
+- 已修复并验证：`UsSectionWidgetBase` 统一 card outer-height 与 body width，`UsScopeTreeWidget` 窄屏 layer stack 测量/绘制一致，`UsFilterBarLayout` + `UsFilterBarWidget` 在窄屏纵向堆叠 dropdown，custom Settings Window 保存 tick，异常后隔帧切换 fallback，设置窗口入口单实例化，Kernel-only close 不重置 legacy session。
+- 新增 `tools/UniversalSqueakerKernelHostTests`：直接使用生产 `UsKernelSettingsHost.Create`、真实嵌入 `Layout.Schema2.xml`、真实 US Kind 注册与 typed binding 表；覆盖真实 Host 创建、创建期未知 Kind/属性拒绝、双 Host session 隔离、typed 业务路由、800/1280/1920 三视口 Measure/Draw、scope 清理和 disposed session。
+- 证据：`pwsh -File scripts/verify-local.ps1` 15 门全绿；main Release 构建 0 warning/0 error；`tools/UniversalSqueakerKernelHostTests` ALL PASS；`tools/FerriteLib.UiKit.Tests` ALL PASS；`tools/UniversalSqueakerUiLogicTests` ALL GREEN。
+- Gate U 自动证据判定 `PASS（stub/源码范围）`。维护者实机已通过 Basic 最小门：设置页正常开启、global volume 正常修改、attenuation graph 可拖动、关闭重开正常、无红字；这证明真实 Settings Host、Basic typed 写入、chart 原生拖拽和 session 重开在当前 dev 包成立。
+- 外部 DeepSeek 收口与主代理复查记录位于 `docs/uikit-rebuild/reports/DEEPSEEK-US-UI-REBUILD-COMPLETION-REPORT.md`。首次复查发现 800 宽 Mood 控件被省略；返工后 `UsScopeTreeWidget` 改为统一的 stacked narrow Mood 几何：标题/Auto + Pitch/Volume/Jitter 三行，每行保留 minus/slider/number/plus，Measure/Draw 共用 `UsesStackedMoodRows` / `MoodRowHeightFor`。
+- `MoodLayoutFocusedTests` 使用真实生产 Host 捕获原生控件 rect：800×600、2 个 rich Mood 行共 26 个控件，全部位于 scope-tree card 内且互不重叠；minus、plus、slider、number commit、Auto 均验证 typed `set-mood-tuning` 写入。主代理独立复现 Host `ALL PASS`、`verify-local.ps1 -NoRestore` 15 门全绿、`build-dev.ps1` Dev/Release 0 warning/0 error。
+- Gate U 自动/源码范围当前 `PASS`；整体仍 `LIMITED/未通过`。Tuning/Packs/Camera Indicator 的真实 RimWorld 交互、真实 popup/chart/hotControl 坐标、catalog/翻译/数据路径、800×600/1280×720/1920×1080 实机记录和受控 fallback 恢复尚未验证。旧 Settings/Overlay fallback 继续保留，禁止 clean cutover；下一动作是维护者集中实机验收。
 

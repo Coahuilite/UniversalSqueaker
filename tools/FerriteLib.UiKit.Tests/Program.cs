@@ -94,6 +94,21 @@ internal static class Program
 
         Console.WriteLine("G4 SelectionButton visual accent...");
         failures += SelectionButtonTests.RunAll();
+
+        Console.WriteLine("Kernel vertical slice (greenfield)...");
+        failures += KernelSmokeTests.RunAll();
+
+        Console.WriteLine("Kernel session/native (greenfield)...");
+        failures += KernelSessionTests.RunAll();
+
+        Console.WriteLine("Kernel layout (greenfield)...");
+        failures += KernelLayoutTests.RunAll();
+
+        Console.WriteLine("Kernel contract (greenfield)...");
+        failures += KernelContractTests.RunAll();
+
+        Console.WriteLine("Kernel popup/window-space (greenfield)...");
+        failures += KernelPopupTests.RunAll();
     }
 
     private static void VerifyRegistryCoreFallback()

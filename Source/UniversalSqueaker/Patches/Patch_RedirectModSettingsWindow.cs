@@ -20,9 +20,7 @@ internal static class Patch_RedirectModSettingsWindow
             Mod? owner = AccessTools.Field(typeof(Dialog_ModSettings), "mod")?.GetValue(dialog) as Mod;
             if (owner is UniversalSqueakerMod usMod)
             {
-                var custom = new UniversalSqueakerSettingsWindow(usMod);
-                usMod.RegisterSettingsWindow(custom);
-                Find.WindowStack.Add(custom);
+                usMod.OpenSettings();
                 return false;
             }
         }
