@@ -176,8 +176,7 @@
   - `0a936f6`：`UiGuard` 记录完整异常堆栈；对 `voicePackSelections`、`domain.Packs`、`GetVoicePackDomainPacks` 等可能 null 的 LINQ 来源加防御保护；修复 `UiGuard.ResetSessionLog()` 每帧调用导致的日志刷屏。
   - `acc854d`：`FerriteVoicePacksPage` 首次绘制失败自动重置 `State` 并下一帧重试（等价“关闭再打开”），第二帧仍失败才 fallback。
 - **验证**：`verify-local.ps1` 14 门全绿，Dev/Release 0 警告。
-- **最新 dev 包**：`dist/dev/UniversalSqueaker`（commit `acc854d`，无 zip）。
-- **待办**：维护者实机确认首次打开是否恢复；若仍失败，新 `Player.log` 带完整堆栈可直接定位根因。
+- **Gate R 后续事实**：新 Kernel Settings Host 首开、Basic 操作和关闭重开已由维护者实机确认无异常；若未来回归，现有完整堆栈日志仍可直接定位。
 
 ## Gate U migration checkpoint (2026-08-31)
 
