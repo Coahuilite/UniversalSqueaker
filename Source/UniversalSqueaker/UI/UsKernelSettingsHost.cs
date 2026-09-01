@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using FerriteLib.UiKit;
+
 using FerriteLib.UiKit.Kernel;
 using Verse;
 
@@ -219,7 +219,6 @@ public static class UsKernelSettingsHost
 
         return bindings;
     }
-
 
     /// <summary>Four normalized attenuation points: start locked at 100%, end locked at 0%.</summary>
     private static List<Vector2> BuildAttenuationPoints(VoicePacksViewState view)

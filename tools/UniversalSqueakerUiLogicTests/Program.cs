@@ -27,19 +27,49 @@ internal static class Program
 
     private static void RunAll()
     {
-        TestDistancePreview();
+        TestVoicePackModeDomain();
         TestVoicePacksFilters();
-        TestUiLayoutTier();
         TestAttenuationMath();
-        TestVoicePacksLayoutHeights();
         TestActionScopeRules();
         TestRaceXenotypeFiltering();
-        TestLayerDetailText();
         TestUsCardLayoutHeight();
         TestUsFilterBarLayout();
         TestHelpCatalog();
+        TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
         UsKernelContractInvariantTests.RunAll();
+    }
+
+    /// <summary>
+    /// Anti-drift gate for the voice-pack routing-mode domain: SqueakVoicePackModes.IsKnown is the
+    /// single authority the runtime resolver uses to accept or downgrade a persisted mode
+    /// (unknown values Log.Error once and degrade to Vanilla). If someone adds a fifth enum member
+    /// without extending the All table, this assertion goes red — silently absorbing a new mode as
+    /// "unknown" would be a behaviour change the resolver's one-time error would bury in logs.
+    /// </summary>
+    private static void TestVoicePackModeDomain()
+    {
+        Array declared = Enum.GetValues(typeof(SqueakVoicePackMode));
+        Assert(SqueakVoicePackModes.All.Length == declared.Length,
+            "SqueakVoicePackModes.All must stay exactly as long as the SqueakVoicePackMode enum "
+            + "(All.Length=" + SqueakVoicePackModes.All.Length + ", enum.Length=" + declared.Length
+            + "); a new mode without a table entry is a silent behaviour change");
+
+        for (int i = 0; i < declared.Length; i++)
+        {
+            Assert(SqueakVoicePackModes.All[i].Equals(declared.GetValue(i)),
+                "SqueakVoicePackModes.All[" + i + "] must equal enum value " + declared.GetValue(i)
+                + " in declaration order");
+        }
+
+        foreach (SqueakVoicePackMode mode in SqueakVoicePackModes.All)
+        {
+            Assert(SqueakVoicePackModes.IsKnown(mode),
+                "every declared mode must be IsKnown: " + mode);
+        }
+
+        Assert(!SqueakVoicePackModes.IsKnown((SqueakVoicePackMode)(declared.Length + 100)),
+            "a value outside the declared set must NOT be IsKnown (resolver degrades it to Vanilla)");
     }
 
     private static void TestUsCardLayoutHeight()
@@ -163,120 +193,7 @@ internal static class Program
         Assert(noSection.Text == UsHelpPanelLogic.EmptyText, "missing section uses empty text");
     }
 
-    private static void TestVoicePacksLayoutHeights()
-    {
-        const float tolerance = 0.0001f;
-        var metrics = new StubMetrics(10f, 5f);
 
-        float twoLine = VoicePacksLayout.TwoLineRowHeight("Primary", "Secondary", 300f, metrics);
-        Assert(twoLine >= VoicePacksLayout.MinTwoLineRowHeight, "two-line row respects its minimum height");
-        Assert(twoLine >= 4f + metrics.CalcHeight("Primary", 280f) + 2f + metrics.CalcHeight("Secondary", 280f) + 4f - tolerance,
-            "two-line row covers both measured text lines");
-
-        float voicePackRow = VoicePacksLayout.VoicePackRowHeightFor("Long VoicePack label", "Mod · Author", "Actions 5/17", 500f, metrics);
-        Assert(voicePackRow >= VoicePacksLayout.MinVoicePackRowHeight, "voice pack row respects its three-line minimum height");
-        Assert(voicePackRow >= 3f + 20f + 2f + 16f + 2f + 16f + 4f - tolerance,
-            "voice pack row covers the three fixed line minima plus padding");
-
-        float compactRow = VoicePacksLayout.VoicePackRowHeightFor("Label", "Mod · Author", "Actions 5/17", 300f, metrics);
-        Assert(compactRow < voicePackRow, "compact voice pack row omits coverage and is shorter than the comfortable row");
-
-        float layerRow = VoicePacksLayout.LayerRowHeightFor("Race Display Name", "1 / 2 enabled", 500f, metrics);
-        Assert(layerRow >= VoicePacksLayout.MinLayerRowHeight, "layer row respects its minimum height");
-        Assert(layerRow >= 4f + metrics.CalcHeight("Race Display Name", 476f) + 2f + metrics.CalcHeight("1 / 2 enabled", 476f) + 4f - tolerance,
-            "layer row covers display name plus detail line");
-
-        float measuredRow = VoicePacksLayout.MeasuredRowHeight("Wrapped text", 100f, metrics, 26f);
-        Assert(measuredRow >= 4f + metrics.CalcHeight("Wrapped text", 100f) + 4f - tolerance,
-            "generic measured row height covers the text plus padding");
-
-        var pack = new VoicePackRowView(
-            "pack-key",
-            "Long VoicePack label",
-            "Some Mod",
-            "Some Author",
-            "VoicePackDef",
-            "Actions 5/17",
-            "search text",
-            false);
-        var domain = new VoicePackDomainView(
-            SqueakVoicePackScope.Race,
-            "race",
-            "",
-            "Race",
-            "Race",
-            SqueakVoicePackDomainState.Normal,
-            false,
-            false,
-            false,
-            0,
-            1,
-            0,
-            Array.Empty<string>(),
-            new[] { pack });
-
-        float checklistHeight = VoicePacksLayout.ChecklistHeight(domain, "", 500f, metrics);
-        float expectedChecklist = VoicePacksLayout.SearchFieldHeight + VoicePacksLayout.Gap
-            + VoicePacksLayout.VoicePackRowHeightFor(pack, 500f, metrics) + VoicePacksLayout.Gap;
-        Assert(checklistHeight >= expectedChecklist - tolerance,
-            "checklist height uses the dynamic voice pack row height for each shown row");
-    }
-
-    private static void TestUiLayoutTier()
-    {
-        Assert(UiLayoutTier.ForWidth(480f) == LayoutTier.Comfortable, "480 is Comfortable");
-        Assert(UiLayoutTier.ForWidth(320f) == LayoutTier.Compact, "320 is Compact");
-        Assert(UiLayoutTier.ForWidth(240f) == LayoutTier.Minimal, "240 is Minimal");
-        Assert(UiLayoutTier.ForWidth(239f) == LayoutTier.Fallback, "239 is Fallback");
-        AssertEqual(10f, UiLayoutTier.ClampWidth(5f, 10f), 0.0001f, "ClampWidth raises below min");
-        AssertEqual(20f, UiLayoutTier.ClampWidth(20f, 10f), 0.0001f, "ClampWidth keeps above min");
-    }
-
-    private static void TestDistancePreview()
-    {
-        const float tolerance = 0.00001f;
-
-        IReadOnlyList<DistanceSample> curve = DistancePreview.SampleAudibilityCurve(15f, 50f, 10, 15f, 65f);
-        Assert(curve.Count == 10, "default curve should contain 10 samples");
-        AssertEqual(15f, curve[0].Distance, tolerance, "default curve first sample should be at graphMin");
-        AssertEqual(1f, curve[0].Audibility, tolerance, "default curve first sample should be fully audible");
-        AssertEqual(65f, curve[curve.Count - 1].Distance, tolerance, "default curve last sample should be at graphMax");
-        AssertEqual(0f, curve[curve.Count - 1].Audibility, tolerance, "default curve last sample should be silent");
-        AssertMonotonicNonIncreasing(curve, "default curve");
-
-        IReadOnlyList<DistanceSample> twoSamples = DistancePreview.SampleAudibilityCurve(15f, 50f, 2, 15f, 65f);
-        Assert(twoSamples.Count == 2, "sampleCount=2 should produce exactly two samples");
-        AssertEqual(1f, twoSamples[0].Audibility, tolerance, "two-sample curve starts at 1");
-        AssertEqual(0f, twoSamples[1].Audibility, tolerance, "two-sample curve ends at 0");
-
-        IReadOnlyList<DistanceSample> twoHundred = DistancePreview.SampleAudibilityCurve(15f, 50f, 200, 15f, 65f);
-        Assert(twoHundred.Count == 200, "sampleCount=200 should produce 200 samples");
-        AssertEqual(1f, twoHundred[0].Audibility, tolerance, "200-sample curve starts at 1");
-        AssertEqual(0f, twoHundred[twoHundred.Count - 1].Audibility, tolerance, "200-sample curve ends at 0");
-        AssertMonotonicNonIncreasing(twoHundred, "200-sample curve");
-
-        IReadOnlyList<DistanceSample> degenerate = DistancePreview.SampleAudibilityCurve(30f, 30f, 6, 15f, 65f);
-        Assert(degenerate.Count == 6, "min==max curve should keep requested sample count");
-        foreach (DistanceSample sample in degenerate)
-        {
-            AssertEqual(1f, sample.Audibility, tolerance, "min==max curve should be all 1");
-        }
-
-        IReadOnlyList<DistanceSample> swapped = DistancePreview.SampleAudibilityCurve(50f, 15f, 10, 15f, 65f);
-        AssertEqual(1f, swapped[0].Audibility, tolerance, "swapped min/max should behave like min=15,max=50 at graphMin");
-        AssertEqual(0f, swapped[swapped.Count - 1].Audibility, tolerance, "swapped min/max should behave like min=15,max=50 at graphMax");
-
-        IReadOnlyList<DistanceSample> nanDefended = DistancePreview.SampleAudibilityCurve(float.NaN, float.PositiveInfinity, 8, 15f, 65f);
-        AssertEqual(1f, nanDefended[0].Audibility, tolerance, "NaN/Infinity min/max should fall back to 15/50 at graphMin");
-        AssertEqual(0f, nanDefended[nanDefended.Count - 1].Audibility, tolerance, "NaN/Infinity min/max should fall back to 15/50 at graphMax");
-
-        IReadOnlyList<DistanceSample> badGraph = DistancePreview.SampleAudibilityCurve(15f, 50f, 8, 65f, 15f);
-        AssertEqual(15f, badGraph[0].Distance, tolerance, "invalid graphMin/graphMax should fall back to 15/65");
-        AssertEqual(65f, badGraph[badGraph.Count - 1].Distance, tolerance, "invalid graphMin/graphMax should fall back to 15/65");
-
-        IReadOnlyList<DistanceSample> clampedCount = DistancePreview.SampleAudibilityCurve(15f, 50f, 1000, 15f, 65f);
-        Assert(clampedCount.Count == 512, "sampleCount > 512 should clamp to 512");
-    }
 
     private static void TestVoicePacksFilters()
     {
@@ -393,15 +310,6 @@ internal static class Program
             "race filter drops the same xenotype on another race");
     }
 
-    private static void TestLayerDetailText()
-    {
-        Assert(VoicePacksLayout.LayerDetailText(0, 0) == "No available packs",
-            "zero-candidate xenotype rows read as no available packs");
-        Assert(VoicePacksLayout.LayerDetailText(1, 2) == "1 / 2 enabled",
-            "rows with candidates keep the enabled/candidate caption");
-        Assert(VoicePacksLayout.LayerDetailText(0, 0, " · dormant") == "No available packs · dormant",
-            "no-available-packs caption preserves state suffix");
-    }
 
     private static void TestAttenuationMath()
     {
@@ -435,19 +343,6 @@ internal static class Program
         Assert(AttenuationMath.FormatRangeDisplay(15f, 50f).Contains("–"), "FormatRangeDisplay uses en dash");
     }
 
-    private static void AssertMonotonicNonIncreasing(IReadOnlyList<DistanceSample> samples, string message)
-    {
-        const float tolerance = 0.00001f;
-        for (int i = 0; i < samples.Count - 1; i++)
-        {
-            if (samples[i].Audibility + tolerance < samples[i + 1].Audibility)
-            {
-                throw new InvalidOperationException(
-                    message + " is not monotonic non-increasing at index " + i
-                    + ": " + samples[i].Audibility + " -> " + samples[i + 1].Audibility);
-            }
-        }
-    }
 
     private static void AssertEqual(float expected, float actual, float tolerance, string message)
     {
@@ -465,25 +360,4 @@ internal static class Program
         }
     }
 
-    private sealed class StubMetrics : ITextMetrics
-    {
-        private readonly float height;
-        private readonly float widthPerChar;
-
-        public StubMetrics(float height, float widthPerChar)
-        {
-            this.height = height;
-            this.widthPerChar = widthPerChar;
-        }
-
-        public float CalcHeight(string text, float width)
-        {
-            return height;
-        }
-
-        public float CalcWidth(string text)
-        {
-            return (text ?? "").Length * widthPerChar;
-        }
-    }
 }

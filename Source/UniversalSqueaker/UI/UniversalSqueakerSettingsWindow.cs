@@ -1,18 +1,22 @@
 using UnityEngine;
 using Verse;
-using FerriteLib.UiKit;
 using FerriteLib.UiKit.Kernel;
+
+// This window draws its own chrome with the kernel theme vocabulary; there is no second palette.
 
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Full-screen, custom-drawn settings window for Universal Squeaker.
+/// Custom-drawn settings window for Universal Squeaker.
 ///
-/// Normal path: the window owns exactly one kernel <see cref="UiHost"/> (created from the real
-/// embedded Schema=2 page resource) and draws ONLY the kernel page. Closing the window disposes the
-/// host and its session; reopening creates a fresh host/session. Creation-time contract failures
-/// (schema/binding/kind/attribute) and whole-frame draw failures fall back to the legacy full page,
-/// which is never drawn together with the kernel page.
+/// The window owns exactly one kernel <see cref="UiHost"/> (created from the real embedded Schema=2
+/// page resource) and draws that page and nothing else. Closing the window disposes the host and its
+/// session; reopening creates a fresh host/session, so a reopened window gets a clean retry.
+///
+/// When the kernel page cannot be created, or a whole-frame draw throws, the window shows an honest
+/// unavailable notice instead of a second implementation: recovery lives in the per-widget
+/// <see cref="UiSessionGuard"/> for local failures, and there is deliberately no fallback page to
+/// keep semantically in sync.
 ///
 /// RimWorld default input stays intact: Escape closes via the window stack and Enter closes the
 /// window through the stock Mod Settings behavior. US deliberately does not intercept Enter; the
@@ -26,14 +30,13 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     private const float CloseButtonHeight = 30f;
     private const float AccentBarHeight = 3f;
 
+    private static readonly UiTheme Theme = UiTheme.DarkGold;
+
     private UiHost? kernelHost;
     private IUsKernelSettingsSource? kernelSource;
-    private bool kernelPageFailed;
-    private bool fallbackNextFrame;
-    private bool legacySessionActive;
+    private bool pageUnavailable;
+    private bool noticeDueNextFrame;
     private readonly UniversalSqueakerMod mod;
-
-    internal bool UsesLegacySettingsSession => legacySessionActive;
 
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
@@ -81,17 +84,21 @@ public sealed class UniversalSqueakerSettingsWindow : Window
             Mathf.Max(1f, inRect.width - SidePadding * 2f),
             Mathf.Max(1f, inRect.height - TitleBarHeight - SidePadding));
         mod.TickSettingsSaveForWindow();
-        if (fallbackNextFrame)
+
+        if (pageUnavailable)
         {
-            fallbackNextFrame = false;
-            kernelPageFailed = true;
-            DrawLegacyPage(contentRect);
+            DrawUnavailableNotice(contentRect);
             return;
         }
 
-        if (kernelPageFailed)
+        // A failed draw must not switch pages inside the same IMGUI pass that threw: that pass has
+        // already claimed layout state for the kernel page. Trip the notice on the next frame so it is
+        // drawn from a clean pass.
+        if (noticeDueNextFrame)
         {
-            DrawLegacyPage(contentRect);
+            noticeDueNextFrame = false;
+            pageUnavailable = true;
+            DrawUnavailableNotice(contentRect);
             return;
         }
 
@@ -102,7 +109,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         }
         catch (System.Exception ex)
         {
-            fallbackNextFrame = true;
+            noticeDueNextFrame = true;
             kernelHost?.Dispose();
             kernelHost = null;
             kernelSource = null;
@@ -116,10 +123,23 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         return UsKernelSettingsHost.Create(kernelSource);
     }
 
-    private void DrawLegacyPage(Rect rect)
+    /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>
+    private void DrawUnavailableNotice(Rect rect)
     {
-        legacySessionActive = true;
-        mod.DoSettingsWindowContents(rect);
+        UiThemeDraw.Surface(rect, Theme, Theme.Panel, Theme.Border);
+        Rect body = rect.ContractedBy(24f);
+        UiThemeDraw.Label(
+            new Rect(body.x, body.y, body.width, 28f),
+            "US.Settings.PageUnavailable.Title".Translate(),
+            Theme,
+            Theme.TextPrimary,
+            UiFont.Medium);
+        UiThemeDraw.Label(
+            new Rect(body.x, body.y + 36f, body.width, Mathf.Max(1f, body.height - 36f)),
+            "US.Settings.PageUnavailable.Body".Translate(SqueakLabels.SettingsCategory),
+            Theme,
+            Theme.TextSecondary,
+            UiFont.Small);
     }
 
     public override void PreClose()
@@ -132,46 +152,59 @@ public sealed class UniversalSqueakerSettingsWindow : Window
 
     private void DrawBackground(Rect rect)
     {
-        Widgets.DrawBoxSolid(rect, Palette.Canvas);
-        Widgets.DrawBoxSolid(
+        UiThemeDraw.Workspace(rect, Theme);
+        UiThemeDraw.Surface(
             new Rect(rect.x, rect.y, rect.width, AccentBarHeight),
-            Palette.AccentGold);
+            Theme,
+            Theme.AccentGold,
+            Theme.AccentGold);
     }
 
     private void DrawTitleBar(Rect rect)
     {
-        Color oldColor = GUI.color;
-        TextAnchor oldAnchor = Text.Anchor;
-        GameFont oldFont = Text.Font;
-
         Rect titleRect = new(
             rect.x + SidePadding,
             rect.y + 8f,
             Mathf.Max(1f, rect.width * 0.6f),
             TitleBarHeight - 16f);
 
-        UiText.DrawTitle(new Rect(titleRect.x, titleRect.y, titleRect.width, 24f), mod.SettingsCategory());
-        UiText.DrawCaption(new Rect(titleRect.x, titleRect.y + 24f, titleRect.width, 16f), "Universal Squeaker — VoicePack Routing");
+        UiThemeDraw.Label(
+            new Rect(titleRect.x, titleRect.y, titleRect.width, 24f),
+            mod.SettingsCategory(),
+            Theme,
+            Theme.TextPrimary,
+            UiFont.Medium);
+        UiThemeDraw.Label(
+            new Rect(titleRect.x, titleRect.y + 24f, titleRect.width, 16f),
+            "Universal Squeaker — VoicePack Routing",
+            Theme,
+            Theme.TextSecondary,
+            UiFont.Tiny);
 
-        Rect closeRect = new(
+        DrawCloseButton(new Rect(
             rect.xMax - CloseButtonWidth - SidePadding,
             rect.y + (TitleBarHeight - CloseButtonHeight) * 0.5f,
             CloseButtonWidth,
-            CloseButtonHeight);
-        DrawCloseButton(closeRect);
-
-        Text.Font = oldFont;
-        Text.Anchor = oldAnchor;
-        GUI.color = oldColor;
+            CloseButtonHeight));
     }
 
     private void DrawCloseButton(Rect rect)
     {
         bool hovered = Mouse.IsOver(rect);
-        Widgets.DrawBoxSolid(rect, hovered ? Palette.Hover : Palette.Panel);
-        SurfaceFrame.DrawBorder(rect, hovered ? Palette.BorderStrong : Palette.Border);
+        UiThemeDraw.Surface(
+            rect,
+            Theme,
+            hovered ? Theme.Hover : Theme.Panel,
+            hovered ? Theme.BorderStrong : Theme.Border);
+        UiThemeDraw.Label(
+            rect,
+            "Close",
+            Theme,
+            hovered ? Theme.TextPrimary : Theme.TextSecondary,
+            UiFont.Tiny,
+            TextAnchor.MiddleCenter);
 
-        UiText.DrawCaption(rect, "Close", hovered ? Palette.TextPrimary : Palette.TextSecondary);
+        // Native IMGUI hit test: the window is host chrome, not a kernel widget, so it owns no session.
         if (Widgets.ButtonInvisible(rect))
         {
             Close();

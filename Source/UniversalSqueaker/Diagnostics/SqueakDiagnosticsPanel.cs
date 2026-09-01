@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+
+using FerriteLib.UiKit.Kernel;
 using RimWorld;
 using UnityEngine;
-using UniversalSqueaker.UI;
 using Verse;
 
 namespace UniversalSqueaker;
@@ -31,6 +32,9 @@ internal sealed class SqueakDiagnosticsPanel : Window
     private const float SectionTitleHeight = 21f;
     private const float SpaceSm = 8f;
     private const float ScrollbarWidth = 16f;
+
+    // The panel's single theme vocabulary: Dark Gold kernel roles (UiTheme / UiThemeDraw only).
+    private static readonly UiTheme Theme = UiTheme.DarkGold;
 
     private enum GateState { Pass, Block, Pending }
 
@@ -121,7 +125,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
 
     public override void DoWindowContents(Rect inRect)
     {
-        SectionFrame.Draw(inRect, SectionFrame.SurfaceKind.Raised);
+        UiThemeDraw.Surface(inRect, Theme, Theme.Raised, Theme.Border);
         Rect inner = inRect.ContractedBy(SpaceSm);
 
         RebuildIfStale();
@@ -129,15 +133,12 @@ internal sealed class SqueakDiagnosticsPanel : Window
         // Title row; keep the right edge clear for the vanilla small close X.
         Rect titleRect = new(inner.x, inner.y, Mathf.Max(1f, inner.width - ModeBadgeWidth - SpaceSm - CloseXReserve), TitleRowHeight);
         string titleText = "US.Diagnostics.Title".Translate().ToString();
-        Color oldColor = GUI.color;
         GameFont oldFont = Text.Font;
         Text.Font = GameFont.Medium;
         float titleH = Mathf.Max(TitleRowHeight, Text.CalcHeight(titleText, titleRect.width));
-        titleRect.height = titleH;
-        GUI.color = UiPalette.Gold;
-        Widgets.Label(titleRect, titleText);
         Text.Font = oldFont;
-        GUI.color = oldColor;
+        titleRect.height = titleH;
+        UiThemeDraw.Label(titleRect, titleText, Theme, Theme.AccentGold, UiFont.Medium);
 
         // Right of the title: tick/s toggle then mode toggle (cycles Selected <-> Visible).
         float controlsY = inner.y + (titleH - 22f) * .5f;
@@ -157,7 +158,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
                 DrawVisible(body);
                 break;
             default:
-                EmptyState.Draw(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
+                DrawEmptyNotice(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
                 break;
         }
 
@@ -166,16 +167,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
         Rect hintRect = new(inner.x, inner.yMax - HintHeight, inner.width, HintHeight);
         if (Time.realtimeSinceStartup <= escArmedUntil)
         {
-            Color hintOldColor = GUI.color;
-            TextAnchor hintOldAnchor = Text.Anchor;
-            GameFont hintOldFont = Text.Font;
-            Text.Font = GameFont.Tiny;
-            Text.Anchor = TextAnchor.MiddleCenter;
-            GUI.color = UiPalette.Gold;
-            Widgets.Label(hintRect, "US.Diagnostics.CloseHint".Translate());
-            Text.Anchor = hintOldAnchor;
-            Text.Font = hintOldFont;
-            GUI.color = hintOldColor;
+            UiThemeDraw.Label(hintRect, "US.Diagnostics.CloseHint".Translate().ToString(), Theme, Theme.AccentGold, UiFont.Tiny, TextAnchor.MiddleCenter);
         }
     }
 
@@ -202,27 +194,18 @@ internal sealed class SqueakDiagnosticsPanel : Window
     {
         if (gates.Count == 0)
         {
-            EmptyState.Draw(body, "US.Diagnostics.Panel.NoPawn".Translate().ToString());
+            DrawEmptyNotice(body, "US.Diagnostics.Panel.NoPawn".Translate().ToString());
             return;
         }
 
         Rect headerRect = new(body.x, body.y, body.width, HeaderHeight);
-        SectionFrame.Draw(headerRect, SectionFrame.SurfaceKind.Base);
+        UiThemeDraw.Base(headerRect, Theme);
         Rect badgeRect = new(headerRect.xMax - 72f - SpaceSm, headerRect.y + 3f, 72f, headerRect.height - 6f);
-        StatusBanner.Draw(badgeRect, cachedPawnReady
+        UiThemeDraw.StatusBadge(badgeRect, cachedPawnReady
             ? "US.Diagnostics.Ready".Translate().ToString() : "US.Diagnostics.Blocked".Translate().ToString(),
-            cachedPawnReady ? SectionFrame.SurfaceKind.Success : SectionFrame.SurfaceKind.Base);
-        Color oldColor = GUI.color;
-        TextAnchor oldAnchor = Text.Anchor;
-        GameFont oldFont = Text.Font;
-        Text.Font = GameFont.Small;
-        Text.Anchor = TextAnchor.MiddleLeft;
-        GUI.color = Color.white;
-        Widgets.Label(new Rect(headerRect.x + SpaceSm, headerRect.y, Mathf.Max(1f, badgeRect.x - headerRect.x - SpaceSm * 2f), headerRect.height),
-            cachedPawnText);
-        Text.Font = oldFont;
-        Text.Anchor = oldAnchor;
-        GUI.color = oldColor;
+            Theme, cachedPawnReady ? UiStatusTone.Success : UiStatusTone.Neutral, UiFont.Tiny);
+        UiThemeDraw.Label(new Rect(headerRect.x + SpaceSm, headerRect.y, Mathf.Max(1f, badgeRect.x - headerRect.x - SpaceSm * 2f), headerRect.height),
+            cachedPawnText, Theme, Color.white, UiFont.Small);
 
         // Section 1 (2 fixed rows): current action + dispatched audio.
         float y = headerRect.yMax;
@@ -265,42 +248,24 @@ internal sealed class SqueakDiagnosticsPanel : Window
 
     private static void DrawSectionTitle(Rect rect, string label)
     {
-        Color oldColor = GUI.color;
-        GameFont oldFont = Text.Font;
-        Text.Font = GameFont.Small;
-        GUI.color = UiPalette.Gold;
-        Widgets.Label(rect, label);
-        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f),
-            new Color(UiPalette.Gold.r, UiPalette.Gold.g, UiPalette.Gold.b, .25f));
-        Text.Font = oldFont;
-        GUI.color = oldColor;
+        UiThemeDraw.Label(rect, label, Theme, Theme.AccentGold, UiFont.Small);
+        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Theme.AccentGoldAlpha20);
     }
 
     private static void DrawFieldRow(Rect rect, string label, string value, Color? valueColor = null)
     {
-        Color oldColor = GUI.color;
-        TextAnchor oldAnchor = Text.Anchor;
-        GameFont oldFont = Text.Font;
-        Text.Font = GameFont.Small;
-        Text.Anchor = TextAnchor.MiddleLeft;
         float labelWidth = rect.width * .42f;
-        GUI.color = UiPalette.Muted;
-        Widgets.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), label);
+        UiThemeDraw.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), label, Theme, Theme.TextSecondary, UiFont.Small);
         Rect valueRect = new(rect.x + labelWidth + SpaceSm, rect.y,
             Mathf.Max(1f, rect.xMax - (rect.x + labelWidth + SpaceSm)), rect.height);
-        Text.Anchor = TextAnchor.MiddleRight;
-        GUI.color = valueColor ?? Color.white;
-        Widgets.Label(valueRect, value);
-        Text.Anchor = oldAnchor;
-        Text.Font = oldFont;
-        GUI.color = oldColor;
+        UiThemeDraw.Label(valueRect, value, Theme, valueColor ?? Color.white, UiFont.Small, TextAnchor.MiddleRight);
     }
 
     private void DrawVisible(Rect body)
     {
         if (rows.Count == 0)
         {
-            EmptyState.Draw(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
+            DrawEmptyNotice(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
             return;
         }
 
@@ -338,13 +303,13 @@ internal sealed class SqueakDiagnosticsPanel : Window
             Widgets.Label(new Rect(rowRect.x + 2f, rowRect.y, DotWidth, rowRect.height), SqueakDiagnosticsOverlay.Mark);
             GUI.color = Color.white;
             Widgets.Label(new Rect(pawnX, rowRect.y, pawnW, rowRect.height), row.PawnText);
-            GUI.color = UiPalette.Muted;
+            GUI.color = Theme.TextSecondary;
             Widgets.Label(new Rect(actionX, rowRect.y, 60f, rowRect.height), row.Action);
             Widgets.Label(new Rect(cooldownX, rowRect.y, 60f, rowRect.height), row.Cooldown);
             Text.Anchor = TextAnchor.MiddleRight;
             GUI.color = Color.white;
             Widgets.Label(new Rect(audioX, rowRect.y, 90f, rowRect.height), row.Audio);
-            GUI.color = row.Ready ? UiPalette.Success : UiPalette.Gold;
+            GUI.color = row.Ready ? Theme.Success : Theme.AccentGold;
             Widgets.Label(new Rect(statusX, rowRect.y, Mathf.Max(1f, rowRect.xMax - statusX), rowRect.height),
                 row.Ready ? "US.Diagnostics.Ready".Translate().ToString() : "US.Diagnostics.Blocked".Translate().ToString());
             Text.Anchor = oldAnchor;
@@ -358,13 +323,45 @@ internal sealed class SqueakDiagnosticsPanel : Window
         }
     }
 
-    private static Color ColorFor(GateState state) => state switch
+    /// <summary>
+    /// The single auditable three-state mapping for the gate chain: GateState -> UiStatusTone.
+    /// This is the only place where a gate state chooses its semantic tone.
+    /// </summary>
+    private static UiStatusTone ToneFor(GateState state) => state switch
     {
-        GateState.Pass => UiPalette.Success,
-        GateState.Block => UiPalette.Gold,
-        GateState.Pending => UiPalette.Selected,
-        _ => Color.white
+        GateState.Pass => UiStatusTone.Success,
+        GateState.Block => UiStatusTone.Warning,
+        GateState.Pending => UiStatusTone.Active,
+        _ => UiStatusTone.Neutral,
     };
+
+    /// <summary>
+    /// Gate value text tint. Keeps the panel's original role colors (pass green / gold blocker /
+    /// selected plane for stochastic gates), now sourced from UiTheme roles via the tone switch.
+    /// </summary>
+    private static Color ColorFor(GateState state) => ToneFor(state) switch
+    {
+        UiStatusTone.Success => Theme.Success,
+        UiStatusTone.Warning => Theme.AccentGold,
+        UiStatusTone.Active => Theme.Selected,
+        _ => Color.white,
+    };
+
+    /// <summary>
+    /// Local replacement for the retired centered-notice helper: framed panel plane plus centered
+    /// descriptive text, painted through public UiThemeDraw entries. Deliberately private to this
+    /// panel — no new public UI type is introduced.
+    /// </summary>
+    private static void DrawEmptyNotice(Rect body, string text)
+    {
+        if (body.width <= 1f || body.height <= 1f)
+        {
+            return;
+        }
+
+        UiThemeDraw.Panel(body, Theme);
+        UiThemeDraw.Label(body.ContractedBy(16f), text, Theme, Theme.TextSecondary, UiFont.Small, TextAnchor.MiddleCenter);
+    }
 
     /// <summary>Rebuilds the formatted text cache on Repaint only when the overlay revision (or mode) changed. Zero per-frame re-snapshot/re-layout work.</summary>
     private void RebuildIfStale()

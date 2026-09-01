@@ -6,6 +6,7 @@ using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker;
 
@@ -108,14 +109,52 @@ public class UniversalSqueakerMod : Mod
 
     public override string SettingsCategory() => SqueakLabels.SettingsCategory;
 
+    /// <summary>
+    /// Vanilla Mod Settings shell path. <see cref="Patches.Patch_RedirectModSettingsWindow"/> normally
+    /// sends the framework to <see cref="UI.UniversalSqueakerSettingsWindow"/>, so this body only runs
+    /// when that redirect did not apply. It offers the in-house window instead of keeping a second
+    /// settings implementation alive.
+    /// </summary>
     public override void DoSettingsWindowContents(Rect inRect)
     {
-        Settings.BeginSettingsSession();
         TickQueuedSettingsSave();
-        Settings.DrawSettings(inRect);
+
+        Rect body = inRect.ContractedBy(18f);
+        UiTheme theme = UiTheme.DarkGold;
+        Rect box = new Rect(body.x, body.y, body.width, Mathf.Min(96f, Mathf.Max(0f, body.height)));
+        UiThemeDraw.Surface(box, theme, theme.Panel, theme.Border);
+
+        Rect inner = box.ContractedBy(12f);
+        UiThemeDraw.Label(
+            new Rect(inner.x, inner.y, inner.width, 20f),
+            "US.Settings.Shell.Title".Translate(),
+            theme,
+            theme.TextPrimary,
+            UiFont.Small);
+        UiThemeDraw.Label(
+            new Rect(inner.x, inner.y + 22f, inner.width, 34f),
+            "US.Settings.Shell.Body".Translate(SqueakLabels.SettingsCategory),
+            theme,
+            theme.TextSecondary,
+            UiFont.Tiny);
+
+        Rect open = new Rect(inner.x, inner.yMax - 28f, 220f, 28f);
+        bool hovered = Mouse.IsOver(open);
+        UiThemeDraw.Surface(open, theme, hovered ? theme.Hover : theme.Raised, theme.Border);
+        UiThemeDraw.Label(
+            open,
+            "US.Settings.Shell.Open".Translate(),
+            theme,
+            hovered ? theme.TextPrimary : theme.TextSecondary,
+            UiFont.Tiny,
+            TextAnchor.MiddleCenter);
+        if (UiNative.Button(open))
+        {
+            OpenSettings();
+        }
     }
 
-    public void OpenSettings(bool selectXenotypeTab = false)
+    public void OpenSettings()
     {
         if (Find.WindowStack == null) return;
         if (activeSettingsWindow != null)
@@ -129,12 +168,10 @@ public class UniversalSqueakerMod : Mod
             var window = new UniversalSqueaker.UI.UniversalSqueakerSettingsWindow(this);
             activeSettingsWindow = window;
             RegisterSettingsWindow(window);
-            if (selectXenotypeTab) Settings.RequestXenotypeTabOnNextDraw();
             Find.WindowStack.Add(window);
         }
         catch (Exception ex)
         {
-            Settings.ClearXenotypeTabRequest();
             activeSettingsWindow = null;
             SqueakLog.SettingsOpenFailed(ex);
         }
@@ -171,10 +208,6 @@ public class UniversalSqueakerMod : Mod
         if (!Instance.IsOwnedSettingsWindow(window)) return;
         Instance.settingsWindows.Remove(window);
         if (ReferenceEquals(Instance.activeSettingsWindow, window)) Instance.activeSettingsWindow = null;
-        if (window is UniversalSqueaker.UI.UniversalSqueakerSettingsWindow custom && custom.UsesLegacySettingsSession)
-        {
-            Settings.EndSettingsSession();
-        }
         Instance.FlushQueuedSettingsSave(true, true);
     }
 

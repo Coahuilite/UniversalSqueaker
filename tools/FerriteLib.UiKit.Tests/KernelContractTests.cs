@@ -437,6 +437,19 @@ internal static class KernelContractTests
         {
             throw new Exception("Content revision bump did not re-arrange with the new height");
         }
+
+        // A different available size must bypass the single-slot cache (width-change invalidation).
+        UiLayoutSnapshot resized = host.MeasureAndArrange(new Vector2(120f, 200f));
+        if (ReferenceEquals(resized, refreshed))
+        {
+            throw new Exception("Available-size change reused the cached snapshot");
+        }
+
+        UiLayoutSnapshot backToOriginal = host.MeasureAndArrange(new Vector2(200f, 200f));
+        if (ReferenceEquals(backToOriginal, resized))
+        {
+            throw new Exception("Returning to the previous size reused the resized snapshot");
+        }
     }
 
     private sealed class HeightBoundWidget : IUiWidget

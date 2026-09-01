@@ -1,4 +1,4 @@
-namespace FerriteLib.UiKit;
+namespace FerriteLib.UiKit.Kernel;
 
 /// <summary>
 /// Text measurement seam. Production implementations use Verse's IMGUI text engine;

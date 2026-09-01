@@ -41,4 +41,10 @@
   <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
   <US.Notice.TargetUnavailable>目标不可用</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
+
+  <US.Settings.Shell.Title>Universal Squeaker 使用独立设置窗口。</US.Settings.Shell.Title>
+  <US.Settings.Shell.Body>游戏内的 Mod Settings 面板不再承载 {0} 的设置。请打开专用窗口调整路由、调音与语音包。</US.Settings.Shell.Body>
+  <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
+  <US.Settings.PageUnavailable.Title>设置页不可用</US.Settings.PageUnavailable.Title>
+  <US.Settings.PageUnavailable.Body>{0} 设置页无法构建或绘制，因此不显示残缺界面。关闭后重新打开即可重试。若持续失败，请在日志中查找 usdiag 记录：它会指出出错的控件并附带异常堆栈。</US.Settings.PageUnavailable.Body>
 </LanguageData>

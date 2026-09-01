@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
-using FerriteLib.UiKit;
+
 using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;
@@ -105,7 +105,6 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
             ctx.Bindings.Invoke("toggle-egg", !enabled);
         }
     }
-
 
     private void DrawBasicRow(Rect rect, UiWidgetContext ctx, string valueKey, string actionKey, string label)
     {

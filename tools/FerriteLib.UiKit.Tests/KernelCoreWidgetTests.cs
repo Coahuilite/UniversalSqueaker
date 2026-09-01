@@ -62,6 +62,9 @@ internal static class KernelCoreWidgetTests
         bindings.BindValue("dropdown", () => dropdown, v => dropdown = v);
         bindings.BindOptions("Options", () => new List<string> { "x", "y" });
         bindings.BindValue("volume", () => volume, v => volume = v);
+        // chart/line validates its typed points binding by Id (Bind falls back to Id).
+        bindings.BindReadOnly<IReadOnlyList<Vector2>>(
+            "chart", () => new List<Vector2> { new(0f, 0f), new(1f, 1f) });
 
         using UiHost host = new("test", manifest, bindings, UiTheme.DarkGold, new StubMetrics(), new StubTranslation());
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(500f, 600f));

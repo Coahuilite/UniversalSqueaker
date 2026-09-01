@@ -41,4 +41,10 @@
   <US.Notice.RaceDomain>Race domain</US.Notice.RaceDomain>
   <US.Notice.TargetUnavailable>target unavailable</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>Some VoicePack domains have no enabled pack:</US.Notice.AudioPool.Body>
+
+  <US.Settings.Shell.Title>Universal Squeaker uses its own settings window.</US.Settings.Shell.Title>
+  <US.Settings.Shell.Body>The in-game Mod Settings shell is not used by {0}. Open the dedicated window to change routing, tuning and VoicePacks.</US.Settings.Shell.Body>
+  <US.Settings.Shell.Open>Open Universal Squeaker settings</US.Settings.Shell.Open>
+  <US.Settings.PageUnavailable.Title>Settings page unavailable</US.Settings.PageUnavailable.Title>
+  <US.Settings.PageUnavailable.Body>The {0} settings page could not be built or drawn, so it will not show a partial interface. Close and reopen the window to retry. If it keeps failing, look for the usdiag record in the log: it names the failing control and carries the exception stack.</US.Settings.PageUnavailable.Body>
 </LanguageData>

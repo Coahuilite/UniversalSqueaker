@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using RimWorld;
 using UnityEngine;
@@ -9,11 +8,11 @@ using Verse;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Single business entry for the VoicePacks page. It projects the read-only view state from
-/// settings/catalog and executes all UI commands. Business commands land on the existing write bridge
-/// (<see cref="UniversalSqueakerSettings.SetVoicePackSelection"/> /
+/// Single business entry for the VoicePacks page. <see cref="BuildView"/> projects the read-only view
+/// state from settings/catalog; the typed facade writes player intent. Every write lands on the
+/// existing settings bridge (<see cref="UniversalSqueakerSettings.SetVoicePackSelection"/> /
 /// <see cref="UniversalSqueakerSettings.CommitVoicePackMode"/>), so resolver rebuild and
-/// QueuePersistence semantics remain untouched.
+/// QueuePersistence semantics stay where they were.
 /// </summary>
 public static class VoicePacksPageModel
 {
@@ -93,107 +92,6 @@ public static class VoicePacksPageModel
         return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions);
     }
 
-    public static void ExecuteAll(UniversalSqueakerSettings settings, IEnumerable<UiCommand> commands, VoicePacksPageState state)
-    {
-        if (commands == null) return;
-        foreach (UiCommand command in commands) Execute(settings, command, state);
-    }
-
-    public static void Execute(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
-    {
-        if (settings == null) settings = UniversalSqueakerMod.Settings;
-        if (settings == null) return;
-        if (state == null) return;
-
-        switch (command.Kind)
-        {
-            case UiCommandKind.SetMode:
-                settings.CommitVoicePackMode(command.Mode);
-                break;
-            case UiCommandKind.SelectDomain:
-                state.SelectedScope = command.Scope;
-                state.SelectedRaceDefName = command.RaceDefName ?? "";
-                state.SelectedTargetName = command.Scope == SqueakVoicePackScope.Xenotype
-                    ? command.TargetDefName ?? ""
-                    : "";
-                break;
-            case UiCommandKind.TogglePack:
-                ExecuteTogglePack(settings, command);
-                break;
-            case UiCommandKind.ForgetUnavailable:
-                ExecuteForgetUnavailable(settings, command);
-                break;
-            case UiCommandKind.ToggleEgg:
-                settings.SetAllowEasterEggSounds(command.Flag);
-                break;
-            case UiCommandKind.SetDistancePreset:
-                if (Enum.TryParse(command.Arg, true, out SqueakDistancePreset preset)) settings.SetDistancePreset(preset);
-                break;
-            case UiCommandKind.SetGlobalVolume:
-                if (float.TryParse(command.Arg, NumberStyles.Float, CultureInfo.InvariantCulture, out float globalVolume))
-                    settings.SetGlobalVolume(globalVolume);
-                break;
-            case UiCommandKind.SetDistanceRange:
-                ExecuteSetDistanceRange(settings, command);
-                break;
-            case UiCommandKind.ToggleBasic:
-                settings.SetBasicTuning(command.Arg, command.Flag);
-                break;
-            case UiCommandKind.SetActionTuningScope:
-                ExecuteSetActionTuningScope(settings, command, state);
-                break;
-            case UiCommandKind.SetTuningLayer:
-                if (int.TryParse(command.Arg, out int tuningLayer) && tuningLayer >= 0 && tuningLayer <= 2)
-                    state.TuningLayer = tuningLayer;
-                break;
-            case UiCommandKind.SetTuningDomain:
-                if (!string.IsNullOrEmpty(command.RaceDefName))
-                {
-                    state.TuningRaceDefName = command.RaceDefName;
-                    state.TuningXenotypeDefName = command.TargetDefName ?? "";
-                }
-                break;
-            case UiCommandKind.SetMoodTuning:
-                ExecuteSetMoodTuning(settings, command, state);
-                break;
-            case UiCommandKind.ToggleBaselinePreset:
-                ToggleBaselinePreset(state, command.Arg);
-                break;
-            case UiCommandKind.ToggleBaselineRace:
-                ToggleBaselineRace(state, command.Arg, command.RaceDefName, command.Flag);
-                break;
-            case UiCommandKind.ToggleBaselineXenotype:
-                ToggleBaselineXenotype(state, command.Arg, command.RaceDefName, command.TargetDefName, command.Flag);
-                break;
-            case UiCommandKind.ImportBaselinePreset:
-                ImportBaselinePreset(settings, command.Arg, state);
-                break;
-            case UiCommandKind.SetActiveTab:
-                ExecuteSetActiveTab(state, command.Arg);
-                break;
-            case UiCommandKind.ScrollToSection:
-                ExecuteScrollToSection(state, command.Arg);
-                break;
-            case UiCommandKind.SetDomainFilter:
-                ExecuteSetDomainFilter(state, command);
-                break;
-            case UiCommandKind.SetPackFilter:
-                ExecuteSetPackFilter(state, command);
-                break;
-            case UiCommandKind.SetRaceFilter:
-                ExecuteSetRaceFilter(settings, state, command.Arg ?? "");
-                break;
-            case UiCommandKind.SetXenotypeFilter:
-                state.XenotypeFilter = command.Arg ?? "";
-                break;
-        }
-    }
-
-    private static void ExecuteSetDomainFilter(VoicePacksPageState state, UiCommand command)
-    {
-        ApplyDomainFilter(state, command.Arg, command.Flag);
-    }
-
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
     {
         UiDomainFilter filter = state.DomainFilter;
@@ -229,12 +127,6 @@ public static class VoicePacksPageModel
         state.DomainFilter = filter;
     }
 
-    private static void ExecuteSetPackFilter(VoicePacksPageState state, UiCommand command)
-    {
-        if (!command.Arg.StartsWith("Author|", StringComparison.OrdinalIgnoreCase)) return;
-        ApplyPackFilter(state, command.Arg.Substring("Author|".Length));
-    }
-
     private static void ApplyPackFilter(VoicePacksPageState state, string author)
     {
         state.PackFilter = new UiPackFilter(author);
@@ -263,7 +155,25 @@ public static class VoicePacksPageModel
         return false;
     }
 
-    private static void ExecuteSetActiveTab(VoicePacksPageState state, string tab)
+    private static string SectionGroup(string sectionKey)
+    {
+        if (string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)) return "Distance";
+        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
+        if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
+        if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "race-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "xenotype-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
+        {
+            return "Packs";
+        }
+
+        return "Overview";
+    }
+
+    /// <summary>Workspace switch: normalises the incoming name, then clears hover/selection/scroll so
+    /// the active section, the highlighted help row and the scroll offset all agree.</summary>
+    private static void ApplyActiveTab(VoicePacksPageState state, string tab)
     {
         string normalized;
         if (string.Equals(tab, "Overview", StringComparison.OrdinalIgnoreCase))
@@ -289,6 +199,7 @@ public static class VoicePacksPageModel
         }
     }
 
+    /// <summary>Primary navigation target of each workspace.</summary>
     private static string WorkspacePrimarySection(string workspace)
     {
         return workspace switch
@@ -301,39 +212,12 @@ public static class VoicePacksPageModel
         };
     }
 
-    private static void ExecuteScrollToSection(VoicePacksPageState state, string sectionKey)
+    private static void ApplyScrollToSection(VoicePacksPageState state, string sectionKey)
     {
         if (string.IsNullOrEmpty(sectionKey)) return;
         state.ScrollTargetKey = sectionKey;
         state.ActiveSectionKey = sectionKey;
         state.ActiveTab = SectionGroup(sectionKey);
-    }
-
-    private static string SectionGroup(string sectionKey)
-    {
-        if (string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)) return "Distance";
-        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
-        if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
-        if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "race-layer", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "xenotype-layer", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
-        {
-            return "Packs";
-        }
-
-        return "Overview";
-    }
-
-    /// <summary>分层 scope 写桥执行：arg = "scope|actionKey"（scope 空 = 清本层记录）。</summary>
-    private static void ExecuteSetActionTuningScope(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
-    {
-        if (string.IsNullOrEmpty(command.Arg)) return;
-        string[] parts = command.Arg.Split('|');
-        SqueakActionScope? scope = parts.Length > 0 && !string.IsNullOrEmpty(parts[0])
-            && Enum.TryParse(parts[0], true, out SqueakActionScope parsedScope) ? parsedScope : (SqueakActionScope?)null;
-        string actionKey = parts.Length > 1 ? parts[1] : "";
-        ApplyActionTuningScope(settings, state, actionKey, scope);
     }
 
     /// <summary>Typed scope write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。
@@ -344,19 +228,6 @@ public static class VoicePacksPageModel
         if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
         if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
         settings.SetActionTuningScope(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, scope);
-    }
-
-    /// <summary>S5 心情调音执行：arg = "MoodName|factor|value" | "MoodName|clear"。</summary>
-    private static void ExecuteSetMoodTuning(UniversalSqueakerSettings settings, UiCommand command, VoicePacksPageState state)
-    {
-        string[] parts = command.Arg.Split('|');
-        if (parts.Length < 2) return;
-        if (!Enum.TryParse(parts[0], true, out SqueakMood mood)) return;
-        string factor = parts[1];
-        float? value = null;
-        if (parts.Length > 2 && float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-            value = parsed;
-        ApplyMoodTuning(settings, state, mood, factor, value);
     }
 
     /// <summary>Typed field-level mood write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。</summary>
@@ -377,24 +248,6 @@ public static class VoicePacksPageModel
         if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
         if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
         settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
-    }
-
-    private static void ExecuteSetDistanceRange(UniversalSqueakerSettings settings, UiCommand command)
-    {
-        if (string.IsNullOrEmpty(command.Arg)) return;
-        string[] parts = command.Arg.Split('|');
-        if (parts.Length < 2) return;
-        if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float start)
-            && float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float end))
-        {
-            settings.SetDistanceRange(start, end);
-        }
-    }
-
-    private static void ExecuteTogglePack(UniversalSqueakerSettings settings, UiCommand command)
-    {
-        if (string.IsNullOrEmpty(command.Arg) || string.IsNullOrEmpty(command.RaceDefName)) return;
-        ApplyTogglePack(settings, command.Scope, command.RaceDefName, command.TargetDefName, command.Arg, command.Flag);
     }
 
     /// <summary>Typed VoicePack checkbox write inside one domain.</summary>
@@ -418,11 +271,6 @@ public static class VoicePacksPageModel
             next.RemoveAll(key => string.Equals(key, packKey, StringComparison.Ordinal));
         }
         settings.SetVoicePackSelection(scope, raceDefName, targetDefName, next);
-    }
-
-    private static void ExecuteForgetUnavailable(UniversalSqueakerSettings settings, UiCommand command)
-    {
-        ApplyForgetUnavailable(settings, command.Scope, command.RaceDefName, command.TargetDefName);
     }
 
     /// <summary>Typed Forget Unavailable for one domain identity.</summary>
@@ -1020,20 +868,20 @@ public static class VoicePacksPageModel
 
     // ---------------------------------------------------------------------------------------------
     // Typed facade used by the kernel settings Host. Every method delegates to the same private
-    // implementations as the UiCommand path, so the old page and the new Host share one business
-    // source of truth. No string command bridge is involved: callers pass typed values.
+    // write implementations the legacy command dispatcher used to route through, so there is exactly
+    // one business source of truth. Callers pass typed values; there is no string command bridge.
     // ---------------------------------------------------------------------------------------------
 
     public static void SetActiveTab(VoicePacksPageState state, string tab)
     {
         if (state == null) return;
-        ExecuteSetActiveTab(state, tab);
+        ApplyActiveTab(state, tab);
     }
 
     public static void ScrollToSection(VoicePacksPageState state, string sectionKey)
     {
         if (state == null) return;
-        ExecuteScrollToSection(state, sectionKey);
+        ApplyScrollToSection(state, sectionKey);
     }
 
     public static string SectionGroupOf(string sectionKey)

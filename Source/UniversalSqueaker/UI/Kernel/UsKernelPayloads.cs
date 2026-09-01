@@ -1,21 +1,9 @@
+// Typed payloads for the US kernel settings path. Every payload is a plain readonly value type
+// carrying exactly the business identity needed by one IUsKernelSettingsSource write, so widgets never
+// parse strings into business commands. Distance-range writes pass their endpoints as typed values,
+// which is why no range payload type exists here.
+
 namespace UniversalSqueaker.UI;
-
-/// <summary>
-/// Typed payloads for the US kernel settings path. Every payload is a plain readonly value type
-/// carrying exactly the business identity needed by one <see cref="IUsKernelSettingsSource"/> write;
-/// no strings are parsed into business commands by widgets.
-/// </summary>
-public readonly struct UsRangeWrite
-{
-    public readonly float Min;
-    public readonly float Max;
-
-    public UsRangeWrite(float min, float max)
-    {
-        Min = min;
-        Max = max;
-    }
-}
 
 /// <summary>Layer domain identity for the tuning editor (Race layer = race only; Xenotype = race + target).</summary>
 public readonly struct UsTuningDomainSelection

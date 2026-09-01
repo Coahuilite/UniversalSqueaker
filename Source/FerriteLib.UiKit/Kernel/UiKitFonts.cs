@@ -1,8 +1,9 @@
 using Verse;
 
-namespace FerriteLib.UiKit.Widgets;
+namespace FerriteLib.UiKit.Kernel;
 
-internal static class UiKitFonts
+/// <summary>Single <see cref="UiFont"/> to Verse <see cref="GameFont"/> mapping for the whole library and its hosts.</summary>
+public static class UiKitFonts
 {
     public static GameFont ToGameFont(UiFont font)
     {

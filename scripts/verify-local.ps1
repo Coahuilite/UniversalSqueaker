@@ -21,9 +21,9 @@ $ErrorActionPreference = "Stop"
 #  10   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
 #  11   main assembly Release build (TreatWarningsAsErrors)
 #  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
-#  13   UI layout manifest XML well-formedness
-#  14   UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview)
-#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host creation + typed bindings)
+#  13   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
+#  14   UniversalSqueakerUiLogicTests Release (filters + attenuation math + card/filter layout math + mode-set drift guard + Schema2 source invariants)
+#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry)
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -125,25 +125,45 @@ Invoke-Check 'built assemblies present (FerriteLib.UiKit.dll + UniversalSqueaker
         }
     }
 
-Invoke-Check 'UI layout manifest XML well-formedness' `
+Invoke-Check 'Schema=2 manifests present, well-formed and correctly attributed' `
     'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
     {
-        $layoutPath = Join-Path $root 'Source\UniversalSqueaker\UI\Layout.xml'
-        if (-not (Test-Path -LiteralPath $layoutPath -PathType Leaf)) {
-            throw "Missing UI layout manifest: $layoutPath"
+        # Schema=2 is the only shipped manifest schema since the legacy page chain was removed; a
+        # manifest that parses but claims another schema or source would silently load the wrong page.
+        $manifests = @(
+            (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.Schema2.xml'),
+            (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.Overlay.Schema2.xml')
+        )
+        foreach ($manifestPath in $manifests) {
+            if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+                throw "Missing Schema=2 manifest: $manifestPath"
+            }
+            $doc = [xml](Get-Content -LiteralPath $manifestPath -Raw)
+            if ($doc.DocumentElement.Name -ne 'UiPage') {
+                throw "Manifest root must be UiPage: $manifestPath"
+            }
+            if ($doc.DocumentElement.Schema -ne '2') {
+                throw "Manifest must declare Schema=2: $manifestPath"
+            }
+            if ($doc.DocumentElement.Source -ne 'coahuilite.universalsqueaker') {
+                throw "Manifest Source must be the US package id: $manifestPath"
+            }
+            if (@($doc.SelectNodes('//Widget')).Count -eq 0) {
+                throw "Manifest declares no widgets: $manifestPath"
+            }
         }
-        $null = [xml](Get-Content -LiteralPath $layoutPath -Raw)
     }
 
-# VanillaVoicePacksPage is intentionally not unit-tested here: it is a fallback-only page that
-# requires the Verse IMGUI runtime and is covered by the maintainer in-game matrix.
-Invoke-Check 'UniversalSqueakerUiLogicTests Release (pure UI filters + distance preview + attenuation math + layout tiers)' `
+# The removed legacy page chain (FerriteVoicePacksPage / VanillaVoicePacksPage) is gone with its
+# fallback role, so there is no second implementation left to characterize or to keep in sync.
+
+Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 invariants)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerUiLogicTests -c Release' `
     { dotnet run --no-restore --project $uiLogicTestsProject -c Release }
 
 # Real embedded Schema=2 Host creation regression: the production Host adapter runs against the
 # real resource, real US widget registrations and the real typed binding table (recording source).
-Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host creation + typed bindings + 3-viewport layout)' `
+Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c Release' `
     { dotnet run --no-restore --project $kernelHostTestsProject -c Release }
 

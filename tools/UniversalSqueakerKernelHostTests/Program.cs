@@ -114,6 +114,7 @@ internal static class Program
         Step("800px three-column mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
+        Step("settings window uses the pageUnavailable failure model", SettingsWindowPageUnavailableModel);
         Step("overlay host without settings window", OverlayHostCreatedWithoutSettingsWindow);
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
@@ -122,6 +123,114 @@ internal static class Program
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
         Step("closing settings window does not affect overlay", ClosingSettingsWindowDoesNotAffectOverlay);
+    }
+
+    private static void SettingsWindowPageUnavailableModel()
+    {
+        // New failure semantics (replaces the deleted legacy-fallback-reachability tests):
+        //   * the page model has no Execute/ExecuteAll command dispatcher any more — the typed
+        //     facade is the ONLY write authority, so no generic command can smuggle a legacy
+        //     page switch back in;
+        //   * the settings source interface exposes no Execute* surface either;
+        //   * after a whole-frame failure the window's own catch disposes the host, and the
+        //     disposed-host contract below proves the kernel page can never be drawn again —
+        //     the window therefore shows only the pageUnavailable notice (its source-level
+        //     shape is pinned by the UiLogicTests failure-model invariant; the window derives
+        //     from Verse.Window, which the stub runtime deliberately does not provide).
+        var (types, names) = LoadProductionTypeNames();
+
+        Type? model = FindLoadedType(types, "VoicePacksPageModel");
+        Assert(model != null, "the page model must be loadable for this gate to be meaningful");
+
+        Assert(model!.GetMethod("Execute", BindingFlags.Public | BindingFlags.Static) == null,
+            "VoicePacksPageModel.Execute (generic legacy command dispatcher) must be gone");
+        Assert(model.GetMethod("ExecuteAll", BindingFlags.Public | BindingFlags.Static) == null,
+            "VoicePacksPageModel.ExecuteAll must be gone");
+        foreach (MethodInfo method in model.GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            Assert(!method.Name.StartsWith("Execute", StringComparison.Ordinal),
+                "no Execute* dispatcher may return on the page model: found " + method.Name);
+        }
+
+        string[] typedFacade =
+        {
+            "SetActiveTab", "ScrollToSection", "SetDomainFilter", "SetMoodTuning",
+            "ToggleVoicePack", "ForgetUnavailable"
+        };
+        foreach (string facade in typedFacade)
+        {
+            Assert(model.GetMethod(facade, BindingFlags.Public | BindingFlags.Static) != null,
+                "the typed facade entry '" + facade + "' must exist as the sole write authority");
+        }
+
+        Type? source = FindLoadedType(types, "IUsKernelSettingsSource");
+        Assert(source != null, "the kernel settings source interface must be loadable");
+        foreach (MethodInfo method in source!.GetMethods())
+        {
+            Assert(!method.Name.StartsWith("Execute", StringComparison.Ordinal),
+                "IUsKernelSettingsSource must not grow an Execute* command surface: found " + method.Name);
+        }
+
+        // Terminal state proof against the REAL host: once a whole-frame failure disposes it,
+        // every further draw attempt is refused — there is nothing left to draw except the
+        // pageUnavailable notice, and no second page implementation exists to fall back to.
+        var fake = new RecordingSettingsSource();
+        UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Dispose();
+        AssertThrows<InvalidOperationException>(
+            () => host.DrawFrame(new Rect(0f, 0f, 900f, 700f)),
+            "after the window's whole-frame failure catch disposed the host, no frame can ever render the page again");
+
+        // Types deleted with the legacy UI chain, plus the caller-less preview surface that only
+        // existed to serve the removed Dev audio browser. They must not reappear in the shipped
+        // assembly by name in any namespace: a resurrection under a different folder would otherwise
+        // pass a source-level check.
+        string[] deletedTypes =
+        {
+            "FerriteVoicePacksPage", "VanillaVoicePacksPage", "VoicePacksPage",
+            "UsWidgetRegistrar", "UsCommandPayload", "UsWidgetCommandAdapter",
+            "UiCommand",
+            "SqueakFinalPreviewStatus", "SqueakFinalPreviewResult", "SqueakSettingsGameContext"
+        };
+        foreach (string dead in deletedTypes)
+        {
+            Assert(!names.Contains(dead),
+                "deleted fallback/preview type '" + dead + "' must not exist in the shipped assembly");
+        }
+    }
+
+    private static (List<Type> Loaded, HashSet<string> AllNames) LoadProductionTypeNames()
+    {
+        Assembly production = typeof(UsKernelSettingsHost).Assembly;
+        var loaded = new List<Type>();
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        Type[] candidates;
+        try
+        {
+            candidates = production.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            candidates = ex.Types.Where(t => t != null).ToArray()!;
+        }
+
+        foreach (Type type in candidates)
+        {
+            loaded.Add(type);
+            names.Add(type.Name);
+        }
+
+        return (loaded, names);
+    }
+
+    private static Type? FindLoadedType(List<Type> types, string name)
+    {
+        foreach (Type type in types)
+        {
+            if (type.Name == name) return type;
+        }
+
+        return null;
     }
 
     private static void RealEmbeddedResourcePresentAndShaped()
@@ -174,9 +283,9 @@ internal static class Program
         Assert(UiWidgetRegistry.KnownKinds(ExpectedSource).Count >= 15, "US scope registry holds the kernel composite kinds");
     }
 
-    private static void CollectKinds(IReadOnlyList<FerriteLib.UiKit.UiElementSpec> elements, HashSet<string> kinds)
+    private static void CollectKinds(IReadOnlyList<FerriteLib.UiKit.Kernel.UiElementSpec> elements, HashSet<string> kinds)
     {
-        foreach (FerriteLib.UiKit.UiElementSpec element in elements)
+        foreach (FerriteLib.UiKit.Kernel.UiElementSpec element in elements)
         {
             kinds.Add(element.Kind);
             CollectKinds(element.Children, kinds);
@@ -854,9 +963,9 @@ internal static class Program
         }
     }
 
-    private sealed class StubMetrics : FerriteLib.UiKit.ITextMetrics
+    private sealed class StubMetrics : FerriteLib.UiKit.Kernel.ITextMetrics
     {
-        public float MeasureText(string text, FerriteLib.UiKit.UiFont font, float width)
+        public float MeasureText(string text, FerriteLib.UiKit.Kernel.UiFont font, float width)
         {
             return 16f;
         }

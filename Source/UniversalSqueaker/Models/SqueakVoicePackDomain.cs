@@ -19,6 +19,33 @@ public enum SqueakVoicePackMode
     Disabled
 }
 
+/// <summary>
+/// The explicitly handled routing-mode set. The resolver normalises persisted values through
+/// <see cref="IsKnown"/> instead of a growing ternary, so an unrecognised value is reported rather than
+/// silently absorbed as Vanilla; the UI logic gate additionally asserts that this list still equals
+/// <c>Enum.GetValues(typeof(SqueakVoicePackMode))</c>, which makes adding a fifth member without writing
+/// down its semantics a build failure instead of a silent behaviour change.
+/// </summary>
+public static class SqueakVoicePackModes
+{
+    public static readonly SqueakVoicePackMode[] All =
+    {
+        SqueakVoicePackMode.Vanilla,
+        SqueakVoicePackMode.Fallback,
+        SqueakVoicePackMode.Remix,
+        SqueakVoicePackMode.Disabled,
+    };
+
+    public static bool IsKnown(SqueakVoicePackMode mode)
+    {
+        for (int i = 0; i < All.Length; i++)
+        {
+            if (All[i] == mode) return true;
+        }
+        return false;
+    }
+}
+
 /// <summary>Camera-height attenuation quick presets. Zero-Verse enum; the settings class consumes it.</summary>
 public enum SqueakDistancePreset
 {

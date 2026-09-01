@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
-using FerriteLib.UiKit;
+
 using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker.UI;

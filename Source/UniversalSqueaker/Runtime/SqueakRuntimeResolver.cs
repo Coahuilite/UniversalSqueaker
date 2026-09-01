@@ -393,7 +393,26 @@ public static class SqueakRuntimeResolver
         }
     }
 
-    private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode) => mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled ? mode : SqueakVoicePackMode.Vanilla;
+    private static readonly HashSet<SqueakVoicePackMode> ReportedUnknownModes = new();
+
+    /// <summary>
+    /// Normalises the persisted routing mode against the explicit known set. An unknown value means a
+    /// mode was added without extending <see cref="SqueakVoicePackModes.All"/> and its mapping, so it is
+    /// reported once per process as an error instead of being silently absorbed as Vanilla.
+    /// </summary>
+    private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode)
+    {
+        if (SqueakVoicePackModes.IsKnown(mode)) return mode;
+        lock (ReportedUnknownModes)
+        {
+            if (ReportedUnknownModes.Add(mode))
+            {
+                Log.Error($"[UniversalSqueaker] Unhandled SqueakVoicePackMode value ({(int)mode}); treating it as Vanilla. Extend SqueakVoicePackModes.All plus the selection-mode and UI mapping.");
+            }
+        }
+        return SqueakVoicePackMode.Vanilla;
+    }
+
     private static float Sanitize(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
 }
 

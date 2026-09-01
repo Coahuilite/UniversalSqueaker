@@ -42,9 +42,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 新 Ferrite 渲染路径的权威页面清单（嵌入资源，运行时经 Assembly.GetManifestResourceStream 读取）。 -->
-    <EmbeddedResource Include="UI\Layout.xml" />
-    <None Remove="UI\Layout.xml" />
+    <!-- Schema=2 is the only shipped page manifest: settings page plus the camera-indicator overlay.
+         Both are read through Assembly.GetManifestResourceStream by their kernel Host. -->
     <EmbeddedResource Include="UI\Layout.Schema2.xml" />
     <None Remove="UI\Layout.Schema2.xml" />
     <EmbeddedResource Include="UI\Layout.Overlay.Schema2.xml" />

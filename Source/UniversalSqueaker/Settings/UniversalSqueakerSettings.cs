@@ -77,18 +77,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (announceChange) SqueakLog.LoggingModeChanged(devLoggingMode, SqueakLog.EffectiveDevLogging);
     }
 
-    // Settings window session scaffolding. Opening/closing the window resets page-local UI state and
-    // keeps the Mod shell flush-on-close lifecycle intact.
-    internal void BeginSettingsSession() => UniversalSqueaker.UI.VoicePacksPage.BeginSession();
-    internal void EndSettingsSession() => UniversalSqueaker.UI.VoicePacksPage.EndSession();
-    internal void RequestXenotypeTabOnNextDraw() { }
-    internal void ClearXenotypeTabRequest() { }
-
-    public void DrawSettings(Rect inRect)
-    {
-        UniversalSqueaker.UI.VoicePacksPage.Draw(inRect);
-    }
-
     public void ApplyToRuntime()
     {
         SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
@@ -186,7 +174,6 @@ public partial class UniversalSqueakerSettings : ModSettings
                 break;
         }
     }
-
 
     /// <summary>
     /// S4 diagnostics foundation: player-facing camera indicator toggle. Cheap: updates the runtime

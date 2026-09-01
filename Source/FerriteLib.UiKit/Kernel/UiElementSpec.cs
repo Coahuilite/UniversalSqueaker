@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace FerriteLib.UiKit;
+namespace FerriteLib.UiKit.Kernel;
 
 /// <summary>
 /// Parsed XML element spec for a widget. Attribute lookup is case-insensitive; the stored

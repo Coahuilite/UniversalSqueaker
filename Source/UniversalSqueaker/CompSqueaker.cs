@@ -89,8 +89,6 @@ internal readonly struct SqueakDiagnosticSnapshot
     }
 }
 
-public enum SqueakFinalPreviewStatus { NoEligibleSound, PawnOrMapUnavailable, IneligibleSound, Dispatched, Exception }
-
 public enum SqueakPlaybackAttemptResult { NoEligibleSound, EligibilityRejected, Dispatched, Exception }
 
 public readonly struct SqueakPlaybackAttempt
@@ -98,27 +96,6 @@ public readonly struct SqueakPlaybackAttempt
     public readonly SqueakPlaybackAttemptResult Result;
     public readonly SqueakSoundChoice Choice;
     internal SqueakPlaybackAttempt(SqueakPlaybackAttemptResult result, SqueakSoundChoice choice) { Result = result; Choice = choice; }
-}
-
-/// <summary>Read-only final-preview plan/result for the Dev audio browser.</summary>
-public readonly struct SqueakFinalPreviewResult
-{
-    public readonly Pawn? Pawn;
-    public readonly XenotypeDef? Xenotype;
-    public readonly SqueakMood Mood;
-    public readonly SoundDef? Sound;
-    public readonly SqueakSoundSource Source;
-    public readonly string? PoolStableKey;
-    public readonly SqueakFinalPreviewStatus Status;
-    public readonly SqueakSoundPlayability Playability;
-    public readonly string Reason;
-    internal SqueakFinalPreviewResult(Pawn? pawn, XenotypeDef? xenotype, SqueakMood mood, SqueakSoundChoice choice,
-        SqueakFinalPreviewStatus status, SqueakSoundPlayability playability, string reason = "")
-    {
-        Pawn = pawn; Xenotype = xenotype; Mood = mood; Sound = choice.Sound; Source = choice.Source;
-        PoolStableKey = choice.PoolStableKey; Status = status; Playability = playability;
-        Reason = reason;
-    }
 }
 
 /// <summary>单个动作的触发配置。</summary>
@@ -633,7 +610,6 @@ public class CompSqueaker : ThingComp
             : new UniversalSqueaker.Kernel.ModulationAxis(true, stage.voxPitch, true, stage.voxVolume, false, (1f, 1f));
     }
 
-
     /// <summary>心情调制合并:CompProperties 默认 → 分层 context delta（Global < Race < Xenotype，
     /// 快照层已合并——S5 起不再实时读 settings.moodOverrides，H3 完成），最后合成年龄调制。</summary>
     private SqueakMoodMod ResolveMoodMod(SqueakMood mood, ResolvedSqueakContext context)
@@ -791,54 +767,6 @@ public class CompSqueaker : ThingComp
             SqueakLog.AudioDispatchFailed(actionKey, soundKey, ex);
             return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Exception, choice);
         }
-    }
-
-    /// <summary>
-    /// Resolves and plays a production-equivalent final one-shot without touching trigger gates, cooldowns, diagnostics,
-    /// motes, or persistent state. Random state is restored even when resolver selection needs a random draw.
-    /// </summary>
-    public SqueakFinalPreviewResult PreviewFinal(SqueakAction action, SqueakMood? moodOverride = null) => PreviewFinal(action, moodOverride, SqueakSettingsGameContext.Capture());
-
-    /// <summary>Settings preview boundary: callers may pass their once-per-frame context so no menu UI path reaches map services.</summary>
-    public SqueakFinalPreviewResult PreviewFinal(SqueakAction action, SqueakMood? moodOverride, SqueakSettingsGameContext gameContext)
-    {
-        SqueakSoundChoice choice = SqueakSoundChoice.None;
-        SqueakMood mood = SqueakMood.Neutral;
-        Rand.PushState();
-        try
-        {
-            SqueakRuntimeResolver.FlushPendingRuntimeChanges(true);
-            if (!gameContext.IsPawnOnCurrentMap(Pawn) || Pawn.Dead)
-            {
-                return new SqueakFinalPreviewResult(Pawn, null, mood, choice, SqueakFinalPreviewStatus.PawnOrMapUnavailable, SqueakSoundPlayability.MapRequired, "pawn_or_map_unavailable");
-            }
-
-            mood = moodOverride ?? CurrentMood;
-            SqueakRuntimeSnapshot snapshot = SqueakRuntimeResolver.Current;
-            ResolvedSqueakContext context = snapshot.ResolveContext(Pawn);
-            choice = snapshot.ChooseProductionSound(context, action, Pawn);
-            if (choice.IsNone)
-            {
-                return new SqueakFinalPreviewResult(Pawn, context.Xenotype, mood, choice, SqueakFinalPreviewStatus.NoEligibleSound, SqueakSoundPlayability.NoAudio, "resolver_no_eligible_sound");
-            }
-            SqueakSoundPlayability playability = SqueakSoundAvailabilityCache.GetProductionPlayability(choice.Sound, Pawn);
-            if (playability != SqueakSoundPlayability.Playable)
-            {
-                return new SqueakFinalPreviewResult(Pawn, context.Xenotype, mood, choice, SqueakFinalPreviewStatus.IneligibleSound, playability, "sound_not_playable_" + playability);
-            }
-
-            SqueakMoodMod mod = ResolveMoodMod(mood, context);
-            if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(choice.Sound, Pawn, out SoundInfo info, out playability))
-            {
-                return new SqueakFinalPreviewResult(Pawn, context.Xenotype, mood, choice, SqueakFinalPreviewStatus.IneligibleSound, playability, "sound_info_failed_" + playability);
-            }
-            info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
-            info.volumeFactor = mod.volumeFactor;
-            choice.Sound!.PlayOneShot(info);
-            return new SqueakFinalPreviewResult(Pawn, context.Xenotype, mood, choice, SqueakFinalPreviewStatus.Dispatched, playability, "dispatched");
-        }
-        catch { return new SqueakFinalPreviewResult(Pawn, null, mood, choice, SqueakFinalPreviewStatus.Exception, SqueakSoundPlayability.Failed, "exception"); }
-        finally { Rand.PopState(); }
     }
 
     private ResolvedSqueakContext GetRuntimeContext(out SqueakRuntimeSnapshot snapshot)
