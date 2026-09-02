@@ -106,7 +106,11 @@ public sealed class DropdownWidget : IUiWidget
 
     private void DrawPopup(Rect anchor, List<Option> options, string current, UiWidgetContext ctx)
     {
-        Rect popupRect = new(anchor.x, anchor.yMax, anchor.width, options.Count * OptionHeight);
+        Rect popupRect = PopupRect(anchor, options.Count, ctx.Session.HostViewport);
+
+        // Published for the *next* frame's content pass: a click on a popup row is delivered in a
+        // later frame than the one that drew the row, and only the trigger below can yield to it.
+        ctx.Session.SetPopupRect(popupRect);
         UiThemeDraw.Panel(popupRect, ctx.Theme);
 
         for (int i = 0; i < options.Count; i++)
@@ -129,10 +133,41 @@ public sealed class DropdownWidget : IUiWidget
             string bindKey = ReadBindKey();
             if (UiNative.DropdownOptionRow(rowRect, bindKey, ctx.Session))
             {
+                UiNative.ConsumePointerEvent();
                 ctx.Session.ClosePopup();
                 ctx.Bindings.Set(bindKey, options[i].Value);
             }
         }
+    }
+
+    /// <summary>
+    /// Popup rect in Host window space: below the trigger when it fits, above it when it does not, and
+    /// never beyond the viewport. A popup running off the window edge cannot be clicked at all, so the
+    /// flip is a correctness rule, not cosmetics. A viewport the host never published (zero height)
+    /// keeps the plain below-the-anchor placement.
+    /// </summary>
+    private static Rect PopupRect(Rect anchor, int optionCount, Rect viewport)
+    {
+        float height = optionCount * OptionHeight;
+        float y = anchor.yMax;
+        float x = anchor.x;
+        if (viewport.height <= 0f) return new Rect(x, y, anchor.width, height);
+
+        if (y + height > viewport.yMax && anchor.y - height >= viewport.y)
+        {
+            y = anchor.y - height;
+        }
+        else if (y + height > viewport.yMax)
+        {
+            y = Math.Max(viewport.y, viewport.yMax - height);
+        }
+
+        if (x + anchor.width > viewport.xMax)
+        {
+            x = Math.Max(viewport.x, viewport.xMax - anchor.width);
+        }
+
+        return new Rect(x, y, anchor.width, height);
     }
 
     private static void DrawField(Rect rect, string display, bool selected, UiTheme theme)

@@ -20,6 +20,8 @@ public sealed class UiSession : IDisposable
     private readonly List<Action> popupDrawActions = new();
     private string? openPopupId;
     private Rect? openPopupAnchor;
+    private Rect? openPopupRect;
+    private Rect hostViewport;
     private string? scrollTargetElementId;
 
     /// <summary>True until <see cref="Dispose"/> is called.</summary>
@@ -48,6 +50,16 @@ public sealed class UiSession : IDisposable
 
     /// <summary>Anchor rect of the popup currently owned by this session, if any.</summary>
     public Rect? OpenPopupAnchor => openPopupAnchor;
+
+    /// <summary>
+    /// Window-space rect the open popup actually covered when it was last drawn. The popup pass runs
+    /// after content, so this is the previous frame's rect — which is exactly the frame boundary a
+    /// click on a popup row arrives in. Null between opening and the first draw.
+    /// </summary>
+    public Rect? OpenPopupRect => openPopupRect;
+
+    /// <summary>Host viewport in window space, published once per frame before any content draws.</summary>
+    public Rect HostViewport => hostViewport;
 
     /// <summary>Id of the element the host should scroll into view on the next arranged frame, if any.</summary>
     public string? ScrollTargetElementId => scrollTargetElementId;
@@ -89,6 +101,8 @@ public sealed class UiSession : IDisposable
         EnsureActive();
         openPopupId = ownerId;
         openPopupAnchor = anchor;
+        // A freshly opened popup has no drawn rect yet; the popup pass records it this frame.
+        openPopupRect = null;
     }
 
     /// <summary>Closes the session-owned popup, if any.</summary>
@@ -97,6 +111,36 @@ public sealed class UiSession : IDisposable
         EnsureActive();
         openPopupId = null;
         openPopupAnchor = null;
+        openPopupRect = null;
+    }
+
+    /// <summary>Records the window-space rect of the popup the session is drawing this frame.</summary>
+    public void SetPopupRect(Rect rect)
+    {
+        EnsureActive();
+        openPopupRect = rect;
+    }
+
+    /// <summary>
+    /// True when <paramref name="point"/> (Host window space) falls inside the popup the session last
+    /// drew. Content that lies under the popup must use this to give up the click: the popup is drawn
+    /// after content, so it can only ever be the topmost thing the player sees.
+    /// </summary>
+    public bool IsPointOverPopup(Vector2 point)
+    {
+        if (!openPopupRect.HasValue) return false;
+        Rect rect = openPopupRect.Value;
+
+        // Written out instead of calling Rect.Contains: the harness's UnityEngine stub has no such
+        // member, and a throw here would be swallowed by the draw guard and silently disable the rule.
+        return point.x >= rect.x && point.x <= rect.xMax && point.y >= rect.y && point.y <= rect.yMax;
+    }
+
+    /// <summary>Publishes the frame's Host viewport so popups can clamp themselves into it.</summary>
+    internal void SetHostViewport(Rect viewport)
+    {
+        EnsureActive();
+        hostViewport = viewport;
     }
 
     public void BeginFrame()
@@ -244,6 +288,7 @@ public sealed class UiSession : IDisposable
         popupDrawActions.Clear();
         openPopupId = null;
         openPopupAnchor = null;
+        openPopupRect = null;
         scrollTargetElementId = null;
     }
 

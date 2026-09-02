@@ -62,6 +62,9 @@ public sealed class UiHost : IDisposable
 
     public void Draw(Rect viewport, UiLayoutSnapshot snapshot)
     {
+        // Popups are drawn after content and must clamp themselves into the frame's usable window
+        // space; publish it here, the one place that knows both the viewport and the session.
+        session.SetHostViewport(viewport);
         UiWidgetContext ctx = CreateContext(viewport.width);
         engine.Draw(ctx, snapshot, viewport);
 

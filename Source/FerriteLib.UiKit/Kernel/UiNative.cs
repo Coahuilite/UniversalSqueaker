@@ -109,6 +109,11 @@ public static class UiNative
         if (session == null) throw new ArgumentNullException(nameof(session));
         if (string.IsNullOrEmpty(elementId)) throw new ArgumentException("Dropdown element id is required.", nameof(elementId));
 
+        // A popup drawn over this trigger must win the click. The popup pass runs after content, so
+        // without this a pointer inside both rects would toggle this trigger first and silently drop
+        // the selection the popup row was about to make.
+        if (YieldsToCoveringPopup(session, elementId)) return false;
+
         if (!Button(rect)) return false;
 
         if (session.IsPopupOpen(elementId))
@@ -245,6 +250,27 @@ public static class UiNative
         if (DebugMousePositionEnabled) return DebugMouseUp;
         Event? current = Event.current;
         return current != null && current.type == EventType.MouseUp && current.button == 0;
+    }
+
+    /// <summary>
+    /// True when another element's popup currently covers the pointer. The owning element itself is
+    /// excluded so its trigger keeps normal toggle-to-close behaviour.
+    /// </summary>
+    private static bool YieldsToCoveringPopup(UiSession session, string elementId)
+    {
+        string? owner = session.OpenPopupId;
+        if (owner == null || string.Equals(owner, elementId, StringComparison.Ordinal)) return false;
+        return session.IsPointOverPopup(PointerPosition());
+    }
+
+    /// <summary>
+    /// Marks the current IMGUI event handled, so a control drawn later in the same pass cannot also
+    /// react to it. No-op in the harness, where there is no live event.
+    /// </summary>
+    public static void ConsumePointerEvent()
+    {
+        Event? current = Event.current;
+        if (current != null) current.Use();
     }
 
     internal static bool TryParseNumber(string text, out float value)
