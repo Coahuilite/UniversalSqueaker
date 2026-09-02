@@ -3,7 +3,7 @@
 ## Current durable state
 
 - This repository is the **Universal Squeaker (US)** local fork of Squeaky Ratkin (SR), created 2026-08-23. It has **no remote** and is **not published**.
-- Fork source: SR branch `0.3.x` tip `b19d68a` (post-0.3.2-pre1, including the `.slim` cleanup commits C34–C42).
+- Fork source: SR branch `0.3.x` tip `b19d68a` (post-0.3.2-pre1, including the `.slim` cleanup commits C34–C42). `b19d68a` is an object of the **SR repository** and is intentionally unreachable from this clone — it is not a lost commit; verify the doc's hash inventory against this repo before "fixing" it.
 - Confirmed identity: repo `coahuilite/UniversalSqueaker`, packageId `coahuilite.universalsqueaker`, namespace/prefix/log = `UniversalSqueaker` / `US_` / `usdiag`. Workshop display name and license are pending maintainer confirmation.
 - 0.4 co-existence policy (decided): SR owns Ratkin exclusively; US serves other races only; both mods may be enabled together; no `incompatibleWith`. The legacy SR compatibility bridge has been dropped; US ships no `SqueakyRatkin.*` types and no Ratkin audio/content/profiles/attachments.
 - SR 1.0.0 will shrink SR into a pure audio pack with US as prerequisite.
