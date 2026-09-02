@@ -86,7 +86,7 @@ public static class VoicePacksPageModel
         IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
-        string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "unknown";
+        string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
         string saveStatus = UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
         return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions);
@@ -745,7 +745,11 @@ public static class VoicePacksPageModel
         string author = pack.modContentPack?.ModMetaData?.AuthorsString ?? "";
         if (string.IsNullOrEmpty(author)) author = modName;
         int playable = CountPlayableActions(pack);
-        string coverage = "Actions " + playable + "/" + SqueakActionDefinitions.Count;
+        string coverage = string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "US.Packs.Checklist.PackActions".Translate(),
+            playable,
+            SqueakActionDefinitions.Count);
         string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
         return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
@@ -815,6 +819,10 @@ public static class VoicePacksPageModel
         return orphan;
     }
 
+    /// <summary>
+    /// Page banner. Every line here is a Keyed string: the model has no kernel translation seam, so
+    /// it resolves through the Verse Translator the same way the audio-pool notice does.
+    /// </summary>
     private static string BuildBannerText(
         IReadOnlyList<RaceLayerRowView> races,
         IReadOnlyList<VoicePackDomainView> xenotypes,
@@ -823,11 +831,11 @@ public static class VoicePacksPageModel
     {
         List<string> messages = new();
         if (races.Count == 0 && xenotypes.Count == 0)
-            messages.Add("No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.");
+            messages.Add("US.Packs.Banner.NoDomains".Translate());
         if (!biotech && xenotypes.Count > 0)
-            messages.Add("Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.");
+            messages.Add("US.Packs.Banner.DormantBiotech".Translate());
         if (mode == SqueakVoicePackMode.Vanilla)
-            messages.Add("VoicePack mode is Vanilla. Enabled packs are retained, but VoicePack audio is not routed.");
+            messages.Add("US.Packs.Banner.VanillaMode".Translate());
         return string.Join("\n", messages);
     }
 

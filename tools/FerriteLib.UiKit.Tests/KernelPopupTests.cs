@@ -176,6 +176,8 @@ internal static class KernelPopupTests
                 _ => 32f
             };
         }
+
+        public float MeasureWidth(string text, UiFont font) => StubTextWidth.Of(text, font);
     }
 
     private sealed class StubTranslation : IUiTranslation

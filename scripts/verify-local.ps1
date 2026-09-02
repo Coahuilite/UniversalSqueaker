@@ -22,8 +22,8 @@ $ErrorActionPreference = "Stop"
 #  11   main assembly Release build (TreatWarningsAsErrors)
 #  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
 #  13   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
-#  14   UniversalSqueakerUiLogicTests Release (filters + attenuation math + card/filter layout math + mode-set drift guard + Schema2 source invariants)
-#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry)
+#  14   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
+#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -157,13 +157,13 @@ Invoke-Check 'Schema=2 manifests present, well-formed and correctly attributed' 
 # The removed legacy page chain (FerriteVoicePacksPage / VanillaVoicePacksPage) is gone with its
 # fallback role, so there is no second implementation left to characterize or to keep in sync.
 
-Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 invariants)' `
+Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 invariants + Keyed localization contract)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerUiLogicTests -c Release' `
     { dotnet run --no-restore --project $uiLogicTestsProject -c Release }
 
 # Real embedded Schema=2 Host creation regression: the production Host adapter runs against the
 # real resource, real US widget registrations and the real typed binding table (recording source).
-Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry)' `
+Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c Release' `
     { dotnet run --no-restore --project $kernelHostTestsProject -c Release }
 

@@ -12,14 +12,23 @@ namespace FerriteLib.UiKit.Kernel;
 /// </summary>
 public static class UiThemeDraw
 {
-    public static void Label(Rect rect, string text, UiTheme theme, Color? color = null, UiFont? font = null, TextAnchor anchor = TextAnchor.MiddleLeft)
+    /// <param name="singleLine">
+    /// True for labels that must stay on one line (badges, dropdown display text). The fitting audit then
+    /// checks width instead of height, because for those labels wrapping is not an available answer.
+    /// </param>
+    public static void Label(Rect rect, string text, UiTheme theme, Color? color = null, UiFont? font = null, TextAnchor anchor = TextAnchor.MiddleLeft, bool singleLine = false)
     {
+        UiFont resolvedFont = font ?? theme.DefaultFont;
+        // Every kernel label funnels through this method, which is what makes the fitting audit cheap:
+        // one hook covers the whole page, and widgets never have to remember to check themselves.
+        UiFitAudit.Check(rect, text, resolvedFont, singleLine);
+
         Color oldColor = GUI.color;
         TextAnchor oldAnchor = Text.Anchor;
         GameFont oldFont = Text.Font;
         try
         {
-            Text.Font = UiKitFonts.ToGameFont(font ?? theme.DefaultFont);
+            Text.Font = UiKitFonts.ToGameFont(resolvedFont);
             Text.Anchor = anchor;
             GUI.color = color ?? theme.TextPrimary;
             VerseWidgets.Label(rect, text);
@@ -180,7 +189,7 @@ public static class UiThemeDraw
             UiStatusTone.Disabled => theme.TextDisabled,
             _ => theme.TextSecondary
         };
-        Label(rect, text, theme, textColor, font ?? UiFont.Tiny, TextAnchor.MiddleCenter);
+        Label(rect, text, theme, textColor, font ?? UiFont.Tiny, TextAnchor.MiddleCenter, singleLine: true);
     }
 
     private static void Solid(Rect rect, Color color)

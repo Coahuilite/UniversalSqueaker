@@ -16,6 +16,9 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/xenotype-layer";
 
+    // Row title and detail line resolve through UsPacksText (UsRaceLayerWidget.cs): one keyed
+    // template per text, translated once at the draw call site.
+
     private const float RowGap = 2f;
 
     public override string Kind => KindName;
@@ -89,10 +92,10 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
 
-        string detail = domain.EnabledCount + " / " + domain.CandidateCount + " enabled" + StateSuffix(domain.State);
+        string detail = UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount, domain.State);
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 20f), 18f),
-            domain.DisplayName + " (" + domain.RaceDefName + ")",
+            UsPacksText.Format(ctx, UsPacksText.KeyXenotypeRaceContext, domain.DisplayName, domain.RaceDefName),
             ctx.Theme,
             selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -117,16 +120,5 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
     {
         float measured = ctx.Metrics.MeasureText(domain.DisplayName, UiFont.Small, Math.Max(1f, BodyWidth(ctx) - 60f));
         return Math.Max(48f, measured + 32f);
-    }
-
-    private static string StateSuffix(SqueakVoicePackDomainState state)
-    {
-        return state switch
-        {
-            SqueakVoicePackDomainState.Orphan => " · orphan",
-            SqueakVoicePackDomainState.TargetUnavailable => " · target unavailable",
-            SqueakVoicePackDomainState.Dormant => " · dormant",
-            _ => "",
-        };
     }
 }

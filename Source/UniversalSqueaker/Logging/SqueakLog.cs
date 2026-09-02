@@ -80,6 +80,13 @@ public static class SqueakLog
     public static void CompAutoAttached(string race) => Emit(SqueakLogEvent.VoicePackCompAutoAttached, new SqueakLogData(race: race), false);
     public static void CompAttachSkipped(string race, string reason) => Emit(SqueakLogEvent.VoicePackCompAttachSkipped, new SqueakLogData(race: race, reason: reason), false);
     public static void CompAttachFailed(Exception ex) => Emit(SqueakLogEvent.VoicePackCompAttachFailed, new SqueakLogData(exception: ex), true);
+    /// <summary>UI text-fit audit finding. The audit itself deduplicates by element+text, so this is
+    /// emitted once per distinct defect rather than once per frame.</summary>
+    public static void LabelOverflow(string elementPath, string axis, string font, float needed, float available)
+    {
+        if (!ShouldEmitDev) return;
+        Emit(SqueakLogEvent.LabelOverflow, new SqueakLogData(target: elementPath, reason: axis, source: font, needed: needed, available: available), false);
+    }
 
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {

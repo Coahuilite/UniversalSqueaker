@@ -24,6 +24,9 @@ public sealed class UsHelpPanelWidget : IUiWidget
     private const float ContentGap = 6f;
     private const float ContentLabelHeight = 18f;
 
+    /// <summary>Keyed format string of the panel header; <c>{0}</c> is the active section title.</summary>
+    private const string HeaderFormatKey = "US.Help.Header";
+
     private UiElementSpec spec = UiElementSpec.Empty;
 
     string IUiWidget.Kind => Kind;
@@ -54,12 +57,8 @@ public sealed class UsHelpPanelWidget : IUiWidget
     public float Measure(UiWidgetContext ctx)
     {
         float textWidth = Math.Max(1f, ctx.ViewWidth - Padding * 2f);
-        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
-        UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
-
-        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
-        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
-        UsHelpPanelLogic.HelpPanelDisplay display = UsHelpPanelLogic.Resolve(section, hover, selection);
+        HelpSection? section = CurrentSection(ctx);
+        UsHelpPanelLogic.HelpPanelDisplay display = ResolveFrameDisplay(ctx, section);
 
         float listHeight = ItemHeight;
         if (section != null && section.Items.Count > 0)
@@ -77,12 +76,8 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
         UiThemeDraw.Panel(rect, ctx.Theme);
 
-        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
-        UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
-
-        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
-        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
-        UsHelpPanelLogic.HelpPanelDisplay display = UsHelpPanelLogic.Resolve(section, hover, selection);
+        HelpSection? section = CurrentSection(ctx);
+        UsHelpPanelLogic.HelpPanelDisplay display = ResolveFrameDisplay(ctx, section);
 
         float x = rect.x + Padding;
         float y = rect.y + Padding;
@@ -91,11 +86,16 @@ public sealed class UsHelpPanelWidget : IUiWidget
         // Keep the context header fixed at the top of the help surface; the index and body below
         // follow the active section, hover, or selection without changing the panel's hierarchy.
         Rect headerRect = new(x, y, textWidth, TitleHeight);
-        UiThemeDraw.SectionHeader(headerRect, "HELP  ·  " + display.Title, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
+        UiThemeDraw.SectionHeader(
+            headerRect,
+            string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.Title),
+            ctx.Theme,
+            ctx.Theme.TextPrimary,
+            UiFont.Small);
         UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
         y += TitleHeight + TitleGap;
 
-        DrawItemRow(new Rect(x, y, textWidth, ItemHeight), UsHelpPanelLogic.OverviewLabel,
+        DrawItemRow(new Rect(x, y, textWidth, ItemHeight), UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabel),
             selected: display.IsOverview, itemKey: null, ctx);
         y += ItemHeight;
 
@@ -144,11 +144,10 @@ public sealed class UsHelpPanelWidget : IUiWidget
             // Hover changes the resolved help text, which changes the panel height; bump the
             // revision only when the display text actually changes so transient hover events do
             // not invalidate layout. Selection changes are bumped by the Host binding boundary.
-            string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
-            UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
+            HelpSection? section = CurrentSection(ctx);
             string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
-            string before = UsHelpPanelLogic.Resolve(section, currentHover, selection).Text;
-            string after = UsHelpPanelLogic.Resolve(section, itemKey ?? "", selection).Text;
+            string before = UsHelpPanelLogic.Resolve(section, currentHover, selection, TranslationSeam(ctx)).Text;
+            string after = UsHelpPanelLogic.Resolve(section, itemKey ?? "", selection, TranslationSeam(ctx)).Text;
             ctx.Bindings.Invoke("set-help-hover", itemKey ?? "");
             if (!string.Equals(after, before, StringComparison.Ordinal))
             {
@@ -171,5 +170,33 @@ public sealed class UsHelpPanelWidget : IUiWidget
             // set-help-selection bumps the session revision through the Host binding boundary.
             ctx.Bindings.Invoke("set-help-selection", capturedKey);
         }
+    }
+
+    /// <summary>The section this panel is currently explaining (null when nothing is selected).</summary>
+    private static HelpSection? CurrentSection(UiWidgetContext ctx)
+    {
+        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
+        UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
+        return section;
+    }
+
+    /// <summary>Resolves the display for the frame's current hover/selection bindings.</summary>
+    private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
+    {
+        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
+        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
+        return UsHelpPanelLogic.Resolve(section, hover, selection, TranslationSeam(ctx));
+    }
+
+    /// <summary>
+    /// The seam handed to the Verse-free panel logic. That module may not reference Verse, so it
+    /// returns Keyed entry NAMES for its own three strings; this is where they become display text.
+    /// Measure, Draw and the hover text-diff all resolve through this one seam, so a measured height
+    /// can never belong to a different string than the one drawn. Catalog text is deliberately not
+    /// routed through it while the catalog is still plain English (see <see cref="UsHelpPanelLogic"/>).
+    /// </summary>
+    private static Func<string, string> TranslationSeam(UiWidgetContext ctx)
+    {
+        return key => UsKernelDraw.Keyed(ctx, key);
     }
 }

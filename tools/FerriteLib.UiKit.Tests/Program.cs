@@ -43,6 +43,9 @@ internal static class Program
         Console.WriteLine("Kernel widget behavior (stepper / mode-row)...");
         failures += KernelWidgetBehaviorTests.RunAll();
 
+        Console.WriteLine("Kernel text-fit audit (half-width model, reporting policy)...");
+        failures += KernelTextAuditTests.RunAll();
+
         Console.WriteLine("Kernel vertical slice (greenfield)...");
         failures += KernelSmokeTests.RunAll();
 

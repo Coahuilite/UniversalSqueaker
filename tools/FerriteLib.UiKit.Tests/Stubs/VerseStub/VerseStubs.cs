@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -69,12 +70,160 @@ public struct TaggedString
     }
 }
 
-/// <summary>Deterministic translation stub: keys pass through unchanged.</summary>
+/// <summary>
+/// Minimal stand-in for Verse's argument wrapper so production code can use the idiomatic
+/// <c>"Key".Translate(a, b)</c> form under the harness. Formatting is invariant-culture
+/// <c>string.Format</c>, matching what the shipped call sites rely on.
+/// </summary>
+public readonly struct NamedArgument
+{
+    private readonly object? value;
+
+    public NamedArgument(object? value)
+    {
+        this.value = value;
+    }
+
+    public static implicit operator NamedArgument(string? value) => new NamedArgument(value);
+
+    public static implicit operator NamedArgument(int value) => new NamedArgument(value);
+
+    public static implicit operator NamedArgument(float value) => new NamedArgument(value);
+
+    public static implicit operator NamedArgument(bool value) => new NamedArgument(value);
+
+    public static implicit operator NamedArgument(TaggedString value) => new NamedArgument(value.RawText);
+
+    public override string ToString()
+    {
+        return value?.ToString() ?? "";
+    }
+}
+
+/// <summary>
+/// Deterministic translation stub. By default keys pass through unchanged, which keeps the neutral
+/// UiKit lanes free of any product vocabulary. A harness may install <see cref="Resolve"/> to make
+/// key lookups behave like the real language database, so production widgets can be measured against
+/// the exact strings a player would see.
+/// </summary>
 public static class Translator
 {
+    /// <summary>Optional resolver: key to displayed text. Null keeps the pass-through behaviour.</summary>
+    public static Func<string, string>? Resolve;
+
     public static TaggedString Translate(this string key)
     {
+        Func<string, string>? resolver = Resolve;
+        if (resolver != null && key != null)
+        {
+            string? text = resolver(key);
+            if (text != null) return new TaggedString(text);
+        }
+
         return new TaggedString(key ?? "");
+    }
+
+    /// <summary>
+    /// Argumented translate forms. Verse declares these on
+    /// <c>TranslatorFormattedStringExtensions</c> and the compiler binds call sites there, so the stub
+    /// carries the same members under both type names; see that class below.
+    /// </summary>
+    public static TaggedString Translate(this string key, NamedArgument arg)
+    {
+        return TranslateFormatted(key, arg);
+    }
+
+    public static TaggedString Translate(this string key, NamedArgument arg0, NamedArgument arg1)
+    {
+        return TranslateFormatted(key, arg0, arg1);
+    }
+
+    public static TaggedString Translate(
+        this string key,
+        NamedArgument arg0,
+        NamedArgument arg1,
+        NamedArgument arg2)
+    {
+        return TranslateFormatted(key, arg0, arg1, arg2);
+    }
+
+    public static TaggedString Translate(
+        this string key,
+        NamedArgument arg0,
+        NamedArgument arg1,
+        NamedArgument arg2,
+        NamedArgument arg3)
+    {
+        return TranslateFormatted(key, arg0, arg1, arg2, arg3);
+    }
+
+    private static TaggedString TranslateFormatted(string key, params NamedArgument[] args)
+    {
+        return new TaggedString(FormatWith(Translate(key).RawText, args));
+    }
+
+    internal static string FormatWith(string template, params NamedArgument[] args)
+    {
+        if (args.Length == 0) return template;
+
+        object[] values = new object[args.Length];
+        for (int i = 0; i < args.Length; i++) values[i] = args[i].ToString();
+        try
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, template, values);
+        }
+        catch (FormatException)
+        {
+            // A placeholder/argument mismatch is a content bug. Return the raw template instead of
+            // throwing so one bad Keyed row cannot abort an entire harness sweep.
+            return template;
+        }
+    }
+}
+
+/// <summary>
+/// Stub for the Verse type that actually declares <c>Translate(this string, NamedArgument…)</c>.
+/// Reference assemblies bind call sites here, so the name has to exist at runtime too.
+/// </summary>
+public static class TranslatorFormattedStringExtensions
+{
+    public static TaggedString Translate(this TaggedString taggedString, NamedArgument arg)
+    {
+        return new TaggedString(Translator.FormatWith(taggedString.RawText, arg));
+    }
+
+    public static TaggedString Translate(this TaggedString taggedString, NamedArgument arg0, NamedArgument arg1)
+    {
+        return new TaggedString(Translator.FormatWith(taggedString.RawText, arg0, arg1));
+    }
+
+    public static TaggedString Translate(this string key, NamedArgument arg)
+    {
+        return Translator.Translate(key, arg);
+    }
+
+    public static TaggedString Translate(this string key, NamedArgument arg0, NamedArgument arg1)
+    {
+        return Translator.Translate(key, arg0, arg1);
+    }
+
+    public static TaggedString Translate(
+        this string key,
+        NamedArgument arg0,
+        NamedArgument arg1,
+        NamedArgument arg2)
+    {
+        return Translator.Translate(key, arg0, arg1, arg2);
+    }
+
+    public static TaggedString Translate(
+        this string key,
+        NamedArgument arg0,
+        NamedArgument arg1,
+        NamedArgument arg2,
+        NamedArgument arg3)
+    {
+        return Translator.Translate(key, arg0, arg1, arg2, arg3);
     }
 }
 
@@ -84,11 +233,45 @@ public static class Text
 
     public static TextAnchor Anchor { get; set; }
 
+    public static bool WordWrap { get; set; } = true;
+
     // Deterministic stub so real widget Measure/Draw paths (e.g. ChromeBannerWidget, the US
     // kernel sections) can execute text-height layout without a real IMGUI text engine.
     public static float CalcHeight(string text, float width)
     {
         return 16f;
+    }
+
+    /// <summary>
+    /// Half-width advance model, the same convention every real UI font follows: a CJK ideograph or
+    /// full-width punctuation occupies one em, and a Latin/digit character occupies about half an em.
+    /// That makes the stub's widths track what a real font engine reports closely enough to catch a
+    /// label that no longer fits its rect, while staying bit-deterministic across runs.
+    /// </summary>
+    public static Vector2 CalcSize(string text)
+    {
+        float em = EmOf(Font);
+        float units = 0f;
+        foreach (char c in text ?? "") units += IsWide(c) ? 2f : 1f;
+        return new Vector2(units * em * 0.5f, em * 1.25f);
+    }
+
+    private static float EmOf(GameFont font)
+    {
+        return font switch
+        {
+            GameFont.Tiny => 12f,
+            GameFont.Medium => 18f,
+            _ => 16f
+        };
+    }
+
+    private static bool IsWide(char c)
+    {
+        return c >= '\u2E80' && (
+            c <= '\u303F' || (c >= '\u3400' && c <= '\u4DBF') || (c >= '\u4E00' && c <= '\u9FFF')
+            || (c >= '\uAC00' && c <= '\uD7AF') || (c >= '\uF900' && c <= '\uFAFF')
+            || (c >= '\uFF00' && c <= '\uFF60') || (c >= '\uFFE0' && c <= '\uFFE6'));
     }
 }
 

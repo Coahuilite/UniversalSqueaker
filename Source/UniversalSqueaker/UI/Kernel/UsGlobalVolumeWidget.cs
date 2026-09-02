@@ -77,7 +77,7 @@ public sealed class UsGlobalVolumeWidget : UsSectionWidgetBase
         string display = Mathf.RoundToInt(value * 100f) + "%";
         UsKernelDraw.Label(
             new Rect(rect.x, rect.y + 4f, Math.Max(1f, fieldRect.x - rect.x - 8f), 16f),
-            "Global volume: " + display,
+            string.Format(ctx.Translation.Translate("US.Tuning.GlobalVolume"), display),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,

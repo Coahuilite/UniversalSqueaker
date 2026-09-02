@@ -5,13 +5,23 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// Pure display resolution for the right-hand help panel.
 /// Kept free of Verse/Unity so the overview/hover/selection switching can be unit-tested in the
-/// zero-Verse UI logic gate.
+/// zero-Verse UI logic gate. Its own three UI strings are therefore Keyed entry <em>names</em>, never
+/// text: the drawing site (<c>UsHelpPanelWidget</c>) hands <see cref="Resolve"/> the Host translation
+/// seam, and only these three names go through it. Catalog titles/labels/body are deliberately not
+/// passed to the seam while they are still plain English — an unresolved lookup comes back verbatim,
+/// which RimWorld then pseudo-translates into accented garbage whenever DevMode is on. Keying the
+/// catalog is the next pass; when it lands, those entries route through the same seam.
 /// </summary>
 internal static class UsHelpPanelLogic
 {
-    internal const string EmptyTitle = "Help";
-    internal const string EmptyText = "Select a section to see its help here.";
-    internal const string OverviewLabel = "Overview";
+    /// <summary>Panel title/label when no help section is selected.</summary>
+    internal const string EmptyTitle = "US.Help.EmptyTitle";
+
+    /// <summary>Panel body when no help section is selected.</summary>
+    internal const string EmptyText = "US.Help.EmptyText";
+
+    /// <summary>Index row and content label of the section overview (as opposed to one item).</summary>
+    internal const string OverviewLabel = "US.Help.Overview";
 
     internal readonly struct HelpPanelDisplay
     {
@@ -35,11 +45,21 @@ internal static class UsHelpPanelLogic
         public string? ItemKey { get; }
     }
 
-    internal static HelpPanelDisplay Resolve(HelpSection? section, string helpHoverKey, string helpSelectionKey)
+    internal static HelpPanelDisplay Resolve(
+        HelpSection? section,
+        string helpHoverKey,
+        string helpSelectionKey,
+        Func<string, string>? translate = null)
     {
+        Func<string, string> keyed = translate ?? Identity;
+
         if (section == null)
         {
-            return new HelpPanelDisplay(EmptyTitle, EmptyTitle, EmptyText, isOverview: true);
+            return new HelpPanelDisplay(
+                keyed(EmptyTitle),
+                keyed(EmptyTitle),
+                keyed(EmptyText),
+                isOverview: true);
         }
 
         if (!string.IsNullOrEmpty(helpSelectionKey)
@@ -66,8 +86,14 @@ internal static class UsHelpPanelLogic
 
         return new HelpPanelDisplay(
             section.Title,
-            OverviewLabel,
+            keyed(OverviewLabel),
             section.Overview,
             isOverview: true);
+    }
+
+    /// <summary>Seam used when the caller only wants the switching logic (the zero-Verse gate).</summary>
+    private static string Identity(string key)
+    {
+        return key;
     }
 }

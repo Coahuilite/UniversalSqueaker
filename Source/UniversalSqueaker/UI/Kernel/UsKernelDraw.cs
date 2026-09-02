@@ -12,6 +12,13 @@ namespace UniversalSqueaker.UI;
 /// Visual helpers for kernel-owned US composite widgets. These are drawing helpers only; input
 /// authority stays with native IMGUI controls through <see cref="UiNative"/>. All global GUI state
 /// (color/font/anchor) is restored before returning.
+///
+/// Text contract: every <c>text</c>/<c>label</c>/<c>title</c> parameter here is already-resolved
+/// display text. Only <see cref="Dropdown"/> sees a <see cref="UiWidgetContext"/>, and even it
+/// resolves nothing — option pairs arrive as (display, value) with the display decided by the
+/// caller. That is deliberate: the helpers carry no key knowledge, so a string is resolved exactly
+/// once at the site that owns it (see <see cref="Keyed"/>), never once for Measure and again for
+/// Draw.
 /// </summary>
 public static class UsKernelDraw
 {
@@ -41,9 +48,32 @@ public static class UsKernelDraw
         }
     }
 
-    public static void Label(Rect rect, string text, UiTheme theme, Color? color = null, UiFont? font = null, TextAnchor anchor = TextAnchor.MiddleLeft)
+    /// <param name="singleLine">
+    /// Forwarded to the fitting audit. True for surfaces that must render on one line (dropdown trigger
+    /// and option rows), where the real failure mode is a too-narrow rect rather than a too-short band.
+    /// </param>
+    public static void Label(
+        Rect rect,
+        string text,
+        UiTheme theme,
+        Color? color = null,
+        UiFont? font = null,
+        TextAnchor anchor = TextAnchor.MiddleLeft,
+        bool singleLine = false)
     {
-        UiThemeDraw.Label(rect, text, theme, color ?? theme.TextPrimary, font ?? UiFont.Small, anchor);
+        UiThemeDraw.Label(rect, text, theme, color ?? theme.TextPrimary, font ?? UiFont.Small, anchor, singleLine);
+    }
+
+    /// <summary>
+    /// The single keyed-text outlet for US kernel widgets: resolves a Keyed entry name through the
+    /// Host-provided translation seam. Call sites resolve once here and hand the resulting string to
+    /// the drawing helpers; when one string feeds both Measure and Draw, both passes must come back
+    /// through this method, otherwise the measured height belongs to a different string than the one
+    /// actually drawn.
+    /// </summary>
+    public static string Keyed(UiWidgetContext ctx, string key)
+    {
+        return ctx.Translation.Translate(key);
     }
 
     /// <summary>Draws a selection-style button surface and returns whether it was clicked (native invisible button).</summary>
@@ -97,7 +127,8 @@ public static class UsKernelDraw
             ctx.Theme,
             current.Length > 0 ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            TextAnchor.MiddleLeft,
+            singleLine: true);
 
         // The trigger click stores the popup anchor in Host window space (the engine translates
         // draw rects inside scrolls/groups); the popup pass draws and hit-tests in that same
@@ -141,7 +172,8 @@ public static class UsKernelDraw
                 ctx.Theme,
                 selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
                 UiFont.Small,
-                TextAnchor.MiddleLeft);
+                TextAnchor.MiddleLeft,
+                singleLine: true);
 
             if (UiNative.DropdownOptionRow(rowRect, elementId, ctx.Session))
             {

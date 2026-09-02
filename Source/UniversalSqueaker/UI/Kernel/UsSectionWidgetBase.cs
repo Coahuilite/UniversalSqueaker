@@ -18,6 +18,9 @@ public abstract class UsSectionWidgetBase : IUiWidget
 {
     private UiElementSpec spec = UiElementSpec.Empty;
 
+    /// <summary>Keyed format string of the tripped-section caption; <c>{0}</c> is the card title.</summary>
+    private const string FallbackNoteKey = "US.Card.FallbackNote";
+
     string IUiWidget.Kind => Kind;
 
     public abstract string Kind { get; }
@@ -55,7 +58,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
             rect,
             () => DrawBody(rect, ctx),
             fallback => DrawCard(fallback, ctx, body =>
-                UsKernelDraw.Label(body, SectionTitle(ctx) + " (unavailable in fallback mode)", ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny)));
+                UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny)));
     }
 
     /// <summary>True when the section's Tab attribute (if any) matches the active-tab binding.</summary>
@@ -66,6 +69,12 @@ public abstract class UsSectionWidgetBase : IUiWidget
         return string.Equals(tab.Trim(), active, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// The one card-title outlet: a non-empty <c>TitleKey</c> attribute resolves through the Host
+    /// translation seam, otherwise the literal <c>Title</c> attribute is used, otherwise the widget
+    /// Kind. Measure and Draw both take the title from here, so a section never sizes one string and
+    /// draws another.
+    /// </summary>
     protected string SectionTitle(UiWidgetContext ctx)
     {
         if (spec.TryGetAttribute("TitleKey", out string key) && key.Trim().Length > 0)
@@ -74,6 +83,17 @@ public abstract class UsSectionWidgetBase : IUiWidget
         }
 
         return spec.TryGetAttribute("Title", out string title) ? title : Kind;
+    }
+
+    /// <summary>
+    /// Caption drawn instead of the body once the session guard has tripped this section. The title is
+    /// injected into the keyed format string instead of concatenated, so a language that puts the note
+    /// before the title may do so; the title itself still comes from <see cref="SectionTitle"/>, the
+    /// single title outlet.
+    /// </summary>
+    private string FallbackNote(UiWidgetContext ctx)
+    {
+        return string.Format(UsKernelDraw.Keyed(ctx, FallbackNoteKey), SectionTitle(ctx));
     }
 
     /// <summary>Whether the help panel currently selects this section (drives the accent border).</summary>

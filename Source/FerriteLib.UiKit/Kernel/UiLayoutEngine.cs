@@ -178,13 +178,23 @@ public sealed class UiLayoutEngine
             }
             else
             {
-                if (entry.IsContainer)
+                // Announce the owning element so the text-fit audit can attribute a finding by path
+                // without every widget threading its own identity through the drawing helpers.
+                UiFitAudit.BeginElement(entry.Path);
+                try
                 {
-                    DrawContainer(entry, drawRect, entryCtx);
+                    if (entry.IsContainer)
+                    {
+                        DrawContainer(entry, drawRect, entryCtx);
+                    }
+                    else
+                    {
+                        entry.Widget?.Draw(drawRect, entryCtx);
+                    }
                 }
-                else
+                finally
                 {
-                    entry.Widget?.Draw(drawRect, entryCtx);
+                    UiFitAudit.EndElement();
                 }
 
                 index++;

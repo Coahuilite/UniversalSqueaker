@@ -79,10 +79,29 @@ public sealed class UsKernelFooterWidget : IUiWidget
         string prefix = saveStatus == "Saving" || isDirty ? "● " : "";
         UsKernelDraw.Label(
             new Rect(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height),
-            prefix + saveStatus,
+            prefix + SaveStatusText(ctx, saveStatus),
             ctx.Theme,
             statusColor,
             UiFont.Tiny,
             TextAnchor.MiddleRight);
+    }
+
+    /// <summary>
+    /// Display-only translation of the save-status token. All status logic in Draw (color, dot
+    /// prefix) keeps matching on the raw token from the binding — never on translated text — and an
+    /// unrecognized token still renders raw, exactly like before the Keyed migration.
+    /// </summary>
+    private static string SaveStatusText(UiWidgetContext ctx, string token)
+    {
+        string? key = token switch
+        {
+            "Idle" => "US.Footer.SaveStatus.Idle",
+            "Saving" => "US.Footer.SaveStatus.Saving",
+            "Saved" => "US.Footer.SaveStatus.Saved",
+            "Failed" => "US.Footer.SaveStatus.Failed",
+            "Unknown" => "US.Footer.SaveStatus.Unknown",
+            _ => null,
+        };
+        return key != null ? ctx.Translation.Translate(key) : token;
     }
 }

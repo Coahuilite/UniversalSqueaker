@@ -15,6 +15,9 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/race-layer";
 
+    // Row detail line: composed from keyed templates only (see UsPacksText at the bottom of this
+    // file, which the Xenotype layer and the VoicePack checklist share, so one text has one resolver).
+
     private const float RowGap = 2f;
 
     public override string Kind => KindName;
@@ -87,7 +90,7 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
 
-        string detail = race.EnabledCount + " / " + race.CandidateCount + " enabled" + StateSuffix(race.State);
+        string detail = UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount, race.State);
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 20f), 18f),
             race.DisplayName,
@@ -114,14 +117,46 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         float measured = ctx.Metrics.MeasureText(race.DisplayName, UiFont.Small, Math.Max(1f, BodyWidth(ctx) - 40f));
         return Math.Max(48f, measured + 32f);
     }
+}
 
-    private static string StateSuffix(SqueakVoicePackDomainState state)
+/// <summary>
+/// Keyed-text outlet for the Packs workspace. The Race and Xenotype layers render the same
+/// "n / m enabled · state" line and the same "name (race)" title, and the checklist joins pack
+/// metadata with the same separator, so the template composition lives here once: Measure takes row
+/// heights from Def/data text only (never from these strings), Draw is their single consumer, and
+/// every lookup goes through <see cref="UiWidgetContext.Translation"/> — no Verse bypass, no second copy.
+/// </summary>
+internal static class UsPacksText
+{
+    internal const string KeyEnabledSummary = "US.Packs.Domain.EnabledSummary";
+    internal const string KeyEnabledState = "US.Packs.Domain.EnabledState";
+    internal const string KeyStateOrphan = "US.Packs.Domain.State.Orphan";
+    internal const string KeyStateTargetUnavailable = "US.Packs.Domain.State.TargetUnavailable";
+    internal const string KeyStateDormant = "US.Packs.Domain.State.Dormant";
+    internal const string KeyXenotypeRaceContext = "US.Packs.Domain.XenotypeRaceContext";
+
+    /// <summary>Formats a keyed template with invariant culture so digits stay as plain as before.</summary>
+    internal static string Format(UiWidgetContext ctx, string key, params object[] args)
+    {
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, ctx.Translation.Translate(key), args);
+    }
+
+    /// <summary>The Tiny status line under a domain row: enabled/candidate counts plus optional state.</summary>
+    internal static string DetailText(UiWidgetContext ctx, int enabled, int candidate, SqueakVoicePackDomainState state)
+    {
+        string summary = Format(ctx, KeyEnabledSummary, enabled, candidate);
+        string stateKey = StateKey(state);
+        return stateKey.Length == 0 ? summary : Format(ctx, KeyEnabledState, summary, ctx.Translation.Translate(stateKey));
+    }
+
+    /// <summary>Translation key of the row state, or empty when the domain carries no state.</summary>
+    internal static string StateKey(SqueakVoicePackDomainState state)
     {
         return state switch
         {
-            SqueakVoicePackDomainState.Orphan => " · orphan",
-            SqueakVoicePackDomainState.TargetUnavailable => " · target unavailable",
-            SqueakVoicePackDomainState.Dormant => " · dormant",
+            SqueakVoicePackDomainState.Orphan => KeyStateOrphan,
+            SqueakVoicePackDomainState.TargetUnavailable => KeyStateTargetUnavailable,
+            SqueakVoicePackDomainState.Dormant => KeyStateDormant,
             _ => "",
         };
     }

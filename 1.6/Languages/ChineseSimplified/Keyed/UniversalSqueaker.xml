@@ -47,4 +47,118 @@
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
   <US.Settings.PageUnavailable.Title>设置页不可用</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>{0} 设置页无法构建或绘制，因此不显示残缺界面。关闭后重新打开即可重试。若持续失败，请在日志中查找 usdiag 记录：它会指出出错的控件并附带异常堆栈。</US.Settings.PageUnavailable.Body>
+
+  <!-- Schema=2 设置页标题（UsPageTitleWidget / UsNavWidget）与卡片标题（清单 TitleKey）。
+       中文串按净宽预算收紧：nav 描述 ≤25 半角单位，中间列 Tiny 文案 ≤47 半角单位。 -->
+  <US.Page.Overview.Title>语音包路由</US.Page.Overview.Title>
+  <US.Page.Overview.Caption>选择本存档的路由与播放行为</US.Page.Overview.Caption>
+  <US.Page.Distance.Title>距离衰减</US.Page.Distance.Title>
+  <US.Page.Distance.Caption>设定区间、比对曲线、再选快速预设</US.Page.Distance.Caption>
+  <US.Page.Packs.Title>语音包选择</US.Page.Packs.Title>
+  <US.Page.Packs.Caption>按流程：先筛选域，再选域，然后启用包</US.Page.Packs.Caption>
+  <US.Page.Tuning.Title>分层调音</US.Page.Tuning.Title>
+  <US.Page.Tuning.Caption>先选层与域，再设动作范围与心情值</US.Page.Tuning.Caption>
+  <US.Page.Presets.Title>基线预设</US.Page.Presets.Title>
+  <US.Page.Presets.Caption>可导入基线由已安装的 Def 提供</US.Page.Presets.Caption>
+
+  <US.Nav.Overview.Label>总览</US.Nav.Overview.Label>
+  <US.Nav.Overview.Description>路由与播放</US.Nav.Overview.Description>
+  <US.Nav.Distance.Label>距离</US.Nav.Distance.Label>
+  <US.Nav.Distance.Description>区间与衰减</US.Nav.Distance.Description>
+  <US.Nav.Packs.Label>语音包</US.Nav.Packs.Label>
+  <US.Nav.Packs.Description>筛选、选域、启用</US.Nav.Packs.Description>
+  <US.Nav.Tuning.Label>调音</US.Nav.Tuning.Label>
+  <US.Nav.Tuning.Description>分层动作与心情规则</US.Nav.Tuning.Description>
+  <US.Nav.Presets.Label>预设</US.Nav.Presets.Label>
+  <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
+
+  <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
+  <US.Section.PlaybackBehaviour>播放行为</US.Section.PlaybackBehaviour>
+  <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
+  <US.Section.DistanceAttenuation>距离衰减</US.Section.DistanceAttenuation>
+  <US.Section.FilterDomains>1. 筛选音域</US.Section.FilterDomains>
+  <US.Section.RaceDomain>2. 选择种族域</US.Section.RaceDomain>
+  <US.Section.XenotypeDomain>2. 或选择异型域</US.Section.XenotypeDomain>
+  <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
+  <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
+  <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
+  <US.Tuning.EasterEggs>彩蛋音效</US.Tuning.EasterEggs>
+  <US.Tuning.EasterEggs.On>开启：彩蛋加入音效池</US.Tuning.EasterEggs.On>
+  <US.Tuning.EasterEggs.Off>关闭：仅普通语音条目</US.Tuning.EasterEggs.Off>
+  <US.Tuning.ScaleCooldown>按时间流速缩放冷却</US.Tuning.ScaleCooldown>
+  <US.Tuning.ScaleTalking>按交谈缩放频率</US.Tuning.ScaleTalking>
+  <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
+  <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
+  <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
+  <US.Tuning.Mode.Vanilla>原版</US.Tuning.Mode.Vanilla>
+  <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
+  <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>
+  <US.Tuning.Mode.Disabled>禁用</US.Tuning.Mode.Disabled>
+  <US.Packs.Filter.All>全部</US.Packs.Filter.All>
+  <US.Packs.Filter.EnabledOnly>仅已启用</US.Packs.Filter.EnabledOnly>
+  <US.Packs.Filter.Conflicts>仅冲突</US.Packs.Filter.Conflicts>
+  <US.Packs.Filter.OrphanOnly>仅已失效</US.Packs.Filter.OrphanOnly>
+  <US.Packs.Filter.Race>种族</US.Packs.Filter.Race>
+  <US.Packs.Filter.Xenotype>异型</US.Packs.Filter.Xenotype>
+  <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
+  <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
+  <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
+  <US.Packs.Domain.State.Orphan>已失效</US.Packs.Domain.State.Orphan>
+  <US.Packs.Domain.State.TargetUnavailable>目标不可用</US.Packs.Domain.State.TargetUnavailable>
+  <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
+  <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
+  <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
+  <US.Packs.Checklist.DormantBanner>Biotech 未启用；该异型域处于休眠。</US.Packs.Checklist.DormantBanner>
+  <US.Packs.Checklist.TargetUnavailableBanner>选中的异型目标未加载。相关选择已保留，便于恢复。</US.Packs.Checklist.TargetUnavailableBanner>
+  <US.Packs.Checklist.ConflictBanner>多个异型 Def 共用该目标；解决前路由保持关闭。</US.Packs.Checklist.ConflictBanner>
+  <US.Packs.Checklist.EmptyDomain>该域未安装任何语音包。</US.Packs.Checklist.EmptyDomain>
+  <US.Packs.Checklist.EmptySearch>没有语音包匹配当前搜索。</US.Packs.Checklist.EmptySearch>
+  <US.Packs.Checklist.OrphanBanner>已选包键不再存在。请使用“清除失效”清理。</US.Packs.Checklist.OrphanBanner>
+  <US.Packs.Checklist.ForgetUnavailable>清除失效</US.Packs.Checklist.ForgetUnavailable>
+  <US.Packs.Checklist.SearchPlaceholder>搜索语音包…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
+  <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
+  <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
+  <US.Packs.Banner.DormantBiotech>Biotech 未启用。异型语音包选择处于休眠，不会路由到 pawn。</US.Packs.Banner.DormantBiotech>
+  <US.Packs.Banner.VanillaMode>语音包模式为原版。已启用的包会保留，但不路由语音包音频。</US.Packs.Banner.VanillaMode>
+  <US.Preset.List.Empty>未安装基线预设。此功能读取由 Def 提供的预设。</US.Preset.List.Empty>
+  <US.Preset.List.Import>导入</US.Preset.List.Import>
+  <US.Preset.List.Selection>{0} 个种族 · {1} 个异型</US.Preset.List.Selection>
+  <US.Preset.Race.Summary>{0}（{1} 个动作，{2} 种心情）</US.Preset.Race.Summary>
+  <US.Preset.Xeno.Inherits>（继承种族）</US.Preset.Xeno.Inherits>
+  <US.Preset.Xeno.Own>（仅自身）</US.Preset.Xeno.Own>
+  <US.Preset.Xeno.Summary>{0}{1}（{2} 个动作，{3} 种心情）</US.Preset.Xeno.Summary>
+  <US.Footer.SaveStatus.Idle>空闲</US.Footer.SaveStatus.Idle>
+  <US.Footer.SaveStatus.Saving>保存中</US.Footer.SaveStatus.Saving>
+  <US.Footer.SaveStatus.Saved>已保存</US.Footer.SaveStatus.Saved>
+  <US.Footer.SaveStatus.Failed>失败</US.Footer.SaveStatus.Failed>
+  <US.Footer.SaveStatus.Unknown>未知</US.Footer.SaveStatus.Unknown>
+  <US.Footer.Build.Unknown>未知</US.Footer.Build.Unknown>
+  <US.Overlay.ManifestMissing>未找到内嵌的 Schema=2 覆盖层资源“{0}”。</US.Overlay.ManifestMissing>
+  <US.Tuning.Layer>调音层</US.Tuning.Layer>
+  <US.Tuning.Domain>层级适用域</US.Tuning.Domain>
+  <US.Tuning.Layer.Global>全局</US.Tuning.Layer.Global>
+  <US.Tuning.Layer.Race>种族</US.Tuning.Layer.Race>
+  <US.Tuning.Layer.Xenotype>异种</US.Tuning.Layer.Xenotype>
+  <US.Tuning.ActionScope>动作范围</US.Tuning.ActionScope>
+  <US.Tuning.Group.Autonomous>自发行为</US.Tuning.Group.Autonomous>
+  <US.Tuning.Group.Operable>可操作 / 指令</US.Tuning.Group.Operable>
+  <US.Tuning.MoodTuning>心情调音</US.Tuning.MoodTuning>
+  <US.Tuning.Scope.Off>关闭</US.Tuning.Scope.Off>
+  <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
+  <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
+  <US.Tuning.Auto>自动</US.Tuning.Auto>
+  <US.Tuning.Factor.Pitch>音</US.Tuning.Factor.Pitch>
+  <US.Tuning.Factor.Volume>量</US.Tuning.Factor.Volume>
+  <US.Tuning.Factor.Jitter>抖</US.Tuning.Factor.Jitter>
+  <US.Distance.Preset.Conservative>保守</US.Distance.Preset.Conservative>
+  <US.Distance.Preset.Balanced>均衡</US.Distance.Preset.Balanced>
+  <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
+  <US.Distance.Preset.Custom>自定义</US.Distance.Preset.Custom>
+  <US.Distance.Status>衰减 {0}  {1}</US.Distance.Status>
+  <US.Card.FallbackNote>{0}（降级模式，暂不可用）</US.Card.FallbackNote>
+  <US.Help.Header>帮助  ·  {0}</US.Help.Header>
+  <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
+  <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
+  <US.Help.Overview>总览</US.Help.Overview>
 </LanguageData>

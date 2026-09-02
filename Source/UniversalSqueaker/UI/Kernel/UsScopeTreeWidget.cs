@@ -27,6 +27,11 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float DomainRowHeight = 28f;
     private const float LayerRowLabelBandHeight = 22f;
     private const float RowHeight = 28f;
+
+    // The inherited-scope hint is a Tiny line: its band has to hold a full Tiny line (a 14px band cut
+    // the tail of every scope name, in any language).
+    private const float InheritedHintHeight = 16f;
+
     private const float MoodRowHeight = 32f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
@@ -38,7 +43,27 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float MoodClearWidth = 52f;
     private const float MoodGap = 6f;
 
-    private static readonly string[] LayerNames = { "Global", "Race", "Xenotype" };
+    // Keyed display text. Every bound value stays untouched: the tuning layer is the "tuning-layer"
+    // int index, scope options bind SqueakActionScope.ToString(), the domain dropdown binds the
+    // (race, xeno) pair and the stepper element ids are built from enums. Only the text drawn to the
+    // player goes through these keys, resolved at the site that owns the Label/SelectionButton call.
+    private const string LayerLabelKey = "US.Tuning.Layer";
+    private const string DomainLabelKey = "US.Tuning.Domain";
+    private const string ActionScopeHeaderKey = "US.Tuning.ActionScope";
+    private const string GroupAutonomousKey = "US.Tuning.Group.Autonomous";
+    private const string GroupOperableKey = "US.Tuning.Group.Operable";
+    private const string MoodTuningHeaderKey = "US.Tuning.MoodTuning";
+    private const string AutoLabelKey = "US.Tuning.Auto";
+    private const string PitchLabelKey = "US.Tuning.Factor.Pitch";
+    private const string VolumeLabelKey = "US.Tuning.Factor.Volume";
+    private const string JitterLabelKey = "US.Tuning.Factor.Jitter";
+
+    /// <summary>
+    /// Display-text keys of the three tuning layers, index-aligned with the "tuning-layer" int binding.
+    /// The length doubles as the layer count for the stacked-row height, so text and geometry share one
+    /// source and Measure can never size a different number of buttons than Draw makes.
+    /// </summary>
+    private static readonly string[] LayerKeys = { "US.Tuning.Layer.Global", "US.Tuning.Layer.Race", "US.Tuning.Layer.Xenotype" };
 
     public override string Kind => KindName;
 
@@ -149,7 +174,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(x, y, innerWidth, RowHeight),
-            "Action Scope",
+            UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -174,7 +199,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
-                targetGroup == ActionScopeGroup.Operable ? "Operable / Command" : "Autonomous",
+                UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.Operable ? GroupOperableKey : GroupAutonomousKey),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Tiny,
@@ -196,7 +221,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
-                "Mood Tuning",
+                UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
                 ctx.Theme,
                 ctx.Theme.TextPrimary,
                 UiFont.Small,
@@ -218,7 +243,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             UsKernelDraw.Label(
                 new Rect(rect.x + LeftPadding, rect.y, 120f, LayerRowLabelBandHeight),
-                "Tuning layer",
+                UsKernelDraw.Keyed(ctx, LayerLabelKey),
                 ctx.Theme,
                 ctx.Theme.TextPrimary,
                 UiFont.Small,
@@ -226,10 +251,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
             float stackedButtonWidth = Math.Max(1f, (rect.width - LeftPadding * 2f - RowGap * 2f) / 3f);
             float y = rect.y + LayerRowLabelBandHeight;
-            for (int i = 0; i < LayerNames.Length; i++)
+            for (int i = 0; i < LayerKeys.Length; i++)
             {
                 Rect buttonRect = new(rect.x + LeftPadding, y, stackedButtonWidth, ButtonHeight);
-                if (UsKernelDraw.SelectionButton(buttonRect, LayerNames[i], ctx.Theme, layer == i, font: UiFont.Tiny))
+                if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
                 {
                     ctx.Bindings.Invoke("set-tuning-layer", i);
                 }
@@ -242,7 +267,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
-            "Tuning layer",
+            UsKernelDraw.Keyed(ctx, LayerLabelKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -251,10 +276,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float available = rect.width - LeftPadding * 2f - 120f - RowGap * 2f;
         float buttonWidth = Math.Max(1f, (available - RowGap * 2f) / 3f);
         float buttonX = rect.x + rect.width - LeftPadding - buttonWidth * 3f - RowGap * 2f;
-        for (int i = 0; i < LayerNames.Length; i++)
+        for (int i = 0; i < LayerKeys.Length; i++)
         {
             Rect buttonRect = new(buttonX, rect.y + (rect.height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(buttonRect, LayerNames[i], ctx.Theme, layer == i, font: UiFont.Tiny))
+            if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
             {
                 ctx.Bindings.Invoke("set-tuning-layer", i);
             }
@@ -275,7 +300,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
-            "Layer domain",
+            UsKernelDraw.Keyed(ctx, DomainLabelKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -310,7 +335,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
-        string displayName = ctx.Translation.Translate(DefinitionFor(row.Action).DisplayKey);
+        string displayName = UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey);
         float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 120f));
 
         UsKernelDraw.Label(
@@ -324,8 +349,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         if (ctx.ViewWidth >= 480f && (!row.HasOwnScope || row.Scope != row.EffectiveScope))
         {
             UsKernelDraw.Label(
-                new Rect(rect.x + rect.width - scopeButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), 14f),
-                "→ " + ShortName(row.EffectiveScope),
+                new Rect(rect.x + rect.width - scopeButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), InheritedHintHeight),
+                "→ " + UsKernelDraw.Keyed(ctx, ScopeLabelKey(row.EffectiveScope)),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Tiny,
@@ -334,11 +359,11 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         var options = new List<KeyValuePair<string, string>>
         {
-            new KeyValuePair<string, string>("Auto", "")
+            new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, AutoLabelKey), "")
         };
         foreach (SqueakActionScope scope in SupportedStates(row.Action))
         {
-            options.Add(new KeyValuePair<string, string>(ShortName(scope), scope.ToString()));
+            options.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, ScopeLabelKey(scope)), scope.ToString()));
         }
 
         string current = row.HasOwnScope ? row.Scope.ToString() : "";
@@ -386,15 +411,15 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             float y = rect.y + headerHeight + RowGap;
             DrawMoodStepper(
                 new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                "P", pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
+                PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
             y += ButtonHeight + RowGap;
             DrawMoodStepper(
                 new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                "V", volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
+                VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
             y += ButtonHeight + RowGap;
             DrawMoodStepper(
                 new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                "J", jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
+                JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
             return;
         }
 
@@ -412,16 +437,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
 
-        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, rect.height), "P", pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
-        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "V", volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
-        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), "J", jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
+        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, rect.height), PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
+        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
+        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
 
         DrawAutoClearButton(clearRect, row, ctx);
     }
 
     private void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, UiWidgetContext ctx)
     {
-        if (UsKernelDraw.SelectionButton(clearRect, "Auto", ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(clearRect, UsKernelDraw.Keyed(ctx, AutoLabelKey), ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null));
         }
@@ -429,7 +454,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     private float DrawMoodStepper(
         Rect rect,
-        string label,
+        string labelKey,
         float value,
         float min,
         float max,
@@ -439,7 +464,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     {
         UsKernelDraw.Label(
             new Rect(rect.x, rect.y + 4f, 14f, 16f),
-            label,
+            UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
@@ -510,7 +535,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private static float LayerRowHeightFor(float bodyWidth)
     {
         return UsesStackedLayerButtons(bodyWidth)
-            ? LayerRowLabelBandHeight + LayerNames.Length * ButtonHeight + (LayerNames.Length - 1) * RowGap
+            ? LayerRowLabelBandHeight + LayerKeys.Length * ButtonHeight + (LayerKeys.Length - 1) * RowGap
             : LayerRowHeight;
     }
 
@@ -564,14 +589,19 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         return SqueakActionDefinitions.Get(action);
     }
 
-    private static string ShortName(SqueakActionScope scope)
+    /// <summary>
+    /// Display-text key of a scope. Purely cosmetic: the bound value of a scope option is always
+    /// <c>scope.ToString()</c>, nothing parses this text back, and the inherited-scope hint is the only
+    /// other consumer. That is what lets the short label be translated while the persisted value stays
+    /// byte-identical.
+    /// </summary>
+    private static string ScopeLabelKey(SqueakActionScope scope)
     {
         return scope switch
         {
-            SqueakActionScope.Disabled => "Off",
-            SqueakActionScope.AnyOccurrence => "Any",
-            SqueakActionScope.ActiveCommand => "Command",
-            _ => "Off",
+            SqueakActionScope.AnyOccurrence => "US.Tuning.Scope.Any",
+            SqueakActionScope.ActiveCommand => "US.Tuning.Scope.Command",
+            _ => "US.Tuning.Scope.Off",
         };
     }
 }

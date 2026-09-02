@@ -88,7 +88,7 @@ public class UniversalSqueakerMod : Mod
         Assembly asm = typeof(UniversalSqueakerMod).Assembly;
         string informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? asm.GetName().Version?.ToString()
-            ?? "unknown";
+            ?? "US.Footer.Build.Unknown".Translate();
 
 #if US_DEV
         int plus = informational.IndexOf('+');

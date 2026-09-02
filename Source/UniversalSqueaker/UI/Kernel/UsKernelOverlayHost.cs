@@ -48,7 +48,7 @@ public static class UsKernelOverlayHost
         if (stream == null)
         {
             throw new InvalidOperationException(
-                $"Embedded Schema=2 overlay resource '{ManifestResourceName}' was not found.");
+                "US.Overlay.ManifestMissing".Translate(ManifestResourceName));
         }
 
         using var reader = new StreamReader(stream);

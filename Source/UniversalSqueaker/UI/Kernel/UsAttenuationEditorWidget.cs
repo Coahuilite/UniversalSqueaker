@@ -27,6 +27,21 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
     private const float NarrowHeight = 24f;
     private const float MinWidth = 200f;
 
+    /// <summary>
+    /// Fallback value of the "distance-preset" binding. It is a <see cref="SqueakDistancePreset"/> name,
+    /// never display text: <see cref="IsCurrentPreset"/> compares against it and it must stay
+    /// byte-identical. The player-facing word lives in <see cref="PresetCustomKey"/> instead.
+    /// </summary>
+    private const string PresetCustomValue = "Custom";
+
+    private const string PresetConservativeKey = "US.Distance.Preset.Conservative";
+    private const string PresetBalancedKey = "US.Distance.Preset.Balanced";
+    private const string PresetStrongKey = "US.Distance.Preset.Strong";
+    private const string PresetCustomKey = "US.Distance.Preset.Custom";
+
+    /// <summary>Keyed narrow-screen status line; <c>{0}</c> is the preset, <c>{1}</c> the distance range.</summary>
+    private const string NarrowSummaryKey = "US.Distance.Status";
+
     public override string Kind => KindName;
 
     public static void Register()
@@ -75,7 +90,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
         float min = ctx.Bindings.TryGet("distance-range-min", out float minBound) ? minBound : AttenuationMath.MinDistance;
         float max = ctx.Bindings.TryGet("distance-range-max", out float maxBound) ? maxBound : 50f;
         AttenuationMath.SanitizeRange(ref min, ref max);
-        string preset = ctx.Bindings.TryGet("distance-preset", out string presetText) ? presetText : "Custom";
+        string preset = ctx.Bindings.TryGet("distance-preset", out string presetText) ? presetText : PresetCustomValue;
 
         float x = rect.x;
         float y = rect.y + TopPadding;
@@ -85,7 +100,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(x, y, rect.width, StatusHeight),
-            preset + "  " + AttenuationMath.FormatRangeDisplay(min, max),
+            PresetDisplay(ctx, preset) + "  " + AttenuationMath.FormatRangeDisplay(min, max),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
@@ -116,11 +131,11 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
     private void DrawPresetButtons(Rect rect, string currentPreset, UiWidgetContext ctx)
     {
         float buttonWidth = (rect.width - Gap * 2f) / 3f;
-        DrawPresetButton(new Rect(rect.x, rect.y, buttonWidth, rect.height), "Conservative",
+        DrawPresetButton(new Rect(rect.x, rect.y, buttonWidth, rect.height), UsKernelDraw.Keyed(ctx, PresetConservativeKey),
             IsCurrentPreset(currentPreset, SqueakDistancePreset.Conservative), SqueakDistancePreset.Conservative, ctx);
-        DrawPresetButton(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), "Balanced",
+        DrawPresetButton(new Rect(rect.x + buttonWidth + Gap, rect.y, buttonWidth, rect.height), UsKernelDraw.Keyed(ctx, PresetBalancedKey),
             IsCurrentPreset(currentPreset, SqueakDistancePreset.Balanced), SqueakDistancePreset.Balanced, ctx);
-        DrawPresetButton(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), "Strong",
+        DrawPresetButton(new Rect(rect.x + (buttonWidth + Gap) * 2f, rect.y, buttonWidth, rect.height), UsKernelDraw.Keyed(ctx, PresetStrongKey),
             IsCurrentPreset(currentPreset, SqueakDistancePreset.Strong), SqueakDistancePreset.Strong, ctx);
     }
 
@@ -134,13 +149,16 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
     private void DrawNarrowSummary(Rect rect, UiWidgetContext ctx)
     {
-        string preset = ctx.Bindings.TryGet("distance-preset", out string presetText) ? presetText : "Custom";
+        string preset = ctx.Bindings.TryGet("distance-preset", out string presetText) ? presetText : PresetCustomValue;
         float min = ctx.Bindings.TryGet("distance-range-min", out float minBound) ? minBound : AttenuationMath.MinDistance;
         float max = ctx.Bindings.TryGet("distance-range-max", out float maxBound) ? maxBound : 50f;
         AttenuationMath.SanitizeRange(ref min, ref max);
         UsKernelDraw.Label(
             rect,
-            "Attenuation " + preset + "  " + AttenuationMath.FormatRangeDisplay(min, max),
+            string.Format(
+                UsKernelDraw.Keyed(ctx, NarrowSummaryKey),
+                PresetDisplay(ctx, preset),
+                AttenuationMath.FormatRangeDisplay(min, max)),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
@@ -150,5 +168,21 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
     private static bool IsCurrentPreset(string currentPreset, SqueakDistancePreset preset)
     {
         return string.Equals(currentPreset, preset.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Display text for the bound preset value. The value is the <see cref="SqueakDistancePreset"/> name
+    /// that <c>set-distance-preset</c> writes and <see cref="IsCurrentPreset"/> compares, so it is never
+    /// translated; only this label mapping is. It matches presets through the same comparison the
+    /// buttons use, so the highlighted button and the status line can never name two different presets;
+    /// an unrecognised value is shown verbatim instead of being renamed.
+    /// </summary>
+    private static string PresetDisplay(UiWidgetContext ctx, string presetValue)
+    {
+        if (IsCurrentPreset(presetValue, SqueakDistancePreset.Conservative)) return UsKernelDraw.Keyed(ctx, PresetConservativeKey);
+        if (IsCurrentPreset(presetValue, SqueakDistancePreset.Balanced)) return UsKernelDraw.Keyed(ctx, PresetBalancedKey);
+        if (IsCurrentPreset(presetValue, SqueakDistancePreset.Strong)) return UsKernelDraw.Keyed(ctx, PresetStrongKey);
+        if (IsCurrentPreset(presetValue, SqueakDistancePreset.Custom)) return UsKernelDraw.Keyed(ctx, PresetCustomKey);
+        return presetValue;
     }
 }

@@ -120,6 +120,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     private UiHost CreateKernelHost()
     {
         kernelSource = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
+        UsTextFitAudit.Begin();
         return UsKernelSettingsHost.Create(kernelSource);
     }
 
@@ -144,6 +145,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
 
     public override void PreClose()
     {
+        UsTextFitAudit.End();
         kernelHost?.Dispose();
         kernelHost = null;
         kernelSource = null;

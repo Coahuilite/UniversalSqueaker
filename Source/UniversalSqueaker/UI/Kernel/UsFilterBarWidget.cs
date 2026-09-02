@@ -18,6 +18,17 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/filter-bar";
 
+    // Keyed display labels. The machine tokens these chips/dropdowns write ("race-filter",
+    // "xenotype-filter", "pack-filter", "search-text" and the SqueakDomainFilterKind values) stay
+    // untranslated; only what the player reads goes through the translation seam.
+    private const string KeyChipAll = "US.Packs.Filter.All";
+    private const string KeyChipEnabledOnly = "US.Packs.Filter.EnabledOnly";
+    private const string KeyChipConflicts = "US.Packs.Filter.Conflicts";
+    private const string KeyChipOrphanOnly = "US.Packs.Filter.OrphanOnly";
+    private const string KeyLabelRace = "US.Packs.Filter.Race";
+    private const string KeyLabelXenotype = "US.Packs.Filter.Xenotype";
+    private const string KeyLabelAuthor = "US.Packs.Filter.Author";
+
     private const float RowHeight = UsFilterBarLayout.RowHeight;
     private const float Gap = UsFilterBarLayout.Gap;
 
@@ -91,25 +102,25 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
         bool allActive = !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
             && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0;
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), "All", ctx.Theme, allActive))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
         {
             ctx.Bindings.Invoke("clear-pack-filters", "");
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), "Enabled only", ctx.Theme, domainFilter.EnabledOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, !domainFilter.EnabledOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), "Conflicts", ctx.Theme, domainFilter.ConflictOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.ConflictOnly, !domainFilter.ConflictOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), "Orphan only", ctx.Theme, domainFilter.OrphanOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, !domainFilter.OrphanOnly));
         }
@@ -124,21 +135,21 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         DrawNestedDropdown(
             new Rect(x, rect.y, dropdownWidth, rect.height),
             "race-filter",
-            "Race",
+            KeyLabelRace,
             ctx);
         x += dropdownWidth + Gap;
 
         DrawNestedDropdown(
             new Rect(x, rect.y, dropdownWidth, rect.height),
             "xenotype-filter",
-            "Xenotype",
+            KeyLabelXenotype,
             ctx);
         x += dropdownWidth + Gap;
 
         DrawNestedDropdown(
             new Rect(x, rect.y, dropdownWidth, rect.height),
             "pack-filter",
-            "Author",
+            KeyLabelAuthor,
             ctx);
     }
 
@@ -146,14 +157,14 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private void DrawFilterDropdownRows(Rect rect, UiWidgetContext ctx)
     {
         float y = rect.y;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "race-filter", "Race", ctx);
+        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "race-filter", KeyLabelRace, ctx);
         y += RowHeight + Gap;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "xenotype-filter", "Xenotype", ctx);
+        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "xenotype-filter", KeyLabelXenotype, ctx);
         y += RowHeight + Gap;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "pack-filter", "Author", ctx);
+        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "pack-filter", KeyLabelAuthor, ctx);
     }
 
-    private void DrawNestedDropdown(Rect rect, string elementId, string label, UiWidgetContext ctx)
+    private void DrawNestedDropdown(Rect rect, string elementId, string labelKey, UiWidgetContext ctx)
     {
         string optionsKey = elementId switch
         {
@@ -162,9 +173,11 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
             _ => "author-options"
         };
 
+        // The nested dropdown resolves the key through the Host translation seam, so the label is
+        // translated in exactly one place for both the wide and the stacked layout.
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Label"] = label,
+            ["LabelKey"] = labelKey,
             ["Bind"] = elementId,
             ["OptionsBind"] = optionsKey,
             ["Height"] = rect.height.ToString(System.Globalization.CultureInfo.InvariantCulture)

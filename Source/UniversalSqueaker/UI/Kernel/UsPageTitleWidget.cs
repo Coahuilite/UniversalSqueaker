@@ -6,9 +6,9 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Kernel-owned US page title: a large title line plus a caption line, from TitleKey/Title and
-/// CaptionKey/Caption attributes resolved through the host translation seam (keys win over
-/// literals).
+/// Kernel-owned US page title: a large title line plus a caption line, resolved from the active
+/// workspace through the host translation seam. Both lines are Keyed entries, never literals, so a
+/// non-English game gets a translated heading instead of leftover English prose.
 /// </summary>
 public sealed class UsPageTitleWidget : IUiWidget
 {
@@ -16,8 +16,8 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     private const float TitleHeight = 26f;
     private const float CaptionHeight = 18f;
-
-    private UiElementSpec spec = UiElementSpec.Empty;
+    private const float CaptionGap = 4f;
+    private const float TextLeftInset = 2f;
 
     string IUiWidget.Kind => Kind;
 
@@ -27,12 +27,11 @@ public sealed class UsPageTitleWidget : IUiWidget
             UsKernelWidgetRegistrar.Scope,
             Kind,
             () => new UsPageTitleWidget(),
-            new[] { "Id", "Kind", "Title", "TitleKey", "Caption", "CaptionKey", "Tab", "Hidden" });
+            new[] { "Id", "Kind", "Tab", "Hidden" });
     }
 
     public void Configure(UiElementSpec spec)
     {
-        this.spec = spec ?? throw new ArgumentNullException(nameof(spec));
     }
 
     public void Validate(IUiBindings bindings, string elementPath)
@@ -42,52 +41,72 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
-        return TitleHeight + CaptionHeight + 4f;
+        (string title, string caption) = ResolveHeading(ctx);
+        return TitleHeight + CaptionGap + CaptionBand(ctx, caption);
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        ctx.Bindings.TryGet("active-tab", out string activeTab);
-        (string title, string caption) = HeadingFor(activeTab);
+        (string title, string caption) = ResolveHeading(ctx);
+        float textWidth = Math.Max(1f, rect.width - TextLeftInset);
+        float captionTop = rect.y + TitleHeight + CaptionGap;
+        float captionHeight = CaptionBand(textWidth, ctx, caption);
+
         UiThemeDraw.SectionBand(rect, ctx.Theme);
         UsKernelDraw.Label(
-            new Rect(rect.x + 2f, rect.y, rect.width - 2f, TitleHeight),
+            new Rect(rect.x + TextLeftInset, rect.y, textWidth, TitleHeight),
             title,
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Medium,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
-            new Rect(rect.x + 2f, rect.y + TitleHeight + 4f, rect.width - 2f, CaptionHeight),
+            new Rect(rect.x + TextLeftInset, captionTop, textWidth, captionHeight),
             caption,
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            TextAnchor.UpperLeft);
     }
 
-    private static (string Title, string Caption) HeadingFor(string activeTab)
+    /// <summary>
+    /// Caption band for the text as it is actually resolved for this frame. The caption is instructional
+    /// prose and is the longest string on the page, so its height comes from the injected metrics rather
+    /// than a constant: a constant here silently clips the second line on narrow layouts.
+    /// Shared by Measure and Draw so the allocated band always equals the drawn band.
+    /// </summary>
+    private static float CaptionBand(UiWidgetContext ctx, string caption)
+    {
+        return CaptionBand(Math.Max(1f, ctx.ViewWidth - TextLeftInset), ctx, caption);
+    }
+
+    private static float CaptionBand(float textWidth, UiWidgetContext ctx, string caption)
+    {
+        return Math.Max(CaptionHeight, Math.Max(1f, ctx.Metrics.MeasureText(caption, UiFont.Tiny, textWidth)));
+    }
+
+    private static (string Title, string Caption) ResolveHeading(UiWidgetContext ctx)
+    {
+        ctx.Bindings.TryGet("active-tab", out string activeTab);
+        (string titleKey, string captionKey) = HeadingKeyFor(activeTab);
+        return (ctx.Translation.Translate(titleKey), ctx.Translation.Translate(captionKey));
+    }
+
+    /// <summary>
+    /// One entry per workspace, keyed by the tab token the navigation widget emits. Tab tokens stay
+    /// untranslated because they are also the persisted state value; only the display strings are Keyed.
+    /// </summary>
+    private static (string TitleKey, string CaptionKey) HeadingKeyFor(string? activeTab)
     {
         return activeTab switch
         {
-            "Distance" => ("Distance attenuation", "Set one range, compare the curve, then choose a quick preset."),
-            "Packs" => ("VoicePack selection", "Follow the flow: filter domains, choose a domain, then enable packs."),
-            "Tuning" => ("Layered tuning", "Select the layer and domain first; then set action scope and mood values."),
-            "Presets" => ("Baseline presets", "These importable baselines are supplied by installed Defs."),
-            _ => ("VoicePack Routing", "Choose routing and playback behaviour for this save.")
+            "Distance" => ("US.Page.Distance.Title", "US.Page.Distance.Caption"),
+            "Packs" => ("US.Page.Packs.Title", "US.Page.Packs.Caption"),
+            "Tuning" => ("US.Page.Tuning.Title", "US.Page.Tuning.Caption"),
+            "Presets" => ("US.Page.Presets.Title", "US.Page.Presets.Caption"),
+            _ => ("US.Page.Overview.Title", "US.Page.Overview.Caption")
         };
-    }
-
-    private string ReadText(UiWidgetContext ctx, string attribute)
-    {
-        if (spec.TryGetAttribute(attribute, out string key) && key.Trim().Length > 0)
-        {
-            return ctx.Translation.Translate(key.Trim());
-        }
-
-        string literalAttribute = string.Equals(attribute, "TitleKey", StringComparison.Ordinal) ? "Title" : "Caption";
-        return spec.TryGetAttribute(literalAttribute, out string literal) ? literal : "";
     }
 }

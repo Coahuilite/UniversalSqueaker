@@ -352,6 +352,8 @@ internal static class KernelWidgetBehaviorTests
     private sealed class FixedMetrics : ITextMetrics
     {
         public float MeasureText(string text, UiFont font, float width) => text.Length;
+
+        public float MeasureWidth(string text, UiFont font) => StubTextWidth.Of(text, font);
     }
 
     private sealed class FixedTranslation : IUiTranslation

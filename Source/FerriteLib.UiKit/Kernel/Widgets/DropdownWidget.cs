@@ -80,7 +80,9 @@ public sealed class DropdownWidget : IUiWidget
         Rect fieldRect = new(rect.x + labelWidth, rect.y, Math.Max(1f, rect.width - labelWidth), rect.height);
         if (labelWidth > 0f)
         {
-            UiThemeDraw.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), label, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.MiddleLeft);
+            // The field label lives in a fixed LabelWidth column: it is a single line by design, so the
+            // fitting audit must measure its width rather than assume wrapping will rescue a long word.
+            UiThemeDraw.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), label, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.MiddleLeft, singleLine: true);
         }
 
         string display = FindDisplayText(options, current);
@@ -142,7 +144,8 @@ public sealed class DropdownWidget : IUiWidget
             theme,
             selected ? theme.TextOnGold : theme.TextPrimary,
             UiFont.Small,
-            TextAnchor.MiddleLeft);
+            TextAnchor.MiddleLeft,
+            singleLine: true);
     }
 
     private string ReadBindKey()

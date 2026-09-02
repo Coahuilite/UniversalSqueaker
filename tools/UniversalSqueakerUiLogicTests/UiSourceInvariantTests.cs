@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UniversalSqueaker.UI;
 using System.IO;
 using System.Reflection;
@@ -24,6 +25,10 @@ namespace UniversalSqueaker.UiLogicTests;
 ///   5. The help catalog, the manifests' HelpKey attributes, the section help-key map and the
 ///      panel's item-count height formula agree with each other (no manifest/catalog drift in
 ///      either direction, no unreachable or empty catalog entries).
+///   6. Localization contract: the two shipped Keyed tables carry the identical key set with
+///      identical `{n}` placeholder multisets, every Keyed reference made by the production UI
+///      resolves in BOTH languages, and the shipped manifests never pass literal English prose
+///      through Title/Caption/Text attributes.
 /// These are NARROW STRUCTURAL GUARDS: they fail loudly when a pinned contract disappears, but
 /// behavioural proof lives in the UiKit/kernel-host harnesses.
 /// </summary>
@@ -38,6 +43,7 @@ internal static class UiSourceInvariantTests
         VerifyEmbeddedManifestsAreSchema2Only(root);
         VerifyHelpCatalogManifestConsistency(root);
         VerifyHelpPanelWiringAndHeightFormula(root);
+        VerifyLocalizationContract(root);
     }
 
     // 1. Settings window: new failure model present, legacy whole-page fallback symbols absent.
@@ -402,6 +408,123 @@ internal static class UiSourceInvariantTests
         {
             yield return ((XmlElement)node).GetAttribute(attribute);
         }
+    }
+
+    // 6. Localization contract. RimWorld answers an unknown key by returning the key itself (and, in
+    // dev mode, a pseudo-translated variant of it), so a half-migrated string never fails loudly at
+    // runtime — it just shows a raw key or accented garbage to the player. That makes key existence a
+    // build-time property, not a runtime one, and it is exactly what this guard pins.
+    private static void VerifyLocalizationContract(string root)
+    {
+        Dictionary<string, string> english = ReadKeyedTable(Path.Combine(root, "1.6", "Languages", "English", "Keyed", "UniversalSqueaker.xml"));
+        Dictionary<string, string> chinese = ReadKeyedTable(Path.Combine(root, "1.6", "Languages", "ChineseSimplified", "Keyed", "UniversalSqueaker.xml"));
+
+        Assert(english.Count >= 100 && chinese.Count >= 100,
+            "both Keyed tables must be populated (english=" + english.Count + ", chinese=" + chinese.Count + ")");
+
+        var englishKeys = new HashSet<string>(english.Keys, StringComparer.Ordinal);
+        var chineseKeys = new HashSet<string>(chinese.Keys, StringComparer.Ordinal);
+        Assert(IsSameSet(englishKeys, chineseKeys),
+            "the two Keyed tables must carry the identical key set; only-in-english={"
+            + Join(englishKeys, chineseKeys) + "} only-in-chinese={" + Join(chineseKeys, englishKeys) + "}");
+
+        foreach (KeyValuePair<string, string> entry in english)
+        {
+            Assert(entry.Value.Trim().Length > 0, "English Keyed entry has no text: " + entry.Key);
+            string chineseText = chinese[entry.Key];
+            Assert(chineseText.Trim().Length > 0, "Chinese Keyed entry has no text: " + entry.Key);
+
+            // A translation that drops or renumbers a placeholder silently breaks the formatted line,
+            // because the substituted argument lands in the wrong slot or disappears.
+            Assert(SamePlaceholders(entry.Value, chineseText),
+                "Keyed entry's {n} placeholders differ between languages: " + entry.Key
+                + " english={" + entry.Value + "} chinese={" + chineseText + "}");
+        }
+
+        foreach (string key in CollectKeyedReferences(root))
+        {
+            Assert(englishKeys.Contains(key),
+                "the UI references a Keyed entry that has no English text: " + key);
+            Assert(chineseKeys.Contains(key),
+                "the UI references a Keyed entry that has no Chinese text: " + key);
+        }
+
+        foreach (string manifest in ManifestPaths(root))
+        {
+            var document = new XmlDocument();
+            document.Load(manifest);
+            XmlNode? offenders = document.SelectSingleNode("//Widget[@Title or @Caption or @Text]");
+            Assert(offenders == null,
+                "shipped manifests must pass translatable text as *Key attributes, never as a literal;"
+                + " offending element: " + (offenders?.Name ?? "") + " in " + manifest);
+        }
+    }
+
+    private static Dictionary<string, string> ReadKeyedTable(string path)
+    {
+        Assert(File.Exists(path), "Keyed table is missing: " + path);
+        var document = new XmlDocument();
+        document.Load(path);
+
+        var table = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (XmlNode node in document.SelectNodes("/LanguageData/*")!)
+        {
+            Assert(node.NodeType == XmlNodeType.Element, "unexpected node in " + path);
+            table[node.Name] = node.InnerText;
+        }
+
+        return table;
+    }
+
+    /// <summary>
+    /// Every complete `US.*` string literal in the production source plus every `*Key` attribute value
+    /// in the shipped manifests. Literals ending in `.` are excluded on purpose: those are concatenation
+    /// prefixes (for example `"US.Mood." + mood`) whose full key names cannot be read statically.
+    /// </summary>
+    private static HashSet<string> CollectKeyedReferences(string root)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        string sourceRoot = Path.Combine(root, "Source");
+
+        foreach (string file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            if (Path.GetFileName(file).Equals("AssemblyInfo.cs", StringComparison.Ordinal)) continue;
+            foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
+                File.ReadAllText(file), "\"(US\\.[A-Za-z0-9_]*)\""))
+            {
+                string key = match.Groups[1].Value;
+                if (key.Length > 3 && !key.EndsWith(".", StringComparison.Ordinal)) keys.Add(key);
+            }
+        }
+
+        foreach (string manifest in ManifestPaths(root))
+        {
+            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey" })
+            {
+                foreach (string value in EnumerateManifestAttributes(manifest, attribute))
+                {
+                    if (value.StartsWith("US.", StringComparison.Ordinal)) keys.Add(value.Trim());
+                }
+            }
+        }
+
+        return keys;
+    }
+
+    private static IEnumerable<string> ManifestPaths(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        yield return Path.Combine(ui, "Layout.Schema2.xml");
+        yield return Path.Combine(ui, "Layout.Overlay.Schema2.xml");
+    }
+
+    private static bool SamePlaceholders(string english, string chinese)
+    {
+        var left = new List<string>(System.Text.RegularExpressions.Regex.Matches(english, "\\{\\d+\\}").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value));
+        var right = new List<string>(System.Text.RegularExpressions.Regex.Matches(chinese, "\\{\\d+\\}").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value));
+        left.Sort(StringComparer.Ordinal);
+        right.Sort(StringComparer.Ordinal);
+        return left.SequenceEqual(right, StringComparer.Ordinal);
     }
 
     private static string SettingsWindowPath(string root) =>

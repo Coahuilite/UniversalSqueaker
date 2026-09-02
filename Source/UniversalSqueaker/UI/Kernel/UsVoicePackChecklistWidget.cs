@@ -16,10 +16,35 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/voice-pack-checklist";
 
+    // Every player-facing string this widget draws. Element ids and binding keys
+    // ("checklist-search", "search-text", "toggle-pack", "forget-unavailable") stay machine tokens.
+    private const string KeyNoDomains = "US.Packs.Checklist.NoDomains";
+    private const string KeyDormantBanner = "US.Packs.Checklist.DormantBanner";
+    private const string KeyTargetUnavailableBanner = "US.Packs.Checklist.TargetUnavailableBanner";
+    private const string KeyConflictBanner = "US.Packs.Checklist.ConflictBanner";
+    private const string KeyEmptyDomain = "US.Packs.Checklist.EmptyDomain";
+    private const string KeyEmptySearch = "US.Packs.Checklist.EmptySearch";
+    private const string KeyOrphanBanner = "US.Packs.Checklist.OrphanBanner";
+    private const string KeyForgetUnavailable = "US.Packs.Checklist.ForgetUnavailable";
+    private const string KeySearchPlaceholder = "US.Packs.Checklist.SearchPlaceholder";
+    private const string KeyPackMeta = "US.Packs.Checklist.PackMeta";
+
     private const float RowGap = 2f;
     private const float SearchFieldHeight = 24f;
-    private const float EmptyStateHeight = 48f;
     private const float BannerGap = 4f;
+
+    // Floors, not fixed sizes: every band below is grown by the text metrics so a translated sentence
+    // that needs a second or third line is drawn instead of cut off.
+    private const float EmptyStateMinHeight = 48f;
+    private const float BannerMinHeight = 30f;
+    private const float BandVerticalPadding = 8f;
+    private const float BannerTextInset = 8f;
+    private const float RowTopPadding = 4f;
+    private const float RowBottomPadding = 4f;
+    private const float LabelBand = 18f;
+    private const float MetaBand = 16f;
+    private const float CoverageBand = 16f;
+    private const float RowTextReserve = 60f;
 
     public override string Kind => KindName;
 
@@ -42,20 +67,34 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     protected override float FallbackHeight(UiWidgetContext ctx)
     {
-        return SearchFieldHeight + EmptyStateHeight + RowGap;
+        return SearchFieldHeight + EmptyStateMinHeight + RowGap;
     }
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
         VoicePackDomainView? selected = ctx.Bindings.TryGet("selected-domain", out VoicePackDomainView? s) ? s : null;
-        if (!selected.HasValue) return EmptyStateHeight;
+        if (!selected.HasValue) return EmptyStateBand(ctx, ctx.Translation.Translate(KeyNoDomains));
 
         string search = ctx.Bindings.TryGet("search-text", out string text) ? text : "";
         VoicePackDomainView domain = selected.Value;
         float height = 0f;
-        if (domain.IsDormant || domain.IsTargetUnavailable || domain.HasCanonicalConflict)
+
+        // Each banner that Draw will render is measured separately. Summing them once for all three
+        // conditions under-counted the body whenever a domain was dormant, unavailable AND in conflict,
+        // so the last banner fell outside the allocated card.
+        if (domain.IsDormant)
         {
-            height += BannerHeight + BannerGap;
+            height += BannerBand(ctx, ctx.Translation.Translate(KeyDormantBanner)) + BannerGap;
+        }
+
+        if (domain.IsTargetUnavailable)
+        {
+            height += BannerBand(ctx, ctx.Translation.Translate(KeyTargetUnavailableBanner)) + BannerGap;
+        }
+
+        if (domain.HasCanonicalConflict)
+        {
+            height += BannerBand(ctx, ctx.Translation.Translate(KeyConflictBanner)) + BannerGap;
         }
 
         height += SearchFieldHeight + RowGap;
@@ -70,12 +109,12 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (shown == 0)
         {
-            height += EmptyStateHeight + RowGap;
+            height += EmptyStateBand(ctx, ctx.Translation.Translate(domain.Packs.Count == 0 ? KeyEmptyDomain : KeyEmptySearch)) + RowGap;
         }
 
         if (domain.OrphanCount > 0)
         {
-            height += BannerHeight + BannerGap;
+            height += BannerBand(ctx, ctx.Translation.Translate(KeyOrphanBanner)) + BannerGap;
         }
 
         return height;
@@ -92,8 +131,8 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         if (!selected.HasValue)
         {
             UsKernelDraw.Label(
-                new Rect(rect.x, rect.y, rect.width, EmptyStateHeight),
-                "No VoicePack domains are available yet. Install a VoicePack that declares a raceDefName.",
+                new Rect(rect.x, rect.y, rect.width, EmptyStateBand(ctx, ctx.Translation.Translate(KeyNoDomains))),
+                ctx.Translation.Translate(KeyNoDomains),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Small,
@@ -106,17 +145,17 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (domain.IsDormant)
         {
-            y = DrawBanner(rect, y, "Biotech is not active; this Xenotype domain is dormant.", ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyDormantBanner), ctx);
         }
 
         if (domain.IsTargetUnavailable)
         {
-            y = DrawBanner(rect, y, "The selected Xenotype target is not loaded. Selections are retained for recovery.", ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyTargetUnavailableBanner), ctx);
         }
 
         if (domain.HasCanonicalConflict)
         {
-            y = DrawBanner(rect, y, "Multiple Xenotype Defs share this target; routing fails closed until resolved.", ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyConflictBanner), ctx);
         }
 
         string search = DrawSearchField(new Rect(rect.x, y, rect.width, SearchFieldHeight), ctx);
@@ -134,36 +173,36 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (shown == 0)
         {
+            float emptyBand = EmptyStateBand(ctx, ctx.Translation.Translate(domain.Packs.Count == 0 ? KeyEmptyDomain : KeyEmptySearch));
             UsKernelDraw.Label(
-                new Rect(rect.x, y, rect.width, EmptyStateHeight),
-                domain.Packs.Count == 0
-                    ? "No VoicePacks are installed for this domain."
-                    : "No VoicePacks match the current search.",
+                new Rect(rect.x, y, rect.width, emptyBand),
+                ctx.Translation.Translate(domain.Packs.Count == 0 ? KeyEmptyDomain : KeyEmptySearch),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Small,
                 TextAnchor.MiddleCenter);
-            y += EmptyStateHeight;
+            y += emptyBand;
         }
 
         if (domain.OrphanCount > 0)
         {
-            DrawOrphanBanner(new Rect(rect.x, y, rect.width, BannerHeight), domain, ctx);
+            DrawOrphanBanner(new Rect(rect.x, y, rect.width, BannerBand(ctx, ctx.Translation.Translate(KeyOrphanBanner))), domain, ctx);
         }
     }
 
     private float DrawBanner(Rect outer, float y, string text, UiWidgetContext ctx)
     {
-        Rect bannerRect = new(outer.x, y, outer.width, BannerHeight);
+        float band = BannerBand(ctx, text);
+        Rect bannerRect = new(outer.x, y, outer.width, band);
         UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, selected: false, danger: true);
         UsKernelDraw.Label(
-            new Rect(bannerRect.x + 8f, bannerRect.y, Math.Max(1f, bannerRect.width - 16f), bannerRect.height),
+            new Rect(bannerRect.x + BannerTextInset, bannerRect.y, Math.Max(1f, bannerRect.width - BannerTextInset * 2f), band),
             text,
             ctx.Theme,
             ctx.Theme.TextOnDanger,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
-        return y + BannerHeight + BannerGap;
+        return y + band + BannerGap;
     }
 
     private void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, UiWidgetContext ctx)
@@ -174,13 +213,13 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         Rect text = new(rect.x + 8f, rect.y + 5f, Math.Max(1f, button.x - rect.x - 16f), Math.Max(1f, rect.height - 10f));
         UsKernelDraw.Label(
             text,
-            "Selected pack keys are no longer installed. Use Forget Unavailable to clean them.",
+            ctx.Translation.Translate(KeyOrphanBanner),
             ctx.Theme,
             ctx.Theme.TextOnDanger,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(button, "Forget Unavailable", ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(button, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke(
                 "forget-unavailable",
@@ -211,7 +250,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         }
         else if (!state.Focused && current.Length == 0)
         {
-            UsKernelDraw.Label(textRect, "Search VoicePacks…", ctx.Theme, ctx.Theme.TextDisabled, UiFont.Small, TextAnchor.MiddleLeft);
+            UsKernelDraw.Label(textRect, ctx.Translation.Translate(KeySearchPlaceholder), ctx.Theme, ctx.Theme.TextDisabled, UiFont.Small, TextAnchor.MiddleLeft);
         }
 
         if (UiNative.IsMouseDownOver(rect))
@@ -232,28 +271,34 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected);
 
-        string meta = row.ModName + " · " + row.Author;
+        string meta = UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author);
+        float textWidth = Math.Max(1f, rect.width - RowTextReserve);
+        (float labelBand, float metaBand, float coverageBand) = RowBands(ctx, textWidth, row, meta);
+
+        float rowY = rect.y + RowTopPadding;
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 60f), 18f),
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rowY, textWidth, labelBand),
             row.Label,
             ctx.Theme,
             row.IsSelected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
+        rowY += labelBand + RowGap;
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 22f, Math.Max(1f, rect.width - 60f), 14f),
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rowY, textWidth, metaBand),
             meta,
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            TextAnchor.UpperLeft);
+        rowY += metaBand + RowGap;
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 36f, Math.Max(1f, rect.width - 60f), 14f),
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rowY, textWidth, coverageBand),
             row.Coverage,
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
-            TextAnchor.MiddleLeft);
+            TextAnchor.UpperLeft);
 
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 4f, 18f, 18f), ctx.Theme, row.IsSelected);
 
@@ -267,11 +312,38 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     private float RowHeightFor(VoicePackRowView row, UiWidgetContext ctx)
     {
-        float measured = ctx.Metrics.MeasureText(row.Label, UiFont.Small, Math.Max(1f, BodyWidth(ctx) - 60f));
-        return Math.Max(54f, measured + 38f);
+        float textWidth = Math.Max(1f, BodyWidth(ctx) - RowTextReserve);
+        (float labelBand, float metaBand, float coverageBand) = RowBands(
+            ctx, textWidth, row, UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author));
+
+        return RowTopPadding + labelBand + RowGap + metaBand + RowGap + coverageBand + RowBottomPadding;
     }
 
-    private float BannerHeight => Math.Max(30f, 22f);
+    /// <summary>
+    /// The three text bands of a pack row, resolved by one shared path so the height Measure allocates
+    /// and the offsets Draw uses cannot disagree. The meta and coverage lines sit in Tiny bands that were
+    /// previously 14px, shorter than a single Tiny line, which is why their tails never rendered.
+    /// </summary>
+    private (float Label, float Meta, float Coverage) RowBands(
+        UiWidgetContext ctx, float textWidth, VoicePackRowView row, string meta)
+    {
+        return (
+            Math.Max(LabelBand, ctx.Metrics.MeasureText(row.Label, UiFont.Small, textWidth)),
+            Math.Max(MetaBand, ctx.Metrics.MeasureText(meta, UiFont.Tiny, textWidth)),
+            Math.Max(CoverageBand, ctx.Metrics.MeasureText(row.Coverage, UiFont.Tiny, textWidth)));
+    }
+
+    /// <summary>Warning band for a whole-width sentence: at least one line tall, plus its own padding.</summary>
+    private float BannerBand(UiWidgetContext ctx, string text)
+    {
+        float textWidth = Math.Max(1f, BodyWidth(ctx) - BannerTextInset * 2f);
+        return Math.Max(BannerMinHeight, ctx.Metrics.MeasureText(text, UiFont.Tiny, textWidth) + BandVerticalPadding);
+    }
+
+    private float EmptyStateBand(UiWidgetContext ctx, string text)
+    {
+        return Math.Max(EmptyStateMinHeight, ctx.Metrics.MeasureText(text, UiFont.Small, BodyWidth(ctx)) + BandVerticalPadding);
+    }
 
     private static bool MatchesSearch(VoicePackRowView row, string query)
     {

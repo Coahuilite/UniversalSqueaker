@@ -17,7 +17,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/preset-list";
 
-    private const float PresetHeaderHeight = 32f;
+    private const float PresetHeaderHeight = 40f;
+
+    // The selection summary is a Tiny line under the preset title; 40f header = title band + gap + this
+    // band + padding, so the summary is no longer cut to an 11px sliver.
+    private const float SelectionSummaryHeight = 16f;
+
     private const float RaceRowHeight = 24f;
     private const float XenotypeRowHeight = 22f;
     private const float RowGap = 2f;
@@ -27,6 +32,16 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private const float ImportButtonHeight = 20f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
+
+    // Keyed UI text. English values in the Keyed table are verbatim copies of the former literals;
+    // every string is resolved through Tr() so Measure and Draw share one outlet.
+    private const string EmptyTextKey = "US.Preset.List.Empty";
+    private const string SelectionSummaryKey = "US.Preset.List.Selection";
+    private const string ImportKey = "US.Preset.List.Import";
+    private const string RaceSummaryKey = "US.Preset.Race.Summary";
+    private const string XenotypeSummaryKey = "US.Preset.Xeno.Summary";
+    private const string XenotypeInheritsKey = "US.Preset.Xeno.Inherits";
+    private const string XenotypeOwnOnlyKey = "US.Preset.Xeno.Own";
 
     public override string Kind => KindName;
 
@@ -74,11 +89,11 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                bodyHeight += MeasuredRowHeight(RaceLabel(race), Math.Max(1f, width - 64f), ctx, RaceRowHeight) + RowGap;
+                bodyHeight += MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, width - 64f), ctx, RaceRowHeight) + RowGap;
                 float xenoWidth = Math.Max(1f, width - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    bodyHeight += MeasuredRowHeight(XenotypeLabel(xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight) + RowGap;
+                    bodyHeight += MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight) + RowGap;
                 }
             }
         }
@@ -100,7 +115,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         {
             UsKernelDraw.Label(
                 new Rect(rect.x, rect.y + TopPadding, rect.width, 48f),
-                "No baseline presets are installed. This feature reads presets provided by Defs.",
+                Tr(ctx, EmptyTextKey),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Small,
@@ -135,14 +150,14 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                float raceRowHeight = MeasuredRowHeight(RaceLabel(race), Math.Max(1f, innerWidth - 64f), ctx, RaceRowHeight);
+                float raceRowHeight = MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, innerWidth - 64f), ctx, RaceRowHeight);
                 DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, ctx);
                 y += raceRowHeight + RowGap;
 
                 float xenoWidth = Math.Max(1f, innerWidth - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    float xenoRowHeight = MeasuredRowHeight(XenotypeLabel(xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight);
+                    float xenoRowHeight = MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight);
                     DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
                     y += xenoRowHeight + RowGap;
                 }
@@ -165,14 +180,14 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             UiFont.Small,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding + 4f, rect.y + 20f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), 11f),
-            preset.SelectedRaceCount + " races · " + preset.SelectedXenotypeCount + " xenotypes",
+            new Rect(rect.x + LeftPadding + 4f, rect.y + 21f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), SelectionSummaryHeight),
+            string.Format(Tr(ctx, SelectionSummaryKey), preset.SelectedRaceCount, preset.SelectedXenotypeCount),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(importRect, "Import", ctx.Theme, selected: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(importRect, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke("import-baseline", preset.DefName);
         }
@@ -191,7 +206,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), Math.Max(18f, rect.height - 6f)),
-            RaceLabel(race),
+            RaceLabel(ctx, race),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -211,7 +226,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), Math.Max(14f, rect.height - 6f)),
-            XenotypeLabel(xenotype),
+            XenotypeLabel(ctx, xenotype),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Tiny,
@@ -232,14 +247,19 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         return Math.Max(fallback, measured + 8f);
     }
 
-    private static string RaceLabel(BaselineRaceView race)
+    private static string Tr(UiWidgetContext ctx, string key)
     {
-        return race.DisplayName + "  (" + race.ActionCount + " actions, " + race.MoodCount + " moods)";
+        return ctx.Translation.Translate(key);
     }
 
-    private static string XenotypeLabel(BaselineXenotypeView xenotype)
+    private static string RaceLabel(UiWidgetContext ctx, BaselineRaceView race)
     {
-        string inheritTag = xenotype.InheritFromRace ? " (inherits race)" : " (own only)";
-        return xenotype.DisplayName + inheritTag + "  (" + xenotype.ActionCount + " actions, " + xenotype.MoodCount + " moods)";
+        return string.Format(Tr(ctx, RaceSummaryKey), race.DisplayName, race.ActionCount, race.MoodCount);
+    }
+
+    private static string XenotypeLabel(UiWidgetContext ctx, BaselineXenotypeView xenotype)
+    {
+        string inheritTag = " " + Tr(ctx, xenotype.InheritFromRace ? XenotypeInheritsKey : XenotypeOwnOnlyKey);
+        return string.Format(Tr(ctx, XenotypeSummaryKey), xenotype.DisplayName, inheritTag, xenotype.ActionCount, xenotype.MoodCount);
     }
 }

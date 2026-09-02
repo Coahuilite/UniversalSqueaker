@@ -47,4 +47,119 @@
   <US.Settings.Shell.Open>Open Universal Squeaker settings</US.Settings.Shell.Open>
   <US.Settings.PageUnavailable.Title>Settings page unavailable</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>The {0} settings page could not be built or drawn, so it will not show a partial interface. Close and reopen the window to retry. If it keeps failing, look for the usdiag record in the log: it names the failing control and carries the exception stack.</US.Settings.PageUnavailable.Body>
+
+  <!-- Schema=2 settings page headings (UsPageTitleWidget / UsNavWidget) and card titles
+       (manifest TitleKey values). English text here is authoritative: it must match the
+       literals these widgets displayed before they became translatable. -->
+  <US.Page.Overview.Title>VoicePack Routing</US.Page.Overview.Title>
+  <US.Page.Overview.Caption>Choose routing and playback behaviour for this save.</US.Page.Overview.Caption>
+  <US.Page.Distance.Title>Distance attenuation</US.Page.Distance.Title>
+  <US.Page.Distance.Caption>Set one range, compare the curve, then choose a quick preset.</US.Page.Distance.Caption>
+  <US.Page.Packs.Title>VoicePack selection</US.Page.Packs.Title>
+  <US.Page.Packs.Caption>Follow the flow: filter domains, choose a domain, then enable packs.</US.Page.Packs.Caption>
+  <US.Page.Tuning.Title>Layered tuning</US.Page.Tuning.Title>
+  <US.Page.Tuning.Caption>Select the layer and domain first; then set action scope and mood values.</US.Page.Tuning.Caption>
+  <US.Page.Presets.Title>Baseline presets</US.Page.Presets.Title>
+  <US.Page.Presets.Caption>These importable baselines are supplied by installed Defs.</US.Page.Presets.Caption>
+
+  <US.Nav.Overview.Label>Overview</US.Nav.Overview.Label>
+  <US.Nav.Overview.Description>Routing and playback</US.Nav.Overview.Description>
+  <US.Nav.Distance.Label>Distance</US.Nav.Distance.Label>
+  <US.Nav.Distance.Description>Range and attenuation</US.Nav.Distance.Description>
+  <US.Nav.Packs.Label>VoicePacks</US.Nav.Packs.Label>
+  <US.Nav.Packs.Description>Filter, domain, then pack</US.Nav.Packs.Description>
+  <US.Nav.Tuning.Label>Tuning</US.Nav.Tuning.Label>
+  <US.Nav.Tuning.Description>Layered action and mood rules</US.Nav.Tuning.Description>
+  <US.Nav.Presets.Label>Presets</US.Nav.Presets.Label>
+  <US.Nav.Presets.Description>Def-provided baselines</US.Nav.Presets.Description>
+
+  <US.Section.OutputLevel>Output level</US.Section.OutputLevel>
+  <US.Section.PlaybackBehaviour>Playback behaviour</US.Section.PlaybackBehaviour>
+  <US.Section.InWorldIndicator>In-world indicator</US.Section.InWorldIndicator>
+  <US.Section.DistanceAttenuation>Distance attenuation</US.Section.DistanceAttenuation>
+  <US.Section.FilterDomains>1. Filter domains</US.Section.FilterDomains>
+  <US.Section.RaceDomain>2. Choose a race domain</US.Section.RaceDomain>
+  <US.Section.XenotypeDomain>2. Or choose a xenotype domain</US.Section.XenotypeDomain>
+  <US.Section.ChooseVoicePacks>3. Choose VoicePacks</US.Section.ChooseVoicePacks>
+  <US.Section.LayeredTuning>Layered tuning</US.Section.LayeredTuning>
+  <US.Section.DefBaselines>Def baseline presets</US.Section.DefBaselines>
+  <US.Tuning.EasterEggs>Easter egg sounds</US.Tuning.EasterEggs>
+  <US.Tuning.EasterEggs.On>On (eggs join the pool)</US.Tuning.EasterEggs.On>
+  <US.Tuning.EasterEggs.Off>Off (ordinary entries only)</US.Tuning.EasterEggs.Off>
+  <US.Tuning.ScaleCooldown>Scale cooldown with time speed</US.Tuning.ScaleCooldown>
+  <US.Tuning.ScaleTalking>Scale frequency with talking</US.Tuning.ScaleTalking>
+  <US.Tuning.ScalePopulation>Scale periodic with audible population</US.Tuning.ScalePopulation>
+  <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
+  <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
+  <US.Tuning.Mode.Vanilla>Vanilla</US.Tuning.Mode.Vanilla>
+  <US.Tuning.Mode.Fallback>Fallback</US.Tuning.Mode.Fallback>
+  <US.Tuning.Mode.Remix>Remix</US.Tuning.Mode.Remix>
+  <US.Tuning.Mode.Disabled>Disabled</US.Tuning.Mode.Disabled>
+  <US.Packs.Filter.All>All</US.Packs.Filter.All>
+  <US.Packs.Filter.EnabledOnly>Enabled only</US.Packs.Filter.EnabledOnly>
+  <US.Packs.Filter.Conflicts>Conflicts</US.Packs.Filter.Conflicts>
+  <US.Packs.Filter.OrphanOnly>Orphan only</US.Packs.Filter.OrphanOnly>
+  <US.Packs.Filter.Race>Race</US.Packs.Filter.Race>
+  <US.Packs.Filter.Xenotype>Xenotype</US.Packs.Filter.Xenotype>
+  <US.Packs.Filter.Author>Author</US.Packs.Filter.Author>
+  <US.Packs.Domain.EnabledSummary>{0} / {1} enabled</US.Packs.Domain.EnabledSummary>
+  <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
+  <US.Packs.Domain.State.Orphan>orphan</US.Packs.Domain.State.Orphan>
+  <US.Packs.Domain.State.TargetUnavailable>target unavailable</US.Packs.Domain.State.TargetUnavailable>
+  <US.Packs.Domain.State.Dormant>dormant</US.Packs.Domain.State.Dormant>
+  <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
+  <US.Packs.Checklist.NoDomains>No VoicePack domains are available yet. Install a VoicePack that declares a raceDefName.</US.Packs.Checklist.NoDomains>
+  <US.Packs.Checklist.DormantBanner>Biotech is not active; this Xenotype domain is dormant.</US.Packs.Checklist.DormantBanner>
+  <US.Packs.Checklist.TargetUnavailableBanner>The selected Xenotype target is not loaded. Selections are retained for recovery.</US.Packs.Checklist.TargetUnavailableBanner>
+  <US.Packs.Checklist.ConflictBanner>Multiple Xenotype Defs share this target; routing fails closed until resolved.</US.Packs.Checklist.ConflictBanner>
+  <US.Packs.Checklist.EmptyDomain>No VoicePacks are installed for this domain.</US.Packs.Checklist.EmptyDomain>
+  <US.Packs.Checklist.EmptySearch>No VoicePacks match the current search.</US.Packs.Checklist.EmptySearch>
+  <US.Packs.Checklist.OrphanBanner>Selected pack keys are no longer installed. Use Forget Unavailable to clean them.</US.Packs.Checklist.OrphanBanner>
+  <US.Packs.Checklist.ForgetUnavailable>Forget Unavailable</US.Packs.Checklist.ForgetUnavailable>
+  <US.Packs.Checklist.SearchPlaceholder>Search VoicePacks…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
+  <US.Packs.Checklist.PackActions>Actions {0}/{1}</US.Packs.Checklist.PackActions>
+  <US.Packs.Banner.NoDomains>No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.</US.Packs.Banner.NoDomains>
+  <US.Packs.Banner.DormantBiotech>Biotech is not active. Xenotype VoicePack selections are dormant and will not route to pawns.</US.Packs.Banner.DormantBiotech>
+  <US.Packs.Banner.VanillaMode>VoicePack mode is Vanilla. Enabled packs are retained, but VoicePack audio is not routed.</US.Packs.Banner.VanillaMode>
+  <US.Preset.List.Empty>No baseline presets are installed. This feature reads presets provided by Defs.</US.Preset.List.Empty>
+  <US.Preset.List.Import>Import</US.Preset.List.Import>
+  <US.Preset.List.Selection>{0} races · {1} xenotypes</US.Preset.List.Selection>
+  <US.Preset.Race.Summary>{0}  ({1} actions, {2} moods)</US.Preset.Race.Summary>
+  <US.Preset.Xeno.Inherits>(inherits race)</US.Preset.Xeno.Inherits>
+  <US.Preset.Xeno.Own>(own only)</US.Preset.Xeno.Own>
+  <US.Preset.Xeno.Summary>{0}{1}  ({2} actions, {3} moods)</US.Preset.Xeno.Summary>
+  <US.Footer.SaveStatus.Idle>Idle</US.Footer.SaveStatus.Idle>
+  <US.Footer.SaveStatus.Saving>Saving</US.Footer.SaveStatus.Saving>
+  <US.Footer.SaveStatus.Saved>Saved</US.Footer.SaveStatus.Saved>
+  <US.Footer.SaveStatus.Failed>Failed</US.Footer.SaveStatus.Failed>
+  <US.Footer.SaveStatus.Unknown>Unknown</US.Footer.SaveStatus.Unknown>
+  <US.Footer.Build.Unknown>unknown</US.Footer.Build.Unknown>
+  <US.Overlay.ManifestMissing>Embedded Schema=2 overlay resource '{0}' was not found.</US.Overlay.ManifestMissing>
+  <US.Tuning.Layer>Tuning layer</US.Tuning.Layer>
+  <US.Tuning.Domain>Layer domain</US.Tuning.Domain>
+  <US.Tuning.Layer.Global>Global</US.Tuning.Layer.Global>
+  <US.Tuning.Layer.Race>Race</US.Tuning.Layer.Race>
+  <US.Tuning.Layer.Xenotype>Xenotype</US.Tuning.Layer.Xenotype>
+  <US.Tuning.ActionScope>Action Scope</US.Tuning.ActionScope>
+  <US.Tuning.Group.Autonomous>Autonomous</US.Tuning.Group.Autonomous>
+  <US.Tuning.Group.Operable>Operable / Command</US.Tuning.Group.Operable>
+  <US.Tuning.MoodTuning>Mood Tuning</US.Tuning.MoodTuning>
+  <US.Tuning.Scope.Off>Off</US.Tuning.Scope.Off>
+  <US.Tuning.Scope.Any>Any</US.Tuning.Scope.Any>
+  <US.Tuning.Scope.Command>Command</US.Tuning.Scope.Command>
+  <US.Tuning.Auto>Auto</US.Tuning.Auto>
+  <US.Tuning.Factor.Pitch>P</US.Tuning.Factor.Pitch>
+  <US.Tuning.Factor.Volume>V</US.Tuning.Factor.Volume>
+  <US.Tuning.Factor.Jitter>J</US.Tuning.Factor.Jitter>
+  <US.Distance.Preset.Conservative>Conservative</US.Distance.Preset.Conservative>
+  <US.Distance.Preset.Balanced>Balanced</US.Distance.Preset.Balanced>
+  <US.Distance.Preset.Strong>Strong</US.Distance.Preset.Strong>
+  <US.Distance.Preset.Custom>Custom</US.Distance.Preset.Custom>
+  <US.Distance.Status>Attenuation {0}  {1}</US.Distance.Status>
+  <US.Card.FallbackNote>{0} (unavailable in fallback mode)</US.Card.FallbackNote>
+  <US.Help.Header>HELP  ·  {0}</US.Help.Header>
+  <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
+  <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
+  <US.Help.Overview>Overview</US.Help.Overview>
 </LanguageData>

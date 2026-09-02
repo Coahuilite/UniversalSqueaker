@@ -56,7 +56,7 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
 
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - 60f), rect.height),
-            "Show camera indicator",
+            ctx.Translation.Translate("US.Tuning.CameraIndicator"),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,

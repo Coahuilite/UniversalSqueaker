@@ -279,6 +279,17 @@ internal static class Program
             V2("warning", "daily", "voicepack.comp.attach_failed", "VoicePack comp auto-attach failed.", trailing: " ex_type=System.Exception ex_msg=attach%20failed"));
         CaptureV2Coverage();
 
+        // UI text-fit audit: one warning per distinct clipped label, carrying the element path plus the
+        // need/have pixel pair so a log line alone is enough to locate and size the defect (DevOnly).
+        Reset(SqueakDevLoggingMode.Enabled);
+        SqueakLog.LabelOverflow("page-root/body-row/nav-column/nav", "width", "tiny", 24.5f, 10f);
+        AssertLines(nameof(VerifyV2Protocol) + " text overflow",
+            V2("warning", "dev_only", "ui.text.overflow",
+                "A settings label does not fit its rect: page-root/body-row/nav-column/nav (width axis, font tiny, needs 24.5px, has 10.0px).",
+                target: "page-root/body-row/nav-column/nav",
+                trailing: " reason=width source=tiny need=24.5 have=10"));
+        CaptureV2Coverage();
+
         // Gating: v2 Daily keeps the human-only shape while detailed logging is ineffective; v2 DevOnly is silent.
         Reset(SqueakDevLoggingMode.Disabled);
         SqueakLog.SettingsOrigin(SqueakSettingsOrigin.FreshCreated);
@@ -319,7 +330,7 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(9, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(10, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)

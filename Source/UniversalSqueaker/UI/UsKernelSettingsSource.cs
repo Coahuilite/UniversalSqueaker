@@ -1,4 +1,5 @@
 using UnityEngine;
+using Verse;
 
 namespace UniversalSqueaker.UI;
 
@@ -41,7 +42,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         return VoicePacksPageModel.SectionHelpKeyOf(sectionKey);
     }
 
-    public string BuildIdentity => UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "unknown";
+    // Fallback shares the footer's Keyed entry so a missing instance never leaks a raw English token
+    // into a translated page. SaveStatus stays a raw token: the footer maps status tokens itself and
+    // must keep matching on them.
+    public string BuildIdentity => UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
 
     public string SaveStatus => UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
 

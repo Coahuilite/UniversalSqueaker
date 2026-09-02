@@ -9,6 +9,7 @@ public sealed class EmptyStateWidget : IUiWidget
     public const string Kind = "state/empty";
 
     private const float DefaultHeight = 48f;
+    private const float VerticalPadding = 12f;
 
     private UiElementSpec spec = UiElementSpec.Empty;
 
@@ -35,18 +36,38 @@ public sealed class EmptyStateWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
-        return ReadHeight();
+        return BandFor(ctx, ResolveText(ctx));
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
 
-        string text = spec.TryGetAttribute("TextKey", out string key) && key.Length > 0
-            ? ctx.Translation.Translate(key)
-            : spec.TryGetAttribute("Text", out string literal) ? literal : "";
+        UiThemeDraw.Label(rect, ResolveText(ctx), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Small, TextAnchor.MiddleCenter);
+    }
 
-        UiThemeDraw.Label(rect, text, ctx.Theme, ctx.Theme.TextSecondary, UiFont.Small, TextAnchor.MiddleCenter);
+    /// <summary>Shared by Measure and Draw so the allocated band always matches the drawn string.</summary>
+    private string ResolveText(UiWidgetContext ctx)
+    {
+        if (spec.TryGetAttribute("TextKey", out string key) && key.Length > 0)
+        {
+            return ctx.Translation.Translate(key);
+        }
+
+        return spec.TryGetAttribute("Text", out string literal) ? literal : "";
+    }
+
+    /// <summary>
+    /// Empty-state copy is a sentence, not a word: it gets the height its wrapped lines need, with the
+    /// declared or default height as the floor.
+    /// </summary>
+    private float BandFor(UiWidgetContext ctx, string text)
+    {
+        float minimum = ReadHeight();
+        if (text.Length == 0) return minimum;
+
+        float lines = Math.Max(1f, ctx.Metrics.MeasureText(text, UiFont.Small, Math.Max(1f, ctx.ViewWidth)));
+        return Math.Max(minimum, lines + VerticalPadding);
     }
 
     private float ReadHeight()

@@ -118,7 +118,7 @@ internal static class Program
         Step("overlay host without settings window", OverlayHostCreatedWithoutSettingsWindow);
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
-        Step("overlay safe area at three viewports", OverlaySafeAreaThreeViewports);
+        Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -588,6 +588,176 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// End-to-end text-fitting gate. Production widgets, the production Schema=2 host, and the two
+    /// shipped Keyed tables are driven through the kernel text-fit audit at three window widths. Two
+    /// things must hold: no single-line label overflows the rect it is given (in either language), and
+    /// the audit demonstrably fires when a label does overflow — an assertion that can only pass because
+    /// nothing is measured would be worthless, so the second half injects a deliberately impossible
+    /// option name. Widths come from the Verse stub's half-width advance model (CJK = one em, Latin =
+    /// half an em); absolute pixel truth remains an in-game property.
+    /// </summary>
+    private static void TextFitAuditAcrossLanguages()
+    {
+        Dictionary<string, string> english = ReadKeyedTable("English");
+        Dictionary<string, string> chinese = ReadKeyedTable("ChineseSimplified");
+        Assert(english.Count >= 100, "the shipped English Keyed table should be populated, got " + english.Count);
+        string[] tabs = { "Overview", "Distance", "Packs", "Tuning", "Presets" };
+        var viewports = new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) };
+        var reports = new List<UiOverflowReport>();
+
+        UiFitAudit.Attach(new StubMetrics(), reports.Add);
+        UiFitAudit.Enabled = true;
+        try
+        {
+            // Positive control, and the reason the zero-finding sweeps below mean anything: prove in this
+            // process, through the same production drawing outlet, that a label which cannot fit is seen.
+            // Without it, a silently disabled audit would pass every "no overflow" assertion forever.
+            UiFitAudit.Reset();
+            reports.Clear();
+            UiFitAudit.BeginElement("probe/single-line");
+            FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
+                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                TextAnchor.MiddleLeft, singleLine: true);
+            UiFitAudit.EndElement();
+            Assert(reports.Count == 1, "positive control failed: the audit saw nothing for a label that cannot fit (" + Describe(reports) + ")");
+            CheckLanguageTable(reports, tabs, viewports, english, "english");
+            CheckLanguageTable(reports, tabs, viewports, chinese, "chinese");
+
+            // Failure sensitivity for the sweeping checks: one Keyed string is replaced with a value no
+            // fixed column can hold, then the real page is drawn again. If the audit stays silent here,
+            // every "no overflow" result above is meaningless — that is the exact failure this guards.
+            string impossible = new string('\u6d4b', 30);
+            var stretched = new Dictionary<string, string>(chinese, StringComparer.Ordinal)
+            {
+                ["US.Packs.Filter.Race"] = impossible
+            };
+
+            SetTranslatorResolver(stretched);
+            UiFitAudit.Reset();
+            reports.Clear();
+            using (UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }))
+            {
+                host.Bindings.Invoke("set-tab", "Packs");
+                host.MeasureAndArrange(viewports[0]);
+                host.DrawFrame(new Rect(0f, 0f, viewports[0].x, viewports[0].y));
+            }
+
+            bool caught = false;
+            foreach (UiOverflowReport report in reports)
+            {
+                if (report.Axis == UiOverflowAxis.Width
+                    && report.ElementPath.IndexOf("filter-bar", StringComparison.Ordinal) >= 0)
+                {
+                    caught = true;
+                }
+            }
+
+            Assert(caught, "the audit must report a Keyed string too wide for its column, findings: " + Describe(reports));
+        }
+        finally
+        {
+            UiFitAudit.Detach();
+            SetTranslatorResolver(null);
+        }
+    }
+
+    private static void CheckLanguageTable(
+        List<UiOverflowReport> reports,
+        string[] tabs,
+        Vector2[] viewports,
+        Dictionary<string, string> table,
+        string label)
+    {
+        SetTranslatorResolver(table);
+        UiFitAudit.Reset();
+        reports.Clear();
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        foreach (string tab in tabs)
+        {
+            host.Bindings.Invoke("set-tab", tab);
+            foreach (Vector2 viewport in viewports)
+            {
+                host.MeasureAndArrange(viewport);
+                host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+            }
+        }
+
+        var findings = new List<string>();
+        foreach (UiOverflowReport report in reports)
+        {
+            findings.Add(report.ElementPath + " " + report.Axis + " needs " + report.Needed + "px, has " + report.Available + "px");
+        }
+
+        Assert(findings.Count == 0,
+            label + ": every label on the shipped page must fit the rect it is given; offenders: "
+            + string.Join(" | ", findings));
+        Console.WriteLine("  ok: " + label + " table draws 5 workspaces x 3 viewports with no text overflow");
+    }
+
+    private static string Describe(List<UiOverflowReport> reports)
+    {
+        var parts = new List<string>();
+        foreach (UiOverflowReport report in reports)
+        {
+            parts.Add(report.ElementPath + "/" + report.Axis + " " + report.Needed + ">" + report.Available);
+        }
+
+        return parts.Count == 0 ? "(none)" : string.Join(" | ", parts);
+    }
+
+    private static Dictionary<string, string> ReadKeyedTable(string languageFolder)
+    {
+        string path = System.IO.Path.Combine(
+            RepoRoot(), "1.6", "Languages", languageFolder, "Keyed", "UniversalSqueaker.xml");
+        var document = new System.Xml.XmlDocument();
+        document.Load(path);
+
+        var table = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (System.Xml.XmlNode node in document.SelectNodes("/LanguageData/*")!)
+        {
+            table[node.Name] = node.InnerText.Trim();
+        }
+
+        return table;
+    }
+
+    private static string RepoRoot()
+    {
+        System.IO.DirectoryInfo? dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir != null; i++)
+        {
+            if (System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "scripts", "verify-local.ps1"))) return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root from " + AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    /// Installs the harness language database into the Verse stub's resolver. Reached by reflection
+    /// because the field exists only on the stub: call sites compile against the Krafs reference
+    /// assembly, which has no such member.
+    /// </summary>
+    private static void SetTranslatorResolver(Dictionary<string, string>? table)
+    {
+        System.Reflection.FieldInfo? field = typeof(Translator).GetField(
+            "Resolve", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        Assert(field != null, "the Verse stub must expose Translator.Resolve for language-driven checks");
+        if (field == null) return;
+
+        if (table == null)
+        {
+            field.SetValue(null, null);
+            return;
+        }
+
+        field.SetValue(null, new Func<string, string>(
+            key => table.TryGetValue(key, out string? text) ? text : key));
+    }
+
     private static void WorkspaceSwitchResetsSessionScroll()
     {
         var fake = new RecordingSettingsSource { RichData = true };
@@ -968,6 +1138,38 @@ internal static class Program
         public float MeasureText(string text, FerriteLib.UiKit.Kernel.UiFont font, float width)
         {
             return 16f;
+        }
+
+        // Half-width advance model (CJK/full-width = one em, Latin = half an em), matching the Verse
+        // stub's own CalcSize so harness-level and production-level widths agree.
+        public float MeasureWidth(string text, FerriteLib.UiKit.Kernel.UiFont font)
+        {
+            float em = font switch
+            {
+                FerriteLib.UiKit.Kernel.UiFont.Tiny => 12f,
+                FerriteLib.UiKit.Kernel.UiFont.Medium => 18f,
+                _ => 16f
+            };
+
+            float units = 0f;
+            foreach (char c in text ?? "")
+            {
+                units += IsWide(c) ? 2f : 1f;
+            }
+
+            return units * em * 0.5f;
+        }
+
+        private static bool IsWide(char c)
+        {
+            return c >= '\u2E80' && (
+                c <= '\u303F'
+                || (c >= '\u3400' && c <= '\u4DBF')
+                || (c >= '\u4E00' && c <= '\u9FFF')
+                || (c >= '\uAC00' && c <= '\uD7AF')
+                || (c >= '\uF900' && c <= '\uFAFF')
+                || (c >= '\uFF00' && c <= '\uFF60')
+                || (c >= '\uFFE0' && c <= '\uFFE6'));
         }
     }
 

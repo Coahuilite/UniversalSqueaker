@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled, VoicePackCompAutoAttached, VoicePackCompAttachSkipped, VoicePackCompAttachFailed }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled, VoicePackCompAutoAttached, VoicePackCompAttachSkipped, VoicePackCompAttachFailed, LabelOverflow }
 
 internal readonly struct SqueakLogData
 {
@@ -17,8 +17,11 @@ internal readonly struct SqueakLogData
     // v2-only identity/route facts (0.3.1 wave 2c). Race/Xenotype carry exact DefNames; Tier carries the
     // protocol tier vocabulary; SettingsOrigin carries the session settings-source fact.
     internal readonly string? Race, Xenotype, Tier; internal readonly SqueakSettingsOrigin? SettingsOrigin;
-    internal SqueakLogData(string? action = null, string? target = null, string? pack = null, string? reason = null, string? sound = null, string? source = null, int? count = null, int? dispatched = null, int? suppressedDetail = null, bool? enabled = null, Exception? exception = null, string? pawnName = null, string? pawnId = null, string? race = null, string? xenotype = null, string? tier = null, SqueakSettingsOrigin? settingsOrigin = null, bool? egg = null, bool? pawnControlled = null, string? pawnFaction = null)
-    { Action = action; Target = target; Pack = pack; Reason = reason; Sound = sound; Source = source; Count = count; Dispatched = dispatched; SuppressedDetail = suppressedDetail; Enabled = enabled; Exception = exception; PawnName = pawnName; PawnId = pawnId; Race = race; Xenotype = xenotype; Tier = tier; SettingsOrigin = settingsOrigin; Egg = egg; PawnControlled = pawnControlled; PawnFaction = pawnFaction; }
+    // UI text-fit audit facts: measured need vs the rect actually offered. Pixels carry one decimal so a
+    // reviewer can tell a 1px rounding disagreement from a string that is twice as wide as its box.
+    internal readonly float? Needed, Available;
+    internal SqueakLogData(string? action = null, string? target = null, string? pack = null, string? reason = null, string? sound = null, string? source = null, int? count = null, int? dispatched = null, int? suppressedDetail = null, bool? enabled = null, Exception? exception = null, string? pawnName = null, string? pawnId = null, string? race = null, string? xenotype = null, string? tier = null, SqueakSettingsOrigin? settingsOrigin = null, bool? egg = null, bool? pawnControlled = null, string? pawnFaction = null, float? needed = null, float? available = null)
+    { Action = action; Target = target; Pack = pack; Reason = reason; Sound = sound; Source = source; Count = count; Dispatched = dispatched; SuppressedDetail = suppressedDetail; Enabled = enabled; Exception = exception; PawnName = pawnName; PawnId = pawnId; Race = race; Xenotype = xenotype; Tier = tier; SettingsOrigin = settingsOrigin; Egg = egg; PawnControlled = pawnControlled; PawnFaction = pawnFaction; Needed = needed; Available = available; }
 }
 
 internal readonly struct SqueakLogDefinition
@@ -80,6 +83,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.VoicePackCompAutoAttached => new(SqueakLogVisibility.Daily, SqueakLogLevel.Info, "VoicePack comp auto-attached to race <race>.", 2),
         SqueakLogEvent.VoicePackCompAttachSkipped => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "VoicePack comp auto-attach skipped for race <race> (<reason>).", 2),
         SqueakLogEvent.VoicePackCompAttachFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "VoicePack comp auto-attach failed.", 2),
+        SqueakLogEvent.LabelOverflow => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "A settings label does not fit its rect: <target> (<reason>).", 2),
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 
@@ -115,6 +119,15 @@ internal static class SqueakLogRegistry
             return "VoicePack comp auto-attached to race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + ".";
         if (e == SqueakLogEvent.VoicePackCompAttachSkipped)
             return "VoicePack comp auto-attach skipped for race " + (string.IsNullOrEmpty(data.Race) ? "-" : data.Race) + " (" + (string.IsNullOrEmpty(data.Reason) ? "-" : data.Reason) + ").";
+        if (e == SqueakLogEvent.LabelOverflow)
+        {
+            return "A settings label does not fit its rect: "
+                + (string.IsNullOrEmpty(data.Target) ? "-" : data.Target)
+                + " (" + (string.IsNullOrEmpty(data.Reason) ? "-" : data.Reason) + " axis, font "
+                + (string.IsNullOrEmpty(data.Source) ? "-" : data.Source) + ", needs "
+                + (data.Needed == null ? "-" : data.Needed.Value.ToString("0.0", CultureInfo.InvariantCulture))
+                + "px, has " + (data.Available == null ? "-" : data.Available.Value.ToString("0.0", CultureInfo.InvariantCulture)) + "px).";
+        }
         return definition.Human;
     }
 
@@ -157,6 +170,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.VoicePackCompAutoAttached => "voicepack.comp.auto_attached",
         SqueakLogEvent.VoicePackCompAttachSkipped => "voicepack.comp.attach_skipped",
         SqueakLogEvent.VoicePackCompAttachFailed => "voicepack.comp.attach_failed",
+        SqueakLogEvent.LabelOverflow => "ui.text.overflow",
         _ => throw new ArgumentOutOfRangeException(nameof(e))
     };
 }
@@ -275,6 +289,12 @@ internal static class SqueakLogFormatter
                     Add(builder, "ex_site", site == null ? null : site.DeclaringType?.FullName + "." + site.Name);
                     Add(builder, "ex_msg", SqueakLogText.SanitizeExceptionMessage(data.Exception.Message));
                 }
+                break;
+            case SqueakLogEvent.LabelOverflow:
+                Add(builder, "reason", data.Reason);
+                Add(builder, "source", data.Source);
+                Add(builder, "need", data.Needed);
+                Add(builder, "have", data.Available);
                 break;
         }
 
