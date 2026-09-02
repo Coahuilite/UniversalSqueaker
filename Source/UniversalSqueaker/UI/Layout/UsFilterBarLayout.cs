@@ -37,9 +37,19 @@ public static class UsFilterBarLayout
         return DropdownsStack(bodyWidth) ? RowHeight * 2f + Gap * 2f : 0f;
     }
 
-    /// <summary>Total body height (card chrome excluded) for the filter bar.</summary>
+    /// <summary>Total body height when every row sits at the default <see cref="RowHeight"/>.</summary>
     public static float BodyHeight(float bodyWidth)
     {
-        return RowHeight * 2f + ExtraDropdownRows(bodyWidth);
+        return BodyHeight(bodyWidth, RowHeight);
+    }
+
+    /// <summary>
+    /// Total body height with a caller-measured first row. The domain chips are Tiny labels drawn into the
+    /// whole chip rect, so in a language where a chip wraps the first row must grow; the dropdown rows
+    /// below it keep the fixed height they are drawn at.
+    /// </summary>
+    public static float BodyHeight(float bodyWidth, float domainRowHeight)
+    {
+        return domainRowHeight + RowHeight + ExtraDropdownRows(bodyWidth);
     }
 }

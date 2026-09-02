@@ -17,7 +17,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
     public const string Kind = "us/help-panel";
 
     private const float Padding = 8f;
-    private const float TitleHeight = 20f;
+    private const float TitleMinHeight = 20f;
     private const float TitleGap = 6f;
     private const float ItemHeight = 20f;
     private const float ItemGap = 2f;
@@ -66,8 +66,25 @@ public sealed class UsHelpPanelWidget : IUiWidget
             listHeight = ItemHeight + (ItemHeight + ItemGap) * section.Items.Count;
         }
 
+        float headerHeight = HeaderHeight(ctx, HeaderText(ctx, display), textWidth);
         float textHeight = Math.Max(1f, ctx.Metrics.MeasureText(display.Text, UiFont.Tiny, textWidth));
-        return Padding * 2f + TitleHeight + TitleGap + listHeight + ContentGap + ContentLabelHeight + 2f + textHeight + 4f;
+        return Padding * 2f + headerHeight + TitleGap + listHeight + ContentGap + ContentLabelHeight + 2f + textHeight + 4f;
+    }
+
+    /// <summary>
+    /// The one header-text outlet. The header is a Keyed format string wrapping the active section
+    /// title, so its length is data: Measure and Draw must both take it from here or the band gets
+    /// sized for one string while another is drawn.
+    /// </summary>
+    private static string HeaderText(UiWidgetContext ctx, UsHelpPanelLogic.HelpPanelDisplay display)
+    {
+        return string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.Title);
+    }
+
+    /// <summary>Header band height: one line at minimum, more when the section title wraps.</summary>
+    private static float HeaderHeight(UiWidgetContext ctx, string header, float textWidth)
+    {
+        return Math.Max(TitleMinHeight, ctx.Metrics.MeasureText(header, UiFont.Small, textWidth));
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -85,15 +102,11 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
         // Keep the context header fixed at the top of the help surface; the index and body below
         // follow the active section, hover, or selection without changing the panel's hierarchy.
-        Rect headerRect = new(x, y, textWidth, TitleHeight);
-        UiThemeDraw.SectionHeader(
-            headerRect,
-            string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.Title),
-            ctx.Theme,
-            ctx.Theme.TextPrimary,
-            UiFont.Small);
+        string header = HeaderText(ctx, display);
+        Rect headerRect = new(x, y, textWidth, HeaderHeight(ctx, header, textWidth));
+        UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
         UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
-        y += TitleHeight + TitleGap;
+        y += headerRect.height + TitleGap;
 
         DrawItemRow(new Rect(x, y, textWidth, ItemHeight), UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabel),
             selected: display.IsOverview, itemKey: null, ctx);

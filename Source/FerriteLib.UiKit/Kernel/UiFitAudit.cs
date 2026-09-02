@@ -24,7 +24,8 @@ public readonly struct UiOverflowReport
         UiFont font,
         UiOverflowAxis axis,
         float needed,
-        float available)
+        float available,
+        float rectWidth = 0f)
     {
         ElementPath = elementPath;
         Text = text;
@@ -32,6 +33,7 @@ public readonly struct UiOverflowReport
         Axis = axis;
         Needed = needed;
         Available = available;
+        RectWidth = rectWidth;
     }
 
     public string ElementPath { get; }
@@ -45,6 +47,13 @@ public readonly struct UiOverflowReport
     public float Needed { get; }
 
     public float Available { get; }
+
+    /// <summary>
+    /// Width of the rect the text was laid out in. A height finding is only explainable next to the
+    /// width it wrapped at: need/have alone cannot tell a band that is too short from a column that is
+    /// too narrow. Diagnostic only — the shipped usdiag record does not carry it.
+    /// </summary>
+    public float RectWidth { get; }
 }
 
 /// <summary>
@@ -176,7 +185,8 @@ public static class UiFitAudit
             font,
             axis,
             needed,
-            available));
+            available,
+            rect.width));
     }
 
     private static string Shorten(string text)

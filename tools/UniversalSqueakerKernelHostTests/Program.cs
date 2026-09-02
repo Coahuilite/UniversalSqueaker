@@ -119,6 +119,7 @@ internal static class Program
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
+        Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -606,7 +607,8 @@ internal static class Program
         var viewports = new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) };
         var reports = new List<UiOverflowReport>();
 
-        UiFitAudit.Attach(new StubMetrics(), reports.Add);
+        var metrics = new StubMetrics();
+        UiFitAudit.Attach(metrics, reports.Add);
         UiFitAudit.Enabled = true;
         try
         {
@@ -621,8 +623,8 @@ internal static class Program
                 TextAnchor.MiddleLeft, singleLine: true);
             UiFitAudit.EndElement();
             Assert(reports.Count == 1, "positive control failed: the audit saw nothing for a label that cannot fit (" + Describe(reports) + ")");
-            CheckLanguageTable(reports, tabs, viewports, english, "english");
-            CheckLanguageTable(reports, tabs, viewports, chinese, "chinese");
+            CheckLanguageTable(reports, tabs, viewports, english, "english", metrics);
+            CheckLanguageTable(reports, tabs, viewports, chinese, "chinese", metrics);
 
             // Failure sensitivity for the sweeping checks: one Keyed string is replaced with a value no
             // fixed column can hold, then the real page is drawn again. If the audit stays silent here,
@@ -636,7 +638,7 @@ internal static class Program
             SetTranslatorResolver(stretched);
             UiFitAudit.Reset();
             reports.Clear();
-            using (UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }))
+            using (UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics))
             {
                 host.Bindings.Invoke("set-tab", "Packs");
                 host.MeasureAndArrange(viewports[0]);
@@ -662,19 +664,72 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// Failure sensitivity for the Packs layer row heights. The bilingual fit sweep compares one label
+    /// against its own band, so it cannot see a row that is too short for the content stacked inside it —
+    /// exactly the bug that made the race and xenotype layers overdraw the sections below them. This step
+    /// drives the real Host twice, once with text that fits one line and once with text that cannot, and
+    /// requires both cards to grow. Under the old height formulas (title only, measured from the bare
+    /// xenotype name) the two arrangements come out identical and this fails.
+    /// </summary>
+    private static void WrappingDomainTextGrowsLayerRows()
+    {
+        var metrics = new StubMetrics();
+        var reports = new List<UiOverflowReport>();
+        UiFitAudit.Attach(metrics, reports.Add);
+        UiFitAudit.Enabled = true;
+        try
+        {
+            // The detail and title templates are Keyed: without a loaded table Translate returns the key
+            // itself, the numeric arguments are dropped and nothing is long enough to wrap, which would
+            // make this step pass without measuring anything.
+            SetTranslatorResolver(ReadKeyedTable("English"));
+            var narrow = new Vector2(800f, 600f);
+            (float raceShort, float xenotypeShort) = LayerCardHeights(narrow, wrapping: false, metrics);
+            (float raceLong, float xenotypeLong) = LayerCardHeights(narrow, wrapping: true, metrics);
+
+            Assert(raceShort > 0f && xenotypeShort > 0f, "the rich fixture must place both layer cards");
+            Assert(raceLong > raceShort + 10f,
+                "a race detail line that cannot fit one line must grow the race-layer card: one-line "
+                + raceShort + "px, wrapping " + raceLong + "px");
+            Assert(xenotypeLong > xenotypeShort + 10f,
+                "a composed xenotype title that cannot fit one line must grow the xenotype-layer card: one-line "
+                + xenotypeShort + "px, wrapping " + xenotypeLong + "px");
+            Assert(reports.Count == 0,
+                "wrapping layer text must be measured into its band, not clipped: " + Describe(reports));
+        }
+        finally
+        {
+            UiFitAudit.Detach();
+            SetTranslatorResolver(null);
+        }
+    }
+
+    private static (float Race, float Xenotype) LayerCardHeights(Vector2 viewport, bool wrapping, StubMetrics metrics)
+    {
+        var fake = new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        host.Bindings.Invoke("set-tab", "Packs");
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+        float Race = snapshot.RectById.TryGetValue("race-layer", out Rect raceRect) ? raceRect.height : 0f;
+        float Xenotype = snapshot.RectById.TryGetValue("xenotype-layer", out Rect xenoRect) ? xenoRect.height : 0f;
+        return (Race, Xenotype);
+    }
+
     private static void CheckLanguageTable(
         List<UiOverflowReport> reports,
         string[] tabs,
         Vector2[] viewports,
         Dictionary<string, string> table,
-        string label)
+        string label,
+        StubMetrics metrics)
     {
         SetTranslatorResolver(table);
         UiFitAudit.Reset();
         reports.Clear();
 
         var fake = new RecordingSettingsSource { RichData = true };
-        using UiHost host = UsKernelSettingsHost.Create(fake);
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         foreach (string tab in tabs)
         {
             host.Bindings.Invoke("set-tab", tab);
@@ -688,7 +743,8 @@ internal static class Program
         var findings = new List<string>();
         foreach (UiOverflowReport report in reports)
         {
-            findings.Add(report.ElementPath + " " + report.Axis + " needs " + report.Needed + "px, has " + report.Available + "px");
+            findings.Add(report.ElementPath + " " + report.Axis + " needs " + report.Needed + "px, has "
+                + report.Available + "px at width " + report.RectWidth + "px, text=\"" + Short(report.Text) + "\"");
         }
 
         Assert(findings.Count == 0,
@@ -706,6 +762,13 @@ internal static class Program
         }
 
         return parts.Count == 0 ? "(none)" : string.Join(" | ", parts);
+    }
+
+    /// <summary>Trims an offender string so the harness message stays one readable line per finding.</summary>
+    private static string Short(string? text)
+    {
+        string value = text ?? "";
+        return value.Length <= 28 ? value : value.Substring(0, 28) + "…";
     }
 
     private static Dictionary<string, string> ReadKeyedTable(string languageFolder)
@@ -1135,10 +1198,28 @@ internal static class Program
 
     private sealed class StubMetrics : FerriteLib.UiKit.Kernel.ITextMetrics
     {
+        /// <summary>
+        /// Wrap-aware on purpose. The fit audit's height axis compares this against the band it was
+        /// drawn into, so a font-constant answer makes every band at or above that constant pass no
+        /// matter how long the string is: that is exactly how the help-panel header and the Packs row
+        /// detail lines stayed green in this gate while visibly overdrawn in game. Height is therefore
+        /// derived from the same half-width advance model as MeasureWidth.
+        /// </summary>
         public float MeasureText(string text, FerriteLib.UiKit.Kernel.UiFont font, float width)
         {
-            return 16f;
+            float need = MeasureWidth(text, font);
+            if (need <= 0f) return LineHeight(font);
+            int lines = (int)Math.Ceiling(need / Math.Max(1f, width));
+            return lines * LineHeight(font);
         }
+
+        /// <summary>One text line including leading, per font: em plus the game's usual vertical padding.</summary>
+        private static float LineHeight(FerriteLib.UiKit.Kernel.UiFont font) => font switch
+        {
+            FerriteLib.UiKit.Kernel.UiFont.Tiny => 15f,
+            FerriteLib.UiKit.Kernel.UiFont.Medium => 21f,
+            _ => 19f,
+        };
 
         // Half-width advance model (CJK/full-width = one em, Latin = half an em), matching the Verse
         // stub's own CalcSize so harness-level and production-level widths agree.

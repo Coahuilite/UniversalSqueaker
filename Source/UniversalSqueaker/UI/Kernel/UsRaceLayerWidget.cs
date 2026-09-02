@@ -18,7 +18,16 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
     // Row detail line: composed from keyed templates only (see UsPacksText at the bottom of this
     // file, which the Xenotype layer and the VoicePack checklist share, so one text has one resolver).
 
+    // Row text bands. Both lines go through RowBands below: GUI.Label does not clip to its rect, so a
+    // detail line long enough to wrap must grow the row rather than spill over the next section.
     private const float RowGap = 2f;
+    private const float RowTopPadding = 4f;
+    private const float RowBottomPadding = 6f;
+    private const float TitleBand = 18f;
+    private const float DetailGap = 2f;
+    private const float DetailBand = 16f;
+    private const float RowMinHeight = 48f;
+    private const float RowTextInset = 20f;
 
     public override string Kind => KindName;
 
@@ -50,10 +59,11 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
             : Array.Empty<RaceLayerRowView>();
         if (races.Count == 0) return 0f;
 
+        float textWidth = Math.Max(1f, BodyWidth(ctx) - RowTextInset);
         float height = 0f;
         foreach (RaceLayerRowView race in races)
         {
-            height += RowHeightFor(race, ctx) + RowGap;
+            height += RowHeightFor(race, ctx, textWidth) + RowGap;
         }
 
         return height;
@@ -72,6 +82,7 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         if (races.Count == 0) return;
 
         VoicePackDomainView? selected = ctx.Bindings.TryGet("selected-domain", out VoicePackDomainView? s) ? s : null;
+        float textWidth = Math.Max(1f, rect.width - RowTextInset);
 
         float y = rect.y;
         foreach (RaceLayerRowView race in races)
@@ -79,27 +90,31 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
             bool isSelected = selected.HasValue
                 && selected.Value.Scope == SqueakVoicePackScope.Race
                 && string.Equals(selected.Value.RaceDefName, race.RaceDefName, StringComparison.Ordinal);
-            float rowHeight = RowHeightFor(race, ctx);
-            DrawRaceRow(new Rect(rect.x, y, rect.width, rowHeight), race, isSelected, ctx);
+            float rowHeight = RowHeightFor(race, ctx, textWidth);
+            DrawRaceRow(new Rect(rect.x, y, rect.width, rowHeight), race, isSelected, textWidth, ctx);
             y += rowHeight + RowGap;
         }
     }
 
-    private void DrawRaceRow(Rect rect, RaceLayerRowView race, bool selected, UiWidgetContext ctx)
+    private void DrawRaceRow(Rect rect, RaceLayerRowView race, bool selected, float textWidth, UiWidgetContext ctx)
     {
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
 
         string detail = UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount, race.State);
+        (float titleBand, float detailBand, float _) = RowBands(ctx, textWidth, race.DisplayName, detail);
+        float x = rect.x + UsKernelDraw.RowLeftPadding;
+        float lineY = rect.y + RowTopPadding;
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 20f), 18f),
+            new Rect(x, lineY, textWidth, titleBand),
             race.DisplayName,
             ctx.Theme,
             selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
+        lineY += titleBand + DetailGap;
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 22f, Math.Max(1f, rect.width - 20f), 16f),
+            new Rect(x, lineY, textWidth, detailBand),
             detail,
             ctx.Theme,
             ctx.Theme.TextSecondary,
@@ -112,19 +127,38 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         }
     }
 
-    private float RowHeightFor(RaceLayerRowView race, UiWidgetContext ctx)
+    private float RowHeightFor(RaceLayerRowView race, UiWidgetContext ctx, float textWidth)
     {
-        float measured = ctx.Metrics.MeasureText(race.DisplayName, UiFont.Small, Math.Max(1f, BodyWidth(ctx) - 40f));
-        return Math.Max(48f, measured + 32f);
+        return RowBands(
+            ctx,
+            textWidth,
+            race.DisplayName,
+            UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount, race.State)).Total;
+    }
+
+    /// <summary>
+    /// The two text bands of a domain row, resolved by one shared path so the height Measure allocates
+    /// and the offsets Draw uses cannot disagree. Previously only the title was measured and the detail
+    /// line sat in an unmeasured 16px band, so a wrapped detail over drew the section below it.
+    /// </summary>
+    private (float Title, float Detail, float Total) RowBands(
+        UiWidgetContext ctx, float textWidth, string title, string detail)
+    {
+        float titleBand = Math.Max(TitleBand, ctx.Metrics.MeasureText(title, UiFont.Small, textWidth));
+        float detailBand = Math.Max(DetailBand, ctx.Metrics.MeasureText(detail, UiFont.Tiny, textWidth));
+        float total = Math.Max(
+            RowMinHeight,
+            RowTopPadding + titleBand + DetailGap + detailBand + RowBottomPadding);
+        return (titleBand, detailBand, total);
     }
 }
 
 /// <summary>
 /// Keyed-text outlet for the Packs workspace. The Race and Xenotype layers render the same
 /// "n / m enabled · state" line and the same "name (race)" title, and the checklist joins pack
-/// metadata with the same separator, so the template composition lives here once: Measure takes row
-/// heights from Def/data text only (never from these strings), Draw is their single consumer, and
-/// every lookup goes through <see cref="UiWidgetContext.Translation"/> — no Verse bypass, no second copy.
+/// metadata with the same separator, so the template composition lives here once: the row detail line
+/// is measured and drawn from this one resolver, and every lookup goes through
+/// <see cref="UiWidgetContext.Translation"/> — no Verse bypass, no second copy.
 /// </summary>
 internal static class UsPacksText
 {

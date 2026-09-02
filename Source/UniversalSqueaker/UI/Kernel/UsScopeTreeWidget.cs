@@ -33,6 +33,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float InheritedHintHeight = 16f;
 
     private const float MoodRowHeight = 32f;
+    // The mood name is a Small line in a fixed column: a 16px band is shorter than one such line, so
+    // the band is measured and the row grows with it. Measure and Draw share MoodLabelBand below.
+    private const float MoodLabelMinHeight = 16f;
+    private const float MoodLabelTop = 7f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
@@ -137,7 +141,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             }
 
             bodyHeight += RowHeight + RowGap; // "Mood Tuning" header
-            bodyHeight += moodRows.Count * (MoodRowHeightFor(width) + RowGap);
+            bodyHeight += moodRows.Count * (MoodRowHeightFor(width, ctx, moodRows) + RowGap);
         }
 
         return bodyHeight + BottomPadding;
@@ -228,7 +232,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 TextAnchor.MiddleLeft);
             y += RowHeight + RowGap;
 
-            float moodRowHeight = MoodRowHeightFor(innerWidth);
+            float moodRowHeight = MoodRowHeightFor(innerWidth, ctx, moodRows);
             foreach (MoodTuningRowView mood in moodRows)
             {
                 DrawMoodRow(new Rect(x, y, innerWidth, moodRowHeight), mood, ctx);
@@ -424,7 +428,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + 7f, MoodLabelWidth, 16f),
+            new Rect(rect.x + LeftPadding, rect.y + MoodLabelTop, MoodLabelWidth, MoodLabelBand(ctx, row.DisplayName)),
             row.DisplayName,
             ctx.Theme,
             ctx.Theme.TextPrimary,
@@ -557,10 +561,31 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// layouts, or the stacked header + three full-width stepper lines on narrow ones. Measure and
     /// Draw must agree so the section card never clips or overlaps mood controls.
     /// </summary>
-    private static float MoodRowHeightFor(float bodyWidth)
+    private static float MoodRowHeightFor(float bodyWidth, UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
     {
-        if (!UsesStackedMoodRows(bodyWidth)) return MoodRowHeight;
+        if (!UsesStackedMoodRows(bodyWidth))
+        {
+            return Math.Max(MoodRowHeight, MoodLabelTop + MaxMoodLabelBand(ctx, rows) + MoodLabelTop);
+        }
+
         return ButtonHeight + RowGap + 3f * ButtonHeight + 2f * RowGap;
+    }
+
+    /// <summary>Tallest mood-name band in the set, so one row height serves every mood in the language.</summary>
+    private static float MaxMoodLabelBand(UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
+    {
+        float band = MoodLabelMinHeight;
+        foreach (MoodTuningRowView row in rows)
+        {
+            band = Math.Max(band, MoodLabelBand(ctx, row.DisplayName));
+        }
+
+        return band;
+    }
+
+    private static float MoodLabelBand(UiWidgetContext ctx, string label)
+    {
+        return Math.Max(MoodLabelMinHeight, ctx.Metrics.MeasureText(label, UiFont.Small, MoodLabelWidth));
     }
 
     private float ScopeRowHeightFor(float rowWidth, string displayName, UiWidgetContext ctx)

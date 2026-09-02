@@ -27,9 +27,23 @@ public static class UsKernelSettingsHost
     private const string Source = "coahuilite.universalsqueaker";
     private const string ManifestResourceName = "UniversalSqueaker.UI.Layout.Schema2.xml";
 
+    /// <summary>Production entry point: the Host measures text with the real Verse text engine.</summary>
     public static UiHost Create(IUsKernelSettingsSource source)
     {
+        return Create(source, VerseFerriteTextMetrics.Instance);
+    }
+
+    /// <summary>
+    /// Host creation with an explicit text-metrics model. A harness must pass the very same instance it
+    /// attaches to <see cref="UiFitAudit"/>: layout sized by one model and checked against another makes
+    /// every band that fell back to its constant look like an overflow, and hides the ones that genuinely
+    /// are. Outside the game the Verse engine returns no usable heights at all, so the injected model is
+    /// the only way this seam can measure anything.
+    /// </summary>
+    public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics)
+    {
         if (source == null) throw new ArgumentNullException(nameof(source));
+        if (metrics == null) throw new ArgumentNullException(nameof(metrics));
 
         UsKernelWidgetRegistrar.EnsureRegistered();
 
@@ -41,7 +55,7 @@ public static class UsKernelSettingsHost
             manifest,
             bindings,
             UiTheme.DarkGold,
-            VerseFerriteTextMetrics.Instance,
+            metrics,
             new UsKernelTranslation());
         bumper.Attach(host.Session);
         return host;

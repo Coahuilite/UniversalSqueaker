@@ -21,6 +21,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// </summary>
     public bool RichData;
 
+    /// <summary>
+    /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: short race
+    /// names with an oversized "n / m enabled · state" detail, and a short xenotype name whose race
+    /// context makes the composed title long. The layer-height assertions need this because every other
+    /// fixture string fits one line, and a one-line world cannot tell a measured band from a constant one.
+    /// </summary>
+    public bool WrappingDomainText;
+
     // Basic writes.
     public SqueakVoicePackMode? LastMode;
     public float? LastGlobalVolume;
@@ -133,10 +141,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     private VoicePacksViewState BuildRichView()
     {
         var sang = new VoicePackDomainView(
+            // The two Packs layers compose their title from the xenotype name plus the race context, so
+            // a long race defName is what makes the drawn title wrap while the bare name stays short.
             SqueakVoicePackScope.Xenotype,
-            "human",
+            WrappingDomainText ? "a-very-long-race-definition-name-used-only-to-make-the-title-wrap" : "human",
             "sanguophage",
-            "Sanguophage (Human)",
+            WrappingDomainText ? "Sanguophage" : "Sanguophage (Human)",
             "test-catalog",
             SqueakVoicePackDomainState.Available,
             isDormant: false,
@@ -189,8 +199,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             bannerText: "rich harness catalog",
             races: new[]
             {
-                new RaceLayerRowView("human", "Human", enabledCount: 2, candidateCount: 3, SqueakVoicePackDomainState.Available),
-                new RaceLayerRowView("testrace", "Test Race", enabledCount: 1, candidateCount: 2, SqueakVoicePackDomainState.Available)
+                new RaceLayerRowView("human", "Human", enabledCount: WrappingDomainText ? int.MaxValue : 2, candidateCount: WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+                new RaceLayerRowView("testrace", "Test Race", enabledCount: WrappingDomainText ? int.MaxValue : 1, candidateCount: WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available)
             },
             xenotypeDomains: new[] { sang },
             selectedDomain: sang,

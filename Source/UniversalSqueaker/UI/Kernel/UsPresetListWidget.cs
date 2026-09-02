@@ -18,6 +18,10 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     public const string KindName = "us/preset-list";
 
     private const float PresetHeaderHeight = 40f;
+    private const float HeaderTitleMinHeight = 16f;
+    private const float HeaderTopPadding = 3f;
+    private const float HeaderInnerGap = 2f;
+    private const float HeaderBottomPadding = 3f;
 
     // The selection summary is a Tiny line under the preset title; 40f header = title band + gap + this
     // band + padding, so the summary is no longer cut to an 11px sliver.
@@ -80,7 +84,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         float bodyHeight = TopPadding;
         foreach (BaselinePresetView preset in presets)
         {
-            bodyHeight += PresetHeaderHeight + RowGap;
+            bodyHeight += HeaderBands(ctx, preset, width).Total + RowGap;
             if (!preset.Expanded) continue;
             if (!string.IsNullOrEmpty(preset.Description))
             {
@@ -130,8 +134,9 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
         foreach (BaselinePresetView preset in presets)
         {
-            DrawPresetHeader(new Rect(x, y, innerWidth, PresetHeaderHeight), preset, ctx);
-            y += PresetHeaderHeight + RowGap;
+            (float headerTitle, float headerSummary, float headerTotal) = HeaderBands(ctx, preset, innerWidth);
+            DrawPresetHeader(new Rect(x, y, innerWidth, headerTotal), preset, headerTitle, headerSummary, ctx);
+            y += headerTotal + RowGap;
 
             if (!preset.Expanded) continue;
 
@@ -165,7 +170,8 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         }
     }
 
-    private void DrawPresetHeader(Rect rect, BaselinePresetView preset, UiWidgetContext ctx)
+    private void DrawPresetHeader(
+        Rect rect, BaselinePresetView preset, float titleBand, float summaryBand, UiWidgetContext ctx)
     {
         bool hovered = Mouse.IsOver(rect);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, preset.Expanded);
@@ -173,15 +179,15 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
 
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), 16f),
-            (preset.Expanded ? "− " : "+ ") + preset.Label,
+            new Rect(rect.x + LeftPadding, rect.y + HeaderTopPadding, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), titleBand),
+            HeaderTitle(preset),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding + 4f, rect.y + 21f, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), SelectionSummaryHeight),
-            string.Format(Tr(ctx, SelectionSummaryKey), preset.SelectedRaceCount, preset.SelectedXenotypeCount),
+            new Rect(rect.x + LeftPadding + 4f, rect.y + HeaderTopPadding + titleBand + HeaderInnerGap, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), summaryBand),
+            SummaryText(ctx, preset),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
@@ -239,6 +245,40 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
                 "toggle-baseline-xenotype",
                 new UsBaselineXenoToggle(presetDefName, raceDefName, xenotype.XenotypeDefName, !xenotype.Selected));
         }
+    }
+
+    /// <summary>The preset header title as one outlet: the expander glyph plus the preset label.</summary>
+    private static string HeaderTitle(BaselinePresetView preset)
+    {
+        return (preset.Expanded ? "− " : "+ ") + preset.Label;
+    }
+
+    private static string SummaryText(UiWidgetContext ctx, BaselinePresetView preset)
+    {
+        return string.Format(Tr(ctx, SelectionSummaryKey), preset.SelectedRaceCount, preset.SelectedXenotypeCount);
+    }
+
+    /// <summary>
+    /// The two header bands and the row height, from the same widths the header draws into. The title is
+    /// a Small line and the old 16px band was shorter than one such line, so the summary underneath was
+    /// overdrawn whenever the title grew; the row now grows with both.
+    /// </summary>
+    private (float Title, float Summary, float Total) HeaderBands(
+        UiWidgetContext ctx, BaselinePresetView preset, float innerWidth)
+    {
+        float importX = innerWidth - ImportButtonWidth - 8f;
+        float titleWidth = Math.Max(1f, importX - LeftPadding - 8f);
+        float summaryWidth = Math.Max(1f, importX - LeftPadding - 16f);
+        string title = HeaderTitle(preset);
+        string summary = SummaryText(ctx, preset);
+        float titleBand = Math.Max(
+            HeaderTitleMinHeight, ctx.Metrics.MeasureText(title, UiFont.Small, titleWidth));
+        float summaryBand = Math.Max(
+            SelectionSummaryHeight, ctx.Metrics.MeasureText(summary, UiFont.Tiny, summaryWidth));
+        float total = Math.Max(
+            PresetHeaderHeight,
+            HeaderTopPadding + titleBand + HeaderInnerGap + summaryBand + HeaderBottomPadding);
+        return (titleBand, summaryBand, total);
     }
 
     private static float MeasuredRowHeight(string text, float width, UiWidgetContext ctx, float fallback)

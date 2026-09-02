@@ -64,7 +64,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return UsFilterBarLayout.BodyHeight(BodyWidth(ctx));
+        return UsFilterBarLayout.BodyHeight(BodyWidth(ctx), DomainRowHeight(ctx, BodyWidth(ctx)));
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -74,10 +74,11 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     private void DrawContent(Rect rect, UiWidgetContext ctx)
     {
-        DrawDomainRow(new Rect(rect.x, rect.y, rect.width, RowHeight), ctx);
+        float domainHeight = DomainRowHeight(ctx, rect.width);
+        DrawDomainRow(new Rect(rect.x, rect.y, rect.width, domainHeight), ctx);
 
-        float dropdownAreaTop = rect.y + RowHeight;
-        float dropdownAreaHeight = rect.height - RowHeight;
+        float dropdownAreaTop = rect.y + domainHeight;
+        float dropdownAreaHeight = rect.height - domainHeight;
         if (UsFilterBarLayout.DropdownsStack(rect.width))
         {
             DrawFilterDropdownRows(new Rect(rect.x, dropdownAreaTop, rect.width, dropdownAreaHeight), ctx);
@@ -86,6 +87,25 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         {
             DrawFilterDropdownRow(new Rect(rect.x, dropdownAreaTop, rect.width, RowHeight), ctx);
         }
+    }
+
+    /// <summary>
+    /// Height of the chip row: the tallest chip label as it actually wraps at the chip width each chip
+    /// is drawn at, never below the layout default. Measure and Draw call this once each with the same
+    /// body width, so the dropdown area below starts where the chips end.
+    /// </summary>
+    private float DomainRowHeight(UiWidgetContext ctx, float bodyWidth)
+    {
+        const int count = 4;
+        float chipWidth = Math.Max(1f, (bodyWidth - Gap * (count - 1)) / count);
+        float band = RowHeight;
+        string[] keys = { KeyChipAll, KeyChipEnabledOnly, KeyChipConflicts, KeyChipOrphanOnly };
+        foreach (string key in keys)
+        {
+            band = Math.Max(band, ctx.Metrics.MeasureText(ctx.Translation.Translate(key), UiFont.Tiny, chipWidth));
+        }
+
+        return band;
     }
 
     private void DrawDomainRow(Rect rect, UiWidgetContext ctx)
