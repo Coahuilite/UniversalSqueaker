@@ -12,7 +12,7 @@ RimWorld 1.6 通用语音包内核（本地分叉，未发布）。
 ## 本地验证
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1          # 15 道门禁（7 个 harness + 两程序集 Dev/Release + DLL 与 Schema=2 清单校验）
+pwsh -NoProfile -File scripts/verify-local.ps1          # 15 道门禁（7 个 harness + 两程序集 Dev/Release + DLL 与 Schema=2 清单校验；含双语 Keyed 本地化契约与文本适配扫描）
 pwsh -NoProfile -File scripts/build-dev.ps1             # Dev 构建 + 打 dev 包（dist/dev/）
 dotnet run --project tools/UniversalSqueakerKernelTests -c Release
 ```

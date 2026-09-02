@@ -94,7 +94,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 - [ ] Workshop display name and license (maintainer only; do not invent).
 - [x] Camera+ 帮助机制调研与实施（2026-08-30 维护者反馈）— 已实现：分区总览 + 单项列表 + 悬停/选中联动高亮；见 `docs/ui-camera-help-and-title-hide-plan-zh.md`。
-- [x] 全局行高/文字截断修复（2026-08-30 维护者反馈）— 已修复：`VoicePacksLayout` 动态测量行高；Basic toggles/VoicePackRow/Race/Xeno 行均按文本测量。
+- [x] 全局行高/文字截断修复（2026-08-30 维护者反馈）— 当时由 legacy `VoicePacksLayout` 动态测量实现；该文件已在 2026-09-02 cutover 中删除。现由内核 measured bands 承担，最终闭环见 "Text fit and localization (2026-09-02b)"。
 - [x] 包管理筛选联动（2026-08-30 维护者反馈）— 已修复：race/xenotype 并列筛选 + 自动收窄 xeno。
 - [x] 未列出 xenotype 黯淡显示（2026-08-30 维护者反馈）— 已修复：`CandidateCount == 0` 显示 “No available packs” 并黯淡。
 - [x] 包管理作者筛选下拉（2026-08-30 维护者反馈）— 已修复：FilterBar 作者下拉。
@@ -138,8 +138,16 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 - Re-implement natively in `UI/Kernel/`, each with a failure-sensitive geometry plus interaction assertion: sticky Tuning layer row, reverse help linkage when hovering mid-column controls (the 41 help entries stay reachable through the panel's own index, so this is convenience only), xenotype-row dimming at zero candidate packs; minor `HideBodyLabel` and an in-list `All` entry for the author dropdown.
 - Also decide: delete the remaining pure-Verse camera-readout fallback and make the overlay kernel-only.
-- Separate work item, higher risk than any of the above: most kernel `Measure()` paths still return constant row heights, so long Chinese text or long pack names can clip and no gate catches it (G1 remains open).
+- ~~Constant row heights / text clipping unasserted (G1)~~ — **closed 2026-09-02b** by the `UiFitAudit` measurement seam plus gate 15's both-language sweep; see the new section below.
 - Alternative for Knife 3: drop those behaviours as legacy-anchored. If dropped, delete the matching help entries and backlog lines in the same commit instead of leaving them dangling.
+
+## Text fit and localization (2026-09-02b, commit `55b6edf`)
+
+- Landed: `ITextMetrics.MeasureWidth`; `UiFitAudit` on the single label outlet; Dev-only `usdiag evt=ui.text.overflow`; manifests `TitleKey`-only; 53 new Keyed strings in both languages (152 keys each); gate 14 localization contract; gate 15 both-language fit sweep with an in-process positive control. Bands fixed: page-title caption, scope-tree inherited hint (was 14px), preset summary (was 11px), checklist banners (one band had been allocated for up to three), basic-tuning rows, nav rows, chrome banner, empty state.
+- [ ] **Help catalog localization** (tone decision, ~120 strings): the 41 `UsHelpCatalog` sections/items are still English literals, so the right-hand panel is English in a Chinese game while everything else is Chinese. Largest remaining untranslated surface.
+- [ ] **Review the proposed Chinese wordings** before any publication: routing modes (原版/回退/混音/禁用), distance presets (保守/均衡/强烈/自定义), filter labels (全部/仅启用/冲突/孤立/种族/异型/作者), card titles. Product vocabulary, not mechanical translation.
+- [ ] **Container-level auto-width** deliberately not done: `UiLayoutEngine.ResolveColumnWidths` honours only static `Width=` plus equal split, so `nav-column 192` and `help-scroll 232` stay fixed; "widen for Chinese" currently happens by growing bands, not columns. Revisit only if the in-game log shows a column genuinely too narrow after the band fixes — measured data says Chinese is narrower than English for 146 of 152 keys, so it may never be needed.
+- [ ] **In-game half of the evidence**: open the settings window with dev logging in both languages and confirm `evt=ui.text.overflow` stays silent. The harness model is a half-width advance approximation; only the real font engine confirms. Any line it prints is a fix target with an exact need/have pair.
 
 ## VoicePack routing table review (2026-09-02; evidence gap closed, content gaps open)
 
@@ -154,4 +162,4 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
   - Action: add one fixture pack exercising age variants + egg clips + a per-action pack fallback, and assert it end to end.
 - First-run behaviour to confirm by decision rather than accident: pool entries are built only from explicit selection records (`SqueakKernelAdapter.BuildEntries` skips domains with no record or an empty key set), so installing a VoicePack makes nothing audible until the player enables it per domain in the settings UI. Combined with the empty built-in table, a fresh install is completely silent even in `Remix`.
 - Brand-boundary item to rule on (still open): the US fixture `Ratkin-US-EXP` routes to race `Ratkin`, and `Kiiro-US-EXP` keeps packageId `coahuilite.squeakyratkin.meowingkiiroexp` with clip roots under `coahuilite.squeakyratkin.*`. `dist/` is gitignored test content, but `AGENTS.md` reserves Ratkin and the SR namespace for SR; either re-target these fixtures to non-Ratkin third-party races or record the exception explicitly. Related risk noted while de-patching: if an external Ratkin or SR-side mod ships its own squeak comp, the log will show `attach_skipped reason=author_patch race=Ratkin` and auto-attach remains untested for that race — that is an external-carrier signal, not a reason to re-add a patch.
-- Stale fixture text found but not touched: `Ratkin-US-EXP/About/About.xml` still describes itself as attaching `CompProperties_Squeaker`, and the Nivarian pack README still references the old `SR_MeowingKiiroExp_` naming. Both are now wrong for canonical packs.
+- Stale fixture text: fixed 2026-09-02b — `Ratkin-US-EXP/About/About.xml` no longer claims it attaches `CompProperties_Squeaker`, and the empty `1.6/Race/Patches/` directories are deleted. Remaining: the Nivarian pack README still references the old `SR_MeowingKiiroExp_` naming.
