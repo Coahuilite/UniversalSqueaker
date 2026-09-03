@@ -156,7 +156,7 @@ public static class UsKernelDraw
     {
         UiThemeDraw.Panel(rect, theme);
         Label(
-            new Rect(rect.x + UsCardLayout.Padding, rect.y + 4f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 18f),
+            new Rect(rect.x + UsCardLayout.Padding, rect.y + 2f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 22f),
             title,
             theme,
             theme.TextPrimary,

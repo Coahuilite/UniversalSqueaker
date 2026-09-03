@@ -22,7 +22,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
     private const float ItemHeight = 20f;
     private const float ItemGap = 2f;
     private const float ContentGap = 6f;
-    private const float ContentLabelHeight = 18f;
+    private const float ContentLabelHeight = 22f;
 
     /// <summary>Keyed format string of the panel header; <c>{0}</c> is the active section title.</summary>
     private const string HeaderFormatKey = "US.Help.Header";

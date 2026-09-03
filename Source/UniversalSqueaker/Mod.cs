@@ -14,11 +14,19 @@ public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
     /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against. Pre-1.0 the minor
-    /// is the breaking axis, so the accepted window is exactly one minor wide.
+    /// The FerriteLib API range this build of US was compiled and verified against. Pre-1.0 any
+    /// public-surface change bumps the library's minor, so the accepted window is exactly one minor
+    /// wide and a consumer newer than the loaded carrier fails Require with a readable report
+    /// instead of exploding as a TypeLoadException at first draw.
     /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 1, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 2, 0);
+    private static readonly Version PrerequisiteApiMin = new Version(0, 2, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 3, 0);
+
+    /// <summary>
+    /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a
+    /// carrier/consumer desync becomes a named notice instead of a draw-time TypeLoadException.
+    /// </summary>
+    public static bool PrerequisiteVerified { get; private set; } = true;
 
     public static Harmony Harmony = null!;
     public static UniversalSqueakerSettings Settings = null!;
@@ -62,7 +70,8 @@ public class UniversalSqueakerMod : Mod
         // API range US was compiled against meets the API range that actually loaded. It reports and keeps
         // going: throwing from a Mod constructor buries the diagnosis behind the game's generic
         // "mod failed to load" and takes the Harmony patches down with it.
-        if (!FerriteLibVersion.Require(PrerequisiteApiMin, PrerequisiteApiMax, PackageId, out string prerequisiteReport))
+        PrerequisiteVerified = FerriteLibVersion.Require(PrerequisiteApiMin, PrerequisiteApiMax, PackageId, out string prerequisiteReport);
+        if (!PrerequisiteVerified)
         {
             Log.Error("UniversalSqueaker cannot verify its FerriteLib prerequisite. " + prerequisiteReport);
         }

@@ -23,7 +23,7 @@ public sealed class UsNavWidget : IUiWidget
     private const float SidePadding = 10f;
     private const float TopPadding = 12f;
     private const float LabelTop = 6f;
-    private const float LabelHeight = 18f;
+    private const float LabelHeight = 22f;
     private const float DescriptionGap = 1f;
     private const float DescriptionHeight = 16f;
     private const float BottomPadding = 11f;

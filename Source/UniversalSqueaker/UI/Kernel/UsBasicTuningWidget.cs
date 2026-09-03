@@ -116,14 +116,14 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 60f), 18f),
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 60f), 22f),
             ctx.Translation.Translate("US.Tuning.EasterEggs"),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 22f, Math.Max(1f, rect.width - 60f), 16f),
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 27f, Math.Max(1f, rect.width - 60f), 18f),
             ctx.Translation.Translate(enabled ? "US.Tuning.EasterEggs.On" : "US.Tuning.EasterEggs.Off"),
             ctx.Theme,
             ctx.Theme.TextSecondary,

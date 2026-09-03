@@ -44,6 +44,21 @@ internal static class UiSourceInvariantTests
         VerifyHelpCatalogManifestConsistency(root);
         VerifyHelpPanelWiringAndHeightFormula(root);
         VerifyLocalizationContract(root);
+        VerifyPrerequisiteDesyncIsNamed(root);
+    }
+
+    // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
+    //    the Mod constructor records the Require verdict and the settings window short-circuits on it.
+    private static void VerifyPrerequisiteDesyncIsNamed(string root)
+    {
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "Mod.cs"),
+            new[] { "PrerequisiteVerified = FerriteLibVersion.Require(" },
+            "Mod must record the Require verdict in PrerequisiteVerified");
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"),
+            new[] { "UniversalSqueakerMod.PrerequisiteVerified" },
+            "the settings window must short-circuit on an unverified prerequisite");
     }
 
     // 1. Settings window: new failure model present, legacy whole-page fallback symbols absent.

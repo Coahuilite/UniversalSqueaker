@@ -47,6 +47,8 @@
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
   <US.Settings.PageUnavailable.Title>设置页不可用</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>{0} 设置页无法构建或绘制，因此不显示残缺界面。关闭后重新打开即可重试。若持续失败，请在日志中查找 usdiag 记录：它会指出出错的控件并附带异常堆栈。</US.Settings.PageUnavailable.Body>
+  <US.Settings.Prerequisite.Title>FerriteLib 前置版本不匹配</US.Settings.Prerequisite.Title>
+  <US.Settings.Prerequisite.Body>已安装的 FerriteLib 模组旧于本 Universal Squeaker 构建编译时所针对的 API。请将 FerriteLib 更新到配套版本后重启游戏；完整契约诊断见 Player.log。</US.Settings.Prerequisite.Body>
 
   <!-- Schema=2 设置页标题（UsPageTitleWidget / UsNavWidget）与卡片标题（清单 TitleKey）。
        中文串按净宽预算收紧：nav 描述 ≤25 半角单位，中间列 Tiny 文案 ≤47 半角单位。 -->

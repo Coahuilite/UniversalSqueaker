@@ -85,6 +85,14 @@ public sealed class UniversalSqueakerSettingsWindow : Window
             Mathf.Max(1f, inRect.height - TitleBarHeight - SidePadding));
         mod.TickSettingsSaveForWindow();
 
+        // A carrier/consumer desync must never reach the draw path: the kernel page would die in a
+        // TypeLoadException and the player would see a generic notice instead of the real cause.
+        if (!UniversalSqueakerMod.PrerequisiteVerified)
+        {
+            DrawPrerequisiteNotice(contentRect);
+            return;
+        }
+
         if (pageUnavailable)
         {
             DrawUnavailableNotice(contentRect);
@@ -130,14 +138,33 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         UiThemeDraw.Surface(rect, Theme, Theme.Panel, Theme.Border);
         Rect body = rect.ContractedBy(24f);
         UiThemeDraw.Label(
-            new Rect(body.x, body.y, body.width, 28f),
+            new Rect(body.x, body.y, body.width, 30f),
             "US.Settings.PageUnavailable.Title".Translate(),
             Theme,
             Theme.TextPrimary,
             UiFont.Medium);
         UiThemeDraw.Label(
-            new Rect(body.x, body.y + 36f, body.width, Mathf.Max(1f, body.height - 36f)),
+            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
             "US.Settings.PageUnavailable.Body".Translate(SqueakLabels.SettingsCategory),
+            Theme,
+            Theme.TextSecondary,
+            UiFont.Small);
+    }
+
+    /// <summary>Named desync notice: the installed carrier mod is older than the API this build compiled against.</summary>
+    private void DrawPrerequisiteNotice(Rect rect)
+    {
+        UiThemeDraw.Surface(rect, Theme, Theme.Panel, Theme.Border);
+        Rect body = rect.ContractedBy(24f);
+        UiThemeDraw.Label(
+            new Rect(body.x, body.y, body.width, 30f),
+            "US.Settings.Prerequisite.Title".Translate(),
+            Theme,
+            Theme.TextPrimary,
+            UiFont.Medium);
+        UiThemeDraw.Label(
+            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
+            "US.Settings.Prerequisite.Body".Translate(),
             Theme,
             Theme.TextSecondary,
             UiFont.Small);
@@ -166,18 +193,18 @@ public sealed class UniversalSqueakerSettingsWindow : Window
     {
         Rect titleRect = new(
             rect.x + SidePadding,
-            rect.y + 8f,
+            rect.y + 6f,
             Mathf.Max(1f, rect.width * 0.6f),
             TitleBarHeight - 16f);
 
         UiThemeDraw.Label(
-            new Rect(titleRect.x, titleRect.y, titleRect.width, 24f),
+            new Rect(titleRect.x, titleRect.y, titleRect.width, 30f),
             mod.SettingsCategory(),
             Theme,
             Theme.TextPrimary,
             UiFont.Medium);
         UiThemeDraw.Label(
-            new Rect(titleRect.x, titleRect.y + 24f, titleRect.width, 16f),
+            new Rect(titleRect.x, titleRect.y + 30f, titleRect.width, 18f),
             "Universal Squeaker — VoicePack Routing",
             Theme,
             Theme.TextSecondary,

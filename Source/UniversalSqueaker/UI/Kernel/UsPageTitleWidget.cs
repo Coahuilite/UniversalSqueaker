@@ -14,7 +14,7 @@ public sealed class UsPageTitleWidget : IUiWidget
 {
     public const string Kind = "us/page-title";
 
-    private const float TitleHeight = 26f;
+    private const float TitleMinHeight = 30f;
     private const float CaptionHeight = 18f;
     private const float CaptionGap = 4f;
     private const float TextLeftInset = 2f;
@@ -42,7 +42,7 @@ public sealed class UsPageTitleWidget : IUiWidget
     public float Measure(UiWidgetContext ctx)
     {
         (string title, string caption) = ResolveHeading(ctx);
-        return TitleHeight + CaptionGap + CaptionBand(ctx, caption);
+        return TitleBand(ctx, title) + CaptionGap + CaptionBand(ctx, caption);
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -51,12 +51,13 @@ public sealed class UsPageTitleWidget : IUiWidget
 
         (string title, string caption) = ResolveHeading(ctx);
         float textWidth = Math.Max(1f, rect.width - TextLeftInset);
-        float captionTop = rect.y + TitleHeight + CaptionGap;
+        float titleHeight = TitleBand(textWidth, ctx, title);
+        float captionTop = rect.y + titleHeight + CaptionGap;
         float captionHeight = CaptionBand(textWidth, ctx, caption);
 
         UiThemeDraw.SectionBand(rect, ctx.Theme);
         UsKernelDraw.Label(
-            new Rect(rect.x + TextLeftInset, rect.y, textWidth, TitleHeight),
+            new Rect(rect.x + TextLeftInset, rect.y, textWidth, titleHeight),
             title,
             ctx.Theme,
             ctx.Theme.TextPrimary,
@@ -85,6 +86,21 @@ public sealed class UsPageTitleWidget : IUiWidget
     private static float CaptionBand(float textWidth, UiWidgetContext ctx, string caption)
     {
         return Math.Max(CaptionHeight, Math.Max(1f, ctx.Metrics.MeasureText(caption, UiFont.Tiny, textWidth)));
+    }
+
+    /// <summary>
+    /// Title band, measured like the caption. The in-game font engine reports one medium line at 30px
+    /// (ui.text.overflow, 2026-09-04), so the old 26px constant clipped every workspace title by one
+    /// third of a line. Shared by Measure and Draw so the allocated band equals the drawn band.
+    /// </summary>
+    private static float TitleBand(UiWidgetContext ctx, string title)
+    {
+        return TitleBand(Math.Max(1f, ctx.ViewWidth - TextLeftInset), ctx, title);
+    }
+
+    private static float TitleBand(float textWidth, UiWidgetContext ctx, string title)
+    {
+        return Math.Max(TitleMinHeight, Math.Max(1f, ctx.Metrics.MeasureText(title, UiFont.Medium, textWidth)));
     }
 
     private static (string Title, string Caption) ResolveHeading(UiWidgetContext ctx)

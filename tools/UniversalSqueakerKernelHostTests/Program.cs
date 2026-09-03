@@ -121,6 +121,7 @@ internal static class Program
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
+        Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -182,6 +183,21 @@ internal static class Program
         host.Session.ClosePopup();
         host.DrawFrame(viewport);
         Assert(!host.Session.OpenPopupRect.HasValue, "a closed composite popup must leave no published rect");
+    }
+
+    /// <summary>
+    /// Build-time lockstep pin: US compiles against the sibling carrier payload, so the range floor in
+    /// Mod.cs must equal the Api of the library this harness just linked. If the library bumps its
+    /// public surface, this step goes red until PrerequisiteApiMin/Max move and both mods ship
+    /// together - the desync that produced the 2026-09-04 TypeLoadException cannot recur silently.
+    /// </summary>
+    private static void PrerequisiteRangeTracksCompiledApi()
+    {
+        Version compiledFloor = new Version(0, 2, 0);
+        Assert(FerriteLib.UiKit.Kernel.FerriteLibVersion.Api.Equals(compiledFloor),
+            "US is compiled against FerriteLib Api " + compiledFloor + " but the linked carrier reports "
+            + FerriteLib.UiKit.Kernel.FerriteLibVersion.Api
+            + "; move PrerequisiteApiMin/Max in Mod.cs and ship both mods in lockstep");
     }
 
     private static void SettingsWindowPageUnavailableModel()
@@ -1271,12 +1287,19 @@ internal static class Program
             return lines * LineHeight(font);
         }
 
-        /// <summary>One text line including leading, per font: em plus the game's usual vertical padding.</summary>
+        /// <summary>
+        /// One text line including leading, per font. Calibrated 2026-09-04 against the real font
+        /// engine: the in-game fit audit (ui.text.overflow, English client) reported one-line needs of
+        /// 18.0px tiny, 21.33333px small and 30.0px medium while these constants said 15/19/21, which
+        /// is how constant bands of 16/18/24/26/28 passed this sweep and still clipped in game. Line
+        /// advance is a per-font constant (it does not depend on the glyph set), so one calibrated
+        /// table serves both language tables; the width axis keeps its own half-width model.
+        /// </summary>
         private static float LineHeight(FerriteLib.UiKit.Kernel.UiFont font) => font switch
         {
-            FerriteLib.UiKit.Kernel.UiFont.Tiny => 15f,
-            FerriteLib.UiKit.Kernel.UiFont.Medium => 21f,
-            _ => 19f,
+            FerriteLib.UiKit.Kernel.UiFont.Tiny => 18f,
+            FerriteLib.UiKit.Kernel.UiFont.Medium => 30f,
+            _ => 21.33333f,
         };
 
         // Half-width advance model (CJK/full-width = one em, Latin = half an em), matching the Verse

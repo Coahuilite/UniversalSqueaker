@@ -30,7 +30,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     // The inherited-scope hint is a Tiny line: its band has to hold a full Tiny line (a 14px band cut
     // the tail of every scope name, in any language).
-    private const float InheritedHintHeight = 16f;
+    private const float InheritedHintHeight = 18f;
 
     private const float MoodRowHeight = 32f;
     // The mood name is a Small line in a fixed column: a 16px band is shorter than one such line, so
@@ -467,7 +467,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         UiWidgetContext ctx)
     {
         UsKernelDraw.Label(
-            new Rect(rect.x, rect.y + 4f, 14f, 16f),
+            new Rect(rect.x, rect.y + 4f, 14f, 18f),
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
             ctx.Theme.TextSecondary,
