@@ -54,6 +54,9 @@ function Test-PackageIdList([string]$xpath) {
 Assert-Check 'About.xml declares coahuilite.ferritelib as a prerequisite' (Test-PackageIdList '/ModMetaData/modDependencies/li/packageId')
 Assert-Check 'About.xml loads after coahuilite.ferritelib' (Test-PackageIdList '/ModMetaData/loadAfter/li')
 
+Assert-Check 'LICENSE present at repo root and MPL-2.0' (
+    (Test-Path -LiteralPath (Join-Path $root 'LICENSE') -PathType Leaf) -and
+    ((Get-Content -LiteralPath (Join-Path $root 'LICENSE') -Raw) -match 'Mozilla Public License Version 2\.0'))
 if ($RequireReleaseMetadata) {
     $descNode = $aboutXml.SelectSingleNode('/ModMetaData/description')
     $desc = if ($null -ne $descNode) { $descNode.InnerText.Trim() } else { '' }

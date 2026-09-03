@@ -5,7 +5,7 @@
 ## Project identity
 
 - Project: RimWorld 1.6 mod **Universal Squeaker** (local fork; no remote configured).
-- Confirmed identity: repo `coahuilite/UniversalSqueaker`; permanent `packageId` `coahuilite.universalsqueaker`; target C# namespace `UniversalSqueaker`; Def/log/debug-key prefix `US_`; diagnostic log prefix `usdiag`. Workshop display name and license remain pending maintainer confirmation; this repository is not published.
+- Confirmed identity: repo `coahuilite/UniversalSqueaker`; permanent `packageId` `coahuilite.universalsqueaker`; target C# namespace `UniversalSqueaker`; Def/log/debug-key prefix `US_`; diagnostic log prefix `usdiag`. License is **MPL-2.0** for the whole Coahuilite mod series (`LICENSE`, byte-identical per repo, no "Incompatible With Secondary Licenses" notice). Workshop display name remains pending maintainer confirmation; this repository is not published.
 - Squeaky Ratkin (`coahuilite.squeakyratkin`) is a separate product. Never reuse its brand, packageId, namespace, or `SR_` prefix here. No `SqueakyRatkin.*` types and no Ratkin assemblies, profiles, attachments, or content may ship with US.
 - Product version source: once the product csproj exists, its `<Version>` is primary and `About/About.xml <modVersion>` must follow it.
 

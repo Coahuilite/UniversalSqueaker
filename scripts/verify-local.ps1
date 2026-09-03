@@ -18,13 +18,17 @@ $ErrorActionPreference = "Stop"
 #   7   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
 #   8   main assembly Release build (TreatWarningsAsErrors)
 #   9   US payload is single-carrier (UniversalSqueaker.dll present, FerriteLib.UiKit.dll ABSENT)
-#  10   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
-#  11   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
-#  12   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
-# GATE PROVENANCE: 1-5 and 10-12 are US-owned; 6 and 9 assert the carrier boundary itself. The
+#  10   LICENSE present and un-truncated MPL-2.0, identical to the carrier's copy
+#  11   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
+#  12   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
+#  13   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
+# GATE PROVENANCE: 1-5 and 10-13 are US-owned; 6 and 9 assert the carrier boundary itself. The
 # FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and the
 # visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
+# The library gates (harness, Dev/Release build, neutrality grep, visual-core boundary) are no longer
+# run from here; they live in the carrier repository. Two gates here guard the carrier boundary itself,
+# and one asserts the series licence is present and un-truncated before a package can be staged.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -109,6 +113,36 @@ Invoke-Check 'US payload carries exactly one assembly (no second FerriteLib copy
         $stray = Join-Path $assembliesDir 'FerriteLib.UiKit.dll'
         if (Test-Path -LiteralPath $stray -PathType Leaf) {
             throw "US must not ship the FerriteLib payload (coahuilite.ferritelib is the only carrier): $stray"
+        }
+    }
+
+Invoke-Check 'LICENSE present and un-truncated MPL-2.0' `
+    'manually' `
+    {
+        # MPL-2.0 is chosen for the whole series, and section 3.2 attaches an obligation to shipping a
+        # DLL: recipients must be told how to get source. stage-package.ps1 copies this file into the
+        # package, so the gate proves the file is real before anything is staged from it.
+        $licensePath = Join-Path $root 'LICENSE'
+        if (-not (Test-Path -LiteralPath $licensePath -PathType Leaf)) {
+            throw "US has no LICENSE file, yet stage-package.ps1 copies one into every package."
+        }
+        $text = Get-Content -LiteralPath $licensePath -Raw
+        if ($text -notmatch 'Mozilla Public License Version 2\.0') { throw 'LICENSE is not the MPL-2.0 text.' }
+        if ($text -notmatch 'Exhibit B') { throw 'LICENSE is truncated: Exhibit B is missing.' }
+        if ($text -notmatch '10\.4\. Distributing Source Code Form') { throw 'LICENSE is truncated: section 10.4 is missing.' }
+        # Scoped to the header: the reproduced licence body always contains Exhibit B's sample notice,
+        # so testing the whole file would flag every correct copy.
+        $separator = $text.IndexOf('-----')
+        $header = if ($separator -gt 0) { $text.Substring(0, $separator) } else { $text }
+        if ($header -match 'Incompatible With Secondary Licenses., as defined') {
+            throw 'The applied notice declares incompatibility with secondary licenses; series policy keeps that allowed.'
+        }
+        # The carrier ships the same licence text; a fork between the two copies is a real defect.
+        $carrierLicense = Join-Path (Split-Path -Parent $root) 'ferritelib\LICENSE'
+        if (Test-Path -LiteralPath $carrierLicense -PathType Leaf) {
+            $ours = (Get-FileHash -LiteralPath $licensePath -Algorithm SHA256).Hash
+            $theirs = (Get-FileHash -LiteralPath $carrierLicense -Algorithm SHA256).Hash
+            if ($ours -ne $theirs) { throw "US and FerriteLib LICENSE files differ; the series licence must be one text." }
         }
     }
 

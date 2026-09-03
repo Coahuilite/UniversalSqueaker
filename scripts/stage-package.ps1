@@ -44,12 +44,21 @@ if (-not (Test-Path -LiteralPath $assemblyPath -PathType Leaf)) { throw "Missing
 if (Test-Path -LiteralPath $uikitAssemblyPath -PathType Leaf) {
     throw "US must not ship the FerriteLib payload; coahuilite.ferritelib is the single carrier: $uikitAssemblyPath"
 }
-
 if (Test-Path -LiteralPath $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force }
 $null = New-Item -ItemType Directory -Path $stageDir -Force
 Copy-Item -LiteralPath $aboutSource -Destination (Join-Path $stageDir 'About') -Recurse -Force
 Copy-Item -LiteralPath $loadFoldersSource -Destination (Join-Path $stageDir 'LoadFolders.xml') -Force
 Copy-Item -LiteralPath $versionedSource -Destination (Join-Path $stageDir '1.6') -Recurse -Force
+
+# MPL-2.0 section 3.2: distributing the Executable Form (a mod package of DLLs) obliges us to tell
+# recipients how to get the Source Code Form. The cheapest compliant route is to ship the licence text
+# inside the package, so it travels with every build instead of living only in the repository.
+# This runs AFTER the stage directory is wiped, which is why it is here and not with the input checks.
+$licenseSource = Join-Path $root 'LICENSE'
+if (-not (Test-Path -LiteralPath $licenseSource -PathType Leaf)) {
+    throw "Missing LICENSE: the package is MPL-2.0 covered and must ship the licence text with it."
+}
+Copy-Item -LiteralPath $licenseSource -Destination (Join-Path $stageDir 'LICENSE') -Force
 
 $publishedFileId = Join-Path $stageDir 'About\PublishedFileId.txt'
 if (Test-Path -LiteralPath $publishedFileId) { Remove-Item -LiteralPath $publishedFileId -Force }
