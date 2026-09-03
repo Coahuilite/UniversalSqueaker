@@ -71,6 +71,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - 权威入口：`docs/uikit-rebuild/README.md`、`07-rebuild-reset-and-execution-contract-zh.md`、`tasks/MAIN-ORCHESTRATOR.md`。
 - Gate R：`PASS`。自动证据与维护者实机验证均完成；首开、Kernel banner、global-volume 操作、关闭/重开及其余场景无异常。
 - Gate U 自动证据：`PASS（现有 harness/源码范围）`。真实嵌入 Schema2 Host、17 个 US Kind、typed binding/action、Host session 隔离、五工作区×三视口、scope cleanup、disposed session 和创建期失败均通过；主代理独立复现 `verify-local.ps1 -NoRestore` 15 门全绿与 `build-dev.ps1` 0 warning/0 error。
+  - **修正（2026-09-04）**：当时确为 15 门，此数已随 UI 库拆出而失效。库的门禁迁到 `../ferritelib` 从内部自证，US 侧现为 **13 门**；旧"门 14 本地化契约""门 15 文本适配"不再是独立门，现为门 12 / 门 13 内部的断言。历史条目按原样保留，口径以 `HANDOFF.md` §5 为准。
 - DeepSeek UI 收口：`PASS（自动/源码范围）`。800 宽 Mood 已改为 stacked compact 布局，Pitch/Volume/Jitter 各保留 minus/slider/number/plus，Auto 独立；`MoodLayoutFocusedTests` 验证 2 行共 26 个控件在 card 内且不重叠，并覆盖全部 typed `set-mood-tuning` 交互。
 - Gate U Basic 实机：`PASS`。设置页正常开启、global volume 正常修改、attenuation graph 可拖动、关闭重开正常、无红字。
 - Gate U 整体：`LIMITED/未通过`。下一步仅为维护者实机验证 Tuning、Packs、Camera Indicator、真实数据/翻译、popup/chart/hotControl、fallback 与 800×600/1280×720/1920×1080；证据齐全后再执行旧路径 clean-cutover inventory 审查。
