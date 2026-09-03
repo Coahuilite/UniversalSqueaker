@@ -64,7 +64,11 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return UsFilterBarLayout.BodyHeight(BodyWidth(ctx), DomainRowHeight(ctx, BodyWidth(ctx)));
+        float bodyWidth = BodyWidth(ctx);
+        float domain = DomainRowHeight(ctx, bodyWidth);
+        float body = UsFilterBarLayout.BodyHeight(bodyWidth, domain);
+        TraceLayout("measure", bodyWidth, body, domain);
+        return body;
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -75,6 +79,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private void DrawContent(Rect rect, UiWidgetContext ctx)
     {
         float domainHeight = DomainRowHeight(ctx, rect.width);
+        TraceLayout("draw", rect.width, rect.height, domainHeight);
         DrawDomainRow(new Rect(rect.x, rect.y, rect.width, domainHeight), ctx);
 
         float dropdownAreaTop = rect.y + domainHeight;
@@ -207,4 +212,24 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         dropdown.Configure(spec);
         dropdown.Draw(rect, ctx);
     }
+
+    /// <summary>
+    /// Dev-only parity trace: Measure and Draw must make the stack/height decisions from the same
+    /// width. If a reserved-vs-drawn divergence ever reaches a player log again, the paired ltrace
+    /// lines name the width and the decisions each side used.
+    /// </summary>
+    private void TraceLayout(string pass, float width, float body, float domain)
+    {
+        if (!SqueakLog.ShouldEmitDev) return;
+        string line = pass
+            + " width=" + width.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+            + " body=" + body.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+            + " domain=" + domain.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+            + " stack=" + (UsFilterBarLayout.DropdownsStack(width) ? "true" : "false");
+        if (string.Equals(line, lastLayoutTrace, System.StringComparison.Ordinal)) return;
+        lastLayoutTrace = line;
+        SqueakLog.LayoutTrace(line);
+    }
+
+    private string? lastLayoutTrace;
 }

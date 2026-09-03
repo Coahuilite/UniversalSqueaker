@@ -97,6 +97,14 @@ public static class SqueakLog
         Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
     }
 
+    /// <summary>Forensic layout-parity trace: reports the width/stack/height decisions each side of a
+    /// Measure/Draw pair made, so a reserved-vs-drawn divergence is readable from the player log.</summary>
+    public static void LayoutTrace(string message)
+    {
+        if (!ShouldEmitDev) return;
+        Verse.Log.Message("[UniversalSqueaker] ltrace: " + message);
+    }
+
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {
         try
