@@ -1,19 +1,24 @@
-using FerriteLib.UiKit.Kernel;
 using UnityEngine;
 using Verse;
 
-namespace UniversalSqueaker.UI;
+namespace FerriteLib.UiKit.Kernel;
 
 /// <summary>
-/// Production Verse-backed <see cref="ITextMetrics"/> for both kernel Hosts. It is the only place the
-/// settings page and the camera overlay measure text; the font mapping itself is the library's
-/// <see cref="UiKitFonts"/> so measurement and drawing can never disagree about a font size. Verse's
-/// text engine measures through process-global state, so every entry saves and restores all three
-/// properties it touches.
+/// The production <see cref="ITextMetrics"/>.
+/// It lives in the library, not in a consumer, because it is the only real implementation of the
+/// library's own interface: shipping the interface without it would force every consumer to re-derive
+/// the same save/restore dance around Verse's process-global text state, and that dance is precisely
+/// where a previous round of measurement defects came from. The font mapping is the library's
+/// <see cref="UiKitFonts"/>, so measurement and drawing cannot disagree about a font size.
 /// </summary>
-internal sealed class VerseFerriteTextMetrics : ITextMetrics
+public sealed class VerseFerriteTextMetrics : ITextMetrics
 {
-    internal static readonly VerseFerriteTextMetrics Instance = new();
+    /// <summary>
+    /// Shared instance; the type holds no state. A host and its text-fit audit must be handed the same
+    /// metrics *model* - a wrap-aware one like this - or layout and audit measure against two different
+    /// rulers and the audit goes quietly vacuous.
+    /// </summary>
+    public static readonly VerseFerriteTextMetrics Instance = new();
 
     public float MeasureText(string text, UiFont font, float width)
     {

@@ -363,3 +363,18 @@ public static class Log
     {
     }
 }
+
+public sealed class LoadedLanguage
+{
+    public string folderName = "";
+}
+
+// Only the surface UsKernelTranslation reads to report the active language. Real RimWorld exposes
+// these as public static fields on a static class; the shape must match or the production type-load
+// differs between harness and game.
+public static class LanguageDatabase
+{
+    public static LoadedLanguage? activeLanguage;
+    public static LoadedLanguage? defaultLanguage;
+    public static string DefaultLangFolderName = "";
+}

@@ -359,5 +359,7 @@ internal static class KernelWidgetBehaviorTests
     private sealed class FixedTranslation : IUiTranslation
     {
         public string Translate(string key) => key;
+
+        public int TranslationRevision => 0;
     }
 }

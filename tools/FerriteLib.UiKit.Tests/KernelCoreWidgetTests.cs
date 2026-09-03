@@ -145,5 +145,7 @@ internal static class KernelCoreWidgetTests
         {
             return "[" + key + "]";
         }
+
+        public int TranslationRevision => 0;
     }
 }

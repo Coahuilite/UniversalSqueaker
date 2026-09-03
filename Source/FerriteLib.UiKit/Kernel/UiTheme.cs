@@ -9,7 +9,6 @@ namespace FerriteLib.UiKit.Kernel;
 public sealed class UiTheme
 {
     // Surfaces: restrained near-black planes with small luminance steps.
-    public Color Canvas { get; set; } = new(0.045f, 0.045f, 0.044f, 1f);
     public Color Base { get; set; } = new(0.065f, 0.065f, 0.063f, 1f);
     public Color Panel { get; set; } = new(0.095f, 0.095f, 0.090f, 1f);
     public Color Raised { get; set; } = new(0.135f, 0.135f, 0.128f, 1f);
@@ -33,18 +32,26 @@ public sealed class UiTheme
     // Accents: reserve gold for activity and focus states.
     public Color AccentGold { get; set; } = new(0.82f, 0.60f, 0.22f, 1f);
     public Color HoverPoint { get; set; } = new(0.96f, 0.80f, 0.42f, 1f);
-    public Color AccentGoldAlpha20 { get; set; } = new(0.82f, 0.60f, 0.22f, 0.20f);
-    public Color AccentGoldAlpha10 { get; set; } = new(0.82f, 0.60f, 0.22f, 0.10f);
+
+    /// <summary>
+    /// The accent at a reduced alpha. Derived rather than stored: a consumer that re-tints
+    /// <see cref="AccentGold"/> must not be left with alpha variants still holding the old hue.
+    /// </summary>
+    public Color AccentWith(float alpha) => new Color(AccentGold.r, AccentGold.g, AccentGold.b, alpha);
 
     // Borders
     public Color Border { get; set; } = new(0.21f, 0.21f, 0.20f, 1f);
     public Color BorderStrong { get; set; } = new(0.32f, 0.32f, 0.30f, 1f);
     public Color Divider { get; set; } = new(0.14f, 0.14f, 0.13f, 1f);
 
-    // Typography / metrics
+    // Typography. DefaultFont is geometry-bearing (it feeds text measurement); the colour tokens
+    // above are not, and KernelContractTests holds that line.
     public UiFont DefaultFont { get; set; } = UiFont.Small;
-    public float ControlHeight { get; set; } = 28f;
-    public float Spacing { get; set; } = 8f;
 
-    public static UiTheme DarkGold { get; } = new();
+    /// <summary>
+    /// The shipped default palette, handed out as a fresh instance on every call. It is a template,
+    /// not a shared singleton: two consumer mods re-tinting "the default" must never repaint each
+    /// other. A caller that wants one theme for a whole window keeps the returned instance.
+    /// </summary>
+    public static UiTheme DarkGold => new();
 }

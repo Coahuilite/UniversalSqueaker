@@ -243,5 +243,7 @@ internal static class KernelSmokeTests
         {
             return "[" + key + "]";
         }
+
+        public int TranslationRevision => 0;
     }
 }

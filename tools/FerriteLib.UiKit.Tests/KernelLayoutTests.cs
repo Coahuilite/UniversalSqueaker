@@ -505,5 +505,7 @@ internal static class KernelLayoutTests
         {
             return "[" + key + "]";
         }
+
+        public int TranslationRevision => 0;
     }
 }

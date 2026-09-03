@@ -345,5 +345,7 @@ internal static class KernelPopupTests
         {
             return "[" + key + "]";
         }
+
+        public int TranslationRevision => 0;
     }
 }

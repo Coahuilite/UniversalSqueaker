@@ -1260,5 +1260,7 @@ internal static class Program
         {
             return key ?? "";
         }
+
+        public int TranslationRevision => 0;
     }
 }

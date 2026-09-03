@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using FerriteLib.UiKit.Kernel;
 using UnityEngine;
@@ -29,6 +30,9 @@ internal static class KernelContractTests
         failures += Run("Session content revision invalidates the layout cache", VerifyContentRevisionInvalidatesLayout);
         failures += Run("Neutral full-page manifest creates host", VerifyNeutralFullPageManifestCreatesHost);
         failures += Run("Duplicate widget kind registration is rejected", VerifyDuplicateRegistrationRejected);
+        failures += Run("Translation revision invalidates the layout cache", VerifyTranslationRevisionInvalidatesLayout);
+        failures += Run("Theme colour tokens cannot move geometry", VerifyThemeColorsDoNotAffectLayout);
+        failures += Run("Visual core never depends on the page model", VerifyVisualCoreIsPageModelFree);
         return failures;
     }
 
@@ -452,6 +456,210 @@ internal static class KernelContractTests
         }
     }
 
+    private static void VerifyTranslationRevisionInvalidatesLayout()
+    {
+        UiWidgetRegistry.Clear();
+        UiWidgetRegistry.InitializeCore();
+        UiWidgetRegistry.Register("lang-test", "test/height", () => new HeightBoundWidget());
+
+        string xml =
+            "<UiPage Schema=\"2\" Source=\"lang-test\">"
+            + "<Widget Id=\"h\" Kind=\"test/height\" />"
+            + "</UiPage>";
+
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(xml);
+        var bindings = new UiBindings();
+        float current = 10f;
+        bindings.BindReadOnly("height", () => current);
+
+        StubTranslation translation = new StubTranslation();
+        using UiHost host = new("lang-test", manifest, bindings, UiTheme.DarkGold, new StubMetrics(), translation);
+        UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(200f, 200f));
+        if (!ReferenceEquals(first, host.MeasureAndArrange(new Vector2(200f, 200f))))
+        {
+            throw new Exception("Steady state re-arranged instead of reusing the cached snapshot");
+        }
+
+        // The game language changes, and with it every string the bands were measured from. Nothing
+        // else moves: same size, same manifest, no content-revision bump. Only a re-arrange can pick
+        // up the new value, so a cache that ignores the translation revision fails here.
+        current = 40f;
+        translation.TranslationRevision = 7;
+        UiLayoutSnapshot reArranged = host.MeasureAndArrange(new Vector2(200f, 200f));
+        if (ReferenceEquals(reArranged, first))
+        {
+            throw new Exception("Language change reused the previous language's snapshot");
+        }
+
+        if (Math.Abs(reArranged.RectById["h"].height - 40f) > 0.01f)
+        {
+            throw new Exception("Language change re-arranged but did not re-measure");
+        }
+    }
+
+    private static void VerifyThemeColorsDoNotAffectLayout()
+    {
+        // "Theming is a late, purely visual concern" is only worth claiming if something holds it:
+        // two themes differing in every colour token must yield identical geometry. Any colour that
+        // ever leaks into a size or a rect fails here. DefaultFont is deliberately not perturbed - it
+        // feeds text measurement, so it is a metric that happens to live on the theme.
+        if (ReferenceEquals(UiTheme.DarkGold, UiTheme.DarkGold))
+        {
+            throw new Exception("UiTheme.DarkGold hands out a shared instance; consumers repaint each other");
+        }
+
+        UiWidgetRegistry.Clear();
+        UiWidgetRegistry.InitializeCore();
+        UiWidgetRegistry.Register("theme-test", "test/height", () => new HeightBoundWidget());
+
+        string xml =
+            "<UiPage Schema=\"2\" Source=\"theme-test\">"
+            + "<Column Id=\"c\" Gap=\"8\" Padding=\"12\">"
+            + "<Row Id=\"r\" Gap=\"4\">"
+            + "<Widget Id=\"h\" Kind=\"test/height\" />"
+            + "<Widget Id=\"h2\" Kind=\"test/height\" />"
+            + "</Row>"
+            + "</Column>"
+            + "</UiPage>";
+
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(xml);
+        var bindings = new UiBindings();
+        bindings.BindReadOnly("height", () => 20f);
+
+        UiTheme plain = UiTheme.DarkGold;
+        UiTheme altered = UiTheme.DarkGold;
+        altered.Base = new Color(1f, 0f, 0f, 1f);
+        altered.Panel = new Color(0f, 1f, 0f, 0.5f);
+        altered.Raised = new Color(0f, 0f, 1f, 1f);
+        altered.Hover = new Color(1f, 1f, 0f, 1f);
+        altered.Selected = new Color(0f, 1f, 1f, 1f);
+        altered.Warning = new Color(1f, 0f, 1f, 1f);
+        altered.Success = new Color(0.5f, 0.5f, 0.5f, 1f);
+        altered.Danger = new Color(0.2f, 0.9f, 0.1f, 1f);
+        altered.WorkspacePlane = new Color(0.9f, 0.1f, 0.1f, 1f);
+        altered.SectionBand = new Color(0.1f, 0.9f, 0.9f, 1f);
+        altered.TextPrimary = new Color(0f, 0f, 0f, 1f);
+        altered.TextSecondary = new Color(1f, 1f, 1f, 1f);
+        altered.TextOnGold = new Color(0.3f, 0.3f, 0.3f, 1f);
+        altered.TextOnDanger = new Color(0.7f, 0.7f, 0.7f, 1f);
+        altered.TextDisabled = new Color(0.1f, 0.2f, 0.3f, 1f);
+        altered.AccentGold = new Color(0.4f, 0.5f, 0.6f, 1f);
+        altered.HoverPoint = new Color(0.6f, 0.5f, 0.4f, 1f);
+        altered.Border = new Color(0f, 0f, 0f, 0f);
+        altered.BorderStrong = new Color(1f, 1f, 1f, 1f);
+        altered.Divider = new Color(0.5f, 0f, 0.5f, 1f);
+
+        using UiHost a = new("theme-test", manifest, bindings, plain, new StubMetrics(), new StubTranslation());
+        using UiHost b = new("theme-test", manifest, bindings, altered, new StubMetrics(), new StubTranslation());
+        UiLayoutSnapshot sa = a.MeasureAndArrange(new Vector2(240f, 240f));
+        UiLayoutSnapshot sb = b.MeasureAndArrange(new Vector2(240f, 240f));
+
+        if (sa.RectById.Count != sb.RectById.Count)
+        {
+            throw new Exception("Recolouring changed the number of laid-out elements");
+        }
+
+        foreach (KeyValuePair<string, Rect> pair in sa.RectById)
+        {
+            if (!sb.RectById.TryGetValue(pair.Key, out Rect other))
+            {
+                throw new Exception("Recolouring dropped element '" + pair.Key + "'");
+            }
+
+            // Compared component-wise rather than with Rect.Equals: the harness's UnityEngine stub
+            // owns that type, and a missing member here would throw inside the guard and pass silently.
+            Rect one = pair.Value;
+            if (Math.Abs(one.x - other.x) > 0.01f
+                || Math.Abs(one.y - other.y) > 0.01f
+                || Math.Abs(one.width - other.width) > 0.01f
+                || Math.Abs(one.height - other.height) > 0.01f)
+            {
+                throw new Exception(
+                    "A colour token moved '" + pair.Key + "': " + one.width + "x" + one.height
+                    + " at " + one.x + "," + one.y + " became " + other.width + "x" + other.height
+                    + " at " + other.x + "," + other.y);
+            }
+        }
+    }
+
+
+    private static void VerifyVisualCoreIsPageModelFree()
+    {
+        // The library ships one assembly but serves two audiences: hosts that drive a declarative page
+        // (manifest + engine + session + typed bindings), and consumers that only want the theme, the
+        // drawing helpers and text measurement. That split is only real while the visual core never
+        // reaches back into the page model, so the boundary is enforced here rather than left to
+        // convention - and it is exactly the line a future assembly split would have to be cut along.
+        string kernel = Path.Combine(RepoRoot(), "Source", "FerriteLib.UiKit", "Kernel");
+        string[] visualCore =
+        {
+            "UiTheme.cs",
+            "UiThemeDraw.cs",
+            "UiFitAudit.cs",
+            "UiKitFonts.cs",
+            "UiFont.cs",
+            "ITextMetrics.cs",
+            "VerseFerriteTextMetrics.cs"
+        };
+        string[] pageModel =
+        {
+            "UiHost",
+            "UiSession",
+            "UiSessionGuard",
+            "UiLayoutEngine",
+            "UiLayoutSnapshot",
+            "UiLayoutManifest",
+            "IUiBindings",
+            "UiBindings",
+            "UiWidgetRegistry",
+            "IUiWidget",
+            "UiNative",
+            "UiElementSpec",
+            "UiValueState",
+            "UiWidgetContext"
+        };
+
+        foreach (string file in visualCore)
+        {
+            string path = Path.Combine(kernel, file);
+            if (!File.Exists(path))
+            {
+                throw new Exception("Visual-core file vanished from the boundary list: " + file);
+            }
+
+            string[] lines = File.ReadAllLines(path);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                foreach (string symbol in pageModel)
+                {
+                    if (lines[i].IndexOf(symbol, StringComparison.Ordinal) >= 0)
+                    {
+                        throw new Exception(
+                            file + ":" + (i + 1) + " reaches into the page model via '" + symbol
+                            + "'; the visual core must stay usable without a Host.");
+                    }
+                }
+            }
+        }
+    }
+
+    private static string RepoRoot()
+    {
+        string? current = AppContext.BaseDirectory;
+        for (int i = 0; i < 8 && current != null; i++)
+        {
+            if (Directory.Exists(Path.Combine(current, "Source", "FerriteLib.UiKit")))
+            {
+                return current;
+            }
+
+            current = Path.GetDirectoryName(current);
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root from " + AppContext.BaseDirectory);
+    }
+
+
     private sealed class HeightBoundWidget : IUiWidget
     {
         public string Kind => "test/height";
@@ -774,5 +982,10 @@ internal static class KernelContractTests
         {
             return "[" + key + "]";
         }
+
+        // Settable so a test can prove the layout cache reacts to a language change and to nothing
+        // else. Left at 0 everywhere else: the engine compares it by equality, so a constant is the
+        // "language did not change" case.
+        public int TranslationRevision { get; set; }
     }
 }

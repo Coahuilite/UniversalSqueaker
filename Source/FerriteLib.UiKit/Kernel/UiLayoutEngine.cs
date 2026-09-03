@@ -51,6 +51,7 @@ public sealed class UiLayoutEngine
     private Vector2 cachedAvailable;
     private int cachedContentRevision = -1;
     private int cachedDefinitionRevision;
+    private int cachedTranslationRevision = int.MinValue;
     private List<PlacedEntry> lastEntries = new();
 
     public UiLayoutEngine(string scope)
@@ -70,7 +71,8 @@ public sealed class UiLayoutEngine
             && Math.Abs(cachedAvailable.x - width) < 0.01f
             && Math.Abs(cachedAvailable.y - height) < 0.01f
             && cachedContentRevision == ctx.Session.ContentRevision
-            && cachedDefinitionRevision == DefinitionRevision(ctx))
+            && cachedDefinitionRevision == DefinitionRevision(ctx)
+            && cachedTranslationRevision == ctx.Translation.TranslationRevision)
         {
             ClampScrollPositions(ctx.Session, cachedSnapshot);
             return cachedSnapshot;
@@ -124,6 +126,7 @@ public sealed class UiLayoutEngine
         cachedAvailable = new Vector2(width, height);
         cachedContentRevision = ctx.Session.ContentRevision;
         cachedDefinitionRevision = DefinitionRevision(ctx);
+        cachedTranslationRevision = ctx.Translation.TranslationRevision;
         cachedSnapshot = new UiLayoutSnapshot(
             new Vector2(width, box.Height),
             rects,

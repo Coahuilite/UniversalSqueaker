@@ -63,4 +63,27 @@ internal sealed class UsKernelTranslation : IUiTranslation
     {
         return key.Translate();
     }
+
+    /// <summary>
+    /// The active language's folder name, which is what RimWorld resolves keys against. Known limit:
+    /// a translation mod that overwrites Keyed entries inside the same folder changes strings without
+    /// changing this value - but that only lands after a restart or a language re-select, both of which
+    /// close the settings window anyway, so no stale layout is observable through that hole.
+    /// </summary>
+    public int TranslationRevision
+    {
+        get
+        {
+            // Explicit null test rather than string.IsNullOrEmpty: net472's reference assembly does not
+            // carry [NotNullWhen] on it, so flow analysis cannot narrow through the guard and the
+            // dereference after it fails to compile under Nullable+WarningsAsErrors.
+            string? folder = LanguageDatabase.activeLanguage?.folderName;
+            if (folder == null || folder.Length == 0)
+            {
+                return 0;
+            }
+
+            return folder.GetHashCode();
+        }
+    }
 }

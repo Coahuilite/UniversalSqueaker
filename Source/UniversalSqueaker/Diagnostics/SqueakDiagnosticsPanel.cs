@@ -249,7 +249,7 @@ internal sealed class SqueakDiagnosticsPanel : Window
     private static void DrawSectionTitle(Rect rect, string label)
     {
         UiThemeDraw.Label(rect, label, Theme, Theme.AccentGold, UiFont.Small);
-        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Theme.AccentGoldAlpha20);
+        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Theme.AccentWith(0.20f));
     }
 
     private static void DrawFieldRow(Rect rect, string label, string value, Color? valueColor = null)

@@ -7,6 +7,15 @@ namespace FerriteLib.UiKit.Kernel;
 public interface IUiTranslation
 {
     string Translate(string key);
+
+    /// <summary>
+    /// A value that differs whenever the text resolved for a key may differ - in practice, the active
+    /// game language. Measured text bands are derived from resolved strings, so the layout engine
+    /// compares this by equality as part of the snapshot cache key: switching language while the size,
+    /// the manifest and the content revision all stay put must force a re-measure instead of reusing
+    /// the previous language's geometry. Hosts must not return a value that changes on every call.
+    /// </summary>
+    int TranslationRevision { get; }
 }
 
 /// <summary>
