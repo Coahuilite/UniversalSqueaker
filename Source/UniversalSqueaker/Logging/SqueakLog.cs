@@ -88,6 +88,15 @@ public static class SqueakLog
         Emit(SqueakLogEvent.LabelOverflow, new SqueakLogData(target: elementPath, reason: axis, source: font, needed: needed, available: available), false);
     }
 
+    /// <summary>Forensic click-routing trace from the library's neutral Trace hook. Deliberately
+    /// out-of-protocol: it exists to answer "who ate this click" in a running game, where no stub
+    /// harness can reproduce native IMGUI event order.</summary>
+    public static void PopupTrace(string message)
+    {
+        if (!ShouldEmitDev) return;
+        Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
+    }
+
     private static void Emit(SqueakLogEvent evt, SqueakLogData data, bool once)
     {
         try

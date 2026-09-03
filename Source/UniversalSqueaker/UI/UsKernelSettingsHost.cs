@@ -30,6 +30,7 @@ public static class UsKernelSettingsHost
     /// <summary>Production entry point: the Host measures text with the real Verse text engine.</summary>
     public static UiHost Create(IUsKernelSettingsSource source)
     {
+        UiNative.Trace = SqueakLog.PopupTrace;
         return Create(source, VerseFerriteTextMetrics.Instance);
     }
 
