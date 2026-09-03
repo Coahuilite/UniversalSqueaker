@@ -23,7 +23,6 @@ namespace UniversalSqueaker.UI;
 public static class UsKernelDraw
 {
     public const float RowLeftPadding = 10f;
-    private const float DropdownOptionHeight = 24f;
 
     public static void RowSurface(Rect rect, UiTheme theme, bool hovered, bool selected, bool danger = false)
     {
@@ -141,44 +140,13 @@ public static class UsKernelDraw
             if (anchor.HasValue)
             {
                 string capturedCurrent = current;
-                ctx.Session.RegisterPopupDraw(() => DrawDropdownPopup(anchor.Value, elementId, options, capturedCurrent, ctx, onSelected));
-            }
-        }
-    }
-
-    private static void DrawDropdownPopup(
-        Rect anchor,
-        string elementId,
-        IReadOnlyList<KeyValuePair<string, string>> options,
-        string current,
-        UiWidgetContext ctx,
-        Action<string> onSelected)
-    {
-        Rect popupRect = new(anchor.x, anchor.yMax, anchor.width, options.Count * DropdownOptionHeight);
-        UiThemeDraw.Panel(popupRect, ctx.Theme);
-
-        for (int i = 0; i < options.Count; i++)
-        {
-            Rect rowRect = new(popupRect.x, popupRect.y + i * DropdownOptionHeight, popupRect.width, DropdownOptionHeight);
-            bool selected = string.Equals(options[i].Value, current, StringComparison.Ordinal);
-            UiThemeDraw.Surface(
-                rowRect,
-                ctx.Theme,
-                selected ? ctx.Theme.Selected : ctx.Theme.Raised,
-                selected ? ctx.Theme.AccentGold : ctx.Theme.Border);
-            Label(
-                new Rect(rowRect.x + 6f, rowRect.y, rowRect.width - 12f, rowRect.height),
-                options[i].Key,
-                ctx.Theme,
-                selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
-                UiFont.Small,
-                TextAnchor.MiddleLeft,
-                singleLine: true);
-
-            if (UiNative.DropdownOptionRow(rowRect, elementId, ctx.Session))
-            {
-                ctx.Session.ClosePopup();
-                onSelected(options[i].Value);
+                ctx.Session.RegisterPopupDraw(() => UiPopup.DrawOptionList(
+                    UiPopup.RectFor(anchor.Value, options.Count, ctx.Session.HostViewport),
+                    elementId,
+                    ctx,
+                    options,
+                    capturedCurrent,
+                    onSelected));
             }
         }
     }

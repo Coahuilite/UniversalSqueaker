@@ -120,10 +120,68 @@ internal static class Program
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
+        Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
         Step("closing settings window does not affect overlay", ClosingSettingsWindowDoesNotAffectOverlay);
+    }
+
+    /// <summary>
+    /// The in-game failure reported on 2026-09-04: picking Auto in a Tuning scope dropdown opened the
+    /// next row's dropdown instead of selecting it. The yield guard in UiNative consults
+    /// UiSession.OpenPopupRect, and the composite popup path (UsKernelDraw.Dropdown: scope rows,
+    /// domain picker, filter dropdowns) never published that rect, so every covered trigger kept
+    /// stealing the click. The library lanes prove the guard and the rect rule given a published
+    /// rect; this lane proves the composite path publishes one, through the real production host.
+    /// </summary>
+    private static void CompositeDropdownPublishesCoveringRect()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        Rect viewport = new(0f, 0f, 800f, 600f);
+        host.DrawFrame(viewport);
+
+        // Anchor low enough that two or more option rows cannot fit below it: the composite popup
+        // must flip above the trigger, the same branch the reported click loss exercised.
+        Rect anchor = new(300f, 560f, 120f, 22f);
+        string? publishedBy = null;
+        Rect popup = default;
+        foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
+        {
+            host.Session.OpenPopup("scope-tree-scope-" + key, anchor);
+            host.DrawFrame(viewport);
+            if (host.Session.OpenPopupRect.HasValue)
+            {
+                publishedBy = key;
+                popup = host.Session.OpenPopupRect.Value;
+                break;
+            }
+
+            host.Session.ClosePopup();
+        }
+
+        Assert(publishedBy != null,
+            "no Tuning scope dropdown published its popup rect; composite popups can never win a covered click");
+        Assert(popup.height >= 24f && Math.Abs(popup.height % 24f) < 0.01f,
+            "composite popup height must be a whole number of option rows: " + popup.height);
+        Assert(popup.y >= -0.01f && popup.yMax <= 600f + 0.01f,
+            "composite popup must stay inside the host viewport: " + popup);
+        Assert(Math.Abs(popup.yMax - anchor.y) < 0.01f,
+            "a composite popup that cannot fit below its anchor must flip above it: " + popup);
+        Assert(host.Session.IsPointOverPopup(new Vector2(popup.x + popup.width / 2f, popup.y + 12f)),
+            "the yield predicate must see a point inside the composite popup");
+        Assert(!host.Session.IsPointOverPopup(new Vector2(popup.x + popup.width / 2f, popup.yMax + 40f)),
+            "the yield predicate must not fire below the composite popup");
+
+        // The rect is per-frame state and a click arrives in the frame after the draw, so a second
+        // frame must republish it; closing must clear it so a stale rect cannot shadow later clicks.
+        host.DrawFrame(viewport);
+        Assert(host.Session.OpenPopupRect.HasValue, "composite popup rect must be republished every frame it draws");
+        host.Session.ClosePopup();
+        host.DrawFrame(viewport);
+        Assert(!host.Session.OpenPopupRect.HasValue, "a closed composite popup must leave no published rect");
     }
 
     private static void SettingsWindowPageUnavailableModel()
