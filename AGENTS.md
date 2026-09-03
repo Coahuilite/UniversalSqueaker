@@ -12,7 +12,7 @@
 ## Project philosophy
 
 - Neutral routing: a VoicePack's `raceDefName` declaration is the only routing entry. There is no built-in race special-casing; HAR races, vanilla Human, and any third-party race route identically.
-- Optional dependencies are reflective only: HAR is touched via reflection for discovery; missing dependencies degrade silently and never crash.
+- Optional dependencies degrade silently and never crash. HAR reflective discovery is **intent, not the shipped build**: `Catalog/SqueakXenotypeCatalog.cs` carries `TODO(HAR)` and discovers assembled defs only, so the reflective hint lists stay empty until that TODO lands.
 - Uninstall safety is a hard rule: removing the mod must never affect a saved game. No permanent data is written into saves; settings and profiles live in the Config folder.
 - Content and kernel are separate: the Kernel compile set must not reference Verse/Unity/RimWorld and must not contain product sound keys or race seeds. `SR_*`/Ratkin seed data belongs to SR content packs; US provides data-driven fallback profiles.
 
