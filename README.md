@@ -12,7 +12,7 @@ RimWorld 1.6 通用语音包内核（本地分叉，未发布）。
 ## 本地验证
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1          # 12 道门禁（6 个 harness + 主程序集 Dev/Release + 载体载荷存在与单载体红线 + Schema=2 清单校验；含双语 Keyed 本地化契约与文本适配扫描）
+pwsh -NoProfile -File scripts/verify-local.ps1          # 13 道门禁（6 个 harness + 主程序集 Dev/Release + 载体载荷与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验）
 pwsh -NoProfile -File scripts/build-dev.ps1             # 先建 ../ferritelib 载荷，再 Dev 构建 + 打 dev 包（dist/dev/）
 
 # UI 库已拆为独立前置模组仓库 ../ferritelib（coahuilite.ferritelib），有自己的一套门禁。
