@@ -37,7 +37,13 @@ if (-not [string]::IsNullOrWhiteSpace($VersionLabel)) {
     }
 }
 if (-not (Test-Path -LiteralPath $assemblyPath -PathType Leaf)) { throw "Missing built assembly: $assemblyPath. Build the desired flavor before staging." }
-if (-not (Test-Path -LiteralPath $uikitAssemblyPath -PathType Leaf)) { throw "Missing built assembly: $uikitAssemblyPath. Build FerriteLib.UiKit before staging." }
+# Third carrier red line, at the moment the package is actually assembled: Extras and audio are
+# content red lines, this one is an identity red line. coahuilite.ferritelib is the only carrier of
+# FerriteLib.UiKit.dll, and a copy staged here would ship a second assembly whose binding order nobody
+# can predict from inside.
+if (Test-Path -LiteralPath $uikitAssemblyPath -PathType Leaf) {
+    throw "US must not ship the FerriteLib payload; coahuilite.ferritelib is the single carrier: $uikitAssemblyPath"
+}
 
 if (Test-Path -LiteralPath $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force }
 $null = New-Item -ItemType Directory -Path $stageDir -Force

@@ -13,6 +13,13 @@ namespace UniversalSqueaker;
 public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
+    /// <summary>
+    /// The FerriteLib API range this build of US was compiled and verified against. Pre-1.0 the minor
+    /// is the breaking axis, so the accepted window is exactly one minor wide.
+    /// </summary>
+    private static readonly Version PrerequisiteApiMin = new Version(0, 1, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 2, 0);
+
     public static Harmony Harmony = null!;
     public static UniversalSqueakerSettings Settings = null!;
     public static UniversalSqueakerMod? Instance { get; private set; }
@@ -50,6 +57,16 @@ public class UniversalSqueakerMod : Mod
         Instance = this;
         Harmony = new Harmony(PackageId);
         Settings = GetSettings<UniversalSqueakerSettings>();
+        // Prerequisite contract check. RimWorld's modDependencies cannot carry a version (ModRequirement
+        // parses only packageId / alternativePackageIds / displayName), so this is the one place where the
+        // API range US was compiled against meets the API range that actually loaded. It reports and keeps
+        // going: throwing from a Mod constructor buries the diagnosis behind the game's generic
+        // "mod failed to load" and takes the Harmony patches down with it.
+        if (!FerriteLibVersion.Require(PrerequisiteApiMin, PrerequisiteApiMax, PackageId, out string prerequisiteReport))
+        {
+            Log.Error("UniversalSqueaker cannot verify its FerriteLib prerequisite. " + prerequisiteReport);
+        }
+
         // Loading may run on LongEvent's worker thread. PostLoadInit only records a pending migration;
         // this constructor must not consume it, read Unity Time, initialize resolver/UI state, or publish runtime.
         // SettingsOrigin (usdiag v2): LoadedFromFile = Scribe deserialization completed (ExposeData ran);

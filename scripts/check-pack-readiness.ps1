@@ -40,6 +40,20 @@ $packageIdNode = $aboutXml.SelectSingleNode('/ModMetaData/packageId')
 $packageId = if ($null -ne $packageIdNode) { $packageIdNode.InnerText.Trim() } else { '' }
 Assert-Check 'packageId is coahuilite.universalsqueaker' ($packageId -eq 'coahuilite.universalsqueaker') "($packageId)"
 
+# The other half of the carrier boundary: US ships no FerriteLib payload, so it must name the carrier
+# as a dependency or the mod fails to load with no explanation. RimWorld's modDependencies cannot
+# carry a version (ModRequirement parses only packageId/alternativePackageIds/displayName), so the
+# API-range assert is in code - UniversalSqueakerMod's constructor calls FerriteLibVersion.Require.
+function Test-PackageIdList([string]$xpath) {
+    $nodes = @($aboutXml.SelectNodes($xpath))
+    foreach ($node in $nodes) {
+        if ($node.InnerText.Trim() -eq 'coahuilite.ferritelib') { return $true }
+    }
+    return $false
+}
+Assert-Check 'About.xml declares coahuilite.ferritelib as a prerequisite' (Test-PackageIdList '/ModMetaData/modDependencies/li/packageId')
+Assert-Check 'About.xml loads after coahuilite.ferritelib' (Test-PackageIdList '/ModMetaData/loadAfter/li')
+
 if ($RequireReleaseMetadata) {
     $descNode = $aboutXml.SelectSingleNode('/ModMetaData/description')
     $desc = if ($null -ne $descNode) { $descNode.InnerText.Trim() } else { '' }
@@ -48,7 +62,10 @@ if ($RequireReleaseMetadata) {
 
 # C. Assemblies
 Assert-Check 'UniversalSqueaker.dll exists' (Test-Path -LiteralPath (Join-Path $assembliesDir 'UniversalSqueaker.dll') -PathType Leaf)
-Assert-Check 'FerriteLib.UiKit.dll exists' (Test-Path -LiteralPath (Join-Path $assembliesDir 'FerriteLib.UiKit.dll') -PathType Leaf)
+# Inverted since FerriteLib became its own prerequisite mod: coahuilite.ferritelib is the single
+# carrier, and a second copy would bind by load order through RimWorld's global AssemblyResolve with
+# no other detector for whichever copy lost.
+Assert-Check 'no FerriteLib.UiKit.dll in the US package (single carrier)' (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'FerriteLib.UiKit.dll') -PathType Leaf))
 
 # .pdb files are removed by stage-package.ps1, so they are not a pre-pack blocker.
 

@@ -20,7 +20,6 @@ internal static class UsKernelContractInvariantTests
     {
         string root = RepoRoot();
         VerifyRealSchema2RootStructure(root);
-        VerifyUiKitTreesNeutral(root);
         VerifyHostRevisionBumpBoundary(root);
         VerifyBasicTuningHasNoDistanceDuplicate(root);
     }
@@ -122,50 +121,6 @@ internal static class UsKernelContractInvariantTests
     }
 
     /// <summary>
-    /// Neutrality attribution: the UiKit source tree and the UiKit test tree must contain no US
-    /// product literals. This guard mirrors the verify-local neutrality grep and also catches the
-    /// lowercase identifiers the grep's case-sensitive pattern misses. Lives here (US-owned)
-    /// because the UiKit tree cannot assert its own neutrality.
-    /// </summary>
-    private static void VerifyUiKitTreesNeutral(string root)
-    {
-        string[] trees =
-        {
-            Path.Combine(root, "Source", "FerriteLib.UiKit"),
-            Path.Combine(root, "tools", "FerriteLib.UiKit.Tests")
-        };
-        string[] productLiterals = { "coahuilite", "universalsqueaker", "squeak", "us/nav", "voicepack" };
-
-        var hits = new List<string>();
-        foreach (string tree in trees)
-        {
-            if (!Directory.Exists(tree)) continue;
-            foreach (string file in Directory.EnumerateFiles(tree, "*.cs", SearchOption.AllDirectories))
-            {
-                if (file.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)
-                    || file.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
-                {
-                    continue;
-                }
-
-                string text = File.ReadAllText(file);
-                foreach (string literal in productLiterals)
-                {
-                    if (text.IndexOf(literal, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        hits.Add(file + " contains '" + literal + "'");
-                    }
-                }
-            }
-        }
-
-        if (hits.Count > 0)
-        {
-            throw new Exception("UiKit neutrality violation(s):\n" + string.Join("\n", hits));
-        }
-    }
-
-    /// <summary>
     /// Structural guard for the Host binding/action revision boundary: layout-affecting actions
     /// must bump the session content revision through the Host's SessionRevisionBumper, and the
     /// kernel widgets must not double-bump themselves (help hover keeps its text-diff guard).
@@ -264,8 +219,11 @@ internal static class UsKernelContractInvariantTests
         string? current = AppContext.BaseDirectory;
         for (int i = 0; i < 8 && current != null; i++)
         {
-            if (Directory.Exists(Path.Combine(current, "Source", "FerriteLib.UiKit"))
-                && Directory.Exists(Path.Combine(current, "Source", "UniversalSqueaker")))
+            // Only US's own tree: FerriteLib left for its own repository, and the neutrality guard
+            // that used to live here moved with it - asserted by the library from inside, with a
+            // positive control. The old note that the library "cannot assert its own neutrality"
+            // turned out to be wrong once the exemption was pinned to the scanner file itself.
+            if (Directory.Exists(Path.Combine(current, "Source", "UniversalSqueaker")))
             {
                 return current;
             }

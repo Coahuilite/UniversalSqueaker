@@ -37,8 +37,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Phase A UiKit integration: US 主程序集引用中性通用 UI 库。 -->
-    <ProjectReference Include="..\FerriteLib.UiKit\FerriteLib.UiKit.csproj" />
+    <!-- FerriteLib is its own prerequisite mod (coahuilite.ferritelib). US compiles against the
+         sibling repo's built payload and ships nothing of it: Private=false keeps the DLL out of
+         1.6/Assemblies, so the mod package cannot grow a second carrier copy. A same-version package
+         feed was measured and rejected: NuGet drops build metadata from the cache identity, so a
+         dev-plus-sha version still lands in one stale lib/0.1.0-dev folder, and these gates restore
+         once and then run with restore disabled, so a floating version would go green against the
+         previously resolved graph. dotnet pack still works in that repo for when there is a remote
+         or a third-party consumer. -->
+    <Reference Include="FerriteLib.UiKit">
+      <HintPath>..\..\..\ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

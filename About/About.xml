@@ -6,5 +6,18 @@
   <name>Universal Squeaker</name>
   <author>Coahuilite</author>
   <supportedVersions><li>1.6</li></supportedVersions>
+  <!-- FerriteLib is a hard prerequisite: it carries FerriteLib.UiKit.dll, which US compiles against
+       and binds to at runtime. RimWorld's modDependencies cannot express a version (ModRequirement
+       only parses packageId / alternativePackageIds / displayName), so the API-range assert lives in
+       code: FerriteLib.UiKit.Kernel.FerriteLibVersion.Require, called from Mod's constructor. -->
+  <modDependencies>
+    <li>
+      <packageId>coahuilite.ferritelib</packageId>
+      <displayName>FerriteLib</displayName>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>coahuilite.ferritelib</li>
+  </loadAfter>
   <description>Placeholder description for the local fork. Replace before any release.</description>
 </ModMetaData>

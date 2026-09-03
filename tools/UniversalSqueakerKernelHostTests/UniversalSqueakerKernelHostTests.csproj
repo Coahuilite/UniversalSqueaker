@@ -14,11 +14,14 @@
     <NuGetAudit>false</NuGetAudit>
     <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- FerriteLib's own repo, sibling to this one. The stub assemblies live there now; this project
+         builds them in place so both repos always run against byte-identical stubs. -->
+    <FerriteLibHarness>$(MSBuildProjectDirectory)\..\..\..\ferritelib\tools\FerriteLib.UiKit.Tests</FerriteLibHarness>
   </PropertyGroup>
 
   <!-- 真实 Schema2 Host creation regression：引用生产主程序集（连同 FerriteLib.UiKit 与
-       Krafs.Rimworld.Ref 编译期引用）。运行时用与 FerriteLib.UiKit.Tests 相同的最小可执行
-       桩程序集替换 Verse/Unity，Host 创建/测量/绘制路径因此可在本地无游戏环境执行。
+       Krafs.Rimworld.Ref 编译期引用）。运行时用 FerriteLib 仓库里的最小可执行桩程序集替换
+       Verse/Unity，Host 创建/测量/绘制路径因此可在本地无游戏环境执行。
        说明：本项目刻意使用“先构建生产 DLL + 直接 Reference”而不是 ProjectReference。本机
        dotnet SDK 10 在嵌套 MSBuild 解析 UniversalSqueaker.csproj 的 SDK workload locator 时
        会静默失败（MSB4276），但直接构建生产项目成功；直接引用保持“使用真实生产代码”且可在
@@ -35,27 +38,30 @@
       <Private>true</Private>
     </Reference>
     <Reference Include="FerriteLib.UiKit">
-      <HintPath>..\..\1.6\Assemblies\FerriteLib.UiKit.dll</HintPath>
+      <!-- The carrier mod's payload, built in the sibling repo. Never copied into US's own
+           1.6/Assemblies, which is what keeps a second carrier from entering the US package. -->
+      <HintPath>..\..\..\ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>
 
-  <!-- 桩项目源码位于 FerriteLib.UiKit.Tests 目录树下；它们是独立桩程序集，不能参与本项目编译。
-       与 FerriteLib.UiKit.Tests 相同：主构建后显式构建并复制可执行桩到输出目录。 -->
+  <!-- The stub assemblies belong to FerriteLib's own harness now (single source of truth: a second
+       copy is how the layout-vs-audit two-metrics defect happened). This project builds them in place
+       in the sibling repo and copies the binaries in, so both repos always run against identical stubs. -->
   <Target Name="BuildAndCopyRuntimeStubs" AfterTargets="Build">
-    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
-          WorkingDirectory="$(MSBuildProjectDirectory)" />
-    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
-          WorkingDirectory="$(MSBuildProjectDirectory)" />
-    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
-          WorkingDirectory="$(MSBuildProjectDirectory)" />
-    <Exec Command="dotnet build &quot;..\FerriteLib.UiKit.Tests\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
-          WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(FerriteLibHarness)" />
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(FerriteLibHarness)" />
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(FerriteLibHarness)" />
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet"
+          WorkingDirectory="$(FerriteLibHarness)" />
     <ItemGroup>
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine\UnityEngine.CoreModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.UiKit.Tests\bin\stubs\verse\Assembly-CSharp.dll" />
+      <RuntimeStub Include="$(FerriteLibHarness)\bin\stubs\unityengine\UnityEngine.CoreModule.dll" />
+      <RuntimeStub Include="$(FerriteLibHarness)\bin\stubs\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <RuntimeStub Include="$(FerriteLibHarness)\bin\stubs\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
+      <RuntimeStub Include="$(FerriteLibHarness)\bin\stubs\verse\Assembly-CSharp.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>

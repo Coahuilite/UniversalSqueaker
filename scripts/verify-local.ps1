@@ -14,23 +14,23 @@ $ErrorActionPreference = "Stop"
 #   3   settings migration characterization (schema migration, write bridges, baseline importer)
 #   4   log protocol characterization, Release
 #   5   log protocol characterization, Dev (US_DEV)
-#   6   FerriteLib.UiKit tests, Release
-#   7   FerriteLib.UiKit Dev build (TreatWarningsAsErrors)
-#   8   FerriteLib.UiKit Release build (TreatWarningsAsErrors)
-#   9   FerriteLib.UiKit neutrality grep (no US/SR product literals)
-#  10   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
-#  11   main assembly Release build (TreatWarningsAsErrors)
-#  12   built assembly presence (FerriteLib.UiKit.dll + UniversalSqueaker.dll)
-#  13   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
-#  14   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
-#  15   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
+#   6   FerriteLib carrier payload present (the sibling repo has been built; US compiles against it)
+#   7   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
+#   8   main assembly Release build (TreatWarningsAsErrors)
+#   9   US payload is single-carrier (UniversalSqueaker.dll present, FerriteLib.UiKit.dll ABSENT)
+#  10   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
+#  11   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
+#  12   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
+# GATE PROVENANCE: 1-5 and 10-12 are US-owned; 6 and 9 assert the carrier boundary itself. The
+# FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and the
+# visual-core/page-model boundary) moved to that repository, which runs them from inside with a
+# positive control.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
-$uikitProjectFile = Join-Path $root 'Source\FerriteLib.UiKit\FerriteLib.UiKit.csproj'
-$uikitTestsProject = Join-Path $root 'tools\FerriteLib.UiKit.Tests\FerriteLib.UiKit.Tests.csproj'
+$carrierDll = Join-Path (Split-Path -Parent $root) 'ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll'
 $uiLogicTestsProject = Join-Path $root 'tools\UniversalSqueakerUiLogicTests\UniversalSqueakerUiLogicTests.csproj'
 $kernelHostTestsProject = Join-Path $root 'tools\UniversalSqueakerKernelHostTests\UniversalSqueakerKernelHostTests.csproj'
 $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
@@ -78,30 +78,13 @@ Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Dev' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
-Invoke-Check 'FerriteLib.UiKit.Tests Release' `
-    'dotnet run --no-restore --project tools/FerriteLib.UiKit.Tests -c Release' `
-    { dotnet run --no-restore --project $uikitTestsProject -c Release }
-
-Invoke-Check 'FerriteLib.UiKit Dev build (warnings as errors)' `
-    'dotnet build Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Dev' `
-    { dotnet build $uikitProjectFile -c Dev @buildExtraArgs }
-
-Invoke-Check 'FerriteLib.UiKit Release build (warnings as errors)' `
-    'dotnet build Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release' `
-    { dotnet build $uikitProjectFile -c Release @buildExtraArgs }
-
-Invoke-Check 'FerriteLib.UiKit neutrality grep (no US/SR product literals)' `
-    'dotnet run --no-restore --project tools/FerriteLib.UiKit.Tests -c Release' `
+Invoke-Check 'FerriteLib carrier payload present (sibling repo built)' `
+    'dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release' `
     {
-        $uikitSrc = Join-Path $root 'Source\FerriteLib.UiKit'
-        $uikitTests = Join-Path $root 'tools\FerriteLib.UiKit.Tests'
-        $pattern = 'UniversalSqueaker|SqueakyRatkin|Ratkin|Kiiro|SR_|US_'
-        $hits = Get-ChildItem -LiteralPath $uikitSrc, $uikitTests -Recurse -File |
-            Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' -and $_.Name -match '\.(cs|csproj|xml|md|json|props|targets|sln|txt)$' } |
-            Select-String -Pattern $pattern -CaseSensitive
-        if ($hits) {
-            $first = $hits | Select-Object -First 5 | ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
-            throw "Neutrality violation(s):`n$($first -join "`n")"
+        # US compiles against the carrier mod's payload and never ships one, so the sibling build is a
+        # precondition, not a convenience. Say so plainly instead of failing inside csc.
+        if (-not (Test-Path -LiteralPath $carrierDll -PathType Leaf)) {
+            throw "Missing FerriteLib payload: $carrierDll. Build the ferritelib repo first (scripts/build-dev.ps1 does it in order)."
         }
     }
 
@@ -113,15 +96,19 @@ Invoke-Check 'main assembly Release build (warnings as errors)' `
     'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
     { dotnet build $projectFile -c Release @buildExtraArgs }
 
-Invoke-Check 'built assemblies present (FerriteLib.UiKit.dll + UniversalSqueaker.dll)' `
+Invoke-Check 'US payload carries exactly one assembly (no second FerriteLib copy)' `
     'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
     {
         $assembliesDir = Join-Path $root '1.6\Assemblies'
-        if (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'FerriteLib.UiKit.dll') -PathType Leaf)) {
-            throw "Missing built assembly: $assembliesDir\FerriteLib.UiKit.dll"
-        }
         if (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'UniversalSqueaker.dll') -PathType Leaf)) {
             throw "Missing built assembly: $assembliesDir\UniversalSqueaker.dll"
+        }
+        # The inverted guard. Two mods shipping FerriteLib.UiKit.dll bind by load order through
+        # RimWorld's single global AssemblyResolve, and the copy that loses never finds out - so a
+        # stray DLL sitting in this folder is a defect with no other detector.
+        $stray = Join-Path $assembliesDir 'FerriteLib.UiKit.dll'
+        if (Test-Path -LiteralPath $stray -PathType Leaf) {
+            throw "US must not ship the FerriteLib payload (coahuilite.ferritelib is the only carrier): $stray"
         }
     }
 
