@@ -193,3 +193,9 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] Maintainer in-game re-test of the composite path (see the corrected item in the 2026-09-03 section above).
 - [x] Refactor assessment: answered — no broader refactor warranted; reasoning in MEMORY. Reopen only if a second geometry/input duplication appears.
 - Open decisions unchanged: Knife 3 behaviours, overlay kernel-only cut, help-catalogue localization tone, built-in fallback/baseline content, brand-boundary fixtures, Workshop naming/description.
+
+## Desync incident follow-ups (2026-09-04b, US `a2ade99` + library `b2006a0`)
+
+- [ ] Maintainer: replace BOTH installed mods from the new package pair (US zip labelled `a2ade99…` and the FerriteLib zip from library `b2006a0`); lockstep is release policy and the Api pin now enforces it at build time.
+- [ ] Maintainer in-game: the settings window opens with no notice region; the Tuning scope dropdown selects Auto and closes without opening the neighbour; with detailed logging, both languages walked through all five workspaces keep `ui.text.overflow` silent (the 2026-09-04 height-axis records should all be closed by the band calibration).
+- [ ] If a future in-game round reports `ui.text.overflow` again, re-measure the stub line heights from the log's need values before touching any band.
