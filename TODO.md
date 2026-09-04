@@ -137,7 +137,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 
 ### Knife 3 — optional, maintainer call (OPEN)
 
-- Re-implement natively in `UI/Kernel/`, each with a failure-sensitive geometry plus interaction assertion: sticky Tuning layer row, reverse help linkage when hovering mid-column controls (the 41 help entries stay reachable through the panel's own index, so this is convenience only), xenotype-row dimming at zero candidate packs; minor `HideBodyLabel` and an in-list `All` entry for the author dropdown.
+- Re-implement natively in `UI/Kernel/`, each with a failure-sensitive geometry plus interaction assertion: sticky Tuning layer row, ~~reverse help linkage when hovering mid-column controls~~ (**closed 2026-09-05 by the C+A landing, `72cff33`** - see "Help presentation redesign" below); xenotype-row dimming at zero candidate packs; minor `HideBodyLabel` and an in-list `All` entry for the author dropdown.
 - Also decide: delete the remaining pure-Verse camera-readout fallback and make the overlay kernel-only.
 - ~~Constant row heights / text clipping unasserted (G1)~~ — **closed 2026-09-02b** by the `UiFitAudit` measurement seam plus gate 15's both-language sweep; see the new section below.
 - Alternative for Knife 3: drop those behaviours as legacy-anchored. If dropped, delete the matching help entries and backlog lines in the same commit instead of leaving them dangling.
@@ -145,7 +145,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 ## Text fit and localization (2026-09-02b, commit `55b6edf`)
 
 - Landed: `ITextMetrics.MeasureWidth`; `UiFitAudit` on the single label outlet; Dev-only `usdiag evt=ui.text.overflow`; manifests `TitleKey`-only; 53 new Keyed strings in both languages (152 keys each); gate 14 localization contract; gate 15 both-language fit sweep with an in-process positive control. Bands fixed: page-title caption, scope-tree inherited hint (was 14px), preset summary (was 11px), checklist banners (one band had been allocated for up to three), basic-tuning rows, nav rows, chrome banner, empty state.
-- [ ] **Help catalog localization** (tone decision): measured 2026-09-02b — `UsHelpCatalog.cs` is 291 lines holding **12 sections + 29 items = 41 entries**, i.e. **71 distinct English strings** (section/item titles + bodies). All still literals, so the right-hand panel is English in a Chinese game while everything else is Chinese. Largest remaining untranslated surface.
+- [x] **Help catalog localization** — closed 2026-09-05 in `72cff33`: all 41 entries (now 40 after the dead `basic-tuning/distance` removal) are Keyed, Chinese authoritative manual-style copy, English translated from it (58 new keys per table + 24 reuses). The historical measurement above stands; the "largest untranslated surface" sentence no longer applies.
 - [ ] **Review the proposed Chinese wordings** before any publication: routing modes (原版/回退/混音/禁用), distance presets (保守/均衡/强烈/自定义), filter labels (全部/仅启用/冲突/孤立/种族/异型/作者), card titles. Product vocabulary, not mechanical translation.
 - [ ] **Container-level auto-width** deliberately not done: `UiLayoutEngine.ResolveColumnWidths` honours only static `Width=` plus equal split, so `nav-column 192` and `help-scroll 232` stay fixed; "widen for Chinese" currently happens by growing bands, not columns. Revisit only if the in-game log shows a column genuinely too narrow after the band fixes — measured data says Chinese is narrower than English for 146 of 152 keys, so it may never be needed.
 - [ ] **In-game half of the evidence**: open the settings window with dev logging in both languages and confirm `evt=ui.text.overflow` stays silent. The harness model is a half-width advance approximation; only the real font engine confirms. Any line it prints is a fix target with an exact need/have pair.
@@ -172,7 +172,7 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] Maintainer re-test: HANDOFF §5 items 12-14, Chinese, 800×600.
 - [ ] No harness can assert real glyph advance. With detailed logging on, walk all five workspaces and confirm `usdiag evt=ui.text.overflow` stays silent; any `height` record is a live defect of exactly this family.
 - [ ] Same family, deliberately left out of this block: `SqueakDiagnosticsPanel.DrawVisible` pairs `Widgets.BeginScrollView`/`EndScrollView` and restores `Text.Anchor`/`Text.Font`/`GUI.color` **outside** `try/finally`, and `UiSessionGuard` restores GUI state only in its `catch` and then keeps drawing siblings. Both can leave the IMGUI group stack unbalanced after a single throw — crash-shape risks, so they belong with the heap-corruption triage, not with layout.
-- [ ] Knife 3 unchanged (maintainer decision): sticky tuning layer row, reverse help linkage, xenotype-row dimming at zero candidate packs, `HideBodyLabel` in the global volume widget, explicit `All` row in the author dropdown.
+- [ ] Knife 3 remainder (maintainer decision): sticky tuning layer row, xenotype-row dimming at zero candidate packs, `HideBodyLabel` in the global volume widget, explicit `All` row in the author dropdown. (Reverse help linkage was closed 2026-09-05 with C+A.)
 
 ## FerriteLib extraction (ruled and executed 2026-09-03)
 
