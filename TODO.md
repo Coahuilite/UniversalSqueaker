@@ -202,3 +202,6 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [ ] Maintainer: replace **only the FerriteLib mod** from the new `FerriteLib-dev-v0.1.0-dev.zip` (library `9a197a2`); the US package `b56aa08` stays as installed — the fix shipped in the carrier DLL. Proof the new library is live: ptrace lines now carry `pointerLocal=` and `pointerWindow=` separately. Then re-run the Tuning scope-dropdown click (Auto over the next row's trigger) and the wheel-scroll workaround should be unnecessary.
 - [x] Filter misalignment diagnosed and fixed: view cache and layout cache shared clock (US `87e3cd6`); package `UniversalSqueaker-dev-v0.1.0-dev-87e3cd6.zip` (US-only change, FerriteLib stays).
 - [ ] Maintainer re-test: apply/clear race and xenotype filters on the Packs workspace - content and layout must agree in the same frame, no workspace-switch refresh needed.
+- [x] Filter dropdown labels localized + 异型→异种 (US `d23ad22`); package `UniversalSqueaker-dev-v0.1.0-dev-d23ad22.zip` (US-only).
+- [ ] Maintainer re-test: race/xenotype/author dropdowns show translated labels (鼠族 etc.) while writes stay machine tokens; xenotype row's race context matches the race layer's title.
+- [ ] **Next item (maintainer): help presentation redesign - format under discussion, do not start before the direction is ruled.**
