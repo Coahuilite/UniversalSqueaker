@@ -140,6 +140,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     private VoicePacksViewState BuildRichView()
     {
+        bool filterSanguophage = string.Equals(state.RaceFilter, "sanguophage", StringComparison.Ordinal);
         var sang = new VoicePackDomainView(
             // The two Packs layers compose their title from the xenotype name plus the race context, so
             // a long race defName is what makes the drawn title wrap while the bare name stays short.
@@ -197,13 +198,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             distanceRangeMax: 45f,
             biotechActive: true,
             bannerText: "rich harness catalog",
-            races: new[]
-            {
-                new RaceLayerRowView("human", "Human", enabledCount: WrappingDomainText ? int.MaxValue : 2, candidateCount: WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
-                new RaceLayerRowView("testrace", "Test Race", enabledCount: WrappingDomainText ? int.MaxValue : 1, candidateCount: WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available)
-            },
-            xenotypeDomains: new[] { sang },
-            selectedDomain: sang,
+            races: RaceRowsFor(filterSanguophage),
+            xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
+            selectedDomain: filterSanguophage ? null : sang,
             actionScopes: new[]
             {
                 new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
@@ -227,10 +224,40 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             saveStatus: SaveStatus,
             isDirty: true,
             authors: new[] { "AuthorA", "AuthorB" },
-            raceFilter: "",
-            xenotypeFilter: "",
-            raceFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Human", "human") },
+            raceFilter: state.RaceFilter,
+            xenotypeFilter: state.XenotypeFilter,
+            raceFilterOptions: new[]
+            {
+                new FilterOptionView("All", ""),
+                new FilterOptionView("Human", "human"),
+                new FilterOptionView("Test Race", "testrace"),
+                new FilterOptionView("Sanguophage Race", "sanguophage")
+            },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") });
+    }
+
+    /// <summary>
+    /// Mirrors the production race-filter semantics for the parity lane: selecting a race narrows the
+    /// race layer to that row, drops non-matching xenotype domains, and clears the selection. The
+    /// fake must respond to the filter or the harness can never compare "filtered live" against
+    /// "filtered from the start".
+    /// </summary>
+    private IReadOnlyList<RaceLayerRowView> RaceRowsFor(bool filterSanguophage)
+    {
+        if (filterSanguophage)
+        {
+            return new[]
+            {
+                new RaceLayerRowView("sanguophage", "Sanguophage Race", 1, 1, SqueakVoicePackDomainState.Available)
+            };
+        }
+
+        return new[]
+        {
+            new RaceLayerRowView("human", "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            new RaceLayerRowView("testrace", "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            new RaceLayerRowView("sanguophage", "Sanguophage Race", 1, 1, SqueakVoicePackDomainState.Available)
+        };
     }
 
     public string SectionHelpKey(string sectionKey)
@@ -264,7 +291,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     {
         LastActiveTab = tab;
         // Mirror the production facade: the engine Tab gate reads state.ActiveTab, so the fake
-        // must mutate it for workspace-switch layout evidence.
         string normalized;
         if (string.Equals(tab, "Overview", StringComparison.OrdinalIgnoreCase))
             normalized = "Overview";

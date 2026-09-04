@@ -122,6 +122,7 @@ internal static class Program
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
+        Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -198,6 +199,67 @@ internal static class Program
             "US is compiled against FerriteLib Api " + compiledFloor + " but the linked carrier reports "
             + FerriteLib.UiKit.Kernel.FerriteLibVersion.Api
             + "; move PrerequisiteApiMin/Max in Mod.cs and ship both mods in lockstep");
+    }
+
+    /// <summary>
+    /// The post-filter misalignment reported from the game must be reproduced or excluded here:
+    /// two real hosts at one viewport (800x600, where the Packs content overflows and the engine
+    /// reserves the scrollbar - the regime the game log showed: 693 vs 677), one filtered live
+    /// through the typed binding and one filtered from the first frame. If the layout after a
+    /// filter write ever diverges from the from-the-start layout, the two snapshots disagree and
+    /// this lane names the element.
+    private static void FilterWriteLaysOutIdenticalToFreshFilteredHost()
+    {
+        // 800x600 (minimum), 1129x600 (the maintainer's 1568-wide screen at the 72%x66% default),
+        // 1280x720: three regimes of scrollbar reservation and column width.
+        var viewports = new[]
+        {
+            new Rect(0f, 0f, 800f, 600f),
+            new Rect(0f, 0f, 1129f, 600f),
+            new Rect(0f, 0f, 1280f, 720f),
+        };
+        string[] ids = { "filter-bar", "race-layer", "xenotype-layer", "checklist", "footer" };
+
+        foreach (Rect viewport in viewports)
+        {
+            var liveFake = new RecordingSettingsSource { RichData = true };
+            using UiHost live = UsKernelSettingsHost.Create(liveFake);
+            live.Bindings.Invoke("set-tab", "Packs");
+            live.DrawFrame(viewport);
+            live.Bindings.Set("race-filter", "sanguophage");
+            live.DrawFrame(viewport);
+            UiLayoutSnapshot liveSnapshot = live.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+
+            var freshFake = new RecordingSettingsSource { RichData = true };
+            freshFake.SetRaceFilter("sanguophage");
+            using UiHost fresh = UsKernelSettingsHost.Create(freshFake);
+            fresh.Bindings.Invoke("set-tab", "Packs");
+            fresh.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+            UiLayoutSnapshot freshSnapshot = fresh.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+
+            foreach (string id in ids)
+            {
+                if (!liveSnapshot.RectById.ContainsKey(id) || !freshSnapshot.RectById.ContainsKey(id))
+                {
+                    throw new Exception("parity lane missing element id: " + id + " at " + viewport.width + "x" + viewport.height);
+                }
+
+                Rect liveRect = liveSnapshot.RectById[id];
+                Rect freshRect = freshSnapshot.RectById[id];
+                Assert(
+                    Math.Abs(liveRect.x - freshRect.x) < 0.01f
+                    && Math.Abs(liveRect.y - freshRect.y) < 0.01f
+                    && Math.Abs(liveRect.width - freshRect.width) < 0.01f
+                    && Math.Abs(liveRect.height - freshRect.height) < 0.01f,
+                    id + " diverges after a live filter write at " + viewport.width + "x" + viewport.height
+                    + ": live=" + liveRect + " fresh=" + freshRect);
+            }
+
+            Assert(
+                Math.Abs(liveSnapshot.ContentSize.y - freshSnapshot.ContentSize.y) < 0.01f,
+                "scroll content height diverges after a live filter write at " + viewport.width + "x" + viewport.height
+                + ": live=" + liveSnapshot.ContentSize.y + " fresh=" + freshSnapshot.ContentSize.y);
+        }
     }
 
     private static void SettingsWindowPageUnavailableModel()
@@ -920,9 +982,9 @@ internal static class Program
 
         // Filter/options/dynamic-list bindings read the rich projections.
         Assert(bindings.GetOptions<string>("author-options").Count == 2, "author-options reads the rich author list");
-        Assert(bindings.GetOptions<string>("race-filter-options").Count == 2, "race-filter-options reads the rich list");
+        Assert(bindings.GetOptions<string>("race-filter-options").Count == 4, "race-filter-options reads the rich list");
         Assert(bindings.GetOptions<string>("xenotype-filter-options").Count == 2, "xenotype-filter-options reads the rich list");
-        Assert(bindings.Get<IReadOnlyList<RaceLayerRowView>>("races").Count == 2, "races reads the rich race list");
+        Assert(bindings.Get<IReadOnlyList<RaceLayerRowView>>("races").Count == 3, "races reads the rich race list");
         Assert(bindings.Get<IReadOnlyList<BaselinePresetView>>("baseline-presets").Count == 1, "baseline-presets reads the rich preset list");
         Assert(bindings.Get<IReadOnlyList<VoicePackDomainView>>("xenotype-domains").Count == 1, "xenotype-domains reads the rich list");
         Assert(bindings.Get<VoicePackDomainView?>("selected-domain").HasValue, "selected-domain reads the rich selected domain");
