@@ -164,4 +164,63 @@
   <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
   <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
   <US.Help.Overview>Overview</US.Help.Overview>
+  <!-- Help catalog (C+A panel): authoritative Chinese copy, English translated from it. -->
+  <US.Help.PageTitle.Title>Using This Window</US.Help.PageTitle.Title>
+  <US.Help.PageTitle.Overview>The window is organized into workspaces - Overview, Distance, VoicePacks, Tuning and Presets - switched from the left navigation. Every change applies immediately and is saved to disk automatically.</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Nav.Label>Workspace Navigation</US.Help.PageTitle.Nav.Label>
+  <US.Help.PageTitle.Nav.Text>The left navigation switches between the five workspaces: Overview, Distance, VoicePacks, Tuning and Presets. Selecting a workspace also updates the help panel on the right.</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Apply.Label>Apply &amp; Save</US.Help.PageTitle.Apply.Label>
+  <US.Help.PageTitle.Apply.Text>Every change applies immediately. Settings are written to disk automatically right after each edit - the footer shows Saving / Saved - and closing the window performs a final forced flush.</US.Help.PageTitle.Apply.Text>
+  <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
+  <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
+  <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
+  <US.Help.ModeRow.Fallback.Text>Short-circuits through the tiers in order - xenotype pack, race pack, each pack's own fallback, then the built-in tier; only when all three miss does the (currently empty) built-in tier apply.</US.Help.ModeRow.Fallback.Text>
+  <US.Help.ModeRow.Remix.Text>Folds every tier's candidates for the domain - xenotype pack, race pack, pack fallback and built-in - into one equally weighted draw pool.</US.Help.ModeRow.Remix.Text>
+  <US.Help.ModeRow.Disabled.Text>Bypasses this mod's audio path entirely - no VoicePack and no built-in audio is emitted - pawns behave as the base game defines, and all stored settings are kept.</US.Help.ModeRow.Disabled.Text>
+  <US.Help.GlobalVolume.Overview>Global volume scales the final loudness of every squeak between 0% and 100%. 0% is not a bypass: selection and modulation still run, only the result is inaudible.</US.Help.GlobalVolume.Overview>
+  <US.Help.GlobalVolume.Slider.Label>Volume Slider</US.Help.GlobalVolume.Slider.Label>
+  <US.Help.GlobalVolume.Slider.Text>Drag to scale all final audio continuously between 0% and 100%; it takes effect instantly.</US.Help.GlobalVolume.Slider.Text>
+  <US.Help.GlobalVolume.Number.Label>Percent Field</US.Help.GlobalVolume.Number.Label>
+  <US.Help.GlobalVolume.Number.Text>Type a percentage between 0 and 100. Anything parseable applies live as you type; Enter or clicking away only ends editing.</US.Help.GlobalVolume.Number.Text>
+  <US.Help.Attenuation.Overview>Camera height maps to the audible distance across the 15-65 band: the start point stays locked at 100% and the end at 0%, dragged horizontally into a linear fade. Quick presets: Conservative 15-65, Balanced 15-50, Strong 15-40.</US.Help.Attenuation.Overview>
+  <US.Help.Attenuation.Chart.Label>Attenuation Chart</US.Help.Attenuation.Chart.Label>
+  <US.Help.Attenuation.Chart.Text>Drag the two control points horizontally to set where the fade starts and ends; the left point stays at full audibility and the right at zero, kept at least 5 units apart.</US.Help.Attenuation.Chart.Text>
+  <US.Help.Attenuation.Presets.Label>Quick Presets</US.Help.Attenuation.Presets.Label>
+  <US.Help.Attenuation.Presets.Text>Three mutually exclusive buttons apply a distance range outright - Conservative 15-65, Balanced 15-50, Strong 15-40 - and the chart and status line update with them.</US.Help.Attenuation.Presets.Text>
+  <US.Help.BasicTuning.Overview>The playback-behaviour card: whether Easter-egg entries join the pool, plus the three runtime scalings - cooldown with time speed, frequency with talking, periodic sounds with the audible population. Distance presets and the curve live in the Distance workspace.</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Egg.Label>Easter Egg Sounds</US.Help.BasicTuning.Egg.Label>
+  <US.Help.BasicTuning.Egg.Text>When on, Easter egg entries join the normal pool and can be drawn like any other clip; when off, only ordinary entries are eligible.</US.Help.BasicTuning.Egg.Text>
+  <US.Help.BasicTuning.Scaling.Label>Scaling Toggles</US.Help.BasicTuning.Scaling.Label>
+  <US.Help.BasicTuning.Scaling.Text>Three global scaling toggles: cooldown with time speed, frequency with talking, and periodic sounds with the audible population. All on by default.</US.Help.BasicTuning.Scaling.Text>
+  <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
+  <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
+  <US.Help.ScopeTree.Overview>The three-layer tuning editor: Global, Race and Xenotype. Each action's scope either inherits (Auto) or is forced to Off, Any or Command within the states that action supports; four mood rows override pitch, volume and jitter per layer.</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
+  <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
+  <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field; the row's Auto clears this layer's override back to the inherited values.</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.Auto.Label>Auto / Clear</US.Help.ScopeTree.Auto.Label>
+  <US.Help.ScopeTree.Auto.Text>Auto removes the current layer's record - an action scope or a whole mood row - so the entry falls through to the next effective layer.</US.Help.ScopeTree.Auto.Text>
+  <US.Help.PresetList.Overview>Imports tuning baselines provided by Defs: expand a preset, tick the races and xenotypes, then press Import to write its action and mood rows into the matching layers. With no preset Defs installed the card shows its empty state.</US.Help.PresetList.Overview>
+  <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
+  <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
+  <US.Help.PresetList.Import.Text>Applies the preset's ticked action and mood rows to the matching race / xenotype layers - same keys overwrite, new keys append - tags every imported row with its source preset, and feeds the runtime resolver immediately.</US.Help.PresetList.Import.Text>
+  <US.Help.FilterBar.Overview>The narrowing tools of the Packs workspace: Enabled only keeps domains with enabled packs; Conflicts lists domains that are conflicting, dormant, target-unavailable or stale; Orphan only keeps domains with stale selections; the Author dropdown narrows pack rows; All clears every filter.</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
+  <US.Help.FilterBar.Domain.Text>The chips stack: Enabled only, Conflicts and Orphan each narrow the domain lists and the pack checklist, while All clears every filter, search included.</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.RaceXeno.Label>Race / Xenotype Filters</US.Help.FilterBar.RaceXeno.Label>
+  <US.Help.FilterBar.RaceXeno.Text>Two parallel dropdowns filter the step-2 domain lists by race and xenotype; choosing a race narrows the xenotype options to that race's domains. Each dropdown shows translated names.</US.Help.FilterBar.RaceXeno.Text>
+  <US.Help.FilterBar.Author.Text>Narrows the VoicePack rows by author; packs without a declared author stand in by mod name. Matching is case-insensitive containment.</US.Help.FilterBar.Author.Text>
+  <US.Help.RaceLayer.Overview>Lists the VoicePack domains race by race - each row shows enabled/candidate counts and any state - and selecting a row points the pack checklist below at that domain.</US.Help.RaceLayer.Overview>
+  <US.Help.RaceLayer.Row.Label>Race Row</US.Help.RaceLayer.Row.Label>
+  <US.Help.RaceLayer.Row.Text>Clicking a race row selects that race domain, and the Choose VoicePacks card below switches to its pack checklist.</US.Help.RaceLayer.Row.Text>
+  <US.Help.XenotypeLayer.Overview>Lists xenotype domains keyed by the (race, xenotype) pair - each row reads "xenotype (race)" - so the same xenotype is configured independently per race.</US.Help.XenotypeLayer.Overview>
+  <US.Help.XenotypeLayer.Row.Label>Xenotype Row</US.Help.XenotypeLayer.Row.Label>
+  <US.Help.XenotypeLayer.Row.Text>Clicking a xenotype row selects that (race, xenotype) domain, and the Choose VoicePacks card below switches to its pack checklist.</US.Help.XenotypeLayer.Row.Text>
+  <US.Help.Checklist.Overview>Search and tick VoicePacks for the selected domain. Saved pack keys that are no longer installed are stale selections: they surface in a warning banner, and Forget Unavailable clears them at once. Dormant, target-unavailable and conflict banners also sit atop the card.</US.Help.Checklist.Overview>
+  <US.Help.Checklist.Search.Label>Search</US.Help.Checklist.Search.Label>
+  <US.Help.Checklist.Search.Text>Filters the visible rows by case-insensitive substring, matching pack name, defName, mod, author or pack key.</US.Help.Checklist.Search.Text>
+  <US.Help.Checklist.Row.Label>VoicePack Row</US.Help.Checklist.Row.Label>
+  <US.Help.Checklist.Row.Text>Each row shows the pack name, the mod and author line, and its action coverage; clicking anywhere on the row toggles that VoicePack for the domain.</US.Help.Checklist.Row.Text>
+  <US.Help.Checklist.Forget.Text>Removes the saved selections whose pack keys are no longer installed; the button appears only inside the stale-selection banner and affects the current domain only.</US.Help.Checklist.Forget.Text>
 </LanguageData>

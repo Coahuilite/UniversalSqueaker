@@ -243,6 +243,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     private void DrawLayerRow(Rect rect, int layer, UiWidgetContext ctx)
     {
+        UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/layer");
         if (UsesStackedLayerButtons(rect.width))
         {
             UsKernelDraw.Label(
@@ -300,7 +301,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             ? d
             : Array.Empty<TuningDomainOptionView>();
 
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/domain");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
@@ -336,7 +337,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     private void DrawScopeRow(Rect rect, ActionScopeRowView row, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        // A trigger that currently reads "Auto" claims the Auto/Clear entry instead of the generic
+        // action-scope one, so the panel explains what the visible value means.
+        bool hovered = UsKernelDraw.HelpHover(
+            rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         string displayName = UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey);
@@ -387,7 +391,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     private void DrawMoodRow(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/mood-tuning");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         float pitch = row.Own?.hasPitchFactor == true ? row.Own.pitchFactor : row.EffectivePitch;

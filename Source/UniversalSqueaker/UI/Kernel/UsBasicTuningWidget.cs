@@ -98,21 +98,21 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
         // Each row's band is measured once per frame and reused for both the rect and the cursor
         // advance; calling BasicRowHeight inline in both spots would double the text-measuring cost.
         float cooldownHeight = BasicRowHeight(ctx, "US.Tuning.ScaleCooldown");
-        DrawBasicRow(new Rect(x, y, innerWidth, cooldownHeight), ctx, "scale-cooldown", "toggle-scale-cooldown", "US.Tuning.ScaleCooldown");
+        DrawBasicRow(new Rect(x, y, innerWidth, cooldownHeight), ctx, "scale-cooldown", "toggle-scale-cooldown", "US.Tuning.ScaleCooldown", "us/basic-tuning/scaling");
         y += cooldownHeight + RowGap;
 
         float talkingHeight = BasicRowHeight(ctx, "US.Tuning.ScaleTalking");
-        DrawBasicRow(new Rect(x, y, innerWidth, talkingHeight), ctx, "scale-talking", "toggle-scale-talking", "US.Tuning.ScaleTalking");
+        DrawBasicRow(new Rect(x, y, innerWidth, talkingHeight), ctx, "scale-talking", "toggle-scale-talking", "US.Tuning.ScaleTalking", "us/basic-tuning/scaling");
         y += talkingHeight + RowGap;
 
         float populationHeight = BasicRowHeight(ctx, "US.Tuning.ScalePopulation");
-        DrawBasicRow(new Rect(x, y, innerWidth, populationHeight), ctx, "scale-population", "toggle-scale-population", "US.Tuning.ScalePopulation");
+        DrawBasicRow(new Rect(x, y, innerWidth, populationHeight), ctx, "scale-population", "toggle-scale-population", "US.Tuning.ScalePopulation", "us/basic-tuning/scaling");
     }
 
     private void DrawEggRow(Rect rect, UiWidgetContext ctx)
     {
         bool enabled = ctx.Bindings.TryGet("allow-eggs", out bool value) && value;
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/basic-tuning/egg");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(
@@ -137,10 +137,10 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
         }
     }
 
-    private void DrawBasicRow(Rect rect, UiWidgetContext ctx, string valueKey, string actionKey, string labelKey)
+    private void DrawBasicRow(Rect rect, UiWidgetContext ctx, string valueKey, string actionKey, string labelKey, string helpKey)
     {
         bool enabled = ctx.Bindings.TryGet(valueKey, out bool value) && value;
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, helpKey);
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(

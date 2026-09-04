@@ -100,7 +100,7 @@ public sealed class UsNavWidget : IUiWidget
             float itemHeight = ItemHeight(ctx, textWidth, descriptionKey);
             Rect itemRect = new(rect.x + SidePadding, y, innerWidth, itemHeight);
             bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
-            bool hovered = Mouse.IsOver(itemRect);
+            bool hovered = UsKernelDraw.HelpHover(itemRect, ctx, "us/page-title/nav");
             UiThemeDraw.StatusTreatment(itemRect, ctx.Theme, active ? UiStatusTone.Active : UiStatusTone.Neutral);
             UiThemeDraw.AccentRail(itemRect, ctx.Theme, active, 3f);
             UsKernelDraw.Label(new Rect(itemRect.x + TextInset, itemRect.y + LabelTop, textWidth, LabelHeight),

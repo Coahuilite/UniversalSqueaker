@@ -14,12 +14,12 @@ public sealed class UsModeRowWidget : IUiWidget
     private const float Padding = 4f;
 
     /// <summary>Mode values stay the typed enum the "mode" binding carries; only the display name is keyed.</summary>
-    private static readonly (SqueakVoicePackMode Mode, string LabelKey)[] Options =
+    private static readonly (SqueakVoicePackMode Mode, string LabelKey, string HelpKey)[] Options =
     {
-        (SqueakVoicePackMode.Vanilla, "US.Tuning.Mode.Vanilla"),
-        (SqueakVoicePackMode.Fallback, "US.Tuning.Mode.Fallback"),
-        (SqueakVoicePackMode.Remix, "US.Tuning.Mode.Remix"),
-        (SqueakVoicePackMode.Disabled, "US.Tuning.Mode.Disabled")
+        (SqueakVoicePackMode.Vanilla, "US.Tuning.Mode.Vanilla", "us/mode-row/vanilla"),
+        (SqueakVoicePackMode.Fallback, "US.Tuning.Mode.Fallback", "us/mode-row/fallback"),
+        (SqueakVoicePackMode.Remix, "US.Tuning.Mode.Remix", "us/mode-row/remix"),
+        (SqueakVoicePackMode.Disabled, "US.Tuning.Mode.Disabled", "us/mode-row/disabled")
     };
 
     private UiElementSpec spec = UiElementSpec.Empty;
@@ -61,6 +61,7 @@ public sealed class UsModeRowWidget : IUiWidget
         for (int i = 0; i < Options.Length; i++)
         {
             Rect optionRect = new(x, rect.y + Padding, width, Height);
+            UsKernelDraw.HelpHover(optionRect, ctx, Options[i].HelpKey);
             if (UsKernelDraw.SelectionButton(optionRect, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current))
             {
                 ctx.Bindings.Set(binding, Options[i].Mode);

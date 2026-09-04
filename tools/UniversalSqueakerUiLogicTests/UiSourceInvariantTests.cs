@@ -43,6 +43,7 @@ internal static class UiSourceInvariantTests
         VerifyEmbeddedManifestsAreSchema2Only(root);
         VerifyHelpCatalogManifestConsistency(root);
         VerifyHelpPanelWiringAndHeightFormula(root);
+        VerifyHoverClaimsMatchCatalogItems(root);
         VerifyLocalizationContract(root);
         VerifyPrerequisiteDesyncIsNamed(root);
         VerifyViewCacheSharesLayoutClock(root);
@@ -331,8 +332,9 @@ internal static class UiSourceInvariantTests
         }
     }
 
-    // 5b. Panel: the height formula and the drawn row list both key off section.Items, and the
-    // hover/select contract runs through the Host-bound actions (never a private command bridge).
+    // 5b. Panel: the height formula and the drawn row list both key off section.Items, the hover
+    // claim runs through the single HelpHover outlet, and the hover/select contract stays on the
+    // Host-bound actions (never a private command bridge).
     private static void VerifyHelpPanelWiringAndHeightFormula(string root)
     {
         string panel = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs");
@@ -343,10 +345,26 @@ internal static class UiSourceInvariantTests
             "ValidateValue<string>(\"help-section-key\"",
             "ValidateAction<string>(\"set-help-hover\"",
             "ValidateAction<string>(\"set-help-selection\"",
-            "ctx.Bindings.Invoke(\"set-help-hover\"",
+            "UsKernelDraw.HelpHover(",
             "ctx.Bindings.Invoke(\"set-help-selection\"",
+            "MaxBodyBand(ctx, textWidth)",
         },
-        "the help panel must render one row per section.Items entry and size its list height from the same count");
+        "the help panel must render one row per section.Items entry, size its list from the same "
+        + "count, claim hover through HelpHover, and size its text bands from the hover-invariant "
+        + "catalog maxima (MaxBodyBand) rather than the displayed string");
+
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"),
+            new[] { "ctx.Bindings.Invoke(\"set-help-hover\", itemKey)" },
+            "HelpHover is the single claim outlet and it routes through the Host-bound set-help-hover action");
+
+        string window = File.ReadAllText(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"));
+        int clear = window.IndexOf("SetHelpHover(\"\")", StringComparison.Ordinal);
+        int draw = window.IndexOf("kernelHost.DrawFrame(contentRect)", StringComparison.Ordinal);
+        Assert(clear >= 0 && draw >= 0 && clear < draw,
+            "the settings window must clear the per-frame hover claim immediately before DrawFrame "
+            + "(moving away falls back to the section overview; without this the claim sticks)");
 
         string host = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
@@ -355,6 +373,77 @@ internal static class UiSourceInvariantTests
                && host.Contains("BindAction<string>(\"set-help-selection\"")
                && host.Contains("BindAction<string>(\"scroll-to\""),
             "the Host owns the help-section-key/hover/selection/scroll-to wiring (single event authority)");
+    }
+
+
+    // 5c. The C+A wiring table, both directions: every two-segment "us/<section>/<item>" literal in
+    // the widget tree must be a real catalog item (a claim that resolves to nothing is a silent
+    // dead hover), and every catalog item must be claimed by some control (an entry no control
+    // owns is dead catalog content the panel index would show forever). This is the drift pin for
+    // "feature exists, wiring lost": adding a help entry without wiring it, or rewiring a control
+    // onto a renamed key, fails here at build-gate time, not in someone's screenshot.
+    private static void VerifyHoverClaimsMatchCatalogItems(string root)
+    {
+        var claimed = new HashSet<string>(StringComparer.Ordinal);
+        string kernelDir = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel");
+        foreach (string file in Directory.EnumerateFiles(kernelDir, "*.cs", SearchOption.AllDirectories))
+        {
+            string text = File.ReadAllText(file);
+            int at = 0;
+            while ((at = text.IndexOf("\"us/", at, StringComparison.Ordinal)) >= 0)
+            {
+                int close = text.IndexOf('"', at + 1);
+                if (close < 0) break;
+                string literal = text.Substring(at + 1, close - at - 1);
+                // Two segments below "us" = an item key; one segment = a kind/section reference.
+                string[] parts = literal.Split('/');
+                if (parts.Length == 3 && parts[0] == "us" && parts[1].Length > 0 && parts[2].Length > 0)
+                {
+                    claimed.Add(literal);
+                }
+
+                at = close + 1;
+            }
+        }
+
+        Assert(claimed.Count > 0, "the widget tree claims no help item keys at all; the scan is broken");
+
+        var catalogItems = ReadCatalogItemKeys();
+        foreach (string key in claimed)
+        {
+            Assert(catalogItems.Contains(key),
+                "widget hover claim '" + key + "' is not a catalog item (dead hover; "
+                + "add the entry or fix the key)");
+        }
+
+        foreach (string key in catalogItems)
+        {
+            Assert(claimed.Contains(key),
+                "catalog item '" + key + "' is claimed by no control (dead catalog content; "
+                + "wire the control or remove the entry)");
+        }
+    }
+
+    private static HashSet<string> ReadCatalogItemKeys()
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        FieldInfo? field = typeof(UsHelpCatalog).GetField("Sections", BindingFlags.NonPublic | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException("UsHelpCatalog.Sections field is gone; re-point this guard deliberately.");
+        }
+
+        var sections = (System.Collections.IDictionary)field.GetValue(null)!;
+        foreach (DictionaryEntry entry in sections)
+        {
+            HelpSection section = (HelpSection)entry.Value!;
+            foreach (HelpItem item in section.Items)
+            {
+                Assert(keys.Add(item.Key), "catalog item key collides across sections: " + item.Key);
+            }
+        }
+
+        return keys;
     }
 
     private static HashSet<string> ReadCatalogSectionKeys()
@@ -510,8 +599,11 @@ internal static class UiSourceInvariantTests
 
     /// <summary>
     /// Every complete `US.*` string literal in the production source plus every `*Key` attribute value
-    /// in the shipped manifests. Literals ending in `.` are excluded on purpose: those are concatenation
-    /// prefixes (for example `"US.Mood." + mood`) whose full key names cannot be read statically.
+    /// in the shipped manifests. Dots inside the key must be part of the character class or every
+    /// key with three or more segments (US.Help.ScopeTree.ActionScope.Text) silently escapes the
+    /// scan - and a reference that is never collected can never be asserted to exist. Literals
+    /// ending in `.` are excluded on purpose: those are concatenation prefixes (for example
+    /// `"US.Mood." + mood`) whose full key names cannot be read statically.
     /// </summary>
     private static HashSet<string> CollectKeyedReferences(string root)
     {
@@ -522,7 +614,7 @@ internal static class UiSourceInvariantTests
         {
             if (Path.GetFileName(file).Equals("AssemblyInfo.cs", StringComparison.Ordinal)) continue;
             foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
-                File.ReadAllText(file), "\"(US\\.[A-Za-z0-9_]*)\""))
+                File.ReadAllText(file), "\"(US\\.[A-Za-z0-9_.]*)\""))
             {
                 string key = match.Groups[1].Value;
                 if (key.Length > 3 && !key.EndsWith(".", StringComparison.Ordinal)) keys.Add(key);

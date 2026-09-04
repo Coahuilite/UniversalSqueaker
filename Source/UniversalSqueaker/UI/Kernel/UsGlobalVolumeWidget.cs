@@ -59,6 +59,9 @@ public sealed class UsGlobalVolumeWidget : UsSectionWidgetBase
         Rect fieldRect = new(rect.xMax - RightPadding - FieldWidth, rect.y + 2f, FieldWidth, LabelHeight);
         Rect sliderRect = new(rect.x, rect.y + LabelHeight + 2f, rect.width - RightPadding, SliderHeight);
 
+        UsKernelDraw.HelpHover(sliderRect, ctx, "us/global-volume/slider");
+        UsKernelDraw.HelpHover(fieldRect, ctx, "us/global-volume/number");
+
         float sliderValue = UiNative.Slider(sliderRect, elementId, ctx.Session, value, 0f, 1f, out bool sliderChanged);
         if (sliderChanged)
         {

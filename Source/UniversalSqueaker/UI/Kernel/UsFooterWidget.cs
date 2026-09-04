@@ -77,8 +77,10 @@ public sealed class UsKernelFooterWidget : IUiWidget
         }
 
         string prefix = saveStatus == "Saving" || isDirty ? "● " : "";
+        Rect statusRect = new(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height);
+        UsKernelDraw.HelpHover(statusRect, ctx, "us/page-title/apply");
         UsKernelDraw.Label(
-            new Rect(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height),
+            statusRect,
             prefix + SaveStatusText(ctx, saveStatus),
             ctx.Theme,
             statusColor,

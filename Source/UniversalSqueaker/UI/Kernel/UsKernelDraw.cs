@@ -75,6 +75,26 @@ public static class UsKernelDraw
         return ctx.Translation.Translate(key);
     }
 
+    /// <summary>
+    /// The single outlet for claiming a control's help entry on hover (C+A model): while the pointer
+    /// is over <paramref name="rect"/>, the panel falls back to the active section's overview; while
+    /// it is over a claimed rect, the panel shows that entry instead. The claim is a per-frame
+    /// transient - the settings window clears <c>help-hover</c> before every <c>DrawFrame</c>, so a
+    /// control that stops being hovered stops being shown without any cleanup of its own. Widgets
+    /// must call this from <c>Draw</c> with the rect they actually drew (scroll-local space is fine;
+    /// IMGUI group translation keeps <c>Mouse.IsOver</c> honest inside the pass).
+    /// </summary>
+    /// <returns>Whether the pointer is over the rect, so callers can reuse it for row highlighting.</returns>
+    public static bool HelpHover(Rect rect, UiWidgetContext ctx, string itemKey)
+    {
+        bool hovered = Mouse.IsOver(rect);
+        if (hovered)
+        {
+            ctx.Bindings.Invoke("set-help-hover", itemKey);
+        }
+        return hovered;
+    }
+
     /// <summary>Draws a selection-style button surface and returns whether it was clicked (native invisible button).</summary>
     public static bool SelectionButton(Rect rect, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
     {

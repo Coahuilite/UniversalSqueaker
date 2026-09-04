@@ -51,7 +51,7 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
     private void DrawContent(Rect rect, UiWidgetContext ctx)
     {
         bool enabled = ctx.Bindings.TryGet("camera-indicator", out bool value) && value;
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/camera-indicator/toggle");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(

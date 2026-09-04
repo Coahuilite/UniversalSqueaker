@@ -157,8 +157,12 @@ internal static class UsKernelContractInvariantTests
             "UsVoicePackChecklistWidget must not bump the revision itself (Host boundary owns search-text)");
 
         string help = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs"));
-        Assert(help.Contains("BumpContentRevision") && help.Contains("UsHelpPanelLogic.Resolve(section, currentHover"),
-            "UsHelpPanelWidget keeps only the text-diff-guarded hover bump");
+        // C+A: hover claims never change the panel height (bands measure against the whole catalog),
+        // so the widget must not bump the revision at all; only the Host-boundary selection bump remains.
+        Assert(!help.Contains("BumpContentRevision"),
+            "UsHelpPanelWidget must not bump the revision itself - hover is height-invariant and selection bumps at the Host boundary");
+        Assert(help.Contains("UsKernelDraw.HelpHover("),
+            "the panel's index rows claim hover through the single UsKernelDraw.HelpHover outlet");
         Assert(!help.Contains("ctx.Bindings.Invoke(\"set-help-selection\"")
             || help.Contains("Host binding boundary"),
             "help selection bump is owned by the Host boundary, not the widget");

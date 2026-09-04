@@ -117,6 +117,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     private void DrawDomainRow(Rect rect, UiWidgetContext ctx)
     {
+        UsKernelDraw.HelpHover(rect, ctx, "us/filter-bar/domain");
         UiDomainFilter domainFilter = ctx.Bindings.TryGet("domain-filter", out UiDomainFilter f) ? f : default;
         string race = ctx.Bindings.TryGet("race-filter", out string raceFilter) ? raceFilter : "";
         string xenotype = ctx.Bindings.TryGet("xenotype-filter", out string xenotypeFilter) ? xenotypeFilter : "";
@@ -206,6 +207,10 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
             "xenotype-filter" => "xenotype-filter-options",
             _ => "author-options"
         };
+
+        // The race and xenotype dropdowns share one help entry (they are one filter concept read
+        // left-to-right); the author dropdown has its own.
+        UsKernelDraw.HelpHover(rect, ctx, elementId == "pack-filter" ? "us/filter-bar/author" : "us/filter-bar/race-xeno");
 
         string current = ctx.Bindings.TryGet(elementId, out string value) ? value ?? "" : "";
         IReadOnlyList<FilterOptionView> options = ctx.Bindings.GetOptions<FilterOptionView>(optionsKey);

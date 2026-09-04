@@ -173,10 +173,13 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private void DrawPresetHeader(
         Rect rect, BaselinePresetView preset, float titleBand, float summaryBand, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        // The header claims the tree entry first; the import button re-claims below, so hovering
+        // the button shows "Import" and anywhere else on the header shows the tree.
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, preset.Expanded);
 
         Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
+        UsKernelDraw.HelpHover(importRect, ctx, "us/preset-list/import");
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + HeaderTopPadding, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), titleBand),
@@ -207,7 +210,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(
@@ -227,7 +230,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
 
         UsKernelDraw.Label(

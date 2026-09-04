@@ -163,4 +163,63 @@
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
+  <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
+  <US.Help.PageTitle.Title>本窗口的用法</US.Help.PageTitle.Title>
+  <US.Help.PageTitle.Overview>窗口按工作区组织：总览、距离、语音包、调音与预设，由左侧导航切换。所有修改即时生效，并自动保存到磁盘。</US.Help.PageTitle.Overview>
+  <US.Help.PageTitle.Nav.Label>工作区导航</US.Help.PageTitle.Nav.Label>
+  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新右侧帮助面板的内容。</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
+  <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
+  <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
+  <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
+  <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
+  <US.Help.ModeRow.Fallback.Text>按级短路取声：异种包、种族包、包内回退、内置兜底档；前三级皆空才落到内置档（该档暂无内容，等同无声）。</US.Help.ModeRow.Fallback.Text>
+  <US.Help.ModeRow.Remix.Text>把该域各级候选（异种包、种族包、包内回退、内置档）折叠为一个等权池共同抽签。</US.Help.ModeRow.Remix.Text>
+  <US.Help.ModeRow.Disabled.Text>完全旁路本 Mod 的发声管线：不路由语音包，也不落到内置档；殖民者回到游戏自身的语音表现，已有存档与设置不受影响。</US.Help.ModeRow.Disabled.Text>
+  <US.Help.GlobalVolume.Overview>全局音量把每条语音的最终响度统一缩放于 0% 至 100%。0% 不等同于禁用：选取与调制照常执行，只是结果听不见。</US.Help.GlobalVolume.Overview>
+  <US.Help.GlobalVolume.Slider.Label>音量滑条</US.Help.GlobalVolume.Slider.Label>
+  <US.Help.GlobalVolume.Slider.Text>拖动滑条即在 0% 至 100% 间连续缩放全部最终音频，即时生效。</US.Help.GlobalVolume.Slider.Text>
+  <US.Help.GlobalVolume.Number.Label>百分比输入框</US.Help.GlobalVolume.Number.Label>
+  <US.Help.GlobalVolume.Number.Text>键入 0 至 100 的百分数。能解析的输入即时生效；按回车或点击别处只是结束编辑。</US.Help.GlobalVolume.Number.Text>
+  <US.Help.Attenuation.Overview>以镜头高度对应可闻距离：横轴为 15 至 65 的距离带，起点恒为 100% 响度、终点恒为 0%，水平拖动两端设出线性淡出。快速预设：保守 15-65、均衡 15-50、强效 15-40。</US.Help.Attenuation.Overview>
+  <US.Help.Attenuation.Chart.Label>衰减曲线</US.Help.Attenuation.Chart.Label>
+  <US.Help.Attenuation.Chart.Text>水平拖动两个控制点，设定淡出的起点与终点；左点恒处 100% 可闻、右点恒处 0%，两点间距不小于 5。</US.Help.Attenuation.Chart.Text>
+  <US.Help.Attenuation.Presets.Label>快速预设</US.Help.Attenuation.Presets.Label>
+  <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、均衡 15-50、强效 15-40；套用后曲线与状态行同步更新。</US.Help.Attenuation.Presets.Text>
+  <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
+  <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
+  <US.Help.BasicTuning.Scaling.Label>缩放开关</US.Help.BasicTuning.Scaling.Label>
+  <US.Help.BasicTuning.Scaling.Text>三项全局缩放开关：冷却随游戏时间流速、频率随交谈状态、周期语音随可闻人口数量。默认全部开启。</US.Help.BasicTuning.Scaling.Text>
+  <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
+  <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
+  <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
+  <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
+  <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾自动清除本层覆盖，恢复继承值。</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.Auto.Label>自动 / 清除</US.Help.ScopeTree.Auto.Label>
+  <US.Help.ScopeTree.Auto.Text>"自动"删除当前层的该条记录——动作范围或整条心情行——于是此行回落向下层，由下一个生效层给出数值。</US.Help.ScopeTree.Auto.Text>
+  <US.Help.PresetList.Overview>导入由 Def 提供的调音基线：展开预设，勾选种族与异种，再按"导入"，把该预设保存的动作与心情调音行写入对应层。没有安装任何预设 Def 时，本卡显示空状态提示。</US.Help.PresetList.Overview>
+  <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
+  <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
+  <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
+  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标不可用或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
+  <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
+  <US.Help.FilterBar.RaceXeno.Text>两个并列下拉按种族与异种过滤第 2 步的域列表；选定种族后，异种选项自动收窄到该种族的域。下拉显示各自的已翻译名称。</US.Help.FilterBar.RaceXeno.Text>
+  <US.Help.FilterBar.Author.Text>按作者过滤语音包行；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
+  <US.Help.RaceLayer.Overview>按种族列出语音包域，每行显示"已启用 / 候选"数量与状态角标；选中一行即把下方包清单切到该域。</US.Help.RaceLayer.Overview>
+  <US.Help.RaceLayer.Row.Label>种族行</US.Help.RaceLayer.Row.Label>
+  <US.Help.RaceLayer.Row.Text>点击种族行选中该种族域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.RaceLayer.Row.Text>
+  <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。</US.Help.XenotypeLayer.Overview>
+  <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
+  <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
+  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标不可用、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
+  <US.Help.Checklist.Search.Label>搜索框</US.Help.Checklist.Search.Label>
+  <US.Help.Checklist.Search.Text>对可见行做忽略大小写的子串过滤，命中范围：包名、defName、Mod 名、作者与包键。</US.Help.Checklist.Search.Text>
+  <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
+  <US.Help.Checklist.Row.Text>行内显示包名、Mod 与作者行以及动作覆盖数；点击整行即启用或停用该语音包。</US.Help.Checklist.Row.Text>
+  <US.Help.Checklist.Forget.Text>一次性移除本域中包键不再安装的已存选择；该按钮只随失效横幅出现，作用域限于当前域。</US.Help.Checklist.Forget.Text>
 </LanguageData>

@@ -164,12 +164,37 @@ internal static class Program
         Assert(!UsHelpCatalog.TryGetSection("missing/section", out _), "missing section returns false");
         Assert(!UsHelpCatalog.TryGetItem("us/scope-tree", "us/scope-tree/not-real", out _),
             "missing item returns false");
+
+        // Global hover resolution requires globally unique item keys; a duplicate would make the
+        // panel's meaning depend on dictionary order.
+        var seenKeys = new HashSet<string>(StringComparer.Ordinal);
+        int itemCount = 0;
+        foreach (string sectionKey in sectionKeys)
+        {
+            Assert(UsHelpCatalog.TryGetSection(sectionKey, out HelpSection s), "section for uniqueness scan: " + sectionKey);
+            foreach (HelpItem helpItem in s.Items)
+            {
+                itemCount++;
+                Assert(seenKeys.Add(helpItem.Key), "item key is globally unique: " + helpItem.Key);
+                Assert(helpItem.Key.StartsWith(sectionKey + "/", StringComparison.Ordinal),
+                    "item key embeds its section prefix: " + helpItem.Key);
+            }
+        }
+
+        Assert(itemCount == 28, "catalog item count matches the shipped wiring table (was 29; the dead basic-tuning/distance entry was cut): " + itemCount);
+
+        // The dead-entry guard: every section still owns at least one claimable item, and the
+        // removed distance entry must stay removed (its control lives in the Distance workspace now).
+        Assert(!UsHelpCatalog.TryGetItem("us/basic-tuning", "us/basic-tuning/distance", out _),
+            "basic-tuning has no distance item (control moved to the Distance workspace)");
     }
 
     private static void TestHelpPanelLogic()
     {
         Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
             "help panel logic test uses an existing section");
+        Assert(UsHelpCatalog.TryGetSection("us/global-volume", out HelpSection globalVolume),
+            "help panel logic test uses the global-volume section");
 
         UsHelpPanelLogic.HelpPanelDisplay overview = UsHelpPanelLogic.Resolve(scopeTree, "", "");
         Assert(overview.Title == scopeTree.Title, "overview display uses section title");
@@ -178,19 +203,38 @@ internal static class Program
 
         UsHelpPanelLogic.HelpPanelDisplay hover = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/action-scope", "");
         Assert(!hover.IsOverview, "valid hover key resolves to an item");
-        Assert(hover.Label == "Action Scope", "hover display uses the hovered item label");
-        Assert(hover.ItemKey == "us/scope-tree/action-scope", "hover display carries the item key");
+        // The zero-Verse seam is identity, so display strings are the catalog's Keyed entry names;
+        // the action-scope label reuses the row's own caption key (US.Tuning.ActionScope).
+        Assert(hover.Label == "US.Tuning.ActionScope", "hover display uses the hovered item's label key");
+        Assert(hover.Text == "US.Help.ScopeTree.ActionScope.Text", "hover display uses the hovered item's body key");
 
-        UsHelpPanelLogic.HelpPanelDisplay selection = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/layer", "us/scope-tree/action-scope");
-        Assert(!selection.IsOverview, "valid selection wins over hover");
-        Assert(selection.ItemKey == "us/scope-tree/action-scope", "selection display uses selection key");
+        // C+A priority: hover wins over a pinned selection while the pointer holds the claim.
+        UsHelpPanelLogic.HelpPanelDisplay hoverOverSelection = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/layer", "us/scope-tree/action-scope");
+        Assert(hoverOverSelection.ItemKey == "us/scope-tree/layer", "hover wins over selection (C+A ruling)");
 
+        // Global hover: the always-visible surfaces claim entries of other sections (nav claims
+        // page-title/nav while any section is active); the header follows the claimed entry's section.
         UsHelpPanelLogic.HelpPanelDisplay foreignHover = UsHelpPanelLogic.Resolve(scopeTree, "us/global-volume/slider", "");
-        Assert(foreignHover.IsOverview, "hover key outside the current section falls back to overview");
+        Assert(!foreignHover.IsOverview, "hover resolves across the whole catalog, not just the current section");
+        Assert(foreignHover.ItemKey == "us/global-volume/slider", "foreign hover shows the claimed item");
+        Assert(foreignHover.Title == globalVolume.Title, "foreign hover header names the claimed entry's section");
+
+        // The overview sentinel beats a pinned selection and falls back to the section overview.
+        UsHelpPanelLogic.HelpPanelDisplay sentinel = UsHelpPanelLogic.Resolve(scopeTree, UsHelpPanelLogic.OverviewHoverKey, "us/scope-tree/layer");
+        Assert(sentinel.IsOverview && sentinel.Text == scopeTree.Overview,
+            "overview sentinel hover beats selection and shows the section overview");
+
+        // With no hover, the pinned selection survives; an unknown key is ignored, not fatal.
+        UsHelpPanelLogic.HelpPanelDisplay selection = UsHelpPanelLogic.Resolve(scopeTree, "", "us/scope-tree/action-scope");
+        Assert(selection.ItemKey == "us/scope-tree/action-scope", "without hover the selection stays pinned");
+        UsHelpPanelLogic.HelpPanelDisplay unknown = UsHelpPanelLogic.Resolve(scopeTree, "us/nope/not-real", "us/scope-tree/layer");
+        Assert(unknown.ItemKey == "us/scope-tree/layer", "unknown hover key falls through to the selection");
 
         UsHelpPanelLogic.HelpPanelDisplay noSection = UsHelpPanelLogic.Resolve(null, "", "");
         Assert(noSection.Title == UsHelpPanelLogic.EmptyTitle, "missing section uses Help title");
         Assert(noSection.Text == UsHelpPanelLogic.EmptyText, "missing section uses empty text");
+        UsHelpPanelLogic.HelpPanelDisplay noSectionHover = UsHelpPanelLogic.Resolve(null, "us/scope-tree/layer", "");
+        Assert(noSectionHover.ItemKey == "us/scope-tree/layer", "hover works even with no active section");
     }
 
 

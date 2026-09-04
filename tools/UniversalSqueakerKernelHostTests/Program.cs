@@ -123,6 +123,7 @@ internal static class Program
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
+        Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -259,6 +260,103 @@ internal static class Program
                 Math.Abs(liveSnapshot.ContentSize.y - freshSnapshot.ContentSize.y) < 0.01f,
                 "scroll content height diverges after a live filter write at " + viewport.width + "x" + viewport.height
                 + ": live=" + liveSnapshot.ContentSize.y + " fresh=" + freshSnapshot.ContentSize.y);
+        }
+    }
+
+    /// <summary>
+    /// End-to-end C+A hover claim through the REAL production host and the REAL event pump (the
+    /// 09-04b stub models Mouse.IsOver from Event.mousePosition, so this is genuine pointer
+    /// routing, not an override). The footer is the probe surface: it draws in window space
+    /// (no scroll group), claims "us/page-title/apply", and its claim must land in the business
+    /// state through the typed set-help-hover action. The lane replays the exact per-frame
+    /// protocol the settings window uses (clear the claim, then DrawFrame - the clear itself is
+    /// pinned by the source-invariant guard, this lane proves the rest):
+    ///   1. pointer over the footer  -> the frame's draw claims the entry;
+    ///   2. pointer elsewhere        -> the next frame's clear leaves no claim (no stickiness);
+    ///   3. panel height identical between hovered and unhovered frames (hover-invariant bands);
+    ///   4. no ContentRevision bump across hover changes (claims never invalidate layout).
+    /// </summary>
+    private static void HoverClaimsHelpThroughRealPointerPasses()
+    {
+        // StubMetrics (not the default out-of-game Verse metrics, which return a constant) so the
+        // height-invariance assert below is a real assertion: a displayed-string Measure would
+        // produce DIFFERENT heights for the overview vs the hovered item and fail it.
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        Rect viewport = new(0f, 0f, 1280f, 720f);
+        host.Bindings.Invoke("set-tab", "Overview");
+
+        // Frame 0: pointer parked away from every claimed surface (top-left corner of the nav
+        // column above the first item is unclaimed chrome). Establish the baseline geometry.
+        Vector2 away = new(4f, 4f);
+        DrawWithPointer(host, fake, viewport, away);
+        UiLayoutSnapshot baseline = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        Assert(string.Equals(fake.ViewState.HelpHoverKey, "", StringComparison.Ordinal),
+            "an unhovered frame must carry no help claim, got '" + fake.ViewState.HelpHoverKey + "'");
+        int revisionBefore = host.Session.ContentRevision;
+
+        // Frame 1: pointer over the footer's right half (the save-status claim rect).
+        Rect footer = baseline.RectById["footer"];
+        Vector2 onFooter = new(footer.x + footer.width * 0.75f, footer.y + footer.height / 2f);
+        DrawWithPointer(host, fake, viewport, onFooter);
+        Assert(string.Equals(fake.ViewState.HelpHoverKey, "us/page-title/apply", StringComparison.Ordinal),
+            "hovering the footer save-status must claim us/page-title/apply through the typed action, got '"
+            + fake.ViewState.HelpHoverKey + "'");
+
+        // Frame 2: pointer leaves. The window protocol clears BEFORE drawing, so the claim must
+        // be gone even though frame 1 set it - the old sticky-hover model failed exactly here.
+        DrawWithPointer(host, fake, viewport, away);
+        Assert(string.Equals(fake.ViewState.HelpHoverKey, "", StringComparison.Ordinal),
+            "the claim must not survive the frame after the pointer leaves, got '"
+            + fake.ViewState.HelpHoverKey + "'");
+
+        // Height parity across hover state, measured FRESH on two hosts: the engine caches the
+        // snapshot by content revision and a hover claim must never bump it, so one host cannot
+        // re-measure a changed hover state. Two hosts - one starting with the claim already in
+        // the state, one without - compare the panel height the layout would give each. A Measure
+        // that sized from the displayed string (the pre-C+A model) makes these two differ; the
+        // hover-invariant catalog-maximum bands make them identical.
+        var claimedFake = new RecordingSettingsSource { RichData = true };
+        claimedFake.SetHelpHover("us/page-title/apply");
+        using UiHost claimedHost = UsKernelSettingsHost.Create(claimedFake, new StubMetrics());
+        claimedHost.Bindings.Invoke("set-tab", "Overview");
+        float claimedHeight = claimedHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
+
+        var plainFake = new RecordingSettingsSource { RichData = true };
+        using UiHost plainHost = UsKernelSettingsHost.Create(plainFake, new StubMetrics());
+        plainHost.Bindings.Invoke("set-tab", "Overview");
+        float plainHeight = plainHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
+
+        Assert(claimedHeight > 0f && plainHeight > 0f, "both hosts must lay out a help panel");
+        Assert(Math.Abs(claimedHeight - plainHeight) < 0.01f,
+            "the help panel height must not depend on the hover claim: claimed=" + claimedHeight
+            + " plain=" + plainHeight);
+
+        Assert(host.Session.ContentRevision == revisionBefore,
+            "hover claims must never bump the content revision (layout is hover-invariant): "
+            + revisionBefore + " -> " + host.Session.ContentRevision);
+    }
+
+    /// <summary>
+    /// One frame of the settings-window protocol: clear the per-frame claim, pump a Repaint pass
+    /// with the pointer at <paramref name="pointer"/>, then draw. Mirrors
+    /// UniversalSqueakerSettingsWindow.DoWindowContents; the claim is read back from the fake's
+    /// business state exactly as the real source stores it.
+    /// </summary>
+    private static void DrawWithPointer(UiHost host, RecordingSettingsSource fake, Rect viewport, Vector2 pointer)
+    {
+        Event e = Event.KeyboardEvent("dummy");
+        e.type = EventType.Repaint;
+        e.mousePosition = pointer;
+        Event.current = e;
+        try
+        {
+            fake.SetHelpHover("");
+            host.DrawFrame(viewport);
+        }
+        finally
+        {
+            Event.current = null;
         }
     }
 

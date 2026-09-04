@@ -210,6 +210,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered: false, selected: false, danger: true);
 
         Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
+        UsKernelDraw.HelpHover(button, ctx, "us/voice-pack-checklist/forget");
         Rect text = new(rect.x + 8f, rect.y + 5f, Math.Max(1f, button.x - rect.x - 16f), Math.Max(1f, rect.height - 10f));
         UsKernelDraw.Label(
             text,
@@ -229,6 +230,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     private string DrawSearchField(Rect rect, UiWidgetContext ctx)
     {
+        UsKernelDraw.HelpHover(rect, ctx, "us/voice-pack-checklist/search");
         string current = ctx.Bindings.TryGet("search-text", out string text) ? text : "";
         UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme.Raised, ctx.Theme.Border);
 
@@ -268,7 +270,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     private void DrawPackRow(Rect rect, VoicePackDomainView domain, VoicePackRowView row, UiWidgetContext ctx)
     {
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/voice-pack-checklist/row");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected);
 
         string meta = UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author);

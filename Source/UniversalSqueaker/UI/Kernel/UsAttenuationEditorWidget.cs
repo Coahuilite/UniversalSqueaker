@@ -95,8 +95,8 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
         float x = rect.x;
         float y = rect.y + TopPadding;
 
+        UsKernelDraw.HelpHover(new Rect(x, y, rect.width, ChartHeight), ctx, "us/attenuation-editor/chart");
         DrawChart(new Rect(x, y, rect.width, ChartHeight), ctx);
-        y += ChartHeight + Gap;
 
         UsKernelDraw.Label(
             new Rect(x, y, rect.width, StatusHeight),
@@ -107,6 +107,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         y += StatusHeight + Gap;
 
+        UsKernelDraw.HelpHover(new Rect(x, y, rect.width, ButtonsHeight), ctx, "us/attenuation-editor/presets");
         DrawPresetButtons(new Rect(x, y, rect.width, ButtonsHeight), preset, ctx);
     }
 

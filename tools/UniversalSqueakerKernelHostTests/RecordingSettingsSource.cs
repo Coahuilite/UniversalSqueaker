@@ -338,9 +338,20 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetSearchText(string text) => LastSearchText = text;
 
-    public void SetHelpHover(string key) => LastHelpHover = key;
+    // The Host's help-hover/help-selection READ bindings serve the panel from ViewState (exactly
+    // like the real source routes them), so a record-only fake would leave every end-to-end hover
+    // lane blind. Write the state AND keep the recording field.
+    public void SetHelpHover(string key)
+    {
+        LastHelpHover = key;
+        VoicePacksPageModel.SetHelpHover(state, key);
+    }
 
-    public void SetHelpSelection(string key) => LastHelpSelection = key;
+    public void SetHelpSelection(string key)
+    {
+        LastHelpSelection = key;
+        VoicePacksPageModel.SetHelpSelection(state, key);
+    }
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {
