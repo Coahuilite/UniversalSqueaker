@@ -214,3 +214,8 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - DONE: catalog fully localized - Chinese authoritative manual-style copy (58 new keys/table, 24 reuse), English translated from it; camera-indicator copy corrected from the false "marks pawns" claim to the real bottom-left readout.
 - [ ] Maintainer re-test (C+A walkthrough, Chinese client): hover switches instantly per control, moving away falls back to the section overview, panel height never jumps, nav/footer cross-section claims work, help bodies read fluently in 232px with `ui.text.overflow` silent.
 - Open for the copy owner: the maintainer should skim the 58 Chinese entries for tone (they follow the 说明书式 ruling but were drafted by an agent); 复用键 mean panel titles equal card titles including the "1./2./3." step prefixes - accepted unless ruled otherwise.
+
+## Help key naming tightening (decision open; batch rename, zero behavior change)
+
+- Measured 2026-09-05: 152/211 keys sit at 4+ dot-segments; the help keys' role suffixes (.Title/.Overview/.Label/.Text) carry no information the parent name does not already fix. Proposal: key = concept, body on the bare name, label keeps .Label - all help keys become ≤4 segments. Constraint: every reference stays a source literal (concatenated/derived keys are prohibited; gate 14's existence scan only sees literals).
+- [ ] Maintainer decision: rename now or after the C+A in-game walkthrough (renaming changes shipped bytes and forces a re-test of the very build being walked).
