@@ -205,3 +205,10 @@ Full plan: `docs/us-ui-migration-plan-zh.md`.
 - [x] Filter dropdown labels localized + 异型→异种 (US `d23ad22`); package `UniversalSqueaker-dev-v0.1.0-dev-d23ad22.zip` (US-only).
 - [ ] Maintainer re-test: race/xenotype/author dropdowns show translated labels (鼠族 etc.) while writes stay machine tokens; xenotype row's race context matches the race layer's title.
 - [ ] **Next item (maintainer): help presentation redesign - format under discussion, do not start before the direction is ruled.**
+
+## Help presentation redesign (2026-09-05; direction pending, do not start)
+
+- Camera+ verified from the Workshop package (DLL + languages + README + screenshot): panel is topic-driven; per-control help is inline notes only (`SettingsNote_*`); no `?` buttons, no mouse tooltips. The earlier "Camera+ = hover swaps panel" claim was a hallucination; the `?` was US's early attempt, already deleted by ruling.
+- Options registered for the maintainer: A topic-driven panel / B index+collapse / C per-control hover swap / D focus + persistent index / E = A + Camera+-style inline notes. Translating the 41 catalog entries (tone: manual-style vs colloquial) is a prerequisite for any direction in a Chinese client.
+- [ ] Maintainer picks direction + hover/pin semantics + translation tone. Implementation plan first, then failure-sensitive assertions, then code.
+- [ ] Maintainer re-test still open from `d23ad22`: filter dropdowns show translated labels (鼠族 etc.), xenotype row's race context matches the race layer title.
