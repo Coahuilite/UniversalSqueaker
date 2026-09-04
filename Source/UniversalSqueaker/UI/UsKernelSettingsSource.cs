@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Verse;
 
@@ -15,7 +16,8 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     private readonly UniversalSqueakerSettings settings;
     private readonly VoicePacksPageState state;
     private VoicePacksViewState? cachedView;
-    private int cachedFrame = -1;
+    private Func<int>? revisionSource;
+    private int cachedRevision = -1;
 
     public UsKernelSettingsSource(UniversalSqueakerSettings settings)
     {
@@ -25,13 +27,27 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 
     public VoicePacksPageState ViewState => state;
 
+    /// <summary>
+    /// Wires the view cache to the Host session's content revision - the SAME clock the layout cache
+    /// invalidates on. Caching by <c>Time.frameCount</c> instead let a write that happens in a frame's
+    /// popup pass bump the layout revision and re-arrange against this frame's still-stale view, while
+    /// the next frame's fresh view drew into that stale snapshot: content and geometry disagreed until
+    /// the next bump (the 2026-09-04 "filter misaligns until a workspace switch" report). Until a
+    /// source is attached (no Host yet) the frame clock remains the fallback.
+    /// </summary>
+    public void AttachRevisionSource(Func<int> revision)
+    {
+        revisionSource = revision ?? throw new System.ArgumentNullException(nameof(revision));
+        cachedRevision = -1;
+    }
+
     public VoicePacksViewState BuildView()
     {
-        int frame = Time.frameCount;
-        if (cachedView == null || frame != cachedFrame)
+        int revision = revisionSource != null ? revisionSource() : Time.frameCount;
+        if (cachedView == null || revision != cachedRevision)
         {
             cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state);
-            cachedFrame = frame;
+            cachedRevision = revision;
         }
 
         return cachedView;

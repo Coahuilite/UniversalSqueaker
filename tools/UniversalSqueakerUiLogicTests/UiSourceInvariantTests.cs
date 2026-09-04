@@ -45,6 +45,7 @@ internal static class UiSourceInvariantTests
         VerifyHelpPanelWiringAndHeightFormula(root);
         VerifyLocalizationContract(root);
         VerifyPrerequisiteDesyncIsNamed(root);
+        VerifyViewCacheSharesLayoutClock(root);
     }
 
     // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
@@ -59,6 +60,22 @@ internal static class UiSourceInvariantTests
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"),
             new[] { "UniversalSqueakerMod.PrerequisiteVerified" },
             "the settings window must short-circuit on an unverified prerequisite");
+    }
+
+    // 9. The production view cache must key on the session content revision - the same clock the
+    // layout cache invalidates on. A Time.frameCount-keyed cache let a popup-pass write arrange
+    // against the stale view and draw the fresh view into the stale snapshot until the next bump
+    // (the 2026-09-04 filter misalignment that only a workspace switch healed).
+    private static void VerifyViewCacheSharesLayoutClock(string root)
+    {
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsSource.cs"),
+            new[] { "AttachRevisionSource", "cachedRevision" },
+            "the production view cache must key on the session content revision");
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"),
+            new[] { "AttachRevisionSource(() => host.Session.ContentRevision)" },
+            "the host must wire the view cache to the session revision");
     }
 
     // 1. Settings window: new failure model present, legacy whole-page fallback symbols absent.

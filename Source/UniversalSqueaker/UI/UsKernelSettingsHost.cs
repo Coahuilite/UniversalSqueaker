@@ -59,6 +59,14 @@ public static class UsKernelSettingsHost
             metrics,
             new UsKernelTranslation());
         bumper.Attach(host.Session);
+        // The view cache must expire on the same clock as the layout cache, or a write landing in a
+        // frame's popup pass arranges against the previous view while the next frame draws a fresh
+        // view into the stale snapshot - the 2026-09-04 filter misalignment.
+        if (source is UsKernelSettingsSource production)
+        {
+            production.AttachRevisionSource(() => host.Session.ContentRevision);
+        }
+
         return host;
     }
 
