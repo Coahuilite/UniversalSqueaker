@@ -225,9 +225,14 @@ public static class UsKernelSettingsHost
                 source.SetSearchText("");
                 bump();
             });
-        bindings.BindOptions<string>("race-filter-options", () => source.BuildView().RaceFilterOptions.Select(option => option.Value).ToList());
-        bindings.BindOptions<string>("xenotype-filter-options", () => source.BuildView().XenotypeFilterOptions.Select(option => option.Value).ToList());
-        bindings.BindOptions<string>("author-options", () => source.BuildView().Authors);
+        // The filter dropdowns display translated labels but write machine tokens: the options
+        // binding carries the (display, value) pair through, so a Chinese client never shows a raw
+        // defName in the trigger or the list. Authors are proper nouns: display == value.
+        bindings.BindOptions<FilterOptionView>("race-filter-options", () => source.BuildView().RaceFilterOptions);
+        bindings.BindOptions<FilterOptionView>("xenotype-filter-options", () => source.BuildView().XenotypeFilterOptions);
+        bindings.BindOptions<FilterOptionView>("author-options", () => source.BuildView().Authors
+            .Select(author => new FilterOptionView(author, author))
+            .ToList());
         bindings.BindValue<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });

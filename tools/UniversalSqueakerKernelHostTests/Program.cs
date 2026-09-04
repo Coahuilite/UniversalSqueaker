@@ -496,9 +496,9 @@ internal static class Program
         bindings.ValidateValue<IReadOnlyList<VoicePackDomainView>>("xenotype-domains", "test");
         bindings.ValidateValue<VoicePackDomainView?>("selected-domain", "test");
         bindings.ValidateValue<UiDomainFilter>("domain-filter", "test");
-        bindings.ValidateOptions<string>("race-filter-options", "test");
-        bindings.ValidateOptions<string>("xenotype-filter-options", "test");
-        bindings.ValidateOptions<string>("author-options", "test");
+        bindings.ValidateOptions<FilterOptionView>("race-filter-options", "test");
+        bindings.ValidateOptions<FilterOptionView>("xenotype-filter-options", "test");
+        bindings.ValidateOptions<FilterOptionView>("author-options", "test");
         bindings.ValidateAction<UsDomainFilterWrite>("set-domain-filter", "test");
         bindings.ValidateAction<string>("clear-pack-filters", "test");
         bindings.ValidateAction<UsScopeWrite>("set-action-scope", "test");
@@ -561,7 +561,7 @@ internal static class Program
             "clear-pack-filters invalidates the layout once after the batch");
 
         // Options bindings are read-only projections; they must exist and be typed.
-        Assert(bindings.GetOptions<string>("author-options").Count == 0, "author-options reads as typed string list");
+        Assert(bindings.GetOptions<FilterOptionView>("author-options").Count == 0, "author-options reads as typed option list");
 
         // Layout-affecting actions bump the session content revision through the Host boundary.
         int revision = host.Session.ContentRevision;
@@ -981,9 +981,9 @@ internal static class Program
         IUiBindings bindings = host.Bindings;
 
         // Filter/options/dynamic-list bindings read the rich projections.
-        Assert(bindings.GetOptions<string>("author-options").Count == 2, "author-options reads the rich author list");
-        Assert(bindings.GetOptions<string>("race-filter-options").Count == 4, "race-filter-options reads the rich list");
-        Assert(bindings.GetOptions<string>("xenotype-filter-options").Count == 2, "xenotype-filter-options reads the rich list");
+        Assert(bindings.GetOptions<FilterOptionView>("author-options").Count == 2, "author-options reads the rich author list");
+        Assert(bindings.GetOptions<FilterOptionView>("race-filter-options").Count == 4, "race-filter-options reads the rich list");
+        Assert(bindings.GetOptions<FilterOptionView>("xenotype-filter-options").Count == 2, "xenotype-filter-options reads the rich list");
         Assert(bindings.Get<IReadOnlyList<RaceLayerRowView>>("races").Count == 3, "races reads the rich race list");
         Assert(bindings.Get<IReadOnlyList<BaselinePresetView>>("baseline-presets").Count == 1, "baseline-presets reads the rich preset list");
         Assert(bindings.Get<IReadOnlyList<VoicePackDomainView>>("xenotype-domains").Count == 1, "xenotype-domains reads the rich list");

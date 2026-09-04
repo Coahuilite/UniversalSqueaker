@@ -583,7 +583,8 @@ public static class VoicePacksPageModel
                 packs.Count,
                 orphanCount,
                 status.EnabledKeys ?? Array.Empty<string>(),
-                rows));
+                rows,
+                raceDisplay: ResolveRaceLabel(key.RaceDefName)));
         }
         return domains;
     }
@@ -615,7 +616,7 @@ public static class VoicePacksPageModel
             string identity = domain.TargetDefName + "\n" + domain.RaceDefName;
             if (!seen.Add(identity)) continue;
             string display = string.IsNullOrEmpty(raceFilter)
-                ? domain.DisplayName + " (" + domain.RaceDefName + ")"
+                ? domain.DisplayName + " (" + domain.RaceDisplay + ")"
                 : domain.DisplayName;
             result.Add(new FilterOptionView(display, domain.TargetDefName));
         }

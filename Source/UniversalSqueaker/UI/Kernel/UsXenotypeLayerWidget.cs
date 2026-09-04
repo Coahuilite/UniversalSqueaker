@@ -133,10 +133,12 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
         }
     }
 
-    /// <summary>The one title outlet for a xenotype row: the name qualified by its race.</summary>
+    /// <summary>The one title outlet for a xenotype row: the name qualified by its race's translated
+    /// label (the race layer already shows that label as its own row title; showing the raw defName
+    /// here would present one entity two ways in the same card column).</summary>
     private static string TitleText(UiWidgetContext ctx, VoicePackDomainView domain)
     {
-        return UsPacksText.Format(ctx, UsPacksText.KeyXenotypeRaceContext, domain.DisplayName, domain.RaceDefName);
+        return UsPacksText.Format(ctx, UsPacksText.KeyXenotypeRaceContext, domain.DisplayName, domain.RaceDisplay);
     }
 
     private float RowHeightFor(VoicePackDomainView domain, UiWidgetContext ctx, float textWidth)

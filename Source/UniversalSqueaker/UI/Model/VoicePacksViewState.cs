@@ -142,6 +142,9 @@ public readonly struct VoicePackDomainView
 {
     public readonly SqueakVoicePackScope Scope;
     public readonly string RaceDefName;
+    /// <summary>The race's translated label used when this domain is shown to the player; falls back
+    /// to <see cref="RaceDefName"/> when empty so harness fixtures keep working unchanged.</summary>
+    public readonly string RaceDisplay;
     public readonly string TargetDefName;
     public readonly string DisplayName;
     public readonly string SourceText;
@@ -169,7 +172,8 @@ public readonly struct VoicePackDomainView
         int candidateCount,
         int orphanCount,
         IReadOnlyList<string> enabledKeys,
-        IReadOnlyList<VoicePackRowView> packs)
+        IReadOnlyList<VoicePackRowView> packs,
+        string? raceDisplay = null)
     {
         Scope = scope;
         RaceDefName = raceDefName ?? "";
@@ -185,6 +189,7 @@ public readonly struct VoicePackDomainView
         OrphanCount = orphanCount;
         EnabledKeys = enabledKeys ?? Array.Empty<string>();
         Packs = packs ?? Array.Empty<VoicePackRowView>();
+        RaceDisplay = raceDisplay == null || raceDisplay.Length == 0 ? RaceDefName : raceDisplay;
     }
 
     public string DomainIdentity => (Scope == SqueakVoicePackScope.Xenotype ? TargetDefName : RaceDefName) ?? "";

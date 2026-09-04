@@ -20,7 +20,9 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     // Keyed display labels. The machine tokens these chips/dropdowns write ("race-filter",
     // "xenotype-filter", "pack-filter", "search-text" and the SqueakDomainFilterKind values) stay
-    // untranslated; only what the player reads goes through the translation seam.
+    // untranslated; only what the player reads goes through the translation seam. The dropdowns
+    // display the translated (display, value) pairs carried by the options bindings, so a Chinese
+    // client never shows a raw defName in the trigger or the list.
     private const string KeyChipAll = "US.Packs.Filter.All";
     private const string KeyChipEnabledOnly = "US.Packs.Filter.EnabledOnly";
     private const string KeyChipConflicts = "US.Packs.Filter.Conflicts";
@@ -49,9 +51,9 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         bindings.ValidateValue<string>("xenotype-filter", elementPath);
         bindings.ValidateValue<string>("pack-filter", elementPath);
         bindings.ValidateValue<string>("search-text", elementPath);
-        bindings.ValidateOptions<string>("race-filter-options", elementPath);
-        bindings.ValidateOptions<string>("xenotype-filter-options", elementPath);
-        bindings.ValidateOptions<string>("author-options", elementPath);
+        bindings.ValidateOptions<FilterOptionView>("race-filter-options", elementPath);
+        bindings.ValidateOptions<FilterOptionView>("xenotype-filter-options", elementPath);
+        bindings.ValidateOptions<FilterOptionView>("author-options", elementPath);
         bindings.ValidateValue<UiDomainFilter>("domain-filter", elementPath);
         bindings.ValidateAction<UsDomainFilterWrite>("set-domain-filter", elementPath);
         bindings.ValidateAction<string>("clear-pack-filters", elementPath);
@@ -189,6 +191,13 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "pack-filter", KeyLabelAuthor, ctx);
     }
 
+    /// <summary>
+    /// One filter dropdown: label column plus field, mirroring the library manifest widget's geometry
+    /// (the same <see cref="UsFilterBarLayout.DropdownLabelWidth"/> the stack rule measures against).
+    /// The field is the US composite, which takes (display, value) pairs directly - the trigger and
+    /// rows show the translated display while the write carries the machine token. An empty selection
+    /// leaves the field blank; the label column carries the meaning, as it always did.
+    /// </summary>
     private void DrawNestedDropdown(Rect rect, string elementId, string labelKey, UiWidgetContext ctx)
     {
         string optionsKey = elementId switch
@@ -198,19 +207,31 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
             _ => "author-options"
         };
 
-        // The nested dropdown resolves the key through the Host translation seam, so the label is
-        // translated in exactly one place for both the wide and the stacked layout.
-        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        string current = ctx.Bindings.TryGet(elementId, out string value) ? value ?? "" : "";
+        IReadOnlyList<FilterOptionView> options = ctx.Bindings.GetOptions<FilterOptionView>(optionsKey);
+
+        var pairs = new List<KeyValuePair<string, string>>(options.Count);
+        foreach (FilterOptionView option in options)
         {
-            ["LabelKey"] = labelKey,
-            ["Bind"] = elementId,
-            ["OptionsBind"] = optionsKey,
-            ["Height"] = rect.height.ToString(System.Globalization.CultureInfo.InvariantCulture)
-        };
-        var spec = new UiElementSpec(elementId, DropdownWidget.Kind, attributes);
-        var dropdown = new DropdownWidget();
-        dropdown.Configure(spec);
-        dropdown.Draw(rect, ctx);
+            pairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+        }
+
+        float labelWidth = Math.Min(UsFilterBarLayout.DropdownLabelWidth, rect.width * 0.4f);
+        UsKernelDraw.Label(
+            new Rect(rect.x, rect.y, labelWidth, rect.height),
+            UsKernelDraw.Keyed(ctx, labelKey),
+            ctx.Theme,
+            ctx.Theme.TextPrimary,
+            UiFont.Small,
+            TextAnchor.MiddleLeft,
+            singleLine: true);
+
+        Rect fieldRect = new(rect.x + labelWidth, rect.y, Math.Max(1f, rect.width - labelWidth), rect.height);
+        UsKernelDraw.Dropdown(fieldRect, elementId, ctx, current, pairs, selected =>
+        {
+            if (string.Equals(selected, current, StringComparison.Ordinal)) return;
+            ctx.Bindings.Set(elementId, selected);
+        });
     }
 
     /// <summary>

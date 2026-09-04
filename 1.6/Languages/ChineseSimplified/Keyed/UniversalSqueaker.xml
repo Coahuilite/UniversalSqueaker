@@ -80,7 +80,7 @@
   <US.Section.DistanceAttenuation>距离衰减</US.Section.DistanceAttenuation>
   <US.Section.FilterDomains>1. 筛选音域</US.Section.FilterDomains>
   <US.Section.RaceDomain>2. 选择种族域</US.Section.RaceDomain>
-  <US.Section.XenotypeDomain>2. 或选择异型域</US.Section.XenotypeDomain>
+  <US.Section.XenotypeDomain>2. 或选择异种域</US.Section.XenotypeDomain>
   <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
@@ -101,7 +101,7 @@
   <US.Packs.Filter.Conflicts>仅冲突</US.Packs.Filter.Conflicts>
   <US.Packs.Filter.OrphanOnly>仅已失效</US.Packs.Filter.OrphanOnly>
   <US.Packs.Filter.Race>种族</US.Packs.Filter.Race>
-  <US.Packs.Filter.Xenotype>异型</US.Packs.Filter.Xenotype>
+  <US.Packs.Filter.Xenotype>异种</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
   <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
   <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
@@ -110,9 +110,9 @@
   <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
   <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
-  <US.Packs.Checklist.DormantBanner>Biotech 未启用；该异型域处于休眠。</US.Packs.Checklist.DormantBanner>
-  <US.Packs.Checklist.TargetUnavailableBanner>选中的异型目标未加载。相关选择已保留，便于恢复。</US.Packs.Checklist.TargetUnavailableBanner>
-  <US.Packs.Checklist.ConflictBanner>多个异型 Def 共用该目标；解决前路由保持关闭。</US.Packs.Checklist.ConflictBanner>
+  <US.Packs.Checklist.DormantBanner>Biotech 未启用；该异种域处于休眠。</US.Packs.Checklist.DormantBanner>
+  <US.Packs.Checklist.TargetUnavailableBanner>选中的异种目标未加载。相关选择已保留，便于恢复。</US.Packs.Checklist.TargetUnavailableBanner>
+  <US.Packs.Checklist.ConflictBanner>多个异种 Def 共用该目标；解决前路由保持关闭。</US.Packs.Checklist.ConflictBanner>
   <US.Packs.Checklist.EmptyDomain>该域未安装任何语音包。</US.Packs.Checklist.EmptyDomain>
   <US.Packs.Checklist.EmptySearch>没有语音包匹配当前搜索。</US.Packs.Checklist.EmptySearch>
   <US.Packs.Checklist.OrphanBanner>已选包键不再存在。请使用“清除失效”清理。</US.Packs.Checklist.OrphanBanner>
@@ -121,11 +121,11 @@
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
-  <US.Packs.Banner.DormantBiotech>Biotech 未启用。异型语音包选择处于休眠，不会路由到 pawn。</US.Packs.Banner.DormantBiotech>
+  <US.Packs.Banner.DormantBiotech>Biotech 未启用。异种语音包选择处于休眠，不会路由到 pawn。</US.Packs.Banner.DormantBiotech>
   <US.Packs.Banner.VanillaMode>语音包模式为原版。已启用的包会保留，但不路由语音包音频。</US.Packs.Banner.VanillaMode>
   <US.Preset.List.Empty>未安装基线预设。此功能读取由 Def 提供的预设。</US.Preset.List.Empty>
   <US.Preset.List.Import>导入</US.Preset.List.Import>
-  <US.Preset.List.Selection>{0} 个种族 · {1} 个异型</US.Preset.List.Selection>
+  <US.Preset.List.Selection>{0} 个种族 · {1} 个异种</US.Preset.List.Selection>
   <US.Preset.Race.Summary>{0}（{1} 个动作，{2} 种心情）</US.Preset.Race.Summary>
   <US.Preset.Xeno.Inherits>（继承种族）</US.Preset.Xeno.Inherits>
   <US.Preset.Xeno.Own>（仅自身）</US.Preset.Xeno.Own>
