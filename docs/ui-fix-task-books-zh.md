@@ -112,7 +112,7 @@
 ## T4 — 修复批次 C：G4 视觉统一（原版/SR 语言）
 
 ### 背景
-- SR 证据：`../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`
+- SR 证据：`Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`
   - Primary/Danger 按钮底部金色/红色条 `rect.yMax - 3f`；
   - SettingSelector 左侧金色条 `rect.x+1, rect.y+1, 3, height-2`；
   - SelectableCard 选中底部金色条。

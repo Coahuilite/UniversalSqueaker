@@ -60,22 +60,23 @@ uvx git-filter-repo --replace-text rules.txt --preserve-commit-hashes --force
 （Python 一律 uv，`uvx` 即得；不要 pip。执行期实测注：`git grep` 只扫 tracked 文件——锚点复测时上传文档自身尚未 tracked，所以向量 1 报 0 是「当时为真」；文档首次入库后必须重扫，其内联字面量已先行中性化。）
 
 波及量化（实测）：
-- 脏 blob 引入于第 33/34 提交（`5183358`/`73056ab`），workdocs 整体删除于第 146 提交（`6065420`）。**实测修正：漂移不是「33 号之后」局部——commit-map 覆盖全部 216 提交、0 条恒等映射，根提交 `8fc8d8b` 也漂为 `8fc8d8b`**（blob 哈希入 commit 哈希，逐级上溯）。好消息：`--preserve-commit-hashes` 下消息里的旧 hash 原样保留，台账因此成为**必需**而非可选；
+- 脏 blob 引入于第 33/34 提交（重写前 `41cf6f4`/`f492e6c`，重写后 `5183358`/`73056ab`），workdocs 整体删除于第 146 提交（重写前 `8f1ba5f`）。**实测修正：漂移不是「33 号之后」局部——commit-map 覆盖全部 216 提交、0 条恒等映射，根提交 `eb2ac90`（重写前）也漂为 `8fc8d8b`（重写后）**（blob 哈希入 commit 哈希，逐级上溯）。好消息：`--preserve-commit-hashes` 下消息里的旧 hash 原样保留，台账因此成为**必需**而非可选；
 - 仓内 hash 引用：文档窄口径（MEMORY/TODO/AGENTS/HANDOFF/runbook）**29 处**，全 tracked md 实测 **70 处唯一值**（review/uikit-rebuild/OBLIVIONIS 也大量引用）。台账按全量 70 处理，**只替换 commit-map 里存在的键**：其中混有 lib 仓 hash（如 `fc59b60`）与 SR 仓对象（`b19d68a`），不在本仓 map 中，碰了就是造假；
-- **跨仓锚点 1 处**：lib 仓 `MEMORY.md:8` 引用 US `6c7053a`（拆分溯源）。重写完成后，把 commit-map 里 `6c7053a` 对应的新 hash 报给 maintainer，由 lib 侧会话跟改——**这是本文唯一允许越仓的事项，且只报数不改对方文件**。（执行期实测：`0fe60b0 → 6c7053a`。）
+- **跨仓锚点 1 处**：lib 仓 `MEMORY.md:8` 引用 US `0fe60b0`（拆分溯源，重写前 hash）。重写完成后，把 commit-map 里 `0fe60b0` 对应的新 hash 报给 maintainer，由 lib 侧会话跟改——**这是本文唯一允许越仓的事项，且只报数不改对方文件**。（执行期实测：`0fe60b0 → 6c7053a`。）
+- **台账机械替换的自伤陷阱（执行期实测）**：当一句文档本身在描述「旧 hash → 新 hash」映射时（如本行上一条、及根提交那条），旧 hash 也是 map 的合法键，无差别替换会把它变成新 hash、制造同义反复或假陈述（本轮实测踩到两处：根提交行漂成 `8fc8d8b→8fc8d8b`、跨仓行误称 lib 引用 `6c7053a`）。规则：台账替换只作用于**指代某提交当前身份**的引用；凡「重写前/旧/→」语境里的 hash 必须先保护后替换，或替换后人工复核这几处。
 
 验收：全历史扫描 0 命中 + 提交数不变（重写前复测值 **216**）+ `git log --format='%s%n%b'` 与重写前逐字节相同（消息保全，需 `--preserve-commit-hashes`）+ commit-map 台账 0 悬空引用。
 
 ## 3. 兄弟引用中性化（三层分类，勿混）
 
 **功能层——保留，禁止匿名化**（改名即破坏行为，实测定位）：
-- `Source/.../UniversalSqueakerSettings.ExposeData.cs`：`experimentalKiiroCompat` 是 **Scribe 存档字段名**，重命名 = 旧存档该设置静默重置；
+- `Source/.../UniversalSqueakerSettings.ExposeData.cs:27/75`：`experimentalKiiroCompat` 是 **Scribe 存档字段名**，重命名 = 旧存档该设置静默重置；
 - `scripts/check-pack-readiness.ps1:88`：`'SqueakyRatkin'` 是**负向断言模式**（防 SR 类型渗入 Source 的门禁），替换 = 门禁失明；
-- Legacy bridge shim（`Source/UniversalSqueaker/Legacy`）：SR 兼容契约，maintainer 已授权例外。
+- ~~Legacy bridge shim（`Source/UniversalSqueaker/Legacy`）~~ **实测修正：该 shim 已在 `a5bcff3`「drop legacy SR compatibility bridge」删除，仓内无 Legacy tracked**。残留 `legacy` 词是内部迁移字段 `legacyTargetDefName`（Scribe）与已删字符串域桥的注释，均不含 SR 品牌，非本节对象。
 
 **文档层——中性化（普通新提交，不进 §2 重写）**：tracked md 命中 20+ 文件。分类处理：
-- **SR**：`README.md:5` 的分叉溯源**保留**——SR 是公开仓，且 MPL 对衍生作品要求来源声明，抹掉反而可疑；其余「兄弟仓路径/本地状态」措辞中性化；
-- **NGS（NivarianGrandStructure）**：**未公开项目，最高优先级**——TODO 9 处、MEMORY 4 处点名即曝光未发布产品，改中性措辞（"一个兄弟模组"）；
+- **SR**：`README.md:5` 的分叉溯源**保留**——SR 是公开仓，且 MPL 对衍生作品要求来源声明，抹掉反而可疑；其余「兄弟仓路径/本地状态」措辞中性化（实测 `../squeaky_ratkin` 本地相对路径 8 处：HANDOFF/OBLIVIONIS/5 个 ui-*.md，去本地布局前缀、保留 SR 公开仓内路径与公开名）；
+- **NGS（NivarianGrandStructure）**：**未公开项目，最高优先级**——**实测修正：HEAD 仅 3 处**（HANDOFF:32、TODO:185、`scripts/build-dev.ps1:14`；MEMORY 0 处，非原记「TODO 9 / MEMORY 4」），点名即曝光未发布产品，改中性措辞（"一个兄弟模组（未发布，名称从略）"）。来历实测：NGS 名经 `6c7053a`（拆分裁决记录）从库侧语境渗入——它是 UiKit 的第三方消费者，其接线形状决定 API 冻结时机，US 只经前置区间受波及。**遗留缺口**：历史 blob 里 NGS 有 81 个版本，HEAD-only 中性化不触及；是否第二次重写洗历史 = push 前 maintainer 决策，执行会话不擅自扩 §2 范围；
 - **Ratkin/Kiiro 种族名**：作为游戏实体/defName 出现的保留（公开游戏内容），作为项目引用的中性化。
 
 **fixture 层**：实测 0 tracked（`dist/` 已 ignore），无需动作；裁决 2 的「不再呈现于文档」并入文档层执行。

@@ -15,7 +15,7 @@
    - 是否位于滚动视图内、命中测试是否经过 `UiInteract.ToPageSpace`。
 3. 阅读 `UiInteract.cs`、`DropdownWidget.cs`、`FerriteVoicePacksPage.cs`、`LayoutEngine.cs`，核实 `PushScrollView/PopScrollView`、`DrawPopups`、`ToPageSpace` 调用时序。
 4. 审计所有涉及硬编码行高（24/26/28/30/50/74 等）和多行文本的 widget/component，对照 `ITextMetrics`/`FerriteTextMetricsAdapter` 使用情况。
-5. 收集所有“切换选取项”控件，与只读证据 `../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs` 对照。
+5. 收集所有“切换选取项”控件，与只读证据 `Source/SqueakyRatkin/UI/SqueakySettingsUI.cs` 对照。
 
 ---
 
@@ -108,7 +108,7 @@
 
 ### 2.4 G4 视觉语言（全局高风险）
 
-#### SR 证据摘要（`../squeaky_ratkin/.../SqueakySettingsUI.cs`）
+#### SR 证据摘要（`Source/SqueakyRatkin/.../SqueakySettingsUI.cs`）
 
 - Primary/Danger 按钮：底部金色/红色条 `rect.yMax - 3f`（第 90-93 行）。
 - `SettingSelector`：左侧金色竖条 `x+1, y+1, 3, height-2`（第 166-167 行）。

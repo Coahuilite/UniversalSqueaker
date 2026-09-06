@@ -21,7 +21,7 @@
 - Gate R 窄切片已于 2026-08-31 接入真实生产窗口：`Layout.Schema2.xml`（banner + global-volume）→ `UsKernelSettingsHost` → `UniversalSqueakerSettingsWindow` 持有的 `UiHost`/`UiSession`；自动 build、嵌入资源、focused harness 与完整本地门禁均通过。
 - Gate R 实机结果为 `PASS`：维护者确认首开、Kernel banner、global-volume 交互、关闭/重开及其余场景无异常。数字框按 Enter 关闭窗口与其他 Mod Settings 一致，是 RimWorld 默认行为，不做 US 特殊拦截。证据记录：`docs/uikit-rebuild/gates/GATE-R-2026-08-31.md`。
 - Gate U 已获准启动，但完整 Basic/Tuning/Packs Settings Host 尚未迁移；旧完整 Settings 路径继续作为明确过渡 fallback，直至 Gate U 验收和 clean cutover。后续代码实现交给 DeepSeek，主代理只负责任务书、调度、契约裁决与验收。
-- SR upstream (read-only evidence source): sibling repository at `../squeaky_ratkin` relative to this repo root. Do not write there and do not infer its external state from this repo.
+- SR upstream (read-only evidence source): sibling repository (public, read-only; local checkout path withheld). Do not write there and do not infer its external state from this repo.
 
 ## Engineering decisions and handoff
 

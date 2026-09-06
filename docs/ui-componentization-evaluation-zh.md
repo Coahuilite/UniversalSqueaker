@@ -2,7 +2,7 @@
 
 > 状态：评估文档（批次 1-B 产出）。结论：**方案 A —— 响应式 view-model + 声明式即时组件**。
 > 适用范围：TODO Phase 3（HANDOFF 方案 A 的最小 UI：设置壳 + 三模式卡 + Race 层 + VoicePack 勾选域）。
-> 证据来源：SR 参考实现（`../squeaky_ratkin/Source/SqueakyRatkin/`，只读）与本仓 HANDOFF.md。
+> 证据来源：SR 参考实现（`Source/SqueakyRatkin/`，只读）与本仓 HANDOFF.md。
 
 ## 1. 约束澄清：RimWorld 1.6 mod UI 只有「即时模式」一条路
 

@@ -135,4 +135,4 @@
 - 实施计划：`docs/us-ui-implementation-plan-zh.md`
 - 排查工序：`docs/ui-fix-triage-plan-zh.md`
 - 设计调研：`docs/ui-ux-research-zh.md`
-- SR 样式证据：`../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`
+- SR 样式证据：`Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`

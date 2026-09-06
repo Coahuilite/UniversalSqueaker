@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 #
 # FerriteLib is a separate repository and a separate prerequisite mod (coahuilite.ferritelib). US only
 # compiles against its built DLL; it never ships one. The sibling layout is a stated assumption of the
-# whole workspace, the same one NGS already relies on for the game's own managed DLLs.
+# whole workspace, the same one another unreleased sibling mod already relies on for the game's own managed DLLs.
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $carrierProjectFile = Join-Path (Split-Path -Parent $root) 'ferritelib\Source\FerriteLib.UiKit\FerriteLib.UiKit.csproj'
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'

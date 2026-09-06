@@ -109,7 +109,7 @@
   - Tuning layer 的标签按钮本可以做得像 routing mod 那样好看，属于被夸赞的 UI 样式，应作为保留项目。
   - routing mod 的按钮样式：发光条在下方。
   - 左侧导航栏的按钮：按钮/高亮条在左侧。
-- **SR 原始实现证据**（`../squeaky_ratkin/Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`）：
+- **SR 原始实现证据**（`Source/SqueakyRatkin/UI/SqueakySettingsUI.cs`）：
   - `Button` 的 `Primary`/`Danger` 在底部绘制金色/红色发光条（`rect.yMax - 3f`，第 90–93 行）。
   - `SettingSelector` 在左侧绘制金色竖条表示 active（`rect.x + 1, rect.y + 1, 3, height - 2`，第 166–167 行）。
   - `SelectableCard` 选中时底部金色条（第 47–50 行）。
