@@ -11,7 +11,7 @@
    - changelog（EN/SC）加 `Unreleased — X.Y.Z` 条目：开发者功能解锁细节模糊化、不写 change note、中英同步；
    - README / MEMORY / 根 codemap 的版本引用同步；
    - Workshop 页面文案（如页面内容有变）：中英对称、英文以中文版为准、页面专注模组本身（无音频统计/开发者排障/迁移说明/制作步骤，作者内容只留指南链接）、俏皮句不加解释、字符数刷新。
-3. **隐私审查**：工作树全扫描（凭据/API key/token/本地路径/`PublishedFileId`）。
+3. **隐私审查**：跑 `scripts/privacy-audit.ps1`（规格见 `first-cloud-upload-zh.md` §5）；日常发版扫「工作树 + 本次新增提交范围」，全历史模式仅首上云用。
 4. **构建 + 打包核验**：
    - Dev / Release 构建 0 errors；
    - pack 后**包内容逐项核验**：文件数（含 `version.txt`）、排除项（`*.pdb`/`*.gitkeep`；US 无 `codemap.md`、无 OGG 镜像、无 `Extras/`）、关键文件内容（`LoadFolders.xml` 无门控、DLL 版本/flavor/身份、`About.xml <modVersion>` == csproj `<Version>`）、**包内 `version.txt` 三行与预期一致**（`UniversalSqueaker <版本>`/`build=<flavor>`/`commit=<sha>`）。
@@ -48,8 +48,10 @@
 ## 隐私审查门禁（每次 push 前，含临时暂存）
 
 - 审查**完整可达范围**，不只 HEAD。
+- **三个向量独立扫，结论不得互推**：工作树 / 提交信息 / 历史 blob——工作树干净不蕴含历史干净（首上云实测：前两向量 0 命中、历史 7 文件命中）。分诊方法见 `modding_documents/privacy-debt-vector-triage-zh.md`。
 - 扫描模式：凭据（`sk-…`/API key/token）、私钥、本地绝对路径、诊断日志摘录、`PublishedFileId.txt` 值。
 - 文档按**无隐私写法**编写：写作时不写入个人本地状态、展开路径、日志摘录、凭据或 ID 值，而非写后清理。
+- 一次性首上云事务（历史重写、兄弟引用中性化、CI 依赖链、推送顺序）不在本 runbook：见 `first-cloud-upload-zh.md`。
 
 ## Release Claim Pack 固定模板
 
