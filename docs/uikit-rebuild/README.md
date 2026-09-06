@@ -2,7 +2,7 @@
 
 > 本目录是 FerriteLib.UiKit 绿地重建、US 设置 UI 重接入与 Overlay 试点的专用决策和任务书入口。
 - 当前状态：已完成第一轮架构调查，确认现有 Kernel 只是孤立垂直切片；`UsKernelSettingsHost` 尚未接入生产设置路径，完整 Schema2 US 页面尚不能创建。此前“P1 Kernel 已完成”的表述已被事实推翻。
-  - **修正（2026-09-04，历史证据保留原文）**：上一行是调查期口径，现已反相——`UsKernelSettingsHost` 是**唯一**生产设置路径（Schema=2 清单 + 16 个 `us/*` 控件 + 库前置模组 `coahuilite.ferritelib`），旧页面链与旧 `Layout.xml` 已在 `1a4e904` 删除，UiKit 本体已拆到 `../ferritelib`。当前事实以 `HANDOFF.md` 与代码为准，本目录仅作历史任务书保留。
+  - **修正（2026-09-04，历史证据保留原文；hash 于 2026-09-07 重定位）**：上一行是调查期口径，现已反相——`UsKernelSettingsHost` 是**唯一**生产设置路径（Schema=2 清单 + 16 个 `us/*` 控件 + 库前置模组 `coahuilite.ferritelib`），旧页面链与旧 `Layout.xml` 已在 `38b1247` 删除，UiKit 本体已拆到 `../ferritelib`。本目录"Gate U 通过前不删除旧路径"一类约束（含下方第 49 行与 07 号契约 §C1）同批失效：clean cutover 已于 2026-09-02 执行。当前事实以 `HANDOFF.md`（维护者本地）与代码为准，本目录仅作历史任务书保留。
 - 新执行入口：`07-rebuild-reset-and-execution-contract-zh.md`。
 - 新任务入口：`tasks/DEEPSEEK-KERNEL-DELIVERY.md`、`tasks/DEEPSEEK-REAL-CONSUMER-SLICE.md`、`tasks/DEEPSEEK-US-SETTINGS-MIGRATION.md`、`tasks/DEEPSEEK-GATE-REVIEW.md`。
 - 新门禁要求先证明真实 US consumer slice，再允许全量设置 UI 迁移；stub/build 结果不得冒充游戏内验收。
