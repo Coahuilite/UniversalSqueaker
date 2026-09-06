@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 
@@ -8,13 +7,15 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Kernel-owned US help panel content widget (C+A model). It lives inside the XML "help-scroll"
-/// Scroll container (the engine owns BeginScrollView), so this widget only measures and draws the
-/// catalog content. The displayed entry is the hovered control's claim (resolved across the whole
-/// catalog through <see cref="UsHelpPanelLogic.Resolve"/>), falling back to the active section's
-/// overview; the index rows themselves claim hover through the same channel. All text bands are
-/// hover-invariant catalog maxima, so switching entries never changes the panel height and never
-/// invalidates layout. All content comes from <see cref="UsHelpCatalog"/> /
+/// Kernel-owned US help panel content widget (C+A model; D2 ruling: no persistent index list).
+/// It lives inside the XML "help-scroll" Scroll container (the engine owns BeginScrollView), so
+/// this widget only measures and draws help content: the hovered control's entry when a claim is
+/// live, otherwise the active section's overview (the big-level fallback). Claims come from the
+/// mid-column controls through <see cref="UsKernelDraw.HelpHover"/>; the panel owns no interactive
+/// rows - with hover supplying context, a list of options disconnected from what is shown read as
+/// broken (maintainer ruling, 2026-09-05) - so pinned selection retired with the list. Text bands
+/// are hover-invariant catalog maxima, so switching entries never changes the panel height and
+/// never invalidates layout. Content comes from <see cref="UsHelpCatalog"/> /
 /// <see cref="UsHelpPanelLogic"/> pure sources, stored as Keyed entry names.
 /// </summary>
 public sealed class UsHelpPanelWidget : IUiWidget
@@ -24,8 +25,6 @@ public sealed class UsHelpPanelWidget : IUiWidget
     private const float Padding = 8f;
     private const float TitleMinHeight = 20f;
     private const float TitleGap = 6f;
-    private const float ItemHeight = 20f;
-    private const float ItemGap = 2f;
     private const float ContentGap = 6f;
 
     /// <summary>Keyed format string of the panel header; <c>{0}</c> is the active section title.</summary>
@@ -53,30 +52,20 @@ public sealed class UsHelpPanelWidget : IUiWidget
     {
         bindings.ValidateValue<string>("help-section-key", elementPath);
         bindings.ValidateValue<string>("help-hover", elementPath);
-        bindings.ValidateValue<string>("help-selection", elementPath);
-        bindings.ValidateAction<string>("set-help-hover", elementPath);
-        bindings.ValidateAction<string>("set-help-selection", elementPath);
     }
 
     public float Measure(UiWidgetContext ctx)
     {
         float textWidth = Math.Max(1f, ctx.ViewWidth - Padding * 2f);
-        HelpSection? section = CurrentSection(ctx);
 
-        float listHeight = ItemHeight;
-        if (section != null && section.Items.Count > 0)
-        {
-            listHeight = ItemHeight + (ItemHeight + ItemGap) * section.Items.Count;
-        }
-
-        // Hover-invariant bands: any catalog entry can appear in the header/label/body at any time
-        // (hover resolves across the whole catalog), so the panel sizes against the tallest
+        // Hover-invariant bands: any catalog entry can appear in the header/label/body at any
+        // time (hover resolves across the whole catalog), so the panel sizes against the tallest
         // candidate, never the currently displayed string. Switching help text on hover therefore
         // never changes the panel height and never invalidates layout.
         float headerHeight = MaxHeaderBand(ctx, textWidth);
         float labelHeight = MaxLabelBand(ctx, textWidth);
         float textHeight = MaxBodyBand(ctx, textWidth);
-        return Padding * 2f + headerHeight + TitleGap + listHeight + ContentGap + labelHeight + 2f + textHeight + 4f;
+        return Padding * 2f + headerHeight + TitleGap + ContentGap + labelHeight + 2f + textHeight + 4f;
     }
 
     /// <summary>
@@ -151,70 +140,31 @@ public sealed class UsHelpPanelWidget : IUiWidget
         UiThemeDraw.Panel(rect, ctx.Theme);
 
         HelpSection? section = CurrentSection(ctx);
-        float x = rect.x + Padding;
-        float textWidth = Math.Max(1f, rect.width - Padding * 2f);
-        float headerBand = MaxHeaderBand(ctx, textWidth);
-        float labelBand = MaxLabelBand(ctx, textWidth);
-        float bodyBand = MaxBodyBand(ctx, textWidth);
-
-        // Index rows are laid out once; the claim pass and the draw pass share the rects so the
-        // hovered row and the displayed body can never disagree about which row owns which rect.
-        var rows = new List<(Rect Row, string? Key)>(1 + (section?.Items.Count ?? 0));
-        float rowY = rect.y + Padding + headerBand + TitleGap;
-        rows.Add((new Rect(x, rowY, textWidth, ItemHeight), null));
-        rowY += ItemHeight;
-        if (section != null)
-        {
-            foreach (HelpItem item in section.Items)
-            {
-                rowY += ItemGap;
-                rows.Add((new Rect(x, rowY, textWidth, ItemHeight), item.Key));
-                rowY += ItemHeight;
-            }
-        }
-
-        // Claim pass first: the panel's own rows claim hover BEFORE the display is resolved, so
-        // hovering the index updates the body in the same pass (the window clears the claim at the
-        // start of every frame, so resolving first would never see it). Mid-column controls claimed
-        // earlier in this Draw order already; the panel draws last.
-        foreach ((Rect rowRect, string? key) in rows)
-        {
-            UsKernelDraw.HelpHover(rowRect, ctx, key ?? UsHelpPanelLogic.OverviewHoverKey);
-        }
-
         UsHelpPanelLogic.HelpPanelDisplay display = ResolveFrameDisplay(ctx, section);
 
-        // Keep the context header fixed at the top of the help surface; the index and body below
-        // follow the active section, hover, or selection without changing the panel's hierarchy.
-        // All three bands are the same hover-invariant maxima Measure allocated.
+        float x = rect.x + Padding;
+        float y = rect.y + Padding;
+        float textWidth = Math.Max(1f, rect.width - Padding * 2f);
+
+        // Header, then the displayed entry's label and body. All three bands are the same
+        // hover-invariant maxima Measure allocated, so the content below cannot shift.
         string header = HeaderText(ctx, display);
-        Rect headerRect = new(x, rect.y + Padding, textWidth, headerBand);
+        Rect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
         UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
         UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
+        y += headerRect.height + TitleGap;
 
-        for (int i = 0; i < rows.Count; i++)
-        {
-            string? key = rows[i].Key;
-            string label = i == 0
-                ? UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabel)
-                : UsKernelDraw.Keyed(ctx, section!.Items[i - 1].Label);
-            bool selected = i == 0
-                ? display.IsOverview
-                : !display.IsOverview && string.Equals(display.ItemKey, key, StringComparison.Ordinal);
-            DrawItemRow(rows[i].Row, label, selected, Mouse.IsOver(rows[i].Row), key, ctx);
-        }
-
-        float y = rowY + ContentGap;
+        y += ContentGap;
         UsKernelDraw.Label(
-            new Rect(x, y, textWidth, labelBand),
+            new Rect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
             display.Label,
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.UpperLeft);
-        y += labelBand + 2f;
+        y += MaxLabelBand(ctx, textWidth) + 2f;
         UsKernelDraw.Label(
-            new Rect(x, y, textWidth, bodyBand),
+            new Rect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
             display.Text,
             ctx.Theme,
             ctx.Theme.TextSecondary,
@@ -222,25 +172,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
             TextAnchor.UpperLeft);
     }
 
-    private static void DrawItemRow(Rect rect, string label, bool selected, bool hovering, string? itemKey, UiWidgetContext ctx)
-    {
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovering, selected);
-        UsKernelDraw.Label(
-            new Rect(rect.x + 6f, rect.y, Math.Max(1f, rect.width - 12f), rect.height),
-            label,
-            ctx.Theme,
-            selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
-            UiFont.Tiny,
-            TextAnchor.MiddleLeft);
-
-        if (UiNative.Button(rect))
-        {
-            // set-help-selection bumps the session revision through the Host binding boundary.
-            ctx.Bindings.Invoke("set-help-selection", itemKey ?? "");
-        }
-    }
-
-    /// <summary>The section this panel is currently explaining (null when nothing is selected).</summary>
+    /// <summary>The section this panel is currently falling back to (null when none is active).</summary>
     private static HelpSection? CurrentSection(UiWidgetContext ctx)
     {
         string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
@@ -248,20 +180,17 @@ public sealed class UsHelpPanelWidget : IUiWidget
         return section;
     }
 
-    /// <summary>Resolves the display for the frame's current hover/selection bindings.</summary>
+    /// <summary>Resolves the display for the frame's current hover claim.</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
     {
         string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
-        string selection = ctx.Bindings.TryGet("help-selection", out string s) ? s : "";
-        return UsHelpPanelLogic.Resolve(section, hover, selection, TranslationSeam(ctx));
+        return UsHelpPanelLogic.Resolve(section, hover, TranslationSeam(ctx));
     }
 
     /// <summary>
-    /// The seam handed to the Verse-free panel logic. That module may not reference Verse, so
-    /// everything - its own three strings and every catalog title/label/body - arrives as a Keyed
-    /// entry NAME; this is where they become display text. Measure, Draw and the band maxima all
-    /// resolve through this one seam, so a measured height can never belong to a different string
-    /// than the one drawn.
+    /// The seam handed to the Verse-free panel logic: catalog and panel strings are Keyed entry
+    /// names, and Measure, Draw and the band maxima all resolve through it, so a measured height
+    /// can never belong to a different string than the one drawn.
     /// </summary>
     private static Func<string, string> TranslationSeam(UiWidgetContext ctx)
     {

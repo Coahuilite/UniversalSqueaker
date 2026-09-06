@@ -124,6 +124,8 @@ internal static class Program
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
+        Step("distance card draws its bands filled and disjoint", DistanceCardBandsFillTheMeasuredCard);
+        Step("every display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -337,6 +339,102 @@ internal static class Program
             + revisionBefore + " -> " + host.Session.ContentRevision);
     }
 
+    /// <summary>
+    /// Regression lane for D3: the 72cff33 hover-wiring edit deleted `y += ChartHeight + Gap` in
+    /// UsAttenuationEditorWidget.DrawContent, folding the status line and the preset buttons into
+    /// the 64px chart band (the card then draws its content to ~43% of the height it measured).
+    /// Intra-card rects never enter the layout snapshot, so the probe is behavioral: walk the
+    /// vertical center line of the card and read which help claim each pixel wins. The chart band
+    /// must be a real band and the LAST claimed band must reach near the card bottom - a layout
+    /// that collapses bands upward cannot fill the height it measured. Mutation-checked: deleting
+    /// the cursor advance turns the reach assertion red.
+    /// </summary>
+    private static void DistanceCardBandsFillTheMeasuredCard()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        Rect viewport = new(0f, 0f, 1280f, 720f);
+        host.Bindings.Invoke("set-tab", "Distance");
+        host.Session.SetScrollPosition("content-scroll", Vector2.zero);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        Assert(snapshot.RectById.TryGetValue("attenuation-editor", out Rect card), "Distance snapshot must contain attenuation-editor");
+
+        float probeX = card.x + card.width / 2f;
+        List<float> chartRows = new();
+        List<float> presetRows = new();
+        for (float y = card.y + 2f; y < card.yMax - 2f; y += 4f)
+        {
+            // Same per-frame protocol the settings window runs.
+            DrawWithPointer(host, fake, viewport, new Vector2(probeX, y));
+            string claim = fake.ViewState.HelpHoverKey;
+            if (claim == "us/attenuation-editor/chart") chartRows.Add(y);
+            else if (claim == "us/attenuation-editor/presets") presetRows.Add(y);
+        }
+
+        Assert(chartRows.Count >= 14, "the chart claim band must span at least ~56px, got " + (chartRows.Count * 4) + "px - bands are collapsing into the chart");
+        Assert(presetRows.Count >= 5, "the preset-button claim band must be at least 20px tall, got " + (presetRows.Count * 4) + "px");
+        Assert(chartRows.Count > 0 && presetRows.Count > 0 && presetRows.Min() > chartRows.Max(),
+            "the preset band must start below the observed chart band (claims disjoint vertically): chartMax="
+            + (chartRows.Count > 0 ? chartRows.Max() : -1f) + " presetMin=" + (presetRows.Count > 0 ? presetRows.Min() : -1f));
+        // Span, not card edge: the element rect includes card chrome (title band + padding) the
+        // content bands are not supposed to reach. The layout signature is the DISTANCE from the
+        // top of the first claimed row to the bottom of the last: a filled card spans ~118px of
+        // bands (chart 64 + gaps + status + buttons 26), the collapsed-bug shape ends at ~48px.
+        Assert(presetRows.Max() - chartRows.Min() >= 100f,
+            "claimed bands must span the full measured band sequence (chart top to presets bottom): span="
+            + (presetRows.Max() - chartRows.Min()) + "px (collapsed shape measures ~48)");
+    }
+
+    /// <summary>
+    /// D1/D6 contract lane. The production view cache and the layout cache share ONE clock (the
+    /// session content revision, wired by AttachRevisionSource after 2026-09-04d); any write that
+    /// changes what the page displays must advance it, or the cache serves the pre-write
+    /// projection until some unrelated bumping write lands - exactly the "click does nothing until
+    /// a workspace switch" report from the 2026-09-05 acceptance round. The fake carries a
+    /// revision-gated cache (RecordingSettingsSource.RevisionSource) mirroring production; this
+    /// lane drives each display-write binding and asserts (1) the clock moved and (2) the very
+    /// next BuildView rebuilds instead of hitting the cache. Every key whose value flows back to
+    /// the screen belongs in this list. The visible read-back flip stays a production-only
+    /// property (the fake returns a constant view); FullTypedWriteCoverage pins write routing.
+    /// </summary>
+    private static void DisplayWriteAdvancesSharedRevision()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+
+        void AssertBumped(string key, Action write)
+        {
+            int rev0 = host.Session.ContentRevision;
+            fake.BuildView();               // sync the cache onto the current revision
+            int primed = fake.BuildViewCount;
+            fake.BuildView();               // a repeat read at the same revision must NOT rebuild
+            Assert(fake.BuildViewCount == primed, key + ": repeat reads at one revision must hit the view cache");
+            write();
+            Assert(host.Session.ContentRevision > rev0,
+                key + ": a display write must advance the session clock (D1/D6: stale until the next bump)");
+            fake.BuildView();
+            Assert(fake.BuildViewCount == primed + 1,
+                key + ": the new revision must rebuild the view, not serve the cached projection");
+        }
+
+        AssertBumped("mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled));
+        AssertBumped("global-volume", () => host.Bindings.Set("global-volume", 0.42f));
+        AssertBumped("allow-eggs", () => host.Bindings.Set("allow-eggs", false));
+        AssertBumped("scale-cooldown", () => host.Bindings.Set("scale-cooldown", false));
+        AssertBumped("scale-talking", () => host.Bindings.Set("scale-talking", false));
+        AssertBumped("scale-population", () => host.Bindings.Set("scale-population", true));
+        AssertBumped("camera-indicator", () => host.Bindings.Set("camera-indicator", false));
+        AssertBumped("toggle-egg", () => host.Bindings.Invoke("toggle-egg", false));
+        AssertBumped("toggle-scale-cooldown", () => host.Bindings.Invoke("toggle-scale-cooldown", false));
+        AssertBumped("toggle-scale-talking", () => host.Bindings.Invoke("toggle-scale-talking", false));
+        AssertBumped("toggle-scale-population", () => host.Bindings.Invoke("toggle-scale-population", true));
+        AssertBumped("toggle-camera-indicator", () => host.Bindings.Invoke("toggle-camera-indicator", false));
+        AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
+        AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
+        AssertBumped("set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)));
+        AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
+    }
     /// <summary>
     /// One frame of the settings-window protocol: clear the per-frame claim, pump a Repaint pass
     /// with the pointer at <paramref name="pointer"/>, then draw. Mirrors
@@ -765,11 +863,8 @@ internal static class Program
         Assert(fake.LastDomainFilterKind == SqueakDomainFilterKind.OrphanOnly && fake.LastDomainFilterFlag == true, "set-domain-filter action routes");
         bindings.Invoke("set-help-hover", "us/global-volume");
         Assert(fake.LastHelpHover == "us/global-volume", "set-help-hover action routes");
-        bindings.Invoke("set-help-selection", "us/global-volume");
-        Assert(fake.LastHelpSelection == "us/global-volume", "set-help-selection action routes");
         bindings.Invoke("scroll-to", "preset-list");
         Assert(fake.LastScrollToSection == "preset-list", "scroll-to action routes");
-
         // Attenuation chart drag: a normalized X on the second point writes the min distance.
         bindings.Invoke("attenuation-point", new UiChartPointChange(1, 0.25f, 0f));
         Assert(fake.LastDistanceRangeStart.HasValue, "attenuation-point action routes to SetDistanceRange");

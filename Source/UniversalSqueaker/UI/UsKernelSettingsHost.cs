@@ -140,33 +140,38 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<bool>("is-dirty", () => source.IsDirty);
 
         // Basic: mode.
+        // Display-write contract: every write whose value flows back to the screen through
+        // BuildView must advance the session clock (bump), or the revision-gated view cache keeps
+        // serving the pre-write projection until some other bumping write lands - the D1/D6 defect
+        // (clicks invisible until a workspace switch). Display-write bindings are asserted by the
+        // DisplayWriteAdvancesRevision contract lane in the kernel-host harness.
         bindings.BindValue<SqueakVoicePackMode>(
             "mode",
             () => source.BuildView().Mode,
-            source.SetMode);
+            value => { source.SetMode(value); bump(); });
 
         // Basic: global volume.
-        bindings.BindValue<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, source.SetGlobalVolume);
+        bindings.BindValue<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
 
         // Basic: distance preset/range + attenuation chart.
         bindings.BindReadOnly<float>("distance-range-min", () => source.BuildView().DistanceRangeMin);
         bindings.BindReadOnly<float>("distance-range-max", () => source.BuildView().DistanceRangeMax);
         bindings.BindReadOnly<string>("distance-preset", () => source.BuildView().DistancePreset.ToString());
-        bindings.BindAction<SqueakDistancePreset>("set-distance-preset", source.SetDistancePreset);
+        bindings.BindAction<SqueakDistancePreset>("set-distance-preset", preset => { source.SetDistancePreset(preset); bump(); });
         bindings.BindReadOnly<IReadOnlyList<Vector2>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
-        bindings.BindAction<UiChartPointChange>("attenuation-point", change => ApplyAttenuationPoint(source, source.BuildView(), change));
+        bindings.BindAction<UiChartPointChange>("attenuation-point", change => { ApplyAttenuationPoint(source, source.BuildView(), change); bump(); });
 
         // Basic: toggles.
-        bindings.BindValue<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, source.SetEasterEggs);
-        bindings.BindValue<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value));
-        bindings.BindValue<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value));
-        bindings.BindValue<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value));
-        bindings.BindAction<bool>("toggle-egg", source.SetEasterEggs);
-        bindings.BindAction<bool>("toggle-scale-cooldown", value => source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value));
-        bindings.BindAction<bool>("toggle-scale-talking", value => source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value));
-        bindings.BindAction<bool>("toggle-scale-population", value => source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value));
-        bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, source.SetCameraIndicator);
-        bindings.BindAction<bool>("toggle-camera-indicator", source.SetCameraIndicator);
+        bindings.BindValue<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
+        bindings.BindValue<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
+        bindings.BindValue<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
+        bindings.BindValue<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
+        bindings.BindAction<bool>("toggle-egg", value => { source.SetEasterEggs(value); bump(); });
+        bindings.BindAction<bool>("toggle-scale-cooldown", value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
+        bindings.BindAction<bool>("toggle-scale-talking", value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
+        bindings.BindAction<bool>("toggle-scale-population", value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
+        bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
+        bindings.BindAction<bool>("toggle-camera-indicator", value => { source.SetCameraIndicator(value); bump(); });
 
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);
@@ -179,9 +184,9 @@ public static class UsKernelSettingsHost
             "set-tuning-domain",
             selection => { source.SetTuningDomain(selection.RaceDefName, selection.TargetDefName); bump(); });
         bindings.BindReadOnly<IReadOnlyList<ActionScopeRowView>>("action-scopes", () => source.BuildView().ActionScopes);
-        bindings.BindAction<UsScopeWrite>("set-action-scope", write => source.SetActionScope(write.ActionKey, write.Scope));
+        bindings.BindAction<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
         bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
-        bindings.BindAction<UsMoodWrite>("set-mood-tuning", write => source.SetMoodTuning(write.Mood, write.Factor, write.Value));
+        bindings.BindAction<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
         bindings.BindReadOnly<IReadOnlyList<BaselinePresetView>>("baseline-presets", () => source.BuildView().BaselinePresets);
         // Preset expand/collapse, per-row selection and import all reflow the preset tree.
         bindings.BindAction<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });
@@ -237,13 +242,10 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
 
-        // Help panel.
+        // Help panel (C+A; D2 retired the pinned-selection channel with the index list).
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
         bindings.BindReadOnly<string>("help-hover", () => state.HelpHoverKey);
-        bindings.BindReadOnly<string>("help-selection", () => state.HelpSelectionKey);
         bindings.BindAction<string>("set-help-hover", source.SetHelpHover);
-        // Help selection switches the displayed help text, which changes the help panel height.
-        bindings.BindAction<string>("set-help-selection", key => { source.SetHelpSelection(key); bump(); });
 
         return bindings;
     }

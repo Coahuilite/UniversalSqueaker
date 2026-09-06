@@ -32,6 +32,7 @@ internal static class Program
             SetActionTuningScopeNullClearsAllDuplicates();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
+            TwoPresetsImportIndependentlyAndIdempotently();
             AudioDomainsRejectWhitespace();
             GlobalVolumeDefaultsAndClamps();
             GlobalVolumeScribeRoundTrip();
@@ -290,6 +291,108 @@ internal static class Program
             "baseline: imported row is last-wins and carries sourcePresetDefName", ref failures);
         Check(settings.actionTuning.Find(r => r.actionKey == "Eat" && r.raceDefName == "RaceB" && r.xenotypeDefName == "XenoA") == null,
             "baseline: same xenotype under unselected race is not imported (composite (race,xeno) key)", ref failures);
+    }
+
+    // D8 pre-check: does the import pipeline actually support shipping TWO preset Defs and
+    // importing both? Importer-level end to end (the business boundary the UI's Import button
+    // calls through). Covers the exact shape the Nivarian fixture will take - two presets on one
+    // race, distinct action keys - and the semantics a single-preset test cannot see: cross-preset
+    // non-clobbering and re-import idempotency. The UI-click path itself is NOT exercisable here
+    // (Verse stub has no DefDatabase; that blind spot is tracked under D5), so this pins the
+    // importer contract the fixture depends on and leaves the real in-game pass to the pack.
+    private static void TwoPresetsImportIndependentlyAndIdempotently()
+    {
+        Scenario("6b-two-presets-independent-idempotent");
+
+        UniversalSqueakerTuningBaselineDef cheapTalk = new()
+        {
+            defName = "US_NivarianExp_CheapTalk",
+            presetLabel = "Cheap Talk",
+            races = new List<BaselineRaceEntry>
+            {
+                new BaselineRaceEntry
+                {
+                    raceDefName = "NivarianRace_Pawn",
+                    actions = new List<BaselineActionTuning>
+                    {
+                        new BaselineActionTuning { actionKey = "Work", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 0.15f, probabilityMultiplier = 1f },
+                    },
+                },
+            },
+        };
+        UniversalSqueakerTuningBaselineDef muteJoy = new()
+        {
+            defName = "US_NivarianExp_Mute",
+            presetLabel = "Mute Joy",
+            races = new List<BaselineRaceEntry>
+            {
+                new BaselineRaceEntry
+                {
+                    raceDefName = "NivarianRace_Pawn",
+                    actions = new List<BaselineActionTuning>
+                    {
+                        new BaselineActionTuning { actionKey = "Joy", scope = SqueakActionScope.Disabled, intervalMultiplier = 1f, probabilityMultiplier = 1f },
+                    },
+                },
+            },
+        };
+
+        UniversalSqueakerSettings settings = NewSettings();
+        BaselinePresetImporter.Selection raceSel = new();
+        raceSel.RaceDefNames.Add("NivarianRace_Pawn");
+
+        BaselineImportResult first = BaselinePresetImporter.Import(cheapTalk, raceSel, settings);
+        Check(first.ActionsImported == 1, "two-preset: first preset imports exactly one action row", ref failures);
+        ActionTuningRecord? work = settings.actionTuning.Find(r => r.actionKey == "Work");
+        Check(work != null
+                && work.sourcePresetDefName == "US_NivarianExp_CheapTalk"
+                && work.raceDefName == "NivarianRace_Pawn" && string.IsNullOrEmpty(work.xenotypeDefName)
+                && work.hasIntervalMultiplier && Math.Abs(work.intervalMultiplier - 0.15f) < 0.0001f,
+            "two-preset: Work row lands at the race layer, stamped with its own preset, interval 0.15", ref failures);
+
+        BaselineImportResult second = BaselinePresetImporter.Import(muteJoy, raceSel, settings);
+        Check(second.ActionsImported == 1, "two-preset: second preset imports exactly one action row", ref failures);
+        Check(settings.actionTuning.Count == 2, "two-preset: distinct action keys coexist (Work + Joy), count = 2", ref failures);
+        ActionTuningRecord? joy = settings.actionTuning.Find(r => r.actionKey == "Joy");
+        Check(joy != null
+                && joy.sourcePresetDefName == "US_NivarianExp_Mute"
+                && joy.hasScope && joy.scope == SqueakActionScope.Disabled,
+            "two-preset: Joy row stamped with the SECOND preset and forced Disabled", ref failures);
+        Check(settings.actionTuning.Find(r => r.actionKey == "Work")?.sourcePresetDefName == "US_NivarianExp_CheapTalk",
+            "two-preset: importing the second preset does NOT clobber the first preset's Work row (identity-scoped upsert)", ref failures);
+
+        // Re-import the first preset: same-identity clear-then-append is idempotent, and it must
+        // not touch the second preset's Joy row (different identity).
+        BaselinePresetImporter.Import(cheapTalk, raceSel, settings);
+        Check(settings.actionTuning.Count == 2
+                && settings.actionTuning.FindAll(r => r.actionKey == "Work").Count == 1
+                && settings.actionTuning.Find(r => r.actionKey == "Work")?.sourcePresetDefName == "US_NivarianExp_CheapTalk"
+                && settings.actionTuning.Find(r => r.actionKey == "Joy")?.sourcePresetDefName == "US_NivarianExp_Mute",
+            "two-preset: re-import is idempotent (no Work duplicate) and preserves the other preset's row", ref failures);
+
+        // Same key, two presets, later import wins the identity (the "same key overwrites" half).
+        UniversalSqueakerTuningBaselineDef cheapTalkLoud = new()
+        {
+            defName = "US_NivarianExp_Loud",
+            races = new List<BaselineRaceEntry>
+            {
+                new BaselineRaceEntry
+                {
+                    raceDefName = "NivarianRace_Pawn",
+                    actions = new List<BaselineActionTuning>
+                    {
+                        new BaselineActionTuning { actionKey = "Work", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 3f, probabilityMultiplier = 1f },
+                    },
+                },
+            },
+        };
+        BaselinePresetImporter.Import(cheapTalkLoud, raceSel, settings);
+        ActionTuningRecord? workAfter = settings.actionTuning.Find(r => r.actionKey == "Work");
+        Check(settings.actionTuning.Count == 2
+                && workAfter != null
+                && workAfter.sourcePresetDefName == "US_NivarianExp_Loud"
+                && Math.Abs(workAfter.intervalMultiplier - 3f) < 0.0001f,
+            "two-preset: a different preset writing the SAME identity overwrites it (last import wins, source re-stamped)", ref failures);
     }
 
     private static void AudioDomainsRejectWhitespace()

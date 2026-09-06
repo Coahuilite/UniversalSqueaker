@@ -97,7 +97,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
         UsKernelDraw.HelpHover(new Rect(x, y, rect.width, ChartHeight), ctx, "us/attenuation-editor/chart");
         DrawChart(new Rect(x, y, rect.width, ChartHeight), ctx);
-
+        y += ChartHeight + Gap;
         UsKernelDraw.Label(
             new Rect(x, y, rect.width, StatusHeight),
             PresetDisplay(ctx, preset) + "  " + AttenuationMath.FormatRangeDisplay(min, max),

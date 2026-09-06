@@ -139,7 +139,7 @@ internal static class UsKernelContractInvariantTests
             "set-tab", "scroll-to", "set-tuning-layer", "set-tuning-domain", "select-domain",
             "set-domain-filter", "set-pack-filter", "race-filter", "xenotype-filter", "pack-filter", "search-text",
             "toggle-baseline-preset", "toggle-baseline-race", "toggle-baseline-xenotype",
-            "import-baseline", "toggle-pack", "forget-unavailable", "set-help-selection"
+            "import-baseline", "toggle-pack", "forget-unavailable"
         };
         foreach (string key in layoutAffectingKeys)
         {
@@ -157,15 +157,13 @@ internal static class UsKernelContractInvariantTests
             "UsVoicePackChecklistWidget must not bump the revision itself (Host boundary owns search-text)");
 
         string help = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs"));
-        // C+A: hover claims never change the panel height (bands measure against the whole catalog),
-        // so the widget must not bump the revision at all; only the Host-boundary selection bump remains.
+        // C+A + D2: the panel is a pure read surface. Hover claims never change its height (bands
+        // measure against the whole catalog) and the pinned selection is retired, so it owns no
+        // write channel and must never bump the revision.
         Assert(!help.Contains("BumpContentRevision"),
-            "UsHelpPanelWidget must not bump the revision itself - hover is height-invariant and selection bumps at the Host boundary");
-        Assert(help.Contains("UsKernelDraw.HelpHover("),
-            "the panel's index rows claim hover through the single UsKernelDraw.HelpHover outlet");
-        Assert(!help.Contains("ctx.Bindings.Invoke(\"set-help-selection\"")
-            || help.Contains("Host binding boundary"),
-            "help selection bump is owned by the Host boundary, not the widget");
+            "UsHelpPanelWidget must not bump the revision itself - hover is height-invariant and the panel writes nothing");
+        Assert(!help.Contains(".Invoke"),
+            "the help panel has no write channel at all: claims arrive only from the controls via UsKernelDraw.HelpHover");
 
         string draw = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"));
         Assert(draw.Contains("DropdownButton(rect, elementId, ctx);") && draw.Contains("OpenPopupAnchor"),

@@ -56,7 +56,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public string? LastXenotypeFilter;
     public string? LastSearchText;
     public string? LastHelpHover;
-    public string? LastHelpSelection;
 
     // Tuning writes.
     public string? LastActionKey;
@@ -91,15 +90,33 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public string SaveStatus => "Idle";
 
     public bool IsDirty => false;
+    /// <summary>
+    /// When set, the fake behaves like the production source's view cache: the view is built once
+    /// and only rebuilt when this revision changes, counting rebuilds. The D1/D6 display-write
+    /// contract lane needs exactly this - a cache-less fake makes "stale projection" unobservable
+    /// (the blind spot the 2026-09-05 in-game report exposed).
+    /// </summary>
+    public Func<int>? RevisionSource;
+    public int BuildViewCount;
+    private VoicePacksViewState? cachedView;
+    private int cachedRevision = -1;
 
     public VoicePacksViewState BuildView()
     {
-        if (RichData)
+        if (RevisionSource == null)
         {
-            return BuildRichView();
+            return RichData ? BuildRichView() : BuildEmptyView();
         }
 
-        return BuildEmptyView();
+        int revision = RevisionSource();
+        if (cachedView == null || revision != cachedRevision)
+        {
+            cachedView = RichData ? BuildRichView() : BuildEmptyView();
+            cachedRevision = revision;
+            BuildViewCount++;
+        }
+
+        return cachedView;
     }
 
     private VoicePacksViewState BuildEmptyView()
@@ -337,20 +354,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
     public void SetSearchText(string text) => LastSearchText = text;
-
-    // The Host's help-hover/help-selection READ bindings serve the panel from ViewState (exactly
-    // like the real source routes them), so a record-only fake would leave every end-to-end hover
-    // lane blind. Write the state AND keep the recording field.
+    // The Host's help-hover READ binding serves the panel from ViewState (exactly like the real
+    // source routes it), so a record-only fake would leave every end-to-end hover lane blind. Write
+    // the state AND keep the recording field. SetHelpSelection retired with the D2 index-list cut.
     public void SetHelpHover(string key)
     {
         LastHelpHover = key;
         VoicePacksPageModel.SetHelpHover(state, key);
-    }
-
-    public void SetHelpSelection(string key)
-    {
-        LastHelpSelection = key;
-        VoicePacksPageModel.SetHelpSelection(state, key);
     }
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)

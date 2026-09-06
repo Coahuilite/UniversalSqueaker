@@ -17,7 +17,6 @@ public sealed class VoicePacksPageState
     public string SelectedTargetName = "";
     public string SearchText = "";
     public string HelpHoverKey = "";
-    public string HelpSelectionKey = "";
     public Vector2 ScrollPosition;
     public Vector2 HelpScrollPosition;
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
@@ -47,7 +46,6 @@ public sealed class VoicePacksPageState
         SelectedTargetName = "";
         SearchText = "";
         HelpHoverKey = "";
-        HelpSelectionKey = "";
         ScrollPosition = Vector2.zero;
         HelpScrollPosition = Vector2.zero;
         BaselinePresets.Clear();

@@ -157,11 +157,6 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.SetHelpHover(state, key);
     }
 
-    public void SetHelpSelection(string key)
-    {
-        VoicePacksPageModel.SetHelpSelection(state, key);
-    }
-
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {
         VoicePacksPageModel.SetActionScope(settings, state, actionKey, scope);

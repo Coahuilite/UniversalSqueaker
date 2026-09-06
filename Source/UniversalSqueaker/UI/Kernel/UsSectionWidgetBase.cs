@@ -96,12 +96,17 @@ public abstract class UsSectionWidgetBase : IUiWidget
         return string.Format(UsKernelDraw.Keyed(ctx, FallbackNoteKey), SectionTitle(ctx));
     }
 
-    /// <summary>Whether the help panel currently selects this section (drives the accent border).</summary>
+    /// <summary>
+    /// Whether the help panel is currently explaining this section (drives the accent border).
+    /// After the D2 ruling retired pinned selection, the border follows the live hover claim: a
+    /// card gets the border while a claim resolving to one of its entries is held, so "what the
+    /// panel is talking about" stays visible on the content column too.
+    /// </summary>
     protected bool IsHelpSelected(UiWidgetContext ctx)
     {
         if (!spec.TryGetAttribute("HelpKey", out string helpKey) || helpKey.Trim().Length == 0) return false;
-        string selection = ctx.Bindings.TryGet("help-selection", out string current) ? current : "";
-        return selection.Length > 0 && selection.StartsWith(helpKey.Trim(), StringComparison.Ordinal);
+        string hover = ctx.Bindings.TryGet("help-hover", out string current) ? current : "";
+        return hover.Length > 0 && hover.StartsWith(helpKey.Trim() + "/", StringComparison.Ordinal);
     }
 
     /// <summary>Fallback body height used when Measure throws.</summary>
@@ -138,7 +143,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
     /// <summary>Draws the card frame around a body draw callback (title + help border).</summary>
     protected void DrawCard(Rect rect, UiWidgetContext ctx, Action<Rect> drawBody)
     {
-        UsKernelDraw.DrawHelpSelectionBorder(rect, ctx.Theme, IsHelpSelected(ctx));
+        UsKernelDraw.DrawHelpFocusBorder(rect, ctx.Theme, IsHelpSelected(ctx));
         Rect bodyRect = UsKernelDraw.DrawCard(rect, SectionTitle(ctx), ctx.Theme);
         drawBody(bodyRect);
     }

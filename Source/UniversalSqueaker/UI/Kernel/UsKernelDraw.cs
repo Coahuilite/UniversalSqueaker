@@ -194,10 +194,10 @@ public static class UsKernelDraw
             Mathf.Max(1f, rect.height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
     }
 
-    /// <summary>Accent border drawn around the whole card when the help selection points at this section.</summary>
-    public static void DrawHelpSelectionBorder(Rect rect, UiTheme theme, bool selected)
+    /// <summary>Accent border drawn around the card the help panel is currently explaining (follows the live hover claim).</summary>
+    public static void DrawHelpFocusBorder(Rect rect, UiTheme theme, bool focused)
     {
-        if (!selected) return;
+        if (!focused) return;
         UiThemeDraw.Surface(rect, theme, Color.clear, theme.AccentGold);
     }
 }

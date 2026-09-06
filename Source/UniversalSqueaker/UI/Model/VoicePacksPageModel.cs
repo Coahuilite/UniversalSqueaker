@@ -194,7 +194,6 @@ public static class VoicePacksPageModel
             state.ActiveTab = normalized;
             state.ActiveSectionKey = WorkspacePrimarySection(normalized);
             state.HelpHoverKey = "";
-            state.HelpSelectionKey = "";
             state.ScrollPosition = Vector2.zero;
         }
     }
@@ -805,7 +804,10 @@ public static class VoicePacksPageModel
             domain.CandidateCount,
             domain.OrphanCount,
             domain.EnabledKeys,
-            filteredPacks);
+            filteredPacks,
+            // Carry the resolved race context across the filter rebuild; dropping it here made
+            // the SELECTED domain silently degrade to the bare raceDefName (D5 sister leak).
+            domain.RaceDisplay);
     }
 
     private static int CountOrphanKeys(IReadOnlyList<string>? enabledKeys, IReadOnlyList<SqueakVoicePackDef> packs)
@@ -848,9 +850,19 @@ public static class VoicePacksPageModel
 
     private static string ResolveXenotypeLabel(SqueakXenotypeCatalogSnapshot catalog, string targetDefName)
     {
-        if (catalog.XenotypeByDefName.TryGetValue(targetDefName, out XenotypeDef? def) && def != null)
-            return string.IsNullOrEmpty(def.LabelCap) ? targetDefName : def.LabelCap;
-        return targetDefName;
+        // Single label outlet (D5): the canonical snapshot first, live DefDatabase on a miss - a
+        // bare defName is only ever the last resort when no Def exists to label. The catalog is
+        // routing/eligibility authority, not a label gate: domain rows legitimately reference
+        // xenotypes the snapshot excludes (Biotech gating, name-conflict drops), and those rows
+        // must still read as names. The preset tree's resolver (ResolveXenotypeDisplayName) is
+        // the live half of this same outlet, so one entity can never render two different labels.
+        if (catalog.XenotypeByDefName.TryGetValue(targetDefName, out XenotypeDef? def) && def != null
+            && !string.IsNullOrEmpty(def.LabelCap))
+        {
+            return def.LabelCap;
+        }
+
+        return ResolveXenotypeDisplayName(targetDefName);
     }
 
     private static int CountPlayableActions(SqueakVoicePackDef pack)
@@ -977,11 +989,8 @@ public static class VoicePacksPageModel
         state.HelpHoverKey = key ?? "";
     }
 
-    public static void SetHelpSelection(VoicePacksPageState state, string key)
-    {
-        if (state == null) return;
-        state.HelpSelectionKey = key ?? "";
-    }
+    // SetHelpSelection retired with the persistent index list (D2 ruling, 2026-09-05): hover is
+    // the only channel that changes what the help panel shows.
 
     public static void SetActionScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
     {

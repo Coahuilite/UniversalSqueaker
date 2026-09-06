@@ -196,45 +196,47 @@ internal static class Program
         Assert(UsHelpCatalog.TryGetSection("us/global-volume", out HelpSection globalVolume),
             "help panel logic test uses the global-volume section");
 
-        UsHelpPanelLogic.HelpPanelDisplay overview = UsHelpPanelLogic.Resolve(scopeTree, "", "");
+        // No hover: the panel explains the active section's overview (the big-level fallback).
+        UsHelpPanelLogic.HelpPanelDisplay overview = UsHelpPanelLogic.Resolve(scopeTree, "");
         Assert(overview.Title == scopeTree.Title, "overview display uses section title");
-        Assert(overview.IsOverview, "empty hover/selection resolves to overview");
+        Assert(overview.Label == UsHelpPanelLogic.OverviewLabel, "overview display uses the overview label");
         Assert(overview.Text == scopeTree.Overview, "overview display uses section overview");
 
-        UsHelpPanelLogic.HelpPanelDisplay hover = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/action-scope", "");
-        Assert(!hover.IsOverview, "valid hover key resolves to an item");
         // The zero-Verse seam is identity, so display strings are the catalog's Keyed entry names;
         // the action-scope label reuses the row's own caption key (US.Tuning.ActionScope).
+        UsHelpPanelLogic.HelpPanelDisplay hover = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/action-scope");
         Assert(hover.Label == "US.Tuning.ActionScope", "hover display uses the hovered item's label key");
         Assert(hover.Text == "US.Help.ScopeTree.ActionScope.Text", "hover display uses the hovered item's body key");
-
-        // C+A priority: hover wins over a pinned selection while the pointer holds the claim.
-        UsHelpPanelLogic.HelpPanelDisplay hoverOverSelection = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/layer", "us/scope-tree/action-scope");
-        Assert(hoverOverSelection.ItemKey == "us/scope-tree/layer", "hover wins over selection (C+A ruling)");
+        Assert(hover.Title == scopeTree.Title, "in-section hover keeps the active section header");
 
         // Global hover: the always-visible surfaces claim entries of other sections (nav claims
         // page-title/nav while any section is active); the header follows the claimed entry's section.
-        UsHelpPanelLogic.HelpPanelDisplay foreignHover = UsHelpPanelLogic.Resolve(scopeTree, "us/global-volume/slider", "");
-        Assert(!foreignHover.IsOverview, "hover resolves across the whole catalog, not just the current section");
-        Assert(foreignHover.ItemKey == "us/global-volume/slider", "foreign hover shows the claimed item");
+        Assert(UsHelpCatalog.TryFindItem("us/global-volume/slider", out HelpItem sliderItem, out _),
+            "global-volume slider exists in the catalog");
+        UsHelpPanelLogic.HelpPanelDisplay foreignHover = UsHelpPanelLogic.Resolve(scopeTree, "us/global-volume/slider");
         Assert(foreignHover.Title == globalVolume.Title, "foreign hover header names the claimed entry's section");
+        Assert(foreignHover.Label == sliderItem.Label && foreignHover.Text == sliderItem.Text,
+            "foreign hover resolves across the whole catalog, not just the current section");
 
-        // The overview sentinel beats a pinned selection and falls back to the section overview.
-        UsHelpPanelLogic.HelpPanelDisplay sentinel = UsHelpPanelLogic.Resolve(scopeTree, UsHelpPanelLogic.OverviewHoverKey, "us/scope-tree/layer");
-        Assert(sentinel.IsOverview && sentinel.Text == scopeTree.Overview,
-            "overview sentinel hover beats selection and shows the section overview");
+        // An unknown key is ignored, not fatal: the panel falls back to the section overview.
+        UsHelpPanelLogic.HelpPanelDisplay unknown = UsHelpPanelLogic.Resolve(scopeTree, "us/nope/not-real");
+        Assert(unknown.Label == UsHelpPanelLogic.OverviewLabel && unknown.Text == scopeTree.Overview,
+            "unknown hover key falls back to the section overview");
 
-        // With no hover, the pinned selection survives; an unknown key is ignored, not fatal.
-        UsHelpPanelLogic.HelpPanelDisplay selection = UsHelpPanelLogic.Resolve(scopeTree, "", "us/scope-tree/action-scope");
-        Assert(selection.ItemKey == "us/scope-tree/action-scope", "without hover the selection stays pinned");
-        UsHelpPanelLogic.HelpPanelDisplay unknown = UsHelpPanelLogic.Resolve(scopeTree, "us/nope/not-real", "us/scope-tree/layer");
-        Assert(unknown.ItemKey == "us/scope-tree/layer", "unknown hover key falls through to the selection");
-
-        UsHelpPanelLogic.HelpPanelDisplay noSection = UsHelpPanelLogic.Resolve(null, "", "");
+        UsHelpPanelLogic.HelpPanelDisplay noSection = UsHelpPanelLogic.Resolve(null, "");
         Assert(noSection.Title == UsHelpPanelLogic.EmptyTitle, "missing section uses Help title");
         Assert(noSection.Text == UsHelpPanelLogic.EmptyText, "missing section uses empty text");
-        UsHelpPanelLogic.HelpPanelDisplay noSectionHover = UsHelpPanelLogic.Resolve(null, "us/scope-tree/layer", "");
-        Assert(noSectionHover.ItemKey == "us/scope-tree/layer", "hover works even with no active section");
+        UsHelpPanelLogic.HelpPanelDisplay noSectionHover = UsHelpPanelLogic.Resolve(null, "us/scope-tree/layer");
+        Assert(noSectionHover.Title == scopeTree.Title, "hover works even with no active section");
+
+        // Every returned string - the panel's own three AND the catalog's - resolves through the
+        // one seam handed to Resolve, so measured and drawn text can never come from different passes.
+        UsHelpPanelLogic.HelpPanelDisplay translated = UsHelpPanelLogic.Resolve(
+            scopeTree, "us/scope-tree/action-scope", key => "[" + key + "]");
+        Assert(translated.Title == "[" + scopeTree.Title + "]"
+                && translated.Label == "[US.Tuning.ActionScope]"
+                && translated.Text == "[US.Help.ScopeTree.ActionScope.Text]",
+            "the translation seam wraps title, label and body in one pass");
     }
 
 

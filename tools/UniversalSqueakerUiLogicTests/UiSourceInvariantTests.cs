@@ -332,26 +332,27 @@ internal static class UiSourceInvariantTests
         }
     }
 
-    // 5b. Panel: the height formula and the drawn row list both key off section.Items, the hover
-    // claim runs through the single HelpHover outlet, and the hover/select contract stays on the
-    // Host-bound actions (never a private command bridge).
+    // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone).
+    // It validates its two read keys, sizes its text band from the hover-invariant catalog maxima,
+    // and resolves through the pure logic seam; claims arrive only from the mid-column controls via
+    // UsKernelDraw.HelpHover, and the window clears the claim every frame before DrawFrame.
     private static void VerifyHelpPanelWiringAndHeightFormula(string root)
     {
         string panel = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs");
         CheckSourceContains(panel, new[]
         {
-            "listHeight = ItemHeight + (ItemHeight + ItemGap) * section.Items.Count;",
-            "foreach (HelpItem item in section.Items)",
             "ValidateValue<string>(\"help-section-key\"",
-            "ValidateAction<string>(\"set-help-hover\"",
-            "ValidateAction<string>(\"set-help-selection\"",
-            "UsKernelDraw.HelpHover(",
-            "ctx.Bindings.Invoke(\"set-help-selection\"",
+            "ValidateValue<string>(\"help-hover\"",
             "MaxBodyBand(ctx, textWidth)",
+            "UsHelpPanelLogic.Resolve(section, hover, TranslationSeam(ctx))",
         },
-        "the help panel must render one row per section.Items entry, size its list from the same "
-        + "count, claim hover through HelpHover, and size its text bands from the hover-invariant "
-        + "catalog maxima (MaxBodyBand) rather than the displayed string");
+        "the help panel must validate both read keys, size its text band from the hover-invariant "
+        + "catalog maxima (MaxBodyBand), and resolve its display through the pure logic seam with "
+        + "the Host translation seam applied in one pass");
+        CheckSourceDoesNotContain(panel, "ctx.Bindings.Invoke",
+            "the help panel is read-only: no write channel survives the D2 index-list cut");
+        CheckSourceDoesNotContain(panel, "set-help-selection",
+            "the retired pinned-selection channel stays dead in the panel");
 
         CheckSourceContains(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"),
@@ -370,9 +371,10 @@ internal static class UiSourceInvariantTests
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
         Assert(host.Contains("BindReadOnly<string>(\"help-section-key\"")
                && host.Contains("BindAction<string>(\"set-help-hover\"")
-               && host.Contains("BindAction<string>(\"set-help-selection\"")
+               && !host.Contains("set-help-selection")
                && host.Contains("BindAction<string>(\"scroll-to\""),
-            "the Host owns the help-section-key/hover/selection/scroll-to wiring (single event authority)");
+            "the Host owns the help-section-key/hover/scroll-to wiring and the retired selection "
+            + "channel stays dead (single event authority)");
     }
 
 

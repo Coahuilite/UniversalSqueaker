@@ -46,7 +46,6 @@ public interface IUsKernelSettingsSource
     void SetXenotypeFilter(string xenotypeDefName);
     void SetSearchText(string text);
     void SetHelpHover(string key);
-    void SetHelpSelection(string key);
 
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
