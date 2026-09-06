@@ -23,7 +23,7 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
    pwsh -NoProfile -File scripts/verify-local.ps1
    ```
 
-   15 道门禁须全绿（6 个 harness、主程序集 Dev/Release 零警告、载体边界红线、MPL-2.0 许可一致、Schema=2 清单）。UI 行为改动另需实机验收清单（`HANDOFF.md` §5），由维护者执行。
+   15 道门禁须全绿（6 个 harness、主程序集 Dev/Release 零警告、载体边界红线、MPL-2.0 许可一致、Schema=2 清单）。UI 行为改动另需实机验收清单（维护者本地维护，不入库），由维护者执行。
 
 7. 提交前跑隐私门禁：`pwsh -NoProfile -File scripts/privacy-audit.ps1`（个人路径 / 凭据 / PublishedFileId 值 / 身份唯一性；提交身份使用 GitHub noreply 邮箱）。
 8. 提 PR 到 `main`，附改动与理由。历史重写、tag、推送由维护者裁决，贡献者不做。
@@ -33,6 +33,6 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
 3. Identity contract is fixed: packageId `coahuilite.universalsqueaker`, namespace `UniversalSqueaker`, Def prefix `US_`, log prefix `usdiag`.
 4. Save-compatibility red lines: `Scribe` field names (e.g. `experimentalKiiroCompat`) and the `usdiag` event vocabulary are persistence/diagnostics contracts; renaming them silently breaks old saves or the triage toolchain.
 5. All player-facing strings go through `1.6/Languages/*/Keyed/` (English and Simplified Chinese symmetric, Chinese authoritative); no English literals in source.
-6. Verify with `pwsh -NoProfile -File scripts/verify-local.ps1` — all 15 gates green. UI behaviour changes additionally need the in-game acceptance checklist (`HANDOFF.md` §5), run by the maintainer.
+6. Verify with `pwsh -NoProfile -File scripts/verify-local.ps1` — all 15 gates green. UI behaviour changes additionally need the in-game acceptance checklist (maintainer-local, not published), run by the maintainer.
 7. Run `pwsh -NoProfile -File scripts/privacy-audit.ps1` before committing (personal paths / credentials / PublishedFileId values / identity uniqueness; use the GitHub noreply identity).
 8. Open a PR against `main` with the change and its rationale. History rewrites, tags and pushes are maintainer decisions.

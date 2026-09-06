@@ -13,7 +13,7 @@
 
 ## Authoritative entries
 
-- Fork handoff and UI adaptation evaluation: `HANDOFF.md` (single entry point).
+- Fork handoff and UI adaptation evaluation: `HANDOFF.md` (maintainer-local, not published; removed from history in the third rewrite).
 - Mod structure reference: `docs/mod-structure-reference-zh.md` (RimWorld Wiki + SR-minus-Extras/audio baseline).
 - Release flow: `docs/release-runbook-zh.md` (inherited from SR and adapted for US: no Extras/audio/OGG mirror/codemap checks; `version.txt` first line is `UniversalSqueaker <version>`). Local scripts: `scripts/verify-local.ps1` (**13 gates** since the 2026-09-03 split; the four library gates and the neutrality guard live in `../ferritelib` now), `scripts/build-dev.ps1`, `scripts/pack-dev.ps1`, `scripts/stage-package.ps1`. Dev packaging flow verified 2026-08-23 on commit `ed90214`: all gates green, package content/exclusions/version.txt/DLL identity pass the runbook Phase 0 checks.
 - Kernel compile set (rebuilt, zero-Verse, de-SR-ized): `Source/UniversalSqueaker/Kernel/`. Legacy root `Kernel/` was deleted in the Phase 4 cleanup (git history retains it).

@@ -1,6 +1,6 @@
 # AGENTS.md — Universal Squeaker
 
-> This file is the memory agreement for AI agents working in this repository. Human contributors should read `README.md` and `HANDOFF.md`.
+> This file is the memory agreement for AI agents working in this repository. Human contributors should read `README.md`.
 
 ## Project identity
 

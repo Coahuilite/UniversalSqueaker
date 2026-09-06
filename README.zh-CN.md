@@ -29,7 +29,7 @@ UI 库已拆为独立前置模组仓库 `../ferritelib`（`coahuilite.ferritelib
 
 ## 文档索引
 
-- 交接与验收清单：`HANDOFF.md`
+- 交接与验收清单：`HANDOFF.md`（维护者本地文档，不入库）
 - 记忆协定 / 持久事实 / 行动面 / 冷档案：`AGENTS.md`、`MEMORY.md`、`TODO.md`、`OBLIVIONIS.md`
 - 发布流程（每次发版）：`docs/release-runbook-zh.md`
 - 首次上云：2026-09-06 已执行完毕；持久决策与推送顺序见 `MEMORY.md`（"First cloud upload"节），PASS 台账见 `TODO.md`。
