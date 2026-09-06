@@ -20,7 +20,7 @@ Universal Squeaker ships **no audio of its own**: it is a routing kernel that at
 ## Local verification and build
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests)
+pwsh -NoProfile -File scripts/verify-local.ps1   # 13 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests)
 pwsh -NoProfile -File scripts/build-dev.ps1      # builds the ../ferritelib payload first, then a Dev build + dev package (dist/dev/)
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
 ```

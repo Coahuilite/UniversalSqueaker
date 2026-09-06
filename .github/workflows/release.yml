@@ -97,7 +97,7 @@ jobs:
       # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
       # staging. verify-local's Dev/Release build gates leave 1.6/Assemblies populated; stage-package
       # reads that DLL and re-checks the single-carrier / no-audio / version red lines at assembly time.
-      - name: Verify (15 gates)
+      - name: Verify (13 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 
@@ -169,7 +169,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/github/UniversalSqueaker-release-v${{ github.ref_name }}.zip
           body_path: release-body.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

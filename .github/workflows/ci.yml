@@ -82,7 +82,7 @@ jobs:
           Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
             ForEach-Object { dotnet restore $_.FullName --nologo }
 
-      - name: Verify (15 gates)
+      - name: Verify (13 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 
