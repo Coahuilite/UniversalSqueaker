@@ -4,8 +4,8 @@
 
 ## Project identity
 
-- Project: RimWorld 1.6 mod **Universal Squeaker** (local fork; no remote configured).
-- Confirmed identity: repo `coahuilite/UniversalSqueaker`; permanent `packageId` `coahuilite.universalsqueaker`; target C# namespace `UniversalSqueaker`; Def/log/debug-key prefix `US_`; diagnostic log prefix `usdiag`. License is **MPL-2.0** for the whole Coahuilite mod series (`LICENSE`, byte-identical per repo, no "Incompatible With Secondary Licenses" notice). Workshop display name remains pending maintainer confirmation; this repository is not published.
+- Project: RimWorld 1.6 mod **Universal Squeaker** (local fork; remote `Coahuilite/UniversalSqueaker` created private and pushed 2026-09-06; publication actions still maintainer-gated per session).
+- Confirmed identity: repo `coahuilite/UniversalSqueaker`; permanent `packageId` `coahuilite.universalsqueaker`; target C# namespace `UniversalSqueaker`; Def/log/debug-key prefix `US_`; diagnostic log prefix `usdiag`. License is **MPL-2.0** for the whole Coahuilite mod series (`LICENSE`, byte-identical per repo, no "Incompatible With Secondary Licenses" notice). Workshop display name remains pending maintainer confirmation; the GitHub repo is private and no release has been cut.
 - Squeaky Ratkin (`coahuilite.squeakyratkin`) is a separate product. Never reuse its brand, packageId, namespace, or `SR_` prefix here. No `SqueakyRatkin.*` types and no Ratkin assemblies, profiles, attachments, or content may ship with US.
 - Product version source: once the product csproj exists, its `<Version>` is primary and `About/About.xml <modVersion>` must follow it.
 
@@ -38,7 +38,7 @@ Maintain these boundaries:
 
 - Default scope is this repository root. Reading outside it requires path-specific authorization and remains read-only.
 - Never place personal local paths, diagnostic-log excerpts, credentials, API keys, tokens, private keys, or `PublishedFileId.txt` values in Git, documentation, generated artifacts, staging, or reachable history.
-- Every push is preceded by a privacy review of the complete reachable range. This repository currently has no remote; configuring a remote or pushing is an external operation that requires explicit maintainer authorization.
+- Every push is preceded by a privacy review of the complete reachable range (`scripts/privacy-audit.ps1 -FullHistory`). Configuring a remote, pushing, tagging or releasing remains an external operation requiring explicit maintainer authorization.
 - Destructive history/tag rewrites of the SR repository are out of scope here and must be handled on the SR side.
 
 ## External-state boundaries
