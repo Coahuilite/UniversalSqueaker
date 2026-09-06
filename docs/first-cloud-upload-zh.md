@@ -20,7 +20,7 @@
 |---|---|---|
 | 工作树 | `git grep -l -I -E "[A-Za-z]:[\\\\/](Users\|WorkSpace)" -- .` | **0 命中** |
 | 提交信息 | `git log --all --format='%s%n%b'` 同模式 | **0 命中**（兄弟名 2 行 squeaky 口径 / 13 行宽口径 Ratkin|Kiiro|SR_，裁决 2 不管；复测修正，原记 10 行无口径可复算） |
-| 历史 blob | `git grep -l -I <pat> $(git rev-list --all)` | **7 文件**：`MEMORY.md` + 6 个 `docs/workdocs/*.md` |
+| 历史 blob | `git grep -l -I <pat> $(git rev-list --all)` | 单分隔符模式 **7 文件**（`MEMORY.md` + 6 个 `docs/workdocs/*.md`）；四形态模式 **8 文件**（多出 `s4-polish-kickoff.md`，它只有双形态命中）。重写白名单 `^(MEMORY\.md|docs/workdocs/)` 覆盖两者，白名单外实测零命中 |
 
 债务形态（实测枚举；本文档刻意不再内联「盘符+冒号+反斜杠」字面量，避免自身成为新债）：
 - 工作区拓扑：`E 盘 \WorkSpace\AI_IDE\opencode\modding\rimworld\...` 前缀，不含用户名——单反斜杠形态 662 处；
