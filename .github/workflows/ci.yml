@@ -50,7 +50,7 @@ jobs:
           # local evidence identical. net472 targeting resolves from NuGet (Krafs.Rimworld.Ref) either way.
           dotnet-version: '10.0.x'
 
-      # Dependency chain (upload-doc section 4). actions/checkout resolves `path` INSIDE
+      # Dependency chain (decision recorded in MEMORY.md "First cloud upload: durable decisions"). actions/checkout resolves `path` INSIDE
       # GITHUB_WORKSPACE and rejects anything outside it (verified against the action source), so the
       # literal `path: ../ferritelib` the plan sketched cannot work. Instead: check the carrier out to
       # a workspace subdir, build it there, then a run step (not bound by the checkout guard) copies

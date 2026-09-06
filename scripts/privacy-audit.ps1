@@ -1,4 +1,4 @@
-# Privacy audit gate (spec: docs/first-cloud-upload-zh.md section 5).
+# Privacy audit gate - the one human-run check before any push (see MEMORY.md "First cloud upload").
 # Three independent vectors, scanned separately - a clean working tree does NOT
 # imply clean history, and clean messages do not imply clean blobs.
 #   Vector 1: working tree (tracked files at HEAD)

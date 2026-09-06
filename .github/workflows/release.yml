@@ -59,7 +59,7 @@ jobs:
           $base = $tag -replace '^v', '' -replace '-rc.*$', ''
 
           # 2. The repo's product version must equal the tag base, with no -dev suffix. This is the
-          #    version-axis lock (upload-doc section 4): csproj <Version>, About.xml <modVersion> and
+          #    version-axis lock (MEMORY.md "First cloud upload"): csproj <Version>, About.xml <modVersion> and
           #    the tag must agree, and none may still say -dev. check-pack-readiness enforces the same
           #    invariants; doing it here too fails before any build minutes are spent.
           [xml]$csproj = Get-Content -LiteralPath 'Source/UniversalSqueaker/UniversalSqueaker.csproj' -Raw
@@ -176,7 +176,7 @@ jobs:
           # Glob, not a literal name: the zip is UniversalSqueaker-release-v<base>-<commit>.zip
           # (base = tag minus v/-rcN), and exactly one such zip exists in dist/github per run.
           files: dist/github/UniversalSqueaker-release-v*.zip
-      # Post-push closure (upload-doc section 6): the six-point platform reconciliation reuses the
+      # Post-push closure (MEMORY.md "First cloud upload" push-order entry): the six-point platform reconciliation reuses the
       # carrier repo's scripts/verify-release.ps1 (-Tag -Repo -AssetPrefix UniversalSqueaker). That
       # step runs AFTER the first push is authorized and is intentionally not wired here, because US
       # does not yet carry its own copy of that script; see TODO.md "First cloud upload preparation".

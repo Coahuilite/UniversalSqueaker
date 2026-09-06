@@ -62,9 +62,9 @@ if ($RequireReleaseMetadata) {
     $desc = if ($null -ne $descNode) { $descNode.InnerText.Trim() } else { '' }
     Assert-Check 'release description is not placeholder' ($desc -notmatch 'Placeholder|TODO') "($desc)"
 
-    # Version-axis lock (upload-doc section 4; the lib MEMORY 0.1.0/0.2.0 drift lesson). This pins
-    # the axes that are statically visible in THIS repo and are release-specific. The csproj
-    # <Version> == About.xml <modVersion> agreement is already asserted above (section A); here we
+    # Version-axis lock (the lib MEMORY 0.1.0/0.2.0 drift lesson; see MEMORY.md "First cloud
+    # upload: durable decisions"). This pins the axes that are statically visible in THIS repo and
+    # are release-specific. The csproj <Version> == About.xml <modVersion> agreement is already asserted above (section A); here we
     # add the two release-only facts: a release pack must not carry the -dev suffix, and Mod.cs must
     # declare the prerequisite range. The stronger invariant - that the range actually contains the
     # Api of the carrier DLL this build linked - is proven by the KernelHost harness gate

@@ -32,7 +32,7 @@ The UI library was split into its own prerequisite-mod repository `../ferritelib
 - Handoff and acceptance checklist: `HANDOFF.md`
 - Memory protocol / durable facts / action surface / cold archive: `AGENTS.md`, `MEMORY.md`, `TODO.md`, `OBLIVIONIS.md`
 - Release flow (every release): `docs/release-runbook-zh.md`
-- First cloud upload (one-time transaction): `docs/first-cloud-upload-zh.md`
+- First cloud upload: executed 2026-09-06; durable decisions and push order live in `MEMORY.md` ("First cloud upload"), the PASS ledger in `TODO.md`.
 - Mod structure reference: `docs/mod-structure-reference-zh.md`
 - Voice-pack authoring guide: `.github/skills/us-voicepack-authoring/SKILL.md`
 
