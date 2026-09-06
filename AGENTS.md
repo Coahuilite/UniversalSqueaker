@@ -44,5 +44,5 @@ Maintain these boundaries:
 ## External-state boundaries
 
 - Local commits are permitted. `git remote`, push, PR, tag, release, and all publication actions require explicit maintainer authorization.
-- Never claim that this repository's evidence proves SR, GitHub, or Workshop external state.
+- The pre-push ceremony is deliberately minimal (maintainer ruling 2026-09-06): run `scripts/privacy-audit.ps1 -FullHistory` plus the mechanical final check (clean tree, single main, no tags, noreply identity, mirror backup present). Everything else is automated by verify-local / check-pack-readiness / the workflows - do not re-add manual ritual. Push order and durable upload decisions: `MEMORY.md` "First cloud upload: durable decisions".
 
