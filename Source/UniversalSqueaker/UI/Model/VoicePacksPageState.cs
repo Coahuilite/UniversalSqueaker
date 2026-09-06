@@ -17,6 +17,16 @@ public sealed class VoicePacksPageState
     public string SelectedTargetName = "";
     public string SearchText = "";
     public string HelpHoverKey = "";
+
+    // D10 grace: the last claim that actually landed, the frames left to hold it after the
+    // pointer stopped claiming, and the frame counter + claim stamp that distinguish "a widget
+    // claimed during last frame's draw" from "BeginHelpHoverFrame restored the held value". Owned
+    // by VoicePacksPageModel; the help panel keeps explaining the previous control during transit
+    // gaps instead of flashing the section overview (maintainer ruling 2026-09-06).
+    public string HelpHoverHeld = "";
+    public int HelpHoverGraceLeft;
+    public int HelpHoverFrame;
+    public int HelpHoverClaimStamp;
     public Vector2 ScrollPosition;
     public Vector2 HelpScrollPosition;
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
@@ -46,6 +56,10 @@ public sealed class VoicePacksPageState
         SelectedTargetName = "";
         SearchText = "";
         HelpHoverKey = "";
+        HelpHoverHeld = "";
+        HelpHoverGraceLeft = 0;
+        HelpHoverFrame = 0;
+        HelpHoverClaimStamp = 0;
         ScrollPosition = Vector2.zero;
         HelpScrollPosition = Vector2.zero;
         BaselinePresets.Clear();

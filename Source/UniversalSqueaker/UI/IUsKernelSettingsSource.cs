@@ -47,6 +47,10 @@ public interface IUsKernelSettingsSource
     void SetSearchText(string text);
     void SetHelpHover(string key);
 
+    /// <summary>Per-frame hover-claim boundary (D10): run before every DrawFrame; applies the
+    /// clear-or-hold-or-grace rule from <see cref="VoicePacksPageModel.BeginHelpHoverFrame"/>.</summary>
+    void BeginHelpHoverFrame();
+
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
     void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value);

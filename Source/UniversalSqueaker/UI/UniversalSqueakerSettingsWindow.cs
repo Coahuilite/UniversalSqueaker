@@ -113,11 +113,12 @@ public sealed class UniversalSqueakerSettingsWindow : Window
         try
         {
             kernelHost ??= CreateKernelHost();
-            // C+A help model: the hover claim is a per-frame transient. Clearing it here (the one
-            // place that owns the frame boundary) means "moving away falls back to the section
-            // overview" needs no widget cleanup, mirroring how Camera+ resets its hovered-help
-            // fields at the top of every window pass.
-            kernelSource!.SetHelpHover("");
+            // C+A help model + D10 grace: the hover claim is a per-frame transient, but the
+            // release to the section overview waits out a short grace window so moving the
+            // pointer between adjacent controls never flashes the overview
+            // (VoicePacksPageModel.BeginHelpHoverFrame owns the rule; the claim is still cleared
+            // here, the one place that owns the frame boundary, and widgets re-claim during the draw).
+            kernelSource!.BeginHelpHoverFrame();
             kernelHost.DrawFrame(contentRect);
         }
         catch (System.Exception ex)

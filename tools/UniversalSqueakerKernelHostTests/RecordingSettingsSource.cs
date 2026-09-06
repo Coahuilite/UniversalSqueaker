@@ -29,6 +29,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// </summary>
     public bool WrappingDomainText;
 
+    /// <summary>
+    /// Author strings used by the rich BuildView (the pack/author filter options). The D9 lane
+    /// injects a label far wider than the 143px filter column to prove the popup grows and the
+    /// trigger ellipsizes instead of clipping.
+    /// </summary>
+    public string[] Authors = new[] { "AuthorA", "AuthorB" };
+
     // Basic writes.
     public SqueakVoicePackMode? LastMode;
     public float? LastGlobalVolume;
@@ -240,7 +247,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             buildIdentity: BuildIdentity,
             saveStatus: SaveStatus,
             isDirty: true,
-            authors: new[] { "AuthorA", "AuthorB" },
+            authors: Authors,
             raceFilter: state.RaceFilter,
             xenotypeFilter: state.XenotypeFilter,
             raceFilterOptions: new[]
@@ -347,7 +354,11 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastDomainFilterFlag = flag;
     }
 
-    public void SetPackFilter(string author) => LastPackFilter = author;
+    public void SetPackFilter(string author)
+    {
+        LastPackFilter = author;
+        VoicePacksPageModel.SetPackFilter(state, author);
+    }
 
     public void SetRaceFilter(string raceDefName) => LastRaceFilter = raceDefName;
 
@@ -362,6 +373,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastHelpHover = key;
         VoicePacksPageModel.SetHelpHover(state, key);
     }
+
+    public void BeginHelpHoverFrame() => VoicePacksPageModel.BeginHelpHoverFrame(state);
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {

@@ -121,11 +121,13 @@ internal static class Program
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
+        Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
         Step("distance card draws its bands filled and disjoint", DistanceCardBandsFillTheMeasuredCard);
         Step("every display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
+        Step("hover claims release to the overview only after the D10 grace window", HelpHoverClaimReleasesOnlyAfterGraceWindow);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
@@ -187,6 +189,76 @@ internal static class Program
         host.Session.ClosePopup();
         host.DrawFrame(viewport);
         Assert(!host.Session.OpenPopupRect.HasValue, "a closed composite popup must leave no published rect");
+    }
+
+    /// <summary>
+    /// D9 (2026-09-06 in-game): a long author credit clipped in the pack filter - the popup
+    /// inherited the 143px trigger column verbatim (a 530px row was audited into 131px) and the
+    /// trigger drew the selected label with no ellipsis. The popup now grows to the widest option
+    /// label capped at the viewport, and the trigger ellipsizes through the same seam the audit
+    /// measures. This lane asserts both against the real host and proves the fit audit goes silent
+    /// on the two filter surfaces.
+    /// </summary>
+    private static void LongAuthorFilterGrowsPopupAndEllipsizesTrigger()
+    {
+        string longAuthor = new string('A', 60); // StubMetrics Small: 60 x 8px = 480px, far over 143
+        var stub = new StubMetrics();
+        var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { longAuthor } };
+        using UiHost host = UsKernelSettingsHost.Create(fake, stub);
+        host.Bindings.Invoke("set-tab", "Packs");
+        host.Bindings.Invoke("set-pack-filter", longAuthor);
+        Rect viewport = new(0f, 0f, 800f, 600f);
+
+        var reports = new List<UiOverflowReport>();
+        UiFitAudit.Attach(stub, reports.Add);
+        UiFitAudit.Enabled = true;
+        SetTranslatorResolver(ReadKeyedTable("English"));
+        try
+        {
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport); // prime the view cache and popup state
+            UiFitAudit.Reset();
+            reports.Clear();
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport);
+            Assert(
+                reports.FindAll(r => r.ElementPath.Contains("filter-bar")).Count == 0,
+                "a selected long author must ellipsize inside the fixed trigger column, not overflow: "
+                + DescribeOverflow(reports));
+
+            Rect anchor = new(300f, 200f, 143f, 24f);
+            host.Session.OpenPopup("pack-filter", anchor);
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport);
+            Rect? published = host.Session.OpenPopupRect;
+            Assert(published.HasValue, "the opened pack-filter must publish its rect");
+            Rect popup = published.GetValueOrDefault();
+            float needed = stub.MeasureWidth(longAuthor, UiFont.Small) + 12f;
+            Assert(popup.width >= needed - 0.01f,
+                "the popup must grow to the widest option label: " + popup.width + " < " + needed);
+            Assert(popup.width <= viewport.width + 0.01f,
+                "the grown popup must stay capped at the viewport: " + popup.width);
+
+            UiFitAudit.Reset();
+            reports.Clear();
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport); // repaint with the popup open: rows measured against the grown rect
+            Assert(
+                reports.FindAll(r => r.ElementPath.Length == 0 || r.ElementPath.Contains("filter-bar")).Count == 0,
+                "the widened popup must render its long row without overflow: " + DescribeOverflow(reports));
+        }
+        finally
+        {
+            UiFitAudit.Detach();
+            SetTranslatorResolver(null);
+        }
+    }
+
+    private static string DescribeOverflow(List<UiOverflowReport> reports)
+    {
+        return string.Join(" | ", reports.ConvertAll(
+            r => "(" + (r.ElementPath.Length == 0 ? "unscoped" : r.ElementPath) + " " + r.Axis
+            + " " + r.Needed + "/" + r.Available + ")"));
     }
 
     /// <summary>
@@ -436,8 +508,9 @@ internal static class Program
         AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
     }
     /// <summary>
-    /// One frame of the settings-window protocol: clear the per-frame claim, pump a Repaint pass
-    /// with the pointer at <paramref name="pointer"/>, then draw. Mirrors
+    /// One frame of the settings-window protocol: run the D10 hover-frame boundary (clear, or hold
+    /// the previous claim inside the grace window), pump a Repaint pass with the pointer at
+    /// <paramref name="pointer"/>, then draw. Mirrors
     /// UniversalSqueakerSettingsWindow.DoWindowContents; the claim is read back from the fake's
     /// business state exactly as the real source stores it.
     /// </summary>
@@ -449,13 +522,62 @@ internal static class Program
         Event.current = e;
         try
         {
-            fake.SetHelpHover("");
+            fake.BeginHelpHoverFrame();
             host.DrawFrame(viewport);
         }
         finally
         {
             Event.current = null;
         }
+    }
+
+    /// <summary>
+    /// D10 grace protocol (2026-09-06): releasing a hover claim to the section overview is delayed
+    /// by a short window, so a pointer moving between adjacent controls never flashes the overview.
+    /// The state machine is pure (claim stamp vs frame counter); this lane pins its exact contract
+    /// against the shipped assembly through the same source the window drives.
+    /// </summary>
+    private static void HelpHoverClaimReleasesOnlyAfterGraceWindow()
+    {
+        RecordingSettingsSource fake = new RecordingSettingsSource();
+        VoicePacksPageState state = fake.ViewState;
+
+        fake.SetHelpHover("us/global-volume/slider");
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverKey.Length == 0
+                && state.HelpHoverHeld == "us/global-volume/slider"
+                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
+            "a landed claim is held and the frame starts cleared for the re-claim");
+
+        fake.SetHelpHover("us/global-volume/slider");
+        fake.BeginHelpHoverFrame();
+        fake.SetHelpHover("us/global-volume/slider");
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
+            "a stationary re-claim re-arms the grace window instead of consuming it");
+
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverKey == "us/global-volume/slider"
+                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames - 1,
+            "the first gap frame restores the held claim");
+        for (int gap = 2; gap <= VoicePacksPageModel.HoverGraceFrames; gap++)
+        {
+            fake.BeginHelpHoverFrame();
+            Assert(state.HelpHoverKey == "us/global-volume/slider",
+                "the claim holds for the whole grace window (gap frame " + gap + ")");
+        }
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverKey.Length == 0 && state.HelpHoverGraceLeft == 0,
+            "grace exhaustion releases to the section overview");
+
+        fake.SetHelpHover("us/scope-tree/layer");
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverHeld == "us/scope-tree/layer"
+                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
+            "a new claim re-arms the grace window under the new key");
+        fake.BeginHelpHoverFrame();
+        Assert(state.HelpHoverKey == "us/scope-tree/layer",
+            "the gap frame after B's claim restores B, not the old A");
     }
 
     private static void SettingsWindowPageUnavailableModel()
@@ -777,7 +899,7 @@ internal static class Program
         var viewports = new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) };
         foreach (Vector2 viewport in viewports)
         {
-            UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
             Assert(snapshot.Viewports.ContainsKey("content-scroll"), "content scroll viewport present at " + viewport);
             Assert(snapshot.Viewports.ContainsKey("help-scroll"), "help scroll viewport present at " + viewport);
             Assert(snapshot.RectById.ContainsKey("footer"), "footer rect present at " + viewport);
@@ -900,7 +1022,7 @@ internal static class Program
 
             foreach (Vector2 viewport in viewports)
             {
-                UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+                UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
                 foreach (string id in visible)
                 {
                     Assert(snapshot.RectById.ContainsKey(id), tab + " section " + id + " visible at " + viewport);
@@ -1039,7 +1161,7 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Packs");
-        UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
         float Race = snapshot.RectById.TryGetValue("race-layer", out Rect raceRect) ? raceRect.height : 0f;
         float Xenotype = snapshot.RectById.TryGetValue("xenotype-layer", out Rect xenoRect) ? xenoRect.height : 0f;
         return (Race, Xenotype);
@@ -1064,7 +1186,7 @@ internal static class Program
             host.Bindings.Invoke("set-tab", tab);
             foreach (Vector2 viewport in viewports)
             {
-                host.MeasureAndArrange(viewport);
+                host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
                 host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
             }
         }

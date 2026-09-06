@@ -361,11 +361,13 @@ internal static class UiSourceInvariantTests
 
         string window = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"));
-        int clear = window.IndexOf("SetHelpHover(\"\")", StringComparison.Ordinal);
+        int clear = window.IndexOf("BeginHelpHoverFrame()", StringComparison.Ordinal);
         int draw = window.IndexOf("kernelHost.DrawFrame(contentRect)", StringComparison.Ordinal);
         Assert(clear >= 0 && draw >= 0 && clear < draw,
-            "the settings window must clear the per-frame hover claim immediately before DrawFrame "
-            + "(moving away falls back to the section overview; without this the claim sticks)");
+            "the settings window must run the D10 hover-frame boundary immediately before DrawFrame "
+            + "(clear-or-hold-or-grace; without it the claim sticks)");
+        Assert(window.IndexOf("SetHelpHover(\"\")", StringComparison.Ordinal) < 0,
+            "the raw unconditional clear must not return - it bypasses the grace window (D10)");
 
         string host = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));

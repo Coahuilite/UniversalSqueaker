@@ -140,9 +140,14 @@ public static class UsKernelDraw
             ctx.Theme,
             open ? ctx.Theme.Selected : ctx.Theme.Raised,
             open || current.Length > 0 ? ctx.Theme.AccentGold : ctx.Theme.Border);
+        // D9 (2026-09-06 in-game): the trigger column is a fixed width, so a selected label that
+        // outgrows it (long author credits, pack names) clipped. The trigger ellipsizes through the
+        // same metrics seam the fit audit measures with, so the cut is deliberate, not silent.
+        float triggerTextWidth = Mathf.Max(1f, rect.width - 12f);
+        string triggerDisplay = EllipsizeToFit(display, triggerTextWidth, ctx.Metrics, UiFont.Tiny);
         Label(
-            new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
-            display,
+            new Rect(rect.x + 6f, rect.y, triggerTextWidth, rect.height),
+            triggerDisplay,
             ctx.Theme,
             current.Length > 0 ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Tiny,
@@ -159,9 +164,24 @@ public static class UsKernelDraw
             Rect? anchor = ctx.Session.OpenPopupAnchor;
             if (anchor.HasValue)
             {
+                // D9: the popup grows to the widest option label instead of inheriting the
+                // trigger's narrow column (UiPopup draws each row single-line Small with 6px side
+                // padding). Capped at the viewport width - RectFor still flips vertically and
+                // clamps x, and a label that survives the cap keeps overflowing loudly into the
+                // audit, which is honest: the window itself is too narrow.
+                float popupWidth = anchor.Value.width;
+                foreach (KeyValuePair<string, string> option in options)
+                {
+                    float needed = ctx.Metrics.MeasureWidth(option.Key, UiFont.Small) + 12f;
+                    if (needed > popupWidth) popupWidth = needed;
+                }
+                float viewportWidth = ctx.Session.HostViewport.width;
+                if (viewportWidth > 0f && popupWidth > viewportWidth) popupWidth = viewportWidth;
+                Rect popupAnchor = new Rect(anchor.Value.x, anchor.Value.y, popupWidth, anchor.Value.height);
+
                 string capturedCurrent = current;
                 ctx.Session.RegisterPopupDraw(() => UiPopup.DrawOptionList(
-                    UiPopup.RectFor(anchor.Value, options.Count, ctx.Session.HostViewport),
+                    UiPopup.RectFor(popupAnchor, options.Count, ctx.Session.HostViewport),
                     elementId,
                     ctx,
                     options,
@@ -169,6 +189,25 @@ public static class UsKernelDraw
                     onSelected));
             }
         }
+    }
+
+    /// <summary>
+    /// Shortens <paramref name="text"/> to the longest prefix that fits <paramref name="maxWidth"/>
+    /// plus an ellipsis, measured through the injected seam (harness and game truncate identically).
+    /// Returns the text untouched when it already fits.
+    /// </summary>
+    private static string EllipsizeToFit(string text, float maxWidth, FerriteLib.UiKit.Kernel.ITextMetrics metrics, UiFont font)
+    {
+        if (string.IsNullOrEmpty(text) || metrics.MeasureWidth(text, font) <= maxWidth) return text;
+        int lo = 0;
+        int hi = text.Length;
+        while (lo < hi)
+        {
+            int mid = lo + (hi - lo + 1) / 2;
+            if (metrics.MeasureWidth(text.Substring(0, mid) + "…", font) <= maxWidth) lo = mid;
+            else hi = mid - 1;
+        }
+        return text.Substring(0, lo) + "…";
     }
 
     /// <summary>Card frame with a title header; returns the inner body rect.</summary>

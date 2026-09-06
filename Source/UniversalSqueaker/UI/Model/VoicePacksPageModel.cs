@@ -987,6 +987,47 @@ public static class VoicePacksPageModel
     {
         if (state == null) return;
         state.HelpHoverKey = key ?? "";
+        // The stamp marks WHICH frame's draw produced this claim, so BeginHelpHoverFrame can tell
+        // a live claim from its own previous restore. Only widget claims route through here.
+        state.HelpHoverClaimStamp = state.HelpHoverFrame;
+    }
+
+    /// <summary>Frames a finished hover claim keeps explaining the panel before it releases to
+    /// the section overview (~0.25s at 60fps). Sized to bridge transit gaps between adjacent
+    /// controls without feeling like a pin.</summary>
+    public const int HoverGraceFrames = 15;
+
+    /// <summary>
+    /// Frame-boundary protocol the settings window runs before every <c>DrawFrame</c> (D10 ruling,
+    /// 2026-09-06). A claim that landed during the previous frame's draw is remembered and cleared
+    /// - widgets re-claim during this draw exactly like the plain per-frame clear, so a stationary
+    /// hover never reads as stale. When nothing claimed (a gap frame of a pointer moving from
+    /// control A to control B), the held claim is restored for <see cref="HoverGraceFrames"/>
+    /// frames: the panel goes A -> B with no overview flash, and leaving the control area releases
+    /// to the section overview only after the grace window. A live claim always replaces the held
+    /// one in the same frame, so no pin semantics return.
+    /// </summary>
+    public static void BeginHelpHoverFrame(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.HelpHoverFrame++;
+        bool claimedLastFrame =
+            state.HelpHoverKey.Length > 0 && state.HelpHoverClaimStamp == state.HelpHoverFrame - 1;
+        if (claimedLastFrame)
+        {
+            state.HelpHoverHeld = state.HelpHoverKey;
+            state.HelpHoverGraceLeft = HoverGraceFrames;
+            state.HelpHoverKey = "";
+        }
+        else if (state.HelpHoverGraceLeft > 0)
+        {
+            state.HelpHoverKey = state.HelpHoverHeld;
+            state.HelpHoverGraceLeft--;
+        }
+        else
+        {
+            state.HelpHoverKey = "";
+        }
     }
 
     // SetHelpSelection retired with the persistent index list (D2 ruling, 2026-09-05): hover is
