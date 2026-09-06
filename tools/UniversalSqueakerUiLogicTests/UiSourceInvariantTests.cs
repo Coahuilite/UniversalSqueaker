@@ -581,6 +581,20 @@ internal static class UiSourceInvariantTests
                 "shipped manifests must pass translatable text as *Key attributes, never as a literal;"
                 + " offending element: " + (offenders?.Name ?? "") + " in " + manifest);
         }
+
+        // Text-surface closure (F4, 2026-09-06): the window chrome is drawn through the Keyed seam
+        // only, and the footer's closed save-status token set reports drift instead of silently
+        // rendering an unknown state. Restoring a chrome literal or dropping the guard fails here.
+        string windowChrome = Path.Combine(
+            root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs");
+        CheckSourceDoesNotContain(windowChrome, "\"Close\"",
+            "the close button must translate US.Settings.Window.Close, not ship an English literal");
+        CheckSourceDoesNotContain(windowChrome, "VoicePack Routing",
+            "the window subtitle must come from the Keyed table, not a source literal");
+        CheckSourceContains(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsFooterWidget.cs"),
+            new[] { "ReportedStatusTokens.Add" },
+            "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
     private static Dictionary<string, string> ReadKeyedTable(string path)

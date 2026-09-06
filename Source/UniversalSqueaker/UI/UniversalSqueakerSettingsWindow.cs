@@ -210,7 +210,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
             UiFont.Medium);
         UiThemeDraw.Label(
             new Rect(titleRect.x, titleRect.y + 30f, titleRect.width, 18f),
-            "Universal Squeaker — VoicePack Routing",
+            Translator.Translate("US.Settings.Window.Subtitle"),
             Theme,
             Theme.TextSecondary,
             UiFont.Tiny);
@@ -232,7 +232,7 @@ public sealed class UniversalSqueakerSettingsWindow : Window
             hovered ? Theme.BorderStrong : Theme.Border);
         UiThemeDraw.Label(
             rect,
-            "Close",
+            Translator.Translate("US.Settings.Window.Close"),
             Theme,
             hovered ? Theme.TextPrimary : Theme.TextSecondary,
             UiFont.Tiny,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 
@@ -90,9 +91,12 @@ public sealed class UsKernelFooterWidget : IUiWidget
 
     /// <summary>
     /// Display-only translation of the save-status token. All status logic in Draw (color, dot
-    /// prefix) keeps matching on the raw token from the binding — never on translated text — and an
-    /// unrecognized token still renders raw, exactly like before the Keyed migration.
+    /// prefix) keeps matching on the raw token from the binding - never on translated text. The
+    /// token set is a closed enum surface: an unrecognized token is drift (a new state without a
+    /// Keyed entry), so it is reported once per value and still rendered raw as the last resort.
     /// </summary>
+    private static readonly HashSet<string> ReportedStatusTokens = new HashSet<string>();
+
     private static string SaveStatusText(UiWidgetContext ctx, string token)
     {
         string? key = token switch
@@ -104,6 +108,15 @@ public sealed class UsKernelFooterWidget : IUiWidget
             "Unknown" => "US.Footer.SaveStatus.Unknown",
             _ => null,
         };
-        return key != null ? ctx.Translation.Translate(key) : token;
+        if (key == null)
+        {
+            if (ReportedStatusTokens.Add(token ?? ""))
+            {
+                Log.Error("[US] footer save-status token '" + token + "' has no Keyed entry; "
+                    + "extend UsFooterWidget.SaveStatusText and both language tables.");
+            }
+            return token ?? "";
+        }
+        return ctx.Translation.Translate(key);
     }
 }
