@@ -5,11 +5,11 @@
 ## Entries
 
 - 2026-08-24 legacy bridge activation (maintainer authorization): the 0.4 co-existence rule "US must not define SqueakyRatkin.* types" was explicitly overridden for one thin empty `SqueakyRatkin.SqueakVoicePackDef` compatibility shim. Old SR VoicePacks now load through the bridge and are explicitly marked as old SR content in logs (`voicepack.pack.legacy_admitted`) and UI (`Legacy SR` tag/banner). No Ratkin audio/content ships with US.
-- 2026-08-23 US rebuild cleanup: the SR-derived reference trees were consumed and deleted from the working tree — root `Kernel/` (9 cs files), `Pure/` (2 cs files), `fixtures/` (SR corpora + 0.2.4-shaped settings fixtures), `sr_reference/` (SR SoundDefs/localization snapshot), and `tools/KernelCharacterization/` (legacy SR harness). They remain retrievable from git history. Pre-rebuild baseline commit: `dc8c598`; last pre-cleanup commit: `0c4871a`. Rebuild commits: `a00bbfa` (de-SR-ized kernel/pure + US test gate), `9de2161` (runtime assembly + data surface + tool gates), `0c4871a` (componentized minimal UI).
+- 2026-08-23 US rebuild cleanup: the SR-derived reference trees were consumed and deleted from the working tree — root `Kernel/` (9 cs files), `Pure/` (2 cs files), `fixtures/` (SR corpora + 0.2.4-shaped settings fixtures), `sr_reference/` (SR SoundDefs/localization snapshot), and `tools/KernelCharacterization/` (legacy SR harness). They remain retrievable from git history. Pre-rebuild baseline commit: `abae59c`; last pre-cleanup commit: `a43b731`. Rebuild commits: `edfba6b` (de-SR-ized kernel/pure + US test gate), `1ea6856` (runtime assembly + data surface + tool gates), `a43b731` (componentized minimal UI).
 
 ## Archived session checkpoints (moved out of `MEMORY.md` on 2026-09-02b; verbatim, byte-copied)
 
-- Reason: `AGENTS.md` forbids session narratives in the active memory files. Every block below was live working state at its date and has since been superseded by the cutover (commit `e25c686`) and text-fit/localization (commit `55b6edf`) sections that remain in `MEMORY.md`. Line references and commit hashes are as written at the time.
+- Reason: `AGENTS.md` forbids session narratives in the active memory files. Every block below was live working state at its date and has since been superseded by the cutover (commit `1a4e904`) and text-fit/localization (commit `bba6da2`) sections that remain in `MEMORY.md`. Line references and commit hashes are as written at the time.
 - Most superseded specifics: gate counts grew 12 -> 13 -> 14 -> 15; `Palette`/`UiText`/`UiPanel`/`SurfaceFrame`/`UiInteract`/`UiValueStore`/`UiGuard`/`VoicePacksLayout`/`Layout.xml` (Schema=1) and the legacy page chain no longer exist; Gate U no longer requires a retained fallback.
 
 ## UiKit / US settings rebuild checkpoint (2026-08-31)
@@ -26,7 +26,7 @@
 ## Engineering decisions and handoff
 
 - **Local fork only**: no remote is configured; local commits are the only permitted git operations until the maintainer authorizes remote/push. Reachable history still contains the pre-fix personal absolute SR path in `MEMORY.md` (commits `eb2ac90..dc8c598`); it is recorded in TODO and must be handled by the maintainer before any first push.
-- **Migration inventory (2026-08-23, historical)**: `Kernel/*.cs` (9 files), `Pure/` (2 files), `tools/KernelCharacterization/*` plus `fixtures/` and `sr_reference/` were migrated, consumed as references during the rebuild, and deleted in Phase 4; they remain in git history (`dc8c598` baseline).
+- **Migration inventory (2026-08-23, historical)**: `Kernel/*.cs` (9 files), `Pure/` (2 files), `tools/KernelCharacterization/*` plus `fixtures/` and `sr_reference/` were migrated, consumed as references during the rebuild, and deleted in Phase 4; they remain in git history (`abae59c` baseline).
 - **Inherited technical debt (from the SR snapshot) — resolved by the rebuild**: namespaces migrated to `UniversalSqueaker*`, Ratkin seed and `SR_*` keys removed, `DomainFilter`/`SqueakProductDomainFilter` deleted, five-way sync replaced by three-way sync plus tool gates.
 - **Target baseline**: kernel with zero product literals (race/sound-key/prefix all injected as data); UI only needs VoicePack assignment to work, all other pages may be removed but must not crash; every race routes equally with no Ratkin special-casing.
 - **UI adaptation decision (per HANDOFF.md)**: Plan A (vertical cut) is recommended — keep settings shell, Off/Fallback/Remix mode cards, Race layer, and VoicePack domain checkboxes; remove SoundMood workbench, Diagnostics, audio browser, statistics/overlay/mote diagnostics, and the Xenotype behavior editor without changing any Scribe schema.
@@ -41,7 +41,7 @@
 - D5 Kernel product literals: `BuiltInFallbackCatalog` (Ratkin seed + `SR_*` keys) and `DomainFilter` whitelist semantics removed; `BuiltInFallbackTable.Empty` plus data injection remain.
 - D5b Comp attach: VoicePacks may attach `CompProperties_Squeaker` via their own XML patch.
 - D6 UI: reactive view-model + declarative immediate-mode components over Verse widgets (evaluation: `docs/ui-componentization-evaluation-zh.md`; implementation notes: `docs/ui-phase3-implementation-notes-zh.md`).
-- D7 Cleanup executed in an atomic commit: `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, old `tools/KernelCharacterization/` deleted; `OBLIVIONIS.md` records the pre-rebuild baseline commit `dc8c598`.
+- D7 Cleanup executed in an atomic commit: `Kernel/`, `Pure/`, `fixtures/`, `sr_reference/`, old `tools/KernelCharacterization/` deleted; `OBLIVIONIS.md` records the pre-rebuild baseline commit `abae59c`.
 
 ## Session resume checkpoint (2026-08-24 — UI migration planning session; compression anchor)
 
@@ -55,13 +55,13 @@
 - Two independent reviewer reports completed this session and folded into plan §14. Top open items before S2/S4: H1 layered-priority conflict with `SqueakGlobalActionPolicy` early-return; H2 explicit Scribe migration design needed; H3 Race-layer runtime consumption missing; H4 ActionKey stringification inventory; H5 Sustained validator/playback prerequisites. Recommended execution order: Scribe+data-model design → S1 → S2 (one-shot ActionKey+layered table+action gate) → S3 → S4 → S5.
 - Key code facts verified this session (do not re-derive): `CompProperties_Squeaker` = `CompSqueaker.cs:897-955` (globalMinIntervalTicks/scaleFrequencyWithTalking/actions/moodMods/distancePresets; `CreateDefault()` 916-954); `SqueakVoicePackDef` never carries behavior/mood data (`Models/SqueakVoicePackModels.cs:9`); `xenotypePresets` consumed at `SqueakRuntimeResolver.cs:149-155`; `moodOverrides` at `CompSqueaker.cs:561-573`; distance applied at `CompSqueaker.cs:838-853`; three runtime scale switches at `CompSqueaker.cs:147-149`; `Sustained` period path dead but external `NotifyExternal` does not filter by mode; pawn identity = `SqueakRuntimeSnapshot.ResolveContext` + `Choose` (`SqueakRuntimeResolver.cs:224-252`); `localizeDebugActions` dead field (patch removed); `Patch_ModMetaData_LocalizedMetadata` still present and to be deleted.
 - Pending maintainer confirmations: (1) old `Off` rename target — recommended `Vanilla` (or `FallbackOnly`); (2) tuning baseline Def final name/shape; (3) `ActionEntry`/`TriggerBinding` C# interface detail before S2.
-- Prior session state still relevant: local commit chain ends at `19ba732` (working tree now additionally has the new plan doc + TODO edit + MEMORY checkpoint edit, uncommitted). Test pack inventory under `dist/` unchanged: `Kiiro-US-EXP`, `Nivarian-US-EXP`, `KiiroSiamese-XenoRoutingTest-US-EXP`, `RatkinOA-XenoRoutingTest-US-EXP`. Install by copying `dist/dev/UniversalSqueaker` over the game Mods folder. `dist/` is gitignored build/test output.
+- Prior session state still relevant: local commit chain ends at `d3c94b3` (working tree now additionally has the new plan doc + TODO edit + MEMORY checkpoint edit, uncommitted). Test pack inventory under `dist/` unchanged: `Kiiro-US-EXP`, `Nivarian-US-EXP`, `KiiroSiamese-XenoRoutingTest-US-EXP`, `RatkinOA-XenoRoutingTest-US-EXP`. Install by copying `dist/dev/UniversalSqueaker` over the game Mods folder. `dist/` is gitignored build/test output.
 - Next action on resume: read `docs/us-ui-migration-plan-zh.md` §14, then either start the Scribe+data-model design or S1 global-layer removal; collect maintainer answers to the three pending confirmations first if possible.
 
 
 ## Session resume checkpoint (2026-08-25c — 第三次会话；跨 harness 压缩锚点)
 
-- This session executed **双源统一 + voicePackDefaultSeeded 删除 + dist/ 残留 + Legacy 兼容桥删除 + Baseline 预设系统 + 路由表评估**，committed as 7 LOCAL commits: `1c64146` → `55b6990` → `50bb2ed` → `65b4611` → `6aaeeea` → `a4b90c0` → `e86388e` → `3291672`, on top of `801792e`. All green: verify-local 12 gates + Dev/Release 0 warnings + kernel golden-corpus replay zero-delta. Working tree clean.
+- This session executed **双源统一 + voicePackDefaultSeeded 删除 + dist/ 残留 + Legacy 兼容桥删除 + Baseline 预设系统 + 路由表评估**，committed as 7 LOCAL commits: `5068548` → `5518827` → `a49b06c` → `8279444` → `a5bcff3` → `5c405f4` → `bec1db2` → `9812c02`, on top of `e279de1`. All green: verify-local 12 gates + Dev/Release 0 warnings + kernel golden-corpus replay zero-delta. Working tree clean.
 - Durable facts established this session (do not re-derive):
   - **双源统一完成**：`globalActionEnabled` 全链路删除。`BuildGlobalActions` = `C# DefaultScope < actionTuning Global 层`。
   - **Legacy SR 兼容桥已删除**（维护者裁决）。`Legacy/` 目录全删，`SqueakyRatkin.*` 类型不再存在，3 个 legacy 日志事件删除，UI Legacy SR 标记删除。LogTests V2 事件计数 9→6。
@@ -76,10 +76,10 @@
 
 ## Session resume checkpoint (2026-08-27 — route-table open + audit fixes + plan update)
 
-- This session landed **路由表开放** and closed audit findings A1–A3 on top of `3291672`:
-  `456b2a4` (route table open) → `d8b869e` (escape-hatch rename) → `24f958c` (A1) → `23785a3` (A2) → `11904d5` (A3). All green: Dev/Release 0 warnings + verify-local 12 gates + kernel golden-corpus replay. Working tree clean.
+- This session landed **路由表开放** and closed audit findings A1–A3 on top of `9812c02`:
+  `5819089` (route table open) → `eccca79` (escape-hatch rename) → `7320e9e` (A1) → `b8de71a` (A2) → `f6be81b` (A3). All green: Dev/Release 0 warnings + verify-local 12 gates + kernel golden-corpus replay. Working tree clean.
 - Durable facts established this session (do not re-derive):
-  - **路由表开放 (456b2a4)**: new `Catalog/VoicePackCompAttach.cs` mounts `CompProperties_Squeaker.CreateDefault()` on every race of the admitted-pack union (`catalog.RaceDefNames`), with `auto_attached`/`attach_skipped` diagnostics; author-patch escape hatch preserved via `Any()` skip (docs term now **作者自定义优先 (escape hatch)** — renamed in `d8b869e` to stop colliding with RimWorld pod naming). 3 new v2 events (`voicepack.comp.auto_attached`/`attach_skipped`/`attach_failed`); LogTests v2 registry 6→9. SKILL.md rewritten: canonical packs need no comp patch (patch = optional advanced use only).
+  - **路由表开放 (456b2a4)**: new `Catalog/VoicePackCompAttach.cs` mounts `CompProperties_Squeaker.CreateDefault()` on every race of the admitted-pack union (`catalog.RaceDefNames`), with `auto_attached`/`attach_skipped` diagnostics; author-patch escape hatch preserved via `Any()` skip (docs term now **作者自定义优先 (escape hatch)** — renamed in `eccca79` to stop colliding with RimWorld pod naming). 3 new v2 events (`voicepack.comp.auto_attached`/`attach_skipped`/`attach_failed`); LogTests v2 registry 6→9. SKILL.md rewritten: canonical packs need no comp patch (patch = optional advanced use only).
   - **A1 (24f958c)**: actionTuning layered table serves built-in action keys only — the Global-layer comment previously claimed external keys apply (they never did). External-key tuning is YAGNI; revisit if an external-action ecosystem appears.
   - **A2 (23785a3)**: `BuildFallback` preserves `NormalizeMode(settings.voicePackMode)` instead of hardcoding Vanilla — Disabled true bypass now survives resolver rebuild exceptions (M1 compliance; before the fix the bypass gates stopped firing and data-driven builtin fallback could play while Disabled).
   - **A3 (11904d5)**: `CompTick` Disabled gate moved ahead of `MaintainSustainer`, mirroring the `NotifyExternalByKey` head gate. An active Sustainer is no longer maintained in bypass; vanilla's unmaintained lifecycle ends it in ~1–2 s. No special-case End branch.
@@ -91,8 +91,8 @@
 
 ## Session resume checkpoint (2026-08-27c — S5 layered tuning + tuning editor + kernel gate landed)
 
-- This session completed the layered-mood + tuning-editor + kernel-gate plan on top of `11904d5`:
-  `81e7bb9` (layered mood data) → `2ce5dd9` (three-layer tuning editor UI, option 1) → `43835ea` (pure fold + kernel gate) → `f4d8448` (three-reviewer fixes). All green: Dev/Release 0 warnings, verify-local 12 gates, kernel golden-corpus zero delta, 13 layered-fold assertions. Working tree clean.
+- This session completed the layered-mood + tuning-editor + kernel-gate plan on top of `f6be81b`:
+  `c2aaeae` (layered mood data) → `d7dc7f7` (three-layer tuning editor UI, option 1) → `76b8115` (pure fold + kernel gate) → `14f86b6` (three-reviewer fixes). All green: Dev/Release 0 warnings, verify-local 12 gates, kernel golden-corpus zero delta, 13 layered-fold assertions. Working tree clean.
 - Durable facts (do not re-derive):
   - **分层心情调音 (81e7bb9)**: `MoodTuningRecord` three-layer table (mirror of `ActionTuningRecord`); settings schema 4→5 transactional migration (`moodOverrides`→layer 0, `XenotypePresetRecord.moodOverrides`→layer 2, lossless); runtime three-layer fold in snapshot contexts; `ResolveMoodMod` no longer live-reads settings (H3 completed); importer decision flip — race.moods → layer 1 (supersedes the 2026-08-25c global-dict record), xeno.moods → layer 2.
   - **三层调音编辑器 (2ce5dd9)**: `ScopeTreeWidget` rewritten as the S5 tuning editor — layer segment (Global/Race/Xenotype), domain picker (race list / xeno domain union), scope rows with inherit ring (Auto/Off/Any/Command filtered by supported scopes; inherit clears the layer record), four mood rows with −/+ step factor controls (field-level hasX) + Auto clear. New commands `SetTuningLayer`/`SetTuningDomain`/`SetMoodTuning`; `SetMoodTuning` write bridge (last-wins, clear-all, continuous resolver rebuild).
@@ -118,7 +118,7 @@
 
 - **S4-Polish + US UI 大修 U0–U6 全部完成**：verify-local 14 门全绿，Dev/Release 0 警告；任务书/评估/最终 review 在 `docs/workdocs/us-ui-overhaul-*`。
 - **UiKit B1–B4 已落地**：`UiInteract` 分层输入路由、`UiValueStore`、`input/number-slider`；`UiGuard` 公开，`UsGuard`/`FerriteGuard` 已删除。
-- **游戏内试用发现**：左导航不可点击、帮助按钮被内容覆盖、部分控件错位。已做 **US 侧 hotfix**（nav 改 `ButtonInvisible` + 手绘 label；help 在 US widget 内移到 surface 之后绘制），提交 `1ae7dd6`。
+- **游戏内试用发现**：左导航不可点击、帮助按钮被内容覆盖、部分控件错位。已做 **US 侧 hotfix**（nav 改 `ButtonInvisible` + 手绘 label；help 在 US widget 内移到 surface 之后绘制），提交 `1369869`。
 - **架构警告**：hotfix 是绕过 UiKit 的 workaround；正确方案应回到 UiKit 层（顶层绘制阶段 + 导航纳入统一交互帧），记为 **U7**，尚未实现。
 - **dist voicepack 已整理**：`dist/voicepacks/final-test/` 只保留三个独立当前 US 包（`Ratkin-US-EXP`、`Kiiro-US-EXP`、`Nivarian-US-EXP`），`archive/` 放其它测试/legacy 包；包间不互相引用。Ratkin 包已删除 legacy `SqueakyRatkin_ExampleTemplate_Race.xml` 并重命名为 `US_RatkinExp`；Nivarian packageId 修复为 `coahuilite.nivarianusexp`。
 - **日志红字**：旧 SR ABI `SqueakyRatkin.SqueakVoicePackDef` 红字来自旧 Ratkin/legacy 包，当前 US 不再存在该类型；final-test 包已清理。
@@ -127,17 +127,17 @@
 
 ## Session resume checkpoint (2026-08-30b — 现代 UI 重构落地)
 
-- **现代 UI 重构（`514efb2`）**：UiKit 新增 `UiPanel`/`UiText` 中性原语 + `Palette` 深色/金色 token；US 新增 `UsCard` 卡片外壳覆盖主要设置区块；设置窗口按维护者安全区在 60%～75% 之间浮动（默认 72%×66%），不盖满全屏；左侧导航现代侧边栏（品牌区/hover/active/金色 accent）。verify-local 14 门全绿，Dev/Release 0 警告。
-- **Camera+ 参考（`b86fc97`）**：参考 Workshop Camera+ 设置界面，宽屏时增加右侧帮助面板（`UsHelpPanel`，≥1200px 显示，窄屏隐藏）。
+- **现代 UI 重构（`a4d5070`）**：UiKit 新增 `UiPanel`/`UiText` 中性原语 + `Palette` 深色/金色 token；US 新增 `UsCard` 卡片外壳覆盖主要设置区块；设置窗口按维护者安全区在 60%～75% 之间浮动（默认 72%×66%），不盖满全屏；左侧导航现代侧边栏（品牌区/hover/active/金色 accent）。verify-local 14 门全绿，Dev/Release 0 警告。
+- **Camera+ 参考（`4619062`）**：参考 Workshop Camera+ 设置界面，宽屏时增加右侧帮助面板（`UsHelpPanel`，≥1200px 显示，窄屏隐藏）。
 - **UI 审阅结束（2026-08-30）**：本次审阅需求已整理到 `docs/us-ui-review-requirements-zh.md`（反馈原文 `docs/ui-feedback.md`，设计调研 `docs/ui-ux-research-zh.md`，实施计划 `docs/us-ui-implementation-plan-zh.md`）；**UiKit 容器化/控件基础设施列为最高优先**，衰减图作为可复用 UiKit 控件，帮助入口已确定移除内联 `?`、右侧帮助始终保留，待维护者确认后实施。
 - **UI 帮助方案反馈（2026-08-30）**：维护者认为 Camera+ 右侧帮助面板优于内联 `?` 按钮 + banner；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **800×600 三栏帮助（2026-08-30）**：硬下限 800×600，右侧帮助始终保留，不使用帮助按钮；三栏宽度响应式收缩，方案见 `docs/us-ui-review-requirements-zh.md` R18。
 - **UI 功能块分区反馈（2026-08-30）**：维护者认为三个功能块应各自独立连续滚动，包过滤器应属于包管理块而非全局顶部；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **Tuning Editor 交互反馈（2026-08-30）**：维护者希望 domain/action scope 改下拉菜单，mood 控件升级为 滑条 + 数值输入 + −/+ 微调复合控件；已记录到 `docs/ui-feedback.md`，待拍板后实施。
 - **衰减图/功能块标题/组合式功能块反馈（2026-08-30）**：衰减折线图需重做；每个功能块要有标题作为导航锚点；维护者提出组合式功能块思路，需评估 UiKit 容器化以支持 XML 层级；已记录到 `docs/ui-feedback.md`，待拍板后实施。
-- **未实机审阅**：`514efb2`/`b86fc97` 仅通过构建/测试门禁，需维护者在游戏内确认视觉效果与交互。
+- **未实机审阅**：`a4d5070`/`4619062` 仅通过构建/测试门禁，需维护者在游戏内确认视觉效果与交互。
 - **后续 backlog 不变**：OB-02/03/04 + `docs/workdocs/` 移除 + Ferrite 游戏内稳定化 + 可选 Runtime harness。
-- **UI 实施计划 Phase 0–2 完成（2026-08-30）**：内联 `?` 已移除（`fe4a77f`）；右侧帮助始终保留、800×600 三栏响应式（`1ef4249`）；功能块独立滚动 + 包过滤器归位（`ebd3b5c`）；Tuning Editor 下拉 + Mood stepper-slider（`1d898b3`，含 UiKit `OptionsBind` 与紧凑宽度支持）；衰减图改为 UiKit `chart/line`（`f718db5`）；`docs/workdocs/` 已移除；verify-local 14 门全绿。待独立 review agent 审查与游戏内实机验证。
+- **UI 实施计划 Phase 0–2 完成（2026-08-30）**：内联 `?` 已移除（`faca4cd`）；右侧帮助始终保留、800×600 三栏响应式（`d8ecf09`）；功能块独立滚动 + 包过滤器归位（`5f09c39`）；Tuning Editor 下拉 + Mood stepper-slider（`b04aa53`，含 UiKit `OptionsBind` 与紧凑宽度支持）；衰减图改为 UiKit `chart/line`（`6121138`）；`docs/workdocs/` 已移除；verify-local 14 门全绿。待独立 review agent 审查与游戏内实机验证。
 
 ## Session resume checkpoint (2026-08-30c — UI 反馈修复批次 A–D 调度完成)
 
@@ -162,8 +162,8 @@
 
 - **现象**：打开设置页时 `us/ferrite-page` 与 `us/vanilla-fallback` 每帧 fallback，异常 `Value cannot be null. Parameter name: source`；关闭再打开可恢复（瞬态首次打开问题）。
 - **处理（本地提交）**：
-  - `0a936f6`：`UiGuard` 记录完整异常堆栈；对 `voicePackSelections`、`domain.Packs`、`GetVoicePackDomainPacks` 等可能 null 的 LINQ 来源加防御保护；修复 `UiGuard.ResetSessionLog()` 每帧调用导致的日志刷屏。
-  - `acc854d`：`FerriteVoicePacksPage` 首次绘制失败自动重置 `State` 并下一帧重试（等价“关闭再打开”），第二帧仍失败才 fallback。
+  - `5976b0e`：`UiGuard` 记录完整异常堆栈；对 `voicePackSelections`、`domain.Packs`、`GetVoicePackDomainPacks` 等可能 null 的 LINQ 来源加防御保护；修复 `UiGuard.ResetSessionLog()` 每帧调用导致的日志刷屏。
+  - `790a993`：`FerriteVoicePacksPage` 首次绘制失败自动重置 `State` 并下一帧重试（等价“关闭再打开”），第二帧仍失败才 fallback。
 - **验证**：`verify-local.ps1` 14 门全绿，Dev/Release 0 警告。
 - **Gate R 后续事实**：新 Kernel Settings Host 首开、Basic 操作和关闭重开已由维护者实机确认无异常；若未来回归，现有完整堆栈日志仍可直接定位。
 
@@ -183,7 +183,7 @@
 
 - Maintainer ruling (durable): cut the legacy UI chain **before** in-game Gate U validation. Rationale accepted after audit: the legacy page is the weaker implementation (it still ships the unfixed narrow-width control-omission branch) and it anchors design debates. The Gate U in-game checklist still applies, but now against a single kernel path instead of two.
 - Legacy UI measured surface: 72 files / 8,785 LOC. 58 files / 8,236 LOC are reachable only through `UniversalSqueakerSettingsWindow.DrawLegacyPage`. Business layer loss is zero: `VoicePacksPageModel`/`VoicePacksPageState`/`VoicePacksViewState` are the shared boundary the kernel already delegates every write through.
-- Root structural finding: `c23e5ee` landed the greenfield kernel as 95 added / 22 modified (+16,811/-115) — a **parallel tree**, not the in-place rewrite `docs/uikit-rebuild/02-brownfield-cutover-matrix-zh.md` §2.2/§3.1 planned. Consequence still live today: two widget families register the same `us/*` Kind names, and `UniversalSqueaker.csproj` embeds Schema=1 plus both Schema=2 manifests despite the matrix rule "no half migration".
+- Root structural finding: `fead57e` landed the greenfield kernel as 95 added / 22 modified (+16,811/-115) — a **parallel tree**, not the in-place rewrite `docs/uikit-rebuild/02-brownfield-cutover-matrix-zh.md` §2.2/§3.1 planned. Consequence still live today: two widget families register the same `us/*` Kind names, and `UniversalSqueaker.csproj` embeds Schema=1 plus both Schema=2 manifests despite the matrix rule "no half migration".
 - The §8 clean-cutover inventory mandated by `docs/uikit-rebuild/tasks/EXTERNAL-DEEPSEEK-FINAL-RECOVERY.md` was never produced; the measurements above replace it.
 - Relocation set (kernel compiles against these while they sit in legacy directories — move, do not delete): `FerriteLib.UiKit/Layout/UiElementSpec.cs`, `Metrics/ITextMetrics.cs`, `Metrics/UiFont.cs`, `Interaction/UiValueState.cs`, `Widgets/{UiKitFonts,Palette,UiText,SurfaceFrame}.cs`. The settings-window chrome depends on the last three (`UniversalSqueakerSettingsWindow.cs:135-174`); `UiKitFonts` is a kernel dependency and was misclassified as deletable in an earlier review pass.
 - Shim set kept alive only by the diagnostics panel (migrate `SqueakDiagnosticsPanel` to `UiTheme`/`UiThemeDraw`, then delete): `UI/Components/{SectionFrame,UiPalette,EmptyState,StatusBanner}.cs`, `UI/Visuals/{UsSurface,UsVisualTokens}.cs`. All six self-describe as compatibility forwarding.

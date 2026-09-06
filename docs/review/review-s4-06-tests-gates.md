@@ -2,7 +2,7 @@
 
 ## 结论
 
-已按只读方式核对 HEAD `bf7342f` 下 Tests / Gates 重点文件：
+已按只读方式核对 HEAD `46b7d16` 下 Tests / Gates 重点文件：
 
 - `scripts/verify-local.ps1`
 - `tools/UniversalSqueakerUiLogicTests/Program.cs` / `.csproj`

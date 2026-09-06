@@ -1,6 +1,6 @@
 # Review 04 — Catalog / Comp Auto-Attach
 
-审查日期：2026-08-28（工作区当前 HEAD `4e15511`）
+审查日期：2026-08-28（工作区当前 HEAD `ca71d96`）
 审查类型：独立代码审查（只读 + 报告 + TODO 勾选）
 结论：**无 blocker**；有 1 个需要维护者确认的 major 级域身份一致性问题，其余为 minor/nit。
 

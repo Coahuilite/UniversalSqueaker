@@ -1,6 +1,6 @@
 # 首次上云指南（一次性事务）
 
-> 由 lib 侧会话 2026-09-06 撰写，US 锚点 `73b0b6a`（213 提交 / 227 tracked / 无 remote / 无 tag / 单 main）。执行会话同日复测：基线全部复核，两处措辞漂移已修正（见 docs(upload) 提交）；本文档自身原内联真实路径字面量，已中性化——它不在 §2 重写白名单内，留着就是永久债。
+> 由 lib 侧会话 2026-09-06 撰写，US 锚点 `5f811a0`（213 提交 / 227 tracked / 无 remote / 无 tag / 单 main）。执行会话同日复测：基线全部复核，两处措辞漂移已修正（见 docs(upload) 提交）；本文档自身原内联真实路径字面量，已中性化——它不在 §2 重写白名单内，留着就是永久债。
 > 本文所有「实测」数字带锚点与日期；**执行前先复测**——锚点漂移则数字失效，先改本文再照做。
 > 每次发版的日常流程见 `release-runbook-zh.md`，本文只管 push 之前的一次性事务。
 > 通用方法论（为何三向量分开扫、重写波及怎么量化）见 `modding_documents/privacy-debt-vector-triage-zh.md`。
@@ -12,7 +12,7 @@
 3. **执行主体**：本文由 US 仓自己的会话执行；lib 仓事务由 lib 会话处理（§2 有一个跨仓通知义务例外）。
 4. **文档落点**：本文（一次性）与 runbook（每次）分离；通用教训持久化在 modding_documents。
 
-## 1. 债务向量分诊（实测，锚点 `73b0b6a`）
+## 1. 债务向量分诊（实测，锚点 `5f811a0`）
 
 隐私债务有三个**独立**向量，必须分开扫，不能由一个推另一个：
 
@@ -24,7 +24,7 @@
 
 债务形态（实测枚举；本文档刻意不再内联「盘符+冒号+反斜杠」字面量，避免自身成为新债）：
 - 工作区拓扑：`E 盘 \WorkSpace\AI_IDE\opencode\modding\rimworld\...` 前缀，不含用户名——单反斜杠形态 662 处；
-- 个人标识：`C 盘 \Users\Fe`——单反斜杠形态 9 处，仅存在于 MEMORY.md 历史版（`41cf6f4` 引入、`a4db6f4` 修复，存活 2 个版本）；
+- 个人标识：`C 盘 \Users\Fe`——单反斜杠形态 9 处，仅存在于 MEMORY.md 历史版（`5183358` 引入、`ccb5aad` 修复，存活 2 个版本）；
 - **JSON 转义形态**：上述两者的双反斜杠版（`C 盘 \\Users\\Fe` 82 处、`E 盘 \\WorkSpace...` 1 处，位于 workdocs 的会话存档与本文档旧版）。**§1 的单分隔符扫描模式匹配不到双形态**——重写规则与 privacy-audit 都必须显式覆盖四种字节形态；
 - `E 盘 ...\squeaky_ratkin`——兄弟仓路径，被工作区前缀规则覆盖。
 
@@ -46,18 +46,25 @@ git clone --mirror . ../UniversalSqueaker-mirror-backup.git
 #      C 家目录单形态==>（home）        C 家目录双形态==>（home）
 #    （执行会话注：文档旧版误称「正则==>替换」，且示例只给双形态一行，
 #      会漏掉 662+9 处单形态——已修正。）
-# 3) 只碰白名单路径，其余 blob 逐字节不动
-uvx git-filter-repo --paths 'regex:^(MEMORY\.md|docs/workdocs/)' --replace-text rules.txt --force
+# 3) 执行（实测修正）：--paths/--path-regr 都不是「只碰白名单」——
+#    --path-regex 是【选择保留路径】，白名单外文件会被整个删除。
+#    定向性由 --replace-text 自身保证：只有含字面量的 blob 会被改。
+#    实测债务字面量仅存在于白名单 8 文件（四形态扫描确认白名单外 0 命中），
+#    因此不加路径过滤、直接全库替换即为定向重写。
+#    【必须带 --preserve-commit-hashes】：filter-repo 默认会重写提交信息里
+#    出现的旧对象 ID——那直接违反裁决 1「保留历史」与验收 3「消息逐字节相同」。
+#    执行会话第一次重写就踩了这个坑（消息里 73b0b6a→b0d0fc0），从镜像恢复重做。
+uvx git-filter-repo --replace-text rules.txt --preserve-commit-hashes --force
 ```
 
-（Python 一律 uv，`uvx` 即得；不要 pip。）
+（Python 一律 uv，`uvx` 即得；不要 pip。执行期实测注：`git grep` 只扫 tracked 文件——锚点复测时上传文档自身尚未 tracked，所以向量 1 报 0 是「当时为真」；文档首次入库后必须重扫，其内联字面量已先行中性化。）
 
 波及量化（实测）：
-- 脏 blob 引入于第 33/34 提交（`41cf6f4`/`f492e6c`），workdocs 整体删除于第 146 提交（`8f1ba5f`）→ **第 33 号之后全部提交 hash 漂移**（重写前 214 提交，即 181 个）；
-- 仓内 hash 引用 **29 处**（MEMORY/TODO/AGENTS/HANDOFF/runbook 中反引号 7–8 hex）→ 用 filter-repo 导出的 `.git/filter-repo/commit-map` 机械替换。**只替换 commit-map 里存在的键**：29 处中混有 lib 仓 hash（如 `fc59b60`）与 SR 仓对象（`b19d68a`），它们不在本仓 map 中，碰了就是造假；指向第 33 号之前的本仓引用同样不受影响；
-- **跨仓锚点 1 处**：lib 仓 `MEMORY.md:8` 引用 US `0fe60b0`（拆分溯源）。重写完成后，把 commit-map 里 `0fe60b0` 对应的新 hash 报给 maintainer，由 lib 侧会话跟改——**这是本文唯一允许越仓的事项，且只报数不改对方文件**。
+- 脏 blob 引入于第 33/34 提交（`5183358`/`73056ab`），workdocs 整体删除于第 146 提交（`6065420`）。**实测修正：漂移不是「33 号之后」局部——commit-map 覆盖全部 216 提交、0 条恒等映射，根提交 `8fc8d8b` 也漂为 `8fc8d8b`**（blob 哈希入 commit 哈希，逐级上溯）。好消息：`--preserve-commit-hashes` 下消息里的旧 hash 原样保留，台账因此成为**必需**而非可选；
+- 仓内 hash 引用：文档窄口径（MEMORY/TODO/AGENTS/HANDOFF/runbook）**29 处**，全 tracked md 实测 **70 处唯一值**（review/uikit-rebuild/OBLIVIONIS 也大量引用）。台账按全量 70 处理，**只替换 commit-map 里存在的键**：其中混有 lib 仓 hash（如 `fc59b60`）与 SR 仓对象（`b19d68a`），不在本仓 map 中，碰了就是造假；
+- **跨仓锚点 1 处**：lib 仓 `MEMORY.md:8` 引用 US `6c7053a`（拆分溯源）。重写完成后，把 commit-map 里 `6c7053a` 对应的新 hash 报给 maintainer，由 lib 侧会话跟改——**这是本文唯一允许越仓的事项，且只报数不改对方文件**。（执行期实测：`0fe60b0 → 6c7053a`。）
 
-验收：全历史扫描 0 命中 + 提交数不变（重写前复测值，当前 **214**——含本文复测修正提交）+ `git log --format='%s%n%b'` 与重写前逐字节相同（消息保全）+ commit-map 台账 0 悬空引用。
+验收：全历史扫描 0 命中 + 提交数不变（重写前复测值 **216**）+ `git log --format='%s%n%b'` 与重写前逐字节相同（消息保全，需 `--preserve-commit-hashes`）+ commit-map 台账 0 悬空引用。
 
 ## 3. 兄弟引用中性化（三层分类，勿混）
 

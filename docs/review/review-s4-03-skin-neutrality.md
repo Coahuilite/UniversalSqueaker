@@ -2,7 +2,7 @@
 
 ## 结论
 
-已只读核对 HEAD `bf7342f` 下 Visual Skin / Neutrality 相关重点文件：
+已只读核对 HEAD `46b7d16` 下 Visual Skin / Neutrality 相关重点文件：
 
 - `Source/UniversalSqueaker/UI/Visuals/*.cs`
 - `Source/UniversalSqueaker/UI/Components/*.cs`
@@ -18,7 +18,7 @@
 3. **UiPalette/SectionFrame 转发本身安全**：均为只读静态转发，无状态、无额外行为；但仍有新页面壳代码引用旧入口（`FerriteVoicePacksPage.cs:261-262`），未完全迁移到 `UsVisualTokens`/`UsSurface`。
 4. **FerriteLib 中性通过**：对 `Source/FerriteLib.UiKit` 全部源码搜索 `UniversalSqueaker`/`SqueakyRatkin`/`Ratkin`/`SR_`/`US_` 无命中。
 5. **Guard 恢复顺序正确，Ferrite once-log 未按会话清理**：`UsGuard`/`FerriteGuard` 都在 catch 后先恢复 `Text.Font`/`Text.Anchor`/`GUI.color` 再执行 fallback；`UsGuard` 在 `VoicePacksPage.BeginSession/EndSession` 清理，但 `FerriteGuard.ResetSessionLog()` 没有任何调用点。
-6. **P1 未发现 Measure/命令流/布局高度回归**：P1 commit `b166ca9` diff 中所有 Measure 只是包上 `UsGuard.MeasureOrFallback` 且 fallback 高度相同，命令 payload 未变；未发现 P1 引入的高度或命令流改变（P6 的 `ScopeTreeWidget` 窄屏 Measure/Draw 漂移属另一功能区，已在 R2 报告）。
+6. **P1 未发现 Measure/命令流/布局高度回归**：P1 commit `bb4997a` diff 中所有 Measure 只是包上 `UsGuard.MeasureOrFallback` 且 fallback 高度相同，命令 payload 未变；未发现 P1 引入的高度或命令流改变（P6 的 `ScopeTreeWidget` 窄屏 Measure/Draw 漂移属另一功能区，已在 R2 报告）。
 7. **皮肤状态一致性未完全收口**：左导航 active、复选框 checked、help hover、ScopeTree 段按钮/清除钮、SearchField、PresetList 等仍与 P0 状态表存在偏差，P7 “final skin sweep” 实际只提交了 vanilla fallback 页面，没有完成视觉收口。
 
 未发现 Blocker。共 1 个 Major、6 个 Minor、3 个 Nit。

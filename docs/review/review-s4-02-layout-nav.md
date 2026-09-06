@@ -2,7 +2,7 @@
 
 ## 结论
 
-已核对 HEAD `bf7342f` 下 Layout / Navigation / Footer 相关重点文件：
+已核对 HEAD `46b7d16` 下 Layout / Navigation / Footer 相关重点文件：
 
 - `Source/UniversalSqueaker/UI/FerriteVoicePacksPage.cs`
 - `Source/UniversalSqueaker/UI/Layout.xml`

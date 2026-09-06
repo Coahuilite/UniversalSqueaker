@@ -2,7 +2,7 @@
 
 ## 范围
 
-本次审查聚焦设置持久化、schema 4→5 事务迁移、分层调音写桥、Baseline 预设导入，以及 Config copy 生命周期测试。审查的是已合入的 `4e15511` 之后的数据面：该提交本身未改 settings schema，但运行时已按 `(race, xeno)` 双键消费 layer-2 记录，因此需要确认 settings 数据面与运行时一致。
+本次审查聚焦设置持久化、schema 4→5 事务迁移、分层调音写桥、Baseline 预设导入，以及 Config copy 生命周期测试。审查的是已合入的 `ca71d96` 之后的数据面：该提交本身未改 settings schema，但运行时已按 `(race, xeno)` 双键消费 layer-2 记录，因此需要确认 settings 数据面与运行时一致。
 
 ## 检查文件
 

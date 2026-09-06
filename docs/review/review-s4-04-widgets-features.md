@@ -2,7 +2,7 @@
 
 ## 结论
 
-已按只读方式核对 HEAD `bf7342f` 下 Feature Widgets 相关重点文件，覆盖：
+已按只读方式核对 HEAD `46b7d16` 下 Feature Widgets 相关重点文件，覆盖：
 
 - 全局音量 slider 的命令解析 / 写桥 / 百分比显示
 - 衰减编辑器拖拽约束、快速预设与 Custom 语义

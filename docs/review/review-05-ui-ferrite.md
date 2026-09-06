@@ -1,7 +1,7 @@
 # Review 05 — UI / Ferrite 审查报告
 
 - 审查对象：`Source/UniversalSqueaker/UI/**`、`Source/UniversalSqueaker/UI/Model/**`、`Source/UniversalSqueaker/UI/Widgets/**`、`Source/FerriteLib.UiKit/**`、`tools/FerriteLib.UiKit.Tests/**`
-- 审查基准：本地提交链至 `4e15511`（双键 xeno context）；该提交未改 UI，本次重点核查 UI 与运行时 `(race, xeno)` 双键语义的一致性。
+- 审查基准：本地提交链至 `ca71d96`（双键 xeno context）；该提交未改 UI，本次重点核查 UI 与运行时 `(race, xeno)` 双键语义的一致性。
 - 审查方式：静态阅读 + 交叉比对运行时 resolver/Pure 折叠/Settings 写桥/迁移逻辑；未执行长时间构建（避免并行审查锁冲突）。
 
 ## Scope

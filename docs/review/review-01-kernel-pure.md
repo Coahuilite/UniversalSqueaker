@@ -1,7 +1,7 @@
 # Review 01 — Kernel / Pure 评审报告
 
 > 评审范围：`Source/UniversalSqueaker/Kernel/*.cs`、`Source/UniversalSqueaker/Pure/*.cs`、`tools/UniversalSqueakerKernelTests/**`。
-> 评审基准：最新提交 `4e15511`（double-key xeno tuning contexts）。
+> 评审基准：最新提交 `ca71d96`（double-key xeno tuning contexts）。
 > 验证状态：`dotnet build tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj -c Release --no-restore` 成功；`dotnet run --project tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj -c Release --no-restore` 全绿（单测 + golden corpus 零 delta + 确定性重放）。
 
 ## 1. 范围

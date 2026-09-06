@@ -2,7 +2,7 @@
 
 ## 结论
 
-已核对 HEAD `bf7342f` 下 Settings / Runtime 相关文件，并执行：
+已核对 HEAD `46b7d16` 下 Settings / Runtime 相关文件，并执行：
 
 ```bash
 dotnet run --project tools/UniversalSqueakerSettingsMigrationTests/UniversalSqueakerSettingsMigrationTests.csproj -c Release --no-restore

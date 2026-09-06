@@ -1,6 +1,6 @@
 # Review 02 — Runtime Resolver / Adapter（双键 xeno context）
 
-> 审查对象：`4e15511` 后的运行时解析与适配层。
+> 审查对象：`ca71d96` 后的运行时解析与适配层。
 > 结论：未发现 blocker；kernel 验证门通过。发现 1 个 major（缺失/不可用 canonical XenotypeDef 时 xeno 音频域被错误降级为 race 域），若干 minor/nit。
 
 ## 范围
