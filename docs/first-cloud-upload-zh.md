@@ -83,13 +83,13 @@ uvx git-filter-repo --replace-text rules.txt --preserve-commit-hashes --force
 
 ## 4. 发布面缺口（实测，push 前补齐）
 
-- `About/About.xml` `<description>` 仍是 "Placeholder … Replace before any release"——玩家可见，必须写；
-- 无 `CONTRIBUTING.md`；README 单语中文（SR 案例为双语互链；US 是产品 mod，建议对齐）；
-- `.github/workflows/` 是空壳（仅 `.gitkeep`）——`ci.yml`/`release.yml` 从零写；
-- **无 `global.json`**：SR 案例盲抄 `dotnet-version: 8.0.x` 炸出 MSB4068——runner SDK 版本自己测，别抄；
-- 版本轴现状：`<Version>0.1.0-dev` / `<modVersion>0.1.0-dev` / `PrerequisiteApi 0.2.0–0.3.0`；lib 侧 `Api=0.2.0`/`modVersion=0.2.0`。正式发布时多轴一致性要一条断言全锁（lib MEMORY 的 0.1.0/0.2.0 漂移教训）；
-- **CI 依赖链（硬约束）**：csproj `HintPath` 指向 `..\..\..\ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll`——runner 上不存在兄弟目录，且 lib 仓**不 tracked 该 DLL**（`1.6/Assemblies/` 只有 `.gitkeep`，产物由构建生成）。两条可行路径：① `actions/checkout@v4` 以 `repository: Coahuilite/ferritelib` + **`path: ../ferritelib`** 检出兄弟仓再 `dotnet build`（默认 path 会落在 workspace 内部，所有 pin 死的相对引用全部落空）；② 从 lib 的 GitHub release 页下载资产解出 DLL（按 `PrerequisiteApi` 的 `[0.2.0, 0.3.0)` 区间解析最高满足版本，不拼死 tag）。maintainer 裁决「链接不复制」管的是**玩家分发面**（US 包内不得有第二份 DLL），CI 构建期两条都不违反；选哪条由首跑绿的那条定，写进 MEMORY 带证据。
-- 仓库命名契约：lib 被 US 以相对路径 `../ferritelib`（小写）引用；US 自身仓名一旦被任何仓相对引用即成构建契约，建名前核对大小写。
+- ~~`About/About.xml` `<description>` 仍是 "Placeholder …"~~ **DONE（执行会话）**：中英双语描述已写入（中文权威、工作区名与实发 `US.Nav.*.Label` 逐字核对：总览/距离/语音包/调音/预设）；`check-pack-readiness.ps1 -RequireReleaseMetadata` 的占位拒绝断言实测生效；
+- ~~无 `CONTRIBUTING.md`；README 单语~~ **DONE**：`README.md`（英）+ `README.zh-CN.md`（中）互链，`CONTRIBUTING.md` 单文件双语（对齐 SR 惯例；按 §7 单 main 模型写分支指引，不引入 dev 分支税）。顺带修正：旧 README 的「13 道门禁」是拆分期口径，已改 15；
+- ~~`.github/workflows/` 是空壳~~ **DONE**：`ci.yml`（7 步：双 checkout → SDK → carrier 构建入兄弟路径 → restore → 15 门 → 隐私审计）与 `release.yml`（tag 形状/版本轴/ancestry 三重校验 → 构建 → stage → softprops 发布）从零写；两文件 YAML 解析通过，tag 正则与版本轴拒绝逻辑、heredoc 发布体、stage 发布标签均本地执行验证；
+- **SDK 自测结论（不抄案例）**：本机默认 10.0.204（无 global.json），全部证据产于其上 → pin `10.0.x`。实测 US 在 8.0.424 干净还原下 verify-local 也 15/15 全绿，但混用 major 时陈旧 obj 触发 NETSDK1047（本地实测踩到）——CI 全新 clone 无 obj 不受影响，pin 的意义是让 CI 与本地证据基线一致；
+- 版本轴：`<Version>0.1.0-dev` / `<modVersion>0.1.0-dev` / `PrerequisiteApi [0.2.0,0.3.0)`；lib `Api=0.2.0`。**执行会话实测**：`-p:VersionSuffix=` 清不掉 `-dev`（US csproj 显式钉 `<Version>`，MSBuild 忽略 suffix 覆盖——lib 的把戏在 US 不成立）。因此发布身份必须在**发布提交**里改 `<Version>`/`<modVersion>`，由三处断言全锁：check-pack-readiness 的 `-dev` 拒绝 + release.yml 的 tag==csproj==modVersion 校验 + 既有 `PrerequisiteRangeTracksCompiledApi` 反射门（carrier Api 落在区间内，读已加载 DLL，CI 上可靠）。刻意**不**在 check-pack-readiness 里读 `../ferritelib/Source/`——runner 上 carrier 源码在 `ci-ferritelib/`，读兄弟源码既冗余又必红；
+- **CI 依赖链（实测修正）**：~~① `path: ../ferritelib`~~ **技术上不可能**——`actions/checkout` 源码把 `path` 强制 `path.resolve` 进 `GITHUB_WORKSPACE` 内，越界直接 throw（执行会话读 action 源码证实）。落地变体：carrier 以 `repository: Coahuilite/ferritelib` + `path: ci-ferritelib`（workspace 内）检出 → run 步骤（不受 checkout 护栏约束）构建并把 DLL 拷到 `<run>/ferritelib/1.6/Assemblies/`——路径数学已验证与 HintPath `..\..\..\ferritelib\...` 解析一致（`D:\a\UniversalSqueaker\ferritelib\...`）。**选①变体的决策依据**：②（下载 lib 的 release 资产）要求 lib 仓已有 published release，而 lib 尚未 push/tag——首跑即绿只有①可行；lib 发布后若 maintainer 想切②（按区间解析最高满足版本），改一步即可。此决策连同证据写入 MEMORY；
+- 仓库命名契约：lib 被 US 以相对路径 `../ferritelib`（小写）引用；US 自身仓名一旦被任何仓相对引用即成构建契约，建名前核对大小写。**执行会话注**：ci.yml/release.yml 里 `repository: Coahuilite/ferritelib` 的大小写同样待 maintainer 建仓时坐实，写死在 workflow 里，错了首跑即红（不会静默）。
 
 ## 5. 推送顺序（依赖约束，非偏好）
 

@@ -1,32 +1,39 @@
 # Universal Squeaker
 
-RimWorld 1.6 通用语音包内核（本地分叉，未发布）。
+**English** | [中文](./README.zh-CN.md)
 
-本仓库是 Squeaky Ratkin 的 **Universal Squeaker 本地分叉**。当前阶段只做本地整理、重建与评估，不配置 remote、不 push、不发布。
+A voice-pack routing kernel for RimWorld 1.6. This repository is the **Universal Squeaker local fork** of Squeaky Ratkin (MPL-2.0; the provenance notice is kept as the license requires for derivatives), preparing for its first cloud release.
 
-- 交接与 UI 改造评估：`HANDOFF.md`
-- 记忆协定：`AGENTS.md`、`MEMORY.md`
-- 冷档案：`OBLIVIONIS.md`
-- 当前行动面：`TODO.md`
+Universal Squeaker ships **no audio of its own**: it is a routing kernel that attaches third-party voice packs to pawns by race/xenotype domain, with layered tuning (global/race/xenotype overrides), distance attenuation curves, mood modulation, easter-egg gating, and a camera indicator. Settings live in a dedicated window — five workspaces (Overview / Distance / Packs / Tuning / Presets) plus a hover-driven help panel — and the built-in `usdiag` protocol writes leveled diagnostics to the player log for troubleshooting.
 
-## 本地验证
+## Requirements
+
+- RimWorld 1.6
+- **FerriteLib** (`coahuilite.ferritelib`) as a hard prerequisite: it carries the UI kernel `FerriteLib.UiKit.dll`. US compiles against it by relative path and never ships a copy; the API-range check lives in code (`FerriteLibVersion.Require`), not in `About.xml` (RimWorld's modDependencies cannot express versions).
+
+## Identity
+
+- packageId: `coahuilite.universalsqueaker`
+- namespace / Def prefix / log prefix: `UniversalSqueaker` / `US_` / `usdiag`
+- license: MPL-2.0 (Workshop display name pending maintainer confirmation)
+
+## Local verification and build
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1          # 13 道门禁（6 个 harness + 主程序集 Dev/Release + 载体载荷与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验）
-pwsh -NoProfile -File scripts/build-dev.ps1             # 先建 ../ferritelib 载荷，再 Dev 构建 + 打 dev 包（dist/dev/）
-
-# UI 库已拆为独立前置模组仓库 ../ferritelib（coahuilite.ferritelib），有自己的一套门禁。
-# US 只按相对路径引用它编译出来的 DLL，不再随包携带。
-pwsh -NoProfile -File scripts/build-dev.ps1             # Dev 构建 + 打 dev 包（dist/dev/）
-dotnet run --project tools/UniversalSqueakerKernelTests -c Release
+pwsh -NoProfile -File scripts/verify-local.ps1   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests)
+pwsh -NoProfile -File scripts/build-dev.ps1      # builds the ../ferritelib payload first, then a Dev build + dev package (dist/dev/)
+pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
 ```
 
-## 身份
+The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite.
 
-- packageId：`coahuilite.universalsqueaker`（已确认）
-- 命名空间/前缀/日志：`UniversalSqueaker` / `US_` / `usdiag`
-- Workshop 显示名与许可：待维护者确认
+## Documentation index
 
-- 模组结构参考：docs/mod-structure-reference-zh.md
-- UI 组件化评估与实现笔记（历史资料：描述已于 2026-09-02 删除的旧 UI 实现）：docs/ui-componentization-evaluation-zh.md、docs/ui-phase3-implementation-notes-zh.md
-- 发布流程：docs/release-runbook-zh.md（与 SR 同一套，首次发布前需 US 文案适配）
+- Handoff and acceptance checklist: `HANDOFF.md`
+- Memory protocol / durable facts / action surface / cold archive: `AGENTS.md`, `MEMORY.md`, `TODO.md`, `OBLIVIONIS.md`
+- Release flow (every release): `docs/release-runbook-zh.md`
+- First cloud upload (one-time transaction): `docs/first-cloud-upload-zh.md`
+- Mod structure reference: `docs/mod-structure-reference-zh.md`
+- Voice-pack authoring guide: `.github/skills/us-voicepack-authoring/SKILL.md`
+
+Historical material (describes the old UI implementation deleted on 2026-09-02): `docs/ui-componentization-evaluation-zh.md`, `docs/ui-phase3-implementation-notes-zh.md`.

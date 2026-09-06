@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 模组结构参考：docs/mod-structure-reference-zh.md。显示名与许可待维护者确认后替换。 -->
+<!-- 模组结构参考：docs/mod-structure-reference-zh.md。显示名与许可待维护者确认后替换；description 已按发布文案撰写（中文权威、英文随后），发布门禁 check-pack-readiness.ps1 -RequireReleaseMetadata 会拒绝占位文本。 -->
 <ModMetaData>
   <packageId>coahuilite.universalsqueaker</packageId>
   <modVersion>0.1.0-dev</modVersion>
@@ -19,5 +19,7 @@
   <loadAfter>
     <li>coahuilite.ferritelib</li>
   </loadAfter>
-  <description>Placeholder description for the local fork. Replace before any release.</description>
+  <description>为任何种族接入语音包的通用内核。Universal Squeaker 本身不含任何语音内容：它提供路由表（把第三方语音包按种族/异种域挂到 pawn 上）、分层调音（全局/种族/异种三级覆盖）、距离衰减曲线、心情调制、彩蛋门与相机指示器，并附带 usdiag 诊断协议。启用后打开独立设置窗口，五个工作区（总览/距离/语音包/调音/预设）+ 右侧悬停帮助面板引导配置。需要前置模组 FerriteLib。
+
+Universal Squeaker is a voice-pack routing kernel for any race. It ships no audio itself: it provides a routing table (attaching third-party voice packs to pawns by race/xenotype domain), layered tuning (global/race/xenotype overrides), distance attenuation curves, mood modulation, easter-egg gating, and a camera indicator — with a built-in usdiag diagnostics protocol. Open the dedicated settings window: five workspaces (Overview / Distance / Packs / Tuning / Presets) plus a hover-driven help panel guide configuration. Requires the FerriteLib prerequisite mod.</description>
 </ModMetaData>

@@ -1,0 +1,94 @@
+name: CI
+
+# Push/PR check for Universal Squeaker on a clean checkout. US compiles against the FerriteLib
+# carrier (coahuilite.ferritelib) by a sibling relative path and never ships its copy, so the
+# runner must reproduce that sibling layout before the gates run. A green run here means US is
+# internally sound against a freshly built carrier, not that the carrier itself is sound (that is
+# the carrier repo's own CI).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push cancels the in-flight check of the same branch instead of spending Windows minutes on
+# a superseded commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: windows-latest
+    # The 15-gate suite is seconds of work; the minute is runner startup. A hung runner should burn
+    # 10, not the 360 default.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # The carrier repo checked out to a workspace subdir (checkout cannot write outside
+      # GITHUB_WORKSPACE; see the next step for why it is then copied to the sibling path). The
+      # repository name is a build contract: it must equal the carrier repo's real GitHub name,
+      # which the maintainer fixes when creating it. Default branch is checked out.
+      - name: Checkout the FerriteLib carrier
+        uses: actions/checkout@v4
+        with:
+          repository: Coahuilite/ferritelib
+          path: ci-ferritelib
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Self-measured, not copied: the local default SDK (no global.json) is 10.0.204 and every
+          # gate's evidence was produced on it, so the runner reproduces that machine. US also builds
+          # green under 8.0.424 on a clean restore (measured), but an obj/ restored by one SDK major
+          # fails NETSDK1047 when the other builds it, so pinning to the proven major keeps CI and the
+          # local evidence identical. net472 targeting resolves from NuGet (Krafs.Rimworld.Ref) either way.
+          dotnet-version: '10.0.x'
+
+      # Dependency chain (upload-doc section 4). actions/checkout resolves `path` INSIDE
+      # GITHUB_WORKSPACE and rejects anything outside it (verified against the action source), so the
+      # literal `path: ../ferritelib` the plan sketched cannot work. Instead: check the carrier out to
+      # a workspace subdir, build it there, then a run step (not bound by the checkout guard) copies
+      # the produced DLL to the sibling path the csproj HintPath and verify-local gate 6 both expect:
+      #   US root = <run>/UniversalSqueaker/UniversalSqueaker ; sibling = <run>/UniversalSqueaker/ferritelib
+      # This is option (i) from the plan (checkout + build), chosen because it can go green on the very
+      # first run: option (ii), downloading the carrier's release asset, needs the carrier repo to
+      # already have a published release, which it does not until the maintainer pushes and tags it.
+      - name: Build the FerriteLib carrier into the sibling path
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build ci-ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --nologo
+          $produced = 'ci-ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+          if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
+          $siblingDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib/1.6/Assemblies'
+          New-Item -ItemType Directory -Path $siblingDir -Force | Out-Null
+          Copy-Item -LiteralPath $produced -Destination (Join-Path $siblingDir 'FerriteLib.UiKit.dll') -Force
+          # The carrier repo is read-only from US's perspective: nothing here writes into it, only the
+          # built DLL is copied out to satisfy the sibling relative reference.
+
+      - name: Restore
+        shell: pwsh
+        run: |
+          # verify-local's six harness gates each run `dotnet run --no-restore`, so every project
+          # they touch needs an obj/ from a restore on a clean checkout (locally the obj/ already
+          # exists, which is why -NoRestore passes here but would not on the runner). Glob rather
+          # than a hand list so a new tools/ project can never be forgotten.
+          Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
+            ForEach-Object { dotnet restore $_.FullName --nologo }
+
+      - name: Verify (15 gates)
+        shell: pwsh
+        run: ./scripts/verify-local.ps1 -NoRestore
+
+      # The privacy gate is a first-upload concern and cheap; run it on every CI pass so a personal
+      # path or credential can never ride a commit to main. Full-history mode is reserved for the
+      # pre-push manual check (the runner clone is shallow and would not carry the history to scan).
+      - name: Privacy audit (working tree + commit messages + identity)
+        shell: pwsh
+        run: ./scripts/privacy-audit.ps1

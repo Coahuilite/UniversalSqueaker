@@ -61,6 +61,21 @@ if ($RequireReleaseMetadata) {
     $descNode = $aboutXml.SelectSingleNode('/ModMetaData/description')
     $desc = if ($null -ne $descNode) { $descNode.InnerText.Trim() } else { '' }
     Assert-Check 'release description is not placeholder' ($desc -notmatch 'Placeholder|TODO') "($desc)"
+
+    # Version-axis lock (upload-doc section 4; the lib MEMORY 0.1.0/0.2.0 drift lesson). This pins
+    # the axes that are statically visible in THIS repo and are release-specific. The csproj
+    # <Version> == About.xml <modVersion> agreement is already asserted above (section A); here we
+    # add the two release-only facts: a release pack must not carry the -dev suffix, and Mod.cs must
+    # declare the prerequisite range. The stronger invariant - that the range actually contains the
+    # Api of the carrier DLL this build linked - is proven by the KernelHost harness gate
+    # (PrerequisiteRangeTracksCompiledApi), which reflects the loaded assembly; reading the sibling
+    # repo's source here would be both redundant and CI-fragile (the runner keeps the carrier source
+    # under ci-ferritelib/, not ../ferritelib/Source/), so it is deliberately not done.
+    Assert-Check 'release modVersion carries no -dev suffix' ($modVersion -notmatch '-dev') "($modVersion)"
+
+    $modCs = Get-Content -LiteralPath (Join-Path $root 'Source\UniversalSqueaker\Mod.cs') -Raw
+    Assert-Check 'Mod.cs declares PrerequisiteApiMin' ($modCs -match 'PrerequisiteApiMin\s*=\s*new\s+Version\(')
+    Assert-Check 'Mod.cs declares PrerequisiteApiMax' ($modCs -match 'PrerequisiteApiMax\s*=\s*new\s+Version\(')
 }
 
 # C. Assemblies

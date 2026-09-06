@@ -1,0 +1,182 @@
+name: Release
+
+# Push a SemVer tag (v0.2.0, v0.2.0-rc1) and this publishes the US mod package players download.
+#
+# US ships NO audio and NO copy of FerriteLib.UiKit.dll: it is a routing kernel that compiles
+# against the carrier mod (coahuilite.ferritelib) by a sibling relative path. So this pipeline
+# builds the carrier into the sibling path (same trick as ci.yml), builds US Release, and stages a
+# package that must contain exactly UniversalSqueaker.dll and never a second carrier.
+#
+# Version identity is set in the repository, not injected here: the release commit must already
+# carry a clean <Version>0.2.0</Version> and matching About.xml <modVersion>. The csproj pins
+# <Version> explicitly, so `-p:VersionSuffix=` does NOT clear a -dev suffix (measured) - the
+# release-metadata gate below is what refuses a -dev tag, and it fails the build rather than
+# silently shipping a mislabelled DLL.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # creating a GitHub Release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the ancestry check below needs origin/main, not a depth-1 clone
+
+      - name: Checkout the FerriteLib carrier
+        uses: actions/checkout@v4
+        with:
+          repository: Coahuilite/ferritelib
+          path: ci-ferritelib
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Must match ci.yml (see the note there for why 10.0.x is the pinned major).
+          dotnet-version: '10.0.x'
+
+      - name: Verify the tag is a release of this exact commit on main
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+
+          # 1. Shape. Prereleases are rc-only: vBASE-rcN (N>=1) for trials, bare vBASE for the final.
+          #    Other suffixes (-dev, -alpha, -fix1, rc0) are rejected so the release page speaks
+          #    exactly two dialects and rcN stays SemVer-parseable (rc1 < rc2 < BASE).
+          if ($tag -notmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-rc([1-9]\d*))?$') {
+            throw "Release tag must be vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rcN (N >= 1): $tag"
+          }
+          $base = $tag -replace '^v', '' -replace '-rc.*$', ''
+
+          # 2. The repo's product version must equal the tag base, with no -dev suffix. This is the
+          #    version-axis lock (upload-doc section 4): csproj <Version>, About.xml <modVersion> and
+          #    the tag must agree, and none may still say -dev. check-pack-readiness enforces the same
+          #    invariants; doing it here too fails before any build minutes are spent.
+          [xml]$csproj = Get-Content -LiteralPath 'Source/UniversalSqueaker/UniversalSqueaker.csproj' -Raw
+          $version = $csproj.SelectSingleNode('/Project/PropertyGroup/Version').InnerText.Trim()
+          if ($version -ne $base) { throw "csproj <Version>$version does not match tag base v$base. Bump the version in the release commit, do not rename the artifact." }
+          [xml]$about = Get-Content -LiteralPath 'About/About.xml' -Raw
+          $modVersion = $about.SelectSingleNode('/ModMetaData/modVersion').InnerText.Trim()
+          if ($modVersion -ne $base) { throw "About.xml <modVersion>$modVersion does not match tag base v$base." }
+
+          # 3. The tag must name a commit that is in origin/main history (a release off-trunk is a
+          #    build of code nobody reads).
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch origin/main.' }
+          $commit = (git rev-parse 'HEAD^{commit}').Trim()
+          git merge-base --is-ancestor $commit refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) { throw "Tag commit $commit is not in origin/main history. Merge to main, then tag." }
+
+      - name: Build the FerriteLib carrier into the sibling path
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build ci-ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --nologo
+          $produced = 'ci-ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+          if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
+          $siblingDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib/1.6/Assemblies'
+          New-Item -ItemType Directory -Path $siblingDir -Force | Out-Null
+          Copy-Item -LiteralPath $produced -Destination (Join-Path $siblingDir 'FerriteLib.UiKit.dll') -Force
+
+      - name: Restore
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
+            ForEach-Object { dotnet restore $_.FullName --nologo }
+
+      # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
+      # staging. verify-local's Dev/Release build gates leave 1.6/Assemblies populated; stage-package
+      # reads that DLL and re-checks the single-carrier / no-audio / version red lines at assembly time.
+      - name: Verify (15 gates)
+        shell: pwsh
+        run: ./scripts/verify-local.ps1 -NoRestore
+
+      - name: Pack-readiness with release metadata (version axis + non-placeholder description)
+        shell: pwsh
+        run: ./scripts/check-pack-readiness.ps1 -SkipVerify -RequireReleaseMetadata
+
+      - name: Build the release payload
+        shell: pwsh
+        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --nologo
+
+      - name: Stage the release asset
+        id: pack
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = $env:RELEASE_TAG -replace '^v', '' -replace '-rc.*$', ''
+          $commit = (git rev-parse --short=12 HEAD).Trim()
+          $stageDir = 'dist/github/UniversalSqueaker'
+          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit -CreateZip
+          $zip = "dist/github/UniversalSqueaker-release-v$base-$commit.zip"
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+          "asset=$zip" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Write the release body
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          ASSET_SHA256: ${{ steps.pack.outputs.sha256 }}
+          ASSET_COMMIT: ${{ steps.pack.outputs.commit }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+          $isRc = $tag -match '-rc[1-9]\d*$'
+          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks." } else { "This is the stable release. The identity table below names the exact commit." }
+          # rc delta: show what changed since the previous tag so testers know the trial delta.
+          $all = @(& git tag --list 'v*' --sort=v:refname)
+          $idx = [Array]::IndexOf($all, $tag)
+          if ($idx -gt 0) { $commits = @(& git log --oneline "$($all[$idx-1])..$tag" 2>$null) } else { $commits = @(& git log --oneline -10 $tag 2>$null) }
+          $delta = if ($commits.Count -gt 0) { ($commits | ForEach-Object { "- $_" }) -join "`n" } else { "- (no recorded commits in range)" }
+          $body = @"
+          $trialNote
+
+          Universal Squeaker is a voice-pack routing kernel for RimWorld 1.6. It ships no audio of its own: it attaches third-party voice packs to pawns by race/xenotype domain, with layered tuning, distance attenuation, mood modulation, easter-egg gating and a camera indicator.
+
+          ## Installing
+
+          1. Install the prerequisite mod **FerriteLib** (``coahuilite.ferritelib``) from its own releases page.
+          2. Unzip this archive **directly into** ``RimWorld/Mods/`` (it contains a top-level ``UniversalSqueaker`` folder).
+          3. Enable both in the mod list.
+
+          ## Version identity
+
+          | | |
+          |---|---|
+          | Release | ``$env:RELEASE_TAG`` |
+          | Built from commit | ``$env:ASSET_COMMIT`` |
+          | Asset SHA-256 | ``$env:ASSET_SHA256`` |
+
+          $delta
+          "@
+          $body | Out-File -FilePath release-body.md -Encoding utf8NoBOM
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/github/UniversalSqueaker-release-v${{ github.ref_name }}.zip
+          body_path: release-body.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          # Glob, not a literal name: the zip is UniversalSqueaker-release-v<base>-<commit>.zip
+          # (base = tag minus v/-rcN), and exactly one such zip exists in dist/github per run.
+          files: dist/github/UniversalSqueaker-release-v*.zip
+      # Post-push closure (upload-doc section 6): the six-point platform reconciliation reuses the
+      # carrier repo's scripts/verify-release.ps1 (-Tag -Repo -AssetPrefix UniversalSqueaker). That
+      # step runs AFTER the first push is authorized and is intentionally not wired here, because US
+      # does not yet carry its own copy of that script; see TODO.md "First cloud upload preparation".
