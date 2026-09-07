@@ -77,16 +77,21 @@ jobs:
           git merge-base --is-ancestor $commit refs/remotes/origin/main
           if ($LASTEXITCODE -ne 0) { throw "Tag commit $commit is not in origin/main history. Merge to main, then tag." }
 
-      - name: Build the FerriteLib carrier into the sibling path
+      # Same sibling-staging contract as ci.yml (read its comment): the whole carrier tree lands at the
+      # sibling path because gate 13 builds FerriteLib's stubs in place and the licence gate compares
+      # ferritelib/LICENSE; building there puts the payload DLL exactly where the HintPath resolves.
+      - name: Stage and build the FerriteLib carrier at the sibling path
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          dotnet build ci-ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --nologo
-          $produced = 'ci-ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+          $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
+          New-Item -ItemType Directory -Path $sibling -Force | Out-Null
+          Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
+            Where-Object { $_.Name -ne '.git' } |
+            Copy-Item -Destination $sibling -Recurse -Force
+          dotnet build (Join-Path $sibling 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -c Release --nologo
+          $produced = Join-Path $sibling '1.6/Assemblies/FerriteLib.UiKit.dll'
           if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
-          $siblingDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib/1.6/Assemblies'
-          New-Item -ItemType Directory -Path $siblingDir -Force | Out-Null
-          Copy-Item -LiteralPath $produced -Destination (Join-Path $siblingDir 'FerriteLib.UiKit.dll') -Force
 
       - name: Restore
         shell: pwsh

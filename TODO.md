@@ -5,19 +5,19 @@
 
 ## Blocked on the lib session / maintainer (cloud publication chain)
 
-- [ ] **Carrier repo missing = CI red (expected)**: `Coahuilite/ferritelib` does not exist yet, so the first `ci.yml` run died at the carrier checkout (REST 404, measured 2026-09-06 - the loud-failure naming contract working as designed). When the lib session creates + pushes it: re-run CI, confirm green, then apply branch protection on `main`.
+- [ ] **CI first real run in progress (2026-09-07)**: carrier checkout + build + gates 1-12 green; gate 13 died because the workflow staged only the carrier DLL to the sibling path while `UniversalSqueakerKernelHostTests` builds FerriteLib's stubs in place there. Fixed by staging the whole carrier tree (both workflows); re-push pending local CI simulation.
 - [ ] **`release.yml` empty-jobs defect found + fixed 2026-09-07**: the push-triggered run showed `jobs: []` ("workflow file issue") - root cause was a duplicate `files:` key in the Create-GitHub-Release step (GitHub rejects the whole file). Fix is local; real proof is the first `v*` tag run.
-- [ ] **§6 post-push platform reconciliation** (six points via the carrier's `scripts/verify-release.ps1 -Tag -Repo -AssetPrefix UniversalSqueaker`) needs the carrier repo pushed + tagged first.
-- [ ] **Cross-repo duty** (from the §2 history rewrite): the lib session must re-point its own docs' citation `0fe60b0 -> 6c7053a` (both are pre-rewrite US objects of the same memory-record commit; current US hash is `1724f5f`).
+- [ ] **§6 post-push platform reconciliation** (six points via the carrier's `scripts/verify-release.ps1 -Tag -Repo -AssetPrefix UniversalSqueaker`) - carrier is now pushed + tagged, so this runs once US's own CI is green and a US release exists to reconcile.
+- [x] ~~Cross-repo hash duty~~ **CLOSED by maintainer ruling 2026-09-07**: stop chasing hashes; existing history is never rewritten for them. Dangling citations are archaeology (MEMORY "Hash archaeology - CLOSED").
 - [ ] Workshop display name and license (maintainer only; do not invent). First release prep: About icon/preview, final description, runbook US copy adaptation.
 
 ## Docs compression and cleanup (next block, after session compaction)
 
-- [ ] Decision recorded 2026-09-07: live docs (`MEMORY.md`, `TODO.md`) were re-pointed to current hashes (26 refs); `OBLIVIONIS.md` and `docs/review/**` keep their era's hashes as cold evidence and are NOT rewritten. If any historical doc is later presented as current, add a dated correction banner instead of editing the body.
-- [ ] Pre-existing hash rot: ~28 dangling hashes in `OBLIVIONIS.md`/review docs were never valid in any commit-map generation (older amend chains). Reconciliation chain: `../UniversalSqueaker-mirror-backup.git` + `../UniversalSqueaker-mirror-gen2.git` + `.git/filter-repo/commit-map` (see MEMORY "Hash archaeology"). Treat as archaeology, not damage.
-- [ ] `docs/uikit-rebuild/**` and archived checkpoints still carry the pre-cutover "Gate U must retain the fallback / no clean cutover" constraint - superseded 2026-09-02; add correction banners or fold into the compression pass.
-- [ ] Stale fixture text (dist/, gitignored): the Nivarian pack README still references the old `SR_MeowingKiiroExp_` naming.
-- [ ] Compaction style ruling for this repo's memory files: compress existing stale/verbose parts rather than appending more session-shaped prose (maintainer, 2026-09-07).
+- [x] ~~Hash re-pointing of live docs~~ **CLOSED by the 2026-09-07 ruling**: no further hash maintenance anywhere; `OBLIVIONIS.md`/`docs/review/**`/live docs all keep whatever hashes they carry.
+- [x] ~~Pre-existing hash rot in cold docs~~ **CLOSED by the same ruling**: archaeology, not damage; the mirror chain stays available but unused by default.
+- [x] `docs/uikit-rebuild/**` Gate U constraint banners - landed 2026-09-07 (`02f5f5e`): README + 07 contract now carry dated corrections covering the "no clean cutover before Gate U" lines.
+- [x] Nivarian pack README rewritten to the actual canonical pack (2026-09-07, dist/ is gitignored).
+- [ ] Compaction style ruling for this repo's memory files: compress existing stale/verbose parts rather than appending more session-shaped prose (maintainer, 2026-09-07) - standing rule, applies to every future memory edit.
 
 ## Knife 3 - optional capability re-port (maintainer decision, OPEN)
 

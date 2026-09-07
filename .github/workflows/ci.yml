@@ -52,25 +52,31 @@ jobs:
 
       # Dependency chain (decision recorded in MEMORY.md "First cloud upload: durable decisions"). actions/checkout resolves `path` INSIDE
       # GITHUB_WORKSPACE and rejects anything outside it (verified against the action source), so the
-      # literal `path: ../ferritelib` the plan sketched cannot work. Instead: check the carrier out to
-      # a workspace subdir, build it there, then a run step (not bound by the checkout guard) copies
-      # the produced DLL to the sibling path the csproj HintPath and verify-local gate 6 both expect:
+      # literal `path: ../ferritelib` the plan sketched cannot work. Instead: check the carrier out to a
+      # workspace subdir, then a run step (not bound by the checkout guard) stages it at the sibling path
+      # the csproj HintPath and verify-local gate 6 both expect:
       #   US root = <run>/UniversalSqueaker/UniversalSqueaker ; sibling = <run>/UniversalSqueaker/ferritelib
-      # This is option (i) from the plan (checkout + build), chosen because it can go green on the very
-      # first run: option (ii), downloading the carrier's release asset, needs the carrier repo to
-      # already have a published release, which it does not until the maintainer pushes and tags it.
-      - name: Build the FerriteLib carrier into the sibling path
+      # The WHOLE tree is staged, not just the built DLL, because US's sibling references need more than
+      # the payload: UniversalSqueakerKernelHostTests builds FerriteLib's stub assemblies in place under
+      # ferritelib/tools/FerriteLib.UiKit.Tests/Stubs (single source of truth - a second copy of the stubs
+      # is how the layout-vs-audit two-metrics defect happened), and verify-local's licence gate compares
+      # ferritelib/LICENSE byte-for-byte. Building in the sibling path then lands the DLL exactly where
+      # HintPath looks. This was the first CI run's failure: gate 13 died on a missing stub working
+      # directory while the DLL-only staging passed gates 1-12.
+      - name: Stage and build the FerriteLib carrier at the sibling path
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          dotnet build ci-ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --nologo
-          $produced = 'ci-ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+          $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
+          New-Item -ItemType Directory -Path $sibling -Force | Out-Null
+          Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
+            Where-Object { $_.Name -ne '.git' } |
+            Copy-Item -Destination $sibling -Recurse -Force
+          dotnet build (Join-Path $sibling 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -c Release --nologo
+          $produced = Join-Path $sibling '1.6/Assemblies/FerriteLib.UiKit.dll'
           if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
-          $siblingDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib/1.6/Assemblies'
-          New-Item -ItemType Directory -Path $siblingDir -Force | Out-Null
-          Copy-Item -LiteralPath $produced -Destination (Join-Path $siblingDir 'FerriteLib.UiKit.dll') -Force
-          # The carrier repo is read-only from US's perspective: nothing here writes into it, only the
-          # built DLL is copied out to satisfy the sibling relative reference.
+          # The carrier repo stays read-only from US's perspective: ci-ferritelib/ is never written to,
+          # and the sibling copy is runner scratch space that no push can reach.
 
       - name: Restore
         shell: pwsh
