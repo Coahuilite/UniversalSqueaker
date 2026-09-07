@@ -121,12 +121,19 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $base = $env:RELEASE_TAG -replace '^v', '' -replace '-rc.*$', ''
+          $tag = $env:RELEASE_TAG
+          $base = $tag -replace '^v', '' -replace '-rc.*$', ''
           $commit = (git rev-parse --short=12 HEAD).Trim()
           $stageDir = 'dist/github/UniversalSqueaker'
           ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit -CreateZip
-          $zip = "dist/github/UniversalSqueaker-release-v$base-$commit.zip"
-          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
+          $staged = "dist/github/UniversalSqueaker-release-v$base-$commit.zip"
+          if (-not (Test-Path -LiteralPath $staged -PathType Leaf)) { throw "Expected asset was not produced: $staged" }
+          # Series asset-name convention (the carrier's, enforced by scripts/verify-release.ps1
+          # -AssetPrefix UniversalSqueaker): exactly "<Mod>-<tag>.zip". The commit identity lives in
+          # the release body and in version.txt inside the zip, not in the filename - a name that
+          # changes per rebuild cannot be the reconciliation target.
+          $zip = "dist/github/UniversalSqueaker-$tag.zip"
+          Move-Item -LiteralPath $staged -Destination $zip -Force
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
           "asset=$zip" >> $env:GITHUB_OUTPUT
           "sha256=$hash" >> $env:GITHUB_OUTPUT
@@ -177,9 +184,9 @@ jobs:
           body_path: release-body.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
-          # Glob, not a literal name: the zip is UniversalSqueaker-release-v<base>-<commit>.zip
-          # (base = tag minus v/-rcN), and exactly one such zip exists in dist/github per run.
-          files: dist/github/UniversalSqueaker-release-v*.zip
+          # Glob, not a literal name: the zip is UniversalSqueaker-<tag>.zip (series convention,
+          # see the staging step) and exactly one such zip exists in dist/github per run.
+          files: dist/github/UniversalSqueaker-v*.zip
       # Post-push closure (MEMORY.md "First cloud upload" push-order entry): the six-point platform reconciliation reuses the
       # carrier repo's scripts/verify-release.ps1 (-Tag -Repo -AssetPrefix UniversalSqueaker). That
       # step runs AFTER the first push is authorized and is intentionally not wired here, because US
