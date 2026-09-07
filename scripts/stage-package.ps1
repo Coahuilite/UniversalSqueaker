@@ -25,7 +25,8 @@ if (Test-Path -LiteralPath (Join-Path $root 'Extras') -PathType Container) { thr
 if (Test-Path -LiteralPath (Join-Path $versionedSource 'Sounds') -PathType Container) { throw "US must not ship built-in audio: $versionedSource\Sounds" }
 
 # Version discipline (all channels): the staged About.xml must carry exactly the csproj <Version> label.
-# US records the full prerelease string in About (0.1.0-dev), so the comparison is exact, not base-only.
+# US records the full release-axis label in About (exact, not base-only; the rc suffix lives in the
+# tag and artifact name only, never in About - same discipline as the carrier).
 if (-not [string]::IsNullOrWhiteSpace($VersionLabel)) {
     [xml]$aboutXml = Get-Content -LiteralPath (Join-Path $aboutSource 'About.xml') -Raw
     $modVersionNode = $aboutXml.SelectSingleNode('/ModMetaData/modVersion')

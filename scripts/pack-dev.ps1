@@ -24,7 +24,8 @@ if ($null -eq $versionNode -or [string]::IsNullOrWhiteSpace($versionNode.InnerTe
 
 $version = $versionNode.InnerText.Trim()
 
-# US version is the full label (0.1.0-dev); About.xml must carry the same value exactly.
+# US version is the full label (release axis; during an rc window it is the frozen base, e.g. 0.2.0);
+# About.xml must carry the same value exactly.
 $versionLabel = $version
 
 try {

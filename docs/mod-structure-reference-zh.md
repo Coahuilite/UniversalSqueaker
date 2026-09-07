@@ -31,7 +31,7 @@ UniversalSqueaker/
 |  `- Languages/
 |     |- English/Keyed/UniversalSqueaker.xml
 |     `- ChineseSimplified/Keyed/UniversalSqueaker.xml
-|- Source/UniversalSqueaker/        # 主程序集（net472，0.1.0-dev）
+|- Source/UniversalSqueaker/        # 主程序集（net472，0.2.0）
 |  |- Kernel/                       # 零 Verse 内核编译集（去 SR 化）
 |  |- Pure/                         # 漏斗纯逻辑（零 Verse）
 |  |- Catalog/ Fallback/ Models/ Settings/ Labels/ Logging/ Patches/ Runtime/ Diagnostics/ UI/
@@ -61,7 +61,7 @@ UniversalSqueaker/
 ## 快速创建清单（新仓库或重建时）
 
 1. 根目录：`About/`、`LoadFolders.xml`、`1.6/`、`Source/`、`docs/`、`scripts/`、`tools/`、`.github/workflows/`。
-2. `About/About.xml`：packageId 固定 `coahuilite.universalsqueaker`；modVersion 与 csproj `<Version>` 一致（当前 0.1.0-dev）；显示名/许可待定。
+2. `About/About.xml`：packageId 固定 `coahuilite.universalsqueaker`；modVersion 与 csproj `<Version>` 一致（当前 0.2.0，与 carrier 对齐）；显示名/许可待定
 3. `LoadFolders.xml`：`<li>/</li>` 与 `<li>1.6</li>`；**不得**加 Ratkin/任何内容包的 `IfModActive` 门控。
 4. `1.6/`：四个子目录 `Assemblies/Defs/Patches/Languages`；Languages 已有 Keyed XML，其余保留 `.gitkeep` 占位。
 5. `.gitignore`：`dist/`、`About/PublishedFileId.txt`、`*.dll`、`*.pdb`、`bin/`、`obj/`、`.slim/`。
@@ -69,5 +69,5 @@ UniversalSqueaker/
 
 ## 下一步使用
 
-- `Source/UniversalSqueaker/UniversalSqueaker.csproj` 已建立（Version 0.1.0-dev 主源）；`1.6/Assemblies/` 为构建输出路径。
+- `Source/UniversalSqueaker/UniversalSqueaker.csproj` 已建立（Version 0.2.0 主源，与 carrier 对齐；rc 窗口内版本轴冻结在 base，后缀只进 tag/工件名）；`1.6/Assemblies/` 为构建输出路径。
 - 首次 `About.xml` 定稿前，维护者确认 Workshop 显示名与许可，然后同步 `docs/release-runbook-zh.md` 与页面文案。
