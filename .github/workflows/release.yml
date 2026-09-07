@@ -33,7 +33,7 @@ jobs:
       - name: Checkout the FerriteLib carrier
         uses: actions/checkout@v4
         with:
-          repository: Coahuilite/ferritelib
+          repository: Coahuilite/FerriteLib
           path: ci-ferritelib
 
       - name: Setup .NET
