@@ -125,15 +125,15 @@ jobs:
           $base = $tag -replace '^v', '' -replace '-rc.*$', ''
           $commit = (git rev-parse --short=12 HEAD).Trim()
           $stageDir = 'dist/github/UniversalSqueaker'
-          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit -CreateZip
-          $staged = "dist/github/UniversalSqueaker-release-v$base-$commit.zip"
-          if (-not (Test-Path -LiteralPath $staged -PathType Leaf)) { throw "Expected asset was not produced: $staged" }
-          # Series asset-name convention (the carrier's, enforced by scripts/verify-release.ps1
-          # -AssetPrefix UniversalSqueaker): exactly "<Mod>-<tag>.zip". The commit identity lives in
-          # the release body and in version.txt inside the zip, not in the filename - a name that
-          # changes per rebuild cannot be the reconciliation target.
+          # No -CreateZip here: stage-package zips the CONTENTS of the stage dir, which would put
+          # 1.6/ and About/ at the archive root. The series shape (the carrier's FerriteLib-<tag>.zip,
+          # and what the release body below promises) is a top-level UniversalSqueaker/ folder, so a
+          # collaborator unzipping into RimWorld/Mods/ gets a valid mod directory by construction.
+          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit
           $zip = "dist/github/UniversalSqueaker-$tag.zip"
-          Move-Item -LiteralPath $staged -Destination $zip -Force
+          if (Test-Path -LiteralPath $zip -PathType Leaf) { Remove-Item -LiteralPath $zip -Force }
+          Compress-Archive -Path $stageDir -DestinationPath $zip
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
           "asset=$zip" >> $env:GITHUB_OUTPUT
           "sha256=$hash" >> $env:GITHUB_OUTPUT
