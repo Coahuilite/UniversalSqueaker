@@ -21,7 +21,7 @@ Universal Squeaker 本身**不含任何语音内容**：它是一个路由内核
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-local.ps1   # 14 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计）
-pwsh -NoProfile -File scripts/build-dev.ps1      # 先建 ../ferritelib 载荷，再 Dev 构建 + 打 dev 包（dist/dev/）
+pwsh -NoProfile -File scripts/build-dev.ps1      # 先在 ../ferritelib 建 Release 载主载荷，再 Dev 构建并 stage 成可直接安装的**目录**（dist/dev/UniversalSqueaker）——不打归档；需要 zip 时用 pack-dev -Zip
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # 隐私门禁（三向量 + 凭据 + PublishedFileId 值 + 身份唯一性；-FullHistory 为全历史模式）
 ```
 

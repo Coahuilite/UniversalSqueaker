@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 #   3   settings migration characterization (schema migration, write bridges, baseline importer)
 #   4   log protocol characterization, Release
 #   5   log protocol characterization, Dev (US_DEV)
-#   6   FerriteLib carrier payload present (the sibling repo has been built; US compiles against it)
+#   6   FerriteLib carrier payload present and Release-configured (measured, not assumed)
 #   7   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
 #   8   main assembly Release build (TreatWarningsAsErrors)
 #   9   US payload is single-carrier (UniversalSqueaker.dll present, FerriteLib.UiKit.dll ABSENT)
@@ -84,13 +84,24 @@ Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Dev' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
-Invoke-Check 'FerriteLib carrier payload present (sibling repo built)' `
-    'dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release' `
+Invoke-Check 'FerriteLib carrier payload present and Release-configured (sibling repo built)' `
+    'dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental' `
     {
         # US compiles against the carrier mod's payload and never ships one, so the sibling build is a
         # precondition, not a convenience. Say so plainly instead of failing inside csc.
         if (-not (Test-Path -LiteralPath $carrierDll -PathType Leaf)) {
             throw "Missing FerriteLib payload: $carrierDll. Build the ferritelib repo first (scripts/build-dev.ps1 does it in order)."
+        }
+        # Existence was the whole gate until FL→US round 2 S5, and existence is not enough: Dev and
+        # Release share one carrier OutputPath, so the bytes at that path belong to whichever
+        # configuration the sibling was last built as. US's Release gate must not silently link a
+        # dev-configured carrier - today FER_DEV gates no library source, and "today" is not a contract.
+        # The common cause is legitimate, not mysterious: FerriteLib's own pack-dev builds the carrier
+        # -c Dev and leaves those bytes at this path (its dev channel is a Dev package by design). This
+        # gate is about what US publishes against, so rebuilding it Release is the whole fix.
+        $carrierStamp = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll) -join ''
+        if ($carrierStamp -ne 'Release') {
+            throw "The carrier payload at $carrierDll is '$carrierStamp'-configured; US builds and publishes against a Release carrier (a Dev one usually means ../ferritelib's own pack-dev ran last). Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
         }
     }
 

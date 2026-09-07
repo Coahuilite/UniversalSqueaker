@@ -142,11 +142,15 @@ internal static class UiSourceInvariantTests
             "the settings class must not regain a xenotype-tab clear API");
     }
 
-    // 2. Second event authority / second palette must not resurrect anywhere under UI/.
+    // 2. Second event authority / second palette must not resurrect anywhere under UI/. The list is the
+    // one MEMORY's "Naming/harness bans" claims: `UiPanel` was reported as prose-only in FL→US round 2
+    // (it was a real deleted type in the old chain - `Widgets/UiPanel.cs` - but sat in no source list),
+    // so the name joined the scan rather than leaving the rule. Over-banning a dead name is the safe
+    // direction; a memory that promises a check the check does not make is not.
     private static void VerifyNoSecondEventAuthorityOrPalette(string root)
     {
         string uiDir = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
-        string[] forbiddenTypes = { "UiInteract", "Palette", "SurfaceFrame", "UiText", "UiValueStore" };
+        string[] forbiddenTypes = { "UiInteract", "Palette", "SurfaceFrame", "UiText", "UiValueStore", "UiPanel" };
 
         foreach (string file in Directory.EnumerateFiles(uiDir, "*.cs", SearchOption.AllDirectories))
         {

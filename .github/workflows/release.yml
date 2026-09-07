@@ -112,7 +112,10 @@ jobs:
 
       - name: Build the release payload
         shell: pwsh
-        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --nologo
+        # --no-incremental for the same reason the packers use it: Dev and Release share one
+        # OutputPath, and the staging engine measures the configuration stamp rather than trusting the
+        # label - a stale Dev assembly at the payload path must be rebuilt, not quietly shipped.
+        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo
 
       - name: Stage the release asset
         id: pack
@@ -125,14 +128,15 @@ jobs:
           $base = $tag -replace '^v', '' -replace '-rc.*$', ''
           $commit = (git rev-parse --short=12 HEAD).Trim()
           $stageDir = 'dist/github/UniversalSqueaker'
-          # No -CreateZip here: stage-package zips the CONTENTS of the stage dir, which would put
-          # 1.6/ and About/ at the archive root. The series shape (the carrier's FerriteLib-<tag>.zip,
-          # and what the release body below promises) is a top-level UniversalSqueaker/ folder, so a
-          # collaborator unzipping into RimWorld/Mods/ gets a valid mod directory by construction.
-          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit
+          # One archive writer, in the engine (FL→US round 2 S4). The shape the release body promises -
+          # exactly one top-level UniversalSqueaker/ folder, so unzipping into Mods/ yields a valid mod
+          # directory - and the entry timestamps both come from here now: every entry is stamped with
+          # this commit's author date, which is what makes the digest below a check another run can
+          # reproduce instead of a receipt only this run believes. The asset name stays
+          # UniversalSqueaker-<tag>.zip because that name is a reconciliation target.
+          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release `
+            -CommitLabel $commit -RequireReleaseIdentity -CreateZip -ArchiveName "UniversalSqueaker-$tag"
           $zip = "dist/github/UniversalSqueaker-$tag.zip"
-          if (Test-Path -LiteralPath $zip -PathType Leaf) { Remove-Item -LiteralPath $zip -Force }
-          Compress-Archive -Path $stageDir -DestinationPath $zip
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
           "asset=$zip" >> $env:GITHUB_OUTPUT
