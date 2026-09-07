@@ -102,7 +102,7 @@ jobs:
       # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
       # staging. verify-local's Dev/Release build gates leave 1.6/Assemblies populated; stage-package
       # reads that DLL and re-checks the single-carrier / no-audio / version red lines at assembly time.
-      - name: Verify (13 gates)
+      - name: Verify (14 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 

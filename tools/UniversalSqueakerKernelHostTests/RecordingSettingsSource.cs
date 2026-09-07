@@ -62,7 +62,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public string? LastRaceFilter;
     public string? LastXenotypeFilter;
     public string? LastSearchText;
-    public string? LastHelpHover;
 
     // Tuning writes.
     public string? LastActionKey;
@@ -365,16 +364,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
     public void SetSearchText(string text) => LastSearchText = text;
-    // The Host's help-hover READ binding serves the panel from ViewState (exactly like the real
-    // source routes it), so a record-only fake would leave every end-to-end hover lane blind. Write
-    // the state AND keep the recording field. SetHelpSelection retired with the D2 index-list cut.
-    public void SetHelpHover(string key)
-    {
-        LastHelpHover = key;
-        VoicePacksPageModel.SetHelpHover(state, key);
-    }
-
-    public void BeginHelpHoverFrame() => VoicePacksPageModel.BeginHelpHoverFrame(state);
+    // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
+    // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
+    // host's session. SetHelpSelection stays retired with the D2 index-list cut.
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {

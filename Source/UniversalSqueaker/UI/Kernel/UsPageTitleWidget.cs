@@ -36,7 +36,7 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
-        bindings.ValidateValue<string>("active-tab", elementPath);
+        bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
     }
 
     public float Measure(UiWidgetContext ctx)
@@ -105,7 +105,7 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     private static (string Title, string Caption) ResolveHeading(UiWidgetContext ctx)
     {
-        ctx.Bindings.TryGet("active-tab", out string activeTab);
+        ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
         (string titleKey, string captionKey) = HeadingKeyFor(activeTab);
         return (ctx.Translation.Translate(titleKey), ctx.Translation.Translate(captionKey));
     }

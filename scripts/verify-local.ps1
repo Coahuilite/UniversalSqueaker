@@ -22,13 +22,15 @@ $ErrorActionPreference = "Stop"
 #  11   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
 #  12   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
 #  13   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
-# GATE PROVENANCE: 1-5 and 10-13 are US-owned; 6 and 9 assert the carrier boundary itself. The
-# FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and the
-# visual-core/page-model boundary) moved to that repository, which runs them from inside with a
+#  14   UI boundary audit (scripts/ui-boundary-audit.ps1): raw renderer-backend calls only inside the
+#       2-file exemption whitelist (豁免一 + 豁免二), and ZERO raw Mouse.IsOver since FL P1
+# GATE PROVENANCE: 1-5 and 10-14 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
+# its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
+# entry by entry. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
+# the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
-# The library gates (harness, Dev/Release build, neutrality grep, visual-core boundary) are no longer
-# run from here; they live in the carrier repository. Two gates here guard the carrier boundary itself,
-# and one asserts the series licence is present and un-truncated before a package can be staged.
+# Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as 14
+# instead of shifting the thirteen below it.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -187,6 +189,10 @@ Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math 
 Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c Release' `
     { dotnet run --no-restore --project $kernelHostTestsProject -c Release }
+
+Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whitelist)' `
+    'pwsh -NoProfile -File scripts/ui-boundary-audit.ps1' `
+    { & (Join-Path $PSScriptRoot 'ui-boundary-audit.ps1') -ProjectRoot $root }
 
 Write-Host '[verify] all checks passed.'
 

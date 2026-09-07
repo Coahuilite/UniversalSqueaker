@@ -66,7 +66,7 @@ public sealed class UsKernelOverlayController : IDisposable
     {
         Maintain();
         if (!IsActive) return false;
-        if (Event.current?.type == EventType.Layout) return false;
+        if (UiNative.IsLayoutEvent()) return false;
 
         try
         {

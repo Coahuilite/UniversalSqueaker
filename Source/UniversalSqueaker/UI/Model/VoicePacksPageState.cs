@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Page-local UI ephemeral state. It is not persisted and is reset on settings session begin/end.
 /// The view model is rebuilt from settings/catalog each frame; this state only remembers what the
-/// user is looking at (selected domain, search text, help, scroll) and the baseline-preset import
-/// checkboxes.
+/// user is looking at (selected domain, search text) and the baseline-preset import checkboxes.
+/// Neither scroll nor the help hover claim lives here: both moved to the session — scroll positions
+/// via <c>UiSession.ScrollPositions</c>, the hover claim via <c>UiSession.HoverClaim</c> (FL P3).
 /// </summary>
 public sealed class VoicePacksPageState
 {
@@ -16,19 +16,6 @@ public sealed class VoicePacksPageState
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
     public string SearchText = "";
-    public string HelpHoverKey = "";
-
-    // D10 grace: the last claim that actually landed, the frames left to hold it after the
-    // pointer stopped claiming, and the frame counter + claim stamp that distinguish "a widget
-    // claimed during last frame's draw" from "BeginHelpHoverFrame restored the held value". Owned
-    // by VoicePacksPageModel; the help panel keeps explaining the previous control during transit
-    // gaps instead of flashing the section overview (maintainer ruling 2026-09-06).
-    public string HelpHoverHeld = "";
-    public int HelpHoverGraceLeft;
-    public int HelpHoverFrame;
-    public int HelpHoverClaimStamp;
-    public Vector2 ScrollPosition;
-    public Vector2 HelpScrollPosition;
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
 
     // S5 调音编辑器（选项 ①）：当前编辑层（0=Global,1=Race,2=Xenotype）与层域身份。
@@ -37,7 +24,6 @@ public sealed class VoicePacksPageState
     public string TuningXenotypeDefName = "";
     public string ActiveTab = "Overview";
     public string ActiveSectionKey = "mode-row";
-    public string ScrollTargetKey = "";
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -55,20 +41,12 @@ public sealed class VoicePacksPageState
         SelectedRaceDefName = "";
         SelectedTargetName = "";
         SearchText = "";
-        HelpHoverKey = "";
-        HelpHoverHeld = "";
-        HelpHoverGraceLeft = 0;
-        HelpHoverFrame = 0;
-        HelpHoverClaimStamp = 0;
-        ScrollPosition = Vector2.zero;
-        HelpScrollPosition = Vector2.zero;
         BaselinePresets.Clear();
         TuningLayer = 0;
         TuningRaceDefName = "";
         TuningXenotypeDefName = "";
         ActiveTab = "Overview";
         ActiveSectionKey = "mode-row";
-        ScrollTargetKey = "";
         DomainFilter = default;
         PackFilter = default;
         RaceFilter = "";

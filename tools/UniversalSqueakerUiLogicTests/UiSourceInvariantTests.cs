@@ -14,9 +14,9 @@ namespace UniversalSqueaker.UiLogicTests;
 /// (per-page legacy classes, the neutral SelectionButton/Palette/SurfaceFrame/UiText helpers and
 /// the UiInteract command authority) was deleted together with its production types; this gate
 /// now pins what must stay true on the surviving Schema2 path:
-///   1. The settings window keeps the new all-frame-failure model (pageUnavailable +
-///      noticeDueNextFrame + DrawUnavailableNotice) and can never reintroduce a legacy
-///      second-page fallback.
+///   1. The settings window stays a thin UiWindowHost consumer (FL P2): no chrome and no second
+///      failure state machine may re-grow on this side, and no legacy second-page fallback symbol
+///      may return.
 ///   2. No file under UI/ (widgets included) revives the deleted second event authority or the
 ///      second palette/surface/text helper set.
 ///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the two
@@ -79,7 +79,10 @@ internal static class UiSourceInvariantTests
             "the host must wire the view cache to the session revision");
     }
 
-    // 1. Settings window: new failure model present, legacy whole-page fallback symbols absent.
+    // 1. Settings window: since FL P2 the chrome and the whole-frame failure state machine belong to
+    //    the library shell, so the consumer-side contract is the INVERSE - the window must stay a thin
+    //    UiWindowHost subclass and must not re-grow chrome or a second failure model. A re-added
+    //    DrawBackground/DrawCloseButton/pageUnavailable here is exactly the regression this pins.
     private static void VerifySettingsWindowFailureModel(string root)
     {
         string path = SettingsWindowPath(root);
@@ -87,16 +90,26 @@ internal static class UiSourceInvariantTests
             path,
             new[]
             {
-                "private bool pageUnavailable;",
-                "private bool noticeDueNextFrame;",
-                "private void DrawUnavailableNotice(",
-                "DrawUnavailableNotice(contentRect);",
-                "pageUnavailable = true;",
-                "noticeDueNextFrame = true;",
+                "public sealed class UniversalSqueakerSettingsWindow : UiWindowHost",
+                "protected override UiHost CreateHost()",
+                "protected override void DrawNotice(Rect rect, UiWindowNotice notice)",
+                "protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;",
+                "protected override Func<Vector2>? InitialSizePolicy",
                 "UiThemeDraw.Surface(",
             },
-            "the settings window must keep the Schema2 failure model (deferred notice -> "
-            + "pageUnavailable error region drawn through the shared UiTheme surface)");
+            "the settings window must be a thin UiWindowHost consumer: it supplies the page, the "
+            + "notices and its own size policy, and routes the prerequisite desync through the shell");
+
+        foreach (string shellState in new[]
+        {
+            "private bool pageUnavailable", "private bool noticeDueNextFrame", "DrawBackground(",
+            "DrawTitleBar(", "DrawCloseButton(", "Widgets.ButtonInvisible", "Mouse.IsOver",
+        })
+        {
+            CheckSourceDoesNotContain(path, shellState,
+                "chrome and the next-frame trip are the shell's (FL P2 conditions a-d); the window "
+                + "must not re-grow them: " + shellState);
+        }
 
         string[] forbiddenLegacySymbols =
         {
@@ -332,51 +345,71 @@ internal static class UiSourceInvariantTests
         }
     }
 
-    // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone).
-    // It validates its two read keys, sizes its text band from the hover-invariant catalog maxima,
-    // and resolves through the pure logic seam; claims arrive only from the mid-column controls via
-    // UsKernelDraw.HelpHover, and the window clears the claim every frame before DrawFrame.
+    // 5b. Panel: a pure read surface (D2 ruling - the index list and pinned selection are gone), and
+    // since FL P3 the hover CLAIM is session state: the panel sizes its text band from the
+    // hover-invariant catalog maxima, resolves through the pure logic seam, and reads
+    // UiSession.HoverClaim. Claims arrive only from the mid-column controls through the single outlet,
+    // UsKernelDraw.HelpHover -> Session.ClaimHover. The consumer-side grace machine that used to own
+    // this must stay deleted - re-growing it would put two owners on one clock.
     private static void VerifyHelpPanelWiringAndHeightFormula(string root)
     {
         string panel = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs");
         CheckSourceContains(panel, new[]
         {
             "ValidateValue<string>(\"help-section-key\"",
-            "ValidateValue<string>(\"help-hover\"",
             "MaxBodyBand(ctx, textWidth)",
-            "UsHelpPanelLogic.Resolve(section, hover, TranslationSeam(ctx))",
+            "ctx.Session.HoverClaim ?? \"\"",
+            "TranslationSeam(ctx)",
         },
-        "the help panel must validate both read keys, size its text band from the hover-invariant "
-        + "catalog maxima (MaxBodyBand), and resolve its display through the pure logic seam with "
-        + "the Host translation seam applied in one pass");
+        "the help panel must validate its one read key, size its text band from the hover-invariant "
+        + "catalog maxima (MaxBodyBand), take the claim from the session, and resolve its display "
+        + "through the pure logic seam with the Host translation seam applied in one pass");
         CheckSourceDoesNotContain(panel, "ctx.Bindings.Invoke",
             "the help panel is read-only: no write channel survives the D2 index-list cut");
-        CheckSourceDoesNotContain(panel, "set-help-selection",
-            "the retired pinned-selection channel stays dead in the panel");
+        CheckSourceDoesNotContain(panel, "help-hover",
+            "the hover claim is session state since FL P3; the help-hover binding stays dead");
 
         CheckSourceContains(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"),
-            new[] { "ctx.Bindings.Invoke(\"set-help-hover\", itemKey)" },
-            "HelpHover is the single claim outlet and it routes through the Host-bound set-help-hover action");
+            new[] { "ctx.Session.ClaimHover(itemKey)" },
+            "HelpHover is the single claim outlet and it claims on the session, not through a binding");
+        CheckSourceDoesNotContain(
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsSectionWidgetBase.cs"),
+            "help-hover",
+            "the accent border reads the session claim; the binding must not return as a second read path");
 
-        string window = File.ReadAllText(
-            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"));
-        int clear = window.IndexOf("BeginHelpHoverFrame()", StringComparison.Ordinal);
-        int draw = window.IndexOf("kernelHost.DrawFrame(contentRect)", StringComparison.Ordinal);
-        Assert(clear >= 0 && draw >= 0 && clear < draw,
-            "the settings window must run the D10 hover-frame boundary immediately before DrawFrame "
-            + "(clear-or-hold-or-grace; without it the claim sticks)");
-        Assert(window.IndexOf("SetHelpHover(\"\")", StringComparison.Ordinal) < 0,
-            "the raw unconditional clear must not return - it bypasses the grace window (D10)");
+        // The retired machine: gone from the window, the model, the state and the source boundary.
+        string[] retiredMachine = { "BeginHelpHoverFrame", "SetHelpHover", "HelpHoverKey", "HelpHoverGraceLeft" };
+        foreach (string file in new[]
+        {
+            "UI/UniversalSqueakerSettingsWindow.cs",
+            "UI/Model/VoicePacksPageModel.cs",
+            "UI/Model/VoicePacksPageState.cs",
+            "UI/UsKernelSettingsSource.cs",
+            "UI/IUsKernelSettingsSource.cs",
+        })
+        {
+            string text = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", file));
+            foreach (string symbol in retiredMachine)
+            {
+                // net472: no string.Contains(string, StringComparison).
+                if (text.IndexOf(symbol, StringComparison.Ordinal) >= 0)
+                {
+                    throw new InvalidOperationException(
+                        "the consumer-side hover-claim machine moved to UiSession (FL P3); '"
+                        + symbol + "' must not live in " + file);
+                }
+            }
+        }
 
         string host = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
         Assert(host.Contains("BindReadOnly<string>(\"help-section-key\"")
-               && host.Contains("BindAction<string>(\"set-help-hover\"")
-               && !host.Contains("set-help-selection")
+               && host.Contains("host.Session.HoverGraceFrames = HelpHoverGracePasses")
+               && !host.Contains("set-help-hover")
                && host.Contains("BindAction<string>(\"scroll-to\""),
-            "the Host owns the help-section-key/hover/scroll-to wiring and the retired selection "
-            + "channel stays dead (single event authority)");
+            "the Host owns help-section-key/scroll-to wiring, sets the grace length on the session, "
+            + "and the retired hover/selection channels stay dead (single event authority)");
     }
 
 

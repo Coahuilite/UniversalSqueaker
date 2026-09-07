@@ -33,8 +33,8 @@ public sealed class UsNavWidget : IUiWidget
     private const float TextRightReserve = 8f;
 
     /// <summary>
-    /// Tab is a machine token: it is compared against the persisted <c>active-tab</c> binding and against
-    /// the manifest's Tab attributes, so it never gets translated. Label and Description are Keyed.
+    /// Tab is a machine token: it is compared against the persisted <c>UiBindings.ActiveTabKey</c>
+    /// binding and against the manifest's Tab attributes, so it never gets translated. Label and Description are Keyed.
     /// </summary>
     private static readonly (string Tab, string LabelKey, string DescriptionKey)[] Workspaces =
     {
@@ -65,7 +65,7 @@ public sealed class UsNavWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
-        bindings.ValidateValue<string>("active-tab", elementPath);
+        bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
         bindings.ValidateAction<string>("set-tab", elementPath);
     }
 
@@ -89,7 +89,7 @@ public sealed class UsNavWidget : IUiWidget
 
         UiThemeDraw.BackgroundPlane(rect, ctx.Theme);
         UiThemeDraw.Surface(rect, ctx.Theme, Color.clear, ctx.Theme.Border);
-        ctx.Bindings.TryGet("active-tab", out string activeTab);
+        ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
 
         float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
         float textWidth = TextWidth(rect.width);

@@ -24,6 +24,7 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsKernelSettingsHost
 {
+    private const int HelpHoverGracePasses = 15;
     private const string Source = "coahuilite.universalsqueaker";
     private const string ManifestResourceName = "UniversalSqueaker.UI.Layout.Schema2.xml";
 
@@ -59,6 +60,12 @@ public static class UsKernelSettingsHost
             metrics,
             new UsKernelTranslation());
         bumper.Attach(host.Session);
+        // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
+        // this many IMGUI passes, which is what stops the overview from flashing while the pointer
+        // crosses the gap between two adjacent controls. The library owns the rule and ships no
+        // default on purpose - the consumer that needed the grace picks its length. Counted in passes,
+        // not seconds: the settings window opens with forcePause, where game time is frozen.
+        host.Session.HoverGraceFrames = HelpHoverGracePasses;
         // The view cache must expire on the same clock as the layout cache, or a write landing in a
         // frame's popup pass arranges against the previous view while the next frame draws a fresh
         // view into the stale snapshot - the 2026-09-04 filter misalignment.
@@ -118,7 +125,7 @@ public static class UsKernelSettingsHost
         var bindings = new UiBindings();
 
         // Navigation / page chrome.
-        bindings.BindValue<string>("active-tab", () => state.ActiveTab, source.SetActiveTab);
+        bindings.BindValue<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, source.SetActiveTab);
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
         // Tab switches and scroll-to change which sections are visible (and the active section),
         // so they bump the session content revision through the Host boundary.
@@ -241,11 +248,11 @@ public static class UsKernelSettingsHost
         bindings.BindValue<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
-
-        // Help panel (C+A; D2 retired the pinned-selection channel with the index list).
+        // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
+        // fallback stays a binding because it is business state; the hover claim does not - since FL
+        // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
+        // panel and the accent border read ctx.Session.HoverClaim).
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
-        bindings.BindReadOnly<string>("help-hover", () => state.HelpHoverKey);
-        bindings.BindAction<string>("set-help-hover", source.SetHelpHover);
 
         return bindings;
     }

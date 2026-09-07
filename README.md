@@ -20,12 +20,12 @@ Universal Squeaker ships **no audio of its own**: it is a routing kernel that at
 ## Local verification and build
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 13 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests)
+pwsh -NoProfile -File scripts/verify-local.ps1   # 14 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit)
 pwsh -NoProfile -File scripts/build-dev.ps1      # builds the ../ferritelib payload first, then a Dev build + dev package (dist/dev/)
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
 ```
 
-The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite.
+The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite. Gate 14 (`scripts/ui-boundary-audit.ps1`) is the consumer half of the same containment metric: a raw Unity IMGUI / Verse Widgets call outside the two ruled exemptions (the dev diagnostics panel and the frozen camera-indicator fallback) fails the build, and a raw `Mouse.IsOver` anywhere at all fails it — hover, layout-event gating and window chrome all read the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiWindowHost`).
 
 ## Documentation index
 

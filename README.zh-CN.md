@@ -20,12 +20,12 @@ Universal Squeaker 本身**不含任何语音内容**：它是一个路由内核
 ## 本地验证与构建
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 15 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验）
+pwsh -NoProfile -File scripts/verify-local.ps1   # 14 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计）
 pwsh -NoProfile -File scripts/build-dev.ps1      # 先建 ../ferritelib 载荷，再 Dev 构建 + 打 dev 包（dist/dev/）
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # 隐私门禁（三向量 + 凭据 + PublishedFileId 值 + 身份唯一性；-FullHistory 为全历史模式）
 ```
 
-UI 库已拆为独立前置模组仓库 `../ferritelib`（`coahuilite.ferritelib`），有自己的门禁体系。
+UI 库已拆为独立前置模组仓库 `../ferritelib`（`coahuilite.ferritelib`），有自己的门禁体系。第 14 门 `scripts/ui-boundary-audit.ps1` 是同一 containment 指标的消费侧：白名单只剩两条裁定豁免（dev 诊断面板、冻结的相机指示器 fallback），其外的裸 Unity IMGUI / Verse Widgets 调用一律判红；裸 `Mouse.IsOver` 更是任何位置都不允许——悬停、帧门、窗口 chrome 全部走库缝（`UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiWindowHost`）。
 
 ## 文档索引
 

@@ -152,16 +152,6 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.SetSearchText(state, text);
     }
 
-    public void SetHelpHover(string key)
-    {
-        VoicePacksPageModel.SetHelpHover(state, key);
-    }
-
-    public void BeginHelpHoverFrame()
-    {
-        VoicePacksPageModel.BeginHelpHoverFrame(state);
-    }
-
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {
         VoicePacksPageModel.SetActionScope(settings, state, actionKey, scope);

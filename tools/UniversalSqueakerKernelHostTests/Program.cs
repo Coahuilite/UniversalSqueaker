@@ -115,6 +115,7 @@ internal static class Program
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
         Step("settings window uses the pageUnavailable failure model", SettingsWindowPageUnavailableModel);
+        Step("the window shell carries the next-frame trip and the two notices", SettingsWindowShellCarriesTheFailureContract);
         Step("overlay host without settings window", OverlayHostCreatedWithoutSettingsWindow);
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
@@ -262,18 +263,46 @@ internal static class Program
     }
 
     /// <summary>
-    /// Build-time lockstep pin: US compiles against the sibling carrier payload, so the range floor in
-    /// Mod.cs must equal the Api of the library this harness just linked. If the library bumps its
-    /// public surface, this step goes red until PrerequisiteApiMin/Max move and both mods ship
-    /// together - the desync that produced the 2026-09-04 TypeLoadException cannot recur silently.
+    /// Build-time lockstep pin: US compiles against the sibling carrier payload, so the range in Mod.cs
+    /// must track the Api of the library this harness just linked. If the library bumps its public
+    /// surface, this step goes red until PrerequisiteApiMin/Max move and both mods ship together - the
+    /// desync that produced the 2026-09-04 TypeLoadException cannot recur silently.
+    ///
+    /// The expected range is PARSED from Mod.cs rather than repeated here: a literal copy of the number
+    /// in this file is how a lockstep gate starts agreeing with itself instead of with the pin. Source
+    /// is the only place to read it from - the Verse stub deliberately ships no Verse.Mod, so
+    /// UniversalSqueakerMod cannot be loaded (let alone its private fields reflected) here.
     /// </summary>
     private static void PrerequisiteRangeTracksCompiledApi()
     {
-        Version compiledFloor = new Version(0, 2, 0);
-        Assert(FerriteLib.UiKit.Kernel.FerriteLibVersion.Api.Equals(compiledFloor),
-            "US is compiled against FerriteLib Api " + compiledFloor + " but the linked carrier reports "
-            + FerriteLib.UiKit.Kernel.FerriteLibVersion.Api
-            + "; move PrerequisiteApiMin/Max in Mod.cs and ship both mods in lockstep");
+        string modSource = File.ReadAllText(
+            Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "Mod.cs"));
+        Version min = ReadPinnedVersion(modSource, "PrerequisiteApiMin");
+        Version max = ReadPinnedVersion(modSource, "PrerequisiteApiMax");
+        Version api = FerriteLib.UiKit.Kernel.FerriteLibVersion.Api;
+
+        Assert(api >= min && api < max,
+            "the linked carrier reports FerriteLib Api " + api + " but US pins [" + min + ", " + max + ");"
+            + " move PrerequisiteApiMin/Max in Mod.cs and ship both mods in lockstep");
+        Assert(max.Major == min.Major && max.Minor == min.Minor + 1,
+            "the prerequisite window must stay exactly one minor wide (pre-1.0 carrier lockstep); got ["
+            + min + ", " + max + ")");
+        Assert(api.Major == min.Major && api.Minor == min.Minor && api.Build == min.Build,
+            "US must pin its floor to the Api it was actually compiled against: floor " + min
+            + " vs linked carrier " + api + " (widening the window is a release decision, not a gate fix)");
+    }
+
+    private static Version ReadPinnedVersion(string source, string fieldName)
+    {
+        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
+            source, fieldName + @"\s*=\s*new Version\((\d+),\s*(\d+),\s*(\d+)\)");
+        Assert(match.Success,
+            "cannot read " + fieldName + " from Mod.cs: the pin must stay a three-part"
+            + " new Version(major, minor, build), or this gate stops being a check");
+        return new Version(
+            int.Parse(match.Groups[1].Value),
+            int.Parse(match.Groups[2].Value),
+            int.Parse(match.Groups[3].Value));
     }
 
     /// <summary>
@@ -339,16 +368,16 @@ internal static class Program
 
     /// <summary>
     /// End-to-end C+A hover claim through the REAL production host and the REAL event pump (the
-    /// 09-04b stub models Mouse.IsOver from Event.mousePosition, so this is genuine pointer
-    /// routing, not an override). The footer is the probe surface: it draws in window space
-    /// (no scroll group), claims "us/page-title/apply", and its claim must land in the business
-    /// state through the typed set-help-hover action. The lane replays the exact per-frame
-    /// protocol the settings window uses (clear the claim, then DrawFrame - the clear itself is
-    /// pinned by the source-invariant guard, this lane proves the rest):
-    ///   1. pointer over the footer  -> the frame's draw claims the entry;
-    ///   2. pointer elsewhere        -> the next frame's clear leaves no claim (no stickiness);
-    ///   3. panel height identical between hovered and unhovered frames (hover-invariant bands);
+    /// 09-04b stub models hover from Event.mousePosition, so this is genuine pointer routing, not an
+    /// override). The footer is the probe surface: it draws in window space (no scroll group), claims
+    /// "us/page-title/apply", and since FL P3 that claim must land on the SESSION, which is where the
+    /// help panel and the accent border read it. The lane no longer replays the frame boundary by hand
+    /// - UiHost.DrawFrame runs it, exactly as the window relies on:
+    ///   1. pointer over the footer  -> the pass's draw claims the entry;
+    ///   2. pointer elsewhere        -> the next pass starts cleared (no stickiness);
+    ///   3. panel height identical between hovered and unhovered passes (hover-invariant bands);
     ///   4. no ContentRevision bump across hover changes (claims never invalidate layout).
+    /// The grace window itself is pinned by HelpHoverClaimReleasesOnlyAfterGraceWindow.
     /// </summary>
     private static void HoverClaimsHelpThroughRealPointerPasses()
     {
@@ -360,29 +389,30 @@ internal static class Program
         Rect viewport = new(0f, 0f, 1280f, 720f);
         host.Bindings.Invoke("set-tab", "Overview");
 
-        // Frame 0: pointer parked away from every claimed surface (top-left corner of the nav
+        // Pass 0: pointer parked away from every claimed surface (top-left corner of the nav
         // column above the first item is unclaimed chrome). Establish the baseline geometry.
         Vector2 away = new(4f, 4f);
-        DrawWithPointer(host, fake, viewport, away);
+        DrawWithPointer(host, viewport, away);
         UiLayoutSnapshot baseline = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
-        Assert(string.Equals(fake.ViewState.HelpHoverKey, "", StringComparison.Ordinal),
-            "an unhovered frame must carry no help claim, got '" + fake.ViewState.HelpHoverKey + "'");
+        Assert(host.Session.HoverClaim == null,
+            "an unhovered pass must carry no help claim, got '" + host.Session.HoverClaim + "'");
         int revisionBefore = host.Session.ContentRevision;
 
-        // Frame 1: pointer over the footer's right half (the save-status claim rect).
+        // Pass 1: pointer over the footer's right half (the save-status claim rect).
         Rect footer = baseline.RectById["footer"];
         Vector2 onFooter = new(footer.x + footer.width * 0.75f, footer.y + footer.height / 2f);
-        DrawWithPointer(host, fake, viewport, onFooter);
-        Assert(string.Equals(fake.ViewState.HelpHoverKey, "us/page-title/apply", StringComparison.Ordinal),
-            "hovering the footer save-status must claim us/page-title/apply through the typed action, got '"
-            + fake.ViewState.HelpHoverKey + "'");
+        DrawWithPointer(host, viewport, onFooter);
+        Assert(string.Equals(host.Session.HoverClaim, "us/page-title/apply", StringComparison.Ordinal),
+            "hovering the footer save-status must claim us/page-title/apply on the session, got '"
+            + host.Session.HoverClaim + "'");
 
-        // Frame 2: pointer leaves. The window protocol clears BEFORE drawing, so the claim must
-        // be gone even though frame 1 set it - the old sticky-hover model failed exactly here.
-        DrawWithPointer(host, fake, viewport, away);
-        Assert(string.Equals(fake.ViewState.HelpHoverKey, "", StringComparison.Ordinal),
-            "the claim must not survive the frame after the pointer leaves, got '"
-            + fake.ViewState.HelpHoverKey + "'");
+        // Pass 2: pointer leaves. The boundary holds a finished claim for its grace window but starts
+        // THIS pass cleared, so the claim must be gone even though pass 1 set it - the old sticky-hover
+        // model failed exactly here.
+        DrawWithPointer(host, viewport, away);
+        Assert(host.Session.HoverClaim == null,
+            "the claim must not survive the pass after the pointer leaves, got '"
+            + host.Session.HoverClaim + "'");
 
         // Height parity across hover state, measured FRESH on two hosts: the engine caches the
         // snapshot by content revision and a hover claim must never bump it, so one host cannot
@@ -391,8 +421,8 @@ internal static class Program
         // that sized from the displayed string (the pre-C+A model) makes these two differ; the
         // hover-invariant catalog-maximum bands make them identical.
         var claimedFake = new RecordingSettingsSource { RichData = true };
-        claimedFake.SetHelpHover("us/page-title/apply");
         using UiHost claimedHost = UsKernelSettingsHost.Create(claimedFake, new StubMetrics());
+        claimedHost.Session.ClaimHover("us/page-title/apply");
         claimedHost.Bindings.Invoke("set-tab", "Overview");
         float claimedHeight = claimedHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
 
@@ -436,9 +466,9 @@ internal static class Program
         List<float> presetRows = new();
         for (float y = card.y + 2f; y < card.yMax - 2f; y += 4f)
         {
-            // Same per-frame protocol the settings window runs.
-            DrawWithPointer(host, fake, viewport, new Vector2(probeX, y));
-            string claim = fake.ViewState.HelpHoverKey;
+            // Same per-pass protocol the settings window runs.
+            DrawWithPointer(host, viewport, new Vector2(probeX, y));
+            string claim = host.Session.HoverClaim ?? "";
             if (claim == "us/attenuation-editor/chart") chartRows.Add(y);
             else if (claim == "us/attenuation-editor/presets") presetRows.Add(y);
         }
@@ -508,13 +538,13 @@ internal static class Program
         AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
     }
     /// <summary>
-    /// One frame of the settings-window protocol: run the D10 hover-frame boundary (clear, or hold
-    /// the previous claim inside the grace window), pump a Repaint pass with the pointer at
-    /// <paramref name="pointer"/>, then draw. Mirrors
-    /// UniversalSqueakerSettingsWindow.DoWindowContents; the claim is read back from the fake's
-    /// business state exactly as the real source stores it.
+    /// One pass of the settings-window protocol: pump a Repaint pass with the pointer at
+    /// <paramref name="pointer"/> and let the host draw the page. Since FL P3 this is the whole
+    /// protocol - the D10 hover-frame boundary runs inside UiHost.DrawFrame on the session, so the
+    /// harness cannot drift from the window by replaying it wrong, and it no longer needs the source
+    /// to clear anything.
     /// </summary>
-    private static void DrawWithPointer(UiHost host, RecordingSettingsSource fake, Rect viewport, Vector2 pointer)
+    private static void DrawWithPointer(UiHost host, Rect viewport, Vector2 pointer)
     {
         Event e = Event.KeyboardEvent("dummy");
         e.type = EventType.Repaint;
@@ -522,7 +552,6 @@ internal static class Program
         Event.current = e;
         try
         {
-            fake.BeginHelpHoverFrame();
             host.DrawFrame(viewport);
         }
         finally
@@ -532,52 +561,64 @@ internal static class Program
     }
 
     /// <summary>
-    /// D10 grace protocol (2026-09-06): releasing a hover claim to the section overview is delayed
-    /// by a short window, so a pointer moving between adjacent controls never flashes the overview.
-    /// The state machine is pure (claim stamp vs frame counter); this lane pins its exact contract
-    /// against the shipped assembly through the same source the window drives.
+    /// D10 grace contract (maintainer ruling 2026-09-06), owned by <c>UiSession</c> since FL P3:
+    ///  - a claim that landed during a pass is held, and the NEXT pass starts cleared (widgets
+    ///    re-claim while they draw, so a stationary pointer never reads as stale);
+    ///  - with no fresh claim the held one is restored for exactly HoverGraceFrames passes, then
+    ///    releases to the section overview;
+    ///  - a re-claim re-arms the window instead of consuming it, and a new claim replaces the old hold.
+    /// The length is the consumer's (the library ships no default), so the lane also pins that the
+    /// production host still asks for 15 and that one DrawFrame advances the session clock by exactly
+    /// one - which is what lets the window own no frame protocol at all.
     /// </summary>
     private static void HelpHoverClaimReleasesOnlyAfterGraceWindow()
     {
-        RecordingSettingsSource fake = new RecordingSettingsSource();
-        VoicePacksPageState state = fake.ViewState;
+        var fake = new RecordingSettingsSource();
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        Rect viewport = new(0f, 0f, 1280f, 720f);
+        int grace = host.Session.HoverGraceFrames;
+        Assert(grace == 15,
+            "the production host must set the D10 grace length on the session (FL P3: the consumer picks"
+            + " it, the library defaults to none); got " + grace);
 
-        fake.SetHelpHover("us/global-volume/slider");
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverKey.Length == 0
-                && state.HelpHoverHeld == "us/global-volume/slider"
-                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
-            "a landed claim is held and the frame starts cleared for the re-claim");
+        int frameBefore = host.Session.Frame;
+        host.DrawFrame(viewport);
+        Assert(host.Session.Frame == frameBefore + 1,
+            "one UiHost.DrawFrame must advance the session clock by exactly one pass, or the window's"
+            + " frame boundary is not the session's (" + frameBefore + " -> " + host.Session.Frame + ")");
 
-        fake.SetHelpHover("us/global-volume/slider");
-        fake.BeginHelpHoverFrame();
-        fake.SetHelpHover("us/global-volume/slider");
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
-            "a stationary re-claim re-arms the grace window instead of consuming it");
+        void Pass() => host.Session.BeginFrame();
 
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverKey == "us/global-volume/slider"
-                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames - 1,
-            "the first gap frame restores the held claim");
-        for (int gap = 2; gap <= VoicePacksPageModel.HoverGraceFrames; gap++)
+        host.Session.ClaimHover("us/global-volume/slider");
+        Pass();
+        Assert(host.Session.HoverClaim == null,
+            "a landed claim is held and the next pass starts cleared for the re-claim");
+
+        host.Session.ClaimHover("us/global-volume/slider");
+        Pass();
+        host.Session.ClaimHover("us/global-volume/slider");
+        Pass();
+        Assert(host.Session.HoverClaim == null,
+            "a stationary re-claim keeps the pass cleared for a fresh claim instead of consuming grace");
+
+        Pass();
+        Assert(host.Session.HoverClaim == "us/global-volume/slider",
+            "the first gap pass restores the held claim");
+        for (int gap = 2; gap <= grace; gap++)
         {
-            fake.BeginHelpHoverFrame();
-            Assert(state.HelpHoverKey == "us/global-volume/slider",
-                "the claim holds for the whole grace window (gap frame " + gap + ")");
+            Pass();
+            Assert(host.Session.HoverClaim == "us/global-volume/slider",
+                "the claim holds for the whole grace window (gap pass " + gap + ")");
         }
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverKey.Length == 0 && state.HelpHoverGraceLeft == 0,
-            "grace exhaustion releases to the section overview");
+        Pass();
+        Assert(host.Session.HoverClaim == null,
+            "grace exhaustion releases to the section overview, got '" + host.Session.HoverClaim + "'");
 
-        fake.SetHelpHover("us/scope-tree/layer");
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverHeld == "us/scope-tree/layer"
-                && state.HelpHoverGraceLeft == VoicePacksPageModel.HoverGraceFrames,
-            "a new claim re-arms the grace window under the new key");
-        fake.BeginHelpHoverFrame();
-        Assert(state.HelpHoverKey == "us/scope-tree/layer",
-            "the gap frame after B's claim restores B, not the old A");
+        host.Session.ClaimHover("us/scope-tree/layer");
+        Pass();
+        Pass();
+        Assert(host.Session.HoverClaim == "us/scope-tree/layer",
+            "the gap pass after a new claim restores the NEW claim, not the old one");
     }
 
     private static void SettingsWindowPageUnavailableModel()
@@ -983,8 +1024,6 @@ internal static class Program
             "set-mood-tuning action routes");
         bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, true));
         Assert(fake.LastDomainFilterKind == SqueakDomainFilterKind.OrphanOnly && fake.LastDomainFilterFlag == true, "set-domain-filter action routes");
-        bindings.Invoke("set-help-hover", "us/global-volume");
-        Assert(fake.LastHelpHover == "us/global-volume", "set-help-hover action routes");
         bindings.Invoke("scroll-to", "preset-list");
         Assert(fake.LastScrollToSection == "preset-list", "scroll-to action routes");
         // Attenuation chart drag: a normalized X on the second point writes the min distance.
@@ -1527,42 +1566,44 @@ internal static class Program
 
     private static void OverlayDrawFailureDoesNotDoubleReserveRow()
     {
-        // Regression: when the kernel overlay DrawFrame throws, TryDraw must not commit the row
-        // cursor. The caller then draws the legacy pure-Verse readout at the same curBaseY; if the
-        // kernel path had already decremented it, the fallback would double-reserve the row height.
-        const string throwKind = "test/throw-overlay-draw";
-        UiWidgetRegistry.Register(
-            ExpectedSource,
-            throwKind,
-            () => new ThrowingDrawWidget(),
-            new[] { "Id", "Kind", "Hidden", "Tab" });
-
-        UiLayoutManifest manifest = UiLayoutManifest.Parse(
-            "<UiPage Schema=\"2\" Source=\"" + ExpectedSource + "\">"
-            + "<Widget Id=\"x\" Kind=\"" + throwKind + "\" />"
-            + "</UiPage>");
-        using UiHost throwingHost = new(
-            ExpectedSource,
-            manifest,
-            new UiBindings(),
-            UiTheme.DarkGold,
-            new StubMetrics(),
-            new StubTranslation());
-
+        // Regression: when the kernel overlay's pass fails, TryDraw must not commit the row cursor.
+        // The caller then draws the legacy pure-Verse readout at the same curBaseY; if the kernel path
+        // had already decremented it, the fallback would double-reserve the row height.
+        //
+        // The injection moved one level up with FL 0.3.0 item C: a widget that throws mid-draw is now
+        // recovered BY THE ENGINE (UiSessionGuard.DrawWidget paints a recovery band and keeps the page
+        // alive), so it never reaches this catch - the old throwing widget simply no longer tests the
+        // path it was written for, and FL proves that split from its side. What still escapes
+        // UiHost.DrawFrame is frame-level work the guard does not wrap, and the session popup pass is
+        // exactly that: UiHost.Draw runs the registered popup callbacks after the content tree, with
+        // nothing between them and the consumer's catch. That is the failure planted here.
         var source = new RecordingOverlaySource();
         var controller = new UsKernelOverlayController(source);
         FieldInfo? hostField = typeof(UsKernelOverlayController).GetField("host", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert(hostField != null, "overlay controller exposes a host field for failure injection");
-        hostField!.SetValue(controller, throwingHost);
 
         float y = 600f - 34f;
+        Assert(controller.TryDraw(16f, 200f, ref y), "the live overlay draws before anything fails");
+        Assert(Math.Abs(y - (600f - 34f - 26f)) < 0.001f, "a successful kernel pass reserves exactly one row");
+
+        var host = hostField!.GetValue(controller) as UiHost;
+        Assert(host != null && host.Session.IsActive, "the draw pass must have created a live overlay host to fail");
+        host!.Session.RegisterPopupDraw(() => throw new InvalidOperationException("injected overlay frame failure"));
+
         float before = y;
-        Assert(!controller.TryDraw(16f, 200f, ref y), "overlay draw failure returns false");
+        Assert(!controller.TryDraw(16f, 200f, ref y), "a frame-level overlay failure returns false");
         Assert(Math.Abs(y - before) < 0.001f,
             "failed overlay draw leaves curBaseY untouched so the legacy fallback does not double-reserve the row");
         Assert(controller.CreationFailed, "draw failure trips the permanent fallback flag");
         Assert(!controller.IsActive, "draw failure disposes the overlay host");
+        Assert(!host.Session.IsActive, "and the failing session is the one that was torn down");
         Assert(StubScrollDepth() == 0 && StubGroupDepth() == 0, "no scopes leaked by the failure path");
+
+        // The permanent flag is the whole point of the handover: no retry, even though the injected
+        // failure is gone.
+        float stillY = before;
+        Assert(!controller.TryDraw(16f, 200f, ref stillY) && Math.Abs(stillY - before) < 0.001f,
+            "the controller never re-enters the kernel overlay once it tripped");
     }
 
     private static void ClosingSettingsWindowDoesNotAffectOverlay()
@@ -1621,29 +1662,6 @@ internal static class Program
         if (!condition)
         {
             throw new InvalidOperationException(message);
-        }
-    }
-
-    private sealed class ThrowingDrawWidget : IUiWidget
-    {
-        public string Kind => "test/throw-overlay-draw";
-
-        public void Configure(UiElementSpec spec)
-        {
-        }
-
-        public void Validate(IUiBindings bindings, string elementPath)
-        {
-        }
-
-        public float Measure(UiWidgetContext ctx)
-        {
-            return 26f;
-        }
-
-        public void Draw(Rect rect, UiWidgetContext ctx)
-        {
-            throw new InvalidOperationException("injected overlay draw failure");
         }
     }
 
@@ -1720,5 +1738,115 @@ internal static class Program
         }
 
         public int TranslationRevision => 0;
+    }
+
+    /// <summary>
+    /// The chrome and the whole-frame failure state machine belong to <c>UiWindowHost</c> since FL P2
+    /// and US deleted its own copy of both, so this lane proves from the consumer's side what the
+    /// settings window now trusts:
+    ///  - a pass whose CreateHost throws reports the failure and draws NO notice in that same pass;
+    ///  - the NEXT pass is the first PageUnavailable pass, and the page is never rebuilt after that;
+    ///  - an unmet prerequisite draws the Prerequisite notice without ever building a page, so the two
+    ///    notices stay distinguishable (US branches one DrawNotice on them);
+    ///  - closing disposes the page session (the shell's PreClose), which is the half US must NOT redo.
+    ///
+    /// It drives a probe subclass rather than UniversalSqueakerSettingsWindow itself because the Verse
+    /// stub deliberately ships no Verse.Mod, so the real window type cannot be constructed here; the
+    /// notice TEXTS are US's and are pinned by the Keyed localization gate instead.
+    /// </summary>
+    private static void SettingsWindowShellCarriesTheFailureContract()
+    {
+        var failing = new ShellProbeWindow(throwOnCreate: true) { Prerequisite = true };
+        failing.windowRect = new Rect(0f, 0f, 900f, 700f);
+
+        failing.WindowOnGUI();
+        Assert(failing.HostCreations == 1, "the first pass tries to build the page");
+        Assert(failing.Failures == 1, "and reports the throw exactly once");
+        Assert(failing.Notices.Count == 0,
+            "the throwing pass must not switch to the notice inside itself - that pass already claimed"
+            + " the page's layout state (the condition c next-frame rule)");
+
+        failing.WindowOnGUI();
+        Assert(failing.Notices.Count == 1 && failing.Notices[0] == UiWindowNotice.PageUnavailable,
+            "the next pass is the first unavailable notice, drawn from a clean pass");
+
+        failing.WindowOnGUI();
+        Assert(failing.HostCreations == 1 && failing.Failures == 1 && failing.Notices.Count == 2,
+            "a tripped window neither retries the page nor re-logs it; it just keeps saying the same thing");
+
+        var blocked = new ShellProbeWindow(throwOnCreate: false) { Prerequisite = false };
+        blocked.windowRect = new Rect(0f, 0f, 900f, 700f);
+        blocked.WindowOnGUI();
+        Assert(blocked.HostCreations == 0, "an unmet prerequisite never reaches page creation");
+        Assert(blocked.Notices.Count == 1 && blocked.Notices[0] == UiWindowNotice.Prerequisite,
+            "and it names the desync instead of the generic unavailable page");
+
+        var healthy = new ShellProbeWindow(throwOnCreate: false) { Prerequisite = true };
+        healthy.windowRect = new Rect(0f, 0f, 900f, 700f);
+        healthy.WindowOnGUI();
+        Assert(healthy.HostCreations == 1 && healthy.Notices.Count == 0 && healthy.Failures == 0,
+            "a real US page under the shell draws with no notice and no failure");
+        UiSession? built = healthy.BuiltSession;
+        Assert(built != null && built.IsActive,
+            "the probe must have a live session to test the close path");
+        healthy.PreClose();
+        Assert(built != null && !built.IsActive,
+            "the shell's PreClose disposes the page session - US keeps only its own audit teardown");
+        Assert(healthy.BasePreCloseCalls == 1, "and the consumer override still chains to the shell");
+    }
+
+    /// <summary>A <see cref="UiWindowHost"/> that records what the shell tells it to do.</summary>
+    private sealed class ShellProbeWindow : UiWindowHost
+    {
+        private readonly bool throwOnCreate;
+
+        public ShellProbeWindow(bool throwOnCreate)
+        {
+            this.throwOnCreate = throwOnCreate;
+        }
+
+        public readonly List<UiWindowNotice> Notices = new();
+        public int HostCreations;
+        public int Failures;
+        public int BasePreCloseCalls;
+        public bool Prerequisite = true;
+        public UiSession? BuiltSession;
+
+        protected override UiTheme Theme => UiTheme.DarkGold;
+        protected override string Title => "probe title";
+        protected override string Subtitle => "probe subtitle";
+        protected override string CloseText => "probe close";
+        protected override bool PrerequisiteVerified => Prerequisite;
+
+        protected override UiHost CreateHost()
+        {
+            HostCreations++;
+            if (throwOnCreate)
+            {
+                throw new InvalidOperationException("planted page creation failure");
+            }
+
+            // A real production US page, so the healthy pass exercises the shell against the manifest,
+            // widgets and bindings the settings window actually uses.
+            UiHost host = UsKernelOverlayHost.Create(new RecordingOverlaySource());
+            BuiltSession = host.Session;
+            return host;
+        }
+
+        protected override void DrawNotice(Rect rect, UiWindowNotice notice)
+        {
+            Notices.Add(notice);
+        }
+
+        protected override void OnDrawFailure(Exception error)
+        {
+            Failures++;
+        }
+
+        public override void PreClose()
+        {
+            BasePreCloseCalls++;
+            base.PreClose();
+        }
     }
 }

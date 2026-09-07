@@ -14,13 +14,18 @@ public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
     /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against. Pre-1.0 any
+    /// The FerriteLib API range this build of US was compiled and verified against: the 0.3.0 contract
+    /// axis, i.e. the FL 0.3.0 migration (P1 hover seam, P2 <c>UiWindowHost</c> chrome, P3 session
+    /// hover-claim machine, P4 <c>UiBindings.ActiveTabKey</c>, P6 layout-event seam). Pre-1.0 any
     /// public-surface change bumps the library's minor, so the accepted window is exactly one minor
-    /// wide and a consumer newer than the loaded carrier fails Require with a readable report
-    /// instead of exploding as a TypeLoadException at first draw.
+    /// wide and a consumer newer than the loaded carrier fails Require with a readable report instead
+    /// of exploding as a TypeLoadException at first draw. The kernel-host harness reads this pair out
+    /// of this file (the pin stays private: US ships no InternalsVisibleTo and the Verse stub has no
+    /// Verse.Mod to load), and asserts it against the Api of the carrier it linked, so a carrier
+    /// advance reddens a gate instead of a window and the range cannot be restated wrong in a test.
     /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 2, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 3, 0);
+    private static readonly Version PrerequisiteApiMin = new Version(0, 3, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 4, 0);
 
     /// <summary>
     /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a
@@ -165,7 +170,7 @@ public class UniversalSqueakerMod : Mod
             UiFont.Tiny);
 
         Rect open = new Rect(inner.x, inner.yMax - 28f, 220f, 28f);
-        bool hovered = Mouse.IsOver(open);
+        bool hovered = UiNative.IsMouseOver(open);
         UiThemeDraw.Surface(open, theme, hovered ? theme.Hover : theme.Raised, theme.Border);
         UiThemeDraw.Label(
             open,

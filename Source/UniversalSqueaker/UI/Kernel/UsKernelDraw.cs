@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Verse;
 
 using FerriteLib.UiKit.Kernel;
-using VerseWidgets = Verse.Widgets;
 
 namespace UniversalSqueaker.UI;
 
@@ -41,8 +39,10 @@ public static class UsKernelDraw
         UiThemeDraw.Surface(rect, theme, theme.Raised, theme.Border);
         if (value)
         {
-            VerseWidgets.DrawBoxSolid(
+            UiThemeDraw.Surface(
                 new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f)),
+                theme,
+                theme.AccentGold,
                 theme.AccentGold);
         }
     }
@@ -76,21 +76,23 @@ public static class UsKernelDraw
     }
 
     /// <summary>
-    /// The single outlet for claiming a control's help entry on hover (C+A model): while the pointer
-    /// is over <paramref name="rect"/>, the panel falls back to the active section's overview; while
-    /// it is over a claimed rect, the panel shows that entry instead. The claim is a per-frame
-    /// transient - the settings window clears <c>help-hover</c> before every <c>DrawFrame</c>, so a
-    /// control that stops being hovered stops being shown without any cleanup of its own. Widgets
-    /// must call this from <c>Draw</c> with the rect they actually drew (scroll-local space is fine;
-    /// IMGUI group translation keeps <c>Mouse.IsOver</c> honest inside the pass).
+    /// The single outlet for claiming a control's help entry on hover (C+A model): while the pointer is
+    /// over <paramref name="rect"/> the panel explains that entry; with no claim it falls back to the
+    /// active section's overview. The claim is a per-pass transient owned by the session — FL P3's
+    /// <c>UiSession.ClaimHover</c>/<c>HoverClaim</c> machine runs its frame boundary inside
+    /// <c>DrawFrame</c> and holds a finished claim for <c>HoverGraceFrames</c> passes, so a control that
+    /// stops being hovered stops being shown without any cleanup of its own, and a pointer crossing the
+    /// gap between two neighbours never flashes the overview. Widgets must call this from <c>Draw</c>
+    /// with the rect they actually drew (scroll-local space is fine; the group translation stays honest
+    /// inside the pass because hover is read through <c>UiNative.IsMouseOver</c>).
     /// </summary>
     /// <returns>Whether the pointer is over the rect, so callers can reuse it for row highlighting.</returns>
     public static bool HelpHover(Rect rect, UiWidgetContext ctx, string itemKey)
     {
-        bool hovered = Mouse.IsOver(rect);
+        bool hovered = UiNative.IsMouseOver(rect);
         if (hovered)
         {
-            ctx.Bindings.Invoke("set-help-hover", itemKey);
+            ctx.Session.ClaimHover(itemKey);
         }
         return hovered;
     }
@@ -98,7 +100,7 @@ public static class UsKernelDraw
     /// <summary>Draws a selection-style button surface and returns whether it was clicked (native invisible button).</summary>
     public static bool SelectionButton(Rect rect, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
     {
-        RowSurface(rect, theme, Mouse.IsOver(rect), selected, danger);
+        RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected, danger);
         Label(
             new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
             label,

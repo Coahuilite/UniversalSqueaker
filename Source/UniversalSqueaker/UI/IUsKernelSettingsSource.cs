@@ -45,11 +45,8 @@ public interface IUsKernelSettingsSource
     void SetRaceFilter(string raceDefName);
     void SetXenotypeFilter(string xenotypeDefName);
     void SetSearchText(string text);
-    void SetHelpHover(string key);
-
-    /// <summary>Per-frame hover-claim boundary (D10): run before every DrawFrame; applies the
-    /// clear-or-hold-or-grace rule from <see cref="VoicePacksPageModel.BeginHelpHoverFrame"/>.</summary>
-    void BeginHelpHoverFrame();
+    // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
+    // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
 
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
