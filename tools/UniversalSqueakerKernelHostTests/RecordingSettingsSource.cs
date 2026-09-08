@@ -46,6 +46,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool? LastBasicToggleValue;
     public bool? LastCameraIndicator;
     public bool? LastEasterEggs;
+    public int? LastMinIntervalTicks;
+    public float? LastCooldownMultiplier;
+    public SqueakDevLoggingMode? LastDevLoggingMode;
+    public bool? LastLocalizeDebugActions;
 
     // View/navigation writes.
     public string? LastActiveTab;
@@ -136,6 +140,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             scalePeriodicWithAudiblePopulation: true,
             showCameraIndicator: false,
             globalCooldownMultiplier: 1f,
+            globalMinIntervalTicks: 216,
+            devLoggingMode: SqueakDevLoggingMode.Auto,
+            localizeDebugActions: false,
             globalVolumeFactor: 1f,
             distanceRangeMin: 15f,
             distanceRangeMax: 50f,
@@ -216,6 +223,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             scalePeriodicWithAudiblePopulation: false,
             showCameraIndicator: true,
             globalCooldownMultiplier: 1f,
+            globalMinIntervalTicks: 216,
+            devLoggingMode: SqueakDevLoggingMode.Enabled,
+            localizeDebugActions: true,
             globalVolumeFactor: 0.6f,
             distanceRangeMin: 20f,
             distanceRangeMax: 45f,
@@ -309,6 +319,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetCameraIndicator(bool value) => LastCameraIndicator = value;
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
+
+    public void SetGlobalMinIntervalTicks(int ticks) => LastMinIntervalTicks = ticks;
+
+    public void SetGlobalCooldownMultiplier(float value) => LastCooldownMultiplier = value;
+
+    public void SetDevLoggingMode(SqueakDevLoggingMode mode) => LastDevLoggingMode = mode;
+
+    public void SetLocalizeDebugActions(bool value) => LastLocalizeDebugActions = value;
 
     public void SetActiveTab(string tab)
     {

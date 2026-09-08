@@ -65,8 +65,11 @@ public partial class UniversalSqueakerSettings : ModSettings
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
     {
-        devLoggingMode = Enum.IsDefined(typeof(SqueakDevLoggingMode), value) ? value : SqueakDevLoggingMode.Auto;
+        SqueakDevLoggingMode normalized = Enum.IsDefined(typeof(SqueakDevLoggingMode), value) ? value : SqueakDevLoggingMode.Auto;
+        if (devLoggingMode == normalized) return;
+        devLoggingMode = normalized;
         ApplyDevLoggingModeToRuntime(true);
+        QueuePersistence();
     }
 
     private void ApplyDevLoggingModeToRuntime(bool announceChange)
@@ -184,6 +187,38 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (showCameraIndicator == value) return;
         showCameraIndicator = value;
         SqueakDebug.ShowCameraIndicator = value;
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: global minimum trigger interval in game ticks. Cheap runtime static
+    /// (same class as the scaling toggles); clamped to at least 1 tick, never a resolver rebuild.</summary>
+    internal void SetGlobalMinIntervalTicks(int ticks)
+    {
+        int clamped = Math.Max(1, ticks);
+        if (globalMinIntervalTicks == clamped) return;
+        globalMinIntervalTicks = clamped;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: global cooldown multiplier 0..3 (the runtime clamp boundary). Cheap static.</summary>
+    internal void SetGlobalCooldownMultiplier(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value)) return;
+        float clamped = Mathf.Clamp(value, 0f, 3f);
+        if (System.Math.Abs(clamped - globalCooldownMultiplier) < 0.0001f) return;
+        globalCooldownMultiplier = clamped;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: localize vanilla debug-menu action names. Applies through the Harmony
+    /// patch's enable switch (which resets the debug action cache) and queues persistence.</summary>
+    internal void SetLocalizeDebugActions(bool value)
+    {
+        if (localizeDebugActions == value) return;
+        localizeDebugActions = value;
+        Patch_DebugTabMenu_Actions.SetEnabled(value);
         QueuePersistence();
     }
     public void NotifyContinuousXenotypeRuntimeChanged() => SqueakRuntimeResolver.NotifyContinuousResolverChange(this, SqueakXenotypeCatalog.Current);

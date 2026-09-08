@@ -180,6 +180,14 @@ public static class UsKernelSettingsHost
         bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
         bindings.BindAction<bool>("toggle-camera-indicator", value => { source.SetCameraIndicator(value); bump(); });
 
+        // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
+        bindings.BindValue<int>("min-interval", () => source.BuildView().GlobalMinIntervalTicks, value => { source.SetGlobalMinIntervalTicks(value); bump(); });
+        bindings.BindValue<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
+
+        // Diagnostics: dev logging level + vanilla debug-menu localization.
+        bindings.BindValue<SqueakDevLoggingMode>("dev-logging", () => source.BuildView().DevLoggingMode, value => { source.SetDevLoggingMode(value); bump(); });
+        bindings.BindValue<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
+
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);
         // Layer and domain switches swap the tuning editor's content, so they bump the revision.

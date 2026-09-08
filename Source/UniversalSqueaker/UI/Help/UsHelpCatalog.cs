@@ -157,6 +157,21 @@ internal static class UsHelpCatalog
                     "US.Help.BasicTuning.Scaling.Label",
                     "US.Help.BasicTuning.Scaling.Text"),
             }),
+        ["us/timing"] = new HelpSection(
+            "us/timing",
+            "US.Section.TriggerTiming",
+            "US.Help.Timing.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/timing/interval",
+                    "US.Help.Timing.Interval.Label",
+                    "US.Help.Timing.Interval.Text"),
+                new HelpItem(
+                    "us/timing/multiplier",
+                    "US.Help.Timing.Multiplier.Label",
+                    "US.Help.Timing.Multiplier.Text"),
+            }),
         ["us/camera-indicator"] = new HelpSection(
             "us/camera-indicator",
             "US.Section.InWorldIndicator",
@@ -167,6 +182,29 @@ internal static class UsHelpCatalog
                     "us/camera-indicator/toggle",
                     "US.Tuning.CameraIndicator",
                     "US.Help.CameraIndicator.Toggle.Text"),
+            }),
+        ["us/diagnostics"] = new HelpSection(
+            "us/diagnostics",
+            "US.Section.Diagnostics",
+            "US.Help.Diagnostics.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/diagnostics/logging-auto",
+                    "US.Diagnostics.Logging.Auto",
+                    "US.Help.Diagnostics.LoggingAuto.Text"),
+                new HelpItem(
+                    "us/diagnostics/logging-enabled",
+                    "US.Diagnostics.Logging.Enabled",
+                    "US.Help.Diagnostics.LoggingEnabled.Text"),
+                new HelpItem(
+                    "us/diagnostics/logging-disabled",
+                    "US.Diagnostics.Logging.Disabled",
+                    "US.Help.Diagnostics.LoggingDisabled.Text"),
+                new HelpItem(
+                    "us/diagnostics/localize-debug",
+                    "US.Diagnostics.LocalizeDebugMenu",
+                    "US.Help.Diagnostics.LocalizeDebug.Text"),
             }),
         ["us/scope-tree"] = new HelpSection(
             "us/scope-tree",

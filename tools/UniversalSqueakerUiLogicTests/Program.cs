@@ -148,8 +148,8 @@ internal static class Program
         string[] sectionKeys =
         {
             "us/page-title", "us/mode-row", "us/global-volume", "us/attenuation-editor",
-            "us/basic-tuning", "us/camera-indicator", "us/scope-tree", "us/preset-list",
-            "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
+            "us/basic-tuning", "us/timing", "us/camera-indicator", "us/diagnostics",
+            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
         };
         foreach (string key in sectionKeys)
         {
@@ -181,7 +181,7 @@ internal static class Program
             }
         }
 
-        Assert(itemCount == 28, "catalog item count matches the shipped wiring table (was 29; the dead basic-tuning/distance entry was cut): " + itemCount);
+        Assert(itemCount == 34, "catalog item count matches the shipped wiring table (was 28; timing +2 and diagnostics +4 landed with the global-tuning wiring): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

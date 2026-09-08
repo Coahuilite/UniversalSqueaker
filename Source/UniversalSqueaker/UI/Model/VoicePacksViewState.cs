@@ -14,6 +14,9 @@ public sealed class VoicePacksViewState
     public bool ScalePeriodicWithAudiblePopulation { get; }
     public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
+    public int GlobalMinIntervalTicks { get; }
+    public SqueakDevLoggingMode DevLoggingMode { get; }
+    public bool LocalizeDebugActions { get; }
     public float GlobalVolumeFactor { get; }
     public float DistanceRangeMin { get; }
     public float DistanceRangeMax { get; }
@@ -47,6 +50,9 @@ public sealed class VoicePacksViewState
         bool scalePeriodicWithAudiblePopulation,
         bool showCameraIndicator,
         float globalCooldownMultiplier,
+        int globalMinIntervalTicks,
+        SqueakDevLoggingMode devLoggingMode,
+        bool localizeDebugActions,
         float globalVolumeFactor,
         float distanceRangeMin,
         float distanceRangeMax,
@@ -79,6 +85,9 @@ public sealed class VoicePacksViewState
         ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         ShowCameraIndicator = showCameraIndicator;
         GlobalCooldownMultiplier = globalCooldownMultiplier;
+        GlobalMinIntervalTicks = globalMinIntervalTicks;
+        DevLoggingMode = devLoggingMode;
+        LocalizeDebugActions = localizeDebugActions;
         GlobalVolumeFactor = globalVolumeFactor;
         DistanceRangeMin = distanceRangeMin;
         DistanceRangeMax = distanceRangeMax;

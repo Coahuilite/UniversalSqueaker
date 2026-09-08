@@ -33,6 +33,10 @@ public interface IUsKernelSettingsSource
     void SetBasicToggle(SqueakBasicToggle key, bool value);
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
+    void SetGlobalMinIntervalTicks(int ticks);
+    void SetGlobalCooldownMultiplier(float value);
+    void SetDevLoggingMode(SqueakDevLoggingMode mode);
+    void SetLocalizeDebugActions(bool value);
 
     // View/navigation state (US-owned, per window)
     void SetActiveTab(string tab);

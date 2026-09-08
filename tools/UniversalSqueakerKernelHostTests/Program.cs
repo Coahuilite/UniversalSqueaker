@@ -534,6 +534,10 @@ internal static class Program
         AssertBumped("toggle-camera-indicator", () => host.Bindings.Invoke("toggle-camera-indicator", false));
         AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
         AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
+        AssertBumped("min-interval", () => host.Bindings.Set("min-interval", 300));
+        AssertBumped("cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f));
+        AssertBumped("dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled));
+        AssertBumped("localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true));
         AssertBumped("set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)));
         AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
     }
@@ -1015,6 +1019,14 @@ internal static class Program
         Assert(fake.LastCameraIndicator == false, "toggle-camera-indicator action routes");
         bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative);
         Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative, "set-distance-preset action routes");
+        bindings.Set("min-interval", 300);
+        Assert(fake.LastMinIntervalTicks == 300, "min-interval value write routes");
+        bindings.Set("cooldown-multiplier", 1.5f);
+        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.5f) < 0.001f, "cooldown-multiplier value write routes");
+        bindings.Set("dev-logging", SqueakDevLoggingMode.Disabled);
+        Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled, "dev-logging value write routes");
+        bindings.Set("localize-debug-menu", true);
+        Assert(fake.LastLocalizeDebugActions == true, "localize-debug-menu value write routes");
         bindings.Invoke("set-action-scope", new UsScopeWrite("Work", null));
         Assert(fake.LastActionKey == "Work" && fake.LastActionScope == null, "set-action-scope null-clear routes");
         bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Bad, SqueakMoodFactor.Volume, 0.8f));

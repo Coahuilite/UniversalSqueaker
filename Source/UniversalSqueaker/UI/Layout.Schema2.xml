@@ -11,7 +11,9 @@
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
         <Widget Id="global-volume" Kind="us/global-volume" TitleKey="US.Section.OutputLevel" HelpKey="us/global-volume" Tab="Overview" />
         <Widget Id="basic-tuning" Kind="us/basic-tuning" TitleKey="US.Section.PlaybackBehaviour" HelpKey="us/basic-tuning" Tab="Overview" />
+        <Widget Id="timing" Kind="us/timing" TitleKey="US.Section.TriggerTiming" HelpKey="us/timing" Tab="Overview" />
         <Widget Id="camera-indicator" Kind="us/camera-indicator" TitleKey="US.Section.InWorldIndicator" HelpKey="us/camera-indicator" Tab="Overview" />
+        <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
         <Widget Id="attenuation-editor" Kind="us/attenuation-editor" TitleKey="US.Section.DistanceAttenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
         <Widget Id="race-layer" Kind="us/race-layer" TitleKey="US.Section.RaceDomain" HelpKey="us/race-layer" Tab="Packs" />

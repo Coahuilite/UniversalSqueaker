@@ -14,6 +14,11 @@
   <US.Diagnostics.Blocked>Blocked</US.Diagnostics.Blocked>
   <US.Diagnostics.Panel.Empty>No diagnostics data</US.Diagnostics.Panel.Empty>
   <US.Diagnostics.Panel.NoPawn>No pawn selected</US.Diagnostics.Panel.NoPawn>
+  <US.Diagnostics.Logging.Label>Developer log level</US.Diagnostics.Logging.Label>
+  <US.Diagnostics.Logging.Auto>Auto</US.Diagnostics.Logging.Auto>
+  <US.Diagnostics.Logging.Enabled>Enabled</US.Diagnostics.Logging.Enabled>
+  <US.Diagnostics.Logging.Disabled>Disabled</US.Diagnostics.Logging.Disabled>
+  <US.Diagnostics.LocalizeDebugMenu>Localize debug menu</US.Diagnostics.LocalizeDebugMenu>
 
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>
@@ -87,6 +92,8 @@
   <US.Section.ChooseVoicePacks>3. Choose VoicePacks</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>Layered tuning</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def baseline presets</US.Section.DefBaselines>
+  <US.Section.TriggerTiming>Trigger timing</US.Section.TriggerTiming>
+  <US.Section.Diagnostics>Diagnostics</US.Section.Diagnostics>
   <US.Tuning.EasterEggs>Easter egg sounds</US.Tuning.EasterEggs>
   <US.Tuning.EasterEggs.On>On (eggs join the pool)</US.Tuning.EasterEggs.On>
   <US.Tuning.EasterEggs.Off>Off (ordinary entries only)</US.Tuning.EasterEggs.Off>
@@ -95,6 +102,8 @@
   <US.Tuning.ScalePopulation>Scale periodic with audible population</US.Tuning.ScalePopulation>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
+  <US.Tuning.MinInterval>Minimum trigger interval: {0}</US.Tuning.MinInterval>
+  <US.Tuning.CooldownMultiplier>Global cooldown multiplier</US.Tuning.CooldownMultiplier>
   <US.Tuning.Mode.Vanilla>Vanilla</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>Fallback</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>Remix</US.Tuning.Mode.Remix>
@@ -196,6 +205,16 @@
   <US.Help.BasicTuning.Scaling.Text>Three global scaling toggles: cooldown with time speed, frequency with talking, and periodic sounds with the audible population. All on by default.</US.Help.BasicTuning.Scaling.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
+  <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>
+  <US.Help.Timing.Interval.Label>Minimum Interval</US.Help.Timing.Interval.Label>
+  <US.Help.Timing.Interval.Text>A hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). Raise it to thin out dense crowds; the default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
+  <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
+  <US.Help.Timing.Multiplier.Text>Scales every action cooldown and the global interval at once: 0.5 halves the wait (twice as chatty), 2.0 doubles it. 1.0 is the authored timing.</US.Help.Timing.Multiplier.Text>
+  <US.Help.Diagnostics.Overview>Support tools: the developer log level and the vanilla debug-menu localization. Neither changes what pawns hear; they only affect the log file and the debug menu.</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.LoggingAuto.Text>Follows the build: dev builds log in detail, release builds stay quiet. This is the default.</US.Help.Diagnostics.LoggingAuto.Text>
+  <US.Help.Diagnostics.LoggingEnabled.Text>Forces detailed routing logs on, even in release builds. Use it when reporting an audio problem; turn it back afterwards, the log grows fast.</US.Help.Diagnostics.LoggingEnabled.Text>
+  <US.Help.Diagnostics.LoggingDisabled.Text>Forces all developer logging off, even in dev builds.</US.Help.Diagnostics.LoggingDisabled.Text>
+  <US.Help.Diagnostics.LocalizeDebug.Text>When on, the vanilla debug menu shows Universal Squeaker's debug actions with translated names and categories. Only visible while developer mode is enabled.</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.ScopeTree.Overview>The three-layer tuning editor: Global, Race and Xenotype. Each action's scope either inherits (Auto) or is forced to Off, Any or Command within the states that action supports; four mood rows override pitch, volume and jitter per layer.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>

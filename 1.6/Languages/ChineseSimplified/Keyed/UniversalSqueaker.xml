@@ -14,6 +14,11 @@
   <US.Diagnostics.Blocked>阻塞</US.Diagnostics.Blocked>
   <US.Diagnostics.Panel.Empty>无诊断数据</US.Diagnostics.Panel.Empty>
   <US.Diagnostics.Panel.NoPawn>未选中 pawn</US.Diagnostics.Panel.NoPawn>
+  <US.Diagnostics.Logging.Label>开发者日志等级</US.Diagnostics.Logging.Label>
+  <US.Diagnostics.Logging.Auto>自动</US.Diagnostics.Logging.Auto>
+  <US.Diagnostics.Logging.Enabled>开启</US.Diagnostics.Logging.Enabled>
+  <US.Diagnostics.Logging.Disabled>关闭</US.Diagnostics.Logging.Disabled>
+  <US.Diagnostics.LocalizeDebugMenu>本地化调试菜单</US.Diagnostics.LocalizeDebugMenu>
 
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
@@ -86,6 +91,8 @@
   <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
+  <US.Section.TriggerTiming>触发节奏</US.Section.TriggerTiming>
+  <US.Section.Diagnostics>诊断支持</US.Section.Diagnostics>
   <US.Tuning.EasterEggs>彩蛋音效</US.Tuning.EasterEggs>
   <US.Tuning.EasterEggs.On>开启：彩蛋加入音效池</US.Tuning.EasterEggs.On>
   <US.Tuning.EasterEggs.Off>关闭：仅普通语音条目</US.Tuning.EasterEggs.Off>
@@ -94,6 +101,8 @@
   <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
+  <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>
+  <US.Tuning.CooldownMultiplier>全局冷却倍率</US.Tuning.CooldownMultiplier>
   <US.Tuning.Mode.Vanilla>原版</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>
@@ -195,6 +204,16 @@
   <US.Help.BasicTuning.Scaling.Text>三项全局缩放开关：冷却随游戏时间流速、频率随交谈状态、周期语音随可闻人口数量。默认全部开启。</US.Help.BasicTuning.Scaling.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
+  <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
+  <US.Help.Timing.Interval.Label>最小间隔</US.Help.Timing.Interval.Label>
+  <US.Help.Timing.Interval.Text>两次 squeak 之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
+  <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
+  <US.Help.Timing.Multiplier.Text>一次性缩放所有动作冷却与全局间隔：0.5 减半等待（更吵），2.0 加倍。1.0 即作者设定的原始节奏。</US.Help.Timing.Multiplier.Text>
+  <US.Help.Diagnostics.Overview>支持工具：开发者日志等级与原版调试菜单本地化。两者都不改变殖民者听到的声音，只影响日志文件与调试菜单。</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.LoggingAuto.Text>跟随构建版本：开发版详细记录，正式版保持安静。这是默认值。</US.Help.Diagnostics.LoggingAuto.Text>
+  <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细路由日志，正式版同样生效。反馈音频问题时使用；用完请调回，日志增长很快。</US.Help.Diagnostics.LoggingEnabled.Text>
+  <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
+  <US.Help.Diagnostics.LocalizeDebug.Text>开启后，原版调试菜单中的 Universal Squeaker 调试项显示翻译后的名称与分类。仅在开发者模式打开时可见。</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>

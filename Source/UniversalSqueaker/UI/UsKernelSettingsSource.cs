@@ -102,6 +102,26 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetAllowEasterEggSounds(value);
     }
 
+    public void SetGlobalMinIntervalTicks(int ticks)
+    {
+        settings.SetGlobalMinIntervalTicks(ticks);
+    }
+
+    public void SetGlobalCooldownMultiplier(float value)
+    {
+        settings.SetGlobalCooldownMultiplier(value);
+    }
+
+    public void SetDevLoggingMode(SqueakDevLoggingMode mode)
+    {
+        settings.SetDevLoggingMode(mode);
+    }
+
+    public void SetLocalizeDebugActions(bool value)
+    {
+        settings.SetLocalizeDebugActions(value);
+    }
+
     public void SetActiveTab(string tab)
     {
         VoicePacksPageModel.SetActiveTab(state, tab);
