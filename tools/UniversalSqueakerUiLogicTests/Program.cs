@@ -38,6 +38,7 @@ internal static class Program
         TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
         UsKernelContractInvariantTests.RunAll();
+        UsDiagnosticsLogicTests.RunAll();
     }
 
     /// <summary>

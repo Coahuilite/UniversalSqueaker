@@ -281,7 +281,7 @@ public static class UsDiagnosticsProjection
     public static int ClampPage(int page, int rowCount)
     {
         int pages = Math.Max(1, (rowCount + RowsPerPage - 1) / RowsPerPage);
-        return Math.Clamp(page, 0, pages - 1);
+        return page < 0 ? 0 : (page > pages - 1 ? pages - 1 : page);
     }
 
     public static int PageCount(int rowCount) => Math.Max(1, (rowCount + RowsPerPage - 1) / RowsPerPage);
