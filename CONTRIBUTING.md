@@ -12,7 +12,7 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
 
 ## 代码 / Code
 
-1. 基于当前开发线切出（现为 `0.3.x`，按载主 Api 窗口命名；本仓不设常驻 dev 分支，也不留按功能命名的长期分支——改动直接落在开发线上；开发线由维护者以 merge 常规回流 `main`，时机按里程碑裁量，2026-09-09 裁定）。
+1. 基于当前开发线切出（现为 `0.3.x`，按载主 Api 窗口命名；本仓不设常驻 dev 分支，也不留按功能命名的长期分支——改动直接落在开发线上，随积累推送本地与远端留存进度）。`main` 是发布信号面：仅在切 rc/release 时由维护者将开发线合入，日常改动绝不流向 `main`（2026-09-09 裁定）。
 2. 保持内核边界：`Source/UniversalSqueaker/Kernel/` 与 `Pure/` 零 Verse/Unity 引用；产品词汇不得渗入（`SqueakyRatkin` 类型引用由 `scripts/check-pack-readiness.ps1` 负向断言拦截）。
 3. 身份契约不得改动：packageId `coahuilite.universalsqueaker`、命名空间 `UniversalSqueaker`、Def 前缀 `US_`、日志前缀 `usdiag`。
 4. 存档兼容红线：`Scribe` 字段名（如 `experimentalKiiroCompat`）与 `usdiag` 事件词表是持久化/诊断契约，重命名 = 静默破坏旧档或排障工具链。
@@ -28,7 +28,7 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
 7. 提交前跑隐私门禁：`pwsh -NoProfile -File scripts/privacy-audit.ps1`（个人路径 / 凭据 / PublishedFileId 值 / 身份唯一性；提交身份使用 GitHub noreply 邮箱）。
 8. 提 PR 到当前开发线（现 `0.3.x`），附改动与理由。历史重写、tag、推送由维护者裁决，贡献者不做。
 
-1. Branch from the current development line (`0.3.x`, named after the carrier API window). There is no standing dev branch and no per-feature long-lived branch - changes land on the line directly; the maintainer merges the line back into `main` routinely at milestone discretion (ruling 2026-09-09), never the other way round.
+1. Branch from the current development line (`0.3.x`, named after the carrier API window). There is no standing dev branch and no per-feature long-lived branch - changes land on the line directly, and pushing the line to local + origin as work accumulates is the routine progress backup. `main` is a release-signal surface: it moves only when the maintainer cuts an rc or stable release and merges the line in (ruling 2026-09-09); routine work never flows to `main`.
 2. Keep kernel boundaries: `Source/UniversalSqueaker/Kernel/` and `Pure/` stay zero-Verse; product vocabulary must not leak (`SqueakyRatkin` type references are caught by a negative assertion in `scripts/check-pack-readiness.ps1`).
 3. Identity contract is fixed: packageId `coahuilite.universalsqueaker`, namespace `UniversalSqueaker`, Def prefix `US_`, log prefix `usdiag`.
 4. Save-compatibility red lines: `Scribe` field names (e.g. `experimentalKiiroCompat`) and the `usdiag` event vocabulary are persistence/diagnostics contracts; renaming them silently breaks old saves or the triage toolchain.
