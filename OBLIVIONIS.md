@@ -188,3 +188,84 @@
 - Relocation set (kernel compiles against these while they sit in legacy directories — move, do not delete): `FerriteLib.UiKit/Layout/UiElementSpec.cs`, `Metrics/ITextMetrics.cs`, `Metrics/UiFont.cs`, `Interaction/UiValueState.cs`, `Widgets/{UiKitFonts,Palette,UiText,SurfaceFrame}.cs`. The settings-window chrome depends on the last three (`UniversalSqueakerSettingsWindow.cs:135-174`); `UiKitFonts` is a kernel dependency and was misclassified as deletable in an earlier review pass.
 - Shim set kept alive only by the diagnostics panel (migrate `SqueakDiagnosticsPanel` to `UiTheme`/`UiThemeDraw`, then delete): `UI/Components/{SectionFrame,UiPalette,EmptyState,StatusBanner}.cs`, `UI/Visuals/{UsSurface,UsVisualTokens}.cs`. All six self-describe as compatibility forwarding.
 - Capability gaps present only in the legacy path (re-implement natively or drop by maintainer decision): sticky Tuning layer row, per-control help hover highlight, xenotype-row dimming at zero candidate packs; minor: `HideBodyLabel` unread by the kernel volume widget, author dropdown lacks an explicit `All` entry.
+
+## FL 0.3.0 migration round record + closed pointer lines (archived verbatim from `HANDOFF.md` §1-§6 and `TODO.md`, 2026-09-09)
+
+- Reason: the migration round and FL→US round 2 are fully landed (round 2 CLOSED by FL; durable facts live in `MEMORY.md` - gate 14, packaging construction, carrier lockstep - and in git log `7777cbe`/`1a8dd51`/`445e138`). `HANDOFF.md` was rewritten as a session-to-session buffer; the superseded state record and the closed TODO pointer lines are byte-copied here per the archive convention. Watch one internal pointer: the archived HANDOFF text references "§5 记逐条判定" style section numbers of the OLD file layout, and its §6.4 round-2 closure narrative is now history (FL closed it).
+
+### HANDOFF.md sections 1-6, verbatim
+
+# Universal Squeaker — Handoff（FL 0.3.0 迁移轮 · 状态记录）
+
+> 本文件原本是 **FL 0.3.0 迁移轮的执行面**（M1–M6 + §2 边界 + §3 验收）。迁移包已于 2026-09-07c 全部落地、§3 逐条验收通过，按 §3 尾条改写回**状态记录**：下面不再是待办指令，而是这一轮做了什么、留下什么。
+> 权威顺序不变：代码 > `AGENTS.md`/`MEMORY.md`/`TODO.md` > 本文件。对侧 `../ferritelib/HANDOFF.md`：US→FL round 1 已 CLOSED；**FL→US round 2（打包脚本 S1–S6）由 FL 同日开出，US 已全量处置**（§4 记原委，§5 记逐条判定与实测）。
+
+## 1. §0 裁决前提：仍然有效的部分
+
+- 术语「renderer backend」= Unity IMGUI / Verse Widgets；全仓无 Dear ImGui。**继续有效。**
+- **豁免一（dev 诊断面板）**：白名单条目暂存，但角色裁定已两轮翻新（09-08 逃逸面 → **09-09 撤销**）：面板全量迁入 UiKit 后该条目**退役**（白名单 2→1，only-shrink 棘轮兑现）。迁移前它仍是常驻豁免；细节与执行项见 §7。金丝雀位 = mod settings（每个玩家必经；其 UiKit 故障原样暴露，不许加固）——该条 09-08 裁定继续有效。
+- **豁免二（相机指示器 legacy fallback 段，冻结）**：继续有效；本轮只按 M5 改了它的 `EventType.Layout` 帧门行（§0 明文允许，不算增内容）。段的去留仍是 Knife 3 的维护者决定。
+- **裁定三（窗口 chrome）**：**已闭合**——chrome 归库壳 `UiWindowHost`，消费者侧不再有 chrome 豁免资格，窗口文件本身已从白名单消失。
+- 边界门只减不增、两侧白名单逐条一致：**继续有效**，且本轮就是它把白名单从 5 条收缩到 2 条的落点。
+
+## 2. M1–M6 落地形状
+
+| Canonical | 结果 |
+|---|---|
+| **M1 / P1** | `UI/UsHoverProbe.cs` 删除；四处 hover 直读 `UiNative.IsMouseOver`（窗口那处随 M2 一并消失）。gate 14 的 `hoverCalls` 期望改为 **0**，探针存在性断言删除，白名单删 `UI/UsHoverProbe.cs` 与 `CompSqueaker.cs` 两条 |
+| **M2 / P2** | `UniversalSqueakerSettingsWindow : UiWindowHost`（251 行 → 148 行）。`Theme`/`Title`/`Subtitle`/`CloseText`/`CreateHost`（含 `UsTextFitAudit.Begin()`）/`DrawNotice`（两通知合并、按 `UiWindowNotice` 分支）/`PrerequisiteVerified`/`BeforeDraw`（只剩 `TickSettingsSaveForWindow`）/`OnDrawFailure`（`SqueakLog.SettingsOpenFailed`）/`InitialSizePolicy`（60–75%、800×600 clamp 原样留在 US，条件 a）。**已删**：`DrawBackground`/`DrawTitleBar`/`DrawCloseButton`、`pageUnavailable`/`noticeDueNextFrame` 状态机、prerequisite 早退分支、`Margin`/`InitialSize`/`DoWindowContents` 覆写、`kernelHost`/`kernelSource` 字段；`PreClose` 只留 `UsTextFitAudit.End()` + 基类链。`Mod.cs` 注册/flush 链未动（按 `Window` 工作） |
+| **M3 / P3** | grace 机入 session：`UsKernelSettingsHost` 建 host 后设 `host.Session.HoverGraceFrames = HelpHoverGracePasses(15)`；`UsKernelDraw.HelpHover` 改 `ctx.Session.ClaimHover`；读取侧（`UsHelpPanelWidget.ResolveFrameDisplay`、`UsSectionWidgetBase.IsHelpSelected`）读 `ctx.Session.HoverClaim`，`"<section>/..."` 前缀与 StartsWith 规则不变。**已删**：`help-hover`/`set-help-hover` 两条 binding、`VoicePacksPageState` 五个 hover 字段（含 `HelpHoverKey`）与 `Reset()` 对应行、`VoicePacksPageModel.SetHelpHover`/`BeginHelpHoverFrame`/`HoverGraceFrames`、`IUsKernelSettingsSource`/`UsKernelSettingsSource` 两条转发、窗口的 `BeginHelpHoverFrame()`。`SectionHelpKey` 业务解析留在 source |
+| **M4 / P4** | `UiBindings.ActiveTabKey` 替换 6 处 `"active-tab"` 字面量（`UsKernelSettingsHost:128`、`UsSectionWidgetBase:68`、`UsNavWidget:68/92`、`UsPageTitleWidget:39/108`）+ 三处 doc 提法。`set-tab` 是 action 名，未动 |
+| **M5 / P6** | `UsKernelOverlayController:69` 与相机 patch `:31` 的帧门 → `UiNative.IsLayoutEvent()`；overlay controller 退出白名单 |
+| **M6** | `PrerequisiteApiMin/Max` → `[0.3.0, 0.4.0)`，M1–M5 全部落地后作为本轮最后一步写入；开工红灯（`prerequisite range tracks the compiled FerriteLib Api`）随该车道改判而转绿 |
+
+M6 顺带修掉的一处 gate 形状：该车道原先把 `0.2.0` **复写**在测试里，门禁其实是在和自己的常量一致。现改为从 `Mod.cs` 解析区间并断言三件事——carrier Api 落在区间内、窗口恰为一个 minor 宽、floor 等于所链 Api（stub 无 `Verse.Mod`，所以类型反射不可行，源码是唯一可读面）。
+
+gate 14 终态实测：`scan: 101 files; 2 file(s) hold backend calls; raw Mouse.IsOver = 0; whitelist 2 entries`，两条各 exempt（24 / 1），**无 NOTE**；自测仍在每次运行前置（看不见 code hit 就直接红）。三种失败面各自验过：白名单外命中、豁免文件消失、raw `Mouse.IsOver` 非 0。
+
+## 3. §3 验收结论
+
+- `pwsh -NoProfile -File scripts/verify-local.ps1` → **14/14 OK**；Dev/Release 各 **0 警告 0 错误**。
+- kernel-host harness **34 道 Step 全绿**，本轮新增/重写的四条：`the window shell carries the next-frame trip and the two notices`（M2：抛错 pass 内不出通知、下一 pass 才红、此后不重试、两通知可分、`PreClose` 由壳 dispose session）、`hover claims release to the overview only after the D10 grace window`（M3：改跑 session 时钟，pin 15 与「一次 `DrawFrame` 恰推进一 pass」）、`control hover claims help through real pointer passes` 与 `distance card draws its bands filled and disjoint`（改读 `HoverClaim`）。
+- §3 点名的「在 harness 强制 `CreateHost` 抛错验证 next-frame trip 由壳完成」已做：真窗口在 harness 里构造不出来（stub 无 `Verse.Mod`），故用一个最小 `UiWindowHost` 探针驱动壳本身，页面用真实 overlay host；消费者侧「不得重建 chrome/状态机」由 `UiSourceInvariantTests` 反向钉住。
+- 文档与计数同轮修正：`README.md`、`README.zh-CN.md`、`CONTRIBUTING.md`（中英）、`MEMORY.md`（gate 14 事实改写为 2 条白名单 + 零直读、D10→`UiSession`、carrier 区间与「pin 从源码读」纪律、源码集重测 101/15,566）、`verify-local.ps1` 头注释。日期化历史记录未改写。
+- 源码集：101 files / 15,566 lines（迁移前 102/15,751）。
+- **实机冒烟未做（本机无 RimWorld）**：已并进 `TODO.md` 的合并冒烟项。两处要看的真实差异：(1) chrome 标题/副标题现由壳以 `singleLine: true` 绘制，贴合审计对这两条走宽度轴——若某语言标题报 `ui.text.overflow(width)`，那是壳的带子规格而非 US 回退；(2) 切换工作区不再立即清空帮助悬停解释（旧 `ApplyActiveTab` 里那句 `state.HelpHoverKey = ""` 随字段一并删除），改由 session 的 15 pass grace 释放——这正是 D10 裁定的机制本身，但 `scroll-to` 引发的切页若发生在非导航区，面板会多留住上一条解释 ≤0.25 s。
+
+## 4. 库侧往来：迁移零缺陷，round 2 由 FL 主动开给 US（打包脚本）
+
+**迁移本身未开 round 2**：只用库的既有公开表面，生产代码零绕行。唯一需要改的是**测试注入口**——FL item C（`0cf397d`，per-widget 恢复归引擎）使「widget 抛错」不再升到 `UiHost.DrawFrame` 之外，overlay「整帧失败不得双扣行高」车道的旧注入因此失效。这是 FL 明文设计且有自家正反车道证明（`KernelWindowHostTests.VerifyWidgetFailureIsRecoveredBelowTheShell`、`KernelLayoutTests` 的 Clip 恢复 + group 深度归零），属契约变更而非缺陷；处理是把失败上移到引擎仍未包裹的帧级路径（`UiHost.Draw` 末尾的 session popup pass），断言目标一字未松。
+
+**FL→US round 2（同日，打包脚本 S1–S6）已由 FL 开出**，起因是 FL 在给自己收打包证据时发现 S1 那条规则先坏在 FL（`f2f4dd0` 已修），于是把抓出问题的检查交给消费者。逐条处置见 §5。
+
+## 5. FL→US round 2 处置（S1–S6，同日执行）
+
+| 项 | 判定 | US 落地与实测 |
+---|---|---|
+| **S1** `build=` 是声明不是测量 | **成立**，且我今晚刚被它咬过一次（第一次 stage 到的 md5 与随后 `--no-incremental` 强制重建不同） | 复现：`verify-local` → 旧 `pack-dev` ⇒ `version.txt: build=dev`，包内 DLL `AssemblyConfiguration=Release`。修：新增 `scripts/read-assembly-stamp.ps1`（子进程读 stamp；不用 `MetadataReader`——Store 版 PowerShell 的 `PEReader` 无 `GetMetadataReader`），stager 与 gate 6 共用**同一实现**；`stage-package` 按通道拒收（负控实测：Release 字节走 dev 通道被 `throw` 拒）；`pack-dev` 自己 `-c Dev --no-incremental` 建它承诺的 flavor（不再靠调用顺序）；`build-dev` 建载主 `-c Release --no-incremental` |
+| **S2** dev 归档形状错 | **成立** | 旧 dev zip 条目实测以 `1.6/`、`About/`、`LoadFolders.xml` 开头（解到 `Mods/` 会摊一个散 `LoadFolders.xml`）——正是 `release.yml` 长注释解释并绕行那个形状的地方。修：dev 默认**不出归档**（`pack-dev -Zip` 才出），形状规则移进引擎 |
+| **S3** 四处 strip 做一件构造就能免的事 | **成立** | `About.xml` 按**单文件**复制（`PublishedFileId.txt` 从任何通道都无入口，strip 步删除）；内容根 `1.6/` 保持开放（不 allowlist），构建碎屑在复制时排除、事后**断言不存在**；稳定部分（根 + `About/` + 那一个 DLL）做**封闭集合**断言，入侵者判红而非删除。实测：仓库里放 `About/PublishedFileId.txt` + `1.6/Assemblies/stray.pdb` 后 stage ⇒ 包内两者皆无、7 文件；另一次故意把内容根摊到包根 ⇒ 封闭集合当场点出三个多余文件 |
+| **S4** 两个写者两个名字一个没人能复现的摘要 | **成立** | 归档写者进引擎，唯一实现：条目名归一 `/`、排序、每条 mtime 钉到被打包 commit 的 author date、根目录恰一层 `UniversalSqueaker/`；`-ArchiveName` 让资产名仍由知道 tag 的人定（`UniversalSqueaker-<tag>.zip` 是对账目标）。实测：同一 payload 相隔 3 秒两次出包 sha256 相同（`52D80B57…`），而修之前根条目用「现在」时间戳，两次不同。`release.yml` 的内联 `Compress-Archive` 与那条绕行注释删除 |
+| **S5** 载主门只看存在不看字节 | **成立**（它原先连 label 都在撒谎：`Invoke-Check` 第二参只是显示用的 retry 提示） | gate 6 改为存在 + stamp==Release，失败信息给出可执行的重建命令。选择**在 US 自己实现 reader**，不要求库新开公开面（reader 是打包侧工具，不是库契约） |
+| **S6** `US_STEAM` 有码轴无构建轴 | **成立**，无需改码 | 已记 `TODO.md`：不可达分支，别当 bug 排；真要接 Workshop 通道时走同一引擎加一个 `-BuildFlavor` 值，不再长一个 packer |
+| FL 附带的 cross-repo 提醒 | 部分已过时 | (1) `UiPanel` 幻影禁名：在 **gate 侧补齐**而非从 MEMORY 删——`UiPanel` 确是旧链里真存在过的类型（`Widgets/UiPanel.cs`），只是从没进过扫描表；现在 MEMORY 与 gate 说的是同一件事（六名）。(2) workflow 大小写：实测两处已是 `Coahuilite/FerriteLib`。(4) 0.3.0 迁移：本文件 §2 已完成。(5) `dependency-reality.ps1` 规则 (c)：留作 gate 14 的候选，不在本轮引入 |
+| 顺手修掉的一处自伤 | — | `pack-dev` 旧流程在 stage 旁留一个空 `.txt` 标记（与 `version.txt` 重复，且诱导人从文件名读身份）；改为清掉历史遗留，身份只从包内 `version.txt` 读 |
+
+## 6. 遗留（不属于本文件）
+
+1. 实机冒烟（两轮合并，维护者本地清单）。**打包流程变了**：dev 包是一个目录，直接放 `Mods/`，不要再找 zip；包内 `version.txt` 现在多一行 `carrier=<stamp> <informational>`，进游戏前先核它是不是 `Release 0.3.0-dev+…`（对不上就先 `dotnet build ../ferritelib/… -c Release --no-incremental`），而包内 DLL 的 flavor 已由引擎测量，`build=dev` 现在是真的。
+2. 发布轴：US `<Version>`/`About.xml <modVersion>` 维持 0.2.0 冻结；carrier 0.3.0 标签与 US 下一个 rc 的配对发版是维护者决定（FL 的标签在等本轮）。
+3. Knife 3（相机 fallback 去留）、dev 诊断面板迁入 UiKit 后豁免一退役（裁定链与执行项见 §7）、`UiSessionGuard` 的 IMGUI group 栈血统风险（归 FL 自家收口）。
+4. FL→US round 2 的**关闭动作在 FL 侧**（缓冲区生命周期：裁决追加在提出方的文件里）。2026-09-08 US 会话对 S1–S6 做了**全量复核**（不看旧记录、每项重跑复现：S1 dev 通道拒收 Release 字节当场测得；S3 埋 `PublishedFileId.txt`/`stray.pdb`/`codemap.md`，前两者被构造挡掉、第三者被封闭集合点名判红；S4 同 payload 两次出包 sha256 一致且条目 mtime 钉在 commit author date；S5 载主改 `-c Dev` 后 gate 6 当场变红、Release 重建后转绿；终态 `verify-local` 14/14），裁决已按生命周期追加进 `../ferritelib/HANDOFF.md` 的 `### US re-review (2026-09-08)`，并明确 FL 可标 CLOSED。`TODO.md` 挂指针直到 FL 完成 body 修剪。同轮编号对齐：US 自己开的 N1–N3 那轮被 FL 按全局计数器规则改名为 **round 3**（本文件旧提法与 `TODO.md` 的 "US→FL round 2" 已全部改标）。
+
+### TODO.md closed/landed pointer lines, verbatim (prefix = line number at extraction time)
+
+8: - **Cross-repo round CLOSED on both sides (2026-09-07) — US→FL round 1**: P1-P6 + A-E landed in `../ferritelib` (carrier Api 0.3.0), and the US consumer half (the FL 0.3.0 migration package, `HANDOFF.md` §2 M1-M6) landed the same day: probe deleted, chrome into `UiWindowHost`, the D10 claim machine into `UiSession`, `UiBindings.ActiveTabKey`, both frame gates on `UiNative.IsLayoutEvent`, pin written back to `[0.3.0, 0.4.0)` as the last step. Gate 14's US whitelist is now 2 entries with a zero raw-hover assertion. Nothing on the migration itself needed the library. What is left is not code: the carrier 0.3.0 release tag + US's next rc pairing is a maintainer decision (FL holds its tag until this commit; §2 forbids touching the US version axes).
+9: - **Cross-repo round — FL→US round 2 (2026-09-07): packaging scripts. US DONE + RE-VERIFIED 2026-09-08.** Buffer section `## FL→US round 2` in `../ferritelib/HANDOFF.md`, items S1-S6; FL fixed S1 in its own tree first (`f2f4dd0`) and offered US the check that caught it. **S1-S5 executed in US** (measured reproduction and controls in `HANDOFF.md` §5), **S6 needs no code** (recorded below as a dead-until-wired axis). On 2026-09-08 US re-ran every item as a fresh reproduction on `2324d5f` (scripts identical to landing commit `1a8dd51`): S1 dev-channel refusal measured, S3 planted intruders caught by name, S4 two packs agree byte for byte, S5 gate 6 red against a Dev carrier, `verify-local` 14/14. **The verdict is appended in FL's buffer (`### US re-review (2026-09-08)`); the remaining action is FL's: trim the body to CLOSED per the lifecycle.** This pointer stays until that trim lands.
+12: - [x] ~~US `HANDOFF.md` §1 items 1-6 (seam round)~~ **EXECUTED 2026-09-07b** (dev session): chrome close button `UiNative.Button`; hover behind a then-new `UI/UsHoverProbe.cs`; checkbox off `DrawBoxSolid` onto `UiThemeDraw.Surface`; `VoicePacksPageState` scroll fossils deleted; boundary gate landed as verify-local **gate 14** (self-testing scanner, append-only gate numbers). Its 5-file whitelist and the `[0.2.0, 0.3.0)` pin were both superseded the same day by the migration above - the only-shrink ratchet is what made that shrink an expected outcome rather than a renegotiation.
+15: - [x] ~~CI first real run~~ **GREEN 2026-09-07** (run `34075213342`): carrier checkout + full-tree sibling staging + 13/13 gates + privacy audit CLEAN. Two runner-only defects found and fixed on the way (DLL-only staging broke gate 13's in-place stub build; missing `* text=auto eol=lf` would have broken gate 10's byte-exact licence compare on a CRLF checkout) - both proven by a clean worktree simulation before re-push.
+16: - [x] ~~Branch protection / public flip~~ **DONE 2026-09-07**: repo flipped public on maintainer authorization (collaborator download need; full-history privacy audit CLEAN immediately before). Protection applied same session in the carrier-minimal shape (force-push off, deletion off; PUT requires explicit `"restrictions": null`). Anonymous download of the rc1 asset verified byte-exact against the server digest.
+17: - [x] ~~First US rc tag~~ **CUT 2026-09-07**: version axis 0.2.0 (aligned with carrier), `v0.2.0-rc1` prerelease live, six-point reconciliation green after two re-cuts (asset name, then zip shape - both fixed in release.yml, 0 downloads each time so the collaborator never saw a bad artifact). Release.yml's first real execution proved the whole chain end to end.
+19: - [x] ~~Cross-repo hash duty~~ **CLOSED by maintainer ruling 2026-09-07**: stop chasing hashes; existing history is never rewritten for them. Dangling citations are archaeology (MEMORY "Hash archaeology - CLOSED").
+24: - [x] ~~Hash re-pointing of live docs~~ **CLOSED by the 2026-09-07 ruling**: no further hash maintenance anywhere; `OBLIVIONIS.md`/`docs/review/**`/live docs all keep whatever hashes they carry.
+25: - [x] ~~Pre-existing hash rot in cold docs~~ **CLOSED by the same ruling**: archaeology, not damage; the mirror chain stays available but unused by default.
