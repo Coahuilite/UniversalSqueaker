@@ -4,16 +4,54 @@
   <US.Settings.Save.Failed>Squeak settings could not be saved.</US.Settings.Save.Failed>
 
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
-  <DebugAction_DiagnosticsSelected>Diagnostics: selected pawn</DebugAction_DiagnosticsSelected>
+  <DebugAction_DiagnosticsOpen>Diagnostics: open panel</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>Camera: height {0}, view size {1}</US.Debug.CameraIndicator>
   <US.Diagnostics.Title>Universal Squeaker Diagnostics</US.Diagnostics.Title>
-  <US.Diagnostics.Mode.Selected>Selected</US.Diagnostics.Mode.Selected>
-  <US.Diagnostics.Mode.Visible>Visible</US.Diagnostics.Mode.Visible>
-  <US.Diagnostics.CloseHint>Press Esc again to close</US.Diagnostics.CloseHint>
+  <US.Diagnostics.Close>Close (or press Esc twice)</US.Diagnostics.Close>
+  <US.Diagnostics.UnlockClose>Close and unlock</US.Diagnostics.UnlockClose>
+  <US.Diagnostics.Lock>Lock</US.Diagnostics.Lock>
+  <US.Diagnostics.LockedTag>locked</US.Diagnostics.LockedTag>
+  <US.Diagnostics.Bar>Collapse</US.Diagnostics.Bar>
+  <US.Diagnostics.Page.Format>page {0}/{1} - total {2}</US.Diagnostics.Page.Format>
+  <US.Diagnostics.Search.Placeholder>Search pawns on this map...</US.Diagnostics.Search.Placeholder>
+  <US.Diagnostics.Search.None>No match on this map</US.Diagnostics.Search.None>
+  <US.Diagnostics.Monitor.Empty>Waiting for the first update...</US.Diagnostics.Monitor.Empty>
+  <US.Diagnostics.Detail.Empty>Select a pawn to inspect it</US.Diagnostics.Detail.Empty>
+  <US.Diagnostics.PageUnavailable.Title>Diagnostics page unavailable</US.Diagnostics.PageUnavailable.Title>
+  <US.Diagnostics.PageUnavailable.Body>The diagnostics page failed to draw and was stopped for this window instance; reopen it from the debug menu.</US.Diagnostics.PageUnavailable.Body>
   <US.Diagnostics.Ready>Ready</US.Diagnostics.Ready>
   <US.Diagnostics.Blocked>Blocked</US.Diagnostics.Blocked>
   <US.Diagnostics.Panel.Empty>No diagnostics data</US.Diagnostics.Panel.Empty>
-  <US.Diagnostics.Panel.NoPawn>No pawn selected</US.Diagnostics.Panel.NoPawn>
+  <US.Diagnostics.Section.State>Current state</US.Diagnostics.Section.State>
+  <US.Diagnostics.Section.Chain>Gate chain</US.Diagnostics.Section.Chain>
+  <US.Diagnostics.Field.CurrentAction>Current action</US.Diagnostics.Field.CurrentAction>
+  <US.Diagnostics.Field.LastDispatch>Last dispatch</US.Diagnostics.Field.LastDispatch>
+  <US.Diagnostics.Value.Pass>Pass</US.Diagnostics.Value.Pass>
+  <US.Diagnostics.Value.Blocked>Blocked</US.Diagnostics.Value.Blocked>
+  <US.Diagnostics.Value.NotApplicable>N/A</US.Diagnostics.Value.NotApplicable>
+  <US.Diagnostics.Reason.NotPlayerControlled>not player-controlled</US.Diagnostics.Reason.NotPlayerControlled>
+  <US.Diagnostics.Reason.Downed>downed</US.Diagnostics.Reason.Downed>
+  <US.Diagnostics.Reason.Asleep>asleep</US.Diagnostics.Reason.Asleep>
+  <US.Diagnostics.Gate.Disabled>Disabled bypass</US.Diagnostics.Gate.Disabled>
+  <US.Diagnostics.Gate.OnMap>On map</US.Diagnostics.Gate.OnMap>
+  <US.Diagnostics.Gate.OnScreen>On screen</US.Diagnostics.Gate.OnScreen>
+  <US.Diagnostics.Gate.Plan>Trigger plan</US.Diagnostics.Gate.Plan>
+  <US.Diagnostics.Gate.Identity>Identity gate</US.Diagnostics.Gate.Identity>
+  <US.Diagnostics.Gate.ScopeEnabled>Scope enabled</US.Diagnostics.Gate.ScopeEnabled>
+  <US.Diagnostics.Gate.ScopeMatch>Scope match</US.Diagnostics.Gate.ScopeMatch>
+  <US.Diagnostics.Gate.Startup>Startup phase</US.Diagnostics.Gate.Startup>
+  <US.Diagnostics.Gate.Probability>Probability</US.Diagnostics.Gate.Probability>
+  <US.Diagnostics.Gate.ActionCooldown>Action cooldown</US.Diagnostics.Gate.ActionCooldown>
+  <US.Diagnostics.Gate.GlobalCooldown>Global cooldown</US.Diagnostics.Gate.GlobalCooldown>
+  <US.Diagnostics.Gate.VocalOrgan>Vocal organ</US.Diagnostics.Gate.VocalOrgan>
+  <US.Diagnostics.Gate.Talking>Talking state</US.Diagnostics.Gate.Talking>
+  <US.Diagnostics.Gate.AudioPool>Audio pool</US.Diagnostics.Gate.AudioPool>
+  <US.Diagnostics.Gate.Playability>Playability</US.Diagnostics.Gate.Playability>
+  <US.Diagnostics.Gate.Dispatch>Dispatch</US.Diagnostics.Gate.Dispatch>
+  <US.Diagnostics.Tier.XenotypePack>Xenotype pack</US.Diagnostics.Tier.XenotypePack>
+  <US.Diagnostics.Tier.RacePack>Race pack</US.Diagnostics.Tier.RacePack>
+  <US.Diagnostics.Tier.PackFallback>Pack fallback</US.Diagnostics.Tier.PackFallback>
+  <US.Diagnostics.Tier.Vanilla>Vanilla</US.Diagnostics.Tier.Vanilla>
   <US.Diagnostics.Logging.Label>Developer log level</US.Diagnostics.Logging.Label>
   <US.Diagnostics.Logging.Auto>Auto</US.Diagnostics.Logging.Auto>
   <US.Diagnostics.Logging.Enabled>Enabled</US.Diagnostics.Logging.Enabled>

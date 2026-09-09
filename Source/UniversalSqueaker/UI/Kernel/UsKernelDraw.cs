@@ -75,6 +75,16 @@ public static class UsKernelDraw
         return ctx.Translation.Translate(key);
     }
 
+    /// <summary>Context-bound overloads: widgets pass ctx once and the helper binds theme+seam.
+    /// Same single outlet contract - the string arrives resolved, nothing is translated here.</summary>
+    public static void Label(Rect rect, string text, UiWidgetContext ctx, UiFont? font = null,
+        TextAnchor anchor = TextAnchor.MiddleLeft, bool singleLine = false)
+        => Label(rect, text, ctx.Theme, null, font, anchor, singleLine);
+
+    public static void Label(Rect rect, string text, UiWidgetContext ctx, Color color, UiFont? font = null,
+        TextAnchor anchor = TextAnchor.MiddleLeft, bool singleLine = false)
+        => Label(rect, text, ctx.Theme, color, font, anchor, singleLine);
+
     /// <summary>
     /// The single outlet for claiming a control's help entry on hover (C+A model): while the pointer is
     /// over <paramref name="rect"/> the panel explains that entry; with no claim it falls back to the
@@ -211,6 +221,12 @@ public static class UsKernelDraw
         }
         return text.Substring(0, lo) + "…";
     }
+
+    /// <summary>Public seam over the same ellipsize rule the dropdown trigger uses: single-line
+    /// cells (diagnostics summary rows) cut through the injected metrics so harness and game
+    /// truncate identically.</summary>
+    public static string Ellipsized(string text, UiWidgetContext ctx, UiFont font, float maxWidth)
+        => EllipsizeToFit(text, maxWidth, ctx.Metrics, font);
 
     /// <summary>Card frame with a title header; returns the inner body rect.</summary>
     public static Rect DrawCard(Rect rect, string title, UiTheme theme)

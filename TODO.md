@@ -67,8 +67,7 @@ Agreed with the maintainer 2026-09-08 (the three points below are rulings, not p
 - [ ] **First in-game observation of PackFallback (fold into the panel acceptance build)**: maintainer recalled it as untested; audit confirmed the whole path exists (kernel tiers pinned by `PackFallbackTier`/`PackFallbackExactDomainOnly`, adapter projection at `SqueakKernelAdapter.cs:187-195`) but it was never walked in a live game. Acceptance pack: one VoicePack missing the tested action's sound set but declaring `<fallbacks>` - the panel must show `[Pack fallback·<pack key>] : <sound>` on dispatch.
 
 ## Crash-lineage risks (not layout; belongs with heap-corruption triage)
-
-- [ ] `SqueakDiagnosticsPanel.DrawVisible` pairs `Widgets.BeginScrollView`/`EndScrollView` and restores `Text.Anchor`/`Text.Font`/`GUI.color` outside `try/finally` — closed by construction when the panel moves onto UiKit (ruling 2026-09-09, section above: the engine's `Scroll` container owns the `finally`). `UiSessionGuard` itself restores GUI state only in its `catch` and then keeps drawing siblings (group stack unbalanced after a throw): library-side, belongs to FL's own closure, do not touch from US.
+- [x] ~~`SqueakDiagnosticsPanel.DrawVisible` scroll pairing / GUI-state restore~~ **CLOSED 2026-09-10**: the file was rewritten onto the UiKit shell; raw scroll/GUI-state code no longer exists (the engine's `Scroll` owns the `finally`). `UiSessionGuard` itself (library side: restores GUI state only in its `catch` then keeps drawing - group stack unbalanced after a throw) still belongs to FL's own closure, do not touch from US.
 
 ## Optional tail
 

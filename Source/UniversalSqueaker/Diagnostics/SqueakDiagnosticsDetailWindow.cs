@@ -8,15 +8,14 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker;
 
 /// <summary>
-/// The main diagnostics window (round-9 contract): the library shell (<see cref="UiWindowHost"/>)
-/// around one kernel page in master-detail shape - left list column (search + 8-row pages),
-/// right detail column following the live selection, plus the detach-to-lock and collapsed-bar
-/// states. Closing it ends the whole diagnostics session (the overlay cascades every detail
-/// window closed). The file draws ZERO raw backend calls: chrome is the shell's, content is the
-/// widget family's, hover/keys are the session's - so it leaves the gate 14 whitelist with this
-/// rewrite (only-shrink ratchet landing).
+/// One detachable per-pawn detail window (round-9 lock ruling): created by the overlay when a
+/// row click or lock button detaches a pawn's details, tracked off-screen until it is closed or
+/// unlocked - closing IS the unlock (the overlay's NotifyDetailWindowClosed), and the pawn dying,
+/// despawning or the session ending closes this window in return (IsValid self-check).
+/// Same shell, same widget family, page without list/pager/search; its monitor bar shows its own
+/// pawn's summary row. Zero raw backend calls, so it never joins the gate 14 whitelist.
 /// </summary>
-internal sealed class SqueakDiagnosticsPanel : UiWindowHost
+internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 {
     private const float KeepGrabPx = 24f;
     private const float EscArmSeconds = 3f;
@@ -24,43 +23,53 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 
     private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
 
-    private readonly UsDiagnosticsSessionSource source = new();
+    private readonly Pawn pinnedPawn;
+    private readonly UsDiagnosticsDetailSource source;
     private float escArmedUntil = -1f;
     private bool lastCollapsed;
     private Rect expandedRect = Rect.zero;
 
-    public SqueakDiagnosticsPanel()
+    public SqueakDiagnosticsDetailWindow(Pawn pawn)
     {
-        // Non-modal diagnostic panel: never pauses, never absorbs surroundings, camera stays live.
-        // The chrome flags the shell owns (close button, background, shadow) are deliberately absent here.
+        if (pawn == null) throw new ArgumentNullException(nameof(pawn));
+        pinnedPawn = pawn;
+        source = new UsDiagnosticsDetailSource(pawn);
+
         forcePause = false;
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
-        closeOnCancel = false; // Esc handled by the two-press arm below.
+        closeOnCancel = false;
         closeOnAccept = false;
         closeOnClickedOutside = false;
-        onlyOneOfTypeAllowed = true;
+        onlyOneOfTypeAllowed = false; // multiple locks are allowed by ruling.
         focusWhenOpened = false;
         onlyDrawInDevMode = true;
     }
 
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(620f, 560f);
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(320f, 480f);
 
     protected override UiTheme Theme => WindowTheme;
 
-    protected override string Title => Translator.Translate("US.Diagnostics.Title");
+    protected override string Title => pinnedPawn.LabelShort + " - " + Translator.Translate("US.Diagnostics.Title");
 
-    protected override string CloseText => Translator.Translate("US.Diagnostics.Close");
+    protected override string CloseText => Translator.Translate("US.Diagnostics.UnlockClose");
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateMain(source);
+    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateDetail(source);
 
-    /// <summary>The window owns collapsed GEOMETRY (the source owns the flag): shrink to a bar of
-    /// chrome + one row, restore the remembered rect on expand.</summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        // Self-close the moment the pinned pawn stopped being tracked (dead/despawned/map change/
+        // session end). BeforeDraw is inside THIS window's own pass, so Close here is the same
+        // mid-draw close a button click performs.
+        if (!source.IsValid)
+        {
+            Close();
+            return;
+        }
+
         bool collapsed = source.Collapsed;
         if (collapsed == lastCollapsed)
         {
@@ -84,17 +93,13 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     public override void WindowOnGUI()
     {
         base.WindowOnGUI();
-        // Keep the title bar grabbable: the panel can never be dragged fully off-screen.
         windowRect.x = Mathf.Clamp(windowRect.x, Mathf.Min(0f, KeepGrabPx - windowRect.width), Verse.UI.screenWidth - KeepGrabPx);
         windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - KeepGrabPx));
     }
 
     public override void OnCancelKeyPressed()
     {
-        // Two presses within EscArmSeconds close. NOTE: no Event.current consumption - the UiNative
-        // seam exposes none and the gate-14 contract requires zero raw backend calls in this file.
-        // Whether an unconsumed Esc leaks into game cancel/selection is a live-walkthrough check
-        // item; if it leaks, that is the shell-level gap to take to FerriteLib as round-4 material.
+        // Same two-press arm and the same no-consumption contract as the main window.
         float now = Time.realtimeSinceStartup;
         if (now > escArmedUntil)
         {
@@ -107,7 +112,6 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         }
     }
 
-    /// <summary>Terminal notices in US's own vocabulary (the library ships zero strings).</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
         UiThemeDraw.Surface(rect, WindowTheme, WindowTheme.Panel, WindowTheme.Border);
@@ -124,16 +128,14 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
             WindowTheme, WindowTheme.TextSecondary, UiFont.Small);
     }
 
-    /// <summary>Plain log line, deliberately NOT a usdiag protocol event: the frozen vocabulary
-    /// gates a registry, and a dev-panel failure has no business editing it.</summary>
     protected override void OnDrawFailure(Exception error)
     {
-        Log.Warning("[UniversalSqueaker] Diagnostics panel draw failed: " + SqueakLogText.SanitizeExceptionMessage(error.Message));
+        Log.Warning("[UniversalSqueaker] Diagnostics detail window draw failed: " + SqueakLogText.SanitizeExceptionMessage(error.Message));
     }
 
     public override void PreClose()
     {
         base.PreClose();
-        SqueakDiagnosticsOverlay.NotifyPanelClosed();
+        SqueakDiagnosticsOverlay.NotifyDetailWindowClosed(pinnedPawn);
     }
 }

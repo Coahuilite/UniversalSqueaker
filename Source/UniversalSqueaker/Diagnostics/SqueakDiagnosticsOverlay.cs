@@ -5,21 +5,22 @@ using Verse;
 
 namespace UniversalSqueaker;
 
-/// <summary>Diagnostics display mode: off / single-pawn detail / multi-pawn list.</summary>
-public enum SqueakDiagnosticsMode { Off, Selected, Visible }
-
 /// <summary>
-/// S4 diagnostic session manager (US rebuild, no MapInterface hook). Maintains a low-frequency
-/// cached snapshot set per pawn, drives the draggable <see cref="SqueakDiagnosticsPanel"/>, and
-/// exposes the cached marks for CompSqueaker.PostDraw — the only on-pawn drawing path (a public
-/// ThingComp hook, so marks follow the pawn natively). Layout owns snapshot work; drawing owns
-/// marks only.
+/// Diagnostics session driver (round-9 contract). One live session feeds three observation roles
+/// into <see cref="SqueakDiagnosticsSessionModel{TKey}"/>: a viewport sweep (every squeaker-carrying
+/// pawn on screen, stable thingID order, no headcount gate), the live selection (the main window's
+/// detail column), and the lock set (detachable per-pawn detail windows, tracked even off-screen).
+/// Per-pawn snapshots are low-frequency, side-effect-free reads; the model's revision is the only
+/// clock the UiKit pages rebuild on. Closing the main window ends the session and cascades every
+/// detail window closed; a map change tears the session down through the existing lifecycle guard.
 /// </summary>
 public static class SqueakDiagnosticsOverlay
 {
-    private const int MaxVisiblePawns = 16;
-    private const float SelectedRefreshSeconds = 0.25f;
-    private const float VisibleRefreshSeconds = 0.5f;
+    private const float DetailRefreshSeconds = 0.25f;
+    private const float SweepRefreshSeconds = 0.5f;
+
+    /// <summary>Cap on one search result page source; a colony never legitimately shows this many name matches.</summary>
+    internal const int SearchResultsCap = 64;
 
     internal const string Mark = "●";
 
@@ -28,7 +29,7 @@ public static class SqueakDiagnosticsOverlay
     internal static readonly Color BlockedColor = new(.95f, .68f, .22f);
     internal static readonly Color PendingColor = new(.35f, .66f, .95f);
 
-    /// <summary>One cached structured snapshot per tracked pawn. Read-only for the panel; the overlay mutates only during refresh.</summary>
+    /// <summary>One cached structured snapshot per tracked pawn. Read-only for the pages; the driver mutates only during refresh.</summary>
     internal sealed class CachedPawn
     {
         public Pawn Pawn = null!;
@@ -36,55 +37,135 @@ public static class SqueakDiagnosticsOverlay
         public SqueakDiagnosticSnapshot Snapshot;
         public string MarkText = string.Empty;
         public Color MarkColor = Color.white;
+        public int Fingerprint;
     }
 
-    private static readonly List<CachedPawn> cachedPawns = new();
+    private static readonly SqueakDiagnosticsSessionModel<Pawn> model = new();
     private static readonly Dictionary<Pawn, CachedPawn> entriesByPawn = new();
-    private static readonly HashSet<Pawn> refreshedPawns = new();
-    private static SqueakDiagnosticsMode mode;
+    private static readonly List<CachedPawn> viewportEntries = new();
+    private static readonly List<Pawn> sweepScratch = new();
+    private static readonly List<Pawn> lockedScratch = new();
+    private static readonly List<Pawn> dropScratch = new();
+    private static readonly Dictionary<Pawn, SqueakDiagnosticsDetailWindow> detailWindows = new();
+
+    private static SqueakDiagnosticsPanel? mainPanel;
     private static Map? cachedMap;
-    private static Pawn? selectedPawn;
-    private static float nextRefreshRealtime;
-    private static int revision;
-    private static SqueakDiagnosticsPanel? panel;
+    private static bool sessionActive;
+    private static float nextSweepRealtime;
+    private static float nextDetailRealtime;
+    private static CachedPawn? lastChangedEntry;
 
-    /// <summary>Bumped whenever a snapshot entry is updated or removed; the panel rebuilds its formatted cache on change.</summary>
-    internal static int Revision => revision;
+    /// <summary>The single rebuild clock: membership, selection, and snapshot updates all flow through the model.</summary>
+    internal static int Revision => model.Revision;
 
-    internal static SqueakDiagnosticsMode Mode => mode;
+    public static bool IsSessionActive => sessionActive;
 
-    internal static Pawn? SelectedPawn => selectedPawn;
+    internal static IReadOnlyList<CachedPawn> ViewportEntries => viewportEntries;
 
-    /// <summary>Read-only entry access for the panel. Only read during window draw; the overlay mutates only during refresh.</summary>
-    internal static IReadOnlyList<CachedPawn> CachedPawns => cachedPawns;
+    internal static IReadOnlyList<Pawn> LockedPawns => model.Locked;
 
-    /// <summary>The single readiness rule shared by the mark color and the panel badges.</summary>
+    internal static bool IsLocked(Pawn pawn) => model.IsLocked(pawn);
+
+    internal static bool TryGetEntry(Pawn pawn, out CachedPawn entry) => entriesByPawn.TryGetValue(pawn, out entry!);
+
+    /// <summary>Viewport membership decides a row click: visible pawn drills in via selection,
+    /// search-only (off-screen) pawn locks directly - selection cannot reach what the camera cannot.</summary>
+    internal static bool IsInViewport(Pawn pawn)
+    {
+        for (int i = 0; i < viewportEntries.Count; i++)
+        {
+            if (ReferenceEquals(viewportEntries[i].Pawn, pawn)) return true;
+        }
+
+        return false;
+    }
+
+    internal static bool IsTracked(Pawn pawn) => sessionActive && model.IsTracked(pawn);
+
+    /// <summary>Collapsed-bar content: the pawn whose row content last CHANGED while still tracked;
+    /// falls back to the first viewport entry (a bar showing nothing would be a lie of omission).</summary>
+    internal static CachedPawn? MonitorEntry
+    {
+        get
+        {
+            if (lastChangedEntry != null && model.IsTracked(lastChangedEntry.Pawn)) return lastChangedEntry;
+            return viewportEntries.Count > 0 ? viewportEntries[0] : null;
+        }
+    }
+
+    /// <summary>The entry the main window's detail column shows (live selection), or null.</summary>
+    internal static CachedPawn? SelectedEntry
+    {
+        get
+        {
+            if (!model.HasSelected) return null;
+            return entriesByPawn.TryGetValue(model.Selected!, out CachedPawn? entry) ? entry : null;
+        }
+    }
+
+    /// <summary>The single readiness rule shared by the mark color, the header badge, and the summary row.</summary>
     internal static bool ReadyFor(SqueakDiagnosticSnapshot s) => s.EffectiveTimingReady && s.CurrentActionEnabled
         && s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold;
 
-    public static void SetMode(SqueakDiagnosticsMode newMode)
+    /// <summary>Opens the session (idempotent) and the main window.</summary>
+    public static void BeginSession()
     {
-        ClearSession();
-        if (newMode == SqueakDiagnosticsMode.Off)
-        {
-            return;
-        }
-
         if (Find.CurrentMap == null)
         {
             return;
         }
 
-        mode = newMode;
-        cachedMap = Find.CurrentMap;
-        CompSqueaker.DiagnosticsEnabled = true;
-        OpenPanel();
+        if (!sessionActive)
+        {
+            sessionActive = true;
+            cachedMap = Find.CurrentMap;
+            CompSqueaker.DiagnosticsEnabled = true;
+            model.Reset();
+        }
+
+        OpenMainPanel();
+    }
+
+    /// <summary>Lock a pawn and open (or surface) its detachable detail window. Row clicks and search hits both land here.</summary>
+    public static void LockAndOpenDetail(Pawn pawn)
+    {
+        if (pawn == null) throw new ArgumentNullException(nameof(pawn));
+        if (!sessionActive)
+        {
+            BeginSession();
+        }
+        if (!sessionActive)
+        {
+            return; // no map: BeginSession declined.
+        }
+
+        model.Lock(pawn);
+        if (!detailWindows.ContainsKey(pawn))
+        {
+            SqueakDiagnosticsDetailWindow window = new(pawn);
+            detailWindows.Add(pawn, window);
+            Find.WindowStack.Add(window);
+        }
+    }
+
+    /// <summary>Called from a detail window's PreClose: closing it IS the unlock. Never re-enters window close.</summary>
+    internal static void NotifyDetailWindowClosed(Pawn pawn)
+    {
+        detailWindows.Remove(pawn);
+        model.Unlock(pawn);
+        PruneDroppedEntries();
+    }
+
+    /// <summary>Called from the main window's PreClose: the session ends, every detail window cascades closed.</summary>
+    internal static void NotifyPanelClosed()
+    {
+        CloseSession();
     }
 
     /// <summary>Per-frame teardown guard. It must remain free of snapshot, formatting, translation, and draw work.</summary>
     public static void MaintainLifecycle()
     {
-        if (mode == SqueakDiagnosticsMode.Off)
+        if (!sessionActive)
         {
             return;
         }
@@ -92,7 +173,7 @@ public static class SqueakDiagnosticsOverlay
         Map? map = Find.CurrentMap;
         if (map == null || !ReferenceEquals(cachedMap, map))
         {
-            ClearSession();
+            CloseSession();
         }
     }
 
@@ -101,7 +182,33 @@ public static class SqueakDiagnosticsOverlay
     {
         try
         {
-            RefreshIfDueCore();
+            if (!sessionActive)
+            {
+                return;
+            }
+
+            MaintainLifecycle();
+            if (!sessionActive)
+            {
+                return;
+            }
+
+            // Diagnostics stay fresh even when production population scaling is disabled; individual
+            // comp snapshots only read the resulting immutable shared state.
+            CompSqueaker.MaintainPeriodicPopulationDiagnostics();
+
+            float now = Time.realtimeSinceStartup;
+            if (now >= nextDetailRealtime)
+            {
+                nextDetailRealtime = now + DetailRefreshSeconds;
+                RefreshDetailRoles(now);
+            }
+
+            if (now >= nextSweepRealtime)
+            {
+                nextSweepRealtime = now + SweepRefreshSeconds;
+                RefreshViewportSweep();
+            }
         }
         catch (Exception ex)
         {
@@ -110,127 +217,55 @@ public static class SqueakDiagnosticsOverlay
         }
     }
 
-    private static void RefreshIfDueCore()
+    /// <summary>
+    /// Search over the CURRENT MAP only: the data source is the game's own per-map collection, so
+    /// the map boundary is native, not hand-rolled. Matches are substring/label or defName,
+    /// case-insensitive; a result row click locks directly (selection cannot reach off-screen pawns).
+    /// </summary>
+    public static List<Pawn> SearchCurrentMap(string? rawQuery)
     {
-        MaintainLifecycle();
-
-        if (mode == SqueakDiagnosticsMode.Off)
+        List<Pawn> results = new();
+        if (!sessionActive || cachedMap == null)
         {
-            return;
+            return results;
+        }
+        string query = (rawQuery ?? string.Empty).Trim();
+        if (query.Length == 0)
+        {
+            return results;
         }
 
-        // Keep diagnostics fresh even when production population scaling is disabled. Individual
-        // Comp diagnostic snapshots only read the resulting immutable shared state.
-        CompSqueaker.MaintainPeriodicPopulationDiagnostics();
-
-        Map map = cachedMap!;
-
-        float now = Time.realtimeSinceStartup;
-        if (mode == SqueakDiagnosticsMode.Selected)
+        foreach (Pawn pawn in cachedMap.mapPawns.AllPawnsSpawned)
         {
-            Pawn? pawn = Find.Selector.SingleSelectedThing as Pawn;
-            if (!ReferenceEquals(pawn, selectedPawn) || now >= nextRefreshRealtime)
-            {
-                RefreshSelected(pawn, now);
-            }
-        }
-        else if (now >= nextRefreshRealtime)
-        {
-            RefreshVisible(map, now);
-        }
-    }
-
-    /// <summary>No map-level cached drawing in US: on-pawn marks are drawn by CompSqueaker.PostDraw.</summary>
-    public static void DrawCached() { }
-
-    private static void RefreshSelected(Pawn? pawn, float now)
-    {
-        selectedPawn = pawn;
-        nextRefreshRealtime = now + SelectedRefreshSeconds;
-        refreshedPawns.Clear();
-        CellRect view = Find.CameraDriver.CurrentViewRect.ExpandedBy(1);
-        if (pawn?.Spawned == true && !pawn.Dead && pawn.MapHeld == cachedMap && view.Contains(pawn.Position))
-        {
-            CompSqueaker? comp = pawn.GetComp<CompSqueaker>();
-            if (comp != null)
-            {
-                RefreshSnapshot(pawn, comp);
-            }
-        }
-
-        RemoveUnrefreshedPawns();
-    }
-
-    private static void RefreshVisible(Map map, float now)
-    {
-        nextRefreshRealtime = now + VisibleRefreshSeconds;
-        CellRect view = Find.CameraDriver.CurrentViewRect.ExpandedBy(1);
-        IReadOnlyList<Pawn> pawns = map.mapPawns.AllPawnsSpawned;
-        refreshedPawns.Clear();
-        for (int i = 0; i < pawns.Count && refreshedPawns.Count < MaxVisiblePawns; i++)
-        {
-            Pawn pawn = pawns[i];
-            if (pawn.Dead || !view.Contains(pawn.Position))
+            if (pawn.Dead || pawn.GetComp<CompSqueaker>() == null)
             {
                 continue;
             }
 
-            CompSqueaker? comp = pawn.GetComp<CompSqueaker>();
-            if (comp != null)
+            if (MatchesQuery(pawn.LabelShort, pawn.def.defName, query))
             {
-                RefreshSnapshot(pawn, comp);
+                results.Add(pawn);
+                if (results.Count >= SearchResultsCap)
+                {
+                    break;
+                }
             }
         }
 
-        RemoveUnrefreshedPawns();
+        results.Sort(static (a, b) => a.thingIDNumber.CompareTo(b.thingIDNumber));
+        return results;
     }
 
-    private static void RefreshSnapshot(Pawn pawn, CompSqueaker comp)
-    {
-        try
-        {
-            if (!entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
-            {
-                comp.ResetDiagnosticState();
-                entry = new CachedPawn { Pawn = pawn, Comp = comp };
-                entriesByPawn.Add(pawn, entry);
-                cachedPawns.Add(entry);
-            }
-
-            refreshedPawns.Add(pawn);
-            entry.Snapshot = comp.GetDiagnosticSnapshot();
-            entry.MarkText = Mark;
-            entry.MarkColor = MarkColorFor(entry.Snapshot);
-            revision++;
-        }
-        catch (Exception ex)
-        {
-            // Fail closed: do not let one pawn's snapshot exception abort the overlay refresh loop.
-            Log.Warning("[UniversalSqueaker] Diagnostics snapshot failed for " + pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
-        }
-    }
-
-    /// <summary>Three-state mark color: green = ready; amber = deterministic block; blue = random/parameter gate pending.</summary>
-    private static Color MarkColorFor(SqueakDiagnosticSnapshot s)
-    {
-        if (ReadyFor(s))
-        {
-            return ReadyColor;
-        }
-
-        if (s.StartupPending || !s.Timing.ActionReady || (s.Timing.GlobalApplicable && !s.Timing.GlobalReady)
-            || s.VocalCapability.VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
-        {
-            return BlockedColor;
-        }
-
-        return PendingColor;
-    }
+    /// <summary>Pure matcher (harness-testable): case-insensitive substring over the label OR the defName.</summary>
+    internal static bool MatchesQuery(string label, string defName, string trimmedQuery)
+        => trimmedQuery.Length > 0
+            && (label.IndexOf(trimmedQuery, StringComparison.OrdinalIgnoreCase) >= 0
+                || defName.IndexOf(trimmedQuery, StringComparison.OrdinalIgnoreCase) >= 0);
 
     /// <summary>Read-side mark lookup used by CompSqueaker.PostDraw (public draw path).</summary>
     internal static bool TryGetMark(Pawn pawn, out string mark, out Color color)
     {
-        if (mode != SqueakDiagnosticsMode.Off && entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
+        if (sessionActive && entriesByPawn.TryGetValue(pawn, out CachedPawn? entry))
         {
             mark = entry.MarkText;
             color = entry.MarkColor;
@@ -242,71 +277,254 @@ public static class SqueakDiagnosticsOverlay
         return false;
     }
 
-    private static void RemoveUnrefreshedPawns()
+    private static void RefreshDetailRoles(float now)
     {
-        for (int i = cachedPawns.Count - 1; i >= 0; i--)
+        Pawn? selection = Find.Selector.SingleSelectedThing as Pawn;
+        if (selection != null && IsTrackableNow(selection))
         {
-            CachedPawn entry = cachedPawns[i];
-            if (!refreshedPawns.Contains(entry.Pawn))
+            model.SetSelected(selection);
+            UpdateSnapshot(EnsureEntry(selection));
+        }
+        else
+        {
+            model.SetSelected(null);
+        }
+
+        lockedScratch.Clear();
+        lockedScratch.AddRange(model.Locked);
+        for (int i = 0; i < lockedScratch.Count; i++)
+        {
+            Pawn pawn = lockedScratch[i];
+            if (!IsTrackableNow(pawn))
+            {
+                // Dead/despawned/map-lost: the lock dies with the pawn, and its window closes with it.
+                model.Unlock(pawn);
+                CloseDetailWindow(pawn);
+                continue;
+            }
+
+            UpdateSnapshot(EnsureEntry(pawn));
+        }
+
+        PruneDroppedEntries();
+    }
+
+    private static void RefreshViewportSweep()
+    {
+        Map map = cachedMap!;
+        sweepScratch.Clear();
+        CellRect view = Find.CameraDriver.CurrentViewRect.ExpandedBy(1);
+        IReadOnlyList<Pawn> pawns = map.mapPawns.AllPawnsSpawned;
+        for (int i = 0; i < pawns.Count; i++)
+        {
+            Pawn pawn = pawns[i];
+            if (pawn.Dead || !pawn.Spawned || !view.Contains(pawn.Position))
+            {
+                continue;
+            }
+
+            if (pawn.GetComp<CompSqueaker>() != null)
+            {
+                sweepScratch.Add(pawn);
+            }
+        }
+
+        sweepScratch.Sort(static (a, b) => a.thingIDNumber.CompareTo(b.thingIDNumber));
+        model.ReplaceViewport(sweepScratch);
+
+        viewportEntries.Clear();
+        for (int i = 0; i < sweepScratch.Count; i++)
+        {
+            CachedPawn entry = EnsureEntry(sweepScratch[i]);
+            UpdateSnapshot(entry);
+            viewportEntries.Add(entry);
+        }
+
+        PruneDroppedEntries();
+    }
+
+    private static bool IsTrackableNow(Pawn pawn)
+        => !pawn.Dead && pawn.Spawned && !pawn.Destroyed && pawn.MapHeld == cachedMap
+            && pawn.GetComp<CompSqueaker>() != null;
+
+    private static CachedPawn EnsureEntry(Pawn pawn)
+    {
+        if (entriesByPawn.TryGetValue(pawn, out CachedPawn? existing))
+        {
+            return existing;
+        }
+
+        CompSqueaker comp = pawn.GetComp<CompSqueaker>()!;
+        comp.ResetDiagnosticState();
+        CachedPawn entry = new() { Pawn = pawn, Comp = comp };
+        entriesByPawn.Add(pawn, entry);
+        return entry;
+    }
+
+    private static void UpdateSnapshot(CachedPawn entry)
+    {
+        try
+        {
+            entry.Snapshot = entry.Comp.GetDiagnosticSnapshot();
+            entry.MarkText = Mark;
+            UI.UsDiagDotTone tone = ToneFor(entry.Snapshot);
+            entry.MarkColor = ColorForTone(tone);
+            int fingerprint = RowFingerprint(entry.Snapshot);
+            if (fingerprint != entry.Fingerprint)
+            {
+                entry.Fingerprint = fingerprint;
+                // Monitor-bar semantics (round-9 ruling): the COLLAPSED bar shows the pawn whose
+                // content last actually CHANGED, not merely the last refreshed one.
+                lastChangedEntry = entry;
+            }
+
+            model.BumpRevision();
+        }
+        catch (Exception ex)
+        {
+            // Fail closed: one pawn's snapshot exception never aborts the refresh loop.
+            Log.Warning("[UniversalSqueaker] Diagnostics snapshot failed for " + entry.Pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
+        }
+    }
+
+    /// <summary>Three-way row tone: green ready / amber deterministic block / blue pending. The single
+    /// source for both the on-pawn mark color and the panel row dot - they can never disagree.</summary>
+    internal static UI.UsDiagDotTone ToneFor(SqueakDiagnosticSnapshot s)
+    {
+        if (ReadyFor(s)) return UI.UsDiagDotTone.Ready;
+        if (s.StartupPending || !s.Timing.ActionReady || (s.Timing.GlobalApplicable && !s.Timing.GlobalReady)
+            || s.VocalCapability.VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
+        {
+            return UI.UsDiagDotTone.Blocked;
+        }
+
+        return UI.UsDiagDotTone.Pending;
+    }
+
+    private static Color ColorForTone(UI.UsDiagDotTone tone) => tone switch
+    {
+        UI.UsDiagDotTone.Ready => ReadyColor,
+        UI.UsDiagDotTone.Blocked => BlockedColor,
+        _ => PendingColor,
+    };
+
+    /// <summary>
+    /// Numeric-only content fingerprint (never text): fields that changing means "something happened"
+    /// for the monitor bar. Formatting stays entirely in the projection layer.
+    /// </summary>
+    private static int RowFingerprint(SqueakDiagnosticSnapshot s)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + (s.CurrentTimingAction.HasValue ? (int)s.CurrentTimingAction.Value : -1);
+            hash = hash * 31 + (s.CurrentActionEnabled ? 1 : 0);
+            hash = hash * 31 + (s.StartupPending ? 1 : 0);
+            hash = hash * 31 + (s.Timing.ActionReady ? 1 : 0);
+            hash = hash * 31 + (s.Timing.GlobalReady ? 1 : 0);
+            hash = hash * 31 + (s.EffectiveTimingReady ? 1 : 0);
+            hash = hash * 31 + (s.Timing.ActionRemainingTicks ?? -1);
+            hash = hash * 31 + s.Timing.GlobalRemainingTicks;
+            hash = hash * 31 + (int)(s.VocalCapability.VocalOrganEfficiency * 64f);
+            hash = hash * 31 + (s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1);
+            hash = hash * 31 + (s.LastEvaluation.HasValue ? (int)s.LastEvaluation.Value.Outcome : -1);
+            hash = hash * 31 + (s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Tick : -1);
+            return hash;
+        }
+    }
+
+    private static void PruneDroppedEntries()
+    {
+        dropScratch.Clear();
+        foreach (KeyValuePair<Pawn, CachedPawn> pair in entriesByPawn)
+        {
+            if (!model.IsTracked(pair.Key))
+            {
+                dropScratch.Add(pair.Key);
+            }
+        }
+
+        for (int i = 0; i < dropScratch.Count; i++)
+        {
+            if (entriesByPawn.TryGetValue(dropScratch[i], out CachedPawn? entry))
             {
                 entry.Comp.ResetDiagnosticState();
-                entriesByPawn.Remove(entry.Pawn);
-                cachedPawns.RemoveAt(i);
-                revision++;
+                entriesByPawn.Remove(dropScratch[i]);
+                model.BumpRevision();
+            }
+        }
+
+        // The viewport mirror must not keep pointers to dropped entries within the same frame.
+        for (int i = viewportEntries.Count - 1; i >= 0; i--)
+        {
+            if (!entriesByPawn.ContainsKey(viewportEntries[i].Pawn))
+            {
+                viewportEntries.RemoveAt(i);
             }
         }
     }
 
-    private static void ClearSession()
+    private static void CloseSession()
     {
-        ClearTrackedPawns();
+        // Null the registries BEFORE closing: window PreClose re-enters the notify hooks, and the
+        // windows are still on the stack while their PreClose runs.
+        List<SqueakDiagnosticsDetailWindow> windows = new(detailWindows.Values);
+        detailWindows.Clear();
+        SqueakDiagnosticsPanel? panel = mainPanel;
+        mainPanel = null;
+
+        sessionActive = false;
         cachedMap = null;
-        selectedPawn = null;
-        nextRefreshRealtime = 0f;
-        mode = SqueakDiagnosticsMode.Off;
+        nextSweepRealtime = 0f;
+        nextDetailRealtime = 0f;
         CompSqueaker.DiagnosticsEnabled = false;
-        ClosePanel();
-    }
+        model.Reset();
 
-    private static void ClosePanel()
-    {
-        SqueakDiagnosticsPanel? current = panel;
-        panel = null;
-        // Null the reference before Close() so the panel's PreClose -> NotifyPanelClosed
-        // cannot re-enter ClosePanel (the window is still in the stack during PreClose).
-        if (current != null && current.IsOpen)
+        foreach (KeyValuePair<Pawn, CachedPawn> pair in entriesByPawn)
         {
-            current.Close();
+            pair.Value.Comp.ResetDiagnosticState();
         }
-    }
 
-    /// <summary>Called from the panel's PreClose: the user closed the panel (X/Esc) — tear down the whole diagnostics session. Never re-enters window close.</summary>
-    internal static void NotifyPanelClosed()
-    {
-        panel = null;
-        ClearTrackedPawns();
-        cachedMap = null;
-        selectedPawn = null;
-        nextRefreshRealtime = 0f;
-        mode = SqueakDiagnosticsMode.Off;
-        CompSqueaker.DiagnosticsEnabled = false;
-    }
-
-    internal static void OpenPanel()
-    {
-        SqueakDiagnosticsPanel diagnosticsPanel = new();
-        panel = diagnosticsPanel;
-        Find.WindowStack.Add(diagnosticsPanel);
-    }
-
-    private static void ClearTrackedPawns()
-    {
-        for (int i = 0; i < cachedPawns.Count; i++)
-        {
-            cachedPawns[i].Comp.ResetDiagnosticState();
-        }
-        cachedPawns.Clear();
         entriesByPawn.Clear();
-        refreshedPawns.Clear();
+        viewportEntries.Clear();
+
+        if (panel != null && panel.IsOpen)
+        {
+            panel.Close();
+        }
+
+        for (int i = 0; i < windows.Count; i++)
+        {
+            if (windows[i].IsOpen)
+            {
+                windows[i].Close();
+            }
+        }
+    }
+
+    private static void CloseDetailWindow(Pawn pawn)
+    {
+        if (!detailWindows.TryGetValue(pawn, out SqueakDiagnosticsDetailWindow? window))
+        {
+            return;
+        }
+
+        detailWindows.Remove(pawn);
+        if (window.IsOpen)
+        {
+            window.Close();
+        }
+    }
+
+    private static void OpenMainPanel()
+    {
+        if (mainPanel != null && mainPanel.IsOpen)
+        {
+            return;
+        }
+
+        SqueakDiagnosticsPanel panel = new();
+        mainPanel = panel;
+        Find.WindowStack.Add(panel);
     }
 }

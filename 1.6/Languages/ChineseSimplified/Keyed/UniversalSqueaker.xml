@@ -4,16 +4,54 @@
   <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
 
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
-  <DebugAction_DiagnosticsSelected>诊断：选中 pawn</DebugAction_DiagnosticsSelected>
+  <DebugAction_DiagnosticsOpen>诊断：打开面板</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
   <US.Diagnostics.Title>Universal Squeaker 诊断</US.Diagnostics.Title>
-  <US.Diagnostics.Mode.Selected>选中</US.Diagnostics.Mode.Selected>
-  <US.Diagnostics.Mode.Visible>可见</US.Diagnostics.Mode.Visible>
-  <US.Diagnostics.CloseHint>再次按 Esc 关闭</US.Diagnostics.CloseHint>
+  <US.Diagnostics.Close>关闭（或连按两次 Esc）</US.Diagnostics.Close>
+  <US.Diagnostics.UnlockClose>关闭并解锁</US.Diagnostics.UnlockClose>
+  <US.Diagnostics.Lock>锁定</US.Diagnostics.Lock>
+  <US.Diagnostics.LockedTag>已锁定</US.Diagnostics.LockedTag>
+  <US.Diagnostics.Bar>收起</US.Diagnostics.Bar>
+  <US.Diagnostics.Page.Format>第 {0}/{1} 页 · 共 {2}</US.Diagnostics.Page.Format>
+  <US.Diagnostics.Search.Placeholder>搜索本地图 pawn…</US.Diagnostics.Search.Placeholder>
+  <US.Diagnostics.Search.None>本地图无匹配</US.Diagnostics.Search.None>
+  <US.Diagnostics.Monitor.Empty>等待首次更新…</US.Diagnostics.Monitor.Empty>
+  <US.Diagnostics.Detail.Empty>选中一个 pawn 查看详情</US.Diagnostics.Detail.Empty>
+  <US.Diagnostics.PageUnavailable.Title>诊断页不可用</US.Diagnostics.PageUnavailable.Title>
+  <US.Diagnostics.PageUnavailable.Body>诊断页绘制失败，本窗口实例已停摆；可从调试菜单重新打开。</US.Diagnostics.PageUnavailable.Body>
   <US.Diagnostics.Ready>就绪</US.Diagnostics.Ready>
   <US.Diagnostics.Blocked>阻塞</US.Diagnostics.Blocked>
   <US.Diagnostics.Panel.Empty>无诊断数据</US.Diagnostics.Panel.Empty>
-  <US.Diagnostics.Panel.NoPawn>未选中 pawn</US.Diagnostics.Panel.NoPawn>
+  <US.Diagnostics.Section.State>当前状态</US.Diagnostics.Section.State>
+  <US.Diagnostics.Section.Chain>门控链</US.Diagnostics.Section.Chain>
+  <US.Diagnostics.Field.CurrentAction>当前动作</US.Diagnostics.Field.CurrentAction>
+  <US.Diagnostics.Field.LastDispatch>最后派发</US.Diagnostics.Field.LastDispatch>
+  <US.Diagnostics.Value.Pass>通过</US.Diagnostics.Value.Pass>
+  <US.Diagnostics.Value.Blocked>受阻</US.Diagnostics.Value.Blocked>
+  <US.Diagnostics.Value.NotApplicable>不适用</US.Diagnostics.Value.NotApplicable>
+  <US.Diagnostics.Reason.NotPlayerControlled>非玩家控制</US.Diagnostics.Reason.NotPlayerControlled>
+  <US.Diagnostics.Reason.Downed>已击倒</US.Diagnostics.Reason.Downed>
+  <US.Diagnostics.Reason.Asleep>睡眠中</US.Diagnostics.Reason.Asleep>
+  <US.Diagnostics.Gate.Disabled>禁用旁路</US.Diagnostics.Gate.Disabled>
+  <US.Diagnostics.Gate.OnMap>在地图中</US.Diagnostics.Gate.OnMap>
+  <US.Diagnostics.Gate.OnScreen>在屏幕内</US.Diagnostics.Gate.OnScreen>
+  <US.Diagnostics.Gate.Plan>触发计划</US.Diagnostics.Gate.Plan>
+  <US.Diagnostics.Gate.Identity>身份准入</US.Diagnostics.Gate.Identity>
+  <US.Diagnostics.Gate.ScopeEnabled>范围启用</US.Diagnostics.Gate.ScopeEnabled>
+  <US.Diagnostics.Gate.ScopeMatch>范围匹配</US.Diagnostics.Gate.ScopeMatch>
+  <US.Diagnostics.Gate.Startup>启动阶段</US.Diagnostics.Gate.Startup>
+  <US.Diagnostics.Gate.Probability>概率判定</US.Diagnostics.Gate.Probability>
+  <US.Diagnostics.Gate.ActionCooldown>动作冷却</US.Diagnostics.Gate.ActionCooldown>
+  <US.Diagnostics.Gate.GlobalCooldown>全局冷却</US.Diagnostics.Gate.GlobalCooldown>
+  <US.Diagnostics.Gate.VocalOrgan>发声器官</US.Diagnostics.Gate.VocalOrgan>
+  <US.Diagnostics.Gate.Talking>交谈状态</US.Diagnostics.Gate.Talking>
+  <US.Diagnostics.Gate.AudioPool>音频池</US.Diagnostics.Gate.AudioPool>
+  <US.Diagnostics.Gate.Playability>可播放性</US.Diagnostics.Gate.Playability>
+  <US.Diagnostics.Gate.Dispatch>派发结果</US.Diagnostics.Gate.Dispatch>
+  <US.Diagnostics.Tier.XenotypePack>异种包</US.Diagnostics.Tier.XenotypePack>
+  <US.Diagnostics.Tier.RacePack>种族包</US.Diagnostics.Tier.RacePack>
+  <US.Diagnostics.Tier.PackFallback>包回退</US.Diagnostics.Tier.PackFallback>
+  <US.Diagnostics.Tier.Vanilla>原版</US.Diagnostics.Tier.Vanilla>
   <US.Diagnostics.Logging.Label>开发者日志等级</US.Diagnostics.Logging.Label>
   <US.Diagnostics.Logging.Auto>自动</US.Diagnostics.Logging.Auto>
   <US.Diagnostics.Logging.Enabled>开启</US.Diagnostics.Logging.Enabled>

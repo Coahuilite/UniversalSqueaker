@@ -147,7 +147,7 @@ internal static class SqueakKernelAdapter
             ChainTier.PackFallback => domain.Xenotype != null ? SqueakSoundSource.XenotypePack : SqueakSoundSource.RacePack,
             _ => SqueakSoundSource.Vanilla,
         };
-        return new SqueakSoundChoice(sound, source, result.PoolStableKey, result.IsEgg);
+        return new SqueakSoundChoice(sound, source, result.PoolStableKey, result.IsEgg, result.Tier);
     }
 
     private static void AddDomain(List<VoicePackEntry> entries, IReadOnlyList<SqueakVoicePackDef>? candidates, HashSet<string> keys, AudioDomain domain)

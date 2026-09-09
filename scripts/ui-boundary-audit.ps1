@@ -14,15 +14,14 @@
 #      stripped first, because prose about the backend is documentation, not coupling.
 #   3. VERDICT: a hit outside the whitelist is RED. So is a whitelist entry whose file has vanished
 #      (a dead exemption path is a lost boundary, not a free pass).
-#   4. RATCHET: the whitelist is 2 entries and may only shrink (HANDOFF §0/§1); a new exemption
-#      needs a maintainer ruling. An entry that matches nothing today is reported as a NOTE so it can
-#      be deleted on the next touch.
+#   4. RATCHET: the whitelist is 1 entry and may only shrink (HANDOFF §0/§1); a new exemption
+#      needs a maintainer ruling. An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
 #
 # Cross-repo: this is one half of a single metric. FerriteLib's containment gate (its HANDOFF item B)
 # counts tree membership on the library side; the two whitelists must agree entry by entry. Since FL
 # 0.3.0 landed P1/P2/P6, US holds ZERO raw hover calls and ZERO frame gates: every one of them reads
-# `UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiNative.Button`, and the chrome is the library's
-# `UiWindowHost`. What remains here are the two exemptions HANDOFF §0 rules permanent-or-frozen.
+#  `UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiNative.Button`, and the chrome is the library's
+#  `UiWindowHost`. Since the diagnostics panel moved onto the same machinery (round-9 migration, 2026-09-10) only exemption two (the frozen camera-indicator branch) remains.
 # Exit code 0 = boundary intact. Run directly or from scripts/verify-local.ps1 (gate 14).
 [CmdletBinding()]
 param(
@@ -39,8 +38,8 @@ $BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(B
 # ruling behind it is not an exemption. Both come from HANDOFF §0; neither is this gate's to reconsider.
 # Anything the FL seams already cover must NOT be added back — the seam is the exemption.
 $Whitelist = [ordered]@{
-    'Diagnostics/SqueakDiagnosticsPanel.cs'                  = '豁免一 (HANDOFF §0): deliberate pure-immediate dev diagnostics panel, permanently retained; must stay usable with UiKit attached.'
-    'Patches/Patch_GlobalControlsUtility_CameraIndicator.cs' = '豁免二 (HANDOFF §0): frozen experimental dual path - its pure-Verse legacy fallback may not gain any new UI content; whether that branch survives at all is a Knife 3 maintainer decision, never this gate decision.'
+    # 豁免二 (frozen, HANDOFF §0): camera-indicator legacy fallback branch - Knife 3 owns its fate.
+    'Patches/Patch_GlobalControlsUtility_CameraIndicator.cs' = 'frozen Verse Widgets.Label legacy branch (HANDOFF §0 exemption two)'
 }
 
 # ---- comment stripping -------------------------------------------------------
