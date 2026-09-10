@@ -269,3 +269,106 @@ gate 14 终态实测：`scan: 101 files; 2 file(s) hold backend calls; raw Mouse
 19: - [x] ~~Cross-repo hash duty~~ **CLOSED by maintainer ruling 2026-09-07**: stop chasing hashes; existing history is never rewritten for them. Dangling citations are archaeology (MEMORY "Hash archaeology - CLOSED").
 24: - [x] ~~Hash re-pointing of live docs~~ **CLOSED by the 2026-09-07 ruling**: no further hash maintenance anywhere; `OBLIVIONIS.md`/`docs/review/**`/live docs all keep whatever hashes they carry.
 25: - [x] ~~Pre-existing hash rot in cold docs~~ **CLOSED by the same ruling**: archaeology, not damage; the mirror chain stays available but unused by default.
+## Diagnostics round-9 audit + build + FL cross-repo submission (archived verbatim from HANDOFF.md sections 1-3, 2026-09-10)
+
+- Reason: the round-9 migration is CODE-COMPLETE and merged to 0.3.x (e9e6a34). The nine ruling rounds, the over-design audit, the close-button evaluation, the round-9 build contract and the FL session's cross-repo submission are finished work - durable facts live in MEMORY.md (gate-14 one-entry whitelist, devpanel rules bullet) and the open action surface is in TODO.md (live walkthrough). HANDOFF.md is rewritten as the post-build walkthrough buffer; the superseded body is byte-copied below per the archive convention.
+- Watch while reading: the text is era-faithful - its section numbers reference THAT HANDOFF layout; the "pending ruling" markers were answered by the later rounds that follow in the same body; the acceptance line's "two modes" predates the master-detail rework those very rounds ruled.
+
+### HANDOFF.md sections 1-3, verbatim
+
+## 1. 现行交接：诊断面板迁入 UiKit（devpanel；下个会话从设计讨论开始，逐项裁定后再动工）
+
+**裁定终局（2026-09-09，历经三轮反转，完整链条已记 `MEMORY.md` gate 14 行；已作废立场勿复活——尤其"面板独立成纯 Verse 逃逸面"与"零库依赖棘轮"）。** 面板是与设置页同等的 UiKit 消费者：壳 `UiWindowHost` + 页面 `UiHost` + `<Scroll>` + 注册 kernel widget；故障显示走库自己的机制（`UiSessionGuard` 的 `RecoveryBand` 行 + 壳的 next-frame `pageUnavailable`），数据面（`usdiag` 文件日志）本就在 Kernel 纯度规则下不依赖 UiKit。金丝雀位 = mod settings，其故障原样暴露、不加固件。
+
+**现状事实（已实测）**：`SqueakDiagnosticsPanel.cs` 703 行、gate 14 免检 24 处；`:4` `using FerriteLib.UiKit.Kernel`、`:37` 静态 `UiTheme.DarkGold`、13 处 `UiThemeDraw`/`UiFont`/`UiStatusTone`——迁移是在既有耦合方向上继续走，不是先拆后建。ctor（`:75-91`）自设非模态四件套 + `draggable=true` + `doCloseX=true` + `closeOnCancel/Accept=false` + `onlyOneOfTypeAllowed` + `focusWhenOpened=false` + `onlyDrawInDevMode=true`；`WindowOnGUI` 做拖出钳制（KeepGrabPx）；`OnCancelKeyPressed` 做双 Esc 武装（3 s）；`PreClose` 调 `SqueakDiagnosticsOverlay.NotifyPanelClosed()`。内容侧：Selected 模式 = 17 gate 三态行 + pawn/action/audio 文本，Visible 模式 = ≤16 pawn 行（点标 + 列），文本仅在 `Overlay.Revision` 变化时重建。
+
+**壳的表面（FL `487d80a` 实测）**：sealed 仅 `Margin`/`InitialSize`/`DoWindowContents`；必写 virtual = `Theme`/`CreateHost`/`DrawNotice`，可选 virtual = `Title`/`Subtitle`/`CloseText`/`InitialSizePolicy`/`PrerequisiteVerified`/`BeforeDraw`/`OnDrawFailure` + chrome 几何（`TitleBarHeight`/`SidePadding`/`AccentBarHeight`/`CloseButtonSize`/三个 Font）。modality 与 `draggable` 壳不碰（ctor 注释明文归消费者）；`PreClose` 是 override，子类链调即可。**迁移不需要 FL 开任何新表面。**
+
+**第一轮裁定（2026-09-09b，维护者；讨论产出，逐项照此执行）**：
+0. **需求基线（早期既定，本轮复述为权威）**：Selected 模式 = 指定 pawn 的**全部门控 + 计时器 + 发配音频及其所属 VoicePack**；Visible 模式 = 屏幕可视范围内全部 pawn 的**简要诊断**。两模式是硬要求，内容审计以此为尺。
+1. **控件落位**：`BeforeDraw` 标题栏手绘**被否决**。mode badge 与 s/t 秒位切换做成 **US 自有 widget**，进页面内容首行；实现中若证实某控件本该由 UiKit 提供，先讨论、再向 FL 提提案，不私改库。
+2. **关闭钮**：维护者判断关闭控件"很应当是 lib 组件类型"→ 出评估：论证壳现给的 `CloseText` 文本钮之外，一个组件级关闭钮（独立公共组件形态）是否**足以立为 UiKit 公共组件**；不足以支撑则 US 自有实现。双 Esc 武装无论结果如何都留在 `OnCancelKeyPressed`。
+3. **数据通道**：维持——窄 typed bindings，`Overlay.Revision` 映射 session `ContentRevision`（Cache clock rule 硬约束）。
+4. **清单形态**：嵌入 XML manifest 判定为 UiKit 保留式时代之前的**疑似遗留**，面板**不复制**该仪式：程序构造 spec。依据：gate 11 只断言两份已发布 manifest（settings + overlay）的存在/良构/归属，不要求每页一份；键引用扫描走源码字面量，程序构造不脱检。设置页既有 manifest 面本轮不动。
+5. **harness 车道**：按**审计后的定稿项目集**建满（假快照注入、两模式遍历、revision 重建断言、抛错→RecoveryBand、关窗→NotifyPanelClosed 联动）。
+6. **过度设计审计（新增前置工序）**：SR 旧面板项目按裁定**多为过度设计、不恢复**（上轮"恢复 SR 诊断面"的理解作废，SR 仓无需读取）；现重建面板项目集为基线，逐项对照 §0 需求基线审计——含核实 `cachedAudioText`（"Dispatched audio"行）是否已携带**包归属**、计时器呈现是否完整——清单交维护者逐项裁定，然后才定 widget 集、spec 面与 §5 验收面。
+7. **同 commit 收口**：不变——gate 14 白名单 2→1（删豁免一条目）、`MEMORY.md` gate 14 行与 `CONTRIBUTING.md` 第 6 条"两个豁免"表述同步、crash-lineage 面板半边销账。
+
+**第二轮产物：过度设计审计清单（dev 会话备好 2026-09-09b，待维护者逐项批注）**。逐组结论：
+- **A 窗口行为**（非模态四件套 / KeepGrabPx 拖出钳制 / 双 Esc 3s 武装 / onlyOneOfType / PreClose→NotifyPanelClosed / onlyDrawInDevMode）：全部保留；迁移落点 = `UiWindowHost` 子类的 `WindowOnGUI`/`OnCancelKeyPressed`（壳只封 `Margin`/`InitialSize`/`DoWindowContents`，钳制与双 Esc 放得下，零新面）。
+- **B 标题与控件**：静态标题、mode badge、s/t 切换、Ready/Blocked 汇总徽章 → 保留（badge/s 按 §1.1 进 US 自有 widget 内容首行）；底部 CloseHint 独立 22px 提示行 → **删除**，语义并入 CloseText（§1.2）。
+- **C Selected**：pawn 身份行、Current action 行 → 保留；**G5 Action gate = 死行**（外部动作永不成为 `CurrentTimingAction`，该行恒 Pass/N/A，代码注释自认 "kept as a distinguishable chain entry"）→ 建议删除、语义归 `usdiag` 日志；G3 Plan（恒 Pass、仅 N/A 态）、G4 Identity（仅 external 触发时活）→ 保留或并入他行待裁；"Dispatched audio" 行与 G16 值列在新派发时刻渲染同一 `pack : sound` 串（前者取 `LastSignificantOutcome`、后者取 `LastEvaluation`）→ 建议归一：G16 只留三态，音频归属单点在 C 行。补强①（计时器完整性）：G10/G11 值列 "remaining/total"（`SqueakTimingEvaluation.ActionIntervalTicks/Seconds` 已在快照，零数据成本）；补强②（音频所属包完整性）：vanilla/fallback 派发 `PoolStableKey` 为 null，现显裸 sound 名 → 加 `SqueakSoundSource`（XenotypePack/RacePack/Vanilla）tier 显示。
+- **D Visible**：列集（dot|pawn|action|action+global 冷却|audio|ready）符合"简要诊断"基准，保留；**`MaxVisiblePawns=16` 与"可视范围全部 pawn"基准冲突** → 提额或保留截断+可见计数，待裁；增强候选：行点击 → 选中该 pawn（两模式联动的闭环）。
+- **E 引擎层**：revision 驱动重建、0.25s/0.5s 刷新节奏、逐 pawn fail-closed → 保留，由 §1.5 harness 车道钉住。
+
+**关闭钮评估（§1.2 返回结论：不向 FL 提案）**：库壳已持有关闭钮（`CloseText` 文本钮 + `CloseButtonSize` 几何），且 `doCloseX=false` 正是壳"双关闭钮是缺陷"的裁定——面板与设置页两消费者都已用壳钮，"壳外独立公共关闭钮组件"的消费者数 = 0，按 n≥2 校准纪律不足以立为 UiKit 公共组件。若面板日后要在内容层再加关闭入口，用现有 `UiNative.Button` 缝组 US 自有按钮即可（零新公共件）。"标题栏 × 图标"形态属 chrome action slot 议题，与 round 4 素材同池，本轮不开。
+
+**第三轮（2026-09-10 维护者批注）**：
+- **交互模型重构（裁定，覆盖 §1.1 与审计 Q7 原案）**：全局视图为默认页；游戏内选中 pawn → 面板自动展开该 pawn 详情视图；**mode badge 作废**（"主动切换"被 drill-down 取代，s/t 切换与锁钮为仅存的 US 自有控件）；面板支持**锁定**：锁定后摄像机移开该 pawn 仍持续跟踪。引擎改动点：① `RefreshSelected` 的 `view.Contains` 门对锁定 pawn 解除（快照 = comp 层纯读，离屏单 pawn 成本 = 0.25s 一次采样，可忽略）；② 锁定与"跟随选择"的交叠语义**待裁**（提案：锁定即停跟选择，直到解锁/pawn 死亡/离场）；③ G2 "On screen" 在锁定离屏时如实恒显 Block——生产语义不撒谎，保留；④ 入口 `SqueakDebug.OpenSelectedDiagnostics` 已天然兼容（无有效选择即 Visible），改为"开会话 + 视图状态机"微调；⑤ 行点击 → `Find.Selector.Select` 保留为列表视图的 drill-in 输入方式；⑥ §1.5 harness 车道增：锁定跟踪（离屏不断更）、解锁回跟随、drill-in 联动。
+- **Q4 素材已查（"总时长是否可变"）**：**可变，且可变本身是生产行为**。有效 interval = 配置 ticks × 分层表动作乘数 × 异种 overall × 全局 master（逐级取整）× 时间速度（tick 钟且 `ScaleCooldownWithTimeSpeed` 开）× 可闻人口 scale（≥1）；其中时间速度与人口两轴**随运行时变、玩家不可见**——3x 速度或人口多时总时长被拉大正是"为何迟迟不发声"的直接证据，故"剩余/有效总时长"有诊断价值非装饰。数据零成本：`Timing.ActionIntervalTicks/Seconds` 已在快照。**命名警告（实测）**：`BaseTiming` 不是"调音前基线"——同一 context/delta 照乘全部调音乘数，仅 `periodicScale=1f`，其真实语义是"未含人口拉伸的值"；UI 若展示第二对比串不得叫"基线"。建议：首批只显示"剩余/有效总"，`BaseTiming` 对比缓上。
+- **Q1/Q2 重述后待裁**；Q3/Q5/Q6 继续待批注。
+
+**第四轮（2026-09-10 维护者批注·续）**：
+- **Q7 再重构（覆盖第三轮 ①②）**：主窗 = **左列表栏 + 右详情栏** 的 master-detail 单窗；选中 pawn（游戏选择或点击列表行）→ 右详情栏展开其详情；**锁定 = 详情独立化**——该 pawn 的详情脱离为一个独立详情窗，持续跟踪（含摄像机移开/离屏），直到解锁或直接关闭该详情窗（关闭即自动解锁）。会话语义：主窗关闭 → 整个诊断会话结束，连带关闭全部独立详情窗；独立详情窗 = 第二个 `UiWindowHost` 壳实例。开放子语义（提案默认，若无异议即照建）：(a) 允许多 pawn 同时锁定，overlay 以 locked 集合跟踪，单 pawn 成本 = 0.25s 一次纯读快照；(b) 存在锁定独立窗时，主窗右栏仍跟随实时选择（锁窗钉死自己的 pawn，主窗不失去浏览能力）。
+- **G3 保留（裁定）**，且 N/A 态分配**白色**——审计顺带查实：现实现把 N/A 文本挂在 `GateState.Pass` 上渲染成**绿色**（语义错误，"不适用"不该长得像"通过"），裁定即修法：新增第四态 `GateState.NA` → `UiStatusTone.Neutral`/白。
+- **G4 现实现内容（供裁定）**：激活条件 = 当前动作的计划为 External 触发模式（`s.CurrentTriggerMode == SqueakTriggerMode.External`，数据源 `plan.Mode`），否则整行 N/A；激活时检查三条件聚合：`pawn.IsPlayerControlled && !pawn.Downed && pawn.Awake()`，值列仅显 "Pass"/"Blocked"，**不细分被哪条挡住**。增强提案（待裁）：Blocked 时值列列出失败条件（如 `Blocked: Downed`）。
+- **G5 删除（裁定）**：死行确认成立，从面板移除，语义保留在 `usdiag` 日志。
+- **Q4 通过（裁定）**：G10/G11 值列 = "剩余/有效总时长"，`BaseTiming` 对比缓上、命名陷阱记录在案。
+- 仍待批注：Q3（"Dispatched audio" 行与 G16 双写归一）、Q5（无包键派发的 source tier 标注）、Q6（Visible 16 上限三选一）。
+
+**第五轮（2026-09-10 维护者批注·续 2）**：
+- **折叠横条（Q7 模型扩展）**：主窗与每个独立锁定详情窗都支持**收缩成横条**状态。主窗横条 = 实时显示**一条正在更新的 pawn 状态行**（语义提案：最近一次快照 revision 变化的那个 pawn，行格式同左列摘要行；若维护者另有意图此处待纠）；锁定窗横条 = 只显示自己那个 pawn 的摘要行（同主窗左列行格式：dot|pawn|action|冷却|audio|ready）。展开交互：点击横条（或横条上的展开件）恢复全窗；折叠态随会话生命周期（主窗横条关闭仍 = 会话结束连坐锁窗）。
+- **实现经济**：摘要行做成一个 US 自有 widget，一物三用——主窗左列表行、主窗横条行、锁定窗横条行同组件；每窗折叠状态为窗口私有 UI 态，overlay 不感知。
+- **库边界备忘**：`UiWindowHost` 的壳 chrome（标题栏）无"隐藏"表面，折叠态若保留壳即"带标题栏的小横条"。**先按带壳实现**；若实机走查判定横条必须无壳（纯浮条形态），那才是壳级新面诉求 → 攒 round 4 素材走独立提案，不预先开面。
+- **G3/G4 批准（含 G4 增强）**：G3 保留 + `GateState.NA` 第四态白色；G4 保留 + Blocked 值列细分失败条件（`Blocked: Downed` 式）。
+- **G5/Q4 复确认**：G5 删行（门链 16 行）；G10/G11 = "剩余/有效总时长"，BaseTiming 缓上。
+- 仍待批注：Q3（"Dispatched audio" 与 G16 双写归一）、Q5（无包键派发加 source tier）、Q6（列表 16 上限三选一）。
+
+**第六轮（2026-09-10 维护者批注·续 3）**：
+- **快照监视器语义确认**：主窗横条 = 最近一次 revision 变化的 pawn 摘要行，按第五轮提案照建。
+- **Q6 裁定（覆盖原三选一）**：可视 pawn **不被上限拦截**——追踪集扩为视口内全部带 `CompSqueaker` 的 pawn（删 `MaxVisiblePawns=16` 追踪闸门；快照 = 纯读，0.5s 一轮，规模 50-80 只无压力）；**列表每页 8 条翻页**（页指示 "n/N · 共 M"，上/下页钮）；**pawn 名称搜索框**过滤当前追踪集（子串、不区分大小写，过滤后分页在子集上进行，无命中走空态）。为防翻页抖动，追踪集排序改**按 `thingIDNumber` 稳定升序**。搜索框/s/t 钮/页钮/锁钮全部为 US 自有 widget 家族（内容首行带）。快照数据链（overlay 状态机）不感知分页与搜索——纯视图层。
+- **Q3 示例已呈维护者**（双写时刻两条一模一样的 `pool : sound`；分离时刻 "Dispatched audio"= 最后一次真发声、G16 = 本链末梢当前判定），建议 G16 退纯三态、归属单点在 Current state 区。**待裁**。
+- **Q5 方案已呈维护者**：推荐显示**四层 ChainTier**（异种包/种族包/包回退/内置），代价 = `ChainResult.Tier` 顺 plumbing 进 `SqueakSoundChoice`/`SqueakRecentOutcome`（三处 runtime-only 结构加一个字段，零 Scribe、零 usdiag 词表变更——协议日志维持三层折叠不动）； blanket "vanilla" 方案已论证为劣（混淆包回退与内置、且 Vanilla 一词在 US 词汇里已是模式名）。**待裁**。
+
+**第七轮（2026-09-10 事实核查与提案，待维护者确认）**：
+- **Q6 乙案落定 + 地图边界天然成立**：搜索数据源 = `map.mapPawns.AllPawnsSpawned`（游戏按图自管的集合），扫描范围即"本地图"，零自制地图过滤代码；跨图会话拆毁已有 `MaintainLifecycle`（`cachedMap` 比对）兜底——**切换地图 = 会话与全部锁定窗自然终结**，为"仅限本地图"的既定推论。
+- **C 行语义核查（维护者记忆 = 期望语义，现实现有三处偏差）**：现行 = "当前动作的、最近一次显著结果恰为派发的音频"。偏差①按动作过滤：最近显著结果属别的动作 → 显 "—"；偏差②被覆盖：`lastSignificantOutcome` 被任何显著失败（NoSoundFallback/EligibilityRejected 等，仅冷却×3 与概率拒绝四类不算显著）顶掉——成功喊过一次后任何一次失败尝试即清空该行的"最后一次发声"；偏差③换动作即清空。**提案**：CompSqueaker 增设 `lastDispatched` 专用槽（仅 `Outcome == Dispatched` 时写入，不被失败覆盖、不按动作过滤），快照加一字段（runtime-only，零 Scribe，usdiag 词表不动），C 行与 Visible audio 列同用；G14/G15/G16 维持按动作过滤保证链一致性。**待批**。
+- **G16 为何在三态位置显示派发音频（代码史实）**：`Add("Dispatch", Pass, FormatDispatched(...))`——值列 Pass 态被塞归属串，属建面板时的顺手复用；归一为纯三态后信息零损失（归属单点 = 修好语义的 C 行）。
+- **Q5 最终显示方案（维护者映射经代码验证成立）**：四层 = 命中层即状态，无需独立"被 fallback"标记——`[异种包·<包键>]`（直接命中）、`[种族包·<包键>]`（直接命中）、`[包回退·<包键>]`（命中该包自带回退音组，`SqueakPoolRegistry.cs:198-199` 实证 PoolStableKey 保留回退来源包键）、`[原版]`（内置层，`PoolStableKey` 恒 null，`SqueakKernelAdapter.cs:148` 本就把 BuiltInFallback 折成 Vanilla source、usdiag 协议同款折叠——"内置=原版"不是 UI 私设，是既有生产语义的直读）。注意：内置层数据未 ship（Vanilla silence = 未完成内容），今天 `[原版]` 标签实际不可观察，G14 先红；标签就位是为内容落地那天面板不说谎。plumbing 仍为 Tier 沿 `ChainResult → SqueakSoundChoice → SqueakRecentOutcome` 各 +1 字段。**待批**。
+
+**第八轮（2026-09-10 回退路径实测，澄清 Q5 混淆）**：
+- **回退梯子的实况**（`SqueakPoolRegistry.cs:73-79`，Fallback 模式）：第二级 = **跨层回退**（异种层无此动作音 → 种族层直取）；第三级 = **包内回退**（两层皆无 → 某包声明的自带兜底音组 `PackFallback[actionKey]`）；第四级 = 内置表（=原版）。Remix 模式无梯子：非空层（含包兜底，若声明）3/4 路抽签（:89-128）。Off 模式直返内置表（:65-66）。
+- **标签语义更正**：维护者记忆的"回退到种族层"落地时标签就是 `[种族包·<key>]`——链结果记录的是**供音频的层**，跨层"路过"事实不在结果内（要显示须扩 `ChainResult` 加 passedThrough；提案：**不扩**——"为何没发声"由 G14/G0 回答、"音频来自哪层"由供层回答，路过是过程非状态，且 Remix 抽签根本无路过分层可谈；扩字段还将触发 kernel 黄金语料再生成轮）。`[包回退·<key>]` 仅当音频真来自包兜底音组（tier=PackFallback，:198-199 实证 key=兜底音所属包的 PackKey，非种族层变体写法）。
+- **四层标签定稿提案**：`[异种包·key]` / `[种族包·key]` / `[包回退·key]` / `[原版]`。协议折叠旁注：适配层按域折 PackFallback → source（有异种域折 xenotype_pack，`SqueakKernelAdapter.cs:147`），`SqueakDebug.cs:35` 的"折进 RacePack"旧注释与代码有出入，属文档债，与面板标签无关。
+- **lastDispatched 槽已批准** → 进实现清单。
+
+**第九轮·收口定稿（2026-09-10，审计关闭，本清单即动工合同）**：
+- **窗口拓扑**：主窗（master-detail：左列 = 搜索框 + 8/页分页列表 + 页指示，右列 = 当前选中 pawn 详情）；锁定向导出一枚独立详情窗（可多枚，overlay 以 locked 集合跟踪，离屏持续快照）；主窗与各锁定窗均支持折叠横条（主条 = 最近 revision 变化者的摘要行，锁条 = 本 pawn 摘要行）；双 Esc/KeepGrabPx 钳制/非模态在子类侧；CloseText 吸收 Esc 提示语义；主窗关闭 = 会话终结连坐全部锁窗与跨图既有守卫。
+- **US 自有 widget 家族**：摘要行（一物三用：列表行/主条/锁条）、s/t 单位切换、锁钮、搜索框、分页钮+页指示、字段行、门链行（四态：Pass 绿/Block 琥珀/Pending 蓝/**NA 白**）。全部注册进程序构造 spec（无新 manifest）。
+- **数据/引擎改动**：① `CompSqueaker.lastDispatched` 槽（仅 Dispatched 写入、失败不覆、跨动作存活）+ 快照字段；② `Tier` plumbing（`ChainResult→SqueakSoundChoice→SqueakRecentOutcome`，runtime-only）；③ overlay：删 16 追踪闸、`thingIDNumber` 稳定排序、locked 集合解除视口门、搜索源 = `AllPawnsSpawned`+comp 过滤（本地图天然）；④ 门链 16 行（G5 删）、G4 Blocked 细分失败条件、G10/G11 "剩余/有效总"、G16 纯三态、音频归属单点 = `[异种包·键]/[种族包·键]/[包回退·键]/[原版]` 四层标签（走 Keyed）。不扩内核 ChainResult（"路过"不入标签），不向 FL 开面。
+- **harness 车道（建满，定稿项目集）**：假快照注入、两视图遍历、revision 驱动重建断言、锁定离屏不断更、解锁回跟随、行点击 drill-in/搜索结果直锁联动、lastDispatched 失败不清语义、四层标签渲染用例、抛错→RecoveryBand、关窗→NotifyPanelClosed。
+- **同 commit 收口**：gate 14 白名单 2→1 + `MEMORY.md`/`CONTRIBUTING.md` 第 6 条"两个豁免"文案同步 + crash-lineage 面板半边销账。
+- **实机走查清单（并入维护者验收）**：拖拽/非模态/下钻/多锁/折叠条/翻页/搜索（含搜离屏 pawn 直接锁定）/双 Esc/关窗停会话/**PackFallback 端到端首验**——你的"没测过"记忆已实证为"链路全存在、游戏内从未观察"（kernel 有 `PackFallbackTier`/`PackFallbackExactDomainOnly` 钉，adapter `:187-195` 接通作者 XML 投影）；验收时用一份缺动作音 + `<fallbacks>` 的包实测 `[包回退·键]` 显形。
+
+**不做**：不给 settings 加防炸 fallback；本迁移不向 FL 开轮——§1.2 的关闭钮评估与 §1.1 的"控件本属库"论证若成立，走**独立提案**通道（讨论后向 FL 提项），迁移本体按现壳表面继续，不私改库、不以库改动为面板动工前提；迁移中撞出的壳级缺陷照旧攒 round 4 素材。
+**验收**：面板文件 raw backend 命中 0；whitelist 1 条目无 NOTE；verify-local 14/14；新 harness 车道绿；维护者实机清单加一条面板走查（拖拽/非模态/两模式/双 Esc/关窗停 session）。
+
+## 2. 活口指针（详情都在 `TODO.md`，此处只留一行索引）
+
+- round 3 已 CLOSED 且 FL 已实现合入 `main`（US 侧剩采纳：`Width="Auto"`/`MinWidth`/`MaxWidth` + 容器 `Breakpoint` 已在 CI 所检出的 carrier 默认分支上）→ `TODO.md` 账本行；D7 区域形状开放分叉 → TODO D7 节；Knife 3 → TODO；rc1 试用循环与发布轴配对 → TODO；`US_STEAM` 死轴记录 → TODO。
+- 分支线（2026-09-10 三级定稿）：**功能分支**（短命，自版本线尖端切出，随积累推送留存，合回线后本地+远端删除）→ **版本线** `0.3.x`（集成与积累面，14/14 绿；纯文档/裁定提交可直接落线）→ **`main`**（发布信号面，仅切 rc/release 时合入线，现停 rc1 面 `d9b1d24`）。首个适用对象 = 面板迁移，实际分支名 `diagnostics`。FL 侧 merge/tag 归库会话与维护者，本侧只读。
+- 分支命名（09-10 裁定补充）：功能分支名带版本面与用途前缀（例：`0.3.x/feat-diagnostics`）；本轮已开的 `diagnostics` 不改名，合回即死。
+
+- **面板迁移状态（2026-09-10）：已合回 `0.3.x`（ff 至 `e9e6a34`，27 文件 +2613/−845），`diagnostics` 分支本地+远端已删**。代码面 14/14 全绿（纯车道+kernel-host 车道+verify-local 实测，白名单 2→1 落地）。**实机走查清单待维护者**：拖拽/非模态/下钻/多锁/折叠条/翻页/搜索（含离屏直锁）/双 Esc（重点：**未消费 Esc**——若泄漏进游戏取消/关设置窗，即 FL round-4 的 UiNative 事件缝素材）/关窗连坐/跨图终结/**PackFallback 首验**。
+
+## 3. FL 递交（2026-09-10，跨仓核对；本节由库会话代写，供 US 会话核对后并入或删去）
+
+**为什么有这一节**：FL 侧 2026-09-09 的跨仓核对发现 US 文档里关于 FL 状态与包体版本的陈述已滞后，而 FL 缓冲区里"等对侧下次打开时自行 re-point"的假设已被证伪一次（US 在 refile 当天重写过自己的 `TODO.md`/`HANDOFF.md`，那几行没动）。维护者本次授权库会话跨目录只读检查并直接改对侧文件，因此下列改动**已经落盘**，不是待办：
+
+- `TODO.md:8`（Cross-repo ledger 行）：把"等 FL 把 `feat/round-1-0.3.0` 合入其 main"改为已完成——round 1 + round 3 均在 FL `main`（PR #1），lib 侧只剩 `v0.3.0` 切tag，那归维护者试用裁决，US 的 rc 配对跟的是那个 tag 而不是 merge。
+- `TODO.md:9`（round 3 行）：状态由 "REVIEWED by FL, pending scheduling" 改为 **CLOSED by FL，2026-09-09 实现并经 PR #1 合入 `main`**；并在行内记三处过时断言的更正：① 包体 0.4.0 → **0.3.0**（首发前加入不动契约轴，US pin `[0.3.0,0.4.0)` 本就覆盖，"0.3.0 stays frozen / N ships on 0.4.0" 作废，阈值禁令现在就在 0.3.0 解除）；② 宽度钳位实为 **`MinWidth`/`MaxWidth`**，不是 verdict 原文的 `Min`/`Max`（后者被 StepperSlider 的值域占用）；③ FL 缓冲区里的 `## US→FL round 3` 正文按生命周期已修剪，永久记录改指 FL `MEMORY.md` round-3 条与 US `MEMORY.md` 新增的 responsive-vocabulary 条。
+- `TODO.md:46`、`TODO.md:60`：这两行原来以"0.4.0 还没落地"为前提，把声明式尺寸排到一个不会存在的版本之后。更正后写明：`Width="Auto"` + `MinWidth`/`MaxWidth` + 容器 `Breakpoint`（`Narrow`/`Cols`/`NarrowCols`/`NarrowHidden`）**已在 CI 所检出的 carrier 上可用**——FL 远端默认分支是 `main`，而 US 两条 workflow 检出 carrier 时都不带 `ref:`，所以采纳不再被 FL 发布阻塞；R14 的手写阈值禁令不变，本轮手测几何仍是过渡实现。原 `:60` 关于 `ResolveColumnWidths` 只有"静态 `Width=`/等分"的描述是 round 3 之前的引擎，现已是 Auto 测量列。
+- `MEMORY.md`（Carrier lockstep 条之后新增一条）：把上述事实作为持久能力面记入，附复推命令 `git -C ../ferritelib show origin/main:Source/FerriteLib.UiKit/Kernel/UiLayoutEngine.cs` 后 grep `IsAutoWidth` / `"Breakpoint"`，并带上 FL 侧自己的证据学告诫——harness 的宽度是字符数线性模型（`StubTextWidth`），Auto 列在真实字形下是否合身仍是实机问题。
+- `HANDOFF.md:5`、`:39`：对侧状态摘要与活口指针索引同步为 CLOSED。
+
+**US 侧需要复核的两点**（库会话不改判，只提示）：其一，`:46`/`:60` 的裁定主体（维护者 2026-09-08 三点、区域形状分叉）原样保留，只替换了版本与可用性断言；其二，本轮没有开 FL round——§1.2 关闭钮评估得出 n=0 不立案、§1 声明零新面诉求，因此 FL 侧 round 计数仍停在 3，**round 4 号位空置**，攒素材的触发条件是迁移中撞出的壳级缺陷。若 US 会话认为上述任何改动越界，直接 `git checkout -- TODO.md MEMORY.md`（`HANDOFF.md` 不入库，手工回退本节即可）。
