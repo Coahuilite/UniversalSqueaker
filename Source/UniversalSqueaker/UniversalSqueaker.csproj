@@ -8,11 +8,12 @@
     <AssemblyName>UniversalSqueaker</AssemblyName>
     <RootNamespace>UniversalSqueaker</RootNamespace>
     <Version>0.4.0</Version>
-    <!-- VersionPrefix=$(Version) 会产生非法 AssemblyVersion；此处拆分为纯数字前缀 + 后缀，
-         程序集版本保持 $(VersionPrefix).0。rc 窗口纪律（与 carrier 一致）：版本轴冻结在 base
-         0.2.0，每个 rc 只是新 tag，后缀只进 tag 与工件名，不进身份轴；stable 发布后回写
-         0.2.1-dev 开启下一轮。 -->
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <!-- VersionPrefix must stay a bare numeric prefix and must never point at a suffixed Version:
+         $(VersionPrefix) is what AssemblyVersion/FileVersion below are built from, so a suffix there
+         produces an illegal assembly version. The identity axis moves with the release (<Version>,
+         <VersionPrefix> and About.xml <modVersion> together); the suffix stays in the tag and the
+         artifact name only, never in the identity axis. -->
+    <VersionPrefix>0.4.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
