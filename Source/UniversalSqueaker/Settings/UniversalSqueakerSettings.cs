@@ -244,11 +244,13 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// 写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。
     /// scope == null 表示清除本层的**作用域字段**（恢复继承）。
     ///
-    /// D2 不变式：本方法只动它点名的那一个字段，记录只有在它承载的每个字段都被清掉之后才删除。
-    /// interval / probability 两个乘数是运行时真实输入（<c>SqueakRuntimeResolver</c> 消费），而界面上
-    /// 没有任何控件显示它们，所以「清作用域 = 删整条记录」会静默丢掉玩家从未见过的数据——写入作用域
-    /// 时同理（旧实现两条路径都会丢）。反证：同文件 <see cref="SetMoodTuning"/> 的 "clear" 删整行是
-    /// **对的**，因为 MoodTuningRecord 承载的每个字段都有控件显示；形状相同，字段可见性不同。
+    /// D2 不变式（**组级**）：本方法只动它点名的那一个字段；同身份行只有在**清空后不再贡献任何字段**
+    /// 时才被删除。判定单位是「同身份组的并集」，不是 last-wins 幸存行——运行时对同身份多行是字段级
+    /// 合并（<c>HasX</c> 取并集、值后写覆盖先写：<c>SqueakRuntimeResolver.cs:117-125</c> +
+    /// <c>Pure/SqueakLayeredTuning.cs:33-39</c>），所以较早重复行上的乘数是**活数据**。
+    /// interval / probability 两个乘数界面上没有任何控件显示，删掉就是静默丢掉玩家从未见过的数据。
+    /// 反证：同文件 <see cref="SetMoodTuning"/> 的 "clear" 删整行是**对的**，因为 MoodTuningRecord 承载的
+    /// 每个字段都有控件显示；形状相同，字段可见性不同。
     /// </summary>
     internal void SetActionTuningScope(string actionKey, string raceDefName, string xenotypeDefName, SqueakActionScope? scope)
     {
@@ -259,12 +261,16 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (!hasRace && hasXeno) return;
         if (string.IsNullOrEmpty(actionKey)) return;
 
-        // last-wins 取末个匹配行，并让它原地存活：写入与清除都必须保住它承载的其它字段。同身份的更早
-        // 行是陈旧重复，删除（去重规则与 SetMoodTuning 一致）。
+        // 身份比较统一走归一化后的本地量：helper 自身按 ?? "" 规则比较，调用点也不再让可空参数
+        // 直接流进非空形参（否则 Nullable + TreatWarningsAsErrors 会以 CS8604 拒绝构建）。
+        string actionRaceDefName = raceDefName ?? "";
+        string actionXenotypeDefName = xenotypeDefName ?? "";
+
+        // last-wins 取末个匹配行：写入落在这行，读回来的也是它。
         ActionTuningRecord? existing = null;
         foreach (ActionTuningRecord candidate in actionTuning)
         {
-            if (SameActionTuningIdentity(candidate, actionKey, raceDefName, xenotypeDefName))
+            if (SameActionTuningIdentity(candidate, actionKey, actionRaceDefName, actionXenotypeDefName))
             {
                 existing = candidate;
             }
@@ -272,20 +278,18 @@ public partial class UniversalSqueakerSettings : ModSettings
 
         if (scope == null)
         {
-            if (existing != null)
+            // 清除点名的那一个字段：组内**每一行**都要清（否则较早的重复行会继续贡献旧作用域而让清除
+            // 变成空操作），然后只删「不再承载任何字段」的行。
+            foreach (ActionTuningRecord row in actionTuning)
             {
-                existing.hasScope = false;
-                if (existing.hasIntervalMultiplier || existing.hasProbabilityMultiplier)
+                if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
                 {
-                    actionTuning.RemoveAll(c => c != null && !ReferenceEquals(c, existing)
-                        && SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
-                }
-                else
-                {
-                    // 记录已不承载任何字段：连同陈旧重复行一起删除，列表不再留着空壳。
-                    actionTuning.RemoveAll(c => SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
+                    row.hasScope = false;
                 }
             }
+
+            actionTuning.RemoveAll(c => SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+                && !CarriesAnyActionTuningField(c));
 
             NotifyDiscreteResolverRuntimeChanged();
             QueuePersistence();
@@ -297,27 +301,48 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
             effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
 
+        ActionTuningRecord target;
         if (existing != null)
         {
-            existing.hasScope = true;
-            existing.scope = effective;
-            actionTuning.RemoveAll(c => c != null && !ReferenceEquals(c, existing)
-                && SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
+            target = existing;
         }
         else
         {
-            actionTuning.Add(new ActionTuningRecord
+            target = new ActionTuningRecord
             {
                 actionKey = actionKey,
-                raceDefName = raceDefName ?? "",
-                xenotypeDefName = xenotypeDefName ?? "",
-                hasScope = true,
-                scope = effective,
-            });
+                raceDefName = actionRaceDefName,
+                xenotypeDefName = actionXenotypeDefName,
+            };
+            actionTuning.Add(target);
         }
+
+        target.hasScope = true;
+        target.scope = effective;
+
+        // 较早的重复行不得在同一个字段上竞争（否则 last-wins 会取决于列表顺序），但它们承载的**其它**
+        // 字段全部保留；只有清空后什么都不剩的行才删除。
+        foreach (ActionTuningRecord row in actionTuning)
+        {
+            if (ReferenceEquals(row, target)) continue;
+            if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
+            {
+                row.hasScope = false;
+            }
+        }
+
+        actionTuning.RemoveAll(c => !ReferenceEquals(c, target)
+            && SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+            && !CarriesAnyActionTuningField(c));
 
         NotifyDiscreteResolverRuntimeChanged();
         QueuePersistence();
+    }
+
+    /// <summary>该行是否仍承载运行时折叠会用到的任一字段（作用域 / 间隔倍率 / 概率倍率）。</summary>
+    private static bool CarriesAnyActionTuningField(ActionTuningRecord? record)
+    {
+        return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier);
     }
 
     /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>

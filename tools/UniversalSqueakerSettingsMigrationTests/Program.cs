@@ -30,6 +30,7 @@ internal static class Program
             MigrationFailureBlocksAndRetries();
             VoiceSchemaStaleDoesNotOverwriteMoodTuning();
             SetActionTuningScopeClearsOnlyTheNamedField();
+            SetActionTuningScopeMergesDuplicateRowsFieldWise();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             TwoPresetsImportIndependentlyAndIdempotently();
@@ -233,6 +234,51 @@ internal static class Program
         settings.SetActionTuningScope("Eat", "RaceA", "", null);
         Check(settings.actionTuning.Find(r => r.actionKey == "Eat") == null,
             "action-scope-null: a row that carries nothing else is removed", ref failures);
+    }
+
+    private static void SetActionTuningScopeMergesDuplicateRowsFieldWise()
+    {
+        Scenario("4b-action-scope-duplicate-rows-merge-field-wise");
+
+        // Adversarial order: the multiplier lives in the EARLIER row and the scope-only row comes last.
+        // The runtime merges same-identity rows FIELD-WISE (union of HasX, later rows overwrite values),
+        // so the earlier row is live data. The survivor-only rule deleted the whole group and the
+        // independent verifier measured exactly that loss (F-J).
+        UniversalSqueakerSettings settings = NewSettings();
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasIntervalMultiplier = true, intervalMultiplier = 3f },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.Disabled },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", null);
+
+        Check(settings.actionTuning.Count == 1
+            && settings.actionTuning[0].hasIntervalMultiplier
+            && Math.Abs(settings.actionTuning[0].intervalMultiplier - 3f) < 0.0001f
+            && !settings.actionTuning[0].hasScope,
+            "action-scope-null (adversarial order): the earlier multiplier row survives the clear", ref failures);
+
+        // The same shape on the write path: a live probability multiplier in the earlier row must not
+        // be deleted just because the later row is the one that receives the scope.
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasProbabilityMultiplier = true, probabilityMultiplier = 0.25f },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
+
+        var probabilityRow = settings.actionTuning.Find(r => r.hasProbabilityMultiplier);
+        var scopeRow = settings.actionTuning.Find(r => r.hasScope);
+        Check(probabilityRow != null
+            && Math.Abs(probabilityRow.probabilityMultiplier - 0.25f) < 0.0001f,
+            "action-scope-write (adversarial order): the live probability multiplier survives", ref failures);
+        Check(scopeRow != null && scopeRow.scope == SqueakActionScope.Disabled,
+            "action-scope-write (adversarial order): the written scope lands on a row of the group", ref failures);
+        Check(settings.actionTuning.Count == 2
+            && !ReferenceEquals(probabilityRow, scopeRow),
+            "action-scope-write (adversarial order): the multiplier row is kept beside the scope row", ref failures);
     }
 
     private static void SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord()
