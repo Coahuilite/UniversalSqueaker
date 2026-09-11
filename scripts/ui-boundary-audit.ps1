@@ -14,14 +14,22 @@
 #      stripped first, because prose about the backend is documentation, not coupling.
 #   3. VERDICT: a hit outside the whitelist is RED. So is a whitelist entry whose file has vanished
 #      (a dead exemption path is a lost boundary, not a free pass).
-#   4. RATCHET: the whitelist is 1 entry and may only shrink (HANDOFF §0/§1); a new exemption
-#      needs a maintainer ruling. An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
+#   4. RATCHET: the whitelist may only shrink (HANDOFF §0/§1); a new exemption needs a maintainer ruling.
+#      It holds 2 entries since 2026-09-12: the frozen camera-indicator branch, plus the in-world pawn
+#      marker ratified that day (F-19b). The second one is a RATIFIED ADDITION, not a broken ratchet -
+#      before it, GenMapUI was not in the pattern set, so the marker was neither exempt nor counted: the
+#      gate looked clean while one boundary sat outside its view. Ratified additions get date + reason +
+#      recovery condition in the entry itself.
+#      An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
 #
 # Cross-repo: this is one half of a single metric. FerriteLib's containment gate (its HANDOFF item B)
 # counts tree membership on the library side; the two whitelists must agree entry by entry. Since FL
 # 0.3.0 landed P1/P2/P6, US holds ZERO raw hover calls and ZERO frame gates: every one of them reads
 #  `UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiNative.Button`, and the chrome is the library's
-#  `UiWindowHost`. Since the diagnostics panel moved onto the same machinery (round-9 migration, 2026-09-10) only exemption two (the frozen camera-indicator branch) remains.
+#  `UiWindowHost`. Since the diagnostics panel moved onto the same machinery (round-9 migration, 2026-09-10)
+# the whitelist holds two exemptions: the frozen camera-indicator branch and the in-world pawn marker
+# (2026-09-12). Cross-repo debt created by the second one: the FL containment gate must add `\bGenMapUI\.`
+# to its pattern set and the matching entry, or the two halves of this metric no longer agree.
 # Exit code 0 = boundary intact. Run directly or from scripts/verify-local.ps1 (gate 14).
 [CmdletBinding()]
 param(
@@ -31,15 +39,27 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# The shared pattern set — deliberately identical to the FL containment gate's metric.
-$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.'
+# The shared pattern set — identical to the FL containment gate's metric, plus ONE ratified addition:
+# `\bGenMapUI\.` (maintainer ruling 2026-09-12, F-19b: the in-world pawn marker stays, so it must be
+# COUNTED and then exempted, not invisible). FL's half of the metric needs the same term before the two
+# halves agree entry by entry; that edit belongs to the FL session, not here.
+$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.'
 
 # Sanctioned exemptions (2, only-shrink). The reason is part of the contract: an entry with no
-# ruling behind it is not an exemption. Both come from HANDOFF §0; neither is this gate's to reconsider.
+# ruling behind it is not an exemption. The first comes from HANDOFF §0, the second from the maintainer
+# ruling of 2026-09-12 (F-19b); neither is this gate's to reconsider.
 # Anything the FL seams already cover must NOT be added back — the seam is the exemption.
 $Whitelist = [ordered]@{
     # 豁免二 (frozen, HANDOFF §0): camera-indicator legacy fallback branch - Knife 3 owns its fate.
     'Patches/Patch_GlobalControlsUtility_CameraIndicator.cs' = 'frozen Verse Widgets.Label legacy branch (HANDOFF §0 exemption two)'
+
+    # 裁定增补 2026-09-12 (F-19b): the in-world pawn marker. `SqueakDiagnosticsOverlay` paints the mark
+    # over a spawned pawn through `Verse.GenMapUI.DrawText` (CompSqueaker.PostDrawCore, 5 calls) - a
+    # world-space draw with no UiKit session seam to route through. The maintainer ruled the marker
+    # STAYS as a fixed working part, so it is exempted rather than deleted;
+    # RECYCLE when US stops drawing in-world markers, or when the carrier grows a world-space layer
+    # with a session (then this must route through that seam like every other draw).
+    'CompSqueaker.cs' = 'in-world pawn marker via GenMapUI.DrawText - maintainer ruling 2026-09-12 (F-19b); recycle when US draws no in-world marker, or the carrier gains a session-bearing world layer'
 }
 
 # ---- comment stripping -------------------------------------------------------
