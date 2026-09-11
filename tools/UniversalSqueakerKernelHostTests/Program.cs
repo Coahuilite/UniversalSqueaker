@@ -138,11 +138,12 @@ internal static class Program
 
     /// <summary>
     /// The in-game failure reported on 2026-09-04: picking Auto in a Tuning scope dropdown opened the
-    /// next row's dropdown instead of selecting it. The yield guard in UiNative consults
-    /// UiSession.OpenPopupRect, and the composite popup path (UsKernelDraw.Dropdown: scope rows,
-    /// domain picker, filter dropdowns) never published that rect, so every covered trigger kept
-    /// stealing the click. The library lanes prove the guard and the rect rule given a published
-    /// rect; this lane proves the composite path publishes one, through the real production host.
+    /// next row's dropdown instead of selecting it. The composite popup path (UsKernelDraw.Dropdown:
+    /// scope rows, domain picker, filter dropdowns) never fed the yield rule, so every covered trigger
+    /// kept stealing the click. Since 0.4.0 that rule is the owned hit stack: a popup pushes a
+    /// UiHitLayer and UiSession.IsPointerOverHigherLayer refuses the click for anything covered, in
+    /// place of the retired single published rect. The library's own lanes prove dispatch given a
+    /// stack; this lane proves the composite path publishes one, through the real production host.
     /// </summary>
     private static void CompositeDropdownPublishesCoveringRect()
     {
@@ -152,19 +153,24 @@ internal static class Program
         Rect viewport = new(0f, 0f, 800f, 600f);
         host.DrawFrame(viewport);
 
-        // Anchor low enough that two or more option rows cannot fit below it: the composite popup
-        // must flip above the trigger, the same branch the reported click loss exercised.
-        Rect anchor = new(300f, 560f, 120f, 22f);
+        // Anchor low enough that two or more option rows cannot fit below it (the composite popup must
+        // flip above the trigger, the same branch the reported click loss exercised) and far enough
+        // right that the popup lands over a second widget: the yield rule below needs a node the popup
+        // really covers. The real page hands the trigger's own rect in; injecting the anchor is what
+        // lets this lane choose what sits underneath.
+        Rect anchor = new(620f, 560f, 120f, 22f);
         string? publishedBy = null;
         Rect popup = default;
+        UiNode? popupOwner = null;
         foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
         {
             host.Session.OpenPopup("scope-tree-scope-" + key, anchor);
             host.DrawFrame(viewport);
-            if (host.Session.OpenPopupRect.HasValue)
+            if (TryGetPopupHitLayer(host.Session, out UiHitLayer layer))
             {
                 publishedBy = key;
-                popup = host.Session.OpenPopupRect.Value;
+                popup = layer.Rect;
+                popupOwner = layer.Element;
                 break;
             }
 
@@ -172,25 +178,84 @@ internal static class Program
         }
 
         Assert(publishedBy != null,
-            "no Tuning scope dropdown published its popup rect; composite popups can never win a covered click");
+            "no Tuning scope dropdown published a popup layer; composite popups can never win a covered click");
         Assert(popup.height >= 24f && Math.Abs(popup.height % 24f) < 0.01f,
             "composite popup height must be a whole number of option rows: " + popup.height);
         Assert(popup.y >= -0.01f && popup.yMax <= 600f + 0.01f,
             "composite popup must stay inside the host viewport: " + popup);
         Assert(Math.Abs(popup.yMax - anchor.y) < 0.01f,
             "a composite popup that cannot fit below its anchor must flip above it: " + popup);
-        Assert(host.Session.IsPointOverPopup(new Vector2(popup.x + popup.width / 2f, popup.y + 12f)),
-            "the yield predicate must see a point inside the composite popup");
-        Assert(!host.Session.IsPointOverPopup(new Vector2(popup.x + popup.width / 2f, popup.yMax + 40f)),
-            "the yield predicate must not fire below the composite popup");
 
-        // The rect is per-frame state and a click arrives in the frame after the draw, so a second
-        // frame must republish it; closing must clear it so a stale rect cannot shadow later clicks.
+        // 0.4.0 replaced the single published popup rect with the owned hit stack: UiPopup pushes a
+        // popup layer and dispatch consults it topmost-first (UiSession.IsPointerOverHigherLayer).
+        // Input arrives in the frame AFTER the draw, and a pass dispatches against the stack the
+        // previous pass finished, so the predicate is asserted after a second frame - the same
+        // next-frame reason the retired rect had to be republished before it was read.
         host.DrawFrame(viewport);
-        Assert(host.Session.OpenPopupRect.HasValue, "composite popup rect must be republished every frame it draws");
+
+        // The layer names its owner by node identity, so the owner comes from the layer itself: the
+        // scope rows are drawn inside one widget, so they are not tree elements a string id resolves.
+        UiNode? owner = popupOwner;
+        UiNode? covered = host.Session.GetNodeByElementId("help-panel");
+        Assert(owner != null, "the published popup layer must name the element that pushed it");
+        Assert(covered != null, "the help panel must be an arranged element for the covered case");
+
+        Vector2 inside = new(popup.x + popup.width / 2f, popup.y + 12f);
+        Vector2 outside = new(inside.x, popup.yMax + 40f);
+        Assert(host.Session.IsPointerOverHigherLayer(covered!, inside),
+            "a popup layer must make a covered element yield the click (owned hit stack)");
+        Assert(!host.Session.IsPointerOverHigherLayer(covered!, outside),
+            "the yield predicate must not fire outside the popup");
+        Assert(!host.Session.IsPointerOverHigherLayer(owner!, inside),
+            "the popup's own trigger keeps the click, which is what preserves toggle-to-close");
+
+        // The layer is per-frame state: a second frame must republish it, and closing must drop it so a
+        // stale layer cannot shadow later clicks (the dispatch stack is read one pass after the close).
+        Assert(TryGetPopupHitLayer(host.Session, out _), "the popup layer must be republished every frame it draws");
         host.Session.ClosePopup();
         host.DrawFrame(viewport);
-        Assert(!host.Session.OpenPopupRect.HasValue, "a closed composite popup must leave no published rect");
+        host.DrawFrame(viewport);
+        Assert(!TryGetPopupHitLayer(host.Session, out _), "a closed composite popup must leave no popup layer");
+        Assert(!host.Session.IsPointerOverHigherLayer(covered!, inside),
+            "a closed popup must stop shadowing the elements it covered");
+    }
+
+    /// <summary>
+    /// The owned hit stack's popup layer for the pass that just drew, if any. Replaces the retired
+    /// single-rect seam: a popup is the layer with <see cref="UiHitLayer.IsPopup"/>.
+    /// </summary>
+    internal static bool TryGetPopupHitLayer(UiSession session, out UiHitLayer layer)
+    {
+        foreach (UiHitLayer candidate in session.HitLayers)
+        {
+            if (candidate.IsPopup)
+            {
+                layer = candidate;
+                return true;
+            }
+        }
+
+        layer = default;
+        return false;
+    }
+
+    /// <summary>
+    /// 0.4.0 keys scroll positions by node identity, so a lane must arrange the page first: arranging is
+    /// what creates the element nodes the string id resolves to. A missing node is a lane bug, never a
+    /// silent zero, because a lane that skips the write would assert nothing.
+    /// </summary>
+    internal static void SetScrollPositionById(UiSession session, string elementId, Vector2 position)
+    {
+        UiNode? node = session.GetNodeByElementId(elementId);
+        Assert(node != null, "no arranged element carries the scroll id " + elementId + "; arrange before writing a scroll position");
+        session.SetScrollPosition(node!, position);
+    }
+
+    /// <summary>Reads one scroll container's position through its node; an unarranged container holds zero.</summary>
+    internal static Vector2 ScrollPositionById(UiSession session, string elementId)
+    {
+        UiNode? node = session.GetNodeByElementId(elementId);
+        return node == null ? Vector2.zero : session.GetScrollPosition(node);
     }
 
     /// <summary>
@@ -232,9 +297,9 @@ internal static class Program
             host.Session.OpenPopup("pack-filter", anchor);
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
             host.DrawFrame(viewport);
-            Rect? published = host.Session.OpenPopupRect;
-            Assert(published.HasValue, "the opened pack-filter must publish its rect");
-            Rect popup = published.GetValueOrDefault();
+            Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer popupLayer),
+                "the opened pack-filter must publish its popup layer");
+            Rect popup = popupLayer.Rect;
             float needed = stub.MeasureWidth(longAuthor, UiFont.Small) + 12f;
             Assert(popup.width >= needed - 0.01f,
                 "the popup must grow to the widest option label: " + popup.width + " < " + needed);
@@ -458,7 +523,10 @@ internal static class Program
         using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
         Rect viewport = new(0f, 0f, 1280f, 720f);
         host.Bindings.Invoke("set-tab", "Distance");
-        host.Session.SetScrollPosition("content-scroll", Vector2.zero);
+        // 0.4.0 keys scroll positions by node, so the containers must be arranged before they can hold
+        // one; this write pins the probe to the top of the card in the arranged frame below.
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
         Assert(snapshot.RectById.TryGetValue("attenuation-editor", out Rect card), "Distance snapshot must contain attenuation-editor");
 
@@ -1329,12 +1397,18 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
 
-        host.Session.SetScrollPosition("content-scroll", new Vector2(50f, 120f));
-        host.Session.SetScrollPosition("help-scroll", new Vector2(0f, 40f));
+        // 0.4.0 keys scroll positions by element node, so arranging first is what makes the ids
+        // addressable; without it the writes below would be silent no-ops and this lane would assert
+        // nothing. The mid-lane assertion is the guard against that failure mode returning.
+        host.MeasureAndArrange(new Vector2(1280f, 720f));
+        SetScrollPositionById(host.Session, "content-scroll", new Vector2(50f, 120f));
+        SetScrollPositionById(host.Session, "help-scroll", new Vector2(0f, 40f));
+        Assert(ScrollPositionById(host.Session, "content-scroll").y == 120f,
+            "the lane must really move the centre content scroll before it asserts the reset");
         host.Bindings.Invoke("set-tab", "Packs");
 
-        Vector2 content = host.Session.GetScrollPosition("content-scroll");
-        Vector2 help = host.Session.GetScrollPosition("help-scroll");
+        Vector2 content = ScrollPositionById(host.Session, "content-scroll");
+        Vector2 help = ScrollPositionById(host.Session, "help-scroll");
         Assert(content.x == 0f && content.y == 0f,
             "workspace switch resets the centre content scroll to top");
         Assert(help.x == 0f && help.y == 0f,

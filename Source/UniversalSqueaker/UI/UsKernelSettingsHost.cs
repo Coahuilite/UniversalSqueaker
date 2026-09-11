@@ -105,8 +105,28 @@ public static class UsKernelSettingsHost
         public void ResetScroll()
         {
             if (session == null) return;
-            session.SetScrollPosition(ContentScrollId, Vector2.zero);
-            session.SetScrollPosition(HelpScrollId, Vector2.zero);
+
+            // FL 0.4.0 keys scroll positions by node identity, not by the string a page declares:
+            // SetScrollPosition takes a UiNode and ScrollPositions is keyed by node (the string
+            // overload is gone with the batch-C node work, bd4d1b5). GetNodeByElementId is the
+            // carrier's own bridge from the one string this page owns to that identity.
+            //
+            // A null lookup means the element has not been arranged in this session yet, so there is
+            // no scroll state to reset. Skipping is equivalent to the old write, not a silent
+            // behaviour change: UiSession.GetScrollPosition answers Vector2.zero for a node that
+            // holds nothing, so "no entry" and "entry = zero" are indistinguishable to every reader,
+            // and these two calls never wrote anything but zero.
+            UiNode? contentNode = session.GetNodeByElementId(ContentScrollId);
+            if (contentNode != null)
+            {
+                session.SetScrollPosition(contentNode, Vector2.zero);
+            }
+
+            UiNode? helpNode = session.GetNodeByElementId(HelpScrollId);
+            if (helpNode != null)
+            {
+                session.SetScrollPosition(helpNode, Vector2.zero);
+            }
         }
 
         public void SetScrollTarget(string elementId)

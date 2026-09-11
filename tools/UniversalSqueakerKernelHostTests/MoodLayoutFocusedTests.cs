@@ -274,13 +274,16 @@ internal static class MoodLayoutFocusedTests
         try
         {
             host.Bindings.Invoke("set-tab", "Tuning");
-            host.Session.SetScrollPosition("content-scroll", Vector2.zero);
+            // 0.4.0 keys scroll positions by element node, so the container must be arranged before its
+            // id is addressable; this keeps the capture pinned to the top of the scroll content.
+            host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
+            Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
 
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
             Assert(snapshot.RectById.TryGetValue("scope-tree", out Rect cardPage), "snapshot must contain scope-tree in Tuning workspace");
 
             Rect contentViewport = snapshot.Viewports["content-scroll"];
-            Vector2 scroll = host.Session.GetScrollPosition("content-scroll");
+            Vector2 scroll = Program.ScrollPositionById(host.Session, "content-scroll");
             Rect cardLocal = ToContentLocal(cardPage, contentViewport, scroll);
 
             var raw = new CapturedRects();

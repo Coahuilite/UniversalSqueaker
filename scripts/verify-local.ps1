@@ -50,10 +50,15 @@ function Invoke-Check {
     $previousEap = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
     $failed = $false
-    try { & $Action *> $tempLog } catch { $failed = $true } finally { $ErrorActionPreference = $previousEap }
+    $failureMessage = $null
+    try { & $Action *> $tempLog } catch { $failed = $true; $failureMessage = $_.Exception.Message } finally { $ErrorActionPreference = $previousEap }
     $code = $LASTEXITCODE
     if ($failed -or $code -ne 0) {
         Write-Host 'FAIL'
+        # A gate that enforces a contract without saying which one turns every red into a scavenger
+        # hunt: an assertion message used to be swallowed by this catch and never reached the console
+        # (port of the carrier's own 5399aa7).
+        if (-not [string]::IsNullOrWhiteSpace($failureMessage)) { Write-Host "    $failureMessage" }
         if (Test-Path -LiteralPath $tempLog) {
             Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
         }
@@ -142,6 +147,46 @@ Invoke-Check 'FerriteLib carrier payload present and Release-configured (sibling
         $carrierStamp = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll) -join ''
         if ($carrierStamp -ne 'Release') {
             throw "The carrier payload at $carrierDll is '$carrierStamp'-configured; US builds and publishes against a Release carrier (a Dev one usually means ../ferritelib's own pack-dev ran last). Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        }
+
+        # Presence and configuration are not identity, and identity is what this gate was missing.
+        # Measured 2026-09-12: a payload built from 7402f12 stayed green here while the carrier checkout
+        # was at 572c40b, so US compiled against an older carrier API and the only symptom appeared one
+        # gate later as CS1503 in UsKernelSettingsHost. The carrier itself drew the same lesson in
+        # d0632ca, where an existence-only payload check became an evaluated TargetPath. The payload
+        # embeds its source commit in AssemblyInformationalVersion (carrier AGENTS.md), so attribute the
+        # bytes to a checkout. US never builds the carrier from here - that would write another
+        # repository - it only refuses to accept bytes nobody can attribute.
+        $carrierRoot = Join-Path (Split-Path -Parent $root) 'ferritelib'
+        $carrierRepo = $null
+        foreach ($candidate in @($carrierRoot, (Join-Path $root 'ci-ferritelib'))) {
+            if (Test-Path -LiteralPath (Join-Path $candidate '.git') -PathType Container) { $carrierRepo = $candidate; break }
+        }
+        if ($null -eq $carrierRepo) {
+            throw "Cannot attribute the carrier payload: no carrier git checkout at $carrierRoot (nor at the CI layout $(Join-Path $root 'ci-ferritelib')), so its source commit cannot be proven."
+        }
+
+        $carrierInfo = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll -AttributeName 'AssemblyInformationalVersionAttribute') -join ''
+        $plus = $carrierInfo.IndexOf('+')
+        $payloadCommit = if ($plus -ge 0) { $carrierInfo.Substring($plus + 1).Trim() } else { '' }
+        if ([string]::IsNullOrWhiteSpace($payloadCommit)) {
+            throw "The carrier payload at $carrierDll reports AssemblyInformationalVersion '$carrierInfo', which carries no '+' commit suffix: the bytes cannot be attributed to a source commit. Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        }
+
+        $carrierHead = ((& git -C $carrierRepo rev-parse HEAD) -join '').Trim()
+        if ([string]::IsNullOrWhiteSpace($carrierHead)) {
+            throw "Cannot read HEAD of the carrier checkout at $carrierRepo; the payload's source commit cannot be proven."
+        }
+
+        # A dirty carrier tree means the payload may contain source that is in no commit, so its SHA
+        # would be a half-truth: refuse instead of accepting an unattributable payload.
+        $carrierChanges = @(& git -C $carrierRepo status --porcelain)
+        if ($carrierChanges.Count -gt 0) {
+            throw "The carrier checkout at $carrierRepo has uncommitted changes ($($carrierChanges.Count) path(s)), so the payload cannot be proven to come from $carrierHead. Commit or stash the carrier, rebuild it, then re-run."
+        }
+
+        if (-not [string]::Equals($payloadCommit, $carrierHead, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "The carrier payload at $carrierDll was built from commit $payloadCommit but the carrier checkout at $carrierRepo is at ${carrierHead}: the payload is a STALE build and US would compile against an older carrier API. Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
         }
     }
 
