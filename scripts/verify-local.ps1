@@ -64,6 +64,46 @@ function Invoke-Check {
     Write-Host 'OK'
 }
 
+# A fresh clone or a git-archive extraction has no obj/ tree, and the six tool lanes below run with a
+# hard-coded --no-restore on purpose (a lane must never silently re-resolve a stale package graph).
+# Without this bootstrap a fresh tree dies inside gate 1 as MSB3644 ("reference assemblies for
+# .NETFramework,Version=v4.7.2 not found"), which reads like a real red - the independent verifier hit
+# exactly that on an archive extraction and had to restore seven projects by hand. Same shape as the
+# carrier's own [setup] restore (d0632ca), sized for US: every project a lane invokes, not just one.
+# -NoRestore keeps its documented meaning: the caller asserts the graph is already restored (CI
+# restores every csproj before calling with it), so nothing happens here in that mode.
+if (-not $NoRestore) {
+    $setupProjects = @($projectFile)
+    $setupProjects += @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') -Recurse -File -Filter *.csproj |
+        Where-Object { $_.FullName -notmatch '[\\/]obj[\\/]' } |
+        ForEach-Object { $_.FullName } |
+        Sort-Object)
+
+    # Restore is what produces obj/project.assets.json; its presence is the same signal --no-restore
+    # lanes depend on, so only the projects missing it are restored and a warm tree pays nothing.
+    $setupPending = @($setupProjects | Where-Object {
+        -not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $_) 'obj\project.assets.json') -PathType Leaf) })
+
+    Write-Host -NoNewline "[setup] restore the project graph ($($setupPending.Count) of $($setupProjects.Count) projects need it) ... "
+    $setupFailedProject = ''
+    foreach ($setupProject in $setupPending) {
+        dotnet restore $setupProject *> $tempLog
+        if ($LASTEXITCODE -ne 0) { $setupFailedProject = $setupProject; break }
+    }
+
+    if ($setupFailedProject.Length -gt 0) {
+        Write-Host 'FAIL'
+        if (Test-Path -LiteralPath $tempLog) {
+            Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
+        }
+        Write-Host "  retry: dotnet restore $setupFailedProject"
+        Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
+        exit 1
+    }
+
+    Write-Host 'OK'
+}
+
 Invoke-Check 'UniversalSqueakerKernelTests (unit asserts + US 0.1.0 corpus replay + determinism)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerKernelTests -c Release' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerKernelTests') -c Release }
