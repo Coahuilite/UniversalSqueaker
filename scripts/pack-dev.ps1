@@ -27,7 +27,7 @@ if ($null -eq $versionNode -or [string]::IsNullOrWhiteSpace($versionNode.InnerTe
     throw "Missing <Version> in project file: $projectFile"
 }
 
-# US version is the full release-axis label (during an rc window it is the frozen base, e.g. 0.2.0);
+# US version is the full release-axis label (the base the csproj currently carries);
 # About.xml must carry the same value exactly. One source for the number, so the folder and the DLL
 # inside it cannot disagree.
 $versionLabel = $versionNode.InnerText.Trim()

@@ -1,6 +1,6 @@
 name: Release
 
-# Push a SemVer tag (v0.2.0, v0.2.0-rc1) and this publishes the US mod package players download.
+# Push a SemVer tag (vX.Y.Z, vX.Y.Z-rcN) and this publishes the US mod package players download.
 #
 # US ships NO audio and NO copy of FerriteLib.UiKit.dll: it is a routing kernel that compiles
 # against the carrier mod (coahuilite.ferritelib) by a sibling relative path. So this pipeline
@@ -8,7 +8,7 @@ name: Release
 # package that must contain exactly UniversalSqueaker.dll and never a second carrier.
 #
 # Version identity is set in the repository, not injected here: the release commit must already
-# carry a clean <Version>0.2.0</Version> and matching About.xml <modVersion>. The csproj pins
+# carry a clean <Version> and a matching About.xml <modVersion>. The csproj pins
 # <Version> explicitly, so `-p:VersionSuffix=` does NOT clear a -dev suffix (measured) - the
 # release-metadata gate below is what refuses a -dev tag, and it fails the build rather than
 # silently shipping a mislabelled DLL.
