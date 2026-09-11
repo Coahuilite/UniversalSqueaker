@@ -288,7 +288,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             for (int i = 0; i < LayerKeys.Length; i++)
             {
                 Rect buttonRect = new(rect.x + LeftPadding, y, stackedButtonWidth, ButtonHeight);
-                if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+                if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
                 {
                     ctx.Bindings.Invoke("set-tuning-layer", i);
                 }
@@ -313,7 +313,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         for (int i = 0; i < LayerKeys.Length; i++)
         {
             Rect buttonRect = new(buttonX, rect.y + (rect.height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+            if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
             {
                 ctx.Bindings.Invoke("set-tuning-layer", i);
             }
@@ -575,7 +575,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         // The disabled control still claims its rect (it is drawn and hit-testable - unavailable is not
         // invisible); only the action is suppressed. Not routing the click keeps it out of every binding.
-        bool clicked = UiNative.Button(rect);
+        bool clicked = UiNative.Button(rect, ctx);
         if (enabled && clicked) invoke();
     }
 
@@ -670,8 +670,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         x += fieldWidth + gap;
         Rect plusRect = new(Math.Min(x, rect.xMax - buttonWidth), rect.y, buttonWidth, height);
 
-        bool minusClicked = UsKernelDraw.SelectionButton(minusRect, "−", ctx.Theme, selected: false);
-        bool plusClicked = UsKernelDraw.SelectionButton(plusRect, "+", ctx.Theme, selected: false);
+        bool minusClicked = UsKernelDraw.SelectionButton(minusRect, ctx, "−", ctx.Theme, selected: false);
+        bool plusClicked = UsKernelDraw.SelectionButton(plusRect, ctx, "+", ctx.Theme, selected: false);
 
         float sliderValue = UiNative.Slider(sliderRect, elementId, ctx.Session, value, min, max, out bool sliderChanged);
         if (sliderChanged)

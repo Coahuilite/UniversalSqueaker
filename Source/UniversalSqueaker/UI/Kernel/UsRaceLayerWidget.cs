@@ -122,7 +122,7 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke("select-domain", new UsDomainSelection(SqueakVoicePackScope.Race, race.RaceDefName, ""));
         }

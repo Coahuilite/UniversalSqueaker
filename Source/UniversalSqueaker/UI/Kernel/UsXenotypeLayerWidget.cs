@@ -125,7 +125,7 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke(
                 "select-domain",

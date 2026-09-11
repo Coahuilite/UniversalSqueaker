@@ -62,7 +62,7 @@ public sealed class UsModeRowWidget : IUiWidget
         {
             Rect optionRect = new(x, rect.y + Padding, width, Height);
             UsKernelDraw.HelpHover(optionRect, ctx, Options[i].HelpKey);
-            if (UsKernelDraw.SelectionButton(optionRect, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current))
+            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(Options[i].LabelKey), ctx.Theme, Options[i].Mode == current))
             {
                 ctx.Bindings.Set(binding, Options[i].Mode);
             }

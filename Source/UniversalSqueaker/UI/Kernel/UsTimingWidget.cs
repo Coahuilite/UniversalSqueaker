@@ -137,7 +137,7 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
         Rect fieldRect = new(minusRect.xMax + gap, rect.y, fieldWidth, rect.height);
         Rect plusRect = new(fieldRect.xMax + gap, rect.y, ButtonWidth, rect.height);
 
-        if (UsKernelDraw.SelectionButton(minusRect, "−", ctx.Theme, selected: false))
+        if (UsKernelDraw.SelectionButton(minusRect, ctx, "−", ctx.Theme, selected: false))
         {
             ctx.Bindings.Set("cooldown-multiplier", UiNative.ClampValue(multiplier - MultiplierStep, MultiplierFloor, MultiplierCeil));
         }
@@ -150,7 +150,7 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
             ctx.Bindings.Set("cooldown-multiplier", edited);
         }
 
-        if (UsKernelDraw.SelectionButton(plusRect, "+", ctx.Theme, selected: false))
+        if (UsKernelDraw.SelectionButton(plusRect, ctx, "+", ctx.Theme, selected: false))
         {
             ctx.Bindings.Set("cooldown-multiplier", UiNative.ClampValue(multiplier + MultiplierStep, MultiplierFloor, MultiplierCeil));
         }

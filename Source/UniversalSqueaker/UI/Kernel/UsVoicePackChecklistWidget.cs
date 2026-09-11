@@ -220,7 +220,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(button, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(button, ctx, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke(
                 "forget-unavailable",
@@ -304,7 +304,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 4f, 18f, 18f), ctx.Theme, row.IsSelected);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke(
                 "toggle-pack",

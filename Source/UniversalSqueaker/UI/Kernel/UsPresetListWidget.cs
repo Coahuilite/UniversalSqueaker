@@ -196,13 +196,13 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(importRect, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(importRect, ctx, Tr(ctx, ImportKey), ctx.Theme, selected: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke("import-baseline", preset.DefName);
         }
 
         Rect expandRect = new(rect.x, rect.y, Math.Max(1f, importRect.x - rect.x - 8f), rect.height);
-        if (UiNative.Button(expandRect))
+        if (UiNative.Button(expandRect, ctx))
         {
             ctx.Bindings.Invoke("toggle-baseline-preset", preset.DefName);
         }
@@ -222,7 +222,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 40f, rect.y + 2f, 20f, 20f), ctx.Theme, race.Selected);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle(presetDefName, race.RaceDefName, !race.Selected));
         }
@@ -242,7 +242,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 40f, rect.y + 1f, 20f, 20f), ctx.Theme, xenotype.Selected);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke(
                 "toggle-baseline-xenotype",

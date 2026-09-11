@@ -102,7 +102,7 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 
         bool seconds = GetBool(b, UsDiagnosticsHost.KeySeconds);
         Rect secondsRect = new(x, y, 40f, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(secondsRect, seconds ? "s" : "t", ctx.Theme, seconds))
+        if (UsKernelDraw.SelectionButton(secondsRect, ctx, seconds ? "s" : "t", ctx.Theme, seconds))
         {
             b.Set(UsDiagnosticsHost.KeySeconds, !seconds);
         }
@@ -111,7 +111,7 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
         if (Scope == "main" && GetBool(b, UsDiagnosticsHost.KeyCanLock))
         {
             Rect lockRect = new(x, y, 56f, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(lockRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock"), ctx.Theme, false))
+            if (UsKernelDraw.SelectionButton(lockRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Lock"), ctx.Theme, false))
             {
                 b.Invoke(UsDiagnosticsHost.KeyLock, 0);
             }
@@ -121,7 +121,7 @@ public sealed class UsDiagToolbarWidget : UsDiagWidgetBase
 
         float collapseWidth = Math.Max(1f, rect.xMax - x);
         Rect collapseRect = new(x, y, collapseWidth, ButtonHeight);
-        if (UsKernelDraw.SelectionButton(collapseRect, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), ctx.Theme, false))
+        if (UsKernelDraw.SelectionButton(collapseRect, ctx, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Bar"), ctx.Theme, false))
         {
             b.Set(UsDiagnosticsHost.KeyCollapsed, true);
         }
@@ -177,7 +177,7 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
             bool hovered = UiNative.IsMouseOver(rowRect);
             UsKernelDraw.RowSurface(rowRect, ctx.Theme, hovered, row.Locked);
             UsDiagRowPainter.Paint(rowRect, row, ctx);
-            if (UiNative.Button(rowRect))
+            if (UiNative.Button(rowRect, ctx))
             {
                 b.Invoke(UsDiagnosticsHost.KeyRowClick, row.PawnId);
             }
@@ -252,12 +252,12 @@ public sealed class UsDiagPagerWidget : UsDiagWidgetBase
         int pages = Math.Max(1, GetInt(b, UsDiagnosticsHost.KeyPageCount));
         int total = GetInt(b, UsDiagnosticsHost.KeyTotal);
 
-        if (page > 0 && UsKernelDraw.SelectionButton(new Rect(rect.x, rect.y, ArrowWidth, RowHeight), "◀", ctx.Theme, false))
+        if (page > 0 && UsKernelDraw.SelectionButton(new Rect(rect.x, rect.y, ArrowWidth, RowHeight), ctx, "◀", ctx.Theme, false))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page - 1);
         }
 
-        if (page < pages - 1 && UsKernelDraw.SelectionButton(new Rect(rect.xMax - ArrowWidth, rect.y, ArrowWidth, RowHeight), "▶", ctx.Theme, false))
+        if (page < pages - 1 && UsKernelDraw.SelectionButton(new Rect(rect.xMax - ArrowWidth, rect.y, ArrowWidth, RowHeight), ctx, "▶", ctx.Theme, false))
         {
             b.Set(UsDiagnosticsHost.KeyPage, page + 1);
         }
@@ -420,7 +420,7 @@ public sealed class UsDiagMonitorWidget : UsDiagWidgetBase
             UsKernelDraw.Label(rect.ContractedBy(6f, 0f), UsKernelDraw.Keyed(ctx, "US.Diagnostics.Monitor.Empty"), ctx, UiFont.Tiny, TextAnchor.MiddleLeft);
         }
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Set(UsDiagnosticsHost.KeyCollapsed, false);
         }

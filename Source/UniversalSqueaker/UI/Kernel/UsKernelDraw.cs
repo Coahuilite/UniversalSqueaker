@@ -107,8 +107,13 @@ public static class UsKernelDraw
         return hovered;
     }
 
-    /// <summary>Draws a selection-style button surface and returns whether it was clicked (native invisible button).</summary>
-    public static bool SelectionButton(Rect rect, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
+    /// <summary>
+    /// Draws a selection-style button surface and returns whether it was clicked. The click goes through
+    /// <see cref="UiNative.Button(Rect, UiWidgetContext)"/>, so a control covered by an open popup yields
+    /// the click to the popup instead of stealing it (FL api-tiers.md: the context-free overload is
+    /// outside the hit stack). Callers must hold a context; there is no reason to hand-roll the hit.
+    /// </summary>
+    public static bool SelectionButton(Rect rect, UiWidgetContext ctx, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
     {
         RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected, danger);
         Label(
@@ -118,7 +123,7 @@ public static class UsKernelDraw
             danger ? theme.TextOnDanger : selected ? theme.TextOnGold : theme.TextPrimary,
             font ?? UiFont.Tiny,
             TextAnchor.MiddleLeft);
-        return UiNative.Button(rect);
+        return UiNative.Button(rect, ctx);
     }
 
     /// <summary>

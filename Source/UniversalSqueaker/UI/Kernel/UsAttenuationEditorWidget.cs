@@ -142,7 +142,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
     private void DrawPresetButton(Rect rect, string label, bool selected, SqueakDistancePreset preset, UiWidgetContext ctx)
     {
-        if (UsKernelDraw.SelectionButton(rect, label, ctx.Theme, selected))
+        if (UsKernelDraw.SelectionButton(rect, ctx, label, ctx.Theme, selected))
         {
             ctx.Bindings.Invoke("set-distance-preset", preset);
         }

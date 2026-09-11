@@ -180,6 +180,10 @@ public class UniversalSqueakerMod : Mod
             hovered ? theme.TextPrimary : theme.TextSecondary,
             UiFont.Tiny,
             TextAnchor.MiddleCenter);
+        // The context-free overload is deliberate here, and this is the only US call site left on it:
+        // this button draws outside the kernel session (no UiWidgetContext exists for it), which is the
+        // same exception FL documents for its own window chrome. Every in-tree control goes through
+        // Button(rect, ctx) so an open popup can take the click.
         if (UiNative.Button(open))
         {
             OpenSettings();

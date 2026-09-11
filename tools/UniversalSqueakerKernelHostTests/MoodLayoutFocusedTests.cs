@@ -47,6 +47,8 @@ internal static class MoodLayoutFocusedTests
         Step("number commit routes typed set-mood-tuning", NumberCommitRoutesTypedMoodTuning);
         Step("auto button routes typed set-mood-tuning", AutoButtonRoutesTypedMoodTuning);
         Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
+        Step("reset controls route in all three mood layout modes", ResetRoutingAcrossLayoutModes);
+        Step("a popup-covered reset control yields the click", CoveredControlYieldsTheClick);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
         return 0;
@@ -269,7 +271,7 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    private static CaptureContext CreateCaptureContext()
+    private static CaptureContext CreateCaptureContext(float viewportWidth = ViewportWidth, float viewportHeight = ViewportHeight)
     {
         var source = new RecordingSettingsSource { RichData = true };
         UiHost host = UsKernelSettingsHost.Create(source);
@@ -278,10 +280,10 @@ internal static class MoodLayoutFocusedTests
             host.Bindings.Invoke("set-tab", "Tuning");
             // 0.4.0 keys scroll positions by element node, so the container must be arranged before its
             // id is addressable; this keeps the capture pinned to the top of the scroll content.
-            host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
+            host.MeasureAndArrange(new Vector2(viewportWidth, viewportHeight));
             Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
 
-            UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewportWidth, viewportHeight));
             Assert(snapshot.RectById.TryGetValue("scope-tree", out Rect cardPage), "snapshot must contain scope-tree in Tuning workspace");
 
             Rect contentViewport = snapshot.Viewports["content-scroll"];
@@ -294,7 +296,7 @@ internal static class MoodLayoutFocusedTests
                 SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
                 SetSliderOverride((rect, value, min, max) => { raw.Sliders.Add(rect); return value; });
                 SetTextFieldOverride((rect, text) => { raw.TextFields.Add(rect); return text; });
-                host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+                host.DrawFrame(new Rect(0f, 0f, viewportWidth, viewportHeight));
             }
             finally
             {
@@ -312,7 +314,8 @@ internal static class MoodLayoutFocusedTests
                 scroll,
                 raw.Sliders.Count,
                 raw.TextFields.Count,
-                mood);
+                mood,
+                new Rect(0f, 0f, viewportWidth, viewportHeight));
         }
         catch
         {
@@ -359,8 +362,11 @@ internal static class MoodLayoutFocusedTests
     /// <summary>A drawn reset control: wide enough for either measured label (never the 20px minus/plus).</summary>
     private static bool IsResetButton(Rect rect)
     {
+        // Both bounds matter: without the upper one the wide layer-segment buttons (212/425px) would be
+        // counted as reset controls and the draw-order pairing would then invent ghost pairs.
         float minWidth = Math.Min(DefaultResetWidth, PresetResetWidth) - 1f;
-        return rect.width >= minWidth && rect.height >= 14f && rect.height <= 34f;
+        float maxWidth = Math.Max(DefaultResetWidth, PresetResetWidth) + 1f;
+        return rect.width >= minWidth && rect.width <= maxWidth && rect.height >= 14f && rect.height <= 34f;
     }
 
     /// <summary>
@@ -441,6 +447,184 @@ internal static class MoodLayoutFocusedTests
             ctx.Source.LastMoodPresetResetCount = 0;
         }
     }
+
+    /// <summary>
+    /// Both reset controls must route their typed write in every mood layout mode. The 800px pass is the
+    /// stacked shape; 1000px is wide enough for the steppers to share a line but not for both controls,
+    /// so they wrap to a second line; 1920px is the inline shape. The mode is asserted from the captured
+    /// geometry, so a layout change that silently collapses two modes into one fails here.
+    /// </summary>
+    private static void ResetRoutingAcrossLayoutModes()
+    {
+        (float Width, float Height, string Mode)[] cases =
+        {
+            (800f, 600f, "stacked"),
+            (1000f, 700f, "second-line"),
+            (1920f, 1080f, "inline"),
+        };
+
+        foreach ((float width, float height, string mode) in cases)
+        {
+            using CaptureContext ctx = CreateCaptureContext(width, height);
+            List<Rect> sliders = ctx.Mood.Sliders.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> defaults = ctx.Mood.AutoButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> presets = ctx.Mood.PresetButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            Assert(sliders.Count >= 3 && defaults.Count == 2 && presets.Count == 2,
+                mode + " pass must expose the mood steppers and both reset controls, got "
+                + sliders.Count + "/" + defaults.Count + "/" + presets.Count);
+
+            // The three modes differ by WHERE the controls sit, not by whether they sit together:
+            // stacked = steppers on their own lines; second-line = steppers share a line and the controls
+            // are pushed to the next one; inline = controls share the steppers' line.
+            bool steppersStacked = Math.Abs(sliders[0].y - sliders[1].y) > 1f;
+            bool controlsShareStepperLine = Math.Abs(defaults[0].y - sliders[0].y) < 1f;
+            string observed = steppersStacked ? "stacked" : controlsShareStepperLine ? "inline" : "second-line";
+            Assert(observed == mode, width + "px must select the " + mode + " mood layout, got " + observed
+                + " (card body " + ctx.CardLocalRect.width + "px)");
+
+            try
+            {
+                // Reset to default: the clear write.
+                ClearLastMood(ctx.Source);
+                SetButtonOverride(rect => RectMatches(rect, defaults[0]));
+                SetSliderOverride((rect, value, min, max) => value);
+                SetTextFieldOverride((rect, text) => text);
+                ctx.Host.DrawFrame(ctx.Viewport);
+                Assert(ctx.Source.LastMood == SqueakMood.Good && ctx.Source.LastMoodFactor == SqueakMoodFactor.Clear,
+                    mode + ": the \"reset to default\" control must write Clear for the first rich row");
+
+                // Reset to preset: the typed re-write.
+                ctx.Source.LastMoodPresetReset = null;
+                ctx.Source.LastMoodPresetResetCount = 0;
+                SetButtonOverride(rect => RectMatches(rect, presets[0]));
+                ctx.Host.DrawFrame(ctx.Viewport);
+                Assert(ctx.Source.LastMoodPresetReset == SqueakMood.Good && ctx.Source.LastMoodPresetResetCount == 1,
+                    mode + ": the \"reset to preset\" control must route exactly one reset-mood-to-preset action");
+            }
+            finally
+            {
+                ClearOverrides();
+                ClearLastMood(ctx.Source);
+                ctx.Source.LastMoodPresetReset = null;
+                ctx.Source.LastMoodPresetResetCount = 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The ctx-contract assertion: with a popup covering a reset control, aiming a click at that control
+    /// must not fire it - the protected overload asks the hit stack first and returns false without ever
+    /// reaching the native button. The positive control (popup closed, same click, same pointer) proves the
+    /// assertion can go the other way, so this step dies the moment a call site falls back to the
+    /// context-free overload.
+    /// </summary>
+    private static void CoveredControlYieldsTheClick()
+    {
+        using CaptureContext ctx = CreateCaptureContext();
+
+        // The covered control must belong to a DIFFERENT element than the popup's owner: the hit-stack rule
+        // deliberately lets an element keep clicks over its own popup (that is what makes toggle-to-close
+        // work), so a popup owned by us/scope-tree can never be stolen from a sibling control inside the
+        // same widget. The nav rows are a separate element, are always drawn, and their click is observable
+        // through the active-tab binding.
+        var navRects = new List<Rect>();
+        try
+        {
+            SetButtonOverride(rect =>
+            {
+                if (rect.width >= 160f && rect.height >= 50f) navRects.Add(rect);
+                return false;
+            });
+            ctx.Host.DrawFrame(ctx.Viewport);
+        }
+        finally
+        {
+            ClearOverrides();
+        }
+
+        Assert(navRects.Count >= 1, "expected at least one nav row for the covered-click case");
+        Rect target = navRects.OrderBy(r => r.y).ThenBy(r => r.x).First();
+        Rect targetWindow = target;
+        string tabBefore = ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string t0) ? t0 : "";
+        Assert(tabBefore == "Tuning", "the lane must start on Tuning, got " + tabBefore);
+
+        // Anchor a scope-dropdown popup just above the target so it opens downward over the control.
+        string? owner = null;
+        Rect popup = default;
+        foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
+        {
+            ctx.Host.Session.OpenPopup("scope-tree-scope-" + key, new Rect(targetWindow.x, targetWindow.y - 24f, targetWindow.width, 22f));
+            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawFrame(ctx.Viewport);
+            if (TryGetPopupHitLayerFromHost(ctx.Host, out UiHitLayer layer))
+            {
+                owner = key;
+                popup = layer.Rect;
+                break;
+            }
+
+            ctx.Host.Session.ClosePopup();
+        }
+
+        Assert(owner != null, "no scope dropdown published a popup layer for the covered-click case");
+        Vector2 pointerWindow = new(targetWindow.x + targetWindow.width / 2f, targetWindow.y + targetWindow.height / 2f);
+        Assert(popup.x <= pointerWindow.x && pointerWindow.x <= popup.xMax
+            && popup.y <= pointerWindow.y && pointerWindow.y <= popup.yMax,
+            "the popup must really cover the target control; popup=" + popup + " target=" + targetWindow);
+
+        try
+        {
+            SetMousePosition(pointerWindow);
+            SetButtonOverride(rect => RectMatches(rect, target));
+            ctx.Host.DrawFrame(ctx.Viewport);
+            Assert(!(ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string coveredTab) && coveredTab != tabBefore),
+                "a popup-covered control must not take the click (ctx overload); a raw UiNative.Button(Rect) site fails here");
+
+            // Positive control: same pointer, same click, popup gone - the tab must now switch.
+            ctx.Host.Session.ClosePopup();
+            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawFrame(ctx.Viewport);
+            SetButtonOverride(rect => RectMatches(rect, target));
+            ctx.Host.DrawFrame(ctx.Viewport);
+            string tabAfter = ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string t1) ? t1 : "";
+            Assert(tabAfter != tabBefore,
+                "with no popup the same click must reach the control (positive control for the yield assertion); tab stayed " + tabAfter);
+        }
+        finally
+        {
+            ClearMousePosition();
+            ClearOverrides();
+            ctx.Host.Session.ClosePopup();
+        }
+    }
+
+    private static bool TryGetPopupHitLayerFromHost(UiHost host, out UiHitLayer layer)
+    {
+        layer = default;
+        foreach (UiHitLayer candidate in host.Session.HitLayers)
+        {
+            if (candidate.IsPopup)
+            {
+                layer = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void SetMousePosition(Vector2 position)
+    {
+        SetField(DebugMousePositionField, position);
+        SetField(DebugMousePositionEnabledField, true);
+    }
+
+    private static void ClearMousePosition()
+    {
+        SetField(DebugMousePositionEnabledField, false);
+    }
+
+    private static FieldInfo DebugMousePositionField => RequireField("DebugMousePosition", typeof(Vector2));
+    private static FieldInfo DebugMousePositionEnabledField => RequireField("DebugMousePositionEnabled", typeof(bool));
 
     private static Rect FirstAutoRect(CaptureContext ctx)
     {
@@ -608,6 +792,8 @@ internal static class MoodLayoutFocusedTests
         public int CapturedSliderCount { get; }
         public int CapturedTextFieldCount { get; }
         public MoodControls Mood { get; }
+        /// <summary>Viewport this pass drew at; the two wide modes are driven through it.</summary>
+        public Rect Viewport { get; }
 
         public CaptureContext(
             RecordingSettingsSource source,
@@ -619,7 +805,8 @@ internal static class MoodLayoutFocusedTests
             Vector2 contentScrollPosition,
             int capturedSliderCount,
             int capturedTextFieldCount,
-            MoodControls mood)
+            MoodControls mood,
+            Rect viewport)
         {
             Source = source;
             Host = host;
@@ -631,6 +818,7 @@ internal static class MoodLayoutFocusedTests
             CapturedSliderCount = capturedSliderCount;
             CapturedTextFieldCount = capturedTextFieldCount;
             Mood = mood;
+            Viewport = viewport;
         }
 
         public void Dispose()

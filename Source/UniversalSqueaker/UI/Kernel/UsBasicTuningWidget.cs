@@ -131,7 +131,7 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 12f, 18f, 18f), ctx.Theme, enabled);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke("toggle-egg", !enabled);
         }
@@ -152,7 +152,7 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke(actionKey, !enabled);
         }

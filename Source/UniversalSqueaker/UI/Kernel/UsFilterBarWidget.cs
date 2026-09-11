@@ -130,25 +130,25 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
         bool allActive = !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
             && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0;
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
         {
             ctx.Bindings.Invoke("clear-pack-filters", "");
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, !domainFilter.EnabledOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.ConflictOnly, !domainFilter.ConflictOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, !domainFilter.OrphanOnly));
         }

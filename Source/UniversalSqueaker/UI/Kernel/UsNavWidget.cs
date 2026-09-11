@@ -109,7 +109,7 @@ public sealed class UsNavWidget : IUiWidget
             UsKernelDraw.Label(new Rect(itemRect.x + TextInset, itemRect.y + LabelTop + LabelHeight + DescriptionGap, textWidth, DescriptionBand(ctx, textWidth, descriptionKey)),
                 ctx.Translation.Translate(descriptionKey),
                 ctx.Theme, active ? ctx.Theme.TextOnGold : hovered ? ctx.Theme.TextPrimary : ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.UpperLeft);
-            if (UiNative.Button(itemRect))
+            if (UiNative.Button(itemRect, ctx))
             {
                 ctx.Bindings.Invoke("set-tab", tab);
             }

@@ -94,7 +94,7 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
         {
             Rect optionRect = new(buttonX, y, buttonWidth, ModeRowHeight);
             UsKernelDraw.HelpHover(optionRect, ctx, LoggingOptions[i].HelpKey);
-            if (UsKernelDraw.SelectionButton(optionRect, ctx.Translation.Translate(LoggingOptions[i].LabelKey), ctx.Theme, LoggingOptions[i].Mode == mode))
+            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(LoggingOptions[i].LabelKey), ctx.Theme, LoggingOptions[i].Mode == mode))
             {
                 ctx.Bindings.Set("dev-logging", LoggingOptions[i].Mode);
             }
@@ -121,7 +121,7 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Set("localize-debug-menu", !enabled);
         }
