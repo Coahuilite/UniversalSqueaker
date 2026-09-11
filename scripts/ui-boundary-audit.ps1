@@ -15,11 +15,15 @@
 #   3. VERDICT: a hit outside the whitelist is RED. So is a whitelist entry whose file has vanished
 #      (a dead exemption path is a lost boundary, not a free pass).
 #   4. RATCHET: the whitelist may only shrink (HANDOFF §0/§1); a new exemption needs a maintainer ruling.
-#      It holds 2 entries since 2026-09-12: the frozen camera-indicator branch, plus the in-world pawn
+#      It holds 3 entries since 2026-09-12: the frozen camera-indicator branch, plus the in-world pawn
 #      marker ratified that day (F-19b). The second one is a RATIFIED ADDITION, not a broken ratchet -
 #      before it, GenMapUI was not in the pattern set, so the marker was neither exempt nor counted: the
-#      gate looked clean while one boundary sat outside its view. Ratified additions get date + reason +
-#      recovery condition in the entry itself.
+#      gate looked clean while one boundary sat outside its view. The third entry is the same story on the
+#      CONTRACT axis rather than the renderer axis: `UiNative.Button(` was missing from the pattern set, so
+#      the context-free overload (which FL's api-tiers.md forbids for any caller holding a context) was
+#      neither counted nor exempt - the context fix of 2026-09-12 could not be seen by any gate until the
+#      term below was added (verify's finding: reverting the fix kept all 14 gates green).
+#      Ratified additions get date + reason + recovery condition in the entry itself.
 #      An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
 #
 # Cross-repo: this is one half of a single metric. FerriteLib's containment gate (its HANDOFF item B)
@@ -46,11 +50,15 @@ $ErrorActionPreference = 'Stop'
 # ratified addition, `\bGenMapUI\.` (maintainer ruling 2026-09-12, F-19b: the in-world pawn marker stays,
 # so it must be COUNTED and then exempted, not invisible). FL's set needs the same term to stay one metric;
 # that edit belongs to the FL session. Only the SET is shared — the whitelists are not.
-$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.'
+# `UiNative.Button(` is a CONTRACT term, not a renderer token: it anchors both overloads and Find-BackendHit
+# keeps only the context-free call (FL api-tiers.md: a caller holding a context must use the protected
+# overload, which yields to a covering popup). The renderer terms are shared with FL's gate; this term is
+# US-side today and FL's own chrome button is its documented exception.
+$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.|UiNative\.Button\('
 
-# Sanctioned exemptions (2, only-shrink). The reason is part of the contract: an entry with no
-# ruling behind it is not an exemption. The first comes from HANDOFF §0, the second from the maintainer
-# ruling of 2026-09-12 (F-19b); neither is this gate's to reconsider.
+# Sanctioned exemptions (3, only-shrink). The reason is part of the contract: an entry with no
+# ruling behind it is not an exemption. The first comes from HANDOFF §0, the second and third from the
+# maintainer session of 2026-09-12 (F-19b and task-60); none is this gate's to reconsider.
 # Anything the FL seams already cover must NOT be added back — the seam is the exemption.
 $Whitelist = [ordered]@{
     # 豁免二 (frozen, HANDOFF §0): camera-indicator legacy fallback branch - Knife 3 owns its fate.
@@ -63,6 +71,15 @@ $Whitelist = [ordered]@{
     # RECYCLE when US stops drawing in-world markers, or when the carrier grows a world-space layer
     # with a session (then this must route through that seam like every other draw).
     'CompSqueaker.cs' = 'in-world pawn marker via GenMapUI.DrawText - maintainer ruling 2026-09-12 (F-19b); recycle when US draws no in-world marker, or the carrier gains a session-bearing world layer'
+
+    # 裁定增补 2026-09-12 (task-60): the contract-free `UiNative.Button` overload, one call site.
+    # `Mod.cs:187` is the legacy settings-window opener: it draws OUTSIDE the kernel session, so no
+    # `UiWidgetContext` exists to pass and the hit stack cannot be consulted. FL documents the same
+    # exception for its own window chrome. Every in-tree control uses the protected overload, and the
+    # gate reports this file only while that stays true - the term was invisible before task-60.
+    # RECYCLE when the opener moves into the kernel tree (it then has a context and must use
+    # Button(rect, ctx)), or when the shell retires.
+    'Mod.cs' = 'context-free UiNative.Button at Mod.cs:187 (settings opener, outside the kernel session) - maintainer session 2026-09-12 (task-60); recycle when the opener moves into the kernel tree or the shell retires'
 }
 
 # ---- comment stripping -------------------------------------------------------
@@ -118,6 +135,21 @@ function Remove-CSharpComments([string]$text) {
     return $sb.ToString()
 }
 
+# True when the call whose argument list starts right after $start (depth is already 1) carries a
+# top-level comma, i.e. the caller passed a context. Walks with paren-depth counting so a nested call as
+# the sole argument is still context-free; a top-level comma inside a string literal would fool it, and
+# no such call exists in this tree (documented boundary, not an oversight).
+function Test-UiNativeButtonHasContext([string]$code, [int]$start) {
+    $depth = 1
+    for ($i = $start; $i -lt $code.Length; $i++) {
+        $c = $code[$i]
+        if ($c -eq '(') { $depth++ }
+        elseif ($c -eq ')') { $depth--; if ($depth -eq 0) { return $false } }
+        elseif ($c -eq ',' -and $depth -eq 1) { return $true }
+    }
+    return $false
+}
+
 # One text -> every pattern hit in its code, as File/Line/Match/Code records.
 function Find-BackendHit([string]$label, [string]$text) {
     $results = @()
@@ -125,6 +157,10 @@ function Find-BackendHit([string]$label, [string]$text) {
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $code = $lines[$i]
         foreach ($m in [regex]::Matches($code, $BackendPattern)) {
+            # `UiNative.Button(` anchors BOTH overloads; only the context-free one is a violation, so the
+            # refinement lives here rather than in the pattern - a regular expression cannot count parens,
+            # and a naive comma test on the raw text would also reject a nested single-argument call.
+            if ($m.Value -eq 'UiNative.Button(' -and (Test-UiNativeButtonHasContext $code ($m.Index + $m.Length))) { continue }
             $results += [pscustomobject]@{
                 File  = $label
                 Line  = $i + 1
@@ -174,7 +210,25 @@ if ($cleanHits.Count -ne 0) {
     foreach ($h in $cleanHits) { Write-Host "  $($h.File):$($h.Line) $($h.Match) <- $($h.Code)" }
     exit 1
 }
-Write-Host 'selftest: scanner armed (code hit found, comment prose ignored)'
+$probeOverloads = @'
+using Verse;
+public class Overloads {
+    void DrawRaw(Rect r) { if (UiNative.Button(r)) { Close(); } }
+    void DrawWithContext(Rect r, UiWidgetContext ctx) { if (UiNative.Button(r, ctx)) { Close(); } }
+    void DrawNested(Rect r) { if (UiNative.Button(new Rect(0f, 0f, r.width, r.height))) { Close(); } }
+}
+'@
+$overloadHits = @(Find-BackendHit 'selftest/Overloads.cs' $probeOverloads)
+if ($overloadHits.Count -ne 2) {
+    Write-Host "UI BOUNDARY AUDIT FAILED: self-test - the context-free UiNative.Button overload must be found exactly twice (raw + nested single argument), found $($overloadHits.Count)."
+    foreach ($h in $overloadHits) { Write-Host "  $($h.File):$($h.Line) $($h.Match)" }
+    exit 1
+}
+if ($overloadHits[0].Code -notmatch 'DrawRaw' -or $overloadHits[1].Code -notmatch 'DrawNested') {
+    Write-Host 'UI BOUNDARY AUDIT FAILED: self-test - the overload hits must be the raw call and the nested single-argument call; the context-carrying overload must NOT be reported.'
+    exit 1
+}
+Write-Host 'selftest: scanner armed (code hit found, comment prose ignored); overload discrimination armed (raw + nested found, Button(rect, ctx) ignored)'
 
 # ---- 2. scan the tree -------------------------------------------------------
 if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
