@@ -348,7 +348,11 @@ public readonly struct TuningDomainOptionView
     }
 }
 
-/// <summary>S5 分层心情编辑器行：本层记录（Own，null = 继承）+ 有效值（编辑器显示/滑块起点）。</summary>
+/// <summary>S5 分层心情编辑器行：本层**末行**记录（Own，列表序最后一个匹配行）+ 有效值（编辑器显示/滑块起点）。
+/// <para><b>F-Q：<c>Own != null</c> 不等于「本层有覆盖」。</b>clear 之后带来源的心情行仍留在清单里
+/// （F-P，来源是「重置为预设」的锚点），此时 Own 指向一行三旗标全 false 的记录。读 Own 的<b>值</b>前必须先看
+/// <c>hasPitchFactor</c>/<c>hasVolumeFactor</c>/<c>hasPitchJitter</c> 或 <c>sourcePresetDefName</c>；
+/// 现状消费者 <c>UsScopeTreeWidget</c> 已按 <c>hasXFactor == true</c> 门控，null 只表示本层没有行。</para></summary>
 public readonly struct MoodTuningRowView
 {
     public readonly SqueakMood Mood;

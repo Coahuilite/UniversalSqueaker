@@ -358,7 +358,13 @@ public partial class UniversalSqueakerSettings : ModSettings
     }
 
     /// <summary>心情记录是否仍承载任何可编辑字段：三个因子之一，或非空来源（锚点）。与
-    /// <see cref="CarriesAnyActionTuningField"/> 同形；判定单位同样是「同身份组的并集」，不是 last-wins 幸存行。</summary>
+    /// <see cref="CarriesAnyActionTuningField"/> 同形；判定单位同样是「同身份组的并集」，不是 last-wins 幸存行。
+    ///
+    /// <para><b>F-R：这里的因子项在唯一调用点上恒为 false。</b>调用点是 <see cref="SetMoodTuning"/> 的 clear
+    /// 分支，位于「把组内每一行的三个旗标清零」**之后**，所以该点实际只判来源。因子项保留是为了定义
+    /// 完整（也让将来别的调用点能直接用），<b>不是</b>那个点在守卫因子。于是心情侧与动作侧是
+    /// <b>语法同形、功能不同形</b>：动作侧的乘数项是活的（清除只清 scope），心情侧不是。要改动那条
+    /// 删除规则，改的是<b>来源项</b>——它是唯一活项。</para></summary>
     private static bool CarriesAnyMoodTuningField(MoodTuningRecord? record)
     {
         return record != null && (record.hasPitchFactor || record.hasVolumeFactor || record.hasPitchJitter
@@ -387,7 +393,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 清掉同
     /// 身份组内**每一行**的三个因子字段（恢复继承），并只删「三因子皆无且来源为空」的行——非空
     /// <c>sourcePresetDefName</c> 是「重置为预设」的锚点，与 <see cref="SetActionTuningScope"/> 同一条规则，
-    /// 承载判定见 <see cref="CarriesAnyMoodTuningField"/>。走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
+    /// 承载判定见 <see cref="CarriesAnyMoodTuningField"/>（在那个判定点上三旗标已清零，实际只判来源，见 F-R 注）。
+    /// 走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
     internal void SetMoodTuning(SqueakMood mood, string raceDefName, string xenotypeDefName, string factor, float? value)
     {
         moodTuning ??= new List<MoodTuningRecord>();
@@ -421,6 +428,9 @@ public partial class UniversalSqueakerSettings : ModSettings
                 }
             }
 
+            // F-R：上面那段已经把组内每一行（身份相同 ⇒ 必被清）的三个旗标清零，所以在这里
+            // CarriesAnyMoodTuningField 的三个因子项恒为 false——这一行的实际语义就是「来源为空才删」。
+            // 谓词保持四项是为了与动作侧同形，不是为了在本点兜因子；这条规则唯一活的守卫是**来源项**。
             moodTuning.RemoveAll(c => SameMoodTuningIdentity(c, mood, raceDefName, xenotypeDefName)
                 && !CarriesAnyMoodTuningField(c));
             NotifyContinuousXenotypeRuntimeChanged();
