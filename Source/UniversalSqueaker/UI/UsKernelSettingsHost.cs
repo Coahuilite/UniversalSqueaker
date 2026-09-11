@@ -222,6 +222,7 @@ public static class UsKernelSettingsHost
         bindings.BindAction<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
         bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
         bindings.BindAction<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
+        bindings.BindAction<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
         bindings.BindReadOnly<IReadOnlyList<BaselinePresetView>>("baseline-presets", () => source.BuildView().BaselinePresets);
         // Preset expand/collapse, per-row selection and import all reflow the preset tree.
         bindings.BindAction<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });

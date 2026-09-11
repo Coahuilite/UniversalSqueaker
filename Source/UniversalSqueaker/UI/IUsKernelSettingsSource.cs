@@ -55,6 +55,9 @@ public interface IUsKernelSettingsSource
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
     void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value);
+
+    /// <summary>「重置为预设」：把本层来源指向的预设基线重新写回（来源保持）。不可用时是空操作。</summary>
+    void ResetMoodToPreset(SqueakMood mood);
     void ToggleBaselinePreset(string presetDefName);
     void ToggleBaselineRace(string presetDefName, string raceDefName, bool selected);
     void ToggleBaselineXenotype(string presetDefName, string raceDefName, string xenotypeDefName, bool selected);

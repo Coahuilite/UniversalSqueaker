@@ -1206,6 +1206,21 @@ internal static class Program
             CheckLanguageTable(reports, tabs, viewports, english, "english", metrics);
             CheckLanguageTable(reports, tabs, viewports, chinese, "chinese", metrics);
 
+            // Reported widths of the two mood reset controls (measured Tiny + 12px side padding, floored
+            // at 52): the numbers the wrap decision is built on, for the record.
+            foreach (KeyValuePair<string, Dictionary<string, string>> table in new[]
+            {
+                new KeyValuePair<string, Dictionary<string, string>>("english", english),
+                new KeyValuePair<string, Dictionary<string, string>>("chinese", chinese),
+            })
+            {
+                SetTranslatorResolver(table.Value);
+                float resetDefault = Math.Max(52f, metrics.MeasureWidth(Translator.Translate("US.Tuning.ResetToDefault"), FerriteLib.UiKit.Kernel.UiFont.Tiny) + 12f);
+                float resetPreset = Math.Max(52f, metrics.MeasureWidth(Translator.Translate("US.Tuning.ResetToPreset"), FerriteLib.UiKit.Kernel.UiFont.Tiny) + 12f);
+                Console.WriteLine("[fit] " + table.Key + " reset-to-default=" + resetDefault + "px reset-to-preset=" + resetPreset + "px cluster=" + (resetDefault + 6f + resetPreset) + "px");
+            }
+            SetTranslatorResolver(null);
+
             // Failure sensitivity for the sweeping checks: one Keyed string is replaced with a value no
             // fixed column can hold, then the real page is drawn again. If the audit stays silent here,
             // every "no overflow" result above is meaningless — that is the exact failure this guards.

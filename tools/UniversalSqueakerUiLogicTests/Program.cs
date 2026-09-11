@@ -182,7 +182,10 @@ internal static class Program
             }
         }
 
-        Assert(itemCount == 34, "catalog item count matches the shipped wiring table (was 28; timing +2 and diagnostics +4 landed with the global-tuning wiring): " + itemCount);
+        // 28 → 34 with the global-tuning wiring (timing +2, diagnostics +4), then 40 with the two mood
+        // reset controls (2026-09-12 ruling): one entry per action plus one per unavailable reason
+        // (no local setting / not from a preset / preset missing / preset has no entry).
+        Assert(itemCount == 40, "catalog item count matches the shipped wiring table (34 + 6 mood reset entries: 2 actions + 4 reasons): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

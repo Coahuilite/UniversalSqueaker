@@ -46,6 +46,17 @@ public readonly struct UsMoodWrite
     }
 }
 
+/// <summary>「重置为预设」：不做字段级写入，而是让设置层按本层来源重新写入预设基线（来源保持）。</summary>
+public readonly struct UsMoodPresetReset
+{
+    public readonly SqueakMood Mood;
+
+    public UsMoodPresetReset(SqueakMood mood)
+    {
+        Mood = mood;
+    }
+}
+
 public readonly struct UsBaselineRaceToggle
 {
     public readonly string PresetDefName;

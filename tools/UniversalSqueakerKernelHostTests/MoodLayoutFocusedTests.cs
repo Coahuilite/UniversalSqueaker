@@ -46,6 +46,7 @@ internal static class MoodLayoutFocusedTests
         Step("slider change routes typed set-mood-tuning", SliderChangeRoutesTypedMoodTuning);
         Step("number commit routes typed set-mood-tuning", NumberCommitRoutesTypedMoodTuning);
         Step("auto button routes typed set-mood-tuning", AutoButtonRoutesTypedMoodTuning);
+        Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
         return 0;
@@ -202,7 +203,8 @@ internal static class MoodLayoutFocusedTests
         Assert(ctx.Mood.Sliders.Count == 6, "each of 2 rich mood rows must have 3 sliders (got " + ctx.Mood.Sliders.Count + " total)");
         Assert(ctx.Mood.Fields.Count == 6, "each of 2 rich mood rows must have 3 number fields (got " + ctx.Mood.Fields.Count + " total)");
         Assert(ctx.Mood.SmallButtons.Count == 12, "each of 2 rich mood rows must have 6 minus/plus buttons (got " + ctx.Mood.SmallButtons.Count + " total)");
-        Assert(ctx.Mood.AutoButtons.Count == 2, "each of 2 rich mood rows must have 1 Auto button (got " + ctx.Mood.AutoButtons.Count + " total)");
+        Assert(ctx.Mood.AutoButtons.Count == 2, "each of 2 rich mood rows must have 1 \"reset to default\" control (got " + ctx.Mood.AutoButtons.Count + " total)");
+        Assert(ctx.Mood.PresetButtons.Count == 2, "each of 2 rich mood rows must have 1 \"reset to preset\" control (got " + ctx.Mood.PresetButtons.Count + " total)");
 
         Assert(ctx.CapturedSliderCount == ctx.Mood.Sliders.Count,
             "all captured sliders must be inside the scope-tree card (no slider outside the card)");
@@ -210,7 +212,7 @@ internal static class MoodLayoutFocusedTests
             "all captured number fields must be inside the scope-tree card (no field outside the card)");
 
         List<Rect> allMood = ctx.Mood.All().ToList();
-        Assert(allMood.Count == 26, "two stacked rows must yield 26 mood controls (2 * (3 sliders + 3 fields + 6 small buttons + 1 Auto))");
+        Assert(allMood.Count == 28, "two stacked rows must yield 28 mood controls (2 * (3 sliders + 3 fields + 6 small buttons + 2 reset controls)); got " + allMood.Count + " = " + ctx.Mood.Sliders.Count + " sliders + " + ctx.Mood.Fields.Count + " fields + " + ctx.Mood.SmallButtons.Count + " small + " + ctx.Mood.AutoButtons.Count + " default + " + ctx.Mood.PresetButtons.Count + " preset");
 
         foreach (Rect local in allMood)
         {
@@ -258,11 +260,11 @@ internal static class MoodLayoutFocusedTests
 
     private static void AssertAutoDoesNotOverlapSteppers(MoodControls mood)
     {
-        foreach (Rect auto in mood.AutoButtons)
+        foreach (Rect auto in mood.AutoButtons.Concat(mood.PresetButtons))
         {
             foreach (Rect stepper in mood.Sliders.Concat(mood.Fields).Concat(mood.SmallButtons))
             {
-                Assert(!Overlaps(auto, stepper), "Auto button must not overlap any stepper control: " + auto + " vs " + stepper);
+                Assert(!Overlaps(auto, stepper), "reset control must not overlap any stepper control: " + auto + " vs " + stepper);
             }
         }
     }
@@ -321,13 +323,17 @@ internal static class MoodLayoutFocusedTests
 
     private static MoodControls FilterMoodControls(CapturedRects raw, Rect cardLocal)
     {
-        return new MoodControls
+        MoodControls mood = new()
         {
             Sliders = raw.Sliders.Where(r => IsInside(r, cardLocal)).ToList(),
             Fields = raw.TextFields.Where(r => IsInside(r, cardLocal)).ToList(),
             SmallButtons = raw.Buttons.Where(r => IsInside(r, cardLocal) && IsSmallButton(r)).ToList(),
-            AutoButtons = raw.Buttons.Where(r => IsInside(r, cardLocal) && IsAutoButton(r)).ToList()
         };
+        SplitResetButtons(
+            raw.Buttons.Where(r => IsInside(r, cardLocal) && IsResetButton(r)).ToList(),
+            mood.AutoButtons,
+            mood.PresetButtons);
+        return mood;
     }
 
     private static bool IsSmallButton(Rect rect)
@@ -336,19 +342,43 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// Width the mood row's clear control draws at. It comes from the control's own label
-    /// (UsScopeTreeWidget.MoodClearWidthFor): measured Tiny width plus the button's 12px side padding,
-    /// floored at 52. The lane mirrors the rule because a recorded pass exposes rects, not identities;
-    /// this lane installs no translator table, so the label resolves to its key literal - the same
-    /// string the widget measured.
+    /// Widths the two mood reset controls draw at (UsScopeTreeWidget.MoodResetWidthFor): each label's
+    /// measured Tiny width plus its 12px side padding, floored at 52. Used only as a sanity bound - the
+    /// two controls are told apart by POSITION (the left one on a line is "reset to default"), because
+    /// both translated labels are the same length in Chinese and width alone cannot separate them. This
+    /// lane installs no translator table, so a label resolves to its key literal.
     /// </summary>
-    private static readonly float ClearButtonWidth = Math.Max(
+    private static readonly float DefaultResetWidth = Math.Max(
         52f,
-        FerriteLib.UiKit.Kernel.VerseFerriteTextMetrics.Instance.MeasureWidth("US.Tuning.RestoreInherit", UiFont.Tiny) + 12f);
+        FerriteLib.UiKit.Kernel.VerseFerriteTextMetrics.Instance.MeasureWidth("US.Tuning.ResetToDefault", UiFont.Tiny) + 12f);
 
-    private static bool IsAutoButton(Rect rect)
+    private static readonly float PresetResetWidth = Math.Max(
+        52f,
+        FerriteLib.UiKit.Kernel.VerseFerriteTextMetrics.Instance.MeasureWidth("US.Tuning.ResetToPreset", UiFont.Tiny) + 12f);
+
+    /// <summary>A drawn reset control: wide enough for either measured label (never the 20px minus/plus).</summary>
+    private static bool IsResetButton(Rect rect)
     {
-        return Math.Abs(rect.width - ClearButtonWidth) <= 1f && rect.height >= 14f && rect.height <= 34f;
+        float minWidth = Math.Min(DefaultResetWidth, PresetResetWidth) - 1f;
+        return rect.width >= minWidth && rect.height >= 14f && rect.height <= 34f;
+    }
+
+    /// <summary>
+    /// Splits the reset controls into per-line pairs: on each line the left control is "reset to
+    /// default" and the right one is "reset to preset". Identity comes from the layout order the widget
+    /// draws, not from a width comparison.
+    /// </summary>
+    private static void SplitResetButtons(IReadOnlyList<Rect> reset, List<Rect> defaults, List<Rect> presets)
+    {
+        // Draw order per mood row is always default then preset, on one line when they fit and on two
+        // when they do not, so pairing by sorted order survives both shapes (width cannot separate them:
+        // the two Chinese labels are the same length).
+        List<Rect> sorted = reset.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+        for (int i = 0; i + 1 < sorted.Count; i += 2)
+        {
+            defaults.Add(sorted[i]);
+            presets.Add(sorted[i + 1]);
+        }
     }
 
     private static Rect FirstMinusRect(CaptureContext ctx)
@@ -377,6 +407,39 @@ internal static class MoodLayoutFocusedTests
         List<Rect> row1 = ctx.Mood.Fields.OrderBy(r => r.y).ThenBy(r => r.x).Take(3).ToList();
         Assert(row1.Count == 3, "first mood row must have 3 number fields for commit interaction");
         return row1[0];
+    }
+
+    /// <summary>
+    /// The second reset control ("reset to preset") is a different class of write from the first: it
+    /// must reach the host as "reset-mood-to-preset" with the row's mood, never as a field-level
+    /// "set-mood-tuning" write. The settings semantics live in the migration lane; this step proves the
+    /// binding.
+    /// </summary>
+    private static void PresetResetRoutesTypedMoodTuning()
+    {
+        using CaptureContext ctx = CreateCaptureContext();
+        List<Rect> presets = ctx.Mood.PresetButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+        Assert(presets.Count == 2, "expected 2 \"reset to preset\" controls before the interaction");
+        ctx.Source.LastMoodPresetReset = null;
+        ctx.Source.LastMoodPresetResetCount = 0;
+
+        try
+        {
+            SetButtonOverride(rect => RectMatches(rect, presets[0]));
+            SetSliderOverride((rect, value, min, max) => value);
+            SetTextFieldOverride((rect, text) => text);
+            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+
+            Assert(ctx.Source.LastMoodPresetReset == SqueakMood.Good, "the preset reset must write the first rich mood row (Good)");
+            Assert(ctx.Source.LastMoodPresetResetCount == 1, "the preset reset must route exactly one reset-mood-to-preset action");
+            Assert(ctx.Source.LastMoodFactor == null, "the preset reset must not masquerade as a set-mood-tuning write");
+        }
+        finally
+        {
+            ClearOverrides();
+            ctx.Source.LastMoodPresetReset = null;
+            ctx.Source.LastMoodPresetResetCount = 0;
+        }
     }
 
     private static Rect FirstAutoRect(CaptureContext ctx)
@@ -521,6 +584,7 @@ internal static class MoodLayoutFocusedTests
         public List<Rect> Fields { get; set; } = new();
         public List<Rect> SmallButtons { get; set; } = new();
         public List<Rect> AutoButtons { get; set; } = new();
+        public List<Rect> PresetButtons { get; set; } = new();
 
         public IEnumerable<Rect> All()
         {
@@ -528,6 +592,7 @@ internal static class MoodLayoutFocusedTests
             foreach (Rect rect in Fields) yield return rect;
             foreach (Rect rect in SmallButtons) yield return rect;
             foreach (Rect rect in AutoButtons) yield return rect;
+            foreach (Rect rect in PresetButtons) yield return rect;
         }
     }
 

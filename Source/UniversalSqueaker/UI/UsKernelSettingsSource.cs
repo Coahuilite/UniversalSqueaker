@@ -182,6 +182,11 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.SetMoodTuning(settings, state, mood, factor, value);
     }
 
+    public void ResetMoodToPreset(SqueakMood mood)
+    {
+        VoicePacksPageModel.ResetMoodToPreset(settings, state, mood);
+    }
+
     public void ToggleBaselinePreset(string presetDefName)
     {
         VoicePacksPageModel.ToggleBaselinePresetSelection(state, presetDefName);

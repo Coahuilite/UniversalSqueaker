@@ -16,7 +16,9 @@ namespace UniversalSqueaker.UI;
 ///    "set-tuning-domain";
 ///  - scope rows cycle [Auto, Off, Any, Command] filtered by each action's supported scopes,
 ///    writing "set-action-scope";
-///  - mood rows expose pitch/volume/jitter steppers plus an Auto clear, writing "set-mood-tuning".
+///  - mood rows expose pitch/volume/jitter steppers plus two reset controls: "reset to default"
+///    ("set-mood-tuning" with Clear) and "reset to preset" ("reset-mood-to-preset"); an unavailable
+///    control stays drawn and greyed, and hovering it explains why in the help panel.
 /// All values come from typed read bindings; every write is a typed action.
 /// </summary>
 public sealed class UsScopeTreeWidget : UsSectionWidgetBase
@@ -44,11 +46,15 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float ButtonWidth = 96f;
     private const float ButtonHeight = 24f;
     private const float MoodLabelWidth = 64f;
-    // Floor for the mood row's clear control. The drawn width is measured from the control's own label
-    // (MoodClearWidthFor): the ruled phrase is a verb phrase, and a fixed 52px box wrapped it to three
-    // Tiny lines in English - the bilingual fit sweep caught it as "needs 54px, has 24px at width 40px".
-    private const float MoodClearWidthMin = 52f;
+    // Floor for each of the mood row's two reset controls. Every drawn width is measured from its own
+    // label (MoodResetWidthFor): the ruled phrases are verb phrases ("重置为默认" / "Reset to default"),
+    // and a fixed box wrapped the earlier single control in English - the bilingual fit sweep caught it
+    // as "needs 54px, has 24px at width 40px". Two controls, two measurements, same floor.
+    private const float MoodResetWidthMin = 52f;
     private const float MoodGap = 6f;
+    // The narrowest stepper group the inline layout accepts; below it the buttons move to a second line,
+    // and below that the whole cluster stacks (same 110px floor the single-button decision used).
+    private const float MoodStepperGroupMinWidth = 110f;
 
     // Keyed display text. Every bound value stays untouched: the tuning layer is the "tuning-layer"
     // int index, scope options bind SqueakActionScope.ToString(), the domain dropdown binds the
@@ -61,12 +67,26 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const string GroupOperableKey = "US.Tuning.Group.Operable";
     private const string MoodTuningHeaderKey = "US.Tuning.MoodTuning";
     /// <summary>Action-scope dropdown option: "inherit from below". Per the term split this word belongs to
-    /// the action side only; the mood row's clear control uses <see cref="RestoreInheritKey"/> instead
+    /// the action side only; the mood row's controls use the two "reset" phrases below instead
     /// (one word, two meanings was the direct cause of mis-clicks).</summary>
     private const string AutoLabelKey = "US.Tuning.Auto";
-    /// <summary>Mood row clear control: a verb phrase that says what pressing it does - it does not delete
-    /// a mood the player configured, it drops this layer's record so the value falls through again.</summary>
-    private const string RestoreInheritKey = "US.Tuning.RestoreInherit";
+    /// <summary>Mood row, action one - "reset to default": clear this layer's three factor fields and keep
+    /// the preset source, so the value falls through to inheritance again. A CLEAR.</summary>
+    private const string ResetDefaultKey = "US.Tuning.ResetToDefault";
+    /// <summary>Mood row, action two - "reset to preset": re-apply the baseline of the row's source preset.
+    /// A WRITE, not a clear; the two actions are deliberately different classes.</summary>
+    private const string ResetPresetKey = "US.Tuning.ResetToPreset";
+    // Help entries claimed while hovering the two controls: enabled explains what the control does,
+    // disabled explains why it is unavailable. The help panel is this UI's reason channel; the control
+    // itself stays drawn and only greys out (unavailable is not invisible).
+    private const string ResetDefaultHelpKey = "us/scope-tree/mood-reset-default";
+    private const string ResetPresetHelpKey = "us/scope-tree/mood-reset-preset";
+    // Item keys stay at three path segments (us/<section>/<item>): the UI-logic lane's dead-content scan
+    // reads exactly three-segment literals as claims, and a four-segment key would be invisible to it.
+    private const string ResetDefaultNoLocalHelpKey = "us/scope-tree/mood-reset-no-local";
+    private const string ResetPresetNotFromPresetHelpKey = "us/scope-tree/mood-reset-not-from-preset";
+    private const string ResetPresetMissingHelpKey = "us/scope-tree/mood-reset-preset-missing";
+    private const string ResetPresetNoEntryHelpKey = "us/scope-tree/mood-reset-preset-no-entry";
     private const string PitchLabelKey = "US.Tuning.Factor.Pitch";
     private const string VolumeLabelKey = "US.Tuning.Factor.Volume";
     private const string JitterLabelKey = "US.Tuning.Factor.Jitter";
@@ -407,40 +427,15 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
         float jitter = row.Own?.hasPitchJitter == true ? Math.Max(0f, row.Own.pitchJitter.max - 1f) : row.EffectiveJitterHalf;
 
-        float clearWidth = MoodClearWidthFor(ctx);
-        if (UsesStackedMoodRows(rect.width, ctx))
+        float buttonsWidth = MoodResetClusterWidthFor(ctx);
+        MoodRowMode mode = MoodRowModeFor(rect.width, ctx, buttonsWidth);
+        if (mode == MoodRowMode.Stacked)
         {
-            float headerHeight = ButtonHeight;
-            float labelWidth = Math.Max(1f, rect.width - LeftPadding - clearWidth - 8f - RowGap);
-            UsKernelDraw.Label(
-                new Rect(rect.x + LeftPadding, rect.y, labelWidth, headerHeight),
-                row.DisplayName,
-                ctx.Theme,
-                ctx.Theme.TextPrimary,
-                UiFont.Small,
-                TextAnchor.MiddleLeft);
-
-            DrawAutoClearButton(
-                new Rect(rect.xMax - clearWidth - 8f, rect.y, clearWidth, headerHeight),
-                row,
-                ctx);
-
-            float lineWidth = Math.Max(1f, rect.width - LeftPadding * 2f);
-            float y = rect.y + headerHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
-            y += ButtonHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
-            y += ButtonHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
+            DrawStackedMoodRow(rect, row, ctx, pitch, volume, jitter, buttonsWidth);
             return;
         }
 
+        float lineHeight = InlineMoodLineHeight(ctx, row.DisplayName);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + MoodLabelTop, MoodLabelWidth, MoodLabelBand(ctx, row.DisplayName)),
             row.DisplayName,
@@ -449,37 +444,196 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
-        float clearX = rect.xMax - clearWidth - 8f;
-        Rect clearRect = new(clearX, rect.y, clearWidth, rect.height);
-        float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
+        // Inline shares the line with both buttons; SecondLine gives the buttons their own line, so the
+        // three steppers may use the full body width. The key is the BODY WIDTH, not hover: a
+        // hover-dependent height would make Measure and Draw disagree and clip the section card.
+        float controlsRight = mode == MoodRowMode.Inline ? rect.xMax - buttonsWidth - 8f : rect.xMax;
+        float controlsWidth = controlsRight - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
 
-        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, rect.height), PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
-        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
-        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
+        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, lineHeight), PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
+        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, lineHeight), VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
+        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, lineHeight), JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
 
-        DrawAutoClearButton(clearRect, row, ctx);
+        if (mode == MoodRowMode.Inline)
+        {
+            DrawMoodResetButtons(new Rect(rect.xMax - buttonsWidth - 8f, rect.y, buttonsWidth, rect.height), row, ctx);
+        }
+        else
+        {
+            DrawMoodResetButtons(new Rect(rect.xMax - buttonsWidth - 8f, rect.y + lineHeight + RowGap, buttonsWidth, ButtonHeight), row, ctx);
+        }
+    }
+
+    /// <summary>Which of the three mood-row layouts a given body width gets.</summary>
+    private enum MoodRowMode
+    {
+        /// <summary>Label + three steppers + both reset controls on one line.</summary>
+        Inline,
+
+        /// <summary>Steppers on the first line, the two reset controls on a second (the "second line"
+        /// shape: the controls that do not fit wrap instead of being squeezed or shrunk).</summary>
+        SecondLine,
+
+        /// <summary>Label line, reset controls, then three full-width stepper lines.</summary>
+        Stacked,
     }
 
     /// <summary>
-    /// Width of the mood row's clear control: the label's measured single-line width plus the button's
-    /// own 6px side padding, floored at <see cref="MoodClearWidthMin"/>. Measure and Draw both come
-    /// through here (the stacked/wide decision depends on it), so a longer phrase in either language
-    /// widens the control instead of being clipped into a wrapped band.
+    /// Width of one mood reset control: its own label's measured single-line width plus the control's
+    /// 6px side padding, floored at <see cref="MoodResetWidthMin"/>. Measure and Draw both come through
+    /// here (the mode decision depends on it), so a longer ruled phrase in either language widens the
+    /// control instead of wrapping it into a clipped band.
     /// </summary>
-    private static float MoodClearWidthFor(UiWidgetContext ctx)
+    private static float MoodResetWidthFor(UiWidgetContext ctx, string labelKey)
     {
-        float label = ctx.Metrics.MeasureWidth(UsKernelDraw.Keyed(ctx, RestoreInheritKey), UiFont.Tiny);
-        return Math.Max(MoodClearWidthMin, label + 12f);
+        float label = ctx.Metrics.MeasureWidth(UsKernelDraw.Keyed(ctx, labelKey), UiFont.Tiny);
+        return Math.Max(MoodResetWidthMin, label + 12f);
     }
 
-    private void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, UiWidgetContext ctx)
+    private static float MoodResetClusterWidthFor(UiWidgetContext ctx)
     {
-        if (UsKernelDraw.SelectionButton(clearRect, UsKernelDraw.Keyed(ctx, RestoreInheritKey), ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
+        return MoodResetWidthFor(ctx, ResetDefaultKey) + MoodGap + MoodResetWidthFor(ctx, ResetPresetKey);
+    }
+
+    /// <summary>Height of the mood row's single control line (label band or the 32px minimum).</summary>
+    private static float InlineMoodLineHeight(UiWidgetContext ctx, string displayName)
+    {
+        return Math.Max(MoodRowHeight, MoodLabelTop + MoodLabelBand(ctx, displayName) + MoodLabelTop);
+    }
+
+    /// <summary>Lines the two reset controls need at this row width: one when they fit side by side, else one each.</summary>
+    private static int MoodResetLinesFor(float rowWidth, UiWidgetContext ctx)
+    {
+        return rowWidth >= MoodResetClusterWidthFor(ctx) ? 1 : 2;
+    }
+
+    private static float MoodResetBlockHeight(float rowWidth, UiWidgetContext ctx)
+    {
+        return MoodResetLinesFor(rowWidth, ctx) == 1 ? ButtonHeight : 2f * ButtonHeight + RowGap;
+    }
+
+    private void DrawMoodResetButtons(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
+    {
+        float defaultWidth = MoodResetWidthFor(ctx, ResetDefaultKey);
+        float presetWidth = MoodResetWidthFor(ctx, ResetPresetKey);
+        // Side by side when both labels fit; otherwise each control gets its own line (never squeezed,
+        // never shrunk - the ruling). Order stays default-then-preset in both shapes.
+        bool sideBySide = rect.width >= defaultWidth + MoodGap + presetWidth - 0.5f;
+        float lineWidth = Math.Max(1f, rect.width);
+        Rect defaultRect = new(rect.x, rect.y, Math.Min(defaultWidth, lineWidth), ButtonHeight);
+        Rect presetRect = sideBySide
+            ? new(rect.xMax - presetWidth, rect.y, presetWidth, ButtonHeight)
+            : new(rect.x, rect.y + ButtonHeight + RowGap, Math.Min(presetWidth, lineWidth), ButtonHeight);
+
+        DrawMoodResetButton(
+            defaultRect,
+            ResetDefaultKey,
+            ResetDefaultHelpKey,
+            ResetDefaultUnavailableHelpKey(row),
+            row.DefaultReset == SqueakMoodResetDefaultState.Ready,
+            danger: true,
+            () => ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null)),
+            ctx);
+
+        DrawMoodResetButton(
+            presetRect,
+            ResetPresetKey,
+            ResetPresetHelpKey,
+            ResetPresetUnavailableHelpKey(row),
+            row.PresetReset == SqueakMoodResetPresetState.Ready,
+            danger: false,
+            () => ctx.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(row.Mood)),
+            ctx);
+    }
+
+    /// <summary>
+    /// One reset control. Unavailable means greyed out and inert, never invisible: the control is still
+    /// drawn and hovering it claims the help entry that carries its reason sentence (the reason channel
+    /// of this UI). Available controls claim the entry that explains the action they perform.
+    /// </summary>
+    private static void DrawMoodResetButton(
+        Rect rect,
+        string labelKey,
+        string enabledHelpKey,
+        string unavailableHelpKey,
+        bool enabled,
+        bool danger,
+        Action invoke,
+        UiWidgetContext ctx)
+    {
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, enabled ? enabledHelpKey : unavailableHelpKey);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, false, danger);
+        UsKernelDraw.Label(
+            new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
+            UsKernelDraw.Keyed(ctx, labelKey),
+            ctx.Theme,
+            enabled ? (danger ? ctx.Theme.TextOnDanger : ctx.Theme.TextPrimary) : ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft);
+
+        // The disabled control still claims its rect (it is drawn and hit-testable - unavailable is not
+        // invisible); only the action is suppressed. Not routing the click keeps it out of every binding.
+        bool clicked = UiNative.Button(rect);
+        if (enabled && clicked) invoke();
+    }
+
+    private static string ResetDefaultUnavailableHelpKey(MoodTuningRowView row)
+    {
+        return row.DefaultReset == SqueakMoodResetDefaultState.Ready ? ResetDefaultHelpKey : ResetDefaultNoLocalHelpKey;
+    }
+
+    private static string ResetPresetUnavailableHelpKey(MoodTuningRowView row)
+    {
+        return row.PresetReset switch
         {
-            ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null));
+            SqueakMoodResetPresetState.Ready => ResetPresetHelpKey,
+            SqueakMoodResetPresetState.NotFromPreset => ResetPresetNotFromPresetHelpKey,
+            SqueakMoodResetPresetState.PresetMissing => ResetPresetMissingHelpKey,
+            _ => ResetPresetNoEntryHelpKey,
+        };
+    }
+
+    private void DrawStackedMoodRow(Rect rect, MoodTuningRowView row, UiWidgetContext ctx, float pitch, float volume, float jitter, float buttonsWidth)
+    {
+        bool buttonsInline = StackedHeaderFitsButtons(rect.width, buttonsWidth);
+        float headerHeight = ButtonHeight;
+        float labelWidth = Math.Max(1f, rect.width - LeftPadding * 2f - (buttonsInline ? buttonsWidth + MoodGap : 0f));
+        UsKernelDraw.Label(
+            new Rect(rect.x + LeftPadding, rect.y, labelWidth, headerHeight),
+            row.DisplayName,
+            ctx.Theme,
+            ctx.Theme.TextPrimary,
+            UiFont.Small,
+            TextAnchor.MiddleLeft);
+
+        float y = rect.y;
+        if (buttonsInline)
+        {
+            DrawMoodResetButtons(new Rect(rect.xMax - buttonsWidth - LeftPadding, y, buttonsWidth, headerHeight), row, ctx);
         }
+
+        y += headerHeight + RowGap;
+        if (!buttonsInline)
+        {
+            float block = MoodResetBlockHeight(rect.width, ctx);
+            DrawMoodResetButtons(new Rect(rect.x + LeftPadding, y, rect.width - LeftPadding * 2f, block), row, ctx);
+            y += block + RowGap;
+        }
+
+        float lineWidth = Math.Max(1f, rect.width - LeftPadding * 2f);
+        DrawMoodStepper(
+            new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
+            PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
+        y += ButtonHeight + RowGap;
+        DrawMoodStepper(
+            new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
+            VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
+        y += ButtonHeight + RowGap;
+        DrawMoodStepper(
+            new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
+            JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
     }
 
     private float DrawMoodStepper(
@@ -570,31 +724,63 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     }
 
     /// <summary>
-    /// True when the three horizontal mood stepper groups cannot fit beside the mood label and
-    /// Auto clear button. Uses the same group-width math as the former narrow branch; Measure and
-    /// Draw both feed the card body width.
+    /// Layout mode for a given body width. Inline needs a stepper group of at least
+    /// <see cref="MoodStepperGroupMinWidth"/> beside the label AND both reset controls; when only the
+    /// controls fail to fit they wrap to a second line (SecondLine) and the steppers keep the full
+    /// width; otherwise the whole cluster stacks. Measure and Draw both come through here.
     /// </summary>
-    private static bool UsesStackedMoodRows(float bodyWidth, UiWidgetContext ctx)
+    private static MoodRowMode MoodRowModeFor(float bodyWidth, UiWidgetContext ctx, float buttonsWidth)
     {
-        float clearX = bodyWidth - MoodClearWidthFor(ctx) - 8f;
-        float controlsWidth = clearX - (LeftPadding + MoodLabelWidth) - MoodGap;
-        float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
-        return groupWidth < 110f;
+        if (StepperGroupWidth(bodyWidth, buttonsWidth, out float inlineGroup) && inlineGroup >= MoodStepperGroupMinWidth)
+        {
+            return MoodRowMode.Inline;
+        }
+
+        if (StepperGroupWidth(bodyWidth, 0f, out float wrappedGroup) && wrappedGroup >= MoodStepperGroupMinWidth)
+        {
+            return MoodRowMode.SecondLine;
+        }
+
+        return MoodRowMode.Stacked;
+    }
+
+    /// <summary>Group width the three steppers get when the first line carries <paramref name="buttonsWidthOnLine"/>
+    /// pixels of reset controls (0 = none). Mirrors the draw math in <see cref="DrawMoodRow"/>.</summary>
+    private static bool StepperGroupWidth(float bodyWidth, float buttonsWidthOnLine, out float groupWidth)
+    {
+        float controlsRight = bodyWidth - (buttonsWidthOnLine > 0f ? buttonsWidthOnLine + 8f : 0f);
+        float controlsWidth = controlsRight - (LeftPadding + MoodLabelWidth) - MoodGap;
+        groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
+        return controlsWidth > 0f;
+    }
+
+    /// <summary>Whether the stacked header line can hold the mood label and both reset controls.</summary>
+    private static bool StackedHeaderFitsButtons(float bodyWidth, float buttonsWidth)
+    {
+        return bodyWidth - LeftPadding * 2f >= buttonsWidth + MoodLabelWidth;
     }
 
     /// <summary>
-    /// Height a mood row actually consumes: the single-line <see cref="MoodRowHeight"/> on wide
-    /// layouts, or the stacked header + three full-width stepper lines on narrow ones. Measure and
-    /// Draw must agree so the section card never clips or overlaps mood controls.
+    /// Height a mood row actually consumes in the mode its body width selects: one control line
+    /// (Inline); that line plus a controls line (SecondLine); or the stacked header - plus a controls
+    /// line when the header cannot hold them - and three full-width stepper lines. Measure and Draw
+    /// must agree so the section card never clips or overlaps mood controls.
     /// </summary>
     private static float MoodRowHeightFor(float bodyWidth, UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
     {
-        if (!UsesStackedMoodRows(bodyWidth, ctx))
-        {
-            return Math.Max(MoodRowHeight, MoodLabelTop + MaxMoodLabelBand(ctx, rows) + MoodLabelTop);
-        }
+        float buttonsWidth = MoodResetClusterWidthFor(ctx);
+        MoodRowMode mode = MoodRowModeFor(bodyWidth, ctx, buttonsWidth);
+        float lineHeight = Math.Max(MoodRowHeight, MoodLabelTop + MaxMoodLabelBand(ctx, rows) + MoodLabelTop);
 
-        return ButtonHeight + RowGap + 3f * ButtonHeight + 2f * RowGap;
+        if (mode == MoodRowMode.Inline) return lineHeight;
+        if (mode == MoodRowMode.SecondLine) return lineHeight + RowGap + MoodResetBlockHeight(bodyWidth, ctx);
+
+        // Stacked: label line, then either the controls in the header (when they fit beside the label) or
+        // their own block (one or two lines), then the three full-width stepper lines.
+        float controlsBlock = StackedHeaderFitsButtons(bodyWidth, buttonsWidth)
+            ? ButtonHeight
+            : ButtonHeight + RowGap + MoodResetBlockHeight(bodyWidth, ctx);
+        return controlsBlock + RowGap + 3f * ButtonHeight + 2f * RowGap;
     }
 
     /// <summary>Tallest mood-name band in the set, so one row height serves every mood in the language.</summary>

@@ -200,7 +200,12 @@
   <US.Tuning.Scope.Any>Any</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>Command</US.Tuning.Scope.Command>
   <US.Tuning.Auto>Auto</US.Tuning.Auto>
-  <US.Tuning.RestoreInherit>Use inherited value</US.Tuning.RestoreInherit>
+  <US.Tuning.ResetToDefault>Reset to default</US.Tuning.ResetToDefault>
+  <US.Tuning.ResetToPreset>Reset to preset</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetToDefault.Reason.NoLocal>No setting on this layer.</US.Tuning.ResetToDefault.Reason.NoLocal>
+  <US.Tuning.ResetToPreset.Reason.NotFromPreset>This row was not imported from a preset.</US.Tuning.ResetToPreset.Reason.NotFromPreset>
+  <US.Tuning.ResetToPreset.Reason.PresetMissing>That preset is no longer available.</US.Tuning.ResetToPreset.Reason.PresetMissing>
+  <US.Tuning.ResetToPreset.Reason.NoEntry>That preset has no entry for this row.</US.Tuning.ResetToPreset.Reason.NoEntry>
   <US.Tuning.Factor.Pitch>P</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>V</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>J</US.Tuning.Factor.Jitter>
@@ -258,7 +263,9 @@
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
-  <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field; each row's "Use inherited value" button drops this layer's record back to the inherited values.</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field. Each row ends with two controls: "Reset to default" clears this layer's three factors (the preset source is kept) and "Reset to preset" re-applies that preset's baseline for this row. An unavailable control is still drawn, only disabled - hover it for the reason.</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.ResetDefault.Text>Clears this layer's pitch, volume and jitter factors back to inheritance. The preset source is kept, so "Reset to preset" stays available.</US.Help.ScopeTree.ResetDefault.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>Finds the preset named by this row's source and re-applies that mood's baseline factors (pitch, volume and jitter) to this layer. The source is unchanged.</US.Help.ScopeTree.ResetPreset.Text>
   <US.Help.ScopeTree.Auto.Label>Auto / Use inherited value</US.Help.ScopeTree.Auto.Label>
   <US.Help.ScopeTree.Auto.Text>Auto on an action scope clears only this layer's scope field; the mood rows' Use inherited value drops this layer's record. Either way the value falls through to the next effective layer.</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>Imports tuning baselines provided by Defs: expand a preset, tick the races and xenotypes, then press Import to write its action and mood rows into the matching layers. With no preset Defs installed the card shows its empty state.</US.Help.PresetList.Overview>

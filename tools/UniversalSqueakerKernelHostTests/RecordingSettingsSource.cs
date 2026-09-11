@@ -73,6 +73,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public SqueakMood? LastMood;
     public SqueakMoodFactor? LastMoodFactor;
     public float? LastMoodValue;
+    /// <summary>Mood of the last "reset to preset" write, or null when the control never fired.</summary>
+    public SqueakMood? LastMoodPresetReset;
+    public int LastMoodPresetResetCount;
     public string? LastBaselinePresetToggle;
     public string? LastBaselineRacePreset;
     public string? LastBaselineRace;
@@ -249,8 +252,28 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             },
             moodTuningRows: new[]
             {
-                new MoodTuningRowView(SqueakMood.Good, "Good", own: null, effectivePitch: 1f, effectiveVolume: 1f, effectiveJitterHalf: 0f),
-                new MoodTuningRowView(SqueakMood.Neutral, "Neutral", own: null, effectivePitch: 1f, effectiveVolume: 1f, effectiveJitterHalf: 0f)
+                // Availability is a VIEW input (the model computes it from flags/source), so this fake
+                // sets it directly instead of materialising owned records: with own: null the controls
+                // would render correctly inert and no interaction step could route a click. Row one
+                // keeps a ready "reset to preset" (source-bearing), row two does not (no source).
+                new MoodTuningRowView(
+                    SqueakMood.Good,
+                    "Good",
+                    own: null,
+                    effectivePitch: 1f,
+                    effectiveVolume: 1f,
+                    effectiveJitterHalf: 0f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.Ready),
+                new MoodTuningRowView(
+                    SqueakMood.Neutral,
+                    "Neutral",
+                    own: null,
+                    effectivePitch: 1f,
+                    effectiveVolume: 0.9f,
+                    effectiveJitterHalf: 0f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset)
             },
             baselinePresets: new[] { preset },
             buildIdentity: BuildIdentity,
@@ -399,6 +422,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastMood = mood;
         LastMoodFactor = factor;
         LastMoodValue = value;
+    }
+
+    public void ResetMoodToPreset(SqueakMood mood)
+    {
+        LastMoodPresetReset = mood;
+        LastMoodPresetResetCount++;
     }
 
     public void ToggleBaselinePreset(string presetDefName) => LastBaselinePresetToggle = presetDefName;

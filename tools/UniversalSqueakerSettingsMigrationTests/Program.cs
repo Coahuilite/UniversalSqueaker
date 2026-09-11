@@ -16,6 +16,8 @@ namespace UniversalSqueaker.SettingsMigrationTests;
 ///   4. SetActionTuningScope(null) clears every duplicate for the same identity.
 ///   5. SetMoodTuning with an unknown factor does not create an empty row; its "clear" clears every
 ///      row's factor fields and only drops rows that carry no factor and no source (F-P).
+///   5c. The two mood reset actions: availability comes from flags/source alone (never from row
+///      existence), and "reset to preset" re-applies every factor from the preset while keeping the source.
 ///   6. BaselinePresetImporter last-wins upsert and (race,xeno) composite xenotype selection keys.
 ///   7. AudioDomains.TryCreate rejects whitespace-only race/xeno.
 /// </summary>
@@ -35,6 +37,7 @@ internal static class Program
             SetActionTuningScopeKeepsProvenanceRows();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             SetMoodTuningClearKeepsProvenanceRows();
+            MoodResetAvailabilityAndPresetReapply();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             TwoPresetsImportIndependentlyAndIdempotently();
             AudioDomainsRejectWhitespace();
@@ -437,6 +440,115 @@ internal static class Program
 
         Check(settings.moodTuning.Count == 0,
             "mood-clear (no source): the cleared row is still dropped", ref failures);
+    }
+
+    private static void MoodResetAvailabilityAndPresetReapply()
+    {
+        Scenario("5c-mood-reset-actions");
+
+        // Availability is judged from flags and source only - F-Q: never from whether a row exists.
+        Check(SqueakMoodResetActions.EvaluateDefault(true, false, false) == SqueakMoodResetDefaultState.Ready
+            && SqueakMoodResetActions.EvaluateDefault(false, false, false) == SqueakMoodResetDefaultState.NoLocalSetting,
+            "reset-default: the three flags decide, not row existence", ref failures);
+
+        Check(SqueakMoodResetActions.EvaluatePreset("us.preset", presetDefResolved: true, presetHasEntry: true) == SqueakMoodResetPresetState.Ready
+            && SqueakMoodResetActions.EvaluatePreset("", true, true) == SqueakMoodResetPresetState.NotFromPreset
+            && SqueakMoodResetActions.EvaluatePreset("us.gone", presetDefResolved: false, presetHasEntry: true) == SqueakMoodResetPresetState.PresetMissing
+            && SqueakMoodResetActions.EvaluatePreset("us.preset", true, presetHasEntry: false) == SqueakMoodResetPresetState.PresetHasNoEntry,
+            "reset-preset: each of the four states has its own reason", ref failures);
+
+        // The F-Q row: a cleared row that kept its source is unavailable for default, ready for preset.
+        Check(SqueakMoodResetActions.EvaluateDefault(false, false, false) == SqueakMoodResetDefaultState.NoLocalSetting
+            && SqueakMoodResetActions.EvaluatePreset("us.preset", true, true) == SqueakMoodResetPresetState.Ready,
+            "reset actions: a source-only row is unavailable for default and ready for preset", ref failures);
+
+        UniversalSqueakerTuningBaselineDef preset = new()
+        {
+            defName = "us.preset",
+            races = new List<BaselineRaceEntry>
+            {
+                new BaselineRaceEntry
+                {
+                    raceDefName = "RaceA",
+                    moods = new List<BaselineMoodTuning>
+                    {
+                        new BaselineMoodTuning { mood = SqueakMood.Bad, pitchFactor = 1.4f, volumeFactor = 0.7f, pitchJitter = new FloatRange(0.9f, 1.2f) },
+                    },
+                },
+            },
+        };
+
+        // Reset to preset re-applies every factor from the preset entry and keeps the source.
+        UniversalSqueakerSettings settings = NewSettings();
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset" },
+        };
+
+        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset),
+            "reset-preset: a source-bearing layer reports a successful write", ref failures);
+        Check(settings.moodTuning.Count == 1
+            && settings.moodTuning[0].hasPitchFactor && settings.moodTuning[0].pitchFactor == 1.4f
+            && settings.moodTuning[0].hasVolumeFactor && settings.moodTuning[0].volumeFactor == 0.7f
+            && settings.moodTuning[0].hasPitchJitter
+            && settings.moodTuning[0].pitchJitter.min == 0.9f && settings.moodTuning[0].pitchJitter.max == 1.2f
+            && settings.moodTuning[0].sourcePresetDefName == "us.preset",
+            "reset-preset: all three factors are re-applied and the source stays", ref failures);
+
+        // Xenotype layer mirrors the importer: inherited race baseline first, then the xeno block wins.
+        preset.races[0].moods[0].pitchFactor = 1.1f;
+        preset.races[0].xenotypes = new List<BaselineXenotypeEntry>
+        {
+            new BaselineXenotypeEntry
+            {
+                xenotypeDefName = "XenoX",
+                inheritFromRace = true,
+                moods = new List<BaselineMoodTuning>
+                {
+                    new BaselineMoodTuning { mood = SqueakMood.Bad, pitchFactor = 1.6f, volumeFactor = 1.1f, pitchJitter = new FloatRange(0.8f, 1.3f) },
+                },
+            },
+        };
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "XenoX", sourcePresetDefName = "us.preset" },
+        };
+        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "XenoX", preset)
+            && settings.moodTuning[0].pitchFactor == 1.6f,
+            "reset-preset (xenotype): the xeno delta wins over the inherited race baseline", ref failures);
+
+        // inheritFromRace = false: the race baseline is not a source for this xenotype.
+        preset.races[0].xenotypes[0].inheritFromRace = false;
+        settings.moodTuning[0].hasPitchFactor = false;
+        settings.moodTuning[0].pitchFactor = 1f;
+        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "XenoX", preset)
+            && settings.moodTuning[0].pitchFactor == 1.6f,
+            "reset-preset (xenotype, inheritFromRace=false): only the xeno block is applied", ref failures);
+
+        // Refusals must leave the row untouched: no source, a source naming another def, no entry.
+        UniversalSqueakerSettings other = NewSettings();
+        other.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasPitchFactor = true, pitchFactor = 1.5f },
+        };
+        Check(!other.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset)
+            && other.moodTuning[0].pitchFactor == 1.5f,
+            "reset-preset (no source): refused, the row is untouched", ref failures);
+
+        other.moodTuning[0].sourcePresetDefName = "us.other";
+        Check(!other.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset)
+            && other.moodTuning[0].pitchFactor == 1.5f,
+            "reset-preset (source names another def): refused", ref failures);
+
+        other.moodTuning[0].sourcePresetDefName = "us.preset";
+        Check(!other.ResetMoodTuningToPreset(SqueakMood.Good, "RaceA", "", preset),
+            "reset-preset (the preset has no entry for that mood): refused", ref failures);
+
+        Check(!UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Good, "RaceA", "", out _)
+            && UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Bad, "RaceA", "", out BaselineMoodTuning? raceEntry)
+            && raceEntry != null && raceEntry.pitchFactor == 1.1f
+            && UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Bad, "RaceA", "XenoX", out _),
+            "reset-preset: the entry lookup follows the importer's merge rules", ref failures);
     }
 
     private static void BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys()

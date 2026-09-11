@@ -426,7 +426,22 @@ public static class VoicePacksPageModel
                 if (isOwn) own = record;
             }
             float jitterHalf = bestJitterLayer >= 0 ? Math.Max(0f, jitter.max - 1f) : 0f;
-            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf));
+
+            // The two reset actions are judged from flags and source alone (F-Q): a cleared row that kept
+            // its source is unavailable for "reset to default" and ready for "reset to preset". The
+            // preset Def/entry resolution happens here because this is the layer that may touch the Def
+            // database; the decision itself lives in Pure so the matrix is harness-testable.
+            SqueakMoodResetDefaultState defaultReset = SqueakMoodResetActions.EvaluateDefault(
+                own?.hasPitchFactor == true, own?.hasVolumeFactor == true, own?.hasPitchJitter == true);
+            string sourcePreset = own?.sourcePresetDefName ?? "";
+            UniversalSqueakerTuningBaselineDef? presetDef = sourcePreset.Length > 0
+                ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(sourcePreset)
+                : null;
+            bool presetHasEntry = presetDef != null
+                && UniversalSqueakerSettings.TryFindMoodBaseline(presetDef, mood, race, xeno, out _);
+            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, presetDef != null, presetHasEntry);
+
+            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset));
         }
         return rows;
     }
@@ -1001,6 +1016,30 @@ public static class VoicePacksPageModel
     {
         if (state == null) return;
         ApplyMoodTuning(settings, state, mood, factor, value);
+    }
+
+    /// <summary>「重置为预设」：读本层末行的来源 → 解析预设 Def → 让 settings 把该 (mood,race,xeno) 的基线
+    /// 因子值重新写回（来源保持）。不可用时（无来源 / Def 失效 / 无条目）什么都不做：可用性由
+    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。</summary>
+    public static void ResetMoodToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
+    {
+        if (state == null) return;
+        string race = state.TuningRaceDefName ?? "";
+        string xeno = state.TuningXenotypeDefName ?? "";
+
+        // last-wins：与 BuildMoodTuningRows 取 Own 的口径一致，来源也取末行。
+        string source = "";
+        foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+        {
+            if (record == null || record.mood != mood) continue;
+            if (!string.Equals(record.raceDefName ?? "", race, StringComparison.Ordinal)) continue;
+            if (!string.Equals(record.xenotypeDefName ?? "", xeno, StringComparison.Ordinal)) continue;
+            source = record.sourcePresetDefName ?? "";
+        }
+        if (source.Length == 0) return;
+
+        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source);
+        settings.ResetMoodTuningToPreset(mood, race, xeno, preset);
     }
 
     public static void ToggleBaselinePresetSelection(VoicePacksPageState state, string presetDefName)

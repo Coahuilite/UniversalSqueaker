@@ -483,6 +483,98 @@ public partial class UniversalSqueakerSettings : ModSettings
         SetMoodTuning(mood, raceDefName, xenotypeDefName, legacyFactor, value);
     }
 
+    /// <summary>预设里该 (mood, race, xenotype) 的基线条目查找，**镜像 <see cref="BaselinePresetImporter"/> 的合并规则**：
+    /// race 层取 race 块的 moods（同 mood 后写胜出）；xenotype 层先取父 race 块（仅当 <c>inheritFromRace</c>），
+    /// 再让 xeno 块自己的 moods 覆盖。导入器给每条记录都置三旗标 + 预设值，所以「有条目」= 三因子都该被重套。</summary>
+    internal static bool TryFindMoodBaseline(
+        UniversalSqueakerTuningBaselineDef? preset,
+        SqueakMood mood,
+        string raceDefName,
+        string xenotypeDefName,
+        out BaselineMoodTuning? tuning)
+    {
+        tuning = null;
+        if (preset == null) return false;
+
+        Dictionary<SqueakMood, BaselineMoodTuning> byMood = new();
+        void Add(List<BaselineMoodTuning>? list)
+        {
+            foreach (BaselineMoodTuning entry in list ?? new List<BaselineMoodTuning>())
+            {
+                if (entry == null) continue;
+                byMood[entry.mood] = entry;
+            }
+        }
+
+        if (string.IsNullOrEmpty(xenotypeDefName))
+        {
+            Add(FindBaselineRaceEntry(preset, raceDefName)?.moods);
+            return byMood.TryGetValue(mood, out tuning);
+        }
+
+        BaselineXenotypeEntry? xeno = FindBaselineXenotypeEntry(preset, raceDefName, xenotypeDefName);
+        if (xeno == null) return false;
+        if (xeno.inheritFromRace) Add(FindBaselineRaceEntry(preset, raceDefName)?.moods);
+        Add(xeno.moods);
+        return byMood.TryGetValue(mood, out tuning);
+    }
+
+    private static BaselineRaceEntry? FindBaselineRaceEntry(UniversalSqueakerTuningBaselineDef preset, string raceDefName)
+    {
+        foreach (BaselineRaceEntry race in preset.races ?? new List<BaselineRaceEntry>())
+        {
+            if (race != null && string.Equals(race.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)) return race;
+        }
+        return null;
+    }
+
+    private static BaselineXenotypeEntry? FindBaselineXenotypeEntry(UniversalSqueakerTuningBaselineDef preset, string raceDefName, string xenotypeDefName)
+    {
+        BaselineRaceEntry? race = FindBaselineRaceEntry(preset, raceDefName);
+        if (race == null) return null;
+        foreach (BaselineXenotypeEntry xeno in race.xenotypes ?? new List<BaselineXenotypeEntry>())
+        {
+            if (xeno != null && string.Equals(xeno.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal)) return xeno;
+        }
+        return null;
+    }
+
+    /// <summary>「重置为预设」：把预设里该 (mood,race,xeno) 的因子值**重新写入**本层（三旗标 true + 预设值），
+    /// 来源字段保持不动。与「重置为默认」（清本层字段）是**两类操作**：这个只写、不清。
+    /// 同身份有多个陈旧行时写最后一行（last-wins，与运行时同层 Merge 一致）。
+    /// 返回是否真的写入：无行 / 无来源 / 来源与传入 preset 不一致 / 预设里没有该条目 ⇒ false，不产生任何副作用。</summary>
+    internal bool ResetMoodTuningToPreset(SqueakMood mood, string raceDefName, string xenotypeDefName, UniversalSqueakerTuningBaselineDef? preset)
+    {
+        moodTuning ??= new List<MoodTuningRecord>();
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return false;
+
+        MoodTuningRecord? row = null;
+        foreach (MoodTuningRecord candidate in moodTuning)
+        {
+            if (SameMoodTuningIdentity(candidate, mood, raceDefName, xenotypeDefName)) row = candidate;
+        }
+        if (row == null) return false;
+
+        string source = row.sourcePresetDefName ?? "";
+        if (source.Length == 0) return false;
+        if (preset == null || !string.Equals(preset.defName ?? "", source, StringComparison.Ordinal)) return false;
+        if (!TryFindMoodBaseline(preset, mood, raceDefName, xenotypeDefName, out BaselineMoodTuning? tuning) || tuning == null) return false;
+
+        // 三因子一起重套（导入器就是这么写的：没有「只导入一个因子」的语义）。来源不动。
+        row.hasPitchFactor = true;
+        row.pitchFactor = tuning.pitchFactor;
+        row.hasVolumeFactor = true;
+        row.volumeFactor = tuning.volumeFactor;
+        row.hasPitchJitter = true;
+        row.pitchJitter = tuning.pitchJitter;
+
+        NotifyContinuousXenotypeRuntimeChanged();
+        QueuePersistence();
+        return true;
+    }
+
     /// <summary>增量导入调音预设：将选中 race/xeno 行写入 actionTuning 与 moodOverrides，然后离散重建 resolver 并排队持久化。</summary>
     internal BaselineImportResult ImportBaselinePreset(UniversalSqueakerTuningBaselineDef preset, BaselinePresetImporter.Selection selection)
     {

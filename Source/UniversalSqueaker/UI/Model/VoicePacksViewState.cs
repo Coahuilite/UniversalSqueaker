@@ -362,8 +362,14 @@ public readonly struct MoodTuningRowView
     public readonly float EffectiveVolume;
     /// <summary>有效 jitter 半宽（pitchJitter.max-1，≥0），默认 0。</summary>
     public readonly float EffectiveJitterHalf;
+    /// <summary>「重置为默认」可用性：三旗标皆 false ⇒ 本行没有本层设置（判定看旗标，不看行是否存在）。</summary>
+    public readonly SqueakMoodResetDefaultState DefaultReset;
+    /// <summary>「重置为预设」可用性：看来源字段 + 预设 Def/条目的可解析性，同样不看行是否存在。</summary>
+    public readonly SqueakMoodResetPresetState PresetReset;
 
-    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf)
+    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf,
+        SqueakMoodResetDefaultState defaultReset = SqueakMoodResetDefaultState.NoLocalSetting,
+        SqueakMoodResetPresetState presetReset = SqueakMoodResetPresetState.NotFromPreset)
     {
         Mood = mood;
         DisplayName = displayName ?? mood.ToString();
@@ -371,5 +377,7 @@ public readonly struct MoodTuningRowView
         EffectivePitch = effectivePitch;
         EffectiveVolume = effectiveVolume;
         EffectiveJitterHalf = Math.Max(0f, effectiveJitterHalf);
+        DefaultReset = defaultReset;
+        PresetReset = presetReset;
     }
 }

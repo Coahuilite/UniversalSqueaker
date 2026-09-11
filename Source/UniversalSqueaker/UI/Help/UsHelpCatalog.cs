@@ -232,6 +232,33 @@ internal static class UsHelpCatalog
                     "us/scope-tree/auto",
                     "US.Help.ScopeTree.Auto.Label",
                     "US.Help.ScopeTree.Auto.Text"),
+                // The two mood reset controls: the first two entries explain the actions, the four
+                // below carry the reason sentence for each unavailable state (flags / source / preset
+                // resolution - never row existence).
+                new HelpItem(
+                    "us/scope-tree/mood-reset-default",
+                    "US.Tuning.ResetToDefault",
+                    "US.Help.ScopeTree.ResetDefault.Text"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset",
+                    "US.Tuning.ResetToPreset",
+                    "US.Help.ScopeTree.ResetPreset.Text"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-no-local",
+                    "US.Tuning.ResetToDefault",
+                    "US.Tuning.ResetToDefault.Reason.NoLocal"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-not-from-preset",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.NotFromPreset"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset-missing",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.PresetMissing"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset-no-entry",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.NoEntry"),
             }),
         ["us/preset-list"] = new HelpSection(
             "us/preset-list",

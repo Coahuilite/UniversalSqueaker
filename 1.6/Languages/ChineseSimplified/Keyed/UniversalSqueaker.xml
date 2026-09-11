@@ -199,7 +199,12 @@
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
   <US.Tuning.Auto>自动</US.Tuning.Auto>
-  <US.Tuning.RestoreInherit>改回下层值</US.Tuning.RestoreInherit>
+  <US.Tuning.ResetToDefault>重置为默认</US.Tuning.ResetToDefault>
+  <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetToDefault.Reason.NoLocal>本行没有本层设置。</US.Tuning.ResetToDefault.Reason.NoLocal>
+  <US.Tuning.ResetToPreset.Reason.NotFromPreset>此行不是预设导入的。</US.Tuning.ResetToPreset.Reason.NotFromPreset>
+  <US.Tuning.ResetToPreset.Reason.PresetMissing>该预设已失效。</US.Tuning.ResetToPreset.Reason.PresetMissing>
+  <US.Tuning.ResetToPreset.Reason.NoEntry>该预设没有此行设置。</US.Tuning.ResetToPreset.Reason.NoEntry>
   <US.Tuning.Factor.Pitch>音</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>量</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>抖</US.Tuning.Factor.Jitter>
@@ -257,7 +262,9 @@
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
-  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾按钮「改回下层值」清掉本层记录，恢复继承值。</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾两个按钮：「重置为默认」清掉本层三个因子（来源保留），「重置为预设」按本行来源重新写入该预设的基线值。不可用的按钮仍然画出、只是禁用，悬停可看原因。</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.ResetDefault.Text>清掉本层的音高、音量、抖动三个因子，恢复继承值；预设来源保留，所以「重置为预设」仍然可用。</US.Help.ScopeTree.ResetDefault.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>按本行的预设来源找到那份预设，把该心情的基线因子值（音高、音量、抖动）重新写入本层；来源不变。</US.Help.ScopeTree.ResetPreset.Text>
   <US.Help.ScopeTree.Auto.Label>自动 / 改回下层值</US.Help.ScopeTree.Auto.Label>
   <US.Help.ScopeTree.Auto.Text>动作范围选"自动"只清除当前层的作用域字段；心情行用"改回下层值"清掉本层记录；两者都回落到下一个生效层给出的数值。</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>导入由 Def 提供的调音基线：展开预设，勾选种族与异种，再按"导入"，把该预设保存的动作与心情调音行写入对应层。没有安装任何预设 Def 时，本卡显示空状态提示。</US.Help.PresetList.Overview>
