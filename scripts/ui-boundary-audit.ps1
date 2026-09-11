@@ -54,7 +54,7 @@ $ErrorActionPreference = 'Stop'
 # keeps only the context-free call (FL api-tiers.md: a caller holding a context must use the protected
 # overload, which yields to a covering popup). The renderer terms are shared with FL's gate; this term is
 # US-side today and FL's own chrome button is its documented exception.
-$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.|UiNative\.Button\('
+$BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.|UiNative\s*\.\s*Button\s*\('
 
 # Sanctioned exemptions (3, only-shrink). The reason is part of the contract: an entry with no
 # ruling behind it is not an exemption. The first comes from HANDOFF §0, the second and third from the
@@ -87,7 +87,13 @@ $Whitelist = [ordered]@{
 # Logging/SqueakLogProtocol.cs), and a naive "cut at the first //" would silently narrow what the
 # gate can see on such a line. Comparison operands are strings, never chars, so the empty lookahead
 # at end-of-file cannot throw under Set-StrictMode.
+# Comment characters are blanked to a sentinel that is neither whitespace nor a token character, and the
+# sentinel is restored to a space only when a hit's code line is printed. A comment therefore keeps its
+# length (offsets stay valid for the whole-text walk) and a comment sitting between a name and its paren
+# cannot be mistaken for whitespace - that shape stays a documented blind spot on both halves.
+$CommentSentinel = [string][char]1
 function Remove-CSharpComments([string]$text) {
+    $blank = $CommentSentinel
     $sb = New-Object System.Text.StringBuilder
     $i = 0
     $n = $text.Length
@@ -98,8 +104,8 @@ function Remove-CSharpComments([string]$text) {
         $advance = 1
         switch ($state) {
             'code' {
-                if ($c -eq '/' -and $d -eq '/') { $state = 'line'; $advance = 2 }
-                elseif ($c -eq '/' -and $d -eq '*') { $state = 'block'; $advance = 2 }
+                if ($c -eq '/' -and $d -eq '/') { [void]$sb.Append($blank); [void]$sb.Append($blank); $state = 'line'; $advance = 2 }
+                elseif ($c -eq '/' -and $d -eq '*') { [void]$sb.Append($blank); [void]$sb.Append($blank); $state = 'block'; $advance = 2 }
                 elseif ($c -eq '@' -and $d -eq '"') { [void]$sb.Append(' '); $state = 'verbatim'; $advance = 2 }
                 elseif ($c -eq '"') { [void]$sb.Append($c); $state = 'string' }
                 elseif ($c -eq "'") { [void]$sb.Append($c); $state = 'char' }
@@ -107,10 +113,12 @@ function Remove-CSharpComments([string]$text) {
             }
             'line' {
                 if ($c -eq "`r" -or $c -eq "`n") { [void]$sb.Append($c); $state = 'code' }
+                else { [void]$sb.Append($blank) }
             }
             'block' {
-                if ($c -eq '*' -and $d -eq '/') { [void]$sb.Append('  '); $state = 'code'; $advance = 2 }
+                if ($c -eq '*' -and $d -eq '/') { [void]$sb.Append($blank); [void]$sb.Append($blank); $state = 'code'; $advance = 2 }
                 elseif ($c -eq "`r" -or $c -eq "`n") { [void]$sb.Append($c) }
+                else { [void]$sb.Append($blank) }
             }
             'string' {
                 if ($c -eq '\') { [void]$sb.Append('  '); $advance = 2 }
@@ -136,9 +144,10 @@ function Remove-CSharpComments([string]$text) {
 }
 
 # True when the call whose argument list starts right after $start (depth is already 1) carries a
-# top-level comma, i.e. the caller passed a context. Walks with paren-depth counting so a nested call as
-# the sole argument is still context-free; a top-level comma inside a string literal would fool it, and
-# no such call exists in this tree (documented boundary, not an oversight).
+# top-level comma, i.e. the caller passed a context. Walks the WHOLE comment-stripped text with
+# paren-depth counting, so it spans a protected call formatted across lines (S10) while still ignoring
+# commas nested one level deeper. Known shared blind spots kept as-is (both halves narrow the same way):
+# a comma inside a string literal, or inside [] / <>, sits at depth 1 and is read as "has a context".
 function Test-UiNativeButtonHasContext([string]$code, [int]$start) {
     $depth = 1
     for ($i = $start; $i -lt $code.Length; $i++) {
@@ -153,23 +162,43 @@ function Test-UiNativeButtonHasContext([string]$code, [int]$start) {
 # One text -> every pattern hit in its code, as File/Line/Match/Code records.
 function Find-BackendHit([string]$label, [string]$text) {
     $results = @()
-    $lines = @((Remove-CSharpComments $text) -split "`r?`n")
+    $stripped = Remove-CSharpComments $text
+    $lines = @($stripped -split "`r?`n")
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $code = $lines[$i]
         foreach ($m in [regex]::Matches($code, $BackendPattern)) {
-            # `UiNative.Button(` anchors BOTH overloads; only the context-free one is a violation, so the
-            # refinement lives here rather than in the pattern - a regular expression cannot count parens,
-            # and a naive comma test on the raw text would also reject a nested single-argument call.
-            if ($m.Value -eq 'UiNative.Button(' -and (Test-UiNativeButtonHasContext $code ($m.Index + $m.Length))) { continue }
+            # The `UiNative` anchor is text-scoped, not line-scoped: tokens may be separated by whitespace
+            # or newlines (S9) and a protected call may be formatted across lines (S10), so those matches
+            # are skipped here and re-found by the whole-text walk below.
+            if ($m.Value.StartsWith('UiNative')) { continue }
             $results += [pscustomobject]@{
                 File  = $label
                 Line  = $i + 1
                 Match = $m.Value
-                Code  = $code.Trim()
+                Code  = $code.Replace($CommentSentinel, ' ').Trim()
             }
         }
     }
-    return $results
+
+    # The context-free `UiNative.Button` overload cannot be judged per line: `UiNative . Button(r)` is legal
+    # C# (S9) and a legitimate `Button(` + newline + `rect, ctx);` must NOT be reported (S10). The anchor
+    # below tolerates whitespace between tokens and the walk spans lines. Because comments are blanked to a
+    # non-whitespace sentinel, a comment sitting between the name and the paren (S11) does not match at all:
+    # that shape stays a documented blind spot, the same way it is on the FL half.
+    $buttonAnchor = [regex]'UiNative\s*\.\s*Button\s*\('
+    foreach ($m in $buttonAnchor.Matches($stripped)) {
+        if (Test-UiNativeButtonHasContext $stripped ($m.Index + $m.Length)) { continue }
+        $line = ($stripped.Substring(0, $m.Index) -split "`n").Count
+        $codeLine = @($lines)[$line - 1]
+        $results += [pscustomobject]@{
+            File  = $label
+            Line  = $line
+            Match = 'UiNative.Button('
+            Code  = $codeLine.Replace($CommentSentinel, ' ').Trim()
+        }
+    }
+
+    return @($results | Sort-Object Line)
 }
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
@@ -210,25 +239,36 @@ if ($cleanHits.Count -ne 0) {
     foreach ($h in $cleanHits) { Write-Host "  $($h.File):$($h.Line) $($h.Match) <- $($h.Code)" }
     exit 1
 }
+# The overload probe carries the shape pairs the corpus turned up: S9 (tokens separated by whitespace)
+# must be found, and S10 (a legitimate protected call formatted across lines) must NOT be. Raw + nested
+# single-argument calls stay in as the natural-regression controls.
 $probeOverloads = @'
 using Verse;
 public class Overloads {
     void DrawRaw(Rect r) { if (UiNative.Button(r)) { Close(); } }
     void DrawWithContext(Rect r, UiWidgetContext ctx) { if (UiNative.Button(r, ctx)) { Close(); } }
     void DrawNested(Rect r) { if (UiNative.Button(new Rect(0f, 0f, r.width, r.height))) { Close(); } }
+    void DrawSpaced(Rect r) { if (UiNative . Button(r)) { Close(); } }
+    void DrawProtectedAcrossLines(Rect r, UiWidgetContext ctx) { if (UiNative.Button(
+        r, ctx)) { Close(); } }
 }
 '@
 $overloadHits = @(Find-BackendHit 'selftest/Overloads.cs' $probeOverloads)
-if ($overloadHits.Count -ne 2) {
-    Write-Host "UI BOUNDARY AUDIT FAILED: self-test - the context-free UiNative.Button overload must be found exactly twice (raw + nested single argument), found $($overloadHits.Count)."
-    foreach ($h in $overloadHits) { Write-Host "  $($h.File):$($h.Line) $($h.Match)" }
+if ($overloadHits.Count -ne 3) {
+    Write-Host "UI BOUNDARY AUDIT FAILED: self-test - the context-free UiNative.Button overload must be found exactly three times (raw, nested single argument, spaced tokens), found $($overloadHits.Count)."
+    foreach ($h in $overloadHits) { Write-Host "  $($h.File):$($h.Line) $($h.Match) <- $($h.Code)" }
     exit 1
 }
-if ($overloadHits[0].Code -notmatch 'DrawRaw' -or $overloadHits[1].Code -notmatch 'DrawNested') {
-    Write-Host 'UI BOUNDARY AUDIT FAILED: self-test - the overload hits must be the raw call and the nested single-argument call; the context-carrying overload must NOT be reported.'
+$overloadCodes = ($overloadHits | ForEach-Object { $_.Code }) -join "`n"
+if ($overloadCodes -notmatch 'DrawRaw' -or $overloadCodes -notmatch 'DrawNested' -or $overloadCodes -notmatch 'DrawSpaced') {
+    Write-Host 'UI BOUNDARY AUDIT FAILED: self-test - the overload hits must be the raw, nested single-argument and spaced-token calls.'
     exit 1
 }
-Write-Host 'selftest: scanner armed (code hit found, comment prose ignored); overload discrimination armed (raw + nested found, Button(rect, ctx) ignored)'
+if ($overloadCodes -match 'DrawWithContext' -or $overloadCodes -match 'DrawProtectedAcrossLines') {
+    Write-Host 'UI BOUNDARY AUDIT FAILED: self-test - a context-carrying overload was reported (S10: the protected call formatted across lines must NOT be a hit).'
+    exit 1
+}
+Write-Host 'selftest: scanner armed (code hit found, comment prose ignored); overload discrimination armed (raw + nested + S9 spaced found; S4 two-argument and S10 multi-line protected ignored)'
 
 # ---- 2. scan the tree -------------------------------------------------------
 if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
