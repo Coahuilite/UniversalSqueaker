@@ -29,7 +29,7 @@ internal static class Program
             MigrateV3RecordsTransactionallySucceeds();
             MigrationFailureBlocksAndRetries();
             VoiceSchemaStaleDoesNotOverwriteMoodTuning();
-            SetActionTuningScopeNullClearsAllDuplicates();
+            SetActionTuningScopeClearsOnlyTheNamedField();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             TwoPresetsImportIndependentlyAndIdempotently();
@@ -189,9 +189,9 @@ internal static class Program
             "stale-voice: user moodTuning edit preserved (old moodOverrides not replayed)", ref failures);
     }
 
-    private static void SetActionTuningScopeNullClearsAllDuplicates()
+    private static void SetActionTuningScopeClearsOnlyTheNamedField()
     {
-        Scenario("4-action-scope-null-clears-all-duplicates");
+        Scenario("4-action-scope-clears-the-named-field-only");
         UniversalSqueakerSettings settings = NewSettings();
         settings.actionTuning = new List<ActionTuningRecord>
         {
@@ -203,9 +203,36 @@ internal static class Program
 
         settings.SetActionTuningScope("Call", "RaceA", "", null);
 
-        Check(settings.actionTuning.Count == 1
-            && settings.actionTuning[0].actionKey == "Eat",
-            "action-scope-null: all same-identity rows removed, unrelated row retained", ref failures);
+        // D2 invariant: clearing a scope names the scope field only. The two same-identity rows that
+        // carried nothing else are gone, because their last field was cleared (last-wins dedupe still
+        // holds), while the row that also carries an interval multiplier survives: that field was not
+        // named and has no control on the page, so dropping the row would silently discard data the
+        // player never saw. This check used to pin the opposite (whole row deleted) - the defect.
+        Check(settings.actionTuning.Count == 2,
+            "action-scope-null: dedupe keeps the surviving row plus the unrelated one", ref failures);
+
+        var survivingCall = settings.actionTuning.Find(r => r.actionKey == "Call");
+        Check(survivingCall != null && !survivingCall.hasScope
+            && survivingCall.hasIntervalMultiplier
+            && Math.Abs(survivingCall.intervalMultiplier - 2f) < 0.0001f,
+            "action-scope-null: the multiplier field survives, the named scope field is cleared", ref failures);
+
+        Check(settings.actionTuning.Find(r => r.actionKey == "Eat") != null,
+            "action-scope-null: unrelated row retained", ref failures);
+
+        // The same invariant on the write path: naming the scope must not drop the other fields either.
+        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
+        survivingCall = settings.actionTuning.Find(r => r.actionKey == "Call");
+        Check(survivingCall != null && survivingCall.hasScope
+            && survivingCall.scope == SqueakActionScope.Disabled
+            && survivingCall.hasIntervalMultiplier
+            && Math.Abs(survivingCall.intervalMultiplier - 2f) < 0.0001f,
+            "action-scope-write: writing the scope keeps the multiplier field", ref failures);
+
+        // And a record that carries nothing else still disappears once its last field is cleared.
+        settings.SetActionTuningScope("Eat", "RaceA", "", null);
+        Check(settings.actionTuning.Find(r => r.actionKey == "Eat") == null,
+            "action-scope-null: a row that carries nothing else is removed", ref failures);
     }
 
     private static void SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord()

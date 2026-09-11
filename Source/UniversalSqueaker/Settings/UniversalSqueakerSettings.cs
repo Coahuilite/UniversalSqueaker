@@ -240,7 +240,16 @@ public partial class UniversalSqueakerSettings : ModSettings
         ApplyDevLoggingModeToRuntime(announceLoggingChange);
     }
 
-    /// <summary>写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。scope == null 表示清该层记录（移除）；走离散 resolver 重建 + 排队持久化。</summary>
+    /// <summary>
+    /// 写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。
+    /// scope == null 表示清除本层的**作用域字段**（恢复继承）。
+    ///
+    /// D2 不变式：本方法只动它点名的那一个字段，记录只有在它承载的每个字段都被清掉之后才删除。
+    /// interval / probability 两个乘数是运行时真实输入（<c>SqueakRuntimeResolver</c> 消费），而界面上
+    /// 没有任何控件显示它们，所以「清作用域 = 删整条记录」会静默丢掉玩家从未见过的数据——写入作用域
+    /// 时同理（旧实现两条路径都会丢）。反证：同文件 <see cref="SetMoodTuning"/> 的 "clear" 删整行是
+    /// **对的**，因为 MoodTuningRecord 承载的每个字段都有控件显示；形状相同，字段可见性不同。
+    /// </summary>
     internal void SetActionTuningScope(string actionKey, string raceDefName, string xenotypeDefName, SqueakActionScope? scope)
     {
         actionTuning ??= new List<ActionTuningRecord>();
@@ -250,22 +259,34 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (!hasRace && hasXeno) return;
         if (string.IsNullOrEmpty(actionKey)) return;
 
+        // last-wins 取末个匹配行，并让它原地存活：写入与清除都必须保住它承载的其它字段。同身份的更早
+        // 行是陈旧重复，删除（去重规则与 SetMoodTuning 一致）。
         ActionTuningRecord? existing = null;
         foreach (ActionTuningRecord candidate in actionTuning)
-            if (candidate != null
-                && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
-                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+        {
+            if (SameActionTuningIdentity(candidate, actionKey, raceDefName, xenotypeDefName))
+            {
                 existing = candidate;
-
-        // 统一 last-wins：清除全部同身份行（含陈旧重复）后追加/不再追加，与 SetMoodTuning/UpsertMood 一致。
-        actionTuning.RemoveAll(c => c != null
-            && string.Equals(c.actionKey, actionKey, StringComparison.Ordinal)
-            && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-            && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
+            }
+        }
 
         if (scope == null)
         {
+            if (existing != null)
+            {
+                existing.hasScope = false;
+                if (existing.hasIntervalMultiplier || existing.hasProbabilityMultiplier)
+                {
+                    actionTuning.RemoveAll(c => c != null && !ReferenceEquals(c, existing)
+                        && SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
+                }
+                else
+                {
+                    // 记录已不承载任何字段：连同陈旧重复行一起删除，列表不再留着空壳。
+                    actionTuning.RemoveAll(c => SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
+                }
+            }
+
             NotifyDiscreteResolverRuntimeChanged();
             QueuePersistence();
             return;
@@ -275,17 +296,37 @@ public partial class UniversalSqueakerSettings : ModSettings
         // 内置键按 SupportedScopes 归一（Draft/Undraft/Equip 仅支持 ActiveCommand），避免写入运行时永远不匹配的作用域。
         if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
             effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
-        actionTuning.Add(new ActionTuningRecord
+
+        if (existing != null)
         {
-            actionKey = actionKey,
-            raceDefName = raceDefName ?? "",
-            xenotypeDefName = xenotypeDefName ?? "",
-            sourcePresetDefName = existing?.sourcePresetDefName ?? "",
-            hasScope = true,
-            scope = effective,
-        });
+            existing.hasScope = true;
+            existing.scope = effective;
+            actionTuning.RemoveAll(c => c != null && !ReferenceEquals(c, existing)
+                && SameActionTuningIdentity(c, actionKey, raceDefName, xenotypeDefName));
+        }
+        else
+        {
+            actionTuning.Add(new ActionTuningRecord
+            {
+                actionKey = actionKey,
+                raceDefName = raceDefName ?? "",
+                xenotypeDefName = xenotypeDefName ?? "",
+                hasScope = true,
+                scope = effective,
+            });
+        }
+
         NotifyDiscreteResolverRuntimeChanged();
         QueuePersistence();
+    }
+
+    /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>
+    private static bool SameActionTuningIdentity(ActionTuningRecord? candidate, string actionKey, string raceDefName, string xenotypeDefName)
+    {
+        return candidate != null
+            && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
+            && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
     }
 
     /// <summary>写一条分层心情调音：Upsert 到 moodTuning（last-wins 按 (mood,raceDefName,xenotypeDefName)）。

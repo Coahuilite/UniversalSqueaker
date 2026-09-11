@@ -22,10 +22,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool RichData;
 
     /// <summary>
-    /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: short race
-    /// names with an oversized "n / m enabled · state" detail, and a short xenotype name whose race
-    /// context makes the composed title long. The layer-height assertions need this because every other
-    /// fixture string fits one line, and a one-line world cannot tell a measured band from a constant one.
+    /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: a race row
+    /// title long enough to wrap, and a short xenotype name whose race context makes the composed title
+    /// long. The layer-height assertions need this because every other fixture string fits one line, and
+    /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
     public bool WrappingDomainText;
 
@@ -287,8 +287,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
         return new[]
         {
-            new RaceLayerRowView("human", "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
-            new RaceLayerRowView("testrace", "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            // Wrapping mode: the row title now carries the state too (the detail line keeps the counts), so a
+            // title long enough to need a second line is what must grow the card.
+            new RaceLayerRowView("human", WrappingDomainText ? "Human (a row title long enough that no single line can hold it)" : "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            new RaceLayerRowView("testrace", WrappingDomainText ? "Test Race (a row title long enough that no single line can hold it)" : "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
             new RaceLayerRowView("sanguophage", "Sanguophage Race", 1, 1, SqueakVoicePackDomainState.Available)
         };
     }

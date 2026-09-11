@@ -17,7 +17,7 @@
   <US.Diagnostics.Search.None>No match on this map</US.Diagnostics.Search.None>
   <US.Diagnostics.Monitor.Empty>Waiting for the first update...</US.Diagnostics.Monitor.Empty>
   <US.Diagnostics.Detail.Empty>Select a pawn to inspect it</US.Diagnostics.Detail.Empty>
-  <US.Diagnostics.PageUnavailable.Title>Diagnostics page unavailable</US.Diagnostics.PageUnavailable.Title>
+  <US.Diagnostics.PageUnavailable.Title>Diagnostics page could not be shown</US.Diagnostics.PageUnavailable.Title>
   <US.Diagnostics.PageUnavailable.Body>The diagnostics page failed to draw and was stopped for this window instance; reopen it from the debug menu.</US.Diagnostics.PageUnavailable.Body>
   <US.Diagnostics.Ready>Ready</US.Diagnostics.Ready>
   <US.Diagnostics.Blocked>Blocked</US.Diagnostics.Blocked>
@@ -82,13 +82,13 @@
   <US.Mood.Break>Break</US.Mood.Break>
 
   <US.Notice.RaceDomain>Race domain</US.Notice.RaceDomain>
-  <US.Notice.TargetUnavailable>target unavailable</US.Notice.TargetUnavailable>
+  <US.Notice.TargetUnavailable>target not loaded</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>Some VoicePack domains have no enabled pack:</US.Notice.AudioPool.Body>
 
   <US.Settings.Shell.Title>Universal Squeaker uses its own settings window.</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>The in-game Mod Settings shell is not used by {0}. Open the dedicated window to change routing, tuning and VoicePacks.</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>Open Universal Squeaker settings</US.Settings.Shell.Open>
-  <US.Settings.PageUnavailable.Title>Settings page unavailable</US.Settings.PageUnavailable.Title>
+  <US.Settings.PageUnavailable.Title>Settings page could not be shown</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>The {0} settings page could not be built or drawn, so it will not show a partial interface. Close and reopen the window to retry. If it keeps failing, look for the usdiag record in the log: it names the failing control and carries the exception stack.</US.Settings.PageUnavailable.Body>
   <US.Settings.Window.Subtitle>Universal Squeaker — VoicePack Routing</US.Settings.Window.Subtitle>
   <US.Settings.Window.Close>Close</US.Settings.Window.Close>
@@ -154,9 +154,9 @@
   <US.Packs.Filter.Xenotype>Xenotype</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>Author</US.Packs.Filter.Author>
   <US.Packs.Domain.EnabledSummary>{0} / {1} enabled</US.Packs.Domain.EnabledSummary>
-  <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
+  <US.Packs.Domain.NameWithState>{0} — {1}</US.Packs.Domain.NameWithState>
   <US.Packs.Domain.State.Orphan>orphan</US.Packs.Domain.State.Orphan>
-  <US.Packs.Domain.State.TargetUnavailable>target unavailable</US.Packs.Domain.State.TargetUnavailable>
+  <US.Packs.Domain.State.TargetUnavailable>target not loaded</US.Packs.Domain.State.TargetUnavailable>
   <US.Packs.Domain.State.Dormant>dormant</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
   <US.Packs.Checklist.NoDomains>No VoicePack domains are available yet. Install a VoicePack that declares a raceDefName.</US.Packs.Checklist.NoDomains>
@@ -165,8 +165,8 @@
   <US.Packs.Checklist.ConflictBanner>Multiple Xenotype Defs share this target; routing fails closed until resolved.</US.Packs.Checklist.ConflictBanner>
   <US.Packs.Checklist.EmptyDomain>No VoicePacks are installed for this domain.</US.Packs.Checklist.EmptyDomain>
   <US.Packs.Checklist.EmptySearch>No VoicePacks match the current search.</US.Packs.Checklist.EmptySearch>
-  <US.Packs.Checklist.OrphanBanner>Selected pack keys are no longer installed. Use Forget Unavailable to clean them.</US.Packs.Checklist.OrphanBanner>
-  <US.Packs.Checklist.ForgetUnavailable>Forget Unavailable</US.Packs.Checklist.ForgetUnavailable>
+  <US.Packs.Checklist.OrphanBanner>Selected pack keys are no longer installed. Use Forget dangling to clean them.</US.Packs.Checklist.OrphanBanner>
+  <US.Packs.Checklist.ForgetUnavailable>Forget dangling</US.Packs.Checklist.ForgetUnavailable>
   <US.Packs.Checklist.SearchPlaceholder>Search VoicePacks…</US.Packs.Checklist.SearchPlaceholder>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>Actions {0}/{1}</US.Packs.Checklist.PackActions>
@@ -200,6 +200,7 @@
   <US.Tuning.Scope.Any>Any</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>Command</US.Tuning.Scope.Command>
   <US.Tuning.Auto>Auto</US.Tuning.Auto>
+  <US.Tuning.RestoreInherit>Use inherited value</US.Tuning.RestoreInherit>
   <US.Tuning.Factor.Pitch>P</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>V</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>J</US.Tuning.Factor.Jitter>
@@ -208,7 +209,7 @@
   <US.Distance.Preset.Strong>Strong</US.Distance.Preset.Strong>
   <US.Distance.Preset.Custom>Custom</US.Distance.Preset.Custom>
   <US.Distance.Status>Attenuation {0}  {1}</US.Distance.Status>
-  <US.Card.FallbackNote>{0} (unavailable in fallback mode)</US.Card.FallbackNote>
+  <US.Card.FallbackNote>{0} failed to draw, so this section was skipped. Other sections are unaffected. Reopen the window to retry.</US.Card.FallbackNote>
   <US.Help.Header>HELP  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
   <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
@@ -257,14 +258,14 @@
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
-  <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field; the row's Auto clears this layer's override back to the inherited values.</US.Help.ScopeTree.MoodTuning.Text>
-  <US.Help.ScopeTree.Auto.Label>Auto / Clear</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>Auto removes the current layer's record - an action scope or a whole mood row - so the entry falls through to the next effective layer.</US.Help.ScopeTree.Auto.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field; each row's "Use inherited value" button drops this layer's record back to the inherited values.</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.Auto.Label>Auto / Use inherited value</US.Help.ScopeTree.Auto.Label>
+  <US.Help.ScopeTree.Auto.Text>Auto on an action scope clears only this layer's scope field; the mood rows' Use inherited value drops this layer's record. Either way the value falls through to the next effective layer.</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>Imports tuning baselines provided by Defs: expand a preset, tick the races and xenotypes, then press Import to write its action and mood rows into the matching layers. With no preset Defs installed the card shows its empty state.</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>Applies the preset's ticked action and mood rows to the matching race / xenotype layers - same keys overwrite, new keys append - tags every imported row with its source preset, and feeds the runtime resolver immediately.</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>The narrowing tools of the Packs workspace: Enabled only keeps domains with enabled packs; Conflicts lists domains that are conflicting, dormant, target-unavailable or stale; Orphan only keeps domains with stale selections; the Author dropdown narrows pack rows; All clears every filter.</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>The narrowing tools of the Packs workspace: Enabled only keeps domains with enabled packs; Conflicts lists domains that are conflicting, dormant, target not loaded or dangling; Orphan only keeps domains with stale selections; the Author dropdown narrows pack rows; All clears every filter.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>The chips stack: Enabled only, Conflicts and Orphan each narrow the domain lists and the pack checklist, while All clears every filter, search included.</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.RaceXeno.Label>Race / Xenotype Filters</US.Help.FilterBar.RaceXeno.Label>
@@ -276,7 +277,7 @@
   <US.Help.XenotypeLayer.Overview>Lists xenotype domains keyed by the (race, xenotype) pair - each row reads "xenotype (race)" - so the same xenotype is configured independently per race.</US.Help.XenotypeLayer.Overview>
   <US.Help.XenotypeLayer.Row.Label>Xenotype Row</US.Help.XenotypeLayer.Row.Label>
   <US.Help.XenotypeLayer.Row.Text>Clicking a xenotype row selects that (race, xenotype) domain, and the Choose VoicePacks card below switches to its pack checklist.</US.Help.XenotypeLayer.Row.Text>
-  <US.Help.Checklist.Overview>Search and tick VoicePacks for the selected domain. Saved pack keys that are no longer installed are stale selections: they surface in a warning banner, and Forget Unavailable clears them at once. Dormant, target-unavailable and conflict banners also sit atop the card.</US.Help.Checklist.Overview>
+  <US.Help.Checklist.Overview>Search and tick VoicePacks for the selected domain. Saved pack keys that are no longer installed are stale selections: they surface in a warning banner, and Forget dangling clears them at once. Dormant, target not loaded and conflict banners also sit atop the card.</US.Help.Checklist.Overview>
   <US.Help.Checklist.Search.Label>Search</US.Help.Checklist.Search.Label>
   <US.Help.Checklist.Search.Text>Filters the visible rows by case-insensitive substring, matching pack name, defName, mod, author or pack key.</US.Help.Checklist.Search.Text>
   <US.Help.Checklist.Row.Label>VoicePack Row</US.Help.Checklist.Row.Label>

@@ -69,17 +69,26 @@ internal static class Program
                 Console.Error.WriteLine("MESSAGE-UNPRINTABLE: " + messageError.GetType().FullName);
             }
 
-            if (ex.InnerException != null)
+            // The whole chain, not one level: lane wrappers (MoodLayoutFocusedTests.Step, the Step()
+            // helper) each rethrow with their own message, so the assertion that actually failed sits
+            // below the first InnerException and used to be invisible to whoever read the console.
+            Exception? inner = ex.InnerException;
+            int depth = 0;
+            while (inner != null && depth < 8)
             {
-                Console.Error.WriteLine("INNER: " + ex.InnerException.GetType().FullName);
+                string label = depth == 0 ? "INNER" : "INNER-" + (depth + 1);
+                Console.Error.WriteLine(label + ": " + inner.GetType().FullName);
                 try
                 {
-                    Console.Error.WriteLine("INNER-MESSAGE: " + ex.InnerException.Message);
+                    Console.Error.WriteLine(label + "-MESSAGE: " + inner.Message);
                 }
                 catch (Exception innerMessageError)
                 {
-                    Console.Error.WriteLine("INNER-MESSAGE-UNPRINTABLE: " + innerMessageError.GetType().FullName);
+                    Console.Error.WriteLine(label + "-MESSAGE-UNPRINTABLE: " + innerMessageError.GetType().FullName);
                 }
+
+                inner = inner.InnerException;
+                depth++;
             }
 
             return 1;
@@ -1261,7 +1270,7 @@ internal static class Program
 
             Assert(raceShort > 0f && xenotypeShort > 0f, "the rich fixture must place both layer cards");
             Assert(raceLong > raceShort + 10f,
-                "a race detail line that cannot fit one line must grow the race-layer card: one-line "
+                "a race row title that cannot fit one line must grow the race-layer card: one-line "
                 + raceShort + "px, wrapping " + raceLong + "px");
             Assert(xenotypeLong > xenotypeShort + 10f,
                 "a composed xenotype title that cannot fit one line must grow the xenotype-layer card: one-line "

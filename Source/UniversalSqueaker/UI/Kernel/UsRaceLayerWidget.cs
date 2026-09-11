@@ -101,13 +101,14 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/race-layer/row");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
 
-        string detail = UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount, race.State);
-        (float titleBand, float detailBand, float _) = RowBands(ctx, textWidth, race.DisplayName, detail);
+        string title = UsPacksText.TitleWithState(ctx, race.DisplayName, race.State);
+        string detail = UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount);
+        (float titleBand, float detailBand, float _) = RowBands(ctx, textWidth, title, detail);
         float x = rect.x + UsKernelDraw.RowLeftPadding;
         float lineY = rect.y + RowTopPadding;
         UsKernelDraw.Label(
             new Rect(x, lineY, textWidth, titleBand),
-            race.DisplayName,
+            title,
             ctx.Theme,
             selected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
             UiFont.Small,
@@ -132,8 +133,8 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
         return RowBands(
             ctx,
             textWidth,
-            race.DisplayName,
-            UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount, race.State)).Total;
+            UsPacksText.TitleWithState(ctx, race.DisplayName, race.State),
+            UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount)).Total;
     }
 
     /// <summary>
@@ -155,15 +156,19 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
 
 /// <summary>
 /// Keyed-text outlet for the Packs workspace. The Race and Xenotype layers render the same
-/// "n / m enabled · state" line and the same "name (race)" title, and the checklist joins pack
-/// metadata with the same separator, so the template composition lives here once: the row detail line
-/// is measured and drawn from this one resolver, and every lookup goes through
-/// <see cref="UiWidgetContext.Translation"/> — no Verse bypass, no second copy.
+/// "n / m enabled" detail line and the same "name (race)" title, and the checklist joins pack
+/// metadata with the same separator, so the template composition lives here once: the row title and
+/// its state, and the detail line, are measured and drawn from this one resolver, and every lookup
+/// goes through <see cref="UiWidgetContext.Translation"/> — no Verse bypass, no second copy.
+///
+/// Word order is part of the key text, never of layout code: a translation is free to put the state
+/// before or after the name, and the en/zh pair can then share one layout (measured band, one label).
 /// </summary>
 internal static class UsPacksText
 {
     internal const string KeyEnabledSummary = "US.Packs.Domain.EnabledSummary";
-    internal const string KeyEnabledState = "US.Packs.Domain.EnabledState";
+    /// <summary>Whole-sentence template for "object plus its state"; the placeholder order IS the word order.</summary>
+    internal const string KeyNameWithState = "US.Packs.Domain.NameWithState";
     internal const string KeyStateOrphan = "US.Packs.Domain.State.Orphan";
     internal const string KeyStateTargetUnavailable = "US.Packs.Domain.State.TargetUnavailable";
     internal const string KeyStateDormant = "US.Packs.Domain.State.Dormant";
@@ -175,12 +180,21 @@ internal static class UsPacksText
         return string.Format(System.Globalization.CultureInfo.InvariantCulture, ctx.Translation.Translate(key), args);
     }
 
-    /// <summary>The Tiny status line under a domain row: enabled/candidate counts plus optional state.</summary>
-    internal static string DetailText(UiWidgetContext ctx, int enabled, int candidate, SqueakVoicePackDomainState state)
+    /// <summary>The Tiny status line under a domain row: enabled/candidate counts, no state.</summary>
+    internal static string DetailText(UiWidgetContext ctx, int enabled, int candidate)
     {
-        string summary = Format(ctx, KeyEnabledSummary, enabled, candidate);
+        return Format(ctx, KeyEnabledSummary, enabled, candidate);
+    }
+
+    /// <summary>
+    /// The row title: the object's name followed by its state, composed through one keyed template
+    /// (the state is postposed in Chinese and the pair shares a single label rect in both languages).
+    /// A domain without a state keeps its bare name, so the template is never asked to render a hole.
+    /// </summary>
+    internal static string TitleWithState(UiWidgetContext ctx, string name, SqueakVoicePackDomainState state)
+    {
         string stateKey = StateKey(state);
-        return stateKey.Length == 0 ? summary : Format(ctx, KeyEnabledState, summary, ctx.Translation.Translate(stateKey));
+        return stateKey.Length == 0 ? name : Format(ctx, KeyNameWithState, name, ctx.Translation.Translate(stateKey));
     }
 
     /// <summary>Translation key of the row state, or empty when the domain carries no state.</summary>

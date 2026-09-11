@@ -44,7 +44,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float ButtonWidth = 96f;
     private const float ButtonHeight = 24f;
     private const float MoodLabelWidth = 64f;
-    private const float MoodClearWidth = 52f;
+    // Floor for the mood row's clear control. The drawn width is measured from the control's own label
+    // (MoodClearWidthFor): the ruled phrase is a verb phrase, and a fixed 52px box wrapped it to three
+    // Tiny lines in English - the bilingual fit sweep caught it as "needs 54px, has 24px at width 40px".
+    private const float MoodClearWidthMin = 52f;
     private const float MoodGap = 6f;
 
     // Keyed display text. Every bound value stays untouched: the tuning layer is the "tuning-layer"
@@ -57,7 +60,13 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const string GroupAutonomousKey = "US.Tuning.Group.Autonomous";
     private const string GroupOperableKey = "US.Tuning.Group.Operable";
     private const string MoodTuningHeaderKey = "US.Tuning.MoodTuning";
+    /// <summary>Action-scope dropdown option: "inherit from below". Per the term split this word belongs to
+    /// the action side only; the mood row's clear control uses <see cref="RestoreInheritKey"/> instead
+    /// (one word, two meanings was the direct cause of mis-clicks).</summary>
     private const string AutoLabelKey = "US.Tuning.Auto";
+    /// <summary>Mood row clear control: a verb phrase that says what pressing it does - it does not delete
+    /// a mood the player configured, it drops this layer's record so the value falls through again.</summary>
+    private const string RestoreInheritKey = "US.Tuning.RestoreInherit";
     private const string PitchLabelKey = "US.Tuning.Factor.Pitch";
     private const string VolumeLabelKey = "US.Tuning.Factor.Volume";
     private const string JitterLabelKey = "US.Tuning.Factor.Jitter";
@@ -398,10 +407,11 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
         float jitter = row.Own?.hasPitchJitter == true ? Math.Max(0f, row.Own.pitchJitter.max - 1f) : row.EffectiveJitterHalf;
 
-        if (UsesStackedMoodRows(rect.width))
+        float clearWidth = MoodClearWidthFor(ctx);
+        if (UsesStackedMoodRows(rect.width, ctx))
         {
             float headerHeight = ButtonHeight;
-            float labelWidth = Math.Max(1f, rect.width - LeftPadding - MoodClearWidth - 8f - RowGap);
+            float labelWidth = Math.Max(1f, rect.width - LeftPadding - clearWidth - 8f - RowGap);
             UsKernelDraw.Label(
                 new Rect(rect.x + LeftPadding, rect.y, labelWidth, headerHeight),
                 row.DisplayName,
@@ -411,7 +421,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 TextAnchor.MiddleLeft);
 
             DrawAutoClearButton(
-                new Rect(rect.xMax - MoodClearWidth - 8f, rect.y, MoodClearWidth, headerHeight),
+                new Rect(rect.xMax - clearWidth - 8f, rect.y, clearWidth, headerHeight),
                 row,
                 ctx);
 
@@ -439,8 +449,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
-        float clearX = rect.xMax - MoodClearWidth - 8f;
-        Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
+        float clearX = rect.xMax - clearWidth - 8f;
+        Rect clearRect = new(clearX, rect.y, clearWidth, rect.height);
         float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
         float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
@@ -452,9 +462,21 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         DrawAutoClearButton(clearRect, row, ctx);
     }
 
+    /// <summary>
+    /// Width of the mood row's clear control: the label's measured single-line width plus the button's
+    /// own 6px side padding, floored at <see cref="MoodClearWidthMin"/>. Measure and Draw both come
+    /// through here (the stacked/wide decision depends on it), so a longer phrase in either language
+    /// widens the control instead of being clipped into a wrapped band.
+    /// </summary>
+    private static float MoodClearWidthFor(UiWidgetContext ctx)
+    {
+        float label = ctx.Metrics.MeasureWidth(UsKernelDraw.Keyed(ctx, RestoreInheritKey), UiFont.Tiny);
+        return Math.Max(MoodClearWidthMin, label + 12f);
+    }
+
     private void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, UiWidgetContext ctx)
     {
-        if (UsKernelDraw.SelectionButton(clearRect, UsKernelDraw.Keyed(ctx, AutoLabelKey), ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(clearRect, UsKernelDraw.Keyed(ctx, RestoreInheritKey), ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null));
         }
@@ -552,9 +574,9 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// Auto clear button. Uses the same group-width math as the former narrow branch; Measure and
     /// Draw both feed the card body width.
     /// </summary>
-    private static bool UsesStackedMoodRows(float bodyWidth)
+    private static bool UsesStackedMoodRows(float bodyWidth, UiWidgetContext ctx)
     {
-        float clearX = bodyWidth - MoodClearWidth - 8f;
+        float clearX = bodyWidth - MoodClearWidthFor(ctx) - 8f;
         float controlsWidth = clearX - (LeftPadding + MoodLabelWidth) - MoodGap;
         float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
         return groupWidth < 110f;
@@ -567,7 +589,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// </summary>
     private static float MoodRowHeightFor(float bodyWidth, UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
     {
-        if (!UsesStackedMoodRows(bodyWidth))
+        if (!UsesStackedMoodRows(bodyWidth, ctx))
         {
             return Math.Max(MoodRowHeight, MoodLabelTop + MaxMoodLabelBand(ctx, rows) + MoodLabelTop);
         }

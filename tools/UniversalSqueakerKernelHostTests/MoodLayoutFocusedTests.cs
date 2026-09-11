@@ -335,9 +335,20 @@ internal static class MoodLayoutFocusedTests
         return Math.Abs(rect.width - 20f) <= 2f && rect.height >= 14f && rect.height <= 34f;
     }
 
+    /// <summary>
+    /// Width the mood row's clear control draws at. It comes from the control's own label
+    /// (UsScopeTreeWidget.MoodClearWidthFor): measured Tiny width plus the button's 12px side padding,
+    /// floored at 52. The lane mirrors the rule because a recorded pass exposes rects, not identities;
+    /// this lane installs no translator table, so the label resolves to its key literal - the same
+    /// string the widget measured.
+    /// </summary>
+    private static readonly float ClearButtonWidth = Math.Max(
+        52f,
+        FerriteLib.UiKit.Kernel.VerseFerriteTextMetrics.Instance.MeasureWidth("US.Tuning.RestoreInherit", UiFont.Tiny) + 12f);
+
     private static bool IsAutoButton(Rect rect)
     {
-        return Math.Abs(rect.width - 52f) <= 1f && rect.height >= 14f && rect.height <= 34f;
+        return Math.Abs(rect.width - ClearButtonWidth) <= 1f && rect.height >= 14f && rect.height <= 34f;
     }
 
     private static Rect FirstMinusRect(CaptureContext ctx)

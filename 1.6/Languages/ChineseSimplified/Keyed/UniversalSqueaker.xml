@@ -17,7 +17,7 @@
   <US.Diagnostics.Search.None>本地图无匹配</US.Diagnostics.Search.None>
   <US.Diagnostics.Monitor.Empty>等待首次更新…</US.Diagnostics.Monitor.Empty>
   <US.Diagnostics.Detail.Empty>选中一个 pawn 查看详情</US.Diagnostics.Detail.Empty>
-  <US.Diagnostics.PageUnavailable.Title>诊断页不可用</US.Diagnostics.PageUnavailable.Title>
+  <US.Diagnostics.PageUnavailable.Title>诊断页未能显示</US.Diagnostics.PageUnavailable.Title>
   <US.Diagnostics.PageUnavailable.Body>诊断页绘制失败，本窗口实例已停摆；可从调试菜单重新打开。</US.Diagnostics.PageUnavailable.Body>
   <US.Diagnostics.Ready>就绪</US.Diagnostics.Ready>
   <US.Diagnostics.Blocked>阻塞</US.Diagnostics.Blocked>
@@ -82,13 +82,13 @@
   <US.Mood.Break>崩溃</US.Mood.Break>
 
   <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
-  <US.Notice.TargetUnavailable>目标不可用</US.Notice.TargetUnavailable>
+  <US.Notice.TargetUnavailable>目标未加载</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
 
   <US.Settings.Shell.Title>Universal Squeaker 使用独立设置窗口。</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>游戏内的 Mod Settings 面板不再承载 {0} 的设置。请打开专用窗口调整路由、调音与语音包。</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
-  <US.Settings.PageUnavailable.Title>设置页不可用</US.Settings.PageUnavailable.Title>
+  <US.Settings.PageUnavailable.Title>设置页未能显示</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>{0} 设置页无法构建或绘制，因此不显示残缺界面。关闭后重新打开即可重试。若持续失败，请在日志中查找 usdiag 记录：它会指出出错的控件并附带异常堆栈。</US.Settings.PageUnavailable.Body>
   <US.Settings.Window.Subtitle>Universal Squeaker —— 语音包路由</US.Settings.Window.Subtitle>
   <US.Settings.Window.Close>关闭</US.Settings.Window.Close>
@@ -153,9 +153,9 @@
   <US.Packs.Filter.Xenotype>异种</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
   <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
-  <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
+  <US.Packs.Domain.NameWithState>{0} {1}</US.Packs.Domain.NameWithState>
   <US.Packs.Domain.State.Orphan>已失效</US.Packs.Domain.State.Orphan>
-  <US.Packs.Domain.State.TargetUnavailable>目标不可用</US.Packs.Domain.State.TargetUnavailable>
+  <US.Packs.Domain.State.TargetUnavailable>目标未加载</US.Packs.Domain.State.TargetUnavailable>
   <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
   <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
@@ -199,6 +199,7 @@
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
   <US.Tuning.Auto>自动</US.Tuning.Auto>
+  <US.Tuning.RestoreInherit>改回下层值</US.Tuning.RestoreInherit>
   <US.Tuning.Factor.Pitch>音</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>量</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>抖</US.Tuning.Factor.Jitter>
@@ -207,7 +208,7 @@
   <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
   <US.Distance.Preset.Custom>自定义</US.Distance.Preset.Custom>
   <US.Distance.Status>衰减 {0}  {1}</US.Distance.Status>
-  <US.Card.FallbackNote>{0}（降级模式，暂不可用）</US.Card.FallbackNote>
+  <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
@@ -256,14 +257,14 @@
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
-  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾自动清除本层覆盖，恢复继承值。</US.Help.ScopeTree.MoodTuning.Text>
-  <US.Help.ScopeTree.Auto.Label>自动 / 清除</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>"自动"删除当前层的该条记录——动作范围或整条心情行——于是此行回落向下层，由下一个生效层给出数值。</US.Help.ScopeTree.Auto.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾按钮「改回下层值」清掉本层记录，恢复继承值。</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.Auto.Label>自动 / 改回下层值</US.Help.ScopeTree.Auto.Label>
+  <US.Help.ScopeTree.Auto.Text>动作范围选"自动"只清除当前层的作用域字段；心情行用"改回下层值"清掉本层记录；两者都回落到下一个生效层给出的数值。</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>导入由 Def 提供的调音基线：展开预设，勾选种族与异种，再按"导入"，把该预设保存的动作与心情调音行写入对应层。没有安装任何预设 Def 时，本卡显示空状态提示。</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标不可用或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
@@ -275,7 +276,7 @@
   <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。</US.Help.XenotypeLayer.Overview>
   <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
   <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
-  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标不可用、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
+  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标未加载、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
   <US.Help.Checklist.Search.Label>搜索框</US.Help.Checklist.Search.Label>
   <US.Help.Checklist.Search.Text>对可见行做忽略大小写的子串过滤，命中范围：包名、defName、Mod 名、作者与包键。</US.Help.Checklist.Search.Text>
   <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
