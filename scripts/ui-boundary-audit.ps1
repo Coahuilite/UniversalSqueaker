@@ -23,13 +23,16 @@
 #      An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
 #
 # Cross-repo: this is one half of a single metric. FerriteLib's containment gate (its HANDOFF item B)
-# counts tree membership on the library side; the two whitelists must agree entry by entry. Since FL
+# counts tree membership on the library side. What the two halves SHARE is the pattern set (the metric);
+# each whitelist is that side's own ratified product, NOT a shared list. Since FL
 # 0.3.0 landed P1/P2/P6, US holds ZERO raw hover calls and ZERO frame gates: every one of them reads
 #  `UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiNative.Button`, and the chrome is the library's
 #  `UiWindowHost`. Since the diagnostics panel moved onto the same machinery (round-9 migration, 2026-09-10)
 # the whitelist holds two exemptions: the frozen camera-indicator branch and the in-world pawn marker
-# (2026-09-12). Cross-repo debt created by the second one: the FL containment gate must add `\bGenMapUI\.`
-# to its pattern set and the matching entry, or the two halves of this metric no longer agree.
+# (2026-09-12). Cross-repo consequence of the second one: FL's pattern set must gain `\bGenMapUI\.` so the
+# shared metric stays one metric - but FL needs NO whitelist entry for it. FL draws nothing in world space
+# (a map layer is a permanent non-goal there), so the term is expected to match ZERO times in its tree; an
+# entry on that side would be a free pass for a boundary it does not draw. Expected shape: FL 0 entries, US 2.
 # Exit code 0 = boundary intact. Run directly or from scripts/verify-local.ps1 (gate 14).
 [CmdletBinding()]
 param(
@@ -39,10 +42,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# The shared pattern set — identical to the FL containment gate's metric, plus ONE ratified addition:
-# `\bGenMapUI\.` (maintainer ruling 2026-09-12, F-19b: the in-world pawn marker stays, so it must be
-# COUNTED and then exempted, not invisible). FL's half of the metric needs the same term before the two
-# halves agree entry by entry; that edit belongs to the FL session, not here.
+# The shared pattern set — the metric both halves run: identical to the FL containment gate's set plus ONE
+# ratified addition, `\bGenMapUI\.` (maintainer ruling 2026-09-12, F-19b: the in-world pawn marker stays,
+# so it must be COUNTED and then exempted, not invisible). FL's set needs the same term to stay one metric;
+# that edit belongs to the FL session. Only the SET is shared — the whitelists are not.
 $BackendPattern = 'Mouse\.IsOver|Event\.current|\bGUI\.|GUIUtility|\bWidgets\.(Button|Label|BeginScrollView|EndScrollView|DrawBoxSolid|TextField)|Verse\.Widgets\.|\bGenMapUI\.'
 
 # Sanctioned exemptions (2, only-shrink). The reason is part of the contract: an entry with no
