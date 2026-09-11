@@ -31,6 +31,7 @@ internal static class Program
             VoiceSchemaStaleDoesNotOverwriteMoodTuning();
             SetActionTuningScopeClearsOnlyTheNamedField();
             SetActionTuningScopeMergesDuplicateRowsFieldWise();
+            SetActionTuningScopeKeepsProvenanceRows();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             TwoPresetsImportIndependentlyAndIdempotently();
@@ -279,6 +280,60 @@ internal static class Program
         Check(settings.actionTuning.Count == 2
             && !ReferenceEquals(probabilityRow, scopeRow),
             "action-scope-write (adversarial order): the multiplier row is kept beside the scope row", ref failures);
+    }
+
+    private static void SetActionTuningScopeKeepsProvenanceRows()
+    {
+        Scenario("4c-action-scope-keeps-provenance");
+
+        // The source is the anchor of "reset to preset" (maintainer request, 2026-09-12): a row that
+        // carries only sourcePresetDefName must survive a scope clear wherever it sits in the identity
+        // group. The verifier's F-N/F-O finding judged such a row deletable because it had no reader;
+        // that reason is gone, so this scenario pins the reversed conclusion.
+        UniversalSqueakerSettings settings = NewSettings();
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset1" },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.Disabled },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", null);
+
+        Check(settings.actionTuning.Count == 1
+            && settings.actionTuning[0].sourcePresetDefName == "us.preset1",
+            "action-scope-null (provenance only): the source-only row survives the clear", ref failures);
+
+        // Provenance and multiplier in separate rows: clearing the scope must keep both.
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset2" },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasIntervalMultiplier = true, intervalMultiplier = 1.5f },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", null);
+
+        Check(settings.actionTuning.Count == 2
+            && settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset2") != null
+            && settings.actionTuning.Find(r => r.hasIntervalMultiplier) != null,
+            "action-scope-null (provenance and multiplier in separate rows): both survive", ref failures);
+
+        // The write path: the scope lands on the last row, the earlier provenance row stays, and a
+        // multiplier stored on that provenance row survives with it.
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset3", hasProbabilityMultiplier = true, probabilityMultiplier = 0.5f },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
+
+        Check(settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset3") != null,
+            "action-scope-write (provenance in the earlier row): provenance survives", ref failures);
+        Check(settings.actionTuning.Find(r => r.hasProbabilityMultiplier) != null,
+            "action-scope-write (provenance row also carries a multiplier): the multiplier survives", ref failures);
+        Check(settings.actionTuning.Find(r => r.hasScope && r.scope == SqueakActionScope.Disabled) != null,
+            "action-scope-write (provenance layout): the written scope is present in the group", ref failures);
     }
 
     private static void SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord()

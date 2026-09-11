@@ -245,10 +245,14 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// scope == null 表示清除本层的**作用域字段**（恢复继承）。
     ///
     /// D2 不变式（**组级**）：本方法只动它点名的那一个字段；同身份行只有在**清空后不再贡献任何字段**
-    /// 时才被删除。判定单位是「同身份组的并集」，不是 last-wins 幸存行——运行时对同身份多行是字段级
-    /// 合并（<c>HasX</c> 取并集、值后写覆盖先写：<c>SqueakRuntimeResolver.cs:117-125</c> +
+    /// 时才被删除。这里的「字段」有**精确定义＝四者之一**：作用域（<c>hasScope</c>）、间隔倍率
+    /// （<c>hasIntervalMultiplier</c>）、概率倍率（<c>hasProbabilityMultiplier</c>）、
+    /// **非空来源（<c>sourcePresetDefName</c>）**——与 <see cref="CarriesAnyActionTuningField"/> 的实现一一对应，
+    /// 不允许两处各有一份解释。判定单位是「同身份组的并集」，不是 last-wins 幸存行——运行时对同身份多行
+    /// 是字段级合并（<c>HasX</c> 取并集、值后写覆盖先写：<c>SqueakRuntimeResolver.cs:117-125</c> +
     /// <c>Pure/SqueakLayeredTuning.cs:33-39</c>），所以较早重复行上的乘数是**活数据**。
     /// interval / probability 两个乘数界面上没有任何控件显示，删掉就是静默丢掉玩家从未见过的数据。
+    /// 来源同理：它是「重置为预设」的锚点（维护者 2026-09-12 要求的功能），删掉就再也找不到那份预设。
     /// 反证：同文件 <see cref="SetMoodTuning"/> 的 "clear" 删整行是**对的**，因为 MoodTuningRecord 承载的
     /// 每个字段都有控件显示；形状相同，字段可见性不同。
     /// </summary>
@@ -339,10 +343,17 @@ public partial class UniversalSqueakerSettings : ModSettings
         QueuePersistence();
     }
 
-    /// <summary>该行是否仍承载运行时折叠会用到的任一字段（作用域 / 间隔倍率 / 概率倍率）。</summary>
+    /// <summary>
+    /// 该行是否仍承载「字段」——这里「字段」是**四者之一**：作用域 / 间隔倍率 / 概率倍率 / 
+    /// 非空 `sourcePresetDefName`（来源）。
+    /// 来源计入承载是**翻转后的裁定**（独立验证最初按「今天无读者」判它可删，但维护者随后要求的
+    /// 「重置为预设」正是它的读者：要靠来源找回那份预设并重套其值 ⇒ 删掉来源就是丢掉这个功能的前提）。
+    /// 因此来源非空的行**不得**因为清作用域或清乘数而被删除；它是否长期保留属于来源账，不是本方法的职责。
+    /// </summary>
     private static bool CarriesAnyActionTuningField(ActionTuningRecord? record)
     {
-        return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier);
+        return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier
+            || !string.IsNullOrEmpty(record.sourcePresetDefName));
     }
 
     /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>
