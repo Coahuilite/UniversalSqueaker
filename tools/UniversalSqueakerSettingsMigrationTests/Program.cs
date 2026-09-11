@@ -14,7 +14,8 @@ namespace UniversalSqueaker.SettingsMigrationTests;
 ///   2. Malformed legacy records fail closed, preserve schema markers, and remain retryable.
 ///   3. A settings-schema-current/voice-schema-stale load never overwrites user moodTuning edits.
 ///   4. SetActionTuningScope(null) clears every duplicate for the same identity.
-///   5. SetMoodTuning with an unknown factor does not create an empty row.
+///   5. SetMoodTuning with an unknown factor does not create an empty row; its "clear" clears every
+///      row's factor fields and only drops rows that carry no factor and no source (F-P).
 ///   6. BaselinePresetImporter last-wins upsert and (race,xeno) composite xenotype selection keys.
 ///   7. AudioDomains.TryCreate rejects whitespace-only race/xeno.
 /// </summary>
@@ -33,6 +34,7 @@ internal static class Program
             SetActionTuningScopeMergesDuplicateRowsFieldWise();
             SetActionTuningScopeKeepsProvenanceRows();
             SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
+            SetMoodTuningClearKeepsProvenanceRows();
             BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
             TwoPresetsImportIndependentlyAndIdempotently();
             AudioDomainsRejectWhitespace();
@@ -370,6 +372,71 @@ internal static class Program
         Check(settings.moodTuning.Count == 1
             && settings.moodTuning[0].mood == SqueakMood.Good,
             "mood-unknown-factor: no empty record inserted", ref failures);
+    }
+
+    private static void SetMoodTuningClearKeepsProvenanceRows()
+    {
+        Scenario("5b-mood-clear-keeps-provenance");
+
+        // F-P: the maintainer's two buttons (reset to default / reset to preset) ask about mood tuning,
+        // so the mood side needs the same source anchor the action side keeps. A row whose payload is
+        // just sourcePresetDefName must survive clear, while the three factor fields are still cleared.
+        UniversalSqueakerSettings settings = NewSettings();
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset1" },
+        };
+
+        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
+
+        Check(settings.moodTuning.Count == 1
+            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset1"
+            && !settings.moodTuning[0].hasPitchFactor
+            && !settings.moodTuning[0].hasVolumeFactor
+            && !settings.moodTuning[0].hasPitchJitter,
+            "mood-clear (source only): the provenance row survives, factors stay cleared", ref failures);
+
+        // Source plus one factor: the factor is cleared, the row and its source stay.
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset2", hasPitchFactor = true, pitchFactor = 1.5f },
+        };
+
+        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
+
+        // "Cleared" is the presence flag, not the stored number: the value stays byte-identical because
+        // nothing reads it while hasPitchFactor is false, and rewriting it would touch data the user never
+        // edited. Same rule as SetActionTuningScope, which clears hasScope and leaves the scope value alone.
+        Check(settings.moodTuning.Count == 1
+            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset2"
+            && !settings.moodTuning[0].hasPitchFactor
+            && settings.moodTuning[0].pitchFactor == 1.5f,
+            "mood-clear (source and one factor): source survives, the factor flag is cleared", ref failures);
+
+        // Adversarial order: a source-only row and a three-factor row share the identity. Only the row
+        // that ends up carrying nothing (no factor, no source) may be dropped.
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset3" },
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasPitchFactor = true, pitchFactor = 1.5f, hasVolumeFactor = true, volumeFactor = 0.5f, hasPitchJitter = true, pitchJitter = new FloatRange(0.9f, 1.1f) },
+        };
+
+        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
+
+        Check(settings.moodTuning.Count == 1
+            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset3",
+            "mood-clear (source row plus three-factor row): only the provenance row survives", ref failures);
+
+        // No source anywhere: clear still removes the row entirely (the pre-F-P behaviour must stay).
+        settings.moodTuning = new List<MoodTuningRecord>
+        {
+            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasVolumeFactor = true, volumeFactor = 0.5f },
+        };
+
+        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
+
+        Check(settings.moodTuning.Count == 0,
+            "mood-clear (no source): the cleared row is still dropped", ref failures);
     }
 
     private static void BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys()

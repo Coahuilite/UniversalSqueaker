@@ -253,8 +253,9 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// <c>Pure/SqueakLayeredTuning.cs:33-39</c>），所以较早重复行上的乘数是**活数据**。
     /// interval / probability 两个乘数界面上没有任何控件显示，删掉就是静默丢掉玩家从未见过的数据。
     /// 来源同理：它是「重置为预设」的锚点（维护者 2026-09-12 要求的功能），删掉就再也找不到那份预设。
-    /// 反证：同文件 <see cref="SetMoodTuning"/> 的 "clear" 删整行是**对的**，因为 MoodTuningRecord 承载的
-    /// 每个字段都有控件显示；形状相同，字段可见性不同。
+    /// 心情侧同形（<see cref="SetMoodTuning"/> 的 "clear"）：清掉组内每一行的三个因子，只删「三因子皆无
+    /// 且没有来源」的行。那句「MoodTuningRecord 的每个字段都有控件所以可以删整行」的旧理由现在不成立：
+    /// 来源同样没有控件，而维护者要的「重置为预设」按钮正是问心情调制，所以心情侧也必须留住来源锚点。
     /// </summary>
     internal void SetActionTuningScope(string actionKey, string raceDefName, string xenotypeDefName, SqueakActionScope? scope)
     {
@@ -356,6 +357,23 @@ public partial class UniversalSqueakerSettings : ModSettings
             || !string.IsNullOrEmpty(record.sourcePresetDefName));
     }
 
+    /// <summary>心情记录是否仍承载任何可编辑字段：三个因子之一，或非空来源（锚点）。与
+    /// <see cref="CarriesAnyActionTuningField"/> 同形；判定单位同样是「同身份组的并集」，不是 last-wins 幸存行。</summary>
+    private static bool CarriesAnyMoodTuningField(MoodTuningRecord? record)
+    {
+        return record != null && (record.hasPitchFactor || record.hasVolumeFactor || record.hasPitchJitter
+            || !string.IsNullOrEmpty(record.sourcePresetDefName));
+    }
+
+    /// <summary>心情记录的 (mood, race, xenotype) 身份比较，供 upsert、去重与清除共用。</summary>
+    private static bool SameMoodTuningIdentity(MoodTuningRecord? candidate, SqueakMood mood, string raceDefName, string xenotypeDefName)
+    {
+        return candidate != null
+            && candidate.mood == mood
+            && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
+    }
+
     /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>
     private static bool SameActionTuningIdentity(ActionTuningRecord? candidate, string actionKey, string raceDefName, string xenotypeDefName)
     {
@@ -366,8 +384,10 @@ public partial class UniversalSqueakerSettings : ModSettings
     }
 
     /// <summary>写一条分层心情调音：Upsert 到 moodTuning（last-wins 按 (mood,raceDefName,xenotypeDefName)）。
-    /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 移除整行
-    /// 记录（恢复继承）。走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
+    /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 清掉同
+    /// 身份组内**每一行**的三个因子字段（恢复继承），并只删「三因子皆无且来源为空」的行——非空
+    /// <c>sourcePresetDefName</c> 是「重置为预设」的锚点，与 <see cref="SetActionTuningScope"/> 同一条规则，
+    /// 承载判定见 <see cref="CarriesAnyMoodTuningField"/>。走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
     internal void SetMoodTuning(SqueakMood mood, string raceDefName, string xenotypeDefName, string factor, float? value)
     {
         moodTuning ??= new List<MoodTuningRecord>();
@@ -380,11 +400,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         int index = -1;
         for (int i = 0; i < moodTuning.Count; i++)
         {
-            MoodTuningRecord candidate = moodTuning[i];
-            if (candidate != null
-                && candidate.mood == mood
-                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+            if (SameMoodTuningIdentity(moodTuning[i], mood, raceDefName, xenotypeDefName))
             {
                 index = i;
             }
@@ -392,11 +408,21 @@ public partial class UniversalSqueakerSettings : ModSettings
 
         if (string.Equals(factor, "clear", StringComparison.Ordinal))
         {
-            // 清全部匹配行（含陈旧重复）= 恢复继承。
-            moodTuning.RemoveAll(c => c != null
-                && c.mood == mood
-                && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
+            // 恢复继承 = 清掉同身份组内**每一行**的三个因子字段（来源字段本身不动），然后只删不再
+            // 承载任何字段的行。来源非空的行必须留下：它是「重置为预设」的锚点（F-P，维护者要的
+            // 两个按钮问的就是心情调制）。只删「三因子皆无且来源为空」的行，因此清单不会长出空行。
+            foreach (MoodTuningRecord row in moodTuning)
+            {
+                if (SameMoodTuningIdentity(row, mood, raceDefName, xenotypeDefName))
+                {
+                    row.hasPitchFactor = false;
+                    row.hasVolumeFactor = false;
+                    row.hasPitchJitter = false;
+                }
+            }
+
+            moodTuning.RemoveAll(c => SameMoodTuningIdentity(c, mood, raceDefName, xenotypeDefName)
+                && !CarriesAnyMoodTuningField(c));
             NotifyContinuousXenotypeRuntimeChanged();
             QueuePersistence();
             return;
