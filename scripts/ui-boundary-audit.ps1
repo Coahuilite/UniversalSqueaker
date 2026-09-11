@@ -36,7 +36,7 @@
 # (2026-09-12). Cross-repo consequence of the second one: FL's pattern set must gain `\bGenMapUI\.` so the
 # shared metric stays one metric - but FL needs NO whitelist entry for it. FL draws nothing in world space
 # (a map layer is a permanent non-goal there), so the term is expected to match ZERO times in its tree; an
-# entry on that side would be a free pass for a boundary it does not draw. Expected shape: FL 0 entries, US 2.
+# entry on that side would be a free pass for a boundary it does not draw. Expected shape: FL 0 renderer-axis entries; US 2 renderer-axis + 1 contract-axis (Mod.cs).
 # Exit code 0 = boundary intact. Run directly or from scripts/verify-local.ps1 (gate 14).
 [CmdletBinding()]
 param(
