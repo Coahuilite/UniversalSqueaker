@@ -334,6 +334,26 @@ internal static class Program
             "action-scope-write (provenance row also carries a multiplier): the multiplier survives", ref failures);
         Check(settings.actionTuning.Find(r => r.hasScope && r.scope == SqueakActionScope.Disabled) != null,
             "action-scope-write (provenance layout): the written scope is present in the group", ref failures);
+
+        // The write path with a *source-only* row: the F-J loss happened on exactly this side of the
+        // ledger, so the write path may not be weaker than the clear path here. The row must survive,
+        // and the write must not gift it any tuning value it did not carry (scope stays unset, both
+        // multipliers stay at their defaults).
+        settings.actionTuning = new List<ActionTuningRecord>
+        {
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset4" },
+            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
+        };
+
+        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
+
+        ActionTuningRecord? sourceOnly = settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset4");
+        Check(sourceOnly != null,
+            "action-scope-write (source-only row): the row survives the write", ref failures);
+        Check(sourceOnly != null && !sourceOnly.hasScope
+            && !sourceOnly.hasIntervalMultiplier && !sourceOnly.hasProbabilityMultiplier
+            && sourceOnly.intervalMultiplier == 1f && sourceOnly.probabilityMultiplier == 1f,
+            "action-scope-write (source-only row): the write gifts it no tuning value", ref failures);
     }
 
     private static void SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord()
