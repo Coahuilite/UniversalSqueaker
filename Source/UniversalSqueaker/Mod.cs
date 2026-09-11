@@ -14,9 +14,10 @@ public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
     /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against: the 0.3.0 contract
-    /// axis, i.e. the FL 0.3.0 migration (P1 hover seam, P2 <c>UiWindowHost</c> chrome, P3 session
-    /// hover-claim machine, P4 <c>UiBindings.ActiveTabKey</c>, P6 layout-event seam). Pre-1.0 any
+    /// The FerriteLib API range this build of US was compiled and verified against: the 0.4.0 contract
+    /// axis (the FL 0.4.0 migration; the previous 0.3.0 window carried the P1 hover seam, P2
+    /// <c>UiWindowHost</c> chrome, P3 session hover-claim machine, P4 <c>UiBindings.ActiveTabKey</c>
+    /// and P6 layout-event seam). Pre-1.0 any
     /// public-surface change bumps the library's minor, so the accepted window is exactly one minor
     /// wide and a consumer newer than the loaded carrier fails Require with a readable report instead
     /// of exploding as a TypeLoadException at first draw. The kernel-host harness reads this pair out
@@ -24,8 +25,8 @@ public class UniversalSqueakerMod : Mod
     /// Verse.Mod to load), and asserts it against the Api of the carrier it linked, so a carrier
     /// advance reddens a gate instead of a window and the range cannot be restated wrong in a test.
     /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 3, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 4, 0);
+    private static readonly Version PrerequisiteApiMin = new Version(0, 4, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 5, 0);
 
     /// <summary>
     /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a
