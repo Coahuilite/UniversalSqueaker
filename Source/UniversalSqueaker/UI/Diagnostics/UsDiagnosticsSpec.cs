@@ -17,30 +17,32 @@ public static class UsDiagnosticsSpec
     public static string MainXml => string.Join(
         "\n",
         PageHead,
+        // The collapsed bar is its own page-wide root (09 §3.3 rule 2): as the Row's third child it
+        // inherited a 250px list row's width and painter, which is exactly the reported defect.
+        "  <Widget Id=\"diag-bar\" Kind=\"us/diag/bar\" />",
         "  <Row Id=\"diag-root\" Gap=\"8\" Padding=\"8\">",
-        "    <Column Id=\"diag-list-col\" Width=\"250\" Fill=\"true\">",
+        "    <Column Id=\"diag-list-col\" Width=\"232\" Fill=\"true\">",
         "      <Widget Id=\"diag-toolbar\" Kind=\"us/diag/toolbar\" Scope=\"main\" />",
         "      <Scroll Id=\"diag-list-scroll\" Fill=\"true\" Gap=\"2\">",
         "        <Widget Id=\"diag-list\" Kind=\"us/diag/list\" />",
         "      </Scroll>",
         "      <Widget Id=\"diag-pager\" Kind=\"us/diag/pager\" />",
         "    </Column>",
-        "    <Scroll Id=\"diag-detail-scroll\" Width=\"262\" Fill=\"true\" Gap=\"4\">",
+        "    <Scroll Id=\"diag-detail-scroll\" Width=\"320\" Fill=\"true\" Gap=\"4\">",
         "      <Widget Id=\"diag-detail\" Kind=\"us/diag/detail\" Scope=\"main\" />",
         "    </Scroll>",
-        "    <Widget Id=\"diag-monitor\" Kind=\"us/diag/monitor\" />",
         "  </Row>",
         PageTail);
 
     public static string DetailXml => string.Join(
         "\n",
         PageHead,
+        "  <Widget Id=\"lock-bar\" Kind=\"us/diag/bar\" />",
         "  <Column Id=\"lock-root\" Gap=\"4\" Padding=\"8\">",
         "    <Widget Id=\"lock-toolbar\" Kind=\"us/diag/toolbar\" Scope=\"lock\" />",
         "    <Scroll Id=\"lock-detail-scroll\" Fill=\"true\" Gap=\"4\">",
         "      <Widget Id=\"lock-detail\" Kind=\"us/diag/detail\" Scope=\"lock\" />",
         "    </Scroll>",
-        "    <Widget Id=\"lock-monitor\" Kind=\"us/diag/monitor\" />",
         "  </Column>",
         PageTail);
 }

@@ -150,7 +150,6 @@ public sealed class UsHelpPanelWidget : IUiWidget
         string header = HeaderText(ctx, display);
         Rect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
         UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
-        UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
         y += headerRect.height + TitleGap;
 
         y += ContentGap;

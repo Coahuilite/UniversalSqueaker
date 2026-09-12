@@ -56,6 +56,9 @@ public static class UsDiagnosticsHost
     public const string KeyCanLock = "diag-can-lock";
     public const string KeyLock = "diag-lock";
     public const string KeyRowClick = "diag-row-click";
+    public const string KeyBar = "diag-bar";
+    public const string KeyRawOpen = "diag-raw-open";
+    public const string KeyClose = "diag-close";
 
     private static UiBindings BuildBindings(IUsDiagnosticsSource source, DiagRevisionBumper bumper)
     {
@@ -72,10 +75,13 @@ public static class UsDiagnosticsHost
         b.BindReadOnly<int>(KeyPageCount, () => source.PageCount);
         b.BindReadOnly<UsDiagDetail?>(KeyDetail, () => source.Detail);
         b.BindReadOnly<UsDiagRow?>(KeyMonitor, () => source.MonitorRow);
+        b.BindReadOnly<UsDiagBarModel>(KeyBar, () => source.Bar!);
         b.BindReadOnly<bool>(KeyCanLock, () => source.CanLockDisplayed);
+        b.BindValue<bool>(KeyRawOpen, () => source.RawOpen, value => { source.RawOpen = value; bump(); });
 
         b.BindAction<int>(KeyLock, _ => source.LockDisplayed());
         b.BindAction<int>(KeyRowClick, pawnId => source.ClickRow(pawnId));
+        b.BindCommand(KeyClose, source.RequestClose);
 
         return b;
     }
@@ -114,7 +120,7 @@ public static class UsDiagnosticsWidgetRegistrar
             UsDiagListWidget.Register();
             UsDiagPagerWidget.Register();
             UsDiagDetailWidget.Register();
-            UsDiagMonitorWidget.Register();
+            UsDiagBarWidget.Register();
             registered = true;
         }
     }

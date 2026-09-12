@@ -12,14 +12,14 @@ namespace UniversalSqueaker;
 /// row click or lock button detaches a pawn's details, tracked off-screen until it is closed or
 /// unlocked - closing IS the unlock (the overlay's NotifyDetailWindowClosed), and the pawn dying,
 /// despawning or the session ending closes this window in return (IsValid self-check).
-/// Same shell, same widget family, page without list/pager/search; its monitor bar shows its own
-/// pawn's summary row. Zero raw backend calls, so it never joins the gate 14 whitelist.
+/// Same shell, same widget family, page without list/pager/search; its collapsed bar identifies the
+/// pinned pawn (09 §3.3 rule 5). Zero raw backend calls, so it never joins the gate 14 whitelist.
 /// </summary>
 internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 {
     private const float KeepGrabPx = 24f;
     private const float EscArmSeconds = 3f;
-    private const float BarContentHeight = 26f;
+    private const float BarContentHeight = UsDiagBarWidget.BarHeight;
 
     private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
 
@@ -47,7 +47,8 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         onlyDrawInDevMode = true;
     }
 
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(320f, 480f);
+    // 320 -> 340: the same 40/60 value column the main panel now gives its detail (defect D4).
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(340f, 480f);
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -64,7 +65,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         // Self-close the moment the pinned pawn stopped being tracked (dead/despawned/map change/
         // session end). BeforeDraw is inside THIS window's own pass, so Close here is the same
         // mid-draw close a button click performs.
-        if (!source.IsValid)
+        if (!source.IsValid || source.CloseRequested)
         {
             Close();
             return;

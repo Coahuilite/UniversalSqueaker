@@ -151,12 +151,15 @@ public static class UsKernelDraw
             }
         }
 
+        // Accent discipline (05 §3.1): a filled trigger means "this field carries a value", which is
+        // not one of the accent's three uses. Openness stays a plane change (Selected fill with the
+        // stronger neutral border), never a hue change; the text is always TextPrimary.
         bool open = ctx.Session.IsPopupOpen(elementId);
         UiThemeDraw.Surface(
             rect,
             ctx.Theme,
             open ? ctx.Theme.Selected : ctx.Theme.Raised,
-            open || current.Length > 0 ? ctx.Theme.AccentGold : ctx.Theme.Border);
+            open ? ctx.Theme.BorderStrong : ctx.Theme.Border);
         // D9 (2026-09-06 in-game): the trigger column is a fixed width, so a selected label that
         // outgrows it (long author credits, pack names) clipped. The trigger ellipsizes through the
         // same metrics seam the fit audit measures with, so the cut is deliberate, not silent.
@@ -166,7 +169,7 @@ public static class UsKernelDraw
             new Rect(rect.x + 6f, rect.y, triggerTextWidth, rect.height),
             triggerDisplay,
             ctx.Theme,
-            current.Length > 0 ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+            ctx.Theme.TextPrimary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft,
             singleLine: true);
@@ -272,10 +275,12 @@ public static class UsKernelDraw
             Mathf.Max(1f, rect.height - UsCardLayout.HeaderHeight - UsCardLayout.HeaderGap - UsCardLayout.Padding * 2f));
     }
 
-    /// <summary>Accent border drawn around the card the help panel is currently explaining (follows the live hover claim).</summary>
+    /// <summary>Border drawn around the card the help panel is currently explaining (follows the live
+    /// hover claim). Neutral BorderStrong rather than the accent: the help claim is not one of the
+    /// accent's three uses (05 §3.1).</summary>
     public static void DrawHelpFocusBorder(Rect rect, UiTheme theme, bool focused)
     {
         if (!focused) return;
-        UiThemeDraw.Surface(rect, theme, Color.clear, theme.AccentGold);
+        UiThemeDraw.Surface(rect, theme, Color.clear, theme.BorderStrong);
     }
 }

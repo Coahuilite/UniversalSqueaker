@@ -66,15 +66,18 @@ public sealed class UsKernelFooterWidget : IUiWidget
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
+        // Accent discipline (05 §3.1): "saving" and "dirty" are activity, not "currently in effect" -
+        // the ● prefix and the text already carry that, so the color only steps up from secondary to
+        // primary. The destructive/handling failure keeps its status color (Danger).
         Color statusColor = saveStatus switch
         {
             "Failed" => ctx.Theme.Danger,
-            "Saving" => ctx.Theme.AccentGold,
+            "Saving" => ctx.Theme.TextPrimary,
             _ => ctx.Theme.TextSecondary,
         };
         if (isDirty && saveStatus != "Failed")
         {
-            statusColor = ctx.Theme.AccentGold;
+            statusColor = ctx.Theme.TextPrimary;
         }
 
         string prefix = saveStatus == "Saving" || isDirty ? "● " : "";

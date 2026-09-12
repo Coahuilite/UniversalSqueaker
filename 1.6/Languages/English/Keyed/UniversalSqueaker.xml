@@ -290,4 +290,34 @@
   <US.Help.Checklist.Row.Label>VoicePack Row</US.Help.Checklist.Row.Label>
   <US.Help.Checklist.Row.Text>Each row shows the pack name, the mod and author line, and its action coverage; clicking anywhere on the row toggles that VoicePack for the domain.</US.Help.Checklist.Row.Text>
   <US.Help.Checklist.Forget.Text>Removes the saved selections whose pack keys are no longer installed; the button appears only inside the stale-selection banner and affects the current domain only.</US.Help.Checklist.Forget.Text>
+  <US.Diagnostics.Section.Verdict>Verdict</US.Diagnostics.Section.Verdict>
+  <US.Diagnostics.Section.Raw>Raw values</US.Diagnostics.Section.Raw>
+  <US.Diagnostics.Section.ChainCount>Gate chain ({0})</US.Diagnostics.Section.ChainCount>
+  <US.Diagnostics.Verdict.Play>Will squeak</US.Diagnostics.Verdict.Play>
+  <US.Diagnostics.Verdict.Blocked>Blocked at: {0}</US.Diagnostics.Verdict.Blocked>
+  <US.Diagnostics.Verdict.Pending>Not confirmed yet</US.Diagnostics.Verdict.Pending>
+  <US.Diagnostics.Gates.FirstBlock>first block: {0}</US.Diagnostics.Gates.FirstBlock>
+  <US.Diagnostics.Gates.NoneBlocked>nothing blocked</US.Diagnostics.Gates.NoneBlocked>
+  <US.Diagnostics.Gate.BlockMark>blocked</US.Diagnostics.Gate.BlockMark>
+  <US.Diagnostics.Gate.Group.Game>Game side</US.Diagnostics.Gate.Group.Game>
+  <US.Diagnostics.Gate.Group.Rules>Rules side</US.Diagnostics.Gate.Group.Rules>
+  <US.Diagnostics.Gate.Group.Audio>Audio side</US.Diagnostics.Gate.Group.Audio>
+  <US.Diagnostics.Raw.Show>Show raw values</US.Diagnostics.Raw.Show>
+  <US.Diagnostics.Raw.Hide>Hide raw values</US.Diagnostics.Raw.Hide>
+  <US.Diagnostics.Bar.Identity>Sound log</US.Diagnostics.Bar.Identity>
+  <US.Diagnostics.Bar.IdentityLocked>Sound log (locked: {0})</US.Diagnostics.Bar.IdentityLocked>
+  <US.Diagnostics.Bar.Scale>{0} targets</US.Diagnostics.Bar.Scale>
+  <US.Diagnostics.Bar.Recording>Recording</US.Diagnostics.Bar.Recording>
+  <US.Diagnostics.Bar.Paused>Paused</US.Diagnostics.Bar.Paused>
+  <US.Diagnostics.Bar.Activity.Recent>Last {0}  {1}  {2}</US.Diagnostics.Bar.Activity.Recent>
+  <US.Diagnostics.Bar.Activity.Never>No sound received yet</US.Diagnostics.Bar.Activity.Never>
+  <US.Diagnostics.Bar.Activity.Stale>{0} min without a sound, last {1}</US.Diagnostics.Bar.Activity.Stale>
+  <US.Diagnostics.Bar.Expand>Expand</US.Diagnostics.Bar.Expand>
+  <US.Diagnostics.Bar.Close>Close</US.Diagnostics.Bar.Close>
+  <US.Diagnostics.Dot.Ready>ready</US.Diagnostics.Dot.Ready>
+  <US.Diagnostics.Dot.Blocked>blocked</US.Diagnostics.Dot.Blocked>
+  <US.Diagnostics.Dot.Pending>waiting</US.Diagnostics.Dot.Pending>
+  <US.Diagnostics.Dot.Unknown>untracked</US.Diagnostics.Dot.Unknown>
+  <US.Diagnostics.Pager.Prev>Prev</US.Diagnostics.Pager.Prev>
+  <US.Diagnostics.Pager.Next>Next</US.Diagnostics.Pager.Next>
 </LanguageData>

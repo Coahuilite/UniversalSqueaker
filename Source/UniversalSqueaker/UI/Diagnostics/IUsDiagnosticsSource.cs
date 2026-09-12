@@ -32,6 +32,21 @@ public interface IUsDiagnosticsSource
     /// <summary>The collapsed-bar row (main: last CHANGED pawn; lock window: its own pawn).</summary>
     UsDiagRow? MonitorRow { get; }
 
+    /// <summary>
+    /// The collapsed bar's three answers, already projected and translated (09 §3.3): what this is,
+    /// whether it is on, and what it last did. Null only before a page has anything to say.
+    /// </summary>
+    UsDiagBarModel? Bar { get; }
+
+    /// <summary>The detail column's raw-values block: folded by default, so evidence never leads.</summary>
+    bool RawOpen { get; set; }
+
+    /// <summary>True once the bar's close action asked this page to end. The WINDOW closes in its own pass.</summary>
+    bool CloseRequested { get; }
+
+    /// <summary>The bar's close action: a page-level request, never a direct window close.</summary>
+    void RequestClose();
+
     bool CanLockDisplayed { get; }
 
     void ClickRow(int pawnId);

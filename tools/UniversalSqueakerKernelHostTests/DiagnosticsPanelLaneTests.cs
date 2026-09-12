@@ -25,7 +25,12 @@ internal static class DiagnosticsPanelLaneTests
         Step("detail host validates the lock page", DetailHostCreation);
         Step("view writes route to the source and bump the session clock", WritesRouteAndBump);
         Step("row click and lock actions route through the source", ActionsRoute);
-        Step("collapse swaps columns and monitor bar on the session clock", CollapseReflow);
+        Step("collapse swaps columns and the bar on the session clock", CollapseReflow);
+        Step("collapsed bar answers the three questions (09 §3.3)", CollapsedBarAnswers);
+        Step("expanded detail leads with the verdict and groups the chain", VerdictAndGroupedChain);
+        Step("raw values fold by default", RawFoldsByDefault);
+        Step("the bar's close action routes as a page request", CloseRoutes);
+        Step("a glyph the font cannot draw becomes its word (D7)", MissingGlyphFallsBack);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
     }
 
@@ -70,21 +75,60 @@ internal static class DiagnosticsPanelLaneTests
                     throw new InvalidOperationException("planted projection failure");
                 }
 
+                List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
                 return new UsDiagDetail(
                     "Violet (Human)",
-                    true,
+                    false,
                     false,
                     "Work",
                     "[XenotypePack·craftsmen-xeno] : Squeak_Happy_03",
-                    UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), key => key));
+                    gates,
+                    UsDiagnosticsProjection.BuildVerdict(false, gates, Tr));
             }
         }
 
         public UsDiagRow? MonitorRow => Rows.Count > 0 ? Rows[0] : null;
+
+        /// <summary>The bar's three answers, projected from the same fake rows the list uses.</summary>
+        public UsDiagBarModel? Bar => UsDiagnosticsProjection.BuildBar(
+            new UsDiagBarFacts
+            {
+                TotalTargets = Rows.Count,
+                HasMonitorRow = Rows.Count > 0,
+                PawnText = Rows.Count > 0 ? Rows[0].PawnText : string.Empty,
+                ActionText = Rows.Count > 0 ? Rows[0].ActionText : string.Empty,
+                AudioText = Rows.Count > 0 ? Rows[0].AudioText : string.Empty,
+                MonitorTone = Rows.Count > 0 ? Rows[0].Tone : UsDiagDotTone.Unknown,
+                HasLastEvent = true,
+                LastEventTimeText = "12:04:09",
+                MinutesSinceLastEvent = 0,
+            },
+            Tr);
+
+        public bool RawOpen { get; set; }
+        public bool CloseRequested { get; private set; }
+        public void RequestClose() => CloseRequested = true;
+
         public bool CanLockDisplayed { get; set; } = true;
 
         public void ClickRow(int pawnId) => LastClickedPawnId = pawnId;
         public void LockDisplayed() => LockCalls++;
+
+        /// <summary>
+        /// The format-shaped half of the translation stub: the new sentences carry their placeholders in
+        /// the translated value (the language files hold them), so a lane that returned the bare key
+        /// everywhere would assert nothing about substitution.
+        /// </summary>
+        private static string Tr(string key) => key switch
+        {
+            "US.Diagnostics.Bar.Scale" => "{0} targets",
+            "US.Diagnostics.Bar.IdentityLocked" => "Sound log (locked: {0})",
+            "US.Diagnostics.Bar.Activity.Recent" => "Last {0} {1} {2}",
+            "US.Diagnostics.Bar.Activity.Stale" => "{0} min without a sound, last {1}",
+            "US.Diagnostics.Verdict.Blocked" => "Blocked at: {0}",
+            "US.Diagnostics.Gates.FirstBlock" => "first block: {0}",
+            _ => key,
+        };
     }
 
     private static void FillRows(FakeDiagnosticsSource fake, int count)
@@ -175,20 +219,115 @@ internal static class DiagnosticsPanelLaneTests
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 8);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
-        Vector2 size = new(620f, 560f);
+        Vector2 size = new(680f, 560f); // the panel's round-10 geometry (620 -> 680, lead-authorised)
 
         UiLayoutSnapshot open = host.MeasureAndArrange(size);
         Assert(open.RectById.TryGetValue("diag-list", out Rect listRect) && listRect.height > 0f,
             "expanded: list column has height");
-        Assert(!open.RectById.TryGetValue("diag-monitor", out Rect monitorOpen) || monitorOpen.height <= 0f,
-            "expanded: monitor bar measures zero");
+        Assert(!open.RectById.TryGetValue("diag-bar", out Rect barOpen) || barOpen.height <= 0f,
+            "expanded: the bar measures zero");
 
         host.Bindings.Set(UsDiagnosticsHost.KeyCollapsed, true);
         UiLayoutSnapshot bar = host.MeasureAndArrange(size);
-        Assert(bar.RectById.TryGetValue("diag-monitor", out Rect monitorBar) && monitorBar.height > 0f,
-            "collapsed: monitor bar has height (same session, one binding flip - the bar ruling)");
+        Assert(bar.RectById.TryGetValue("diag-bar", out Rect barRect) && barRect.height > 0f,
+            "collapsed: the bar has height (same session, one binding flip - the bar ruling)");
+        Assert(Math.Abs(barRect.width - size.x) <= 0.5f,
+            "collapsed: the bar spans the full page width, got " + barRect.width + " (the defect was a bar squeezed into the 250px list column)");
         Assert((bar.RectById.TryGetValue("diag-list", out Rect listBar) ? listBar.height : 0f) <= 0f,
             "collapsed: list column measures zero");
+    }
+
+    private static void CollapsedBarAnswers()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 8);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.Bindings.Set(UsDiagnosticsHost.KeyCollapsed, true);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
+        Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyBar, out UsDiagBarModel? bar) && bar != null,
+            "the collapsed bar reads its model through the real host (typed binding, not a paint-side lookup)");
+        Assert(bar!.Identity.Length > 0, "what is this: the bar carries an identity segment");
+        Assert(bar.SwitchText.Length > 0, "is it on: the bar carries a switch segment");
+        Assert(bar.Activity.Length > 0, "what is it doing: the bar carries an activity sentence");
+        Assert(bar.Scale.Contains("8"), "and the tracking scale, got " + bar.Scale);
+        Assert(bar.Activity.Contains("12:04:09"), "the activity sentence carries the event time, got " + bar.Activity);
+    }
+
+    private static void VerdictAndGroupedChain()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 8);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null,
+            "the detail binding still projects a model");
+        Assert(detail!.Verdict.Length > 0, "the expanded state leads with a verdict sentence");
+
+        int first = UsDiagnosticsProjection.FirstBlockedIndex(detail.Gates);
+        Assert(first >= 0 && detail.Gates[first].State == UsDiagGateState.Block,
+            "the fake's chain is blocked, so a first block exists to mark");
+        Assert(detail.Verdict.Contains(detail.Gates[first].Name),
+            "the verdict names that same gate: '" + detail.Verdict + "'");
+
+        int game = 0, rules = 0, audio = 0;
+        foreach (UsDiagGateLine gate in detail.Gates)
+        {
+            if (gate.Group == UsDiagGateGroup.Game) game++;
+            else if (gate.Group == UsDiagGateGroup.Rules) rules++;
+            else audio++;
+        }
+
+        Assert(game == 4 && rules == 7 && audio == 5, "all three sides survive the projection, got " + game + "/" + rules + "/" + audio);
+
+        host.DrawFrame(new Rect(0f, 0f, 680f, 560f));
+        Assert(host.Session.IsActive, "the grouped chain draws inside a full real frame");
+    }
+
+    private static void RawFoldsByDefault()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 8);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        Assert(!fake.RawOpen, "raw values start folded: evidence never leads");
+
+        UiLayoutSnapshot folded = host.MeasureAndArrange(new Vector2(680f, 560f));
+        // Through the binding: the fold is page state on the same session clock as every other write.
+        host.Bindings.Set(UsDiagnosticsHost.KeyRawOpen, true);
+        Assert(fake.RawOpen, "the fold write routes to the source");
+        UiLayoutSnapshot open = host.MeasureAndArrange(new Vector2(680f, 560f));
+        Assert(open.RectById["diag-detail"].height > folded.RectById["diag-detail"].height,
+            "unfolding the raw block adds its two rows to the detail column");
+    }
+
+    private static void CloseRoutes()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 8);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.Bindings.Invoke(UsDiagnosticsHost.KeyClose);
+        Assert(fake.CloseRequested,
+            "the bar's close action sets a page-level request; the window, not the widget, closes");
+    }
+
+    private static void MissingGlyphFallsBack()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        UiWidgetContext ctx = host.CreateContext(200f);
+
+        string drawn = UsDiagGlyphs.DotText(ctx, UsDiagDotTone.Blocked, _ => true);
+        string arrow = UsDiagGlyphs.PrevText(ctx, _ => true);
+        string word = UsDiagGlyphs.DotText(ctx, UsDiagDotTone.Blocked, _ => false);
+        string wordArrow = UsDiagGlyphs.PrevText(ctx, _ => false);
+
+        Assert(drawn == UsDiagGlyphs.Dot && arrow == UsDiagGlyphs.Prev,
+            "a drawable glyph is used as-is");
+        Assert(word == UsDiagnosticsProjection.DotFallbackKey(UsDiagDotTone.Blocked),
+            "a missing dot becomes the tone's state word, got '" + word + "'");
+        Assert(word != "US.Diagnostics.Dot.Ready", "and the word is the tone's own, not a fixed placeholder");
+        Assert(wordArrow == "US.Diagnostics.Pager.Prev",
+            "a missing pager arrow becomes its word, got '" + wordArrow + "'");
     }
 
     private static void ThrowingSourceRecovers()

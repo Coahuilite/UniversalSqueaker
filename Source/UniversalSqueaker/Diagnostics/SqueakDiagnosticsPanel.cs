@@ -20,7 +20,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 {
     private const float KeepGrabPx = 24f;
     private const float EscArmSeconds = 3f;
-    private const float BarContentHeight = 26f;
+    // 09 §3.3's authorised collapsed geometry (26 -> 32); the bar widget owns the number.
+    private const float BarContentHeight = UsDiagBarWidget.BarHeight;
 
     private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
 
@@ -45,7 +46,9 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         onlyDrawInDevMode = true;
     }
 
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(620f, 560f);
+    // 620 -> 680 (lead-authorised, dev-only): the detail column needs 320 for its 40/60 value split
+    // without ellipsizing Chinese values (defect D4).
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(680f, 560f);
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -61,6 +64,14 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     /// chrome + one row, restore the remembered rect on expand.</summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        // The collapsed bar carries a visible close (09 §3.3 rule 3): about-to-draw is the same
+        // mid-draw close point the detail window already uses for its IsValid self-check.
+        if (source.CloseRequested)
+        {
+            Close();
+            return;
+        }
+
         bool collapsed = source.Collapsed;
         if (collapsed == lastCollapsed)
         {

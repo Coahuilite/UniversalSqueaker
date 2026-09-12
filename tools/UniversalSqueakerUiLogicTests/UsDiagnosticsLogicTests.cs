@@ -19,6 +19,10 @@ internal static class UsDiagnosticsLogicTests
         CooldownPairRules();
         DispatchLabelRules();
         PageMathRules();
+        CollapsedBarRules();
+        BarDegradationRules();
+        VerdictAndGroupRules();
+        NumericColumnRules();
     }
 
     private sealed class Key : IEquatable<Key>
@@ -84,6 +88,22 @@ internal static class UsDiagnosticsLogicTests
     }
 
     private static string Tr(string key) => key; // machine identity: the lane asserts KEYS and STRUCTURE.
+
+    /// <summary>
+    /// The round-10 sentences are FORMAT keys whose placeholders live in the translated value (the
+    /// language files hold them), so this stub mirrors that shape - otherwise the lane would assert
+    /// against a bare key and prove nothing about substitution.
+    /// </summary>
+    private static string Fmt(string key) => key switch
+    {
+        "US.Diagnostics.Bar.Scale" => "{0} targets",
+        "US.Diagnostics.Bar.IdentityLocked" => "Sound log (locked: {0})",
+        "US.Diagnostics.Bar.Activity.Recent" => "Last {0} {1} {2}",
+        "US.Diagnostics.Bar.Activity.Stale" => "{0} min without a sound, last {1}",
+        "US.Diagnostics.Verdict.Blocked" => "Blocked at: {0}",
+        "US.Diagnostics.Gates.FirstBlock" => "first block: {0}",
+        _ => key,
+    };
 
     private static UsDiagGateFacts NormalFacts() => new()
     {
@@ -201,6 +221,153 @@ internal static class UsDiagnosticsLogicTests
             "page count is ceiling division with a floor of one");
         Assert(UsDiagnosticsProjection.ClampPage(99, 9) == 1 && UsDiagnosticsProjection.ClampPage(-5, 9) == 0
             && UsDiagnosticsProjection.ClampPage(4, 0) == 0, "page clamps into range for any count");
+    }
+
+
+    // --- round-10 (09 §3.3): the collapsed bar must answer three questions in words ----------------
+
+    private static UsDiagBarFacts BarFacts(bool hasEvent, string time, int minutesAgo) => new()
+    {
+        Locked = false,
+        TotalTargets = 8,
+        HasMonitorRow = true,
+        GamePaused = false,
+        PawnText = "格里姆",
+        ActionText = "打招呼",
+        AudioText = "已播",
+        MonitorTone = UsDiagDotTone.Ready,
+        HasLastEvent = hasEvent,
+        LastEventTimeText = time,
+        MinutesSinceLastEvent = minutesAgo,
+    };
+
+    private static void CollapsedBarRules()
+    {
+        UsDiagBarModel recent = UsDiagnosticsProjection.BuildBar(BarFacts(true, "12:04:09", 0), Fmt);
+        Assert(recent.Identity.Length > 0, "the bar answers 'what is this' (identity segment is never empty)");
+        Assert(recent.SwitchText.Length > 0, "the bar answers 'is it on' (switch segment is never empty)");
+        Assert(recent.Activity.Length > 0, "the bar answers 'what is it doing' (activity segment is never empty)");
+        Assert(recent.Scale.Contains("8"), "the scale figure carries the tracking count, got " + recent.Scale);
+        Assert(recent.Activity.Contains("12:04:09") && recent.Activity.Contains("格里姆"),
+            "the recent sentence carries the event time and the subject, got " + recent.Activity);
+
+        UsDiagBarModel never = UsDiagnosticsProjection.BuildBar(BarFacts(false, string.Empty, 0), Fmt);
+        UsDiagBarModel stale = UsDiagnosticsProjection.BuildBar(BarFacts(true, "12:01:00", 3), Fmt);
+        Assert(never.Activity != stale.Activity && never.Activity != recent.Activity && stale.Activity != recent.Activity,
+            "'never received' and 'was receiving, now stopped' must read differently (09 §3.3's new projection)");
+        Assert(never.Activity == "US.Diagnostics.Bar.Activity.Never",
+            "a recorder that never heard anything says so, got " + never.Activity);
+        Assert(stale.Activity.Contains("3"), "the stopped sentence carries how long it has been quiet, got " + stale.Activity);
+        Assert(stale.Activity.Contains("12:01:00"), "and still names the last event time");
+
+        var lockedFacts = BarFacts(true, "12:04:09", 0);
+        lockedFacts.Locked = true;
+        lockedFacts.LockedPawnText = "Violet";
+        UsDiagBarModel lockedBar = UsDiagnosticsProjection.BuildBar(lockedFacts, Fmt);
+        Assert(lockedBar.Identity.Contains("Violet"), "the lock window's bar identifies its pinned pawn, got " + lockedBar.Identity);
+
+        var waiting = BarFacts(false, string.Empty, 0);
+        waiting.HasMonitorRow = false;
+        Assert(UsDiagnosticsProjection.BuildBar(waiting, Tr).SwitchText == "US.Diagnostics.Monitor.Empty",
+            "no snapshot yet reads as the waiting state, never as 'recording'");
+        var paused = BarFacts(true, "12:04:09", 0);
+        paused.GamePaused = true;
+        Assert(UsDiagnosticsProjection.BuildBar(paused, Tr).SwitchText == "US.Diagnostics.Bar.Paused",
+            "a paused game says so instead of looking stalled");
+
+        var noScale = BarFacts(true, "12:04:09", 0);
+        noScale.TotalTargets = 0;
+        Assert(UsDiagnosticsProjection.BuildBar(noScale, Tr).Scale.Length == 0,
+            "a page without a list has no scale figure to show");
+    }
+
+    /// <summary>09 §3.3 rule 1's ladder: activity goes first, then the scale, never the identity or the switch.</summary>
+    private static void BarDegradationRules()
+    {
+        UsDiagBarModel bar = UsDiagnosticsProjection.BuildBar(BarFacts(true, "12:04:09", 0), Tr);
+        Func<string, float> measure = text => text.Length * 10f;
+
+        const float actions = 40f;
+        const float gap = 6f;
+        float core = measure(bar.Identity) + measure(bar.SwitchText) + actions + gap * 3f;
+        float withScale = core + measure(bar.Scale);
+        float withEverything = withScale + gap + measure(bar.Activity);
+
+        UsDiagBarLayout wide = UsDiagnosticsProjection.LayoutBar(bar, withEverything + 1f, actions, gap, measure);
+        Assert(wide.ShowIdentity && wide.ShowSwitch && wide.ShowScale && wide.ShowActivity,
+            "a wide bar answers all three questions");
+
+        // Drop the activity first: it is the only segment that can go while the bar still explains itself.
+        UsDiagBarLayout medium = UsDiagnosticsProjection.LayoutBar(bar, withScale + 1f, actions, gap, measure);
+        Assert(!medium.ShowActivity && medium.ShowScale && medium.ShowIdentity && medium.ShowSwitch,
+            "the activity sentence is the first thing narrow widths drop");
+
+        // Then the scale figure.
+        UsDiagBarLayout narrow = UsDiagnosticsProjection.LayoutBar(bar, core + 1f, actions, gap, measure);
+        Assert(!narrow.ShowActivity && !narrow.ShowScale && narrow.ShowIdentity && narrow.ShowSwitch,
+            "the scale figure goes second");
+
+        // And even when NOTHING fits, the identity and the switch are still contract (09 §3.3 rule 1):
+        // this is the fallback a mutation must be able to remove.
+        UsDiagBarLayout impossible = UsDiagnosticsProjection.LayoutBar(bar, 1f, 40f, 6f, measure);
+        Assert(impossible.ShowIdentity && impossible.ShowSwitch,
+            "identity and switch are NEVER omitted, not even when the measured width cannot hold them");
+    }
+
+    private static void VerdictAndGroupRules()
+    {
+        var blocked = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
+        int first = UsDiagnosticsProjection.FirstBlockedIndex(blocked);
+        Assert(first >= 0 && blocked[first].State == UsDiagGateState.Block,
+            "the first block is found in production chain order");
+        int earlierBlock = -1;
+        for (int i = 0; i < blocked.Count; i++)
+        {
+            if (blocked[i].State == UsDiagGateState.Block && earlierBlock < 0) earlierBlock = i;
+        }
+
+        Assert(first == earlierBlock, "nothing before the reported first block blocks");
+        Assert(UsDiagnosticsProjection.FirstBlockedText(blocked, Fmt).Contains(blocked[first].Name),
+            "the chain heading names the first block");
+
+        var normal = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr);
+        Assert(UsDiagnosticsProjection.FirstBlockedIndex(normal) == -1, "an all-clear chain reports no block");
+        Assert(UsDiagnosticsProjection.BuildVerdict(true, normal, Tr) == "US.Diagnostics.Verdict.Play",
+            "ready reads as 'will squeak'");
+        Assert(UsDiagnosticsProjection.BuildVerdict(false, blocked, Fmt).Contains(blocked[first].Name),
+            "blocked reads as 'blocked at <first block>'");
+        Assert(UsDiagnosticsProjection.BuildVerdict(false, normal, Tr) == "US.Diagnostics.Verdict.Pending",
+            "a chain that neither passes nor blocks is honestly 'not confirmed', never a fake pass");
+
+        int game = 0, rules = 0, audio = 0;
+        foreach (UsDiagGateLine gate in normal)
+        {
+            if (gate.Group == UsDiagGateGroup.Game) game++;
+            else if (gate.Group == UsDiagGateGroup.Rules) rules++;
+            else audio++;
+        }
+
+        Assert(game == 4 && rules == 7 && audio == 5,
+            "the 16 gates split 4/7/5 across game/rules/audio, got " + game + "/" + rules + "/" + audio);
+        Assert(normal[4].Group == UsDiagGateGroup.Game && normal[3].Group == UsDiagGateGroup.Rules
+                && normal[14].Group == UsDiagGateGroup.Audio,
+            "the identity gate is a game-side precondition while the plan gate is rules-side");
+    }
+
+    private static void NumericColumnRules()
+    {
+        Func<string, float> measure = text => text.Length * 7f;
+        string[] column = { "120/600t", "0/216t", "12/12:00" };
+        float widest = UsDiagnosticsProjection.NumericColumnWidth(column, measure);
+        Assert(Math.Abs(widest - 8 * 7f) < 0.001f, "the column advance is the widest cell, got " + widest);
+
+        string padded = UsDiagnosticsProjection.PadNumeric("0/216t", widest, measure);
+        Assert(measure(padded) >= widest - 0.5f && padded.EndsWith("0/216t"),
+            "a short cell is padded up to the column advance without touching its digits, got '" + padded + "'");
+        Assert(UsDiagnosticsProjection.PadNumeric("120/600t", widest, measure) == "120/600t",
+            "a cell that already meets the advance is returned untouched");
+        Assert(UsDiagnosticsProjection.PadNumeric("", widest, measure) == string.Empty,
+            "an empty cell stays empty (honest blank, never padded into a value)");
     }
 
     private static void Assert(bool condition, string message)

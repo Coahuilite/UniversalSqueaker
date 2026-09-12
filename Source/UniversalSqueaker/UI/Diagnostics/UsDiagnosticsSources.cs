@@ -85,6 +85,21 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
         }
     }
 
+    /// <summary>The bar's three answers, built from the same monitor row the bar used to paint raw.</summary>
+    public UsDiagBarModel? Bar => UsDiagnosticsRowFactory.BuildBar(
+        MonitorRow,
+        locked: false,
+        lockedPawnText: string.Empty,
+        totalTargets: TotalRowCount,
+        paused: Find.TickManager.Paused,
+        snapshot: SqueakDiagnosticsOverlay.MonitorEntry?.Snapshot);
+
+    public bool RawOpen { get; set; }
+
+    public bool CloseRequested { get; private set; }
+
+    public void RequestClose() => CloseRequested = true;
+
     public bool CanLockDisplayed => SqueakDiagnosticsOverlay.SelectedEntry != null;
 
     public void ClickRow(int pawnId)
@@ -195,6 +210,30 @@ public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
         }
     }
 
+    /// <summary>Same three answers, with the identity segment naming the pinned pawn (09 §3.3 rule 5).</summary>
+    public UsDiagBarModel? Bar
+    {
+        get
+        {
+            SqueakDiagnosticSnapshot? snapshot = SqueakDiagnosticsOverlay.TryGetEntry(pinnedPawn, out SqueakDiagnosticsOverlay.CachedPawn? entry)
+                ? entry.Snapshot
+                : null;
+            return UsDiagnosticsRowFactory.BuildBar(
+                MonitorRow,
+                locked: true,
+                lockedPawnText: pinnedPawn.LabelShort,
+                totalTargets: 0,
+                paused: Find.TickManager.Paused,
+                snapshot: snapshot);
+        }
+    }
+
+    public bool RawOpen { get; set; }
+
+    public bool CloseRequested { get; private set; }
+
+    public void RequestClose() => CloseRequested = true;
+
     public bool CanLockDisplayed => false;
 
     public void ClickRow(int pawnId) { }
@@ -234,6 +273,60 @@ internal static class UsDiagnosticsRowFactory
         // Not tracked yet (off-screen hit): honest blanks everywhere except the identity.
         return new UsDiagRow(pawn.thingIDNumber, UsDiagDotTone.Unknown, LabelOf(pawn),
             "—", "—", "—", false, SqueakDiagnosticsOverlay.IsLocked(pawn));
+    }
+
+    /// <summary>
+    /// The collapsed bar's three answers. The activity sentence needs the event clock, and the clock is
+    /// taken from the pawn's last EVALUATION (a blocked attempt is still an event), falling back to its
+    /// last dispatch; null means nothing has ever happened and the bar says so instead of implying age.
+    /// </summary>
+    internal static UsDiagBarModel BuildBar(
+        UsDiagRow? row,
+        bool locked,
+        string lockedPawnText,
+        int totalTargets,
+        bool paused,
+        SqueakDiagnosticSnapshot? snapshot)
+    {
+        int? lastEventTick = LastEventTick(snapshot);
+        int now = Find.TickManager.TicksGame;
+        UsDiagBarFacts f = new()
+        {
+            Locked = locked,
+            LockedPawnText = lockedPawnText ?? string.Empty,
+            TotalTargets = totalTargets,
+            HasMonitorRow = row != null,
+            GamePaused = paused,
+            PawnText = row?.PawnText ?? string.Empty,
+            ActionText = row?.ActionText ?? string.Empty,
+            AudioText = row?.AudioText ?? string.Empty,
+            MonitorTone = row?.Tone ?? UsDiagDotTone.Unknown,
+            HasLastEvent = lastEventTick.HasValue,
+            LastEventTimeText = lastEventTick.HasValue ? ClockText(lastEventTick.Value) : string.Empty,
+            MinutesSinceLastEvent = lastEventTick.HasValue ? Math.Max(0, now - lastEventTick.Value) / 60 : 0,
+        };
+
+        return UsDiagnosticsProjection.BuildBar(f, Tr);
+    }
+
+    private static int? LastEventTick(SqueakDiagnosticSnapshot? snapshot)
+    {
+        if (!snapshot.HasValue) return null;
+        SqueakDiagnosticSnapshot s = snapshot.Value;
+        if (s.LastEvaluation.HasValue) return s.LastEvaluation.Value.Tick;
+        return s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : (int?)null;
+    }
+
+    /// <summary>Game clock for the activity sentence: 60 ticks a second, 2500 an hour, 60000 a day.</summary>
+    private static string ClockText(int tick)
+    {
+        const long TicksPerDay = 60000L;
+        const long TicksPerHour = 2500L;
+        long dayTicks = ((long)tick % TicksPerDay + TicksPerDay) % TicksPerDay;
+        long hourTicks = dayTicks % TicksPerHour;
+        return (dayTicks / TicksPerHour).ToString("00") + ":"
+            + (hourTicks * 60 / TicksPerHour).ToString("00") + ":"
+            + (hourTicks / 60).ToString("00");
     }
 
     internal static UsDiagDetail BuildDetail(SqueakDiagnosticsOverlay.CachedPawn entry, bool showSeconds)
@@ -288,13 +381,16 @@ internal static class UsDiagnosticsRowFactory
             f.PlaybackFailed = ev.Outcome == SqueakTriggerOutcome.PlaybackFailed;
         }
 
+        List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(f, Tr);
+        bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
         return new UsDiagDetail(
             LabelOf(pawn),
-            SqueakDiagnosticsOverlay.ReadyFor(s),
+            ready,
             SqueakDiagnosticsOverlay.IsLocked(pawn),
             f.CurrentActionText,
             f.LastDispatchText,
-            UsDiagnosticsProjection.BuildGateChain(f, Tr));
+            gates,
+            UsDiagnosticsProjection.BuildVerdict(ready, gates, Tr));
     }
 
     private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";

@@ -533,7 +533,6 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             ResetDefaultHelpKey,
             ResetDefaultUnavailableHelpKey(row),
             row.DefaultReset == SqueakMoodResetDefaultState.Ready,
-            danger: true,
             () => ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null)),
             ctx);
 
@@ -543,15 +542,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             ResetPresetHelpKey,
             ResetPresetUnavailableHelpKey(row),
             row.PresetReset == SqueakMoodResetPresetState.Ready,
-            danger: false,
             () => ctx.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(row.Mood)),
             ctx);
     }
 
     /// <summary>
-    /// One reset control. Unavailable means greyed out and inert, never invisible: the control is still
-    /// drawn and hovering it claims the help entry that carries its reason sentence (the reason channel
-    /// of this UI). Available controls claim the entry that explains the action they perform.
+    /// One reset control, neutral by design: "reset to default" restores inheritance, which is not a
+    /// destructive action and therefore carries no danger semantics (07 §7 bans red for it). Unavailable
+    /// means greyed out and inert, never invisible: the control is still drawn and hovering it claims the
+    /// help entry that carries its reason sentence (the reason channel of this UI). Available controls
+    /// claim the entry that explains the action they perform.
     /// </summary>
     private static void DrawMoodResetButton(
         Rect rect,
@@ -559,17 +559,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         string enabledHelpKey,
         string unavailableHelpKey,
         bool enabled,
-        bool danger,
         Action invoke,
         UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, enabled ? enabledHelpKey : unavailableHelpKey);
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, false, danger);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, false);
         UsKernelDraw.Label(
             new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
-            enabled ? (danger ? ctx.Theme.TextOnDanger : ctx.Theme.TextPrimary) : ctx.Theme.TextDisabled,
+            enabled ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 

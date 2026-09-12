@@ -289,4 +289,34 @@
   <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
   <US.Help.Checklist.Row.Text>行内显示包名、Mod 与作者行以及动作覆盖数；点击整行即启用或停用该语音包。</US.Help.Checklist.Row.Text>
   <US.Help.Checklist.Forget.Text>一次性移除本域中包键不再安装的已存选择；该按钮只随失效横幅出现，作用域限于当前域。</US.Help.Checklist.Forget.Text>
+  <US.Diagnostics.Section.Verdict>结论</US.Diagnostics.Section.Verdict>
+  <US.Diagnostics.Section.Raw>原始值</US.Diagnostics.Section.Raw>
+  <US.Diagnostics.Section.ChainCount>门链（{0}）</US.Diagnostics.Section.ChainCount>
+  <US.Diagnostics.Verdict.Play>会发声</US.Diagnostics.Verdict.Play>
+  <US.Diagnostics.Verdict.Blocked>被挡在：{0}</US.Diagnostics.Verdict.Blocked>
+  <US.Diagnostics.Verdict.Pending>未确认</US.Diagnostics.Verdict.Pending>
+  <US.Diagnostics.Gates.FirstBlock>第 1 处被挡：{0}</US.Diagnostics.Gates.FirstBlock>
+  <US.Diagnostics.Gates.NoneBlocked>无被挡</US.Diagnostics.Gates.NoneBlocked>
+  <US.Diagnostics.Gate.BlockMark>挡</US.Diagnostics.Gate.BlockMark>
+  <US.Diagnostics.Gate.Group.Game>游戏侧</US.Diagnostics.Gate.Group.Game>
+  <US.Diagnostics.Gate.Group.Rules>规则侧</US.Diagnostics.Gate.Group.Rules>
+  <US.Diagnostics.Gate.Group.Audio>音频侧</US.Diagnostics.Gate.Group.Audio>
+  <US.Diagnostics.Raw.Show>展开原始值</US.Diagnostics.Raw.Show>
+  <US.Diagnostics.Raw.Hide>收起原始值</US.Diagnostics.Raw.Hide>
+  <US.Diagnostics.Bar.Identity>发声记录</US.Diagnostics.Bar.Identity>
+  <US.Diagnostics.Bar.IdentityLocked>发声记录（锁定：{0}）</US.Diagnostics.Bar.IdentityLocked>
+  <US.Diagnostics.Bar.Scale>{0} 个目标</US.Diagnostics.Bar.Scale>
+  <US.Diagnostics.Bar.Recording>记录中</US.Diagnostics.Bar.Recording>
+  <US.Diagnostics.Bar.Paused>已暂停</US.Diagnostics.Bar.Paused>
+  <US.Diagnostics.Bar.Activity.Recent>最近一次 {0}  {1}  {2}</US.Diagnostics.Bar.Activity.Recent>
+  <US.Diagnostics.Bar.Activity.Never>尚未收到发声</US.Diagnostics.Bar.Activity.Never>
+  <US.Diagnostics.Bar.Activity.Stale>最近 {0} 分钟无发声 · 上次 {1}</US.Diagnostics.Bar.Activity.Stale>
+  <US.Diagnostics.Bar.Expand>展开</US.Diagnostics.Bar.Expand>
+  <US.Diagnostics.Bar.Close>关闭</US.Diagnostics.Bar.Close>
+  <US.Diagnostics.Dot.Ready>就绪</US.Diagnostics.Dot.Ready>
+  <US.Diagnostics.Dot.Blocked>被挡</US.Diagnostics.Dot.Blocked>
+  <US.Diagnostics.Dot.Pending>等待</US.Diagnostics.Dot.Pending>
+  <US.Diagnostics.Dot.Unknown>未跟踪</US.Diagnostics.Dot.Unknown>
+  <US.Diagnostics.Pager.Prev>上一页</US.Diagnostics.Pager.Prev>
+  <US.Diagnostics.Pager.Next>下一页</US.Diagnostics.Pager.Next>
 </LanguageData>
