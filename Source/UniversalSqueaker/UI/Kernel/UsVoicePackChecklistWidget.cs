@@ -271,7 +271,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
     private void DrawPackRow(Rect rect, VoicePackDomainView domain, VoicePackRowView row, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/voice-pack-checklist/row");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
         string meta = UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author);
         float textWidth = Math.Max(1f, rect.width - RowTextReserve);

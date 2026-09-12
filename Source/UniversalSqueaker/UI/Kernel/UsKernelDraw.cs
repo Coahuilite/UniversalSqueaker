@@ -22,20 +22,201 @@ public static class UsKernelDraw
 {
     public const float RowLeftPadding = 10f;
 
+    /// <summary>RowRail: selected = dim 3px rail, current = accent 3px, both = dual, disabled = hatch.
+    /// StateShape: the four effect shapes of spec 1.6, drawn as shape so grey-scale keeps them apart.
+    /// The conflict rail and shape are deliberately absent: attn has no chosen hue yet.</summary>
+    public enum RowRail
+    {
+        None,
+        Selected,
+        Current,
+        CurrentAndSelected,
+        Disabled
+    }
+
+    public enum StateShape
+    {
+        InEffect,
+        Unavailable,
+        Inherited,
+        Overridden
+    }
+
+    /// <summary>Rail widths and shape cells, from the spec's numbers (1.4/1.5/1.6). Public so the lane
+    /// pins the geometry the drawing uses instead of re-deriving it from a picture.</summary>
+    public const float RailWidth = 3f;
+
+    public const float CurrentAndSelectedOuterWidth = 5f;
+
+    public const float ShapeSize = 10f;
+
+    public const float RowHatchPitch = 5f;
+
+    public const float ShapeHatchPitch = 3f;
+
+    /// <summary>Compatibility overload for the call sites whose state is a plain selected flag. It maps
+    /// onto RowRail.Selected and nothing else, so a caller that means the current object says so by name.</summary>
     public static void RowSurface(Rect rect, UiTheme theme, bool hovered, bool selected, bool danger = false)
     {
+        RowSurface(rect, theme, hovered, selected ? RowRail.Selected : RowRail.None, danger);
+    }
+
+    /// <summary>
+    /// The row plane plus its semantic rail. The fill rules are unchanged: the accent never fills a row,
+    /// because "this row is selected" is not one of the accent's three meanings (where I am, keyboard
+    /// focus, what is in effect) and two selected rows would otherwise read as two current objects. The
+    /// current-object rail is the accent at 3px; the selected rail is dim ink at the same width; both at
+    /// once puts the accent inside a 5px dim rail so neither fact hides the other; an unavailable row gets
+    /// the hatch, and its labels stay the caller's job (theme.TextDisabled is the same dim ink).
+    /// </summary>
+    public static void RowSurface(Rect rect, UiTheme theme, bool hovered, RowRail rail, bool danger = false)
+    {
+        bool selected = rail == RowRail.Selected || rail == RowRail.CurrentAndSelected;
         Color fill = danger ? theme.Warning
             : selected ? theme.Selected
             : hovered ? theme.Hover
             : theme.Raised;
 
-        // The selected row keeps the structural line, not the accent: the accent is reserved for the three
-        // things it means (where I am, keyboard focus, what is in effect), and "this row is selected" is
-        // none of them - two selected rows on one screen would otherwise read as two current objects. The
-        // spec's selected row is a plane plus a dim inner rail, and the lane pins that no accent colour is
-        // painted here at all.
         Color border = danger ? theme.Danger : theme.Border;
         UiThemeDraw.Surface(rect, theme, fill, border);
+
+        // The hatch ink is a plane token one step darker than the row (the spec's stripe is #1b1f27 over
+        // #1f232c, which lands on s1 in this table) - never a new colour.
+        if (rail == RowRail.Disabled)
+        {
+            Hatch(rect, theme.Panel, RowHatchPitch);
+        }
+
+        // Rails last, so the plane's edge cannot paint over them, and the dim rail before the accent one so
+        // the accent stays the innermost mark in the dual state.
+        if (rail == RowRail.CurrentAndSelected)
+        {
+            UiThemeDraw.Solid(LeftRail(rect, CurrentAndSelectedOuterWidth), theme.TextSecondary);
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.AccentGold);
+        }
+        else if (rail == RowRail.Selected)
+        {
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.TextSecondary);
+        }
+        else if (rail == RowRail.Current)
+        {
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.AccentGold);
+        }
+    }
+
+    private static Rect LeftRail(Rect rect, float width)
+    {
+        return new Rect(rect.x, rect.y, Mathf.Max(1f, Mathf.Min(width, rect.width)), rect.height);
+    }
+
+    /// <summary>Diagonal hatching as 1px dashes stepped along the diagonal. The lab uses
+    /// repeating-linear-gradient(45deg, transparent 0 5px, #1b1f27 5px 10px); this library exposes exactly
+    /// one fill primitive - an axis-aligned rect (UiThemeDraw.Solid, deliberately, so the backend contact
+    /// stays gateable) - and a gradient needs a texture asset. The staircase keeps the pitch, the 45-degree
+    /// direction and the darker-than-the-plane relationship, which is what the grey-scale reading needs.</summary>
+    public static void Hatch(Rect rect, Color ink, float pitch)
+    {
+        if (rect.width <= 0f || rect.height <= 0f || pitch <= 0f) return;
+        float step = Mathf.Max(2f, pitch);
+        for (float offset = -rect.height; offset < rect.width; offset += step * 2f)
+        {
+            for (float y = 0f; y < rect.height; y += step)
+            {
+                float start = rect.x + offset + y;
+                float left = Mathf.Max(rect.x, start);
+                float right = Mathf.Min(rect.xMax, start + step);
+                if (right - left <= 0f) continue;
+                UiThemeDraw.Solid(new Rect(left, rect.y + y, right - left, 1f), ink);
+            }
+        }
+    }
+
+    /// <summary>One effect shape in a square cell (spec 1.6). Colour carries only "should I act"; the shape
+    /// carries which state, which is what makes the four survive a grey-scale screenshot.</summary>
+    public static void DrawStateShape(Rect rect, UiTheme theme, StateShape shape)
+    {
+        switch (shape)
+        {
+            case StateShape.InEffect:
+                Disc(rect, theme.TextPrimary);
+                break;
+            case StateShape.Unavailable:
+                UiThemeDraw.Surface(rect, theme, Color.clear, theme.TextSecondary);
+                Hatch(
+                    new Rect(rect.x + 1f, rect.y + 1f, Mathf.Max(1f, rect.width - 2f), Mathf.Max(1f, rect.height - 2f)),
+                    theme.Panel,
+                    ShapeHatchPitch);
+                break;
+            case StateShape.Inherited:
+                DottedCircle(rect, theme.TextPrimary);
+                break;
+            case StateShape.Overridden:
+                Disc(rect, theme.TextPrimary);
+                Ring(rect, theme.AccentGold, 2f);
+                break;
+        }
+    }
+
+    /// <summary>Scanline disc: one rect per row, so the shape is exact at any cell size.</summary>
+    private static void Disc(Rect rect, Color ink)
+    {
+        float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+        float centreX = rect.x + rect.width * 0.5f;
+        float centreY = rect.y + rect.height * 0.5f;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.height));
+        for (int i = 0; i < rows; i++)
+        {
+            float y = rect.y + i;
+            float dy = y + 0.5f - centreY;
+            // System.Math rather than Mathf.Sqrt: the harness's Unity stub does not declare Mathf.Sqrt, and
+            // the trip guard caught exactly that (2026-09-12) - a consumer-side call to a member the double
+            // lacks. The value is identical for this geometry, and the missing stub member is reported to the
+            // carrier instead of being papered over.
+            float half = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
+            if (half <= 0.05f) continue;
+            UiThemeDraw.Solid(new Rect(centreX - half, y, half * 2f, 1f), ink);
+        }
+    }
+
+    /// <summary>Outline ring of the requested thickness around the same disc.</summary>
+    private static void Ring(Rect rect, Color ink, float thickness)
+    {
+        float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+        float inner = Mathf.Max(0f, radius - thickness);
+        float centreX = rect.x + rect.width * 0.5f;
+        float centreY = rect.y + rect.height * 0.5f;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(rect.height));
+        for (int i = 0; i < rows; i++)
+        {
+            float y = rect.y + i;
+            float dy = y + 0.5f - centreY;
+            float outerHalf = (float)Math.Sqrt(Mathf.Max(0f, radius * radius - dy * dy));
+            if (outerHalf <= 0.05f) continue;
+            float innerHalf = (float)Math.Sqrt(Mathf.Max(0f, inner * inner - dy * dy));
+            float band = Mathf.Max(1f, outerHalf - innerHalf);
+            UiThemeDraw.Solid(new Rect(centreX - outerHalf, y, band, 1f), ink);
+            if (innerHalf > 0.05f)
+            {
+                UiThemeDraw.Solid(new Rect(centreX + innerHalf, y, band, 1f), ink);
+            }
+        }
+    }
+
+    /// <summary>A dotted circle outline: short marks around the perimeter with every other step skipped,
+    /// which is the closest an axis-aligned fill gets to the spec's dashed ring at a 10px cell.</summary>
+    private static void DottedCircle(Rect rect, Color ink)
+    {
+        float radius = Mathf.Max(0.5f, Mathf.Min(rect.width, rect.height) * 0.5f - 1f);
+        float centreX = rect.x + rect.width * 0.5f;
+        float centreY = rect.y + rect.height * 0.5f;
+        const int Steps = 20;
+        for (int i = 0; i < Steps; i += 2)
+        {
+            double angle = Math.PI * 2.0 * i / Steps;
+            float x = centreX + (float)(Math.Cos(angle) * radius);
+            float y = centreY + (float)(Math.Sin(angle) * radius);
+            UiThemeDraw.Solid(new Rect(x, y, 2f, 1f), ink);
+        }
     }
 
     public static void Checkbox(Rect rect, UiTheme theme, bool value)

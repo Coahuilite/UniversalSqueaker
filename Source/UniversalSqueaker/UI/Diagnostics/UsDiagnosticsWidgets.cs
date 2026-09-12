@@ -346,7 +346,9 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
             UsDiagRow row = rows[i];
             Rect rowRect = new(rect.x, y + i * RowHeight, rect.width, RowHeight);
             bool hovered = UiNative.IsMouseOver(rowRect);
-            UsKernelDraw.RowSurface(rowRect, ctx.Theme, hovered, row.Locked);
+            // A locked row is unavailable, not selected: it takes the disabled rail (hatch) so the hatch
+            // and the selected plane can never be confused for one another.
+            UsKernelDraw.RowSurface(rowRect, ctx.Theme, hovered, row.Locked ? UsKernelDraw.RowRail.Disabled : UsKernelDraw.RowRail.None);
             UsDiagRowPainter.Paint(rowRect, row, ctx, cooldownWidth, audioWidth);
             if (UiNative.Button(rowRect, ctx))
             {
@@ -612,7 +614,24 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
             UiThemeDraw.Solid(
                 new Rect(rect.x, y, 2f, RowHeight),
                 firstBlockRow ? ctx.Theme.Warning : ctx.Theme.Divider);
-            float indent = 6f;
+
+            // The effect shape (spec 1.6), and the carrier decision made explicit: this chain can honestly
+            // draw exactly two of the four states - pass IS the rule being in effect, and not-applicable IS
+            // the rule being unavailable. Block and pending keep their colour treatment instead of borrowing
+            // a shape whose meaning they do not have; inherited and overridden need a scope model (local
+            // override vs inherited value) that no US surface exposes yet, so they wait for that carrier
+            // rather than being drawn where they would mean nothing.
+            if (gate.State == UsDiagGateState.Pass || gate.State == UsDiagGateState.NA)
+            {
+                UsKernelDraw.DrawStateShape(
+                    new Rect(rect.x + 4f, y + (RowHeight - UsKernelDraw.ShapeSize) * 0.5f, UsKernelDraw.ShapeSize, UsKernelDraw.ShapeSize),
+                    ctx.Theme,
+                    gate.State == UsDiagGateState.Pass ? UsKernelDraw.StateShape.InEffect : UsKernelDraw.StateShape.Unavailable);
+            }
+
+            // The shape column is reserved whether or not this row draws one, so a row's text cannot move
+            // when its state changes (a jumping label reads as a redraw bug).
+            float indent = 18f;
             float rowWidth = Math.Max(1f, rect.width - indent);
             float nameWidth = rowWidth * (1f - ValueShare) - 4f;
             float valueX = rect.x + indent + nameWidth + 4f;

@@ -30,6 +30,8 @@ internal static class UsSurfaceLaneTests
         Step("the US surface table carries the spec values and keeps the series gold", TableCarriesSpecValues);
         Step("a selected row takes no accent", SelectedRowTakesNoAccent);
         Step("a checked box is ink solid and takes no accent", CheckedBoxIsInkSolid);
+        Step("the four row rails are four different marks, and only the current one takes the accent", RailStatesAreDistinguishable);
+        Step("the four effect shapes are four different drawings", EffectShapesAreDistinguishable);
     }
 
     /// <summary>
@@ -112,6 +114,142 @@ internal static class UsSurfaceLaneTests
         Assert(Same(Colour(solids[5]), theme.TextPrimary) && Same(Colour(solids[6]), theme.TextPrimary),
             "the checked square is filled with the ink token");
         Assert(!Painted(theme.AccentGold), "a checked box must not paint the accent");
+    }
+
+    /// <summary>
+    /// Spec 1.5, as four observable draws: none paints nothing, selected is dim ink at 3px, current is the
+    /// accent at 3px, both at once paints both (accent inside the wider dim rail), and unavailable is a
+    /// hatched row that still takes no accent. Geometry is asserted from the recorded rects, not from a
+    /// picture, so "3px" and "5px" are numbers this lane can fail on.
+    /// </summary>
+    private static void RailStatesAreDistinguishable()
+    {
+        UiTheme theme = UsTheme.Surface();
+        Rect row = new(0f, 0f, 200f, 24f);
+
+        ClearSolids();
+        UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.None);
+        Assert(!Painted(theme.AccentGold) && !Painted(theme.TextSecondary),
+            "a plain row paints no rail at all");
+
+        ClearSolids();
+        UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Selected);
+        Assert(RailIs(theme.TextSecondary, UsKernelDraw.RailWidth),
+            "a selected row's rail is dim ink at the spec's 3px");
+        Assert(!Painted(theme.AccentGold), "and a selected row still takes no accent");
+
+        ClearSolids();
+        UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Current);
+        Assert(RailIs(theme.AccentGold, UsKernelDraw.RailWidth),
+            "the current object's rail is the accent at the spec's 3px");
+
+        ClearSolids();
+        UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.CurrentAndSelected);
+        Assert(RailIs(theme.TextSecondary, UsKernelDraw.CurrentAndSelectedOuterWidth)
+            && RailIs(theme.AccentGold, UsKernelDraw.RailWidth),
+            "both states at once draw the dim rail and the accent rail inside it");
+
+        ClearSolids();
+        UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Disabled);
+        Assert(Painted(theme.Panel), "an unavailable row is hatched in a plane token, not a new colour");
+        Assert(!Painted(theme.AccentGold), "and it never takes the accent");
+    }
+
+    /// <summary>
+    /// Spec 1.6, as four observable drawings: in effect is a solid ink disc, unavailable a dim stroke over a
+    /// hatched fill with no ink disc, inherited a hollow ink outline with much less ink than the disc, and
+    /// overridden the ink disc inside an accent ring. Shape differences are asserted as ink area and
+    /// centre coverage, which is what a grey-scale screenshot would have to show.
+    /// </summary>
+    private static void EffectShapesAreDistinguishable()
+    {
+        UiTheme theme = UsTheme.Surface();
+        Rect cell = new(0f, 0f, UsKernelDraw.ShapeSize, UsKernelDraw.ShapeSize);
+
+        ClearSolids();
+        UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.InEffect);
+        Assert(Painted(theme.TextPrimary) && !Painted(theme.AccentGold),
+            "in effect is a solid ink shape and takes no accent");
+        Assert(CoversCentre(cell), "and it is solid at the centre");
+        float discArea = InkArea();
+
+        ClearSolids();
+        UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Unavailable);
+        Assert(Painted(theme.TextSecondary) && Painted(theme.Panel),
+            "unavailable is a dim stroke over a hatched fill");
+        Assert(!Painted(theme.TextPrimary), "and it is not the in-effect disc");
+
+        ClearSolids();
+        UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Inherited);
+        Assert(Painted(theme.TextPrimary) && !Painted(theme.AccentGold),
+            "inherited is an ink outline and takes no accent");
+        Assert(!CoversCentre(cell), "hollow at the centre, which is what separates it from in effect");
+        Assert(InkArea() < discArea * 0.6f, "and much less ink than the solid disc");
+
+        ClearSolids();
+        UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Overridden);
+        Assert(Painted(theme.TextPrimary) && Painted(theme.AccentGold),
+            "overridden puts an accent ring around the ink disc");
+        Assert(CoversCentre(cell), "and stays solid at the centre");
+    }
+
+    /// <summary>True when a recorded solid of this colour has this rail geometry at the row's left edge.</summary>
+    private static bool RailIs(Color colour, float width)
+    {
+        IList colours = RecordedSolids();
+        IList rects = RecordedSolidRects();
+        for (int i = 0; i < colours.Count && i < rects.Count; i++)
+        {
+            if (!Same(Colour(colours[i]), colour)) continue;
+            if (rects[i] is Rect rect
+                && Math.Abs(rect.width - width) <= 0.01f
+                && Math.Abs(rect.x) <= 0.01f
+                && Math.Abs(rect.height - 24f) <= 0.01f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool CoversCentre(Rect cell)
+    {
+        float x = cell.x + cell.width * 0.5f;
+        float y = cell.y + cell.height * 0.5f;
+        IList rects = RecordedSolidRects();
+        for (int i = 0; i < rects.Count; i++)
+        {
+            if (rects[i] is Rect rect && x >= rect.x && x <= rect.xMax && y >= rect.y && y <= rect.yMax) return true;
+        }
+
+        return false;
+    }
+
+    private static float InkArea()
+    {
+        float area = 0f;
+        IList rects = RecordedSolidRects();
+        for (int i = 0; i < rects.Count; i++)
+        {
+            if (rects[i] is Rect rect) area += rect.width * rect.height;
+        }
+
+        return area;
+    }
+
+    /// <summary>The second recorder field: the lane needs the geometry, not only the colour.</summary>
+    private static IList RecordedSolidRects()
+    {
+        FieldInfo? field = typeof(Verse.Widgets).GetField("DrawBoxSolidRects", BindingFlags.Public | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException("the runtime stub does not record solid rects; this lane must not pass silently");
+        }
+
+        var list = field.GetValue(null) as IList;
+        if (list == null) throw new InvalidOperationException("the runtime stub's rect recorder is not a list");
+        return list;
     }
 
     private static bool Painted(Color colour)
