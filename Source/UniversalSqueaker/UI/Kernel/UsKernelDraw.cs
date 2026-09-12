@@ -407,6 +407,13 @@ public static class UsKernelDraw
     }
 
     /// <summary>
+    /// Side inset of a selection button's label from its own rect. A caller that sizes a band for this
+    /// label must measure at <c>rect.width - SelectionButtonLabelInset * 2</c>, not at the rect width:
+    /// measuring the outer rect lets a label wrap at draw time inside a band sized for one line.
+    /// </summary>
+    public const float SelectionButtonLabelInset = 6f;
+
+    /// <summary>
     /// Draws a selection-style button surface and returns whether it was clicked. The click goes through
     /// <see cref="UiNative.Button(Rect, UiWidgetContext)"/>, so a control covered by an open popup yields
     /// the click to the popup instead of stealing it (FL api-tiers.md: the context-free overload is
@@ -416,7 +423,7 @@ public static class UsKernelDraw
     {
         RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected ? RowRail.Selected : RowRail.None, danger);
         Label(
-            new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
+            new Rect(rect.x + SelectionButtonLabelInset, rect.y, Mathf.Max(1f, rect.width - SelectionButtonLabelInset * 2f), rect.height),
             label,
             theme,
             danger ? theme.TextOnDanger : selected ? theme.TextOnGold : theme.TextPrimary,

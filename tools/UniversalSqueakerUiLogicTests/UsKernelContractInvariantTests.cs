@@ -95,14 +95,14 @@ internal static class UsKernelContractInvariantTests
             }
 
             if (element.Name == "Scroll" && element.GetAttribute("Id") == "help-scroll"
-                && element.GetAttribute("Width") == "232" && IsTrue(element.GetAttribute("Fill")))
+                && element.GetAttribute("Width") == "176" && IsTrue(element.GetAttribute("Fill")))
             {
                 helpScrollFill = true;
             }
         }
 
         Assert(navFill && contentScrollFill && helpScrollFill,
-            "body-row contains nav-column (192 Fill), content-scroll (Fill) and help-scroll (232 Fill)");
+            "body-row contains nav-column (192 Fill), content-scroll (Fill) and help-scroll (176 Fill)");
 
         bool hasTabSections = false;
         foreach (XmlNode node in bodyRow.ChildNodes)

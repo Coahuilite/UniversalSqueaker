@@ -348,7 +348,11 @@ internal static class MoodLayoutFocusedTests
 
     private static void AssertMoodGeometry(CaptureContext ctx)
     {
-        Assert(ctx.CardPageRect.width >= 260f && ctx.CardPageRect.width <= 340f,
+        // Both bounds stay: the lower one still catches a collapsed card, the upper one now carries the
+        // 176px inspector column. At 800 the row is nav 192 + inspector 176 + gaps, and the scope-tree card
+        // page rect comes out at 368 (the three-column, narrow-card regime this lane exists for); the
+        // behavioural pins below (stacked rows, 6 sliders/fields, 12 steppers) were re-verified at 368.
+        Assert(ctx.CardPageRect.width >= 260f && ctx.CardPageRect.width <= 400f,
             "scope-tree card must be a narrow card at 800px three-column layout (got width " + ctx.CardPageRect.width + ")");
 
         // The Tuning workspace should contain exactly the six mood sliders/fields (all inside the

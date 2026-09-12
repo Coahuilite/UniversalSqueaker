@@ -135,6 +135,7 @@ internal static class Program
         Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
+        Step("inspector column width comes from the manifest", InspectorColumnWidthComesFromTheManifest);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
@@ -451,6 +452,54 @@ internal static class Program
         Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
             "an open pack-filter dropdown must publish its popup layer (authors: " + string.Join(",", authors) + ")");
         return layer.Rect.width;
+    }
+
+    /// <summary>
+    /// The inspector column is 176px as a manifest declaration, not as something the help widget reports
+    /// about itself (maintainer ruling on the lab window model: rail 148 / work flexible / inspector 176 /
+    /// footer 24). Three claims, because a declaration that nothing reads is not a width:
+    /// (1) the manifest declares Width 176 on the inspector column and declares no width on the help
+    ///     widget - the widget's vocabulary (Id/Kind/Tab/Hidden) refuses one at creation, and a widget that
+    ///     measured its own width would bury this responsive decision in the control;
+    /// (2) the arranged snapshot carries 176 at all three shipped viewports;
+    /// (3) the drawn node for the column carries 176 too, so the width a pass actually drew is the
+    ///     declared one rather than a number this lane recomputed from the manifest.
+    /// Re-declaring 232 (or 148/240) turns this step red at the declaration and again at the drawn rect;
+    /// the mutation this exists for is exactly a width that stops being a layout fact.
+    /// </summary>
+    private static void InspectorColumnWidthComesFromTheManifest()
+    {
+        string manifestPath = Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
+        System.Xml.Linq.XDocument manifest = System.Xml.Linq.XDocument.Load(manifestPath);
+        System.Xml.Linq.XElement? column = manifest.Descendants()
+            .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-scroll");
+        Assert(column != null, "the manifest must declare the inspector column (help-scroll)");
+        Assert((string?)column!.Attribute("Width") == "176",
+            "the inspector column width must stay a manifest declaration of 176, got '"
+            + ((string?)column.Attribute("Width") ?? "(none)") + "' in " + manifestPath);
+        System.Xml.Linq.XElement? panel = manifest.Descendants()
+            .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-panel");
+        Assert(panel != null, "the manifest must declare the help panel widget");
+        Assert(panel!.Attribute("Width") == null,
+            "the help widget must not declare its own width: the column owns that layout fact");
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
+        {
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+            Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect arranged),
+                "no arranged inspector column at " + viewport);
+            Assert(Math.Abs(arranged.width - 176f) < 0.01f,
+                "the arranged inspector column must be the declared 176 at " + viewport + ": " + arranged.width);
+
+            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+            UiNode? drawn = host.Session.GetNodeByElementId("help-scroll");
+            Assert(drawn != null, "the drawn pass must carry the inspector column node at " + viewport);
+            Rect drawnRect = drawn!.Rect ?? default;
+            Assert(Math.Abs(drawnRect.width - 176f) < 0.01f,
+                "the drawn inspector column must be the declared 176 at " + viewport + ": " + drawnRect.width);
+        }
     }
 
     private static string DescribeOverflow(List<UiOverflowReport> reports)

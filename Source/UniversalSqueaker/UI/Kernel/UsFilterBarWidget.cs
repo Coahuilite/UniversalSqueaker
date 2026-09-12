@@ -105,11 +105,15 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     {
         const int count = 4;
         float chipWidth = Math.Max(1f, (bodyWidth - Gap * (count - 1)) / count);
+        // Each chip's label is drawn inset (SelectionButtonLabelInset per side), so the band has to be
+        // measured at that drawn width: measuring the outer chip let a label wrap at draw time while the
+        // band stayed one line tall ("Enabled only" needed 36px in a 24px band at the 176px inspector).
+        float labelWidth = Math.Max(1f, chipWidth - UsKernelDraw.SelectionButtonLabelInset * 2f);
         float band = RowHeight;
         string[] keys = { KeyChipAll, KeyChipEnabledOnly, KeyChipConflicts, KeyChipOrphanOnly };
         foreach (string key in keys)
         {
-            band = Math.Max(band, ctx.Metrics.MeasureText(ctx.Translation.Translate(key), UiFont.Tiny, chipWidth));
+            band = Math.Max(band, ctx.Metrics.MeasureText(ctx.Translation.Translate(key), UiFont.Tiny, labelWidth));
         }
 
         return band;

@@ -34,7 +34,7 @@
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
       </Scroll>
-      <Scroll Id="help-scroll" Width="232" Fill="true">
+      <Scroll Id="help-scroll" Width="176" Fill="true">
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
