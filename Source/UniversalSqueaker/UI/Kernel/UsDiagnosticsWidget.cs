@@ -17,7 +17,6 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
 
     private const float LabelHeight = 20f;
     private const float ModeRowHeight = 26f;
-    private const float ToggleRowHeight = 28f;
     private const float RowGap = 4f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
@@ -51,17 +50,19 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
 
     protected override float FallbackHeight(UiWidgetContext ctx)
     {
-        return ContentHeight();
+        return ContentHeight(ctx);
     }
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return ContentHeight();
+        return ContentHeight(ctx);
     }
 
-    private static float ContentHeight()
+    private static float ContentHeight(UiWidgetContext ctx)
     {
-        return TopPadding + LabelHeight + ModeRowHeight + RowGap + ToggleRowHeight + BottomPadding;
+        // The toggle row is a data row, so it follows the density axis; the mode row is a segmented control
+        // and keeps its own height.
+        return TopPadding + LabelHeight + ModeRowHeight + RowGap + UsKernelDraw.RowVisualHeight(ctx) + BottomPadding;
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -103,14 +104,14 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
         }
 
         y += ModeRowHeight + RowGap;
-        DrawLocalizeRow(new Rect(rect.x, y, rect.width, ToggleRowHeight), ctx);
+        DrawLocalizeRow(new Rect(rect.x, y, rect.width, UsKernelDraw.RowVisualHeight(ctx)), ctx);
     }
 
     private void DrawLocalizeRow(Rect rect, UiWidgetContext ctx)
     {
         bool enabled = ctx.Bindings.TryGet("localize-debug-menu", out bool value) && value;
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/diagnostics/localize-debug");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - 60f), rect.height),
@@ -119,9 +120,12 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, enabled);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Set("localize-debug-menu", !enabled);
         }

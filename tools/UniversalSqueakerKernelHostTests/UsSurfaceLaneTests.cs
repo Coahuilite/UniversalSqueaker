@@ -32,6 +32,41 @@ internal static class UsSurfaceLaneTests
         Step("a checked box is ink solid and takes no accent", CheckedBoxIsInkSolid);
         Step("the four row rails are four different marks, and only the current one takes the accent", RailStatesAreDistinguishable);
         Step("the four effect shapes are four different drawings", EffectShapesAreDistinguishable);
+        Step("the two density tiers land on their own bags and do not bleed", DensityTiersDoNotBleed);
+    }
+
+    /// <summary>
+    /// The library's density axis is a document that mutates the theme in place, so two windows sharing one
+    /// bag would paint each other's rows. Two documents, two bags, two row heights - and the first bag keeps
+    /// its value after the second resolves. The positive control is the fresh-instance assertion in
+    /// <see cref="TableCarriesSpecValues"/>: caching <c>UsTheme.Surface()</c> into a static makes it fail,
+    /// which is what turns "don't share the bag" from a comment into something that can go red.
+    /// </summary>
+    private static void DensityTiersDoNotBleed()
+    {
+        UiTheme regular = UsTheme.Surface();
+        UiTheme dense = UsTheme.Surface();
+        Assert(!ReferenceEquals(regular, dense), "two windows get two bags, so neither can move the other's density");
+
+        UiStyleDocument tiers = UiStyleDocument.Parse(
+            "<Styles Schema=\"1\" Density=\"regular\">"
+            + "<Density Name=\"regular\"><Metric Token=\"RowHeight\" Value=\"24\" /></Density>"
+            + "<Density Name=\"dense\"><Metric Token=\"RowHeight\" Value=\"20\" /></Density>"
+            + "</Styles>");
+        Assert(tiers.DensityNames.Count == 2, "both tiers must parse, found " + tiers.DensityNames.Count);
+
+        new UiStyleResolver(regular, tiers).ApplyTo(regular);
+        Assert(Math.Abs(regular.Geometry.RowHeight - 24f) < 0.01f,
+            "the regular tier's RowHeight token lands on its own bag: " + regular.Geometry.RowHeight);
+
+        UiStyleDocument denseOnly = UiStyleDocument.Parse(
+            "<Styles Schema=\"1\" Density=\"dense\">"
+            + "<Density Name=\"dense\"><Metric Token=\"RowHeight\" Value=\"20\" /></Density>"
+            + "</Styles>");
+        new UiStyleResolver(dense, denseOnly).ApplyTo(dense);
+        Assert(Math.Abs(dense.Geometry.RowHeight - 20f) < 0.01f, "the dense tier is 20px: " + dense.Geometry.RowHeight);
+        Assert(Math.Abs(regular.Geometry.RowHeight - 24f) < 0.01f,
+            "resolving the dense document left the other bag at 24: density must not be a process-wide value");
     }
 
     /// <summary>
@@ -107,13 +142,41 @@ internal static class UsSurfaceLaneTests
     {
         UiTheme theme = UsTheme.Surface();
         ClearSolids();
-        UsKernelDraw.Checkbox(new Rect(0f, 0f, 18f, 18f), theme, value: true);
+
+        // Positive control for the property search below: two decoys in the ink token - one too small to be
+        // the square, one square-sized but outside the box. A finder that keyed on position (the old
+        // solids[5]/solids[6]) would land on a decoy and fail here; this one must step over both.
+        UiThemeDraw.Solid(new Rect(0f, 0f, 4f, 4f), theme.TextPrimary);
+        UiThemeDraw.Solid(new Rect(100f, 100f, UsKernelDraw.CheckboxVisual, UsKernelDraw.CheckboxVisual), theme.TextPrimary);
+
+        Rect box = new Rect(0f, 0f, UsKernelDraw.CheckboxVisual, UsKernelDraw.CheckboxVisual);
+        UsKernelDraw.Checkbox(box, theme, value: true);
 
         IList solids = RecordedSolids();
-        Assert(solids.Count >= 10, "the box paints its frame and then the checked square; recorded " + solids.Count);
-        Assert(Same(Colour(solids[5]), theme.TextPrimary) && Same(Colour(solids[6]), theme.TextPrimary),
-            "the checked square is filled with the ink token");
+        Assert(FindCheckedSquare(solids, RecordedSolidRects(), theme.TextPrimary, box) >= 0,
+            "the checked square is filled with the ink token (an ink solid, box-sized, inside the box) - "
+            + "found by property and geometry, so one more rect anywhere cannot move the assertion");
         Assert(!Painted(theme.AccentGold), "a checked box must not paint the accent");
+    }
+
+    /// <summary>
+    /// The index of the checked square: the ink token, at least 8px on a side (the check mark's cells are
+    /// 2px), and inside the box the lane drew. Position is deliberately not part of the search key - a
+    /// fixed index is what made this lane fail while the checkbox it judges was being changed, and the
+    /// failure looked like a product regression rather than a lane that keys on the wrong thing.
+    /// </summary>
+    private static int FindCheckedSquare(IList solids, IList rects, Color ink, Rect box)
+    {
+        for (int i = 0; i < solids.Count && i < rects.Count; i++)
+        {
+            if (!Same(Colour(solids[i]), ink)) continue;
+            if (rects[i] is not Rect rect) continue;
+            if (rect.width < 8f || rect.height < 8f) continue;
+            if (rect.x < box.x || rect.y < box.y || rect.xMax > box.xMax || rect.yMax > box.yMax) continue;
+            return i;
+        }
+
+        return -1;
     }
 
     /// <summary>

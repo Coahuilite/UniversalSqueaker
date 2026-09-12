@@ -331,7 +331,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             : Array.Empty<TuningDomainOptionView>();
 
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/domain");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
             UsKernelDraw.Keyed(ctx, DomainLabelKey),
@@ -370,7 +370,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // action-scope one, so the panel explains what the visible value means.
         bool hovered = UsKernelDraw.HelpHover(
             rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         string displayName = UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey);
         float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 120f));
@@ -421,7 +421,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private void DrawMoodRow(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/mood-tuning");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         float pitch = row.Own?.hasPitchFactor == true ? row.Own.pitchFactor : row.EffectivePitch;
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
@@ -563,7 +563,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, enabled ? enabledHelpKey : unavailableHelpKey);
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, UsKernelDraw.RowRail.None);
         UsKernelDraw.Label(
             new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
             UsKernelDraw.Keyed(ctx, labelKey),

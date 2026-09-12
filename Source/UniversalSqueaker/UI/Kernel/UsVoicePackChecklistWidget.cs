@@ -194,7 +194,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
     {
         float band = BannerBand(ctx, text);
         Rect bannerRect = new(outer.x, y, outer.width, band);
-        UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, selected: false, danger: true);
+        UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.None, danger: true);
         UsKernelDraw.Label(
             new Rect(bannerRect.x + BannerTextInset, bannerRect.y, Math.Max(1f, bannerRect.width - BannerTextInset * 2f), band),
             text,
@@ -207,7 +207,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     private void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, UiWidgetContext ctx)
     {
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered: false, selected: false, danger: true);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.None, danger: true);
 
         Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
         UsKernelDraw.HelpHover(button, ctx, "us/voice-pack-checklist/forget");
@@ -282,7 +282,10 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rowY, textWidth, labelBand),
             row.Label,
             ctx.Theme,
-            row.IsSelected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+            // The selected row is a plane plus the dim rail (spec 1.4/1.5): its label stays primary ink.
+            // TextOnGold here implied a gold fill that this row never has, and it spent one of the screen's
+            // two accent readings on a state the rail already carries.
+            ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
         rowY += labelBand + RowGap;
@@ -302,9 +305,12 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.UpperLeft);
 
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 4f, 18f, 18f), ctx.Theme, row.IsSelected);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, row.IsSelected);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke(
                 "toggle-pack",

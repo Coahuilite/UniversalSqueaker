@@ -14,8 +14,6 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/camera-indicator";
 
-    private const float RowHeight = 28f;
-
     public override string Kind => KindName;
 
     public static void Register()
@@ -35,12 +33,13 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
 
     protected override float FallbackHeight(UiWidgetContext ctx)
     {
-        return RowHeight;
+        return UsKernelDraw.RowVisualHeight(ctx);
     }
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return RowHeight;
+        // One data row: its height is the theme's density axis (24 regular / 20 dense, spec 1.4).
+        return UsKernelDraw.RowVisualHeight(ctx);
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -52,7 +51,7 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
     {
         bool enabled = ctx.Bindings.TryGet("camera-indicator", out bool value) && value;
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/camera-indicator/toggle");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - 60f), rect.height),
@@ -61,9 +60,12 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, enabled);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke("toggle-camera-indicator", !enabled);
         }

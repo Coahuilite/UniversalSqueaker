@@ -27,8 +27,8 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     // band + padding, so the summary is no longer cut to an 11px sliver.
     private const float SelectionSummaryHeight = 16f;
 
-    private const float RaceRowHeight = 24f;
-    private const float XenotypeRowHeight = 22f;
+    // Row heights come from the theme's density axis (spec 1.4: 24 regular / 20 dense), not from a pair of
+    // per-row constants that had drifted 2px apart.
     private const float RowGap = 2f;
     private const float XenotypeIndent = 18f;
     private const float LeftPadding = 10f;
@@ -93,11 +93,11 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                bodyHeight += MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, width - 64f), ctx, RaceRowHeight) + RowGap;
+                bodyHeight += MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, width - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx)) + RowGap;
                 float xenoWidth = Math.Max(1f, width - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    bodyHeight += MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight) + RowGap;
+                    bodyHeight += MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx)) + RowGap;
                 }
             }
         }
@@ -155,14 +155,14 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                float raceRowHeight = MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, innerWidth - 64f), ctx, RaceRowHeight);
+                float raceRowHeight = MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, innerWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx));
                 DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, ctx);
                 y += raceRowHeight + RowGap;
 
                 float xenoWidth = Math.Max(1f, innerWidth - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    float xenoRowHeight = MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, XenotypeRowHeight);
+                    float xenoRowHeight = MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx));
                     DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
                     y += xenoRowHeight + RowGap;
                 }
@@ -176,7 +176,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         // The header claims the tree entry first; the import button re-claims below, so hovering
         // the button shows "Import" and anywhere else on the header shows the tree.
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, preset.Expanded);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, preset.Expanded ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
         Rect importRect = new(rect.xMax - ImportButtonWidth - 8f, rect.y + (rect.height - ImportButtonHeight) / 2f, ImportButtonWidth, ImportButtonHeight);
         UsKernelDraw.HelpHover(importRect, ctx, "us/preset-list/import");
@@ -211,7 +211,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), Math.Max(18f, rect.height - 6f)),
@@ -220,9 +220,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 40f, rect.y + 2f, 20f, 20f), ctx.Theme, race.Selected);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, race.Selected);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle(presetDefName, race.RaceDefName, !race.Selected));
         }
@@ -231,7 +234,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), Math.Max(14f, rect.height - 6f)),
@@ -240,9 +243,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             ctx.Theme.TextPrimary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 40f, rect.y + 1f, 20f, 20f), ctx.Theme, xenotype.Selected);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, xenotype.Selected);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke(
                 "toggle-baseline-xenotype",

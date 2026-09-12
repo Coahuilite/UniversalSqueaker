@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <UiPage Schema="2" Source="coahuilite.universalsqueaker">
+  <!-- Spec 1.4 row/density axis. The two tiers are authored here, not in code, because the library's
+       density axis is the style document: RowHeight 24 is the regular row, 20 the dense one. The hit band
+       stays 24 either way - hit geometry is not a density token - and so do the chrome heights that are
+       not data rows (footer 28, overlay-root 26): those must not follow row density. -->
+  <Styles Schema="1" Density="regular">
+    <Density Name="regular">
+      <Metric Token="RowHeight" Value="24" />
+    </Density>
+    <Density Name="dense">
+      <Metric Token="RowHeight" Value="20" />
+    </Density>
+  </Styles>
   <Column Id="page-root" Gap="8" Padding="12">
     <Row Id="body-row" Gap="12">
       <Column Id="nav-column" Width="192" Fill="true">

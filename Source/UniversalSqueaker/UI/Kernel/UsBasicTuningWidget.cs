@@ -14,7 +14,8 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/basic-tuning";
 
-    private const float RowHeight = 26f;
+    // The single-line row height comes from the theme's density axis (24 regular / 20 dense, authored in
+    // the manifest's <Styles>); this widget keeps no row constant of its own.
     private const float EggRowHeight = 52f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
@@ -45,7 +46,7 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
     {
         float textWidth = Math.Max(1f, BodyWidth(ctx) - LabelRightReserve);
         float lines = ctx.Metrics.MeasureText(ctx.Translation.Translate(labelKey), UiFont.Small, textWidth);
-        return Math.Max(RowHeight, lines + RowVerticalPadding);
+        return Math.Max(UsKernelDraw.RowVisualHeight(ctx), lines + RowVerticalPadding);
     }
 
     public override string Kind => KindName;
@@ -113,7 +114,7 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
     {
         bool enabled = ctx.Bindings.TryGet("allow-eggs", out bool value) && value;
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/basic-tuning/egg");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 60f), 22f),
@@ -129,9 +130,14 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 12f, 18f, 18f), ctx.Theme, enabled);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, enabled);
 
-        if (UiNative.Button(rect, ctx))
+        // The row's hit band stops where the checkbox's starts: overlapping buttons would both report one
+        // press, so inside its own 24px slot the checkbox decides, and the row decides everywhere else.
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke("toggle-egg", !enabled);
         }
@@ -141,7 +147,8 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
     {
         bool enabled = ctx.Bindings.TryGet(valueKey, out bool value) && value;
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, helpKey);
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
         UsKernelDraw.Label(
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - LabelRightReserve), rect.height),
@@ -150,9 +157,12 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, enabled);
 
-        if (UiNative.Button(rect, ctx))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke(actionKey, !enabled);
         }

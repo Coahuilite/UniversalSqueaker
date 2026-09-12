@@ -219,21 +219,131 @@ public static class UsKernelDraw
         }
     }
 
+    /// <summary>Spec 1.4/3-4 checkbox geometry: an 18px visual box inside a 24px hit band, so the pointer
+    /// keeps 3px of slack on every side. Public because the lane pins these numbers rather than a picture.</summary>
+    public const float CheckboxVisual = 18f;
+
+    public const float CheckboxHit = 24f;
+
+    public const float CheckboxInset = (CheckboxHit - CheckboxVisual) * 0.5f;
+
+    /// <summary>Right inset of the visual box from its row's right edge - part of the one placement rule.</summary>
+    public const float CheckboxRightInset = 34f;
+
+    /// <summary>Radius 2 as this backend can express it: the four corner cells the outline stops short of.</summary>
+    public const float CheckboxCornerCut = 2f;
+
+    /// <summary>
+    /// The one placement rule for a checkbox in a row: the 24px hit box is vertically centred in the row,
+    /// and the 18px visual keeps a <see cref="CheckboxRightInset"/> right inset. Every call site goes
+    /// through this, which is what replaced four different hand-picked vertical offsets.
+    /// </summary>
+    public static Rect CheckboxSlot(Rect row)
+    {
+        return new Rect(
+            row.xMax - CheckboxRightInset - CheckboxInset,
+            row.y + (row.height - CheckboxHit) * 0.5f,
+            CheckboxHit,
+            CheckboxHit);
+    }
+
+    /// <summary>
+    /// Draws the checkbox and reports the click: <paramref name="hitRect"/> is the 24px slot from
+    /// <see cref="CheckboxSlot"/>, the visual is drawn inset 3 inside it. The hit goes through
+    /// <see cref="UiNative.Button(Rect, UiWidgetContext)"/>, so an open popup keeps the click.
+    /// <para>
+    /// The caller must take this hit band OUT of any row button behind it: two overlapping IMGUI buttons
+    /// both report the same click, and one press would toggle twice.
+    /// </para>
+    /// </summary>
+    public static bool Checkbox(Rect hitRect, UiWidgetContext ctx, bool value)
+    {
+        CheckboxSurface(
+            new Rect(hitRect.x + CheckboxInset, hitRect.y + CheckboxInset, CheckboxVisual, CheckboxVisual),
+            ctx.Theme,
+            value);
+        return UiNative.Button(hitRect, ctx);
+    }
+
+    /// <summary>Draw-only checkbox, for read-only indicators (the camera indicator): no hit band, no click.</summary>
     public static void Checkbox(Rect rect, UiTheme theme, bool value)
     {
+        CheckboxSurface(rect, theme, value);
+    }
+
+    private static void CheckboxSurface(Rect rect, UiTheme theme, bool value)
+    {
         UiThemeDraw.Surface(rect, theme, theme.Raised, theme.Border);
-        if (value)
+
+        // Radius 2, expressed the only way this library can: the outline's four 2px corner cells are
+        // repainted with the box's own plane, so the border stops short of each corner. A real rounded
+        // corner needs a primitive the backend contact does not expose (UiThemeDraw has exactly one fill -
+        // an axis-aligned rect - on purpose, so the contact stays gateable).
+        float cut = Mathf.Min(CheckboxCornerCut, Mathf.Min(rect.width, rect.height) * 0.25f);
+        UiThemeDraw.Solid(new Rect(rect.x, rect.y, cut, cut), theme.Raised);
+        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.y, cut, cut), theme.Raised);
+        UiThemeDraw.Solid(new Rect(rect.x, rect.yMax - cut, cut, cut), theme.Raised);
+        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.yMax - cut, cut, cut), theme.Raised);
+
+        if (!value) return;
+
+        // "Checked" is a state, and states are carried by shape and ink, not by the accent: the spec's
+        // checked box is an ink-solid square with a check mark in the border colour, and the accent would
+        // put a fourth accent on every screen that has a checkbox. The lane pins that this fill is the ink
+        // token and that no accent colour is painted with it.
+        Rect ink = new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f));
+        UiThemeDraw.Surface(ink, theme, theme.TextPrimary, theme.TextPrimary);
+        CheckMark(new Rect(ink.x + 1f, ink.y + 1f, Mathf.Max(1f, ink.width - 2f), Mathf.Max(1f, ink.height - 2f)), theme.Border);
+    }
+
+    /// <summary>The spec's border-coloured check mark. The library has no line primitive, so each stroke is
+    /// a staircase of 2px cells - the same explicit-approximation口径 as <see cref="Hatch"/>: two straight
+    /// strokes of different lengths at 45 degrees, not a curve.</summary>
+    private static void CheckMark(Rect box, Color ink)
+    {
+        const float cell = 2f;
+        float midX = box.x + box.width * 0.4f;
+        Stroke(box.x, box.y + box.height * 0.5f, midX, box.yMax, cell, ink);
+        Stroke(midX, box.yMax, box.xMax, box.y, cell, ink);
+    }
+
+    private static void Stroke(float x0, float y0, float x1, float y1, float cell, Color ink)
+    {
+        float dx = x1 - x0;
+        float dy = y1 - y0;
+        int steps = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) / cell));
+        for (int i = 0; i <= steps; i++)
         {
-            // "Checked" is a state, and states are carried by shape and ink, not by the accent: the spec's
-            // checked box is an ink-solid square (the check mark itself is drawn from the border colour),
-            // and the accent would put a fourth accent on every screen that has a checkbox. The lane pins
-            // that this fill is the ink token and that no accent colour is painted with it.
-            UiThemeDraw.Surface(
-                new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f)),
-                theme,
-                theme.TextPrimary,
-                theme.TextPrimary);
+            float t = i / (float)steps;
+            UiThemeDraw.Solid(new Rect(x0 + dx * t, y0 + dy * t, cell, cell), ink);
         }
+    }
+
+    /// <summary>Spec 1.4 row system. The visual row follows the theme's density (24px regular / 20px dense,
+    /// authored as RowHeight tokens in the manifest's &lt;Styles&gt;), the hit band is always 24px so a dense
+    /// row stays a comfortable target, and a row ends in a 1px hairline. The numbers are read from
+    /// <see cref="UiTheme.Geometry"/> - the library's density axis - never from a US constant, so one
+    /// document moves the whole page.</summary>
+    public const float RowMinHit = 24f;
+
+    public static float RowVisualHeight(UiWidgetContext ctx) => ctx.Theme.Geometry.RowHeight;
+
+    public static float RowHitHeight(UiWidgetContext ctx) => Mathf.Max(RowMinHit, RowVisualHeight(ctx));
+
+    /// <summary>The hit band of a row: the row is hit at 24px even when its visual is 20px (dense), so the
+    /// band is centred on the visual row and may extend past it.</summary>
+    public static Rect RowHitRect(Rect row, UiWidgetContext ctx)
+    {
+        float hit = RowHitHeight(ctx);
+        return new Rect(row.x, row.y + (row.height - hit) * 0.5f, row.width, hit);
+    }
+
+    /// <summary>The row's bottom rule: one hairline in the divider token, so a stack of rows reads as a
+    /// list instead of a stack of boxes.</summary>
+    public static void RowBottomLine(Rect row, UiTheme theme)
+    {
+        float hairline = Mathf.Max(1f, theme.Geometry.Hairline);
+        UiThemeDraw.Solid(new Rect(row.x, row.yMax - hairline, row.width, hairline), theme.Divider);
     }
 
     /// <param name="singleLine">
@@ -304,7 +414,7 @@ public static class UsKernelDraw
     /// </summary>
     public static bool SelectionButton(Rect rect, UiWidgetContext ctx, string label, UiTheme theme, bool selected, bool danger = false, UiFont? font = null)
     {
-        RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected, danger);
+        RowSurface(rect, theme, UiNative.IsMouseOver(rect), selected ? RowRail.Selected : RowRail.None, danger);
         Label(
             new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
             label,

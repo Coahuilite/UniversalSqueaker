@@ -99,7 +99,7 @@ public sealed class UsRaceLayerWidget : UsSectionWidgetBase
     private void DrawRaceRow(Rect rect, RaceLayerRowView race, bool selected, float textWidth, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/race-layer/row");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
         string title = UsPacksText.TitleWithState(ctx, race.DisplayName, race.State);
         string detail = UsPacksText.DetailText(ctx, race.EnabledCount, race.CandidateCount);

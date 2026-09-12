@@ -102,7 +102,7 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
     private void DrawDomainRow(Rect rect, VoicePackDomainView domain, bool selected, float textWidth, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/xenotype-layer/row");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
         string title = UsPacksText.TitleWithState(ctx, TitleText(ctx, domain), domain.State);
         string detail = UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount);
