@@ -294,33 +294,27 @@ public class CompSqueaker : ThingComp
     }
 
     /// <summary>
-    /// S4 diagnostics: draws the head mark through the public ThingComp draw hook instead of a
-    /// MapInterface reflection hook (US red line). Naturally follows the pawn; the actual text
-    /// draw is a 4-direction black outline plus the main color above the pawn's slot.
+    /// S4 diagnostics: the head mark is drawn from the IMGUI pass by
+    /// <see cref="Patches.Patch_MapInterface_DiagnosticsMarks"/>, never from the thing render pass.
+    /// <c>ThingComp.PostDraw</c> is reached through <c>Pawn.Draw &#8594; Comps_PostDraw()</c>
+    /// (RimWorld <c>Verse/Pawn.cs:2754</c>) during thing rendering, and <c>GenMapUI.DrawText</c> goes
+    /// through the game's IMGUI text path: the first real run logged "You can only call GUI functions
+    /// from inside OnGUI" 8558 times there and no mark ever appeared.
+    ///
+    /// Returns true when the mark was drawn. This method performs no error handling of its own - the
+    /// caller owns the phase it runs in and the once-per-failure report - so the draw stays a plain draw
+    /// and a failure cannot be swallowed silently.
     /// </summary>
-    public override void PostDraw()
-    {
-        try
-        {
-            PostDrawCore();
-        }
-        catch (Exception ex)
-        {
-            // Diagnostics must fail closed: a modded pawn/draw exception never breaks the game frame.
-            Log.Warning("[UniversalSqueaker] Diagnostics draw failed for " + Pawn.LabelShort + ": " + SqueakLogText.SanitizeExceptionMessage(ex.Message));
-        }
-    }
-
-    private void PostDrawCore()
+    internal bool TryDrawDiagnosticsMark()
     {
         if (!SqueakDiagnosticsOverlay.IsSessionActive || !Pawn.Spawned || Pawn.Destroyed || Pawn.MapHeld == null)
         {
-            return;
+            return false;
         }
 
         if (!SqueakDiagnosticsOverlay.TryGetMark(Pawn, out string mark, out Color color))
         {
-            return;
+            return false;
         }
 
         Vector2 position = new(Pawn.DrawPos.x, Pawn.DrawPos.z + 1.15f);
@@ -332,6 +326,7 @@ public class CompSqueaker : ThingComp
         GenMapUI.DrawText(position + new Vector2(0f, -edge), mark, Color.black);
         GenMapUI.DrawText(position + new Vector2(0f, edge), mark, Color.black);
         GenMapUI.DrawText(position, mark, color);
+        return true;
     }
 
     public override void PostDestroy(DestroyMode mode, Map previousMap)

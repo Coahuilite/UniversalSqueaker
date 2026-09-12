@@ -67,6 +67,14 @@ public static class SqueakLog
     public static void HookMentalFitUnavailable() => Emit(SqueakLogEvent.HookMentalFitUnavailable, default, true);
     public static void DiagnosticsHookUnavailable() { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.DiagnosticsHookUnavailable, default, true); }
     public static void DiagnosticsStartFailed() => Emit(SqueakLogEvent.DiagnosticsStartFailed, default, true);
+
+    /// <summary>
+    /// The in-world diagnostics head mark could not be drawn. Once-semantics per exception type: the
+    /// calling hook runs every frame, and an undeduplicated per-frame line is exactly the first in-game
+    /// incident (8558 lines, 83.8% of the log). The bound - one line per exception type per session, no
+    /// matter how many frames or pawns fail - is asserted by the log lane.
+    /// </summary>
+    public static void DiagnosticsMarkDrawFailed(Exception ex) => Emit(SqueakLogEvent.DiagnosticsMarkDrawFailed, new SqueakLogData(exception: ex), true);
     public static void OverlayChanged(bool enabled) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.OverlayChanged, new SqueakLogData(enabled: enabled), false); }
     public static void CameraChanged(bool enabled) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.CameraChanged, new SqueakLogData(enabled: enabled), false); }
     public static void WorkbenchOpenFailed(Exception ex) => Emit(SqueakLogEvent.WorkbenchOpenFailed, new SqueakLogData(exception: ex), true);

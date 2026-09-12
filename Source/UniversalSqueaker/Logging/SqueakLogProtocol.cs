@@ -9,7 +9,7 @@ namespace UniversalSqueaker;
 
 internal enum SqueakLogVisibility { Daily, DevOnly }
 internal enum SqueakLogLevel { Info, Warning, Error }
-internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled, VoicePackCompAutoAttached, VoicePackCompAttachSkipped, VoicePackCompAttachFailed, LabelOverflow }
+internal enum SqueakLogEvent { ModStartIdentity, ModStartReady, LoggingModeEnabled, LoggingModeDisabled, LoggingModeAutoEnabled, LoggingModeAutoDisabled, SettingsOpenApiUnavailable, SettingsOpenFailed, CatalogRefreshFailed, PackRejected, ResolverRebuildFailed, TargetRejected, XenotypeDiscoveryUnavailable, XenotypeDiscoveryFailed, XenotypeDiscoveryCandidate, TriggerAttemptFailed, AudioNoSound, AudioDispatchFailed, AudioDispatchOk, TriggerOutcomeSummary, HookAttackUnavailable, HookAttackTargetSkipped, HookMentalBreakUnavailable, HookMentalFitUnavailable, DiagnosticsHookUnavailable, DiagnosticsStartFailed, DiagnosticsMarkDrawFailed, OverlayChanged, CameraChanged, WorkbenchOpenFailed, SettingsOrigin, AudioRouteSelected, AudioVanillaFallback, FallbackProfileStoreFailed, AudioDisabled, VoicePackCompAutoAttached, VoicePackCompAttachSkipped, VoicePackCompAttachFailed, LabelOverflow }
 
 internal readonly struct SqueakLogData
 {
@@ -71,6 +71,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.HookMentalBreakUnavailable => new(SqueakLogVisibility.Daily, SqueakLogLevel.Error, "Mental-break squeak hook is unavailable."),
         SqueakLogEvent.HookMentalFitUnavailable => new(SqueakLogVisibility.Daily, SqueakLogLevel.Error, "Baby-fits squeak hook is unavailable.", 2),
         SqueakLogEvent.DiagnosticsHookUnavailable => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Warning, "Diagnostics overlay hook is unavailable."),
+        SqueakLogEvent.DiagnosticsMarkDrawFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "A diagnostics head mark could not be drawn."),
         SqueakLogEvent.DiagnosticsStartFailed => new(SqueakLogVisibility.Daily, SqueakLogLevel.Warning, "Diagnostics overlay could not start."),
         SqueakLogEvent.OverlayChanged => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Diagnostics overlay state changed."),
         SqueakLogEvent.CameraChanged => new(SqueakLogVisibility.DevOnly, SqueakLogLevel.Info, "Camera indicator state changed."),
@@ -159,6 +160,7 @@ internal static class SqueakLogRegistry
         SqueakLogEvent.HookMentalFitUnavailable => "hook.mental_fit.unavailable",
         SqueakLogEvent.DiagnosticsHookUnavailable => "diagnostics.hook.unavailable",
         SqueakLogEvent.DiagnosticsStartFailed => "diagnostics.start.failed",
+        SqueakLogEvent.DiagnosticsMarkDrawFailed => "diagnostics.mark.draw_failed",
         SqueakLogEvent.FallbackProfileStoreFailed => "fallback.profile.store_failed",
         SqueakLogEvent.OverlayChanged => "devtools.overlay.changed",
         SqueakLogEvent.CameraChanged => "devtools.camera_indicator.changed",
