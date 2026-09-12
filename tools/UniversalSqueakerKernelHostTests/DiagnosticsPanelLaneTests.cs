@@ -10,17 +10,21 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// Round-9 harness lane for the diagnostics panel (the 建满 set at the seams the engine owns):
+/// Harness lane for the diagnostics panel (the 建满 set at the seams the engine owns):
 /// fake snapshot source injection, both generated pages validated by the REAL production host,
 /// view-state writes routing + bumping the session clock, row-click/lock actions routing, the
-/// collapse reflow (columns vanish, bar appears on the SAME clock as everything else), and a
-/// planted projection failure landing in the session guard's recovery instead of escaping the
-/// frame. Off-screen lock tracking itself is pinned by the pure model lane (SqueakDiagnostics-
+/// collapse reflow, the four-state presentation on a DRAWN frame, the provenance split (current
+/// observation vs previous evaluation), the responsive list/detail navigation, and a planted
+/// projection failure landing in the session guard's recovery instead of escaping the frame.
+/// Off-screen lock tracking itself is pinned by the pure model lane (SqueakDiagnostics-
 /// SessionModel); the window-level teardown interlock (main close cascades, close = unlock) is
 /// the maintainer live-walkthrough item - WindowStack is not stubbable at this seam.
 /// </summary>
 internal static class DiagnosticsPanelLaneTests
 {
+    /// <summary>UsAttention.Marker, spelled through the public seam the production source uses.</summary>
+    private const string Marker = UniversalSqueaker.UsAttention.Marker;
+
     public static void RunAll()
     {
         Step("main host validates the generated master-detail spec", MainHostCreation);
@@ -29,11 +33,19 @@ internal static class DiagnosticsPanelLaneTests
         Step("row click and lock actions route through the source", ActionsRoute);
         Step("collapse swaps columns and the bar on the session clock", CollapseReflow);
         Step("collapsed bar answers the three questions (09 §3.3)", CollapsedBarAnswers);
-        Step("expanded detail leads with the verdict and groups the chain", VerdictAndGroupedChain);
+        Step("the current summary and the grouped chain draw in one frame", SummaryAndGroupedChain);
         Step("raw values fold by default", RawFoldsByDefault);
         Step("the bar's close action routes as a page request", CloseRoutes);
         Step("a glyph the font cannot draw becomes its word (D7)", MissingGlyphFallsBack);
-        Step("the state word is printed once per blocked row", GateBlockMarkAppearsOnceOnScreen);
+        Step("one attention marker per blocked row, none inside a value", GateBlockMarkAppearsOnceOnScreen);
+        Step("the block rail is drawn with the attention brush, not Warning", BlockRailUsesAttentionBrush);
+        Step("the blocked status text itself is painted attention-cyan", BlockStatusTextIsAttentionCyan);
+        Step("N/A is neutral and Pending never reads as not reached", NaAndPendingAreNeutral);
+        Step("a previous failure is never promoted into the current summary", PreviousFailureStaysPrevious);
+        Step("narrow width switches to in-window navigation with a working Back", NarrowNavigation);
+        Step("the pinned detail page can never grow a Back control", PinnedDetailHasNoBack);
+        Step("the detail value column fits the measured Chinese value", ValueColumnFitsMeasuredChinese);
+        Step("all 16 conditions show, and a group folds only when clicked", GroupFold);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
         Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
     }
@@ -50,12 +62,24 @@ internal static class DiagnosticsPanelLaneTests
         }
     }
 
+    /// <summary>
+    /// A fake snapshot source. It mirrors the PRODUCTION derivations (narrow = the projection's own
+    /// content-width rule, active tab = the projection's token, Back only in the narrow detail view) so
+    /// a spec that stopped agreeing with the source's constants reddens the lane instead of the game.
+    /// </summary>
     private sealed class FakeDiagnosticsSource : IUsDiagnosticsSource
     {
         public int RevisionValue = 5;
         public bool ThrowOnDetail;
         public int LastClickedPawnId = -1;
         public int LockCalls;
+        public bool Ready { get; set; }
+
+        /// <summary>The arranged content width the shell reports; the fake's narrow state derives from it.</summary>
+        public float ContentWidth = 680f;
+
+        /// <summary>Planted chain facts, so a step can drive any of the 16 rows without a game.</summary>
+        public UsDiagGateFacts Facts = new();
 
         public List<UsDiagRow> Rows = new();
 
@@ -65,6 +89,11 @@ internal static class DiagnosticsPanelLaneTests
         public bool Collapsed { get; set; }
         public string SearchQuery { get; set; } = string.Empty;
         public int Page { get; set; }
+
+        public void SetContentWidth(float width) => ContentWidth = width;
+        public bool Narrow => UsDiagnosticsProjection.IsNarrowPresentation(ContentWidth);
+        public UsDiagNavView NavigationView { get; set; } = UsDiagNavView.List;
+        public bool ShowBackControl => Narrow && NavigationView == UsDiagNavView.Detail;
 
         public IReadOnlyList<UsDiagRow> PageRows => Rows;
         public int TotalRowCount => Rows.Count;
@@ -79,15 +108,16 @@ internal static class DiagnosticsPanelLaneTests
                     throw new InvalidOperationException("planted projection failure");
                 }
 
-                List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
+                List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(Facts, Tr, Marker);
                 return new UsDiagDetail(
                     "Violet (Human)",
-                    false,
+                    Ready,
                     false,
                     "Work",
                     "[XenotypePack·craftsmen-xeno] : Squeak_Happy_03",
                     gates,
-                    UsDiagnosticsProjection.BuildVerdict(false, gates, Tr));
+                    UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
+                    UsDiagnosticsProjection.BuildPreviousBand(Facts.Previous, Tr));
             }
         }
 
@@ -109,6 +139,13 @@ internal static class DiagnosticsPanelLaneTests
             },
             Tr);
 
+        /// <summary>Per-group fold state, all open by default (the ruling's default).</summary>
+        public readonly bool[] GroupOpen = { true, true, true };
+
+        public bool IsGroupOpen(UsDiagGateGroup group) => GroupOpen[(int)group];
+
+        public void SetGroupOpen(UsDiagGateGroup group, bool open) => GroupOpen[(int)group] = open;
+
         public bool RawOpen { get; set; }
         public bool CloseRequested { get; private set; }
         public void RequestClose() => CloseRequested = true;
@@ -119,18 +156,23 @@ internal static class DiagnosticsPanelLaneTests
         public void LockDisplayed() => LockCalls++;
 
         /// <summary>
-        /// The format-shaped half of the translation stub: the new sentences carry their placeholders in
-        /// the translated value (the language files hold them), so a lane that returned the bare key
+        /// The format-shaped half of the translation stub: the sentences carry their placeholders in the
+        /// translated value (the language files hold them), so a lane that returned the bare key
         /// everywhere would assert nothing about substitution.
         /// </summary>
-        private static string Tr(string key) => key switch
+        internal static string Tr(string key) => key switch
         {
             "US.Diagnostics.Bar.Scale" => "{0} targets",
             "US.Diagnostics.Bar.IdentityLocked" => "Sound log (locked: {0})",
             "US.Diagnostics.Bar.Activity.Recent" => "Last {0} {1} {2}",
             "US.Diagnostics.Bar.Activity.Stale" => "{0} min without a sound, last {1}",
-            "US.Diagnostics.Verdict.Blocked" => "Blocked at: {0}",
-            "US.Diagnostics.Gates.FirstBlock" => "first block: {0}",
+            "US.Diagnostics.Summary.CurrentBlock" => "Current known block: {0}",
+            "US.Diagnostics.Summary.Undetermined" => "Undetermined here: {0}",
+            "US.Diagnostics.Summary.NoCurrentBlock" => "No block found in current observations",
+            "US.Diagnostics.Previous.Evaluation" => "Previous evaluation: {0} · {1} · {2}",
+            "US.Diagnostics.Previous.Dispatch" => "Last dispatch: {0} · {1}",
+            "US.Diagnostics.Recency.JustNow" => "at {0}, less than a minute ago",
+            "US.Diagnostics.Recency.Ago" => "at {0}, {1} min ago",
             _ => key,
         };
     }
@@ -203,6 +245,11 @@ internal static class DiagnosticsPanelLaneTests
         bindings.Set(UsDiagnosticsHost.KeyCollapsed, true);
         Assert(fake.Collapsed, "collapse write routes");
         Assert(host.Session.ContentRevision == rev + 1, "collapse bumps (measure switches)");
+
+        rev = host.Session.ContentRevision;
+        bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
+        Assert(fake.NavigationView == UsDiagNavView.Detail, "the narrow view write routes to the source");
+        Assert(host.Session.ContentRevision == rev + 1, "and bumps: the view switch changes the arranged page");
     }
 
     private static void ActionsRoute()
@@ -258,20 +305,15 @@ internal static class DiagnosticsPanelLaneTests
         Assert(bar.Activity.Contains("12:04:09"), "the activity sentence carries the event time, got " + bar.Activity);
     }
 
-    private static void VerdictAndGroupedChain()
+    private static void SummaryAndGroupedChain()
     {
         var fake = new FakeDiagnosticsSource();
         FillRows(fake, 8);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
         Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null,
             "the detail binding still projects a model");
-        Assert(detail!.Verdict.Length > 0, "the expanded state leads with a verdict sentence");
-
-        int first = UsDiagnosticsProjection.FirstBlockedIndex(detail.Gates);
-        Assert(first >= 0 && detail.Gates[first].State == UsDiagGateState.Block,
-            "the fake's chain is blocked, so a first block exists to mark");
-        Assert(detail.Verdict.Contains(detail.Gates[first].Name),
-            "the verdict names that same gate: '" + detail.Verdict + "'");
+        Assert(detail!.Summary.Headline.Length > 0, "the expanded state leads with the current-only summary");
+        Assert(detail.Previous.Heading.Length > 0, "and keeps the previous-event band");
 
         int game = 0, rules = 0, audio = 0;
         foreach (UsDiagGateLine gate in detail.Gates)
@@ -284,7 +326,7 @@ internal static class DiagnosticsPanelLaneTests
         Assert(game == 4 && rules == 7 && audio == 5, "all three sides survive the projection, got " + game + "/" + rules + "/" + audio);
 
         host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
-        Assert(host.Session.IsActive, "the grouped chain draws inside a full real frame");
+        Assert(host.Session.IsActive, "the summary and the grouped chain draw inside a full real frame");
     }
 
     private static void RawFoldsByDefault()
@@ -314,9 +356,9 @@ internal static class DiagnosticsPanelLaneTests
     }
 
     /// <summary>
-    /// The in-game defect, pinned where a player saw it: on the drawn frame. The state word is read back
-    /// from the stub's label recorder, so a widget that grew a second prefix - whatever the projection
-    /// says - reddens this step; the first block's emphasis is the attention-coloured rail instead.
+    /// The in-game defect, pinned where a player saw it: on the drawn frame. Each blocked condition row
+    /// carries the attention marker EXACTLY once, no other row carries one, and the raw value never
+    /// contains it (the marker lives in the separate status cell).
     /// </summary>
     private static void GateBlockMarkAppearsOnceOnScreen()
     {
@@ -325,13 +367,111 @@ internal static class DiagnosticsPanelLaneTests
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
         host.MeasureAndArrange(new Vector2(680f, 560f));
 
+        int blockRows = 0;
+        List<string> blockValues = new();
+        if (host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null)
+        {
+            foreach (UsDiagGateLine gate in detail.Gates)
+            {
+                if (gate.State != UsDiagGateState.Block) continue;
+                blockRows++;
+                blockValues.Add(gate.Value);
+            }
+        }
+
+        Assert(blockRows > 1, "the fake's chain blocks in more than one place, so the sweep below is meaningful");
+
         IList texts = RecordedStub("LabelTexts");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+
+        // The detail must actually have drawn. A tripping widget is swapped for the recovery band, which
+        // would leave every assertion below vacuously green - the shape that hid this defect.
+        Assert(host.Session.TrippedNodes.Count == 0,
+            "the frame drew the gate chain through the guard without tripping (" + host.Session.TrippedNodes.Count + " tripped)");
+
+        int marked = 0;
+        List<string> drawn = new();
+        for (int i = textStart; i < texts.Count; i++)
+        {
+            string text = (string)texts[i]!;
+            drawn.Add(text);
+            int marks = CountOccurrences(text, Marker);
+            Assert(marks <= 1, "no drawn cell repeats the marker (the in-game defect): '" + text + "'");
+            if (marks == 1) marked++;
+        }
+
+        Assert(marked == blockRows,
+            "every blocked row is marked exactly once and nothing else is, got " + marked + " of " + blockRows);
+
+        // And no VALUE cell carries the marker: the marker must live in the status cell alone. The test is
+        // "contains", not "equals", so a painter that concatenated the status onto the value - the exact
+        // regression this checks for - cannot slip through as a non-matching string.
+        foreach (string value in blockValues)
+        {
+            if (value.Length == 0) continue;
+            foreach (string text in drawn)
+            {
+                if (text.IndexOf(value, StringComparison.Ordinal) < 0) continue;
+                Assert(CountOccurrences(text, Marker) == 0,
+                    "a cell carrying a blocked row's value must not also carry the marker, got '" + text + "'");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The block rail must carry US's attention brush. Asserting against <c>UsAttention.Brush</c> - not
+    /// <c>UiTheme.Warning</c> - is the difference between proving the cyan reached the frame and proving
+    /// that the Danger-aliased token was named: a rail painted gold or danger-red fails here.
+    /// </summary>
+    private static void BlockRailUsesAttentionBrush()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
         IList rects = RecordedStub("DrawBoxSolidRects");
         IList colors = RecordedStub("DrawBoxSolidColors");
-        int textStart = texts.Count;
         int boxStart = colors.Count;
-
         host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+
+        UiTheme hostTheme = host.CreateContext(1f).Theme;
+        int attentionRails = 0;
+        int warningRails = 0;
+        int dividerRails = 0;
+        for (int i = boxStart; i < rects.Count && i < colors.Count; i++)
+        {
+            Rect rail = (Rect)rects[i]!;
+            Color colour = (Color)colors[i]!;
+            if (SameColor(colour, hostTheme.Divider) && Math.Abs(rail.width - 2f) <= 0.01f) dividerRails++;
+            if (!SameColor(colour, UniversalSqueaker.UsAttention.Brush)) continue;
+            if (Math.Abs(rail.width - 2f) <= 0.01f) attentionRails++;
+            if (SameColor(colour, hostTheme.Warning)) warningRails++;
+        }
+
+        // The two names must be different colours, or this whole step is a tautology on this theme.
+        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, hostTheme.Warning),
+            "the attention brush and the Warning/Danger alias are different colours on this theme");
+        Assert(attentionRails == 1,
+            "exactly one rail carries UsAttention.Brush (the first CURRENT block), got " + attentionRails);
+        Assert(warningRails == 0, "and no rail uses the Danger-aliased Warning token, got " + warningRails);
+        Assert(dividerRails >= 1,
+            "the other chain rows keep the plain group rail that carries the same brush where the band is, got " + dividerRails);
+    }
+
+    /// <summary>
+    /// G1: the blocked STATUS TEXT - the marker plus the state word - must be painted with the attention
+    /// brush on the real frame. The rail check alone let a mutation paint the status word gold pass
+    /// green, so this reads the drawn label colour back and guards it against the accent gold and the
+    /// whole danger family (Warning is the carrier's alias of Danger).
+    /// </summary>
+    private static void BlockStatusTextIsAttentionCyan()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
 
         int blockRows = 0;
         if (host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null)
@@ -342,44 +482,462 @@ internal static class DiagnosticsPanelLaneTests
             }
         }
 
-        Assert(blockRows > 1, "the fake's chain blocks in more than one place, so the sweep below is meaningful");
-        // The detail must actually have drawn. A tripping widget is swapped for the recovery band, which
-        // would leave every assertion below vacuously green - the shape that hid this defect.
-        Assert(host.Session.TrippedNodes.Count == 0,
-            "the frame drew the gate chain through the guard without tripping (" + host.Session.TrippedNodes.Count + " tripped)");
+        Assert(blockRows > 1, "the fixture blocks in more than one row, so the sweep is not a one-row special case");
 
-        // The mark token as THIS harness's translation seam resolves it (its stub returns the key).
-        const string Mark = "US.Diagnostics.Gate.BlockMark";
-        int marked = 0;
+        IList texts = RecordedStub("LabelTexts");
+        IList colors = RecordedStub("LabelColors");
+        int start = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+
+        UiTheme theme = host.CreateContext(1f).Theme;
+        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, theme.AccentGold)
+                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme.Danger)
+                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme.Warning),
+            "the theme really distinguishes attention from gold and danger, or this step is a tautology");
+
+        string statusText = Marker + " US.Diagnostics.Gate.BlockMark";
+        int found = 0;
+        for (int i = start; i < texts.Count && i < colors.Count; i++)
+        {
+            if (!string.Equals((string)texts[i]!, statusText, StringComparison.Ordinal)) continue;
+            found++;
+            Color colour = (Color)colors[i]!;
+            Assert(SameColor(colour, UniversalSqueaker.UsAttention.Brush),
+                "a blocked status cell is painted with the attention brush, got " + colour);
+            Assert(!SameColor(colour, theme.AccentGold),
+                "never the accent gold - the ruling's named acceptance clause, got " + colour);
+            Assert(!SameColor(colour, theme.Danger) && !SameColor(colour, theme.Warning),
+                "and never the danger family, got " + colour);
+        }
+
+        Assert(found == blockRows,
+            "every blocked row's status cell was drawn and checked, got " + found + " of " + blockRows);
+    }
+
+    /// <summary>
+    /// The four-state contract on the drawn frame: an N/A status cell is never pass-styled, a Pending
+    /// status cell is never the selection accent, and the copy never claims "not reached".
+    /// </summary>
+    private static void NaAndPendingAreNeutral()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
+        IList texts = RecordedStub("LabelTexts");
+        IList colors = RecordedStub("LabelColors");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+
+        UiTheme theme = host.CreateContext(1f).Theme;
+        Assert(!SameColor(theme.Success, theme.TextSecondary) && !SameColor(theme.Selected, theme.TextSecondary)
+                && !SameColor(theme.Success, theme.Selected),
+            "the theme really distinguishes pass/pending/neutral ink, or the checks below are vacuous");
+
+        int naDrawn = 0;
+        int pendingDrawn = 0;
+        for (int i = textStart; i < texts.Count && i < colors.Count; i++)
+        {
+            string text = (string)texts[i]!;
+            Color colour = (Color)colors[i]!;
+            if (string.Equals(text, "US.Diagnostics.Value.NotApplicable", StringComparison.Ordinal))
+            {
+                naDrawn++;
+                Assert(!SameColor(colour, theme.Success), "N/A must never use the pass colour");
+                Assert(SameColor(colour, theme.TextSecondary), "N/A reads as neutral ink");
+            }
+            else if (string.Equals(text, "US.Diagnostics.Value.Undetermined", StringComparison.Ordinal))
+            {
+                pendingDrawn++;
+                Assert(!SameColor(colour, theme.Selected), "Pending must never use the selection accent");
+                Assert(SameColor(colour, theme.TextSecondary), "Pending reads as neutral ink");
+            }
+
+            Assert(text.IndexOf("not reached", StringComparison.OrdinalIgnoreCase) < 0 && text.IndexOf("NotReached", StringComparison.Ordinal) < 0,
+                "no drawn copy claims a condition was not reached: '" + text + "'");
+        }
+
+        Assert(naDrawn > 0 && pendingDrawn > 0,
+            "the frame really drew both an N/A and a Pending status cell (na=" + naDrawn + ", pending=" + pendingDrawn + ")");
+    }
+
+    /// <summary>
+    /// The adversarial case from the ruling: no current block at all, a remembered evaluation failure.
+    /// The summary must stay honest and the failure must appear only in the previous-event band.
+    /// </summary>
+    private static void PreviousFailureStaysPrevious()
+    {
+        var fake = new FakeDiagnosticsSource
+        {
+            Facts = new UsDiagGateFacts
+            {
+                OnMap = true,
+                OnScreen = true,
+                HasTimingAction = true,
+                ActionEnabled = true,
+                ActionCooldownPass = true,
+                GlobalApplicable = true,
+                GlobalPass = true,
+                VocalPass = true,
+                EvaluationBelongsToCurrentAction = true,
+                EligibilityRejected = true,
+                Previous = new UsDiagPreviousFacts
+                {
+                    HasEvaluation = true,
+                    EvaluationOutcome = "EligibilityRejected",
+                    EvaluationAction = "work",
+                    EvaluationTick = 90000,
+                    NowTick = 90120,
+                },
+            },
+        };
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
+        Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null, "detail projects");
+        Assert(detail!.Gates[14].State == UsDiagGateState.Block, "the fixture really does have a previous-event failure");
+        Assert(!detail.Summary.HasCurrentBlock && detail.Summary.Headline == "No block found in current observations",
+            "the summary headline never promotes it, got '" + detail.Summary.Headline + "'");
+        Assert(detail.Previous.EvaluationLine.Contains("EligibilityRejected"),
+            "and the band is where it is reported, got '" + detail.Previous.EvaluationLine + "'");
+
+        IList texts = RecordedStub("LabelTexts");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+
+        bool headlineDrawn = false;
+        bool previousDrawn = false;
         for (int i = textStart; i < texts.Count; i++)
         {
             string text = (string)texts[i]!;
-            int marks = CountOccurrences(text, Mark);
-            Assert(marks <= 1, "no drawn row repeats the state word (the in-game defect): '" + text + "'");
-            if (marks == 1) marked++;
+            if (text.Contains("No block found in current observations")) headlineDrawn = true;
+            if (text.Contains("Previous evaluation:")) previousDrawn = true;
+            Assert(text.IndexOf("Current known block:", StringComparison.Ordinal) < 0,
+                "no drawn copy claims a current block here: '" + text + "'");
         }
 
-        Assert(marked == blockRows, "every blocked row is marked exactly once, got " + marked + " of " + blockRows);
-
-        // "First" is carried by the rail: a 2px attention-coloured track - a different means from the word.
-        // The comparison uses the theme the HOST drew with, not a stock instance: the panel's palette is
-        // the host's own, and a lane that assumed DarkGold's literals would be asserting the wrong ruler.
-        UiTheme hostTheme = host.CreateContext(1f).Theme;
-        int attentionRails = 0;
-        int dividerRails = 0;
-        for (int i = boxStart; i < rects.Count && i < colors.Count; i++)
-        {
-            Rect rail = (Rect)rects[i]!;
-            if (Math.Abs(rail.width - 2f) > 0.01f) continue;
-
-            Color colour = (Color)colors[i]!;
-            if (SameColor(colour, hostTheme.Warning)) attentionRails++;
-            if (SameColor(colour, hostTheme.Divider)) dividerRails++;
-        }
-
-        Assert(attentionRails == 1, "exactly one rail carries the attention colour (the first block), got " + attentionRails);
-        Assert(dividerRails >= 1, "the other chain rows keep the plain group rail, got " + dividerRails);
+        Assert(headlineDrawn && previousDrawn, "both the honest headline and the previous band reached the frame");
     }
+
+    /// <summary>
+    /// 09 §3.5: below the measured split threshold the page must switch to the in-window list/detail
+    /// navigation, expose a working Back, and leave the search text and page exactly where they were.
+    /// </summary>
+    private static void NarrowNavigation()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 12);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+
+        // The narrow decision and the engine's Breakpoint must agree: this width is half a pixel under
+        // the declared threshold, and the wide columns must be gone while the nav column owns the page.
+        const float narrowWidth = UsDiagnosticsProjection.NarrowBreakpoint + UsDiagnosticsProjection.PagePadding * 2f - 0.5f;
+        fake.SetContentWidth(narrowWidth);
+        UiLayoutSnapshot narrow = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+        Assert(fake.Narrow, "the source's presentation decision follows the same threshold the spec declares");
+        Assert(Height(narrow, "diag-list") <= 0f && Height(narrow, "diag-detail-scroll") <= 0f,
+            "narrow: the wide master and detail columns are hidden whole");
+        Assert(Height(narrow, "diag-nav-body") > 0f && Width(narrow, "diag-nav-col") > 200f,
+            "narrow: the navigation column shows the list and owns the width");
+
+        // Search + page are established BEFORE the navigation switch.
+        host.Bindings.Set(UsDiagnosticsHost.KeySearch, "vi");
+        host.Bindings.Set(UsDiagnosticsHost.KeyPage, 2);
+        int revBefore = host.Session.ContentRevision;
+
+        // Selecting a row opens the detail view through the SAME write the source uses.
+        host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
+        Assert(fake.NavigationView == UsDiagNavView.Detail, "the view switch routes");
+        Assert(host.Session.ContentRevision == revBefore + 1, "and bumps the layout clock once");
+        UiLayoutSnapshot detailView = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+        Assert(Height(detailView, "diag-nav-body") > Height(narrow, "diag-nav-body"),
+            "narrow detail: the same body element now measures the taller detail content, got "
+            + Height(detailView, "diag-nav-body") + " vs " + Height(narrow, "diag-nav-body") + " for the list");
+
+        IList texts = RecordedStub("LabelTexts");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, narrowWidth, 560f));
+        bool backDrawn = false;
+        for (int i = textStart; i < texts.Count; i++)
+        {
+            if (((string)texts[i]!).IndexOf("US.Diagnostics.Nav.Back", StringComparison.Ordinal) >= 0) backDrawn = true;
+        }
+
+        Assert(backDrawn, "the narrow detail view draws a Back control");
+        Assert(Height(detailView, "diag-nav-back") > 0f, "and it has real geometry, not a zero-height ghost");
+
+        // Back returns to the list and restores the SAME search text, page and list position. The list
+        // position is session state on the list Scroll's own node, so it must survive the round trip -
+        // and the switch is driven by CLICKING the drawn control rather than by writing the binding, so a
+        // Back handler that also cleared the search or reset the page reddens this step.
+        const float shortHeight = 160f;
+        host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.List);
+        fake.SetContentWidth(narrowWidth);
+        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        UiNode? listScroll = host.Session.GetNodeByElementId("diag-nav-scroll");
+        Assert(listScroll != null, "the narrow list scroll has a node to own its position");
+        host.Session.SetScrollPosition(listScroll!, new Vector2(0f, 60f));
+        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        float before = host.Session.GetScrollPosition(listScroll!).y;
+        Assert(before > 1f, "the fixture really scrolled (a clamped-to-zero offset would make the check vacuous), got " + before);
+
+        // Show the detail view - the state whose Back control is under test - and click ITS drawn control.
+        host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
+        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Rect shortViewport = new(0f, 0f, narrowWidth, shortHeight);
+        int backStart = texts.Count;
+        host.DrawChecked(shortViewport);
+        Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), backStart, "US.Diagnostics.Nav.Back", out Rect backLabel),
+            "the drawn Back control is on the frame before it is clicked");
+        int revAtClick = host.Session.ContentRevision;
+
+        ClickRect(host, shortViewport, backLabel);
+
+        Assert(fake.NavigationView == UsDiagNavView.List, "clicking the drawn Back control switches the view back");
+        Assert(host.Session.ContentRevision == revAtClick + 1,
+            "and that click is exactly one display write - a handler that also cleared state would bump more, got "
+            + (host.Session.ContentRevision - revAtClick));
+        Assert(fake.SearchQuery == "vi", "and the search text is exactly what it was, got '" + fake.SearchQuery + "'");
+        Assert(fake.Page == 2, "and the page is exactly where it was, got " + fake.Page);
+        UiLayoutSnapshot back = host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Assert(Height(back, "diag-nav-body") > 0f, "the list view is arranged again");
+        Assert(Math.Abs(host.Session.GetScrollPosition(listScroll!).y - before) < 0.5f,
+            "and the list position survived the round trip, got " + host.Session.GetScrollPosition(listScroll!).y + " vs " + before);
+
+        // The wide side of the same boundary keeps the master/detail split.
+        UiLayoutSnapshot wide = HostArrangeAt(680f);
+        Assert(Width(wide, "diag-nav-col") <= 1.5f && Height(wide, "diag-list") > 0f && Height(wide, "diag-detail-scroll") > 0f,
+            "at the shipped 680 width the master/detail split is used and the nav column costs a pixel");
+        Assert(Width(wide, "diag-nav-body") <= 1.5f && Width(wide, "diag-nav-scroll") <= 1.5f,
+            "and the narrow body is a 1px column every widget skips in Draw, so it cannot paint over the split");
+
+        UiLayoutSnapshot HostArrangeAt(float width)
+        {
+            fake.SetContentWidth(width);
+            return host.MeasureAndArrange(new Vector2(width, 560f));
+        }
+    }
+
+    /// <summary>
+    /// The pinned detail window has no owning list, so its page must not declare - and must never draw -
+    /// a Back control that would have nowhere to go. Asserted on the spec AND on a drawn frame.
+    /// </summary>
+    private static void PinnedDetailHasNoBack()
+    {
+        Assert(UsDiagnosticsSpec.DetailXml.IndexOf("us/diag/nav", StringComparison.Ordinal) < 0,
+            "the pinned page declares no nav widget");
+        Assert(UsDiagnosticsSpec.DetailXml.IndexOf("Tab=", StringComparison.Ordinal) < 0,
+            "and no tab-driven view switch (it has no second view)");
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("us/diag/nav", StringComparison.Ordinal) >= 0,
+            "positive control: the responsive main page does declare it");
+
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        // Force the state that shows Back on the MAIN page, then render the PINNED page.
+        fake.SetContentWidth(500f);
+        fake.NavigationView = UsDiagNavView.Detail;
+        Assert(fake.ShowBackControl, "positive control: in this state the main page would show Back");
+        using UiHost host = UsDiagnosticsHost.CreateDetail(fake);
+        host.MeasureAndArrange(new Vector2(320f, 480f));
+
+        IList texts = RecordedStub("LabelTexts");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 320f, 480f));
+        for (int i = textStart; i < texts.Count; i++)
+        {
+            Assert(((string)texts[i]!).IndexOf("US.Diagnostics.Nav.Back", StringComparison.Ordinal) < 0,
+                "the pinned detail frame never draws a Back control");
+        }
+    }
+
+    /// <summary>
+    /// The ruling's mutation target: narrow the detail value rect and this must fail. The check compares
+    /// the DRAWN value cell against the measured need of the Chinese value drawn in it.
+    /// </summary>
+    private static void ValueColumnFitsMeasuredChinese()
+    {
+        const string chineseValue = "随机判定";
+        var fake = new FakeDiagnosticsSource { Facts = new UsDiagGateFacts { ProbabilityValue = chineseValue } };
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+
+        const float narrowWidth = 620f;
+        fake.SetContentWidth(narrowWidth);
+        fake.NavigationView = UsDiagNavView.Detail; // the narrow detail view is what draws the value cell
+        host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+
+        IList texts = RecordedStub("LabelTexts");
+        IList rects = RecordedStub("LabelRects");
+        int textStart = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, narrowWidth, 560f));
+
+        float needed = VerseFerriteTextMetrics.Instance.MeasureWidth(chineseValue, UiFont.Tiny);
+        Assert(needed > 0f, "the ruler measures the value at all");
+
+        float drawnWidth = -1f;
+        for (int i = textStart; i < texts.Count && i < rects.Count; i++)
+        {
+            if (string.Equals((string)texts[i]!, chineseValue, StringComparison.Ordinal))
+            {
+                drawnWidth = Math.Max(drawnWidth, ((Rect)rects[i]!).width);
+            }
+        }
+
+        Assert(drawnWidth > 0f, "the Chinese value was actually drawn (a missing cell would make this vacuous)");
+        Assert(drawnWidth >= needed,
+            "the value column (" + drawnWidth + "px) holds the measured Chinese value (" + needed + "px) at the narrow width");
+    }
+
+    /// <summary>
+    /// 09 §1 decision 1 / §3.2: all 16 conditions are discoverable with the default (all open) groups,
+    /// each group folds ONLY on the developer's click, and an update to the data never changes which
+    /// groups are open - the stable-view rule.
+    /// </summary>
+    private static void GroupFold()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
+        Assert(host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null, "detail projects");
+        Assert(detail!.Gates.Count == 16, "the chain is still 16 conditions");
+        foreach (UsDiagGateGroup group in new[] { UsDiagGateGroup.Game, UsDiagGateGroup.Rules, UsDiagGateGroup.Audio })
+        {
+            Assert(fake.IsGroupOpen(group), "group " + group + " starts open");
+            Assert(host.Bindings.TryGet(UsDiagnosticsHost.GroupKey(group), out bool open) && open,
+                "and its binding agrees, so the default is the page's own state");
+        }
+
+        IList texts = RecordedStub("LabelTexts");
+        int start = texts.Count;
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
+        int drawnNames = 0;
+        foreach (UsDiagGateLine gate in detail.Gates)
+        {
+            if (DrawnContains(texts, start, gate.Name)) drawnNames++;
+        }
+
+        Assert(drawnNames == 16, "all 16 conditions are discoverable with the groups open, got " + drawnNames);
+
+        // Positive control for the name sweep: the game names really are in the drawn text.
+        Assert(DrawnContains(texts, start, "US.Diagnostics.Gate.OnMap"), "the sweep finds a game-side name");
+        Assert(DrawnContains(texts, start, "US.Diagnostics.Gate.Dispatch"), "and an audio-side name");
+
+        float openHeight = Height(host.MeasureAndArrange(new Vector2(680f, 560f)), "diag-detail");
+        Rect viewport = new(0f, 0f, 680f, 560f);
+
+        // Fold the Audio group by CLICKING its heading through the engine's own hit outlet - the same
+        // stub override the mood lane uses. A heading that stopped being a control reddens here.
+        int clickStart = texts.Count;
+        host.DrawChecked(viewport);
+        Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), clickStart,
+                "[-] US.Diagnostics.Gate.Group.Audio · US.Diagnostics.Basis.Current", out Rect openHeading),
+            "the open Audio heading is drawn as a control and names its group");
+        int revBefore = host.Session.ContentRevision;
+        ClickRect(host, viewport, openHeading);
+        Assert(!fake.IsGroupOpen(UsDiagGateGroup.Audio), "clicking the heading folds the group");
+        Assert(host.Session.ContentRevision == revBefore + 1, "and the fold is one display write, not a repaint");
+
+        UiLayoutSnapshot folded = host.MeasureAndArrange(viewport.size);
+        Assert(Height(folded, "diag-detail") < openHeight,
+            "a folded group takes its rows out of the page, got " + Height(folded, "diag-detail") + " vs " + openHeight);
+
+        int start2 = texts.Count;
+        host.DrawChecked(viewport);
+        Assert(DrawnContains(texts, start2, "[+] US.Diagnostics.Gate.Group.Audio"),
+            "the folded group keeps one heading that says so");
+        foreach (string audioName in new[] { "US.Diagnostics.Gate.VocalOrgan", "US.Diagnostics.Gate.AudioPool", "US.Diagnostics.Gate.Playability", "US.Diagnostics.Gate.Dispatch" })
+        {
+            Assert(!DrawnContains(texts, start2, audioName),
+                "a folded group draws none of its condition rows (" + audioName + " was still drawn)");
+        }
+
+        Assert(DrawnContains(texts, start2, "US.Diagnostics.Gate.OnMap") && DrawnContains(texts, start2, "US.Diagnostics.Gate.Startup"),
+            "while the other groups keep drawing");
+
+        // A data update must not move the developer's view: the state is page state, never derived.
+        fake.Facts.OnMap = true;
+        host.MeasureAndArrange(viewport.size);
+        host.DrawChecked(viewport);
+        Assert(!fake.IsGroupOpen(UsDiagGateGroup.Audio),
+            "an update to the values never re-opens a folded group (no automatic collapse or expand)");
+        Assert(fake.IsGroupOpen(UsDiagGateGroup.Game) && fake.IsGroupOpen(UsDiagGateGroup.Rules),
+            "and never touches a group the developer did not fold");
+
+        // And the same control opens it again.
+        int reopenStart = texts.Count;
+        host.DrawChecked(viewport);
+        Assert(TryFindLabelRect(texts, RecordedStub("LabelRects"), reopenStart, "[+] US.Diagnostics.Gate.Group.Audio", out Rect closedHeading),
+            "the folded heading is drawn as a control");
+        ClickRect(host, viewport, closedHeading);
+        Assert(fake.IsGroupOpen(UsDiagGateGroup.Audio), "clicking it again expands the group");
+    }
+
+    /// <summary>True when the label at or after <paramref name="from"/> matches, with its drawn rect.</summary>
+    private static bool TryFindLabelRect(IList texts, IList rects, int from, string needle, out Rect rect)
+    {
+        for (int i = from; i < texts.Count && i < rects.Count; i++)
+        {
+            if (((string)texts[i]!).IndexOf(needle, StringComparison.Ordinal) < 0) continue;
+            rect = (Rect)rects[i]!;
+            return true;
+        }
+
+        rect = Rect.zero;
+        return false;
+    }
+
+    /// <summary>
+    /// One frame in which the control whose surface ENCLOSES <paramref name="labelRect"/> reports a
+    /// click (the carrier's own test seam, <c>UiNative.ButtonOverride</c>).
+    /// </summary>
+    private static void ClickRect(UiHost host, Rect viewport, Rect labelRect)
+    {
+        SetButtonOverride(rect => Math.Abs(rect.y - labelRect.y) <= 0.5f
+            && Math.Abs(rect.height - labelRect.height) <= 0.5f
+            && rect.x <= labelRect.x + 0.5f
+            && rect.xMax >= labelRect.xMax - 0.5f);
+        try
+        {
+            host.DrawChecked(viewport);
+        }
+        finally
+        {
+            SetButtonOverride(null);
+        }
+    }
+
+    private static void SetButtonOverride(Func<Rect, bool>? value)
+    {
+        FieldInfo? info = typeof(UiNative).GetField("ButtonOverride", BindingFlags.NonPublic | BindingFlags.Static);
+        if (info == null)
+        {
+            throw new InvalidOperationException(
+                "the carrier no longer exposes UiNative.ButtonOverride, so this lane cannot simulate a click; "
+                + "the fold check must not be deleted to make that compile error go away");
+        }
+
+        info.SetValue(null, value);
+    }
+
+    private static bool DrawnContains(IList texts, int from, string needle)
+    {
+        for (int i = from; i < texts.Count; i++)
+        {
+            if (((string)texts[i]!).IndexOf(needle, StringComparison.Ordinal) >= 0) return true;
+        }
+
+        return false;
+    }
+
+    private static float Height(UiLayoutSnapshot snapshot, string id)
+        => snapshot.RectById.TryGetValue(id, out Rect rect) ? rect.height : 0f;
+
+    private static float Width(UiLayoutSnapshot snapshot, string id)
+        => snapshot.RectById.TryGetValue(id, out Rect rect) ? rect.width : 0f;
 
     private static IList RecordedStub(string field)
     {

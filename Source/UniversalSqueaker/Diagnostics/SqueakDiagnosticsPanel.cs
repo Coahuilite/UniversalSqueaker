@@ -47,8 +47,12 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     }
 
     // 620 -> 680 (lead-authorised, dev-only): the detail column needs 320 for its 40/60 value split
-    // without ellipsizing Chinese values (defect D4).
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(680f, 560f);
+    // without ellipsizing Chinese values (defect D4). The size is also clamped to the REAL coordinate
+    // space: at high UIScale the scaled screen is narrower than 680 and a fixed initial width would push
+    // the detail column off-screen before the responsive switch could help (09 §3.5).
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
+        Mathf.Clamp(680f, 320f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
+        Mathf.Clamp(560f, 240f, Mathf.Max(240f, Verse.UI.screenHeight - 80f)));
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -71,6 +75,11 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
             Close();
             return;
         }
+
+        // The responsive decision is fed BEFORE this pass's layout: the source derives the narrow
+        // presentation and the active-tab token from the width the shell is about to arrange in, so the
+        // page's shape and the engine's own Breakpoint evaluation read one coordinate space.
+        source.SetContentWidth(contentRect.width);
 
         bool collapsed = source.Collapsed;
         if (collapsed == lastCollapsed)

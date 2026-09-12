@@ -60,6 +60,25 @@ public static class UsDiagnosticsHost
     public const string KeyRawOpen = "diag-raw-open";
     public const string KeyClose = "diag-close";
 
+    /// <summary>Narrow-mode navigation: which in-window view is showing (writable, bumps the clock).</summary>
+    public const string KeyNavView = "diag-navview";
+
+    /// <summary>Read-only: the narrow detail view is showing, so the Back control exists.</summary>
+    public const string KeyShowBack = "diag-showback";
+
+    /// <summary>One writable switch per condition group: all default open, only a click folds one.</summary>
+    public const string KeyGroupGame = "diag-group-game";
+    public const string KeyGroupRules = "diag-group-rules";
+    public const string KeyGroupAudio = "diag-group-audio";
+
+    /// <summary>The binding key of one condition group's fold switch.</summary>
+    public static string GroupKey(UsDiagGateGroup group) => group switch
+    {
+        UsDiagGateGroup.Game => KeyGroupGame,
+        UsDiagGateGroup.Rules => KeyGroupRules,
+        _ => KeyGroupAudio,
+    };
+
     private static UiBindings BuildBindings(IUsDiagnosticsSource source, DiagRevisionBumper bumper)
     {
         Action bump = bumper.Bump;
@@ -69,6 +88,22 @@ public static class UsDiagnosticsHost
         b.BindValue<bool>(KeyCollapsed, () => source.Collapsed, value => { source.Collapsed = value; bump(); });
         b.BindValue<string>(KeySearch, () => source.SearchQuery, value => { source.SearchQuery = value; bump(); });
         b.BindValue<int>(KeyPage, () => source.Page, value => { source.Page = value; bump(); });
+
+        // Narrow navigation. The write goes through the binding so the layout cache sees it (D1/D6):
+        // the widget never flips a private flag.
+        b.BindValue<UsDiagNavView>(KeyNavView, () => source.NavigationView,
+            value => { source.NavigationView = value; bump(); });
+        b.BindReadOnly<bool>(KeyShowBack, () => source.ShowBackControl);
+
+        // One fold switch per group. A write goes through the binding, so the switch is page state on
+        // the same clock as every other display write - and NOTHING in the data path touches it, which
+        // is what makes "no automatic group collapse when values update" structural rather than a rule.
+        b.BindValue<bool>(KeyGroupGame, () => source.IsGroupOpen(UsDiagGateGroup.Game),
+            value => { source.SetGroupOpen(UsDiagGateGroup.Game, value); bump(); });
+        b.BindValue<bool>(KeyGroupRules, () => source.IsGroupOpen(UsDiagGateGroup.Rules),
+            value => { source.SetGroupOpen(UsDiagGateGroup.Rules, value); bump(); });
+        b.BindValue<bool>(KeyGroupAudio, () => source.IsGroupOpen(UsDiagGateGroup.Audio),
+            value => { source.SetGroupOpen(UsDiagGateGroup.Audio, value); bump(); });
 
         b.BindReadOnly<IReadOnlyList<UsDiagRow>>(KeyRows, () => source.PageRows);
         b.BindReadOnly<int>(KeyTotal, () => source.TotalRowCount);
@@ -80,7 +115,9 @@ public static class UsDiagnosticsHost
         b.BindValue<bool>(KeyRawOpen, () => source.RawOpen, value => { source.RawOpen = value; bump(); });
 
         b.BindAction<int>(KeyLock, _ => source.LockDisplayed());
-        b.BindAction<int>(KeyRowClick, pawnId => source.ClickRow(pawnId));
+        // A row click can also change the narrow navigation view, so it bumps like any display write;
+        // the source's own drill-in/lock decision is untouched.
+        b.BindAction<int>(KeyRowClick, pawnId => { source.ClickRow(pawnId); bump(); });
         b.BindCommand(KeyClose, source.RequestClose);
 
         return b;
@@ -101,7 +138,7 @@ public static class UsDiagnosticsHost
 }
 
 /// <summary>
-/// Registers the five diagnostics widget kinds under the US scope with their creation-time
+/// Registers the six diagnostics widget kinds under the US scope with their creation-time
 /// attribute contracts (unknown attributes are rejected at Host creation, same as settings).
 /// </summary>
 public static class UsDiagnosticsWidgetRegistrar
@@ -119,6 +156,8 @@ public static class UsDiagnosticsWidgetRegistrar
             UsDiagToolbarWidget.Register();
             UsDiagListWidget.Register();
             UsDiagPagerWidget.Register();
+            UsDiagNavWidget.Register();
+            UsDiagNavBodyWidget.Register();
             UsDiagDetailWidget.Register();
             UsDiagBarWidget.Register();
             registered = true;

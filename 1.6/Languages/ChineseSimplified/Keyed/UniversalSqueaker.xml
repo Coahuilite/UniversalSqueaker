@@ -319,4 +319,32 @@
   <US.Diagnostics.Dot.Unknown>未跟踪</US.Diagnostics.Dot.Unknown>
   <US.Diagnostics.Pager.Prev>上一页</US.Diagnostics.Pager.Prev>
   <US.Diagnostics.Pager.Next>下一页</US.Diagnostics.Pager.Next>
+  <US.Diagnostics.Value.Yes>是</US.Diagnostics.Value.Yes>
+  <US.Diagnostics.Value.No>否</US.Diagnostics.Value.No>
+  <US.Diagnostics.Value.Undetermined>...</US.Diagnostics.Value.Undetermined>
+  <US.Diagnostics.Pending.Stochastic>随机判定，此处不可观测</US.Diagnostics.Pending.Stochastic>
+  <US.Diagnostics.Pending.SourceMissing>当前数据源未给出判定</US.Diagnostics.Pending.SourceMissing>
+  <US.Diagnostics.Na.NoTimingAction>当前没有计时动作</US.Diagnostics.Na.NoTimingAction>
+  <US.Diagnostics.Na.ExternalPlanOnly>该门只适用于外部触发计划</US.Diagnostics.Na.ExternalPlanOnly>
+  <US.Diagnostics.Na.NoScopeMatch>该动作范围不是主动指令</US.Diagnostics.Na.NoScopeMatch>
+  <US.Diagnostics.Na.GlobalIgnored>该动作忽略全局冷却</US.Diagnostics.Na.GlobalIgnored>
+  <US.Diagnostics.Na.NoEvaluationForAction>本会话中当前动作没有已完成的评估</US.Diagnostics.Na.NoEvaluationForAction>
+  <US.Diagnostics.Na.NoDispatchOutcome>上次评估未进入派发</US.Diagnostics.Na.NoDispatchOutcome>
+  <US.Diagnostics.Basis.Current>当前观测</US.Diagnostics.Basis.Current>
+  <US.Diagnostics.Basis.Previous>上次评估</US.Diagnostics.Basis.Previous>
+  <US.Diagnostics.Section.Current>当前观测</US.Diagnostics.Section.Current>
+  <US.Diagnostics.Section.Previous>上次评估 / 上次分派</US.Diagnostics.Section.Previous>
+  <US.Diagnostics.Summary.CurrentBlock>当前已知阻断：{0}</US.Diagnostics.Summary.CurrentBlock>
+  <US.Diagnostics.Summary.NoCurrentBlock>当前观测未发现阻断</US.Diagnostics.Summary.NoCurrentBlock>
+  <US.Diagnostics.Summary.Incomplete>当前状态信息不完整</US.Diagnostics.Summary.Incomplete>
+  <US.Diagnostics.Summary.Undetermined>未确定：{0}</US.Diagnostics.Summary.Undetermined>
+  <US.Diagnostics.Previous.Evaluation>上次评估：{0} · {1} · {2}</US.Diagnostics.Previous.Evaluation>
+  <US.Diagnostics.Previous.Dispatch>上次分派：{0} · {1}</US.Diagnostics.Previous.Dispatch>
+  <US.Diagnostics.Previous.NoEvaluation>本会话没有记录到评估</US.Diagnostics.Previous.NoEvaluation>
+  <US.Diagnostics.Previous.NoDispatch>本会话没有记录到分派</US.Diagnostics.Previous.NoDispatch>
+  <US.Diagnostics.Previous.None>本会话没有记录到上次评估或分派</US.Diagnostics.Previous.None>
+  <US.Diagnostics.Recency.Unavailable>无可用时间</US.Diagnostics.Recency.Unavailable>
+  <US.Diagnostics.Recency.JustNow>{0}，不到 1 分钟前</US.Diagnostics.Recency.JustNow>
+  <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
+  <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
 </LanguageData>

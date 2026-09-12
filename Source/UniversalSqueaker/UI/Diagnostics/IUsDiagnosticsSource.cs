@@ -22,6 +22,22 @@ public interface IUsDiagnosticsSource
     string SearchQuery { get; set; }
     int Page { get; set; }
 
+    /// <summary>
+    /// The arranged content width the shell hands the page each pass (09 §3.5). The narrow
+    /// presentation decision is a pure function of it; setting it must NOT bump the session clock,
+    /// because the width is already part of the layout cache key.
+    /// </summary>
+    void SetContentWidth(float width);
+
+    /// <summary>True while the page must present the in-window list/detail navigation.</summary>
+    bool Narrow { get; }
+
+    /// <summary>Which narrow view is showing. The wide presentation shows both and ignores it.</summary>
+    UsDiagNavView NavigationView { get; set; }
+
+    /// <summary>True only where a Back control has somewhere to go (narrow detail with an owning list).</summary>
+    bool ShowBackControl { get; }
+
     IReadOnlyList<UsDiagRow> PageRows { get; }
     int TotalRowCount { get; }
     int PageCount { get; }
@@ -40,6 +56,16 @@ public interface IUsDiagnosticsSource
 
     /// <summary>The detail column's raw-values block: folded by default, so evidence never leads.</summary>
     bool RawOpen { get; set; }
+
+    /// <summary>
+    /// Whether one of the three condition groups is expanded. Default TRUE for all three: the ruling
+    /// makes every condition discoverable by default, and only the developer folds a group away. The
+    /// value is page state, so an update to the data never changes it (no automatic collapse).
+    /// </summary>
+    bool IsGroupOpen(UsDiagGateGroup group);
+
+    /// <summary>Folds one group away or expands it. Never called by anything but the user's click.</summary>
+    void SetGroupOpen(UsDiagGateGroup group, bool open);
 
     /// <summary>True once the bar's close action asked this page to end. The WINDOW closes in its own pass.</summary>
     bool CloseRequested { get; }

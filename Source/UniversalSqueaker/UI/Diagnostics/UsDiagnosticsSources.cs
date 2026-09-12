@@ -8,9 +8,9 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Production source for the MAIN diagnostics window: viewport/search rows, live-selection
-/// detail, monitor row, and the two navigation actions (drill-in select, lock-detach).
-/// The row cache expires on the overlay revision plus the view-state keys - never a wall clock
-/// (cache-clock rule; the 2026-09-04 filter misalignment is the proof case).
+/// detail, monitor row, and the navigation actions (drill-in select, lock-detach, and the
+/// in-window narrow Back). The row cache expires on the overlay revision plus the view-state
+/// keys - never a wall clock (cache-clock rule; the 2026-09-04 filter misalignment is the proof case).
 /// </summary>
 public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 {
@@ -23,6 +23,9 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 
     private string searchQuery = string.Empty;
     private int page;
+    private float contentWidth;
+    private UsDiagNavView navigationView = UsDiagNavView.List;
+    private readonly bool[] groupOpen = { true, true, true };
 
     public int Revision => SqueakDiagnosticsOverlay.Revision;
     public bool IsValid => SqueakDiagnosticsOverlay.IsSessionActive;
@@ -47,6 +50,29 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
         get => page;
         set => page = UsDiagnosticsProjection.ClampPage(value, AllRows.Count);
     }
+
+    /// <summary>
+    /// The arranged content width the shell hands the page each pass. It does NOT bump: the width is
+    /// already part of the layout cache key, so a change here re-arranges the page on its own, and the
+    /// engine's own <c>Breakpoint</c> evaluation reads the same coordinate space.
+    /// </summary>
+    public void SetContentWidth(float width) => contentWidth = width;
+
+    public bool Narrow => UsDiagnosticsProjection.IsNarrowPresentation(contentWidth);
+
+    /// <summary>
+    /// Which narrow view is showing. The wide presentation ignores it; the narrow one shows exactly
+    /// one of list/detail. Back (the nav widget) writes List through the binding, so the layout cache
+    /// sees the change on the same clock as every other display write.
+    /// </summary>
+    public UsDiagNavView NavigationView
+    {
+        get => navigationView;
+        set => navigationView = value;
+    }
+
+    /// <summary>The Back control exists only where an owning list does: narrow AND showing the detail.</summary>
+    public bool ShowBackControl => Narrow && navigationView == UsDiagNavView.Detail;
 
     public IReadOnlyList<UsDiagRow> PageRows
     {
@@ -96,18 +122,30 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 
     public bool RawOpen { get; set; }
 
+    /// <summary>All three groups start open; only a user click folds one away.</summary>
+    public bool IsGroupOpen(UsDiagGateGroup group) => groupOpen[(int)group];
+
+    public void SetGroupOpen(UsDiagGateGroup group, bool open) => groupOpen[(int)group] = open;
+
     public bool CloseRequested { get; private set; }
 
     public void RequestClose() => CloseRequested = true;
 
     public bool CanLockDisplayed => SqueakDiagnosticsOverlay.SelectedEntry != null;
 
+    /// <summary>
+    /// Row click, unchanged in meaning: an on-screen pawn drills in through game selection, an
+    /// off-screen (search-only) hit locks and detaches. The ONLY addition is navigation - in narrow
+    /// mode a drill-in also switches the in-window view to the detail, because the pinned window is
+    /// the off-screen pawn's detail surface while selection cannot reach it.
+    /// </summary>
     public void ClickRow(int pawnId)
     {
         if (!pawnsById.TryGetValue(pawnId, out Pawn? pawn) || pawn == null) return;
         if (SqueakDiagnosticsOverlay.IsInViewport(pawn))
         {
             Find.Selector.Select(pawn);
+            navigationView = UsDiagNavView.Detail;
         }
         else
         {
@@ -169,11 +207,13 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
 /// Production source for one DETAIL window: pinned to a single pawn for its whole life.
 /// The list/pager/search members are honest inert values (those widgets are not in this page's
 /// spec); IsValid is the window's self-close signal when the pinned pawn dies, despawns, or the
-/// session ends.
+/// session ends. It has no list navigation context, so it reports no narrow state and no Back
+/// control - the pinned window must not grow a fake one.
 /// </summary>
 public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
 {
     private readonly Pawn pinnedPawn;
+    private readonly bool[] pinnedGroupOpen = { true, true, true };
 
     public UsDiagnosticsDetailSource(Pawn pinnedPawn)
     {
@@ -187,6 +227,15 @@ public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
     public bool Collapsed { get; set; }
     public string SearchQuery { get => string.Empty; set { } }
     public int Page { get => 0; set { } }
+
+    /// <summary>No owning list: the pinned window keeps its identity/lock shape at every width.</summary>
+    public void SetContentWidth(float width) { }
+
+    public bool Narrow => false;
+
+    public UsDiagNavView NavigationView { get => UsDiagNavView.Detail; set { } }
+
+    public bool ShowBackControl => false;
 
     public IReadOnlyList<UsDiagRow> PageRows => Array.Empty<UsDiagRow>();
     public int TotalRowCount => 0;
@@ -230,6 +279,11 @@ public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
 
     public bool RawOpen { get; set; }
 
+    /// <summary>The pinned window owns its own three group switches; all start open.</summary>
+    public bool IsGroupOpen(UsDiagGateGroup group) => pinnedGroupOpen[(int)group];
+
+    public void SetGroupOpen(UsDiagGateGroup group, bool open) => pinnedGroupOpen[(int)group] = open;
+
     public bool CloseRequested { get; private set; }
 
     public void RequestClose() => CloseRequested = true;
@@ -272,7 +326,8 @@ internal static class UsDiagnosticsRowFactory
 
         // Not tracked yet (off-screen hit): honest blanks everywhere except the identity.
         return new UsDiagRow(pawn.thingIDNumber, UsDiagDotTone.Unknown, LabelOf(pawn),
-            "—", "—", "—", false, SqueakDiagnosticsOverlay.IsLocked(pawn));
+            UsDiagnosticsProjection.Dash, UsDiagnosticsProjection.Dash, UsDiagnosticsProjection.Dash,
+            false, SqueakDiagnosticsOverlay.IsLocked(pawn));
     }
 
     /// <summary>
@@ -302,7 +357,7 @@ internal static class UsDiagnosticsRowFactory
             AudioText = row?.AudioText ?? string.Empty,
             MonitorTone = row?.Tone ?? UsDiagDotTone.Unknown,
             HasLastEvent = lastEventTick.HasValue,
-            LastEventTimeText = lastEventTick.HasValue ? ClockText(lastEventTick.Value) : string.Empty,
+            LastEventTimeText = lastEventTick.HasValue ? UsDiagnosticsProjection.ClockText(lastEventTick.Value) : string.Empty,
             MinutesSinceLastEvent = lastEventTick.HasValue ? Math.Max(0, now - lastEventTick.Value) / 60 : 0,
         };
 
@@ -317,22 +372,11 @@ internal static class UsDiagnosticsRowFactory
         return s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : (int?)null;
     }
 
-    /// <summary>Game clock for the activity sentence: 60 ticks a second, 2500 an hour, 60000 a day.</summary>
-    private static string ClockText(int tick)
-    {
-        const long TicksPerDay = 60000L;
-        const long TicksPerHour = 2500L;
-        long dayTicks = ((long)tick % TicksPerDay + TicksPerDay) % TicksPerDay;
-        long hourTicks = dayTicks % TicksPerHour;
-        return (dayTicks / TicksPerHour).ToString("00") + ":"
-            + (hourTicks * 60 / TicksPerHour).ToString("00") + ":"
-            + (hourTicks / 60).ToString("00");
-    }
-
     internal static UsDiagDetail BuildDetail(SqueakDiagnosticsOverlay.CachedPawn entry, bool showSeconds)
     {
         Pawn pawn = entry.Pawn;
         SqueakDiagnosticSnapshot s = entry.Snapshot;
+        int nowTick = Find.TickManager.TicksGame;
         UsDiagGateFacts f = new()
         {
             ModeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled,
@@ -359,6 +403,17 @@ internal static class UsDiagnosticsRowFactory
             CurrentActionText = CurrentActionText(s),
             HasLastDispatch = s.LastDispatched.HasValue,
             LastDispatchText = DispatchText(s.LastDispatched),
+            Previous = new UsDiagPreviousFacts
+            {
+                HasEvaluation = s.LastEvaluation.HasValue,
+                EvaluationOutcome = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Outcome.ToString() : string.Empty,
+                EvaluationAction = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Action : string.Empty,
+                EvaluationTick = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Tick : -1,
+                HasDispatch = s.LastDispatched.HasValue,
+                DispatchText = DispatchText(s.LastDispatched),
+                DispatchTick = s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1,
+                NowTick = nowTick,
+            },
         };
 
         if (s.CurrentTimingAction.HasValue)
@@ -381,7 +436,7 @@ internal static class UsDiagnosticsRowFactory
             f.PlaybackFailed = ev.Outcome == SqueakTriggerOutcome.PlaybackFailed;
         }
 
-        List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(f, Tr);
+        List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(f, Tr, UsAttention.Marker);
         bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
         return new UsDiagDetail(
             LabelOf(pawn),
@@ -390,13 +445,14 @@ internal static class UsDiagnosticsRowFactory
             f.CurrentActionText,
             f.LastDispatchText,
             gates,
-            UsDiagnosticsProjection.BuildVerdict(ready, gates, Tr));
+            UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
+            UsDiagnosticsProjection.BuildPreviousBand(f.Previous, Tr));
     }
 
     private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";
 
     private static string CurrentActionText(SqueakDiagnosticSnapshot s)
-        => s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : "—";
+        => s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : UsDiagnosticsProjection.Dash;
 
     private static string CooldownText(SqueakDiagnosticSnapshot s, bool showSeconds)
     {
@@ -416,14 +472,14 @@ internal static class UsDiagnosticsRowFactory
 
     private static string DispatchText(SqueakRecentOutcome? dispatched)
     {
-        if (dispatched == null) return "—";
+        if (dispatched == null) return UsDiagnosticsProjection.Dash;
         SqueakRecentOutcome o = dispatched.Value;
         return UsDiagnosticsProjection.FormatDispatch(o.Tier?.ToString() ?? "Vanilla", o.PoolStableKey, o.Sound?.defName, Tr);
     }
 
     private static string Percent(float? value, float? baseValue)
     {
-        if (!value.HasValue) return "—";
+        if (!value.HasValue) return UsDiagnosticsProjection.Dash;
         return baseValue.HasValue
             ? $"{value.Value:0.###} / {baseValue.Value:0.###}"
             : $"{value.Value:0.###}";

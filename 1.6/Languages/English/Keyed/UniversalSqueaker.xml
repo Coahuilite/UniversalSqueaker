@@ -320,4 +320,32 @@
   <US.Diagnostics.Dot.Unknown>untracked</US.Diagnostics.Dot.Unknown>
   <US.Diagnostics.Pager.Prev>Prev</US.Diagnostics.Pager.Prev>
   <US.Diagnostics.Pager.Next>Next</US.Diagnostics.Pager.Next>
+  <US.Diagnostics.Value.Yes>yes</US.Diagnostics.Value.Yes>
+  <US.Diagnostics.Value.No>no</US.Diagnostics.Value.No>
+  <US.Diagnostics.Value.Undetermined>...</US.Diagnostics.Value.Undetermined>
+  <US.Diagnostics.Pending.Stochastic>stochastic roll, not observable here</US.Diagnostics.Pending.Stochastic>
+  <US.Diagnostics.Pending.SourceMissing>the current source supplied no determination</US.Diagnostics.Pending.SourceMissing>
+  <US.Diagnostics.Na.NoTimingAction>there is no current timing action</US.Diagnostics.Na.NoTimingAction>
+  <US.Diagnostics.Na.ExternalPlanOnly>this gate applies to external trigger plans only</US.Diagnostics.Na.ExternalPlanOnly>
+  <US.Diagnostics.Na.NoScopeMatch>the action's scope is not an active command</US.Diagnostics.Na.NoScopeMatch>
+  <US.Diagnostics.Na.GlobalIgnored>the action ignores the global cooldown</US.Diagnostics.Na.GlobalIgnored>
+  <US.Diagnostics.Na.NoEvaluationForAction>no completed evaluation for the current action in this session</US.Diagnostics.Na.NoEvaluationForAction>
+  <US.Diagnostics.Na.NoDispatchOutcome>the last evaluation did not reach dispatch</US.Diagnostics.Na.NoDispatchOutcome>
+  <US.Diagnostics.Basis.Current>current observation</US.Diagnostics.Basis.Current>
+  <US.Diagnostics.Basis.Previous>previous evaluation</US.Diagnostics.Basis.Previous>
+  <US.Diagnostics.Section.Current>Current observations</US.Diagnostics.Section.Current>
+  <US.Diagnostics.Section.Previous>Previous evaluation / last dispatch</US.Diagnostics.Section.Previous>
+  <US.Diagnostics.Summary.CurrentBlock>Current known block: {0}</US.Diagnostics.Summary.CurrentBlock>
+  <US.Diagnostics.Summary.NoCurrentBlock>No block found in current observations</US.Diagnostics.Summary.NoCurrentBlock>
+  <US.Diagnostics.Summary.Incomplete>Current state incomplete</US.Diagnostics.Summary.Incomplete>
+  <US.Diagnostics.Summary.Undetermined>Undetermined here: {0}</US.Diagnostics.Summary.Undetermined>
+  <US.Diagnostics.Previous.Evaluation>Previous evaluation: {0} · {1} · {2}</US.Diagnostics.Previous.Evaluation>
+  <US.Diagnostics.Previous.Dispatch>Last dispatch: {0} · {1}</US.Diagnostics.Previous.Dispatch>
+  <US.Diagnostics.Previous.NoEvaluation>No evaluation recorded in this session</US.Diagnostics.Previous.NoEvaluation>
+  <US.Diagnostics.Previous.NoDispatch>No dispatch recorded in this session</US.Diagnostics.Previous.NoDispatch>
+  <US.Diagnostics.Previous.None>No previous evaluation or dispatch recorded in this session</US.Diagnostics.Previous.None>
+  <US.Diagnostics.Recency.Unavailable>recency unavailable</US.Diagnostics.Recency.Unavailable>
+  <US.Diagnostics.Recency.JustNow>at {0}, less than a minute ago</US.Diagnostics.Recency.JustNow>
+  <US.Diagnostics.Recency.Ago>at {0}, {1} min ago</US.Diagnostics.Recency.Ago>
+  <US.Diagnostics.Nav.Back>Back to list</US.Diagnostics.Nav.Back>
 </LanguageData>

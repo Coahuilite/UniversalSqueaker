@@ -5,25 +5,33 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.UiLogicTests;
 
 /// <summary>
-/// Zero-Verse lane for the round-9 diagnostics contract: the pure session role model and the
-/// pure content projection (16-line chain, four-state NA, G4 breakdown, remaining/total
-/// cooldowns, four-tier dispatch labels, page math). Every assertion here pins a ruling that
-/// came out of the maintainer audit, not an implementation detail.
+/// Zero-Verse lane for the diagnostics contract: the pure session role model and the pure content
+/// projection (16-line chain with a per-row time basis, four-state presentation, current-only summary,
+/// previous-event band, remaining/total cooldowns, four-tier dispatch labels, page math and the
+/// responsive presentation decision). Every assertion here pins a ruling that came out of a maintainer
+/// audit, not an implementation detail.
 /// </summary>
 internal static class UsDiagnosticsLogicTests
 {
+    /// <summary>The attention marker the production source hands the projection (UsAttention.Marker).</summary>
+    private const string Mark = "[!]";
+
     internal static void RunAll()
     {
         SessionModelRules();
         GateChainRules();
+        ProvenanceRules();
+        StatusCellRules();
+        SummaryRules();
+        PreviousBandRules();
+        PresentationRules();
         CooldownPairRules();
         DispatchLabelRules();
         PageMathRules();
         CollapsedBarRules();
         BarDegradationRules();
-        VerdictAndGroupRules();
+        GroupRules();
         NumericColumnRules();
-        GateBlockMarkRules();
     }
 
     private sealed class Key : IEquatable<Key>
@@ -91,9 +99,9 @@ internal static class UsDiagnosticsLogicTests
     private static string Tr(string key) => key; // machine identity: the lane asserts KEYS and STRUCTURE.
 
     /// <summary>
-    /// The round-10 sentences are FORMAT keys whose placeholders live in the translated value (the
-    /// language files hold them), so this stub mirrors that shape - otherwise the lane would assert
-    /// against a bare key and prove nothing about substitution.
+    /// The sentences are FORMAT keys whose placeholders live in the translated value (the language files
+    /// hold them), so this stub mirrors that shape - otherwise the lane would assert against a bare key
+    /// and prove nothing about substitution.
     /// </summary>
     private static string Fmt(string key) => key switch
     {
@@ -101,8 +109,14 @@ internal static class UsDiagnosticsLogicTests
         "US.Diagnostics.Bar.IdentityLocked" => "Sound log (locked: {0})",
         "US.Diagnostics.Bar.Activity.Recent" => "Last {0} {1} {2}",
         "US.Diagnostics.Bar.Activity.Stale" => "{0} min without a sound, last {1}",
-        "US.Diagnostics.Verdict.Blocked" => "Blocked at: {0}",
-        "US.Diagnostics.Gates.FirstBlock" => "first block: {0}",
+        "US.Diagnostics.Summary.CurrentBlock" => "Current known block: {0}",
+        "US.Diagnostics.Summary.Undetermined" => "Undetermined here: {0}",
+        "US.Diagnostics.Group.CurrentFormat" => "{0} · current observations",
+        "US.Diagnostics.Group.PreviousFormat" => "{0} · previous evaluation",
+        "US.Diagnostics.Previous.Evaluation" => "Previous evaluation: {0} · {1} · {2}",
+        "US.Diagnostics.Previous.Dispatch" => "Last dispatch: {0} · {1}",
+        "US.Diagnostics.Recency.JustNow" => "at {0}, less than a minute ago",
+        "US.Diagnostics.Recency.Ago" => "at {0}, {1} min ago",
         _ => key,
     };
 
@@ -127,63 +141,235 @@ internal static class UsDiagnosticsLogicTests
 
     private static void GateChainRules()
     {
-        var gates = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr);
+        var gates = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr, Mark);
         Assert(gates.Count == 16, "the chain is 16 lines after the G5 dead-row deletion, got " + gates.Count);
         foreach (UsDiagGateLine g in gates) Assert(g.Name.StartsWith("US.Diagnostics.Gate."), "gate names are keyed, got " + g.Name);
 
         // Four-state rule: NA is its own state and the neutral outlet key.
         var noAction = NormalFacts();
         noAction.HasTimingAction = false;
-        var na = UsDiagnosticsProjection.BuildGateChain(noAction, Tr);
-        Assert(na[3].State == UsDiagGateState.NA && na[3].Value == "US.Diagnostics.Value.NotApplicable",
-            "G3 Plan renders N/A as the fourth state, never a green Pass (round-9 NA ruling)");
+        var na = UsDiagnosticsProjection.BuildGateChain(noAction, Tr, Mark);
+        Assert(na[3].State == UsDiagGateState.NA && na[3].Value == UsDiagnosticsProjection.Dash,
+            "G3 Plan renders N/A as the fourth state with an honest dash value, never a green Pass");
+        Assert(na[3].NaReasonKey != null, "and N/A carries WHY it does not apply instead of 'not reached'");
         Assert(na[6].State == UsDiagGateState.NA, "G7 Scope match is N/A without an action");
         Assert(na[15].State == UsDiagGateState.NA, "G16 without evaluation is N/A");
 
         var notGlobal = NormalFacts();
         notGlobal.GlobalApplicable = false;
-        Assert(UsDiagnosticsProjection.BuildGateChain(notGlobal, Tr)[10].State == UsDiagGateState.NA,
+        Assert(UsDiagnosticsProjection.BuildGateChain(notGlobal, Tr, Mark)[10].State == UsDiagGateState.NA,
             "G11 Global cooldown is N/A (not a fake Pass) when the action ignores it");
 
         // G4 identity: N/A off external plans; Pass on all-true; Blocked names the failing conditions.
         var ext = NormalFacts();
-        Assert(UsDiagnosticsProjection.BuildGateChain(ext, Tr)[4].State == UsDiagGateState.NA,
+        Assert(UsDiagnosticsProjection.BuildGateChain(ext, Tr, Mark)[4].State == UsDiagGateState.NA,
             "G4 is N/A for non-external trigger plans");
         ext.ExternalTriggerPlan = true;
         ext.PlayerControlled = ext.NotDowned = ext.Awake = true;
-        Assert(UsDiagnosticsProjection.BuildGateChain(ext, Tr)[4].State == UsDiagGateState.Pass,
+        Assert(UsDiagnosticsProjection.BuildGateChain(ext, Tr, Mark)[4].State == UsDiagGateState.Pass,
             "G4 passes a valid external pawn");
         ext.NotDowned = false;
         ext.Awake = false;
-        var blocked = UsDiagnosticsProjection.BuildGateChain(ext, Tr)[4];
+        var blocked = UsDiagnosticsProjection.BuildGateChain(ext, Tr, Mark)[4];
         Assert(blocked.State == UsDiagGateState.Block
-                && blocked.Value == "US.Diagnostics.Value.Blocked: " + "US.Diagnostics.Reason.Downed" + ", " + "US.Diagnostics.Reason.Asleep",
-            "G4 Blocked must break down the failing conditions (round-9 enhancement), got '" + blocked.Value + "'");
+                && blocked.Value == "US.Diagnostics.Reason.Downed" + ", " + "US.Diagnostics.Reason.Asleep",
+            "G4 Blocked breaks down the failing conditions in the VALUE, with the state word in the status cell, got '"
+            + blocked.Value + "' / '" + blocked.Status + "'");
 
         // G16 is pure tri-state: a dispatch reads Pass, never the audio string (attribution single-pointed).
         var dispatched = NormalFacts();
         dispatched.EvaluationBelongsToCurrentAction = true;
         dispatched.Dispatched = true;
-        var g16 = UsDiagnosticsProjection.BuildGateChain(dispatched, Tr)[15];
-        Assert(g16.State == UsDiagGateState.Pass && g16.Value == "US.Diagnostics.Value.Pass",
+        var g16 = UsDiagnosticsProjection.BuildGateChain(dispatched, Tr, Mark)[15];
+        Assert(g16.State == UsDiagGateState.Pass && g16.Value == "US.Diagnostics.Value.Yes",
             "G16 keeps tri-state only; the pack:sound string belongs to the Current state row alone");
         var failed = NormalFacts();
         failed.EvaluationBelongsToCurrentAction = true;
         failed.PlaybackFailed = true;
-        Assert(UsDiagnosticsProjection.BuildGateChain(failed, Tr)[15].State == UsDiagGateState.Block,
+        Assert(UsDiagnosticsProjection.BuildGateChain(failed, Tr, Mark)[15].State == UsDiagGateState.Block,
             "G16 blocks a playback failure");
         var staleEv = NormalFacts();
         staleEv.EvaluationBelongsToCurrentAction = false;
         staleEv.Dispatched = true;
-        Assert(UsDiagnosticsProjection.BuildGateChain(staleEv, Tr)[15].State == UsDiagGateState.NA,
+        Assert(UsDiagnosticsProjection.BuildGateChain(staleEv, Tr, Mark)[15].State == UsDiagGateState.NA,
             "an evaluation from ANOTHER action must not light this chain (stale impersonation guard)");
 
-        // G0 disabled bypass is a Block with the bypass truth; probability/talking stay Pending (blue).
+        // G0 disabled bypass is a Block with the bypass truth; probability/talking stay Pending.
         var disabled = NormalFacts();
         disabled.ModeDisabled = true;
-        Assert(UsDiagnosticsProjection.BuildGateChain(disabled, Tr)[0].State == UsDiagGateState.Block, "G0 blocks when Disabled");
-        Assert(UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr)[8].State == UsDiagGateState.Pending, "G9 probability is Pending (stochastic)");
-        Assert(UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr)[12].State == UsDiagGateState.Pending, "G13 talking is Pending (stochastic)");
+        Assert(UsDiagnosticsProjection.BuildGateChain(disabled, Tr, Mark)[0].State == UsDiagGateState.Block, "G0 blocks when Disabled");
+        Assert(UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr, Mark)[8].State == UsDiagGateState.Pending, "G9 probability is Pending (stochastic)");
+        Assert(UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr, Mark)[12].State == UsDiagGateState.Pending, "G13 talking is Pending (stochastic)");
+    }
+
+    /// <summary>
+    /// The provenance map as an executable contract: rows 0-12 are CURRENT observations, rows 13-15 read
+    /// the remembered evaluation. A mutation that marks an audio row current (or a live row previous)
+    /// must fail here, because the current-only summary is built on this split.
+    /// </summary>
+    private static void ProvenanceRules()
+    {
+        var gates = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr, Mark);
+        for (int i = 0; i <= 12; i++)
+        {
+            Assert(gates[i].IsCurrent, "row " + i + " (" + gates[i].Name + ") is a current observation");
+        }
+
+        for (int i = 13; i <= 15; i++)
+        {
+            Assert(!gates[i].IsCurrent && gates[i].Basis == UsDiagBasis.PreviousEvaluation,
+                "row " + i + " (" + gates[i].Name + ") is previous-event evidence, got " + gates[i].Basis);
+        }
+
+        Assert(gates[8].PendingReason == UsDiagPendingReason.Stochastic && gates[12].PendingReason == UsDiagPendingReason.Stochastic,
+            "the two always-Pending rows name the STOCHASTIC reason, not a generic one");
+        Assert(UsDiagnosticsProjection.ReasonText(gates[8], Tr) == "US.Diagnostics.Pending.Stochastic",
+            "and that reason is what the row shows");
+    }
+
+    /// <summary>
+    /// One status mark per condition, and the raw value never carries it. The round-9 defect was a
+    /// doubled state word; the round-ruling adds the second half - the mark moved OUT of the value.
+    /// </summary>
+    private static void StatusCellRules()
+    {
+        Assert(CountOccurrences(UsDiagnosticsProjection.MarkOnce("US.Diagnostics.Gate.BlockMark", Mark), Mark) == 1,
+            "positive control: a marked status cell counts once");
+        string once = UsDiagnosticsProjection.MarkOnce("US.Diagnostics.Value.Pass", Mark);
+        Assert(UsDiagnosticsProjection.MarkOnce(once, Mark) == once,
+            "the marking rule is idempotent: re-rendering cannot double the marker (the in-game defect)");
+
+        // The all-false fixture blocks in five places (map/screen/scope/cooldown/vocal organ), so the
+        // sweep below is not a one-row special case.
+        var gates = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr, Mark);
+        int blockedRows = 0;
+        for (int i = 0; i < gates.Count; i++)
+        {
+            UsDiagGateLine gate = gates[i];
+            int marks = CountOccurrences(gate.Status, Mark);
+            Assert(marks <= 1, "row " + i + " status carries the marker at most once, got '" + gate.Status + "'");
+            Assert(gate.State == UsDiagGateState.Block ? marks == 1 : marks == 0,
+                "a blocked row carries the marker exactly once, every other state none (row " + i + ")");
+            Assert(CountOccurrences(gate.Value, Mark) == 0,
+                "the raw VALUE never carries the marker (row " + i + ", value '" + gate.Value + "')");
+            if (gate.State == UsDiagGateState.Block) blockedRows++;
+        }
+
+        Assert(blockedRows > 1, "the control chain has several blocked rows, so the sweep above is not a one-row special case");
+
+        // Pending is neutral and never "not reached"; N/A is neutral and carries its reason.
+        var pending = gates[8];
+        Assert(pending.Status == "US.Diagnostics.Value.Undetermined",
+            "a Pending row reads the neutral ellipsis word, got '" + pending.Status + "'");
+        Assert(!pending.Status.Contains("NotReached") && !pending.Status.Contains("not reached"),
+            "and it never claims the condition was not reached");
+        var na = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr, Mark)[3];
+        Assert(na.Status == "US.Diagnostics.Value.NotApplicable",
+            "an N/A row reads the neutral not-applicable word, got '" + na.Status + "'");
+        Assert(na.Status != "US.Diagnostics.Value.Pass", "and never the pass word");
+        Assert(UsDiagnosticsProjection.ReasonText(na, Tr) == "US.Diagnostics.Na.NoTimingAction",
+            "an N/A row always explains itself");
+        Assert(UsDiagnosticsProjection.ReasonText(gates[0], Tr).Length == 0,
+            "a determined row carries no reason line");
+        Assert(UsDiagnosticsProjection.BasisText(gates[0], Tr) == "US.Diagnostics.Basis.Current"
+                && UsDiagnosticsProjection.BasisText(gates[13], Tr) == "US.Diagnostics.Basis.Previous",
+            "each row names its own time basis");
+    }
+
+    /// <summary>
+    /// The current-only summary may quote CURRENT rows alone. The adversarial case is the ruling's
+    /// "current data absent + previous audio failure": the remembered failure must stay in its own band.
+    /// </summary>
+    private static void SummaryRules()
+    {
+        // (1) A current block wins the headline, even when a previous row blocks later in the chain.
+        var both = NormalFacts();
+        both.StartupPending = true;
+        both.EvaluationBelongsToCurrentAction = true;
+        both.EligibilityRejected = true;
+        var gates = UsDiagnosticsProjection.BuildGateChain(both, Tr, Mark);
+        UsDiagCurrentSummary summary = UsDiagnosticsProjection.BuildCurrentSummary(gates, Fmt);
+        Assert(summary.HasCurrentBlock, "a current block is a current block");
+        Assert(summary.Headline.Contains(gates[7].Name) && !summary.Headline.Contains(gates[14].Name),
+            "the headline names the CURRENT block, not the remembered one, got '" + summary.Headline + "'");
+        Assert(UsDiagnosticsProjection.FirstCurrentBlockIndex(gates) == 7, "and the current-only index finds it");
+
+        // (2) The adversarial case: no current block at all, a previous failure blocks.
+        var prevOnly = NormalFacts();
+        prevOnly.EvaluationBelongsToCurrentAction = true;
+        prevOnly.EligibilityRejected = true;
+        var prevGates = UsDiagnosticsProjection.BuildGateChain(prevOnly, Tr, Mark);
+        Assert(prevGates[14].State == UsDiagGateState.Block, "the previous evaluation really does block in this fixture");
+        UsDiagCurrentSummary prevSummary = UsDiagnosticsProjection.BuildCurrentSummary(prevGates, Fmt);
+        Assert(!prevSummary.HasCurrentBlock, "a remembered failure is never promoted into the current block summary");
+        Assert(prevSummary.Headline == "US.Diagnostics.Summary.NoCurrentBlock",
+            "the honest headline is 'no block found in current observations', got '" + prevSummary.Headline + "'");
+        Assert(UsDiagnosticsProjection.FirstCurrentBlockIndex(prevGates) == -1,
+            "while the current-only index reports none");
+        Assert(UsDiagnosticsProjection.FirstBlockedIndex(prevGates) == 14,
+            "and the LEGACY index still reports the first block over all 16 rows - its meaning is unchanged");
+
+        // (3) The always-Pending rows are named as undetermined, not silently dropped.
+        Assert(prevSummary.Undetermined.Count == 2 && prevSummary.Detail.Contains(prevGates[8].Name) && prevSummary.Detail.Contains(prevGates[12].Name),
+            "the two stochastic rows are named in the summary's undetermined line, got '" + prevSummary.Detail + "'");
+        Assert(!prevSummary.Incomplete, "an inherently undetermined gate is not an incomplete state");
+
+        // (4) No rows at all = an incomplete state, never a silent all-clear.
+        UsDiagCurrentSummary none = UsDiagnosticsProjection.BuildCurrentSummary(new List<UsDiagGateLine>(), Tr);
+        Assert(none.Incomplete && none.Headline == "US.Diagnostics.Summary.Incomplete",
+            "no current observations reads as incomplete, got '" + none.Headline + "'");
+    }
+
+    /// <summary>The previous-event band owns its own recency, and never invents an age for a missing tick.</summary>
+    private static void PreviousBandRules()
+    {
+        var facts = new UsDiagPreviousFacts
+        {
+            HasEvaluation = true,
+            EvaluationOutcome = "ProbabilityRejected",
+            EvaluationAction = "work",
+            EvaluationTick = 120000,
+            NowTick = 120180,
+        };
+        UsDiagPreviousBand band = UsDiagnosticsProjection.BuildPreviousBand(facts, Fmt);
+        Assert(band.HasAny, "a recorded evaluation fills the band");
+        Assert(band.EvaluationLine.Contains("ProbabilityRejected") && band.EvaluationLine.Contains("work"),
+            "the machine tokens stay untranslated in the band, got '" + band.EvaluationLine + "'");
+        Assert(band.EvaluationLine.Contains("3 min ago"),
+            "a real tick produces a real age, got '" + band.EvaluationLine + "'");
+        Assert(band.DispatchLine == "US.Diagnostics.Previous.NoDispatch",
+            "an evaluation without a dispatch says so instead of showing a blank");
+        Assert(UsDiagnosticsProjection.BuildPreviousBand(new UsDiagPreviousFacts(), Fmt).DispatchLine == "US.Diagnostics.Previous.None",
+            "nothing at all reads as one sentence about the whole band");
+
+        var noTicks = new UsDiagPreviousFacts { HasEvaluation = true, EvaluationOutcome = "Disabled", EvaluationAction = "call", EvaluationTick = -1, NowTick = 500 };
+        Assert(UsDiagnosticsProjection.BuildPreviousBand(noTicks, Fmt).EvaluationLine.Contains("US.Diagnostics.Recency.Unavailable"),
+            "an event with no tick says recency is unavailable instead of manufacturing an age");
+        Assert(UsDiagnosticsProjection.Recency(-1, 10, Fmt) == "US.Diagnostics.Recency.Unavailable",
+            "and the recency helper agrees");
+        Assert(UsDiagnosticsProjection.ClockText(0) == "00:00:00", "the game clock formats from a tick, got " + UsDiagnosticsProjection.ClockText(0));
+    }
+
+    /// <summary>
+    /// The responsive decision (09 §3.5): the split needs both fixed columns plus the gap, and the
+    /// declared Breakpoint keeps a margin above that demonstrable minimum. The spec and the source both
+    /// read these constants, so a threshold below the real minimum dies here instead of in game.
+    /// </summary>
+    private static void PresentationRules()
+    {
+        Assert(UsDiagnosticsProjection.SplitInnerMinimum == UsDiagnosticsProjection.ListColumnWidth
+                + UsDiagnosticsProjection.PageGap + UsDiagnosticsProjection.DetailColumnWidth,
+            "the split minimum is the two columns plus the gap, measured not guessed");
+        Assert(UsDiagnosticsProjection.NarrowBreakpoint > UsDiagnosticsProjection.SplitInnerMinimum,
+            "the declared breakpoint keeps a margin above the minimum, got " + UsDiagnosticsProjection.NarrowBreakpoint);
+
+        float exactlyWide = UsDiagnosticsProjection.NarrowBreakpoint + UsDiagnosticsProjection.PagePadding * 2f;
+        Assert(!UsDiagnosticsProjection.IsNarrowPresentation(exactlyWide),
+            "at exactly the breakpoint the split is still used, got " + exactlyWide);
+        Assert(UsDiagnosticsProjection.IsNarrowPresentation(exactlyWide - 0.5f),
+            "half a pixel below it the navigation presentation takes over");
+        Assert(!UsDiagnosticsProjection.IsNarrowPresentation(100000f),
+            "and a wide page is never dragged into the navigation presentation");
     }
 
     private static void CooldownPairRules()
@@ -194,7 +380,7 @@ internal static class UsDiagnosticsLogicTests
         Assert(sec == "5.00s/15.00s", "remaining/total in seconds, got " + sec);
         string realtimeAsTicks = UsDiagnosticsProjection.FormatCooldownPair(null, 2.5f, null, 7.5f, false);
         Assert(realtimeAsTicks == "150t/450t", "realtime cooldown converts to ticks when t-mode shows, got " + realtimeAsTicks);
-        Assert(UsDiagnosticsProjection.FormatCooldownPair(null, null, null, null, false) == "—",
+        Assert(UsDiagnosticsProjection.FormatCooldownPair(null, null, null, null, false) == UsDiagnosticsProjection.Dash,
             "nothing applicable renders the honest em-dash, never a fake 0");
     }
 
@@ -223,9 +409,6 @@ internal static class UsDiagnosticsLogicTests
         Assert(UsDiagnosticsProjection.ClampPage(99, 9) == 1 && UsDiagnosticsProjection.ClampPage(-5, 9) == 0
             && UsDiagnosticsProjection.ClampPage(4, 0) == 0, "page clamps into range for any count");
     }
-
-
-    // --- round-10 (09 §3.3): the collapsed bar must answer three questions in words ----------------
 
     private static UsDiagBarFacts BarFacts(bool hasEvent, string time, int minutesAgo) => new()
     {
@@ -315,31 +498,9 @@ internal static class UsDiagnosticsLogicTests
             "identity and switch are NEVER omitted, not even when the measured width cannot hold them");
     }
 
-    private static void VerdictAndGroupRules()
+    private static void GroupRules()
     {
-        var blocked = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
-        int first = UsDiagnosticsProjection.FirstBlockedIndex(blocked);
-        Assert(first >= 0 && blocked[first].State == UsDiagGateState.Block,
-            "the first block is found in production chain order");
-        int earlierBlock = -1;
-        for (int i = 0; i < blocked.Count; i++)
-        {
-            if (blocked[i].State == UsDiagGateState.Block && earlierBlock < 0) earlierBlock = i;
-        }
-
-        Assert(first == earlierBlock, "nothing before the reported first block blocks");
-        Assert(UsDiagnosticsProjection.FirstBlockedText(blocked, Fmt).Contains(blocked[first].Name),
-            "the chain heading names the first block");
-
-        var normal = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr);
-        Assert(UsDiagnosticsProjection.FirstBlockedIndex(normal) == -1, "an all-clear chain reports no block");
-        Assert(UsDiagnosticsProjection.BuildVerdict(true, normal, Tr) == "US.Diagnostics.Verdict.Play",
-            "ready reads as 'will squeak'");
-        Assert(UsDiagnosticsProjection.BuildVerdict(false, blocked, Fmt).Contains(blocked[first].Name),
-            "blocked reads as 'blocked at <first block>'");
-        Assert(UsDiagnosticsProjection.BuildVerdict(false, normal, Tr) == "US.Diagnostics.Verdict.Pending",
-            "a chain that neither passes nor blocks is honestly 'not confirmed', never a fake pass");
-
+        var normal = UsDiagnosticsProjection.BuildGateChain(NormalFacts(), Tr, Mark);
         int game = 0, rules = 0, audio = 0;
         foreach (UsDiagGateLine gate in normal)
         {
@@ -353,49 +514,19 @@ internal static class UsDiagnosticsLogicTests
         Assert(normal[4].Group == UsDiagGateGroup.Game && normal[3].Group == UsDiagGateGroup.Rules
                 && normal[14].Group == UsDiagGateGroup.Audio,
             "the identity gate is a game-side precondition while the plan gate is rules-side");
-    }
 
-    /// <summary>
-    /// The in-game defect this rule exists for: the first-blocked row printed its state word twice
-    /// (one branch for "blocked", one for "is the first block", same token). A blocked row carries the
-    /// word exactly once; "first" is emphasised by the rail, not by the word.
-    /// </summary>
-    private static void GateBlockMarkRules()
-    {
-        const string Mark = "挡";
-
-        // Positive control: the ruler itself must see a doubled word, or a green loop below proves nothing.
-        Assert(CountOccurrences("挡 挡 blocked", Mark) == 2, "positive control: a doubled state word is countable");
-
-        var blocked = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
-        int first = UsDiagnosticsProjection.FirstBlockedIndex(blocked);
-        Assert(first >= 0, "the lane's facts block, so there is a first block to mark");
-
-        int blockedRows = 0;
-        for (int i = 0; i < blocked.Count; i++)
+        // The audio group is the one that mixes clocks, which is why the bands are (group, basis) pairs.
+        int audioCurrent = 0, audioPrevious = 0;
+        foreach (UsDiagGateLine gate in normal)
         {
-            string rendered = UsDiagnosticsProjection.GateValueText(blocked[i].Value, blocked[i].State, Mark);
-            int marks = CountOccurrences(rendered, Mark);
-            Assert(marks <= 1, "row " + i + " carries the state word at most once, got '" + rendered + "'");
-            Assert(blocked[i].State == UsDiagGateState.Block ? marks == 1 : marks == 0,
-                "a blocked row carries it exactly once, every other state none (row " + i + ", '" + rendered + "')");
-            if (blocked[i].State == UsDiagGateState.Block) blockedRows++;
+            if (gate.Group != UsDiagGateGroup.Audio) continue;
+            if (gate.IsCurrent) audioCurrent++;
+            else audioPrevious++;
         }
 
-        Assert(blockedRows > 1, "the control chain has several blocked rows, so the count above is not a one-row special case");
-
-        string once = UsDiagnosticsProjection.GateValueText("blocked", UsDiagGateState.Block, Mark);
-        Assert(once == "挡 blocked", "a blocked value gets one prefix, got '" + once + "'");
-        Assert(UsDiagnosticsProjection.GateValueText(once, UsDiagGateState.Block, Mark) == once,
-            "the rule is idempotent: re-rendering a marked value cannot double it (the defect)");
-        Assert(UsDiagnosticsProjection.GateValueText("pass", UsDiagGateState.Pass, Mark) == "pass",
-            "a passing row is never marked");
-        Assert(UsDiagnosticsProjection.GateValueText(blocked[first].Value, blocked[first].State, Mark).StartsWith(Mark),
-            "the first block is still marked - it is the EMPHASIS that moved to the rail, not the mark");
-
-        // The heading and the row must agree on WHICH gate blocks first (the cross-check in the brief).
-        Assert(UsDiagnosticsProjection.FirstBlockedText(blocked, Fmt).Contains(blocked[first].Name),
-            "the chain heading still names the same first block the row marking is driven by");
+        Assert(audioCurrent == 2 && audioPrevious == 3,
+            "audio splits into 2 current + 3 previous rows, got " + audioCurrent + "/" + audioPrevious);
+        Assert(UsDiagnosticsProjection.FirstBlockedIndex(normal) == -1, "an all-clear chain reports no block");
     }
 
     private static int CountOccurrences(string text, string token)

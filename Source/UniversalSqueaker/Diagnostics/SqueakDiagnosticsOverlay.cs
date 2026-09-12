@@ -24,9 +24,15 @@ public static class SqueakDiagnosticsOverlay
 
     internal const string Mark = "●";
 
-    /// <summary>Diagnostics mark colors: green = ready; amber = deterministic block; blue = random/parameter gate.</summary>
+    /// <summary>
+    /// Diagnostics mark colors: green = ready, the attention role = a diagnostic blocking condition,
+    /// neutral blue = random/parameter gate. The blocked mark takes <see cref="UsAttention.Brush"/> so
+    /// the on-pawn mark and the panel row dot can never disagree about what attention looks like; it is
+    /// deliberately NOT <c>UiTheme.Warning</c>, which the carrier resolves onto Danger (a failed gate is
+    /// not a destructive action).
+    /// </summary>
     internal static readonly Color ReadyColor = new(.25f, .82f, .38f);
-    internal static readonly Color BlockedColor = new(.95f, .68f, .22f);
+    internal static readonly Color BlockedColor = UsAttention.Brush;
     internal static readonly Color PendingColor = new(.35f, .66f, .95f);
 
     /// <summary>One cached structured snapshot per tracked pawn. Read-only for the pages; the driver mutates only during refresh.</summary>
