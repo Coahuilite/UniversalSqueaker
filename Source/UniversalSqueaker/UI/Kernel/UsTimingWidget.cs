@@ -12,13 +12,19 @@ namespace UniversalSqueaker.UI;
 /// cooldown multiplier (minus/plus buttons plus a number field on the typed float
 /// "cooldown-multiplier" binding). Both writes are cheap runtime statics; the Host binding
 /// owns the display-revision bump.
+/// <para>
+/// The multiplier row's label band follows the measured wrap height (see
+/// <see cref="MultiplierRowHeight"/>): a language whose label needs two lines grows the card rather
+/// than having the second line clipped away inside a fixed band.
+/// </para>
 /// </summary>
 public sealed class UsTimingWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/timing";
 
     // Row geometry follows the global-volume card: a Tiny label band over a slider row with a
-    // right-aligned number field. The multiplier row is one Small line with stepper buttons.
+    // right-aligned number field. The multiplier row is one Small line with stepper buttons; its label
+    // band grows to the measured wrap height when the shipped string needs two lines.
     private const float IntervalRowHeight = 44f;
     private const float LabelHeight = 20f;
     private const float SliderHeight = 20f;
@@ -28,6 +34,13 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
     private const float RowGap = 4f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
+
+    /// <summary>Gap the label leaves before the stepper cluster, and the cluster's own gaps.</summary>
+    private const float LabelGap = 8f;
+    private const float StepperGap = 4f;
+
+    /// <summary>Width the multiplier row's right-hand stepper cluster (minus, field, plus) reserves.</summary>
+    private const float StepperClusterWidth = ButtonWidth * 2f + FieldWidth + StepperGap * 3f;
 
     /// <summary>The slider covers 1..600 game ticks (10 s at 60 ticks/s); the field edits seconds.</summary>
     private const int MinIntervalTicksFloor = 1;
@@ -58,17 +71,40 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
 
     protected override float FallbackHeight(UiWidgetContext ctx)
     {
-        return ContentHeight();
+        return ContentHeight(ctx);
     }
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return ContentHeight();
+        return ContentHeight(ctx);
     }
 
-    private static float ContentHeight()
+    private float ContentHeight(UiWidgetContext ctx)
     {
-        return TopPadding + IntervalRowHeight + RowGap + SliderHeight + BottomPadding;
+        return TopPadding + IntervalRowHeight + RowGap + MultiplierRowHeight(ctx, BodyWidth(ctx)) + BottomPadding;
+    }
+
+    /// <summary>
+    /// The multiplier row's label band. The shipped English label ("Global cooldown multiplier",
+    /// <c>US.Tuning.CooldownMultiplier</c>) does not fit the band's width at the narrow layout, and the
+    /// fit audit's default axis is height, so a fixed 20px band cut its second line away in silence -
+    /// the finding this card carried was
+    /// <c>page-root/body-row/content-scroll/timing Height needs 42.66666px, has 20px at width 142px</c>.
+    /// The band therefore follows the measured wrap height, the shape the other US cards already use
+    /// (RaceLayer, VoicePackChecklist): the card grows by the line the label needs, in whichever
+    /// language needs it, instead of the text being clipped or declared single-line to keep the audit
+    /// quiet. Measure and Draw both come through here, so the two halves cannot size different bands.
+    /// </summary>
+    private static float MultiplierRowHeight(UiWidgetContext ctx, float bodyWidth)
+    {
+        string label = ctx.Translation.Translate("US.Tuning.CooldownMultiplier");
+        return Math.Max(SliderHeight, ctx.Metrics.MeasureText(label, UiFont.Small, MultiplierLabelWidth(bodyWidth)));
+    }
+
+    /// <summary>The label band's width inside one card body: everything left of the stepper cluster.</summary>
+    private static float MultiplierLabelWidth(float bodyWidth)
+    {
+        return Math.Max(1f, bodyWidth - RightPadding - StepperClusterWidth - LabelGap);
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -87,7 +123,7 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
 
         DrawIntervalRow(new Rect(x, y, width, IntervalRowHeight), ticks, ctx);
         y += IntervalRowHeight + RowGap;
-        DrawMultiplierRow(new Rect(x, y, width, SliderHeight), multiplier, ctx);
+        DrawMultiplierRow(new Rect(x, y, width, MultiplierRowHeight(ctx, width)), multiplier, ctx);
     }
 
     private void DrawIntervalRow(Rect rect, int ticks, UiWidgetContext ctx)
@@ -131,11 +167,12 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
     {
         UsKernelDraw.HelpHover(rect, ctx, "us/timing/multiplier");
 
-        float fieldWidth = FieldWidth;
-        float gap = 4f;
-        Rect minusRect = new(rect.xMax - RightPadding - (ButtonWidth * 2f + fieldWidth + gap * 3f), rect.y, ButtonWidth, rect.height);
-        Rect fieldRect = new(minusRect.xMax + gap, rect.y, fieldWidth, rect.height);
-        Rect plusRect = new(fieldRect.xMax + gap, rect.y, ButtonWidth, rect.height);
+        // The controls keep their own row height and sit on the band's midline: a two-line label makes
+        // the row taller, not the steppers taller.
+        float controlY = rect.y + (rect.height - SliderHeight) * 0.5f;
+        Rect minusRect = new(rect.xMax - RightPadding - StepperClusterWidth, controlY, ButtonWidth, SliderHeight);
+        Rect fieldRect = new(minusRect.xMax + StepperGap, controlY, FieldWidth, SliderHeight);
+        Rect plusRect = new(fieldRect.xMax + StepperGap, controlY, ButtonWidth, SliderHeight);
 
         if (UsKernelDraw.SelectionButton(minusRect, ctx, "−", ctx.Theme, selected: false))
         {
@@ -156,7 +193,7 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
         }
 
         UsKernelDraw.Label(
-            new Rect(rect.x, rect.y, Math.Max(1f, minusRect.x - rect.x - 8f), rect.height),
+            new Rect(rect.x, rect.y, MultiplierLabelWidth(rect.width), rect.height),
             ctx.Translation.Translate("US.Tuning.CooldownMultiplier"),
             ctx.Theme,
             ctx.Theme.TextPrimary,

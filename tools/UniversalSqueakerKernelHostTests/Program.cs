@@ -129,6 +129,7 @@ internal static class Program
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
+        Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
@@ -1386,6 +1387,61 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// Failure sensitivity for the timing card's multiplier row (task-92). The bilingual sweep above is an
+    /// absence - "no label overflowed its band" - and an absence cannot tell a band that grew to fit its
+    /// text from a card that quietly kept drawing past its own bottom. This step drives the real Host
+    /// twice: the shipped English value, which does not fit one line in the narrow band, and a value short
+    /// enough to fit. The card must be one wrapped line TALLER in the first case, and both frames must
+    /// draw with the audit silent. Under the old fixed 20px band the two heights come out identical and
+    /// this fails; so does a card that measures short while its row draws the grown band.
+    /// </summary>
+    private static void WrappingTimingLabelGrowsTheCard()
+    {
+        var metrics = new StubMetrics();
+        var reports = new List<UiOverflowReport>();
+        UiFitAudit.Attach(metrics, reports.Add);
+        UiFitAudit.Enabled = true;
+        try
+        {
+            Dictionary<string, string> english = ReadKeyedTable("English");
+            var fits = new Dictionary<string, string>(english, StringComparer.Ordinal)
+            {
+                ["US.Tuning.CooldownMultiplier"] = "Cooldown"
+            };
+
+            float fitsOneLine = TimingCardHeight(fits, metrics);
+            float wraps = TimingCardHeight(english, metrics);
+
+            Assert(fitsOneLine > 0f && wraps > 0f,
+                "the rich fixture must place the timing card, got " + fitsOneLine + "px / " + wraps + "px");
+            Assert(wraps > fitsOneLine + 10f,
+                "the shipped English multiplier label needs two lines in the narrow band, so the card must "
+                + "grow by that line: one-line " + fitsOneLine + "px, wrapping " + wraps + "px");
+            Assert(reports.Count == 0,
+                "and growing the band is the answer, not clipping the text: " + Describe(reports));
+        }
+        finally
+        {
+            UiFitAudit.Detach();
+            SetTranslatorResolver(null);
+        }
+    }
+
+    /// <summary>Arranges and draws the Overview page at 800x600 with one language table, returning the timing card's height.</summary>
+    private static float TimingCardHeight(Dictionary<string, string> table, StubMetrics metrics)
+    {
+        SetTranslatorResolver(table);
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(800f, 600f));
+        float height = snapshot.RectById.TryGetValue("timing", out Rect rect) ? rect.height : 0f;
+        // Draw it too: a band that only measures tall enough is not the fix, and a tripped element would
+        // fail here (UsTripGuard) instead of leaving this step's silence unexplained.
+        host.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        return height;
+    }
+
     private static (float Race, float Xenotype) LayerCardHeights(Vector2 viewport, bool wrapping, StubMetrics metrics)
     {
         var fake = new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping };
@@ -1411,15 +1467,25 @@ internal static class Program
 
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        int frames = 0;
         foreach (string tab in tabs)
         {
             host.Bindings.Invoke("set-tab", tab);
             foreach (Vector2 viewport in viewports)
             {
                 host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+                // Guarded: a frame that leaves an element in recovery fails HERE, naming the element,
+                // instead of silently shrinking what this sweep was able to measure.
                 host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+                frames++;
             }
         }
+
+        // The frame count is asserted rather than implied by the two loops above: this half of the
+        // lane's claim is "the whole shipped page drew", and every one of those frames went through the
+        // trip guard, so a page that fell into a recovery band can neither pass nor quietly reduce it.
+        Assert(frames == tabs.Length * viewports.Length,
+            label + ": the sweep must draw every workspace at every viewport, drew " + frames);
 
         var findings = new List<string>();
         var unidentified = new List<string>();
@@ -1444,7 +1510,8 @@ internal static class Program
         Assert(findings.Count == 0,
             label + ": every label on the shipped page must fit the rect it is given; offenders: "
             + string.Join(" | ", findings));
-        Console.WriteLine("  ok: " + label + " table draws 5 workspaces x 3 viewports with no text overflow");
+        Console.WriteLine("  ok: " + label + " table draws " + frames + " frames (5 workspaces x 3 viewports)"
+            + " with no text overflow and no tripped element");
     }
 
     private static string Describe(List<UiOverflowReport> reports)
