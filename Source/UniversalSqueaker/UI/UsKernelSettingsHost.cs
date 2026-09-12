@@ -56,7 +56,7 @@ public static class UsKernelSettingsHost
             Source,
             manifest,
             bindings,
-            UiTheme.DarkGold,
+            UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
         bumper.Attach(host.Session);

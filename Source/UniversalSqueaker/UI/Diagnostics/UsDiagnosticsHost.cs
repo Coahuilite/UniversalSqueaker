@@ -37,7 +37,7 @@ public static class UsDiagnosticsHost
             UsKernelWidgetRegistrar.Scope,
             manifest,
             bindings,
-            UiTheme.DarkGold,
+            UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
         bumper.Attach(host.Session);

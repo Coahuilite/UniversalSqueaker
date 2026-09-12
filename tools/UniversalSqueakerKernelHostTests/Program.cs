@@ -144,6 +144,7 @@ internal static class Program
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
         Step("closing settings window does not affect overlay", ClosingSettingsWindowDoesNotAffectOverlay);
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
+        Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
     }
 
     /// <summary>

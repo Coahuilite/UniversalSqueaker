@@ -37,7 +37,7 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 {
-    private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
+    private static readonly UiTheme WindowTheme = UsTheme.Surface();
 
     private readonly UniversalSqueakerMod mod;
 

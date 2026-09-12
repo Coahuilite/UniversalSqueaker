@@ -21,7 +21,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
     private const float EscArmSeconds = 3f;
     private const float BarContentHeight = UsDiagBarWidget.BarHeight;
 
-    private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
+    private static readonly UiTheme WindowTheme = UsTheme.Surface();
 
     private readonly Pawn pinnedPawn;
     private readonly UsDiagnosticsDetailSource source;

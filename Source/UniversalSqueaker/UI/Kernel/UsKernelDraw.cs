@@ -28,9 +28,13 @@ public static class UsKernelDraw
             : selected ? theme.Selected
             : hovered ? theme.Hover
             : theme.Raised;
-        Color border = danger ? theme.Danger
-            : selected ? theme.AccentGold
-            : theme.Border;
+
+        // The selected row keeps the structural line, not the accent: the accent is reserved for the three
+        // things it means (where I am, keyboard focus, what is in effect), and "this row is selected" is
+        // none of them - two selected rows on one screen would otherwise read as two current objects. The
+        // spec's selected row is a plane plus a dim inner rail, and the lane pins that no accent colour is
+        // painted here at all.
+        Color border = danger ? theme.Danger : theme.Border;
         UiThemeDraw.Surface(rect, theme, fill, border);
     }
 
@@ -39,11 +43,15 @@ public static class UsKernelDraw
         UiThemeDraw.Surface(rect, theme, theme.Raised, theme.Border);
         if (value)
         {
+            // "Checked" is a state, and states are carried by shape and ink, not by the accent: the spec's
+            // checked box is an ink-solid square (the check mark itself is drawn from the border colour),
+            // and the accent would put a fourth accent on every screen that has a checkbox. The lane pins
+            // that this fill is the ink token and that no accent colour is painted with it.
             UiThemeDraw.Surface(
                 new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f)),
                 theme,
-                theme.AccentGold,
-                theme.AccentGold);
+                theme.TextPrimary,
+                theme.TextPrimary);
         }
     }
 

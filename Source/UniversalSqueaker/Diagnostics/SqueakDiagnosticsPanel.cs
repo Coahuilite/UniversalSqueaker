@@ -23,7 +23,7 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     // 09 §3.3's authorised collapsed geometry (26 -> 32); the bar widget owns the number.
     private const float BarContentHeight = UsDiagBarWidget.BarHeight;
 
-    private static readonly UiTheme WindowTheme = UiTheme.DarkGold;
+    private static readonly UiTheme WindowTheme = UsTheme.Surface();
 
     private readonly UsDiagnosticsSessionSource source = new();
     private float escArmedUntil = -1f;
