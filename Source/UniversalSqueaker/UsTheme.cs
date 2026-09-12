@@ -26,6 +26,10 @@ namespace UniversalSqueaker;
 /// <item><c>AccentGold</c> is deliberately untouched: the spec keeps the series gold as the identity
 /// accent, so it arrives with the library default this factory starts from, and the lane pins that it
 /// still equals it.</item>
+/// <item>There is no attention token here on purpose, and <c>Warning</c> is not re-pointed either: the
+/// carrier defines <see cref="UiTheme.Warning"/> as a redirect onto <see cref="UiTheme.Danger"/>, so
+/// assigning the ruling's cyan to it would repaint every destructive control. US carries that role in
+/// <see cref="UsAttention"/> instead - one owner for the attention colour, this table for surfaces.</item>
 /// </list>
 /// </para>
 /// <para>

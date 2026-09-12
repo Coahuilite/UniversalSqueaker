@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 
 using FerriteLib.UiKit.Kernel;
@@ -33,6 +35,10 @@ internal static class UsSurfaceLaneTests
         Step("the four row rails are four different marks, and only the current one takes the accent", RailStatesAreDistinguishable);
         Step("the four effect shapes are four different drawings", EffectShapesAreDistinguishable);
         Step("the two density tiers land on their own bags and do not bleed", DensityTiersDoNotBleed);
+        Step("attention is the ruling cyan, not the danger alias and not the accent", AttentionIsTheRulingCyan);
+        Step("the attention badge pairs its cyan fill with the dark ink, never the light one", AttentionBadgePairsCyanWithDarkInk);
+        Step("an attention row takes the thin cyan edge and keeps the neutral fill", AttentionRailStaysThinCyanOnNeutralFill);
+        Step("no unsanctioned attention-cyan literal exists outside UsAttention.cs", StrayCyanScanFindsOnlyTheOwner);
     }
 
     /// <summary>
@@ -254,6 +260,252 @@ internal static class UsSurfaceLaneTests
         Assert(Painted(theme.TextPrimary) && Painted(theme.AccentGold),
             "overridden puts an accent ring around the ink disc");
         Assert(CoversCentre(cell), "and stays solid at the centre");
+    }
+
+    /// <summary>
+    /// The palette ruling, pinned as literals. The attention hue has exactly one owner
+    /// (<see cref="UsAttention.Brush"/>), so a lane that compared it against a theme token would be
+    /// unable to tell the ruling's cyan from a repointed token - these compare the channels directly.
+    /// <para>
+    /// The alias half is the anti-trap property the ruling names: the carrier's <c>Warning</c> is a
+    /// compatibility redirect onto <c>Danger</c>, so "Brush != Warning" would still pass if somebody
+    /// repointed Warning to cyan and repainted every destructive control. The lane therefore asserts the
+    /// redirect itself survives.
+    /// </para>
+    /// </summary>
+    private static void AttentionIsTheRulingCyan()
+    {
+        UiTheme theme = UsTheme.Surface();
+        UiTheme library = UiTheme.DarkGold;
+        Color cyan = Rgb(0x86, 0xE7, 0xD8);
+
+        Assert(Same(UsAttention.Brush, cyan), "UsAttention.Brush must be exactly the ruling's #86E7D8");
+
+        // Negative controls: without them an exact-value check could be a checker that accepts anything.
+        // Each of these is a colour the ruling explicitly rejects for attention.
+        Assert(!Same(Rgb(0xD1, 0x99, 0x38), cyan), "negative control: series gold is not attention");
+        Assert(!Same(Rgb(0xC8, 0x5A, 0x5A), cyan), "negative control: the danger edge is not attention");
+
+        // The surface table's own promises, restated here because this is the lane that would notice a
+        // palette change: accent stays the library default, and the table did not move the alarm tokens.
+        Assert(Same(theme.AccentGold, library.AccentGold),
+            "the identity accent must stay the library's series gold, not a new colour");
+        Assert(Same(theme.Warning, theme.Danger),
+            "theme.Warning must stay the compatibility alias of theme.Danger, not a second attention token");
+        // The redirect is live, not a coincidentally equal value: assigning Warning writes Danger. That
+        // is exactly why nobody can "just set Warning to cyan" to get a Block colour - it would repaint
+        // every destructive control in the same pass.
+        UiTheme probe = UsTheme.Surface();
+        probe.Warning = cyan;
+        Assert(Same(probe.Danger, cyan) && Same(probe.Warning, cyan),
+            "Warning must stay a redirect onto Danger: a cyan Warning assignment repaints destructive controls");
+
+        Assert(!Same(UsAttention.Brush, theme.Warning),
+            "attention must not be the Warning redirect (assigning cyan there repaints destructive controls)");
+        Assert(!Same(UsAttention.Brush, theme.Danger)
+            && theme.DangerBorder.HasValue
+            && !Same(UsAttention.Brush, theme.DangerBorder.Value),
+            "attention must not be the danger fill or its saturated edge");
+        Assert(!Same(UsAttention.Brush, theme.AccentGold),
+            "attention must not be the accent gold: a gold Block marker is the failure this pins");
+        Assert(!Same(UsAttention.Brush, theme.TextPrimary)
+            && !Same(UsAttention.Brush, theme.TextSecondary)
+            && !Same(UsAttention.Brush, theme.TextDisabled),
+            "attention must not be one of the three text tokens");
+        Assert(!string.IsNullOrEmpty(UsAttention.Marker),
+            "attention carries a shape marker: a bare cyan dot cannot be told from the neutral effect dot");
+    }
+
+    /// <summary>
+    /// The badge substrate: cyan fill with the dark ink, observed through the real draw outlets - the
+    /// fill from the recorded solids and the text ink from the label recorder (a colour assertion that
+    /// read only the constant would not prove the draw call used it).
+    /// </summary>
+    private static void AttentionBadgePairsCyanWithDarkInk()
+    {
+        UiTheme theme = UsTheme.Surface();
+        ClearSolids();
+        ClearLabels();
+        UsAttention.Badge(new Rect(0f, 0f, 40f, 16f), "3", theme);
+
+        Assert(Painted(Rgb(0x86, 0xE7, 0xD8)), "the attention badge fill must be the ruling cyan");
+        Assert(!Painted(theme.Danger) && !Painted(theme.AccentGold),
+            "the attention badge must paint neither the danger fill nor the accent");
+
+        IList inks = RecordedLabelColors();
+        Assert(inks.Count > 0, "the badge must draw its text through the label outlet at all");
+        Color recorded = Colour(inks[inks.Count - 1]);
+        Assert(Same(recorded, UsAttention.InkOnBrush),
+            "the badge text must be drawn in UsAttention.InkOnBrush, got the ink the outlet recorded");
+        Assert(Same(UsAttention.InkOnBrush, Rgb(0x0f, 0x11, 0x16)),
+            "InkOnBrush must be the ruling's #0f1116");
+
+        // The forbidden half of the pair, as an assertion: the light ink on this cyan is ~1.20:1, so a
+        // badge that used TextPrimary or TextOnDanger must fail, and it must fail for a reason this lane
+        // states rather than a pixel nobody checked.
+        Assert(!Same(UsAttention.InkOnBrush, theme.TextPrimary)
+            && !Same(UsAttention.InkOnBrush, theme.TextOnDanger),
+            "the attention ink must not be the light ink: light on this cyan is about 1.20:1");
+        Assert(RelativeLuminance(UsAttention.Brush) > RelativeLuminance(theme.Danger),
+            "the cyan is a light fill; it belongs with dark ink, unlike the dark danger plane");
+    }
+
+    /// <summary>
+    /// The row substrate: the new <see cref="UsKernelDraw.RowRail.Attention"/> paints the thin cyan edge
+    /// on the neutral raised fill, with the structural border - not the danger family, not selection, and
+    /// not the accent. Failure-sensitive in both directions: repainting the rail with AccentGold,
+    /// theme.Selected or the danger fill each turn this step red.
+    /// </summary>
+    private static void AttentionRailStaysThinCyanOnNeutralFill()
+    {
+        UiTheme theme = UsTheme.Surface();
+        ClearSolids();
+        UsKernelDraw.RowSurface(new Rect(0f, 0f, 200f, 24f), theme, hovered: false, UsKernelDraw.RowRail.Attention);
+
+        IList colours = RecordedSolids();
+        Assert(colours.Count >= 5, "an attention row paints a fill and four edges; recorded " + colours.Count);
+        Assert(Same(Colour(colours[0]), theme.Raised),
+            "the attention row fill must stay the neutral raised plane");
+        for (int i = 1; i < 5; i++)
+        {
+            Assert(Same(Colour(colours[i]), theme.Border), "and its edge must stay the structural line");
+        }
+
+        Assert(RailIs(UsAttention.Brush, UsAttention.RailWidth),
+            "the attention edge is " + UsAttention.RailWidth + "px of the ruling cyan at the row's left edge");
+        Assert(UsAttention.RailWidth < UsKernelDraw.RailWidth,
+            "the attention edge must stay thinner than a location rail, or hue alone separates them");
+        Assert(!Painted(theme.Danger)
+            && theme.DangerBorder.HasValue
+            && !Painted(theme.DangerBorder.Value),
+            "an attention row is not a destructive treatment");
+        Assert(!Painted(theme.AccentGold), "and an attention row must not take the accent");
+        Assert(!Painted(theme.Selected), "and attention must never be painted as selection");
+        Assert(!Painted(theme.TextOnDanger), "and it must not borrow the danger plane's text token");
+    }
+
+    /// <summary>
+    /// The no-scatter gate: the ruling's cyan literal is legal in exactly one source file, so a widget
+    /// that bypasses <see cref="UsAttention"/> with its own literal fails here even though no draw-level
+    /// lane could see it. The positive control runs the same scanner over planted text, so a scanner that
+    /// read nothing cannot pass this step silently.
+    /// </summary>
+    private static void StrayCyanScanFindsOnlyTheOwner()
+    {
+        string root = Path.Combine(RepoRoot(), "Source", "UniversalSqueaker");
+        Assert(Directory.Exists(root), "the scan root must exist: " + root);
+        var files = new List<KeyValuePair<string, string>>();
+        foreach (string path in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+        {
+            files.Add(new KeyValuePair<string, string>(path, File.ReadAllText(path)));
+        }
+
+        Assert(files.Count >= 20, "the scan must really walk the source tree; found " + files.Count + " files");
+        List<string> offenders = AttentionCyanScan.Find(files);
+        Assert(offenders.Count == 0,
+            "the attention hue must live only in UsAttention.cs; also found in: " + string.Join(", ", offenders));
+
+        // Positive control, one entry per literal form the scanner claims to cover: the probe must flag
+        // every non-owner form and skip the owner-named one. The first version of this control only
+        // exercised the hex-string form and passed while the scanner missed the /255f form - the exact
+        // "control that cannot redden" failure, so all four forms are planted and counted.
+        List<string> planted = AttentionCyanScan.Find(new[]
+        {
+            new KeyValuePair<string, string>("Fake/Hex.cs", "var doc = \"#86E7D8\";"),
+            new KeyValuePair<string, string>("Fake/Channels.cs", "var ink = new Color(0x86, 0xE7, 0xD8);"),
+            new KeyValuePair<string, string>("Fake/Normalized.cs", "var ink = new Color(0x86 / 255f, 0xE7 / 255f, 0xD8 / 255f);"),
+            new KeyValuePair<string, string>("Fake/Decimal.cs", "var ink = new Color(134f / 255f, 231f / 255f, 216f / 255f);"),
+            new KeyValuePair<string, string>("Fake/UsAttention.cs", "var ink = new Color(0x86, 0xE7, 0xD8);")
+        });
+        Assert(planted.Count == 4,
+            "positive control: the scanner must flag all four non-owner literal forms and skip the owner, flagged "
+            + planted.Count + " of 4");
+    }
+
+    /// <summary>The channel-count form of the ruling cyan, not a string, so a differently spaced or
+    /// reordered call is still caught; the hex form covers prose and string literals.</summary>
+    private static class AttentionCyanScan
+    {
+        private const string OwnerFileName = "UsAttention.cs";
+
+        /// <summary>Paths whose text contains the attention hue anywhere but its owner file.</summary>
+        internal static List<string> Find(IEnumerable<KeyValuePair<string, string>> files)
+        {
+            var offenders = new List<string>();
+            foreach (KeyValuePair<string, string> file in files)
+            {
+                if (string.Equals(Path.GetFileName(file.Key), OwnerFileName, StringComparison.Ordinal)) continue;
+                if (HasCyanLiteral(file.Value)) offenders.Add(file.Key);
+            }
+
+            return offenders;
+        }
+
+        private static bool HasCyanLiteral(string text)
+        {
+            if (text.IndexOf("86e7d8", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+
+            // The channel form, in whatever separator style a widget writes it: plain ints
+            // (0x86, 0xE7, 0xD8), normalized floats (0x86 / 255f, ...), or decimal channels
+            // (134f / 255f, ...). Bounded gaps keep an unrelated triple from matching.
+            return System.Text.RegularExpressions.Regex.IsMatch(
+                text,
+                @"(?:0x86\b|\b134(?!\d))[\s\S]{0,48}?(?:0xE7\b|\b231(?!\d))[\s\S]{0,48}?(?:0xD8\b|\b216(?!\d))",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+    }
+
+    /// <summary>WCAG relative luminance, used only as a direction check: the cyan fill is light, so dark
+    /// ink is the only defensible pair.</summary>
+    private static float RelativeLuminance(Color colour)
+    {
+        return 0.2126f * Linear(colour.r) + 0.7152f * Linear(colour.g) + 0.0722f * Linear(colour.b);
+    }
+
+    private static float Linear(float channel)
+    {
+        return channel <= 0.03928f ? channel / 12.92f : (float)Math.Pow((channel + 0.055f) / 1.055f, 2.4f);
+    }
+
+    private static void ClearLabels()
+    {
+        FieldInfo? field = typeof(Verse.Widgets).GetField("LabelColors", BindingFlags.Public | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException(
+                "the runtime stub does not record label colours; this lane cannot observe badge ink and must not pass silently");
+        }
+
+        var list = field.GetValue(null) as IList;
+        if (list == null) throw new InvalidOperationException("the runtime stub's label recorder is not a list");
+        list.Clear();
+    }
+
+    private static IList RecordedLabelColors()
+    {
+        FieldInfo? field = typeof(Verse.Widgets).GetField("LabelColors", BindingFlags.Public | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException("the runtime stub does not record label colours; this lane must not pass silently");
+        }
+
+        var list = field.GetValue(null) as IList;
+        if (list == null) throw new InvalidOperationException("the runtime stub's label recorder is not a list");
+        return list;
+    }
+
+    /// <summary>The harness's own copy of Program.RepoRoot's rule (the program's helper is private and
+    /// this file must not edit it): walk up from the binary until the repository's gate script appears.</summary>
+    private static string RepoRoot()
+    {
+        DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir != null; i++)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "scripts", "verify-local.ps1"))) return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root from " + AppContext.BaseDirectory);
     }
 
     /// <summary>True when a recorded solid of this colour has this rail geometry at the row's left edge.</summary>

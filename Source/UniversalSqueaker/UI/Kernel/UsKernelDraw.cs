@@ -23,15 +23,18 @@ public static class UsKernelDraw
     public const float RowLeftPadding = 10f;
 
     /// <summary>RowRail: selected = dim 3px rail, current = accent 3px, both = dual, disabled = hatch.
-    /// StateShape: the four effect shapes of spec 1.6, drawn as shape so grey-scale keeps them apart.
-    /// The conflict rail and shape are deliberately absent: attn has no chosen hue yet.</summary>
+    /// Attention is the thin cyan edge from <see cref="UsAttention"/> and the row fill stays neutral; the
+    /// ruling settled that hue, which closes the former "attn has no chosen hue yet" absence and leaves
+    /// <see cref="UsAttention.Brush"/> as the one place the literal may appear. StateShape: the four
+    /// effect shapes of spec 1.6, drawn as shape so grey-scale keeps them apart.</summary>
     public enum RowRail
     {
         None,
         Selected,
         Current,
         CurrentAndSelected,
-        Disabled
+        Disabled,
+        Attention
     }
 
     public enum StateShape
@@ -68,11 +71,19 @@ public static class UsKernelDraw
     /// current-object rail is the accent at 3px; the selected rail is dim ink at the same width; both at
     /// once puts the accent inside a 5px dim rail so neither fact hides the other; an unavailable row gets
     /// the hatch, and its labels stay the caller's job (theme.TextDisabled is the same dim ink).
+    /// <para>
+    /// An attention row takes the thin cyan edge from <see cref="UsAttention"/> and keeps the neutral
+    /// fill: attention is not selection, so the two never share one rail - the ruling puts the attention
+    /// mark in the status cell on a row that is also selected.
+    /// </para>
     /// </summary>
     public static void RowSurface(Rect rect, UiTheme theme, bool hovered, RowRail rail, bool danger = false)
     {
         bool selected = rail == RowRail.Selected || rail == RowRail.CurrentAndSelected;
-        Color fill = danger ? theme.Warning
+        // theme.Danger, not theme.Warning: the two hold identical bytes today (Warning is the carrier's
+        // pre-0.4 redirect onto Danger), and reading the destructive fill through the alias is how a
+        // future Warning assignment would silently repaint every danger row. Same pixels, honest name.
+        Color fill = danger ? theme.Danger
             : selected ? theme.Selected
             : hovered ? theme.Hover
             : theme.Raised;
@@ -101,6 +112,12 @@ public static class UsKernelDraw
         else if (rail == RowRail.Current)
         {
             UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.AccentGold);
+        }
+        else if (rail == RowRail.Attention)
+        {
+            // Thinner than either location rail (2px against 3px) and cyan, so a grey-scale screenshot
+            // still keeps attention apart from "selected" and "current"; the fill above stays neutral.
+            UsAttention.Rail(rect, theme);
         }
     }
 
