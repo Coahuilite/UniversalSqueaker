@@ -24,14 +24,15 @@ $ErrorActionPreference = "Stop"
 #  13   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
 #  14   UI boundary audit (scripts/ui-boundary-audit.ps1): raw renderer-backend calls only inside the
 #       2-file exemption whitelist (豁免一 + 豁免二), and ZERO raw Mouse.IsOver since FL P1
-#  15   harness stub coverage: the carrier's reference-driven scan over the US payload, read-only, with
-#       US's own exemption ledger (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose -
-#       gate 13 builds the carrier's stub surface in place, which is the member set the scan reads.
+#  15   harness stub coverage: the carrier's reference-driven scan (read-only) over the US payload AND
+#       the KernelHostTests harness assembly, against US's own exemption ledger
+#       (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose - gate 13 builds both scanned
+#       assemblies and the carrier's stub surface in place.
 # GATE PROVENANCE: 1-5 and 10-15 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
-# entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and the scanned payload
-# are US's; the scanner's own fixture controls stay in the carrier's gate 8, where the scanned tree is
-# the carrier's. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
+# entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and both scanned
+# assemblies (the payload and the KernelHostTests harness) are US's; the scanner's own fixture controls
+# stay in the carrier's gate 8, where the scanned tree is the carrier's. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
 # the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
 # Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
@@ -300,10 +301,20 @@ Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whit
 # guard swaps the element for its recovery band, the frame survives, and a lane that asserts no more than
 # a live session stays green while the path under test never ran (measured 2026-09-12: Verse.GenUI.
 # ContractedBy, then Mathf.Clamp(int, int, int) - the trip guard found both, no assertion did). The
-# carrier's scan is reference-driven: every member the US payload takes from a stub-replaced game assembly
-# must be declared by the stubs or be named in this repository's own ledger with a reason.
-Invoke-Check 'harness stub coverage (every game member the US payload references resolves on the carrier stubs, or is exempted with a reason)' `
-    'pwsh -NoProfile -File ../ferritelib/scripts/stub-coverage-scan.ps1 -Path . -Assembly 1.6/Assemblies/UniversalSqueaker.dll -StubsDir ../ferritelib/tools/FerriteLib.UiKit.Tests/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt' `
+# carrier's scan is reference-driven: every member a scanned assembly takes from a stub-replaced game
+# assembly must be declared by the stubs or be named in this repository's own ledger with a reason.
+#
+# Two targets, ONE scan: the payload is the product surface, the harness is the lane surface - a lane's own
+# helper can take a member the payload never touches, and gate 13 then fails INSIDE the lane (a JIT failure,
+# not an assertion) while nothing names the member. They are scanned together, not in two passes, because
+# the exemption ledger is a union: one pass per assembly makes every entry the other assembly needs look
+# STALE (measured 2026-09-12 - the harness half alone stranded 165 entries). The scanner reports each
+# target's own reference/declared counts, so findings stay attributable. It must be invoked through
+# -Command with an array: after -File, a second value following -Assembly is dropped by the child pwsh's
+# parameter binding (measured 2026-09-12), which silently scans one assembly and looks clean. This gate
+# sits after 13 because gate 13 builds both of the assemblies it scans.
+Invoke-Check 'harness stub coverage (every game member the US payload or the harness references resolves on the carrier stubs, or is exempted with a reason)' `
+    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''1.6/Assemblies/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir ../ferritelib/tools/FerriteLib.UiKit.Tests/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
     {
         $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
         if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
@@ -311,11 +322,22 @@ Invoke-Check 'harness stub coverage (every game member the US payload references
         }
 
         $stubDir = Join-Path (Split-Path -Parent $root) 'ferritelib\tools\FerriteLib.UiKit.Tests\bin\stubs'
-        $stubOutput = @(& pwsh -NoProfile -File $stubCoverageScan `
-            -Path $root `
-            -Assembly (Join-Path $root '1.6\Assemblies\UniversalSqueaker.dll') `
-            -StubsDir $stubDir `
-            -Exemptions (Join-Path $root 'scripts\stub-coverage-exemptions.txt') *>&1)
+        $stubExemptions = Join-Path $root 'scripts\stub-coverage-exemptions.txt'
+        $stubTargets = @(
+            (Join-Path $root '1.6\Assemblies\UniversalSqueaker.dll'),
+            (Join-Path $root 'tools\UniversalSqueakerKernelHostTests\bin\Release\net472\UniversalSqueakerKernelHostTests.exe')
+        )
+
+        # Built through -Command and an array so the scanner receives both paths as separate values; every
+        # path is single-quote escaped so a path containing an apostrophe cannot break out of the string.
+        $stubQuote = { param($value) $value.Replace("'", "''") }
+        $stubCommand = "& '" + (& $stubQuote $stubCoverageScan) + "' -Path '" + (& $stubQuote $root) +
+            "' -Assembly @('" + (& $stubQuote $stubTargets[0]) + "','" + (& $stubQuote $stubTargets[1]) +
+            "') -StubsDir '" + (& $stubQuote $stubDir) + "' -Exemptions '" + (& $stubQuote $stubExemptions) + "'"
+
+        # An assembly that was never built is passed through rather than skipped: the scan reads it as its own
+        # NOT SCANNED (exit 3), and an unscanned half is not a clean half.
+        $stubOutput = @(& pwsh -NoProfile -Command $stubCommand *>&1)
         $stubCode = $LASTEXITCODE
         foreach ($stubLine in $stubOutput) { Write-Host $stubLine }
 
@@ -323,8 +345,8 @@ Invoke-Check 'harness stub coverage (every game member the US payload references
             # The scan prints one line per finding, but a gate's log is shown as a tail and a sorted
             # MISSING list can leave the new reference far from it - so the findings are repeated here,
             # where they cannot be trimmed away.
-            $findings = @($stubOutput | Where-Object { $_ -match 'MISSING |STALE |NO-REASON |NOT SCANNED' } | Select-Object -First 10)
-            throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $findings.Count + " finding line(s) quoted). Findings: " + ($findings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
+            $stubFindings = @($stubOutput | Where-Object { $_ -match 'MISSING |STALE |NO-REASON |NOT SCANNED' } | Select-Object -First 10)
+            throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $stubFindings.Count + " finding line(s) quoted). Findings: " + ($stubFindings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
         }
     }
 

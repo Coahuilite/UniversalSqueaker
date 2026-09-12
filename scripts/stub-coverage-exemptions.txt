@@ -33,10 +33,14 @@
 #             Messages, LongEventHandler, FloatRange, Gen* helpers, TaggedString, Translator).
 #   debug   - the game's dev debug-action surface (LudeonTK): a panel US registers into in game.
 #
-# Measured 2026-09-12 with ferritelib at f629e1a: 239 member references from the US payload to the stub
-# surface, 66 declared by the stubs, 173 exempted below. The language/constant class (Rect.zero, Vector2/
-# Vector3 operators, Color.black, Object operators, Time, Verse.UI screen size) is no longer listed here:
-# the carrier's stub declares those now (task-91), and this table stays 15 entries shorter for it.
+# Measured 2026-09-12 with ferritelib at 0b396c4: 239 member references from the US payload to the stub
+# surface, 74 declared by the stubs, 165 exempted below (the harness assembly adds 25 references, all of
+# them declared, so it needs no entry of its own - see gate 15 in scripts/verify-local.ps1).
+# The table has only ever shrunk, and each shrink is a real resolution gain: 188 -> 173 when the carrier's
+# stub took the language/constant class (task-91: Rect.zero, Vector2/Vector3 operators, Color.black,
+# Object operators, Time, Verse.UI screen size), then 173 -> 165 when it took eight pure helpers (task-97:
+# GenText.NullOrEmpty/SanitizeFilename, GenCollection.Any/Count, the TaggedString.op_Addition pair,
+# FloatRange.One, Translator.TryTranslate).
 #
 # Entries: <member key> | <reason code>
 
@@ -215,7 +219,7 @@ Assembly-CSharp!Verse.WindowStack::Add(c:Verse.Window) | gameui
 Assembly-CSharp!Verse.WindowStack::TryRemove(c:Verse.Window,Boolean) | gameui
 
 # ------------------------------------------------------------------------------------------------
-# utility (19) - utility - Verse static facade/helpers reached only from the in-game paths above
+# utility (11) - utility - Verse static facade/helpers reached only from the in-game paths above
 # ------------------------------------------------------------------------------------------------
 Assembly-CSharp!Verse.Current::get_Game() | utility
 Assembly-CSharp!Verse.Current::get_ProgramState() | utility
@@ -225,17 +229,9 @@ Assembly-CSharp!Verse.Find::get_CurrentMap() | utility
 Assembly-CSharp!Verse.Find::get_Selector() | utility
 Assembly-CSharp!Verse.Find::get_TickManager() | utility
 Assembly-CSharp!Verse.Find::get_WindowStack() | utility
-Assembly-CSharp!Verse.FloatRange::get_One() | utility
 Assembly-CSharp!Verse.FloatRange::get_RandomInRange() | utility
-Assembly-CSharp!Verse.GenCollection::Any(c:System.Collections.Generic.List`1<!!0>,c:System.Predicate`1<!!0>)^1 | utility
-Assembly-CSharp!Verse.GenCollection::Count(c:System.Collections.Generic.List`1<!!0>,c:System.Predicate`1<!!0>)^1 | utility
-Assembly-CSharp!Verse.GenText::NullOrEmpty(String) | utility
-Assembly-CSharp!Verse.GenText::SanitizeFilename(String) | utility
 Assembly-CSharp!Verse.LongEventHandler::ExecuteWhenFinished(c:System.Action) | utility
 Assembly-CSharp!Verse.Messages::Message(String,c:Verse.MessageTypeDef,Boolean) | utility
-Assembly-CSharp!Verse.TaggedString::op_Addition(String,v:Verse.TaggedString) | utility
-Assembly-CSharp!Verse.TaggedString::op_Addition(v:Verse.TaggedString,String) | utility
-Assembly-CSharp!Verse.Translator::TryTranslate(String,v:Verse.TaggedString&) | utility
 
 # ------------------------------------------------------------------------------------------------
 # debug (4) - debug - the game's dev debug-action surface
