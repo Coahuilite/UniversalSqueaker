@@ -23,6 +23,7 @@ internal static class UsDiagnosticsLogicTests
         BarDegradationRules();
         VerdictAndGroupRules();
         NumericColumnRules();
+        GateBlockMarkRules();
     }
 
     private sealed class Key : IEquatable<Key>
@@ -352,6 +353,64 @@ internal static class UsDiagnosticsLogicTests
         Assert(normal[4].Group == UsDiagGateGroup.Game && normal[3].Group == UsDiagGateGroup.Rules
                 && normal[14].Group == UsDiagGateGroup.Audio,
             "the identity gate is a game-side precondition while the plan gate is rules-side");
+    }
+
+    /// <summary>
+    /// The in-game defect this rule exists for: the first-blocked row printed its state word twice
+    /// (one branch for "blocked", one for "is the first block", same token). A blocked row carries the
+    /// word exactly once; "first" is emphasised by the rail, not by the word.
+    /// </summary>
+    private static void GateBlockMarkRules()
+    {
+        const string Mark = "挡";
+
+        // Positive control: the ruler itself must see a doubled word, or a green loop below proves nothing.
+        Assert(CountOccurrences("挡 挡 blocked", Mark) == 2, "positive control: a doubled state word is countable");
+
+        var blocked = UsDiagnosticsProjection.BuildGateChain(new UsDiagGateFacts(), Tr);
+        int first = UsDiagnosticsProjection.FirstBlockedIndex(blocked);
+        Assert(first >= 0, "the lane's facts block, so there is a first block to mark");
+
+        int blockedRows = 0;
+        for (int i = 0; i < blocked.Count; i++)
+        {
+            string rendered = UsDiagnosticsProjection.GateValueText(blocked[i].Value, blocked[i].State, Mark);
+            int marks = CountOccurrences(rendered, Mark);
+            Assert(marks <= 1, "row " + i + " carries the state word at most once, got '" + rendered + "'");
+            Assert(blocked[i].State == UsDiagGateState.Block ? marks == 1 : marks == 0,
+                "a blocked row carries it exactly once, every other state none (row " + i + ", '" + rendered + "')");
+            if (blocked[i].State == UsDiagGateState.Block) blockedRows++;
+        }
+
+        Assert(blockedRows > 1, "the control chain has several blocked rows, so the count above is not a one-row special case");
+
+        string once = UsDiagnosticsProjection.GateValueText("blocked", UsDiagGateState.Block, Mark);
+        Assert(once == "挡 blocked", "a blocked value gets one prefix, got '" + once + "'");
+        Assert(UsDiagnosticsProjection.GateValueText(once, UsDiagGateState.Block, Mark) == once,
+            "the rule is idempotent: re-rendering a marked value cannot double it (the defect)");
+        Assert(UsDiagnosticsProjection.GateValueText("pass", UsDiagGateState.Pass, Mark) == "pass",
+            "a passing row is never marked");
+        Assert(UsDiagnosticsProjection.GateValueText(blocked[first].Value, blocked[first].State, Mark).StartsWith(Mark),
+            "the first block is still marked - it is the EMPHASIS that moved to the rail, not the mark");
+
+        // The heading and the row must agree on WHICH gate blocks first (the cross-check in the brief).
+        Assert(UsDiagnosticsProjection.FirstBlockedText(blocked, Fmt).Contains(blocked[first].Name),
+            "the chain heading still names the same first block the row marking is driven by");
+    }
+
+    private static int CountOccurrences(string text, string token)
+    {
+        int count = 0;
+        int index = 0;
+        while (token.Length > 0 && index < text.Length)
+        {
+            int found = text.IndexOf(token, index, StringComparison.Ordinal);
+            if (found < 0) break;
+            count++;
+            index = found + token.Length;
+        }
+
+        return count;
     }
 
     private static void NumericColumnRules()

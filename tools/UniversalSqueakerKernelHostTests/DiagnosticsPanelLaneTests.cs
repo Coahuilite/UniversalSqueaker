@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 using FerriteLib.UiKit.Kernel;
@@ -31,6 +33,7 @@ internal static class DiagnosticsPanelLaneTests
         Step("raw values fold by default", RawFoldsByDefault);
         Step("the bar's close action routes as a page request", CloseRoutes);
         Step("a glyph the font cannot draw becomes its word (D7)", MissingGlyphFallsBack);
+        Step("the state word is printed once per blocked row", GateBlockMarkAppearsOnceOnScreen);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
     }
 
@@ -307,6 +310,100 @@ internal static class DiagnosticsPanelLaneTests
         host.Bindings.Invoke(UsDiagnosticsHost.KeyClose);
         Assert(fake.CloseRequested,
             "the bar's close action sets a page-level request; the window, not the widget, closes");
+    }
+
+    /// <summary>
+    /// The in-game defect, pinned where a player saw it: on the drawn frame. The state word is read back
+    /// from the stub's label recorder, so a widget that grew a second prefix - whatever the projection
+    /// says - reddens this step; the first block's emphasis is the attention-coloured rail instead.
+    /// </summary>
+    private static void GateBlockMarkAppearsOnceOnScreen()
+    {
+        var fake = new FakeDiagnosticsSource();
+        FillRows(fake, 4);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(680f, 560f));
+
+        IList texts = RecordedStub("LabelTexts");
+        IList rects = RecordedStub("DrawBoxSolidRects");
+        IList colors = RecordedStub("DrawBoxSolidColors");
+        int textStart = texts.Count;
+        int boxStart = colors.Count;
+
+        host.DrawFrame(new Rect(0f, 0f, 680f, 560f));
+
+        int blockRows = 0;
+        if (host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null)
+        {
+            foreach (UsDiagGateLine gate in detail.Gates)
+            {
+                if (gate.State == UsDiagGateState.Block) blockRows++;
+            }
+        }
+
+        Assert(blockRows > 1, "the fake's chain blocks in more than one place, so the sweep below is meaningful");
+        // The detail must actually have drawn. A tripping widget is swapped for the recovery band, which
+        // would leave every assertion below vacuously green - the shape that hid this defect.
+        Assert(host.Session.TrippedNodes.Count == 0,
+            "the frame drew the gate chain through the guard without tripping (" + host.Session.TrippedNodes.Count + " tripped)");
+
+        // The mark token as THIS harness's translation seam resolves it (its stub returns the key).
+        const string Mark = "US.Diagnostics.Gate.BlockMark";
+        int marked = 0;
+        for (int i = textStart; i < texts.Count; i++)
+        {
+            string text = (string)texts[i]!;
+            int marks = CountOccurrences(text, Mark);
+            Assert(marks <= 1, "no drawn row repeats the state word (the in-game defect): '" + text + "'");
+            if (marks == 1) marked++;
+        }
+
+        Assert(marked == blockRows, "every blocked row is marked exactly once, got " + marked + " of " + blockRows);
+
+        // "First" is carried by the rail: a 2px attention-coloured track - a different means from the word.
+        // The comparison uses the theme the HOST drew with, not a stock instance: the panel's palette is
+        // the host's own, and a lane that assumed DarkGold's literals would be asserting the wrong ruler.
+        UiTheme hostTheme = host.CreateContext(1f).Theme;
+        int attentionRails = 0;
+        int dividerRails = 0;
+        for (int i = boxStart; i < rects.Count && i < colors.Count; i++)
+        {
+            Rect rail = (Rect)rects[i]!;
+            if (Math.Abs(rail.width - 2f) > 0.01f) continue;
+
+            Color colour = (Color)colors[i]!;
+            if (SameColor(colour, hostTheme.Warning)) attentionRails++;
+            if (SameColor(colour, hostTheme.Divider)) dividerRails++;
+        }
+
+        Assert(attentionRails == 1, "exactly one rail carries the attention colour (the first block), got " + attentionRails);
+        Assert(dividerRails >= 1, "the other chain rows keep the plain group rail, got " + dividerRails);
+    }
+
+    private static IList RecordedStub(string field)
+    {
+        FieldInfo? info = typeof(Verse.Widgets).GetField(field, BindingFlags.Public | BindingFlags.Static);
+        if (info == null) throw new InvalidOperationException("the harness stub is missing " + field);
+        return (IList)info.GetValue(null)!;
+    }
+
+    private static bool SameColor(Color left, Color right)
+        => Math.Abs(left.r - right.r) <= 0.0001f && Math.Abs(left.g - right.g) <= 0.0001f
+        && Math.Abs(left.b - right.b) <= 0.0001f && Math.Abs(left.a - right.a) <= 0.0001f;
+
+    private static int CountOccurrences(string text, string token)
+    {
+        int count = 0;
+        int index = 0;
+        while (token.Length > 0 && index < text.Length)
+        {
+            int found = text.IndexOf(token, index, StringComparison.Ordinal);
+            if (found < 0) break;
+            count++;
+            index = found + token.Length;
+        }
+
+        return count;
     }
 
     private static void MissingGlyphFallsBack()

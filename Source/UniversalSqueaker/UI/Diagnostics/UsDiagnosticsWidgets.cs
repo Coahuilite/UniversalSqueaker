@@ -497,7 +497,13 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         if (IsCollapsed(ctx)) return;
         if (!ctx.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) || detail == null)
         {
-            UsKernelDraw.Label(rect.ContractedBy(8f), UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"), ctx, UiFont.Small, TextAnchor.MiddleCenter);
+            // Inline inset, not Verse.GenUI.ContractedBy: that extension lives in Assembly-CSharp, and
+            // the harness's Verse stub does not carry GenUI, so calling it made this whole widget
+            // undrawable (and therefore untestable) outside the game. Same 8px inset, no backend tie.
+            UsKernelDraw.Label(
+                new Rect(rect.x + 8f, rect.y + 8f, Math.Max(1f, rect.width - 16f), Math.Max(1f, rect.height - 16f)),
+                UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"),
+                ctx, UiFont.Small, TextAnchor.MiddleCenter);
             return;
         }
 
@@ -597,26 +603,29 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
             UsDiagGateLine gate = gates[i];
             if (gate.Group != group) continue;
 
-            // The group rail (05 §3.2: grouping is a 2px track plus indent, not a card).
-            UiThemeDraw.Solid(new Rect(rect.x, y, 2f, RowHeight), ctx.Theme.Divider);
+            // The group rail (05 §3.2: grouping is a 2px track plus indent, not a card). On the chain's
+            // FIRST block the same rail turns attention-coloured: that is the "first" emphasis, because
+            // repeating the state word here is what printed the mark twice in game.
+            // TODO(maintainer): decide whether later blocked rows keep their own state word or read
+            // "not reached" - deferred until that call is made.
+            bool firstBlockRow = i == firstBlock;
+            UiThemeDraw.Solid(
+                new Rect(rect.x, y, 2f, RowHeight),
+                firstBlockRow ? ctx.Theme.Warning : ctx.Theme.Divider);
             float indent = 6f;
             float rowWidth = Math.Max(1f, rect.width - indent);
             float nameWidth = rowWidth * (1f - ValueShare) - 4f;
             float valueX = rect.x + indent + nameWidth + 4f;
             float valueWidth = Math.Max(1f, rect.width - indent - nameWidth - 4f);
-            bool isFirstBlock = i == firstBlock;
-
             UsKernelDraw.Label(new Rect(rect.x + indent, y, nameWidth, RowHeight), gate.Name, ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
 
             // D4: the value gets the wider half and TWO lines; only a real overflow is clipped, and the
-            // fit audit reports it through the same seam as every other label.
-            string value = gate.State == UsDiagGateState.Block
-                ? UsKernelDraw.Keyed(ctx, "US.Diagnostics.Gate.BlockMark") + " " + gate.Value
-                : gate.Value;
-            if (isFirstBlock)
-            {
-                value = UsKernelDraw.Keyed(ctx, "US.Diagnostics.Gate.BlockMark") + " " + value;
-            }
+            // fit audit reports it through the same seam as every other label. The state word is applied
+            // ONCE by the projection's rule, so a blocked row cannot be marked twice whatever its place
+            // in the chain (the defect it replaced had one branch per condition).
+            string value = UsDiagnosticsProjection.GateValueText(
+                gate.Value, gate.State, UsKernelDraw.Keyed(ctx, "US.Diagnostics.Gate.BlockMark"));
+
 
             UsKernelDraw.Label(
                 new Rect(valueX, y, valueWidth, RowHeight),

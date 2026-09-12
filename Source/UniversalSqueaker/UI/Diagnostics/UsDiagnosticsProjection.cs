@@ -355,6 +355,19 @@ public static class UsDiagnosticsProjection
     }
 
     /// <summary>
+    /// One gate row's display value: a blocked row carries the state word EXACTLY once. The chain's
+    /// "first block" is emphasised by its rail (the caller's business), never by repeating the word -
+    /// an in-game pass caught the two-branch version printing it twice. The rule is idempotent, so a
+    /// value that already carries the mark comes back untouched instead of growing a second one.
+    /// </summary>
+    public static string GateValueText(string value, UsDiagGateState state, string blockMark)
+    {
+        string text = value ?? string.Empty;
+        if (state != UsDiagGateState.Block || string.IsNullOrEmpty(blockMark)) return text;
+        return text.StartsWith(blockMark + " ", StringComparison.Ordinal) ? text : blockMark + " " + text;
+    }
+
+    /// <summary>
     /// The three answers of 09 §3.3, in the order the bar shows them. A missing event is split into
     /// "never" and "stopped" on purpose: a recorder that has never heard anything is a different
     /// problem from one that heard something three minutes ago, and only the second is worth a
