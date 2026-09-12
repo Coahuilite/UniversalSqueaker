@@ -34,6 +34,7 @@ internal static class Program
         TestRaceXenotypeFiltering();
         TestUsCardLayoutHeight();
         TestUsFilterBarLayout();
+        TestWindowChromeLayout();
         TestHelpCatalog();
         TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
@@ -136,6 +137,27 @@ internal static class Program
             "536 body still fits label(80) + field(96) per dropdown");
         Assert(UsFilterBarLayout.DropdownsStack(535f),
             "535 body stacks: a dropdown would fall below label(80) + field(96)");
+    }
+
+    /// <summary>
+    /// The close affordance rule behind the first in-game overflow: the shell's fixed 110px box is the
+    /// floor, and a caption that needs more widens the box by the padding margin instead of being clipped.
+    /// The real-font need of the unresolved Keyed literal was 128px; that number is used here because the
+    /// rule is proportional and this lane has no font engine.
+    /// </summary>
+    private static void TestWindowChromeLayout()
+    {
+        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(0f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
+            "an empty caption keeps the shell's floor width");
+        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(30f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
+            "a short caption ('Close' is 30px in the harness model) keeps the shell's floor width");
+
+        const float needed = 128f; // the in-game finding: has 110, needs 128
+        float width = WindowChromeLayout.CloseButtonWidth(needed);
+        Assert(width >= needed + 1.5f,
+            "a long caption must widen the affordance past the measured text plus the audit tolerance, got " + width);
+        Assert(Math.Abs(width - (needed + WindowChromeLayout.ClosePadding)) < 0.001f,
+            "the widened width is text + padding, got " + width);
     }
 
     private static void TestHelpCatalog()

@@ -62,6 +62,28 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     protected override string CloseText => Translator.Translate("US.Settings.Window.Close");
 
     /// <summary>
+    /// The shell's close affordance, sized from the text that will actually be drawn instead of the
+    /// shell's fixed 110x30. The in-game fit audit caught the fixed box on the first real run:
+    /// <c>ui.text.overflow (unscoped) width/tiny needs 128.0px, has 110.0px</c>. The chrome draws outside
+    /// the layout engine's element scope, so that finding named no element; the rect it names is exactly
+    /// this one (110f is the only such rect in the tree). Measuring through the same seam the audit uses
+    /// widens the button for any language - including the unresolved-Keyed-literal case, which is what a
+    /// 24-character string measuring 128px implies - and never shrinks the font. Floored at the shell's
+    /// own size so the English/Chinese ship shapes are unchanged.
+    /// </summary>
+    protected override Vector2 CloseButtonSize
+    {
+        get
+        {
+            string text = CloseText ?? "";
+            float needed = text.Length == 0
+                ? 0f
+                : VerseFerriteTextMetrics.Instance.MeasureWidth(text, CloseFont);
+            return new Vector2(WindowChromeLayout.CloseButtonWidth(needed), WindowChromeLayout.CloseHeight);
+        }
+    }
+
+    /// <summary>
     /// 维护者指定的安全区域：窗口在屏幕的 60%～75% 之间浮动，默认偏 72%/66%，
     /// 不盖满全屏，也不退回原版那种正中心小方窗。The shell's default is the game's own
     /// <see cref="Window.InitialSize"/>, so this policy is the only thing keeping that ruling alive.

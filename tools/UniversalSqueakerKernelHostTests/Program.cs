@@ -132,6 +132,7 @@ internal static class Program
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
+        Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
@@ -275,6 +276,55 @@ internal static class Program
     /// measures. This lane asserts both against the real host and proves the fit audit goes silent
     /// on the two filter surfaces.
     /// </summary>
+    /// <summary>
+    /// The in-game overflow that started this task was reported as "(unscoped)" and could not be traced
+    /// back to a code site. The popup pass draws after content and outside the layout engine's element
+    /// scope, so it is the one unscoped draw path US owns; UsKernelDraw.Dropdown now claims the owner's
+    /// path for the duration of the rows. This control forces a row wider than the viewport-capped popup,
+    /// so the finding is guaranteed to exist, and asserts it carries that identity. Reverting the scope
+    /// in UsKernelDraw.Dropdown turns this step red with the fallback identity - the mutation this exists
+    /// for.
+    /// </summary>
+    private static void PopupOverflowReportCarriesElementIdentity()
+    {
+        string impossible = new string('A', 200); // StubMetrics Small: ~1600px, far wider than the viewport
+        var stub = new StubMetrics();
+        var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { impossible } };
+        using UiHost host = UsKernelSettingsHost.Create(fake, stub);
+        host.Bindings.Invoke("set-tab", "Packs");
+        Rect viewport = new(0f, 0f, 800f, 600f);
+
+        var reports = new List<UiOverflowReport>();
+        UiFitAudit.Attach(stub, reports.Add);
+        UiFitAudit.Enabled = true;
+        SetTranslatorResolver(ReadKeyedTable("English"));
+        try
+        {
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport);
+            host.Session.OpenPopup("pack-filter", new Rect(300f, 200f, 143f, 24f));
+            UiFitAudit.Reset();
+            reports.Clear();
+            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+            host.DrawFrame(viewport);
+
+            Assert(reports.Count > 0, "a popup row wider than the capped popup must be reported at all");
+            foreach (UiOverflowReport report in reports)
+            {
+                Assert(!string.IsNullOrEmpty(report.ElementPath) && report.ElementPath != "(unscoped)",
+                    "every popup overflow report must carry the owner's element identity, got '" + report.ElementPath + "'");
+            }
+
+            Assert(reports.Exists(r => r.ElementPath.EndsWith("/popup", StringComparison.Ordinal)),
+                "the popup finding must be scoped to the owner's popup path: " + DescribeOverflow(reports));
+        }
+        finally
+        {
+            UiFitAudit.Detach();
+            SetTranslatorResolver(null);
+        }
+    }
+
     private static void LongAuthorFilterGrowsPopupAndEllipsizesTrigger()
     {
         string longAuthor = new string('A', 60); // StubMetrics Small: 60 x 8px = 480px, far over 143
@@ -1203,6 +1253,41 @@ internal static class Program
                 TextAnchor.MiddleLeft, singleLine: true);
             UiFitAudit.EndElement();
             Assert(reports.Count == 1, "positive control failed: the audit saw nothing for a label that cannot fit (" + Describe(reports) + ")");
+            Assert(reports[0].ElementPath == "probe/single-line" && reports[0].Axis == UiOverflowAxis.Width,
+                "the overflow report must name the element path it was scoped to, got '" + reports[0].ElementPath + "' on the " + reports[0].Axis + " axis");
+
+            // Negative control for the identity rule: the same impossible label drawn with no scope is
+            // still reported, under the shell's fallback identity. This is the shape the first in-game
+            // overflow had, and it is why CheckLanguageTable below treats an unidentified report as a
+            // failure of its own rather than a footnote to the overflow.
+            UiFitAudit.Reset();
+            reports.Clear();
+            FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
+                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                TextAnchor.MiddleLeft, singleLine: true);
+            Assert(reports.Count == 1 && reports[0].ElementPath == "(unscoped)",
+                "an unscoped draw must be reported under the fallback identity, got " + Describe(reports));
+
+            // Why this lane never saw the in-game close-button overflow: it drives the page host, not the
+            // window shell, so the chrome labels are never drawn here, and the width axis still runs on the
+            // half-width model (only the height axis was calibrated against the real engine). For the
+            // record, the close text and its unresolved Keyed literal measure in this model as:
+            foreach (KeyValuePair<string, Dictionary<string, string>> closeTable in new[]
+            {
+                new KeyValuePair<string, Dictionary<string, string>>("english", english),
+                new KeyValuePair<string, Dictionary<string, string>>("chinese", chinese),
+            })
+            {
+                SetTranslatorResolver(closeTable.Value);
+                string closeText = Translator.Translate("US.Settings.Window.Close");
+                Console.WriteLine("[fit] " + closeTable.Key + " close text='" + closeText + "' modeled="
+                    + metrics.MeasureWidth(closeText, FerriteLib.UiKit.Kernel.UiFont.Tiny)
+                    + "px, unresolved key literal=" + metrics.MeasureWidth("US.Settings.Window.Close", FerriteLib.UiKit.Kernel.UiFont.Tiny) + "px");
+            }
+            SetTranslatorResolver(null);
+
+            UiFitAudit.Reset();
+            reports.Clear();
             CheckLanguageTable(reports, tabs, viewports, english, "english", metrics);
             CheckLanguageTable(reports, tabs, viewports, chinese, "chinese", metrics);
 
@@ -1336,11 +1421,24 @@ internal static class Program
         }
 
         var findings = new List<string>();
+        var unidentified = new List<string>();
         foreach (UiOverflowReport report in reports)
         {
+            if (string.IsNullOrEmpty(report.ElementPath) || report.ElementPath == "(unscoped)")
+            {
+                unidentified.Add(report.Axis + " needs " + report.Needed + "px, has " + report.Available + "px");
+            }
+
             findings.Add(report.ElementPath + " " + report.Axis + " needs " + report.Needed + "px, has "
                 + report.Available + "px at width " + report.RectWidth + "px, text=\"" + Short(report.Text) + "\"");
         }
+
+        // Actionability is asserted before emptiness: a finding with no element identity cannot be traced
+        // back to a code site, which is exactly what made the first in-game overflow unusable. An
+        // unidentified report is therefore a failure even if the overflow list were otherwise empty.
+        Assert(unidentified.Count == 0,
+            label + ": every overflow report must carry a non-empty element identity (element id or node path); unidentified: "
+            + string.Join(" | ", unidentified));
 
         Assert(findings.Count == 0,
             label + ": every label on the shipped page must fit the rect it is given; offenders: "

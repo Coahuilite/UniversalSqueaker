@@ -196,14 +196,30 @@ public static class UsKernelDraw
                 if (viewportWidth > 0f && popupWidth > viewportWidth) popupWidth = viewportWidth;
                 Rect popupAnchor = new Rect(anchor.Value.x, anchor.Value.y, popupWidth, anchor.Value.height);
 
+                // The popup pass draws after content and outside the layout engine's element scope, so a
+                // finding inside a popup row would be reported as "(unscoped)" - the exact reason the
+                // first in-game overflow was not actionable. Claim the owning element's path for the
+                // duration of the rows so every report from this draw carries a stable identity.
                 string capturedCurrent = current;
-                ctx.Session.RegisterPopupDraw(() => UiPopup.DrawOptionList(
-                    UiPopup.RectFor(popupAnchor, options.Count, ctx.Session.HostViewport),
-                    elementId,
-                    ctx,
-                    options,
-                    capturedCurrent,
-                    onSelected));
+                string popupPath = (ctx.ElementPath ?? "") + "/popup";
+                ctx.Session.RegisterPopupDraw(() =>
+                {
+                    UiFitAudit.BeginElement(popupPath);
+                    try
+                    {
+                        UiPopup.DrawOptionList(
+                            UiPopup.RectFor(popupAnchor, options.Count, ctx.Session.HostViewport),
+                            elementId,
+                            ctx,
+                            options,
+                            capturedCurrent,
+                            onSelected);
+                    }
+                    finally
+                    {
+                        UiFitAudit.EndElement();
+                    }
+                });
             }
         }
     }

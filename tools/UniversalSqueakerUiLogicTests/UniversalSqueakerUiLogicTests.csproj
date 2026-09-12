@@ -26,6 +26,7 @@
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\ActionScopeRules.cs" Link="ActionScopeRules.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\UsCardLayout.cs" Link="UsCardLayout.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\UsFilterBarLayout.cs" Link="UsFilterBarLayout.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\WindowChromeLayout.cs" Link="WindowChromeLayout.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Help\UsHelpCatalog.cs" Link="UsHelpCatalog.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Help\UsHelpPanelLogic.cs" Link="UsHelpPanelLogic.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Diagnostics\UsDiagnosticsProjection.cs" Link="UsDiagnosticsProjection.cs" />
