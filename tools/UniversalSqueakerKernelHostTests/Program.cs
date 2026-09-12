@@ -134,6 +134,7 @@ internal static class Program
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
+        Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
@@ -380,6 +381,76 @@ internal static class Program
             UiFitAudit.Detach();
             SetTranslatorResolver(null);
         }
+    }
+
+    /// <summary>
+    /// The D9 popup-width rule asserted as a rule, not as one incident's accident:
+    /// <c>UsKernelDraw.Dropdown</c> takes the trigger column as the floor, grows to the widest option
+    /// label plus the 6px per-side row padding, and caps the result at the host viewport. The long-author
+    /// lane above pins the pack-filter report that produced the rule; this lane pins the three clauses with
+    /// injected option text, so a hard-coded width, a dropped content term and a dropped cap each turn this
+    /// lane red on their own:
+    /// (1) floor - every option fits the 143px trigger column, so the popup keeps exactly that width
+    ///     (a 268/313 literal, or a collapse to zero, fails here);
+    /// (2) growth - 40 vs 70 characters of option text differ by exactly the measured 240px, and the
+    ///     40-character popup is exactly its label plus 12px (any constant width fails here);
+    /// (3) cap - a label wider than the 800px viewport yields the viewport width exactly (the content
+    ///     clause without the cap fails here).
+    /// The option text is not the interesting part: the pack-filter authors are display == value, so the
+    /// lane can state each width as an exact number instead of a lower bound.
+    /// </summary>
+    private static void PopupWidthFollowsWidestOptionThenViewport()
+    {
+        Rect anchor = new(300f, 200f, 143f, 24f);
+        Rect viewport = new(0f, 0f, 800f, 600f);
+        var stub = new StubMetrics();
+        float perChar = stub.MeasureWidth("A", UiFont.Small);
+        Assert(perChar > 0f, "the stub must measure a character, or every width clause below is vacuous");
+
+        float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, anchor, viewport);
+        Assert(Math.Abs(floorWidth - anchor.width) < 0.01f,
+            "an option list that fits its trigger must keep the trigger width as the popup floor: "
+            + floorWidth + " vs anchor " + anchor.width);
+
+        string forty = new('A', 40);
+        string seventy = new('A', 70);
+        float fortyWidth = DrawnPopupWidth(new[] { forty }, stub, anchor, viewport);
+        float seventyWidth = DrawnPopupWidth(new[] { seventy }, stub, anchor, viewport);
+        Assert(Math.Abs(fortyWidth - (40f * perChar + 12f)) < 0.01f,
+            "the popup must be exactly the widest label plus the 6px-per-side row padding: "
+            + fortyWidth + " vs " + (40f * perChar + 12f));
+        Assert(Math.Abs(seventyWidth - fortyWidth - 30f * perChar) < 0.01f,
+            "30 more characters of option text must widen the popup by exactly 30 measured characters: "
+            + (seventyWidth - fortyWidth) + " vs " + (30f * perChar));
+
+        string impossible = new('A', 200); // StubMetrics Small: 1600px + 12px, far over the 800px viewport
+        Assert(stub.MeasureWidth(impossible, UiFont.Small) + 12f > viewport.width,
+            "the cap clause needs a label wider than the viewport, or it asserts nothing");
+        float cappedWidth = DrawnPopupWidth(new[] { impossible }, stub, anchor, viewport);
+        Assert(Math.Abs(cappedWidth - viewport.width) < 0.01f,
+            "a popup wider than its viewport must be capped at the viewport width: "
+            + cappedWidth + " vs " + viewport.width);
+    }
+
+    /// <summary>
+    /// Opens the real pack-filter dropdown on the real production host with the given author options and
+    /// returns the width of the popup layer that pass published (the popup is the layer carrying
+    /// <see cref="UiHitLayer.IsPopup" /> - the rule reads back the rect the popup was actually drawn with,
+    /// not a width this lane recomputed).
+    /// </summary>
+    private static float DrawnPopupWidth(string[] authors, StubMetrics stub, Rect anchor, Rect viewport)
+    {
+        var fake = new RecordingSettingsSource { RichData = true, Authors = authors };
+        using UiHost host = UsKernelSettingsHost.Create(fake, stub);
+        host.Bindings.Invoke("set-tab", "Packs");
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport); // prime the view cache before the popup opens
+        host.Session.OpenPopup("pack-filter", anchor);
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport);
+        Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
+            "an open pack-filter dropdown must publish its popup layer (authors: " + string.Join(",", authors) + ")");
+        return layer.Rect.width;
     }
 
     private static string DescribeOverflow(List<UiOverflowReport> reports)
