@@ -84,7 +84,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => RectMatches(rect, minus));
             SetSliderOverride((rect, value, min, max) => value);
             SetTextFieldOverride((rect, text) => text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMood == SqueakMood.Good, "minus click must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Pitch, "minus click on the first stepper line must target Pitch");
@@ -108,7 +108,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => RectMatches(rect, plus));
             SetSliderOverride((rect, value, min, max) => value);
             SetTextFieldOverride((rect, text) => text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMood == SqueakMood.Good, "plus click must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Pitch, "plus click on the first stepper line must target Pitch");
@@ -132,7 +132,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => false);
             SetSliderOverride((rect, value, min, max) => RectMatches(rect, slider) ? 1.25f : value);
             SetTextFieldOverride((rect, text) => text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMood == SqueakMood.Good, "slider change must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Pitch, "first slider must target Pitch");
@@ -156,7 +156,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => false);
             SetSliderOverride((rect, value, min, max) => value);
             SetTextFieldOverride((rect, text) => RectMatches(rect, field) ? "1.25" : text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMood == SqueakMood.Good, "number commit must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Pitch, "first number field must target Pitch");
@@ -180,7 +180,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => RectMatches(rect, auto));
             SetSliderOverride((rect, value, min, max) => value);
             SetTextFieldOverride((rect, text) => text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMood == SqueakMood.Good, "Auto click must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Clear, "Auto click must write SqueakMoodFactor.Clear");
@@ -296,7 +296,7 @@ internal static class MoodLayoutFocusedTests
                 SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
                 SetSliderOverride((rect, value, min, max) => { raw.Sliders.Add(rect); return value; });
                 SetTextFieldOverride((rect, text) => { raw.TextFields.Add(rect); return text; });
-                host.DrawFrame(new Rect(0f, 0f, viewportWidth, viewportHeight));
+                host.DrawChecked(new Rect(0f, 0f, viewportWidth, viewportHeight));
             }
             finally
             {
@@ -434,7 +434,7 @@ internal static class MoodLayoutFocusedTests
             SetButtonOverride(rect => RectMatches(rect, presets[0]));
             SetSliderOverride((rect, value, min, max) => value);
             SetTextFieldOverride((rect, text) => text);
-            ctx.Host.DrawFrame(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            ctx.Host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
 
             Assert(ctx.Source.LastMoodPresetReset == SqueakMood.Good, "the preset reset must write the first rich mood row (Good)");
             Assert(ctx.Source.LastMoodPresetResetCount == 1, "the preset reset must route exactly one reset-mood-to-preset action");
@@ -489,7 +489,7 @@ internal static class MoodLayoutFocusedTests
                 SetButtonOverride(rect => RectMatches(rect, defaults[0]));
                 SetSliderOverride((rect, value, min, max) => value);
                 SetTextFieldOverride((rect, text) => text);
-                ctx.Host.DrawFrame(ctx.Viewport);
+                ctx.Host.DrawChecked(ctx.Viewport);
                 Assert(ctx.Source.LastMood == SqueakMood.Good && ctx.Source.LastMoodFactor == SqueakMoodFactor.Clear,
                     mode + ": the \"reset to default\" control must write Clear for the first rich row");
 
@@ -497,7 +497,7 @@ internal static class MoodLayoutFocusedTests
                 ctx.Source.LastMoodPresetReset = null;
                 ctx.Source.LastMoodPresetResetCount = 0;
                 SetButtonOverride(rect => RectMatches(rect, presets[0]));
-                ctx.Host.DrawFrame(ctx.Viewport);
+                ctx.Host.DrawChecked(ctx.Viewport);
                 Assert(ctx.Source.LastMoodPresetReset == SqueakMood.Good && ctx.Source.LastMoodPresetResetCount == 1,
                     mode + ": the \"reset to preset\" control must route exactly one reset-mood-to-preset action");
             }
@@ -535,7 +535,7 @@ internal static class MoodLayoutFocusedTests
                 if (rect.width >= 160f && rect.height >= 50f) navRects.Add(rect);
                 return false;
             });
-            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
         }
         finally
         {
@@ -554,8 +554,8 @@ internal static class MoodLayoutFocusedTests
         foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
         {
             ctx.Host.Session.OpenPopup("scope-tree-scope-" + key, new Rect(targetWindow.x, targetWindow.y - 24f, targetWindow.width, 22f));
-            ctx.Host.DrawFrame(ctx.Viewport);
-            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
             if (TryGetPopupHitLayerFromHost(ctx.Host, out UiHitLayer layer))
             {
                 owner = key;
@@ -576,16 +576,16 @@ internal static class MoodLayoutFocusedTests
         {
             SetMousePosition(pointerWindow);
             SetButtonOverride(rect => RectMatches(rect, target));
-            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
             Assert(!(ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string coveredTab) && coveredTab != tabBefore),
                 "a popup-covered control must not take the click (ctx overload); a raw UiNative.Button(Rect) site fails here");
 
             // Positive control: same pointer, same click, popup gone - the tab must now switch.
             ctx.Host.Session.ClosePopup();
-            ctx.Host.DrawFrame(ctx.Viewport);
-            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
             SetButtonOverride(rect => RectMatches(rect, target));
-            ctx.Host.DrawFrame(ctx.Viewport);
+            ctx.Host.DrawChecked(ctx.Viewport);
             string tabAfter = ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string t1) ? t1 : "";
             Assert(tabAfter != tabBefore,
                 "with no popup the same click must reach the control (positive control for the yield assertion); tab stayed " + tabAfter);

@@ -162,7 +162,7 @@ internal static class Program
         using UiHost host = UsKernelSettingsHost.Create(fake);
         host.Bindings.Invoke("set-tab", "Tuning");
         Rect viewport = new(0f, 0f, 800f, 600f);
-        host.DrawFrame(viewport);
+        host.DrawChecked(viewport);
 
         // Anchor low enough that two or more option rows cannot fit below it (the composite popup must
         // flip above the trigger, the same branch the reported click loss exercised) and far enough
@@ -176,7 +176,7 @@ internal static class Program
         foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
         {
             host.Session.OpenPopup("scope-tree-scope-" + key, anchor);
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
             if (TryGetPopupHitLayer(host.Session, out UiHitLayer layer))
             {
                 publishedBy = key;
@@ -202,7 +202,7 @@ internal static class Program
         // Input arrives in the frame AFTER the draw, and a pass dispatches against the stack the
         // previous pass finished, so the predicate is asserted after a second frame - the same
         // next-frame reason the retired rect had to be republished before it was read.
-        host.DrawFrame(viewport);
+        host.DrawChecked(viewport);
 
         // The layer names its owner by node identity, so the owner comes from the layer itself: the
         // scope rows are drawn inside one widget, so they are not tree elements a string id resolves.
@@ -224,8 +224,8 @@ internal static class Program
         // stale layer cannot shadow later clicks (the dispatch stack is read one pass after the close).
         Assert(TryGetPopupHitLayer(host.Session, out _), "the popup layer must be republished every frame it draws");
         host.Session.ClosePopup();
-        host.DrawFrame(viewport);
-        host.DrawFrame(viewport);
+        host.DrawChecked(viewport);
+        host.DrawChecked(viewport);
         Assert(!TryGetPopupHitLayer(host.Session, out _), "a closed composite popup must leave no popup layer");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, inside),
             "a closed popup must stop shadowing the elements it covered");
@@ -302,12 +302,12 @@ internal static class Program
         try
         {
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
             host.Session.OpenPopup("pack-filter", new Rect(300f, 200f, 143f, 24f));
             UiFitAudit.Reset();
             reports.Clear();
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
 
             Assert(reports.Count > 0, "a popup row wider than the capped popup must be reported at all");
             foreach (UiOverflowReport report in reports)
@@ -343,11 +343,11 @@ internal static class Program
         try
         {
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport); // prime the view cache and popup state
+            host.DrawChecked(viewport); // prime the view cache and popup state
             UiFitAudit.Reset();
             reports.Clear();
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
             Assert(
                 reports.FindAll(r => r.ElementPath.Contains("filter-bar")).Count == 0,
                 "a selected long author must ellipsize inside the fixed trigger column, not overflow: "
@@ -356,7 +356,7 @@ internal static class Program
             Rect anchor = new(300f, 200f, 143f, 24f);
             host.Session.OpenPopup("pack-filter", anchor);
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
             Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer popupLayer),
                 "the opened pack-filter must publish its popup layer");
             Rect popup = popupLayer.Rect;
@@ -369,7 +369,7 @@ internal static class Program
             UiFitAudit.Reset();
             reports.Clear();
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawFrame(viewport); // repaint with the popup open: rows measured against the grown rect
+            host.DrawChecked(viewport); // repaint with the popup open: rows measured against the grown rect
             Assert(
                 reports.FindAll(r => r.ElementPath.Length == 0 || r.ElementPath.Contains("filter-bar")).Count == 0,
                 "the widened popup must render its long row without overflow: " + DescribeOverflow(reports));
@@ -455,9 +455,9 @@ internal static class Program
             var liveFake = new RecordingSettingsSource { RichData = true };
             using UiHost live = UsKernelSettingsHost.Create(liveFake);
             live.Bindings.Invoke("set-tab", "Packs");
-            live.DrawFrame(viewport);
+            live.DrawChecked(viewport);
             live.Bindings.Set("race-filter", "sanguophage");
-            live.DrawFrame(viewport);
+            live.DrawChecked(viewport);
             UiLayoutSnapshot liveSnapshot = live.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
 
             var freshFake = new RecordingSettingsSource { RichData = true };
@@ -685,7 +685,7 @@ internal static class Program
         Event.current = e;
         try
         {
-            host.DrawFrame(viewport);
+            host.DrawChecked(viewport);
         }
         finally
         {
@@ -715,7 +715,7 @@ internal static class Program
             + " it, the library defaults to none); got " + grace);
 
         int frameBefore = host.Session.Frame;
-        host.DrawFrame(viewport);
+        host.DrawChecked(viewport);
         Assert(host.Session.Frame == frameBefore + 1,
             "one UiHost.DrawFrame must advance the session clock by exactly one pass, or the window's"
             + " frame boundary is not the session's (" + frameBefore + " -> " + host.Session.Frame + ")");
@@ -807,7 +807,7 @@ internal static class Program
         UiHost host = UsKernelSettingsHost.Create(fake);
         host.Dispose();
         AssertThrows<InvalidOperationException>(
-            () => host.DrawFrame(new Rect(0f, 0f, 900f, 700f)),
+            () => host.DrawChecked(new Rect(0f, 0f, 900f, 700f)),
             "after the window's whole-frame failure catch disposed the host, no frame can ever render the page again");
 
         // Types deleted with the legacy UI chain, plus the caller-less preview surface that only
@@ -1108,7 +1108,7 @@ internal static class Program
 
             // One complete synchronous frame on the real tree at each viewport; native scopes must
             // all close (no leaked BeginScrollView/BeginGroup).
-            host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
             Assert(StubScrollDepth() == 0, "no leaked Verse scroll scope after DrawFrame at " + viewport);
             Assert(StubGroupDepth() == 0, "no leaked GUI group scope after DrawFrame at " + viewport);
             Assert(host.Session.IsActive, "session stays active after a complete frame at " + viewport);
@@ -1212,7 +1212,7 @@ internal static class Program
                     Assert(!snapshot.RectById.ContainsKey(id), "non-" + tab + " section " + id + " hidden at " + viewport);
                 }
 
-                host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+                host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
                 Assert(StubScrollDepth() == 0, "no leaked Verse scroll scope at workspace " + tab + " viewport " + viewport);
                 Assert(StubGroupDepth() == 0, "no leaked GUI group scope at workspace " + tab + " viewport " + viewport);
                 Assert(host.Session.IsActive, "session active at workspace " + tab + " viewport " + viewport);
@@ -1323,7 +1323,7 @@ internal static class Program
             {
                 host.Bindings.Invoke("set-tab", "Packs");
                 host.MeasureAndArrange(viewports[0]);
-                host.DrawFrame(new Rect(0f, 0f, viewports[0].x, viewports[0].y));
+                host.DrawChecked(new Rect(0f, 0f, viewports[0].x, viewports[0].y));
             }
 
             bool caught = false;
@@ -1417,7 +1417,7 @@ internal static class Program
             foreach (Vector2 viewport in viewports)
             {
                 host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-                host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+                host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
             }
         }
 
@@ -1562,7 +1562,7 @@ internal static class Program
             host.Bindings.Invoke("set-tab", tab);
             foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
             {
-                host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+                host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
                 Assert(StubScrollDepth() == 0, "no leaked Verse scroll scope with rich data at " + tab + " " + viewport);
                 Assert(StubGroupDepth() == 0, "no leaked GUI group scope with rich data at " + tab + " " + viewport);
             }
@@ -1616,7 +1616,7 @@ internal static class Program
         Assert(a.Session.PopupDrawActions.Count == 1, "popup draw action registered on A");
         Assert(b.Session.PopupDrawActions.Count == 0, "session B has no popup draw actions");
 
-        a.DrawFrame(new Rect(0f, 0f, 800f, 600f));
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
         Assert(a.Session.PopupDrawActions.Count == 0, "popup draw actions are consumed at EndFrame");
         Assert(a.Session.IsPopupOpen("a-popup"), "popup ownership survives the frame");
 
@@ -1657,7 +1657,7 @@ internal static class Program
         // the three reference resolutions; the layout must not throw and native scopes close.
         foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
         {
-            host.DrawFrame(new Rect(0f, 0f, viewport.x, viewport.y));
+            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
             Assert(StubScrollDepth() == 0, "no leaked Verse scroll scope after overlay DrawFrame at " + viewport);
             Assert(StubGroupDepth() == 0, "no leaked GUI group scope after overlay DrawFrame at " + viewport);
         }
@@ -1820,7 +1820,7 @@ internal static class Program
     {
         var settingsFake = new RecordingSettingsSource();
         UiHost settingsHost = UsKernelSettingsHost.Create(settingsFake);
-        settingsHost.DrawFrame(new Rect(0f, 0f, 800f, 600f)); // a live settings frame
+        settingsHost.DrawChecked(new Rect(0f, 0f, 800f, 600f)); // a live settings frame
         settingsHost.Dispose(); // window close
 
         var source = new RecordingOverlaySource();
@@ -1837,7 +1837,7 @@ internal static class Program
         host.Dispose();
         Assert(!host.Session.IsActive, "disposed host session is inactive");
         AssertThrows<InvalidOperationException>(
-            () => host.DrawFrame(new Rect(0f, 0f, 800f, 600f)),
+            () => host.DrawChecked(new Rect(0f, 0f, 800f, 600f)),
             "a disposed session must refuse DrawFrame (close-path contract)");
     }
 
@@ -1988,6 +1988,8 @@ internal static class Program
         blocked.windowRect = new Rect(0f, 0f, 900f, 700f);
         blocked.WindowOnGUI();
         Assert(blocked.HostCreations == 0, "an unmet prerequisite never reaches page creation");
+        Assert(blocked.BuiltSession == null,
+            "and there is no page session to check: a pass that builds nothing has no page that could have drawn");
         Assert(blocked.Notices.Count == 1 && blocked.Notices[0] == UiWindowNotice.Prerequisite,
             "and it names the desync instead of the generic unavailable page");
 
@@ -1999,6 +2001,9 @@ internal static class Program
         UiSession? built = healthy.BuiltSession;
         Assert(built != null && built.IsActive,
             "the probe must have a live session to test the close path");
+        // The two notice passes above build no session at all (nothing drew), but this pass draws a real
+        // page under the shell: assert the page DREW, not merely that the window lived (see UsTripGuard).
+        UsTripGuard.ExpectNoTrips(built!, "SettingsWindowShellCarriesTheFailureContract");
         healthy.PreClose();
         Assert(built != null && !built.IsActive,
             "the shell's PreClose disposes the page session - US keeps only its own audit teardown");

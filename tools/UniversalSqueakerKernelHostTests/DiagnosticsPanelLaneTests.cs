@@ -35,6 +35,7 @@ internal static class DiagnosticsPanelLaneTests
         Step("a glyph the font cannot draw becomes its word (D7)", MissingGlyphFallsBack);
         Step("the state word is printed once per blocked row", GateBlockMarkAppearsOnceOnScreen);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
+        Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
     }
 
     private static void Step(string name, Action action)
@@ -172,7 +173,7 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 1);
         using UiHost host = UsDiagnosticsHost.CreateDetail(fake);
         Assert(host.Session.IsActive, "lock page host builds");
-        host.DrawFrame(new Rect(0f, 0f, 320f, 480f));
+        host.DrawChecked(new Rect(0f, 0f, 320f, 480f));
         Assert(host.Session.IsActive, "lock page survives a full frame");
     }
 
@@ -282,7 +283,7 @@ internal static class DiagnosticsPanelLaneTests
 
         Assert(game == 4 && rules == 7 && audio == 5, "all three sides survive the projection, got " + game + "/" + rules + "/" + audio);
 
-        host.DrawFrame(new Rect(0f, 0f, 680f, 560f));
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
         Assert(host.Session.IsActive, "the grouped chain draws inside a full real frame");
     }
 
@@ -330,7 +331,7 @@ internal static class DiagnosticsPanelLaneTests
         int textStart = texts.Count;
         int boxStart = colors.Count;
 
-        host.DrawFrame(new Rect(0f, 0f, 680f, 560f));
+        host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
 
         int blockRows = 0;
         if (host.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) && detail != null)
@@ -434,13 +435,58 @@ internal static class DiagnosticsPanelLaneTests
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
 
         host.MeasureAndArrange(new Vector2(620f, 560f));
-        host.DrawFrame(new Rect(0f, 0f, 620f, 560f));
+        // This lane TRIPS ON PURPOSE, so the switch is explicit in the call rather than an omission - and it
+        // is passed on every later frame too, because UiSession remembers a trip until it is disposed.
+        host.DrawChecked(new Rect(0f, 0f, 620f, 560f), deliberateTrips: true);
         Assert(host.Session.IsActive,
             "a throwing detail projection is absorbed by the session guard (engine RecoveryBand), the frame survives");
+        Assert(UsTripGuard.AnyTripped(host.Session),
+            "and the recovery really happened: the element ended the frame in a recovery band");
+        Assert(UsTripGuard.Describe(host.Session, "diag").Contains("planted projection failure"),
+            "the trip log names what the element threw, so a silent recovery cannot hide the cause");
         fake.ThrowOnDetail = false;
         host.MeasureAndArrange(new Vector2(620f, 560f));
-        host.DrawFrame(new Rect(0f, 0f, 620f, 560f));
+        // Still the declared lane: the detail element draws cleanly from here on, but the session keeps the
+        // earlier trip in TrippedNodes, so this is the same deliberate declaration, not a new one.
+        host.DrawChecked(new Rect(0f, 0f, 620f, 560f), deliberateTrips: true);
         Assert(host.Session.IsActive, "and the same host keeps working after the failure clears");
+        Assert(UsTripGuard.AnyTripped(host.Session),
+            "the session keeps the trip recorded after the failing source is cleared, so a later frame is "
+            + "still the same declared lane rather than a fresh claim");
+    }
+
+    /// <summary>
+    /// Positive control for <see cref="UsTripGuard"/>: the guard must FAIL a lane whose page tripped, and
+    /// must stay quiet when the lane declared the trip. Without this, a guard that silently passed
+    /// everything would look identical to a suite where nothing trips.
+    /// </summary>
+    private static void TripGuardFailsAPlantedTrip()
+    {
+        var fake = new FakeDiagnosticsSource { ThrowOnDetail = true };
+        FillRows(fake, 8);
+        using UiHost host = UsDiagnosticsHost.CreateMain(fake);
+        host.MeasureAndArrange(new Vector2(620f, 560f));
+        host.DrawFrame(new Rect(0f, 0f, 620f, 560f)); // deliberately unguarded: this step is about the guard failing
+
+        Assert(UsTripGuard.AnyTripped(host.Session), "the planted throw is recorded as a tripped element");
+
+        bool fired = false;
+        try
+        {
+            UsTripGuard.ExpectNoTrips(host.Session, "planted-trip positive control");
+        }
+        catch (Exception ex)
+        {
+            fired = true;
+            Assert(ex.Message.Contains("planted-trip positive control")
+                    && ex.Message.Contains("planted projection failure"),
+                "the guard's failure names the lane and what the element threw, got: " + ex.Message);
+        }
+
+        Assert(fired, "the guard fails a lane whose page was replaced by a recovery band");
+
+        // And the explicit switch is the only way past it - it is never an omission.
+        UsTripGuard.ExpectNoTrips(host.Session, "planted-trip positive control", deliberateTrips: true);
     }
 
     private static void Assert(bool condition, string message)

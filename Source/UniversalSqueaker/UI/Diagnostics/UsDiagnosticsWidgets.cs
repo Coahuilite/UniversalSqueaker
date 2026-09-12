@@ -497,9 +497,9 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         if (IsCollapsed(ctx)) return;
         if (!ctx.Bindings.TryGet(UsDiagnosticsHost.KeyDetail, out UsDiagDetail? detail) || detail == null)
         {
-            // Inline inset, not Verse.GenUI.ContractedBy: that extension lives in Assembly-CSharp, and
-            // the harness's Verse stub does not carry GenUI, so calling it made this whole widget
-            // undrawable (and therefore untestable) outside the game. Same 8px inset, no backend tie.
+            // Inline 8px inset rather than Verse.GenUI.ContractedBy: the harness's stub now carries that
+            // extension too (FL 2026-09-12), so the two are equivalent - this form is kept because it
+            // depends on no game-assembly type at all, not because the other one is broken.
             UsKernelDraw.Label(
                 new Rect(rect.x + 8f, rect.y + 8f, Math.Max(1f, rect.width - 16f), Math.Max(1f, rect.height - 16f)),
                 UsKernelDraw.Keyed(ctx, "US.Diagnostics.Detail.Empty"),
