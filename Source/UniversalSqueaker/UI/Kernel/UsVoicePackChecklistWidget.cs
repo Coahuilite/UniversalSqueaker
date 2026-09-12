@@ -272,6 +272,10 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/voice-pack-checklist/row");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
+        // Same list convention as the single-line rows: the pack row ends in one hairline in the divider
+        // token. It sits inside the row's bottom edge, so neither the row height nor the 24px hit band
+        // (RowHitRect centres that band on the visual row) changes.
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
         string meta = UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author);
         float textWidth = Math.Max(1f, rect.width - RowTextReserve);

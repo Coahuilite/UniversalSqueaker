@@ -49,9 +49,162 @@ internal static class MoodLayoutFocusedTests
         Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
         Step("reset controls route in all three mood layout modes", ResetRoutingAcrossLayoutModes);
         Step("a popup-covered reset control yields the click", CoveredControlYieldsTheClick);
+        Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
         return 0;
+    }
+
+    /// <summary>
+    /// The checkbox row's click contract (structure from task-100, assertion from task-103). Two facts,
+    /// failing for different reasons:
+    /// <list type="number">
+    /// <item>THE DRAW FACT. The row's hit band stops where the checkbox slot starts, so the two button
+    /// rects the row registers are disjoint and one press can only be decided by one of them. This is what
+    /// the truncation in the widgets is for, and it is measured on the recorded button rects, not inferred
+    /// from the source.</item>
+    /// <item>THE BEHAVIOUR FACT. One press on either rect advances the session's revision clock by exactly
+    /// one write and flips the value once. Two overlapping buttons both report the same press in IMGUI, so
+    /// a missing short-circuit would show up here as two writes and a value back where it started.</item>
+    /// </list>
+    /// </summary>
+    private static void CheckboxRowPressDecidesOnce()
+    {
+        const float Width = ViewportWidth;
+        const float Height = 900f;
+        var source = new RecordingSettingsSource { RichData = true };
+        UiHost host = UsKernelSettingsHost.Create(source);
+        try
+        {
+            host.Bindings.Invoke("set-tab", "Overview");
+            host.MeasureAndArrange(new Vector2(Width, Height));
+            Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(Width, Height));
+            Assert(snapshot.RectById.TryGetValue("basic-tuning", out Rect card),
+                "the Overview workspace must hold the basic-tuning card");
+
+            var raw = new CapturedRects();
+            try
+            {
+                SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
+                host.DrawChecked(new Rect(0f, 0f, Width, Height));
+            }
+            finally
+            {
+                ClearOverrides();
+            }
+
+            List<Rect> slots = raw.Buttons
+                .Where(r => IsInside(r, card)
+                    && Math.Abs(r.width - UsKernelDraw.CheckboxHit) <= 0.5f
+                    && Math.Abs(r.height - UsKernelDraw.CheckboxHit) <= 0.5f)
+                .OrderBy(r => r.y)
+                .ToList();
+            Assert(slots.Count > 0, "the basic-tuning card must register at least one 24px checkbox slot");
+
+            // THE DRAW FACT, stated as the property itself: no row band in this card may reach into any
+            // checkbox slot. Nothing is assumed about which slot belongs to which row - a widget that
+            // restores a full-width row button fails here whichever row it is, and the band list is built
+            // from what the card actually registered (bands are 24 tall and wider than a slot).
+            foreach (Rect slotRect in slots)
+            {
+                List<Rect> sameRow = RowBandsFor(raw.Buttons, slotRect);
+                Assert(sameRow.Count == 1,
+                    "every checkbox slot must own exactly one row hit band, got " + sameRow.Count + " for the slot at y " + slotRect.y);
+                Assert(Math.Abs(sameRow[0].xMax - slotRect.x) <= 0.01f,
+                    "and that band must end exactly where the slot starts (band ends at " + sameRow[0].xMax + ", slot starts at " + slotRect.x + ")");
+            }
+
+            // THE BEHAVIOUR FACT. The egg row is the widget's first checkbox row (it is drawn first), and
+            // that is verified by what the press does rather than assumed: if this row is not the egg row,
+            // allow-eggs does not move and the lane fails with a name.
+            Rect slot = slots[0];
+            Rect band = RowBandsFor(raw.Buttons, slot)[0];
+
+            // (a) A press that reaches BOTH the slot and the band - the overlapping-button case IMGUI hands
+            //     to both controls - must still be exactly one write and one flip. That is the short-circuit's
+            //     whole job; without it the value would end where it started after two writes.
+            // The observable is the source write (UsKernelSettingsHost wires toggle-egg to
+            // SetEasterEggs and bumps the revision clock), not the cached value binding.
+            bool? before = source.LastEasterEggs;
+            int revisionBefore = host.Session.ContentRevision;
+            try
+            {
+                SetButtonOverride(rect => Math.Abs(rect.y - slot.y) < 0.5f && Math.Abs(rect.height - slot.height) < 0.5f);
+                host.DrawChecked(new Rect(0f, 0f, Width, Height));
+            }
+            finally
+            {
+                ClearOverrides();
+            }
+
+            Assert(source.LastEasterEggs != before, "a press both controls report must flip the value exactly once");
+            Assert(host.Session.ContentRevision == revisionBefore + 1,
+                "and it must be exactly one write, not two (revision " + revisionBefore + " -> " + host.Session.ContentRevision + ")");
+
+            // (b) A press on the row band only: the row decides and still writes once.
+            int rowRevisionBefore = host.Session.ContentRevision;
+            try
+            {
+                Rect rowOnly = band;
+                SetButtonOverride(rect => Math.Abs(rect.x - rowOnly.x) < 0.5f && Math.Abs(rect.width - rowOnly.width) < 0.5f && Math.Abs(rect.y - rowOnly.y) < 0.5f);
+                host.DrawChecked(new Rect(0f, 0f, Width, Height));
+            }
+            finally
+            {
+                ClearOverrides();
+            }
+
+            Assert(source.LastEasterEggs != before, "a press on the row band must flip it again, exactly once");
+            Assert(host.Session.ContentRevision == rowRevisionBefore + 1,
+                "and that press must be exactly one write too (revision " + rowRevisionBefore + " -> " + host.Session.ContentRevision + ")");
+        }
+        finally
+        {
+            host.Dispose();
+        }
+    }
+
+    /// <summary>One Repaint pass with the pointer parked at <paramref name="pointer"/> - the same frame
+    /// protocol Program uses, kept local because this lane needs the pointer position, not the pump.</summary>
+    private static void DrawWithPointer(UiHost host, Rect viewport, Vector2 pointer)
+    {
+        Event e = Event.KeyboardEvent("dummy");
+        e.type = EventType.Repaint;
+        e.mousePosition = pointer;
+        Event.current = e;
+        try
+        {
+            host.DrawChecked(viewport);
+        }
+        finally
+        {
+            Event.current = null;
+        }
+    }
+
+    private static Vector2 Centre(Rect rect) => new(rect.x + rect.width * 0.5f, rect.y + rect.height * 0.5f);
+
+    /// <summary>The hit bands of the row a slot sits on: wider than the slot, ending at its left edge. The
+    /// card's snapshot rect cannot be used to filter these - it does not span the rows' left edge - so the
+    /// slot is the anchor and the band is found from what the draw actually registered.</summary>
+    private static List<Rect> RowBandsFor(List<Rect> recorded, Rect slot)
+    {
+        // Same row means: the same height band and the same vertical centre. A looser overlap test also
+        // catches the navigation rail's 56px items, which sit to the left of the page and share some
+        // vertical range with every row - they are not this row's band and must not be counted as one.
+        return recorded
+            .Where(r => r.width > UsKernelDraw.CheckboxHit + 0.5f
+                && r.xMax <= slot.x + 0.01f
+                && Math.Abs(r.height - slot.height) <= 8f
+                && Math.Abs((r.y + r.height * 0.5f) - (slot.y + slot.height * 0.5f)) <= 4f)
+            .ToList();
+    }
+
+    private static bool OverlapsVertically(Rect left, Rect right)
+    {
+        float overlap = Math.Min(left.yMax, right.yMax) - Math.Max(left.y, right.y);
+        return overlap >= Math.Min(left.height, right.height) * 0.5f;
     }
 
     private static void Step(string name, Action action)

@@ -19,6 +19,11 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public sealed class UsKernelOverlayController : IDisposable
 {
+    // 26, not the settings row height: this row is drawn into the vanilla global-controls column, next to
+    // the game's own controls, and it has to keep the rhythm they are drawn at - a floating HUD row that
+    // followed the settings window's density axis would change height when a settings document changes,
+    // which is neither its surface nor its axis. The patch that inserts the row uses the same number; if
+    // the two ever drift, the overlay sits a pixel off the vanilla stack it is part of.
     private const float RowHeight = 26f;
 
     private readonly IUsKernelOverlaySource source;

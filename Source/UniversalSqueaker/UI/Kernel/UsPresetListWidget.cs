@@ -212,6 +212,10 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        // The list convention the basic-tuning rows set: a single-line list row ends in one hairline in
+        // the divider token, so a stack of rows reads as a list. It is drawn inside the row's bottom edge,
+        // so the 24px hit promise is untouched.
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), Math.Max(18f, rect.height - 6f)),
@@ -235,6 +239,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), Math.Max(14f, rect.height - 6f)),

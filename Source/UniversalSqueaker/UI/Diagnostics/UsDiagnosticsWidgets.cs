@@ -292,6 +292,12 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/list";
     internal const float FieldHeight = 24f;
+
+    // 22, and deliberately NOT UiTheme.Geometry.RowHeight: this is the diagnostics report surface, not a
+    // settings page. Its rows are one Tiny line each, its page holds a fixed RowsPerPage of them, and its
+    // fallback height is arithmetic over both - so it owns a fixed rhythm. Reading the settings density
+    // here would let a style document resize the report's pagination, and the report is the surface that
+    // has to stay comparable between two runs of the game.
     internal const float RowHeight = 22f;
     private const string SearchStateId = "diag-search-field";
 
