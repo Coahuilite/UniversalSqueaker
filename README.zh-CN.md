@@ -20,10 +20,12 @@ Universal Squeaker 本身**不含任何语音内容**：它是一个路由内核
 ## 本地验证与构建
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 14 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计）
+pwsh -NoProfile -File scripts/verify-local.ps1   # 15 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计 + harness stub 覆盖）
 pwsh -NoProfile -File scripts/build-dev.ps1      # 先在 ../ferritelib 建 Release 载主载荷，再 Dev 构建并 stage 成可直接安装的**目录**（dist/dev/UniversalSqueaker）——不打归档；需要 zip 时用 pack-dev -Zip
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # 隐私门禁（三向量 + 凭据 + PublishedFileId 值 + 身份唯一性；-FullHistory 为全历史模式）
 ```
+
+第 15 门把载体的引用驱动 stub 扫描（`../ferritelib/scripts/stub-coverage-scan.ps1`）只读地跑在 US 载荷上，配 US 自己的豁免账 `scripts/stub-coverage-exemptions.txt`：载荷引用的每个游戏成员，要么被载体 stub 声明，要么带理由被豁免，否则判红。这一类的可见性车道给不了——只在参考程序集里存在的成员编译全绿、运行时才死，而 harness 里会话守卫会把它换成一个恢复带，只断言「会话还活着」的车道照样绿。
 
 UI 库已拆为独立前置模组仓库 `../ferritelib`（`coahuilite.ferritelib`），有自己的门禁体系。第 14 门 `scripts/ui-boundary-audit.ps1` 是同一 containment 指标的消费侧：白名单只剩两条裁定豁免（dev 诊断面板、冻结的相机指示器 fallback），其外的裸 Unity IMGUI / Verse Widgets 调用一律判红；裸 `Mouse.IsOver` 更是任何位置都不允许——悬停、帧门、窗口 chrome 全部走库缝（`UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiWindowHost`）。
 

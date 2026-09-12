@@ -20,12 +20,14 @@ Universal Squeaker ships **no audio of its own**: it is a routing kernel that at
 ## Local verification and build
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 14 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit)
+pwsh -NoProfile -File scripts/verify-local.ps1   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit + harness stub coverage)
 pwsh -NoProfile -File scripts/build-dev.ps1      # Release carrier payload at ../ferritelib, then a Dev build staged as an installable FOLDER (dist/dev/UniversalSqueaker) - no archive; -Zip exists in pack-dev if you want one
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
 ```
 
-The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite. Gate 14 (`scripts/ui-boundary-audit.ps1`) is the consumer half of the same containment metric: a raw Unity IMGUI / Verse Widgets call outside the two ruled exemptions (the dev diagnostics panel and the frozen camera-indicator fallback) fails the build, and a raw `Mouse.IsOver` anywhere at all fails it — hover, layout-event gating and window chrome all read the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiWindowHost`).
+The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite. Gate 15 runs the carrier's reference-driven harness-stub scan (`../ferritelib/scripts/stub-coverage-scan.ps1`) over the US payload with US's own exemption ledger (`scripts/stub-coverage-exemptions.txt`): every game member the payload references must be declared by the carrier's stubs or exempted with a reason, or the run fails. That is the class a lane cannot see — a member only the reference assemblies advertise compiles green and dies at run time inside the harness, where the session guard turns it into a recovery band and a lane asserting a live session stays green.
+
+Gate 14 (`scripts/ui-boundary-audit.ps1`) is the consumer half of the same containment metric: a raw Unity IMGUI / Verse Widgets call outside the two ruled exemptions (the dev diagnostics panel and the frozen camera-indicator fallback) fails the build, and a raw `Mouse.IsOver` anywhere at all fails it — hover, layout-event gating and window chrome all read the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiWindowHost`).
 
 ## Documentation index
 

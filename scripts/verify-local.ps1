@@ -24,13 +24,18 @@ $ErrorActionPreference = "Stop"
 #  13   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
 #  14   UI boundary audit (scripts/ui-boundary-audit.ps1): raw renderer-backend calls only inside the
 #       2-file exemption whitelist (豁免一 + 豁免二), and ZERO raw Mouse.IsOver since FL P1
-# GATE PROVENANCE: 1-5 and 10-14 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
+#  15   harness stub coverage: the carrier's reference-driven scan over the US payload, read-only, with
+#       US's own exemption ledger (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose -
+#       gate 13 builds the carrier's stub surface in place, which is the member set the scan reads.
+# GATE PROVENANCE: 1-5 and 10-15 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
-# entry by entry. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
+# entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and the scanned payload
+# are US's; the scanner's own fixture controls stay in the carrier's gate 8, where the scanned tree is
+# the carrier's. The FerriteLib library gates (its harness, Dev/Release builds, neutrality grep and
 # the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
-# Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as 14
-# instead of shifting the thirteen below it.
+# Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
+# next number (this one: 15) instead of shifting the checks below it.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -289,6 +294,39 @@ Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + type
 Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whitelist)' `
     'pwsh -NoProfile -File scripts/ui-boundary-audit.ps1' `
     { & (Join-Path $PSScriptRoot 'ui-boundary-audit.ps1') -ProjectRoot $root }
+
+# The harness compiles against the game's reference assemblies and executes on the carrier's stubs, so a
+# member only the reference declares compiles green and dies at run time INSIDE THE HARNESS: the session
+# guard swaps the element for its recovery band, the frame survives, and a lane that asserts no more than
+# a live session stays green while the path under test never ran (measured 2026-09-12: Verse.GenUI.
+# ContractedBy, then Mathf.Clamp(int, int, int) - the trip guard found both, no assertion did). The
+# carrier's scan is reference-driven: every member the US payload takes from a stub-replaced game assembly
+# must be declared by the stubs or be named in this repository's own ledger with a reason.
+Invoke-Check 'harness stub coverage (every game member the US payload references resolves on the carrier stubs, or is exempted with a reason)' `
+    'pwsh -NoProfile -File ../ferritelib/scripts/stub-coverage-scan.ps1 -Path . -Assembly 1.6/Assemblies/UniversalSqueaker.dll -StubsDir ../ferritelib/tools/FerriteLib.UiKit.Tests/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt' `
+    {
+        $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
+        if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
+            throw "The carrier's stub-coverage scanner is missing at $stubCoverageScan. It ships with the sibling ferritelib checkout (scripts/stub-coverage-scan.ps1); a scan that cannot run is not a clean result."
+        }
+
+        $stubDir = Join-Path (Split-Path -Parent $root) 'ferritelib\tools\FerriteLib.UiKit.Tests\bin\stubs'
+        $stubOutput = @(& pwsh -NoProfile -File $stubCoverageScan `
+            -Path $root `
+            -Assembly (Join-Path $root '1.6\Assemblies\UniversalSqueaker.dll') `
+            -StubsDir $stubDir `
+            -Exemptions (Join-Path $root 'scripts\stub-coverage-exemptions.txt') *>&1)
+        $stubCode = $LASTEXITCODE
+        foreach ($stubLine in $stubOutput) { Write-Host $stubLine }
+
+        if ($stubCode -ne 0) {
+            # The scan prints one line per finding, but a gate's log is shown as a tail and a sorted
+            # MISSING list can leave the new reference far from it - so the findings are repeated here,
+            # where they cannot be trimmed away.
+            $findings = @($stubOutput | Where-Object { $_ -match 'MISSING |STALE |NO-REASON |NOT SCANNED' } | Select-Object -First 10)
+            throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $findings.Count + " finding line(s) quoted). Findings: " + ($findings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
+        }
+    }
 
 Write-Host '[verify] all checks passed.'
 

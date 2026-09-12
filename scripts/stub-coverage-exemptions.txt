@@ -1,0 +1,246 @@
+# UniversalSqueaker's stub-coverage exemptions - the consumer half of the carrier's reference-driven
+# harness-stub scan (../ferritelib/scripts/stub-coverage-scan.ps1, run read-only as US gate 15).
+#
+# Why this table exists. The harness compiles against the game's reference assemblies and executes on the
+# carrier's stubs, so a member only the reference declares compiles green and then dies at run time inside
+# the harness: the session guard swaps the element for its recovery band, the frame survives, and a lane
+# that asserts no more than a live session stays green while the path under test never ran (measured
+# 2026-09-12: Verse.GenUI.ContractedBy, then Mathf.Clamp(int, int, int)). The scan catches that class for
+# every reference, not only the ones a lane happens to execute.
+#
+# Ratchet, copied from the carrier's own table: exact in both directions. A referenced member the stub does
+# not declare and this file does not name is a FINDING; a member listed here that the stub now declares is
+# STALE and also a FINDING (an exemption is rent - delete it the moment the stub catches up); every entry
+# needs a reason after the '|' separator. Prefer declaring the member in the carrier's stubs; this table is
+# for what US genuinely cannot drive today.
+#
+# Reason codes. The legend is part of the ruling: an entry may cite only a code defined here.
+#   world   - needs a live game world: Pawn/Map/Thing and their comps, selector, tick manager, faction,
+#             needs, genes, body/race data, jobs, verbs, commands, camera driver, world renderer.
+#   defs    - needs the loaded Def/Mod database: Def, ThingDef and the DefOf tables, JobDef, LifeStageDef,
+#             MentalFitDef, RaceProperties, body-part defs, Mod/ModContentPack metadata, ModSettings.
+#   scribe  - the game's save/load path (Scribe, ScribeLoader, SafeSaver, GenFilePaths): US writes settings
+#             under Config/, never through the save pipeline.
+#   audio   - the game's audio backend and the Defs that feed it (SoundDef/SubSoundDef, SoundStarter,
+#             SoundInfo, Sustainer, grains): the harness has no playback backend.
+#   backend - renderer / world-space entry points (Verse.Widgets::Label(TaggedString),
+#             Verse.GenMapUI::DrawText, UnityEngine Camera/Component/Transform). These are the members the
+#             containment whitelist fences, so declaring them in the stub would blur that boundary instead.
+#   gameui  - game-side window plumbing the harness deliberately does not model (no Verse.Mod, no
+#             WindowStack): US's diagnostics windows are driven in game only - the structural limit
+#             recorded in the task-88 report.
+#   utility - Verse's static facade and helpers, reached only from the in-game paths above (Find, Current,
+#             Messages, LongEventHandler, FloatRange, Gen* helpers, TaggedString, Translator).
+#   debug   - the game's dev debug-action surface (LudeonTK): a panel US registers into in game.
+#
+# Measured 2026-09-12 with ferritelib at f629e1a: 239 member references from the US payload to the stub
+# surface, 66 declared by the stubs, 173 exempted below. The language/constant class (Rect.zero, Vector2/
+# Vector3 operators, Color.black, Object operators, Time, Verse.UI screen size) is no longer listed here:
+# the carrier's stub declares those now (task-91), and this table stays 15 entries shorter for it.
+#
+# Entries: <member key> | <reason code>
+
+# ------------------------------------------------------------------------------------------------
+# world (74) - world - needs a live in-game object graph the harness never builds
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!RimWorld.Faction::def:c:RimWorld.FactionDef | world
+Assembly-CSharp!RimWorld.Need::get_CurLevelPercentage() | world
+Assembly-CSharp!RimWorld.PawnUtility::GetPosture(c:Verse.Pawn) | world
+Assembly-CSharp!RimWorld.Pawn_GeneTracker::get_Xenotype() | world
+Assembly-CSharp!RimWorld.Pawn_NeedsTracker::mood:c:RimWorld.Need_Mood | world
+Assembly-CSharp!RimWorld.Pawn_NeedsTracker::rest:c:RimWorld.Need_Rest | world
+Assembly-CSharp!RimWorld.Planet.WorldRendererUtility::get_WorldRendered() | world
+Assembly-CSharp!RimWorld.RestUtility::Awake(c:Verse.Pawn) | world
+Assembly-CSharp!RimWorld.Selector::Select(Object,Boolean,Boolean) | world
+Assembly-CSharp!RimWorld.Selector::get_SingleSelectedThing() | world
+Assembly-CSharp!Verse.AI.Job::def:c:Verse.JobDef | world
+Assembly-CSharp!Verse.AI.Job::playerForced:Boolean | world
+Assembly-CSharp!Verse.AI.Job::workGiverDef:c:RimWorld.WorkGiverDef | world
+Assembly-CSharp!Verse.AI.MentalState::pawn:c:Verse.Pawn | world
+Assembly-CSharp!Verse.AI.MentalStateHandler::get_CurState() | world
+Assembly-CSharp!Verse.AI.Pawn_PathFollower::get_Moving() | world
+Assembly-CSharp!Verse.CameraDriver::get_CurrentViewRect() | world
+Assembly-CSharp!Verse.CellRect::Contains(v:Verse.IntVec3) | world
+Assembly-CSharp!Verse.CellRect::ExpandedBy(Int32) | world
+Assembly-CSharp!Verse.CellRect::get_Height() | world
+Assembly-CSharp!Verse.CellRect::get_Width() | world
+Assembly-CSharp!Verse.CellRect::minX:Int32 | world
+Assembly-CSharp!Verse.CellRect::minZ:Int32 | world
+Assembly-CSharp!Verse.Command::hotKey:c:Verse.KeyBindingDef | world
+Assembly-CSharp!Verse.Command::tutorTag:String | world
+Assembly-CSharp!Verse.Command_Toggle::toggleAction:c:System.Action | world
+Assembly-CSharp!Verse.CompProperties::.ctor() | world
+Assembly-CSharp!Verse.CompProperties::compClass:c:System.Type | world
+Assembly-CSharp!Verse.Entity::get_LabelShort() | world
+Assembly-CSharp!Verse.Map::mapPawns:c:Verse.MapPawns | world
+Assembly-CSharp!Verse.MapPawns::get_AllPawnsSpawned() | world
+Assembly-CSharp!Verse.Pawn::ageTracker:c:Verse.Pawn_AgeTracker | world
+Assembly-CSharp!Verse.Pawn::genes:c:RimWorld.Pawn_GeneTracker | world
+Assembly-CSharp!Verse.Pawn::get_CurJob() | world
+Assembly-CSharp!Verse.Pawn::get_Dead() | world
+Assembly-CSharp!Verse.Pawn::get_Downed() | world
+Assembly-CSharp!Verse.Pawn::get_Drafted() | world
+Assembly-CSharp!Verse.Pawn::get_InMentalState() | world
+Assembly-CSharp!Verse.Pawn::get_IsPlayerControlled() | world
+Assembly-CSharp!Verse.Pawn::get_RaceProps() | world
+Assembly-CSharp!Verse.Pawn::health:c:Verse.Pawn_HealthTracker | world
+Assembly-CSharp!Verse.Pawn::needs:c:RimWorld.Pawn_NeedsTracker | world
+Assembly-CSharp!Verse.Pawn::pather:c:Verse.AI.Pawn_PathFollower | world
+Assembly-CSharp!Verse.PawnCapacitiesHandler::GetLevel(c:Verse.PawnCapacityDef) | world
+Assembly-CSharp!Verse.PawnCapacityUtility::CalculateTagEfficiency(c:Verse.HediffSet,c:Verse.BodyPartTagDef,Single,v:Verse.FloatRange,c:System.Collections.Generic.List`1<c:CapacityImpactor>,Single) | world
+Assembly-CSharp!Verse.Pawn_AgeTracker::get_CurLifeStage() | world
+Assembly-CSharp!Verse.Pawn_EquipmentTracker::pawn:c:Verse.Pawn | world
+Assembly-CSharp!Verse.Pawn_HealthTracker::capacities:c:Verse.PawnCapacitiesHandler | world
+Assembly-CSharp!Verse.Pawn_HealthTracker::hediffSet:c:Verse.HediffSet | world
+Assembly-CSharp!Verse.Rand::get_Value() | world
+Assembly-CSharp!Verse.TargetInfo::.ctor(c:Verse.Thing) | world
+Assembly-CSharp!Verse.TargetInfo::get_IsValid() | world
+Assembly-CSharp!Verse.TargetInfo::get_Map() | world
+Assembly-CSharp!Verse.Thing::def:c:Verse.ThingDef | world
+Assembly-CSharp!Verse.Thing::get_Destroyed() | world
+Assembly-CSharp!Verse.Thing::get_DrawPos() | world
+Assembly-CSharp!Verse.Thing::get_Faction() | world
+Assembly-CSharp!Verse.Thing::get_MapHeld() | world
+Assembly-CSharp!Verse.Thing::get_Position() | world
+Assembly-CSharp!Verse.Thing::get_Spawned() | world
+Assembly-CSharp!Verse.Thing::get_ThingID() | world
+Assembly-CSharp!Verse.Thing::thingIDNumber:Int32 | world
+Assembly-CSharp!Verse.ThingComp::.ctor() | world
+Assembly-CSharp!Verse.ThingComp::Initialize(c:Verse.CompProperties) | world
+Assembly-CSharp!Verse.ThingComp::PostDestroy(v:Verse.DestroyMode,c:Verse.Map) | world
+Assembly-CSharp!Verse.ThingComp::PostSpawnSetup(Boolean) | world
+Assembly-CSharp!Verse.ThingComp::parent:c:Verse.ThingWithComps | world
+Assembly-CSharp!Verse.ThingComp::props:c:Verse.CompProperties | world
+Assembly-CSharp!Verse.ThingCompUtility::TryGetComp(c:Verse.Thing)^1 | world
+Assembly-CSharp!Verse.ThingWithComps::GetComp()^1 | world
+Assembly-CSharp!Verse.TickManager::get_Paused() | world
+Assembly-CSharp!Verse.TickManager::get_TickRateMultiplier() | world
+Assembly-CSharp!Verse.TickManager::get_TicksGame() | world
+Assembly-CSharp!Verse.Verb::caster:c:Verse.Thing | world
+
+# ------------------------------------------------------------------------------------------------
+# defs (38) - defs - needs the loaded Def/Mod database (the harness loads no Defs)
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!RimWorld.BodyPartTagDefOf::TalkingPathway:c:Verse.BodyPartTagDef | defs
+Assembly-CSharp!RimWorld.BodyPartTagDefOf::TalkingSource:c:Verse.BodyPartTagDef | defs
+Assembly-CSharp!RimWorld.BodyPartTagDefOf::Tongue:c:Verse.BodyPartTagDef | defs
+Assembly-CSharp!RimWorld.JobDefOf::Equip:c:Verse.JobDef | defs
+Assembly-CSharp!RimWorld.JobDefOf::Ingest:c:Verse.JobDef | defs
+Assembly-CSharp!RimWorld.KeyBindingDefOf::Command_ColonistDraft:c:Verse.KeyBindingDef | defs
+Assembly-CSharp!RimWorld.LifeStageDef::developmentalStage:v:Verse.DevelopmentalStage | defs
+Assembly-CSharp!RimWorld.LifeStageDef::voxPitch:Single | defs
+Assembly-CSharp!RimWorld.LifeStageDef::voxVolume:Single | defs
+Assembly-CSharp!RimWorld.MessageTypeDefOf::RejectInput:c:Verse.MessageTypeDef | defs
+Assembly-CSharp!RimWorld.MessageTypeDefOf::SilentInput:c:Verse.MessageTypeDef | defs
+Assembly-CSharp!RimWorld.PawnCapacityDefOf::Talking:c:Verse.PawnCapacityDef | defs
+Assembly-CSharp!Verse.BodyDef::get_AllParts() | defs
+Assembly-CSharp!Verse.BodyPartDef::tags:c:System.Collections.Generic.List`1<c:Verse.BodyPartTagDef> | defs
+Assembly-CSharp!Verse.BodyPartRecord::def:c:Verse.BodyPartDef | defs
+Assembly-CSharp!Verse.Def::.ctor() | defs
+Assembly-CSharp!Verse.Def::ConfigErrors() | defs
+Assembly-CSharp!Verse.Def::defName:String | defs
+Assembly-CSharp!Verse.Def::get_LabelCap() | defs
+Assembly-CSharp!Verse.Def::label:String | defs
+Assembly-CSharp!Verse.Def::modContentPack:c:Verse.ModContentPack | defs
+Assembly-CSharp!Verse.JobDef::joyKind:c:RimWorld.JoyKindDef | defs
+Assembly-CSharp!Verse.MentalFitDef::mentalState:c:Verse.MentalStateDef | defs
+Assembly-CSharp!Verse.Mod::.ctor(c:Verse.ModContentPack) | defs
+Assembly-CSharp!Verse.Mod::GetSettings()^1 | defs
+Assembly-CSharp!Verse.Mod::SettingsCategory() | defs
+Assembly-CSharp!Verse.Mod::WriteSettings() | defs
+Assembly-CSharp!Verse.ModContentPack::get_ModMetaData() | defs
+Assembly-CSharp!Verse.ModContentPack::get_Name() | defs
+Assembly-CSharp!Verse.ModContentPack::get_PackageId() | defs
+Assembly-CSharp!Verse.ModMetaData::get_AuthorsString() | defs
+Assembly-CSharp!Verse.ModMetaData::get_PackageIdNonUnique() | defs
+Assembly-CSharp!Verse.ModSettings::.ctor() | defs
+Assembly-CSharp!Verse.ModSettings::ExposeData() | defs
+Assembly-CSharp!Verse.ModsConfig::get_BiotechActive() | defs
+Assembly-CSharp!Verse.RaceProperties::body:c:Verse.BodyDef | defs
+Assembly-CSharp!Verse.ThingDef::comps:c:System.Collections.Generic.List`1<c:Verse.CompProperties> | defs
+Assembly-CSharp!Verse.ThingDef::race:c:Verse.RaceProperties | defs
+
+# ------------------------------------------------------------------------------------------------
+# scribe (11) - scribe - the game's save/load path (US writes settings under Config/)
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!Verse.GenFilePaths::get_ConfigFolderPath() | scribe
+Assembly-CSharp!Verse.SafeSaver::Save(String,String,c:System.Action,Boolean) | scribe
+Assembly-CSharp!Verse.Scribe::loader:c:Verse.ScribeLoader | scribe
+Assembly-CSharp!Verse.Scribe::mode:v:Verse.LoadSaveMode | scribe
+Assembly-CSharp!Verse.ScribeLoader::FinalizeLoading() | scribe
+Assembly-CSharp!Verse.ScribeLoader::InitLoading(String) | scribe
+Assembly-CSharp!Verse.ScribeLoader::curXmlParent:c:System.Xml.XmlNode | scribe
+Assembly-CSharp!Verse.Scribe_Collections::Look(c:System.Collections.Generic.Dictionary`2<!!0,!!1>&,String,v:Verse.LookMode,v:Verse.LookMode)^2 | scribe
+Assembly-CSharp!Verse.Scribe_Collections::Look(c:System.Collections.Generic.List`1<!!0>&,String,v:Verse.LookMode,Object[])^1 | scribe
+Assembly-CSharp!Verse.Scribe_Deep::Look(!!0&,String,Object[])^1 | scribe
+Assembly-CSharp!Verse.Scribe_Values::Look(!!0&,String,!!0,Boolean)^1 | scribe
+
+# ------------------------------------------------------------------------------------------------
+# audio (17) - audio - the game's audio backend and the Defs that feed it
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!Verse.Sound.AudioGrain::GetResolvedGrains() | audio
+Assembly-CSharp!Verse.Sound.ResolvedGrain_Clip::clip:c:UnityEngine.AudioClip | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::InMap(v:Verse.TargetInfo,v:Verse.Sound.MaintenanceType) | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::OnCamera(v:Verse.Sound.MaintenanceType) | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::pitchFactor:Single | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::volumeFactor:Single | audio
+Assembly-CSharp!Verse.Sound.SoundStarter::PlayOneShot(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
+Assembly-CSharp!Verse.Sound.SoundStarter::TrySpawnSustainer(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
+Assembly-CSharp!Verse.Sound.SubSoundDef::distRange:v:Verse.FloatRange | audio
+Assembly-CSharp!Verse.Sound.SubSoundDef::grains:c:System.Collections.Generic.List`1<c:Verse.Sound.AudioGrain> | audio
+Assembly-CSharp!Verse.Sound.SubSoundDef::onCamera:Boolean | audio
+Assembly-CSharp!Verse.Sound.Sustainer::End() | audio
+Assembly-CSharp!Verse.Sound.Sustainer::Maintain() | audio
+Assembly-CSharp!Verse.Sound.Sustainer::get_Ended() | audio
+Assembly-CSharp!Verse.SoundDef::context:v:Verse.Sound.SoundContext | audio
+Assembly-CSharp!Verse.SoundDef::subSounds:c:System.Collections.Generic.List`1<c:Verse.Sound.SubSoundDef> | audio
+Assembly-CSharp!Verse.SoundDef::sustain:Boolean | audio
+
+# ------------------------------------------------------------------------------------------------
+# backend (5) - backend - renderer / world-space entry points, also fenced by the containment whitelist
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!Verse.GenMapUI::DrawText(v:UnityEngine.Vector2,String,v:UnityEngine.Color) | backend
+Assembly-CSharp!Verse.Widgets::Label(v:UnityEngine.Rect,v:Verse.TaggedString) | backend
+UnityEngine.CoreModule!UnityEngine.Camera::get_orthographicSize() | backend
+UnityEngine.CoreModule!UnityEngine.Component::get_transform() | backend
+UnityEngine.CoreModule!UnityEngine.Transform::get_position() | backend
+
+# ------------------------------------------------------------------------------------------------
+# gameui (5) - gameui - game-side window plumbing the harness deliberately does not model
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!Verse.Window::get_IsOpen() | gameui
+Assembly-CSharp!Verse.Window::onlyDrawInDevMode:Boolean | gameui
+Assembly-CSharp!Verse.Window::onlyOneOfTypeAllowed:Boolean | gameui
+Assembly-CSharp!Verse.WindowStack::Add(c:Verse.Window) | gameui
+Assembly-CSharp!Verse.WindowStack::TryRemove(c:Verse.Window,Boolean) | gameui
+
+# ------------------------------------------------------------------------------------------------
+# utility (19) - utility - Verse static facade/helpers reached only from the in-game paths above
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!Verse.Current::get_Game() | utility
+Assembly-CSharp!Verse.Current::get_ProgramState() | utility
+Assembly-CSharp!Verse.Find::get_Camera() | utility
+Assembly-CSharp!Verse.Find::get_CameraDriver() | utility
+Assembly-CSharp!Verse.Find::get_CurrentMap() | utility
+Assembly-CSharp!Verse.Find::get_Selector() | utility
+Assembly-CSharp!Verse.Find::get_TickManager() | utility
+Assembly-CSharp!Verse.Find::get_WindowStack() | utility
+Assembly-CSharp!Verse.FloatRange::get_One() | utility
+Assembly-CSharp!Verse.FloatRange::get_RandomInRange() | utility
+Assembly-CSharp!Verse.GenCollection::Any(c:System.Collections.Generic.List`1<!!0>,c:System.Predicate`1<!!0>)^1 | utility
+Assembly-CSharp!Verse.GenCollection::Count(c:System.Collections.Generic.List`1<!!0>,c:System.Predicate`1<!!0>)^1 | utility
+Assembly-CSharp!Verse.GenText::NullOrEmpty(String) | utility
+Assembly-CSharp!Verse.GenText::SanitizeFilename(String) | utility
+Assembly-CSharp!Verse.LongEventHandler::ExecuteWhenFinished(c:System.Action) | utility
+Assembly-CSharp!Verse.Messages::Message(String,c:Verse.MessageTypeDef,Boolean) | utility
+Assembly-CSharp!Verse.TaggedString::op_Addition(String,v:Verse.TaggedString) | utility
+Assembly-CSharp!Verse.TaggedString::op_Addition(v:Verse.TaggedString,String) | utility
+Assembly-CSharp!Verse.Translator::TryTranslate(String,v:Verse.TaggedString&) | utility
+
+# ------------------------------------------------------------------------------------------------
+# debug (4) - debug - the game's dev debug-action surface
+# ------------------------------------------------------------------------------------------------
+Assembly-CSharp!LudeonTK.DebugActionAttribute::.ctor(String,String,Boolean,Boolean,Boolean,Boolean,Boolean,Int32,Boolean) | debug
+Assembly-CSharp!LudeonTK.DebugActionAttribute::category:String | debug
+Assembly-CSharp!LudeonTK.DebugActionAttribute::name:String | debug
+Assembly-CSharp!LudeonTK.Dialog_Debug::rootNode:c:LudeonTK.DebugActionNode | debug

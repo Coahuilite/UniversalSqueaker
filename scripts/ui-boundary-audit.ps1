@@ -22,7 +22,8 @@
 #      CONTRACT axis rather than the renderer axis: `UiNative.Button(` was missing from the pattern set, so
 #      the context-free overload (which FL's api-tiers.md forbids for any caller holding a context) was
 #      neither counted nor exempt - the context fix of 2026-09-12 could not be seen by any gate until the
-#      term below was added (verify's finding: reverting the fix kept all 14 gates green).
+#      term below was added (verify's finding: reverting the fix kept every gate green - the suite had
+#     14 of them at the time; it has 15 since 2026-09-12).
 #      Ratified additions get date + reason + recovery condition in the entry itself.
 #      An entry that matches nothing today is reported as a NOTE so it can be deleted on the next touch.
 #
