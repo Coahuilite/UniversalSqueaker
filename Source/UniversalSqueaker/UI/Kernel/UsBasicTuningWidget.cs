@@ -7,8 +7,9 @@ using FerriteLib.UiKit.Kernel;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Kernel-owned Overview playback behaviour: Easter-egg sounds and the three runtime scaling
-/// toggles. Distance preset/range controls live exclusively in the Distance workspace.
+/// Kernel-owned Overview playback behaviour: Easter-egg sounds, the three runtime scaling toggles and
+/// the two-level eat-occurrence switch (parent "only while actually eating" plus its "include drugs"
+/// child). Distance preset/range controls live exclusively in the Distance workspace.
 /// </summary>
 public sealed class UsBasicTuningWidget : UsSectionWidgetBase
 {
@@ -33,13 +34,37 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
     private const string EggOnKey = "US.Tuning.EasterEggs.On";
     private const string EggOffKey = "US.Tuning.EasterEggs.Off";
 
+    // ---- Eat-occurrence pair: parent switch, grey hint band, child switch ------------------------
+    // The child row is disabled-but-VISIBLE while the parent is off (the engine's Hidden attribute is
+    // static, so hiding is not a shape this widget can take) and its disabled-reason band is reserved
+    // UNCONDITIONALLY: the card's height is a constant sum over both parent states, which is what keeps
+    // Measure and Draw agreeing when the toggle moves mid-flight.
+    private const string EatPrecisionLabelKey = "US.Tuning.EatPrecision";
+    private const string EatPrecisionHintKey = "US.Tuning.EatPrecision.Hint";
+    private const string EatPrecisionChildLabelKey = "US.Tuning.EatPrecision.IncludeDrugs";
+    private const string EatPrecisionChildReasonKey = "US.Tuning.EatPrecision.IncludeDrugs.DisabledReason";
+    private const string EatPrecisionValueKey = "eat-precision";
+    private const string EatPrecisionToggleKey = "toggle-eat-precision";
+    private const string EatPrecisionChildValueKey = "eat-precision-include-drugs";
+    private const string EatPrecisionChildToggleKey = "toggle-eat-precision-include-drugs";
+    private const string EatPrecisionHelpKey = "us/basic-tuning/eat-precision";
+    private const string EatPrecisionChildHelpKey = "us/basic-tuning/eat-precision-include-drugs";
+
+    /// <summary>Floor of the two grey note bands (the parent hint and the child's disabled reason).
+    /// Both are measured through <see cref="UsKernelDraw.TextBandHeight"/> at the row's own label band,
+    /// so a translation grows the band instead of being clipped.</summary>
+    private const float EatNoteFloor = 16f;
+
     /// <summary>Shared measure/draw formula for the overview toggle rows.</summary>
     private float ContentHeight(UiWidgetContext ctx)
     {
         return TopPadding + EggBands(ctx).Total + RowGap
             + BasicRowHeight(ctx, "US.Tuning.ScaleCooldown") + RowGap
             + BasicRowHeight(ctx, "US.Tuning.ScaleTalking") + RowGap
-            + BasicRowHeight(ctx, "US.Tuning.ScalePopulation")
+            + BasicRowHeight(ctx, "US.Tuning.ScalePopulation") + RowGap
+            + BasicRowHeight(ctx, EatPrecisionLabelKey) + RowGap
+            + EatPrecisionHintHeight(ctx) + RowGap
+            + EatPrecisionChildHeight(ctx)
             + BottomPadding;
     }
 
@@ -53,6 +78,44 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
     private float BasicRowHeight(UiWidgetContext ctx, string labelKey)
     {
         return UsKernelDraw.RowLabelHeight(BodyWidth(ctx), ctx, ctx.Translation.Translate(labelKey));
+    }
+
+    /// <summary>The parent row's grey short note. Measured at the row label band so its indent matches
+    /// the labels above and below it; constant accumulation only - the parent toggle never enters this
+    /// formula.</summary>
+    private float EatPrecisionHintHeight(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.TextBandHeight(
+            UsKernelDraw.RowLabelWidth(BodyWidth(ctx)),
+            ctx,
+            ctx.Translation.Translate(EatPrecisionHintKey),
+            UiFont.Tiny,
+            EatNoteFloor);
+    }
+
+    /// <summary>The child row's label band, solved by the shared support-row rule.</summary>
+    private float EatPrecisionChildLabelHeight(UiWidgetContext ctx)
+    {
+        return BasicRowHeight(ctx, EatPrecisionChildLabelKey);
+    }
+
+    /// <summary>The child's disabled-reason band. Reserved in BOTH parent states - Measure and Draw take
+    /// the same number whether or not the reason sentence is painted, so the toggle cannot move the card
+    /// height.</summary>
+    private float EatPrecisionReasonHeight(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.TextBandHeight(
+            UsKernelDraw.RowLabelWidth(BodyWidth(ctx)),
+            ctx,
+            ctx.Translation.Translate(EatPrecisionChildReasonKey),
+            UiFont.Tiny,
+            EatNoteFloor);
+    }
+
+    /// <summary>The whole child row: its own label band plus the unconditionally reserved reason band.</summary>
+    private float EatPrecisionChildHeight(UiWidgetContext ctx)
+    {
+        return EatPrecisionChildLabelHeight(ctx) + EatPrecisionReasonHeight(ctx);
     }
 
     /// <summary>
@@ -88,10 +151,14 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
         bindings.ValidateValue<bool>("scale-cooldown", elementPath);
         bindings.ValidateValue<bool>("scale-talking", elementPath);
         bindings.ValidateValue<bool>("scale-population", elementPath);
+        bindings.ValidateValue<bool>(EatPrecisionValueKey, elementPath);
+        bindings.ValidateValue<bool>(EatPrecisionChildValueKey, elementPath);
         bindings.ValidateAction<bool>("toggle-egg", elementPath);
         bindings.ValidateAction<bool>("toggle-scale-cooldown", elementPath);
         bindings.ValidateAction<bool>("toggle-scale-talking", elementPath);
         bindings.ValidateAction<bool>("toggle-scale-population", elementPath);
+        bindings.ValidateAction<bool>(EatPrecisionToggleKey, elementPath);
+        bindings.ValidateAction<bool>(EatPrecisionChildToggleKey, elementPath);
     }
 
     protected override float FallbackHeight(UiWidgetContext ctx)
@@ -131,6 +198,86 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
 
         float populationHeight = BasicRowHeight(ctx, "US.Tuning.ScalePopulation");
         DrawBasicRow(new Rect(x, y, innerWidth, populationHeight), ctx, "scale-population", "toggle-scale-population", "US.Tuning.ScalePopulation", "us/basic-tuning/scale-population");
+        y += populationHeight + RowGap;
+
+        // Parent switch: the ordinary support-row shape, so the checkbox column and the help claim are
+        // the same ones every row above uses.
+        float eatPrecisionHeight = BasicRowHeight(ctx, EatPrecisionLabelKey);
+        DrawBasicRow(new Rect(x, y, innerWidth, eatPrecisionHeight), ctx, EatPrecisionValueKey, EatPrecisionToggleKey, EatPrecisionLabelKey, EatPrecisionHelpKey);
+        y += eatPrecisionHeight + RowGap;
+
+        float hintHeight = EatPrecisionHintHeight(ctx);
+        DrawEatPrecisionHint(new Rect(x, y, innerWidth, hintHeight), ctx);
+        y += hintHeight + RowGap;
+
+        DrawEatPrecisionChildRow(new Rect(x, y, innerWidth, EatPrecisionChildHeight(ctx)), ctx);
+    }
+
+    /// <summary>The parent's grey short note. Same left inset and label band as a row label, drawn in the
+    /// section's secondary ink; it is explanatory copy, so it owns no control and no hit band.</summary>
+    private void DrawEatPrecisionHint(Rect rect, UiWidgetContext ctx)
+    {
+        UsKernelDraw.Label(
+            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, UsKernelDraw.RowLabelWidth(rect), rect.height),
+            ctx.Translation.Translate(EatPrecisionHintKey),
+            ctx.Theme,
+            ctx.Theme.TextSecondary,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft);
+    }
+
+    /// <summary>
+    /// The child "include drugs" row. While the parent is off the row is disabled AND still drawn:
+    /// the label uses the disabled ink, the checkbox is inert (its hit band still claims its rect, per
+    /// the mood-reset precedent, but the click is dropped before it reaches any binding) and the
+    /// disabled-reason sentence is painted in the band the measure step reserved for it. The label stays
+    /// in the upper band in both states, so turning the parent on never moves it.
+    /// </summary>
+    private void DrawEatPrecisionChildRow(Rect rect, UiWidgetContext ctx)
+    {
+        bool parentOn = ctx.Bindings.TryGet(EatPrecisionValueKey, out bool parentValue) && parentValue;
+        bool childOn = ctx.Bindings.TryGet(EatPrecisionChildValueKey, out bool childValue) && childValue;
+
+        // The claim is unconditional: the disabled control still explains itself on hover.
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, EatPrecisionChildHelpKey);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && parentOn, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
+
+        float labelHeight = EatPrecisionChildLabelHeight(ctx);
+        float labelWidth = UsKernelDraw.RowLabelWidth(rect);
+        Rect labelRect = new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, labelWidth, labelHeight);
+        UsKernelDraw.Label(
+            labelRect,
+            ctx.Translation.Translate(EatPrecisionChildLabelKey),
+            ctx.Theme,
+            parentOn ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
+            UiFont.Small,
+            TextAnchor.MiddleLeft);
+
+        if (!parentOn)
+        {
+            UsKernelDraw.Label(
+                new Rect(labelRect.x, labelRect.yMax, labelWidth, rect.height - labelHeight),
+                ctx.Translation.Translate(EatPrecisionChildReasonKey),
+                ctx.Theme,
+                ctx.Theme.TextSecondary,
+                UiFont.Tiny,
+                TextAnchor.MiddleLeft);
+        }
+
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, parentOn && childOn);
+
+        // Same split as every other row: the hit band stops where the checkbox's starts, so one press is
+        // decided by exactly one control. Both results are dropped while the parent is off - the row is
+        // disabled, and a disabled control writes nothing.
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        bool rowPressed = UiNative.Button(rowHit, ctx);
+        if (parentOn && (toggled || rowPressed))
+        {
+            ctx.Bindings.Invoke(EatPrecisionChildToggleKey, !childOn);
+        }
     }
 
     private void DrawEggRow(Rect rect, UiWidgetContext ctx, float titleBand, float stateBand)

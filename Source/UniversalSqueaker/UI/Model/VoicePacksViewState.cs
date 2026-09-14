@@ -12,6 +12,15 @@ public sealed class VoicePacksViewState
     public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
     public bool ScalePeriodicWithAudiblePopulation { get; }
+
+    /// <summary>Eat-occurrence parent switch (settings.eatPrecisionEnabled): true narrows the Eat
+    /// occurrence to genuinely ingesting food. Read straight from settings.</summary>
+    public bool EatPrecisionEnabled { get; }
+
+    /// <summary>Eat-occurrence child option (settings.eatPrecisionIncludeDrugs): only meaningful while
+    /// <see cref="EatPrecisionEnabled"/> is on; the settings layer forces it false when the parent is off.</summary>
+    public bool EatPrecisionIncludeDrugs { get; }
+
     public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
     public int GlobalMinIntervalTicks { get; }
@@ -75,7 +84,9 @@ public sealed class VoicePacksViewState
         string raceFilter,
         string xenotypeFilter,
         IReadOnlyList<FilterOptionView> raceFilterOptions,
-        IReadOnlyList<FilterOptionView> xenotypeFilterOptions)
+        IReadOnlyList<FilterOptionView> xenotypeFilterOptions,
+        bool eatPrecisionEnabled = false,
+        bool eatPrecisionIncludeDrugs = false)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -111,6 +122,8 @@ public sealed class VoicePacksViewState
         XenotypeFilter = xenotypeFilter ?? "";
         RaceFilterOptions = raceFilterOptions ?? Array.Empty<FilterOptionView>();
         XenotypeFilterOptions = xenotypeFilterOptions ?? Array.Empty<FilterOptionView>();
+        EatPrecisionEnabled = eatPrecisionEnabled;
+        EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 }
 

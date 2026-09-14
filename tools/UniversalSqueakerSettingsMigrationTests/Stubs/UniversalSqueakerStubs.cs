@@ -143,6 +143,10 @@ namespace UniversalSqueaker
         public static float GlobalCooldownMultiplier = 1f;
         public static float GlobalVolumeFactor = 1f;
         public static int GlobalMinIntervalTicks = 216;
+        // Mirror of the production cheap runtime statics the settings layer publishes (Pure/SqueakEatOccurrence
+        // is part of this harness's compile set, so the defaults stay the single source).
+        public static bool EatPrecisionEnabled = SqueakEatOccurrence.EatPrecisionDefault;
+        public static bool EatPrecisionIncludeDrugs = SqueakEatOccurrence.EatPrecisionIncludeDrugsDefault;
 
         public static void ApplyDistanceRange(Verse.FloatRange range)
         {

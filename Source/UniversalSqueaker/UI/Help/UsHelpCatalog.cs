@@ -183,6 +183,17 @@ internal static class UsHelpCatalog
                     "us/basic-tuning/scale-population",
                     "US.Help.BasicTuning.ScalePopulation.Label",
                     "US.Help.BasicTuning.ScalePopulation.Text"),
+                // The two-level eat-occurrence switch: the parent's entry explains the whole pair
+                // (including the zero-nutrition boundary), and the child's entry explains the
+                // chewing/lighting authority plus its fallback to the whole eating job.
+                new HelpItem(
+                    "us/basic-tuning/eat-precision",
+                    "US.Help.BasicTuning.EatPrecision.Label",
+                    "US.Help.BasicTuning.EatPrecision.Text"),
+                new HelpItem(
+                    "us/basic-tuning/eat-precision-include-drugs",
+                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label",
+                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text"),
             }),
         ["us/timing"] = new HelpSection(
             "us/timing",

@@ -102,6 +102,16 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetAllowEasterEggSounds(value);
     }
 
+    public void SetEatPrecision(bool value)
+    {
+        settings.SetEatPrecision(value);
+    }
+
+    public void SetEatPrecisionIncludeDrugs(bool value)
+    {
+        settings.SetEatPrecisionIncludeDrugs(value);
+    }
+
     public void SetGlobalMinIntervalTicks(int ticks)
     {
         settings.SetGlobalMinIntervalTicks(ticks);

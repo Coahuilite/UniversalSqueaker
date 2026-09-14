@@ -128,6 +128,10 @@ public class CompSqueaker : ThingComp
     public static float GlobalCooldownMultiplier = 1f;
     public static float GlobalVolumeFactor = 1f;
     public static int GlobalMinIntervalTicks = 216;
+    // Eat occurrence granularity: cheap same-frame runtime statics published by the settings layer
+    // (ApplyToRuntime / NotifyCheapRuntimeChanged). Defaults come from the pure rule, never a literal here.
+    public static bool EatPrecisionEnabled = SqueakEatOccurrence.EatPrecisionDefault;
+    public static bool EatPrecisionIncludeDrugs = SqueakEatOccurrence.EatPrecisionIncludeDrugsDefault;
     public static bool DiagnosticsEnabled;
 
     private static readonly Dictionary<string, SoundDef?> SoundCacheMixed = new(StringComparer.Ordinal);

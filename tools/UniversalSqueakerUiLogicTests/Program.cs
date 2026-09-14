@@ -278,8 +278,10 @@ internal static class Program
         // Count pin, updated with the help-coverage pass: the catalog gained one entry per Playback
         // behaviour row (us/basic-tuning/scale-cooldown|scale-talking|scale-population), the attenuation
         // status/range read-out (us/attenuation-editor/status) and the Help drawer toggle
-        // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item.
-        Assert(itemCount == 44, "catalog item count matches the shipped wiring table (44 items incl. the three per-row basic-tuning entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
+        // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item. The
+        // eat-occurrence pair adds one entry per control: us/basic-tuning/eat-precision (parent) and
+        // us/basic-tuning/eat-precision-include-drugs (the child row), 44 -> 46.
+        Assert(itemCount == 46, "catalog item count matches the shipped wiring table (46 items incl. the three per-row basic-tuning entries, the two eat-precision entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

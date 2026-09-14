@@ -33,6 +33,17 @@ public interface IUsKernelSettingsSource
     void SetBasicToggle(SqueakBasicToggle key, bool value);
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
+
+    /// <summary>
+    /// Parent switch of the eat-occurrence pair: false (the shipped default) keeps the whole
+    /// <c>JobDefOf.Ingest</c> job counting as an Eat occurrence, true narrows it to genuinely
+    /// ingesting food. Turning it off forces the child switch false in the same write.
+    /// </summary>
+    void SetEatPrecision(bool value);
+
+    /// <summary>Child option "include drugs"; only meaningful while the parent switch is on.</summary>
+    void SetEatPrecisionIncludeDrugs(bool value);
+
     void SetGlobalMinIntervalTicks(int ticks);
     void SetGlobalCooldownMultiplier(float value);
     void SetDevLoggingMode(SqueakDevLoggingMode mode);

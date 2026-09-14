@@ -260,6 +260,15 @@ public static class UsKernelSettingsHost
         bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
         bindings.BindAction<bool>("toggle-camera-indicator", value => { source.SetCameraIndicator(value); bump(); });
 
+        // Basic: the eat-precision pair. The parent gates the child, but the guard deliberately lives in
+        // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
+        // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
+        // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
+        bindings.BindValue<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
+        bindings.BindAction<bool>("toggle-eat-precision", value => { source.SetEatPrecision(value); bump(); });
+        bindings.BindValue<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
+        bindings.BindAction<bool>("toggle-eat-precision-include-drugs", value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
+
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
         bindings.BindValue<int>("min-interval", () => source.BuildView().GlobalMinIntervalTicks, value => { source.SetGlobalMinIntervalTicks(value); bump(); });
         bindings.BindValue<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });

@@ -30,6 +30,16 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool WrappingDomainText;
 
     /// <summary>
+    /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
+    /// its child row; the disabled-child lane flips the parent without writing anything, which is how
+    /// the two drawn states are compared for identical geometry.
+    /// </summary>
+    public bool EatPrecisionEnabled = false;
+
+    /// <summary>See <see cref="EatPrecisionEnabled"/>.</summary>
+    public bool EatPrecisionIncludeDrugs = false;
+
+    /// <summary>
     /// Author strings used by the rich BuildView (the pack/author filter options). The D9 lane
     /// injects a label far wider than the 143px filter column to prove the popup grows and the
     /// trigger ellipsizes instead of clipping.
@@ -46,6 +56,11 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool? LastBasicToggleValue;
     public bool? LastCameraIndicator;
     public bool? LastEasterEggs;
+    /// <summary>Parent eat-precision write, or null when the control never fired.</summary>
+    public bool? LastEatPrecision;
+    /// <summary>Child "include drugs" write, or null when the control never fired (the disabled-child
+    /// lane asserts exactly this stays null while the parent is off).</summary>
+    public bool? LastEatPrecisionIncludeDrugs;
     public int? LastMinIntervalTicks;
     public float? LastCooldownMultiplier;
     public SqueakDevLoggingMode? LastDevLoggingMode;
@@ -170,7 +185,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilter: "",
             xenotypeFilter: "",
             raceFilterOptions: Array.Empty<FilterOptionView>(),
-            xenotypeFilterOptions: Array.Empty<FilterOptionView>());
+            xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
+            eatPrecisionEnabled: EatPrecisionEnabled,
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -314,7 +331,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new FilterOptionView("Test Race", "testrace"),
                 new FilterOptionView("Sanguophage Race", "sanguophage")
             },
-            xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") });
+            xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
+            eatPrecisionEnabled: EatPrecisionEnabled,
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
     }
 
     /// <summary>
@@ -369,6 +388,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetCameraIndicator(bool value) => LastCameraIndicator = value;
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
+
+    public void SetEatPrecision(bool value) => LastEatPrecision = value;
+
+    public void SetEatPrecisionIncludeDrugs(bool value) => LastEatPrecisionIncludeDrugs = value;
 
     public void SetGlobalMinIntervalTicks(int ticks) => LastMinIntervalTicks = ticks;
 

@@ -1,6 +1,7 @@
 using System;
 using RimWorld;
 using Verse;
+using Verse.AI;
 
 namespace UniversalSqueaker;
 
@@ -12,6 +13,11 @@ namespace UniversalSqueaker;
 public static class PeriodicStateBinding
 {
     private static readonly string[] SocialJobMarkers = { "Chat", "Social", "Visit", "Lovin", "Entertain" };
+
+    // Process-level, runtime-only fact (never Scribed): the vanilla chewing/lighting toil debugName has been
+    // sampled at least once. Until then the pure rule falls back to full job level for ChewingToil
+    // (fail-open: a renamed toil degrades to the factory feel instead of going silent).
+    private static bool chewToilNameConfirmed;
 
     public static SqueakAction? Probe(Pawn pawn)
     {
@@ -25,7 +31,36 @@ public static class PeriodicStateBinding
         return SqueakAction.Call;
     }
 
-    private static bool IsEating(Pawn pawn) => pawn.CurJob?.def == JobDefOf.Ingest;
+    /// <summary>Eat occurrence granularity (contract 1.4): the two switches resolve to one of three modes.
+    /// Only public API is sampled and there is no JobDriver_Ingest cast; the WholeJob arm returns before any
+    /// sampling, so "parent off" never touches jobs / curDriver / the nutrition probe.</summary>
+    private static bool IsEating(Pawn pawn)
+    {
+        if (pawn.CurJob?.def != JobDefOf.Ingest) return false;
+        return SqueakEatOccurrence.ResolveMode(CompSqueaker.EatPrecisionEnabled, CompSqueaker.EatPrecisionIncludeDrugs) switch
+        {
+            SqueakEatOccurrenceMode.WholeJob => true,
+            SqueakEatOccurrenceMode.GainingNutrition => IsGainingNutritionNow(pawn),
+            _ => SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.ChewingToil,
+                IsGainingNutritionNow(pawn), SampleChewingToil(pawn), chewToilNameConfirmed),
+        };
+    }
+
+    /// <summary>vanilla nutrition authority: the public IEatingDriver interface exposes GainingNutritionNow.</summary>
+    private static bool IsGainingNutritionNow(Pawn pawn)
+        => pawn.jobs?.curDriver is IEatingDriver eating && eating.GainingNutritionNow;
+
+    /// <summary>Match the current toil against the vanilla chewing/lighting debugName. JobDriver's public
+    /// CurToilString needs no subclass cast; a hit confirms the name for the rest of this process.</summary>
+    private static bool SampleChewingToil(Pawn pawn)
+    {
+        JobDriver? driver = pawn.jobs?.curDriver;
+        if (driver == null) return false;
+        if (!string.Equals(driver.CurToilString, SqueakEatOccurrence.ChewingToilDebugName, StringComparison.Ordinal))
+            return false;
+        chewToilNameConfirmed = true;
+        return true;
+    }
     private static bool IsSleeping(Pawn pawn) => pawn.GetPosture() == PawnPosture.LayingInBed && pawn.needs?.rest != null;
     private static bool IsMoving(Pawn pawn) => pawn.pather != null && pawn.pather.Moving;
     private static bool IsJoyJob(Pawn pawn) => pawn.CurJob?.def?.joyKind != null;

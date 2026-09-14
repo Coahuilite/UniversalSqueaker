@@ -36,6 +36,12 @@
 # Measured 2026-09-12 with ferritelib at 0b396c4: 239 member references from the US payload to the stub
 # surface, 74 declared by the stubs, 165 exempted below (the harness assembly adds 25 references, all of
 # them declared, so it needs no entry of its own - see gate 15 in scripts/verify-local.ps1).
+# Re-measured 2026-09-14 on feat/eat-granularity (stub-coverage-scan.ps1 over the US payload): 245 member
+# references, 76 declared by the stubs, 169 exempted below. The four additions are the Eat
+# occurrence-granularity sampling members - Pawn::jobs, Pawn_JobTracker::curDriver,
+# JobDriver::get_CurToilString and IEatingDriver::get_GainingNutritionNow. This is the first time the table
+# has grown: the new adapter path samples the live pawn job graph the harness never builds, and the carrier
+# stub declares none of these four.
 # The table has only ever shrunk, and each shrink is a real resolution gain: 188 -> 173 when the carrier's
 # stub took the language/constant class (task-91: Rect.zero, Vector2/Vector3 operators, Color.black,
 # Object operators, Time, Verse.UI screen size), then 173 -> 165 when it took eight pure helpers (task-97:
@@ -45,9 +51,10 @@
 # Entries: <member key> | <reason code>
 
 # ------------------------------------------------------------------------------------------------
-# world (74) - world - needs a live in-game object graph the harness never builds
+# world (78) - world - needs a live in-game object graph the harness never builds
 # ------------------------------------------------------------------------------------------------
 Assembly-CSharp!RimWorld.Faction::def:c:RimWorld.FactionDef | world
+Assembly-CSharp!RimWorld.IEatingDriver::get_GainingNutritionNow() | world
 Assembly-CSharp!RimWorld.Need::get_CurLevelPercentage() | world
 Assembly-CSharp!RimWorld.PawnUtility::GetPosture(c:Verse.Pawn) | world
 Assembly-CSharp!RimWorld.Pawn_GeneTracker::get_Xenotype() | world
@@ -60,8 +67,10 @@ Assembly-CSharp!RimWorld.Selector::get_SingleSelectedThing() | world
 Assembly-CSharp!Verse.AI.Job::def:c:Verse.JobDef | world
 Assembly-CSharp!Verse.AI.Job::playerForced:Boolean | world
 Assembly-CSharp!Verse.AI.Job::workGiverDef:c:RimWorld.WorkGiverDef | world
+Assembly-CSharp!Verse.AI.JobDriver::get_CurToilString() | world
 Assembly-CSharp!Verse.AI.MentalState::pawn:c:Verse.Pawn | world
 Assembly-CSharp!Verse.AI.MentalStateHandler::get_CurState() | world
+Assembly-CSharp!Verse.AI.Pawn_JobTracker::curDriver:c:Verse.AI.JobDriver | world
 Assembly-CSharp!Verse.AI.Pawn_PathFollower::get_Moving() | world
 Assembly-CSharp!Verse.CameraDriver::get_CurrentViewRect() | world
 Assembly-CSharp!Verse.CellRect::Contains(v:Verse.IntVec3) | world
@@ -88,6 +97,7 @@ Assembly-CSharp!Verse.Pawn::get_InMentalState() | world
 Assembly-CSharp!Verse.Pawn::get_IsPlayerControlled() | world
 Assembly-CSharp!Verse.Pawn::get_RaceProps() | world
 Assembly-CSharp!Verse.Pawn::health:c:Verse.Pawn_HealthTracker | world
+Assembly-CSharp!Verse.Pawn::jobs:c:Verse.AI.Pawn_JobTracker | world
 Assembly-CSharp!Verse.Pawn::needs:c:RimWorld.Pawn_NeedsTracker | world
 Assembly-CSharp!Verse.Pawn::pather:c:Verse.AI.Pawn_PathFollower | world
 Assembly-CSharp!Verse.PawnCapacitiesHandler::GetLevel(c:Verse.PawnCapacityDef) | world

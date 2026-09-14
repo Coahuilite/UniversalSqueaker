@@ -81,7 +81,7 @@ public sealed class ActionEntryRegistry
 | ActionKey | BindingKind | 触发通路（patch/谓词） |
 |---|---|---|
 | Call | PeriodicState | CurrentAction 默认（无谓词命中） |
-| Eat | PeriodicState | IsEating（CurJob.def == Ingest） |
+| Eat | PeriodicState | IsEating（`CurJob.def == Ingest` 且 `SqueakEatOccurrence.AllowsOccurrence(ResolveMode(...), ...)`；父关=整段 job（不采样）、父开子关=`IEatingDriver.GainingNutritionNow`、父开子开=`JobDriver.CurToilString == "ChewIngestible"`，toil 名未确认时回落整段 job；只用公开 API，无 `JobDriver_Ingest` cast） |
 | Sleep | PeriodicState | IsSleeping（LayingInBed && rest!=null） |
 | Move | PeriodicState | IsMoving（pather.Moving） |
 | Social | PeriodicState | IsSocializing（job defName 含标记） |

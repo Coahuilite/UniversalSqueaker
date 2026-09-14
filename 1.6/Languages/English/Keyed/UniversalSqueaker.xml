@@ -138,6 +138,10 @@
   <US.Tuning.ScaleCooldown>Scale cooldown with time speed</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>Scale frequency with talking</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>Scale periodic with audible population</US.Tuning.ScalePopulation>
+  <US.Tuning.EatPrecision>Only squeak while actually eating</US.Tuning.EatPrecision>
+  <US.Tuning.EatPrecision.Hint>Off: the whole eating trip counts. On: only while food is really being ingested; zero-nutrition items such as smokeleaf joints do not count.</US.Tuning.EatPrecision.Hint>
+  <US.Tuning.EatPrecision.IncludeDrugs>Include drugs</US.Tuning.EatPrecision.IncludeDrugs>
+  <US.Tuning.EatPrecision.IncludeDrugs.DisabledReason>Turn on the switch above first.</US.Tuning.EatPrecision.IncludeDrugs.DisabledReason>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>Minimum trigger interval: {0}</US.Tuning.MinInterval>
@@ -258,6 +262,10 @@
   <US.Help.BasicTuning.ScaleTalking.Text>When on, actions that declare a talking gate only pass while the pawn is talking, so speech and conversation carry the sound; off ignores talking for those actions. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>Population Scaling</US.Help.BasicTuning.ScalePopulation.Label>
   <US.Help.BasicTuning.ScalePopulation.Text>When on, periodic sounds divide their chance by the audible population (one step per ten pawns in earshot), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.EatPrecision.Label>Eating Detection</US.Help.BasicTuning.EatPrecision.Label>
+  <US.Help.BasicTuning.EatPrecision.Text>Off, the whole eating job counts, including walking to the food. On, only the part where food is actually being ingested counts; zero-nutrition items such as smokeleaf joints do not count unless "Include drugs" is also on. Off by default.</US.Help.BasicTuning.EatPrecision.Text>
+  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>Include Drugs</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
+  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>Only available while the switch above is on. Counts the chewing or lighting stage, so zero-nutrition drugs still trigger. If the game's toil name cannot be recognised, behaviour falls back to the whole eating job rather than going silent.</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>
