@@ -47,7 +47,14 @@ $aboutXml = Join-Path $root 'About\About.xml'
 $loadFolders = Join-Path $root 'LoadFolders.xml'
 $license = Join-Path $root 'LICENSE'
 $contentRoot = Join-Path $root '1.6'
-$stageDir = Resolve-NormalizedPath $StageDir
+# -StageDir is a repository-relative path by contract: the packers (dev and release) pass
+# 'dist/<channel>/UniversalSqueaker'. Resolve it against $root, never against the process's
+# current directory - [IO.Path]::GetFullPath follows the .NET cwd, which PowerShell's location
+# (Push-Location/Set-Location) does not update, so a relative path used to land the staged
+# folder AND the archive outside the repository whenever the caller's cwd was not the root.
+# Measured 2026-09-15: invoking the release sequence from a clone wrote dist/ into the
+# session root instead of the clone. An absolute path is still honoured as given.
+$stageDir = if ([System.IO.Path]::IsPathRooted($StageDir)) { Resolve-NormalizedPath $StageDir } else { Resolve-NormalizedPath (Join-Path $root $StageDir) }
 
 # What a staged US package always contains, and what it must never contain anywhere. Named rather than
 # filtered: an empty filtered enumeration lets a check pass vacuously, which is the bug class both
