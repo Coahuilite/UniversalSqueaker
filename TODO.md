@@ -121,6 +121,13 @@ Durable decisions in `MEMORY.md` ("Eat-granularity port + UI granularity axes");
 - [ ] **Expanded diagnostics detail column shows blank space** when nothing is selected. Needs a product decision on what the empty state should say.
 - [ ] **Over-long author names overlap in the dropdown popup**: option rows are a fixed 24px single-line band (`ferritelib UiPopup.OptionHeight`) while the row text wraps. Choose: single-line + ellipsis in the library (cross-repo), or rows that grow with their content (moves the pinned "popup height = options x 24" lane). The wider window above already removes most of the trigger.
 
+## Feedback round 2026-09-15 (F5 + F6; packages US `f50a462` / FL `aa0f9ab`)
+
+- [x] **F6**: the parent hint band and its Keyed key are gone; the child row now EXISTS ONLY while the parent is on (no disabled/grey state, no reason text) and is an ordinary support row. The parent state the MEASURE pass read is cached for the DRAW pass of the same frame, so the drawn rows and the arranged card height cannot disagree; the parent click bumps the revision and the next frame re-measures. Lane `ChildRowFollowsTheParentSwitch` pins 5 slots off / 6 on, the card growth, and that the press routes exactly one child write.
+- [x] **F5 (both halves)**: the consumer ellipsizes the DISPLAY handed to a popup at `max(120, SettingsClosedWidth * 0.5)` while the VALUE stays the machine token, and the library's `singleLine` now actually renders single-line (`UiThemeDraw.Label` turns `Text.WordWrap` off around the draw and restores it) - the real defect, since `UiPopup` already passed `singleLine: true` and the outlet only used it as the audit axis. Scope note: the cut is in the shared pairs loop, so race/xenotype displays are capped too; moving it inside `elementId == "pack-filter"` makes it author-only.
+- [x] **FL harness csproj**: the four nested stub builds now pass `-m:1`, the sandbox trap US documented; FL `verify-local` is 9/9 again.
+- [ ] Still open from this round: the two 2px band floors (`checklist`, `diag-list`: 20 vs the calibrated 21.33 Small line), and a FL lane for the single-line RENDERING (the carrier stub records rect/text/colour but not wrap state, so "the row no longer wraps" rests on the 1.6 source path plus the green suite).
+
 ## UI granularity axes — standing reference (no open defect)
 
 - [ ] Layout stays card-level by construction (manifest = containers/workspaces/cards; rows are widget C#; FL has no checkbox atom — see MEMORY). If a future ask needs row-level declarative authoring, it is a US→FL round (atom vocabulary extension), not a US-side workaround; nothing to do today.
