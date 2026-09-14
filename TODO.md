@@ -110,6 +110,15 @@ Durable decisions in `MEMORY.md` ("Eat-granularity port + UI granularity axes");
 
 - [ ] Manual acceptance matrix (handoff §6): meal / smokeleaf / go-juice / beer / ambrosia / nutrient paste / inventory / animal / corpse × (parent-off, parent-on+child-off, parent-on+child-on); parent-off must be byte-identical feel to today; beer/ambrosia still fire at parent-on+child-off (nutrition > 0 — accepted, same ruling as SR).
 
+## In-game feedback batch 2026-09-14 (dev pair 712de50; triage `../modding_documents/team-mode/ingame-feedback-2026-09-14-ui-zh.md`)
+
+- [x] **Settings window rebased on vanilla's own dialog** (`6538a6c`): floor = `Dialog_Options.InitialSize` 650x600, growth 16:9 above it. 2560x1440 goes 614x950 -> 1126.4x633.6, which removes the wrapping that produced the footer/global-volume/checklist overflows.
+- [x] **Collapsed diagnostics bar line bands** (`6538a6c`): 14px lines under 18px text -> `StripLineHeight` 18, `TitleLineHeight` 22, bar 32 -> 44.
+- [x] **FerriteLib dependency `<downloadUrl>`** in `About.xml`, which the game demands in the log.
+- [ ] **Collapsed diagnostics panel is still as wide as the expanded one** (`SqueakDiagnosticsPanel.BeforeDraw` shrinks height only). Proposed: measure the bar (identity + switch + the two actions, applying the existing degradation ladder for scale/activity) and shrink the width to that, restoring on expand. Needs the maintainer's pick against "keep 680 and tighten the content instead".
+- [ ] **Expanded diagnostics detail column shows blank space** when nothing is selected. Needs a product decision on what the empty state should say.
+- [ ] **Over-long author names overlap in the dropdown popup**: option rows are a fixed 24px single-line band (`ferritelib UiPopup.OptionHeight`) while the row text wraps. Choose: single-line + ellipsis in the library (cross-repo), or rows that grow with their content (moves the pinned "popup height = options x 24" lane). The wider window above already removes most of the trigger.
+
 ## UI granularity axes — standing reference (no open defect)
 
 - [ ] Layout stays card-level by construction (manifest = containers/workspaces/cards; rows are widget C#; FL has no checkbox atom — see MEMORY). If a future ask needs row-level declarative authoring, it is a US→FL round (atom vocabulary extension), not a US-side workaround; nothing to do today.
