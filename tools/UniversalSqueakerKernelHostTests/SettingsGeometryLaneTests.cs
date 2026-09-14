@@ -58,7 +58,7 @@ internal static class SettingsGeometryLaneTests
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
         Step("checkbox visible edge + support-row height growth evidence table", CheckboxEdgeAndRowHeightEvidence);
-        Step("the eat-precision child row is visible, inert and height-neutral while the parent is off", DisabledChildRowIsVisibleAndInert);
+        Step("the eat-precision child row exists only while its parent switch is on", ChildRowFollowsTheParentSwitch);
         Console.WriteLine("SettingsGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -536,11 +536,6 @@ internal static class SettingsGeometryLaneTests
     /// the lane must predict the drawn height from the resolved label and then prove the prediction.</summary>
     private const float EggStackFloor = 52f;
 
-    /// <summary>Floor of the eat-occurrence group's two grey note bands (the parent hint and the child's
-    /// disabled reason), repeated from <c>UsBasicTuningWidget.EatNoteFloor</c> for the same reason the egg
-    /// constants are repeated: the lane predicts the drawn bands and then proves the prediction.</summary>
-    private const float EatNoteFloor = 16f;
-
     private static void CheckboxEdgeAndRowHeightEvidence()
     {
         var metrics = new Program.StubMetrics();
@@ -758,7 +753,7 @@ internal static class SettingsGeometryLaneTests
     // same press with the parent on routes exactly one child write.
     // ---------------------------------------------------------------------------------------------
 
-    private static void DisabledChildRowIsVisibleAndInert()
+    private static void ChildRowFollowsTheParentSwitch()
     {
         var metrics = new Program.StubMetrics();
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
@@ -772,17 +767,11 @@ internal static class SettingsGeometryLaneTests
                 host.Bindings.Invoke("set-tab", "Overview");
                 Rec rec = Record(host, 1024f, Height);
                 (offCard, offSlots) = BasicTuningSlotGeometry(rec);
-                Assert(offSlots.Count == 6,
-                    "the parent-off basic-tuning card must still draw all six checkbox slots, got " + offSlots.Count);
-
-                int revisionBefore = host.Session.ContentRevision;
-                PressRect(host, 1024f, offSlots[offSlots.Count - 1]);
-                Assert(offSource.LastEatPrecisionIncludeDrugs == null && offSource.LastEatPrecision == null,
-                    "a press on the child row while the parent is off must write nothing; got child="
-                    + (offSource.LastEatPrecisionIncludeDrugs?.ToString() ?? "null") + " parent="
-                    + (offSource.LastEatPrecision?.ToString() ?? "null"));
-                Assert(host.Session.ContentRevision == revisionBefore,
-                    "and it must not bump the revision clock (" + revisionBefore + " -> " + host.Session.ContentRevision + ")");
+                Assert(offSlots.Count == 5,
+                    "with the parent OFF the card draws five support checkboxes (egg + three scalings + the"
+                    + " parent) - the child row does not exist at all, got " + offSlots.Count);
+                Assert(offSource.LastEatPrecisionIncludeDrugs == null,
+                    "and nothing may write the child value while it is off screen");
             }
 
             var onSource = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
@@ -794,11 +783,11 @@ internal static class SettingsGeometryLaneTests
                 Rec rec = Record(host, 1024f, Height);
                 (onCard, onSlots) = BasicTuningSlotGeometry(rec);
 
-                Assert(Math.Abs(onCard - offCard) <= 0.01f,
-                    "the basic-tuning card height must not move with the parent toggle: off=" + Num(offCard)
-                    + " on=" + Num(onCard) + " (the disabled-reason band is reserved unconditionally)");
-                Assert(onSlots.Count == offSlots.Count,
-                    "the parent toggle must not add or remove a checkbox slot: " + offSlots.Count + " -> " + onSlots.Count);
+                Assert(onSlots.Count == offSlots.Count + 1,
+                    "turning the parent on adds exactly one checkbox slot (the child), got "
+                    + offSlots.Count + " -> " + onSlots.Count);
+                Assert(onCard > offCard + 20f,
+                    "and the card grows by the child row, got off=" + Num(offCard) + " on=" + Num(onCard));
                 for (int index = 0; index < offSlots.Count; index++)
                 {
                     Rect before = offSlots[index];
@@ -806,7 +795,7 @@ internal static class SettingsGeometryLaneTests
                     Assert(Math.Abs(before.x - after.x) <= 0.01f && Math.Abs(before.y - after.y) <= 0.01f
                         && Math.Abs(before.width - after.width) <= 0.01f && Math.Abs(before.height - after.height) <= 0.01f,
                         "checkbox slot " + index + " must keep identical geometry across the parent toggle (the"
-                        + " child row is never hidden and its reason band is always reserved): "
+                        + " child is now the ONLY row that appears or disappears): "
                         + Describe(before) + " -> " + Describe(after));
                 }
 
@@ -819,7 +808,8 @@ internal static class SettingsGeometryLaneTests
             }
 
             Console.WriteLine("[eat-child] parent-off card=" + Num(offCard) + "px slots=" + offSlots.Count
-                + " press-writes=0; parent-on card=" + Num(onCard) + "px slots-identical=true press-writes=1");
+                + " child-absent=true; parent-on card=" + Num(onCard) + "px slots=" + onSlots.Count
+                + " child-present=true press-writes=1");
         }
         finally
         {
@@ -866,7 +856,10 @@ internal static class SettingsGeometryLaneTests
         bool open,
         string language)
     {
-        var fake = new RecordingSettingsSource { RichData = true };
+        // The eat-precision child row exists only while its parent switch is on (ruling 2026-09-15), so the
+        // geometry sweep runs with the parent ON and asserts the six-slot card; the parent-off shape (five
+        // slots, no child) is covered by ChildRowFollowsTheParentSwitch.
+        var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
         host.Bindings.Set("help-open", open);
@@ -924,24 +917,12 @@ internal static class SettingsGeometryLaneTests
         float basicBodyTop = BodyTopOf(basic.Card);
         float basicBottom = BodyBottomOf(basic.Card);
         float[] centres = basicSlots.Select(CentreY).ToArray();
-        float eatHint = EatPrecisionHintRuleHeight(metrics, table, basicBand);
 
-        // The child row's controls are anchored to its LABEL band, and the row also carries the
-        // unconditionally reserved disabled-reason band, so the DRAWN height is observed from the label
-        // band's centre: bottom - centre + band/2. Deriving it from 2*(bottom - centre) instead is exactly
-        // how the pre-fix layout (controls centred on the full row) slipped through this lane - the old
-        // derivation assumed the defect. The assertion below compares the observed centre against the one
-        // the production rule predicts, so a control anchored anywhere else fails here.
-        float eatChildLabelBand = EatPrecisionChildLabelRuleHeight(metrics, table, basicBand);
-        float eatChildRule = EatPrecisionChildRuleHeight(metrics, table, basicBand);
-        float predictedChildControlCentre = (basicBottom - 2f - eatChildRule) + eatChildLabelBand * 0.5f;
-        Assert(Math.Abs(centres[5] - predictedChildControlCentre) <= 0.01f,
-            "the child row's control must be centred on its LABEL band, not on the full row (which also"
-            + " reserves the disabled-reason band) at " + width + " (" + language + "): control centre "
-            + Num(centres[5]) + " vs label-band centre " + Num(predictedChildControlCentre)
-            + " [rule " + Num(eatChildRule) + " = label band " + Num(eatChildLabelBand) + " + reason band]");
-        float eatChild = (basicBottom - 2f - centres[5]) + eatChildLabelBand * 0.5f;
-        float eatParentBottom = basicBottom - 2f - eatChild - 2f - eatHint - 2f;
+        // The child row is an ORDINARY support row now (its checkbox is centred on the row like every other
+        // row's, because the reserved reason band is gone), so its drawn height comes back from the row centre
+        // exactly like its neighbours' - and there is no hint band between the parent and the child any more.
+        float eatChild = 2f * (basicBottom - 2f - centres[5]);
+        float eatParentBottom = basicBottom - 2f - eatChild - 2f;
         float eatParent = 2f * (eatParentBottom - centres[4]);
         float eatParentTop = eatParentBottom - eatParent;
         float population = 2f * (eatParentTop - 2f - centres[3]);
@@ -964,7 +945,7 @@ internal static class SettingsGeometryLaneTests
             basicBand, eatParent, basicSlots[4], metrics, true, 0f);
         AddRow(evidence, "basic-tuning/eat-precision-include-drugs", 5,
             KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), basicBand, eatChild, basicSlots[5],
-            metrics, sharedRule: false, eggRule: EatPrecisionChildRuleHeight(metrics, table, basicBand));
+            metrics, sharedRule: true, eggRule: 0f);
 
         // timing: the cooldown-multiplier row is the last one, so its height is anchored on the body's
         // bottom padding and its centre comes from the minus/plus steppers the widget centres on it.
@@ -1026,30 +1007,6 @@ internal static class SettingsGeometryLaneTests
         return Math.Max(EggStackFloor, 4f + title + 1f + state + 7f);
     }
 
-    /// <summary>The parent's grey hint band, repeated from <c>UsBasicTuningWidget.EatPrecisionHintHeight</c>:
-    /// the resolved hint measured through the metrics seam at the row's label band, floored at the note
-    /// floor. The band carries no control, so this rule is the only way the lane learns where the child
-    /// row starts.</summary>
-    private static float EatPrecisionHintRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
-    {
-        return Math.Max(EatNoteFloor, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.Hint"), UiFont.Tiny, band));
-    }
-
-    /// <summary>The child row's own rule, repeated from <c>UsBasicTuningWidget.EatPrecisionChildHeight</c>:
-    /// the shared support-row rule for the child label PLUS the disabled-reason band, which is reserved in
-    /// both parent states. That reservation is exactly what keeps the card's height a constant sum.</summary>
-    private static float EatPrecisionChildLabelRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
-    {
-        return Math.Max(RowTokenPin, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), UiFont.Small, band));
-    }
-
-    /// <summary>The child row's label band PLUS its reserved disabled-reason band, which is the row's
-    /// drawn height in both parent states.</summary>
-    private static float EatPrecisionChildRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
-    {
-        float reason = Math.Max(EatNoteFloor, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs.DisabledReason"), UiFont.Tiny, band));
-        return EatPrecisionChildLabelRuleHeight(metrics, table, band) + reason;
-    }
 
     private static void AddRow(
         CaseEvidence evidence,
@@ -1193,7 +1150,10 @@ internal static class SettingsGeometryLaneTests
 
     private static UiHost NewHost(Program.StubMetrics metrics)
     {
-        var source = new RecordingSettingsSource { RichData = true };
+        // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15), and the
+        // shared-column survey wants the full six-slot basic-tuning card. The parent-off shape is covered by
+        // ChildRowFollowsTheParentSwitch.
+        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
         return host;

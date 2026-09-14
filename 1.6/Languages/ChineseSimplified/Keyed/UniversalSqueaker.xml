@@ -138,9 +138,7 @@
   <US.Tuning.ScaleTalking>按交谈缩放频率</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
   <US.Tuning.EatPrecision>仅在真正进食时发声</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.Hint>关闭：整段进食工作都算。开启：只在真正摄入食物时算；大麻烟卷等零营养物品仅在勾选「使用成瘾品」后算，啤酒、仙馔等含营养的饮品始终算。</US.Tuning.EatPrecision.Hint>
   <US.Tuning.EatPrecision.IncludeDrugs>使用成瘾品</US.Tuning.EatPrecision.IncludeDrugs>
-  <US.Tuning.EatPrecision.IncludeDrugs.DisabledReason>需先勾选上方的选项。</US.Tuning.EatPrecision.IncludeDrugs.DisabledReason>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>
@@ -262,9 +260,9 @@
   <US.Help.BasicTuning.ScalePopulation.Label>可闻人口缩放</US.Help.BasicTuning.ScalePopulation.Label>
   <US.Help.BasicTuning.ScalePopulation.Text>开启后，周期语音的触发概率按可闻人口除算（每十名可闻殖民者一档），因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.BasicTuning.EatPrecision.Label>进食判定</US.Help.BasicTuning.EatPrecision.Label>
-  <US.Help.BasicTuning.EatPrecision.Text>关闭时整段进食工作都算（含走向食物的路程）。开启后只算真正摄入食物的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除下方选项。默认关闭。</US.Help.BasicTuning.EatPrecision.Text>
+  <US.Help.BasicTuning.EatPrecision.Text>关闭时整段进食工作都算（含走向食物的路程）。开启后只算真正摄入食物的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。默认关闭。</US.Help.BasicTuning.EatPrecision.Text>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>使用成瘾品</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
-  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>只在开启上方选项后可用。按咀嚼/点燃阶段判定，因此零营养成瘾品也会触发。若无法识别该阶段，则整段进食工作都算。</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
+  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>只在上方开关开启后出现。按咀嚼/点燃阶段判定，因此零营养成瘾品也会触发。若无法识别该阶段，则整段进食工作都算。</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
