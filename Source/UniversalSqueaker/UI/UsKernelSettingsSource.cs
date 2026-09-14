@@ -132,6 +132,11 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.ScrollToSection(state, sectionKey);
     }
 
+    public void SetHelpDrawerOpen(bool open)
+    {
+        state.HelpDrawerOpen = open;
+    }
+
     public void SetTuningLayer(int layer)
     {
         VoicePacksPageModel.SetTuningLayer(state, layer);

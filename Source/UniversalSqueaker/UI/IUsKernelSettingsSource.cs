@@ -41,6 +41,13 @@ public interface IUsKernelSettingsSource
     // View/navigation state (US-owned, per window)
     void SetActiveTab(string tab);
     void ScrollToSection(string sectionKey);
+
+    /// <summary>
+    /// Retractable help drawer visibility. Independent per-window view state, never the engine's
+    /// active-tab gate: the Host writes it through its own "help-open" binding, and the revision
+    /// bumper turns the change into the matching layout variant at the next arrange.
+    /// </summary>
+    void SetHelpDrawerOpen(bool open);
     void SetTuningLayer(int layer);
     void SetTuningDomain(string raceDefName, string targetDefName);
     void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName);

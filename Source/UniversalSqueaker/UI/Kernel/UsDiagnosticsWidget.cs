@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 using FerriteLib.UiKit.Kernel;
@@ -15,13 +16,20 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/diagnostics";
 
-    private const float LabelHeight = 20f;
     private const float ModeRowHeight = 26f;
     private const float RowGap = 4f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
-    private const float SidePadding = 10f;
-    private const float ModeGap = 6f;
+
+    /// <summary>Floor of the section heading band ("Developer log level"); the band grows when the
+    /// translated heading needs more than this many pixels at the heading width.</summary>
+    private const float HeadingFloor = 20f;
+
+    private const string HeadingKey = "US.Diagnostics.Logging.Label";
+    private const string LocalizeLabelKey = "US.Diagnostics.LocalizeDebugMenu";
+
+    /// <summary>Per-frame option buffer for the segmented control, so the draw path allocates nothing.</summary>
+    private readonly KeyValuePair<string, string>[] optionBuffer = new KeyValuePair<string, string>[LoggingOptions.Length];
 
     /// <summary>Mode values stay the typed enum the "dev-logging" binding carries; only the display name is keyed.</summary>
     private static readonly (SqueakDevLoggingMode Mode, string LabelKey, string HelpKey)[] LoggingOptions =
@@ -58,11 +66,32 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
         return ContentHeight(ctx);
     }
 
-    private static float ContentHeight(UiWidgetContext ctx)
+    /// <summary>
+    /// One measure path for the whole card, shared by Measure and Draw. The heading band is measured at
+    /// the heading width, and the localize row's height comes from the shared support-row rule: the
+    /// density token as the floor, grown when the translated label wraps in the remaining label band.
+    /// The mode row is a segmented control and keeps its own fixed height.
+    /// </summary>
+    private float ContentHeight(UiWidgetContext ctx)
     {
-        // The toggle row is a data row, so it follows the density axis; the mode row is a segmented control
-        // and keeps its own height.
-        return TopPadding + LabelHeight + ModeRowHeight + RowGap + UsKernelDraw.RowVisualHeight(ctx) + BottomPadding;
+        return TopPadding + HeadingHeight(ctx) + ModeRowHeight + RowGap + LocalizeRowHeight(ctx) + BottomPadding;
+    }
+
+    /// <summary>The heading sits on its own line above the segmented control, so it spans the full row
+    /// width minus the shared right inset (nothing is to its right).</summary>
+    private float HeadingWidth(UiWidgetContext ctx)
+    {
+        return Math.Max(1f, BodyWidth(ctx) - UsKernelDraw.RowLeftPadding - UsKernelDraw.ControlColumnRightInset);
+    }
+
+    private float HeadingHeight(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.TextBandHeight(HeadingWidth(ctx), ctx, ctx.Translation.Translate(HeadingKey), UiFont.Tiny, HeadingFloor);
+    }
+
+    private float LocalizeRowHeight(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.RowLabelHeight(BodyWidth(ctx), ctx, ctx.Translation.Translate(LocalizeLabelKey));
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -76,35 +105,39 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
             ? bound
             : SqueakDevLoggingMode.Auto;
 
-        float x = rect.x + SidePadding;
+        float x = rect.x;
         float y = rect.y + TopPadding;
-        float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
 
         UsKernelDraw.Label(
-            new Rect(x, y, innerWidth, LabelHeight),
-            ctx.Translation.Translate("US.Diagnostics.Logging.Label"),
+            new Rect(x + UsKernelDraw.RowLeftPadding, y, HeadingWidth(ctx), HeadingHeight(ctx)),
+            ctx.Translation.Translate(HeadingKey),
             ctx.Theme,
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
-        y += LabelHeight;
+        y += HeadingHeight(ctx);
 
-        float buttonWidth = Math.Max(1f, (innerWidth - ModeGap * (LoggingOptions.Length - 1)) / LoggingOptions.Length);
-        float buttonX = x;
+        // The three choices are one segmented control whose total width IS the shared control column:
+        // equal cells, fixed width, one right edge - the same edge the localize checkbox below uses.
+        // A translated cell label can only be ellipsized inside its own cell, never resize the column.
+        int selected = 0;
         for (int i = 0; i < LoggingOptions.Length; i++)
         {
-            Rect optionRect = new(buttonX, y, buttonWidth, ModeRowHeight);
-            UsKernelDraw.HelpHover(optionRect, ctx, LoggingOptions[i].HelpKey);
-            if (UsKernelDraw.SelectionButton(optionRect, ctx, ctx.Translation.Translate(LoggingOptions[i].LabelKey), ctx.Theme, LoggingOptions[i].Mode == mode))
-            {
-                ctx.Bindings.Set("dev-logging", LoggingOptions[i].Mode);
-            }
+            optionBuffer[i] = new KeyValuePair<string, string>(
+                ctx.Translation.Translate(LoggingOptions[i].LabelKey),
+                LoggingOptions[i].HelpKey);
+            if (LoggingOptions[i].Mode == mode) selected = i;
+        }
 
-            buttonX += buttonWidth + ModeGap;
+        Rect modeRow = new(x, y, rect.width, ModeRowHeight);
+        int clicked = UsKernelDraw.SegmentedRow(UsKernelDraw.ControlColumnRect(modeRow), ctx, optionBuffer, selected);
+        if (clicked >= 0)
+        {
+            ctx.Bindings.Set("dev-logging", LoggingOptions[clicked].Mode);
         }
 
         y += ModeRowHeight + RowGap;
-        DrawLocalizeRow(new Rect(rect.x, y, rect.width, UsKernelDraw.RowVisualHeight(ctx)), ctx);
+        DrawLocalizeRow(new Rect(rect.x, y, rect.width, LocalizeRowHeight(ctx)), ctx);
     }
 
     private void DrawLocalizeRow(Rect rect, UiWidgetContext ctx)
@@ -114,8 +147,8 @@ public sealed class UsDiagnosticsWidget : UsSectionWidgetBase
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - 60f), rect.height),
-            ctx.Translation.Translate("US.Diagnostics.LocalizeDebugMenu"),
+            UsKernelDraw.RowLabelRect(rect, rect.height),
+            ctx.Translation.Translate(LocalizeLabelKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,

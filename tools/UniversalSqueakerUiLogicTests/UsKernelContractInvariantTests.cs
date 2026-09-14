@@ -83,7 +83,7 @@ internal static class UsKernelContractInvariantTests
         {
             if (node is not XmlElement element) continue;
             if (element.Name == "Column" && element.GetAttribute("Id") == "nav-column"
-                && element.GetAttribute("Width") == "192" && IsTrue(element.GetAttribute("Fill")))
+                && element.GetAttribute("Width") == "160" && IsTrue(element.GetAttribute("Fill")))
             {
                 navFill = true;
             }
@@ -102,7 +102,7 @@ internal static class UsKernelContractInvariantTests
         }
 
         Assert(navFill && contentScrollFill && helpScrollFill,
-            "body-row contains nav-column (192 Fill), content-scroll (Fill) and help-scroll (176 Fill)");
+            "body-row contains nav-column (160 Fill), content-scroll (Fill) and help-scroll (176 Fill)");
 
         bool hasTabSections = false;
         foreach (XmlNode node in bodyRow.ChildNodes)

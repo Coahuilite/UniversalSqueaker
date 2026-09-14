@@ -53,6 +53,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     // View/navigation writes.
     public string? LastActiveTab;
+    /// <summary>Help drawer visibility writes; must stay independent of the workspace tab.</summary>
+    public bool? LastHelpDrawerOpen;
     public string? LastScrollToSection;
     public int? LastTuningLayer;
     public string? LastTuningDomainRace;
@@ -250,15 +252,20 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new TuningDomainOptionView("human", "Human"),
                 new TuningDomainOptionView("testrace", "Test Race")
             },
+            // All FOUR product moods, in the production enumeration order (VoicePacksPageModel
+            // builds one row per SqueakMood: Good, Neutral, Bad, Break). Availability is a VIEW input
+            // (the model computes it from flags/source), so this fake sets it directly instead of
+            // materialising owned records: with own: null the controls would render correctly inert
+            // and no interaction step could route a click. Every row carries DISTINCT effective
+            // values, so the mood layout lane can identify a card by the write its own controls route
+            // (a two-row fixture could not tell the third and fourth cards apart from the first two).
+            // "reset to preset" stays ready on rows one and three and unavailable on two and four, so
+            // both reset states are exercised on more than one card.
             moodTuningRows: new[]
             {
-                // Availability is a VIEW input (the model computes it from flags/source), so this fake
-                // sets it directly instead of materialising owned records: with own: null the controls
-                // would render correctly inert and no interaction step could route a click. Row one
-                // keeps a ready "reset to preset" (source-bearing), row two does not (no source).
                 new MoodTuningRowView(
                     SqueakMood.Good,
-                    "Good",
+                    SqueakMood.Good.ToString(),
                     own: null,
                     effectivePitch: 1f,
                     effectiveVolume: 1f,
@@ -267,11 +274,29 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     presetReset: SqueakMoodResetPresetState.Ready),
                 new MoodTuningRowView(
                     SqueakMood.Neutral,
-                    "Neutral",
+                    SqueakMood.Neutral.ToString(),
                     own: null,
-                    effectivePitch: 1f,
-                    effectiveVolume: 0.9f,
-                    effectiveJitterHalf: 0f,
+                    effectivePitch: 0.9f,
+                    effectiveVolume: 0.8f,
+                    effectiveJitterHalf: 0.1f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset),
+                new MoodTuningRowView(
+                    SqueakMood.Bad,
+                    SqueakMood.Bad.ToString(),
+                    own: null,
+                    effectivePitch: 0.75f,
+                    effectiveVolume: 0.6f,
+                    effectiveJitterHalf: 0.2f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.Ready),
+                new MoodTuningRowView(
+                    SqueakMood.Break,
+                    SqueakMood.Break.ToString(),
+                    own: null,
+                    effectivePitch: 0.6f,
+                    effectiveVolume: 0.4f,
+                    effectiveJitterHalf: 0.3f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
                     presetReset: SqueakMoodResetPresetState.NotFromPreset)
             },
@@ -370,10 +395,34 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             normalized = "Presets";
         else
             return;
-        state.ActiveTab = normalized;
+
+        // Mirror VoicePacksPageModel.ApplyActiveTab exactly: a real workspace switch also moves the
+        // active section to that workspace's primary section, and help-section-key resolves through
+        // it. Without this the fake would pin help-section-key to "us/mode-row" forever, so no lane
+        // could observe the help topic following the workspace while the drawer stays open.
+        if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
+        {
+            state.ActiveTab = normalized;
+            state.ActiveSectionKey = normalized switch
+            {
+                "Distance" => "attenuation-editor",
+                "Packs" => "filter-bar",
+                "Tuning" => "scope-tree",
+                "Presets" => "preset-list",
+                _ => "mode-row"
+            };
+        }
     }
 
     public void ScrollToSection(string sectionKey) => LastScrollToSection = sectionKey;
+
+    public void SetHelpDrawerOpen(bool open)
+    {
+        LastHelpDrawerOpen = open;
+        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the drawer
+        // binding reads ViewState.HelpDrawerOpen, so the fake must answer the read-back too.
+        state.HelpDrawerOpen = open;
+    }
 
     public void SetTuningLayer(int layer) => LastTuningLayer = layer;
 

@@ -41,6 +41,14 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     private readonly UniversalSqueakerMod mod;
 
+    // The page's per-window business boundary, kept so BeforeDraw can read the drawer state that
+    // decides the window width. CreateHost builds it once per window instance.
+    private UsKernelSettingsSource? source;
+
+    // The drawer state this window has already sized for. Starts retracted: that is the page state's
+    // default and the width InitialSizePolicy already opened with.
+    private bool appliedDrawerExpanded;
+
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
         this.mod = mod;
@@ -84,25 +92,46 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     }
 
     /// <summary>
-    /// 维护者指定的安全区域：窗口在屏幕的 60%～75% 之间浮动，默认偏 72%/66%，
-    /// 不盖满全屏，也不退回原版那种正中心小方窗。The shell's default is the game's own
-    /// <see cref="Window.InitialSize"/>, so this policy is the only thing keeping that ruling alive.
+    /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
+    /// clamps 24% of the screen width into [600, 860], and the retractable help drawer widens it by
+    /// exactly the column plus row gap it costs (188 = 176 + 12) once the player expands it (see
+    /// <see cref="ApplyDrawerWidth"/>). Height keeps the shipped shape: 66% of the screen with a 600
+    /// floor. The shell's default would be the game's own <see cref="Window.InitialSize"/>, so this
+    /// policy is what makes the narrow opening a product decision instead of an accident.
     /// </summary>
     protected override Func<Vector2>? InitialSizePolicy => InitialSizeFromScreen;
 
     private static Vector2 InitialSizeFromScreen()
     {
-        float width = Mathf.Clamp(
-            Verse.UI.screenWidth * 0.72f,
-            Verse.UI.screenWidth * 0.60f,
-            Verse.UI.screenWidth * 0.75f);
-        float height = Mathf.Clamp(
-            Verse.UI.screenHeight * 0.66f,
-            Verse.UI.screenHeight * 0.60f,
-            Verse.UI.screenHeight * 0.75f);
-        width = Mathf.Max(800f, width);
-        height = Mathf.Max(600f, height);
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, drawerExpanded: false);
+        float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenHeight);
         return new Vector2(width, height);
+    }
+
+    /// <summary>
+    /// One-shot width change on the drawer STATE EDGE only: the page's header toggle is the only thing
+    /// that flips it, and the width is written the pass after the toggle (BeforeDraw runs before the
+    /// page draws), so this never fights the player's own drag or a per-frame relayout. The window
+    /// stays horizontally centred on its own centre and the result is clamped inside the screen.
+    /// </summary>
+    private void ApplyDrawerWidth()
+    {
+        UsKernelSettingsSource? current = source;
+        if (current == null) return;
+
+        bool expanded = current.ViewState.HelpDrawerOpen;
+        if (expanded == appliedDrawerExpanded) return;
+        appliedDrawerExpanded = expanded;
+
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, expanded);
+        float delta = width - windowRect.width;
+        if (Mathf.Abs(delta) < 0.5f) return;
+
+        float x = Mathf.Clamp(
+            windowRect.x - delta * 0.5f,
+            0f,
+            Mathf.Max(0f, Verse.UI.screenWidth - width));
+        windowRect = new Rect(x, windowRect.y, width, windowRect.height);
     }
 
     /// <summary>
@@ -115,7 +144,8 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     protected override UiHost CreateHost()
     {
         UsTextFitAudit.Begin();
-        return UsKernelSettingsHost.Create(new UsKernelSettingsSource(UniversalSqueakerMod.Settings));
+        source = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
+        return UsKernelSettingsHost.Create(source);
     }
 
     /// <summary>
@@ -127,6 +157,7 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     protected override void BeforeDraw(Rect contentRect)
     {
         mod.TickSettingsSaveForWindow();
+        ApplyDrawerWidth();
     }
 
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>

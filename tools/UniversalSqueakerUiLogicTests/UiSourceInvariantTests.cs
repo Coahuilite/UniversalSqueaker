@@ -47,6 +47,7 @@ internal static class UiSourceInvariantTests
         VerifyLocalizationContract(root);
         VerifyPrerequisiteDesyncIsNamed(root);
         VerifyViewCacheSharesLayoutClock(root);
+        VerifyHelpDrawerIsIndependentState(root);
     }
 
     // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
@@ -636,6 +637,51 @@ internal static class UiSourceInvariantTests
             "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
+    // 10. The retractable help drawer is INDEPENDENT state (brief: "Help visibility is independent
+    //     state. Do not reuse active-tab"). The engine's only binding-driven visibility switch is the
+    //     Tab attribute, which it compares against UiBindings.ActiveTabKey - so a drawer that rode
+    //     active-tab would leak into workspace switching and leave a reserved column whenever the
+    //     workspace happened to match. This guard is two-sided: the manifest's drawer element declares
+    //     no Tab, and the consumer drives visibility through its own state/binding/revision names. A
+    //     regression that re-binds help visibility to the workspace fails here, at build-gate time.
+    private static void VerifyHelpDrawerIsIndependentState(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        string manifest = Path.Combine(ui, "Layout.Schema2.xml");
+        var document = new XmlDocument();
+        document.XmlResolver = null;
+        document.Load(manifest);
+        XmlNode? drawerElement = document.SelectSingleNode("//*[@Id='help-scroll']");
+        Assert(drawerElement != null,
+            "Layout.Schema2.xml must keep the Id='help-scroll' drawer element; without it help has no home");
+        Assert(!((XmlElement)drawerElement!).HasAttribute("Tab"),
+            "the help drawer element must not carry a Tab attribute: Tab is the engine's active-tab switch, "
+            + "and help visibility is independent state");
+
+        string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");
+        CheckSourceContains(hostPath, new[]
+        {
+            "\"help-open\"",
+            "SetHelpDrawerOpen",
+        },
+        "the Host must own help visibility as its own value binding and write the drawer state through the source boundary");
+
+        string statePath = Path.Combine(ui, "Model", "VoicePacksPageState.cs");
+        CheckSourceContains(statePath, new[] { "HelpDrawerOpen" },
+            "help visibility must live in the per-window page state");
+        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpDrawerOpen = false;", StringComparison.Ordinal) >= 0,
+            "HelpDrawerOpen must default to false: the shipped window opens narrow (vanilla-like) with the"
+            + " help drawer retracted, and only widens when the player expands it");
+
+        string variantsPath = Path.Combine(ui, "Layout", "UsLayoutVariants.cs");
+        CheckSourceContains(variantsPath, new[] { "\"help-scroll\"", "Roots" },
+            "the drawer must be a layout variant applied through the host's manifest roots (the carrier ships "
+            + "no binding-driven column visibility; see UsLayoutVariants)");
+
+        CheckSourceContains(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"),
+            new[] { "\"US.Help.Drawer.Toggle\"" },
+            "the page header must expose the discoverable Help toggle through the Keyed table");
+    }
     private static Dictionary<string, string> ReadKeyedTable(string path)
     {
         Assert(File.Exists(path), "Keyed table is missing: " + path);

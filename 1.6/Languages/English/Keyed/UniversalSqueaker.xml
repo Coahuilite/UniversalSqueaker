@@ -206,9 +206,9 @@
   <US.Tuning.ResetToPreset.Reason.NotFromPreset>This row was not imported from a preset.</US.Tuning.ResetToPreset.Reason.NotFromPreset>
   <US.Tuning.ResetToPreset.Reason.PresetMissing>That preset is no longer available.</US.Tuning.ResetToPreset.Reason.PresetMissing>
   <US.Tuning.ResetToPreset.Reason.NoEntry>That preset has no entry for this row.</US.Tuning.ResetToPreset.Reason.NoEntry>
-  <US.Tuning.Factor.Pitch>P</US.Tuning.Factor.Pitch>
-  <US.Tuning.Factor.Volume>V</US.Tuning.Factor.Volume>
-  <US.Tuning.Factor.Jitter>J</US.Tuning.Factor.Jitter>
+  <US.Tuning.Factor.Pitch>Pitch</US.Tuning.Factor.Pitch>
+  <US.Tuning.Factor.Volume>Volume</US.Tuning.Factor.Volume>
+  <US.Tuning.Factor.Jitter>Jitter</US.Tuning.Factor.Jitter>
   <US.Distance.Preset.Conservative>Conservative</US.Distance.Preset.Conservative>
   <US.Distance.Preset.Balanced>Balanced</US.Distance.Preset.Balanced>
   <US.Distance.Preset.Strong>Strong</US.Distance.Preset.Strong>
@@ -217,6 +217,9 @@
   <US.Card.FallbackNote>{0} failed to draw, so this section was skipped. Other sections are unaffected. Reopen the window to retry.</US.Card.FallbackNote>
   <US.Help.Header>HELP  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
+  <!-- Help drawer chrome: the page-header toggle that retracts the right-side help drawer. -->
+  <US.Help.Drawer.Toggle>Help</US.Help.Drawer.Toggle>
+  <US.Help.Drawer.Toggle.Hint>Show or hide the help drawer</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
   <US.Help.Overview>Overview</US.Help.Overview>
   <!-- Help catalog (C+A panel): authoritative Chinese copy, English translated from it. -->
@@ -226,6 +229,8 @@
   <US.Help.PageTitle.Nav.Text>The left navigation switches between the five workspaces: Overview, Distance, VoicePacks, Tuning and Presets. Selecting a workspace also updates the help panel on the right.</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>Apply &amp; Save</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>Every change applies immediately. Settings are written to disk automatically right after each edit - the footer shows Saving / Saved - and closing the window performs a final forced flush.</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>Help Drawer Toggle</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>Shows or hides the right-side help drawer. The drawer explains whatever control the pointer is over; with it closed the centre column takes the full width, and the selected topic is kept across toggles.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
@@ -242,11 +247,17 @@
   <US.Help.Attenuation.Chart.Text>Drag the two control points horizontally to set where the fade starts and ends; the left point stays at full audibility and the right at zero, kept at least 5 units apart.</US.Help.Attenuation.Chart.Text>
   <US.Help.Attenuation.Presets.Label>Quick Presets</US.Help.Attenuation.Presets.Label>
   <US.Help.Attenuation.Presets.Text>Three mutually exclusive buttons apply a distance range outright - Conservative 15-65, Balanced 15-50, Strong 15-40 - and the chart and status line update with them.</US.Help.Attenuation.Presets.Text>
+  <US.Help.Attenuation.Status.Label>Preset / Range Read-out</US.Help.Attenuation.Status.Label>
+  <US.Help.Attenuation.Status.Text>Read-only line under the chart: it names the active preset (Custom after a manual drag) and the current distance range. It changes nothing by itself.</US.Help.Attenuation.Status.Text>
   <US.Help.BasicTuning.Overview>The playback-behaviour card: whether Easter-egg entries join the pool, plus the three runtime scalings - cooldown with time speed, frequency with talking, periodic sounds with the audible population. Distance presets and the curve live in the Distance workspace.</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>Easter Egg Sounds</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>When on, Easter egg entries join the normal pool and can be drawn like any other clip; when off, only ordinary entries are eligible.</US.Help.BasicTuning.Egg.Text>
-  <US.Help.BasicTuning.Scaling.Label>Scaling Toggles</US.Help.BasicTuning.Scaling.Label>
-  <US.Help.BasicTuning.Scaling.Text>Three global scaling toggles: cooldown with time speed, frequency with talking, and periodic sounds with the audible population. All on by default.</US.Help.BasicTuning.Scaling.Text>
+  <US.Help.BasicTuning.ScaleCooldown.Label>Time-Speed Scaling</US.Help.BasicTuning.ScaleCooldown.Label>
+  <US.Help.BasicTuning.ScaleCooldown.Text>When on, cooldowns are measured against the game's time speed, so two squeaks keep the same real-time spacing at 1x, 2x and 3x. On by default.</US.Help.BasicTuning.ScaleCooldown.Text>
+  <US.Help.BasicTuning.ScaleTalking.Label>Talking Scaling</US.Help.BasicTuning.ScaleTalking.Label>
+  <US.Help.BasicTuning.ScaleTalking.Text>When on, actions that declare a talking gate only pass while the pawn is talking, so speech and conversation carry the sound; off ignores talking for those actions. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
+  <US.Help.BasicTuning.ScalePopulation.Label>Population Scaling</US.Help.BasicTuning.ScalePopulation.Label>
+  <US.Help.BasicTuning.ScalePopulation.Text>When on, periodic sounds divide their chance by the audible population (one step per ten pawns in earshot), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>

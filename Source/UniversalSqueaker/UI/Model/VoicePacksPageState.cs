@@ -24,6 +24,15 @@ public sealed class VoicePacksPageState
     public string TuningXenotypeDefName = "";
     public string ActiveTab = "Overview";
     public string ActiveSectionKey = "mode-row";
+
+    /// <summary>
+    /// Retractable help drawer visibility. INDEPENDENT state on purpose: the engine's only
+    /// binding-driven visibility switch is the <c>Tab</c> attribute compared against
+    /// <c>UiBindings.ActiveTabKey</c>, and help visibility must never follow workspace switching.
+    /// Defaults to false: the shipped window opens narrow (vanilla-like) with the drawer retracted,
+    /// and only widens once the player expands it.
+    /// </summary>
+    public bool HelpDrawerOpen = false;
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -47,6 +56,7 @@ public sealed class VoicePacksPageState
         TuningXenotypeDefName = "";
         ActiveTab = "Overview";
         ActiveSectionKey = "mode-row";
+        HelpDrawerOpen = false;
         DomainFilter = default;
         PackFilter = default;
         RaceFilter = "";

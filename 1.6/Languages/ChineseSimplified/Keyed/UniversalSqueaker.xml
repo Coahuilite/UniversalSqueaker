@@ -205,9 +205,9 @@
   <US.Tuning.ResetToPreset.Reason.NotFromPreset>此行不是预设导入的。</US.Tuning.ResetToPreset.Reason.NotFromPreset>
   <US.Tuning.ResetToPreset.Reason.PresetMissing>该预设已失效。</US.Tuning.ResetToPreset.Reason.PresetMissing>
   <US.Tuning.ResetToPreset.Reason.NoEntry>该预设没有此行设置。</US.Tuning.ResetToPreset.Reason.NoEntry>
-  <US.Tuning.Factor.Pitch>音</US.Tuning.Factor.Pitch>
-  <US.Tuning.Factor.Volume>量</US.Tuning.Factor.Volume>
-  <US.Tuning.Factor.Jitter>抖</US.Tuning.Factor.Jitter>
+  <US.Tuning.Factor.Pitch>音高</US.Tuning.Factor.Pitch>
+  <US.Tuning.Factor.Volume>音量</US.Tuning.Factor.Volume>
+  <US.Tuning.Factor.Jitter>抖动</US.Tuning.Factor.Jitter>
   <US.Distance.Preset.Conservative>保守</US.Distance.Preset.Conservative>
   <US.Distance.Preset.Balanced>均衡</US.Distance.Preset.Balanced>
   <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
@@ -216,6 +216,9 @@
   <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
+  <!-- 帮助抽屉：页头开关，用于收起/展开右侧帮助抽屉。 -->
+  <US.Help.Drawer.Toggle>帮助</US.Help.Drawer.Toggle>
+  <US.Help.Drawer.Toggle.Hint>显示或隐藏帮助抽屉</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
@@ -225,6 +228,8 @@
   <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新右侧帮助面板的内容。</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>帮助抽屉开关</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏右侧帮助抽屉。把指针停在任意控件上，抽屉即解释该控件；关闭后中间内容区获得完整宽度，已选主题在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
@@ -241,11 +246,17 @@
   <US.Help.Attenuation.Chart.Text>水平拖动两个控制点，设定淡出的起点与终点；左点恒处 100% 可闻、右点恒处 0%，两点间距不小于 5。</US.Help.Attenuation.Chart.Text>
   <US.Help.Attenuation.Presets.Label>快速预设</US.Help.Attenuation.Presets.Label>
   <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、均衡 15-50、强效 15-40；套用后曲线与状态行同步更新。</US.Help.Attenuation.Presets.Text>
+  <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
+  <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
   <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
-  <US.Help.BasicTuning.Scaling.Label>缩放开关</US.Help.BasicTuning.Scaling.Label>
-  <US.Help.BasicTuning.Scaling.Text>三项全局缩放开关：冷却随游戏时间流速、频率随交谈状态、周期语音随可闻人口数量。默认全部开启。</US.Help.BasicTuning.Scaling.Text>
+  <US.Help.BasicTuning.ScaleCooldown.Label>时间流速缩放</US.Help.BasicTuning.ScaleCooldown.Label>
+  <US.Help.BasicTuning.ScaleCooldown.Text>开启后，冷却按游戏时间流速折算：1 倍、2 倍、3 倍速下两次 squeak 的真实间隔保持一致。默认开启。</US.Help.BasicTuning.ScaleCooldown.Text>
+  <US.Help.BasicTuning.ScaleTalking.Label>交谈缩放</US.Help.BasicTuning.ScaleTalking.Label>
+  <US.Help.BasicTuning.ScaleTalking.Text>开启后，声明了交谈门控的动作需在殖民者正在交谈时才可能通过，让对话与交谈承载声音；关闭则这些动作不再看交谈状态。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
+  <US.Help.BasicTuning.ScalePopulation.Label>可闻人口缩放</US.Help.BasicTuning.ScalePopulation.Label>
+  <US.Help.BasicTuning.ScalePopulation.Text>开启后，周期语音的触发概率按可闻人口除算（每十名可闻殖民者一档），因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>

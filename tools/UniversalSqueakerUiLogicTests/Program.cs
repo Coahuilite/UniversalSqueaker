@@ -35,6 +35,7 @@ internal static class Program
         TestUsCardLayoutHeight();
         TestUsFilterBarLayout();
         TestWindowChromeLayout();
+        TestSettingsWindowSizePolicy();
         TestHelpCatalog();
         TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
@@ -160,6 +161,73 @@ internal static class Program
             "the widened width is text + padding, got " + width);
     }
 
+    /// <summary>
+    /// Pure size policy of the settings window (task-10): it opens NARROW - 24% of the screen width
+    /// clamped into [600, 860] - and the retractable help drawer adds exactly the column it occupies
+    /// plus the body-row gap it introduces (176 + 12 = 188). Height keeps the shipped 0.66-of-screen
+    /// shape with a 600 floor. This file is compiled by the zero-Verse gate, so these are float
+    /// helpers; the window composes them into its UnityEngine.Vector2 at the Verse boundary.
+    /// The referenced declarations live in Layout.Schema2.xml (help-scroll Width 176, body-row Gap 12).
+    /// </summary>
+    private static void TestSettingsWindowSizePolicy()
+    {
+        const float tolerance = 0.001f;
+
+        Assert(Math.Abs(WindowChromeLayout.HelpDrawerWidth - 176f) < tolerance,
+            "the help column declaration the policy mirrors is 176");
+        Assert(Math.Abs(WindowChromeLayout.BodyRowGap - 12f) < tolerance,
+            "the body-row gap declaration the policy mirrors is 12");
+        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta
+                - (WindowChromeLayout.HelpDrawerWidth + WindowChromeLayout.BodyRowGap)) < tolerance,
+            "the drawer delta is derived from the two manifest declarations, not repeated");
+        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 188f) < tolerance,
+            "expanding the drawer costs the window exactly 176 + 12 = 188px");
+
+        foreach (float screen in new[] { 800f, 1280f, 1920f, 2560f, 3840f })
+        {
+            float closed = WindowChromeLayout.SettingsClosedWidth(screen);
+            float open = WindowChromeLayout.SettingsOpenWidth(screen);
+            Assert(closed >= WindowChromeLayout.SettingsWidthFloor - tolerance,
+                "the closed window is never below the 600 floor at screen " + screen + ": " + closed);
+            Assert(closed <= WindowChromeLayout.SettingsWidthCeiling + tolerance,
+                "the closed window is never above the 860 ceiling at screen " + screen + ": " + closed);
+            Assert(open > closed,
+                "the open window is wider than the closed one at screen " + screen);
+            Assert(Math.Abs((open - closed) - WindowChromeLayout.DrawerWidthDelta) < tolerance,
+                "open - closed is exactly the drawer delta at screen " + screen + ": " + (open - closed));
+            Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: false) - closed) < tolerance
+                && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: true) - open) < tolerance,
+                "SettingsWindowWidth selects the closed/open branch at screen " + screen);
+        }
+
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f) - 600f) < tolerance,
+            "1920 clamps to the 600 floor (24% = 460.8)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f) - 788f) < tolerance,
+            "1920 open = 600 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f) - 614.4f) < tolerance,
+            "2560 closed = 24% of the screen");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f) - 802.4f) < tolerance,
+            "2560 open = 614.4 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(800f) - 600f) < tolerance,
+            "800 clamps to the 600 floor");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f) - 860f) < tolerance,
+            "3840 clamps to the 860 ceiling (24% = 921.6)");
+
+        // The expanded window may never be wider than the screen it lives in: below the 788 floor the
+        // open width is capped at the screen, and the page falls back on its own narrow-layout capability.
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(640f) - 640f) < tolerance,
+            "640 screen caps the expanded window at the screen (open would otherwise be 788)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(700f) - 700f) < tolerance,
+            "700 screen caps the expanded window at the screen");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f) - 788f) < tolerance,
+            "800 screen still fits the full 788 open width");
+
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1080f) - 712.8f) < tolerance,
+            "height keeps the 66%-of-screen shape: " + WindowChromeLayout.SettingsWindowHeight(1080f));
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(600f) - 600f) < tolerance,
+            "height clamps to the 600 floor");
+    }
+
     private static void TestHelpCatalog()
     {
         Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
@@ -207,7 +275,11 @@ internal static class Program
         // 28 → 34 with the global-tuning wiring (timing +2, diagnostics +4), then 40 with the two mood
         // reset controls (2026-09-12 ruling): one entry per action plus one per unavailable reason
         // (no local setting / not from a preset / preset missing / preset has no entry).
-        Assert(itemCount == 40, "catalog item count matches the shipped wiring table (34 + 6 mood reset entries: 2 actions + 4 reasons): " + itemCount);
+        // Count pin, updated with the help-coverage pass: the catalog gained one entry per Playback
+        // behaviour row (us/basic-tuning/scale-cooldown|scale-talking|scale-population), the attenuation
+        // status/range read-out (us/attenuation-editor/status) and the Help drawer toggle
+        // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item.
+        Assert(itemCount == 44, "catalog item count matches the shipped wiring table (44 items incl. the three per-row basic-tuning entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

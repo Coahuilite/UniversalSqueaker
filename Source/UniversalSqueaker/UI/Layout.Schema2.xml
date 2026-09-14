@@ -13,8 +13,14 @@
     </Density>
   </Styles>
   <Column Id="page-root" Gap="8" Padding="12">
-    <Row Id="body-row" Gap="12">
-      <Column Id="nav-column" Width="192" Fill="true">
+    <!-- Responsive footer for the drawer. The closed window is 600 wide (WindowChromeLayout), i.e.
+         536 inner here, and Breakpoint 500 keeps that a two-column Row in BOTH drawer states - the
+         same Row at 736/1024 and the shipped three columns once the drawer opens; only 480/320 fall
+         below it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill
+         containers instead of three squeezed columns. The help column itself is toggled by a layout
+         VARIANT (UsLayoutVariants), never by Tab. -->
+    <Row Id="body-row" Gap="12" Breakpoint="500" Narrow="Column">
+      <Column Id="nav-column" Width="160" Fill="true">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
       <Scroll Id="content-scroll" Fill="true" Gap="8">

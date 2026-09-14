@@ -121,6 +121,8 @@ internal static class Program
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
         Step("rich dynamic data measure + draw", RichDynamicDataMeasureAndDraw);
         Step("800px three-column mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
+        Step("retractable right-side help drawer", () => HelpDrawerLaneTests.RunAll());
+        Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
         Step("settings window uses the pageUnavailable failure model", SettingsWindowPageUnavailableModel);
@@ -146,6 +148,7 @@ internal static class Program
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
         Step("overlay draw failure does not double-reserve the row cursor", OverlayDrawFailureDoesNotDoubleReserveRow);
         Step("closing settings window does not affect overlay", ClosingSettingsWindowDoesNotAffectOverlay);
+        Step("width + language layout evidence sweep (1024/736/480/320, EN/ZH)", WidthAndLanguageEvidenceSweep);
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
     }
@@ -164,6 +167,9 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
         host.Bindings.Invoke("set-tab", "Tuning");
+        // The covered element this lane asserts against is the help panel, which only exists while the
+        // drawer is expanded (the shipped default is retracted).
+        host.Bindings.Set("help-open", true);
         Rect viewport = new(0f, 0f, 800f, 600f);
         host.DrawChecked(viewport);
 
@@ -485,6 +491,9 @@ internal static class Program
 
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
+        // The inspector column only exists while the drawer is expanded, and the shipped default is
+        // retracted, so the lane expands it explicitly before it measures the declared width.
+        host.Bindings.Set("help-open", true);
         foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
         {
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
@@ -671,11 +680,15 @@ internal static class Program
         using UiHost claimedHost = UsKernelSettingsHost.Create(claimedFake, new StubMetrics());
         claimedHost.Session.ClaimHover("us/page-title/apply");
         claimedHost.Bindings.Invoke("set-tab", "Overview");
+        // The help panel is the probe surface; the shipped drawer default is retracted, so both hosts
+        // must expand it before the panel exists to measure.
+        claimedHost.Bindings.Set("help-open", true);
         float claimedHeight = claimedHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
 
         var plainFake = new RecordingSettingsSource { RichData = true };
         using UiHost plainHost = UsKernelSettingsHost.Create(plainFake, new StubMetrics());
         plainHost.Bindings.Invoke("set-tab", "Overview");
+        plainHost.Bindings.Set("help-open", true);
         float plainHeight = plainHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
 
         Assert(claimedHeight > 0f && plainHeight > 0f, "both hosts must lay out a help panel");
@@ -798,7 +811,7 @@ internal static class Program
     /// harness cannot drift from the window by replaying it wrong, and it no longer needs the source
     /// to clear anything.
     /// </summary>
-    private static void DrawWithPointer(UiHost host, Rect viewport, Vector2 pointer)
+    internal static void DrawWithPointer(UiHost host, Rect viewport, Vector2 pointer)
     {
         Event e = Event.KeyboardEvent("dummy");
         e.type = EventType.Repaint;
@@ -1022,6 +1035,16 @@ internal static class Program
 
         // Creation succeeded => every kind in the real resource resolved through the real US/core
         // registries and every widget's Validate passed against the real typed binding table.
+        //
+        // The live root list is the variant matching the page state, and the shipped default is the
+        // RETRACTED drawer (task-10), so the closed tree carries every declared kind except the help
+        // panel. Both directions are asserted: expanding must install the full shipped kind set.
+        var closedKinds = new HashSet<string>(StringComparer.Ordinal);
+        CollectKinds(host.Manifest.Roots, closedKinds);
+        Assert(!closedKinds.Contains("us/help-panel"),
+            "the retracted default must omit the help panel from the live root list");
+
+        host.Bindings.Set("help-open", true);
         var kinds = new HashSet<string>(StringComparer.Ordinal);
         CollectKinds(host.Manifest.Roots, kinds);
         foreach ((string id, string kind) in ExpectedWidgets)
@@ -1184,10 +1207,111 @@ internal static class Program
             "scroll-to forwards the target into the session scroll-target state");
     }
 
+    /// <summary>
+    /// The brief's required width/localization evidence: the real production page is measured and
+    /// DRAWN at the four logical widths in both shipped language tables, with the help drawer open and
+    /// closed, and one text artifact records what the harness actually measured. It is an evidence and
+    /// sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal overflow,
+    /// a dead content viewport, or a closed drawer that still reserves help width.
+    /// </summary>
+    private static void WidthAndLanguageEvidenceSweep()
+    {
+        float[] widths = { 1024f, 736f, 480f, 320f };
+        string[] languages = { "English", "ChineseSimplified" };
+        string outDir = Path.Combine(EvidenceRoot(), "dist", "ui-evidence");
+        Directory.CreateDirectory(outDir);
+        var lines = new List<string>();
+        lines.Add("# US settings layout sweep (harness-measured, StubMetrics; not real RimWorld pixels)");
+        lines.Add("viewport | lang | drawer | nav.w | content.w | help.w | contentArea.w | overflow | fitFindings");
+        int violations = 0;
+        foreach (string language in languages)
+        {
+            SetTranslatorResolver(ReadKeyedTable(language));
+            var metrics = new StubMetrics();
+            var reports = new List<UiOverflowReport>();
+            UiFitAudit.Attach(metrics, reports.Add);
+            UiFitAudit.Enabled = true;
+            try
+            {
+                foreach (float width in widths)
+                {
+                    foreach (bool open in new[] { true, false })
+                    {
+                        var fake = new RecordingSettingsSource { RichData = true };
+                        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+                        UiFitAudit.Reset();
+                        reports.Clear();
+                        host.Bindings.Invoke("set-tab", "Overview");
+                        host.Bindings.Set("help-open", open);
+                        // A scroll position can only be written for an element an arrange has already
+                        // created, so the sweep arranges once, pins the centre column to its top, and
+                        // then arranges the frame it records and draws (the same probe pattern the
+                        // focused lanes use).
+                        host.MeasureAndArrange(new Vector2(width, 600f));
+                        SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, 600f));
+                        host.DrawChecked(new Rect(0f, 0f, width, 600f));
+
+                        Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
+                        Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
+                        bool hasHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
+                        Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
+                        bool overflow = contentArea.width > content.width + 0.5f;
+
+                        lines.Add(width.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " | "
+                            + language + " | " + (open ? "open" : "closed")
+                            + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                            + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                            + " | help=" + (hasHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                            + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                            + " | overflow=" + overflow
+                            + " | fit=" + reports.Count);
+
+                        if (!open && hasHelp) violations++;
+                        if (overflow) violations++;
+                        if (content.width <= 1f) violations++;
+                    }
+                }
+            }
+            finally
+            {
+                UiFitAudit.Detach();
+                UiFitAudit.Enabled = false;
+                reports.Clear();
+            }
+        }
+
+        SetTranslatorResolver(null);
+        string artifact = Path.Combine(outDir, "layout-sweep.txt");
+        File.WriteAllLines(artifact, lines);
+        Console.WriteLine("[evidence] width/language sweep written to " + artifact);
+        foreach (string line in lines) Console.WriteLine("  " + line);
+        Assert(violations == 0,
+            "the width/language evidence sweep found " + violations + " geometry violation(s) "
+            + "(closed drawer still reserving help width, horizontal content overflow, or a dead content viewport); see " + artifact);
+    }
+
+    /// <summary>Repository root for evidence artifacts, found the same way the UI-logic lane finds it.</summary>
+    private static string EvidenceRoot()
+    {
+        DirectoryInfo? dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        for (int i = 0; i < 8 && dir != null; i++)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "scripts", "verify-local.ps1"))) return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        return AppDomain.CurrentDomain.BaseDirectory;
+    }
     private static void ThreeViewportMeasureAndDraw()
     {
         var fake = new RecordingSettingsSource();
         using UiHost host = UsKernelSettingsHost.Create(fake);
+
+        // The shipped drawer default is RETRACTED (task-10: the window opens narrow). This lane is
+        // about the three-column page at the reference viewports, so it expands the drawer explicitly
+        // before asserting the help column is arranged.
+        host.Bindings.Set("help-open", true);
 
         // The maintainer-specified safe-area sizes (window ≈ 60-75% of the three reference
         // resolutions, floored at 800x600).
@@ -1204,7 +1328,7 @@ internal static class Program
                 "content scroll viewport is usable at " + viewport + " (got " + contentScroll + ")");
 
             Rect navColumn = snapshot.RectById["nav"];
-            Assert(Math.Abs(navColumn.width - 192f) < 0.5f, "nav column keeps its declared 192 width at " + viewport);
+            Assert(Math.Abs(navColumn.width - 160f) < 0.5f, "nav column keeps its declared 160 width at " + viewport);
             Assert(snapshot.ScrollContents.ContainsKey("content-scroll"), "content scroll content rect present at " + viewport);
 
             Rect footer = snapshot.RectById["footer"];
@@ -1548,17 +1672,27 @@ internal static class Program
         }
     }
 
-    /// <summary>Arranges and draws the Overview page at 800x600 with one language table, returning the timing card's height.</summary>
+    /// <summary>
+    /// The narrow band this lane was proven in. Task-10's RETRACTED default plus the 160px nav column
+    /// leave the centre column 800 - 24 - 160 - 12 = 604 at the reference viewport, where the shipped
+    /// English multiplier label now fits on one line, so the two-heights claim would assert nothing
+    /// there. A 580-wide page reproduces the pre-task-10 band exactly (580 - 24 - 160 - 12 = 384, the
+    /// centre width the original measurement was taken at), which keeps this lane's failure sensitivity
+    /// instead of re-baselining the wrap away.
+    /// </summary>
+    private const float NarrowTimingPageWidth = 580f;
+
+    /// <summary>Arranges and draws the Overview page at the narrow band with one language table, returning the timing card's height.</summary>
     private static float TimingCardHeight(Dictionary<string, string> table, StubMetrics metrics)
     {
         SetTranslatorResolver(table);
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
-        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(800f, 600f));
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(NarrowTimingPageWidth, 600f));
         float height = snapshot.RectById.TryGetValue("timing", out Rect rect) ? rect.height : 0f;
         // Draw it too: a band that only measures tall enough is not the fix, and a tripped element would
         // fail here (UsTripGuard) instead of leaving this step's silence unexplained.
-        host.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        host.DrawChecked(new Rect(0f, 0f, NarrowTimingPageWidth, 600f));
         return height;
     }
 
@@ -1652,7 +1786,7 @@ internal static class Program
         return value.Length <= 28 ? value : value.Substring(0, 28) + "…";
     }
 
-    private static Dictionary<string, string> ReadKeyedTable(string languageFolder)
+    internal static Dictionary<string, string> ReadKeyedTable(string languageFolder)
     {
         string path = System.IO.Path.Combine(
             RepoRoot(), "1.6", "Languages", languageFolder, "Keyed", "UniversalSqueaker.xml");
@@ -1685,7 +1819,7 @@ internal static class Program
     /// because the field exists only on the stub: call sites compile against the Krafs reference
     /// assembly, which has no such member.
     /// </summary>
-    private static void SetTranslatorResolver(Dictionary<string, string>? table)
+    internal static void SetTranslatorResolver(Dictionary<string, string>? table)
     {
         System.Reflection.FieldInfo? field = typeof(Translator).GetField(
             "Resolve", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -1706,6 +1840,10 @@ internal static class Program
     {
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
+
+        // The shipped drawer default is retracted, so the lane expands it first: the reset contract
+        // covers BOTH page scrolls, and the help scroll only exists while the drawer is arranged.
+        host.Bindings.Set("help-open", true);
 
         // 0.4.0 keys scroll positions by element node, so arranging first is what makes the ids
         // addressable; without it the writes below would be silent no-ops and this lane would assert
@@ -1740,7 +1878,10 @@ internal static class Program
         Assert(bindings.Get<IReadOnlyList<VoicePackDomainView>>("xenotype-domains").Count == 1, "xenotype-domains reads the rich list");
         Assert(bindings.Get<VoicePackDomainView?>("selected-domain").HasValue, "selected-domain reads the rich selected domain");
         Assert(bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes").Count == 2, "action-scopes reads the rich list");
-        Assert(bindings.Get<IReadOnlyList<MoodTuningRowView>>("mood-rows").Count == 2, "mood-rows reads the rich list");
+        // The rich fixture carries ALL FOUR product moods (Good/Neutral/Bad/Break): the closure pass
+        // requires every mood card to be covered, so the count below tracks the fixture, not a
+        // two-mood sample.
+        Assert(bindings.Get<IReadOnlyList<MoodTuningRowView>>("mood-rows").Count == 4, "mood-rows reads the rich four-mood list");
         Assert(bindings.Get<IReadOnlyList<TuningDomainOptionView>>("tuning-domains").Count == 2, "tuning-domains reads the rich list");
 
         // Full dynamic draw: every workspace with non-empty lists at the reference viewports.
@@ -2062,7 +2203,7 @@ internal static class Program
         }
     }
 
-    private sealed class StubMetrics : FerriteLib.UiKit.Kernel.ITextMetrics
+    internal sealed class StubMetrics : FerriteLib.UiKit.Kernel.ITextMetrics
     {
         /// <summary>
         /// Wrap-aware on purpose. The fit audit's height axis compares this against the band it was

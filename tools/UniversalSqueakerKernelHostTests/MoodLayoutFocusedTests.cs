@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -9,15 +10,24 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// Focused geometry/interaction tests for the 800-wide three-column Mood layout.
+/// Focused geometry/interaction tests for the Mood Modulation cards (outcome 3).
 ///
-/// The expected contract (already agreed with the geometry agent):
-///  - at 800px the scope-tree card body is narrow (~288-304px), so each Mood row uses a STACKED layout;
-///  - row label at top-left, Auto button at top-right, three full-width stepper lines (Pitch, Volume,
-///    Jitter) stacked vertically;
-///  - every stepper line still has slider + number field + minus/plus;
-///  - the old narrow branch that omitted sliders/numbers/minus/plus must be gone;
-///  - minus/plus, slider, number commit and Auto all still invoke typed "set-mood-tuning".
+/// The contract these steps pin:
+///  - ALL FOUR product moods (Good / Neutral / Bad / Break) get one card each, asserted per card, not just
+///    as a total: the rich fixture carries all four with distinct values. Header (localized US.Mood.* name
+///    + both reset controls), then three parameter blocks in the order Pitch, Volume, Jitter;
+///  - every card's header resolves through its own US.Mood.&lt;Mood&gt; Keyed entry in EN and ZH: replacing
+///    that one entry with a probe changes what the layout measures and grows that card;
+///  - each block is ONE two-line template - label, minus, numeric field and plus on the first line, the
+///    slider on the second, starting at the numeric group's left edge;
+///  - every parameter of every mood registers a slider, a number field, a minus and a plus: no layout
+///    branch may omit a control (the old MoodRowMode Stacked branch did);
+///  - the parameter label is drawn in a band at least as wide as the RESOLVED localized label (EN and
+///    ZH, through Program.SetTranslatorResolver + Program.ReadKeyedTable), never in the old fixed 14px
+///    band that clipped Pitch/Volume/Jitter;
+///  - slider track widths are equal within 1px across parameters and moods;
+///  - values round-trip through slider/number/plus-minus/reset with the unchanged ranges, 0.05 step,
+///    0.### format, element id and typed actions.
 ///
 /// Rect capture strategy:
 ///  - the test host has no InternalsVisibleTo, so the internal static UiNative test seams are set by
@@ -31,8 +41,58 @@ internal static class MoodLayoutFocusedTests
 {
     private const float ViewportWidth = 800f;
     private const float ViewportHeight = 600f;
+    // Below the manifest's 500px three-column breakpoint the body row resolves to a stacked column, so
+    // this viewport (480 - 24 page padding = 456 inner < 500) exercises the narrow page shape; the card
+    // itself is then the full column width.
+    private const float NarrowViewportWidth = 480f;
+    // A viewport comfortably inside the three-column row regime (724 inner 700 >= the row's 500
+    // breakpoint) - the narrow-card regime this lane exists for.
+    private const float NarrowestThreeColumnWidth = 724f;
+    // The rich RecordingSettingsSource fixture mirrors production: one mood row per SqueakMood, i.e.
+    // ALL FOUR product moods (Good / Neutral / Bad / Break), each with distinct effective values.
+    private const int MoodCount = 4;
+    /// <summary>Parameter blocks per mood card: Pitch, Volume, Jitter, in draw order.</summary>
+    private const int ParameterCount = 3;
+    /// <summary>Controls one mood card registers: 3 sliders + 3 fields + 6 small buttons + 2 resets.</summary>
+    private const int ControlsPerMoodCard = 14;
+    // Mirrored widget geometry, like the reset widths below: the standard numeric group (minus + field +
+    // plus) and the gap between the measured label column and that group.
+    private const float StandardControlGroupWidth = 88f;
+    private const float LabelColumnGap = 6f;
+    // Left padding the widget gives a mood row inside the card body.
+    private const float ParameterContentInset = 10f;
     private const float Epsilon = 0.5f;
     private const float RectMatchEpsilon = 0.01f;
+
+    private static readonly string[] ParameterLabelKeys =
+    {
+        "US.Tuning.Factor.Pitch",
+        "US.Tuning.Factor.Volume",
+        "US.Tuning.Factor.Jitter",
+    };
+
+    /// <summary>The four product moods in production enumeration order (Enum.GetValues(typeof(SqueakMood))).</summary>
+    private static readonly SqueakMood[] ProductMoods =
+    {
+        SqueakMood.Good,
+        SqueakMood.Neutral,
+        SqueakMood.Bad,
+        SqueakMood.Break,
+    };
+
+    /// <summary>
+    /// Effective Pitch/Volume/Jitter values the rich fixture carries, index-aligned with
+    /// <see cref="ProductMoods"/>. Mirrored from RecordingSettingsSource.BuildRichView; kept distinct so
+    /// each card can be identified by the value its own controls write. The per-card routing step below
+    /// pins the -0.05 step on each of these numbers, so a card silently reusing another card's row fails.
+    /// </summary>
+    private static readonly float[][] FixtureMoodValues =
+    {
+        new[] { 1f, 1f, 0f },        // Good
+        new[] { 0.9f, 0.8f, 0.1f },  // Neutral
+        new[] { 0.75f, 0.6f, 0.2f }, // Bad
+        new[] { 0.6f, 0.4f, 0.3f },  // Break
+    };
 
     private static FieldInfo ButtonOverrideField => RequireField("ButtonOverride", typeof(Func<Rect, bool>));
     private static FieldInfo SliderOverrideField => RequireField("SliderOverride", typeof(Func<Rect, float, float, float, float>));
@@ -40,14 +100,26 @@ internal static class MoodLayoutFocusedTests
 
     public static int RunAll()
     {
-        Step("800px mood stacked geometry", NarrowMoodRowStackedGeometry);
+        Step("two-line mood template geometry at 800px", () => TwoLineMoodTemplateGeometry(ViewportWidth, ViewportHeight));
+        Step("every parameter of every mood registers slider/field/minus/plus", EveryParameterRegistersEveryControl);
+        Step("parameter labels fit their bands (EN and ZH, resolved labels)", ParameterLabelBandsCoverResolvedLabels);
+        Step("parameter labels do not overflow the drawn bands (EN and ZH)", ParameterLabelsFitTheirBands);
+        Step("all four product mood cards are present and route their own mood", AllFourProductMoodCardsArePresent);
+        Step("all four mood cards share one row width and control geometry", AllFourCardsShareOneRowGeometry);
+        Step("every mood header resolves through its own US.Mood key (EN and ZH)", MoodHeadersResolveThroughKeyedEntries);
+        Step("the label column follows a longer resolved label", LabelColumnFollowsTheResolvedLabelWidth);
+        Step("slider track widths are equal across parameters and moods", SliderTrackWidthsAreEqual);
+        Step("narrow viewport keeps the template and every control", () => TwoLineMoodTemplateGeometry(NarrowViewportWidth, 720f));
+        Step("narrowest three-column card keeps every control", () => TwoLineMoodTemplateGeometry(NarrowestThreeColumnWidth, 720f));
+        Step("736px three-column card keeps the template", () => TwoLineMoodTemplateGeometry(736f, 720f));
+        Step("mood value round-trip clamps to the factor ranges", MoodValueRoundTripClampsToFactorRanges);
         Step("minus click routes typed set-mood-tuning", MinusClickRoutesTypedMoodTuning);
         Step("plus click routes typed set-mood-tuning", PlusClickRoutesTypedMoodTuning);
         Step("slider change routes typed set-mood-tuning", SliderChangeRoutesTypedMoodTuning);
         Step("number commit routes typed set-mood-tuning", NumberCommitRoutesTypedMoodTuning);
         Step("auto button routes typed set-mood-tuning", AutoButtonRoutesTypedMoodTuning);
         Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
-        Step("reset controls route in all three mood layout modes", ResetRoutingAcrossLayoutModes);
+        Step("reset controls route at every card width", ResetRoutingAcrossCardWidths);
         Step("a popup-covered reset control yields the click", CoveredControlYieldsTheClick);
         Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
 
@@ -219,11 +291,513 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    private static void NarrowMoodRowStackedGeometry()
+    /// <summary>
+    /// The whole card template at one viewport width: presence, containment, and the repeated two-line
+    /// parameter block. Mode-agnostic on purpose - the template is the contract whether the card keeps the
+    /// label beside the numeric group or has to give the label its own line.
+    /// </summary>
+    private static void TwoLineMoodTemplateGeometry(float viewportWidth, float viewportHeight)
     {
-        using CaptureContext ctx = CreateCaptureContext();
-        AssertMoodGeometry(ctx);
-        AssertMoodRowStacking(ctx);
+        using CaptureContext ctx = CreateCaptureContext(viewportWidth, viewportHeight);
+        AssertMoodGeometry(ctx, viewportWidth);
+        AssertTemplateAlignment(ctx, viewportWidth);
+
+        // Recorded evidence: the measured card, the row the parameters get, the observed label column and
+        // one slider track. The sweeps assert these relationships; these numbers are what the Lead can cite.
+        List<MoodRowControls> measured = ctx.Mood.Grouped(MoodCount);
+        Console.WriteLine("[mood] viewport " + viewportWidth.ToString("0", CultureInfo.InvariantCulture)
+            + "px: card=" + ctx.CardPageRect.width.ToString("0.#", CultureInfo.InvariantCulture)
+            + "px row=" + MoodRowWidth(ctx).ToString("0.#", CultureInfo.InvariantCulture)
+            + "px labelColumn=" + ParameterLabelColumn(ctx).ToString("0.#", CultureInfo.InvariantCulture)
+            + "px sliderX=" + measured[0].Sliders[0].x.ToString("0.#", CultureInfo.InvariantCulture)
+            + "px sliderW=" + measured[0].Sliders[0].width.ToString("0.#", CultureInfo.InvariantCulture)
+            + "px minusX=" + measured[0].Minus[0].x.ToString("0.#", CultureInfo.InvariantCulture)
+            + "px sliderY-minusY=" + (measured[0].Sliders[0].y - measured[0].Minus[0].y).ToString("0.#", CultureInfo.InvariantCulture) + "px");
+    }
+
+    /// <summary>
+    /// The core presence contract, stated per parameter of every mood rather than as a total: for each
+    /// fixture mood card and each of the three parameters, the real draw pass must register a minus, a
+    /// plus, a numeric field and a slider, and both reset controls. A layout branch that drops any control
+    /// (the retired MoodRowMode.Stacked shape dropped sliders/fields/minus/plus) fails here even if totals
+    /// happened to add up.
+    /// </summary>
+    private static void EveryParameterRegistersEveryControl()
+    {
+        using CaptureContext ctx = CreateCaptureContext(NarrowestThreeColumnWidth, 720f);
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected one control group per mood card, got " + rows.Count);
+        for (int m = 0; m < rows.Count; m++)
+        {
+            for (int p = 0; p < 3; p++)
+            {
+                string where = "mood card " + m + ", parameter " + p;
+                Assert(rows[m].Minus[p].width > 1f, where + " must register a minus button");
+                Assert(rows[m].Plus[p].width > 1f, where + " must register a plus button");
+                Assert(rows[m].Fields[p].width > 1f, where + " must register a numeric field");
+                Assert(rows[m].Sliders[p].width > 1f, where + " must register a slider");
+                Assert(rows[m].Minus[p].x < rows[m].Plus[p].x, where + ": the minus must precede the plus");
+            }
+
+            Assert(rows[m].ResetDefault.Count == 1 && rows[m].ResetDefault[0].width > 1f,
+                "mood card " + m + " must register its \"reset to default\" control");
+            Assert(rows[m].ResetPreset.Count == 1 && rows[m].ResetPreset[0].width > 1f,
+                "mood card " + m + " must register its \"reset to preset\" control");
+        }
+    }
+
+    /// <summary>Slider track widths and left edges must be identical (within 1px) across all TWELVE
+    /// parameter blocks - the three parameters of all four fixture moods.</summary>
+    private static void SliderTrackWidthsAreEqual()
+    {
+        using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight);
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        var widths = new List<float>();
+        var lefts = new List<float>();
+        foreach (MoodRowControls row in rows)
+        {
+            for (int p = 0; p < 3; p++)
+            {
+                widths.Add(row.Sliders[p].width);
+                lefts.Add(row.Sliders[p].x);
+            }
+        }
+
+        Assert(widths.Count == MoodCount * ParameterCount, "expected twelve mood sliders across the four fixture moods, got " + widths.Count);
+        Assert(widths.Max() - widths.Min() < 1f,
+            "slider track widths must be equal within 1px across every parameter and mood (min " + widths.Min() + ", max " + widths.Max() + ")");
+        Assert(lefts.Max() - lefts.Min() < 1f,
+            "slider tracks must start at the same x across every parameter and mood (min " + lefts.Min() + ", max " + lefts.Max() + ")");
+    }
+
+    /// <summary>
+    /// The label fix, measured in both shipped languages through the harness language tables. The label band
+    /// is the space between the parameter content's left edge and the numeric group's left edge; when the
+    /// card is too narrow to carry that column beside the controls the label gets its own full-width line.
+    /// Either way the band must be at least as wide as the widest RESOLVED label of the three parameters.
+    /// </summary>
+    private static void ParameterLabelBandsCoverResolvedLabels()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            var metrics = new Program.StubMetrics();
+            Program.SetTranslatorResolver(table);
+            try
+            {
+                float widest = 0f;
+                foreach (string key in ParameterLabelKeys)
+                {
+                    Assert(table.ContainsKey(key), language + ": the shipped Keyed table must carry " + key);
+                    widest = Math.Max(widest, metrics.MeasureWidth(table[key], UiFont.Tiny));
+                }
+
+                using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight, metrics);
+                float column = ParameterLabelColumn(ctx);
+                float rowWidth = MoodRowWidth(ctx);
+                Console.WriteLine("[mood-i18n] " + language + ": widestResolvedLabel="
+                    + widest.ToString("0.#", CultureInfo.InvariantCulture) + "px labelColumn="
+                    + column.ToString("0.#", CultureInfo.InvariantCulture) + "px row="
+                    + rowWidth.ToString("0.#", CultureInfo.InvariantCulture) + "px");
+                float band = column > 0.5f ? column : rowWidth;
+                Assert(band + 0.01f >= widest,
+                    language + ": the parameter label band must be at least the resolved label width (band " + band
+                    + "px for the widest resolved label " + widest + "px; label column " + column + "px, card row " + rowWidth + "px)");
+                Assert(column < rowWidth + 0.01f,
+                    language + ": the measured label column must stay inside the card row (column " + column + "px, row " + rowWidth + "px)");
+
+                // Per card: each of the four product mood cards must offer the same band. The shared
+                // measurement above is the source of the column, so this loop is what proves every card
+                // actually consumed it (a card that re-introduced its own narrower band fails here).
+                List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+                Assert(rows.Count == MoodCount, language + ": expected " + MoodCount + " mood cards, got " + rows.Count);
+                for (int m = 0; m < rows.Count; m++)
+                {
+                    float cardColumn = rows[m].Minus[0].x - ParameterContentX(ctx);
+                    float cardBand = cardColumn > 0.5f ? cardColumn : rowWidth;
+                    Assert(cardBand + 0.01f >= widest,
+                        language + ": mood card " + m + " (" + ProductMoods[m] + ") must give its parameter labels a band at least the resolved label width (band "
+                        + cardBand + "px for the widest resolved label " + widest + "px; card column " + cardColumn + "px)");
+                }
+                Console.WriteLine("[mood-i18n] " + language + ": per-card label bands all >= " + widest.ToString("0.#", CultureInfo.InvariantCulture)
+                    + "px across " + rows.Count + " cards");
+            }
+            finally
+            {
+                Program.SetTranslatorResolver(null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Failure sensitivity for the measured column: with a deliberately long translated Pitch label the
+    /// observed column must widen beyond what the shipped English labels need. A widget that kept a fixed
+    /// band (the old 14px) cannot move the column at all, so this fails for the exact regression the task
+    /// describes - and it fails on the RESOLVED label, not on the key text.
+    /// </summary>
+    private static void LabelColumnFollowsTheResolvedLabelWidth()
+    {
+        Dictionary<string, string> english = Program.ReadKeyedTable("English");
+        var probe = new Dictionary<string, string>(english, StringComparer.Ordinal)
+        {
+            ["US.Tuning.Factor.Pitch"] = "Pitch (semitones) (probe)"
+        };
+
+        var metrics = new Program.StubMetrics();
+        float shipped;
+        Program.SetTranslatorResolver(english);
+        try
+        {
+            using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight, metrics);
+            shipped = ParameterLabelColumn(ctx);
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+
+        Program.SetTranslatorResolver(probe);
+        try
+        {
+            using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight, metrics);
+            float column = ParameterLabelColumn(ctx);
+            float need = metrics.MeasureWidth(probe["US.Tuning.Factor.Pitch"], UiFont.Tiny);
+            Console.WriteLine("[mood-probe] shippedLabelColumn=" + shipped.ToString("0.#", CultureInfo.InvariantCulture)
+                + "px probeLabelColumn=" + column.ToString("0.#", CultureInfo.InvariantCulture)
+                + "px probeLabel=" + need.ToString("0.#", CultureInfo.InvariantCulture) + "px");
+            Assert(column > 0.5f, "the 800px card must keep the label column beside the numeric group for this probe");
+            Assert(column + 0.01f >= need,
+                "the label column must follow the resolved label width (column " + column + "px, probe label " + need + "px)");
+            Assert(column > shipped + 20f,
+                "a longer resolved Pitch label must widen the column (shipped " + shipped + "px, probe " + column + "px)");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
+    /// <summary>
+    /// The regression this task exists for, driven through the real fit audit: with the shipped language
+    /// table loaded and the harness metrics attached to both the host and the audit, drawing the Tuning page
+    /// must produce NO finding for any of the three resolved parameter labels. The pre-fix widget drew them
+    /// into a fixed 14x18px band and the audit reported exactly
+    /// "Height needs 54px, has 18px at width 14px, text=Pitch|Volume|Jitter".
+    /// </summary>
+    private static void ParameterLabelsFitTheirBands()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            var metrics = new Program.StubMetrics();
+            var reports = new List<UiOverflowReport>();
+            UiFitAudit.Attach(metrics, reports.Add);
+            UiFitAudit.Enabled = true;
+            Program.SetTranslatorResolver(table);
+            try
+            {
+                UiFitAudit.Reset();
+                reports.Clear();
+                using (UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics))
+                {
+                    host.Bindings.Invoke("set-tab", "Tuning");
+                    host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
+                    host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+                }
+
+                var offenders = new List<string>();
+                foreach (UiOverflowReport report in reports)
+                {
+                    foreach (string key in ParameterLabelKeys)
+                    {
+                        if (table.TryGetValue(key, out string? text) && string.Equals(report.Text, text, StringComparison.Ordinal))
+                        {
+                            offenders.Add(report.ElementPath + "/" + report.Axis + " needs " + report.Needed
+                                + "px, has " + report.Available + "px at width " + report.RectWidth + "px, text=\"" + report.Text + "\"");
+                        }
+                    }
+                }
+
+                Assert(offenders.Count == 0,
+                    language + ": the parameter labels must fit the bands they are measured into; findings: " + string.Join(" | ", offenders));
+            }
+            finally
+            {
+                UiFitAudit.Detach();
+                Program.SetTranslatorResolver(null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// EVERY mood header comes from its own resolved US.Mood.* entry, in both shipped languages - not from
+    /// a language literal and not from the row's debug display name. Three facts per mood per language:
+    /// <list type="number">
+    /// <item>the shipped table's value for US.Mood.Mood is the text the layout measures (and the raw key
+    /// literal never reaches the text ruler, so the header really went through the translation seam);</item>
+    /// <item>replacing ONLY that mood's entry with a unique probe makes the probe the measured header text -
+    /// a hard-coded "Good"/良好 or another mood's entry can never produce the probe;</item>
+    /// <item>the probe is long enough to wrap the header band, and the card grows by more than 10px, so the
+    /// resolved value is measured into the card's height, not merely drawn.</item>
+    /// </list>
+    /// The fixture's DisplayNames are the enum names ("Good" ... "Break"), which are identical to the
+    /// English values: a widget that drew DisplayName cannot satisfy fact 2 in either language.
+    /// </summary>
+    private static void MoodHeadersResolveThroughKeyedEntries()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            foreach (SqueakMood mood in ProductMoods)
+            {
+                string key = "US.Mood." + mood;
+                Assert(table.ContainsKey(key), language + ": the shipped Keyed table must carry " + key);
+                string resolved = table[key];
+
+                // (1) The shipped table: the resolved value must be measured into the layout, and the
+                //     unresolved key literal must not be.
+                var shippedMetrics = new RecordingMetrics();
+                float shippedHeight = TuningCardHeight(table, shippedMetrics);
+                Assert(shippedHeight > 0f, "the Tuning workspace must place the scope-tree card");
+                Assert(shippedMetrics.Measured(resolved),
+                    language + ": the " + mood + " card header must be measured from the resolved " + key
+                    + " value \"" + resolved + "\"");
+                Assert(!shippedMetrics.Measured(key),
+                    language + ": the raw key literal " + key + " must never reach the text ruler (the header must resolve through the translation seam)");
+
+                // (2)+(3) Per-mood key sensitivity: only this mood's entry changes. The unique probe must
+                //         be the measured header text and must grow the card.
+                string probe = "US-MOOD-PROBE-" + mood.ToString().ToUpperInvariant() + new string('p', 140);
+                var probeTable = new Dictionary<string, string>(table, StringComparer.Ordinal) { [key] = probe };
+                var probeMetrics = new RecordingMetrics();
+                float probeHeight = TuningCardHeight(probeTable, probeMetrics);
+                Assert(probeMetrics.Measured(probe),
+                    language + ": the " + mood + " card header must follow " + key + " (the unique probe was never measured, so the header is not keyed)");
+                Assert(!probeMetrics.Measured(resolved),
+                    language + ": after " + key + " was replaced, the shipped value \"" + resolved + "\" must no longer be the measured header");
+                Assert(probeHeight > shippedHeight + 10f,
+                    language + ": a longer resolved " + key + " value must be measured into the card header (shipped "
+                    + shippedHeight + "px, probe " + probeHeight + "px) - a hard-coded name cannot grow");
+
+                Console.WriteLine("[mood-header] " + language + " " + mood + ": key=" + key + " resolved=\"" + resolved
+                    + "\" resolvedMeasured=true rawKeyMeasured=false probeMeasured=true cardHeight="
+                    + shippedHeight.ToString("0.#", CultureInfo.InvariantCulture) + "px->"
+                    + probeHeight.ToString("0.#", CultureInfo.InvariantCulture) + "px");
+            }
+        }
+    }
+
+    /// <summary>Arranges and draws the Tuning card with one language table, recording every measured text,
+    /// and returns its measured height.</summary>
+    private static float TuningCardHeight(Dictionary<string, string> table, RecordingMetrics metrics)
+    {
+        Program.SetTranslatorResolver(table);
+        try
+        {
+            using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics);
+            host.Bindings.Invoke("set-tab", "Tuning");
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
+            host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
+            return snapshot.RectById.TryGetValue("scope-tree", out Rect card) ? card.height : 0f;
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
+    /// <summary>
+    /// The user-facing requirement this lane was extended for: ALL FOUR product mood cards exist, in
+    /// production order, and each one owns its own mood identity and distinct fixture values. Identity is
+    /// measured, not assumed: pressing the Pitch minus of card m must write exactly the mood of card m with
+    /// the value FixtureMoodValues[m][0] - 0.05. The pre-extension two-row fixture cannot run this step at
+    /// all; a widget that reused one row for two cards, or emitted them in another order, fails here.
+    /// </summary>
+    private static void AllFourProductMoodCardsArePresent()
+    {
+        using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight);
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected " + MoodCount + " product mood cards, got " + rows.Count);
+        Assert(ProductMoods.Length == MoodCount, "ProductMoods must list one mood per fixture card");
+
+        for (int m = 0; m < MoodCount; m++)
+        {
+            SqueakMood mood = ProductMoods[m];
+            MoodRowControls row = rows[m];
+            Assert(row.Minus.Count == ParameterCount && row.Plus.Count == ParameterCount
+                && row.Fields.Count == ParameterCount && row.Sliders.Count == ParameterCount,
+                "mood card " + m + " (" + mood + ") must carry all three parameter blocks");
+            Assert(row.ResetDefault.Count == 1 && row.ResetPreset.Count == 1,
+                "mood card " + m + " (" + mood + ") must carry both reset controls");
+
+            ClearLastMood(ctx.Source);
+            try
+            {
+                Rect minus = row.Minus[0];
+                SetButtonOverride(rect => RectMatches(rect, minus));
+                SetSliderOverride((rect, value, min, max) => value);
+                SetTextFieldOverride((rect, text) => text);
+                ctx.Host.DrawChecked(ctx.Viewport);
+                Assert(ctx.Source.LastMood == mood,
+                    "the Pitch minus of card " + m + " must write " + mood + " (got " + ctx.Source.LastMood + ")");
+                float expected = FixtureMoodValues[m][0] - 0.05f;
+                Assert(FloatEquals(ctx.Source.LastMoodValue, expected),
+                    "card " + m + " (" + mood + ") must start from its own distinct Pitch " + FixtureMoodValues[m][0]
+                    + " and step to " + expected.ToString("0.####", CultureInfo.InvariantCulture)
+                    + " (got " + ctx.Source.LastMoodValue + ")");
+            }
+            finally
+            {
+                ClearOverrides();
+                ClearLastMood(ctx.Source);
+            }
+
+            Console.WriteLine("[mood-card] card " + m + " = " + mood
+                + ": pitch=" + FixtureMoodValues[m][0].ToString("0.####", CultureInfo.InvariantCulture)
+                + " volume=" + FixtureMoodValues[m][1].ToString("0.####", CultureInfo.InvariantCulture)
+                + " jitter=" + FixtureMoodValues[m][2].ToString("0.####", CultureInfo.InvariantCulture)
+                + "; parameterBlocks=" + ParameterCount
+                + " resetControls=" + (row.ResetDefault.Count + row.ResetPreset.Count));
+        }
+    }
+
+    /// <summary>
+    /// The four cards must share ONE row width and ONE control geometry. Measured on the drawn rects:
+    /// every card's row starts at the same left edge (the label column) and its slider ends at the card
+    /// content's right edge, so each card's row width is the same number; the minus/field/plus widths and
+    /// their left/right edges are identical; and the slider track (x and width) is identical across all
+    /// twelve parameter instances. This is the per-card counterpart of the aggregate slider-width step.
+    /// </summary>
+    private static void AllFourCardsShareOneRowGeometry()
+    {
+        using CaptureContext ctx = CreateCaptureContext(ViewportWidth, ViewportHeight);
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected " + MoodCount + " product mood cards, got " + rows.Count);
+
+        // The widget gives the parameter row the card content's full width: the row starts at the card body
+        // left plus the widget left padding, and the slider track ends at the card body right minus that
+        // same padding (the widget's own right inset), which is the same number on every card.
+        float rowLeft = ParameterContentX(ctx);
+        float rowRight = ctx.CardLocalRect.xMax - UsCardLayout.Padding - ParameterContentInset;
+        float rowWidth = rowRight - rowLeft;
+        MoodRowControls reference = rows[0];
+        for (int m = 0; m < rows.Count; m++)
+        {
+            float cardRowWidth = rows[m].Sliders[0].xMax - rowLeft;
+            Assert(Math.Abs(cardRowWidth - rowWidth) <= 1f,
+                "mood card " + m + " (" + ProductMoods[m] + ") must have the same row width as every other card (card "
+                + cardRowWidth + "px vs " + rowWidth + "px)");
+
+            for (int p = 0; p < ParameterCount; p++)
+            {
+                string where = "mood card " + m + " (" + ProductMoods[m] + "), parameter " + p;
+                Assert(Math.Abs(rows[m].Minus[p].x - reference.Minus[p].x) <= 0.01f,
+                    where + ": the row must start at the shared label column (minus x " + rows[m].Minus[p].x + " vs " + reference.Minus[p].x + ")");
+                Assert(Math.Abs(rows[m].Fields[p].x - reference.Fields[p].x) <= 0.01f
+                    && Math.Abs(rows[m].Plus[p].x - reference.Plus[p].x) <= 0.01f
+                    && Math.Abs(rows[m].Plus[p].xMax - reference.Plus[p].xMax) <= 0.01f,
+                    where + ": the minus/field/plus group must share one left and right edge across all four cards");
+                Assert(Math.Abs(rows[m].Minus[p].width - reference.Minus[p].width) <= 0.01f
+                    && Math.Abs(rows[m].Fields[p].width - reference.Fields[p].width) <= 0.01f
+                    && Math.Abs(rows[m].Plus[p].width - reference.Plus[p].width) <= 0.01f,
+                    where + ": minus/field/plus widths must be identical across all four cards");
+                Assert(Math.Abs(rows[m].Sliders[p].x - reference.Sliders[p].x) <= 0.01f
+                    && Math.Abs(rows[m].Sliders[p].width - reference.Sliders[p].width) <= 0.01f,
+                    where + ": the slider track must share one x and one width across all four cards");
+                Assert(Math.Abs(rows[m].Sliders[p].xMax - rowRight) <= 1f,
+                    where + ": the slider track must reach the row's right edge (the row fills the card content; track ends at "
+                    + rows[m].Sliders[p].xMax + ", row right " + rowRight + ")");
+                Assert(rows[m].Sliders[p].y > rows[m].Minus[p].y + 1f,
+                    where + ": the slider must be on the line below the minus/field/plus line");
+            }
+        }
+
+        Console.WriteLine("[mood-row] all " + rows.Count + " cards share rowWidth=" + rowWidth.ToString("0.#", CultureInfo.InvariantCulture)
+            + "px (content x " + rowLeft.ToString("0.#", CultureInfo.InvariantCulture)
+            + " -> " + rowRight.ToString("0.#", CultureInfo.InvariantCulture)
+            + "); minusW=" + reference.Minus[0].width.ToString("0.#", CultureInfo.InvariantCulture)
+            + " fieldW=" + reference.Fields[0].width.ToString("0.#", CultureInfo.InvariantCulture)
+            + " plusW=" + reference.Plus[0].width.ToString("0.#", CultureInfo.InvariantCulture)
+            + " sliderW=" + reference.Sliders[0].width.ToString("0.#", CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Value round-trip: the slider, the number field and the +/- controls still route typed
+    /// "set-mood-tuning" writes with the unchanged ranges - Pitch 0.5-2, Volume 0.1-2, Jitter 0-0.5 - the
+    /// unchanged 0.05 step and the clamped endpoints.
+    /// </summary>
+    private static void MoodValueRoundTripClampsToFactorRanges()
+    {
+        // Plus routes to the parameter it belongs to (Volume) and applies the 0.05 step.
+        using (CaptureContext ctx = CreateCaptureContext())
+        {
+            MoodRowControls row = ctx.Mood.Grouped(MoodCount)[0];
+            ClearLastMood(ctx.Source);
+            try
+            {
+                SetButtonOverride(rect => RectMatches(rect, row.Plus[1]));
+                SetSliderOverride((rect, value, min, max) => value);
+                SetTextFieldOverride((rect, text) => text);
+                ctx.Host.DrawChecked(ctx.Viewport);
+                Assert(ctx.Source.LastMood == SqueakMood.Good && ctx.Source.LastMoodFactor == SqueakMoodFactor.Volume,
+                    "the plus of the second parameter must write the Volume factor of the first card");
+                Assert(FloatEquals(ctx.Source.LastMoodValue, 1.05f), "Volume plus must step 1.0 up to 1.05");
+            }
+            finally
+            {
+                ClearOverrides();
+                ClearLastMood(ctx.Source);
+            }
+        }
+
+        // Minus at the Jitter floor (the fixture's jitter is 0) clamps to 0 instead of going negative.
+        using (CaptureContext ctx = CreateCaptureContext())
+        {
+            MoodRowControls row = ctx.Mood.Grouped(MoodCount)[0];
+            ClearLastMood(ctx.Source);
+            try
+            {
+                SetButtonOverride(rect => RectMatches(rect, row.Minus[2]));
+                SetSliderOverride((rect, value, min, max) => value);
+                SetTextFieldOverride((rect, text) => text);
+                ctx.Host.DrawChecked(ctx.Viewport);
+                Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Jitter, "the minus of the third parameter must write the Jitter factor");
+                Assert(FloatEquals(ctx.Source.LastMoodValue, 0f), "Jitter minus at the 0 floor must clamp to 0");
+            }
+            finally
+            {
+                ClearOverrides();
+                ClearLastMood(ctx.Source);
+            }
+        }
+
+        // A number commit above the Pitch maximum clamps to 2; below the minimum clamps to 0.5.
+        (string Text, float Expected, string Why)[] commits =
+        {
+            ("9", 2f, "above the maximum"),
+            ("-5", 0.5f, "below the minimum"),
+        };
+        foreach (var commit in commits)
+        {
+            using CaptureContext ctx = CreateCaptureContext();
+            MoodRowControls row = ctx.Mood.Grouped(MoodCount)[0];
+            ClearLastMood(ctx.Source);
+            try
+            {
+                SetButtonOverride(rect => false);
+                SetSliderOverride((rect, value, min, max) => value);
+                SetTextFieldOverride((rect, text) => RectMatches(rect, row.Fields[0]) ? commit.Text : text);
+                ctx.Host.DrawChecked(ctx.Viewport);
+                Assert(ctx.Source.LastMoodFactor == SqueakMoodFactor.Pitch, "the first number field must target Pitch");
+                Assert(FloatEquals(ctx.Source.LastMoodValue, commit.Expected),
+                    "a Pitch commit " + commit.Why + " must clamp to " + commit.Expected + " (got " + ctx.Source.LastMoodValue + ")");
+            }
+            finally
+            {
+                ClearOverrides();
+                ClearLastMood(ctx.Source);
+            }
+        }
     }
 
     private static void MinusClickRoutesTypedMoodTuning()
@@ -346,64 +920,128 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    private static void AssertMoodGeometry(CaptureContext ctx)
+    /// <summary>
+    /// Card-level presence and containment at one viewport: the Tuning page carries exactly the mood
+    /// controls of ALL FOUR product mood cards (twelve sliders and twelve number fields, twenty-four
+    /// minus/plus, and both reset controls per rich fixture mood), all inside the scope-tree card and none
+    /// overlapping. A layout branch that omitted a control - the old narrow/stacked shape dropped sliders,
+    /// fields and minus/plus - fails the counts here, and a fixture that quietly lost the third or fourth
+    /// mood fails the per-card loop below instead of balancing out in the totals.
+    /// </summary>
+    private static void AssertMoodGeometry(CaptureContext ctx, float viewportWidth)
     {
-        // Both bounds stay: the lower one still catches a collapsed card, the upper one now carries the
-        // 176px inspector column. At 800 the row is nav 192 + inspector 176 + gaps, and the scope-tree card
-        // page rect comes out at 368 (the three-column, narrow-card regime this lane exists for); the
-        // behavioural pins below (stacked rows, 6 sliders/fields, 12 steppers) were re-verified at 368.
-        Assert(ctx.CardPageRect.width >= 260f && ctx.CardPageRect.width <= 400f,
-            "scope-tree card must be a narrow card at 800px three-column layout (got width " + ctx.CardPageRect.width + ")");
+        string at = " at " + viewportWidth + "px";
+        int sliders = MoodCount * ParameterCount;    // four moods x three parameters = 12
+        int small = MoodCount * ParameterCount * 2;  // minus + plus per parameter = 24
+        Assert(ctx.CardPageRect.width > 100f && ctx.CardPageRect.width <= viewportWidth,
+            "scope-tree card must be a real, non-collapsed card" + at + " (got width " + ctx.CardPageRect.width + ")");
 
-        // The Tuning workspace should contain exactly the six mood sliders/fields (all inside the
-        // scope-tree card). This also proves the old narrow branch (no sliders/fields/minus/plus) is gone.
-        Assert(ctx.CapturedSliderCount == 6, "captured slider count must be 6 in Tuning at 800px (got " + ctx.CapturedSliderCount + ")");
-        Assert(ctx.CapturedTextFieldCount == 6, "captured number-field count must be 6 in Tuning at 800px (got " + ctx.CapturedTextFieldCount + ")");
-        Assert(ctx.Mood.Sliders.Count == 6, "each of 2 rich mood rows must have 3 sliders (got " + ctx.Mood.Sliders.Count + " total)");
-        Assert(ctx.Mood.Fields.Count == 6, "each of 2 rich mood rows must have 3 number fields (got " + ctx.Mood.Fields.Count + " total)");
-        Assert(ctx.Mood.SmallButtons.Count == 12, "each of 2 rich mood rows must have 6 minus/plus buttons (got " + ctx.Mood.SmallButtons.Count + " total)");
-        Assert(ctx.Mood.AutoButtons.Count == 2, "each of 2 rich mood rows must have 1 \"reset to default\" control (got " + ctx.Mood.AutoButtons.Count + " total)");
-        Assert(ctx.Mood.PresetButtons.Count == 2, "each of 2 rich mood rows must have 1 \"reset to preset\" control (got " + ctx.Mood.PresetButtons.Count + " total)");
+        Assert(ctx.CapturedSliderCount == sliders, "captured slider count must be " + sliders + " in Tuning" + at + " (got " + ctx.CapturedSliderCount + ")");
+        Assert(ctx.CapturedTextFieldCount == sliders, "captured number-field count must be " + sliders + " in Tuning" + at + " (got " + ctx.CapturedTextFieldCount + ")");
+        Assert(ctx.Mood.Sliders.Count == sliders, "each of the " + MoodCount + " rich mood rows must have " + ParameterCount + " sliders (got " + ctx.Mood.Sliders.Count + " total)");
+        Assert(ctx.Mood.Fields.Count == sliders, "each of the " + MoodCount + " rich mood rows must have " + ParameterCount + " number fields (got " + ctx.Mood.Fields.Count + " total)");
+        Assert(ctx.Mood.SmallButtons.Count == small, "each rich mood row must have 6 minus/plus buttons (got " + ctx.Mood.SmallButtons.Count + " total)");
+        Assert(ctx.Mood.AutoButtons.Count == MoodCount, "each rich mood row must have 1 \"reset to default\" control (got " + ctx.Mood.AutoButtons.Count + " total)");
+        Assert(ctx.Mood.PresetButtons.Count == MoodCount, "each rich mood row must have 1 \"reset to preset\" control (got " + ctx.Mood.PresetButtons.Count + " total)");
 
         Assert(ctx.CapturedSliderCount == ctx.Mood.Sliders.Count,
-            "all captured sliders must be inside the scope-tree card (no slider outside the card)");
+            "all captured sliders must be inside the scope-tree card (no slider outside the card)" + at);
         Assert(ctx.CapturedTextFieldCount == ctx.Mood.Fields.Count,
-            "all captured number fields must be inside the scope-tree card (no field outside the card)");
+            "all captured number fields must be inside the scope-tree card (no field outside the card)" + at);
+
+        // Per card, not just as a total: three complete parameter blocks and both reset controls on each
+        // of the four product moods.
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected one control group per mood card" + at + ", got " + rows.Count);
+        for (int m = 0; m < rows.Count; m++)
+        {
+            MoodRowControls row = rows[m];
+            Assert(row.Sliders.Count == ParameterCount && row.Fields.Count == ParameterCount
+                && row.Minus.Count == ParameterCount && row.Plus.Count == ParameterCount,
+                "mood card " + m + " (" + ProductMoods[m] + ")" + at + " must carry " + ParameterCount
+                + " complete parameter blocks (minus " + row.Minus.Count + ", plus " + row.Plus.Count
+                + ", fields " + row.Fields.Count + ", sliders " + row.Sliders.Count + ")");
+            Assert(row.ResetDefault.Count == 1 && row.ResetPreset.Count == 1,
+                "mood card " + m + " (" + ProductMoods[m] + ")" + at + " must carry both reset controls (got "
+                + row.ResetDefault.Count + "/" + row.ResetPreset.Count + ")");
+        }
 
         List<Rect> allMood = ctx.Mood.All().ToList();
-        Assert(allMood.Count == 28, "two stacked rows must yield 28 mood controls (2 * (3 sliders + 3 fields + 6 small buttons + 2 reset controls)); got " + allMood.Count + " = " + ctx.Mood.Sliders.Count + " sliders + " + ctx.Mood.Fields.Count + " fields + " + ctx.Mood.SmallButtons.Count + " small + " + ctx.Mood.AutoButtons.Count + " default + " + ctx.Mood.PresetButtons.Count + " preset");
+        Assert(allMood.Count == MoodCount * ControlsPerMoodCard,
+            "four mood cards must yield " + MoodCount * ControlsPerMoodCard + " mood controls (" + MoodCount
+            + " * (3 sliders + 3 fields + 6 small buttons + 2 reset controls)); got "
+            + allMood.Count + " = " + ctx.Mood.Sliders.Count + " sliders + " + ctx.Mood.Fields.Count + " fields + "
+            + ctx.Mood.SmallButtons.Count + " small + " + ctx.Mood.AutoButtons.Count + " default + " + ctx.Mood.PresetButtons.Count + " preset");
 
         foreach (Rect local in allMood)
         {
             Rect page = ToPageRect(local, ctx.ContentViewport, ctx.ContentScrollPosition);
-            Assert(IsInside(page, ctx.CardPageRect), "mood control must be inside the scope-tree card: " + page);
+            Assert(IsInside(page, ctx.CardPageRect), "mood control must be inside the scope-tree card" + at + ": " + page);
         }
 
-        AssertNoOverlaps(allMood, "mood control rects must not overlap");
+        AssertNoOverlaps(allMood, "mood control rects must not overlap" + at);
         AssertAutoDoesNotOverlapSteppers(ctx.Mood);
     }
 
-    private static void AssertMoodRowStacking(CaptureContext ctx)
+    /// <summary>
+    /// The two-line parameter template itself, on every mood and every parameter: minus, numeric field and
+    /// plus share the first line in that order; the slider is on the line below and starts at the numeric
+    /// group's left edge; every slider track has the same x and the same width (within 1px) across
+    /// Pitch/Volume/Jitter and across the mood cards.
+    /// </summary>
+    private static void AssertTemplateAlignment(CaptureContext ctx, float viewportWidth)
     {
-        List<Rect> sliders = ctx.Mood.Sliders.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-        Assert(sliders.Count == 6, "expected six mood sliders before stacking assertion");
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected " + MoodCount + " mood cards at " + viewportWidth + "px, got " + rows.Count);
 
-        List<Rect> row1Sliders = sliders.Take(3).ToList();
-        List<Rect> row2Sliders = sliders.Skip(3).Take(3).ToList();
+        bool first = true;
+        float firstSliderX = 0f;
+        float firstSliderWidth = 0f;
+        for (int m = 0; m < rows.Count; m++)
+        {
+            MoodRowControls row = rows[m];
+            Assert(row.Minus.Count == 3 && row.Plus.Count == 3 && row.Fields.Count == 3 && row.Sliders.Count == 3,
+                "mood card " + m + " must carry exactly three parameter blocks at " + viewportWidth + "px (minus "
+                + row.Minus.Count + ", plus " + row.Plus.Count + ", fields " + row.Fields.Count + ", sliders " + row.Sliders.Count + ")");
 
-        AssertStackedSliders(row1Sliders, "first mood row");
-        AssertStackedSliders(row2Sliders, "second mood row");
-    }
+            for (int p = 0; p < 3; p++)
+            {
+                string where = "mood card " + m + ", parameter " + p + " at " + viewportWidth + "px";
+                Rect minus = row.Minus[p];
+                Rect field = row.Fields[p];
+                Rect plus = row.Plus[p];
+                Rect slider = row.Sliders[p];
 
-    private static void AssertStackedSliders(IReadOnlyList<Rect> sliders, string rowName)
-    {
-        Assert(sliders.Count == 3, rowName + " must have 3 sliders");
-        Assert(sliders[0].y < sliders[1].y - Epsilon && sliders[1].y < sliders[2].y - Epsilon,
-            rowName + " sliders must be vertically stacked with distinct Y values");
-        Assert(Math.Abs(sliders[0].x - sliders[1].x) < 1f && Math.Abs(sliders[1].x - sliders[2].x) < 1f,
-            rowName + " stacked sliders must share the same X (full-width stepper lines)");
-        Assert(Math.Abs(sliders[0].width - sliders[1].width) < 1f && Math.Abs(sliders[1].width - sliders[2].width) < 1f,
-            rowName + " stacked sliders must share the same width");
+                Assert(Math.Abs(minus.y - field.y) < 0.01f && Math.Abs(field.y - plus.y) < 0.01f,
+                    where + ": minus, numeric field and plus must share the first line");
+                Assert(minus.xMax <= field.x + 0.01f && field.xMax <= plus.x + 0.01f,
+                    where + ": the first line order must be minus, numeric field, plus");
+
+                Assert(slider.y + Epsilon >= minus.yMax,
+                    where + ": the slider must sit on the line below the numeric group (slider y " + slider.y + ", numeric line bottom " + minus.yMax + ")");
+                Assert(slider.y > minus.y + 1f, where + ": the slider must not share the numeric line");
+                Assert(Math.Abs(slider.x - minus.x) <= 1f,
+                    where + ": the slider must start at the numeric group's left edge (slider x " + slider.x + ", minus x " + minus.x + ")");
+                Assert(slider.xMax + 0.01f >= plus.xMax,
+                    where + ": the slider track must span at least the numeric group");
+
+                if (first)
+                {
+                    firstSliderX = slider.x;
+                    firstSliderWidth = slider.width;
+                    first = false;
+                }
+                else
+                {
+                    Assert(Math.Abs(slider.x - firstSliderX) < 1f,
+                        where + ": every slider must share the same x (got " + slider.x + " vs " + firstSliderX + ")");
+                    Assert(Math.Abs(slider.width - firstSliderWidth) < 1f,
+                        where + ": every slider track must share the same width within 1px (got " + slider.width + " vs " + firstSliderWidth + ")");
+                }
+            }
+        }
+
+        Assert(!first, "the template alignment check must have measured at least one slider");
     }
 
     private static void AssertNoOverlaps(IReadOnlyList<Rect> rects, string message)
@@ -428,10 +1066,15 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    private static CaptureContext CreateCaptureContext(float viewportWidth = ViewportWidth, float viewportHeight = ViewportHeight)
+    private static CaptureContext CreateCaptureContext(
+        float viewportWidth = ViewportWidth,
+        float viewportHeight = ViewportHeight,
+        Program.StubMetrics? metrics = null)
     {
         var source = new RecordingSettingsSource { RichData = true };
-        UiHost host = UsKernelSettingsHost.Create(source);
+        // A lane that installs a translator table must also inject the harness metrics model: this is the
+        // same instance the expectations are measured with, so layout and assertion cannot disagree.
+        UiHost host = metrics == null ? UsKernelSettingsHost.Create(source) : UsKernelSettingsHost.Create(source, metrics);
         try
         {
             host.Bindings.Invoke("set-tab", "Tuning");
@@ -472,7 +1115,8 @@ internal static class MoodLayoutFocusedTests
                 raw.Sliders.Count,
                 raw.TextFields.Count,
                 mood,
-                new Rect(0f, 0f, viewportWidth, viewportHeight));
+                new Rect(0f, 0f, viewportWidth, viewportHeight),
+                metrics);
         }
         catch
         {
@@ -494,6 +1138,45 @@ internal static class MoodLayoutFocusedTests
             mood.AutoButtons,
             mood.PresetButtons);
         return mood;
+    }
+
+    /// <summary>
+    /// Left edge of the parameter content inside the captured card, in the same scroll-content-local space
+    /// the UiNative overrides record in: the card body starts one card padding in, and the mood rows one
+    /// widget left padding further (both mirrored below, like the reset widths).
+    /// </summary>
+    private static float ParameterContentX(CaptureContext ctx)
+    {
+        return ctx.CardLocalRect.x + UsCardLayout.Padding + ParameterContentInset;
+    }
+
+    /// <summary>Width one mood row has inside the captured card.</summary>
+    private static float MoodRowWidth(CaptureContext ctx)
+    {
+        return Math.Max(1f, ctx.CardLocalRect.width - UsCardLayout.Padding * 2f - ParameterContentInset * 2f);
+    }
+
+    /// <summary>
+    /// The observed label band of a captured card: the space between the parameter content's left edge and
+    /// the numeric group's left edge (the minus button), which the widget sizes from the resolved localized
+    /// labels. Zero when the card moved the label onto its own full-width line. Every parameter must share
+    /// the same column, so one measurement serves all three.
+    /// </summary>
+    private static float ParameterLabelColumn(CaptureContext ctx)
+    {
+        List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
+        Assert(rows.Count == MoodCount, "expected " + MoodCount + " mood cards, got " + rows.Count);
+        float first = rows[0].Minus[0].x;
+        foreach (MoodRowControls row in rows)
+        {
+            for (int p = 0; p < 3; p++)
+            {
+                Assert(Math.Abs(row.Minus[p].x - first) < 0.01f,
+                    "every parameter must share the measured label column (minus x " + row.Minus[p].x + " vs " + first + ")");
+            }
+        }
+
+        return first - ParameterContentX(ctx);
     }
 
     private static bool IsSmallButton(Rect rect)
@@ -582,7 +1265,7 @@ internal static class MoodLayoutFocusedTests
     {
         using CaptureContext ctx = CreateCaptureContext();
         List<Rect> presets = ctx.Mood.PresetButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-        Assert(presets.Count == 2, "expected 2 \"reset to preset\" controls before the interaction");
+        Assert(presets.Count == MoodCount, "expected " + MoodCount + " \"reset to preset\" controls before the interaction");
         ctx.Source.LastMoodPresetReset = null;
         ctx.Source.LastMoodPresetResetCount = 0;
 
@@ -606,38 +1289,31 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// Both reset controls must route their typed write in every mood layout mode. The 800px pass is the
-    /// stacked shape; 1000px is wide enough for the steppers to share a line but not for both controls,
-    /// so they wrap to a second line; 1920px is the inline shape. The mode is asserted from the captured
-    /// geometry, so a layout change that silently collapses two modes into one fails here.
+    /// Both reset controls must route their typed write at every card width: the narrowest three-column
+    /// card, the 800px reference, a mid width and the wide layout. The header may keep the controls beside
+    /// the mood name or drop them to their own line(s) - only the placement changes, never the semantics.
+    /// "Reset to default" is a CLEAR (set-mood-tuning with Clear and a null value); "reset to preset" is a
+    /// typed reset-mood-to-preset WRITE. The two-line template must hold at every width as well.
     /// </summary>
-    private static void ResetRoutingAcrossLayoutModes()
+    private static void ResetRoutingAcrossCardWidths()
     {
-        (float Width, float Height, string Mode)[] cases =
+        float[] widths = { NarrowestThreeColumnWidth, ViewportWidth, 1000f, 1920f };
+        foreach (float width in widths)
         {
-            (800f, 600f, "stacked"),
-            (1000f, 700f, "second-line"),
-            (1920f, 1080f, "inline"),
-        };
-
-        foreach ((float width, float height, string mode) in cases)
-        {
-            using CaptureContext ctx = CreateCaptureContext(width, height);
-            List<Rect> sliders = ctx.Mood.Sliders.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            using CaptureContext ctx = CreateCaptureContext(width, 720f);
             List<Rect> defaults = ctx.Mood.AutoButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
             List<Rect> presets = ctx.Mood.PresetButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-            Assert(sliders.Count >= 3 && defaults.Count == 2 && presets.Count == 2,
-                mode + " pass must expose the mood steppers and both reset controls, got "
-                + sliders.Count + "/" + defaults.Count + "/" + presets.Count);
+            Assert(defaults.Count == MoodCount && presets.Count == MoodCount,
+                width + "px must expose both reset controls per mood card, got " + defaults.Count + "/" + presets.Count);
 
-            // The three modes differ by WHERE the controls sit, not by whether they sit together:
-            // stacked = steppers on their own lines; second-line = steppers share a line and the controls
-            // are pushed to the next one; inline = controls share the steppers' line.
-            bool steppersStacked = Math.Abs(sliders[0].y - sliders[1].y) > 1f;
-            bool controlsShareStepperLine = Math.Abs(defaults[0].y - sliders[0].y) < 1f;
-            string observed = steppersStacked ? "stacked" : controlsShareStepperLine ? "inline" : "second-line";
-            Assert(observed == mode, width + "px must select the " + mode + " mood layout, got " + observed
-                + " (card body " + ctx.CardLocalRect.width + "px)");
+            foreach (MoodRowControls row in ctx.Mood.Grouped(MoodCount))
+            {
+                for (int p = 0; p < 3; p++)
+                {
+                    Assert(row.Sliders[p].y > row.Minus[p].y + 1f && Math.Abs(row.Sliders[p].x - row.Minus[p].x) <= 1f,
+                        width + "px: the two-line template must hold for every parameter (slider below its numeric group)");
+                }
+            }
 
             try
             {
@@ -647,8 +1323,9 @@ internal static class MoodLayoutFocusedTests
                 SetSliderOverride((rect, value, min, max) => value);
                 SetTextFieldOverride((rect, text) => text);
                 ctx.Host.DrawChecked(ctx.Viewport);
-                Assert(ctx.Source.LastMood == SqueakMood.Good && ctx.Source.LastMoodFactor == SqueakMoodFactor.Clear,
-                    mode + ": the \"reset to default\" control must write Clear for the first rich row");
+                Assert(ctx.Source.LastMood == SqueakMood.Good && ctx.Source.LastMoodFactor == SqueakMoodFactor.Clear
+                    && !ctx.Source.LastMoodValue.HasValue,
+                    width + "px: the \"reset to default\" control must write a null-valued Clear for the first mood card");
 
                 // Reset to preset: the typed re-write.
                 ctx.Source.LastMoodPresetReset = null;
@@ -656,7 +1333,7 @@ internal static class MoodLayoutFocusedTests
                 SetButtonOverride(rect => RectMatches(rect, presets[0]));
                 ctx.Host.DrawChecked(ctx.Viewport);
                 Assert(ctx.Source.LastMoodPresetReset == SqueakMood.Good && ctx.Source.LastMoodPresetResetCount == 1,
-                    mode + ": the \"reset to preset\" control must route exactly one reset-mood-to-preset action");
+                    width + "px: the \"reset to preset\" control must route exactly one reset-mood-to-preset action");
             }
             finally
             {
@@ -689,7 +1366,10 @@ internal static class MoodLayoutFocusedTests
         {
             SetButtonOverride(rect =>
             {
-                if (rect.width >= 160f && rect.height >= 50f) navRects.Add(rect);
+                // The compact nav card measures ~144x49 under the stub metrics (160 column minus the
+                // widget's 2x8 padding), so the old >=160/>=50 filter no longer matches it: keep enough
+                // width to exclude support-row controls and a height floor that still isolates rows.
+                if (rect.width >= 100f && rect.height >= 30f) navRects.Add(rect);
                 return false;
             });
             ctx.Host.DrawChecked(ctx.Viewport);
@@ -786,7 +1466,7 @@ internal static class MoodLayoutFocusedTests
     private static Rect FirstAutoRect(CaptureContext ctx)
     {
         List<Rect> autos = ctx.Mood.AutoButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-        Assert(autos.Count == 2, "expected 2 Auto buttons before Auto interaction");
+        Assert(autos.Count == MoodCount, "expected " + MoodCount + " Auto buttons before Auto interaction");
         return autos[0];
     }
 
@@ -912,6 +1592,34 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
+    /// <summary>
+    /// An <see cref="ITextMetrics"/> that delegates measurement to the harness stub and records every
+    /// string handed to it. The header-resolution step uses it as the ruler the layout must consult: a mood
+    /// name appears here only if the widget measured it, which is how "the header resolves through
+    /// US.Mood.&lt;Mood&gt;" is observed instead of inferred from the widget source.
+    /// </summary>
+    private sealed class RecordingMetrics : ITextMetrics
+    {
+        private readonly Program.StubMetrics inner = new();
+        private readonly HashSet<string> measured = new(StringComparer.Ordinal);
+
+        public bool Measured(string text) => measured.Contains(text ?? "");
+
+        public float MeasureText(string text, UiFont font, float width)
+        {
+            string value = text ?? "";
+            measured.Add(value);
+            return inner.MeasureText(value, font, width);
+        }
+
+        public float MeasureWidth(string text, UiFont font)
+        {
+            string value = text ?? "";
+            measured.Add(value);
+            return inner.MeasureWidth(value, font);
+        }
+    }
+
     private sealed class CapturedRects
     {
         public List<Rect> Buttons { get; } = new();
@@ -935,6 +1643,54 @@ internal static class MoodLayoutFocusedTests
             foreach (Rect rect in AutoButtons) yield return rect;
             foreach (Rect rect in PresetButtons) yield return rect;
         }
+
+        /// <summary>
+        /// The captured controls grouped into mood cards and, inside each card, into the three parameter
+        /// blocks in draw order (Pitch, Volume, Jitter). Draw order is the widget's contract: within a
+        /// parameter the minus is drawn before the plus, and the three parameter blocks run top to bottom.
+        /// </summary>
+        public List<MoodRowControls> Grouped(int moodCount)
+        {
+            List<Rect> buttons = SmallButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> fields = Fields.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> sliders = Sliders.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> defaults = AutoButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+            List<Rect> presets = PresetButtons.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+
+            var rows = new List<MoodRowControls>();
+            for (int m = 0; m < moodCount; m++)
+            {
+                var row = new MoodRowControls();
+                for (int p = 0; p < 3; p++)
+                {
+                    int button = (m * 3 + p) * 2;
+                    row.Minus.Add(buttons[button]);
+                    row.Plus.Add(buttons[button + 1]);
+                    row.Fields.Add(fields[m * 3 + p]);
+                    row.Sliders.Add(sliders[m * 3 + p]);
+                }
+
+                // A capture whose injected metrics model differs from the library's static reset-width
+                // probe cannot tell the reset controls apart by width. Grouping must not require them;
+                // the reset presence assertion lives in EveryParameterRegistersEveryControl.
+                if (m < defaults.Count) row.ResetDefault.Add(defaults[m]);
+                if (m < presets.Count) row.ResetPreset.Add(presets[m]);
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+    }
+
+    /// <summary>One mood card's controls, indexed by parameter (0 = Pitch, 1 = Volume, 2 = Jitter).</summary>
+    private sealed class MoodRowControls
+    {
+        public List<Rect> Minus { get; } = new();
+        public List<Rect> Plus { get; } = new();
+        public List<Rect> Fields { get; } = new();
+        public List<Rect> Sliders { get; } = new();
+        public List<Rect> ResetDefault { get; } = new();
+        public List<Rect> ResetPreset { get; } = new();
     }
 
     private sealed class CaptureContext : IDisposable
@@ -949,8 +1705,10 @@ internal static class MoodLayoutFocusedTests
         public int CapturedSliderCount { get; }
         public int CapturedTextFieldCount { get; }
         public MoodControls Mood { get; }
-        /// <summary>Viewport this pass drew at; the two wide modes are driven through it.</summary>
+        /// <summary>Viewport this pass drew at.</summary>
         public Rect Viewport { get; }
+        /// <summary>Metrics model the host measured with when the lane injected one (localized steps).</summary>
+        public Program.StubMetrics? Metrics { get; }
 
         public CaptureContext(
             RecordingSettingsSource source,
@@ -963,7 +1721,8 @@ internal static class MoodLayoutFocusedTests
             int capturedSliderCount,
             int capturedTextFieldCount,
             MoodControls mood,
-            Rect viewport)
+            Rect viewport,
+            Program.StubMetrics? metrics)
         {
             Source = source;
             Host = host;
@@ -976,6 +1735,7 @@ internal static class MoodLayoutFocusedTests
             CapturedTextFieldCount = capturedTextFieldCount;
             Mood = mood;
             Viewport = viewport;
+            Metrics = metrics;
         }
 
         public void Dispose()

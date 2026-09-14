@@ -244,21 +244,28 @@ public static class UsKernelDraw
 
     public const float CheckboxInset = (CheckboxHit - CheckboxVisual) * 0.5f;
 
-    /// <summary>Right inset of the visual box from its row's right edge - part of the one placement rule.</summary>
-    public const float CheckboxRightInset = 34f;
+    /// <summary>Left offset of the 24px checkbox hit box from its row's right edge, chosen so the 18px
+    /// VISUAL box's right edge - not the hit box's - lands exactly on the shared control-column right
+    /// edge (<see cref="ControlColumnRightInset"/> + <see cref="CheckboxVisual"/> +
+    /// <see cref="CheckboxInset"/>). The hit box keeps its 24px and stays centred on the visual, so its
+    /// own right edge deliberately overhangs the column edge by <see cref="CheckboxInset"/> while the
+    /// drawn box agrees with the segmented control to the pixel.</summary>
+    public const float CheckboxRightInset = ControlColumnRightInset + CheckboxVisual + CheckboxInset;
 
     /// <summary>Radius 2 as this backend can express it: the four corner cells the outline stops short of.</summary>
     public const float CheckboxCornerCut = 2f;
 
     /// <summary>
-    /// The one placement rule for a checkbox in a row: the 24px hit box is vertically centred in the row,
-    /// and the 18px visual keeps a <see cref="CheckboxRightInset"/> right inset. Every call site goes
-    /// through this, which is what replaced four different hand-picked vertical offsets.
+    /// The one placement rule for a checkbox in a row: the 18px visual box is the box the player sees, so
+    /// IT is what terminates on the shared control-column right edge (<see cref="ControlColumnRect(Rect)"/>)
+    /// - a checkbox and the segmented control agree to the pixel. The 24px hit box is centred on the visual
+    /// (3px of pointer slack per side) and is vertically centred in the row. Every call site goes through
+    /// this, which is what replaced four different hand-picked vertical offsets.
     /// </summary>
     public static Rect CheckboxSlot(Rect row)
     {
         return new Rect(
-            row.xMax - CheckboxRightInset - CheckboxInset,
+            row.xMax - CheckboxRightInset,
             row.y + (row.height - CheckboxHit) * 0.5f,
             CheckboxHit,
             CheckboxHit);
@@ -362,6 +369,149 @@ public static class UsKernelDraw
         float hairline = Mathf.Max(1f, theme.Geometry.Hairline);
         UiThemeDraw.Solid(new Rect(row.x, row.yMax - hairline, row.width, hairline), theme.Divider);
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // The one support-row width contract for the Overview diagnostic/support sections.
+    //
+    // Every row is [label band | control column]. The label takes what is left of the row; the control
+    // column keeps one fixed width and one right edge across every row of a section and across the
+    // sibling sections (us/diagnostics, us/basic-tuning, us/timing, us/camera-indicator). The label
+    // width is derived from the ROW, never from the label, so a translation can never push a control
+    // sideways. Measure and Draw both take the geometry from here.
+    //
+    // Row height keeps the theme's density token as its floor (see RowVisualHeight/RowMinHit); a label
+    // that cannot fit the remaining width at one line grows the row instead of being clipped, which is
+    // the shape basic-tuning and timing already used. Alignment never depends on that height: the
+    // column's width and right edge are computed before any text is measured.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Right inset of the control column from the row's right edge - the single right edge
+    /// every support control terminates on (the segmented control, the checkbox slot, the timing number
+    /// fields and the timing stepper cluster).</summary>
+    public const float ControlColumnRightInset = 10f;
+
+    /// <summary>
+    /// The control column's one fixed width. Three equal segmented cells plus two
+    /// <see cref="SegmentedCellGap"/>s fit it exactly (66px cells, 54px of text band), so the widest
+    /// shipped cell label ("Disabled") keeps a margin against the real font and the column never has to
+    /// grow for a translation.
+    /// </summary>
+    public const float ControlColumnWidth = 210f;
+
+    /// <summary>Breathing room between the label band and the control column.</summary>
+    public const float ControlColumnLabelGap = 8f;
+
+    /// <summary>Gap between two segmented cells inside the column.</summary>
+    public const float SegmentedCellGap = 6f;
+
+    /// <summary>
+    /// The column rect for one row: the same width and the same right edge in every support row. At a
+    /// degenerate row width (a layout narrow enough that the column could not fit at all) the width is
+    /// clamped to what the row can hold so no control is ever drawn outside its own row; the right edge
+    /// never moves.
+    /// </summary>
+    public static Rect ControlColumnRect(Rect row)
+    {
+        float available = Mathf.Max(1f, row.width - RowLeftPadding - ControlColumnRightInset);
+        float width = Mathf.Min(ControlColumnWidth, available);
+        return new Rect(row.xMax - ControlColumnRightInset - width, row.y, width, row.height);
+    }
+
+    /// <summary>
+    /// Width left for a row's label once the control column is reserved. Depends on the row width only -
+    /// never on the label - which is what keeps a translation from resizing the column.
+    /// </summary>
+    public static float RowLabelWidth(float rowWidth)
+    {
+        float available = Mathf.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset);
+        float column = Mathf.Min(ControlColumnWidth, available);
+        return Mathf.Max(1f, rowWidth - RowLeftPadding - ControlColumnRightInset - column - ControlColumnLabelGap);
+    }
+
+    public static float RowLabelWidth(Rect row) => RowLabelWidth(row.width);
+
+    /// <summary>The row's label band: the remaining width, starting at the shared row text inset.</summary>
+    public static Rect RowLabelRect(Rect row, float height)
+    {
+        return new Rect(row.x + RowLeftPadding, row.y, RowLabelWidth(row), height);
+    }
+
+    /// <summary>
+    /// The support-row height: the density token as the floor, grown by the wrapped height of the label
+    /// measured against the row's own label band. Measure and Draw come through here so a row can never
+    /// size one band and draw another.
+    /// </summary>
+    public static float RowLabelHeight(float rowWidth, UiWidgetContext ctx, string text, UiFont font = UiFont.Small)
+    {
+        return Mathf.Max(RowVisualHeight(ctx), ctx.Metrics.MeasureText(text ?? "", font, RowLabelWidth(rowWidth)));
+    }
+
+    /// <summary>A measured band for text that is not a support row's label (the row's own stacked heading,
+    /// the timing interval caption): the wrapped height at <paramref name="width"/>, floored at
+    /// <paramref name="floor"/>.</summary>
+    public static float TextBandHeight(float width, UiWidgetContext ctx, string text, UiFont font, float floor)
+    {
+        return Mathf.Max(floor, ctx.Metrics.MeasureText(text ?? "", font, Mathf.Max(1f, width)));
+    }
+
+    /// <summary>One equal-width segmented cell inside the control column.</summary>
+    public static Rect SegmentedCellRect(Rect column, int index, int count)
+    {
+        if (count <= 0) return column;
+        float cell = SegmentedCellWidth(column.width, count);
+        return new Rect(column.x + index * (cell + SegmentedCellGap), column.y, cell, column.height);
+    }
+
+    /// <summary>Width of one equal segmented cell for a given column width.</summary>
+    public static float SegmentedCellWidth(float columnWidth, int count)
+    {
+        if (count <= 0) return Mathf.Max(1f, columnWidth);
+        return Mathf.Max(1f, (columnWidth - SegmentedCellGap * (count - 1)) / count);
+    }
+
+    /// <summary>Text band inside one segmented cell (the same inset SelectionButton uses).</summary>
+    public static float SegmentedCellLabelWidth(float columnWidth, int count)
+    {
+        return Mathf.Max(1f, SegmentedCellWidth(columnWidth, count) - SelectionButtonLabelInset * 2f);
+    }
+
+    /// <summary>
+    /// The three-choice support control: one segmented control whose total width IS the control column,
+    /// with equal cells that never size from a translated label. The display text is ellipsized into the
+    /// cell's own text band through the injected metric seam, so a language whose word for "Disabled" is
+    /// longer cuts deliberately instead of resizing the column. A cell whose text band is too small to
+    /// hold even an ellipsis draws no glyph at all (the degenerate-width case). Returns the clicked
+    /// option index, or -1.
+    /// </summary>
+    public static int SegmentedRow(
+        Rect column,
+        UiWidgetContext ctx,
+        IReadOnlyList<KeyValuePair<string, string>> options,
+        int selectedIndex)
+    {
+        if (options == null || options.Count == 0) return -1;
+
+        int clicked = -1;
+        float labelWidth = SegmentedCellLabelWidth(column.width, options.Count);
+        for (int i = 0; i < options.Count; i++)
+        {
+            Rect cell = SegmentedCellRect(column, i, options.Count);
+            HelpHover(cell, ctx, options[i].Value);
+            string display = labelWidth >= MinSegmentedLabelWidth
+                ? Ellipsized(options[i].Key ?? "", ctx, UiFont.Tiny, labelWidth)
+                : "";
+            if (SelectionButton(cell, ctx, display, ctx.Theme, i == selectedIndex))
+            {
+                clicked = i;
+            }
+        }
+
+        return clicked;
+    }
+
+    /// <summary>A cell narrower than this cannot hold even an ellipsized glyph, so the segmented row
+    /// draws its plane without text instead of reporting a width overflow in a 1px band.</summary>
+    public const float MinSegmentedLabelWidth = 12f;
 
     /// <param name="singleLine">
     /// Forwarded to the fitting audit. True for surfaces that must render on one line (dropdown trigger
@@ -574,6 +724,43 @@ public static class UsKernelDraw
     /// truncate identically.</summary>
     public static string Ellipsized(string text, UiWidgetContext ctx, UiFont font, float maxWidth)
         => EllipsizeToFit(text, maxWidth, ctx.Metrics, font);
+
+    /// <summary>
+    /// Shortens <paramref name="text"/> to the longest prefix that fits <paramref name="maxLines"/>
+    /// wrapped lines of <paramref name="font"/> at <paramref name="width"/>, appending an ellipsis.
+    /// The navigation cards reserve a fixed subtitle band, so a translation that needs more lines than
+    /// the band holds is cut here rather than resizing the card or drawing outside it. Returns the text
+    /// untouched when it already fits.
+    /// </summary>
+    public static string EllipsizedToLines(string text, UiWidgetContext ctx, UiFont font, float width, int maxLines)
+    {
+        if (string.IsNullOrEmpty(text) || maxLines <= 0) return text ?? "";
+        float lineHeight = LineHeightOf(ctx, font);
+        float maxHeight = lineHeight * maxLines;
+        if (ctx.Metrics.MeasureText(text, font, width) <= maxHeight) return text;
+
+        // A band too narrow to hold even the ellipsis glyph draws nothing rather than a mark that
+        // overflows - the degenerate-width case, same rule SegmentedRow uses.
+        if (ctx.Metrics.MeasureText("…", font, width) > maxHeight) return "";
+
+        int lo = 0;
+        int hi = text.Length;
+        while (lo < hi)
+        {
+            int mid = lo + (hi - lo + 1) / 2;
+            if (ctx.Metrics.MeasureText(text.Substring(0, mid) + "…", font, width) <= maxHeight) lo = mid;
+            else hi = mid - 1;
+        }
+
+        return text.Substring(0, lo) + "…";
+    }
+
+    /// <summary>One line's advance for a font, measured through the injected seam at a width no line can
+    /// wrap into two (a fixed band wants the per-line number, not the wrapped one).</summary>
+    public static float LineHeightOf(UiWidgetContext ctx, UiFont font)
+    {
+        return Mathf.Max(1f, ctx.Metrics.MeasureText("Ag", font, 100000f));
+    }
 
     /// <summary>Card frame with a title header; returns the inner body rect.</summary>
     public static Rect DrawCard(Rect rect, string title, UiTheme theme)

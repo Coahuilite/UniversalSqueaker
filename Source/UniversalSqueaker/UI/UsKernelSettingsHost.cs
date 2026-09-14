@@ -50,7 +50,24 @@ public static class UsKernelSettingsHost
         UsKernelWidgetRegistrar.EnsureRegistered();
 
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
-        var bumper = new SessionRevisionBumper();
+
+        // The retractable help drawer is a layout VARIANT of the shipped tree, not a binding-driven
+        // column: the carrier's engine reads only a static Hidden attribute plus the forbidden
+        // Tab/active-tab gate, and it has no visible/width binding. Both variants are composed ONCE
+        // from the parsed roots - open = as shipped, closed = the same tree without the help column -
+        // and handed to the revision bumper, which installs the matching one at the revision boundary.
+        // They are SNAPSHOTS: UiLayoutManifest.Roots is the live list an install mutates, so aliasing
+        // it here would make the open variant follow every close (the install writes the closed root
+        // back into the "open" list) and the drawer could never reopen.
+        var openRoots = new List<UiElementSpec>(manifest.Roots.Count);
+        openRoots.AddRange(manifest.Roots);
+        var closedRoots = new List<UiElementSpec>(openRoots.Count);
+        foreach (UiElementSpec root in openRoots)
+        {
+            closedRoots.Add(UsLayoutVariants.WithoutElement(root, UsLayoutVariants.HelpColumnId));
+        }
+
+        var bumper = new SessionRevisionBumper(source.ViewState, openRoots, closedRoots);
         UiBindings bindings = BuildBindings(source, bumper);
         UiHost host = new(
             Source,
@@ -59,7 +76,11 @@ public static class UsKernelSettingsHost
             UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
-        bumper.Attach(host.Session);
+        bumper.Attach(host.Session, manifest);
+        // The page state's default - and every Reset - is the RETRACTED drawer, while the parsed
+        // manifest IS the open tree. Reconcile the two before the first arrange, or the very first
+        // frame would show the drawer open and every later toggle would be one state behind.
+        bumper.ApplyVariant();
         // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
         // this many IMGUI passes, which is what stops the overview from flashing while the pointer
         // crosses the gap between two adjacent controls. The library owns the rule and ships no
@@ -84,15 +105,54 @@ public static class UsKernelSettingsHost
     /// </summary>
     private sealed class SessionRevisionBumper
     {
+        private readonly VoicePacksPageState state;
+        private readonly IReadOnlyList<UiElementSpec> openRoots;
+        private readonly IReadOnlyList<UiElementSpec> closedRoots;
         private UiSession? session;
+        private UiLayoutManifest? manifest;
+        private bool appliedOpen = true;
 
-        public void Attach(UiSession value)
+        public SessionRevisionBumper(
+            VoicePacksPageState state,
+            IReadOnlyList<UiElementSpec> openRoots,
+            IReadOnlyList<UiElementSpec> closedRoots)
+        {
+            this.state = state ?? throw new ArgumentNullException(nameof(state));
+            this.openRoots = openRoots ?? throw new ArgumentNullException(nameof(openRoots));
+            this.closedRoots = closedRoots ?? throw new ArgumentNullException(nameof(closedRoots));
+        }
+
+        public void Attach(UiSession value, UiLayoutManifest owner)
         {
             session = value;
+            manifest = owner ?? throw new ArgumentNullException(nameof(owner));
+        }
+
+        /// <summary>
+        /// Installs the root variant that matches <see cref="VoicePacksPageState.HelpDrawerOpen"/>
+        /// when it differs from the one already installed. Node identity is element Id/kind/declared
+        /// index, so the centre and help Scroll nodes - and the scroll positions they hold - survive
+        /// the swap; no host or session is recreated. A refused install leaves the shipped tree
+        /// (drawer open) in place, which is the fail-soft direction the layout variant promises.
+        /// </summary>
+        public void ApplyVariant()
+        {
+            if (manifest == null) return;
+            if (state.HelpDrawerOpen == appliedOpen) return;
+
+            IReadOnlyList<UiElementSpec> variant = state.HelpDrawerOpen ? openRoots : closedRoots;
+            if (UsLayoutVariants.TryReplaceRoots(manifest, variant, out _))
+            {
+                appliedOpen = state.HelpDrawerOpen;
+            }
         }
 
         public void Bump()
         {
+            // Compose BEFORE the clock moves: the engine's snapshot cache is keyed on the content
+            // revision, so swapping the roots without a bump would keep serving the pre-toggle
+            // geometry, while bumping first would publish the old tree under the new revision.
+            ApplyVariant();
             session?.ClosePopup();
             session?.BumpContentRevision();
         }
@@ -282,6 +342,18 @@ public static class UsKernelSettingsHost
         // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
         // panel and the accent border read ctx.Session.HoverClaim).
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
+
+        // Retractable help drawer: INDEPENDENT per-window visibility state, never the engine's
+        // active-tab gate (the manifest's drawer element deliberately carries no Tab). Both writes
+        // advance the session revision through the bumper, which installs the matching root variant
+        // BEFORE it bumps - so a toggle re-arranges the page and never recreates the host/session.
+        bindings.BindValue<bool>(
+            "help-open",
+            () => state.HelpDrawerOpen,
+            value => { source.SetHelpDrawerOpen(value); bump(); });
+        bindings.BindAction<string>(
+            "toggle-help-drawer",
+            _ => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
         return bindings;
     }
