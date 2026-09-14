@@ -28,6 +28,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
     public bool WrappingDomainText;
+    // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
 
     /// <summary>
     /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
@@ -356,6 +357,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         {
             // Wrapping mode: the row title now carries the state too (the detail line keeps the counts), so a
             // title long enough to need a second line is what must grow the card.
+            // Overwide mode: a domain title wider than the popup's viewport cap, which is what the
+            // popup-overflow-identity lane needs - the author dropdown is no longer a valid source for it,
+            // because the consumer now truncates author labels to half the window (F5, 2026-09-14).
             new RaceLayerRowView("human", WrappingDomainText ? "Human (a row title long enough that no single line can hold it)" : "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
             new RaceLayerRowView("testrace", WrappingDomainText ? "Test Race (a row title long enough that no single line can hold it)" : "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
             new RaceLayerRowView("sanguophage", "Sanguophage Race", 1, 1, SqueakVoicePackDomainState.Available)

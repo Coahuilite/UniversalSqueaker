@@ -47,21 +47,27 @@ public static class WindowChromeLayout
     /// </summary>
     public const float VanillaBaselineWidth = 650f;
 
-    /// <summary>Vanilla's own options-window height; see <see cref="VanillaBaselineWidth"/>.</summary>
+    /// <summary>Vanilla's own options-window height; see <see cref="VanillaBaselineWidth"/>: 650x600 is
+    /// 13:12 (about 1.083), i.e. nearly square - far closer to 4:3 than to 16:9.</summary>
     public const float VanillaBaselineHeight = 600f;
 
-    /// <summary>Fraction of the screen width the retracted window opens at, above the vanilla floor.</summary>
-    public const float SettingsClosedWidthFraction = 0.44f;
+    /// <summary>Fraction of the screen width the retracted window opens at, above the floor below.</summary>
+    public const float SettingsClosedWidthFraction = 0.5f;
 
     /// <summary>Widest the retracted window may open, so a 4K screen does not get a near-full-width dialog.</summary>
     public const float SettingsWidthCeiling = 1600f;
 
+    /// <summary>Every width is a multiple of this, so the derived height is an exact integer.</summary>
+    public const float SettingsWidthStep = 4f;
+
     /// <summary>
-    /// Narrowest the window may be: vanilla's own width (the baseline above). The page declares Breakpoint
-    /// 500 on body-row, so this floor plus the chrome insets holds the two-column regime in the worst case
-    /// (650 - 2*20 chrome - 2*12 page padding = 586 inner >= 500).
+    /// Narrowest the window may be: the SMALLEST 4:3 box that is at least vanilla's own 650x600, which is
+    /// 800x600. Deriving it (rather than declaring 800) is what keeps "never smaller than the dialog the
+    /// game itself opens" and "integer 4:3" from drifting apart. The page declares Breakpoint 500 on
+    /// body-row, so this floor plus the chrome insets holds the two-column regime in the worst case
+    /// (800 - 2*20 chrome - 2*12 page padding = 736 inner >= 500).
     /// </summary>
-    public const float SettingsWidthFloor = VanillaBaselineWidth;
+    public const float SettingsWidthFloor = 800f;
 
     /// <summary>Declared <c>Width</c> of the help Scroll in <c>Layout.Schema2.xml</c>.</summary>
     public const float HelpDrawerWidth = 176f;
@@ -76,27 +82,39 @@ public static class WindowChromeLayout
     /// </summary>
     public const float DrawerWidthDelta = HelpDrawerWidth + BodyRowGap;
 
-    /// <summary>Narrowest the window may be vertically: vanilla's own height (the baseline above).</summary>
+    /// <summary>Narrowest the window may be vertically: vanilla's own height (the baseline above), which
+    /// is also the height the 800-wide floor derives to.</summary>
     public const float SettingsHeightFloor = VanillaBaselineHeight;
 
     /// <summary>
-    /// The growth shape above the floor: 16:9. Chosen because the old shape grew the WRONG axis - 0.24 of
-    /// the width against 0.66 of the height opened portrait (614x950 at 2560x1440), which wrapped every
-    /// long label (the 2026-09-14 in-game log: footer needs 47.3px in a 28px band, global-volume 32.7/18)
-    /// and lengthened the vertical stack and its scrollbar. Width now grows ~2.4x faster than height.
+    /// The growth shape above the floor: 4:3, in whole pixels. Chosen on two grounds. (a) The old shape grew
+    /// the WRONG axis - 24% of the width against 66% of the height opened portrait (614x950 at 2560x1440),
+    /// which wrapped every long label (the 2026-09-14 in-game log: footer needs 47.3px in a 28px band,
+    /// global-volume 32.7/18) and lengthened the stack. (b) Vanilla's own 650x600 is 13:12, so 4:3 sits much
+    /// closer to it than 16:9 would, and w*3/4 is an exact integer for every width that is a multiple of
+    /// <see cref="SettingsWidthStep"/> - no fractional window sizes reach the player.
     /// </summary>
-    public const float WindowAspectWidth = 16f;
+    public const float WindowAspectWidth = 4f;
 
     /// <summary>The other half of <see cref="WindowAspectWidth"/>.</summary>
-    public const float WindowAspectHeight = 9f;
+    public const float WindowAspectHeight = 3f;
 
     /// <summary>Largest share of the screen height the window may take, so a 16:9 window never runs off screen.</summary>
     public const float SettingsHeightCeilingFraction = 0.9f;
 
-    /// <summary>Width the window opens at while the help drawer is retracted.</summary>
-    public static float SettingsClosedWidth(float screenWidth)
+    /// <summary>
+    /// Width the window opens at while the help drawer is retracted. Every constraint is folded in HERE so the
+    /// window can never disagree with itself: half the screen, capped by the 90%-of-screen-height limit at 4:3
+    /// (a short, ultra-wide display shrinks the WIDTH instead of breaking the shape), floored at the 4:3 box
+    /// that covers vanilla's own dialog, capped for 4K, and rounded up to a whole pixel step so the derived
+    /// height is an exact integer.
+    /// </summary>
+    public static float SettingsClosedWidth(float screenWidth, float screenHeight)
     {
-        return Clamp(screenWidth * SettingsClosedWidthFraction, SettingsWidthFloor, SettingsWidthCeiling);
+        float byWidth = screenWidth * SettingsClosedWidthFraction;
+        float byHeight = screenHeight * SettingsHeightCeilingFraction * WindowAspectWidth / WindowAspectHeight;
+        float wanted = Clamp(Math.Min(byWidth, byHeight), SettingsWidthFloor, SettingsWidthCeiling);
+        return RoundUpToStep(wanted);
     }
 
     /// <summary>
@@ -105,27 +123,32 @@ public static class WindowChromeLayout
     /// page keeps its own narrow-layout capability (body-row declares Breakpoint 500), so the centre column
     /// and the drawer stay inside the window instead of the drawer hanging off the screen edge.
     /// </summary>
-    public static float SettingsOpenWidth(float screenWidth)
+    public static float SettingsOpenWidth(float screenWidth, float screenHeight)
     {
-        float closed = SettingsClosedWidth(screenWidth);
+        float closed = SettingsClosedWidth(screenWidth, screenHeight);
         return Math.Min(closed + DrawerWidthDelta, Math.Max(closed, screenWidth));
     }
 
     /// <summary>Width for one drawer state. The single entry the window and the lanes both read.</summary>
-    public static float SettingsWindowWidth(float screenWidth, bool drawerExpanded)
+    public static float SettingsWindowWidth(float screenWidth, float screenHeight, bool drawerExpanded)
     {
-        return drawerExpanded ? SettingsOpenWidth(screenWidth) : SettingsClosedWidth(screenWidth);
+        return drawerExpanded
+            ? SettingsOpenWidth(screenWidth, screenHeight)
+            : SettingsClosedWidth(screenWidth, screenHeight);
     }
 
     /// <summary>
-    /// Height for a screen: 16:9 derived from the width, floored at vanilla's own height (so the minimum
-    /// canvas keeps the vanilla footprint) and capped at 90% of the screen height.
+    /// Height for a screen: the closed width at 4:3, which is an exact whole number for every width this class
+    /// returns, floored at vanilla's own height because the width floor derives from it.
     /// </summary>
     public static float SettingsWindowHeight(float screenWidth, float screenHeight)
     {
-        float aspectHeight = SettingsClosedWidth(screenWidth) * WindowAspectHeight / WindowAspectWidth;
-        float ceiling = Math.Max(SettingsHeightFloor, screenHeight * SettingsHeightCeilingFraction);
-        return Math.Min(Math.Max(aspectHeight, SettingsHeightFloor), ceiling);
+        return SettingsClosedWidth(screenWidth, screenHeight) * WindowAspectHeight / WindowAspectWidth;
+    }
+
+    private static float RoundUpToStep(float value)
+    {
+        return (float)Math.Ceiling(value / SettingsWidthStep) * SettingsWidthStep;
     }
 
     private static float Clamp(float value, float min, float max)

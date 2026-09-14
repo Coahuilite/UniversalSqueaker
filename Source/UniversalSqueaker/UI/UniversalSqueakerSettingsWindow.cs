@@ -104,7 +104,7 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     private static Vector2 InitialSizeFromScreen()
     {
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, drawerExpanded: false);
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, drawerExpanded: false);
         float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenWidth, Verse.UI.screenHeight);
         return new Vector2(width, height);
     }
@@ -124,7 +124,7 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         if (expanded == appliedDrawerExpanded) return;
         appliedDrawerExpanded = expanded;
 
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, expanded);
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, expanded);
         float delta = width - windowRect.width;
         if (Mathf.Abs(delta) < 0.5f) return;
 

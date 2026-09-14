@@ -183,16 +183,26 @@ internal static class Program
         Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 188f) < tolerance,
             "expanding the drawer costs the window exactly 176 + 12 = 188px");
 
-        foreach (float screen in new[] { 800f, 1280f, 1920f, 2560f, 3840f })
+        foreach ((float screen, float screenHeight) in new[]
+            { (1024f, 768f), (1280f, 800f), (1920f, 1080f), (2560f, 1440f), (3840f, 2160f) })
         {
-            float closed = WindowChromeLayout.SettingsClosedWidth(screen);
-            float open = WindowChromeLayout.SettingsOpenWidth(screen);
+            float closed = WindowChromeLayout.SettingsClosedWidth(screen, screenHeight);
+            float open = WindowChromeLayout.SettingsOpenWidth(screen, screenHeight);
+            float height = WindowChromeLayout.SettingsWindowHeight(screen, screenHeight);
             Assert(closed >= WindowChromeLayout.SettingsWidthFloor - tolerance,
-                "the closed window is never below the 600 floor at screen " + screen + ": " + closed);
+                "the closed window is never below the " + WindowChromeLayout.SettingsWidthFloor + " floor at screen "
+                + screen + ": " + closed);
             Assert(closed <= WindowChromeLayout.SettingsWidthCeiling + tolerance,
-                "the closed window is never above the 860 ceiling at screen " + screen + ": " + closed);
-            Assert(open > closed,
-                "the open window is wider than the closed one at screen " + screen);
+                "the closed window is never above the " + WindowChromeLayout.SettingsWidthCeiling + " ceiling at screen "
+                + screen + ": " + closed);
+            Assert(open >= closed,
+                "the open window is never narrower than the closed one at screen " + screen);
+            Assert(Math.Abs(closed - Math.Round(closed)) < tolerance,
+                "the closed width is a whole pixel count at screen " + screen + ": " + closed);
+            Assert(Math.Abs(height - Math.Round(height)) < tolerance,
+                "the height is a whole pixel count at " + screen + "x" + screenHeight + ": " + height);
+            Assert(Math.Abs(height * 4f - closed * 3f) < tolerance,
+                "the window keeps 4:3 exactly at " + screen + "x" + screenHeight + ": " + closed + "x" + height);
             // The drawer delta is what the window gains where the screen can hold it. Below that the open
             // width is capped at the screen, so the gain is the screen's remaining room instead - the whole
             // reason SettingsOpenWidth clamps rather than adding blindly.
@@ -200,40 +210,44 @@ internal static class Program
             Assert(Math.Abs((open - closed) - expectedDelta) < tolerance,
                 "open - closed is the drawer delta where the screen holds it, the remaining room otherwise, at screen "
                 + screen + ": " + (open - closed) + " vs " + expectedDelta);
-            Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: false) - closed) < tolerance
-                && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: true) - open) < tolerance,
+            Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: false) - closed) < tolerance
+                && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: true) - open) < tolerance,
                 "SettingsWindowWidth selects the closed/open branch at screen " + screen);
         }
 
         // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a
         // fixed size), so the minimum canvas must land exactly on that footprint.
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1024f) - 650f) < tolerance,
-            "1024 clamps to vanilla's own width (44% = 450.6)");
+        // The floor is the smallest whole-pixel 4:3 box that covers vanilla's own 650x600, and the minimum
+        // canvas opens exactly there; every larger screen is the same 4:3 box scaled.
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1024f, 768f) - 800f) < tolerance,
+            "1024x768 opens at the 800 floor (vanilla's 650x600 rounded up to whole-pixel 4:3)");
         Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 600f) < tolerance,
-            "1024x768 lands exactly on the vanilla baseline 650x600");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f) - 844.8f) < tolerance,
-            "1920 closed = 44% of the screen");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f) - 1032.8f) < tolerance,
-            "1920 open = 844.8 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f) - 1126.4f) < tolerance,
-            "2560 closed = 44% of the screen");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(2560f, 1440f) - 633.6f) < tolerance,
-            "2560x1440 keeps 16:9 (1126.4 * 9/16), which is what stops the long labels wrapping");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(800f) - 650f) < tolerance,
-            "800 clamps to the vanilla floor");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f) - 1600f) < tolerance,
-            "3840 clamps to the 1600 ceiling (44% = 1689.6)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(3840f, 2160f) - 900f) < tolerance,
-            "3840x2160 keeps 16:9 at the ceiling (1600 * 9/16)");
+            "1024x768 is 800x600 - 4:3 at vanilla's own height, both whole numbers");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f, 1080f) - 960f) < tolerance,
+            "1920x1080 opens at 960 = half the screen width");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1920f, 1080f) - 720f) < tolerance,
+            "1920x1080 keeps 4:3: 960x720");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f, 1440f) - 1280f) < tolerance,
+            "2560x1440 opens at 1280 = half the screen width");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(2560f, 1440f) - 960f) < tolerance,
+            "2560x1440 keeps 4:3: 1280x960 (the old portrait 614x950 is what wrapped every long label)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f, 2160f) - 1600f) < tolerance,
+            "3840x2160 clamps to the 1600 ceiling (half = 1920)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(3840f, 2160f) - 1200f) < tolerance,
+            "3840x2160 keeps 4:3: 1600x1200");
 
         // The expanded window may never be wider than the screen it lives in; below the drawer delta it is
-        // capped at the screen, and under the vanilla floor at the closed width itself.
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(640f) - 650f) < tolerance,
-            "a 640-wide screen cannot be widened past the vanilla floor, so open == closed");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(700f) - 700f) < tolerance,
-            "700 screen caps the expanded window at the screen");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(844f) - 838f) < tolerance,
-            "844 screen still fits the full drawer delta on top of the vanilla floor");
+        // capped at the screen, and under the width floor at the closed width itself.
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f, 1080f) - 1148f) < tolerance,
+            "1920 open = 960 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f, 1440f) - 1468f) < tolerance,
+            "2560 open = 1280 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f, 600f) - 800f) < tolerance,
+            "an 800-wide screen cannot be widened past the floor, so open == closed");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(900f, 700f) - 900f) < tolerance,
+            "900 screen caps the expanded window at the screen (it would be 988)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(988f, 800f) - 988f) < tolerance,
+            "988 screen still fits the full drawer delta on top of the floor");
     }
 
     private static void TestHelpCatalog()
