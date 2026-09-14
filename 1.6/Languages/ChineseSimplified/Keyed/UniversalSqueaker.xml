@@ -4,16 +4,59 @@
   <US.Settings.Save.Failed>语音设置保存失败。</US.Settings.Save.Failed>
 
   <DebugActionCategory_UniversalSqueaker>Universal Squeaker</DebugActionCategory_UniversalSqueaker>
-  <DebugAction_DiagnosticsSelected>诊断：选中 pawn</DebugAction_DiagnosticsSelected>
+  <DebugAction_DiagnosticsOpen>诊断：打开面板</DebugAction_DiagnosticsOpen>
   <US.Debug.CameraIndicator>相机：高度 {0}，视距 {1}</US.Debug.CameraIndicator>
   <US.Diagnostics.Title>Universal Squeaker 诊断</US.Diagnostics.Title>
-  <US.Diagnostics.Mode.Selected>选中</US.Diagnostics.Mode.Selected>
-  <US.Diagnostics.Mode.Visible>可见</US.Diagnostics.Mode.Visible>
-  <US.Diagnostics.CloseHint>再次按 Esc 关闭</US.Diagnostics.CloseHint>
+  <US.Diagnostics.Close>关闭（或连按两次 Esc）</US.Diagnostics.Close>
+  <US.Diagnostics.UnlockClose>关闭并解锁</US.Diagnostics.UnlockClose>
+  <US.Diagnostics.Lock>锁定</US.Diagnostics.Lock>
+  <US.Diagnostics.LockedTag>已锁定</US.Diagnostics.LockedTag>
+  <US.Diagnostics.Bar>收起</US.Diagnostics.Bar>
+  <US.Diagnostics.Page.Format>第 {0}/{1} 页 · 共 {2}</US.Diagnostics.Page.Format>
+  <US.Diagnostics.Search.Placeholder>搜索本地图 pawn…</US.Diagnostics.Search.Placeholder>
+  <US.Diagnostics.Search.None>本地图无匹配</US.Diagnostics.Search.None>
+  <US.Diagnostics.Monitor.Empty>等待首次更新…</US.Diagnostics.Monitor.Empty>
+  <US.Diagnostics.Detail.Empty>选中一个 pawn 查看详情</US.Diagnostics.Detail.Empty>
+  <US.Diagnostics.PageUnavailable.Title>诊断页未能显示</US.Diagnostics.PageUnavailable.Title>
+  <US.Diagnostics.PageUnavailable.Body>诊断页绘制失败，本窗口实例已停摆；可从调试菜单重新打开。</US.Diagnostics.PageUnavailable.Body>
   <US.Diagnostics.Ready>就绪</US.Diagnostics.Ready>
   <US.Diagnostics.Blocked>阻塞</US.Diagnostics.Blocked>
   <US.Diagnostics.Panel.Empty>无诊断数据</US.Diagnostics.Panel.Empty>
-  <US.Diagnostics.Panel.NoPawn>未选中 pawn</US.Diagnostics.Panel.NoPawn>
+  <US.Diagnostics.Section.State>当前状态</US.Diagnostics.Section.State>
+  <US.Diagnostics.Section.Chain>门控链</US.Diagnostics.Section.Chain>
+  <US.Diagnostics.Field.CurrentAction>当前动作</US.Diagnostics.Field.CurrentAction>
+  <US.Diagnostics.Field.LastDispatch>最后派发</US.Diagnostics.Field.LastDispatch>
+  <US.Diagnostics.Value.Pass>通过</US.Diagnostics.Value.Pass>
+  <US.Diagnostics.Value.Blocked>受阻</US.Diagnostics.Value.Blocked>
+  <US.Diagnostics.Value.NotApplicable>不适用</US.Diagnostics.Value.NotApplicable>
+  <US.Diagnostics.Reason.NotPlayerControlled>非玩家控制</US.Diagnostics.Reason.NotPlayerControlled>
+  <US.Diagnostics.Reason.Downed>已击倒</US.Diagnostics.Reason.Downed>
+  <US.Diagnostics.Reason.Asleep>睡眠中</US.Diagnostics.Reason.Asleep>
+  <US.Diagnostics.Gate.Disabled>禁用旁路</US.Diagnostics.Gate.Disabled>
+  <US.Diagnostics.Gate.OnMap>在地图中</US.Diagnostics.Gate.OnMap>
+  <US.Diagnostics.Gate.OnScreen>在屏幕内</US.Diagnostics.Gate.OnScreen>
+  <US.Diagnostics.Gate.Plan>触发计划</US.Diagnostics.Gate.Plan>
+  <US.Diagnostics.Gate.Identity>身份准入</US.Diagnostics.Gate.Identity>
+  <US.Diagnostics.Gate.ScopeEnabled>范围启用</US.Diagnostics.Gate.ScopeEnabled>
+  <US.Diagnostics.Gate.ScopeMatch>范围匹配</US.Diagnostics.Gate.ScopeMatch>
+  <US.Diagnostics.Gate.Startup>启动阶段</US.Diagnostics.Gate.Startup>
+  <US.Diagnostics.Gate.Probability>概率判定</US.Diagnostics.Gate.Probability>
+  <US.Diagnostics.Gate.ActionCooldown>动作冷却</US.Diagnostics.Gate.ActionCooldown>
+  <US.Diagnostics.Gate.GlobalCooldown>全局冷却</US.Diagnostics.Gate.GlobalCooldown>
+  <US.Diagnostics.Gate.VocalOrgan>发声器官</US.Diagnostics.Gate.VocalOrgan>
+  <US.Diagnostics.Gate.Talking>交谈状态</US.Diagnostics.Gate.Talking>
+  <US.Diagnostics.Gate.AudioPool>音频池</US.Diagnostics.Gate.AudioPool>
+  <US.Diagnostics.Gate.Playability>可播放性</US.Diagnostics.Gate.Playability>
+  <US.Diagnostics.Gate.Dispatch>派发结果</US.Diagnostics.Gate.Dispatch>
+  <US.Diagnostics.Tier.XenotypePack>异种包</US.Diagnostics.Tier.XenotypePack>
+  <US.Diagnostics.Tier.RacePack>种族包</US.Diagnostics.Tier.RacePack>
+  <US.Diagnostics.Tier.PackFallback>包回退</US.Diagnostics.Tier.PackFallback>
+  <US.Diagnostics.Tier.Vanilla>原版</US.Diagnostics.Tier.Vanilla>
+  <US.Diagnostics.Logging.Label>开发者日志等级</US.Diagnostics.Logging.Label>
+  <US.Diagnostics.Logging.Auto>自动</US.Diagnostics.Logging.Auto>
+  <US.Diagnostics.Logging.Enabled>开启</US.Diagnostics.Logging.Enabled>
+  <US.Diagnostics.Logging.Disabled>关闭</US.Diagnostics.Logging.Disabled>
+  <US.Diagnostics.LocalizeDebugMenu>本地化调试菜单</US.Diagnostics.LocalizeDebugMenu>
 
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
@@ -39,13 +82,13 @@
   <US.Mood.Break>崩溃</US.Mood.Break>
 
   <US.Notice.RaceDomain>种族域</US.Notice.RaceDomain>
-  <US.Notice.TargetUnavailable>目标不可用</US.Notice.TargetUnavailable>
+  <US.Notice.TargetUnavailable>目标未加载</US.Notice.TargetUnavailable>
   <US.Notice.AudioPool.Body>以下语音包域尚未启用任何语音包：</US.Notice.AudioPool.Body>
 
   <US.Settings.Shell.Title>Universal Squeaker 使用独立设置窗口。</US.Settings.Shell.Title>
   <US.Settings.Shell.Body>游戏内的 Mod Settings 面板不再承载 {0} 的设置。请打开专用窗口调整路由、调音与语音包。</US.Settings.Shell.Body>
   <US.Settings.Shell.Open>打开 Universal Squeaker 设置</US.Settings.Shell.Open>
-  <US.Settings.PageUnavailable.Title>设置页不可用</US.Settings.PageUnavailable.Title>
+  <US.Settings.PageUnavailable.Title>设置页未能显示</US.Settings.PageUnavailable.Title>
   <US.Settings.PageUnavailable.Body>{0} 设置页无法构建或绘制，因此不显示残缺界面。关闭后重新打开即可重试。若持续失败，请在日志中查找 usdiag 记录：它会指出出错的控件并附带异常堆栈。</US.Settings.PageUnavailable.Body>
   <US.Settings.Window.Subtitle>Universal Squeaker —— 语音包路由</US.Settings.Window.Subtitle>
   <US.Settings.Window.Close>关闭</US.Settings.Window.Close>
@@ -86,14 +129,20 @@
   <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
+  <US.Section.TriggerTiming>触发节奏</US.Section.TriggerTiming>
+  <US.Section.Diagnostics>诊断支持</US.Section.Diagnostics>
   <US.Tuning.EasterEggs>彩蛋音效</US.Tuning.EasterEggs>
   <US.Tuning.EasterEggs.On>开启：彩蛋加入音效池</US.Tuning.EasterEggs.On>
   <US.Tuning.EasterEggs.Off>关闭：仅普通语音条目</US.Tuning.EasterEggs.Off>
   <US.Tuning.ScaleCooldown>按时间流速缩放冷却</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>按交谈缩放频率</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
+  <US.Tuning.EatPrecision>仅在真正进食时发声</US.Tuning.EatPrecision>
+  <US.Tuning.EatPrecision.IncludeDrugs>服用成瘾品也算作进食</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
+  <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>
+  <US.Tuning.CooldownMultiplier>全局冷却倍率</US.Tuning.CooldownMultiplier>
   <US.Tuning.Mode.Vanilla>原版</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>
@@ -106,9 +155,9 @@
   <US.Packs.Filter.Xenotype>异种</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
   <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
-  <US.Packs.Domain.EnabledState>{0} · {1}</US.Packs.Domain.EnabledState>
+  <US.Packs.Domain.NameWithState>{0} {1}</US.Packs.Domain.NameWithState>
   <US.Packs.Domain.State.Orphan>已失效</US.Packs.Domain.State.Orphan>
-  <US.Packs.Domain.State.TargetUnavailable>目标不可用</US.Packs.Domain.State.TargetUnavailable>
+  <US.Packs.Domain.State.TargetUnavailable>目标未加载</US.Packs.Domain.State.TargetUnavailable>
   <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
   <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
@@ -152,17 +201,26 @@
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
   <US.Tuning.Auto>自动</US.Tuning.Auto>
-  <US.Tuning.Factor.Pitch>音</US.Tuning.Factor.Pitch>
-  <US.Tuning.Factor.Volume>量</US.Tuning.Factor.Volume>
-  <US.Tuning.Factor.Jitter>抖</US.Tuning.Factor.Jitter>
+  <US.Tuning.ResetToDefault>重置为默认</US.Tuning.ResetToDefault>
+  <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetToDefault.Reason.NoLocal>本行没有本层设置。</US.Tuning.ResetToDefault.Reason.NoLocal>
+  <US.Tuning.ResetToPreset.Reason.NotFromPreset>此行不是预设导入的。</US.Tuning.ResetToPreset.Reason.NotFromPreset>
+  <US.Tuning.ResetToPreset.Reason.PresetMissing>该预设已失效。</US.Tuning.ResetToPreset.Reason.PresetMissing>
+  <US.Tuning.ResetToPreset.Reason.NoEntry>该预设没有此行设置。</US.Tuning.ResetToPreset.Reason.NoEntry>
+  <US.Tuning.Factor.Pitch>音高</US.Tuning.Factor.Pitch>
+  <US.Tuning.Factor.Volume>音量</US.Tuning.Factor.Volume>
+  <US.Tuning.Factor.Jitter>抖动</US.Tuning.Factor.Jitter>
   <US.Distance.Preset.Conservative>保守</US.Distance.Preset.Conservative>
   <US.Distance.Preset.Balanced>均衡</US.Distance.Preset.Balanced>
   <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
   <US.Distance.Preset.Custom>自定义</US.Distance.Preset.Custom>
   <US.Distance.Status>衰减 {0}  {1}</US.Distance.Status>
-  <US.Card.FallbackNote>{0}（降级模式，暂不可用）</US.Card.FallbackNote>
+  <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
+  <!-- 帮助抽屉：页头开关，用于收起/展开右侧帮助抽屉。 -->
+  <US.Help.Drawer.Toggle>帮助</US.Help.Drawer.Toggle>
+  <US.Help.Drawer.Toggle.Hint>显示或隐藏帮助抽屉</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
@@ -172,6 +230,8 @@
   <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新右侧帮助面板的内容。</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>帮助抽屉开关</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏右侧帮助抽屉。把指针停在任意控件上，抽屉即解释该控件；关闭后中间内容区获得完整宽度，已选主题在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
@@ -188,25 +248,47 @@
   <US.Help.Attenuation.Chart.Text>水平拖动两个控制点，设定淡出的起点与终点；左点恒处 100% 可闻、右点恒处 0%，两点间距不小于 5。</US.Help.Attenuation.Chart.Text>
   <US.Help.Attenuation.Presets.Label>快速预设</US.Help.Attenuation.Presets.Label>
   <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、均衡 15-50、强效 15-40；套用后曲线与状态行同步更新。</US.Help.Attenuation.Presets.Text>
+  <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
+  <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
   <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
-  <US.Help.BasicTuning.Scaling.Label>缩放开关</US.Help.BasicTuning.Scaling.Label>
-  <US.Help.BasicTuning.Scaling.Text>三项全局缩放开关：冷却随游戏时间流速、频率随交谈状态、周期语音随可闻人口数量。默认全部开启。</US.Help.BasicTuning.Scaling.Text>
+  <US.Help.BasicTuning.ScaleCooldown.Label>时间流速缩放</US.Help.BasicTuning.ScaleCooldown.Label>
+  <US.Help.BasicTuning.ScaleCooldown.Text>开启后，冷却按游戏时间流速折算：1 倍、2 倍、3 倍速下两次 squeak 的真实间隔保持一致。默认开启。</US.Help.BasicTuning.ScaleCooldown.Text>
+  <US.Help.BasicTuning.ScaleTalking.Label>交谈缩放</US.Help.BasicTuning.ScaleTalking.Label>
+  <US.Help.BasicTuning.ScaleTalking.Text>开启后，声明了交谈门控的动作需在殖民者正在交谈时才可能通过，让对话与交谈承载声音；关闭则这些动作不再看交谈状态。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
+  <US.Help.BasicTuning.ScalePopulation.Label>可闻人口缩放</US.Help.BasicTuning.ScalePopulation.Label>
+  <US.Help.BasicTuning.ScalePopulation.Text>开启后，周期语音的触发概率按可闻人口除算（每十名可闻殖民者一档），因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.EatPrecision.Label>进食判定</US.Help.BasicTuning.EatPrecision.Label>
+  <US.Help.BasicTuning.EatPrecision.Text>关闭时整段进食工作都算（含走向食物的路程）。开启后只算真正摄入食物的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。默认关闭。</US.Help.BasicTuning.EatPrecision.Text>
+  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>使用成瘾品</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
+  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>只在上方开关开启后出现。按咀嚼/点燃阶段判定，因此零营养成瘾品也会触发。若无法识别该阶段，则整段进食工作都算。</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
+  <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
+  <US.Help.Timing.Interval.Label>最小间隔</US.Help.Timing.Interval.Label>
+  <US.Help.Timing.Interval.Text>两次 squeak 之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
+  <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
+  <US.Help.Timing.Multiplier.Text>一次性缩放所有动作冷却与全局间隔：0.5 减半等待（更吵），2.0 加倍。1.0 即作者设定的原始节奏。</US.Help.Timing.Multiplier.Text>
+  <US.Help.Diagnostics.Overview>支持工具：开发者日志等级与原版调试菜单本地化。两者都不改变殖民者听到的声音，只影响日志文件与调试菜单。</US.Help.Diagnostics.Overview>
+  <US.Help.Diagnostics.LoggingAuto.Text>跟随构建版本：开发版详细记录，正式版保持安静。这是默认值。</US.Help.Diagnostics.LoggingAuto.Text>
+  <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细路由日志，正式版同样生效。反馈音频问题时使用；用完请调回，日志增长很快。</US.Help.Diagnostics.LoggingEnabled.Text>
+  <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
+  <US.Help.Diagnostics.LocalizeDebug.Text>开启后，原版调试菜单中的 Universal Squeaker 调试项显示翻译后的名称与分类。仅在开发者模式打开时可见。</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
-  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾自动清除本层覆盖，恢复继承值。</US.Help.ScopeTree.MoodTuning.Text>
-  <US.Help.ScopeTree.Auto.Label>自动 / 清除</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>"自动"删除当前层的该条记录——动作范围或整条心情行——于是此行回落向下层，由下一个生效层给出数值。</US.Help.ScopeTree.Auto.Text>
+  <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾两个按钮：「重置为默认」清掉本层三个因子（来源保留），「重置为预设」按本行来源重新写入该预设的基线值。不可用的按钮仍然画出、只是禁用，悬停可看原因。</US.Help.ScopeTree.MoodTuning.Text>
+  <US.Help.ScopeTree.ResetDefault.Text>清掉本层的音高、音量、抖动三个因子，恢复继承值；预设来源保留，所以「重置为预设」仍然可用。</US.Help.ScopeTree.ResetDefault.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>按本行的预设来源找到那份预设，把该心情的基线因子值（音高、音量、抖动）重新写入本层；来源不变。</US.Help.ScopeTree.ResetPreset.Text>
+  <US.Help.ScopeTree.Auto.Label>自动 / 改回下层值</US.Help.ScopeTree.Auto.Label>
+  <US.Help.ScopeTree.Auto.Text>动作范围选"自动"只清除当前层的作用域字段；心情行用"改回下层值"清掉本层记录；两者都回落到下一个生效层给出的数值。</US.Help.ScopeTree.Auto.Text>
   <US.Help.PresetList.Overview>导入由 Def 提供的调音基线：展开预设，勾选种族与异种，再按"导入"，把该预设保存的动作与心情调音行写入对应层。没有安装任何预设 Def 时，本卡显示空状态提示。</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标不可用或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
@@ -218,10 +300,68 @@
   <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。</US.Help.XenotypeLayer.Overview>
   <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
   <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
-  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标不可用、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
+  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标未加载、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
   <US.Help.Checklist.Search.Label>搜索框</US.Help.Checklist.Search.Label>
   <US.Help.Checklist.Search.Text>对可见行做忽略大小写的子串过滤，命中范围：包名、defName、Mod 名、作者与包键。</US.Help.Checklist.Search.Text>
   <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
   <US.Help.Checklist.Row.Text>行内显示包名、Mod 与作者行以及动作覆盖数；点击整行即启用或停用该语音包。</US.Help.Checklist.Row.Text>
   <US.Help.Checklist.Forget.Text>一次性移除本域中包键不再安装的已存选择；该按钮只随失效横幅出现，作用域限于当前域。</US.Help.Checklist.Forget.Text>
+  <US.Diagnostics.Section.Verdict>结论</US.Diagnostics.Section.Verdict>
+  <US.Diagnostics.Section.Raw>原始值</US.Diagnostics.Section.Raw>
+  <US.Diagnostics.Section.ChainCount>门链（{0}）</US.Diagnostics.Section.ChainCount>
+  <US.Diagnostics.Verdict.Play>会发声</US.Diagnostics.Verdict.Play>
+  <US.Diagnostics.Verdict.Blocked>被挡在：{0}</US.Diagnostics.Verdict.Blocked>
+  <US.Diagnostics.Verdict.Pending>未确认</US.Diagnostics.Verdict.Pending>
+  <US.Diagnostics.Gates.FirstBlock>第 1 处被挡：{0}</US.Diagnostics.Gates.FirstBlock>
+  <US.Diagnostics.Gates.NoneBlocked>无被挡</US.Diagnostics.Gates.NoneBlocked>
+  <US.Diagnostics.Gate.BlockMark>挡</US.Diagnostics.Gate.BlockMark>
+  <US.Diagnostics.Gate.Group.Game>游戏侧</US.Diagnostics.Gate.Group.Game>
+  <US.Diagnostics.Gate.Group.Rules>规则侧</US.Diagnostics.Gate.Group.Rules>
+  <US.Diagnostics.Gate.Group.Audio>音频侧</US.Diagnostics.Gate.Group.Audio>
+  <US.Diagnostics.Raw.Show>展开原始值</US.Diagnostics.Raw.Show>
+  <US.Diagnostics.Raw.Hide>收起原始值</US.Diagnostics.Raw.Hide>
+  <US.Diagnostics.Bar.Identity>发声记录</US.Diagnostics.Bar.Identity>
+  <US.Diagnostics.Bar.IdentityLocked>发声记录（锁定：{0}）</US.Diagnostics.Bar.IdentityLocked>
+  <US.Diagnostics.Bar.Scale>{0} 个目标</US.Diagnostics.Bar.Scale>
+  <US.Diagnostics.Bar.Recording>记录中</US.Diagnostics.Bar.Recording>
+  <US.Diagnostics.Bar.Paused>已暂停</US.Diagnostics.Bar.Paused>
+  <US.Diagnostics.Bar.Activity.Recent>最近一次 {0}  {1}  {2}</US.Diagnostics.Bar.Activity.Recent>
+  <US.Diagnostics.Bar.Activity.Never>尚未收到发声</US.Diagnostics.Bar.Activity.Never>
+  <US.Diagnostics.Bar.Activity.Stale>最近 {0} 分钟无发声 · 上次 {1}</US.Diagnostics.Bar.Activity.Stale>
+  <US.Diagnostics.Bar.Expand>展开</US.Diagnostics.Bar.Expand>
+  <US.Diagnostics.Bar.Close>关闭</US.Diagnostics.Bar.Close>
+  <US.Diagnostics.Dot.Ready>就绪</US.Diagnostics.Dot.Ready>
+  <US.Diagnostics.Dot.Blocked>被挡</US.Diagnostics.Dot.Blocked>
+  <US.Diagnostics.Dot.Pending>等待</US.Diagnostics.Dot.Pending>
+  <US.Diagnostics.Dot.Unknown>未跟踪</US.Diagnostics.Dot.Unknown>
+  <US.Diagnostics.Pager.Prev>上一页</US.Diagnostics.Pager.Prev>
+  <US.Diagnostics.Pager.Next>下一页</US.Diagnostics.Pager.Next>
+  <US.Diagnostics.Value.Yes>是</US.Diagnostics.Value.Yes>
+  <US.Diagnostics.Value.No>否</US.Diagnostics.Value.No>
+  <US.Diagnostics.Value.Undetermined>...</US.Diagnostics.Value.Undetermined>
+  <US.Diagnostics.Pending.Stochastic>随机判定，此处不可观测</US.Diagnostics.Pending.Stochastic>
+  <US.Diagnostics.Pending.SourceMissing>当前数据源未给出判定</US.Diagnostics.Pending.SourceMissing>
+  <US.Diagnostics.Na.NoTimingAction>当前没有计时动作</US.Diagnostics.Na.NoTimingAction>
+  <US.Diagnostics.Na.ExternalPlanOnly>该门只适用于外部触发计划</US.Diagnostics.Na.ExternalPlanOnly>
+  <US.Diagnostics.Na.NoScopeMatch>该动作范围不是主动指令</US.Diagnostics.Na.NoScopeMatch>
+  <US.Diagnostics.Na.GlobalIgnored>该动作忽略全局冷却</US.Diagnostics.Na.GlobalIgnored>
+  <US.Diagnostics.Na.NoEvaluationForAction>本会话中当前动作没有已完成的评估</US.Diagnostics.Na.NoEvaluationForAction>
+  <US.Diagnostics.Na.NoDispatchOutcome>上次评估未进入派发</US.Diagnostics.Na.NoDispatchOutcome>
+  <US.Diagnostics.Basis.Current>当前观测</US.Diagnostics.Basis.Current>
+  <US.Diagnostics.Basis.Previous>上次评估</US.Diagnostics.Basis.Previous>
+  <US.Diagnostics.Section.Current>当前观测</US.Diagnostics.Section.Current>
+  <US.Diagnostics.Section.Previous>上次评估 / 上次分派</US.Diagnostics.Section.Previous>
+  <US.Diagnostics.Summary.CurrentBlock>当前已知阻断：{0}</US.Diagnostics.Summary.CurrentBlock>
+  <US.Diagnostics.Summary.NoCurrentBlock>当前观测未发现阻断</US.Diagnostics.Summary.NoCurrentBlock>
+  <US.Diagnostics.Summary.Incomplete>当前状态信息不完整</US.Diagnostics.Summary.Incomplete>
+  <US.Diagnostics.Summary.Undetermined>未确定：{0}</US.Diagnostics.Summary.Undetermined>
+  <US.Diagnostics.Previous.Evaluation>上次评估：{0} · {1} · {2}</US.Diagnostics.Previous.Evaluation>
+  <US.Diagnostics.Previous.Dispatch>上次分派：{0} · {1}</US.Diagnostics.Previous.Dispatch>
+  <US.Diagnostics.Previous.NoEvaluation>本会话没有记录到评估</US.Diagnostics.Previous.NoEvaluation>
+  <US.Diagnostics.Previous.NoDispatch>本会话没有记录到分派</US.Diagnostics.Previous.NoDispatch>
+  <US.Diagnostics.Previous.None>本会话没有记录到上次评估或分派</US.Diagnostics.Previous.None>
+  <US.Diagnostics.Recency.Unavailable>无可用时间</US.Diagnostics.Recency.Unavailable>
+  <US.Diagnostics.Recency.JustNow>{0}，不到 1 分钟前</US.Diagnostics.Recency.JustNow>
+  <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
+  <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
 </LanguageData>

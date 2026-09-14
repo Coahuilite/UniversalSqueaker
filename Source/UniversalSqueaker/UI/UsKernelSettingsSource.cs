@@ -102,6 +102,36 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetAllowEasterEggSounds(value);
     }
 
+    public void SetEatPrecision(bool value)
+    {
+        settings.SetEatPrecision(value);
+    }
+
+    public void SetEatPrecisionIncludeDrugs(bool value)
+    {
+        settings.SetEatPrecisionIncludeDrugs(value);
+    }
+
+    public void SetGlobalMinIntervalTicks(int ticks)
+    {
+        settings.SetGlobalMinIntervalTicks(ticks);
+    }
+
+    public void SetGlobalCooldownMultiplier(float value)
+    {
+        settings.SetGlobalCooldownMultiplier(value);
+    }
+
+    public void SetDevLoggingMode(SqueakDevLoggingMode mode)
+    {
+        settings.SetDevLoggingMode(mode);
+    }
+
+    public void SetLocalizeDebugActions(bool value)
+    {
+        settings.SetLocalizeDebugActions(value);
+    }
+
     public void SetActiveTab(string tab)
     {
         VoicePacksPageModel.SetActiveTab(state, tab);
@@ -110,6 +140,11 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void ScrollToSection(string sectionKey)
     {
         VoicePacksPageModel.ScrollToSection(state, sectionKey);
+    }
+
+    public void SetHelpDrawerOpen(bool open)
+    {
+        state.HelpDrawerOpen = open;
     }
 
     public void SetTuningLayer(int layer)
@@ -152,16 +187,6 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.SetSearchText(state, text);
     }
 
-    public void SetHelpHover(string key)
-    {
-        VoicePacksPageModel.SetHelpHover(state, key);
-    }
-
-    public void BeginHelpHoverFrame()
-    {
-        VoicePacksPageModel.BeginHelpHoverFrame(state);
-    }
-
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {
         VoicePacksPageModel.SetActionScope(settings, state, actionKey, scope);
@@ -170,6 +195,11 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value)
     {
         VoicePacksPageModel.SetMoodTuning(settings, state, mood, factor, value);
+    }
+
+    public void ResetMoodToPreset(SqueakMood mood)
+    {
+        VoicePacksPageModel.ResetMoodToPreset(settings, state, mood);
     }
 
     public void ToggleBaselinePreset(string presetDefName)

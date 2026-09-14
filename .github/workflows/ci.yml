@@ -24,7 +24,7 @@ concurrency:
 jobs:
   gates:
     runs-on: windows-latest
-    # The 15-gate suite is seconds of work; the minute is runner startup. A hung runner should burn
+    # The 14-gate suite is seconds of work; the minute is runner startup. A hung runner should burn
     # 10, not the 360 default.
     timeout-minutes: 10
     steps:
@@ -88,7 +88,7 @@ jobs:
           Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
             ForEach-Object { dotnet restore $_.FullName --nologo }
 
-      - name: Verify (13 gates)
+      - name: Verify (14 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 

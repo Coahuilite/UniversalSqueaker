@@ -69,10 +69,13 @@ internal static class UsKernelContractInvariantTests
         }
 
         Assert(bodyRow != null, "body-row Row is a direct child of page-root");
+        // The footer is a direct child of page-root (outside every scroll), and it must NOT pin a Height:
+        // the attribute overrides the widget's wrap-aware measure, which is how the in-game log kept
+        // reporting "footer needs 33px has 28px" while the attribute held 28 (2026-09-15).
         Assert(footer != null
             && footer.GetAttribute("Kind") == "us/footer"
-            && footer.GetAttribute("Height") == "28",
-            "footer Widget (us/footer, Height=28) is a direct child of page-root, outside every scroll");
+            && footer.GetAttribute("Height") == "",
+            "footer Widget (us/footer, no Height attribute) is a direct child of page-root, outside every scroll");
 
         Assert(bodyRow!.GetAttribute("Gap") == "12", "body-row declares Gap=12");
 
@@ -83,7 +86,7 @@ internal static class UsKernelContractInvariantTests
         {
             if (node is not XmlElement element) continue;
             if (element.Name == "Column" && element.GetAttribute("Id") == "nav-column"
-                && element.GetAttribute("Width") == "192" && IsTrue(element.GetAttribute("Fill")))
+                && element.GetAttribute("Width") == "160" && IsTrue(element.GetAttribute("Fill")))
             {
                 navFill = true;
             }
@@ -95,14 +98,14 @@ internal static class UsKernelContractInvariantTests
             }
 
             if (element.Name == "Scroll" && element.GetAttribute("Id") == "help-scroll"
-                && element.GetAttribute("Width") == "232" && IsTrue(element.GetAttribute("Fill")))
+                && element.GetAttribute("Width") == "176" && IsTrue(element.GetAttribute("Fill")))
             {
                 helpScrollFill = true;
             }
         }
 
         Assert(navFill && contentScrollFill && helpScrollFill,
-            "body-row contains nav-column (192 Fill), content-scroll (Fill) and help-scroll (232 Fill)");
+            "body-row contains nav-column (160 Fill), content-scroll (Fill) and help-scroll (176 Fill)");
 
         bool hasTabSections = false;
         foreach (XmlNode node in bodyRow.ChildNodes)

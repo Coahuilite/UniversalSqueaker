@@ -62,11 +62,20 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<MoodTuningRecord> moodTuning = new();
     // Action gate: non-built-in external actions fire only when true. Default false (closed).
     public bool allowExternalActions = false;
+    // Eat occurrence granularity (two-level switch). Both fields are add-only and default false, and false
+    // is omitted at the Scribe boundary, so settingsSchemaVersion stays 5 and a default config writes no
+    // new node. Parent off forces the child false: see SetEatPrecision (UI write), the PostLoadInit
+    // normalisation (hand-edited file) and SqueakEatOccurrence.ResolveMode (pure rule, parent-off-first).
+    public bool eatPrecisionEnabled = false;
+    public bool eatPrecisionIncludeDrugs = false;
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
     {
-        devLoggingMode = Enum.IsDefined(typeof(SqueakDevLoggingMode), value) ? value : SqueakDevLoggingMode.Auto;
+        SqueakDevLoggingMode normalized = Enum.IsDefined(typeof(SqueakDevLoggingMode), value) ? value : SqueakDevLoggingMode.Auto;
+        if (devLoggingMode == normalized) return;
+        devLoggingMode = normalized;
         ApplyDevLoggingModeToRuntime(true);
+        QueuePersistence();
     }
 
     private void ApplyDevLoggingModeToRuntime(bool announceChange)
@@ -89,6 +98,8 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
         ApplyGlobalVolumeStatic();
         CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
+        CompSqueaker.EatPrecisionEnabled = eatPrecisionEnabled;
+        CompSqueaker.EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 
     /// <summary>Cheap controls are same-frame static runtime values and never rebuild the resolver.</summary>
@@ -100,6 +111,8 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
         ApplyGlobalVolumeStatic();
+        CompSqueaker.EatPrecisionEnabled = eatPrecisionEnabled;
+        CompSqueaker.EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 
     public void NotifyDistanceRuntimeChanged() => CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
@@ -186,6 +199,63 @@ public partial class UniversalSqueakerSettings : ModSettings
         SqueakDebug.ShowCameraIndicator = value;
         QueuePersistence();
     }
+
+    /// <summary>UI wiring: global minimum trigger interval in game ticks. Cheap runtime static
+    /// (same class as the scaling toggles); clamped to at least 1 tick, never a resolver rebuild.</summary>
+    internal void SetGlobalMinIntervalTicks(int ticks)
+    {
+        int clamped = Math.Max(1, ticks);
+        if (globalMinIntervalTicks == clamped) return;
+        globalMinIntervalTicks = clamped;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: global cooldown multiplier 0..3 (the runtime clamp boundary). Cheap static.</summary>
+    internal void SetGlobalCooldownMultiplier(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value)) return;
+        float clamped = Mathf.Clamp(value, 0f, 3f);
+        if (System.Math.Abs(clamped - globalCooldownMultiplier) < 0.0001f) return;
+        globalCooldownMultiplier = clamped;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: localize vanilla debug-menu action names. Applies through the Harmony
+    /// patch's enable switch (which resets the debug action cache) and queues persistence.</summary>
+    internal void SetLocalizeDebugActions(bool value)
+    {
+        if (localizeDebugActions == value) return;
+        localizeDebugActions = value;
+        Patch_DebugTabMenu_Actions.SetEnabled(value);
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: Eat occurrence granularity parent switch. Parent off beats the child: clearing the
+    /// parent clears the child in the same write so "parent off + child on" can never become a live or
+    /// persisted state (the second layer is the PostLoadInit normalisation, the third the pure rule).
+    /// Cheap runtime republish + queued persistence.</summary>
+    internal void SetEatPrecision(bool value)
+    {
+        if (eatPrecisionEnabled == value) return;
+        eatPrecisionEnabled = value;
+        if (!value) eatPrecisionIncludeDrugs = false;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>UI wiring: Eat occurrence granularity child switch ("include drugs"). While the parent is off
+    /// the widget keeps the row disabled and never invokes this; the parent setter (child forced false in the
+    /// same write) and the PostLoadInit normalisation are what make "parent off + child on" unreachable.
+    /// Cheap runtime republish + queued persistence, same as the parent.</summary>
+    internal void SetEatPrecisionIncludeDrugs(bool value)
+    {
+        if (eatPrecisionIncludeDrugs == value) return;
+        eatPrecisionIncludeDrugs = value;
+        NotifyCheapRuntimeChanged();
+        QueuePersistence();
+    }
     public void NotifyContinuousXenotypeRuntimeChanged() => SqueakRuntimeResolver.NotifyContinuousResolverChange(this, SqueakXenotypeCatalog.Current);
     public void NotifyDiscreteResolverRuntimeChanged() => SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
     public void QueuePersistence() => UniversalSqueakerMod.Instance?.QueueSettingsSave();
@@ -205,7 +275,23 @@ public partial class UniversalSqueakerSettings : ModSettings
         ApplyDevLoggingModeToRuntime(announceLoggingChange);
     }
 
-    /// <summary>写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。scope == null 表示清该层记录（移除）；走离散 resolver 重建 + 排队持久化。</summary>
+    /// <summary>
+    /// 写一条分层作用域：Upsert 到 actionTuning（last-wins 按 (actionKey,raceDefName,xenotypeDefName)）。
+    /// scope == null 表示清除本层的**作用域字段**（恢复继承）。
+    ///
+    /// D2 不变式（**组级**）：本方法只动它点名的那一个字段；同身份行只有在**清空后不再贡献任何字段**
+    /// 时才被删除。这里的「字段」有**精确定义＝四者之一**：作用域（<c>hasScope</c>）、间隔倍率
+    /// （<c>hasIntervalMultiplier</c>）、概率倍率（<c>hasProbabilityMultiplier</c>）、
+    /// **非空来源（<c>sourcePresetDefName</c>）**——与 <see cref="CarriesAnyActionTuningField"/> 的实现一一对应，
+    /// 不允许两处各有一份解释。判定单位是「同身份组的并集」，不是 last-wins 幸存行——运行时对同身份多行
+    /// 是字段级合并（<c>HasX</c> 取并集、值后写覆盖先写：<c>SqueakRuntimeResolver.cs:117-125</c> +
+    /// <c>Pure/SqueakLayeredTuning.cs:33-39</c>），所以较早重复行上的乘数是**活数据**。
+    /// interval / probability 两个乘数界面上没有任何控件显示，删掉就是静默丢掉玩家从未见过的数据。
+    /// 来源同理：它是「重置为预设」的锚点（维护者 2026-09-12 要求的功能），删掉就再也找不到那份预设。
+    /// 心情侧同形（<see cref="SetMoodTuning"/> 的 "clear"）：清掉组内每一行的三个因子，只删「三因子皆无
+    /// 且没有来源」的行。那句「MoodTuningRecord 的每个字段都有控件所以可以删整行」的旧理由现在不成立：
+    /// 来源同样没有控件，而维护者要的「重置为预设」按钮正是问心情调制，所以心情侧也必须留住来源锚点。
+    /// </summary>
     internal void SetActionTuningScope(string actionKey, string raceDefName, string xenotypeDefName, SqueakActionScope? scope)
     {
         actionTuning ??= new List<ActionTuningRecord>();
@@ -215,22 +301,36 @@ public partial class UniversalSqueakerSettings : ModSettings
         if (!hasRace && hasXeno) return;
         if (string.IsNullOrEmpty(actionKey)) return;
 
+        // 身份比较统一走归一化后的本地量：helper 自身按 ?? "" 规则比较，调用点也不再让可空参数
+        // 直接流进非空形参（否则 Nullable + TreatWarningsAsErrors 会以 CS8604 拒绝构建）。
+        string actionRaceDefName = raceDefName ?? "";
+        string actionXenotypeDefName = xenotypeDefName ?? "";
+
+        // last-wins 取末个匹配行：写入落在这行，读回来的也是它。
         ActionTuningRecord? existing = null;
         foreach (ActionTuningRecord candidate in actionTuning)
-            if (candidate != null
-                && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
-                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+        {
+            if (SameActionTuningIdentity(candidate, actionKey, actionRaceDefName, actionXenotypeDefName))
+            {
                 existing = candidate;
-
-        // 统一 last-wins：清除全部同身份行（含陈旧重复）后追加/不再追加，与 SetMoodTuning/UpsertMood 一致。
-        actionTuning.RemoveAll(c => c != null
-            && string.Equals(c.actionKey, actionKey, StringComparison.Ordinal)
-            && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-            && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
+            }
+        }
 
         if (scope == null)
         {
+            // 清除点名的那一个字段：组内**每一行**都要清（否则较早的重复行会继续贡献旧作用域而让清除
+            // 变成空操作），然后只删「不再承载任何字段」的行。
+            foreach (ActionTuningRecord row in actionTuning)
+            {
+                if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
+                {
+                    row.hasScope = false;
+                }
+            }
+
+            actionTuning.RemoveAll(c => SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+                && !CarriesAnyActionTuningField(c));
+
             NotifyDiscreteResolverRuntimeChanged();
             QueuePersistence();
             return;
@@ -240,22 +340,96 @@ public partial class UniversalSqueakerSettings : ModSettings
         // 内置键按 SupportedScopes 归一（Draft/Undraft/Equip 仅支持 ActiveCommand），避免写入运行时永远不匹配的作用域。
         if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey, out SqueakAction builtInAction))
             effective = SqueakActionDefinitions.NormalizeScope(builtInAction, effective);
-        actionTuning.Add(new ActionTuningRecord
+
+        ActionTuningRecord target;
+        if (existing != null)
         {
-            actionKey = actionKey,
-            raceDefName = raceDefName ?? "",
-            xenotypeDefName = xenotypeDefName ?? "",
-            sourcePresetDefName = existing?.sourcePresetDefName ?? "",
-            hasScope = true,
-            scope = effective,
-        });
+            target = existing;
+        }
+        else
+        {
+            target = new ActionTuningRecord
+            {
+                actionKey = actionKey,
+                raceDefName = actionRaceDefName,
+                xenotypeDefName = actionXenotypeDefName,
+            };
+            actionTuning.Add(target);
+        }
+
+        target.hasScope = true;
+        target.scope = effective;
+
+        // 较早的重复行不得在同一个字段上竞争（否则 last-wins 会取决于列表顺序），但它们承载的**其它**
+        // 字段全部保留；只有清空后什么都不剩的行才删除。
+        foreach (ActionTuningRecord row in actionTuning)
+        {
+            if (ReferenceEquals(row, target)) continue;
+            if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
+            {
+                row.hasScope = false;
+            }
+        }
+
+        actionTuning.RemoveAll(c => !ReferenceEquals(c, target)
+            && SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+            && !CarriesAnyActionTuningField(c));
+
         NotifyDiscreteResolverRuntimeChanged();
         QueuePersistence();
     }
 
+    /// <summary>
+    /// 该行是否仍承载「字段」——这里「字段」是**四者之一**：作用域 / 间隔倍率 / 概率倍率 / 
+    /// 非空 `sourcePresetDefName`（来源）。
+    /// 来源计入承载是**翻转后的裁定**（独立验证最初按「今天无读者」判它可删，但维护者随后要求的
+    /// 「重置为预设」正是它的读者：要靠来源找回那份预设并重套其值 ⇒ 删掉来源就是丢掉这个功能的前提）。
+    /// 因此来源非空的行**不得**因为清作用域或清乘数而被删除；它是否长期保留属于来源账，不是本方法的职责。
+    /// </summary>
+    private static bool CarriesAnyActionTuningField(ActionTuningRecord? record)
+    {
+        return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier
+            || !string.IsNullOrEmpty(record.sourcePresetDefName));
+    }
+
+    /// <summary>心情记录是否仍承载任何可编辑字段：三个因子之一，或非空来源（锚点）。与
+    /// <see cref="CarriesAnyActionTuningField"/> 同形；判定单位同样是「同身份组的并集」，不是 last-wins 幸存行。
+    ///
+    /// <para><b>F-R：这里的因子项在唯一调用点上恒为 false。</b>调用点是 <see cref="SetMoodTuning"/> 的 clear
+    /// 分支，位于「把组内每一行的三个旗标清零」**之后**，所以该点实际只判来源。因子项保留是为了定义
+    /// 完整（也让将来别的调用点能直接用），<b>不是</b>那个点在守卫因子。于是心情侧与动作侧是
+    /// <b>语法同形、功能不同形</b>：动作侧的乘数项是活的（清除只清 scope），心情侧不是。要改动那条
+    /// 删除规则，改的是<b>来源项</b>——它是唯一活项。</para></summary>
+    private static bool CarriesAnyMoodTuningField(MoodTuningRecord? record)
+    {
+        return record != null && (record.hasPitchFactor || record.hasVolumeFactor || record.hasPitchJitter
+            || !string.IsNullOrEmpty(record.sourcePresetDefName));
+    }
+
+    /// <summary>心情记录的 (mood, race, xenotype) 身份比较，供 upsert、去重与清除共用。</summary>
+    private static bool SameMoodTuningIdentity(MoodTuningRecord? candidate, SqueakMood mood, string raceDefName, string xenotypeDefName)
+    {
+        return candidate != null
+            && candidate.mood == mood
+            && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
+    }
+
+    /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>
+    private static bool SameActionTuningIdentity(ActionTuningRecord? candidate, string actionKey, string raceDefName, string xenotypeDefName)
+    {
+        return candidate != null
+            && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
+            && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
+            && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
+    }
+
     /// <summary>写一条分层心情调音：Upsert 到 moodTuning（last-wins 按 (mood,raceDefName,xenotypeDefName)）。
-    /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 移除整行
-    /// 记录（恢复继承）。走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
+    /// factor ∈ {pitch, volume, jitter, clear}：字段级写入（hasX+值，其余因子继承不变）；clear 清掉同
+    /// 身份组内**每一行**的三个因子字段（恢复继承），并只删「三因子皆无且来源为空」的行——非空
+    /// <c>sourcePresetDefName</c> 是「重置为预设」的锚点，与 <see cref="SetActionTuningScope"/> 同一条规则，
+    /// 承载判定见 <see cref="CarriesAnyMoodTuningField"/>（在那个判定点上三旗标已清零，实际只判来源，见 F-R 注）。
+    /// 走连续 resolver 重建（拖动期 75/150ms 合并）+ 排队持久化。</summary>
     internal void SetMoodTuning(SqueakMood mood, string raceDefName, string xenotypeDefName, string factor, float? value)
     {
         moodTuning ??= new List<MoodTuningRecord>();
@@ -268,11 +442,7 @@ public partial class UniversalSqueakerSettings : ModSettings
         int index = -1;
         for (int i = 0; i < moodTuning.Count; i++)
         {
-            MoodTuningRecord candidate = moodTuning[i];
-            if (candidate != null
-                && candidate.mood == mood
-                && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal))
+            if (SameMoodTuningIdentity(moodTuning[i], mood, raceDefName, xenotypeDefName))
             {
                 index = i;
             }
@@ -280,11 +450,24 @@ public partial class UniversalSqueakerSettings : ModSettings
 
         if (string.Equals(factor, "clear", StringComparison.Ordinal))
         {
-            // 清全部匹配行（含陈旧重复）= 恢复继承。
-            moodTuning.RemoveAll(c => c != null
-                && c.mood == mood
-                && string.Equals(c.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
-                && string.Equals(c.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal));
+            // 恢复继承 = 清掉同身份组内**每一行**的三个因子字段（来源字段本身不动），然后只删不再
+            // 承载任何字段的行。来源非空的行必须留下：它是「重置为预设」的锚点（F-P，维护者要的
+            // 两个按钮问的就是心情调制）。只删「三因子皆无且来源为空」的行，因此清单不会长出空行。
+            foreach (MoodTuningRecord row in moodTuning)
+            {
+                if (SameMoodTuningIdentity(row, mood, raceDefName, xenotypeDefName))
+                {
+                    row.hasPitchFactor = false;
+                    row.hasVolumeFactor = false;
+                    row.hasPitchJitter = false;
+                }
+            }
+
+            // F-R：上面那段已经把组内每一行（身份相同 ⇒ 必被清）的三个旗标清零，所以在这里
+            // CarriesAnyMoodTuningField 的三个因子项恒为 false——这一行的实际语义就是「来源为空才删」。
+            // 谓词保持四项是为了与动作侧同形，不是为了在本点兜因子；这条规则唯一活的守卫是**来源项**。
+            moodTuning.RemoveAll(c => SameMoodTuningIdentity(c, mood, raceDefName, xenotypeDefName)
+                && !CarriesAnyMoodTuningField(c));
             NotifyContinuousXenotypeRuntimeChanged();
             QueuePersistence();
             return;
@@ -333,6 +516,98 @@ public partial class UniversalSqueakerSettings : ModSettings
         };
         if (legacyFactor.Length == 0) return;
         SetMoodTuning(mood, raceDefName, xenotypeDefName, legacyFactor, value);
+    }
+
+    /// <summary>预设里该 (mood, race, xenotype) 的基线条目查找，**镜像 <see cref="BaselinePresetImporter"/> 的合并规则**：
+    /// race 层取 race 块的 moods（同 mood 后写胜出）；xenotype 层先取父 race 块（仅当 <c>inheritFromRace</c>），
+    /// 再让 xeno 块自己的 moods 覆盖。导入器给每条记录都置三旗标 + 预设值，所以「有条目」= 三因子都该被重套。</summary>
+    internal static bool TryFindMoodBaseline(
+        UniversalSqueakerTuningBaselineDef? preset,
+        SqueakMood mood,
+        string raceDefName,
+        string xenotypeDefName,
+        out BaselineMoodTuning? tuning)
+    {
+        tuning = null;
+        if (preset == null) return false;
+
+        Dictionary<SqueakMood, BaselineMoodTuning> byMood = new();
+        void Add(List<BaselineMoodTuning>? list)
+        {
+            foreach (BaselineMoodTuning entry in list ?? new List<BaselineMoodTuning>())
+            {
+                if (entry == null) continue;
+                byMood[entry.mood] = entry;
+            }
+        }
+
+        if (string.IsNullOrEmpty(xenotypeDefName))
+        {
+            Add(FindBaselineRaceEntry(preset, raceDefName)?.moods);
+            return byMood.TryGetValue(mood, out tuning);
+        }
+
+        BaselineXenotypeEntry? xeno = FindBaselineXenotypeEntry(preset, raceDefName, xenotypeDefName);
+        if (xeno == null) return false;
+        if (xeno.inheritFromRace) Add(FindBaselineRaceEntry(preset, raceDefName)?.moods);
+        Add(xeno.moods);
+        return byMood.TryGetValue(mood, out tuning);
+    }
+
+    private static BaselineRaceEntry? FindBaselineRaceEntry(UniversalSqueakerTuningBaselineDef preset, string raceDefName)
+    {
+        foreach (BaselineRaceEntry race in preset.races ?? new List<BaselineRaceEntry>())
+        {
+            if (race != null && string.Equals(race.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)) return race;
+        }
+        return null;
+    }
+
+    private static BaselineXenotypeEntry? FindBaselineXenotypeEntry(UniversalSqueakerTuningBaselineDef preset, string raceDefName, string xenotypeDefName)
+    {
+        BaselineRaceEntry? race = FindBaselineRaceEntry(preset, raceDefName);
+        if (race == null) return null;
+        foreach (BaselineXenotypeEntry xeno in race.xenotypes ?? new List<BaselineXenotypeEntry>())
+        {
+            if (xeno != null && string.Equals(xeno.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal)) return xeno;
+        }
+        return null;
+    }
+
+    /// <summary>「重置为预设」：把预设里该 (mood,race,xeno) 的因子值**重新写入**本层（三旗标 true + 预设值），
+    /// 来源字段保持不动。与「重置为默认」（清本层字段）是**两类操作**：这个只写、不清。
+    /// 同身份有多个陈旧行时写最后一行（last-wins，与运行时同层 Merge 一致）。
+    /// 返回是否真的写入：无行 / 无来源 / 来源与传入 preset 不一致 / 预设里没有该条目 ⇒ false，不产生任何副作用。</summary>
+    internal bool ResetMoodTuningToPreset(SqueakMood mood, string raceDefName, string xenotypeDefName, UniversalSqueakerTuningBaselineDef? preset)
+    {
+        moodTuning ??= new List<MoodTuningRecord>();
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return false;
+
+        MoodTuningRecord? row = null;
+        foreach (MoodTuningRecord candidate in moodTuning)
+        {
+            if (SameMoodTuningIdentity(candidate, mood, raceDefName, xenotypeDefName)) row = candidate;
+        }
+        if (row == null) return false;
+
+        string source = row.sourcePresetDefName ?? "";
+        if (source.Length == 0) return false;
+        if (preset == null || !string.Equals(preset.defName ?? "", source, StringComparison.Ordinal)) return false;
+        if (!TryFindMoodBaseline(preset, mood, raceDefName, xenotypeDefName, out BaselineMoodTuning? tuning) || tuning == null) return false;
+
+        // 三因子一起重套（导入器就是这么写的：没有「只导入一个因子」的语义）。来源不动。
+        row.hasPitchFactor = true;
+        row.pitchFactor = tuning.pitchFactor;
+        row.hasVolumeFactor = true;
+        row.volumeFactor = tuning.volumeFactor;
+        row.hasPitchJitter = true;
+        row.pitchJitter = tuning.pitchJitter;
+
+        NotifyContinuousXenotypeRuntimeChanged();
+        QueuePersistence();
+        return true;
     }
 
     /// <summary>增量导入调音预设：将选中 race/xeno 行写入 actionTuning 与 moodOverrides，然后离散重建 resolver 并排队持久化。</summary>

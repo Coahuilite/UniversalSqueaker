@@ -1,87 +1,46 @@
 using System;
-using System.Collections.Generic;
-
-using FerriteLib.UiKit.Kernel;
-using RimWorld;
 using UnityEngine;
 using Verse;
+
+using FerriteLib.UiKit.Kernel;
+using UniversalSqueaker.UI;
 
 namespace UniversalSqueaker;
 
 /// <summary>
-/// Draggable, non-pausing diagnostics detail panel for <see cref="SqueakDiagnosticsOverlay"/>.
-/// Selected mode shows one pawn's current state plus the 17-gate chain (three-state rows);
-/// Visible mode lists up to 16 pawns. Formatted text is rebuilt only when
-/// <see cref="SqueakDiagnosticsOverlay.Revision"/> changes — never a per-frame re-snapshot or
-/// re-layout. Closing the panel (native X or double-Esc) turns the whole diagnostics session off
-/// via <see cref="SqueakDiagnosticsOverlay.NotifyPanelClosed"/>.
+/// The main diagnostics window (round-9 contract): the library shell (<see cref="UiWindowHost"/>)
+/// around one kernel page in master-detail shape - left list column (search + 8-row pages),
+/// right detail column following the live selection, plus the detach-to-lock and collapsed-bar
+/// states. Closing it ends the whole diagnostics session (the overlay cascades every detail
+/// window closed). The file draws ZERO raw backend calls: chrome is the shell's, content is the
+/// widget family's, hover/keys are the session's - so it leaves the gate 14 whitelist with this
+/// rewrite (only-shrink ratchet landing).
 /// </summary>
-internal sealed class SqueakDiagnosticsPanel : Window
+internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 {
-    private const float TitleRowHeight = 26f;
-    private const float ModeBadgeWidth = 96f;
-    private const float CloseXReserve = 28f;
-    private const float RowHeight = 22f;
-    private const float HeaderHeight = 30f;
-    private const float DotWidth = 18f;
-    private const float StateTextWidth = 64f;
     private const float KeepGrabPx = 24f;
     private const float EscArmSeconds = 3f;
-    private const float HintHeight = 22f;
-    private const float FieldRowHeight = 19f;
-    private const float SectionTitleHeight = 21f;
-    private const float SpaceSm = 8f;
-    private const float ScrollbarWidth = 16f;
+    // 09 §3.3's authorised collapsed geometry (26 -> 32); the bar widget owns the number.
+    private const float BarContentHeight = UsDiagBarWidget.BarHeight;
 
-    // The panel's single theme vocabulary: Dark Gold kernel roles (UiTheme / UiThemeDraw only).
-    private static readonly UiTheme Theme = UiTheme.DarkGold;
+    private static readonly UiTheme WindowTheme = UsTheme.Surface();
 
-    private enum GateState { Pass, Block, Pending }
-
-    private sealed class GateLine
-    {
-        public string Name = string.Empty;
-        public string Value = string.Empty;
-        public GateState State;
-    }
-
-    private readonly List<GateLine> gates = new();
-    private readonly List<VisibleRow> rows = new();
-    private int cachedRevision = -1;
-    private SqueakDiagnosticsMode cachedMode = SqueakDiagnosticsMode.Off;
-    private string cachedPawnText = string.Empty;
-    private bool cachedPawnReady;
-    private string cachedActionText = string.Empty;
-    private string cachedAudioText = string.Empty;
+    private readonly UsDiagnosticsSessionSource source = new();
     private float escArmedUntil = -1f;
-    private bool showSeconds;
-    private Vector2 scroll;
-
-    private readonly struct VisibleRow
-    {
-        public readonly Color Dot;
-        public readonly string PawnText;
-        public readonly string Action;
-        public readonly string Cooldown;
-        public readonly string Audio;
-        public readonly bool Ready;
-
-        public VisibleRow(Color dot, string pawnText, string action, string cooldown, string audio, bool ready)
-        {
-            Dot = dot; PawnText = pawnText; Action = action; Cooldown = cooldown; Audio = audio; Ready = ready;
-        }
-    }
+    private bool lastCollapsed;
+    private bool lastEmpty;
+    private bool opened;
+    private Rect expandedRect = Rect.zero;
 
     public SqueakDiagnosticsPanel()
     {
-        // Non-modal diagnostic panel: never pauses the game, never absorbs surrounding input,
-        // keeps camera motion alive. Mirrors the SR panel flags.
+        // Non-modal diagnostic panel: never pauses, never absorbs surroundings, camera stays live.
+        // The chrome flags the shell owns (close button, background, shadow) are deliberately absent here.
         forcePause = false;
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
-        doCloseX = true;
-        closeOnCancel = false; // Esc handled manually: two presses within EscArmSeconds close (armed state machine).
+        closeOnCancel = false; // Esc handled by the two-press arm below.
         closeOnAccept = false;
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = true;
@@ -89,27 +48,105 @@ internal sealed class SqueakDiagnosticsPanel : Window
         onlyDrawInDevMode = true;
     }
 
-    public override Vector2 InitialSize => new(420f, 600f);
+    // 620 -> 680 (lead-authorised, dev-only): the detail column needs 320 for its 40/60 value split
+    // without ellipsizing Chinese values (defect D4). The size is also clamped to the REAL coordinate
+    // space: at high UIScale the scaled screen is narrower than 680 and a fixed initial width would push
+    // the detail column off-screen before the responsive switch could help (09 §3.5).
+    // Redesign 2026-09-14 (feedback: "at the minimum resolution it nearly fills the screen, and it is mostly
+    // empty"). The panel now OPENS COLLAPSED as its bar, and only widens to the master/detail shape once a row
+    // is actually selected - so an empty panel is a strip, never a full screen. The two content sizes below are
+    // the content rect only; the shell adds the chrome.
+    internal const float CollapsedWidth = 460f;
 
-    public override void PreClose()
+    /// <summary>Width while nothing is selected. Deliberately BELOW the page's narrow breakpoint (inner width
+    /// 600 - 16 pads &lt; 592), so the page presents its list-only shape instead of a list plus an empty detail
+    /// column - the blank right half the feedback reported.</summary>
+    internal const float EmptyStateWidth = 600f;
+
+    /// <summary>Content height while nothing is selected: the search row, the list header and the empty note.</summary>
+    internal const float EmptyStateContentHeight = 240f;
+
+    /// <summary>The wide master/detail content size, used once a row is selected.</summary>
+    internal const float ExpandedContentWidth = 680f;
+
+    /// <summary>The wide master/detail content height.</summary>
+    internal const float ExpandedContentHeight = 560f;
+
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
+        Mathf.Clamp(CollapsedWidth, 320f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
+        UsDiagBarWidget.BarHeight);
+
+    protected override UiTheme Theme => WindowTheme;
+
+    protected override string Title => Translator.Translate("US.Diagnostics.Title");
+
+    protected override string CloseText => Translator.Translate("US.Diagnostics.Close");
+
+    protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
+
+    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateMain(source);
+
+    /// <summary>The window owns collapsed GEOMETRY (the source owns the flag): shrink to a bar of
+    /// chrome + one row, restore the remembered rect on expand.</summary>
+    protected override void BeforeDraw(Rect contentRect)
     {
-        base.PreClose();
-        SqueakDiagnosticsOverlay.NotifyPanelClosed();
+        // The collapsed bar carries a visible close (09 §3.3 rule 3): about-to-draw is the same
+        // mid-draw close point the detail window already uses for its IsValid self-check.
+        if (source.CloseRequested)
+        {
+            Close();
+            return;
+        }
+
+        // The responsive decision is fed BEFORE this pass's layout: the source derives the narrow
+        // presentation and the active-tab token from the width the shell is about to arrange in, so the
+        // page's shape and the engine's own Breakpoint evaluation read one coordinate space.
+        source.SetContentWidth(contentRect.width);
+
+        if (!opened)
+        {
+            // Default state is the collapsed bar: a freshly opened diagnostics session must not own the screen.
+            opened = true;
+            source.Collapsed = true;
+        }
+
+        bool collapsed = source.Collapsed;
+        bool empty = !collapsed && source.Detail == null;
+        if (collapsed == lastCollapsed && empty == lastEmpty)
+        {
+            return;
+        }
+
+        float chrome = Math.Max(0f, windowRect.height - contentRect.height);
+        float screenCap = Math.Max(120f, Verse.UI.screenWidth - 40f);
+        float width = collapsed
+            ? Math.Min(CollapsedWidth, screenCap)
+            : empty
+                ? Math.Min(EmptyStateWidth, screenCap)
+                : Math.Min(ExpandedContentWidth, screenCap);
+        float height = collapsed
+            ? chrome + BarContentHeight
+            : chrome + (empty ? EmptyStateContentHeight : ExpandedContentHeight);
+        windowRect = new Rect(windowRect.x, windowRect.y, width, height);
+
+        lastCollapsed = collapsed;
+        lastEmpty = empty;
     }
 
     public override void WindowOnGUI()
     {
         base.WindowOnGUI();
-        // Keep the title bar grabbable after dragging: at least KeepGrabPx of the window must
-        // stay on screen so the panel can never be dragged fully off-screen.
+        // Keep the title bar grabbable: the panel can never be dragged fully off-screen.
         windowRect.x = Mathf.Clamp(windowRect.x, Mathf.Min(0f, KeepGrabPx - windowRect.width), Verse.UI.screenWidth - KeepGrabPx);
         windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - KeepGrabPx));
     }
 
     public override void OnCancelKeyPressed()
     {
-        // Esc does not close immediately: first press arms a 3s window, second press closes.
-        // The direct Window.InnerWindowOnGUI call reaches this override regardless of closeOnCancel.
+        // Two presses within EscArmSeconds close. NOTE: no Event.current consumption - the UiNative
+        // seam exposes none and the gate-14 contract requires zero raw backend calls in this file.
+        // Whether an unconsumed Esc leaks into game cancel/selection is a live-walkthrough check
+        // item; if it leaks, that is the shell-level gap to take to FerriteLib as round-4 material.
         float now = Time.realtimeSinceStartup;
         if (now > escArmedUntil)
         {
@@ -120,585 +157,35 @@ internal sealed class SqueakDiagnosticsPanel : Window
             escArmedUntil = -1f;
             Close();
         }
-        Event.current?.Use();
     }
 
-    public override void DoWindowContents(Rect inRect)
+    /// <summary>Terminal notices in US's own vocabulary (the library ships zero strings).</summary>
+    protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(inRect, Theme, Theme.Raised, Theme.Border);
-        Rect inner = inRect.ContractedBy(SpaceSm);
+        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme.Panel, WindowTheme.Border);
+        Rect body = rect.ContractedBy(24f);
+        bool prerequisite = notice == UiWindowNotice.Prerequisite;
 
-        RebuildIfStale();
-
-        // Title row; keep the right edge clear for the vanilla small close X.
-        Rect titleRect = new(inner.x, inner.y, Mathf.Max(1f, inner.width - ModeBadgeWidth - SpaceSm - CloseXReserve), TitleRowHeight);
-        string titleText = "US.Diagnostics.Title".Translate().ToString();
-        GameFont oldFont = Text.Font;
-        Text.Font = GameFont.Medium;
-        float titleH = Mathf.Max(TitleRowHeight, Text.CalcHeight(titleText, titleRect.width));
-        Text.Font = oldFont;
-        titleRect.height = titleH;
-        UiThemeDraw.Label(titleRect, titleText, Theme, Theme.AccentGold, UiFont.Medium);
-
-        // Right of the title: tick/s toggle then mode toggle (cycles Selected <-> Visible).
-        float controlsY = inner.y + (titleH - 22f) * .5f;
-        Rect secondsRect = new(inner.xMax - CloseXReserve - 42f - 4f - ModeBadgeWidth, controlsY, 42f, 22f);
-        DrawSecondsToggle(secondsRect);
-        Rect modeRect = new(inner.xMax - CloseXReserve - ModeBadgeWidth, controlsY, ModeBadgeWidth, 22f);
-        DrawModeToggle(modeRect);
-
-        Rect body = new(inner.x, inner.y + titleH + SpaceSm,
-            inner.width, Mathf.Max(1f, inner.yMax - HintHeight - (inner.y + titleH + SpaceSm)));
-        switch (SqueakDiagnosticsOverlay.Mode)
-        {
-            case SqueakDiagnosticsMode.Selected:
-                DrawSelected(body);
-                break;
-            case SqueakDiagnosticsMode.Visible:
-                DrawVisible(body);
-                break;
-            default:
-                DrawEmptyNotice(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
-                break;
-        }
-
-        // Fixed 22px hint slot at the bottom: only filled while Esc-close is armed, so the
-        // layout never jumps between armed/unarmed states.
-        Rect hintRect = new(inner.x, inner.yMax - HintHeight, inner.width, HintHeight);
-        if (Time.realtimeSinceStartup <= escArmedUntil)
-        {
-            UiThemeDraw.Label(hintRect, "US.Diagnostics.CloseHint".Translate().ToString(), Theme, Theme.AccentGold, UiFont.Tiny, TextAnchor.MiddleCenter);
-        }
+        UsKernelDraw.Label(
+            new Rect(body.x, body.y, body.width, 30f),
+            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
+            WindowTheme, WindowTheme.TextPrimary, UiFont.Medium);
+        UsKernelDraw.Label(
+            new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
+            Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
+            WindowTheme, WindowTheme.TextSecondary, UiFont.Small);
     }
 
-    private static void DrawModeToggle(Rect rect)
+    /// <summary>Plain log line, deliberately NOT a usdiag protocol event: the frozen vocabulary
+    /// gates a registry, and a dev-panel failure has no business editing it.</summary>
+    protected override void OnDrawFailure(Exception error)
     {
-        bool selected = SqueakDiagnosticsOverlay.Mode == SqueakDiagnosticsMode.Selected;
-        if (Widgets.ButtonText(rect, selected
-                ? "US.Diagnostics.Mode.Selected".Translate().ToString()
-                : "US.Diagnostics.Mode.Visible".Translate().ToString()))
-        {
-            SqueakDiagnosticsOverlay.SetMode(selected ? SqueakDiagnosticsMode.Visible : SqueakDiagnosticsMode.Selected);
-        }
+        Log.Warning("[UniversalSqueaker] Diagnostics panel draw failed: " + SqueakLogText.SanitizeExceptionMessage(error.Message));
     }
 
-    private void DrawSecondsToggle(Rect rect)
+    public override void PreClose()
     {
-        if (Widgets.ButtonText(rect, showSeconds ? "s" : "t"))
-        {
-            showSeconds = !showSeconds;
-        }
-    }
-
-    private void DrawSelected(Rect body)
-    {
-        if (gates.Count == 0)
-        {
-            DrawEmptyNotice(body, "US.Diagnostics.Panel.NoPawn".Translate().ToString());
-            return;
-        }
-
-        Rect headerRect = new(body.x, body.y, body.width, HeaderHeight);
-        UiThemeDraw.Base(headerRect, Theme);
-        Rect badgeRect = new(headerRect.xMax - 72f - SpaceSm, headerRect.y + 3f, 72f, headerRect.height - 6f);
-        UiThemeDraw.StatusBadge(badgeRect, cachedPawnReady
-            ? "US.Diagnostics.Ready".Translate().ToString() : "US.Diagnostics.Blocked".Translate().ToString(),
-            Theme, cachedPawnReady ? UiStatusTone.Success : UiStatusTone.Neutral, UiFont.Tiny);
-        UiThemeDraw.Label(new Rect(headerRect.x + SpaceSm, headerRect.y, Mathf.Max(1f, badgeRect.x - headerRect.x - SpaceSm * 2f), headerRect.height),
-            cachedPawnText, Theme, Color.white, UiFont.Small);
-
-        // Section 1 (2 fixed rows): current action + dispatched audio.
-        float y = headerRect.yMax;
-        DrawSectionTitle(new Rect(body.x, y, body.width, SectionTitleHeight), "Current state");
-        y += SectionTitleHeight;
-        DrawFieldRow(new Rect(body.x, y, body.width, FieldRowHeight), "Current action", cachedActionText);
-        y += FieldRowHeight;
-        DrawFieldRow(new Rect(body.x, y, body.width, FieldRowHeight), "Dispatched audio", cachedAudioText);
-        y += FieldRowHeight;
-
-        // Section 2: the 17-gate chain, inside a vertical scroll view when it overflows.
-        DrawSectionTitle(new Rect(body.x, y, body.width, SectionTitleHeight), "Gate chain");
-        y += SectionTitleHeight;
-        Rect viewport = new(body.x, y, body.width, Mathf.Max(1f, body.yMax - y));
-        DrawGateChain(viewport);
-    }
-
-    private void DrawGateChain(Rect viewport)
-    {
-        float contentHeight = gates.Count * FieldRowHeight;
-        bool scrollable = contentHeight > viewport.height;
-        float contentWidth = scrollable ? Mathf.Max(1f, viewport.width - ScrollbarWidth) : viewport.width;
-        Rect content = new(0f, 0f, contentWidth, contentHeight);
-        if (scrollable)
-        {
-            Widgets.BeginScrollView(viewport, ref scroll, content);
-        }
-
-        for (int i = 0; i < gates.Count; i++)
-        {
-            GateLine gate = gates[i];
-            DrawFieldRow(new Rect(0f, i * FieldRowHeight, contentWidth, FieldRowHeight), gate.Name, gate.Value, ColorFor(gate.State));
-        }
-
-        if (scrollable)
-        {
-            Widgets.EndScrollView();
-        }
-    }
-
-    private static void DrawSectionTitle(Rect rect, string label)
-    {
-        UiThemeDraw.Label(rect, label, Theme, Theme.AccentGold, UiFont.Small);
-        Widgets.DrawBoxSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Theme.AccentWith(0.20f));
-    }
-
-    private static void DrawFieldRow(Rect rect, string label, string value, Color? valueColor = null)
-    {
-        float labelWidth = rect.width * .42f;
-        UiThemeDraw.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), label, Theme, Theme.TextSecondary, UiFont.Small);
-        Rect valueRect = new(rect.x + labelWidth + SpaceSm, rect.y,
-            Mathf.Max(1f, rect.xMax - (rect.x + labelWidth + SpaceSm)), rect.height);
-        UiThemeDraw.Label(valueRect, value, Theme, valueColor ?? Color.white, UiFont.Small, TextAnchor.MiddleRight);
-    }
-
-    private void DrawVisible(Rect body)
-    {
-        if (rows.Count == 0)
-        {
-            DrawEmptyNotice(body, "US.Diagnostics.Panel.Empty".Translate().ToString());
-            return;
-        }
-
-        float contentHeight = rows.Count * RowHeight;
-        bool scrollable = contentHeight > body.height;
-        float contentWidth = scrollable ? Mathf.Max(1f, body.width - ScrollbarWidth) : body.width;
-        Rect content = new(0f, 0f, contentWidth, contentHeight);
-        if (scrollable)
-        {
-            Widgets.BeginScrollView(body, ref scroll, content);
-        }
-
-        for (int i = 0; i < rows.Count; i++)
-        {
-            VisibleRow row = rows[i];
-            Rect rowRect = new(0f, i * RowHeight, contentWidth, RowHeight);
-            if (i % 2 == 0)
-            {
-                Widgets.DrawBoxSolid(rowRect, new Color(.08f, .075f, .067f, .65f));
-            }
-
-            Color oldColor = GUI.color;
-            TextAnchor oldAnchor = Text.Anchor;
-            GameFont oldFont = Text.Font;
-            Text.Anchor = TextAnchor.MiddleLeft;
-            Text.Font = GameFont.Small;
-            // Columns: dot | PawnText (flexible) | Action | Cooldown | Audio | Ready/Blocked (right).
-            float statusX = rowRect.xMax - StateTextWidth;
-            float audioX = statusX - 96f;
-            float cooldownX = audioX - 66f;
-            float actionX = cooldownX - 60f;
-            float pawnX = rowRect.x + DotWidth + SpaceSm;
-            float pawnW = Mathf.Max(1f, actionX - pawnX - SpaceSm);
-            GUI.color = row.Dot;
-            Widgets.Label(new Rect(rowRect.x + 2f, rowRect.y, DotWidth, rowRect.height), SqueakDiagnosticsOverlay.Mark);
-            GUI.color = Color.white;
-            Widgets.Label(new Rect(pawnX, rowRect.y, pawnW, rowRect.height), row.PawnText);
-            GUI.color = Theme.TextSecondary;
-            Widgets.Label(new Rect(actionX, rowRect.y, 60f, rowRect.height), row.Action);
-            Widgets.Label(new Rect(cooldownX, rowRect.y, 60f, rowRect.height), row.Cooldown);
-            Text.Anchor = TextAnchor.MiddleRight;
-            GUI.color = Color.white;
-            Widgets.Label(new Rect(audioX, rowRect.y, 90f, rowRect.height), row.Audio);
-            GUI.color = row.Ready ? Theme.Success : Theme.AccentGold;
-            Widgets.Label(new Rect(statusX, rowRect.y, Mathf.Max(1f, rowRect.xMax - statusX), rowRect.height),
-                row.Ready ? "US.Diagnostics.Ready".Translate().ToString() : "US.Diagnostics.Blocked".Translate().ToString());
-            Text.Anchor = oldAnchor;
-            Text.Font = oldFont;
-            GUI.color = oldColor;
-        }
-
-        if (scrollable)
-        {
-            Widgets.EndScrollView();
-        }
-    }
-
-    /// <summary>
-    /// The single auditable three-state mapping for the gate chain: GateState -> UiStatusTone.
-    /// This is the only place where a gate state chooses its semantic tone.
-    /// </summary>
-    private static UiStatusTone ToneFor(GateState state) => state switch
-    {
-        GateState.Pass => UiStatusTone.Success,
-        GateState.Block => UiStatusTone.Warning,
-        GateState.Pending => UiStatusTone.Active,
-        _ => UiStatusTone.Neutral,
-    };
-
-    /// <summary>
-    /// Gate value text tint. Keeps the panel's original role colors (pass green / gold blocker /
-    /// selected plane for stochastic gates), now sourced from UiTheme roles via the tone switch.
-    /// </summary>
-    private static Color ColorFor(GateState state) => ToneFor(state) switch
-    {
-        UiStatusTone.Success => Theme.Success,
-        UiStatusTone.Warning => Theme.AccentGold,
-        UiStatusTone.Active => Theme.Selected,
-        _ => Color.white,
-    };
-
-    /// <summary>
-    /// Local replacement for the retired centered-notice helper: framed panel plane plus centered
-    /// descriptive text, painted through public UiThemeDraw entries. Deliberately private to this
-    /// panel — no new public UI type is introduced.
-    /// </summary>
-    private static void DrawEmptyNotice(Rect body, string text)
-    {
-        if (body.width <= 1f || body.height <= 1f)
-        {
-            return;
-        }
-
-        UiThemeDraw.Panel(body, Theme);
-        UiThemeDraw.Label(body.ContractedBy(16f), text, Theme, Theme.TextSecondary, UiFont.Small, TextAnchor.MiddleCenter);
-    }
-
-    /// <summary>Rebuilds the formatted text cache on Repaint only when the overlay revision (or mode) changed. Zero per-frame re-snapshot/re-layout work.</summary>
-    private void RebuildIfStale()
-    {
-        if (Event.current == null || Event.current.type != EventType.Repaint)
-        {
-            return;
-        }
-
-        SqueakDiagnosticsMode currentMode = SqueakDiagnosticsOverlay.Mode;
-        int currentRevision = SqueakDiagnosticsOverlay.Revision;
-        if (cachedRevision == currentRevision && cachedMode == currentMode)
-        {
-            return;
-        }
-
-        cachedRevision = currentRevision;
-        cachedMode = currentMode;
-        switch (currentMode)
-        {
-            case SqueakDiagnosticsMode.Selected:
-                RebuildSelected();
-                break;
-            case SqueakDiagnosticsMode.Visible:
-                RebuildVisible();
-                break;
-            default:
-                gates.Clear();
-                rows.Clear();
-                cachedPawnText = string.Empty;
-                cachedActionText = string.Empty;
-                cachedAudioText = string.Empty;
-                break;
-        }
-    }
-
-    private void RebuildSelected()
-    {
-        gates.Clear();
-        cachedPawnText = string.Empty;
-        cachedActionText = string.Empty;
-        cachedAudioText = string.Empty;
-
-        Pawn? pawn = SqueakDiagnosticsOverlay.SelectedPawn;
-        SqueakDiagnosticsOverlay.CachedPawn? entry = null;
-        if (pawn != null)
-        {
-            foreach (SqueakDiagnosticsOverlay.CachedPawn candidate in SqueakDiagnosticsOverlay.CachedPawns)
-            {
-                if (ReferenceEquals(candidate.Pawn, pawn))
-                {
-                    entry = candidate;
-                    break;
-                }
-            }
-        }
-
-        if (entry == null)
-        {
-            return;
-        }
-
-        SqueakDiagnosticSnapshot s = entry.Snapshot;
-        cachedPawnReady = SqueakDiagnosticsOverlay.ReadyFor(s);
-        cachedPawnText = $"{entry.Pawn.LabelShort} ({entry.Pawn.def.defName})";
-
-        // Section 1 values.
-        cachedActionText = s.CurrentTimingAction.HasValue
-            ? SqueakLabels.Action(s.CurrentTimingAction.Value)
-            : "—";
-        cachedAudioText = "—";
-        SqueakRecentOutcome? currentSignificant = OutcomeForCurrentAction(s, s.LastSignificantOutcome);
-        if (currentSignificant.HasValue && currentSignificant.Value.Outcome == SqueakTriggerOutcome.Dispatched)
-        {
-            cachedAudioText = FormatDispatched(currentSignificant.Value);
-        }
-
-        gates.Clear();
-        gates.AddRange(BuildGates(s, entry.Pawn, showSeconds));
-    }
-
-    /// <summary>
-    /// Pure read-only gate-chain projection (17 gates G0-G16). Never consumes Rand, never
-    /// writes production state, never touches timestamps. <paramref name="showSeconds"/> only
-    /// switches cooldown display units; it does not alter any sampled data.
-    /// </summary>
-    private static List<GateLine> BuildGates(SqueakDiagnosticSnapshot s, Pawn pawn, bool showSeconds)
-    {
-        List<GateLine> result = new(20);
-
-        void Add(string name, GateState state, string value)
-        {
-            result.Add(new GateLine { Name = name, Value = value, State = state });
-        }
-
-        // Gate G0: Disabled bypass. The panel only opens in DevMode; when the mode is Disabled
-        // the whole trigger chain is bypassed, so that is the current blocker.
-        bool modeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled;
-        Add("Disabled bypass", modeDisabled ? GateState.Block : GateState.Pass,
-            modeDisabled ? "Blocked" : "Pass");
-
-        // G1: on map.
-        bool onMap = pawn.Spawned && pawn.MapHeld == Find.CurrentMap;
-        Add("On map", onMap ? GateState.Pass : GateState.Block, onMap ? "Pass" : "Blocked");
-
-        // G2: on screen.
-        bool onScreen = Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position);
-        Add("On screen", onScreen ? GateState.Pass : GateState.Block, onScreen ? "Pass" : "Blocked");
-
-        // G3: plan present/configured. Snapshot timing is only computed along the configured-plan
-        // path, so a non-null CurrentTimingAction implies a usable plan; no action => N/A.
-        bool hasAction = s.CurrentTimingAction.HasValue;
-        Add("Plan", GateState.Pass, hasAction ? "Pass" : "N/A");
-
-        // G4: identity gate (external path only). Non-external => N/A; external => evaluate
-        // IsPlayerControlled / Downed / Awake.
-        bool externalPath = s.CurrentTriggerMode == SqueakTriggerMode.External;
-        if (!externalPath)
-        {
-            Add("Identity", GateState.Pass, "N/A");
-        }
-        else
-        {
-            bool idPass = pawn.IsPlayerControlled && !pawn.Downed && pawn.Awake();
-            Add("Identity", idPass ? GateState.Pass : GateState.Block, idPass ? "Pass" : "Blocked");
-        }
-
-        // G5: action gate (external action): built-in actions pass; external actions require
-        // AllowExternalActions. The snapshot only exposes built-in enum actions (external actions
-        // are string-keyed and never become CurrentTimingAction), so this gate is Pass by
-        // construction for the built-in path; kept as a distinguishable chain entry.
-        if (!hasAction)
-        {
-            Add("Action gate", GateState.Pass, "N/A");
-        }
-        else
-        {
-            bool isBuiltIn = s.CurrentTimingAction.HasValue && IsBuiltInAction(s.CurrentTimingAction.Value);
-            if (isBuiltIn)
-            {
-                Add("Action gate", GateState.Pass, "Pass");
-            }
-            else
-            {
-                bool allowed = UniversalSqueakerMod.Settings?.allowExternalActions == true;
-                Add("Action gate", allowed ? GateState.Pass : GateState.Block,
-                    allowed ? "Pass" : "Blocked");
-            }
-        }
-
-        // G6: scope enabled.
-        Add("Scope enabled", s.CurrentActionEnabled ? GateState.Pass : GateState.Block,
-            s.CurrentActionEnabled ? "Pass" : "Blocked");
-
-        // G7: scope match (ActiveCommand). Use the runtime resolved scope (not the static DefaultScope)
-        // and the same invocation source semantics as production.
-        if (!hasAction)
-        {
-            Add("Scope match", GateState.Pass, "N/A");
-        }
-        else
-        {
-            SqueakAction currentAction = s.CurrentTimingAction!.Value;
-            RuntimeActionDelta delta = SqueakRuntimeResolver.Current.ResolveContext(pawn).GetAction(currentAction);
-            bool activeCommandScope = delta.Scope == SqueakActionScope.ActiveCommand;
-            if (!activeCommandScope)
-            {
-                Add("Scope match", GateState.Pass, "N/A");
-            }
-            else
-            {
-                bool isActive = DiagnosticInvocationFor(currentAction, pawn).IsActiveCommand;
-                Add("Scope match", isActive ? GateState.Pass : GateState.Block,
-                    isActive ? "Pass" : "Blocked");
-            }
-        }
-
-        // G8: startup phase.
-        Add("Startup", s.StartupPending ? GateState.Block : GateState.Pass,
-            s.StartupPending ? "Blocked" : "Pass");
-
-        // G9: probability gate (random, blue with probability values).
-        Add("Probability", GateState.Pending, FormatPercent(s.EffectiveProbability, s.BaseProbability));
-
-        // G10: action cooldown.
-        Add("Action cooldown", s.Timing.ActionReady ? GateState.Pass : GateState.Block,
-            FormatCooldownDisplay(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds, showSeconds));
-
-        // G11: global cooldown.
-        bool globalApplicable = s.Timing.GlobalApplicable;
-        Add("Global cooldown", !globalApplicable || s.Timing.GlobalReady ? GateState.Pass : GateState.Block,
-            FormatCooldownDisplay(s.Timing.GlobalRemainingTicks, null, showSeconds));
-
-        // G12: vocal organ gate.
-        bool vocalOk = s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold;
-        Add("Vocal organ", vocalOk ? GateState.Pass : GateState.Block,
-            vocalOk ? "Pass" : "Blocked");
-
-        // G13: talking gate (probability, blue).
-        Add("Talking", GateState.Pending, FormatPercent(s.VocalCapability.TalkingChance, null));
-
-        // G14/G15/G16 only reflect the current action's last evaluation; an older result from a
-        // different action is not shown as if it belonged to the current gate chain.
-        SqueakRecentOutcome? evaluation = OutcomeForCurrentAction(s, s.LastEvaluation);
-
-        // G14: audio pool no candidate.
-        bool noCandidate = evaluation.HasValue && evaluation.Value.Outcome == SqueakTriggerOutcome.NoSoundFallback;
-        Add("Audio pool", noCandidate ? GateState.Block : GateState.Pass,
-            noCandidate ? "Blocked" : evaluation.HasValue ? "Pass" : "N/A");
-
-        // G15: playability rejected.
-        bool eligibilityRejected = evaluation.HasValue && evaluation.Value.Outcome == SqueakTriggerOutcome.EligibilityRejected;
-        Add("Playability", eligibilityRejected ? GateState.Block : GateState.Pass,
-            eligibilityRejected ? "Blocked" : evaluation.HasValue ? "Pass" : "N/A");
-
-        // G16: dispatch success.
-        if (!evaluation.HasValue)
-        {
-            Add("Dispatch", GateState.Pass, "N/A");
-        }
-        else if (evaluation.Value.Outcome == SqueakTriggerOutcome.Dispatched)
-        {
-            Add("Dispatch", GateState.Pass, FormatDispatched(evaluation.Value));
-        }
-        else if (evaluation.Value.Outcome == SqueakTriggerOutcome.PlaybackFailed)
-        {
-            Add("Dispatch", GateState.Block, "Blocked");
-        }
-        else
-        {
-            Add("Dispatch", GateState.Pass, "N/A");
-        }
-
-        return result;
-    }
-
-    private static bool IsBuiltInAction(SqueakAction action)
-    {
-        string? key = UniversalSqueaker.Kernel.ActionKey.For(action);
-        return key != null && UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(key);
-    }
-
-    private static string FormatPercent(float? value, float? baseValue)
-    {
-        if (!value.HasValue)
-        {
-            return "—";
-        }
-
-        return baseValue.HasValue
-            ? $"{value.Value:0.###} / {baseValue.Value:0.###}"
-            : $"{value.Value:0.###}";
-    }
-
-    private static string FormatDispatched(SqueakRecentOutcome outcome)
-    {
-        string sound = outcome.Sound?.defName ?? "?";
-        return string.IsNullOrEmpty(outcome.PoolStableKey)
-            ? sound
-            : $"{outcome.PoolStableKey} : {sound}";
-    }
-
-    private static string FormatCooldownDisplay(int? remainingTicks, float? remainingSeconds, bool showSeconds)
-    {
-        if (remainingTicks.HasValue)
-        {
-            return showSeconds ? $"{remainingTicks.Value / 60f:0.00}s" : $"{remainingTicks.Value}t";
-        }
-
-        if (remainingSeconds.HasValue)
-        {
-            return showSeconds ? $"{remainingSeconds.Value:0.00}s" : $"{remainingSeconds.Value * 60f:0.00}t";
-        }
-
-        return "—";
-    }
-
-    /// <summary>Mirrors CompSqueaker.PeriodicInvocationFor plus the external action sources used by
-    /// Notify_Draft/Notify_Attack/Notify_Equip, so the diagnostic Scope-match gate uses the same
-    /// SqueakTriggerInvocation.IsActiveCommand semantics as production.</summary>
-    private static SqueakTriggerInvocation DiagnosticInvocationFor(SqueakAction action, Pawn pawn)
-    {
-        switch (action)
-        {
-            case SqueakAction.Work:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic,
-                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.Periodic);
-            case SqueakAction.Attack:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Attack,
-                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
-            case SqueakAction.Draft:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Draft, SqueakInvocationSource.ActiveCommand);
-            case SqueakAction.Undraft:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand);
-            case SqueakAction.Equip:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
-            default:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic, SqueakInvocationSource.Periodic);
-        }
-    }
-
-    private static string? CurrentActionKey(SqueakDiagnosticSnapshot s)
-    {
-        if (!s.CurrentTimingAction.HasValue) return null;
-        return UniversalSqueaker.Kernel.ActionKey.For(s.CurrentTimingAction.Value) ?? s.CurrentTimingAction.Value.ToString();
-    }
-
-    /// <summary>Returns the supplied outcome only when it belongs to the currently displayed action;
-    /// otherwise returns null so stale results from other actions are not shown in this action's gates.</summary>
-    private static SqueakRecentOutcome? OutcomeForCurrentAction(SqueakDiagnosticSnapshot s, SqueakRecentOutcome? outcome)
-    {
-        string? key = CurrentActionKey(s);
-        if (key == null || !outcome.HasValue) return null;
-        return string.Equals(outcome.Value.Action, key, StringComparison.Ordinal) ? outcome : null;
-    }
-
-    private void RebuildVisible()
-    {
-        rows.Clear();
-        IReadOnlyList<SqueakDiagnosticsOverlay.CachedPawn> entries = SqueakDiagnosticsOverlay.CachedPawns;
-        for (int i = 0; i < entries.Count; i++)
-        {
-            SqueakDiagnosticsOverlay.CachedPawn entry = entries[i];
-            SqueakDiagnosticSnapshot s = entry.Snapshot;
-            bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
-            string pawnText = $"{entry.Pawn.LabelShort} ({entry.Pawn.def.defName})";
-            string action = s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : "—";
-            string cooldown = FormatCooldownDisplay(s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds, showSeconds);
-            string globalCooldown = FormatCooldownDisplay(s.Timing.GlobalRemainingTicks, null, showSeconds);
-            string audio = "—";
-            SqueakRecentOutcome? currentSignificant = OutcomeForCurrentAction(s, s.LastSignificantOutcome);
-            if (currentSignificant.HasValue && currentSignificant.Value.Outcome == SqueakTriggerOutcome.Dispatched)
-            {
-                audio = FormatDispatched(currentSignificant.Value);
-            }
-
-            rows.Add(new VisibleRow(entry.MarkColor, pawnText, action, $"{cooldown}/{globalCooldown}", audio, ready));
-        }
+        base.PreClose();
+        SqueakDiagnosticsOverlay.NotifyPanelClosed();
     }
 }

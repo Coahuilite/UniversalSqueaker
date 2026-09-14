@@ -34,9 +34,31 @@ public interface IUsKernelSettingsSource
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
 
+    /// <summary>
+    /// Parent switch of the eat-occurrence pair: false (the shipped default) keeps the whole
+    /// <c>JobDefOf.Ingest</c> job counting as an Eat occurrence, true narrows it to genuinely
+    /// ingesting food. Turning it off forces the child switch false in the same write.
+    /// </summary>
+    void SetEatPrecision(bool value);
+
+    /// <summary>Child option "include drugs"; only meaningful while the parent switch is on.</summary>
+    void SetEatPrecisionIncludeDrugs(bool value);
+
+    void SetGlobalMinIntervalTicks(int ticks);
+    void SetGlobalCooldownMultiplier(float value);
+    void SetDevLoggingMode(SqueakDevLoggingMode mode);
+    void SetLocalizeDebugActions(bool value);
+
     // View/navigation state (US-owned, per window)
     void SetActiveTab(string tab);
     void ScrollToSection(string sectionKey);
+
+    /// <summary>
+    /// Retractable help drawer visibility. Independent per-window view state, never the engine's
+    /// active-tab gate: the Host writes it through its own "help-open" binding, and the revision
+    /// bumper turns the change into the matching layout variant at the next arrange.
+    /// </summary>
+    void SetHelpDrawerOpen(bool open);
     void SetTuningLayer(int layer);
     void SetTuningDomain(string raceDefName, string targetDefName);
     void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName);
@@ -45,15 +67,15 @@ public interface IUsKernelSettingsSource
     void SetRaceFilter(string raceDefName);
     void SetXenotypeFilter(string xenotypeDefName);
     void SetSearchText(string text);
-    void SetHelpHover(string key);
-
-    /// <summary>Per-frame hover-claim boundary (D10): run before every DrawFrame; applies the
-    /// clear-or-hold-or-grace rule from <see cref="VoicePacksPageModel.BeginHelpHoverFrame"/>.</summary>
-    void BeginHelpHoverFrame();
+    // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
+    // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
 
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
     void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value);
+
+    /// <summary>「重置为预设」：把本层来源指向的预设基线重新写回（来源保持）。不可用时是空操作。</summary>
+    void ResetMoodToPreset(SqueakMood mood);
     void ToggleBaselinePreset(string presetDefName);
     void ToggleBaselineRace(string presetDefName, string raceDefName, bool selected);
     void ToggleBaselineXenotype(string presetDefName, string raceDefName, string xenotypeDefName, bool selected);

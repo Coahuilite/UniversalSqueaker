@@ -27,6 +27,7 @@ internal static class Program
         VerifyAllEventDefinitions();
         VerifyOnceSemantics();
         VerifyOnceLimit();
+        VerifyDrawFailureIsBounded();
         VerifyDisabledModeGate();
         VerifySilentFailureBoundary();
         VerifyEncodingAndExceptionMetadata();
@@ -134,6 +135,32 @@ internal static class Program
         AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "cap1023", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1023]), nameof(VerifyOnceLimit) + " limit");
         AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p1", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1024]), nameof(VerifyOnceLimit) + " reclaimed");
         AssertEqual(D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "cap0", trailing: " reason=duplicate_key count=1"), Format(Verse.Log.Captured[1025]), nameof(VerifyOnceLimit) + " cleared prior key");
+    }
+
+    /// <summary>
+    /// The first in-game incident: the diagnostics head mark was drawn from a per-frame hook in a
+    /// non-IMGUI phase, so every frame of every pawn logged
+    /// "You can only call GUI functions from inside OnGUI" - 8558 lines, 83.8% of the whole log.
+    /// The report is once-per-exception-type per session; this pins the bound so a future edit cannot
+    /// turn it back into a per-frame line. Mutation: passing once:false in
+    /// SqueakLog.DiagnosticsMarkDrawFailed makes the first assertion count 500.
+    /// </summary>
+    private static void VerifyDrawFailureIsBounded()
+    {
+        Reset(SqueakDevLoggingMode.Enabled);
+        for (int i = 0; i < 500; i++)
+        {
+            SqueakLog.DiagnosticsMarkDrawFailed(new InvalidOperationException("You can only call GUI functions from inside OnGUI."));
+        }
+
+        AssertEqual(1, Verse.Log.Captured.Count, nameof(VerifyDrawFailureIsBounded) + ": 500 identical draw failures must produce one line");
+        AssertEqual(D("warning", "daily", "diagnostics.mark.draw_failed", "A diagnostics head mark could not be drawn.",
+            trailing: " ex_type=System.InvalidOperationException ex_msg=You%20can%20only%20call%20GUI%20functions%20from%20inside%20OnGUI."),
+            Format(Verse.Log.Captured[0]), nameof(VerifyDrawFailureIsBounded) + " line");
+
+        // A different exception type is one more line (the claim key carries the type), never one per frame.
+        SqueakLog.DiagnosticsMarkDrawFailed(new ArgumentException("other failure"));
+        AssertEqual(2, Verse.Log.Captured.Count, nameof(VerifyDrawFailureIsBounded) + ": a second exception type adds exactly one line");
     }
 
     private static void VerifyDisabledModeGate()

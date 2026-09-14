@@ -98,8 +98,12 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
         UsKernelDraw.HelpHover(new Rect(x, y, rect.width, ChartHeight), ctx, "us/attenuation-editor/chart");
         DrawChart(new Rect(x, y, rect.width, ChartHeight), ctx);
         y += ChartHeight + Gap;
+        // The status read-out is not writable, but it is still a hover surface: it owns the catalog entry
+        // that explains what the preset name and the range it prints mean.
+        Rect statusRect = new(x, y, rect.width, StatusHeight);
+        UsKernelDraw.HelpHover(statusRect, ctx, "us/attenuation-editor/status");
         UsKernelDraw.Label(
-            new Rect(x, y, rect.width, StatusHeight),
+            statusRect,
             PresetDisplay(ctx, preset) + "  " + AttenuationMath.FormatRangeDisplay(min, max),
             ctx.Theme,
             ctx.Theme.TextSecondary,
@@ -142,7 +146,7 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
     private void DrawPresetButton(Rect rect, string label, bool selected, SqueakDistancePreset preset, UiWidgetContext ctx)
     {
-        if (UsKernelDraw.SelectionButton(rect, label, ctx.Theme, selected))
+        if (UsKernelDraw.SelectionButton(rect, ctx, label, ctx.Theme, selected))
         {
             ctx.Bindings.Invoke("set-distance-preset", preset);
         }
@@ -150,6 +154,8 @@ public sealed class UsAttenuationEditorWidget : UsSectionWidgetBase
 
     private void DrawNarrowSummary(Rect rect, UiWidgetContext ctx)
     {
+        // The narrow card's whole body is the same read-out, so it claims the same entry.
+        UsKernelDraw.HelpHover(rect, ctx, "us/attenuation-editor/status");
         string preset = ctx.Bindings.TryGet("distance-preset", out string presetText) ? presetText : PresetCustomValue;
         float min = ctx.Bindings.TryGet("distance-range-min", out float minBound) ? minBound : AttenuationMath.MinDistance;
         float max = ctx.Bindings.TryGet("distance-range-max", out float maxBound) ? maxBound : 50f;

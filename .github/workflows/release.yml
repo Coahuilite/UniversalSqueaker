@@ -1,6 +1,6 @@
 name: Release
 
-# Push a SemVer tag (v0.2.0, v0.2.0-rc1) and this publishes the US mod package players download.
+# Push a SemVer tag (vX.Y.Z, vX.Y.Z-rcN) and this publishes the US mod package players download.
 #
 # US ships NO audio and NO copy of FerriteLib.UiKit.dll: it is a routing kernel that compiles
 # against the carrier mod (coahuilite.ferritelib) by a sibling relative path. So this pipeline
@@ -8,7 +8,7 @@ name: Release
 # package that must contain exactly UniversalSqueaker.dll and never a second carrier.
 #
 # Version identity is set in the repository, not injected here: the release commit must already
-# carry a clean <Version>0.2.0</Version> and matching About.xml <modVersion>. The csproj pins
+# carry a clean <Version> and a matching About.xml <modVersion>. The csproj pins
 # <Version> explicitly, so `-p:VersionSuffix=` does NOT clear a -dev suffix (measured) - the
 # release-metadata gate below is what refuses a -dev tag, and it fails the build rather than
 # silently shipping a mislabelled DLL.
@@ -102,7 +102,7 @@ jobs:
       # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
       # staging. verify-local's Dev/Release build gates leave 1.6/Assemblies populated; stage-package
       # reads that DLL and re-checks the single-carrier / no-audio / version red lines at assembly time.
-      - name: Verify (13 gates)
+      - name: Verify (14 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 
@@ -112,7 +112,10 @@ jobs:
 
       - name: Build the release payload
         shell: pwsh
-        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --nologo
+        # --no-incremental for the same reason the packers use it: Dev and Release share one
+        # OutputPath, and the staging engine measures the configuration stamp rather than trusting the
+        # label - a stale Dev assembly at the payload path must be rebuilt, not quietly shipped.
+        run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo
 
       - name: Stage the release asset
         id: pack
@@ -125,14 +128,15 @@ jobs:
           $base = $tag -replace '^v', '' -replace '-rc.*$', ''
           $commit = (git rev-parse --short=12 HEAD).Trim()
           $stageDir = 'dist/github/UniversalSqueaker'
-          # No -CreateZip here: stage-package zips the CONTENTS of the stage dir, which would put
-          # 1.6/ and About/ at the archive root. The series shape (the carrier's FerriteLib-<tag>.zip,
-          # and what the release body below promises) is a top-level UniversalSqueaker/ folder, so a
-          # collaborator unzipping into RimWorld/Mods/ gets a valid mod directory by construction.
-          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release -CommitLabel $commit
+          # One archive writer, in the engine (FL→US round 2 S4). The shape the release body promises -
+          # exactly one top-level UniversalSqueaker/ folder, so unzipping into Mods/ yields a valid mod
+          # directory - and the entry timestamps both come from here now: every entry is stamped with
+          # this commit's author date, which is what makes the digest below a check another run can
+          # reproduce instead of a receipt only this run believes. The asset name stays
+          # UniversalSqueaker-<tag>.zip because that name is a reconciliation target.
+          ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release `
+            -CommitLabel $commit -RequireReleaseIdentity -CreateZip -ArchiveName "UniversalSqueaker-$tag"
           $zip = "dist/github/UniversalSqueaker-$tag.zip"
-          if (Test-Path -LiteralPath $zip -PathType Leaf) { Remove-Item -LiteralPath $zip -Force }
-          Compress-Archive -Path $stageDir -DestinationPath $zip
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
           "asset=$zip" >> $env:GITHUB_OUTPUT

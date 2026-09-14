@@ -24,6 +24,7 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsKernelSettingsHost
 {
+    private const int HelpHoverGracePasses = 15;
     private const string Source = "coahuilite.universalsqueaker";
     private const string ManifestResourceName = "UniversalSqueaker.UI.Layout.Schema2.xml";
 
@@ -49,16 +50,43 @@ public static class UsKernelSettingsHost
         UsKernelWidgetRegistrar.EnsureRegistered();
 
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
-        var bumper = new SessionRevisionBumper();
+
+        // The retractable help drawer is a layout VARIANT of the shipped tree, not a binding-driven
+        // column: the carrier's engine reads only a static Hidden attribute plus the forbidden
+        // Tab/active-tab gate, and it has no visible/width binding. Both variants are composed ONCE
+        // from the parsed roots - open = as shipped, closed = the same tree without the help column -
+        // and handed to the revision bumper, which installs the matching one at the revision boundary.
+        // They are SNAPSHOTS: UiLayoutManifest.Roots is the live list an install mutates, so aliasing
+        // it here would make the open variant follow every close (the install writes the closed root
+        // back into the "open" list) and the drawer could never reopen.
+        var openRoots = new List<UiElementSpec>(manifest.Roots.Count);
+        openRoots.AddRange(manifest.Roots);
+        var closedRoots = new List<UiElementSpec>(openRoots.Count);
+        foreach (UiElementSpec root in openRoots)
+        {
+            closedRoots.Add(UsLayoutVariants.WithoutElement(root, UsLayoutVariants.HelpColumnId));
+        }
+
+        var bumper = new SessionRevisionBumper(source.ViewState, openRoots, closedRoots);
         UiBindings bindings = BuildBindings(source, bumper);
         UiHost host = new(
             Source,
             manifest,
             bindings,
-            UiTheme.DarkGold,
+            UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
-        bumper.Attach(host.Session);
+        bumper.Attach(host.Session, manifest);
+        // The page state's default - and every Reset - is the RETRACTED drawer, while the parsed
+        // manifest IS the open tree. Reconcile the two before the first arrange, or the very first
+        // frame would show the drawer open and every later toggle would be one state behind.
+        bumper.ApplyVariant();
+        // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
+        // this many IMGUI passes, which is what stops the overview from flashing while the pointer
+        // crosses the gap between two adjacent controls. The library owns the rule and ships no
+        // default on purpose - the consumer that needed the grace picks its length. Counted in passes,
+        // not seconds: the settings window opens with forcePause, where game time is frozen.
+        host.Session.HoverGraceFrames = HelpHoverGracePasses;
         // The view cache must expire on the same clock as the layout cache, or a write landing in a
         // frame's popup pass arranges against the previous view while the next frame draws a fresh
         // view into the stale snapshot - the 2026-09-04 filter misalignment.
@@ -77,15 +105,54 @@ public static class UsKernelSettingsHost
     /// </summary>
     private sealed class SessionRevisionBumper
     {
+        private readonly VoicePacksPageState state;
+        private readonly IReadOnlyList<UiElementSpec> openRoots;
+        private readonly IReadOnlyList<UiElementSpec> closedRoots;
         private UiSession? session;
+        private UiLayoutManifest? manifest;
+        private bool appliedOpen = true;
 
-        public void Attach(UiSession value)
+        public SessionRevisionBumper(
+            VoicePacksPageState state,
+            IReadOnlyList<UiElementSpec> openRoots,
+            IReadOnlyList<UiElementSpec> closedRoots)
+        {
+            this.state = state ?? throw new ArgumentNullException(nameof(state));
+            this.openRoots = openRoots ?? throw new ArgumentNullException(nameof(openRoots));
+            this.closedRoots = closedRoots ?? throw new ArgumentNullException(nameof(closedRoots));
+        }
+
+        public void Attach(UiSession value, UiLayoutManifest owner)
         {
             session = value;
+            manifest = owner ?? throw new ArgumentNullException(nameof(owner));
+        }
+
+        /// <summary>
+        /// Installs the root variant that matches <see cref="VoicePacksPageState.HelpDrawerOpen"/>
+        /// when it differs from the one already installed. Node identity is element Id/kind/declared
+        /// index, so the centre and help Scroll nodes - and the scroll positions they hold - survive
+        /// the swap; no host or session is recreated. A refused install leaves the shipped tree
+        /// (drawer open) in place, which is the fail-soft direction the layout variant promises.
+        /// </summary>
+        public void ApplyVariant()
+        {
+            if (manifest == null) return;
+            if (state.HelpDrawerOpen == appliedOpen) return;
+
+            IReadOnlyList<UiElementSpec> variant = state.HelpDrawerOpen ? openRoots : closedRoots;
+            if (UsLayoutVariants.TryReplaceRoots(manifest, variant, out _))
+            {
+                appliedOpen = state.HelpDrawerOpen;
+            }
         }
 
         public void Bump()
         {
+            // Compose BEFORE the clock moves: the engine's snapshot cache is keyed on the content
+            // revision, so swapping the roots without a bump would keep serving the pre-toggle
+            // geometry, while bumping first would publish the old tree under the new revision.
+            ApplyVariant();
             session?.ClosePopup();
             session?.BumpContentRevision();
         }
@@ -98,8 +165,28 @@ public static class UsKernelSettingsHost
         public void ResetScroll()
         {
             if (session == null) return;
-            session.SetScrollPosition(ContentScrollId, Vector2.zero);
-            session.SetScrollPosition(HelpScrollId, Vector2.zero);
+
+            // FL 0.4.0 keys scroll positions by node identity, not by the string a page declares:
+            // SetScrollPosition takes a UiNode and ScrollPositions is keyed by node (the string
+            // overload is gone with the batch-C node work, bd4d1b5). GetNodeByElementId is the
+            // carrier's own bridge from the one string this page owns to that identity.
+            //
+            // A null lookup means the element has not been arranged in this session yet, so there is
+            // no scroll state to reset. Skipping is equivalent to the old write, not a silent
+            // behaviour change: UiSession.GetScrollPosition answers Vector2.zero for a node that
+            // holds nothing, so "no entry" and "entry = zero" are indistinguishable to every reader,
+            // and these two calls never wrote anything but zero.
+            UiNode? contentNode = session.GetNodeByElementId(ContentScrollId);
+            if (contentNode != null)
+            {
+                session.SetScrollPosition(contentNode, Vector2.zero);
+            }
+
+            UiNode? helpNode = session.GetNodeByElementId(HelpScrollId);
+            if (helpNode != null)
+            {
+                session.SetScrollPosition(helpNode, Vector2.zero);
+            }
         }
 
         public void SetScrollTarget(string elementId)
@@ -118,7 +205,7 @@ public static class UsKernelSettingsHost
         var bindings = new UiBindings();
 
         // Navigation / page chrome.
-        bindings.BindValue<string>("active-tab", () => state.ActiveTab, source.SetActiveTab);
+        bindings.BindValue<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, source.SetActiveTab);
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
         // Tab switches and scroll-to change which sections are visible (and the active section),
         // so they bump the session content revision through the Host boundary.
@@ -173,6 +260,23 @@ public static class UsKernelSettingsHost
         bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
         bindings.BindAction<bool>("toggle-camera-indicator", value => { source.SetCameraIndicator(value); bump(); });
 
+        // Basic: the eat-precision pair. The parent gates the child, but the guard deliberately lives in
+        // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
+        // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
+        // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
+        bindings.BindValue<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
+        bindings.BindAction<bool>("toggle-eat-precision", value => { source.SetEatPrecision(value); bump(); });
+        bindings.BindValue<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
+        bindings.BindAction<bool>("toggle-eat-precision-include-drugs", value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
+
+        // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
+        bindings.BindValue<int>("min-interval", () => source.BuildView().GlobalMinIntervalTicks, value => { source.SetGlobalMinIntervalTicks(value); bump(); });
+        bindings.BindValue<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
+
+        // Diagnostics: dev logging level + vanilla debug-menu localization.
+        bindings.BindValue<SqueakDevLoggingMode>("dev-logging", () => source.BuildView().DevLoggingMode, value => { source.SetDevLoggingMode(value); bump(); });
+        bindings.BindValue<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
+
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);
         // Layer and domain switches swap the tuning editor's content, so they bump the revision.
@@ -187,6 +291,7 @@ public static class UsKernelSettingsHost
         bindings.BindAction<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
         bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
         bindings.BindAction<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
+        bindings.BindAction<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
         bindings.BindReadOnly<IReadOnlyList<BaselinePresetView>>("baseline-presets", () => source.BuildView().BaselinePresets);
         // Preset expand/collapse, per-row selection and import all reflow the preset tree.
         bindings.BindAction<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });
@@ -241,11 +346,23 @@ public static class UsKernelSettingsHost
         bindings.BindValue<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
-
-        // Help panel (C+A; D2 retired the pinned-selection channel with the index list).
+        // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
+        // fallback stays a binding because it is business state; the hover claim does not - since FL
+        // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
+        // panel and the accent border read ctx.Session.HoverClaim).
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
-        bindings.BindReadOnly<string>("help-hover", () => state.HelpHoverKey);
-        bindings.BindAction<string>("set-help-hover", source.SetHelpHover);
+
+        // Retractable help drawer: INDEPENDENT per-window visibility state, never the engine's
+        // active-tab gate (the manifest's drawer element deliberately carries no Tab). Both writes
+        // advance the session revision through the bumper, which installs the matching root variant
+        // BEFORE it bumps - so a toggle re-arranges the page and never recreates the host/session.
+        bindings.BindValue<bool>(
+            "help-open",
+            () => state.HelpDrawerOpen,
+            value => { source.SetHelpDrawerOpen(value); bump(); });
+        bindings.BindAction<string>(
+            "toggle-help-drawer",
+            _ => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
         return bindings;
     }

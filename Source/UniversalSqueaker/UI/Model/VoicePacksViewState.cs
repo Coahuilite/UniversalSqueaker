@@ -12,8 +12,20 @@ public sealed class VoicePacksViewState
     public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
     public bool ScalePeriodicWithAudiblePopulation { get; }
+
+    /// <summary>Eat-occurrence parent switch (settings.eatPrecisionEnabled): true narrows the Eat
+    /// occurrence to genuinely ingesting food. Read straight from settings.</summary>
+    public bool EatPrecisionEnabled { get; }
+
+    /// <summary>Eat-occurrence child option (settings.eatPrecisionIncludeDrugs): only meaningful while
+    /// <see cref="EatPrecisionEnabled"/> is on; the settings layer forces it false when the parent is off.</summary>
+    public bool EatPrecisionIncludeDrugs { get; }
+
     public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
+    public int GlobalMinIntervalTicks { get; }
+    public SqueakDevLoggingMode DevLoggingMode { get; }
+    public bool LocalizeDebugActions { get; }
     public float GlobalVolumeFactor { get; }
     public float DistanceRangeMin { get; }
     public float DistanceRangeMax { get; }
@@ -47,6 +59,9 @@ public sealed class VoicePacksViewState
         bool scalePeriodicWithAudiblePopulation,
         bool showCameraIndicator,
         float globalCooldownMultiplier,
+        int globalMinIntervalTicks,
+        SqueakDevLoggingMode devLoggingMode,
+        bool localizeDebugActions,
         float globalVolumeFactor,
         float distanceRangeMin,
         float distanceRangeMax,
@@ -69,7 +84,9 @@ public sealed class VoicePacksViewState
         string raceFilter,
         string xenotypeFilter,
         IReadOnlyList<FilterOptionView> raceFilterOptions,
-        IReadOnlyList<FilterOptionView> xenotypeFilterOptions)
+        IReadOnlyList<FilterOptionView> xenotypeFilterOptions,
+        bool eatPrecisionEnabled = false,
+        bool eatPrecisionIncludeDrugs = false)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -79,6 +96,9 @@ public sealed class VoicePacksViewState
         ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         ShowCameraIndicator = showCameraIndicator;
         GlobalCooldownMultiplier = globalCooldownMultiplier;
+        GlobalMinIntervalTicks = globalMinIntervalTicks;
+        DevLoggingMode = devLoggingMode;
+        LocalizeDebugActions = localizeDebugActions;
         GlobalVolumeFactor = globalVolumeFactor;
         DistanceRangeMin = distanceRangeMin;
         DistanceRangeMax = distanceRangeMax;
@@ -102,6 +122,8 @@ public sealed class VoicePacksViewState
         XenotypeFilter = xenotypeFilter ?? "";
         RaceFilterOptions = raceFilterOptions ?? Array.Empty<FilterOptionView>();
         XenotypeFilterOptions = xenotypeFilterOptions ?? Array.Empty<FilterOptionView>();
+        EatPrecisionEnabled = eatPrecisionEnabled;
+        EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 }
 
@@ -339,7 +361,11 @@ public readonly struct TuningDomainOptionView
     }
 }
 
-/// <summary>S5 分层心情编辑器行：本层记录（Own，null = 继承）+ 有效值（编辑器显示/滑块起点）。</summary>
+/// <summary>S5 分层心情编辑器行：本层**末行**记录（Own，列表序最后一个匹配行）+ 有效值（编辑器显示/滑块起点）。
+/// <para><b>F-Q：<c>Own != null</c> 不等于「本层有覆盖」。</b>clear 之后带来源的心情行仍留在清单里
+/// （F-P，来源是「重置为预设」的锚点），此时 Own 指向一行三旗标全 false 的记录。读 Own 的<b>值</b>前必须先看
+/// <c>hasPitchFactor</c>/<c>hasVolumeFactor</c>/<c>hasPitchJitter</c> 或 <c>sourcePresetDefName</c>；
+/// 现状消费者 <c>UsScopeTreeWidget</c> 已按 <c>hasXFactor == true</c> 门控，null 只表示本层没有行。</para></summary>
 public readonly struct MoodTuningRowView
 {
     public readonly SqueakMood Mood;
@@ -349,8 +375,14 @@ public readonly struct MoodTuningRowView
     public readonly float EffectiveVolume;
     /// <summary>有效 jitter 半宽（pitchJitter.max-1，≥0），默认 0。</summary>
     public readonly float EffectiveJitterHalf;
+    /// <summary>「重置为默认」可用性：三旗标皆 false ⇒ 本行没有本层设置（判定看旗标，不看行是否存在）。</summary>
+    public readonly SqueakMoodResetDefaultState DefaultReset;
+    /// <summary>「重置为预设」可用性：看来源字段 + 预设 Def/条目的可解析性，同样不看行是否存在。</summary>
+    public readonly SqueakMoodResetPresetState PresetReset;
 
-    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf)
+    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf,
+        SqueakMoodResetDefaultState defaultReset = SqueakMoodResetDefaultState.NoLocalSetting,
+        SqueakMoodResetPresetState presetReset = SqueakMoodResetPresetState.NotFromPreset)
     {
         Mood = mood;
         DisplayName = displayName ?? mood.ToString();
@@ -358,5 +390,7 @@ public readonly struct MoodTuningRowView
         EffectivePitch = effectivePitch;
         EffectiveVolume = effectiveVolume;
         EffectiveJitterHalf = Math.Max(0f, effectiveJitterHalf);
+        DefaultReset = defaultReset;
+        PresetReset = presetReset;
     }
 }

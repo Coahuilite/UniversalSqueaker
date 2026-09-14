@@ -45,7 +45,16 @@ public sealed class UsKernelFooterWidget : IUiWidget
 
     public float Measure(UiWidgetContext ctx)
     {
-        return FooterHeight;
+        // The band must fit what it draws. The 2026-09-14 run reported page-root/footer needing 33px in this
+        // 28px band once the build identity wrapped - the footer was the only widget in the page still
+        // returning a constant. Both halves are measured at their own half width, and 28 stays the floor, so
+        // a wide window keeps the shipped height exactly.
+        ctx.Bindings.TryGet("build-identity", out string buildIdentity);
+        ctx.Bindings.TryGet("save-status", out string saveStatus);
+        float half = Math.Max(1f, ctx.ViewWidth * 0.5f - Padding);
+        float left = ctx.Metrics.MeasureText(buildIdentity ?? "", UiFont.Tiny, half);
+        float right = ctx.Metrics.MeasureText(SaveStatusText(ctx, saveStatus), UiFont.Tiny, half);
+        return Math.Max(FooterHeight, Math.Max(left, right) + 6f);
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -66,15 +75,18 @@ public sealed class UsKernelFooterWidget : IUiWidget
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
+        // Accent discipline (05 §3.1): "saving" and "dirty" are activity, not "currently in effect" -
+        // the ● prefix and the text already carry that, so the color only steps up from secondary to
+        // primary. The destructive/handling failure keeps its status color (Danger).
         Color statusColor = saveStatus switch
         {
             "Failed" => ctx.Theme.Danger,
-            "Saving" => ctx.Theme.AccentGold,
+            "Saving" => ctx.Theme.TextPrimary,
             _ => ctx.Theme.TextSecondary,
         };
         if (isDirty && saveStatus != "Failed")
         {
-            statusColor = ctx.Theme.AccentGold;
+            statusColor = ctx.Theme.TextPrimary;
         }
 
         string prefix = saveStatus == "Saving" || isDirty ? "● " : "";

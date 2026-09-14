@@ -102,10 +102,10 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
     private void DrawDomainRow(Rect rect, VoicePackDomainView domain, bool selected, float textWidth, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/xenotype-layer/row");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, selected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
 
-        string title = TitleText(ctx, domain);
-        string detail = UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount, domain.State);
+        string title = UsPacksText.TitleWithState(ctx, TitleText(ctx, domain), domain.State);
+        string detail = UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount);
         (float titleBand, float detailBand, float _) = RowBands(ctx, textWidth, title, detail);
         float x = rect.x + UsKernelDraw.RowLeftPadding;
         float lineY = rect.y + RowTopPadding;
@@ -125,7 +125,7 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UiNative.Button(rect))
+        if (UiNative.Button(rect, ctx))
         {
             ctx.Bindings.Invoke(
                 "select-domain",
@@ -146,8 +146,8 @@ public sealed class UsXenotypeLayerWidget : UsSectionWidgetBase
         return RowBands(
             ctx,
             textWidth,
-            TitleText(ctx, domain),
-            UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount, domain.State)).Total;
+            UsPacksText.TitleWithState(ctx, TitleText(ctx, domain), domain.State),
+            UsPacksText.DetailText(ctx, domain.EnabledCount, domain.CandidateCount)).Total;
     }
 
     /// <summary>

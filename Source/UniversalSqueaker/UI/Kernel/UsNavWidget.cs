@@ -10,31 +10,53 @@ namespace UniversalSqueaker.UI;
 /// Workspace-only navigation for the five player tasks. It intentionally does not expose every
 /// child control: each destination owns one coherent flow in the centre workspace.
 ///
-/// Row heights come from the injected text metrics instead of a constant, because the description line
-/// is a translated string: a fixed 16px band fits English but silently cuts the wrapped line of any
-/// language that needs more room. One line costs exactly what it cost before, so the wide-window layout
-/// is unchanged.
+/// Geometry contract: one fixed column width comes from the manifest (160 since the compact-nav ruling),
+/// every card fills it exactly, and every card has the SAME outer bounds whichever one is selected. Card
+/// height is a single shared number, not a per-card measurement: <see cref="SubtitleLines"/> Tiny lines
+/// are reserved for the subtitle on every card in every language, so a wrapping translation can no longer
+/// make one card taller than its siblings. The label and subtitle are ellipsized inside the card (through
+/// the injected metric seam) rather than allowed to resize it. Selected state changes ink, fill and rail
+/// only.
+/// <para>
+/// COMPACT PASS (user feedback, 2026-09-13): the stack was too tall in game. Paddings are tightened and
+/// the reserved subtitle band is one line instead of two, which is a user-directed deviation from the
+/// brief's "two-line subtitle band" wording. The band is still ONE shared constant for all five cards, so
+/// the stability contract is unchanged; setting <see cref="SubtitleLines"/> back to 2 restores the previous
+/// shape in one line.
+/// </para>
 /// </summary>
 public sealed class UsNavWidget : IUiWidget
 {
     public const string Kind = "us/nav";
 
-    private const float Gap = 5f;
-    private const float SidePadding = 10f;
-    private const float TopPadding = 12f;
-    private const float LabelTop = 6f;
-    private const float LabelHeight = 22f;
+    // Compact-nav paddings (user feedback): the stack was too tall in game.
+    private const float Gap = 4f;
+    private const float SidePadding = 8f;
+    private const float TopPadding = 10f;
+    private const float LabelTop = 4f;
+    private const float LabelHeight = 20f;
     private const float DescriptionGap = 1f;
-    private const float DescriptionHeight = 16f;
-    private const float BottomPadding = 11f;
+    private const float BottomPadding = 6f;
 
-    // Text bands lose 10px of left inset plus 8px of breathing room to the row edge.
-    private const float TextInset = 10f;
-    private const float TextRightReserve = 8f;
+    // Text bands lose 8px of left inset plus 6px of breathing room to the row edge.
+    private const float TextInset = 8f;
+    private const float TextRightReserve = 6f;
 
     /// <summary>
-    /// Tab is a machine token: it is compared against the persisted <c>active-tab</c> binding and against
-    /// the manifest's Tab attributes, so it never gets translated. Label and Description are Keyed.
+    /// Lines reserved for the subtitle on EVERY card, in every language. This is what makes the stack
+    /// geometrically stable: the old per-card description band sized each card from its own translation,
+    /// so one wrapping subtitle moved every card below it.
+    /// <para>
+    /// One line since the compact-nav ruling (user-directed deviation from the brief's "two-line subtitle
+    /// band"): the band is still one shared value for all five cards, and the subtitle is ellipsized into
+    /// it. Set this back to 2 to restore the previous, taller stack in one line.
+    /// </para>
+    /// </summary>
+    private const int SubtitleLines = 1;
+
+    /// <summary>
+    /// Tab is a machine token: it is compared against the persisted <c>UiBindings.ActiveTabKey</c>
+    /// binding and against the manifest's Tab attributes, so it never gets translated. Label and Description are Keyed.
     /// </summary>
     private static readonly (string Tab, string LabelKey, string DescriptionKey)[] Workspaces =
     {
@@ -65,22 +87,18 @@ public sealed class UsNavWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
-        bindings.ValidateValue<string>("active-tab", elementPath);
+        bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
         bindings.ValidateAction<string>("set-tab", elementPath);
     }
 
+    /// <summary>
+    /// The stack height: the header inset, five identical cards and four identical gaps. Draw walks the
+    /// exact same sequence (see <see cref="Draw"/>), so Measure returns what is drawn - never a value
+    /// derived from a per-card text measurement.
+    /// </summary>
     public float Measure(UiWidgetContext ctx)
     {
-        float textWidth = TextWidth(Math.Max(1f, ctx.ViewWidth));
-        float total = TopPadding;
-        for (int i = 0; i < Workspaces.Length; i++)
-        {
-            if (i > 0) total += Gap;
-            total += ItemHeight(ctx, textWidth, Workspaces[i].DescriptionKey);
-        }
-
-        // Draw starts at rect.y + TopPadding and ends after the last item; no trailing TopPadding.
-        return total;
+        return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap;
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -89,47 +107,72 @@ public sealed class UsNavWidget : IUiWidget
 
         UiThemeDraw.BackgroundPlane(rect, ctx.Theme);
         UiThemeDraw.Surface(rect, ctx.Theme, Color.clear, ctx.Theme.Border);
-        ctx.Bindings.TryGet("active-tab", out string activeTab);
+        ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
 
         float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
         float textWidth = TextWidth(rect.width);
+        float cardHeight = CardHeight(ctx);
+        float subtitleBand = SubtitleBand(ctx);
         float y = rect.y + TopPadding;
         for (int i = 0; i < Workspaces.Length; i++)
         {
             (string tab, string labelKey, string descriptionKey) = Workspaces[i];
-            float itemHeight = ItemHeight(ctx, textWidth, descriptionKey);
-            Rect itemRect = new(rect.x + SidePadding, y, innerWidth, itemHeight);
+            Rect card = new(rect.x + SidePadding, y, innerWidth, cardHeight);
             bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
-            bool hovered = UsKernelDraw.HelpHover(itemRect, ctx, "us/page-title/nav");
-            UiThemeDraw.StatusTreatment(itemRect, ctx.Theme, active ? UiStatusTone.Active : UiStatusTone.Neutral);
-            UiThemeDraw.AccentRail(itemRect, ctx.Theme, active, 3f);
-            UsKernelDraw.Label(new Rect(itemRect.x + TextInset, itemRect.y + LabelTop, textWidth, LabelHeight),
-                ctx.Translation.Translate(labelKey),
-                ctx.Theme, active ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.MiddleLeft);
-            UsKernelDraw.Label(new Rect(itemRect.x + TextInset, itemRect.y + LabelTop + LabelHeight + DescriptionGap, textWidth, DescriptionBand(ctx, textWidth, descriptionKey)),
-                ctx.Translation.Translate(descriptionKey),
-                ctx.Theme, active ? ctx.Theme.TextOnGold : hovered ? ctx.Theme.TextPrimary : ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.UpperLeft);
-            if (UiNative.Button(itemRect))
+            bool hovered = UsKernelDraw.HelpHover(card, ctx, "us/page-title/nav");
+
+            // Selected/unselected differ in ink, fill and rail ONLY: the rect handed to every state is the
+            // same one, so the two states cannot diverge in x, width or height.
+            UiThemeDraw.StatusTreatment(card, ctx.Theme, active ? UiStatusTone.Active : UiStatusTone.Neutral);
+            UiThemeDraw.AccentRail(card, ctx.Theme, active, 3f);
+
+            // Both bands are ellipsized into the card's fixed text column through the same metric seam the
+            // fit audit reads, so a long translation is cut deliberately instead of resizing the card.
+            string label = UsKernelDraw.Ellipsized(ctx.Translation.Translate(labelKey), ctx, UiFont.Small, textWidth);
+            UsKernelDraw.Label(
+                new Rect(card.x + TextInset, card.y + LabelTop, textWidth, LabelHeight),
+                label,
+                ctx.Theme,
+                active ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+                UiFont.Small,
+                TextAnchor.MiddleLeft,
+                singleLine: true);
+
+            string description = UsKernelDraw.EllipsizedToLines(
+                ctx.Translation.Translate(descriptionKey), ctx, UiFont.Tiny, textWidth, SubtitleLines);
+            UsKernelDraw.Label(
+                new Rect(card.x + TextInset, card.y + LabelTop + LabelHeight + DescriptionGap, textWidth, subtitleBand),
+                description,
+                ctx.Theme,
+                active ? ctx.Theme.TextOnGold : hovered ? ctx.Theme.TextPrimary : ctx.Theme.TextSecondary,
+                UiFont.Tiny,
+                TextAnchor.UpperLeft);
+
+            if (UiNative.Button(card, ctx))
             {
                 ctx.Bindings.Invoke("set-tab", tab);
             }
-            y += itemHeight + Gap;
+
+            y += cardHeight + Gap;
         }
+    }
+
+    /// <summary>One shared card height for all five cards: the label band plus the reserved subtitle band.
+    /// Nothing in this formula reads a translation, so the five cards cannot disagree.</summary>
+    private static float CardHeight(UiWidgetContext ctx)
+    {
+        return LabelTop + LabelHeight + DescriptionGap + SubtitleBand(ctx) + BottomPadding;
+    }
+
+    /// <summary>The reserved subtitle band: <see cref="SubtitleLines"/> Tiny line advances, measured
+    /// through the injected seam so the harness and the game reserve the same band.</summary>
+    private static float SubtitleBand(UiWidgetContext ctx)
+    {
+        return SubtitleLines * UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny);
     }
 
     private static float TextWidth(float rowWidth)
     {
         return Math.Max(1f, rowWidth - SidePadding * 2f - TextInset - TextRightReserve);
-    }
-
-    private static float DescriptionBand(UiWidgetContext ctx, float textWidth, string descriptionKey)
-    {
-        string description = ctx.Translation.Translate(descriptionKey);
-        return Math.Max(DescriptionHeight, Math.Max(1f, ctx.Metrics.MeasureText(description, UiFont.Tiny, textWidth)));
-    }
-
-    private static float ItemHeight(UiWidgetContext ctx, float textWidth, string descriptionKey)
-    {
-        return LabelTop + LabelHeight + DescriptionGap + DescriptionBand(ctx, textWidth, descriptionKey) + BottomPadding;
     }
 }

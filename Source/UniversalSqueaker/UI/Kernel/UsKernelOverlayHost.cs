@@ -12,7 +12,7 @@ namespace UniversalSqueaker.UI;
 /// <c>us/camera-readout</c> kind through the shared <see cref="UiWidgetRegistry"/> (same US scope,
 /// same <see cref="UsKernelWidgetRegistrar"/> as the settings host), builds the typed binding table
 /// against the narrow <see cref="IUsKernelOverlaySource"/> boundary, and uses the same
-/// <see cref="UiTheme.DarkGold"/> theme, <see cref="VerseFerriteTextMetrics"/> metrics and
+/// <see cref="UsTheme"/> surface table, <see cref="VerseFerriteTextMetrics"/> metrics and
 /// translation mechanism as the settings host. Any schema/kind/binding error fails here at
 /// creation time; <see cref="UsKernelOverlayController"/> treats that as a permanent fallback to
 /// the legacy pure-Verse readout for the game session.
@@ -37,7 +37,7 @@ public static class UsKernelOverlayHost
             Source,
             manifest,
             bindings,
-            UiTheme.DarkGold,
+            UsTheme.Surface(),
             VerseFerriteTextMetrics.Instance,
             new UsKernelTranslation());
     }

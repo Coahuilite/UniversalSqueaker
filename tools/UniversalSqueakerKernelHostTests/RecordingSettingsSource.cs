@@ -22,12 +22,23 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool RichData;
 
     /// <summary>
-    /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: short race
-    /// names with an oversized "n / m enabled · state" detail, and a short xenotype name whose race
-    /// context makes the composed title long. The layer-height assertions need this because every other
-    /// fixture string fits one line, and a one-line world cannot tell a measured band from a constant one.
+    /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: a race row
+    /// title long enough to wrap, and a short xenotype name whose race context makes the composed title
+    /// long. The layer-height assertions need this because every other fixture string fits one line, and
+    /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
     public bool WrappingDomainText;
+    // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
+
+    /// <summary>
+    /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
+    /// its child row; the disabled-child lane flips the parent without writing anything, which is how
+    /// the two drawn states are compared for identical geometry.
+    /// </summary>
+    public bool EatPrecisionEnabled = false;
+
+    /// <summary>See <see cref="EatPrecisionEnabled"/>.</summary>
+    public bool EatPrecisionIncludeDrugs = false;
 
     /// <summary>
     /// Author strings used by the rich BuildView (the pack/author filter options). The D9 lane
@@ -46,9 +57,20 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool? LastBasicToggleValue;
     public bool? LastCameraIndicator;
     public bool? LastEasterEggs;
+    /// <summary>Parent eat-precision write, or null when the control never fired.</summary>
+    public bool? LastEatPrecision;
+    /// <summary>Child "include drugs" write, or null when the control never fired (the disabled-child
+    /// lane asserts exactly this stays null while the parent is off).</summary>
+    public bool? LastEatPrecisionIncludeDrugs;
+    public int? LastMinIntervalTicks;
+    public float? LastCooldownMultiplier;
+    public SqueakDevLoggingMode? LastDevLoggingMode;
+    public bool? LastLocalizeDebugActions;
 
     // View/navigation writes.
     public string? LastActiveTab;
+    /// <summary>Help drawer visibility writes; must stay independent of the workspace tab.</summary>
+    public bool? LastHelpDrawerOpen;
     public string? LastScrollToSection;
     public int? LastTuningLayer;
     public string? LastTuningDomainRace;
@@ -62,7 +84,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public string? LastRaceFilter;
     public string? LastXenotypeFilter;
     public string? LastSearchText;
-    public string? LastHelpHover;
 
     // Tuning writes.
     public string? LastActionKey;
@@ -70,6 +91,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public SqueakMood? LastMood;
     public SqueakMoodFactor? LastMoodFactor;
     public float? LastMoodValue;
+    /// <summary>Mood of the last "reset to preset" write, or null when the control never fired.</summary>
+    public SqueakMood? LastMoodPresetReset;
+    public int LastMoodPresetResetCount;
     public string? LastBaselinePresetToggle;
     public string? LastBaselineRacePreset;
     public string? LastBaselineRace;
@@ -137,6 +161,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             scalePeriodicWithAudiblePopulation: true,
             showCameraIndicator: false,
             globalCooldownMultiplier: 1f,
+            globalMinIntervalTicks: 216,
+            devLoggingMode: SqueakDevLoggingMode.Auto,
+            localizeDebugActions: false,
             globalVolumeFactor: 1f,
             distanceRangeMin: 15f,
             distanceRangeMax: 50f,
@@ -159,7 +186,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilter: "",
             xenotypeFilter: "",
             raceFilterOptions: Array.Empty<FilterOptionView>(),
-            xenotypeFilterOptions: Array.Empty<FilterOptionView>());
+            xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
+            eatPrecisionEnabled: EatPrecisionEnabled,
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -217,6 +246,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             scalePeriodicWithAudiblePopulation: false,
             showCameraIndicator: true,
             globalCooldownMultiplier: 1f,
+            globalMinIntervalTicks: 216,
+            devLoggingMode: SqueakDevLoggingMode.Enabled,
+            localizeDebugActions: true,
             globalVolumeFactor: 0.6f,
             distanceRangeMin: 20f,
             distanceRangeMax: 45f,
@@ -238,10 +270,53 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new TuningDomainOptionView("human", "Human"),
                 new TuningDomainOptionView("testrace", "Test Race")
             },
+            // All FOUR product moods, in the production enumeration order (VoicePacksPageModel
+            // builds one row per SqueakMood: Good, Neutral, Bad, Break). Availability is a VIEW input
+            // (the model computes it from flags/source), so this fake sets it directly instead of
+            // materialising owned records: with own: null the controls would render correctly inert
+            // and no interaction step could route a click. Every row carries DISTINCT effective
+            // values, so the mood layout lane can identify a card by the write its own controls route
+            // (a two-row fixture could not tell the third and fourth cards apart from the first two).
+            // "reset to preset" stays ready on rows one and three and unavailable on two and four, so
+            // both reset states are exercised on more than one card.
             moodTuningRows: new[]
             {
-                new MoodTuningRowView(SqueakMood.Good, "Good", own: null, effectivePitch: 1f, effectiveVolume: 1f, effectiveJitterHalf: 0f),
-                new MoodTuningRowView(SqueakMood.Neutral, "Neutral", own: null, effectivePitch: 1f, effectiveVolume: 1f, effectiveJitterHalf: 0f)
+                new MoodTuningRowView(
+                    SqueakMood.Good,
+                    SqueakMood.Good.ToString(),
+                    own: null,
+                    effectivePitch: 1f,
+                    effectiveVolume: 1f,
+                    effectiveJitterHalf: 0f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.Ready),
+                new MoodTuningRowView(
+                    SqueakMood.Neutral,
+                    SqueakMood.Neutral.ToString(),
+                    own: null,
+                    effectivePitch: 0.9f,
+                    effectiveVolume: 0.8f,
+                    effectiveJitterHalf: 0.1f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset),
+                new MoodTuningRowView(
+                    SqueakMood.Bad,
+                    SqueakMood.Bad.ToString(),
+                    own: null,
+                    effectivePitch: 0.75f,
+                    effectiveVolume: 0.6f,
+                    effectiveJitterHalf: 0.2f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.Ready),
+                new MoodTuningRowView(
+                    SqueakMood.Break,
+                    SqueakMood.Break.ToString(),
+                    own: null,
+                    effectivePitch: 0.6f,
+                    effectiveVolume: 0.4f,
+                    effectiveJitterHalf: 0.3f,
+                    defaultReset: SqueakMoodResetDefaultState.Ready,
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset)
             },
             baselinePresets: new[] { preset },
             buildIdentity: BuildIdentity,
@@ -257,7 +332,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new FilterOptionView("Test Race", "testrace"),
                 new FilterOptionView("Sanguophage Race", "sanguophage")
             },
-            xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") });
+            xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
+            eatPrecisionEnabled: EatPrecisionEnabled,
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
     }
 
     /// <summary>
@@ -278,8 +355,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
         return new[]
         {
-            new RaceLayerRowView("human", "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
-            new RaceLayerRowView("testrace", "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            // Wrapping mode: the row title now carries the state too (the detail line keeps the counts), so a
+            // title long enough to need a second line is what must grow the card.
+            // Overwide mode: a domain title wider than the popup's viewport cap, which is what the
+            // popup-overflow-identity lane needs - the author dropdown is no longer a valid source for it,
+            // because the consumer now truncates author labels to half the window (F5, 2026-09-14).
+            new RaceLayerRowView("human", WrappingDomainText ? "Human (a row title long enough that no single line can hold it)" : "Human", WrappingDomainText ? int.MaxValue : 2, WrappingDomainText ? int.MaxValue - 1 : 3, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
+            new RaceLayerRowView("testrace", WrappingDomainText ? "Test Race (a row title long enough that no single line can hold it)" : "Test Race", WrappingDomainText ? int.MaxValue : 1, WrappingDomainText ? int.MaxValue - 1 : 2, WrappingDomainText ? SqueakVoicePackDomainState.TargetUnavailable : SqueakVoicePackDomainState.Available),
             new RaceLayerRowView("sanguophage", "Sanguophage Race", 1, 1, SqueakVoicePackDomainState.Available)
         };
     }
@@ -311,6 +393,18 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
 
+    public void SetEatPrecision(bool value) => LastEatPrecision = value;
+
+    public void SetEatPrecisionIncludeDrugs(bool value) => LastEatPrecisionIncludeDrugs = value;
+
+    public void SetGlobalMinIntervalTicks(int ticks) => LastMinIntervalTicks = ticks;
+
+    public void SetGlobalCooldownMultiplier(float value) => LastCooldownMultiplier = value;
+
+    public void SetDevLoggingMode(SqueakDevLoggingMode mode) => LastDevLoggingMode = mode;
+
+    public void SetLocalizeDebugActions(bool value) => LastLocalizeDebugActions = value;
+
     public void SetActiveTab(string tab)
     {
         LastActiveTab = tab;
@@ -328,10 +422,34 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             normalized = "Presets";
         else
             return;
-        state.ActiveTab = normalized;
+
+        // Mirror VoicePacksPageModel.ApplyActiveTab exactly: a real workspace switch also moves the
+        // active section to that workspace's primary section, and help-section-key resolves through
+        // it. Without this the fake would pin help-section-key to "us/mode-row" forever, so no lane
+        // could observe the help topic following the workspace while the drawer stays open.
+        if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
+        {
+            state.ActiveTab = normalized;
+            state.ActiveSectionKey = normalized switch
+            {
+                "Distance" => "attenuation-editor",
+                "Packs" => "filter-bar",
+                "Tuning" => "scope-tree",
+                "Presets" => "preset-list",
+                _ => "mode-row"
+            };
+        }
     }
 
     public void ScrollToSection(string sectionKey) => LastScrollToSection = sectionKey;
+
+    public void SetHelpDrawerOpen(bool open)
+    {
+        LastHelpDrawerOpen = open;
+        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the drawer
+        // binding reads ViewState.HelpDrawerOpen, so the fake must answer the read-back too.
+        state.HelpDrawerOpen = open;
+    }
 
     public void SetTuningLayer(int layer) => LastTuningLayer = layer;
 
@@ -365,16 +483,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
     public void SetSearchText(string text) => LastSearchText = text;
-    // The Host's help-hover READ binding serves the panel from ViewState (exactly like the real
-    // source routes it), so a record-only fake would leave every end-to-end hover lane blind. Write
-    // the state AND keep the recording field. SetHelpSelection retired with the D2 index-list cut.
-    public void SetHelpHover(string key)
-    {
-        LastHelpHover = key;
-        VoicePacksPageModel.SetHelpHover(state, key);
-    }
-
-    public void BeginHelpHoverFrame() => VoicePacksPageModel.BeginHelpHoverFrame(state);
+    // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
+    // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
+    // host's session. SetHelpSelection stays retired with the D2 index-list cut.
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {
@@ -387,6 +498,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastMood = mood;
         LastMoodFactor = factor;
         LastMoodValue = value;
+    }
+
+    public void ResetMoodToPreset(SqueakMood mood)
+    {
+        LastMoodPresetReset = mood;
+        LastMoodPresetResetCount++;
     }
 
     public void ToggleBaselinePreset(string presetDefName) => LastBaselinePresetToggle = presetDefName;

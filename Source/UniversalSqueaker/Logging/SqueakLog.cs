@@ -67,6 +67,14 @@ public static class SqueakLog
     public static void HookMentalFitUnavailable() => Emit(SqueakLogEvent.HookMentalFitUnavailable, default, true);
     public static void DiagnosticsHookUnavailable() { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.DiagnosticsHookUnavailable, default, true); }
     public static void DiagnosticsStartFailed() => Emit(SqueakLogEvent.DiagnosticsStartFailed, default, true);
+
+    /// <summary>
+    /// The in-world diagnostics head mark could not be drawn. Once-semantics per exception type: the
+    /// calling hook runs every frame, and an undeduplicated per-frame line is exactly the first in-game
+    /// incident (8558 lines, 83.8% of the log). The bound - one line per exception type per session, no
+    /// matter how many frames or pawns fail - is asserted by the log lane.
+    /// </summary>
+    public static void DiagnosticsMarkDrawFailed(Exception ex) => Emit(SqueakLogEvent.DiagnosticsMarkDrawFailed, new SqueakLogData(exception: ex), true);
     public static void OverlayChanged(bool enabled) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.OverlayChanged, new SqueakLogData(enabled: enabled), false); }
     public static void CameraChanged(bool enabled) { if (!ShouldEmitDev) return; Emit(SqueakLogEvent.CameraChanged, new SqueakLogData(enabled: enabled), false); }
     public static void WorkbenchOpenFailed(Exception ex) => Emit(SqueakLogEvent.WorkbenchOpenFailed, new SqueakLogData(exception: ex), true);
@@ -91,9 +99,25 @@ public static class SqueakLog
     /// <summary>Forensic click-routing trace from the library's neutral Trace hook. Deliberately
     /// out-of-protocol: it exists to answer "who ate this click" in a running game, where no stub
     /// harness can reproduce native IMGUI event order.</summary>
+    /// <summary>The library's publisher fires ptrace once per FRAME while a popup is open, which made one
+    /// popup session 1,6k log lines in the 2026-09-14 run - noise, not evidence. Identical messages are
+    /// therefore printed once per session: the whole message is the key, so a moved rect or a changed owner
+    /// still prints. Bounded on purpose (a forensic window, not a leak); clearing may re-report an unchanged
+    /// line once per 512 distinct ones, which is the price of a bounded set.</summary>
+    private static readonly System.Collections.Generic.HashSet<string> ReportedPopupTraces
+        = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
     public static void PopupTrace(string message)
     {
         if (!ShouldEmitDev) return;
+        if (string.IsNullOrEmpty(message)) return;
+        // The trigger traces carry the live pointer position, so the raw message differs on every mouse
+        // move; the forensic value is the DECISION (who is eligible, who owns it, whether it yields), so the
+        // dedupe key drops the coordinates. 537 lines in the 2026-09-15 run shrank to one per decision.
+        int pointerAt = message.IndexOf(" pointerLocal=", StringComparison.Ordinal);
+        string key = pointerAt > 0 ? message.Substring(0, pointerAt) : message;
+        if (!ReportedPopupTraces.Add(key)) return;
+        if (ReportedPopupTraces.Count > 512) ReportedPopupTraces.Clear();
         Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
     }
 

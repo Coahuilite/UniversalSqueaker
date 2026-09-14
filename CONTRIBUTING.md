@@ -12,7 +12,7 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
 
 ## 代码 / Code
 
-1. 从 `main` 分支切出（本仓为单 `main` 模型，无 dev 分支税）。
+1. 功能或行为改动：从当前开发线（现 `0.3.x`）切出**短生命功能分支**，在其上开发并随积累推送留存；完成后合回开发线，**删除该功能分支（本地与远端）**——不留任何活过工作项的分支（2026-09-10 裁定）。纯文档/裁定类提交（不触发布运字节）可直接落线。`main` 是发布信号面：仅在切 rc/release 时由维护者将开发线合入，日常改动绝不流向 `main`（2026-09-09 裁定）。
 2. 保持内核边界：`Source/UniversalSqueaker/Kernel/` 与 `Pure/` 零 Verse/Unity 引用；产品词汇不得渗入（`SqueakyRatkin` 类型引用由 `scripts/check-pack-readiness.ps1` 负向断言拦截）。
 3. 身份契约不得改动：packageId `coahuilite.universalsqueaker`、命名空间 `UniversalSqueaker`、Def 前缀 `US_`、日志前缀 `usdiag`。
 4. 存档兼容红线：`Scribe` 字段名（如 `experimentalKiiroCompat`）与 `usdiag` 事件词表是持久化/诊断契约，重命名 = 静默破坏旧档或排障工具链。
@@ -23,16 +23,16 @@ Universal Squeaker ships **no audio** and does not accept PRs adding audio to th
    pwsh -NoProfile -File scripts/verify-local.ps1
    ```
 
-   15 道门禁须全绿（6 个 harness、主程序集 Dev/Release 零警告、载体边界红线、MPL-2.0 许可一致、Schema=2 清单）。UI 行为改动另需实机验收清单（维护者本地维护，不入库），由维护者执行。
+   14 道门禁须全绿（6 个 harness、主程序集 Dev/Release 零警告、载体边界红线、MPL-2.0 许可一致、Schema=2 清单、UI 边界审计）。UI 行为改动另需实机验收清单（维护者本地维护，不入库），由维护者执行。
 
 7. 提交前跑隐私门禁：`pwsh -NoProfile -File scripts/privacy-audit.ps1`（个人路径 / 凭据 / PublishedFileId 值 / 身份唯一性；提交身份使用 GitHub noreply 邮箱）。
-8. 提 PR 到 `main`，附改动与理由。历史重写、tag、推送由维护者裁决，贡献者不做。
+8. 提 PR 到当前开发线（现 `0.3.x`），附改动与理由。历史重写、tag、推送由维护者裁决，贡献者不做。
 
-1. Branch from `main` (single-`main` model; no dev-branch tax).
+1. Feature or behavior change: cut a SHORT-LIVED branch from the current development line (`0.3.x`, named after the carrier API window), work and progress-push there; on completion merge it back into the line and DELETE the branch (local + remote) - no branch may outlive its work item (ruling 2026-09-10). Pure doc/decision commits (no shipped bytes) may land on the line directly. `main` is a release-signal surface: it moves only when the maintainer cuts an rc or stable release and merges the line in (ruling 2026-09-09); routine work never flows to `main`.
 2. Keep kernel boundaries: `Source/UniversalSqueaker/Kernel/` and `Pure/` stay zero-Verse; product vocabulary must not leak (`SqueakyRatkin` type references are caught by a negative assertion in `scripts/check-pack-readiness.ps1`).
 3. Identity contract is fixed: packageId `coahuilite.universalsqueaker`, namespace `UniversalSqueaker`, Def prefix `US_`, log prefix `usdiag`.
 4. Save-compatibility red lines: `Scribe` field names (e.g. `experimentalKiiroCompat`) and the `usdiag` event vocabulary are persistence/diagnostics contracts; renaming them silently breaks old saves or the triage toolchain.
 5. All player-facing strings go through `1.6/Languages/*/Keyed/` (English and Simplified Chinese symmetric, Chinese authoritative); no English literals in source.
-6. Verify with `pwsh -NoProfile -File scripts/verify-local.ps1` — all 13 gates green. UI behaviour changes additionally need the in-game acceptance checklist (maintainer-local, not published), run by the maintainer.
+6. Verify with `pwsh -NoProfile -File scripts/verify-local.ps1` — all 15 gates green. Gate 15 scans the US payload and the KernelHostTests harness assembly for game members the carrier's harness stubs do not declare (`../ferritelib/scripts/stub-coverage-scan.ps1` with `scripts/stub-coverage-exemptions.txt`; an exemption needs a reason from that file's legend, and a stale one fails). Gate 14 is `scripts/ui-boundary-audit.ps1`: a raw Unity IMGUI / Verse Widgets call (`GUI`, `Event.current`, `Mouse.IsOver`, `Widgets.*`, `GUIUtility`) outside the one ruled exemption (frozen camera-indicator fallback; the dev diagnostics panel left the whitelist with the 2026-09-10 UiKit migration) fails the run, and any raw `Mouse.IsOver` at all fails it — hover, layout-event gating and window chrome go through the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiNative.Button`, `UiWindowHost`). The whitelist may only shrink; a new exemption is a maintainer decision. UI behaviour changes additionally need the in-game acceptance checklist (maintainer-local, not published), run by the maintainer.
 7. Run `pwsh -NoProfile -File scripts/privacy-audit.ps1` before committing (personal paths / credentials / PublishedFileId values / identity uniqueness; use the GitHub noreply identity).
-8. Open a PR against `main` with the change and its rationale. History rewrites, tags and pushes are maintainer decisions.
+8. Open a PR against the current development line (`0.3.x`) with the change and its rationale. History rewrites, tags and pushes are maintainer decisions.

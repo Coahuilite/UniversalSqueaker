@@ -34,6 +34,13 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private const float RowHeight = UsFilterBarLayout.RowHeight;
     private const float Gap = UsFilterBarLayout.Gap;
 
+    /// <summary>
+    /// Narrowest option display the F5 truncation rule may hand the popup. Half the settings window is
+    /// the ruling; this is its floor, so a degenerate screen still leaves a readable prefix instead of
+    /// an ellipsis-only label.
+    /// </summary>
+    public const float MinOptionDisplayWidth = 120f;
+
     public override string Kind => KindName;
 
     public static void Register()
@@ -105,11 +112,15 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     {
         const int count = 4;
         float chipWidth = Math.Max(1f, (bodyWidth - Gap * (count - 1)) / count);
+        // Each chip's label is drawn inset (SelectionButtonLabelInset per side), so the band has to be
+        // measured at that drawn width: measuring the outer chip let a label wrap at draw time while the
+        // band stayed one line tall ("Enabled only" needed 36px in a 24px band at the 176px inspector).
+        float labelWidth = Math.Max(1f, chipWidth - UsKernelDraw.SelectionButtonLabelInset * 2f);
         float band = RowHeight;
         string[] keys = { KeyChipAll, KeyChipEnabledOnly, KeyChipConflicts, KeyChipOrphanOnly };
         foreach (string key in keys)
         {
-            band = Math.Max(band, ctx.Metrics.MeasureText(ctx.Translation.Translate(key), UiFont.Tiny, chipWidth));
+            band = Math.Max(band, ctx.Metrics.MeasureText(ctx.Translation.Translate(key), UiFont.Tiny, labelWidth));
         }
 
         return band;
@@ -130,25 +141,25 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
         bool allActive = !domainFilter.EnabledOnly && !domainFilter.ConflictOnly && !domainFilter.OrphanOnly
             && race.Length == 0 && xenotype.Length == 0 && packAuthor.Length == 0 && searchText.Length == 0;
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipAll), ctx.Theme, allActive))
         {
             ctx.Bindings.Invoke("clear-pack-filters", "");
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipEnabledOnly), ctx.Theme, domainFilter.EnabledOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, !domainFilter.EnabledOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipConflicts), ctx.Theme, domainFilter.ConflictOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.ConflictOnly, !domainFilter.ConflictOnly));
         }
         x += buttonWidth + Gap;
 
-        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
+        if (UsKernelDraw.SelectionButton(new Rect(x, rect.y, buttonWidth, rect.height), ctx, ctx.Translation.Translate(KeyChipOrphanOnly), ctx.Theme, domainFilter.OrphanOnly))
         {
             ctx.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, !domainFilter.OrphanOnly));
         }
@@ -215,10 +226,21 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         string current = ctx.Bindings.TryGet(elementId, out string value) ? value ?? "" : "";
         IReadOnlyList<FilterOptionView> options = ctx.Bindings.GetOptions<FilterOptionView>(optionsKey);
 
+        // F5 (maintainer ruling 2026-09-15): an author credit is unbounded user data, and the popup
+        // grows to the widest option, so one over-long name used to size the popup off the settings
+        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own closed
+        // width - the same policy number the window opens with - floored so a degenerate screen still
+        // shows a readable prefix. The pair's VALUE stays the machine token: only what the player reads
+        // is shortened, never what gets written back.
+        float displayCap = Math.Max(
+            MinOptionDisplayWidth,
+            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
         var pairs = new List<KeyValuePair<string, string>>(options.Count);
         foreach (FilterOptionView option in options)
         {
-            pairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+            pairs.Add(new KeyValuePair<string, string>(
+                UsKernelDraw.Ellipsized(option.DisplayName, ctx, UiFont.Small, displayCap),
+                option.Value));
         }
 
         float labelWidth = Math.Min(UsFilterBarLayout.DropdownLabelWidth, rect.width * 0.4f);

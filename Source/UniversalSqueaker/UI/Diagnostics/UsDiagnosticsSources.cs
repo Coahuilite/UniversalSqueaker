@@ -1,0 +1,522 @@
+using System;
+using System.Collections.Generic;
+using RimWorld;
+using UnityEngine;
+using Verse;
+
+namespace UniversalSqueaker.UI;
+
+/// <summary>
+/// Production source for the MAIN diagnostics window: viewport/search rows, live-selection
+/// detail, monitor row, and the navigation actions (drill-in select, lock-detach, and the
+/// in-window narrow Back). The row cache expires on the overlay revision plus the view-state
+/// keys - never a wall clock (cache-clock rule; the 2026-09-04 filter misalignment is the proof case).
+/// </summary>
+public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
+{
+    private readonly Dictionary<int, Pawn> pawnsById = new();
+    private readonly List<UsDiagRow> rowsCache = new();
+
+    private int rowsCacheRevision = -1;
+    private bool rowsCacheSeconds;
+    private string rowsCacheQuery = string.Empty;
+
+    private string searchQuery = string.Empty;
+    private int page;
+    private float contentWidth;
+    private UsDiagNavView navigationView = UsDiagNavView.List;
+    private readonly bool[] groupOpen = { true, true, true };
+
+    public int Revision => SqueakDiagnosticsOverlay.Revision;
+    public bool IsValid => SqueakDiagnosticsOverlay.IsSessionActive;
+
+    public bool ShowSeconds { get; set; }
+    public bool Collapsed { get; set; }
+
+    public string SearchQuery
+    {
+        get => searchQuery;
+        set
+        {
+            string trimmed = (value ?? string.Empty).Trim();
+            if (string.Equals(trimmed, searchQuery, StringComparison.Ordinal)) return;
+            searchQuery = trimmed;
+            page = 0;
+        }
+    }
+
+    public int Page
+    {
+        get => page;
+        set => page = UsDiagnosticsProjection.ClampPage(value, AllRows.Count);
+    }
+
+    /// <summary>
+    /// The arranged content width the shell hands the page each pass. It does NOT bump: the width is
+    /// already part of the layout cache key, so a change here re-arranges the page on its own, and the
+    /// engine's own <c>Breakpoint</c> evaluation reads the same coordinate space.
+    /// </summary>
+    public void SetContentWidth(float width) => contentWidth = width;
+
+    public bool Narrow => UsDiagnosticsProjection.IsNarrowPresentation(contentWidth);
+
+    /// <summary>
+    /// Which narrow view is showing. The wide presentation ignores it; the narrow one shows exactly
+    /// one of list/detail. Back (the nav widget) writes List through the binding, so the layout cache
+    /// sees the change on the same clock as every other display write.
+    /// </summary>
+    public UsDiagNavView NavigationView
+    {
+        get => navigationView;
+        set => navigationView = value;
+    }
+
+    /// <summary>The Back control exists only where an owning list does: narrow AND showing the detail.</summary>
+    public bool ShowBackControl => Narrow && navigationView == UsDiagNavView.Detail;
+
+    public IReadOnlyList<UsDiagRow> PageRows
+    {
+        get
+        {
+            List<UsDiagRow> all = AllRows;
+            int start = page * UsDiagnosticsProjection.RowsPerPage;
+            List<UsDiagRow> result = new(UsDiagnosticsProjection.RowsPerPage);
+            for (int i = start; i < all.Count && i < start + UsDiagnosticsProjection.RowsPerPage; i++)
+            {
+                result.Add(all[i]);
+            }
+
+            return result;
+        }
+    }
+
+    public int TotalRowCount => AllRows.Count;
+    public int PageCount => UsDiagnosticsProjection.PageCount(AllRows.Count);
+
+    public UsDiagDetail? Detail
+    {
+        get
+        {
+            SqueakDiagnosticsOverlay.CachedPawn? entry = SqueakDiagnosticsOverlay.SelectedEntry;
+            return entry == null ? null : UsDiagnosticsRowFactory.BuildDetail(entry, ShowSeconds);
+        }
+    }
+
+    public UsDiagRow? MonitorRow
+    {
+        get
+        {
+            SqueakDiagnosticsOverlay.CachedPawn? entry = SqueakDiagnosticsOverlay.MonitorEntry;
+            return entry == null ? null : UsDiagnosticsRowFactory.BuildRow(entry, ShowSeconds);
+        }
+    }
+
+    /// <summary>The bar's three answers, built from the same monitor row the bar used to paint raw.</summary>
+    public UsDiagBarModel? Bar => UsDiagnosticsRowFactory.BuildBar(
+        MonitorRow,
+        locked: false,
+        lockedPawnText: string.Empty,
+        totalTargets: TotalRowCount,
+        paused: Find.TickManager.Paused,
+        snapshot: SqueakDiagnosticsOverlay.MonitorEntry?.Snapshot);
+
+    public bool RawOpen { get; set; }
+
+    /// <summary>All three groups start open; only a user click folds one away.</summary>
+    public bool IsGroupOpen(UsDiagGateGroup group) => groupOpen[(int)group];
+
+    public void SetGroupOpen(UsDiagGateGroup group, bool open) => groupOpen[(int)group] = open;
+
+    public bool CloseRequested { get; private set; }
+
+    public void RequestClose() => CloseRequested = true;
+
+    public bool CanLockDisplayed => SqueakDiagnosticsOverlay.SelectedEntry != null;
+
+    /// <summary>
+    /// Row click, unchanged in meaning: an on-screen pawn drills in through game selection, an
+    /// off-screen (search-only) hit locks and detaches. The ONLY addition is navigation - in narrow
+    /// mode a drill-in also switches the in-window view to the detail, because the pinned window is
+    /// the off-screen pawn's detail surface while selection cannot reach it.
+    /// </summary>
+    public void ClickRow(int pawnId)
+    {
+        if (!pawnsById.TryGetValue(pawnId, out Pawn? pawn) || pawn == null) return;
+        if (SqueakDiagnosticsOverlay.IsInViewport(pawn))
+        {
+            Find.Selector.Select(pawn);
+            navigationView = UsDiagNavView.Detail;
+        }
+        else
+        {
+            SqueakDiagnosticsOverlay.LockAndOpenDetail(pawn);
+        }
+    }
+
+    public void LockDisplayed()
+    {
+        SqueakDiagnosticsOverlay.CachedPawn? entry = SqueakDiagnosticsOverlay.SelectedEntry;
+        if (entry != null)
+        {
+            SqueakDiagnosticsOverlay.LockAndOpenDetail(entry.Pawn);
+        }
+    }
+
+    private List<UsDiagRow> AllRows
+    {
+        get
+        {
+            int revision = Revision;
+            if (rowsCacheRevision == revision && rowsCacheSeconds == ShowSeconds
+                && string.Equals(rowsCacheQuery, searchQuery, StringComparison.Ordinal))
+            {
+                return rowsCache;
+            }
+
+            rowsCache.Clear();
+            pawnsById.Clear();
+
+            if (searchQuery.Length > 0)
+            {
+                List<Pawn> hits = SqueakDiagnosticsOverlay.SearchCurrentMap(searchQuery);
+                for (int i = 0; i < hits.Count; i++)
+                {
+                    rowsCache.Add(UsDiagnosticsRowFactory.BuildSearchRow(hits[i], ShowSeconds));
+                    pawnsById[hits[i].thingIDNumber] = hits[i];
+                }
+            }
+            else
+            {
+                IReadOnlyList<SqueakDiagnosticsOverlay.CachedPawn> entries = SqueakDiagnosticsOverlay.ViewportEntries;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    rowsCache.Add(UsDiagnosticsRowFactory.BuildRow(entries[i], ShowSeconds));
+                    pawnsById[entries[i].Pawn.thingIDNumber] = entries[i].Pawn;
+                }
+            }
+
+            rowsCacheRevision = revision;
+            rowsCacheSeconds = ShowSeconds;
+            rowsCacheQuery = searchQuery;
+            return rowsCache;
+        }
+    }
+}
+
+/// <summary>
+/// Production source for one DETAIL window: pinned to a single pawn for its whole life.
+/// The list/pager/search members are honest inert values (those widgets are not in this page's
+/// spec); IsValid is the window's self-close signal when the pinned pawn dies, despawns, or the
+/// session ends. It has no list navigation context, so it reports no narrow state and no Back
+/// control - the pinned window must not grow a fake one.
+/// </summary>
+public sealed class UsDiagnosticsDetailSource : IUsDiagnosticsSource
+{
+    private readonly Pawn pinnedPawn;
+    private readonly bool[] pinnedGroupOpen = { true, true, true };
+
+    public UsDiagnosticsDetailSource(Pawn pinnedPawn)
+    {
+        this.pinnedPawn = pinnedPawn ?? throw new ArgumentNullException(nameof(pinnedPawn));
+    }
+
+    public int Revision => SqueakDiagnosticsOverlay.Revision;
+    public bool IsValid => SqueakDiagnosticsOverlay.IsTracked(pinnedPawn);
+
+    public bool ShowSeconds { get; set; }
+    public bool Collapsed { get; set; }
+    public string SearchQuery { get => string.Empty; set { } }
+    public int Page { get => 0; set { } }
+
+    /// <summary>No owning list: the pinned window keeps its identity/lock shape at every width.</summary>
+    public void SetContentWidth(float width) { }
+
+    public bool Narrow => false;
+
+    public UsDiagNavView NavigationView { get => UsDiagNavView.Detail; set { } }
+
+    public bool ShowBackControl => false;
+
+    public IReadOnlyList<UsDiagRow> PageRows => Array.Empty<UsDiagRow>();
+    public int TotalRowCount => 0;
+    public int PageCount => 1;
+
+    public UsDiagDetail? Detail
+    {
+        get
+        {
+            if (!SqueakDiagnosticsOverlay.TryGetEntry(pinnedPawn, out SqueakDiagnosticsOverlay.CachedPawn? entry)) return null;
+            return UsDiagnosticsRowFactory.BuildDetail(entry, ShowSeconds);
+        }
+    }
+
+    public UsDiagRow? MonitorRow
+    {
+        get
+        {
+            if (!SqueakDiagnosticsOverlay.TryGetEntry(pinnedPawn, out SqueakDiagnosticsOverlay.CachedPawn? entry)) return null;
+            return UsDiagnosticsRowFactory.BuildRow(entry, ShowSeconds);
+        }
+    }
+
+    /// <summary>Same three answers, with the identity segment naming the pinned pawn (09 §3.3 rule 5).</summary>
+    public UsDiagBarModel? Bar
+    {
+        get
+        {
+            SqueakDiagnosticSnapshot? snapshot = SqueakDiagnosticsOverlay.TryGetEntry(pinnedPawn, out SqueakDiagnosticsOverlay.CachedPawn? entry)
+                ? entry.Snapshot
+                : null;
+            return UsDiagnosticsRowFactory.BuildBar(
+                MonitorRow,
+                locked: true,
+                lockedPawnText: pinnedPawn.LabelShort,
+                totalTargets: 0,
+                paused: Find.TickManager.Paused,
+                snapshot: snapshot);
+        }
+    }
+
+    public bool RawOpen { get; set; }
+
+    /// <summary>The pinned window owns its own three group switches; all start open.</summary>
+    public bool IsGroupOpen(UsDiagGateGroup group) => pinnedGroupOpen[(int)group];
+
+    public void SetGroupOpen(UsDiagGateGroup group, bool open) => pinnedGroupOpen[(int)group] = open;
+
+    public bool CloseRequested { get; private set; }
+
+    public void RequestClose() => CloseRequested = true;
+
+    public bool CanLockDisplayed => false;
+
+    public void ClickRow(int pawnId) { }
+    public void LockDisplayed() { }
+}
+
+/// <summary>
+/// Shared row/detail construction: extracts the primitive <see cref="UsDiagGateFacts"/> from a
+/// cached snapshot + pawn and hands them to the pure projection. This is the ONLY place allowed
+/// to read overlay snapshots for display; the old per-action filter of the C row died with the
+/// lastDispatched ruling - audio attribution is action-independent now.
+/// </summary>
+internal static class UsDiagnosticsRowFactory
+{
+    internal static UsDiagRow BuildRow(SqueakDiagnosticsOverlay.CachedPawn entry, bool showSeconds)
+    {
+        Pawn pawn = entry.Pawn;
+        SqueakDiagnosticSnapshot s = entry.Snapshot;
+        return new UsDiagRow(
+            pawn.thingIDNumber,
+            SqueakDiagnosticsOverlay.ToneFor(s),
+            LabelOf(pawn),
+            CurrentActionText(s),
+            CooldownText(s, showSeconds),
+            DispatchText(s.LastDispatched),
+            SqueakDiagnosticsOverlay.ReadyFor(s),
+            SqueakDiagnosticsOverlay.IsLocked(pawn));
+    }
+
+    internal static UsDiagRow BuildSearchRow(Pawn pawn, bool showSeconds)
+    {
+        if (SqueakDiagnosticsOverlay.TryGetEntry(pawn, out SqueakDiagnosticsOverlay.CachedPawn? entry))
+        {
+            return BuildRow(entry, showSeconds);
+        }
+
+        // Not tracked yet (off-screen hit): honest blanks everywhere except the identity.
+        return new UsDiagRow(pawn.thingIDNumber, UsDiagDotTone.Unknown, LabelOf(pawn),
+            UsDiagnosticsProjection.Dash, UsDiagnosticsProjection.Dash, UsDiagnosticsProjection.Dash,
+            false, SqueakDiagnosticsOverlay.IsLocked(pawn));
+    }
+
+    /// <summary>
+    /// The collapsed bar's three answers. The activity sentence needs the event clock, and the clock is
+    /// taken from the pawn's last EVALUATION (a blocked attempt is still an event), falling back to its
+    /// last dispatch; null means nothing has ever happened and the bar says so instead of implying age.
+    /// </summary>
+    internal static UsDiagBarModel BuildBar(
+        UsDiagRow? row,
+        bool locked,
+        string lockedPawnText,
+        int totalTargets,
+        bool paused,
+        SqueakDiagnosticSnapshot? snapshot)
+    {
+        int? lastEventTick = LastEventTick(snapshot);
+        int now = Find.TickManager.TicksGame;
+        UsDiagBarFacts f = new()
+        {
+            Locked = locked,
+            LockedPawnText = lockedPawnText ?? string.Empty,
+            TotalTargets = totalTargets,
+            HasMonitorRow = row != null,
+            GamePaused = paused,
+            PawnText = row?.PawnText ?? string.Empty,
+            ActionText = row?.ActionText ?? string.Empty,
+            AudioText = row?.AudioText ?? string.Empty,
+            MonitorTone = row?.Tone ?? UsDiagDotTone.Unknown,
+            HasLastEvent = lastEventTick.HasValue,
+            LastEventTimeText = lastEventTick.HasValue ? UsDiagnosticsProjection.ClockText(lastEventTick.Value) : string.Empty,
+            MinutesSinceLastEvent = lastEventTick.HasValue ? Math.Max(0, now - lastEventTick.Value) / 60 : 0,
+        };
+
+        return UsDiagnosticsProjection.BuildBar(f, Tr);
+    }
+
+    private static int? LastEventTick(SqueakDiagnosticSnapshot? snapshot)
+    {
+        if (!snapshot.HasValue) return null;
+        SqueakDiagnosticSnapshot s = snapshot.Value;
+        if (s.LastEvaluation.HasValue) return s.LastEvaluation.Value.Tick;
+        return s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : (int?)null;
+    }
+
+    internal static UsDiagDetail BuildDetail(SqueakDiagnosticsOverlay.CachedPawn entry, bool showSeconds)
+    {
+        Pawn pawn = entry.Pawn;
+        SqueakDiagnosticSnapshot s = entry.Snapshot;
+        int nowTick = Find.TickManager.TicksGame;
+        UsDiagGateFacts f = new()
+        {
+            ModeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled,
+            OnMap = pawn.Spawned && pawn.MapHeld == Find.CurrentMap,
+            OnScreen = Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position),
+            HasTimingAction = s.CurrentTimingAction.HasValue,
+            ExternalTriggerPlan = s.CurrentTriggerMode == SqueakTriggerMode.External,
+            PlayerControlled = pawn.IsPlayerControlled,
+            NotDowned = !pawn.Downed,
+            Awake = pawn.Awake(),
+            ActionEnabled = s.CurrentActionEnabled,
+            StartupPending = s.StartupPending,
+            ProbabilityValue = Percent(s.EffectiveProbability, s.BaseProbability),
+            ActionCooldownPass = s.Timing.ActionReady,
+            ActionCooldownValue = UsDiagnosticsProjection.FormatCooldownPair(
+                s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds,
+                s.Timing.ActionIntervalTicks, s.Timing.ActionIntervalSeconds, showSeconds),
+            GlobalApplicable = s.Timing.GlobalApplicable,
+            GlobalPass = s.Timing.GlobalReady,
+            GlobalCooldownValue = UsDiagnosticsProjection.FormatCooldownPair(
+                s.Timing.GlobalRemainingTicks, null, s.Timing.GlobalCooldownTicks == 0 ? (int?)null : s.Timing.GlobalCooldownTicks, null, showSeconds),
+            VocalPass = s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
+            TalkingValue = Percent(s.VocalCapability.TalkingChance, null),
+            CurrentActionText = CurrentActionText(s),
+            HasLastDispatch = s.LastDispatched.HasValue,
+            LastDispatchText = DispatchText(s.LastDispatched),
+            Previous = new UsDiagPreviousFacts
+            {
+                HasEvaluation = s.LastEvaluation.HasValue,
+                EvaluationOutcome = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Outcome.ToString() : string.Empty,
+                EvaluationAction = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Action : string.Empty,
+                EvaluationTick = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Tick : -1,
+                HasDispatch = s.LastDispatched.HasValue,
+                DispatchText = DispatchText(s.LastDispatched),
+                DispatchTick = s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1,
+                NowTick = nowTick,
+            },
+        };
+
+        if (s.CurrentTimingAction.HasValue)
+        {
+            SqueakAction action = s.CurrentTimingAction.Value;
+            RuntimeActionDelta delta = SqueakRuntimeResolver.Current.ResolveContext(pawn).GetAction(action);
+            if (delta.Scope == SqueakActionScope.ActiveCommand)
+            {
+                f.ScopeMatchApplicable = true;
+                f.ScopeMatchPass = DiagnosticInvocationFor(action, pawn).IsActiveCommand;
+            }
+        }
+
+        if (OutcomeForCurrentAction(s, s.LastEvaluation) is SqueakRecentOutcome ev)
+        {
+            f.EvaluationBelongsToCurrentAction = true;
+            f.AudioPoolBlocked = ev.Outcome == SqueakTriggerOutcome.NoSoundFallback;
+            f.EligibilityRejected = ev.Outcome == SqueakTriggerOutcome.EligibilityRejected;
+            f.Dispatched = ev.Outcome == SqueakTriggerOutcome.Dispatched;
+            f.PlaybackFailed = ev.Outcome == SqueakTriggerOutcome.PlaybackFailed;
+        }
+
+        List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(f, Tr, UsAttention.Marker);
+        bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
+        return new UsDiagDetail(
+            LabelOf(pawn),
+            ready,
+            SqueakDiagnosticsOverlay.IsLocked(pawn),
+            f.CurrentActionText,
+            f.LastDispatchText,
+            gates,
+            UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
+            UsDiagnosticsProjection.BuildPreviousBand(f.Previous, Tr));
+    }
+
+    private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";
+
+    private static string CurrentActionText(SqueakDiagnosticSnapshot s)
+        => s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : UsDiagnosticsProjection.Dash;
+
+    private static string CooldownText(SqueakDiagnosticSnapshot s, bool showSeconds)
+    {
+        string action = UsDiagnosticsProjection.FormatCooldownPair(
+            s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds,
+            s.Timing.ActionIntervalTicks, s.Timing.ActionIntervalSeconds, showSeconds);
+        if (!s.Timing.GlobalApplicable)
+        {
+            return action;
+        }
+
+        string global = UsDiagnosticsProjection.FormatCooldownPair(
+            s.Timing.GlobalRemainingTicks, null,
+            s.Timing.GlobalCooldownTicks == 0 ? (int?)null : s.Timing.GlobalCooldownTicks, null, showSeconds);
+        return action + " " + global;
+    }
+
+    private static string DispatchText(SqueakRecentOutcome? dispatched)
+    {
+        if (dispatched == null) return UsDiagnosticsProjection.Dash;
+        SqueakRecentOutcome o = dispatched.Value;
+        return UsDiagnosticsProjection.FormatDispatch(o.Tier?.ToString() ?? "Vanilla", o.PoolStableKey, o.Sound?.defName, Tr);
+    }
+
+    private static string Percent(float? value, float? baseValue)
+    {
+        if (!value.HasValue) return UsDiagnosticsProjection.Dash;
+        return baseValue.HasValue
+            ? $"{value.Value:0.###} / {baseValue.Value:0.###}"
+            : $"{value.Value:0.###}";
+    }
+
+    /// <summary>Returns the supplied outcome only when it belongs to the currently displayed action,
+    /// so an older result from a different action never impersonates this chain's gate states.</summary>
+    private static SqueakRecentOutcome? OutcomeForCurrentAction(SqueakDiagnosticSnapshot s, SqueakRecentOutcome? outcome)
+    {
+        if (!s.CurrentTimingAction.HasValue || !outcome.HasValue) return null;
+        string? key = UniversalSqueaker.Kernel.ActionKey.For(s.CurrentTimingAction.Value) ?? s.CurrentTimingAction.Value.ToString();
+        return string.Equals(outcome.Value.Action, key, StringComparison.Ordinal) ? outcome : null;
+    }
+
+    /// <summary>Mirrors CompSqueaker.PeriodicInvocationFor plus the external sources used by
+    /// Notify_Draft/Notify_Attack/Notify_Equip, so the diagnostic scope gate reads the same
+    /// IsActiveCommand semantics as production.</summary>
+    private static SqueakTriggerInvocation DiagnosticInvocationFor(SqueakAction action, Pawn pawn)
+    {
+        switch (action)
+        {
+            case SqueakAction.Work:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic,
+                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.Periodic);
+            case SqueakAction.Attack:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Attack,
+                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
+            case SqueakAction.Draft:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Draft, SqueakInvocationSource.ActiveCommand);
+            case SqueakAction.Undraft:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand);
+            case SqueakAction.Equip:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
+            default:
+                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic, SqueakInvocationSource.Periodic);
+        }
+    }
+
+    private static string Tr(string key) => key.Translate().ToString();
+}

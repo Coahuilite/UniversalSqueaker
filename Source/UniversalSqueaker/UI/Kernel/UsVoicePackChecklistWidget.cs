@@ -11,6 +11,11 @@ namespace UniversalSqueaker.UI;
 /// pack checkbox rows, empty state and the Forget Unavailable banner. Reads the typed
 /// "selected-domain" binding; writes "toggle-pack" / "forget-unavailable" typed actions and the
 /// "search-text" value binding. Search focus/edit state lives in the session.
+/// <para>
+/// The four domain banners are role-mapped rather than sharing one treatment: conflict and an
+/// unloaded target are attention conditions, a dormant domain is an unavailable control, and the
+/// destructive Forget action keeps the danger family inside its own band. See <c>BannerRole</c>.
+/// </para>
 /// </summary>
 public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 {
@@ -145,17 +150,17 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
         if (domain.IsDormant)
         {
-            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyDormantBanner), ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyDormantBanner), ctx, BannerRole.Unavailable);
         }
 
         if (domain.IsTargetUnavailable)
         {
-            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyTargetUnavailableBanner), ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyTargetUnavailableBanner), ctx, BannerRole.Attention);
         }
 
         if (domain.HasCanonicalConflict)
         {
-            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyConflictBanner), ctx);
+            y = DrawBanner(rect, y, ctx.Translation.Translate(KeyConflictBanner), ctx, BannerRole.Attention);
         }
 
         string search = DrawSearchField(new Rect(rect.x, y, rect.width, SearchFieldHeight), ctx);
@@ -190,16 +195,48 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         }
     }
 
-    private float DrawBanner(Rect outer, float y, string text, UiWidgetContext ctx)
+    /// <summary>
+    /// What a whole-width banner means, so the four domain conditions stop sharing one treatment.
+    /// <see cref="Attention"/> is the ruling's "a condition worth investigating" - a missing required
+    /// resource (target not loaded) or an unresolved source (multiple Defs share the target, pack keys no
+    /// longer installed). <see cref="Unavailable"/> is the ruling's "unavailable control" row: a readable
+    /// disabled treatment plus the sentence that explains it. A destructive ACTION is neither: it keeps the
+    /// danger family at its own call site (see <see cref="DrawOrphanBanner"/>).
+    /// </summary>
+    private enum BannerRole
+    {
+        Attention,
+        Unavailable
+    }
+
+    private float DrawBanner(Rect outer, float y, string text, UiWidgetContext ctx, BannerRole role)
     {
         float band = BannerBand(ctx, text);
         Rect bannerRect = new(outer.x, y, outer.width, band);
-        UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, selected: false, danger: true);
+        Color ink;
+        if (role == BannerRole.Attention)
+        {
+            // Neutral panel fill plus the cyan border and thin edge: the ruling's default treatment for an
+            // attention band, and deliberately not a new tinted surface token. The sentence stays primary
+            // ink - a cyan-on-cyan label would fail the same substrate rule the filled badge is held to.
+            UsAttention.Band(bannerRect, ctx.Theme);
+            UsAttention.Rail(bannerRect, ctx.Theme);
+            ink = ctx.Theme.TextPrimary;
+        }
+        else
+        {
+            // "Biotech is not active" is neither attention nor destruction: the domain is unavailable, so
+            // the band takes the kernel's disabled row treatment (neutral plane + hatch, the shape spec 1.4
+            // gives an unavailable row) and its own sentence is the reason.
+            UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.Disabled);
+            ink = ctx.Theme.TextDisabled;
+        }
+
         UsKernelDraw.Label(
             new Rect(bannerRect.x + BannerTextInset, bannerRect.y, Math.Max(1f, bannerRect.width - BannerTextInset * 2f), band),
             text,
             ctx.Theme,
-            ctx.Theme.TextOnDanger,
+            ink,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
         return y + band + BannerGap;
@@ -207,7 +244,11 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     private void DrawOrphanBanner(Rect rect, VoicePackDomainView domain, UiWidgetContext ctx)
     {
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered: false, selected: false, danger: true);
+        // "Selected pack keys are no longer installed" is an unresolved source: an attention condition,
+        // not a destructive one. The band therefore takes the attention treatment and primary ink, while
+        // the button keeps the danger family below - forgetting dangling keys has no undo.
+        UsAttention.Band(rect, ctx.Theme);
+        UsAttention.Rail(rect, ctx.Theme);
 
         Rect button = new(rect.xMax - 132f, rect.y + 5f, 124f, Math.Max(20f, rect.height - 10f));
         UsKernelDraw.HelpHover(button, ctx, "us/voice-pack-checklist/forget");
@@ -216,11 +257,11 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             text,
             ctx.Translation.Translate(KeyOrphanBanner),
             ctx.Theme,
-            ctx.Theme.TextOnDanger,
+            ctx.Theme.TextPrimary,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
-        if (UsKernelDraw.SelectionButton(button, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
+        if (UsKernelDraw.SelectionButton(button, ctx, ctx.Translation.Translate(KeyForgetUnavailable), ctx.Theme, selected: true, danger: true, font: UiFont.Tiny))
         {
             ctx.Bindings.Invoke(
                 "forget-unavailable",
@@ -252,7 +293,21 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         }
         else if (!state.Focused && current.Length == 0)
         {
-            UsKernelDraw.Label(textRect, ctx.Translation.Translate(KeySearchPlaceholder), ctx.Theme, ctx.Theme.TextDisabled, UiFont.Small, TextAnchor.MiddleLeft);
+            // The placeholder band must fit a Small line. The field is 24 tall with a 2px inset top and
+            // bottom, so the text rect is 20 while a Small line measures 21.33 - exactly the in-game
+            // "checklist needs 22px has 20px" report (2026-09-15). The band is measured and centred in the
+            // field rather than the field growing, so nothing else moves.
+            string placeholder = ctx.Translation.Translate(KeySearchPlaceholder);
+            float placeholderBand = Math.Max(
+                textRect.height,
+                ctx.Metrics.MeasureText(placeholder, UiFont.Small, textRect.width));
+            UsKernelDraw.Label(
+                new Rect(textRect.x, textRect.y + (textRect.height - placeholderBand) * 0.5f, textRect.width, placeholderBand),
+                placeholder,
+                ctx.Theme,
+                ctx.Theme.TextDisabled,
+                UiFont.Small,
+                TextAnchor.MiddleLeft);
         }
 
         if (UiNative.IsMouseDownOver(rect))
@@ -271,7 +326,11 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
     private void DrawPackRow(Rect rect, VoicePackDomainView domain, VoicePackRowView row, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/voice-pack-checklist/row");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, row.IsSelected ? UsKernelDraw.RowRail.Selected : UsKernelDraw.RowRail.None);
+        // Same list convention as the single-line rows: the pack row ends in one hairline in the divider
+        // token. It sits inside the row's bottom edge, so neither the row height nor the 24px hit band
+        // (RowHitRect centres that band on the visual row) changes.
+        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
         string meta = UsPacksText.Format(ctx, KeyPackMeta, row.ModName, row.Author);
         float textWidth = Math.Max(1f, rect.width - RowTextReserve);
@@ -282,7 +341,10 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             new Rect(rect.x + UsKernelDraw.RowLeftPadding, rowY, textWidth, labelBand),
             row.Label,
             ctx.Theme,
-            row.IsSelected ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+            // The selected row is a plane plus the dim rail (spec 1.4/1.5): its label stays primary ink.
+            // TextOnGold here implied a gold fill that this row never has, and it spent one of the screen's
+            // two accent readings on a state the rail already carries.
+            ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
         rowY += labelBand + RowGap;
@@ -302,9 +364,12 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.UpperLeft);
 
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + 4f, 18f, 18f), ctx.Theme, row.IsSelected);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, row.IsSelected);
 
-        if (UiNative.Button(rect))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke(
                 "toggle-pack",

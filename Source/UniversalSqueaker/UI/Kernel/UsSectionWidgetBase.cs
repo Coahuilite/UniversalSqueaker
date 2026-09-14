@@ -9,7 +9,7 @@ namespace UniversalSqueaker.UI;
 /// Base for kernel-owned US section composites. It owns the three shared behaviors of every
 /// settings section:
 ///  - Tab visibility: a <c>Tab</c> attribute (Basic/Tuning/Packs) hides the section (Measure = 0 and
-///    no Draw) unless it matches the session "active-tab" value binding;
+///    no Draw) unless it matches the session <c>UiBindings.ActiveTabKey</c> value binding;
 ///  - card frame + title from <c>TitleKey</c>/<c>Title</c> + help-selection accent border;
 ///  - session-level fallback: Measure/Draw exceptions trip the session slot and draw a stable
 ///    fallback instead of corrupting the frame.
@@ -65,7 +65,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
     protected bool IsVisible(UiWidgetContext ctx)
     {
         if (!spec.TryGetAttribute("Tab", out string tab) || tab.Trim().Length == 0) return true;
-        string active = ctx.Bindings.TryGet("active-tab", out string current) ? current : "";
+        string active = ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string current) ? current : "";
         return string.Equals(tab.Trim(), active, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -100,12 +100,14 @@ public abstract class UsSectionWidgetBase : IUiWidget
     /// Whether the help panel is currently explaining this section (drives the accent border).
     /// After the D2 ruling retired pinned selection, the border follows the live hover claim: a
     /// card gets the border while a claim resolving to one of its entries is held, so "what the
-    /// panel is talking about" stays visible on the content column too.
+    /// panel is talking about" stays visible on the content column too. Since FL P3 the claim is
+    /// session state (claimed by <see cref="UsKernelDraw.HelpHover"/>), not a binding; the
+    /// <c>"&lt;section&gt;/..."</c> key prefix and this StartsWith rule are unchanged.
     /// </summary>
     protected bool IsHelpSelected(UiWidgetContext ctx)
     {
         if (!spec.TryGetAttribute("HelpKey", out string helpKey) || helpKey.Trim().Length == 0) return false;
-        string hover = ctx.Bindings.TryGet("help-hover", out string current) ? current : "";
+        string hover = ctx.Session.HoverClaim ?? "";
         return hover.Length > 0 && hover.StartsWith(helpKey.Trim() + "/", StringComparison.Ordinal);
     }
 

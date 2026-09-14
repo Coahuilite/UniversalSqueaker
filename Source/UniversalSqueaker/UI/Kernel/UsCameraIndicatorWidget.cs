@@ -14,7 +14,7 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
 {
     public const string KindName = "us/camera-indicator";
 
-    private const float RowHeight = 28f;
+    private const string LabelKey = "US.Tuning.CameraIndicator";
 
     public override string Kind => KindName;
 
@@ -35,12 +35,20 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
 
     protected override float FallbackHeight(UiWidgetContext ctx)
     {
-        return RowHeight;
+        return RowHeight(ctx);
     }
 
     protected override float MeasureBody(UiWidgetContext ctx)
     {
-        return RowHeight;
+        // One support row: the theme's density axis (24 regular / 20 dense, spec 1.4) as the floor,
+        // grown when the translated label wraps in the band left of the shared control column.
+        return RowHeight(ctx);
+    }
+
+    /// <summary>The one measure/draw height for the toggle row.</summary>
+    private float RowHeight(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.RowLabelHeight(BodyWidth(ctx), ctx, ctx.Translation.Translate(LabelKey));
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -52,18 +60,21 @@ public sealed class UsCameraIndicatorWidget : UsSectionWidgetBase
     {
         bool enabled = ctx.Bindings.TryGet("camera-indicator", out bool value) && value;
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/camera-indicator/toggle");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         UsKernelDraw.Label(
-            new Rect(rect.x + UsKernelDraw.RowLeftPadding, rect.y, Math.Max(1f, rect.width - 60f), rect.height),
-            ctx.Translation.Translate("US.Tuning.CameraIndicator"),
+            UsKernelDraw.RowLabelRect(rect, rect.height),
+            ctx.Translation.Translate(LabelKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
-        UsKernelDraw.Checkbox(new Rect(rect.xMax - 34f, rect.y + (rect.height - 18f) * 0.5f, 18f, 18f), ctx.Theme, enabled);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, enabled);
 
-        if (UiNative.Button(rect))
+        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
+        if (toggled || UiNative.Button(rowHit, ctx))
         {
             ctx.Bindings.Invoke("toggle-camera-indicator", !enabled);
         }

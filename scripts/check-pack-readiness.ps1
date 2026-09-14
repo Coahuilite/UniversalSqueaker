@@ -85,7 +85,9 @@ Assert-Check 'UniversalSqueaker.dll exists' (Test-Path -LiteralPath (Join-Path $
 # no other detector for whichever copy lost.
 Assert-Check 'no FerriteLib.UiKit.dll in the US package (single carrier)' (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'FerriteLib.UiKit.dll') -PathType Leaf))
 
-# .pdb files are removed by stage-package.ps1, so they are not a pre-pack blocker.
+# Build debris does not enter a package by construction any more (stage-package excludes *.pdb and
+# *.gitkeep on the copy and then asserts the closed set), so a pdb at the payload path is not a pre-pack
+# blocker. What this script still checks is the repo, which no longer has a strip step to hide behind.
 
 # D. Content red lines
 Assert-Check 'no Extras directory' (-not (Test-Path -LiteralPath (Join-Path $root 'Extras') -PathType Container))

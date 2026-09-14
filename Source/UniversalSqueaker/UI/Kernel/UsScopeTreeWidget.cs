@@ -16,7 +16,11 @@ namespace UniversalSqueaker.UI;
 ///    "set-tuning-domain";
 ///  - scope rows cycle [Auto, Off, Any, Command] filtered by each action's supported scopes,
 ///    writing "set-action-scope";
-///  - mood rows expose pitch/volume/jitter steppers plus an Auto clear, writing "set-mood-tuning".
+///  - each mood is one card: a header with the mood's US.Mood.* name and two reset controls -
+///    "reset to default" ("set-mood-tuning" with Clear) and "reset to preset" ("reset-mood-to-preset") -
+///    followed by the same two-line parameter block for Pitch, Volume and Jitter (localized label, minus,
+///    numeric field and plus on the first line, the slider on the second). An unavailable control stays
+///    drawn and greyed, and hovering it explains why in the help panel.
 /// All values come from typed read bindings; every write is a typed action.
 /// </summary>
 public sealed class UsScopeTreeWidget : UsSectionWidgetBase
@@ -32,19 +36,40 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     // the tail of every scope name, in any language).
     private const float InheritedHintHeight = 18f;
 
-    private const float MoodRowHeight = 32f;
-    // The mood name is a Small line in a fixed column: a 16px band is shorter than one such line, so
-    // the band is measured and the row grows with it. Measure and Draw share MoodLabelBand below.
-    private const float MoodLabelMinHeight = 16f;
-    private const float MoodLabelTop = 7f;
+    // A mood card is a repeated two-line parameter template: the mood name and its two reset controls on
+    // the header line, then three parameter blocks - label, minus, numeric field and plus on the first
+    // line, the slider on the second, aligned to the numeric group's left edge. Every block draws every
+    // control in every width regime: the only width-dependent choices move a control onto its own line,
+    // they never drop one.
+    private const float MoodControlHeight = 22f;
+    private const float MoodControlButtonWidth = 20f;
+    private const float MoodControlButtonMinWidth = 6f;
+    private const float MoodControlFieldWidth = 40f;
+    private const float MoodControlFieldMinWidth = 24f;
+    private const float MoodControlGap = 4f;
+    private const float MoodSliderHeight = 16f;
+    private const float MoodSliderGap = 3f;
+    private const float MoodBlockGap = 8f;
+    // The parameter label column is measured from the resolved localized labels through the metrics seam
+    // (never the old fixed 14px band, which clipped Pitch / 音高), plus this padding so a rounding
+    // difference between the measuring pass and the drawing pass cannot wrap what the column was sized
+    // for. Measure and Draw both come through MoodRowsLayoutFor below.
+    private const float MoodLabelColumnGap = 6f;
+    private const float MoodLabelColumnPad = 8f;
+    private const float MoodParameterLabelMinBand = 16f;
+    private const float MoodNameMinBand = 18f;
+    private const float MoodHeaderGap = 6f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
     private const float BottomPadding = 2f;
     private const float LeftPadding = 10f;
     private const float ButtonWidth = 96f;
     private const float ButtonHeight = 24f;
-    private const float MoodLabelWidth = 64f;
-    private const float MoodClearWidth = 52f;
+    // Floor for each of the mood row's two reset controls. Every drawn width is measured from its own
+    // label (MoodResetWidthFor): the ruled phrases are verb phrases ("重置为默认" / "Reset to default"),
+    // and a fixed box wrapped the earlier single control in English - the bilingual fit sweep caught it
+    // as "needs 54px, has 24px at width 40px". Two controls, two measurements, same floor.
+    private const float MoodResetWidthMin = 52f;
     private const float MoodGap = 6f;
 
     // Keyed display text. Every bound value stays untouched: the tuning layer is the "tuning-layer"
@@ -57,7 +82,27 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const string GroupAutonomousKey = "US.Tuning.Group.Autonomous";
     private const string GroupOperableKey = "US.Tuning.Group.Operable";
     private const string MoodTuningHeaderKey = "US.Tuning.MoodTuning";
+    /// <summary>Action-scope dropdown option: "inherit from below". Per the term split this word belongs to
+    /// the action side only; the mood row's controls use the two "reset" phrases below instead
+    /// (one word, two meanings was the direct cause of mis-clicks).</summary>
     private const string AutoLabelKey = "US.Tuning.Auto";
+    /// <summary>Mood row, action one - "reset to default": clear this layer's three factor fields and keep
+    /// the preset source, so the value falls through to inheritance again. A CLEAR.</summary>
+    private const string ResetDefaultKey = "US.Tuning.ResetToDefault";
+    /// <summary>Mood row, action two - "reset to preset": re-apply the baseline of the row's source preset.
+    /// A WRITE, not a clear; the two actions are deliberately different classes.</summary>
+    private const string ResetPresetKey = "US.Tuning.ResetToPreset";
+    // Help entries claimed while hovering the two controls: enabled explains what the control does,
+    // disabled explains why it is unavailable. The help panel is this UI's reason channel; the control
+    // itself stays drawn and only greys out (unavailable is not invisible).
+    private const string ResetDefaultHelpKey = "us/scope-tree/mood-reset-default";
+    private const string ResetPresetHelpKey = "us/scope-tree/mood-reset-preset";
+    // Item keys stay at three path segments (us/<section>/<item>): the UI-logic lane's dead-content scan
+    // reads exactly three-segment literals as claims, and a four-segment key would be invisible to it.
+    private const string ResetDefaultNoLocalHelpKey = "us/scope-tree/mood-reset-no-local";
+    private const string ResetPresetNotFromPresetHelpKey = "us/scope-tree/mood-reset-not-from-preset";
+    private const string ResetPresetMissingHelpKey = "us/scope-tree/mood-reset-preset-missing";
+    private const string ResetPresetNoEntryHelpKey = "us/scope-tree/mood-reset-preset-no-entry";
     private const string PitchLabelKey = "US.Tuning.Factor.Pitch";
     private const string VolumeLabelKey = "US.Tuning.Factor.Volume";
     private const string JitterLabelKey = "US.Tuning.Factor.Jitter";
@@ -141,7 +186,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             }
 
             bodyHeight += RowHeight + RowGap; // "Mood Tuning" header
-            bodyHeight += moodRows.Count * (MoodRowHeightFor(width, ctx, moodRows) + RowGap);
+            MoodRowsLayout moodLayout = MoodRowsLayoutFor(width, ctx, moodRows);
+            bodyHeight += moodRows.Count * (moodLayout.TotalHeight + RowGap);
         }
 
         return bodyHeight + BottomPadding;
@@ -232,11 +278,11 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 TextAnchor.MiddleLeft);
             y += RowHeight + RowGap;
 
-            float moodRowHeight = MoodRowHeightFor(innerWidth, ctx, moodRows);
+            MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
             foreach (MoodTuningRowView mood in moodRows)
             {
-                DrawMoodRow(new Rect(x, y, innerWidth, moodRowHeight), mood, ctx);
-                y += moodRowHeight + RowGap;
+                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx);
+                y += moodLayout.TotalHeight + RowGap;
             }
         }
     }
@@ -259,7 +305,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             for (int i = 0; i < LayerKeys.Length; i++)
             {
                 Rect buttonRect = new(rect.x + LeftPadding, y, stackedButtonWidth, ButtonHeight);
-                if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+                if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
                 {
                     ctx.Bindings.Invoke("set-tuning-layer", i);
                 }
@@ -284,7 +330,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         for (int i = 0; i < LayerKeys.Length; i++)
         {
             Rect buttonRect = new(buttonX, rect.y + (rect.height - ButtonHeight) / 2f, buttonWidth, ButtonHeight);
-            if (UsKernelDraw.SelectionButton(buttonRect, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
+            if (UsKernelDraw.SelectionButton(buttonRect, ctx, UsKernelDraw.Keyed(ctx, LayerKeys[i]), ctx.Theme, layer == i, font: UiFont.Tiny))
             {
                 ctx.Bindings.Invoke("set-tuning-layer", i);
             }
@@ -302,7 +348,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             : Array.Empty<TuningDomainOptionView>();
 
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/domain");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
             UsKernelDraw.Keyed(ctx, DomainLabelKey),
@@ -341,7 +387,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // action-scope one, so the panel explains what the visible value means.
         bool hovered = UsKernelDraw.HelpHover(
             rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         string displayName = UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey);
         float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 120f));
@@ -389,79 +435,230 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         });
     }
 
-    private void DrawMoodRow(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
+    /// <summary>
+    /// One mood card. The header line carries the mood name (resolved through its US.Mood.* key, so no
+    /// language literal lives in this file) and the two reset controls; below it every parameter gets the
+    /// same two-line block: label, minus, numeric field and plus on the first line, the slider on the
+    /// second. The geometry comes from <see cref="MoodRowsLayoutFor"/> - the same function Measure uses -
+    /// so a hover never changes a height and the section card can never clip a control.
+    /// </summary>
+    private void DrawMoodRow(Rect rect, MoodTuningRowView row, MoodRowsLayout layout, UiWidgetContext ctx)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/mood-tuning");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, false);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
         float pitch = row.Own?.hasPitchFactor == true ? row.Own.pitchFactor : row.EffectivePitch;
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
         float jitter = row.Own?.hasPitchJitter == true ? Math.Max(0f, row.Own.pitchJitter.max - 1f) : row.EffectiveJitterHalf;
 
-        if (UsesStackedMoodRows(rect.width))
-        {
-            float headerHeight = ButtonHeight;
-            float labelWidth = Math.Max(1f, rect.width - LeftPadding - MoodClearWidth - 8f - RowGap);
-            UsKernelDraw.Label(
-                new Rect(rect.x + LeftPadding, rect.y, labelWidth, headerHeight),
-                row.DisplayName,
-                ctx.Theme,
-                ctx.Theme.TextPrimary,
-                UiFont.Small,
-                TextAnchor.MiddleLeft);
-
-            DrawAutoClearButton(
-                new Rect(rect.xMax - MoodClearWidth - 8f, rect.y, MoodClearWidth, headerHeight),
-                row,
-                ctx);
-
-            float lineWidth = Math.Max(1f, rect.width - LeftPadding * 2f);
-            float y = rect.y + headerHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
-            y += ButtonHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
-            y += ButtonHeight + RowGap;
-            DrawMoodStepper(
-                new Rect(rect.x + LeftPadding, y, lineWidth, ButtonHeight),
-                JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
-            return;
-        }
-
+        // Header. When the name and the measured reset block cannot share the line, the controls drop to
+        // their own line - they are never squeezed away, and an unavailable control stays drawn and inert
+        // while still claiming the help entry that carries its reason.
+        float nameY = layout.HeaderInline
+            ? rect.y + (layout.HeaderHeight - layout.NameBandHeight) * 0.5f
+            : rect.y;
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + MoodLabelTop, MoodLabelWidth, MoodLabelBand(ctx, row.DisplayName)),
-            row.DisplayName,
+            new Rect(rect.x + LeftPadding, nameY, layout.NameBandWidth, layout.NameBandHeight),
+            MoodName(ctx, row),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
-        float clearX = rect.xMax - MoodClearWidth - 8f;
-        Rect clearRect = new(clearX, rect.y, MoodClearWidth, rect.height);
-        float controlsWidth = clearX - (rect.x + LeftPadding + MoodLabelWidth) - MoodGap;
-        float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
-        float factorX = rect.x + LeftPadding + MoodLabelWidth + MoodGap;
-
-        factorX = DrawMoodStepper(new Rect(factorX, rect.y, groupWidth, rect.height), PitchLabelKey, pitch, 0.5f, 2f, row, SqueakMoodFactor.Pitch, ctx);
-        factorX = DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), VolumeLabelKey, volume, 0.1f, 2f, row, SqueakMoodFactor.Volume, ctx);
-        DrawMoodStepper(new Rect(factorX + MoodGap, rect.y, groupWidth, rect.height), JitterLabelKey, jitter, 0f, 0.5f, row, SqueakMoodFactor.Jitter, ctx);
-
-        DrawAutoClearButton(clearRect, row, ctx);
-    }
-
-    private void DrawAutoClearButton(Rect clearRect, MoodTuningRowView row, UiWidgetContext ctx)
-    {
-        if (UsKernelDraw.SelectionButton(clearRect, UsKernelDraw.Keyed(ctx, AutoLabelKey), ctx.Theme, selected: false, danger: true, font: UiFont.Tiny))
+        if (layout.HeaderInline)
         {
-            ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null));
+            DrawMoodResetButtons(
+                new Rect(
+                    rect.x + LeftPadding + layout.ParameterWidth - layout.ResetWidth,
+                    rect.y + (layout.HeaderHeight - layout.ResetHeight) * 0.5f,
+                    layout.ResetWidth,
+                    layout.ResetHeight),
+                row,
+                ctx);
+        }
+        else
+        {
+            DrawMoodResetButtons(
+                new Rect(rect.x + LeftPadding, rect.y + layout.NameBandHeight + RowGap, layout.ParameterWidth, layout.ResetHeight),
+                row,
+                ctx);
+        }
+
+        float parameterX = rect.x + LeftPadding;
+        for (int i = 0; i < MoodParameterFactors.Length; i++)
+        {
+            SqueakMoodFactor factor = MoodParameterFactors[i];
+            float value = i == 0 ? pitch : i == 1 ? volume : jitter;
+
+            float blockY = rect.y + layout.ParameterTop + i * (layout.BlockHeight + MoodBlockGap);
+            Rect labelRect;
+            Rect groupRect;
+            if (layout.LabelOnOwnLine)
+            {
+                // Narrow card: the label keeps its own full-width line and the numeric line follows it, so
+                // both stay readable instead of one being clipped to make room for the other.
+                labelRect = new Rect(parameterX, blockY, layout.ParameterWidth, layout.LabelBandHeight);
+                groupRect = new Rect(parameterX, blockY + layout.LabelBandHeight, layout.ControlGroupWidth, layout.ControlLineHeight);
+            }
+            else
+            {
+                labelRect = new Rect(
+                    parameterX,
+                    blockY + (layout.ControlLineHeight - layout.LabelBandHeight) * 0.5f,
+                    layout.LabelColumnWidth,
+                    layout.LabelBandHeight);
+                groupRect = new Rect(
+                    parameterX + layout.LabelColumnWidth + MoodLabelColumnGap,
+                    blockY,
+                    layout.ControlGroupWidth,
+                    layout.ControlLineHeight);
+            }
+
+            DrawMoodStepper(
+                labelRect,
+                groupRect,
+                layout.ControlButtonWidth,
+                layout.ControlFieldWidth,
+                new Rect(rect.x + layout.SliderX, blockY + layout.SliderY, layout.SliderWidth, MoodSliderHeight),
+                ParameterLabelKey(factor),
+                value,
+                MoodParameterMin[i],
+                MoodParameterMax[i],
+                row,
+                factor,
+                ctx);
         }
     }
 
-    private float DrawMoodStepper(
+    /// <summary>Mood display name through the Host translation seam. Keyed (US.Mood.Good and friends), so
+    /// a mood is never rendered from a hard-coded language literal or from a debug name.</summary>
+    private static string MoodName(UiWidgetContext ctx, MoodTuningRowView row)
+    {
+        return UsKernelDraw.Keyed(ctx, "US.Mood." + row.Mood);
+    }
+
+    /// <summary>Display-text key of one factor, index-aligned with <see cref="MoodParameterFactors"/>.</summary>
+    private static string ParameterLabelKey(SqueakMoodFactor factor)
+    {
+        return factor switch
+        {
+            SqueakMoodFactor.Volume => VolumeLabelKey,
+            SqueakMoodFactor.Jitter => JitterLabelKey,
+            _ => PitchLabelKey,
+        };
+    }
+
+    /// <summary>
+    /// Width of one mood reset control: its own label's measured single-line width plus the control's
+    /// 6px side padding, floored at <see cref="MoodResetWidthMin"/>. Measure and Draw both come through
+    /// here (the mode decision depends on it), so a longer ruled phrase in either language widens the
+    /// control instead of wrapping it into a clipped band.
+    /// </summary>
+    private static float MoodResetWidthFor(UiWidgetContext ctx, string labelKey)
+    {
+        float label = ctx.Metrics.MeasureWidth(UsKernelDraw.Keyed(ctx, labelKey), UiFont.Tiny);
+        return Math.Max(MoodResetWidthMin, label + 12f);
+    }
+
+    private static float MoodResetClusterWidthFor(UiWidgetContext ctx)
+    {
+        return MoodResetWidthFor(ctx, ResetDefaultKey) + MoodGap + MoodResetWidthFor(ctx, ResetPresetKey);
+    }
+
+    private void DrawMoodResetButtons(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
+    {
+        float defaultWidth = MoodResetWidthFor(ctx, ResetDefaultKey);
+        float presetWidth = MoodResetWidthFor(ctx, ResetPresetKey);
+        // Side by side when both labels fit; otherwise each control gets its own line (never squeezed,
+        // never shrunk - the ruling). Order stays default-then-preset in both shapes.
+        bool sideBySide = rect.width >= defaultWidth + MoodGap + presetWidth - 0.5f;
+        float lineWidth = Math.Max(1f, rect.width);
+        Rect defaultRect = new(rect.x, rect.y, Math.Min(defaultWidth, lineWidth), ButtonHeight);
+        Rect presetRect = sideBySide
+            ? new(rect.xMax - presetWidth, rect.y, presetWidth, ButtonHeight)
+            : new(rect.x, rect.y + ButtonHeight + RowGap, Math.Min(presetWidth, lineWidth), ButtonHeight);
+
+        DrawMoodResetButton(
+            defaultRect,
+            ResetDefaultKey,
+            ResetDefaultHelpKey,
+            ResetDefaultUnavailableHelpKey(row),
+            row.DefaultReset == SqueakMoodResetDefaultState.Ready,
+            () => ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null)),
+            ctx);
+
+        DrawMoodResetButton(
+            presetRect,
+            ResetPresetKey,
+            ResetPresetHelpKey,
+            ResetPresetUnavailableHelpKey(row),
+            row.PresetReset == SqueakMoodResetPresetState.Ready,
+            () => ctx.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(row.Mood)),
+            ctx);
+    }
+
+    /// <summary>
+    /// One reset control, neutral by design: "reset to default" restores inheritance, which is not a
+    /// destructive action and therefore carries no danger semantics (07 §7 bans red for it). Unavailable
+    /// means greyed out and inert, never invisible: the control is still drawn and hovering it claims the
+    /// help entry that carries its reason sentence (the reason channel of this UI). Available controls
+    /// claim the entry that explains the action they perform.
+    /// </summary>
+    private static void DrawMoodResetButton(
         Rect rect,
+        string labelKey,
+        string enabledHelpKey,
+        string unavailableHelpKey,
+        bool enabled,
+        Action invoke,
+        UiWidgetContext ctx)
+    {
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, enabled ? enabledHelpKey : unavailableHelpKey);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && enabled, UsKernelDraw.RowRail.None);
+        UsKernelDraw.Label(
+            new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
+            UsKernelDraw.Keyed(ctx, labelKey),
+            ctx.Theme,
+            enabled ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft);
+
+        // The disabled control still claims its rect (it is drawn and hit-testable - unavailable is not
+        // invisible); only the action is suppressed. Not routing the click keeps it out of every binding.
+        bool clicked = UiNative.Button(rect, ctx);
+        if (enabled && clicked) invoke();
+    }
+
+    private static string ResetDefaultUnavailableHelpKey(MoodTuningRowView row)
+    {
+        return row.DefaultReset == SqueakMoodResetDefaultState.Ready ? ResetDefaultHelpKey : ResetDefaultNoLocalHelpKey;
+    }
+
+    private static string ResetPresetUnavailableHelpKey(MoodTuningRowView row)
+    {
+        return row.PresetReset switch
+        {
+            SqueakMoodResetPresetState.Ready => ResetPresetHelpKey,
+            SqueakMoodResetPresetState.NotFromPreset => ResetPresetNotFromPresetHelpKey,
+            SqueakMoodResetPresetState.PresetMissing => ResetPresetMissingHelpKey,
+            _ => ResetPresetNoEntryHelpKey,
+        };
+    }
+
+    /// <summary>
+    /// One parameter block: the label band the layout sized from the resolved localized text, then the
+    /// numeric line - minus, numeric field, plus - then the slider on its own line starting at the numeric
+    /// group's left edge. Every width regime reaches this method, so no regime can omit a control; a group
+    /// narrower than the standard control widths shrinks (field first, buttons second) rather than spilling
+    /// out of the card. Writes are unchanged: the typed "set-mood-tuning" action, the shared
+    /// "mood-&lt;Mood&gt;-&lt;Factor&gt;" element id, 0.05 steps and the 0.### format.
+    /// </summary>
+    private void DrawMoodStepper(
+        Rect labelRect,
+        Rect groupRect,
+        float buttonWidth,
+        float fieldWidth,
+        Rect sliderRect,
         string labelKey,
         float value,
         float min,
@@ -471,7 +668,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         UiWidgetContext ctx)
     {
         UsKernelDraw.Label(
-            new Rect(rect.x, rect.y + 4f, 14f, 18f),
+            labelRect,
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
             ctx.Theme.TextSecondary,
@@ -479,23 +676,13 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
 
         string elementId = "mood-" + row.Mood + "-" + factor;
-        float x = rect.x + 14f;
-        float height = rect.height;
-        float buttonWidth = 20f;
-        float fieldWidth = 40f;
-        float gap = 4f;
 
-        Rect minusRect = new(x, rect.y, buttonWidth, height);
-        x += buttonWidth + gap;
-        float sliderWidth = Math.Max(1f, rect.xMax - x - fieldWidth - gap * 2f - buttonWidth);
-        Rect sliderRect = new(x, rect.y, sliderWidth, height);
-        x += sliderRect.width + gap;
-        Rect fieldRect = new(x, rect.y, fieldWidth, height);
-        x += fieldWidth + gap;
-        Rect plusRect = new(Math.Min(x, rect.xMax - buttonWidth), rect.y, buttonWidth, height);
+        Rect minusRect = new(groupRect.x, groupRect.y, buttonWidth, groupRect.height);
+        Rect fieldRect = new(minusRect.xMax + MoodControlGap, groupRect.y, fieldWidth, groupRect.height);
+        Rect plusRect = new(fieldRect.xMax + MoodControlGap, groupRect.y, buttonWidth, groupRect.height);
 
-        bool minusClicked = UsKernelDraw.SelectionButton(minusRect, "−", ctx.Theme, selected: false);
-        bool plusClicked = UsKernelDraw.SelectionButton(plusRect, "+", ctx.Theme, selected: false);
+        bool minusClicked = UsKernelDraw.SelectionButton(minusRect, ctx, "−", ctx.Theme, selected: false);
+        bool plusClicked = UsKernelDraw.SelectionButton(plusRect, ctx, "+", ctx.Theme, selected: false);
 
         float sliderValue = UiNative.Slider(sliderRect, elementId, ctx.Session, value, min, max, out bool sliderChanged);
         if (sliderChanged)
@@ -519,8 +706,6 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, factor, UiNative.ClampValue(value + 0.05f, min, max)));
         }
-
-        return rect.x + rect.width;
     }
 
     /// <summary>
@@ -547,49 +732,140 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             : LayerRowHeight;
     }
 
-    /// <summary>
-    /// True when the three horizontal mood stepper groups cannot fit beside the mood label and
-    /// Auto clear button. Uses the same group-width math as the former narrow branch; Measure and
-    /// Draw both feed the card body width.
-    /// </summary>
-    private static bool UsesStackedMoodRows(float bodyWidth)
+    /// <summary>The three factor parameters in draw order. The arrays below are index-aligned with it, so
+    /// the label, the range and the element id of one parameter can never drift apart.</summary>
+    private static readonly SqueakMoodFactor[] MoodParameterFactors =
     {
-        float clearX = bodyWidth - MoodClearWidth - 8f;
-        float controlsWidth = clearX - (LeftPadding + MoodLabelWidth) - MoodGap;
-        float groupWidth = (controlsWidth - MoodGap * 2f) / 3f;
-        return groupWidth < 110f;
-    }
+        SqueakMoodFactor.Pitch,
+        SqueakMoodFactor.Volume,
+        SqueakMoodFactor.Jitter,
+    };
+
+    /// <summary>Factor ranges, unchanged: Pitch 0.5-2, Volume 0.1-2, Jitter 0-0.5.</summary>
+    private static readonly float[] MoodParameterMin = { 0.5f, 0.1f, 0f };
+
+    private static readonly float[] MoodParameterMax = { 2f, 2f, 0.5f };
 
     /// <summary>
-    /// Height a mood row actually consumes: the single-line <see cref="MoodRowHeight"/> on wide
-    /// layouts, or the stacked header + three full-width stepper lines on narrow ones. Measure and
-    /// Draw must agree so the section card never clips or overlaps mood controls.
+    /// The one geometry function Measure and Draw share for the whole Mood Modulation section: the card
+    /// header (mood name + measured reset block) and the repeated two-line parameter block. Everything is
+    /// derived from the card body width, the metrics/resolver seam and the rows themselves - never from
+    /// hover - so the row count, the section height and the drawn rects always agree.
+    /// <para>
+    /// One layout serves every mood and every parameter: the label column is the widest RESOLVED
+    /// localized label (plus padding), the numeric group is one fixed width, and the slider starts at the
+    /// group's left edge and runs to the card's inner right edge. That is what makes slider track widths
+    /// equal across Pitch/Volume/Jitter and across all four moods.
+    /// </para>
     /// </summary>
-    private static float MoodRowHeightFor(float bodyWidth, UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
+    private static MoodRowsLayout MoodRowsLayoutFor(float bodyWidth, UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
     {
-        if (!UsesStackedMoodRows(bodyWidth))
-        {
-            return Math.Max(MoodRowHeight, MoodLabelTop + MaxMoodLabelBand(ctx, rows) + MoodLabelTop);
-        }
+        var layout = new MoodRowsLayout();
+        float innerWidth = Mathf.Max(1f, bodyWidth - LeftPadding * 2f);
+        layout.ParameterWidth = innerWidth;
 
-        return ButtonHeight + RowGap + 3f * ButtonHeight + 2f * RowGap;
-    }
-
-    /// <summary>Tallest mood-name band in the set, so one row height serves every mood in the language.</summary>
-    private static float MaxMoodLabelBand(UiWidgetContext ctx, IReadOnlyList<MoodTuningRowView> rows)
-    {
-        float band = MoodLabelMinHeight;
+        // Header: the mood name is measured in its own font through the resolver; the reset block is
+        // measured from its own two labels, so a longer ruled phrase in either language widens the block
+        // instead of clipping it.
+        float nameWidth = 0f;
         foreach (MoodTuningRowView row in rows)
         {
-            band = Math.Max(band, MoodLabelBand(ctx, row.DisplayName));
+            nameWidth = Mathf.Max(nameWidth, ctx.Metrics.MeasureWidth(MoodName(ctx, row), UiFont.Small));
         }
 
-        return band;
+        float resetCluster = MoodResetClusterWidthFor(ctx);
+        layout.ResetWidth = resetCluster;
+        layout.ResetHeight = innerWidth >= resetCluster - 0.5f ? ButtonHeight : 2f * ButtonHeight + RowGap;
+        layout.HeaderInline = innerWidth >= nameWidth + MoodHeaderGap + resetCluster;
+        layout.NameBandWidth = layout.HeaderInline ? innerWidth - MoodHeaderGap - resetCluster : innerWidth;
+
+        float nameBand = MoodNameMinBand;
+        foreach (MoodTuningRowView row in rows)
+        {
+            nameBand = Mathf.Max(nameBand, ctx.Metrics.MeasureText(MoodName(ctx, row), UiFont.Small, Mathf.Max(1f, layout.NameBandWidth)));
+        }
+
+        layout.NameBandHeight = nameBand;
+        layout.HeaderHeight = layout.HeaderInline
+            ? Mathf.Max(ButtonHeight, nameBand)
+            : nameBand + RowGap + layout.ResetHeight;
+
+        // Parameter labels. The column is the widest resolved label plus padding - never a fixed band, and
+        // never a language literal. A card too narrow to carry that column beside the numeric group moves
+        // the label to its own line; the controls themselves are drawn in both shapes.
+        float labelWidth = 0f;
+        foreach (SqueakMoodFactor factor in MoodParameterFactors)
+        {
+            labelWidth = Mathf.Max(labelWidth, ctx.Metrics.MeasureWidth(UsKernelDraw.Keyed(ctx, ParameterLabelKey(factor)), UiFont.Tiny));
+        }
+
+        layout.ControlButtonWidth = MoodControlButtonWidth;
+        layout.ControlFieldWidth = MoodControlFieldWidth;
+        float defaultGroupWidth = MoodControlButtonWidth * 2f + MoodControlFieldWidth + MoodControlGap * 2f;
+        float groupWidth = Mathf.Min(defaultGroupWidth, innerWidth);
+        if (groupWidth < defaultGroupWidth)
+        {
+            // Pathologically narrow card: shrink the field first, then the two buttons, so every control
+            // stays inside the card instead of spilling over its neighbours. Standard widths are unaffected.
+            float shrink = defaultGroupWidth - groupWidth;
+            float fieldShrink = Mathf.Min(shrink, MoodControlFieldWidth - MoodControlFieldMinWidth);
+            layout.ControlFieldWidth = MoodControlFieldWidth - fieldShrink;
+            shrink -= fieldShrink;
+            layout.ControlButtonWidth = MoodControlButtonWidth
+                - Mathf.Min(MoodControlButtonWidth - MoodControlButtonMinWidth, shrink * 0.5f);
+        }
+
+        layout.ControlGroupWidth = layout.ControlButtonWidth * 2f + layout.ControlFieldWidth + MoodControlGap * 2f;
+        layout.LabelColumnWidth = labelWidth + MoodLabelColumnPad;
+        layout.LabelOnOwnLine = innerWidth < layout.LabelColumnWidth + MoodLabelColumnGap + layout.ControlGroupWidth;
+
+        float labelBandWidth = layout.LabelOnOwnLine ? innerWidth : layout.LabelColumnWidth;
+        float labelBand = MoodParameterLabelMinBand;
+        foreach (SqueakMoodFactor factor in MoodParameterFactors)
+        {
+            labelBand = Mathf.Max(labelBand, ctx.Metrics.MeasureText(UsKernelDraw.Keyed(ctx, ParameterLabelKey(factor)), UiFont.Tiny, Mathf.Max(1f, labelBandWidth)));
+        }
+
+        layout.LabelBandHeight = labelBand;
+        layout.ControlLineHeight = layout.LabelOnOwnLine ? MoodControlHeight : Mathf.Max(MoodControlHeight, labelBand);
+        layout.SliderX = LeftPadding + (layout.LabelOnOwnLine ? 0f : layout.LabelColumnWidth + MoodLabelColumnGap);
+        layout.SliderY = (layout.LabelOnOwnLine ? labelBand : 0f) + layout.ControlLineHeight + MoodSliderGap;
+        layout.SliderWidth = Mathf.Max(1f, bodyWidth - LeftPadding - layout.SliderX);
+        layout.BlockHeight = layout.SliderY + MoodSliderHeight;
+        layout.ParameterTop = layout.HeaderHeight + MoodHeaderGap;
+        layout.TotalHeight = layout.ParameterTop
+            + MoodParameterFactors.Length * layout.BlockHeight
+            + (MoodParameterFactors.Length - 1) * MoodBlockGap;
+        return layout;
     }
 
-    private static float MoodLabelBand(UiWidgetContext ctx, string label)
+    /// <summary>
+    /// Everything one mood card consumes, relative to its own rect. A mutable struct filled by
+    /// <see cref="MoodRowsLayoutFor"/>: both Measure (TotalHeight) and Draw (the rest) read the same
+    /// numbers, which is what keeps the section card from clipping a control.
+    /// </summary>
+    private struct MoodRowsLayout
     {
-        return Math.Max(MoodLabelMinHeight, ctx.Metrics.MeasureText(label, UiFont.Small, MoodLabelWidth));
+        public bool HeaderInline;
+        public float HeaderHeight;
+        public float NameBandWidth;
+        public float NameBandHeight;
+        public float ResetWidth;
+        public float ResetHeight;
+        public float ParameterWidth;
+        public float ParameterTop;
+        public bool LabelOnOwnLine;
+        public float LabelColumnWidth;
+        public float LabelBandHeight;
+        public float ControlLineHeight;
+        public float ControlGroupWidth;
+        public float ControlButtonWidth;
+        public float ControlFieldWidth;
+        public float SliderX;
+        public float SliderY;
+        public float SliderWidth;
+        public float BlockHeight;
+        public float TotalHeight;
     }
 
     private float ScopeRowHeightFor(float rowWidth, string displayName, UiWidgetContext ctx)

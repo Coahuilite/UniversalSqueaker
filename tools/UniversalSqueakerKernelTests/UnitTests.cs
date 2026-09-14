@@ -37,6 +37,7 @@ public static class UnitTests
         PackWeight(ref failures);
         SelectInvalidGuards(ref failures);
         TimingModelRules(ref failures);
+        EatOccurrenceRules(ref failures);
         TriggerInvocationRules(ref failures);
         PerRacePoolIsolation(ref failures);
         EqualRouting(ref failures);
@@ -815,6 +816,40 @@ public static class UnitTests
             "timing public GetActionIntervalSeconds helper", ref failures);
         Check(SqueakTimingModel.GetGlobalCooldownTicks(216, 2f, true, 1f) == 432,
             "timing public GetGlobalCooldownTicks helper", ref failures);
+    }
+
+    /// <summary>Eat occurrence granularity pure rules (Pure/SqueakEatOccurrence): two switches -> three
+    /// modes, parent off beats the child, and an unconfirmed ChewIngestible toil name falls back to the
+    /// full Ingest job instead of going silent.</summary>
+    private static void EatOccurrenceRules(ref int failures)
+    {
+        Check(SqueakEatOccurrence.ResolveMode(false, false) == SqueakEatOccurrenceMode.WholeJob
+            && SqueakEatOccurrence.ResolveMode(false, true) == SqueakEatOccurrenceMode.WholeJob,
+            "eat mode: parent off resolves to WholeJob for both child values (parent-off-beats-child)", ref failures);
+        Check(SqueakEatOccurrence.ResolveMode(true, false) == SqueakEatOccurrenceMode.GainingNutrition,
+            "eat mode: parent on + child off resolves to GainingNutrition", ref failures);
+        Check(SqueakEatOccurrence.ResolveMode(true, true) == SqueakEatOccurrenceMode.ChewingToil,
+            "eat mode: parent on + child on resolves to ChewingToil", ref failures);
+
+        Check(SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.WholeJob, false, false, false)
+            && SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.WholeJob, true, false, true)
+            && SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.WholeJob, false, true, false),
+            "eat occurrence: WholeJob allows unconditionally", ref failures);
+        Check(SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.GainingNutrition, true, false, false)
+            && SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.GainingNutrition, true, true, true)
+            && !SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.GainingNutrition, false, true, true),
+            "eat occurrence: GainingNutrition follows gainingNutritionNow only", ref failures);
+        Check(SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.ChewingToil, false, true, true)
+            && SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.ChewingToil, true, false, true)
+            && !SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.ChewingToil, false, false, true),
+            "eat occurrence: confirmed ChewingToil follows the toil hit (nutrition as extra union)", ref failures);
+        Check(SqueakEatOccurrence.AllowsOccurrence(SqueakEatOccurrenceMode.ChewingToil, false, false, false),
+            "eat occurrence: unconfirmed toil name falls back to the whole job (never silent)", ref failures);
+
+        Check(SqueakEatOccurrence.ChewingToilDebugName == "ChewIngestible",
+            "eat occurrence: vanilla chewing toil debugName pinned to ChewIngestible", ref failures);
+        Check(!SqueakEatOccurrence.EatPrecisionDefault && !SqueakEatOccurrence.EatPrecisionIncludeDrugsDefault,
+            "eat occurrence: parent and child factory defaults are both false", ref failures);
     }
 
     /// <summary>漏斗纯逻辑：SqueakTriggerInvocation 语义（非周期跳过 RandomOneShot 概率）。

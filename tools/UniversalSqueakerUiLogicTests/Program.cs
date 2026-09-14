@@ -34,10 +34,13 @@ internal static class Program
         TestRaceXenotypeFiltering();
         TestUsCardLayoutHeight();
         TestUsFilterBarLayout();
+        TestWindowChromeLayout();
+        TestSettingsWindowSizePolicy();
         TestHelpCatalog();
         TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
         UsKernelContractInvariantTests.RunAll();
+        UsDiagnosticsLogicTests.RunAll();
     }
 
     /// <summary>
@@ -137,6 +140,116 @@ internal static class Program
             "535 body stacks: a dropdown would fall below label(80) + field(96)");
     }
 
+    /// <summary>
+    /// The close affordance rule behind the first in-game overflow: the shell's fixed 110px box is the
+    /// floor, and a caption that needs more widens the box by the padding margin instead of being clipped.
+    /// The real-font need of the unresolved Keyed literal was 128px; that number is used here because the
+    /// rule is proportional and this lane has no font engine.
+    /// </summary>
+    private static void TestWindowChromeLayout()
+    {
+        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(0f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
+            "an empty caption keeps the shell's floor width");
+        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(30f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
+            "a short caption ('Close' is 30px in the harness model) keeps the shell's floor width");
+
+        const float needed = 128f; // the in-game finding: has 110, needs 128
+        float width = WindowChromeLayout.CloseButtonWidth(needed);
+        Assert(width >= needed + 1.5f,
+            "a long caption must widen the affordance past the measured text plus the audit tolerance, got " + width);
+        Assert(Math.Abs(width - (needed + WindowChromeLayout.ClosePadding)) < 0.001f,
+            "the widened width is text + padding, got " + width);
+    }
+
+    /// <summary>
+    /// Pure size policy of the settings window (task-10): it opens NARROW - 24% of the screen width
+    /// clamped into [600, 860] - and the retractable help drawer adds exactly the column it occupies
+    /// plus the body-row gap it introduces (176 + 12 = 188). Height keeps the shipped 0.66-of-screen
+    /// shape with a 600 floor. This file is compiled by the zero-Verse gate, so these are float
+    /// helpers; the window composes them into its UnityEngine.Vector2 at the Verse boundary.
+    /// The referenced declarations live in Layout.Schema2.xml (help-scroll Width 176, body-row Gap 12).
+    /// </summary>
+    private static void TestSettingsWindowSizePolicy()
+    {
+        const float tolerance = 0.001f;
+
+        Assert(Math.Abs(WindowChromeLayout.HelpDrawerWidth - 176f) < tolerance,
+            "the help column declaration the policy mirrors is 176");
+        Assert(Math.Abs(WindowChromeLayout.BodyRowGap - 12f) < tolerance,
+            "the body-row gap declaration the policy mirrors is 12");
+        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta
+                - (WindowChromeLayout.HelpDrawerWidth + WindowChromeLayout.BodyRowGap)) < tolerance,
+            "the drawer delta is derived from the two manifest declarations, not repeated");
+        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 188f) < tolerance,
+            "expanding the drawer costs the window exactly 176 + 12 = 188px");
+
+        foreach ((float screen, float screenHeight) in new[]
+            { (1024f, 768f), (1280f, 800f), (1920f, 1080f), (2560f, 1440f), (3840f, 2160f) })
+        {
+            float closed = WindowChromeLayout.SettingsClosedWidth(screen, screenHeight);
+            float open = WindowChromeLayout.SettingsOpenWidth(screen, screenHeight);
+            float height = WindowChromeLayout.SettingsWindowHeight(screen, screenHeight);
+            Assert(closed >= WindowChromeLayout.SettingsWidthFloor - tolerance,
+                "the closed window is never below the " + WindowChromeLayout.SettingsWidthFloor + " floor at screen "
+                + screen + ": " + closed);
+            Assert(closed <= WindowChromeLayout.SettingsWidthCeiling + tolerance,
+                "the closed window is never above the " + WindowChromeLayout.SettingsWidthCeiling + " ceiling at screen "
+                + screen + ": " + closed);
+            Assert(open >= closed,
+                "the open window is never narrower than the closed one at screen " + screen);
+            Assert(Math.Abs(closed - Math.Round(closed)) < tolerance,
+                "the closed width is a whole pixel count at screen " + screen + ": " + closed);
+            Assert(Math.Abs(height - Math.Round(height)) < tolerance,
+                "the height is a whole pixel count at " + screen + "x" + screenHeight + ": " + height);
+            Assert(Math.Abs(height * 4f - closed * 3f) < tolerance,
+                "the window keeps 4:3 exactly at " + screen + "x" + screenHeight + ": " + closed + "x" + height);
+            // The drawer delta is what the window gains where the screen can hold it. Below that the open
+            // width is capped at the screen, so the gain is the screen's remaining room instead - the whole
+            // reason SettingsOpenWidth clamps rather than adding blindly.
+            float expectedDelta = Math.Min(WindowChromeLayout.DrawerWidthDelta, Math.Max(0f, screen - closed));
+            Assert(Math.Abs((open - closed) - expectedDelta) < tolerance,
+                "open - closed is the drawer delta where the screen holds it, the remaining room otherwise, at screen "
+                + screen + ": " + (open - closed) + " vs " + expectedDelta);
+            Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: false) - closed) < tolerance
+                && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: true) - open) < tolerance,
+                "SettingsWindowWidth selects the closed/open branch at screen " + screen);
+        }
+
+        // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a
+        // fixed size), so the minimum canvas must land exactly on that footprint.
+        // The floor is the smallest whole-pixel 4:3 box that covers vanilla's own 650x600, and the minimum
+        // canvas opens exactly there; every larger screen is the same 4:3 box scaled.
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1024f, 768f) - 800f) < tolerance,
+            "1024x768 opens at the 800 floor (vanilla's 650x600 rounded up to whole-pixel 4:3)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 600f) < tolerance,
+            "1024x768 is 800x600 - 4:3 at vanilla's own height, both whole numbers");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f, 1080f) - 960f) < tolerance,
+            "1920x1080 opens at 960 = half the screen width");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1920f, 1080f) - 720f) < tolerance,
+            "1920x1080 keeps 4:3: 960x720");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f, 1440f) - 1280f) < tolerance,
+            "2560x1440 opens at 1280 = half the screen width");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(2560f, 1440f) - 960f) < tolerance,
+            "2560x1440 keeps 4:3: 1280x960 (the old portrait 614x950 is what wrapped every long label)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f, 2160f) - 1600f) < tolerance,
+            "3840x2160 clamps to the 1600 ceiling (half = 1920)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(3840f, 2160f) - 1200f) < tolerance,
+            "3840x2160 keeps 4:3: 1600x1200");
+
+        // The expanded window may never be wider than the screen it lives in; below the drawer delta it is
+        // capped at the screen, and under the width floor at the closed width itself.
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f, 1080f) - 1148f) < tolerance,
+            "1920 open = 960 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f, 1440f) - 1468f) < tolerance,
+            "2560 open = 1280 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f, 600f) - 800f) < tolerance,
+            "an 800-wide screen cannot be widened past the floor, so open == closed");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(900f, 700f) - 900f) < tolerance,
+            "900 screen caps the expanded window at the screen (it would be 988)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(988f, 800f) - 988f) < tolerance,
+            "988 screen still fits the full drawer delta on top of the floor");
+    }
+
     private static void TestHelpCatalog()
     {
         Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
@@ -148,8 +261,8 @@ internal static class Program
         string[] sectionKeys =
         {
             "us/page-title", "us/mode-row", "us/global-volume", "us/attenuation-editor",
-            "us/basic-tuning", "us/camera-indicator", "us/scope-tree", "us/preset-list",
-            "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
+            "us/basic-tuning", "us/timing", "us/camera-indicator", "us/diagnostics",
+            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
         };
         foreach (string key in sectionKeys)
         {
@@ -181,7 +294,16 @@ internal static class Program
             }
         }
 
-        Assert(itemCount == 28, "catalog item count matches the shipped wiring table (was 29; the dead basic-tuning/distance entry was cut): " + itemCount);
+        // 28 → 34 with the global-tuning wiring (timing +2, diagnostics +4), then 40 with the two mood
+        // reset controls (2026-09-12 ruling): one entry per action plus one per unavailable reason
+        // (no local setting / not from a preset / preset missing / preset has no entry).
+        // Count pin, updated with the help-coverage pass: the catalog gained one entry per Playback
+        // behaviour row (us/basic-tuning/scale-cooldown|scale-talking|scale-population), the attenuation
+        // status/range read-out (us/attenuation-editor/status) and the Help drawer toggle
+        // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item. The
+        // eat-occurrence pair adds one entry per control: us/basic-tuning/eat-precision (parent) and
+        // us/basic-tuning/eat-precision-include-drugs (the child row), 44 -> 46.
+        Assert(itemCount == 46, "catalog item count matches the shipped wiring table (46 items incl. the three per-row basic-tuning entries, the two eat-precision entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

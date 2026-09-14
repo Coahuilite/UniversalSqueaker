@@ -51,7 +51,6 @@ public sealed class UsHelpPanelWidget : IUiWidget
     public void Validate(IUiBindings bindings, string elementPath)
     {
         bindings.ValidateValue<string>("help-section-key", elementPath);
-        bindings.ValidateValue<string>("help-hover", elementPath);
     }
 
     public float Measure(UiWidgetContext ctx)
@@ -151,7 +150,6 @@ public sealed class UsHelpPanelWidget : IUiWidget
         string header = HeaderText(ctx, display);
         Rect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
         UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
-        UiThemeDraw.AccentRail(headerRect, ctx.Theme, true, 2f);
         y += headerRect.height + TitleGap;
 
         y += ContentGap;
@@ -180,11 +178,11 @@ public sealed class UsHelpPanelWidget : IUiWidget
         return section;
     }
 
-    /// <summary>Resolves the display for the frame's current hover claim.</summary>
+    /// <summary>Resolves the display for the frame's current hover claim (session-owned since FL P3;
+    /// the claim is not a binding, so there is nothing to validate here beyond the section fallback).</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
     {
-        string hover = ctx.Bindings.TryGet("help-hover", out string h) ? h : "";
-        return UsHelpPanelLogic.Resolve(section, hover, TranslationSeam(ctx));
+        return UsHelpPanelLogic.Resolve(section, ctx.Session.HoverClaim ?? "", TranslationSeam(ctx));
     }
 
     /// <summary>

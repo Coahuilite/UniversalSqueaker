@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
-using UnityEngine;
 using Verse;
 
 namespace UniversalSqueaker.UI;
@@ -89,7 +88,7 @@ public static class VoicePacksPageModel
         string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
         string saveStatus = UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions);
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks, settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled, settings.eatPrecisionIncludeDrugs);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -171,8 +170,9 @@ public static class VoicePacksPageModel
         return "Overview";
     }
 
-    /// <summary>Workspace switch: normalises the incoming name, then clears hover/selection/scroll so
-    /// the active section, the highlighted help row and the scroll offset all agree.</summary>
+    /// <summary>Workspace switch: normalises the incoming name and points the active section at the
+    /// new workspace's primary target. Neither the scroll offset nor the help hover claim is this
+    /// model's business any more: both are session state, reset or held by the Host/session.</summary>
     private static void ApplyActiveTab(VoicePacksPageState state, string tab)
     {
         string normalized;
@@ -193,8 +193,6 @@ public static class VoicePacksPageModel
         {
             state.ActiveTab = normalized;
             state.ActiveSectionKey = WorkspacePrimarySection(normalized);
-            state.HelpHoverKey = "";
-            state.ScrollPosition = Vector2.zero;
         }
     }
 
@@ -214,7 +212,6 @@ public static class VoicePacksPageModel
     private static void ApplyScrollToSection(VoicePacksPageState state, string sectionKey)
     {
         if (string.IsNullOrEmpty(sectionKey)) return;
-        state.ScrollTargetKey = sectionKey;
         state.ActiveSectionKey = sectionKey;
         state.ActiveTab = SectionGroup(sectionKey);
     }
@@ -429,7 +426,22 @@ public static class VoicePacksPageModel
                 if (isOwn) own = record;
             }
             float jitterHalf = bestJitterLayer >= 0 ? Math.Max(0f, jitter.max - 1f) : 0f;
-            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf));
+
+            // The two reset actions are judged from flags and source alone (F-Q): a cleared row that kept
+            // its source is unavailable for "reset to default" and ready for "reset to preset". The
+            // preset Def/entry resolution happens here because this is the layer that may touch the Def
+            // database; the decision itself lives in Pure so the matrix is harness-testable.
+            SqueakMoodResetDefaultState defaultReset = SqueakMoodResetActions.EvaluateDefault(
+                own?.hasPitchFactor == true, own?.hasVolumeFactor == true, own?.hasPitchJitter == true);
+            string sourcePreset = own?.sourcePresetDefName ?? "";
+            UniversalSqueakerTuningBaselineDef? presetDef = sourcePreset.Length > 0
+                ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(sourcePreset)
+                : null;
+            bool presetHasEntry = presetDef != null
+                && UniversalSqueakerSettings.TryFindMoodBaseline(presetDef, mood, race, xeno, out _);
+            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, presetDef != null, presetHasEntry);
+
+            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset));
         }
         return rows;
     }
@@ -918,7 +930,8 @@ public static class VoicePacksPageModel
             "global-volume" => "us/global-volume",
             "attenuation-editor" => "us/attenuation-editor",
             "basic-tuning" => "us/basic-tuning",
-            "camera-indicator" => "us/camera-indicator",
+            "timing" => "us/timing",
+            "diagnostics" => "us/diagnostics",
             "scope-tree" => "us/scope-tree",
             "preset-list" => "us/preset-list",
             "filter-bar" => "us/filter-bar",
@@ -983,55 +996,10 @@ public static class VoicePacksPageModel
         state.SearchText = text ?? "";
     }
 
-    public static void SetHelpHover(VoicePacksPageState state, string key)
-    {
-        if (state == null) return;
-        state.HelpHoverKey = key ?? "";
-        // The stamp marks WHICH frame's draw produced this claim, so BeginHelpHoverFrame can tell
-        // a live claim from its own previous restore. Only widget claims route through here.
-        state.HelpHoverClaimStamp = state.HelpHoverFrame;
-    }
-
-    /// <summary>Frames a finished hover claim keeps explaining the panel before it releases to
-    /// the section overview (~0.25s at 60fps). Sized to bridge transit gaps between adjacent
-    /// controls without feeling like a pin.</summary>
-    public const int HoverGraceFrames = 15;
-
-    /// <summary>
-    /// Frame-boundary protocol the settings window runs before every <c>DrawFrame</c> (D10 ruling,
-    /// 2026-09-06). A claim that landed during the previous frame's draw is remembered and cleared
-    /// - widgets re-claim during this draw exactly like the plain per-frame clear, so a stationary
-    /// hover never reads as stale. When nothing claimed (a gap frame of a pointer moving from
-    /// control A to control B), the held claim is restored for <see cref="HoverGraceFrames"/>
-    /// frames: the panel goes A -> B with no overview flash, and leaving the control area releases
-    /// to the section overview only after the grace window. A live claim always replaces the held
-    /// one in the same frame, so no pin semantics return.
-    /// </summary>
-    public static void BeginHelpHoverFrame(VoicePacksPageState state)
-    {
-        if (state == null) return;
-        state.HelpHoverFrame++;
-        bool claimedLastFrame =
-            state.HelpHoverKey.Length > 0 && state.HelpHoverClaimStamp == state.HelpHoverFrame - 1;
-        if (claimedLastFrame)
-        {
-            state.HelpHoverHeld = state.HelpHoverKey;
-            state.HelpHoverGraceLeft = HoverGraceFrames;
-            state.HelpHoverKey = "";
-        }
-        else if (state.HelpHoverGraceLeft > 0)
-        {
-            state.HelpHoverKey = state.HelpHoverHeld;
-            state.HelpHoverGraceLeft--;
-        }
-        else
-        {
-            state.HelpHoverKey = "";
-        }
-    }
-
-    // SetHelpSelection retired with the persistent index list (D2 ruling, 2026-09-05): hover is
-    // the only channel that changes what the help panel shows.
+    // The hover-claim machine (D10 grace) moved to UiSession with FL 0.3.0 P3: widgets claim through
+    // UsKernelDraw.HelpHover -> Session.ClaimHover, and the panel/border read Session.HoverClaim. The
+    // pinned-selection channel stays retired with the index list (D2 ruling, 2026-09-05) - hover is
+    // still the only thing that changes what the help panel shows, it just has a session owner now.
 
     public static void SetActionScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
     {
@@ -1048,6 +1016,30 @@ public static class VoicePacksPageModel
     {
         if (state == null) return;
         ApplyMoodTuning(settings, state, mood, factor, value);
+    }
+
+    /// <summary>「重置为预设」：读本层末行的来源 → 解析预设 Def → 让 settings 把该 (mood,race,xeno) 的基线
+    /// 因子值重新写回（来源保持）。不可用时（无来源 / Def 失效 / 无条目）什么都不做：可用性由
+    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。</summary>
+    public static void ResetMoodToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
+    {
+        if (state == null) return;
+        string race = state.TuningRaceDefName ?? "";
+        string xeno = state.TuningXenotypeDefName ?? "";
+
+        // last-wins：与 BuildMoodTuningRows 取 Own 的口径一致，来源也取末行。
+        string source = "";
+        foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+        {
+            if (record == null || record.mood != mood) continue;
+            if (!string.Equals(record.raceDefName ?? "", race, StringComparison.Ordinal)) continue;
+            if (!string.Equals(record.xenotypeDefName ?? "", xeno, StringComparison.Ordinal)) continue;
+            source = record.sourcePresetDefName ?? "";
+        }
+        if (source.Length == 0) return;
+
+        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source);
+        settings.ResetMoodTuningToPreset(mood, race, xeno, preset);
     }
 
     public static void ToggleBaselinePresetSelection(VoicePacksPageState state, string presetDefName)

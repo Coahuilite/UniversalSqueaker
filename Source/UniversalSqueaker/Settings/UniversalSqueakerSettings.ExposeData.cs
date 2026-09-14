@@ -71,6 +71,10 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref distanceRange, "distanceRange", GetDistancePresetRange(SqueakDistancePreset.Balanced));
         Scribe_Values.Look(ref allowEasterEggSounds, "allowEasterEggSounds", false);
         Scribe_Values.Look(ref allowExternalActions, "allowExternalActions", false);
+        // Eat occurrence granularity: add-only fields, default false omitted at the Scribe boundary, so the
+        // default config keeps a zero-byte delta and settingsSchemaVersion stays 5.
+        Scribe_Values.Look(ref eatPrecisionEnabled, "eatPrecisionEnabled", false);
+        Scribe_Values.Look(ref eatPrecisionIncludeDrugs, "eatPrecisionIncludeDrugs", false);
 #if US_EXPERIMENTAL
         Scribe_Values.Look(ref experimentalKiiroCompat, "experimentalKiiroCompat", false);
 #endif
@@ -95,6 +99,11 @@ public partial class UniversalSqueakerSettings
             moodTuning = new List<MoodTuningRecord>();
 
         if (Scribe.mode != LoadSaveMode.PostLoadInit) return;
+
+        // Parent off beats child on: a hand-edited "parent off + child true" file normalises to false here
+        // and never becomes a legal state (the UI clears the child on a parent-off write; the pure rule
+        // already resolves parent-off to WholeJob, so this only keeps the persisted value honest).
+        if (!eatPrecisionEnabled) eatPrecisionIncludeDrugs = false;
 
         if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Vanilla;
         if (!Enum.IsDefined(typeof(SqueakDevLoggingMode), devLoggingMode)) devLoggingMode = SqueakDevLoggingMode.Auto;

@@ -68,8 +68,8 @@ internal static class UsHelpCatalog
     private static readonly Dictionary<string, HelpSection> Sections = new(StringComparer.Ordinal)
     {
         // Window-level fallback section: the section-map guard keeps it reachable via
-        // SectionHelpKeyOf's default branch; its two items are claimed live by the navigation
-        // rows and the footer save status.
+        // SectionHelpKeyOf's default branch; its three items are claimed live by the navigation
+        // rows, the footer save status and the page-title Help toggle.
         ["us/page-title"] = new HelpSection(
             "us/page-title",
             "US.Help.PageTitle.Title",
@@ -84,6 +84,13 @@ internal static class UsHelpCatalog
                     "us/page-title/apply",
                     "US.Help.PageTitle.Apply.Label",
                     "US.Help.PageTitle.Apply.Text"),
+                // The page-title Help toggle: the control that shows/hides the help drawer. W1 wires the
+                // matching HelpHover claim on the toggle itself; without that literal this entry is
+                // unclaimed and the claim<->catalog gate flags it.
+                new HelpItem(
+                    "us/page-title/help-drawer",
+                    "US.Help.PageTitle.HelpDrawer.Label",
+                    "US.Help.PageTitle.HelpDrawer.Text"),
             }),
         ["us/mode-row"] = new HelpSection(
             "us/mode-row",
@@ -139,9 +146,21 @@ internal static class UsHelpCatalog
                     "us/attenuation-editor/presets",
                     "US.Help.Attenuation.Presets.Label",
                     "US.Help.Attenuation.Presets.Text"),
+                // The status line under the chart is a read-out (active preset + current range), not a
+                // writable control, but it is still a surface a player hovers: it owns this entry in both
+                // the wide status line and the narrow summary shape.
+                new HelpItem(
+                    "us/attenuation-editor/status",
+                    "US.Help.Attenuation.Status.Label",
+                    "US.Help.Attenuation.Status.Text"),
             }),
         // The dead basic-tuning/distance item (its control moved to the Distance workspace) stays
         // removed; the claim↔entry equality guard makes re-adding it without wiring fail the gate.
+        // Each playback-behaviour row owns its own entry: the three runtime scalings were one shared
+        // "us/basic-tuning/scaling" claim, which made three different toggles explain themselves with one
+        // sentence (and left the hovered row unable to say what it alone does). Each new item carries its
+        // own label + body keys in both languages rather than reusing the row's full-sentence caption, so
+        // the help index name stays short and the two surfaces can still be worded for their own job.
         ["us/basic-tuning"] = new HelpSection(
             "us/basic-tuning",
             "US.Section.PlaybackBehaviour",
@@ -153,9 +172,43 @@ internal static class UsHelpCatalog
                     "US.Help.BasicTuning.Egg.Label",
                     "US.Help.BasicTuning.Egg.Text"),
                 new HelpItem(
-                    "us/basic-tuning/scaling",
-                    "US.Help.BasicTuning.Scaling.Label",
-                    "US.Help.BasicTuning.Scaling.Text"),
+                    "us/basic-tuning/scale-cooldown",
+                    "US.Help.BasicTuning.ScaleCooldown.Label",
+                    "US.Help.BasicTuning.ScaleCooldown.Text"),
+                new HelpItem(
+                    "us/basic-tuning/scale-talking",
+                    "US.Help.BasicTuning.ScaleTalking.Label",
+                    "US.Help.BasicTuning.ScaleTalking.Text"),
+                new HelpItem(
+                    "us/basic-tuning/scale-population",
+                    "US.Help.BasicTuning.ScalePopulation.Label",
+                    "US.Help.BasicTuning.ScalePopulation.Text"),
+                // The two-level eat-occurrence switch: the parent's entry explains the whole pair
+                // (including the zero-nutrition boundary), and the child's entry explains the
+                // chewing/lighting authority plus its fallback to the whole eating job.
+                new HelpItem(
+                    "us/basic-tuning/eat-precision",
+                    "US.Help.BasicTuning.EatPrecision.Label",
+                    "US.Help.BasicTuning.EatPrecision.Text"),
+                new HelpItem(
+                    "us/basic-tuning/eat-precision-include-drugs",
+                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label",
+                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text"),
+            }),
+        ["us/timing"] = new HelpSection(
+            "us/timing",
+            "US.Section.TriggerTiming",
+            "US.Help.Timing.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/timing/interval",
+                    "US.Help.Timing.Interval.Label",
+                    "US.Help.Timing.Interval.Text"),
+                new HelpItem(
+                    "us/timing/multiplier",
+                    "US.Help.Timing.Multiplier.Label",
+                    "US.Help.Timing.Multiplier.Text"),
             }),
         ["us/camera-indicator"] = new HelpSection(
             "us/camera-indicator",
@@ -167,6 +220,29 @@ internal static class UsHelpCatalog
                     "us/camera-indicator/toggle",
                     "US.Tuning.CameraIndicator",
                     "US.Help.CameraIndicator.Toggle.Text"),
+            }),
+        ["us/diagnostics"] = new HelpSection(
+            "us/diagnostics",
+            "US.Section.Diagnostics",
+            "US.Help.Diagnostics.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/diagnostics/logging-auto",
+                    "US.Diagnostics.Logging.Auto",
+                    "US.Help.Diagnostics.LoggingAuto.Text"),
+                new HelpItem(
+                    "us/diagnostics/logging-enabled",
+                    "US.Diagnostics.Logging.Enabled",
+                    "US.Help.Diagnostics.LoggingEnabled.Text"),
+                new HelpItem(
+                    "us/diagnostics/logging-disabled",
+                    "US.Diagnostics.Logging.Disabled",
+                    "US.Help.Diagnostics.LoggingDisabled.Text"),
+                new HelpItem(
+                    "us/diagnostics/localize-debug",
+                    "US.Diagnostics.LocalizeDebugMenu",
+                    "US.Help.Diagnostics.LocalizeDebug.Text"),
             }),
         ["us/scope-tree"] = new HelpSection(
             "us/scope-tree",
@@ -194,6 +270,33 @@ internal static class UsHelpCatalog
                     "us/scope-tree/auto",
                     "US.Help.ScopeTree.Auto.Label",
                     "US.Help.ScopeTree.Auto.Text"),
+                // The two mood reset controls: the first two entries explain the actions, the four
+                // below carry the reason sentence for each unavailable state (flags / source / preset
+                // resolution - never row existence).
+                new HelpItem(
+                    "us/scope-tree/mood-reset-default",
+                    "US.Tuning.ResetToDefault",
+                    "US.Help.ScopeTree.ResetDefault.Text"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset",
+                    "US.Tuning.ResetToPreset",
+                    "US.Help.ScopeTree.ResetPreset.Text"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-no-local",
+                    "US.Tuning.ResetToDefault",
+                    "US.Tuning.ResetToDefault.Reason.NoLocal"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-not-from-preset",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.NotFromPreset"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset-missing",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.PresetMissing"),
+                new HelpItem(
+                    "us/scope-tree/mood-reset-preset-no-entry",
+                    "US.Tuning.ResetToPreset",
+                    "US.Tuning.ResetToPreset.Reason.NoEntry"),
             }),
         ["us/preset-list"] = new HelpSection(
             "us/preset-list",
