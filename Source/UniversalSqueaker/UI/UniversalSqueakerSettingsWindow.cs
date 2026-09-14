@@ -93,18 +93,19 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     /// <summary>
     /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
-    /// clamps 24% of the screen width into [600, 860], and the retractable help drawer widens it by
-    /// exactly the column plus row gap it costs (188 = 176 + 12) once the player expands it (see
-    /// <see cref="ApplyDrawerWidth"/>). Height keeps the shipped shape: 66% of the screen with a 600
-    /// floor. The shell's default would be the game's own <see cref="Window.InitialSize"/>, so this
-    /// policy is what makes the narrow opening a product decision instead of an accident.
+    /// clamps 44% of the screen width into [vanilla's own 650, 1600] - never below the dialog vanilla
+    /// itself opens at the minimum canvas - and the retractable help drawer widens it by exactly the column
+    /// plus row gap it costs (188 = 176 + 12) once the player expands it (see
+    /// <see cref="ApplyDrawerWidth"/>). Height is derived from the width at 16:9 and floored at vanilla's
+    /// 600. The shell's default would be the game's own <see cref="Window.InitialSize"/>, so this policy is
+    /// what makes the opening size a product decision instead of an accident.
     /// </summary>
     protected override Func<Vector2>? InitialSizePolicy => InitialSizeFromScreen;
 
     private static Vector2 InitialSizeFromScreen()
     {
         float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, drawerExpanded: false);
-        float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenHeight);
+        float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenWidth, Verse.UI.screenHeight);
         return new Vector2(width, height);
     }
 

@@ -312,13 +312,21 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
 {
     public const string KindName = "us/diag/bar";
 
-    /// <summary>09 §3.3's authorised geometry: 26 -> 32, dev-only panel.</summary>
-    internal const float BarHeight = 32f;
+    /// <summary>
+    /// 09 §3.3's geometry, re-measured against real glyph heights: the 32px strip carried two 14px lines,
+    /// but a tiny line needs 18 and the identity line draws at Small (calibrated 21.33). The 2026-09-14
+    /// in-game log reported it six times as "diag-bar (height axis, needs 18, has 14)" - the collapsed bar
+    /// was clipping every line it drew. The strip now reserves the real bands: TopPad 2 + 22 + 18 + 2 = 44.
+    /// </summary>
+    internal const float BarHeight = 44f;
 
     private const float Padding = 8f;
 
-    /// <summary>The bar's own two-line rhythm: TopPad 2 + 14 + 14 = 30 inside the 32px strip.</summary>
-    private const float StripLineHeight = 14f;
+    /// <summary>Band of the identity line, drawn at <see cref="UiFont.Small"/> (calibrated one-line 21.33).</summary>
+    private const float TitleLineHeight = 22f;
+
+    /// <summary>Band of every Tiny line (calibrated one-line height 18).</summary>
+    private const float StripLineHeight = 18f;
     private const float TopPad = 2f;
     private const float Gap = 6f;
     private const float DotWidth = 14f;
@@ -359,8 +367,8 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
         float lineTop = rect.y + TopPad;
 
         // Line 2 actions are laid out first: they are unconditional, the activity sentence is not.
-        Rect closeRect = new(innerRight - closeWidth, lineTop + StripLineHeight, closeWidth, StripLineHeight);
-        Rect expandRect = new(closeRect.x - ActionGap - expandWidth, lineTop + StripLineHeight, expandWidth, StripLineHeight);
+        Rect closeRect = new(innerRight - closeWidth, lineTop + TitleLineHeight, closeWidth, StripLineHeight);
+        Rect expandRect = new(closeRect.x - ActionGap - expandWidth, lineTop + TitleLineHeight, expandWidth, StripLineHeight);
 
         UsDiagBarLayout layout = UsDiagnosticsProjection.LayoutBar(
             bar,
@@ -373,25 +381,25 @@ public sealed class UsDiagBarWidget : UsDiagWidgetBase
         float identityWidth = Math.Max(40f, innerRight - innerLeft - ctx.Metrics.MeasureWidth(bar.SwitchText, UiFont.Tiny) - Gap
             - (layout.ShowScale ? ctx.Metrics.MeasureWidth(bar.Scale, UiFont.Tiny) + Gap * 3f : 0f));
         string identity = UsKernelDraw.Ellipsized(bar.Identity, ctx, UiFont.Small, identityWidth);
-        UsKernelDraw.Label(new Rect(innerLeft, lineTop, identityWidth, StripLineHeight), identity, ctx, ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new Rect(innerLeft, lineTop, identityWidth, TitleLineHeight), identity, ctx, ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.MiddleLeft, singleLine: true);
         float switchX = innerLeft + ctx.Metrics.MeasureWidth(identity, UiFont.Small) + Gap;
-        UsKernelDraw.Label(new Rect(switchX, lineTop, Math.Max(1f, innerRight - switchX), StripLineHeight), bar.SwitchText, ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new Rect(switchX, lineTop, Math.Max(1f, innerRight - switchX), TitleLineHeight), bar.SwitchText, ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
         if (layout.ShowScale)
         {
             float scaleWidth = ctx.Metrics.MeasureWidth(bar.Scale, UiFont.Tiny);
-            UsKernelDraw.Label(new Rect(innerRight - scaleWidth, lineTop, scaleWidth, StripLineHeight), bar.Scale, ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+            UsKernelDraw.Label(new Rect(innerRight - scaleWidth, lineTop, scaleWidth, TitleLineHeight), bar.Scale, ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
         }
 
         // Line 2: the activity sentence (first to go when narrow) and the two actions.
         if (layout.ShowActivity)
         {
             string dot = UsDiagGlyphs.DotText(ctx, bar.ActivityTone);
-            Rect dotRect = new(innerLeft, lineTop + StripLineHeight, DotWidth, StripLineHeight);
+            Rect dotRect = new(innerLeft, lineTop + TitleLineHeight, DotWidth, StripLineHeight);
             UsKernelDraw.Label(dotRect, dot, ctx, UsDiagPaint.Dot(ctx.Theme, bar.ActivityTone), UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
             float textX = dotRect.xMax;
             float textWidth = Math.Max(1f, expandRect.x - Gap - textX);
             UsKernelDraw.Label(
-                new Rect(textX, lineTop + StripLineHeight, textWidth, StripLineHeight),
+                new Rect(textX, lineTop + TitleLineHeight, textWidth, StripLineHeight),
                 UsKernelDraw.Ellipsized(bar.Activity, ctx, UiFont.Tiny, textWidth),
                 ctx, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
         }

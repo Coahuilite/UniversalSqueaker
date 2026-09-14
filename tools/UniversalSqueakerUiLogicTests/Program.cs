@@ -193,39 +193,47 @@ internal static class Program
                 "the closed window is never above the 860 ceiling at screen " + screen + ": " + closed);
             Assert(open > closed,
                 "the open window is wider than the closed one at screen " + screen);
-            Assert(Math.Abs((open - closed) - WindowChromeLayout.DrawerWidthDelta) < tolerance,
-                "open - closed is exactly the drawer delta at screen " + screen + ": " + (open - closed));
+            // The drawer delta is what the window gains where the screen can hold it. Below that the open
+            // width is capped at the screen, so the gain is the screen's remaining room instead - the whole
+            // reason SettingsOpenWidth clamps rather than adding blindly.
+            float expectedDelta = Math.Min(WindowChromeLayout.DrawerWidthDelta, Math.Max(0f, screen - closed));
+            Assert(Math.Abs((open - closed) - expectedDelta) < tolerance,
+                "open - closed is the drawer delta where the screen holds it, the remaining room otherwise, at screen "
+                + screen + ": " + (open - closed) + " vs " + expectedDelta);
             Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: false) - closed) < tolerance
                 && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, drawerExpanded: true) - open) < tolerance,
                 "SettingsWindowWidth selects the closed/open branch at screen " + screen);
         }
 
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f) - 600f) < tolerance,
-            "1920 clamps to the 600 floor (24% = 460.8)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f) - 788f) < tolerance,
-            "1920 open = 600 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f) - 614.4f) < tolerance,
-            "2560 closed = 24% of the screen");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f) - 802.4f) < tolerance,
-            "2560 open = 614.4 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(800f) - 600f) < tolerance,
-            "800 clamps to the 600 floor");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f) - 860f) < tolerance,
-            "3840 clamps to the 860 ceiling (24% = 921.6)");
+        // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a
+        // fixed size), so the minimum canvas must land exactly on that footprint.
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1024f) - 650f) < tolerance,
+            "1024 clamps to vanilla's own width (44% = 450.6)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 600f) < tolerance,
+            "1024x768 lands exactly on the vanilla baseline 650x600");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f) - 844.8f) < tolerance,
+            "1920 closed = 44% of the screen");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f) - 1032.8f) < tolerance,
+            "1920 open = 844.8 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f) - 1126.4f) < tolerance,
+            "2560 closed = 44% of the screen");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(2560f, 1440f) - 633.6f) < tolerance,
+            "2560x1440 keeps 16:9 (1126.4 * 9/16), which is what stops the long labels wrapping");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(800f) - 650f) < tolerance,
+            "800 clamps to the vanilla floor");
+        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f) - 1600f) < tolerance,
+            "3840 clamps to the 1600 ceiling (44% = 1689.6)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(3840f, 2160f) - 900f) < tolerance,
+            "3840x2160 keeps 16:9 at the ceiling (1600 * 9/16)");
 
-        // The expanded window may never be wider than the screen it lives in: below the 788 floor the
-        // open width is capped at the screen, and the page falls back on its own narrow-layout capability.
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(640f) - 640f) < tolerance,
-            "640 screen caps the expanded window at the screen (open would otherwise be 788)");
+        // The expanded window may never be wider than the screen it lives in; below the drawer delta it is
+        // capped at the screen, and under the vanilla floor at the closed width itself.
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(640f) - 650f) < tolerance,
+            "a 640-wide screen cannot be widened past the vanilla floor, so open == closed");
         Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(700f) - 700f) < tolerance,
             "700 screen caps the expanded window at the screen");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f) - 788f) < tolerance,
-            "800 screen still fits the full 788 open width");
-
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1080f) - 712.8f) < tolerance,
-            "height keeps the 66%-of-screen shape: " + WindowChromeLayout.SettingsWindowHeight(1080f));
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(600f) - 600f) < tolerance,
-            "height clamps to the 600 floor");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(844f) - 838f) < tolerance,
+            "844 screen still fits the full drawer delta on top of the vanilla floor");
     }
 
     private static void TestHelpCatalog()

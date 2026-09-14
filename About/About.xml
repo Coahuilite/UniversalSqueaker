@@ -14,6 +14,9 @@
     <li>
       <packageId>coahuilite.ferritelib</packageId>
       <displayName>FerriteLib</displayName>
+      <!-- The game logs "needs to have <downloadUrl> and/or <steamWorkshopUrl> specified" without one
+           (observed in the 2026-09-14 Player.log). The carrier is public on GitHub. -->
+      <downloadUrl>https://github.com/Coahuilite/FerriteLib/releases</downloadUrl>
     </li>
   </modDependencies>
   <loadAfter>
