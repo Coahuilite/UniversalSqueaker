@@ -134,7 +134,7 @@ internal static class Program
         Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
-        Step("long author filter grows the popup and ellipsizes the trigger", LongAuthorFilterGrowsPopupAndEllipsizesTrigger);
+        Step("long author filter truncates the display and writes the raw token", LongAuthorFilterTruncatesTheDisplayOnly);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
         Step("inspector column width comes from the manifest", InspectorColumnWidthComesFromTheManifest);
@@ -279,71 +279,102 @@ internal static class Program
     }
 
     /// <summary>
-    /// D9 (2026-09-06 in-game): a long author credit clipped in the pack filter - the popup
-    /// inherited the 143px trigger column verbatim (a 530px row was audited into 131px) and the
-    /// trigger drew the selected label with no ellipsis. The popup now grows to the widest option
-    /// label capped at the viewport, and the trigger ellipsizes through the same seam the audit
-    /// measures. This lane asserts both against the real host and proves the fit audit goes silent
-    /// on the two filter surfaces.
-    /// </summary>
-    /// <summary>
     /// The in-game overflow that started this task was reported as "(unscoped)" and could not be traced
     /// back to a code site. The popup pass draws after content and outside the layout engine's element
     /// scope, so it is the one unscoped draw path US owns; UsKernelDraw.Dropdown now claims the owner's
-    /// path for the duration of the rows. This control forces a row wider than the viewport-capped popup,
+    /// path for the duration of the rows. This control forces a row wider than the popup's own text band,
     /// so the finding is guaranteed to exist, and asserts it carries that identity. Reverting the scope
     /// in UsKernelDraw.Dropdown turns this step red with the fallback identity - the mutation this exists
     /// for.
+    /// <para>
+    /// F5 (maintainer ruling 2026-09-15) moved where the over-wide row comes from. The consumer now cuts
+    /// every author display at half the settings window and the popup grows to the truncated label, so a
+    /// raw 200-character name no longer produces one. What still does is the viewport clamp: pin the
+    /// screen so half the window reaches the 800px viewport (the carrier's UI stub documents itself as
+    /// the pin a lane uses), the display is truncated to exactly 800px, and the viewport-capped popup
+    /// draws it into a 788px text band (800 - the 6px per-side row padding). The finding this lane
+    /// asserts is unchanged; only its trigger moved from "unbounded author name" to "the cap the
+    /// truncation is clamped at".
+    /// </para>
     /// </summary>
     private static void PopupOverflowReportCarriesElementIdentity()
     {
-        string impossible = new string('A', 200); // StubMetrics Small: ~1600px, far wider than the viewport
-        var stub = new StubMetrics();
-        var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { impossible } };
-        using UiHost host = UsKernelSettingsHost.Create(fake, stub);
-        host.Bindings.Invoke("set-tab", "Packs");
-        Rect viewport = new(0f, 0f, 800f, 600f);
-
-        var reports = new List<UiOverflowReport>();
-        UiFitAudit.Attach(stub, reports.Add);
-        UiFitAudit.Enabled = true;
-        SetTranslatorResolver(ReadKeyedTable("English"));
+        string overCapAuthor = new string('A', 200); // StubMetrics Small: 1600px, twice the pinned 800px cap
+        int pinnedWidth = Verse.UI.screenWidth;
+        int pinnedHeight = Verse.UI.screenHeight;
+        Verse.UI.screenWidth = 4000; // half the settings window hits its 1600 ceiling -> an 800px display cap
+        Verse.UI.screenHeight = 2000;
         try
         {
-            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawChecked(viewport);
-            host.Session.OpenPopup("pack-filter", new Rect(300f, 200f, 143f, 24f));
-            UiFitAudit.Reset();
-            reports.Clear();
-            host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawChecked(viewport);
+            var stub = new StubMetrics();
+            var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { overCapAuthor } };
+            using UiHost host = UsKernelSettingsHost.Create(fake, stub);
+            host.Bindings.Invoke("set-tab", "Packs");
+            Rect viewport = new(0f, 0f, 800f, 600f);
 
-            Assert(reports.Count > 0, "a popup row wider than the capped popup must be reported at all");
-            foreach (UiOverflowReport report in reports)
+            var reports = new List<UiOverflowReport>();
+            UiFitAudit.Attach(stub, reports.Add);
+            UiFitAudit.Enabled = true;
+            SetTranslatorResolver(ReadKeyedTable("English"));
+            try
             {
-                Assert(!string.IsNullOrEmpty(report.ElementPath) && report.ElementPath != "(unscoped)",
-                    "every popup overflow report must carry the owner's element identity, got '" + report.ElementPath + "'");
-            }
+                host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+                host.DrawChecked(viewport);
+                host.Session.OpenPopup("pack-filter", new Rect(300f, 200f, 143f, 24f));
+                UiFitAudit.Reset();
+                reports.Clear();
+                host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+                host.DrawChecked(viewport);
 
-            Assert(reports.Exists(r => r.ElementPath.EndsWith("/popup", StringComparison.Ordinal)),
-                "the popup finding must be scoped to the owner's popup path: " + DescribeOverflow(reports));
+                Assert(reports.Count > 0, "a popup row wider than the capped popup must be reported at all");
+                foreach (UiOverflowReport report in reports)
+                {
+                    Assert(!string.IsNullOrEmpty(report.ElementPath) && report.ElementPath != "(unscoped)",
+                        "every popup overflow report must carry the owner's element identity, got '" + report.ElementPath + "'");
+                }
+
+                Assert(reports.Exists(r => r.ElementPath.EndsWith("/popup", StringComparison.Ordinal)),
+                    "the popup finding must be scoped to the owner's popup path: " + DescribeOverflow(reports));
+            }
+            finally
+            {
+                UiFitAudit.Detach();
+                SetTranslatorResolver(null);
+            }
         }
         finally
         {
-            UiFitAudit.Detach();
-            SetTranslatorResolver(null);
+            Verse.UI.screenWidth = pinnedWidth;
+            Verse.UI.screenHeight = pinnedHeight;
         }
     }
 
-    private static void LongAuthorFilterGrowsPopupAndEllipsizesTrigger()
+    /// <summary>
+    /// D9 (2026-09-06 in-game): a long author credit clipped in the pack filter - the popup inherited the
+    /// 143px trigger column verbatim (a 530px row was audited into 131px) and the trigger drew the
+    /// selected label with no ellipsis. The trigger ellipsizes through the same seam the audit measures.
+    /// <para>
+    /// F5 (maintainer ruling 2026-09-15) bounds the other half: the (display, value) pair the widget hands
+    /// the popup carries a display cut at half the settings window's own closed width, so the popup grows
+    /// to the truncated label instead of the raw credit. This lane asserts that width rule AND that the
+    /// cut is display-only: it pumps a real MouseDown/MouseUp over the over-cap row through the carrier's
+    /// faithful stub button (hot-control capture on down, activation on up) and reads what the page
+    /// actually wrote. A pair that swapped display and value would write the truncated string and fail
+    /// here; the raw credit is the only accepted value.
+    /// </para>
+    /// </summary>
+    private static void LongAuthorFilterTruncatesTheDisplayOnly()
     {
-        string longAuthor = new string('A', 60); // StubMetrics Small: 60 x 8px = 480px, far over 143
+        const string shortAuthor = "AuthorA";
+        string longAuthor = new string('A', 200); // 1600px raw; the cap at the stub's 1920 screen is 480
         var stub = new StubMetrics();
-        var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { longAuthor } };
+        var fake = new RecordingSettingsSource { RichData = true, Authors = new[] { shortAuthor, longAuthor } };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
         host.Bindings.Invoke("set-tab", "Packs");
-        host.Bindings.Invoke("set-pack-filter", longAuthor);
+        host.Bindings.Invoke("set-pack-filter", shortAuthor);
         Rect viewport = new(0f, 0f, 800f, 600f);
+        float cap = OptionDisplayCap();
+        float rawNeeded = stub.MeasureWidth(longAuthor, UiFont.Small) + 12f;
 
         var reports = new List<UiOverflowReport>();
         UiFitAudit.Attach(stub, reports.Add);
@@ -369,19 +400,35 @@ internal static class Program
             Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer popupLayer),
                 "the opened pack-filter must publish its popup layer");
             Rect popup = popupLayer.Rect;
-            float needed = stub.MeasureWidth(longAuthor, UiFont.Small) + 12f;
-            Assert(popup.width >= needed - 0.01f,
-                "the popup must grow to the widest option label: " + popup.width + " < " + needed);
+
+            Assert(cap < rawNeeded,
+                "the truncation clause needs a cap under the raw credit, or it asserts nothing: cap=" + cap);
+            Assert(popup.width < rawNeeded,
+                "the popup must follow the truncated display, not the raw credit: " + popup.width + " vs raw " + rawNeeded);
+            Assert(popup.width - 12f <= cap + 0.01f,
+                "the truncated display must fit the cap: " + (popup.width - 12f) + " > " + cap);
             Assert(popup.width <= viewport.width + 0.01f,
                 "the grown popup must stay capped at the viewport: " + popup.width);
 
             UiFitAudit.Reset();
             reports.Clear();
             host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-            host.DrawChecked(viewport); // repaint with the popup open: rows measured against the grown rect
+            host.DrawChecked(viewport); // repaint with the popup open: the row is measured against its band
             Assert(
                 reports.FindAll(r => r.ElementPath.Length == 0 || r.ElementPath.Contains("filter-bar")).Count == 0,
-                "the widened popup must render its long row without overflow: " + DescribeOverflow(reports));
+                "the bounded popup must render its long row without overflow: " + DescribeOverflow(reports));
+
+            // The display-only proof: the option rows are drawn after content and outside the layout
+            // groups, so the popup layer's window-space rect is the row's own space. Row 1 is the
+            // over-cap author (row 0 is "AuthorA"), one OptionHeight below the popup top.
+            Vector2 rowClick = new(popup.x + 8f, popup.y + UiPopup.OptionHeight + UiPopup.OptionHeight / 2f);
+            DrawWithEvent(host, viewport, EventType.MouseDown, rowClick);
+            DrawWithEvent(host, viewport, EventType.MouseUp, rowClick);
+            Assert(!host.Session.IsPopupOpen("pack-filter"),
+                "clicking an option row must close the popup; the pointer pump did not reach the row");
+            Assert(string.Equals(fake.LastPackFilter, longAuthor, StringComparison.Ordinal),
+                "the option row must write the machine token, not the truncated display: '"
+                + (fake.LastPackFilter ?? "(none)") + "'");
         }
         finally
         {
@@ -393,16 +440,19 @@ internal static class Program
     /// <summary>
     /// The D9 popup-width rule asserted as a rule, not as one incident's accident:
     /// <c>UsKernelDraw.Dropdown</c> takes the trigger column as the floor, grows to the widest option
-    /// label plus the 6px per-side row padding, and caps the result at the host viewport. The long-author
-    /// lane above pins the pack-filter report that produced the rule; this lane pins the three clauses with
-    /// injected option text, so a hard-coded width, a dropped content term and a dropped cap each turn this
-    /// lane red on their own:
-    /// (1) floor - every option fits the 143px trigger column, so the popup keeps exactly that width
-    ///     (a 268/313 literal, or a collapse to zero, fails here);
-    /// (2) growth - 40 vs 70 characters of option text differ by exactly the measured 240px, and the
-    ///     40-character popup is exactly its label plus 12px (any constant width fails here);
-    /// (3) cap - a label wider than the 800px viewport yields the viewport width exactly (the content
-    ///     clause without the cap fails here).
+    /// label plus the 6px per-side row padding, and caps the result at the host viewport. F5 (maintainer
+    /// ruling 2026-09-15) put a consumer-side cut in front of that loop: <see cref="UsFilterBarWidget"/>
+    /// truncates every option DISPLAY at half the settings window, so the popup follows the truncated
+    /// label rather than the raw one. Each clause turns this lane red on its own:
+    /// (1) floor - every option fits the 143px trigger column, so the popup keeps exactly that width;
+    /// (2) growth - two option texts that both survive the cut (20 vs 50 characters) differ by exactly the
+    ///     measured 240px, and the shorter popup is exactly its label plus 12px;
+    /// (3) truncation - a 200-character author and the longest author that still fits the cap draw the
+    ///     SAME popup width, which fits the cap; a popup that follows the raw label fails here;
+    /// (4) viewport cap - driven by pinning the screen so half the settings window reaches the viewport.
+    ///     In production the cap is half the settings window, i.e. always narrower than the screen, so the
+    ///     truncation is what removed this clause's natural trigger; the carrier's UI stub documents
+    ///     itself as the pin a lane uses, and the clause stays armed through it rather than being deleted.
     /// The option text is not the interesting part: the pack-filter authors are display == value, so the
     /// lane can state each width as an exact number instead of a lower bound.
     /// </summary>
@@ -413,30 +463,108 @@ internal static class Program
         var stub = new StubMetrics();
         float perChar = stub.MeasureWidth("A", UiFont.Small);
         Assert(perChar > 0f, "the stub must measure a character, or every width clause below is vacuous");
+        float cap = OptionDisplayCap();
+        Assert(cap > anchor.width,
+            "the truncation cap must leave the growth clause a range above the trigger floor: cap=" + cap);
 
         float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, anchor, viewport);
         Assert(Math.Abs(floorWidth - anchor.width) < 0.01f,
             "an option list that fits its trigger must keep the trigger width as the popup floor: "
             + floorWidth + " vs anchor " + anchor.width);
 
-        string forty = new('A', 40);
-        string seventy = new('A', 70);
-        float fortyWidth = DrawnPopupWidth(new[] { forty }, stub, anchor, viewport);
-        float seventyWidth = DrawnPopupWidth(new[] { seventy }, stub, anchor, viewport);
-        Assert(Math.Abs(fortyWidth - (40f * perChar + 12f)) < 0.01f,
+        // Both samples have to survive the F5 cut, or this clause silently re-tests the truncation clause.
+        string twenty = new('A', 20);
+        string fifty = new('A', 50);
+        Assert(20f * perChar <= cap && 50f * perChar <= cap,
+            "the growth clause needs both option texts under the truncation cap (" + cap + "): the stub screen moved");
+        float twentyWidth = DrawnPopupWidth(new[] { twenty }, stub, anchor, viewport);
+        float fiftyWidth = DrawnPopupWidth(new[] { fifty }, stub, anchor, viewport);
+        Assert(Math.Abs(twentyWidth - (20f * perChar + 12f)) < 0.01f,
             "the popup must be exactly the widest label plus the 6px-per-side row padding: "
-            + fortyWidth + " vs " + (40f * perChar + 12f));
-        Assert(Math.Abs(seventyWidth - fortyWidth - 30f * perChar) < 0.01f,
+            + twentyWidth + " vs " + (20f * perChar + 12f));
+        Assert(Math.Abs(fiftyWidth - twentyWidth - 30f * perChar) < 0.01f,
             "30 more characters of option text must widen the popup by exactly 30 measured characters: "
-            + (seventyWidth - fortyWidth) + " vs " + (30f * perChar));
+            + (fiftyWidth - twentyWidth) + " vs " + (30f * perChar));
 
-        string impossible = new('A', 200); // StubMetrics Small: 1600px + 12px, far over the 800px viewport
-        Assert(stub.MeasureWidth(impossible, UiFont.Small) + 12f > viewport.width,
-            "the cap clause needs a label wider than the viewport, or it asserts nothing");
-        float cappedWidth = DrawnPopupWidth(new[] { impossible }, stub, anchor, viewport);
-        Assert(Math.Abs(cappedWidth - viewport.width) < 0.01f,
-            "a popup wider than its viewport must be capped at the viewport width: "
-            + cappedWidth + " vs " + viewport.width);
+        // The longest label that still fits the cap, and one far past it: both are cut to the same display,
+        // so both popups are that display plus the row padding, and neither follows the raw label.
+        int fittingChars = (int)Math.Floor(cap / perChar);
+        string justFits = new('A', fittingChars);
+        string overCap = new('A', 200);
+        Assert(stub.MeasureWidth(justFits, UiFont.Small) <= cap + 0.01f,
+            "the reference label must still fit the truncation cap");
+        Assert(stub.MeasureWidth(overCap, UiFont.Small) > cap,
+            "the truncation clause needs a label wider than the cap, or it asserts nothing");
+        float fitsWidth = DrawnPopupWidth(new[] { justFits }, stub, anchor, viewport);
+        float overCapWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+        Assert(Math.Abs(overCapWidth - fitsWidth) < 0.01f,
+            "an over-cap option must draw the same popup width as the longest option that fits the cap: "
+            + overCapWidth + " vs " + fitsWidth);
+        Assert(overCapWidth - 12f <= cap + 0.01f,
+            "the option display must be truncated at the cap: " + (overCapWidth - 12f) + " > " + cap);
+        Assert(overCapWidth - 12f > cap - perChar - 0.01f,
+            "the truncated display must use the whole cap (within one glyph), not a smaller cut: "
+            + (overCapWidth - 12f) + " <= " + (cap - perChar));
+        Assert(overCapWidth < stub.MeasureWidth(overCap, UiFont.Small) + 12f,
+            "the popup must not follow the raw over-cap label: " + overCapWidth);
+
+        // Viewport clause. Pin the screen so half the settings window reaches the 800px viewport, which
+        // makes the truncated display wider than the popup's own 788px text band (800 - 6px per side) and
+        // drives the viewport clamp. The carrier's UI stub is the documented surface for exactly this pin.
+        int pinnedWidth = Verse.UI.screenWidth;
+        int pinnedHeight = Verse.UI.screenHeight;
+        try
+        {
+            Verse.UI.screenWidth = 4000; // 0.5 * the screen width hits the 1600px ceiling -> a 800px cap
+            Verse.UI.screenHeight = 2000;
+            float viewportCap = OptionDisplayCap();
+            Assert(viewportCap >= viewport.width,
+                "the viewport clause needs the truncation cap at or above the viewport: " + viewportCap);
+            float cappedWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+            Assert(Math.Abs(cappedWidth - viewport.width) < 0.01f,
+                "a popup wider than its viewport must be capped at the viewport width: "
+                + cappedWidth + " vs " + viewport.width);
+        }
+        finally
+        {
+            Verse.UI.screenWidth = pinnedWidth;
+            Verse.UI.screenHeight = pinnedHeight;
+        }
+    }
+
+    /// <summary>
+    /// The F5 display cap, read from the production policy instead of restated: half the settings window's
+    /// retracted width at the screen the stub currently pins, floored at the widget's own minimum. A lane
+    /// that hardcoded 480 would stay green while the window policy moved under it.
+    /// </summary>
+    private static float OptionDisplayCap()
+    {
+        return Math.Max(
+            UsFilterBarWidget.MinOptionDisplayWidth,
+            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
+    }
+
+    /// <summary>
+    /// One checked frame with a caller-chosen IMGUI event: the same protocol as
+    /// <see cref="DrawWithPointer"/>, but MouseDown/MouseUp let a lane drive the popup row's native button
+    /// through the carrier's faithful stub (hot-control capture on down, activation on up), which is what
+    /// makes "which value did the row actually write" observable.
+    /// </summary>
+    private static void DrawWithEvent(UiHost host, Rect viewport, EventType type, Vector2 pointer)
+    {
+        Event e = Event.KeyboardEvent("dummy");
+        e.type = type;
+        e.button = 0;
+        e.mousePosition = pointer;
+        Event.current = e;
+        try
+        {
+            host.DrawChecked(viewport);
+        }
+        finally
+        {
+            Event.current = null;
+        }
     }
 
     /// <summary>

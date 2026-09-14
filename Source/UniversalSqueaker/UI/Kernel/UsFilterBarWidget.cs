@@ -34,6 +34,13 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private const float RowHeight = UsFilterBarLayout.RowHeight;
     private const float Gap = UsFilterBarLayout.Gap;
 
+    /// <summary>
+    /// Narrowest option display the F5 truncation rule may hand the popup. Half the settings window is
+    /// the ruling; this is its floor, so a degenerate screen still leaves a readable prefix instead of
+    /// an ellipsis-only label.
+    /// </summary>
+    public const float MinOptionDisplayWidth = 120f;
+
     public override string Kind => KindName;
 
     public static void Register()
@@ -219,10 +226,21 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         string current = ctx.Bindings.TryGet(elementId, out string value) ? value ?? "" : "";
         IReadOnlyList<FilterOptionView> options = ctx.Bindings.GetOptions<FilterOptionView>(optionsKey);
 
+        // F5 (maintainer ruling 2026-09-15): an author credit is unbounded user data, and the popup
+        // grows to the widest option, so one over-long name used to size the popup off the settings
+        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own closed
+        // width - the same policy number the window opens with - floored so a degenerate screen still
+        // shows a readable prefix. The pair's VALUE stays the machine token: only what the player reads
+        // is shortened, never what gets written back.
+        float displayCap = Math.Max(
+            MinOptionDisplayWidth,
+            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
         var pairs = new List<KeyValuePair<string, string>>(options.Count);
         foreach (FilterOptionView option in options)
         {
-            pairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+            pairs.Add(new KeyValuePair<string, string>(
+                UsKernelDraw.Ellipsized(option.DisplayName, ctx, UiFont.Small, displayCap),
+                option.Value));
         }
 
         float labelWidth = Math.Min(UsFilterBarLayout.DropdownLabelWidth, rect.width * 0.4f);
