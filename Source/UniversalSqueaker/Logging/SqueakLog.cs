@@ -111,7 +111,12 @@ public static class SqueakLog
     {
         if (!ShouldEmitDev) return;
         if (string.IsNullOrEmpty(message)) return;
-        if (!ReportedPopupTraces.Add(message)) return;
+        // The trigger traces carry the live pointer position, so the raw message differs on every mouse
+        // move; the forensic value is the DECISION (who is eligible, who owns it, whether it yields), so the
+        // dedupe key drops the coordinates. 537 lines in the 2026-09-15 run shrank to one per decision.
+        int pointerAt = message.IndexOf(" pointerLocal=", StringComparison.Ordinal);
+        string key = pointerAt > 0 ? message.Substring(0, pointerAt) : message;
+        if (!ReportedPopupTraces.Add(key)) return;
         if (ReportedPopupTraces.Count > 512) ReportedPopupTraces.Clear();
         Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
     }

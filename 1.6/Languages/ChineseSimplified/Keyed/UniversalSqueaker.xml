@@ -138,7 +138,7 @@
   <US.Tuning.ScaleTalking>按交谈缩放频率</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
   <US.Tuning.EatPrecision>仅在真正进食时发声</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>使用成瘾品</US.Tuning.EatPrecision.IncludeDrugs>
+  <US.Tuning.EatPrecision.IncludeDrugs>服用成瘾品也算作进食</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>

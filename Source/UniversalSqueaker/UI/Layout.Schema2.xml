@@ -44,6 +44,8 @@
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
-    <Widget Id="footer" Kind="us/footer" Height="28" />
+    <!-- No Height attribute: it would override the widget's own measure, which is wrap-aware (the
+         in-game log kept reporting "footer needs 33px has 28px" while the attribute was pinning 28). -->
+    <Widget Id="footer" Kind="us/footer" />
   </Column>
 </UiPage>

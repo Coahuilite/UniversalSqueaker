@@ -69,10 +69,13 @@ internal static class UsKernelContractInvariantTests
         }
 
         Assert(bodyRow != null, "body-row Row is a direct child of page-root");
+        // The footer is a direct child of page-root (outside every scroll), and it must NOT pin a Height:
+        // the attribute overrides the widget's wrap-aware measure, which is how the in-game log kept
+        // reporting "footer needs 33px has 28px" while the attribute held 28 (2026-09-15).
         Assert(footer != null
             && footer.GetAttribute("Kind") == "us/footer"
-            && footer.GetAttribute("Height") == "28",
-            "footer Widget (us/footer, Height=28) is a direct child of page-root, outside every scroll");
+            && footer.GetAttribute("Height") == "",
+            "footer Widget (us/footer, no Height attribute) is a direct child of page-root, outside every scroll");
 
         Assert(bodyRow!.GetAttribute("Gap") == "12", "body-row declares Gap=12");
 

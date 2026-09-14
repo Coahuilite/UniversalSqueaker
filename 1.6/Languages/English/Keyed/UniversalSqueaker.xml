@@ -139,7 +139,7 @@
   <US.Tuning.ScaleTalking>Scale frequency with talking</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>Scale periodic with audible population</US.Tuning.ScalePopulation>
   <US.Tuning.EatPrecision>Only squeak while actually eating</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>Include drugs</US.Tuning.EatPrecision.IncludeDrugs>
+  <US.Tuning.EatPrecision.IncludeDrugs>Taking drugs also counts as eating</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>Minimum trigger interval: {0}</US.Tuning.MinInterval>

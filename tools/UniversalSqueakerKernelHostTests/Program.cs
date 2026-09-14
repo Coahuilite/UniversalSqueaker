@@ -1143,7 +1143,12 @@ internal static class Program
         Assert(xml.Contains("Source=\"" + ExpectedSource + "\""), "resource root declares the US source scope");
         Assert(xml.Contains("<Scroll Id=\"content-scroll\""), "content scroll container present");
         Assert(xml.Contains("<Scroll Id=\"help-scroll\""), "help scroll container present");
-        Assert(xml.Contains("<Widget Id=\"footer\" Kind=\"us/footer\" Height=\"28\""), "fixed footer declared as body sibling");
+        // The footer is a body sibling OUTSIDE the scroll, and it must NOT carry a Height attribute: the
+        // attribute overrides the widget's own wrap-aware measure, which is how the in-game log kept
+        // reporting "footer needs 33px has 28px" while the attribute pinned 28 (2026-09-15).
+        Assert(xml.Contains("<Widget Id=\"footer\" Kind=\"us/footer\""), "fixed footer declared as body sibling");
+        Assert(!xml.Contains("<Widget Id=\"footer\" Kind=\"us/footer\" Height="),
+            "the footer must not pin a Height attribute - its band is measured");
 
         foreach ((string id, string kind) in ExpectedWidgets)
         {
