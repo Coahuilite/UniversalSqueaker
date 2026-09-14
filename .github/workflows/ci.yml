@@ -69,10 +69,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
           New-Item -ItemType Directory -Path $sibling -Force | Out-Null
+          # Build in the CHECKOUT, not in the sibling. The payload embeds its source commit in
+          # AssemblyInformationalVersion, and the SDK reads that revision from the git checkout the
+          # project lives in; the sibling copy deliberately has no .git, so building there produced
+          # '0.4.0-dev' with no commit suffix and verify-local's gate 6 refused the bytes as
+          # unattributable (v0.4.0-rc1 release run and CI run, 2026-09-14).
+          dotnet build (Join-Path 'ci-ferritelib' 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'carrier build failed' }
           Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
             Where-Object { $_.Name -ne '.git' } |
             Copy-Item -Destination $sibling -Recurse -Force
-          dotnet build (Join-Path $sibling 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -c Release --nologo
           $produced = Join-Path $sibling '1.6/Assemblies/FerriteLib.UiKit.dll'
           if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
           # The carrier repo stays read-only from US's perspective: ci-ferritelib/ is never written to,
