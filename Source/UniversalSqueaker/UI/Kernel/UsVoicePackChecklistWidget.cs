@@ -293,7 +293,21 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         }
         else if (!state.Focused && current.Length == 0)
         {
-            UsKernelDraw.Label(textRect, ctx.Translation.Translate(KeySearchPlaceholder), ctx.Theme, ctx.Theme.TextDisabled, UiFont.Small, TextAnchor.MiddleLeft);
+            // The placeholder band must fit a Small line. The field is 24 tall with a 2px inset top and
+            // bottom, so the text rect is 20 while a Small line measures 21.33 - exactly the in-game
+            // "checklist needs 22px has 20px" report (2026-09-15). The band is measured and centred in the
+            // field rather than the field growing, so nothing else moves.
+            string placeholder = ctx.Translation.Translate(KeySearchPlaceholder);
+            float placeholderBand = Math.Max(
+                textRect.height,
+                ctx.Metrics.MeasureText(placeholder, UiFont.Small, textRect.width));
+            UsKernelDraw.Label(
+                new Rect(textRect.x, textRect.y + (textRect.height - placeholderBand) * 0.5f, textRect.width, placeholderBand),
+                placeholder,
+                ctx.Theme,
+                ctx.Theme.TextDisabled,
+                UiFont.Small,
+                TextAnchor.MiddleLeft);
         }
 
         if (UiNative.IsMouseDownOver(rect))
