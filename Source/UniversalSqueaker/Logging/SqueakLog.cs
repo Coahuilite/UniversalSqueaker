@@ -99,9 +99,20 @@ public static class SqueakLog
     /// <summary>Forensic click-routing trace from the library's neutral Trace hook. Deliberately
     /// out-of-protocol: it exists to answer "who ate this click" in a running game, where no stub
     /// harness can reproduce native IMGUI event order.</summary>
+    /// <summary>The library's publisher fires ptrace once per FRAME while a popup is open, which made one
+    /// popup session 1,6k log lines in the 2026-09-14 run - noise, not evidence. Identical messages are
+    /// therefore printed once per session: the whole message is the key, so a moved rect or a changed owner
+    /// still prints. Bounded on purpose (a forensic window, not a leak); clearing may re-report an unchanged
+    /// line once per 512 distinct ones, which is the price of a bounded set.</summary>
+    private static readonly System.Collections.Generic.HashSet<string> ReportedPopupTraces
+        = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
     public static void PopupTrace(string message)
     {
         if (!ShouldEmitDev) return;
+        if (string.IsNullOrEmpty(message)) return;
+        if (!ReportedPopupTraces.Add(message)) return;
+        if (ReportedPopupTraces.Count > 512) ReportedPopupTraces.Clear();
         Verse.Log.Message("[UniversalSqueaker] ptrace: " + message);
     }
 

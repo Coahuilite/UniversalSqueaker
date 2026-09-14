@@ -28,6 +28,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     private readonly UsDiagnosticsSessionSource source = new();
     private float escArmedUntil = -1f;
     private bool lastCollapsed;
+    private bool lastEmpty;
+    private bool opened;
     private Rect expandedRect = Rect.zero;
 
     public SqueakDiagnosticsPanel()
@@ -50,9 +52,29 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     // without ellipsizing Chinese values (defect D4). The size is also clamped to the REAL coordinate
     // space: at high UIScale the scaled screen is narrower than 680 and a fixed initial width would push
     // the detail column off-screen before the responsive switch could help (09 §3.5).
+    // Redesign 2026-09-14 (feedback: "at the minimum resolution it nearly fills the screen, and it is mostly
+    // empty"). The panel now OPENS COLLAPSED as its bar, and only widens to the master/detail shape once a row
+    // is actually selected - so an empty panel is a strip, never a full screen. The two content sizes below are
+    // the content rect only; the shell adds the chrome.
+    internal const float CollapsedWidth = 460f;
+
+    /// <summary>Width while nothing is selected. Deliberately BELOW the page's narrow breakpoint (inner width
+    /// 600 - 16 pads &lt; 592), so the page presents its list-only shape instead of a list plus an empty detail
+    /// column - the blank right half the feedback reported.</summary>
+    internal const float EmptyStateWidth = 600f;
+
+    /// <summary>Content height while nothing is selected: the search row, the list header and the empty note.</summary>
+    internal const float EmptyStateContentHeight = 240f;
+
+    /// <summary>The wide master/detail content size, used once a row is selected.</summary>
+    internal const float ExpandedContentWidth = 680f;
+
+    /// <summary>The wide master/detail content height.</summary>
+    internal const float ExpandedContentHeight = 560f;
+
     protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
-        Mathf.Clamp(680f, 320f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
-        Mathf.Clamp(560f, 240f, Mathf.Max(240f, Verse.UI.screenHeight - 80f)));
+        Mathf.Clamp(CollapsedWidth, 320f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
+        UsDiagBarWidget.BarHeight);
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -81,24 +103,34 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         // page's shape and the engine's own Breakpoint evaluation read one coordinate space.
         source.SetContentWidth(contentRect.width);
 
+        if (!opened)
+        {
+            // Default state is the collapsed bar: a freshly opened diagnostics session must not own the screen.
+            opened = true;
+            source.Collapsed = true;
+        }
+
         bool collapsed = source.Collapsed;
-        if (collapsed == lastCollapsed)
+        bool empty = !collapsed && source.Detail == null;
+        if (collapsed == lastCollapsed && empty == lastEmpty)
         {
             return;
         }
 
-        if (collapsed)
-        {
-            expandedRect = windowRect;
-            float chrome = Math.Max(0f, windowRect.height - contentRect.height);
-            windowRect = new Rect(windowRect.x, windowRect.y, windowRect.width, chrome + BarContentHeight);
-        }
-        else if (expandedRect.height > 1f)
-        {
-            windowRect = expandedRect;
-        }
+        float chrome = Math.Max(0f, windowRect.height - contentRect.height);
+        float screenCap = Math.Max(120f, Verse.UI.screenWidth - 40f);
+        float width = collapsed
+            ? Math.Min(CollapsedWidth, screenCap)
+            : empty
+                ? Math.Min(EmptyStateWidth, screenCap)
+                : Math.Min(ExpandedContentWidth, screenCap);
+        float height = collapsed
+            ? chrome + BarContentHeight
+            : chrome + (empty ? EmptyStateContentHeight : ExpandedContentHeight);
+        windowRect = new Rect(windowRect.x, windowRect.y, width, height);
 
         lastCollapsed = collapsed;
+        lastEmpty = empty;
     }
 
     public override void WindowOnGUI()
