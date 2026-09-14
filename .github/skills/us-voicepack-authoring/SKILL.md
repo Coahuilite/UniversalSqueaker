@@ -101,21 +101,54 @@ MyStudioVoices/
 
 `FloatRange` 用 `~`；字段大小写与 C# 一致，特别是 `IsEgg`。`distRange` 是 SoundDef 初始值，US 的距离设置会覆盖其管理的地图 SubSound 范围，不能把此值当成包的永久播放半径。
 
-### 3.5 自动 comp 与高级行为配置
+### 3.5 自动 comp 与调音预设（默认无 patch）
 
 默认 comp 有 15 个生产动作配置（不含 Crying/Giggling）和 Good/Neutral/Bad/Break 四档心情配置。例如 Call 是 `RandomOneShot`，基础间隔 864 ticks、每次检查概率 0.012；实际结果还受玩家设置及运行时门控影响。
 
-普通音频包无需 patch。只有明确需要提供种族级行为基线时，才另写 `CompProperties_Squeaker` patch：它影响该种族，并非仅在这个包被勾选时生效。
+普通音频包无需 patch。若作者需要随包提供某 Race 或 Race + Xenotype 的触发范围、单动作间隔倍率、随机触发概率倍率或心情调制，优先额外发布独立 `UniversalSqueakerTuningBaselineDef` 调音预设；它不属于 `SqueakVoicePackDef`，也不写进 comp。预设由玩家在 US 设置的 **Presets** 页面选择目标 Race/Xenotype 后点击 **Import**，才导入本地 settings 并立即重建运行时 resolver。安装包、勾选 PackDef、或自动挂载 comp 都不会自动导入预设。
 
 目标种族已有任意 `CompProperties_Squeaker` 时，自动挂载整体跳过，**不会把 `CreateDefault()` 的其他动作或心情补进作者列表**。缺失动作走 `SqueakActionPlanFactory.Unconfigured`（当前为 RandomOneShot、300 ticks、0.02），不是上述 15 项默认表；玩家的调音仍可能覆盖行为。不要用仅含 Call 的 comp 示例冒充完整默认配置。
 
-确需 patch 时，从第 13 节的 `CreateDefault()` 核对所需完整基线，定位目标 XML 实际节点（原版 `ThingDef` 与 HAR 的 `AlienRace.ThingDef_AlienRace` 不同），仅在目标没有该 comp 时添加，避免重复挂载。不要把 HAR 专用 XPath 用于任意种族，也不要为普通语音包无条件生成行为 patch。
+预设只调整既有 action plan：`scope`、`intervalMultiplier`、`probabilityMultiplier`，以及心情的 pitch/volume/jitter。它不能改 `SqueakTriggerMode`、绝对 `minIntervalTicks`、`ignoreGlobalCooldown`、`cooldownClock` 或全局 cooldown；各动作的基础触发 plan 仍由自动挂载的默认 comp 或已有 comp 提供。`intervalMultiplier` 乘在该 action 的基础间隔上，`probabilityMultiplier` 乘在 RandomOneShot 的基础概率上。使用内置 17 个动作名称作为 `actionKey`，并用非负有限倍率；`0` 是允许值，代表该 action 不再有自身间隔，并不跳过全局 cooldown 或其他发声门控。
+
+以下为可选 Race 预设，放入激活加载目录内的 Defs 文件，例如 `1.6/Race/Defs/US_MyStudio_Human_Tuning.xml`。它与第 3 节的 Human 音频包共存，却没有任何 patch：
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <UniversalSqueaker.UniversalSqueakerTuningBaselineDef>
+    <defName>US_MyStudio_Human_Tuning</defName>
+    <presetLabel>My Studio Human tuning</presetLabel>
+    <presetDescription>Quicker Work calls; keeps the standard trigger plan.</presetDescription>
+    <races>
+      <li>
+        <raceDefName>Human</raceDefName>
+        <actions>
+          <li>
+            <actionKey>Work</actionKey>
+            <scope>AnyOccurrence</scope>
+            <intervalMultiplier>0.5</intervalMultiplier>
+            <probabilityMultiplier>1.0</probabilityMultiplier>
+          </li>
+        </actions>
+        <moods>
+          <li><mood>Good</mood><pitchFactor>1.1</pitchFactor><volumeFactor>1.0</volumeFactor><pitchJitter>0.97~1.03</pitchJitter></li>
+        </moods>
+      </li>
+    </races>
+  </UniversalSqueaker.UniversalSqueakerTuningBaselineDef>
+</Defs>
+```
+
+同一预设可在该 Race 条目下添加 `<xenotypes>`，每项以 `xenotypeDefName` 锁定 Race + Xenotype 域；`inheritFromRace` 默认 true，导入时先取父 Race 调音，再以 Xenotype 条目覆盖。Xenotype 层还要求 catalog 已有同名 target 的有效 Xenotype VoicePack 声明（可不勾选）；没有该声明时 resolver 不创建 Xenotype 上下文，导入记录会静默退回 Race/Global。导入是增量且按 `(actionKey, raceDefName, xenotypeDefName)` 覆写：不同 action 可共存，后导入的预设若写同一身份则覆盖它。预设没有 PackDef key，不能做到“玩家勾选 A 包自动采用 A 预设”。同一预设不要重复 Race 块或同 Race 下的 Xenotype 块：导入按顺序后写胜出，而“重置为预设”的查找取首个匹配块，二者会不一致。
+
+只有必须改变预设无法表达的基础 action plan 时，才考虑 `CompProperties_Squeaker` patch。它影响该种族的所有 pawn，并会让自动挂载跳过；从第 13 节的 `CreateDefault()` 核对所需完整基线，定位目标 XML 实际节点（原版 `ThingDef` 与 HAR 的 `AlienRace.ThingDef_AlienRace` 不同），仅在目标没有该 comp 时添加，避免重复挂载。不要把 HAR 专用 XPath 用于任意种族，也不要为普通语音包无条件生成行为 patch。
 
 ## 4. PackDef 字段与年龄/彩蛋
 
 | 字段 | 必填 | 实现语义 |
 | --- | --- | --- |
-| `defName` | 是 | `US_` 开头；稳定包键的一部分，发布后改名会使旧勾选失配 |
+| `defName` | 是 | `US_` 前缀为硬校验；前缀之后的文本自由，但它是永久身份而非路由——命名边界见下表后段 |
 | `label` | 否 | 继承自 Def 的显示标签，不替代稳定身份 |
 | `raceDefName` | 是 | 精确 ThingDef.defName，无首尾空白；不支持通配符或种族列表 |
 | `scope` | 是 | `Race` 或 `Xenotype` |
@@ -123,6 +156,8 @@ MyStudioVoices/
 | `weight` | 否 | 正有限包权重，默认 1；用于同层合格包之间抽取 |
 | `actions` | 是 | 至少一条 `action` + 非空 `sounds`；可附 `ageTag`、`IsEgg` |
 | `fallbacks` | 否 | 每条 `action` + 单个 `sound`；同动作只能一条 |
+
+`defName` 不承载任何路由语义：包服务哪个种族只由 `raceDefName`（Xenotype 再加 `scope` + `targetDefName`）精确决定，comp 挂载与玩家勾选域同样只读这些字段。`US_` 前缀之后可自由命名，但两个属性使它实际不可更改：它是稳定键 `packageId:defName` 的一半，玩家勾选按该键持久化在设置中，发布后改名只会使旧勾选失配；它同时是全局 Def 名，须避开与其他模组的撞名（`duplicate_key` 整组拒绝，RimWorld 层同名 Def 也会冲突或互相覆盖）。SoundDef 名同理只查 `US_` 前缀——引用它的 `actions`/`fallbacks` 按 Def 名解析，改名必须同步全部引用。音频目录里的 `<PackDef.defName>` 段是防串音约定，校验器不核对（第 2 节）。
 
 同一个 PackDef 内，`action + ageTag`（含省略的全年龄）不得重复；`IsEgg` 不参与去重。因此不能为同动作同年龄各写一条普通项和彩蛋项。多个声音写进同一条 `sounds`；如需可独立开关的普通包和彩蛋包，可使用两个不同 PackDef。
 
@@ -213,10 +248,12 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 
 1. 用 XML 解析器检查完整文件，再核对 Def 引用、大小写和实际 clip 路径。重启游戏加载修改后的内容，不假定音频缓存支持热更新。
 2. 启用独立内容模组及依赖，排序在 US 和目标种族之后。在对应域勾选 PackDef，选择 Fallback，确认未 Disabled。
-3. 在当前地图上用目标 pawn 测 Call。Call 默认是概率触发，不保证立即发声；定位无声时查看生产门控与冷却。需要更易复现的选择事件时，可另加 Select action 复用 Call SoundDef。
-4. 检查开发者派发日志：`Audio route: <action> -> <sound> (<tier>[, egg][, nonplayer]).` 诊断面板的层和包键可帮助区分 Race、Xenotype 与 Pack fallback。派发日志仍需结合实际听感。
-5. 验证当前包实际使用的特性：部分动作覆盖、fallback、精确年龄及其不可用情形、彩蛋开关、不同包权重和 Xenotype 匹配；不要只测预览。
-6. 测 Off/Fallback/Remix/Disabled；Off 没有 profile 时无声是当前可预期结果。测试 PackFallback 时只移除待测 action 的普通项，保留另一个合法 action，避免因 actions 为空而整包拒绝。
+3. 若附带调音预设，打开 **Presets**，展开该预设，勾选它声明的准确 Race 或 Race + Xenotype，再点击 **Import**；重开设置页确认该域的调音记录带有该预设来源。仅看到预设、仅勾选 PackDef 都不能证明调音已生效。
+4. 在当前地图上用目标 pawn 测 Call。Call 默认是概率触发，不保证立即发声；定位无声时查看生产门控与冷却。需要更易复现的选择事件时，可另加 Select action 复用 Call SoundDef。
+5. 对预设至少实测一项可观察的行为差异：例如 Work 的 `intervalMultiplier` 前后差异，或将 Joy 设为 `Disabled` 后确认不再派发。测试 Xenotype 项时还要保留一个相同 targetDefName 的有效 Xenotype PackDef，确认上下文实际建立。结果仍会经过全局 cooldown、时间倍率、人口倍率、Talking gate 和音频可播放性；不要把单次没有声音直接归因于预设。
+6. 检查开发者派发日志：`Audio route: <action> -> <sound> (<tier>[, egg][, nonplayer]).` 诊断面板的层和包键可帮助区分 Race、Xenotype 与 Pack fallback。派发日志仍需结合实际听感。
+7. 验证当前包实际使用的特性：部分动作覆盖、fallback、精确年龄及其不可用情形、彩蛋开关、不同包权重和 Xenotype 匹配；不要只测预览。
+8. 测 Off/Fallback/Remix/Disabled；Off 没有 profile 时无声是当前可预期结果。测试 PackFallback 时只移除待测 action 的普通项，保留另一个合法 action，避免因 actions 为空而整包拒绝。
 
 ## 10. 排错
 
@@ -229,6 +266,8 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 | 精确年龄不响但全年龄有声音 | 精确项存在会遮蔽全年龄项，即使其彩蛋关闭或声音不可用；Toddler 见第 4 节 |
 | Race fallback 未用于 Xenotype pawn | 第 6 节的精确域规则；不要把 Race actions 与 Race fallbacks 混为一层 |
 | 未覆盖动作无声 / Off 无声 | 是否真的提供了该种族 fallback profile；US 不附带默认音频种子 |
+| 预设显示但频率/冷却未变 | 是否在正确 Race/Xenotype 域勾选并点击 **Import**；确认 actionKey 是内置精确名称，且实际触发使用的基础 action plan、全局 cooldown 和其他门控没有掩盖倍率效果 |
+| Xenotype 预设导入后无效 | 除导入域外，确认存在该 targetDefName 的有效 Xenotype VoicePack 声明；没有 canonical Xenotype 上下文时只会用 Race/Global 调音 |
 | Xenotype 不匹配 | Biotech 是否启用、真实种族及目标 defName、目标是否存在或有歧义、是否在该域勾选 |
 | 串音或改名后旧勾选失效 | 全局 Def 名、路径命名空间、稳定 `packageId:PackDef.defName` 是否改变 |
 | 旧 SR 类型加载红字 | 按第 1 节迁移类型、标识、引用与依赖；US 不含旧类型桥接 |
@@ -239,7 +278,8 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 - [ ] 声明精确种族/目标与必要依赖；加载目录门控正确。
 - [ ] 音频实际存在，路径与 XML 一致；无空文件、静音占位或意外素材。
 - [ ] 完整 XML 可解析，actions/fallbacks 满足第 4–5 节，引用目标均可加载。
-- [ ] 仅在有明确行为需求时提供 comp patch，未误用部分配置代替完整默认基线。
+- [ ] 有行为调音需求时，提供了独立 `UniversalSqueakerTuningBaselineDef`，且写明玩家需要在 Presets 中导入；没有用 comp patch 代替可用的预设。
+- [ ] 仅当必须改变 action plan 的基础字段时才提供 comp patch，未误用部分配置代替完整默认基线。
 - [ ] 已记录哪些模式和内容特性通过实机验证，未验证项明确列出。
 - [ ] 音频许可与署名清楚；上传或发布在用户授权范围内进行。
 
@@ -249,9 +289,10 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 
 1. 确认目标 US 版本、实际种族 defName、依赖和可用音频；小型新包优先采用第 2–3 节结构。不要编造目标 Def、可播放素材或第三方依赖。
 2. 保持稳定身份。迁移时检查所有交叉引用与旧行为内容，不仅替换前缀；保留用户未要求更改的素材和配置。
-3. 区分硬性 validator 规则、运行时门控和制作建议。当前源码与本文件不一致时，先核对第 13 节的实际实现，再说明适用版本与差异。
-4. 用 XML 解析器检查完整生成物，核对引用、重复 action/age 与路径；不为普通包自动添加 comp patch，也不修改 US 主程序来迁就内容。
-5. 交付时说明实际改动、静态检查结果和实机未验证项。没有游戏证据时不要声称“能响”或所有模式通过；提供与本包特性匹配的第 9 节验证步骤。
+3. 用户要求调节动作触发范围、单动作间隔/概率或心情时，优先创建独立 `UniversalSqueakerTuningBaselineDef`，而非 comp patch；明确它须由玩家手动导入，且不按 PackDef 自动绑定。Xenotype 预设同时需要一个有效 Xenotype PackDef 声明该 target。用户要求 mode、绝对间隔、全局 cooldown、冷却时钟或其他基础 plan 字段时，说明预设无法表达该需求，再评估 comp patch。
+4. 区分硬性 validator 规则、运行时门控和制作建议。预设没有 PackDef 同等级的 actionKey validator：只写 17 个精确内置名称，避免未知键被导入后在 resolver 中忽略。当前源码与本文件不一致时，先核对第 13 节的实际实现，再说明适用版本与差异。
+5. 用 XML 解析器检查完整生成物，核对引用、重复 action/age、路径和预设域；不为普通包自动添加 comp patch，也不修改 US 主程序来迁就内容。
+6. 交付时说明实际改动、静态检查结果和实机未验证项。只要交付预设，就提供“在 Presets 选择域并 Import，随后比较可观察行为”的步骤；没有游戏证据时不要声称“能响”或所有模式通过。
 
 ## 13. 维护时的源码入口
 
@@ -268,5 +309,9 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 | [SqueakSoundAvailability.cs](../../../Source/UniversalSqueaker/Runtime/SqueakSoundAvailability.cs) | clip 解析缓存、预览与生产可播放门控 |
 | [CompSqueaker.cs](../../../Source/UniversalSqueaker/CompSqueaker.cs) | `CreateDefault`、一次性/持续派发、距离覆盖和 Disabled 入口 |
 | [SqueakActionModel.cs](../../../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs) | 17 个动作及 `Unconfigured` 基线 |
+| [UniversalSqueakerTuningBaselineDef.cs](../../../Source/UniversalSqueaker/Runtime/UniversalSqueakerTuningBaselineDef.cs) | 独立预设 XML 形状与可表达字段 |
+| [BaselinePresetImporter.cs](../../../Source/UniversalSqueaker/Settings/BaselinePresetImporter.cs) | 手动导入、Race/Xenotype 域、继承与同身份覆写 |
+| [SqueakRuntimeResolver.cs](../../../Source/UniversalSqueaker/Runtime/SqueakRuntimeResolver.cs) | settings 调音层投影为运行时 action/mood delta |
+| [SqueakTimingModel.cs](../../../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs) | 基础 action interval 与各倍率、全局 cooldown 的计算边界 |
 
 维护这些部分时同步复核本文件。XML 解析只能证明语法，源码对照只能证明当前实现语义，两者都不能代替音频与生产路径的实机测试。
