@@ -265,13 +265,19 @@ public sealed class UsBasicTuningWidget : UsSectionWidgetBase
                 TextAnchor.MiddleLeft);
         }
 
-        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
+        // The controls are anchored to the LABEL band, never to the full row: this row also carries the
+        // unconditionally reserved disabled-reason band, so centring a control in the whole height would
+        // push the checkbox below its own label and drop the label out of the 24px hit band as soon as the
+        // reason sentence wraps. Every other row in this card keeps label band == row band; this one must
+        // too, or one row in the section behaves differently from its neighbours.
+        Rect controlBand = new Rect(rect.x, rect.y, rect.width, labelHeight);
+        Rect checkbox = UsKernelDraw.CheckboxSlot(controlBand);
         bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, parentOn && childOn);
 
         // Same split as every other row: the hit band stops where the checkbox's starts, so one press is
         // decided by exactly one control. Both results are dropped while the parent is off - the row is
         // disabled, and a disabled control writes nothing.
-        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
+        Rect rowHit = UsKernelDraw.RowHitRect(controlBand, ctx);
         rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
         bool rowPressed = UiNative.Button(rowHit, ctx);
         if (parentOn && (toggled || rowPressed))

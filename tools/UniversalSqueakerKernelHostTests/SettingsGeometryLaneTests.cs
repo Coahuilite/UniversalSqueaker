@@ -926,7 +926,21 @@ internal static class SettingsGeometryLaneTests
         float[] centres = basicSlots.Select(CentreY).ToArray();
         float eatHint = EatPrecisionHintRuleHeight(metrics, table, basicBand);
 
-        float eatChild = 2f * (basicBottom - 2f - centres[5]);
+        // The child row's controls are anchored to its LABEL band, and the row also carries the
+        // unconditionally reserved disabled-reason band, so the DRAWN height is observed from the label
+        // band's centre: bottom - centre + band/2. Deriving it from 2*(bottom - centre) instead is exactly
+        // how the pre-fix layout (controls centred on the full row) slipped through this lane - the old
+        // derivation assumed the defect. The assertion below compares the observed centre against the one
+        // the production rule predicts, so a control anchored anywhere else fails here.
+        float eatChildLabelBand = EatPrecisionChildLabelRuleHeight(metrics, table, basicBand);
+        float eatChildRule = EatPrecisionChildRuleHeight(metrics, table, basicBand);
+        float predictedChildControlCentre = (basicBottom - 2f - eatChildRule) + eatChildLabelBand * 0.5f;
+        Assert(Math.Abs(centres[5] - predictedChildControlCentre) <= 0.01f,
+            "the child row's control must be centred on its LABEL band, not on the full row (which also"
+            + " reserves the disabled-reason band) at " + width + " (" + language + "): control centre "
+            + Num(centres[5]) + " vs label-band centre " + Num(predictedChildControlCentre)
+            + " [rule " + Num(eatChildRule) + " = label band " + Num(eatChildLabelBand) + " + reason band]");
+        float eatChild = (basicBottom - 2f - centres[5]) + eatChildLabelBand * 0.5f;
         float eatParentBottom = basicBottom - 2f - eatChild - 2f - eatHint - 2f;
         float eatParent = 2f * (eatParentBottom - centres[4]);
         float eatParentTop = eatParentBottom - eatParent;
@@ -1024,11 +1038,17 @@ internal static class SettingsGeometryLaneTests
     /// <summary>The child row's own rule, repeated from <c>UsBasicTuningWidget.EatPrecisionChildHeight</c>:
     /// the shared support-row rule for the child label PLUS the disabled-reason band, which is reserved in
     /// both parent states. That reservation is exactly what keeps the card's height a constant sum.</summary>
+    private static float EatPrecisionChildLabelRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
+    {
+        return Math.Max(RowTokenPin, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), UiFont.Small, band));
+    }
+
+    /// <summary>The child row's label band PLUS its reserved disabled-reason band, which is the row's
+    /// drawn height in both parent states.</summary>
     private static float EatPrecisionChildRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
     {
-        float label = Math.Max(RowTokenPin, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), UiFont.Small, band));
         float reason = Math.Max(EatNoteFloor, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs.DisabledReason"), UiFont.Tiny, band));
-        return label + reason;
+        return EatPrecisionChildLabelRuleHeight(metrics, table, band) + reason;
     }
 
     private static void AddRow(
