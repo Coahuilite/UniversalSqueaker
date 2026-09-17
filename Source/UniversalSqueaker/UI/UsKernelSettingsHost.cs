@@ -51,23 +51,14 @@ public static class UsKernelSettingsHost
 
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
 
-        // The retractable help drawer is a layout VARIANT of the shipped tree, not a binding-driven
-        // column: the carrier's engine reads only a static Hidden attribute plus the forbidden
-        // Tab/active-tab gate, and it has no visible/width binding. Both variants are composed ONCE
-        // from the parsed roots - open = as shipped, closed = the same tree without the help column -
-        // and handed to the revision bumper, which installs the matching one at the revision boundary.
-        // They are SNAPSHOTS: UiLayoutManifest.Roots is the live list an install mutates, so aliasing
-        // it here would make the open variant follow every close (the install writes the closed root
-        // back into the "open" list) and the drawer could never reopen.
-        var openRoots = new List<UiElementSpec>(manifest.Roots.Count);
-        openRoots.AddRange(manifest.Roots);
-        var closedRoots = new List<UiElementSpec>(openRoots.Count);
-        foreach (UiElementSpec root in openRoots)
-        {
-            closedRoots.Add(UsLayoutVariants.WithoutElement(root, UsLayoutVariants.HelpColumnId));
-        }
-
-        var bumper = new SessionRevisionBumper(source.ViewState, openRoots, closedRoots);
+        // The retractable help drawer is DECLARATIVE: the manifest's help-scroll element carries
+        // VisibleKey="help-open", so the element stays in the definition and the engine simply does not
+        // arrange it while the drawer is closed. Staying in the definition is the whole point - it is
+        // what lets the Scroll keep its node AND its scroll position across a close/open. The pre-0.5
+        // root-list VARIANT (a rebuilt root list with the help element omitted) relied on a removed
+        // element keeping its node, which the 0.6 carrier no longer does: PruneNodesExcept releases a
+        // removed identity together with its scroll position (UiSession.PruneNodesExcept).
+        var bumper = new SessionRevisionBumper();
         UiBindings bindings = BuildBindings(source, bumper);
         UiHost host = new(
             Source,
@@ -76,11 +67,10 @@ public static class UsKernelSettingsHost
             UsTheme.Surface(),
             metrics,
             new UsKernelTranslation());
-        bumper.Attach(host.Session, manifest);
-        // The page state's default - and every Reset - is the RETRACTED drawer, while the parsed
-        // manifest IS the open tree. Reconcile the two before the first arrange, or the very first
-        // frame would show the drawer open and every later toggle would be one state behind.
-        bumper.ApplyVariant();
+        bumper.Attach(host.Session);
+        // No first-frame reconciliation is needed any more: the manifest's VisibleKey is resolved
+        // through the "help-open" binding on every arrange, so the RETRACTED default in the page state
+        // is what the very first frame already follows.
         // D10 (maintainer ruling 2026-09-06): a finished hover claim keeps explaining the panel for
         // this many IMGUI passes, which is what stops the overview from flashing while the pointer
         // crosses the gap between two adjacent controls. The library owns the rule and ships no
@@ -105,54 +95,22 @@ public static class UsKernelSettingsHost
     /// </summary>
     private sealed class SessionRevisionBumper
     {
-        private readonly VoicePacksPageState state;
-        private readonly IReadOnlyList<UiElementSpec> openRoots;
-        private readonly IReadOnlyList<UiElementSpec> closedRoots;
         private UiSession? session;
-        private UiLayoutManifest? manifest;
-        private bool appliedOpen = true;
 
-        public SessionRevisionBumper(
-            VoicePacksPageState state,
-            IReadOnlyList<UiElementSpec> openRoots,
-            IReadOnlyList<UiElementSpec> closedRoots)
-        {
-            this.state = state ?? throw new ArgumentNullException(nameof(state));
-            this.openRoots = openRoots ?? throw new ArgumentNullException(nameof(openRoots));
-            this.closedRoots = closedRoots ?? throw new ArgumentNullException(nameof(closedRoots));
-        }
-
-        public void Attach(UiSession value, UiLayoutManifest owner)
+        public void Attach(UiSession value)
         {
             session = value;
-            manifest = owner ?? throw new ArgumentNullException(nameof(owner));
         }
 
         /// <summary>
-        /// Installs the root variant that matches <see cref="VoicePacksPageState.HelpDrawerOpen"/>
-        /// when it differs from the one already installed. Node identity is element Id/kind/declared
-        /// index, so the centre and help Scroll nodes - and the scroll positions they hold - survive
-        /// the swap; no host or session is recreated. A refused install leaves the shipped tree
-        /// (drawer open) in place, which is the fail-soft direction the layout variant promises.
+        /// Advances the clock the engine's snapshot cache is keyed on, so the next arrange re-reads the
+        /// page's declared visibility. This is REQUIRED for the declarative drawer: the cache compares
+        /// <c>cachedContentRevision == ctx.Session.ContentRevision</c> and returns the previous snapshot
+        /// when every term matches, so without a bump a closed drawer keeps its old geometry and the
+        /// "no reserved column" assertions fail on the very next measure.
         /// </summary>
-        public void ApplyVariant()
-        {
-            if (manifest == null) return;
-            if (state.HelpDrawerOpen == appliedOpen) return;
-
-            IReadOnlyList<UiElementSpec> variant = state.HelpDrawerOpen ? openRoots : closedRoots;
-            if (UsLayoutVariants.TryReplaceRoots(manifest, variant, out _))
-            {
-                appliedOpen = state.HelpDrawerOpen;
-            }
-        }
-
         public void Bump()
         {
-            // Compose BEFORE the clock moves: the engine's snapshot cache is keyed on the content
-            // revision, so swapping the roots without a bump would keep serving the pre-toggle
-            // geometry, while bumping first would publish the old tree under the new revision.
-            ApplyVariant();
             session?.ClosePopup();
             session?.BumpContentRevision();
         }

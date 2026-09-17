@@ -638,12 +638,14 @@ internal static class UiSourceInvariantTests
     }
 
     // 10. The retractable help drawer is INDEPENDENT state (brief: "Help visibility is independent
-    //     state. Do not reuse active-tab"). The engine's only binding-driven visibility switch is the
-    //     Tab attribute, which it compares against UiBindings.ActiveTabKey - so a drawer that rode
-    //     active-tab would leak into workspace switching and leave a reserved column whenever the
-    //     workspace happened to match. This guard is two-sided: the manifest's drawer element declares
-    //     no Tab, and the consumer drives visibility through its own state/binding/revision names. A
-    //     regression that re-binds help visibility to the workspace fails here, at build-gate time.
+    //     state. Do not reuse active-tab"). The engine compares the Tab attribute against
+    //     UiBindings.ActiveTabKey - so a drawer that rode active-tab would leak into workspace switching
+    //     and leave a reserved column whenever the workspace happened to match. The declarative switch
+    //     for this page is VisibleKey="help-open": a bool value binding that is this page's own state.
+    //     This guard is three-sided: the manifest's drawer element declares VisibleKey="help-open" and
+    //     no Tab; the consumer drives visibility through its own state/binding names; and the retired
+    //     root-list variant does not come back. A regression that re-binds help visibility to the
+    //     workspace, or that hides the drawer by REMOVING it from the definition, fails here.
     private static void VerifyHelpDrawerIsIndependentState(string root)
     {
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
@@ -673,10 +675,24 @@ internal static class UiSourceInvariantTests
             "HelpDrawerOpen must default to false: the shipped window opens narrow (vanilla-like) with the"
             + " help drawer retracted, and only widens when the player expands it");
 
-        string variantsPath = Path.Combine(ui, "Layout", "UsLayoutVariants.cs");
-        CheckSourceContains(variantsPath, new[] { "\"help-scroll\"", "Roots" },
-            "the drawer must be a layout variant applied through the host's manifest roots (the carrier ships "
-            + "no binding-driven column visibility; see UsLayoutVariants)");
+        Assert(((XmlElement)drawerElement!).HasAttribute("VisibleKey")
+            && string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"), "help-open", StringComparison.Ordinal),
+            "the help drawer must be hidden DECLARATIVELY through VisibleKey=\"help-open\": the element has to stay"
+            + " in the definition, because that is what lets its node and scroll position survive a close/open");
+
+        // The retired mechanism must not come back in any form - not as the file, and not inlined into the
+        // Host. Rebuilding the manifest root list removes the element from the definition, and the engine
+        // releases a removed element's node together with its scroll position (0.4 -> 0.6 semantics).
+        Assert(!File.Exists(Path.Combine(ui, "Layout", "UsLayoutVariants.cs")),
+            "UsLayoutVariants must not come back: a rebuilt root list omits the element, and the engine"
+            + " releases an omitted element's node and scroll position");
+        CheckSourceDoesNotContain(hostPath, "UsLayoutVariants",
+            "the Host must not reference the retired root-list variant");
+        CheckSourceDoesNotContain(hostPath, "TryReplaceRoots",
+            "the Host must not install a rebuilt root list by hand");
+        CheckSourceDoesNotContain(hostPath, "manifest.Roots",
+            "the Host must not mutate the manifest root list: that is the removed-element path, and visibility"
+            + " is declarative now");
 
         CheckSourceContains(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"),
             new[] { "\"US.Help.Drawer.Toggle\"" },

@@ -1169,23 +1169,34 @@ internal static class Program
         // Creation succeeded => every kind in the real resource resolved through the real US/core
         // registries and every widget's Validate passed against the real typed binding table.
         //
-        // The live root list is the variant matching the page state, and the shipped default is the
-        // RETRACTED drawer (task-10), so the closed tree carries every declared kind except the help
-        // panel. Both directions are asserted: expanding must install the full shipped kind set.
-        var closedKinds = new HashSet<string>(StringComparer.Ordinal);
-        CollectKinds(host.Manifest.Roots, closedKinds);
-        Assert(!closedKinds.Contains("us/help-panel"),
-            "the retracted default must omit the help panel from the live root list");
+        // The drawer is DECLARATIVE now: the manifest ALWAYS declares us/help-panel, and the engine
+        // decides whether it is arranged. Both halves are asserted, because they are the two things the
+        // mechanism has to get right - the definition must keep the element (that is what lets its node
+        // and its scroll position survive a close/open), and the arrange must hide it while the page
+        // state is retracted. The old root-list variant asserted the opposite (element absent from the
+        // roots), which is what made the property that carried the drawer's state disappear wholesale.
+        var declaredKinds = new HashSet<string>(StringComparer.Ordinal);
+        CollectKinds(host.Manifest.Roots, declaredKinds);
+        Assert(declaredKinds.Contains("us/help-panel"),
+            "the retracted default must still DECLARE the help panel: dropping it from the definition is what"
+            + " loses its node and scroll position (see SessionRevisionBumper)");
+
+        var viewport = new Vector2(1024f, 768f);
+        UiLayoutSnapshot retracted = host.MeasureAndArrange(viewport);
+        Assert(!retracted.Viewports.ContainsKey("help-scroll"),
+            "the retracted default must not arrange the help panel");
 
         host.Bindings.Set("help-open", true);
-        var kinds = new HashSet<string>(StringComparer.Ordinal);
-        CollectKinds(host.Manifest.Roots, kinds);
+        UiLayoutSnapshot expanded = host.MeasureAndArrange(viewport);
+        Assert(expanded.Viewports.ContainsKey("help-scroll"),
+            "an explicit open must arrange the help panel");
+
         foreach ((string id, string kind) in ExpectedWidgets)
         {
-            Assert(kinds.Contains(kind), "manifest contains kind " + kind + " (widget " + id + ")");
+            Assert(declaredKinds.Contains(kind), "manifest contains kind " + kind + " (widget " + id + ")");
         }
 
-        Assert(kinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
+        Assert(declaredKinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
         Assert(UiWidgetRegistry.KnownKinds(ExpectedSource).Count >= 15, "US scope registry holds the kernel composite kinds");
     }
 

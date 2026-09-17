@@ -220,13 +220,10 @@ UnityEngine.CoreModule!UnityEngine.Component::get_transform() | backend
 UnityEngine.CoreModule!UnityEngine.Transform::get_position() | backend
 
 # ------------------------------------------------------------------------------------------------
-# gameui (5) - gameui - game-side window plumbing the harness deliberately does not model
+# gameui (2) - gameui - game-side window plumbing the harness deliberately does not model
 # ------------------------------------------------------------------------------------------------
 Assembly-CSharp!Verse.Window::get_IsOpen() | gameui
 Assembly-CSharp!Verse.Window::onlyDrawInDevMode:Boolean | gameui
-Assembly-CSharp!Verse.Window::onlyOneOfTypeAllowed:Boolean | gameui
-Assembly-CSharp!Verse.WindowStack::Add(c:Verse.Window) | gameui
-Assembly-CSharp!Verse.WindowStack::TryRemove(c:Verse.Window,Boolean) | gameui
 
 # ------------------------------------------------------------------------------------------------
 # utility (11) - utility - Verse static facade/helpers reached only from the in-game paths above

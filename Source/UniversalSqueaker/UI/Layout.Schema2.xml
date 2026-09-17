@@ -17,8 +17,11 @@
          536 inner here, and Breakpoint 500 keeps that a two-column Row in BOTH drawer states - the
          same Row at 736/1024 and the shipped three columns once the drawer opens; only 480/320 fall
          below it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill
-         containers instead of three squeezed columns. The help column itself is toggled by a layout
-         VARIANT (UsLayoutVariants), never by Tab. -->
+         containers instead of three squeezed columns. The help column itself is toggled DECLARATIVELY
+         by the engine-level VisibleKey attribute bound to this page's own help-open value binding, never
+         by Tab: the element stays in the definition so its node and scroll position survive a close/open
+         (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with
+         its scroll position). -->
     <Row Id="body-row" Gap="12" Breakpoint="500" Narrow="Column">
       <Column Id="nav-column" Width="160" Fill="true">
         <Widget Id="nav" Kind="us/nav" />
@@ -40,7 +43,7 @@
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
       </Scroll>
-      <Scroll Id="help-scroll" Width="176" Fill="true">
+      <Scroll Id="help-scroll" Width="176" Fill="true" VisibleKey="help-open">
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>

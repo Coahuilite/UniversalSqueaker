@@ -9,9 +9,11 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// Retractable right-side help drawer (outcome 1). The drawer is a layout VARIANT of the shipped
-/// root list, installed by the Host's revision bumper: the carrier's engine has no visible/width
-/// binding and its only tab gate is forbidden for help visibility, so the consumer composes the tree.
+/// Retractable right-side help drawer (outcome 1). The drawer is hidden DECLARATIVELY: the manifest's
+/// help-scroll element carries VisibleKey="help-open", and the Host's revision bumper advances the clock
+/// so the next arrange re-reads it. The element stays in the definition while closed - that is what
+/// keeps its node and its scroll position - which the retired root-list VARIANT could not do on 0.6
+/// (a removed element is released together with its scroll position).
 ///
 /// This lane proves the whole contract against the REAL production Host, the REAL embedded Schema=2
 /// manifest, the REAL widget registrations and the REAL typed binding table:
@@ -531,7 +533,7 @@ internal static class HelpDrawerLaneTests
             host.Bindings.Invoke("set-tab", "Overview");
             UiLayoutSnapshot reset = host.MeasureAndArrange(viewport);
             Assert(!reset.Viewports.ContainsKey(HelpColumnId),
-                "after Reset, a real revision-bumping write must keep the retracted variant installed");
+                "after Reset, a real revision-bumping write must keep the drawer retracted");
         }
 
         // ---- Runtime reopen 2 (what the window really does): closing disposes the host and its source;
@@ -643,7 +645,6 @@ internal static class HelpDrawerLaneTests
         string[] drawerPaths =
         {
             "Source/UniversalSqueaker/UI/UsKernelSettingsHost.cs",
-            "Source/UniversalSqueaker/UI/Layout/UsLayoutVariants.cs",
             "Source/UniversalSqueaker/UI/Kernel/UsPageTitleWidget.cs",
             "Source/UniversalSqueaker/UI/Layout.Schema2.xml",
         };
@@ -683,11 +684,13 @@ internal static class HelpDrawerLaneTests
         Assert(CountToken(hostSource, "\"help-open\"") >= 1 && CountToken(hostSource, "\"toggle-help-drawer\"") >= 1,
             "the drawer toggle must go through the typed binding table, never a raw event handler");
 
-        // UsLayoutVariants is pure tree composition: no drawing, no hit testing, no engine reference.
-        string variants = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout", "UsLayoutVariants.cs"));
-        Assert(CountToken(variants, "UsKernelDraw") == 0 && CountToken(variants, "UiThemeDraw") == 0
-            && CountToken(variants, "UiNative") == 0 && CountToken(variants, "UnityEngine") == 0,
-            "the variant composer must be pure tree composition (no draw/hit/engine reference)");
+        // The retired root-list variant must not come back: removing an element from the definition is the
+        // path whose node the 0.6 engine releases, so the drawer's visibility has to stay declarative.
+        string manifest = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"));
+        Assert(CountToken(manifest, "VisibleKey=\"help-open\"") == 1,
+            "the manifest must hide the drawer through VisibleKey=\"help-open\" exactly once");
+        Assert(!File.Exists(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout", "UsLayoutVariants.cs")),
+            "the root-list variant must not come back: the engine releases an omitted element's node and scroll position");
 
         // Whole-source audit: the ONLY direct backend call in the production source is the documented
         // camera-indicator exception (brief 2026-09-13, "Explicit FL exception").
