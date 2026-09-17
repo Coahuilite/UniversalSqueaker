@@ -4,6 +4,7 @@
 
 ## Entries
 
+- 2026-09-17 memory compaction: superseded `MEMORY.md`/`TODO.md` blocks were moved verbatim to the "Memory compaction 2026-09-17" section at the end of this file; the active files now carry the declarative help drawer state, the 0.6 declaration-surface findings and the open action surface.
 - 2026-08-24 legacy bridge activation (maintainer authorization): the 0.4 co-existence rule "US must not define SqueakyRatkin.* types" was explicitly overridden for one thin empty `SqueakyRatkin.SqueakVoicePackDef` compatibility shim. Old SR VoicePacks now load through the bridge and are explicitly marked as old SR content in logs (`voicepack.pack.legacy_admitted`) and UI (`Legacy SR` tag/banner). No Ratkin audio/content ships with US.
 - 2026-08-23 US rebuild cleanup: the SR-derived reference trees were consumed and deleted from the working tree — root `Kernel/` (9 cs files), `Pure/` (2 cs files), `fixtures/` (SR corpora + 0.2.4-shaped settings fixtures), `sr_reference/` (SR SoundDefs/localization snapshot), and `tools/KernelCharacterization/` (legacy SR harness). They remain retrievable from git history. Pre-rebuild baseline commit: `abae59c`; last pre-cleanup commit: `a43b731`. Rebuild commits: `edfba6b` (de-SR-ized kernel/pure + US test gate), `1ea6856` (runtime assembly + data surface + tool gates), `a43b731` (componentized minimal UI).
 
@@ -57,7 +58,6 @@
 - Pending maintainer confirmations: (1) old `Off` rename target — recommended `Vanilla` (or `FallbackOnly`); (2) tuning baseline Def final name/shape; (3) `ActionEntry`/`TriggerBinding` C# interface detail before S2.
 - Prior session state still relevant: local commit chain ends at `d3c94b3` (working tree now additionally has the new plan doc + TODO edit + MEMORY checkpoint edit, uncommitted). Test pack inventory under `dist/` unchanged: `Kiiro-US-EXP`, `Nivarian-US-EXP`, `KiiroSiamese-XenoRoutingTest-US-EXP`, `RatkinOA-XenoRoutingTest-US-EXP`. Install by copying `dist/dev/UniversalSqueaker` over the game Mods folder. `dist/` is gitignored build/test output.
 - Next action on resume: read `docs/us-ui-migration-plan-zh.md` §14, then either start the Scribe+data-model design or S1 global-layer removal; collect maintainer answers to the three pending confirmations first if possible.
-
 
 ## Session resume checkpoint (2026-08-25c — 第三次会话；跨 harness 压缩锚点)
 
@@ -177,7 +177,6 @@
 - 外部 DeepSeek 收口与主代理复查记录位于 `docs/uikit-rebuild/reports/DEEPSEEK-US-UI-REBUILD-COMPLETION-REPORT.md`。首次复查发现 800 宽 Mood 控件被省略；返工后 `UsScopeTreeWidget` 改为统一的 stacked narrow Mood 几何：标题/Auto + Pitch/Volume/Jitter 三行，每行保留 minus/slider/number/plus，Measure/Draw 共用 `UsesStackedMoodRows` / `MoodRowHeightFor`。
 - `MoodLayoutFocusedTests` 使用真实生产 Host 捕获原生控件 rect：800×600、2 个 rich Mood 行共 26 个控件，全部位于 scope-tree card 内且互不重叠；minus、plus、slider、number commit、Auto 均验证 typed `set-mood-tuning` 写入。主代理独立复现 Host `ALL PASS`、`verify-local.ps1 -NoRestore` 15 门全绿、`build-dev.ps1` Dev/Release 0 warning/0 error。
 - Gate U 自动/源码范围当前 `PASS`；整体仍 `LIMITED/未通过`。Tuning/Packs/Camera Indicator 的真实 RimWorld 交互、真实 popup/chart/hotControl 坐标、catalog/翻译/数据路径、800×600/1280×720/1920×1080 实机记录和受控 fallback 恢复尚未验证。旧 Settings/Overlay fallback 继续保留，禁止 clean cutover；下一动作是维护者集中实机验收。
-
 
 ## Architecture audit and old-UI removal decision (2026-09-02)
 
@@ -358,7 +357,6 @@ gate 14 终态实测：`scan: 101 files; 2 file(s) hold backend calls; raw Mouse
 - round 3 已 CLOSED 且 FL 已实现合入 `main`（US 侧剩采纳：`Width="Auto"`/`MinWidth`/`MaxWidth` + 容器 `Breakpoint` 已在 CI 所检出的 carrier 默认分支上）→ `TODO.md` 账本行；D7 区域形状开放分叉 → TODO D7 节；Knife 3 → TODO；rc1 试用循环与发布轴配对 → TODO；`US_STEAM` 死轴记录 → TODO。
 - 分支线（2026-09-10 三级定稿）：**功能分支**（短命，自版本线尖端切出，随积累推送留存，合回线后本地+远端删除）→ **版本线** `0.3.x`（集成与积累面，14/14 绿；纯文档/裁定提交可直接落线）→ **`main`**（发布信号面，仅切 rc/release 时合入线，现停 rc1 面 `d9b1d24`）。首个适用对象 = 面板迁移，实际分支名 `diagnostics`。FL 侧 merge/tag 归库会话与维护者，本侧只读。
 - 分支命名（09-10 裁定补充）：功能分支名带版本面与用途前缀（例：`0.3.x/feat-diagnostics`）；本轮已开的 `diagnostics` 不改名，合回即死。
-
 - **面板迁移状态（2026-09-10）：已合回 `0.3.x`（ff 至 `e9e6a34`，27 文件 +2613/−845），`diagnostics` 分支本地+远端已删**。代码面 14/14 全绿（纯车道+kernel-host 车道+verify-local 实测，白名单 2→1 落地）。**实机走查清单待维护者**：拖拽/非模态/下钻/多锁/折叠条/翻页/搜索（含离屏直锁）/双 Esc（重点：**未消费 Esc**——若泄漏进游戏取消/关设置窗，即 FL round-4 的 UiNative 事件缝素材）/关窗连坐/跨图终结/**PackFallback 首验**。
 
 ## 3. FL 递交（2026-09-10，跨仓核对；本节由库会话代写，供 US 会话核对后并入或删去）
@@ -372,3 +370,215 @@ gate 14 终态实测：`scan: 101 files; 2 file(s) hold backend calls; raw Mouse
 - `HANDOFF.md:5`、`:39`：对侧状态摘要与活口指针索引同步为 CLOSED。
 
 **US 侧需要复核的两点**（库会话不改判，只提示）：其一，`:46`/`:60` 的裁定主体（维护者 2026-09-08 三点、区域形状分叉）原样保留，只替换了版本与可用性断言；其二，本轮没有开 FL round——§1.2 关闭钮评估得出 n=0 不立案、§1 声明零新面诉求，因此 FL 侧 round 计数仍停在 3，**round 4 号位空置**，攒素材的触发条件是迁移中撞出的壳级缺陷。若 US 会话认为上述任何改动越界，直接 `git checkout -- TODO.md MEMORY.md`（`HANDOFF.md` 不入库，手工回退本节即可）。
+
+## Memory compaction 2026-09-17 (moved from `MEMORY.md` / `TODO.md`; verbatim)
+
+> Reason: `AGENTS.md` keeps `MEMORY.md` to durable still-true facts and `TODO.md` to the open action surface. During the 2026-09-17 declarative-help-drawer session (`feat/help-drawer-visiblekey` @ `cb1b5e1`) the blocks below were superseded, completed, or folded; they are preserved verbatim so nothing is silently deleted. **Each block is `moved from MEMORY.md/TODO.md on 2026-09-17`**; line references are as written in the source file at extraction time.
+
+### From `MEMORY.md`
+#### MEMORY.md:113-121 - migration-040
+
+## US → FL 0.4 migration (executed 2026-09-11, task-20; authorized by the maintainer the same day)
+
+- **The pin and the product axis moved together**: `Source/UniversalSqueaker/Mod.cs` now pins `[0.4.0, 0.5.0)` (was `[0.3.0, 0.4.0)`); csproj `<Version>` and `About/About.xml <modVersion>` are `0.4.0` (was `0.2.0`). `v0.2.0-rc1` stays an archive: no tag touched, nothing pushed from the implementation session (the push is the lead's).
+- **Evidence, all re-run after the change**: `scripts/verify-local.ps1` 14/14 (EXIT 0); `tools/UniversalSqueakerKernelHostTests` ALL PASS (EXIT 0) - its `PrerequisiteRangeTracksCompiledApi` lane parses the pin out of `Mod.cs` and asserts floor-equals-linked-Api plus a one-minor window, so it is the lane that was red before the lift; `scripts/check-pack-readiness.ps1 -RequireReleaseMetadata` all checks passed (EXIT 0). `1.6/Defs/` is still `.gitkeep`-only (zero Def), re-checked after the change.
+- **Correction (2026-09-12, append-only)**: the 14/14 cited in the bullet above ran against carrier payload sha256 `470BF4728CBA50F4E16BEE7DFC73F3ACA2B01E16FF92234B1BE306C36B931670` (`0.4.0-dev+7402f12b5dd59bf40be641481e3fd75a27cc6530`) while the carrier checkout was already at `572c40b`: US's gate 6 asked only "payload present and Release-configured", so a payload built from an older carrier API stayed green until a rebuild forced the tool lanes to recompile. The 0.4 verification is re-established by commit `6710919` on a **rebuilt** carrier (checkout `ae489915566b51f4894e128b65d82c7f3faa6ac8`, payload sha256 `2282EF9F7440F65E931E4665F658F2A8910EEC9845DE3DC1F5E1C011E6DF2017`, IV `0.4.0-dev+ae48991...`): 14/14 live and 14/14 from a `git archive` of that commit beside a freshly built carrier copy, with no manual restore. The real migration face was **2 source call sites plus 14 harness sites** - the popup lane had to move to the owned hit stack (`OpenPopupRect`/`IsPointOverPopup` are gone) and the scroll lanes to node-keyed positions. **Gate 6 now proves payload identity**: the payload's AssemblyInformationalVersion must equal the carrier checkout's HEAD, and a dirty carrier tree is refused (CI's git-less sibling layout is covered via `ci-ferritelib`).
+- **Append-only supersession (do not fold yet)**: this supersedes the frozen base `0.2.0` in the "Version axis (maintainer ruling 2026-09-07)" entry and the `[0.3.0, 0.4.0)` in "Carrier lockstep"; both older lines are left verbatim because the task boundary was append-only. Fold them at the next compaction.
+- **Residual awaiting a maintainer ruling (not a defect)**: `<VersionPrefix>` is still `0.2.0`, so the built payload measures `AssemblyVersion 0.2.0.0` / `FileVersion 0.2.0.0` while `ProductVersion` (InformationalVersion) is `0.4.0+<sha>`. Nothing reads US's own AssemblyVersion: `scripts/pack-dev.ps1:25-27` derives the packaging label from `<Version>`, and `stage-package`'s identity check compares the payload's InformationalVersion base against that label, so both channels are consistent as they stand. The csproj comment block at lines 11-14 still describes the rc-window "frozen at 0.2.0" discipline and is stale for the `<Version>` axis.
+- **Ruling 2026-09-11, closure of the residual above (commit `7c64d3a`)**: the maintainer ruled "lift" - `<VersionPrefix>` is now `0.4.0`, so the payload's AssemblyVersion/FileVersion measure `0.4.0.0` and all four version axes agree, and the stale rc-window comment block the bullet above names was rewritten in that same commit. The bullet above stays verbatim for the record; nothing in it remains open.
+- **Deliberately untouched**: the `UiTheme.Warning` fill in `UI/Kernel/UsKernelDraw.cs` stays as-is - the carrier restored that name as a redirect to `Danger`, with recovery scheduled at the next minor boundary. No file under `Source/UniversalSqueaker/UI/**` changed in this migration.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:12 - gates-history
+
+- **Post-split numbering correction (2026-09-04; re-measured 2026-09-07; +1 gate 2026-09-07b; +1 gate 2026-09-12)**: US `verify-local.ps1` is **15 gates** — gate **15** is harness stub coverage: the carrier's reference-driven scan (`../ferritelib/scripts/stub-coverage-scan.ps1`, read-only) over the US payload **and the KernelHostTests harness assembly**, with US's own exemption ledger (`scripts/stub-coverage-exemptions.txt`, 165 entries with reason codes at the `0b396c4` measurement, one scan per assembly). The ledger has only shrunk: 188 -> 173 when the carrier's stub took the language/constant class (`f629e1a`), then -> 165 when it took eight pure helpers (`0b396c4`); the harness half adds 25 references and needs no entry. Gate **14** is the UI boundary audit (`scripts/ui-boundary-audit.ps1`), appended last because gate numbers here are **append-only**: `gate N` is cited across this file, `TODO.md` and `docs/`, so a new check never shifts the numbers below it. The script's own `Invoke-Check` count stays the only authority (README and both workflow labels said "15 gates" until corrected 2026-09-07; `README.zh-CN.md`/`CONTRIBUTING.md` still said 15 and were corrected in the same round as gate 14). The "gate 14"/"gate 15" named in the dated sections below are **older** prose: they mean assertions *inside* gates 12/13, not the boundary audit. Every `Source/FerriteLib.UiKit/**` path those sections mention lives in `../ferritelib` since the split. Tracked US source set measured 2026-09-07c: **101 files / 15,566 lines** (was 102/15,751 before the FL 0.3.0 migration deleted `UI/UsHoverProbe.cs` and moved the chrome and the claim machine out of consumer code); Keyed tables: **213 entries per language** (211 `US.*` + 2 DebugAction).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:18 - version-axis-020
+
+- **Version axis (maintainer ruling 2026-09-07)**: US's first product version aligns with the carrier at **0.2.0**; the first release is an rc, not stable. Carrier rc-window discipline applies: identity axes freeze at the base (`<Version>`/`VersionPrefix`/`modVersion` = 0.2.0, `VersionSuffix` empty so InformationalVersion is `0.2.0+<sha>`), the rc suffix lives only in tag + artifact name; when the trial ends, the stable cut is a deliberate decision and main returns to a dev suffix (0.2.1-dev) for the next window. The corpus name `us-corpus-0.1.0.txt` is content identity, deliberately NOT renamed.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:23 - handoff-dup-pointer
+
+- Fork handoff and UI adaptation evaluation: `HANDOFF.md` (maintainer-local, not published; removed from history in the third rewrite).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:36 - phase-a-uikit
+
+- Phase A FerriteLib UiKit (2026-08-24, superseded by the 2026-09-02 cutover below): the neutral UI library lives in `Source/FerriteLib.UiKit/` as its own DLL with C# namespace `FerriteLib.UiKit` and XML scope/packageId `coahuilite.ferritelib.uikit`; neutrality means no US/SR product literals, while still referencing `Krafs.Rimworld.Ref` and Verse/Unity IMGUI types by design (`production uses Verse, tests use stubs`, per `docs/ui-shared-library-design-zh.md`). Harness: `tools/FerriteLib.UiKit.Tests/` with runtime stub assemblies under `Stubs/`.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:37 - location-note
+
+- Location note: the tree named in the entry above moved physically to `../ferritelib` on 2026-09-03 (see "FerriteLib spin-off"); nothing lives at `Source/FerriteLib.UiKit/` in this repository any more, not even build residue.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:15 - carrier-published-020
+
+- **Carrier published (2026-09-06/07)**: `Coahuilite/FerriteLib` is **public** (canonical case: capital F and L), default branch `main` — byte-identical to the local `../ferritelib` sibling. Sole release `v0.2.0-rc1` (prerelease) carries `FerriteLib-v0.2.0-rc1.zip` (top-level `FerriteLib/` folder shape); `Api` = 0.2.0, inside US's `[0.2.0, 0.3.0)`. Both workflows check out `Coahuilite/FerriteLib` (canonical case fixed 2026-09-07).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:5 - first-release-020
+
+- This repository is the **Universal Squeaker (US)** local fork of Squeaky Ratkin (SR), created 2026-08-23. Remote `Coahuilite/UniversalSqueaker` pushed 2026-09-06; **public since 2026-09-07** (maintainer authorization: the collaborator needs to download rc1; full-history privacy audit CLEAN immediately before the flip). **First release `v0.2.0-rc1` (prerelease) live** - asset `UniversalSqueaker-v0.2.0-rc1.zip`, six-point reconciliation green, anonymous download digest-verified. Publication actions remain maintainer-gated per session.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:131 - drawer-variant-0913
+
+- **The help drawer is DECLARATIVE now: `VisibleKey="help-open"` on the manifest's `help-scroll`; `UI/Layout/UsLayoutVariants.cs` is DELETED (2026-09-17).** Superseded (history only): the drawer used to be a layout VARIANT - a rebuilt root list with `help-scroll` omitted, installed by `SessionRevisionBumper.ApplyVariant()` before `BumpContentRevision()` - because the carrier US then pinned (`[0.4.0,0.5.0)`) had no binding-driven visibility. The 0.6.0 carrier does (`UiLayoutEngine.IsVisibleDeclaration` resolves `VisibleKey` through `IUiBindings.TryGetBool`; `ContainerAttributes` accepts it on a `Scroll`), and the variant had become a REAL FAILURE rather than dead weight: `UiSession.PruneNodesExcept` releases any node whose identity the definition no longer declares, and removes its `scrollPositions` entry with it - so omitting `help-scroll` destroyed the drawer's node and scroll position on every close. Established by a controlled A/B on ONE source tree (only the two carrier `HintPath`s differed): the same lane is **green on the 0.4.0-rc1 payload and red on 0.6.0-dev**. So the red was a **0.4 -> 0.6 public-observable semantic reversal** ("removed from the definition" moved from 'node survives, just not drawn' to 'node released with its state'), not an original US defect - and keeping the element IN the definition is exactly what preserves node identity and `ScrollPosition` (FL's own `KernelVisibilityTests`: "a removed identity releases its node; a hidden one keeps it"). Retained: `SessionRevisionBumper.Bump()` (`ClosePopup` + `BumpContentRevision`) is still REQUIRED - the layout snapshot cache compares `cachedContentRevision`, so without a bump a closed drawer keeps serving its old geometry. `help-open` stays the page's own value binding; `Tab` remains forbidden for help visibility (and would be refused on a container at creation time anyway).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:132 - window-policy-0913
+
+- **Window policy (2026-09-13).** `WindowChromeLayout.SettingsClosedWidth` = `clamp(0.24 * screenWidth, 600, 860)`; `SettingsOpenWidth` = closed + `DrawerWidthDelta` (help 176 + body-row gap 12, derived from the manifest so window and layout cannot drift) capped at the screen width; height stays `max(600, 0.66 * screenHeight)`. `UniversalSqueakerSettingsWindow` keeps its `UsKernelSettingsSource` in a field and writes `windowRect` once per drawer-state edge (centred, clamped on screen) - the pattern `SqueakDiagnosticsPanel`/`SqueakDiagnosticsDetailWindow` already used; the carrier stub declares `Window.windowRect`, so gate 15 is safe. `HelpDrawerOpen` defaults CLOSED, so the window opens narrow like vanilla ModSettings and widens only when Help expands. The window's runtime `windowRect` mutation has no harness lane (it needs `Verse.Mod`): compile-verified and pure-policy-covered only.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:135 - evidence-0913
+
+- **Evidence at the archived revision.** `scripts/verify-local.ps1` 16/16 (EXIT 0) on the frozen tree; `UniversalSqueakerUiLogicTests` ALL GREEN; `UniversalSqueakerKernelHostTests` ALL PASS including `HelpDrawerLaneTests`, `SettingsGeometryLaneTests`, the four-mood lane and the 16-row width x language sweep (`overflow=False`, `fit=0`); artifact `dist/ui-evidence/layout-sweep.txt`. Gate 6 reddened once because the FerriteLib payload was Dev-configured - the documented recovery is rebuilding the carrier Release (`dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental`), never editing FL. Reviews live in `docs/review/us-settings-*.md`.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:150 - window-formula-6538a6c
+
+- **New policy (commit `6538a6c`)**: `w = clamp(max(650, 0.44 * screenWidth), 650, 1600)`, `h = clamp(w * 9/16, 600, 0.9 * screenHeight)`. 1024x768 -> **exactly the vanilla 650x600**; 1920x1080 -> 844.8x600; 2560x1440 -> **1126.4x633.6** (16:9); 3840x2160 -> 1600x900. `SettingsWindowHeight` now takes `(screenWidth, screenHeight)`. Anything that restates the old 600/860/0.66 numbers is stale.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:157 - stage-cwd-narrative
+
+- **A release-path script resolved its output against the process cwd (found and fixed 2026-09-15).** `scripts/stage-package.ps1` resolved a relative `-StageDir` through `[IO.Path]::GetFullPath`, which follows the .NET current directory rather than PowerShell's location; the rehearsal therefore staged the folder and the archive outside the repository. A relative `-StageDir` now resolves against the repository root (an absolute path is still honoured as given). Verified both ways: with the cwd at the root the staged bytes and digest are unchanged, and from a foreign cwd the stage lands in-repo with nothing leaking to the caller's directory.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:103 - rc-freeze-note
+
+- **Version-axis freeze during an rc window**: `pack-dev` labels itself from the csproj `<Version>`, so the dev folder can report `0.2.0` while the sibling carrier's own dev package reports `0.3.0-dev`. That asymmetry is the frozen-axis discipline, not drift (US pins the API range, not the release axis).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:110 - batch2-residuals
+
+- **Post-batch-2 verification residuals (2026-09-12, independent pass `16-verify-ingame-batch2.md`; none blocked the in-game test)**: the close-button seam has **two definitions of the same padding** - FL's shell default is `max(110, measured + 2x10)` while US's settings-window override still computes `max(110, measured + 16)` over a hardcoded `VerseFerriteTextMetrics.Instance` instead of FL's new virtual `Metrics` seam. Today all three windows land on 110 for short text, but a long text makes the settings window 4px narrower than the panel and detail windows, and the hardcoded ruler is exactly the two-rulers hazard the library's own docs warn about. Fix by deleting the US override (redundant since FL `a306cae`) or by aligning the padding to 20 and reading `Metrics`. **Also: gate 6 needs a real carrier git checkout as sibling** - a plain `git archive` sibling fails with 「no carrier git checkout … so its source commit cannot be proven」, which is a harness-layout fact, not a product defect.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:111 - marker-residuals
+
+- **Marker patch residuals (same pass)**: the per-frame cost is fine when no session is active (`IsSessionActive` and `Find.CurrentMap == null` both guard before the loop), but while a session runs it walks `AllPawnsSpawned` and calls `GetComp` per pawn every frame; one `try` wraps the whole loop, so a single throwing pawn swallows that frame's remaining marks; and there is no `map == Find.CurrentMap` guard, so two maps' interface calls in one frame would double-draw the same pawns. The chrome-key runtime self-check that FL `a306cae` assigns to the host is **not implemented on this side** yet. All four are next-batch material, none is a live-game blocker.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:42 - gate-count-consequence
+
+- Consequence to remember when reading old docs: gate counts drifted repeatedly (12 → 13 → 14 → 15, then back to **13** after the 2026-09-03 library split - the four library gates moved to `../ferritelib` - and **14** again from 2026-09-07b, where the new number is the appended boundary audit and 1-13 never moved), and `Palette`/`UiText`/`UiPanel`/`SurfaceFrame`/`UiInteract`/`UiValueStore`/`UiGuard`/`VoicePacksLayout`/`Layout.xml` (Schema=1) plus the whole legacy page chain no longer exist.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:64 (trailing fragment) - camera-claim-history
+
+ Claim history: pass 1 asserted "hover swaps the panel" without reading anything (hallucination); pass 2 asserted "topic-driven only, per-control help is inline notes" from DLL strings + screenshot (incomplete — the hover fields were in the binary, I did not search for them). Camera+'s real shape = options C+A combined; US's pre-cutover reverse linkage was modeled on exactly this.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:28 - kernel-harness-pointer
+
+- Kernel harness (rebuilt): `tools/UniversalSqueakerKernelTests/` links `Source/UniversalSqueaker/Kernel/`+`Pure/`; US 0.1.0 golden corpus committed and replay-green. Legacy `tools/KernelCharacterization/`, `fixtures/`, and `sr_reference/` were deleted in the Phase 4 cleanup (see `OBLIVIONIS.md`).
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:63 - net472-notnullwhen-duplicate
+
+- Same family as the net472 `string.Contains(string, StringComparison)` note below: `string.IsNullOrEmpty` carries no `[NotNullWhen(false)]` on net472, so `IsNullOrEmpty(x) ? 0 : x.GetHashCode()` is CS8602 under Nullable + TreatWarningsAsErrors. Test `x == null` explicitly.
+
+_moved from `MEMORY.md` on 2026-09-17_
+
+#### MEMORY.md:78 - push-order
+
+- **Push order (dependency, not preference)**: lib side first - create repo -> push -> tag -> release asset downloadable. US side may prepare in parallel but push waits on lib: `git remote add` (no push) -> final check -> push. After push: branch protection on main, CI first run, then the six-point platform reconciliation reusing the carrier's `scripts/verify-release.ps1 -Tag -Repo -AssetPrefix UniversalSqueaker` (draft state / prerelease flag / asset name / server digest / `/releases/latest` semantics / dangling tags; non-zero exit = release incomplete, fix before announcing).
+
+_moved from `MEMORY.md` on 2026-09-17_
+### From `TODO.md`
+
+#### TODO.md:9 - cross-repo-round3
+
+- **Cross-repo round — US→FL round 3 (2026-09-08): declarative responsiveness. CLOSED by FL — implemented 2026-09-09 and merged to FL `main` (PR #1), so the surface is live on the carrier's default branch.** Filed as "round 2", **renumbered to 3 by FL under the global-counter rule** (one counter across directions, next-unused at filing, later filer yields — FL→US round 2 holds number 2 by filing order); US's own files said "round 2" until this line fixed it. Items N1-N3, raised while taking over the mood-tuning rows against maintainer requirement **R14** (`docs/us-ui-review-requirements-zh.md:26`, 复合控件避免一次性写死, still open). FL's verdicts (2026-09-08, at `996a6bc`): **N1+N2 ACCEPTED as one work package** (text-natural `Width="Auto"` via `MeasureWidth` plus width clamps; one container-level `Breakpoint`); **N3 verdict (b)** — layered editing stays consumer-side, `input/stepper-slider` enters the delete-or-reshape queue; US's threshold-free mood geometry is endorsed and unblocked. **Three claims in the previous version of this line went stale and were corrected by the FL session on 2026-09-09:** (i) the package was **refiled 0.4.0 → 0.3.0** before publication — 0.3.0 had never shipped, so additions before first publication cost no contract axis, US's pin `[0.3.0,0.4.0)` already covers it, and the threshold ban lifts now instead of at a later minor, which also retires the old "**0.3.0 stays frozen**, N ships on 0.4.0" clause; (ii) the clamps shipped as **`MinWidth`/`MaxWidth`, not `Min`/`Max`** — StepperSlider's own schema owns `Min`/`Max` as its slider value range, so the pair named in N1's provenance would have fed value-range numbers to the engine as width clamps; (iii) the buffer section `## US→FL round 3` has been **trimmed out of `../ferritelib/HANDOFF.md`** under that file's own lifecycle (CLOSED = body deleted), so its permanent records are FL's `MEMORY.md` round-3 entry and US's own `MEMORY.md` responsive-vocabulary line, not the buffer.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:8 - cross-repo-ledger-orig
+
+- **Cross-repo ledger**: rounds 1 (US→FL, P1-P6 + A-E) and 2 (FL→US, packaging S1-S6) are **CLOSED on both sides** - narratives byte-archived to `OBLIVIONIS.md` (2026-09-09 entry); durable facts live in `MEMORY.md` (gate 14 / packaging construction / carrier lockstep). Live (corrected by the FL session 2026-09-09): FL's merge is done — rounds 1 and 3 sit on its `main` (PR #1) — so the only remaining lib-side action is the `v0.3.0` tag/release, which is the maintainer's trial decision, and US's rc pairing follows that tag rather than the merge.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:17 - rc1-trial-loop
+
+- [ ] **rc1 trial loop (collaborator testing, maintainer relays)**: bad rc = delete release + tag, re-cut same rc number from fixed head (carrier precedent); stable cut stays a deliberate decision. When the trial ends: tag `v0.2.0` stable, then main returns to `0.2.1-dev` for the next window.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:20,22 - docs-compression-section
+
+## Docs compression and cleanup (next block, after session compaction)
+- [ ] Compaction style ruling for this repo's memory files: compress existing stale/verbose parts rather than appending more session-shaped prose (maintainer, 2026-09-07) - standing rule, applies to every future memory edit.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:107-111 - eat-port-x-items
+
+- [x] Pure rule: `Pure/SqueakEatOccurrence.cs` (mode enum + `ResolveMode` + 4-arg `AllowsOccurrence` + `ChewingToilDebugName` + default constants), zero Verse; `tools/UniversalSqueakerKernelTests/UnitTests.cs` gains `EatOccurrenceRules` (four combos incl. parent-off+child-on = WholeJob, three modes, unconfirmed-toil fallback, constant + default assertions). Purity gate covers it by `Pure\*.cs` glob automatically.
+- [x] Adapter sampling: `PeriodicStateBinding.Probe` reads the two published statics; sample via public API only (`pawn.jobs?.curDriver is IEatingDriver` / `JobDriver.CurToilString`, no `JobDriver_Ingest` cast); `chewToilNameConfirmed` is process-static, never Scribed. Diagnostics needs no change (`GetDiagnosticSnapshot` shares the `CurrentAction` outlet); zero new log events.
+- [x] Settings + Scribe: two bool fields default false, published in `ApplyToRuntime` + `NotifyCheapRuntimeChanged`; add-only Scribe lines, `settingsSchemaVersion` stays 5, `PostLoadInit` normalises parent-off+child-on to false; setters force child false when the parent closes. No fixture-delta gate exists in US (verify-local header) — gate 3 green is the equivalent check.
+- [x] UI wiring in Overview `us/basic-tuning` below the four rows: source/interface/viewstate/host binding chain, two nested checkbox rows via the existing `DrawBasicRow` shape, child disabled-and-greyed (never hidden — the engine's `Hidden` is static) with a disabled-reason help entry; card height constant-sum, parent toggle must not move Measure vs Draw.
+- [x] Contracts that move with it: help catalog 44→46 items (pin in `tools/UniversalSqueakerUiLogicTests/Program.cs:282`, bidirectional claim check), geometry lane support-checkbox count 6→8 + row inventory (`SettingsGeometryLaneTests.cs:145,:786-813`), both Keyed tables (+~5 keys each, parity gate 12), gate-15 ledger entries for the new Assembly-CSharp references (`Pawn::jobs`, `curDriver`, `get_CurToilString`, `GainingNutritionNow`, reason `world`), and the `IsEating` line in `docs/us-action-wrapper-interface-zh.md:84`.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:103 - eat-port-banner
+
+> **LANDED 2026-09-14 on `feat/eat-granularity` @ `e414b71`, fixed @ `712de50`** (carrier `ferritelib` @ `a0b716a`, Release payload rebuilt). Independently verified on an isolated archive: `verify-local` 15/15 EXIT 0, `KernelHostTests` ALL PASS, `UiLogicTests` ALL GREEN, and five mutations each turned their harness non-zero naming the assertion, with the 264-file tree byte-identical after restore. The pre-distribution review (`19-eat-review.md`) found one must-fix: the child row centred its checkbox and hit band on the FULL row, so at the default window width the label fell out of the 24px hit band (unclickable) and the box sat below its own label; fixed in `712de50`, re-verified SHIP-WITH-NOTES with the pre-fix anchoring mutation reddening the new lane assertion. Distribution pair and tester notes: `../modding_documents/team-mode/verify-us04/20-distribution-brief.md`. Report: `../modding_documents/team-mode/verify-us04/18-eat-granularity.md`; frozen contract: `../modding_documents/team-mode/eat-granularity-contract-zh.md`. Only the manual in-game matrix below stays open (maintainer).
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:118-122 - feedback-0914-x-items
+
+- [x] **Settings window rebased on vanilla's own dialog** (`6538a6c`): floor = `Dialog_Options.InitialSize` 650x600, growth 16:9 above it. 2560x1440 goes 614x950 -> 1126.4x633.6, which removes the wrapping that produced the footer/global-volume/checklist overflows.
+- [x] **Collapsed diagnostics bar line bands** (`6538a6c`): 14px lines under 18px text -> `StripLineHeight` 18, `TitleLineHeight` 22, bar 32 -> 44.
+- [x] **FerriteLib dependency `<downloadUrl>`** in `About.xml`, which the game demands in the log.
+- [x] **Diagnostics panel redesigned** (`c-pending` commit): opens COLLAPSED (460x44 content), stays at 600 wide and 240 tall while nothing is selected (that width is below the page's 592 narrow breakpoint, so the page presents list-only and there is no empty detail column), and only takes the 680x560 master/detail shape once a row is selected. Collapsed width no longer keeps the expanded 680.
+- [x] **`ptrace` deduped** and the footer band measured: identical popup traces print once per session (bounded at 512 distinct), and `UsFooterWidget.Measure` now measures the wrapped build identity instead of returning a constant 28.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:74,75 - crash-lineage-section
+
+## Crash-lineage risks (not layout; belongs with heap-corruption triage)
+- [x] ~~`SqueakDiagnosticsPanel.DrawVisible` scroll pairing / GUI-state restore~~ **CLOSED 2026-09-10**: the file was rewritten onto the UiKit shell; raw scroll/GUI-state code no longer exists (the engine's `Scroll` owns the `finally`). `UiSessionGuard` itself (library side: restores GUI state only in its `catch` then keeps drawing - group stack unbalanced after a throw) still belongs to FL's own closure, do not touch from US.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:84 - landed-rebuild-plan
+
+- Rebuild plan (approved 2026-08-23) + UI migration S0-S5 + orphan features: completed; baseline in `OBLIVIONIS.md`.
+
+_moved from `TODO.md` on 2026-09-17_
+
+#### TODO.md:85 - landed-6way-review
+
+- 6-way review 2026-08-28: findings closed; reports in `docs/review/**` (era-faithful hashes).
+
+_moved from `TODO.md` on 2026-09-17_
+
+---
