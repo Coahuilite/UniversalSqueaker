@@ -1,17 +1,100 @@
 # US UI 重设计（0.7 线 · DarkGold 三栏 + 文件驱动）
 
-> 状态：设计冻结稿，未实施。基线 = FerriteLib `0.7.x` @ `d82a3ca`（Api 0.7.0，含 Batch 1），
+> 状态：设计冻结稿，未实施。基线 = FerriteLib `0.7.x` @ `bce1ba4c88e557ee91fc1fbe87391b5107a2ff32`
+> （Api 0.7.0，含 Batch 1 与 P1-E 两批；初稿写在 `d82a3ca` 上，事实面已在 §0 逐行复核）。
 > US pin `[0.7.0, 0.8.0)`。本文是设计规格，不是实现记录。
 
 ## 0. 本次 FL 更新带来的新事实（决定设计的关键项）
 
-| 变动 | 事实 | 对本设计的作用 |
+> **复核（2026-09-21，task-27 第 0 步）：载体 = FL HEAD `bce1ba4c88e557ee91fc1fbe87391b5107a2ff32`（Api 0.7.0，Release / 249 344 B / 无 PDB）。**
+> 本节初稿写在 `d82a3ca` 上；`git -C ../ferritelib log --oneline d82a3ca..bce1ba4` = **14 个提交，其中代码提交 8 个**。
+> 本节现在的口径是 **「原文主张 / 是否仍成立 / 依据」**，不再只列变化。**§0.2 与 §0.4 是两条改变结论（而不是措辞）的更新，必须连带重裁 §4.1 与 §5.4。**
+> FL 仓内路径一律相对于 `../ferritelib/`。
+
+### 0.1 第 0 版本节的 5 行，逐行复核
+
+| 原文主张（逐字保留） | 现在是否仍成立 | 依据 |
 |---|---|---|
-| 放置词汇（Batch 1） | `AlignX/OffsetX/AlignY/OffsetY`；`origin + fraction*(parentSpan-selfSpan) + offset`；`Overlay` 是唯一双轴放置容器，flow 子元素只接受**交叉轴 + 像素微调**；模板根拒绝全部四个名字 | 页头/页脚的左盈右对齐、居中、悬浮徽标不再用 spacer 惯用法；**页头帮助按钮可右对齐** |
-| 密度触达布局（CP-0，破坏性） | 容器未声明 `Padding`/`Gap` 时回落 `UiTheme.Geometry`（两套 palette 均为 6/6）；显式属性仍优先，`Padding="0"` 保留旧结果 | 页面间距改为 density token 驱动，不再写死 8/12 |
-| 语气词汇收紧（D6） | 可写 `Tone` 只剩 `Neutral/Success/Warning/Danger`；`Active`/`Disabled` 成为状态（本 minor 内仍是重定向，0.8 起拒绝） | 不再有 `Tone="Active"` 写法；选中态由控件自身状态表达 |
-| 单一强调色（D7） | `UiTheme.HoverPoint` **删除**，改为只读派生 `UiTheme.AccentHover`（= AccentGold 各通道向白抬 30%，alpha 保持）；样式文档写 `HoverPoint` 会报未知 token | 旧“一个 Hover token 同时服务行悬停与按钮悬停”的取舍消失；悬停步可用派生值 |
-| 仍缺（不在本线） | chrome 动作插槽（`UiWindowHost.DoWindowContents` 仍 sealed）、`input/text-field`、`input/mode-row` 的 `Description1..8` 仍不绘制、`container/tree` 行内无子控件、页面模型无文本对齐轴、**无宽度绑定（只有 `VisibleKey` 这类 bool）** | 见 §3 的“必须保留的 kind”与 §4 的右栏结论 |
+| 放置词汇（Batch 1）：`AlignX/OffsetX/AlignY/OffsetY`；`origin + fraction*(parentSpan-selfSpan) + offset`；`Overlay` 是唯一双轴放置容器，flow 子元素只接受**交叉轴 + 像素微调**；模板根拒绝全部四个名字 | **成立，本轮未变** | `Kernel/UiPlacement.cs:138-153`（既非 placement 容器也非 flow → creation 期拒绝）、`:173-190`（flow 只收交叉轴）、`:236-241`（`AlignX="Stretch"` 与显式 `Width` 互斥）；属性名门 `Kernel/UiLayoutEngine.cs:110` 与 `:118`；模板容器表 `:107-111` 含四个名字 |
+| 密度触达布局（CP-0，破坏性）：容器未声明 `Padding`/`Gap` 时回落 `UiTheme.Geometry`（**两套 palette 均为 6/6**）；显式属性仍优先，`Padding="0"` 保留旧结果 | **成立，但原文的「6/6」不完整** | `Kernel/UiLayoutEngine.ParsePadding:2557-2563`（未声明 → `theme.Geometry.Padding`）、`ReadGap:2594-2599`；`Padding="0"` 的逃生口写在 `:2546-2549`。基线 `UiGeometry.Default = (Padding 6, Spacing 4, Gap 6, RowHeight 28, Hairline 1)`（`Kernel/UiTheme.cs:65`）；**US 清单已把 `RowHeight` 覆盖为 24**（`Source/UniversalSqueaker/UI/Layout.Schema2.xml:9`），所以 US 的实际 page 密度是 `(6, 4, 6, 24, 1)`。可声明的 metric 只有 `Padding/Spacing/Gap/RowHeight/Hairline`（`Kernel/UiStyleDocument.cs:515-524`） |
+| 语气词汇收紧（D6）：可写 `Tone` 只剩 `Neutral/Success/Warning/Danger`；`Active`/`Disabled` 成为状态（本 minor 内仍是重定向，0.8 起拒绝） | **成立** | `Kernel/Widgets/AtomVocabulary.ParseTone:267-`（只认四个 meaning；数值不被当作 tone；`Active`/`Disabled` 重定向到它一直表示的状态 + 一条去重 note） |
+| 单一强调色（D7）：`UiTheme.HoverPoint` **删除**，改为只读派生 `UiTheme.AccentHover` | **成立** | `Kernel/UiTheme.cs:159-168`（每次读派生，`HoverLift = 0.3`，alpha 保持）；`Kernel/UiStyleDocument.cs:496` 与 `Kernel/UiStyleResolver.cs:246`（文档里写 `HoverPoint` 报未知 token，永不进 switch） |
+| 仍缺（不在本线）：chrome 动作插槽、`input/text-field`、`input/mode-row` 的 `Description1..8` 仍不绘制、`container/tree` 行内无子控件、页面模型无文本对齐轴、**无宽度绑定（只有 `VisibleKey` 这类 bool）** | **2 条已不成立、1 条须改写、3 条仍成立** | 逐项见 §0.1.1 |
+
+#### 0.1.1 「仍缺」那一行的逐项判定
+
+| 项 | 判定 | 依据 / 说明 |
+|---|---|---|
+| chrome 动作插槽 | **仍缺（但已不影响本设计）** | `Kernel/UiWindowHost.cs` 未改，chrome 仍只有 Title/Subtitle/Close…；维护者裁定 (5)（2026-09-20）已改为「帮助按钮 = 固定页头」，故 §4.2 的落点不变 |
+| `input/text-field` | **已不成立——已发** | `Kernel/Widgets/TextFieldWidget.cs`（提交 `d687032`）；US 已在用（`Layout.Schema2.xml:61`）。它是有身份的单行字段：草稿/焦点在元素上；标签集是 `Label/LabelKey`，`Placeholder` **故意不在**标签集里（B8 口径） |
+| `input/mode-row` 的 `Description1..8` 仍不绘制 | **字面成立，但角色已变（这句须改写）** | 它仍不画（`Kernel/Widgets/InputModeRowWidget.cs:156-163`），但现在是**选项级 hover 帮助文本**：`DescriptionN` → `UiSession.ClaimHover`，由消费侧的帮助面板读出（`Kernel/Widgets/OptionHelp.cs:16`）。所以它不是死属性；B8 只剩「词表半」（移除 vs 绘制）待维护者 |
+| `container/tree` 行内无子控件 | **仍成立** | B9 已裁本线不做；Route A（给 tree 可选按行模板）维护者倾向但明确不在本线 |
+| 页面模型无文本对齐轴 | **仍成立** | `AlignX` 是 **placement**（摆整个元素），不是文本对齐轴（B10） |
+| **无宽度绑定** | **已不成立——已发（B5 `WidthKey`）** | 见 §0.2。**§4.1 的结论因此需要重新裁定** |
+
+### 0.2 ★ `WidthKey` ⇒ §4.1 的结论要重新裁定，不是重新措辞
+
+**已发能力（提交 `3df7bf5`，P1-E batch 1）**：`WidthKey` 是 `VisibleKey` 的**数值兄弟**。
+
+- 位置：`Kernel/UiLayoutEngine.cs:150`（属性名常量）、`:2200-2244`（`TryFixedWidth` / `TryBoundWidth`）；属性门：容器 `Kernel/UiHost.cs:909`、widget `:884`。
+- 语义：**静态声明先赢**（与 `Visible/VisibleKey` 同一优先级形状）——写了可用 `Width` 时不读 `WidthKey`；`WidthKey` 只在没有可用 `Width` 时被问，经 float 值绑定回答。
+- 失败形状：键缺失或绑到别的类型 → **fail-soft + 一条去重 appearance note**（不是每帧抛），静态答案原样保留。
+- 重排：经 `RecordDeclaredKeys` 注册（`:455`），所以对该键的公告**只重排声明它的节点**。
+
+**为什么这要重裁**：§4.1 当初放弃「右栏可调」的**唯一技术理由是「manifest 的 `Width` 是字面量，可调宽度在当前公开面不可表达」**。该理由已消失，而维护者裁定 (4) 的「两档 collapse / 320」正是在**没有它**的时候定的。所以现在要重裁的是**产品形态**：两档 vs 可调。
+
+**两条路及其真实代价**
+
+- **A｜采纳 `WidthKey`，右栏拖拽可调。** 可表达面：`<Scroll Id="help-scroll" WidthKey="help-drawer-width" MinWidth="260" MaxWidth="480">` + host 侧 `BindValue<float>`；拖拽手柄的命中与几何属 `us/*` 自有契约（US 自绘）。
+  **代价不在右栏，在窗口**：今天 `WindowChromeLayout.DrawerWidthDelta = HelpDrawerWidth + BodyRowGap` 是**编译期常量**，而窗口尺寸在 `Verse.Window` 构造时确定（引擎不提供「按内容改窗」的缝，本稿 §3 自己也这么写）。运行期宽度可调 ⇒ 三选一，且都是产品决策：
+  (a) 窗口按**最大**宽度预留 → 抽屉关着时右侧留一条最多 ~480px 的空白；
+  (b) 接受把内容列挤到下限；
+  (c) 运行期改窗 → Verse 侧没有可靠的公开通路（这正是 FL-18 被裁「不会来」的那一类缝）。
+  另需新 lane：宽绑定 → 声明宽；公告 → 重排；非 float → fail-soft + 一条 note；`MinWidth`/`MaxWidth` 夹取。
+- **B｜维持两档（收起 / 320），把 `WidthKey` 记为「已具备、本线不采纳」。** 代价：长条目仍换行（`MinWidth="260"` 只是保底不是交互）。收益：窗口策略不变（常量成立）、零新增 lane、S3 的几何面小得多。
+
+**本稿的记录（供维护者裁决，设计稿不自行拍板）**：`WidthKey` 只移除了「不可表达」这个**技术**理由，**没有增加「可调更好」的证据**；而 320 相对今天的 176 已经是 +82%，「读得下」这个需求大半被两档满足。因此**倾向 B**，并把 A 作为**独立后续切片**（届时先做窗口预留那一步）。**在维护者重新裁定前，§4.1 的 `Width="320" + MinWidth="260"` 仍然有效。**
+
+### 0.3 第二版新增事实：`d82a3ca` → `bce1ba4` 落地的 8 件词表
+
+| # | 能力 | 提交 | 依据（FL 仓内） | 对本设计的作用 |
+|---|---|---|---|---|
+| 1 | **`WidthKey`（B5）** | `3df7bf5` | 见 §0.2 | 见 §0.2 —— 唯一需要**重裁结论**的一条 |
+| 2 | **`SelectedKey`** | `3df7bf5` | `Kernel/Widgets/AtomVocabulary.cs:224-250` | bool 绑定把**元素**解析成 Active 处理（state 胜作者）；**故意不是 `ToneKey`**（回传 "Active" 会把这个本线已退役的名字重新授权）；解不出 → fail-soft + 一条 note。它是**元素级**属性（容器属性表里没有它），所以对 §5.1 里 nav 的「按卡 bool 做选中态」只是换了一种写法——nav 内部的卡片选中仍由该 composite 自绘 |
+| 3 | **`WideHidden`** | `3df7bf5` | `Kernel/UiLayoutEngine.cs:2628-2638`；父级要求 `Kernel/UiHost.cs:1056-1057` | `NarrowHidden` 的**精确镜像**；父级无 `Breakpoint` 时 creation 期拒绝。⇒ §2「窄态：`NarrowHidden` 或堆叠（产品二选一）」现在**两侧都能声明**，不必再写两棵互斥子树 |
+| 4 | **`chrome/banner` 拿到角色对** | `3df7bf5` | `Kernel/Widgets/ChromeBannerWidget.cs:37-48` | banner 进入 atom 的 `ToneAndEmphasis` 角色对；它读角色的**文字色**，默认 emphasis = `Muted`——这个默认值保证**无色 banner 的墨与从前完全一致**（词表增益、零视觉变化）。**这一条闭合 G5，见 §0.4** |
+| 5 | **元素级 `HelpKey`** | `64af720` | `Kernel/UiLayoutEngine.cs:151`、`:610-627`；属性门 `Kernel/UiHost.cs:887-894` vs `:902-913` | 引擎在 widget **画之前**统一 claim（在 `EnterNode` 内，所以 claim 归属该元素）。**精确边界**：`HelpKey` 在 **widget 属性表**里，**容器表里没有** ⇒「只挂在 widget 上、永不挂 `Section` 容器」这条**仍然成立**，§5.4 的写法不用改。**它是 G1 的解药，见 §0.4** |
+| 6 | **`input/mode-row` 的 `TitleKey1..8` + 每选项 hover help** | `64af720` / `fcc6a18` | `Kernel/Widgets/InputModeRowWidget.cs:14-27,56-73,228-238`；`Kernel/Widgets/OptionHelp.cs` | 选项标签走翻译缝（`TitleKeyN`），并且 `HoverHelpKey`（**可写 string 绑定**）把 hover 到的选项身份写出去。**G4 闭合**；`DescriptionN` 升格为选项的帮助文本 |
+| 7 | **容器 `Tab`** | `ee387f1` | `Kernel/UiLayoutEngine.cs:107`、`:2655-2661`；属性门 `Kernel/UiHost.cs:904-909` | 容器可声明 `Tab`，与 widget 同一门控，**隐藏整棵子树**。US 清单已在用（`checklist-card`）；S3 的页头/三栏也可以用 workspace 门控 |
+| 8 | **`UiOption`（FL-16）** | `bce1ba4` | `Kernel/UiOption.cs:17-30`；`Kernel/Widgets/DropdownWidget.cs:61-76,192-196` | `BindOptions<UiOption>` 给动态选项（display, value）；`BindOptions<string>` 语义不变（display == value）。另 **FL-23**（`26c8ac0`）：元素类型不匹配现在**先上报 fail-soft 通道、再照旧抛出**——「先探一种形态、失败再退另一种」的探针**必须走不报错的读** |
+
+### 0.4 ★ 比 §0 更要紧：WAVE-1 的 **G1–G5 五个缺口全部已闭合**
+
+§5.3/§5.4 是**当前**「迁移被挡住、lines deleted = 0」的结论来源，而它列出的五个缺口现在全部有实现：
+
+| 缺口 | 原文结论 | 现状 | 依据 |
+|---|---|---|---|
+| **G1** 无声明式帮助/悬停钩子 | 「任何涉及帮助的迁移都静默丢覆盖，**这一条 gate 住整个 bucket (i)**」 | **闭合**：元素级 `HelpKey`，引擎统一 claim | `Kernel/UiLayoutEngine.cs:610-627`（提交 `64af720`） |
+| **G2** 重复行无法上报 item key | 「layers 保持 composite，不迁移」的全部理由 | **闭合**：`input/button.PayloadKey` —— 命令收到**行自己的 key**，per-item 作用域；创建期契约随形态走（有 payload ⇒ `BindAction<string>`，无 ⇒ `BindCommand`） | `Kernel/Widgets/ButtonWidget.cs:37-41,60-71,118-147`（提交 `b3957dc`） |
+| **G3** 无无外观命中区、无法按内容量高 | 同上 | **闭合，但有一条须照实记录的边界**：`Chrome="none"` 不画任何 surface、命中照常；`Height="Auto"` 的高度取**它自己 caption 的测量内容**（空 caption 回落 `RowHeight`）。**边界**：它是按**自身 caption** 量高，不是「按兄弟组合出的两行行高」；caption 仍以 `MiddleCenter` + `singleLine: true` 绘制 | `Kernel/Widgets/ButtonWidget.cs:84-99,169-174`（提交 `b3957dc`） |
+| **G4** `input/mode-row` 标题是字面量、绕过翻译缝 | 本地化消费者用不了该 kind | **闭合**：`TitleKey1..8` + 每选项 hover help | `Kernel/Widgets/InputModeRowWidget.cs:56-73,228-238` |
+| **G5** `chrome/banner` 没有 `Tone` | §5.4 保留状态带 composite 的**唯一依据**（「保留下来的 composite 就是 G5 的引证」） | **闭合**：banner 进入角色对，默认 `Muted` 保证零视觉变化 | `Kernel/Widgets/ChromeBannerWidget.cs:37-48` |
+
+**这改变了什么**（不改 S3 的工作面，改 S4/Round-4 的结论与价签）：
+
+- §5.3「(i) 的 15 个部件在布局上可表达，但 **0 个**可以在不丢帮助覆盖的前提下迁移」——**前置条件 G1 已解决**，这句话失效。
+- §5.4「layers 保持 composite，它们的阻塞是 **G2（已证缺口，带锚点）**」——**该锚点已闭合**；layers 真正的剩余阻塞退回**层级行 × 行内组合**（即 Route A 那一件能力），而不是「行上报不了 key」。
+- §5.4 保留状态带 composite 的理由（G5 引证）**已消失**；是否改迁 `chrome/banner` 成为一次**新的**产品选择，而不是「等 FL 补能力」。
+- §5.3 的「给维护者/lead 的绕行选项 (a)/(b)/(c)」——**(a) 已经发生了**。
+- **本文不改写 §5.3/§5.4 的行文**（那是结论，不是措辞）：就地加推翻横幅指向本节，重裁留给维护者/后续轮次。
+
+### 0.5 仍未落地的（S3/S4 不得依赖）
+
+- **chrome 动作插槽**：仍缺（维护者裁定 (5) 已放弃；帮助按钮走固定页头）。
+- **`container/tree` 行内子控件**：仍缺（B9 本线不做）。
+- **文本对齐轴（B10）**：仍缺——右对齐文本仍靠 placement 摆整个元素，或控件自带锚点。
+- **B8 的「词表半」**：`Description1..8` 的绘制（移除 vs 绘制）仍是维护者的裁定项。
+- **`input/mode-row` 的 `TitleN`/`ValueN` 配对**：`TitleN/DescriptionN` 没有对应 `ValueN` 时 creation 期拒绝（`InputModeRowWidget.cs:93-101`）。
 
 ## 1. 设计原则
 
@@ -203,6 +286,9 @@
 **维护者倾向（记录，不在本轮执行）**：对 bucket (ii) 的缺口，维护者倾向 **Route A —— 给 `container/tree` 一个可选的按行模板**，但明确要求**先等 US 真正用过现有组件**再决定；本节的 (ii) 数字（2 个部件 / 933 code 行）就是那个决定的价格依据。本轮不实现、不给 FL 提交请求。
 ### 5.3 WAVE 1 采纳实测（2026-09-20）：迁移被三个**实测缺口**挡住，bucket (i) 必须修正
 
+> **⚠ 已被 §0.4 推翻（2026-09-21 复核，载体 `bce1ba4`）：G1–G5 五个缺口全部已闭合，本节据此得出的结论需要重裁。**
+> 本节**逐字保留**，因为「为何曾经如此」是证据的一部分：当时的三个缺口（G1 无声明式帮助/悬停钩子、G2 重复行无法上报自己的 item key、G3 无无外观命中区 / 无法按内容量高）**确实存在**，`Repeat` 的采纳**确实**被依赖面挡住，而且当时**还没有** `WidthKey`、元素级 `HelpKey`、`input/text-field`、容器的 `Tab`。重裁（bucket (i) 是否解锁、S4 的价签）由维护者/PM 进行，本文不改写本节结论。
+
 **结论先说**：checklist 与 race/xenotype 行集的 `Repeat` + `<Templates>` 采纳**在动一行代码之前就撞墙**，而且是结构性的，不是排版细节。撞墙点不是 `Repeat` 本身——`Repeat` 的契约（`Items` = `IReadOnlyList<string>` 值绑定、`Template` 指向 `<Templates>`、item 局部绑定 `<Items>.<key>.<declaredKey>`、身份 `<declaredId>#<key>`）**实测可用**；挡住迁移的是它的**依赖面**：US 的悬停帮助、行交互与本地化。
 
 **G1（B，通用）没有任何声明式的帮助/悬停钩子。** FL 全库只有一个帮助形状的属性：`input/mode-row` 的 `HoverHelpKey`（且它是**选项级**的，不是元素级）；`Section` 的 schema 只有 `Title`/`TitleKey`。US 的悬停帮助由 **`UsKernelDraw.HelpHover` 调用 43 处 / 22 个 UI 文件**声明（本会话口径：grep `HelpHover` over `Source/**`；lead 独立复测为 **46 处 / 23 个文件**，口径不同、结论不变），另加清单里 **12 处 `HelpKey=`** 区块声明（`Layout.Schema2.xml:33-44`，由 `UsSectionWidgetBase:109` 消费），并且**双向**钉在 46 项帮助目录上（`Program.cs:306`）。**18 个部件文件里每一个都至少带一条 claim。**推论：**把任何区块/行迁成声明式元素都会静默丢掉它的帮助覆盖**——双向测试会红，而删掉目录项等于发布一次帮助功能回退。通用性：任何带 inspect/帮助浮层的消费者都要把帮助身份挂到声明式控件上；与既有的 `Bind`/`ActionBind`/`LabelKey` 词表对称；FL 自己已经为 `input/mode-row` 单独发了 `HoverHelpKey`，那就是需求存在的证据。
@@ -226,6 +312,9 @@
 
 **本轮没有提交任何迁移（lines deleted = 0），这是有意的**：在 (a)/(b)/(c) 里选一条之前，任何迁移要么发布帮助回退，要么产出假证据。三个缺口的证据（FL 源码行 + US 的 43 处 claim + 46 项目录钉）已经写进本节，可供 FL 转录入 `MEMORY.md`。
 ### 5.4 维护者裁定（2026-09-20）：checklist 的**部分**迁移；layers 保持 composite
+
+> **⚠ 已被 §0.4 推翻（2026-09-21 复核，载体 `bce1ba4`）：本节的两条依据——保留状态带 composite 的 G5、layers 保持 composite 的 G2——都已闭合。**
+> 本节**逐字保留**以记录「为何曾经如此」：G2 当时是**已证缺口**（`ButtonWidget.cs:83` 触发无 payload 命令；`container/tree` 不吃模板且一行只画一个 band），G5 当时是**源码确认**的缺口（`ChromeBannerWidget.Register` 的 schema 没有 `ToneAndEmphasis`）。因此「是否改迁 `chrome/banner`」「layers 是否已具备迁移条件」现在是**新的产品裁定**，不是「等 FL 补能力」；layers 真正剩下的阻塞退回**层级行 × 行内组合**（Route A）。
 
 **裁定形态**：checklist 卡片改为声明式——`Section` + `section/header`（`HelpKey` 挂在 widget 上，**永不挂在 `Section` 容器上**）+ `input/text-field`（搜索）+ `Repeat` + `<Templates>`（`input/checkbox` 行）+ `state/empty`（两个空态，`VisibleKey` 门控）。**一次验证四个 FL 组件**：`Repeat`（今天消费侧证据为零）、`input/checkbox`、`input/text-field`、`state/empty`。
 
