@@ -52,9 +52,12 @@ public sealed class UsDiagnosticsSessionSource : IUsDiagnosticsSource
     }
 
     /// <summary>
-    /// The arranged content width the shell hands the page each pass. It does NOT bump: the width is
-    /// already part of the layout cache key, so a change here re-arranges the page on its own, and the
-    /// engine's own <c>Breakpoint</c> evaluation reads the same coordinate space.
+    /// The arranged content width the shell hands the page each pass, and the single input of
+    /// <see cref="Narrow"/>. This setter itself does NOT bump; the flip's clock movement belongs to
+    /// <see cref="UsDiagnosticsHost.ApplyContentWidth"/>, which is the production door for it - the
+    /// page's two presentations are swapped by a read-only <c>VisibleKey</c>, and a read-only binding
+    /// announces no revision of its own. The engine's own <c>Breakpoint</c> evaluation reads the same
+    /// coordinate space, because the shell feeds and arranges the same rect in one frame.
     /// </summary>
     public void SetContentWidth(float width) => contentWidth = width;
 

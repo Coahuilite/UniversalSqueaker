@@ -582,3 +582,37 @@ _moved from `TODO.md` on 2026-09-17_
 _moved from `TODO.md` on 2026-09-17_
 
 ---
+
+## HANDOFF.md live buffer — archived verbatim (2026-09-19)
+
+> Provenance: the live section of `HANDOFF.md` as it stood before the 2026-09-19 cross-project handoff replaced it.
+> It is the 2026-09-10 round-9 diagnostics panel in-game walkthrough. Nothing in it was completed or re-run;
+> it is kept because a walkthrough checklist is evidence of what was asked, not because it is still the plan.
+> The current live handoff is `HANDOFF.md` (US x FL, 2026-09-19).
+
+## 附录 A（历史 · 2026-09-10）：诊断面板实机走查（被上方 §0–§10 取代；其中未完成的实机项仍然有效）
+
+**状态**：round-9 合同代码面**全部落地**并已合回 `0.3.x`（`e9e6a34`，功能分支生命周期首例：ff 合回 + 双端删支）。verify-local 14/14，gate 14 白名单 2→1 实测，纯车道 + kernel-host 车道全绿。面板入口 = F12 调试菜单 → Universal Squeaker → "Diagnostics: open panel"（开本地化开关时显中文；键 = `DebugAction_<方法名>`，改名必须同步双语表）。
+
+**测试包制作**：`pwsh -NoProfile -File scripts/pack-dev.ps1` 出一个**文件夹**（直接放 `Mods/`，没有 zip）；进游戏前读包内 `version.txt` 的 `carrier=` 行，确认 `Release 0.3.x+…`，不匹配就按 stager 报错信息重建载主。
+
+**走查清单（每项 = 一个裁定的实机化身）**：
+1. 拖拽/非模态：面板不暂停、镜头可动、可拖但拖不丢（KeepGrabPx 24px 标题栏保握）。
+2. 下钻：选一个带 comp 的 pawn → 主窗右详情栏自动展开（**没有模式切换钮了**——badge 已随 master-detail 裁定作废）；点左列行 = 游戏选中该 pawn。
+3. 多锁 + 独立详情窗：主窗工具条"锁定"→ 该 pawn 详情脱出为独立窗；可同时锁多枚；主窗右栏继续跟随实时选择。
+4. 锁定跟踪：摄像机拉远/pawn 离屏 → 锁定窗**持续更新**；G2 "在屏幕内" 如实长亮琥珀（生产语义不撒谎，这是特性）。
+5. 关窗即解锁：关独立窗 = 自动解锁；**关主窗 = 全会话终结**，所有锁定窗连坐关闭。
+6. 折叠横条：两窗都有"收起"→ 收成带壳小横条；主条 = 最近一次内容**变化**的 pawn 摘要行（快照监视器），锁条 = 本 pawn 摘要行；点条复原。横条带壳（壳标题栏 + 一行）是既定形态，不是缺陷。
+7. 翻页与搜索：8 条/页，"第 n/N 页 · 共 M" 计数；搜索框找**离屏** pawn（如远家殖民者）→ 点结果行 = 直接锁定开窗（游戏选择够不到离屏，锁定可以）。
+8. **双 Esc（重点观察项）**：第一下 Esc 亮关闭提示（CloseText 吸收语义），3 秒内第二下关窗。**本实现刻意不消费 Esc 事件**（库缝无此口）——盯：第一下 Esc 是否泄漏（误清游戏选择/连带关掉背后的设置窗/其它窗口弹出）。**若泄漏**：这是 FL round-4 的 UiNative 事件消耗缝素材，按跨仓提案流程立项，**绝不允许**回退成白名单豁免或裸 `Event.current`。
+9. 门链 16 行：无动作时 Plan/G16 显**白色"不适用"**（不再混进绿 Pass）；G4 身份门在 external 计划受阻时细分失败条件（受阻: 已击倒…）；G10/G11 显"剩余/有效总"（3x 速度/高人口时总时长应随之变大——这正是"为何迟迟不叫"的证据）；G5 已不存在。
+10. 音频归属：叫过一声后，"最后派发"行显 `[异种包·键] / [种族包·键] / [包回退·键] / [原版] : sound`；成功后再来失败尝试，该行**不清空**（lastDispatched 槽的契约）；换选别的 pawn 再回来，她喊过的最后一句还在。
+11. **PackFallback 端到端首验（历史上从未被实机观察到）**：装一份**缺所测动作音组、但声明 `<fallbacks>`** 的 VoicePack，触发该动作 → 面板应显 `[包回退·<该包键>] : sound`。不显形先查：作者 XML → `SqueakKernelAdapter.cs:187-195` 投影 →（kernel 层已被 `PackFallbackTier`/`PackFallbackExactDomainOnly` 钉死，缺口最可能在投影或包 XML 本身）。
+
+**处置规则**：走查发现壳级缺陷（横条要无壳、事件消耗缝等）→ 攒 FL round-4 素材独立提案；US 侧面板缺陷 → 新分支（名字带版本面 + 用途前缀，例 `0.3.x/fix-diag-…`）按分支纪律走。
+
+## 2. 活口指针（详情都在 `TODO.md`，此处只留一行索引）
+
+- round 3 CLOSED、声明式尺寸（`Width="Auto"`/`MinWidth`/`MaxWidth`/`Breakpoint`）已在 CI 载主上 → `TODO.md` 账本行；D7 区域形状分叉 → TODO D7 节；Knife 3 → TODO；rc1 试用循环与发布轴配对 → TODO；`US_STEAM` 死轴 → TODO。
+- 分支线三级模型（功能分支→版本线→main 发布信号面）+ 命名新规 → `MEMORY.md` "Development-line model"。
+

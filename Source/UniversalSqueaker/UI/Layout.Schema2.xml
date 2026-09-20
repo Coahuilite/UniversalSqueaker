@@ -22,11 +22,11 @@
          by Tab: the element stays in the definition so its node and scroll position survive a close/open
          (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with
          its scroll position). -->
-    <Row Id="body-row" Gap="12" Breakpoint="500" Narrow="Column">
-      <Column Id="nav-column" Width="160" Fill="true">
+    <Row Id="body-row" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
+      <Column Id="nav-column" Width="160" Padding="0" Fill="true">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
-      <Scroll Id="content-scroll" Fill="true" Gap="8">
+      <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
         <Widget Id="page-title" Kind="us/page-title" />
         <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
@@ -43,7 +43,7 @@
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
       </Scroll>
-      <Scroll Id="help-scroll" Width="176" Fill="true" VisibleKey="help-open">
+      <Scroll Id="help-scroll" Width="176" Fill="true" Padding="0" VisibleKey="help-open">
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>

@@ -15,6 +15,25 @@
 - [ ] **Close-button seam (verify pass `16-verify-ingame-batch2.md`, 2026-09-12)**: two definitions of the same padding - FL's shell default is `max(110, measured + 2x10)` while US's settings-window override computes `max(110, measured + 16)` over a hardcoded `VerseFerriteTextMetrics.Instance` instead of FL's `Metrics` seam. Fix by deleting the US override or aligning to 20 and reading `Metrics`.
 - [ ] **Marker-patch residuals (same pass)**: while a session runs the patch walks `AllPawnsSpawned` and calls `GetComp` per pawn every frame; one `try` wraps the whole loop, so one throwing pawn swallows the rest of that frame; there is no `map == Find.CurrentMap` guard; and FL `a306cae`'s chrome-key runtime self-check is not implemented on this side. Next-batch material, none a live-game blocker.
 
+## Cross-repo round 2026-09-19 - buckets and open actions
+
+> Dispositions: `../modding_documents/team-mode/fl-to-us-2026-09-19-zh.md`; policy + durable facts in `MEMORY.md`
+> ("US->FL request classification" and "Cross-repo round 2026-09-19"). Classification is binding: every item is
+> exactly **(A) US misuse / US's own job** (fix here, file NO request) or **(B) a genuine GENERAL FL gap**
+> (neutral, symmetric with an existing general property, useful beyond US - and the escalation must say so).
+
+- (A) **Diagnostics `diag-nav-col Width="Auto"`** — US relied on the undocumented 1px collapse; fixed US-side with the existing general `VisibleKey` + two mutually exclusive presentations. NO FL change, NO version bump, and it is **not** evidence that FL owes US a surface.
+- (A) **B9 `tree` inline child controls** — compose a US kind (consumer ladder level 1): structural component work, not a tree patch. FL's will-not-do is the correct landing.
+- (B) **B2(2) `WideHidden`** — exact mirror of the existing general `NarrowHidden`; any responsive page needs a narrow-only element, so it is not US-private. Batch 2, non-blocking; the US fix does not need it.
+- (B) **B5 `WidthKey`** — numeric-width binding symmetric with the bool `VisibleKey`; any resizable column. Batch 2, non-blocking. The 2026-09-19 commit of `docs/ui-redesign-0.7-zh.md` unblocks FL's **citation**, not the feature.
+- (B) **B6 chrome action slot** — any consumer wanting a header action; US already works around it with existing Batch 1 vocabulary. Batch 2, non-blocking.
+- (B) **B7 `input/text-field`** — string sibling of the existing `NumberFieldWidget` + the `UiNative.TextField` funnel primitive; passes the four-question promotion gate. FL's highest-value Batch 2 item.
+- (B) **B10 text alignment** — alignment is intent-driven layout needed by any consumer; FL asks for a LAYOUT attribute, not a third appearance axis. Batch 2, low priority.
+- **B8 `Description1..8`** — DEFECT, not a request: the label-set half moves pixels now (orphan names widen an `Auto` column) and is fixed FL-side; the schema half is a public-vocabulary shrinkage and is the maintainer's call (FL prefers removal over drawing).
+- **B11 orphan-name check** — NOT a request: US is the consumer-side positive control (B8 is its first live specimen).
+- [ ] **Maintainer rulings, five open (`HANDOFF.md` §8)**: US product axis (0.5.0?); the `feat/ui-rebuild` branch shape; whether the diagnostics fix stands alone or folds into redesign slice S6; the right column as two tiers vs waiting for `WidthKey`; the help button as a fixed page header vs waiting for the chrome slot (B6). Do not start S2-S7 before these land.
+- [ ] **Maintainer rulings, FL §3**: whether any further FL public addition lifts the minor to `0.8.0` (US must then move its pin in the same round); and B8's vocabulary half.
+
 ## Blocked on the lib session / maintainer (cloud publication chain)
 
 - **Cross-repo ledger**: rounds 1-3 are **CLOSED on both sides** (narratives byte-archived in `OBLIVIONIS.md`, durable facts in `MEMORY.md`); FL has since cut `v0.4.0-rc1`. The one remaining lib-side action is publishing FL's **`0.6.x` line** (local only today) - the maintainer's trial/publish call, not ours. Open adoptions are in the 2026-09-17 section below.

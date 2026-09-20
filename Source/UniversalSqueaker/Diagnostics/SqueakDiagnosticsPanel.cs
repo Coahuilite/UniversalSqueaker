@@ -99,9 +99,12 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         }
 
         // The responsive decision is fed BEFORE this pass's layout: the source derives the narrow
-        // presentation and the active-tab token from the width the shell is about to arrange in, so the
-        // page's shape and the engine's own Breakpoint evaluation read one coordinate space.
-        source.SetContentWidth(contentRect.width);
+        // presentation from the width the shell is about to arrange in, so the page's two VisibleKey
+        // presentations and the engine's own Breakpoint evaluation read one coordinate space. The same
+        // call moves the layout clock when the width crossed the presentation threshold, because a
+        // read-only VisibleKey binding announces no revision of its own. Host is null on the first
+        // pass (chrome draws before the shell creates one); the width is still recorded.
+        UsDiagnosticsHost.ApplyContentWidth(source, Host, contentRect.width);
 
         if (!opened)
         {

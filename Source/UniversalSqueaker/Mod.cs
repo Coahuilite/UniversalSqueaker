@@ -14,10 +14,14 @@ public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
     /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against: the 0.6.0 contract
-    /// axis (the FL 0.6.0 migration; 0.5.0 carried <c>Visible</c>/<c>VisibleKey</c>, the invalidation
-    /// classes and the common controls, and 0.6.0 carried the page lifecycle doors, the
-    /// <c>INotifyPropertyChanged</c> adapter, the reload scheduler's time seam and the widget catalog).
+    /// The FerriteLib API range this build of US was compiled and verified against: the 0.7.0 contract
+    /// axis (0.5.0 carried <c>Visible</c>/<c>VisibleKey</c>, the invalidation classes and the common
+    /// controls; 0.6.0 carried the page lifecycle doors, the <c>INotifyPropertyChanged</c> adapter, the
+    /// reload scheduler's time seam and the widget catalog; 0.7.0 carried the two peer palettes, the
+    /// creation-time <c>Height</c> validation, the Row/<c>Auto</c> fallback fix, the dropdown value
+    /// precedence, and Batch 1's placement vocabulary (<c>AlignX</c>/<c>OffsetX</c>/<c>AlignY</c>/
+    /// <c>OffsetY</c>), the density fallback for container <c>Padding</c>/<c>Gap</c> and the tone/accent
+    /// vocabulary tightening in which <c>HoverPoint</c> became the derived <c>AccentHover</c>).
     /// This line is also a semantic precondition, not bookkeeping: the declarative help drawer uses
     /// <c>VisibleKey</c>, which does not exist on the 0.4.0 carrier - so a 0.4.0 carrier fails at
     /// CREATION (<c>UiContractException</c>: unknown attribute) rather than at first draw. Pre-1.0 any
@@ -28,8 +32,8 @@ public class UniversalSqueakerMod : Mod
     /// Verse.Mod to load), and asserts it against the Api of the carrier it linked, so a carrier
     /// advance reddens a gate instead of a window and the range cannot be restated wrong in a test.
     /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 6, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 7, 0);
+    private static readonly Version PrerequisiteApiMin = new Version(0, 7, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 8, 0);
 
     /// <summary>
     /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a

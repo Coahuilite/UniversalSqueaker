@@ -624,6 +624,9 @@ internal static class DiagnosticsPanelLaneTests
     /// <summary>
     /// 09 §3.5: below the measured split threshold the page must switch to the in-window list/detail
     /// navigation, expose a working Back, and leave the search text and page exactly where they were.
+    /// The switch is the TWO mutually exclusive presentations of <see cref="UsDiagnosticsSpec.MainXml"/>
+    /// behind their VisibleKeys, not a column that collapses to a pixel (FL 0.7 A1 retired that idiom),
+    /// so each half of the boundary is asserted by the OTHER presentation owning no arranged geometry.
     /// </summary>
     private static void NarrowNavigation()
     {
@@ -631,14 +634,41 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 12);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
 
-        // The narrow decision and the engine's Breakpoint must agree: this width is half a pixel under
-        // the declared threshold, and the wide columns must be gone while the nav column owns the page.
+        // The spec must spell the host's own keys: an unresolvable VisibleKey stays VISIBLE, so a drift
+        // between the two would show both presentations at once. This is the positive control for it.
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyWide + "\"", StringComparison.Ordinal) >= 0
+                && UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyNarrow + "\"", StringComparison.Ordinal) >= 0,
+            "the main spec binds both presentations to the host's contract keys");
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("NarrowHidden", StringComparison.Ordinal) < 0,
+            "the retired idiom is gone: a presentation is hidden whole, never left as a pixel-wide remnant");
+
+        // Warm the arrangement once at the shipped wide width. The FIRST arrange also folds the
+        // injected theme's layout revision into the clock (UiHost's own one-time cache invalidation),
+        // and that movement is not part of what this step measures; the repeated-regime control below
+        // then proves the clock is otherwise quiet, so the flip's delta is the flip's alone.
+        HostArrangeAt(680f);
+
+        // This width is half a pixel under the threshold. Crossing it must move the layout clock exactly
+        // once: the VisibleKey binding is read-only, so ApplyContentWidth is the ONLY thing that
+        // re-arranges the page when the width flips - the engine has no Breakpoint swap doing it for us.
         const float narrowWidth = UsDiagnosticsProjection.NarrowBreakpoint + UsDiagnosticsProjection.PagePadding * 2f - 0.5f;
-        fake.SetContentWidth(narrowWidth);
-        UiLayoutSnapshot narrow = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
-        Assert(fake.Narrow, "the source's presentation decision follows the same threshold the spec declares");
-        Assert(Height(narrow, "diag-list") <= 0f && Height(narrow, "diag-detail-scroll") <= 0f,
-            "narrow: the wide master and detail columns are hidden whole");
+        int revBeforeFlip = host.Session.ContentRevision;
+        UiLayoutSnapshot narrow = HostArrangeAt(narrowWidth);
+        Assert(fake.Narrow, "the source's presentation decision is taken from the fed content width");
+        Assert(host.Session.ContentRevision == revBeforeFlip + 1,
+            "crossing the presentation threshold moves the layout clock exactly once, got "
+            + (host.Session.ContentRevision - revBeforeFlip));
+        int revAfterFlip = host.Session.ContentRevision;
+        HostArrangeAt(narrowWidth);
+        Assert(host.Session.ContentRevision == revAfterFlip,
+            "re-feeding a width in the same regime moves nothing, got +"
+            + (host.Session.ContentRevision - revAfterFlip));
+        Assert(host.Bindings.TryGetBool(UsDiagnosticsHost.KeyWide, out bool wideKey) && !wideKey
+                && host.Bindings.TryGetBool(UsDiagnosticsHost.KeyNarrow, out bool narrowKey) && narrowKey,
+            "and the two keys answer the complement of each other in this shape");
+        Assert(!narrow.RectById.ContainsKey("diag-list") && !narrow.RectById.ContainsKey("diag-detail-scroll"),
+            "narrow: the wide master and detail subtrees are not arranged at all (diag-list height "
+            + Height(narrow, "diag-list") + ")");
         Assert(Height(narrow, "diag-nav-body") > 0f && Width(narrow, "diag-nav-col") > 200f,
             "narrow: the navigation column shows the list and owns the width");
 
@@ -651,7 +681,7 @@ internal static class DiagnosticsPanelLaneTests
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
         Assert(fake.NavigationView == UsDiagNavView.Detail, "the view switch routes");
         Assert(host.Session.ContentRevision == revBefore + 1, "and bumps the layout clock once");
-        UiLayoutSnapshot detailView = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+        UiLayoutSnapshot detailView = Arrange(narrowWidth, 560f);
         Assert(Height(detailView, "diag-nav-body") > Height(narrow, "diag-nav-body"),
             "narrow detail: the same body element now measures the taller detail content, got "
             + Height(detailView, "diag-nav-body") + " vs " + Height(narrow, "diag-nav-body") + " for the list");
@@ -674,18 +704,17 @@ internal static class DiagnosticsPanelLaneTests
         // Back handler that also cleared the search or reset the page reddens this step.
         const float shortHeight = 160f;
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.List);
-        fake.SetContentWidth(narrowWidth);
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         UiNode? listScroll = host.Session.GetNodeByElementId("diag-nav-scroll");
         Assert(listScroll != null, "the narrow list scroll has a node to own its position");
         host.Session.SetScrollPosition(listScroll!, new Vector2(0f, 60f));
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         float before = host.Session.GetScrollPosition(listScroll!).y;
         Assert(before > 1f, "the fixture really scrolled (a clamped-to-zero offset would make the check vacuous), got " + before);
 
         // Show the detail view - the state whose Back control is under test - and click ITS drawn control.
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         Rect shortViewport = new(0f, 0f, narrowWidth, shortHeight);
         int backStart = texts.Count;
         host.DrawChecked(shortViewport);
@@ -701,23 +730,39 @@ internal static class DiagnosticsPanelLaneTests
             + (host.Session.ContentRevision - revAtClick));
         Assert(fake.SearchQuery == "vi", "and the search text is exactly what it was, got '" + fake.SearchQuery + "'");
         Assert(fake.Page == 2, "and the page is exactly where it was, got " + fake.Page);
-        UiLayoutSnapshot back = host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        UiLayoutSnapshot back = Arrange(narrowWidth, shortHeight);
         Assert(Height(back, "diag-nav-body") > 0f, "the list view is arranged again");
         Assert(Math.Abs(host.Session.GetScrollPosition(listScroll!).y - before) < 0.5f,
             "and the list position survived the round trip, got " + host.Session.GetScrollPosition(listScroll!).y + " vs " + before);
 
-        // The wide side of the same boundary keeps the master/detail split.
+        // The wide side of the same boundary: the master/detail split is the arranged shape, and the
+        // narrow presentation owns NO geometry there - not a 1px stub, and not a share of the wide
+        // Row's leftover space (the A1 defect: the unmeasurable Auto child joined the unsized
+        // distribution and took ~96px of the exactly-filled 680-wide Row).
+        int revBeforeWide = host.Session.ContentRevision;
         UiLayoutSnapshot wide = HostArrangeAt(680f);
-        Assert(Width(wide, "diag-nav-col") <= 1.5f && Height(wide, "diag-list") > 0f && Height(wide, "diag-detail-scroll") > 0f,
-            "at the shipped 680 width the master/detail split is used and the nav column costs a pixel");
-        Assert(Width(wide, "diag-nav-body") <= 1.5f && Width(wide, "diag-nav-scroll") <= 1.5f,
-            "and the narrow body is a 1px column every widget skips in Draw, so it cannot paint over the split");
+        Assert(host.Session.ContentRevision == revBeforeWide + 1,
+            "crossing back to the wide presentation moves the clock exactly once, got "
+            + (host.Session.ContentRevision - revBeforeWide));
+        Assert(Height(wide, "diag-list") > 0f && Height(wide, "diag-detail-scroll") > 0f,
+            "at the shipped 680 width the master/detail split is the arranged shape");
+        Assert(!wide.RectById.ContainsKey("diag-nav-col") && !wide.RectById.ContainsKey("diag-nav-body")
+                && !wide.RectById.ContainsKey("diag-nav-scroll") && !wide.RectById.ContainsKey("diag-nav-back"),
+            "and the narrow presentation is not arranged at all, so it costs the split no column (diag-nav-col width "
+            + Width(wide, "diag-nav-col") + ")");
+        Assert(host.Bindings.TryGetBool(UsDiagnosticsHost.KeyWide, out bool wideKeyAt680) && wideKeyAt680
+                && host.Bindings.TryGetBool(UsDiagnosticsHost.KeyNarrow, out bool narrowKeyAt680) && !narrowKeyAt680,
+            "the keys answer the complement of each other in this shape too");
 
-        UiLayoutSnapshot HostArrangeAt(float width)
+        // Production's own width feed, not a hand-written SetContentWidth: the lane must fail if the
+        // path the panel actually uses stops moving the layout clock.
+        UiLayoutSnapshot Arrange(float width, float height)
         {
-            fake.SetContentWidth(width);
-            return host.MeasureAndArrange(new Vector2(width, 560f));
+            UsDiagnosticsHost.ApplyContentWidth(fake, host, width);
+            return host.MeasureAndArrange(new Vector2(width, height));
         }
+
+        UiLayoutSnapshot HostArrangeAt(float width) => Arrange(width, 560f);
     }
 
     /// <summary>
