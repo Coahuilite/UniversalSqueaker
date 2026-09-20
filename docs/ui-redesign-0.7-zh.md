@@ -155,7 +155,7 @@
 | `UsScopeTreeWidget` | 678 | 405 | **(ii)** | 层级 scope 行（每行内容是循环按钮/下拉）＋ 4 条 mood 行；tree 无 template、Repeat 无 level，两者无法组合。附带第二个独立需求：mood 三因子**跨行等宽网格**（tree 与 Repeat 都不提供） |
 | `UsPresetListWidget` | 255 | 145 | **(ii)** | preset → race → xenotype 的复选树，每行含 checkbox、preset 行含 Import 按钮：层级行需要组合子树 |
 | `UsHelpPanelWidget` | 125 | 36 | **(iii)** | 内容是按**当前 hover claim 索引的目录**，band 按**全目录最坏值**测量以免 hover 时布局跳动；绑定文本量的是当前字符串，任何声明都表达不了这条规则 |
-| `UsVoicePackChecklistWidget` | 317 | 226 | (i) | 扁平行集：`Repeat` ＋ 模板（`input/checkbox` ＋ 绑定 label）＋ `input/text-field`（已发）做搜索 ＋ `chrome/banner` ＋ `state/empty`；角色化 banner 落 Tone/可见性声明 |
+| `UsVoicePackChecklistWidget` | 322 | 226 | (i) | 扁平行集：`Repeat` ＋ 模板（`input/checkbox` ＋ 绑定 label）＋ `input/text-field`（已发）做搜索 ＋ `chrome/banner` ＋ `state/empty`；角色化 banner 落 Tone/可见性声明 |
 | `UsFilterBarWidget` | 203 | 138 | (i) | 4 个互斥 chip ＝ `input/mode-row`（`Bind` 是 string）＋ 3 个嵌套 `input/dropdown`（`OptionsBind`） |
 | `UsTimingWidget` | 176 | 117 | (i) | `input/slider` ＋ `input/number-field` ＋ 按钮；**代价**：今天「按最坏值预留 caption band」要退化成声明的 `Height`（词表没有 `MinHeight`），失去按内容计算那一条 |
 | `UsBasicTuningWidget` | 172 | 95 | (i) | 6 行静态 label+checkbox；F6 的父子两行 = 子行 `VisibleKey` 直接读父行的 bool 绑定 |
@@ -172,6 +172,8 @@
 | `UsCameraReadoutWidget` | 34 | 6 | (i) | 一行右对齐只读文本：`Overlay` ＋ `AlignX=Right` ＋ `text/wrapped`（`Bind`） |
 
 **合计。** (i) **15 个部件 / 1,969 code / 1,060 draw** —— 用今天已发的词表就能做，**不需要 FL 任何改动**；(ii) **2 个部件 / 933 code / 550 draw** —— 全部卡在同一个能力（层级行 ＋ 组合子树）；(iii) **1 个部件 / 125 code / 36 draw** —— 自有量测契约。
+
+> **2026-09-20 实测修正（步骤 B 落地后）**：checklist 一件已实际迁移（§5.7）。它的 code 实测 **322 @46a580b**（原表 317 是更早一次测量，其间 step A 加了 TitleHidden 分支），迁移后 **154 code / 236 行**，widget 侧删 **230 行**，但 `Source/**` **净 +68 行**。所以 (i) 的 **1,969 code 是「可搬走的绘制代码上限」，不是「可删除的净行数」**；与「删除」直接对应的是 **1,060 draw** 那一列，而每件还要另付模板、per-item 投影、lane 与保留 composite 的代价。第一件付出的脚手架里约六成是一次性的（后续继承），因此「迁移 15 件 = 15 × 第一件」不成立；但第二件旗舰（race/xenotype 行集）的摩擦类别不同（G2/G3 整行 hover 命中），它的边际成本由交互形状决定，**Route A 不宜用一个数据点拍板**。
 
 **这张表给维护者的价签**：(i) 是 US 自己的迁移工作量（0 FL 依赖，约占 18 部件 code 行的 65%、可删 draw 代码的 64%）；要价的缺口只服务 (ii) 的 **933 行**（两个部件），并且它的正确形状是「部件可组合自身部件」而不是「tree 支持行内控件」。是否值这个价由维护者定，本盘点不下结论。
 
@@ -261,6 +263,57 @@
 - 迁移前对每个 claim 站点记录：`path:line` + 该处的 key 表达式（字面量 / 计算式）。迁移后重新 grep `HelpHover(`，对**每一个被删除的站点**记一行「删除了哪个、由哪个元素的 `HelpKey` 接管」。
 - 三个必须给出的数：① **删掉的站点数**（预期 30 个静态站点中的大多数，具体数以 grep 为准）；② **有没有站点其实无法用字面量 `HelpKey` 表达**（已预判的例外：`UsScopeTreeWidget.cs:388` 与 `:616` 两处按行状态取键，保持 imperative；`UsModeRowWidget.cs:64` 与 `UsKernelDraw.cs:499` 两处是**选项级**，由 `HoverHelpKey` 接管，不算站点删除）；③ **帮助目录或其 46 项 pin 是否需要改动**——预期**不需要**（键名不变，只是声明位置从 C# 移到 manifest），若需要改动必须写明改了什么、为什么。
 - 记账的判定口径：**键名集合在迁移前后必须完全一致**（迁移是搬家，不是改名）。任何键名变化都要单独列出并说明，否则「帮助目录没动」这句话就没有意义。
+### 5.7 步骤 B 摩擦报告（2026-09-20 实测：checklist 迁移已落地）
+
+**提交**：`cdcc675`（B-1 过滤后的 key 投影 + 不说谎 lane）、`340526f`（B-2 声明式卡体 + `Tab="Packs"` 门控 + 删一 bool shim）。证据：harness **ALL PASS / EXIT 0**、`verify-local` **15/15 EXIT 0**（载体 `c898a6b3`，Release，无 PDB）；6 个变异各自红，且红在预期断言上（见末段）。
+
+**行数（`git numstat` 实测，非估算）**
+
+| 范围 | 增 | 删 |
+|---|---:|---:|
+| `UsVoicePackChecklistWidget.cs` | 35 | **230**（431 → 236 行） |
+| `Source/**` 全量 | 311 | 243 → **净 +68** |
+| `UsChecklistFilter.cs`（新） | 69 | 0 |
+| host 侧 per-item 绑定命名空间（新） | ~80 | 0 |
+| `Layout.Schema2.xml` | 36 | 5 |
+| 工具侧（新 lane 409、几何 lane 重导、UI 逻辑门） | 488 | 17 |
+
+按本盘点的 code 口径（非空且非注释行）：widget **322 → 154**（−168）。
+
+**结论一：删除是真的，节省是假的（尚未摊销）。** bucket (i) 说「1,969 code 行今天可表达」——本件证明的是**可表达**，不是**可省**：把一张卡体的绘制搬进 manifest 要先付一次脚手架，所以第一件的 Source 净行数是 **+68**。真正消失的是 **draw** 那一列（本件约 226 draw 行的大部分）；模型/绑定/适配器照旧是 C#。
+
+**结论二：成本两桶（lead 指定口径）**
+
+- **一次性脚手架（后续 widget 继承）**：① 投影函数形状（一个谓词 + 一个有序 key 投影，两个消费者共用，`UsChecklistFilter`）；② **per-item 绑定命名空间的按需注册**（投影负责它刚列出的行的 item-local 键——注册表没有前缀解析，pack 集是运行期投影，所以「注册恰好引擎即将物化的那几行」是唯一诚实的形状）；③ 「不说谎」lane 的设计与骨架（283 code 中约七成可复用）；④ 卡高关系的多子元素重导形状；⑤ **两条 help 门的加宽**（manifest `HelpKey` 可以是 item 键，且算作 claim）——这一条一次性解锁后续所有 widget 的声明式帮助；⑥ `UsPacksText.Format(IUiTranslation,…)` 这类「host 需要翻译缝」的形状；⑦ `Tab`-on-container 一致性修复（FL 侧，免费）。
+- **每件都要重付（widget 专属）**：① 模板的具体形状与随之而来的**视觉/交互 delta 取舍**；② per-item 键集与取值器（本件 label/meta/coverage/enabled）；③ 该件的 fixture 与 lane 断言；④ 状态可见性 bool（has-domain / 两种空态）；⑤ 任何 pin 了旧 composite 几何的 lane 都要重导（本件 1 条）；⑥ 保留 composite 的切分（哪些部分因 G5/G2/G3 留下）；⑦ 删旧 kind 的绘制代码 + 更新 kind 清单与源码不变式。
+
+**结论三：widget #2 的代价——诚实答案是「管道那半已摊销，交互那半还不知道」，而后者才是决定项。**
+
+- 可复用部分约占非 lane 新增的 60%，lane 骨架约七成。因此 #2 的**管道**边际成本是「模板 ~15 行 + per-item 键集 ~25 行 + fixture/lane ~60 行 + 状态绑定 ~10 行」。
+- 但 §5.2 排在第 1 轮的第二个旗舰是 race/xenotype 行集，它的摩擦**类别不同**：那是一整行纯 hover 命中区（G2/G3），没有 `input/checkbox` 这种「行本身就是该语义」的原子可用。用 `input/button` 会发布按钮外观回退（§5.4 已否决），用 US 行 composite 则一行绘制代码都不删。所以 #2 的边际成本由**交互形状的决定**支配，不由管道支配。
+- 对 Route A 的直接含义：**不要用一个数据点拍板**；同时可以确定，Route A 要买的不是「管道」——管道已被本轮证明是一次性的，要买的是「层级行 × 行内组合」这一件能力。
+
+**结论四：G1 记账（5.6 口径，逐条）**
+
+- **删除的站点：恰好 2 个**（`Source/**` 的 `HelpHover(` 代码行 35 → 33）。
+  1. `Source/UniversalSqueaker/UI/Kernel/UsVoicePackChecklistWidget.cs:281`（迁移前）键字面量 `us/voice-pack-checklist/search` → 由 `Layout.Schema2.xml` 的 `checklist-search`（`input/text-field`）元素 `HelpKey` 接管。
+  2. 同文件 `:335` 键字面量 `us/voice-pack-checklist/row` → 由模板的四个 widget 元素（`checklist-row-label`/`-meta`/`-coverage`/`-check`）`HelpKey` 接管。
+- **保持 imperative、未删除**：同文件 `:261` `us/voice-pack-checklist/forget`（保留 composite 内的破坏性按钮）。
+- **无法用字面量 `HelpKey` 表达的站点：本轮 0 个。** 既有例外清单不变：`UsScopeTreeWidget.cs:388`/`:616`（按行状态取键）保持 imperative；`UsModeRowWidget.cs:64` 与 `UsKernelDraw.cs:499` 是选项级，由 `HoverHelpKey` 接管，不算删除。
+- **键名集合前后完全一致**：`{us/voice-pack-checklist, /search, /row, /forget}` → 同一集合（只是声明位置从 C# 移到 manifest）。**目录与 46 项 pin 无需改动**（gate 12 绿即为证）。
+- 唯一「目录邻近」的改动是**门本身**：manifest `HelpKey` 校验从「必须是 section」放宽为「item 或 section 皆可」，claim↔item 双向钉把 manifest `HelpKey` 计入 claim 来源（合计 39 行）。改的是门的口径，不是目录内容；`PlaceholderKey` 同时加入被收集的 manifest key 属性表（搜索提示从 C# 移入 manifest 后必须仍被断言存在）。
+
+**结论五：五条被点名的行为变化（写进提交信息，不是隐含）**
+1. orphan 带从行列表**下方移到上方**（widget 元素是一个矩形，无法跨 manifest 兄弟节点）。
+2. 行的点击目标从**整行**缩到 **checkbox 带**（G2/G3 的活标本：记录，不绕开）。
+3. 行的 surface / hover / 选中轨消失——逐行状态选色正是 §5.5 排在迁移**之后**的条款。
+4. meta/coverage 带改用原子的主题字号（Small），行略高。
+5. 搜索占位符改用 `TextSecondary`（原子的既定选择）而非 `TextDisabled`。
+
+**变异证据（每条都红，且红在预期断言上）**：M1 谓词多收一行 → `the list contains a key the search rejects`；M2 投影不跟随搜索写入 → `the probe query must narrow the list`；M3 去重移除 → `a blank key and a repeated key must collapse to one entry each`；M4 不注册 per-item `enabled` → `the projection must have registered 'checklist-pack-keys.us.alpha.enabled'`（**屏幕上看不出来**，fail-soft）；M5 卡片 `Tab` 改错 → `Packs workspace hidden by default`；M6 丢掉一个通过谓词的 key → 基线数量断言红。
+
+**盘点修正（§5.1 表）**：`UsVoicePackChecklistWidget` 的 code 实测为 **322 @46a580b**（原表 317 是更早一次测量，其间 step A 给它加了 TitleHidden 分支）；draw 未复测（本轮不再宣称该列数字）。更重要的一句：**bucket (i) 的 1,969 code 是「可搬走的绘制代码上限」，不是「可删除的净行数」**——每件还要付模板、per-item 投影、lane 与保留 composite 的代价，第一件的 Source 净行数是 +68。真正与「删除」直接对应的是 **1,060 draw** 那一列。
+
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
