@@ -102,6 +102,21 @@ internal static class UsAuditRoutingLaneTests
 
                 Assert(flooded.Diagnostics.CountOf(UiDiagnosticKind.Fit) == floodedFindings,
                     "the subscription's own count must agree with the snapshot (per-subscription ring)");
+
+                // Ref-count invariants, asserted because every one of their failures is silent. The
+                // process-wide switch is the only thing that still couples these windows, so the consumer
+                // is what has to keep it correct.
+                UiFitAudit.Enabled = true;
+                floodedAudit.Dispose();
+                Assert(UiFitAudit.Enabled,
+                    "closing ONE of two audited windows must not switch detection off for the other "
+                    + "(early decrement); the other window would silently stop reporting");
+                floodedAudit.Dispose();
+                Assert(UiFitAudit.Enabled,
+                    "disposing an already-disposed scope must be a no-op; a second decrement is the same "
+                    + "early-decrement failure reached through a different call site");
+                floodedAudit.Publish();
+                calibratedAudit.Publish();
             }
 
             // X-27, asserted: with both scopes closed the last close turned the shared switch off, so a

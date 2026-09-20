@@ -46,7 +46,26 @@ namespace UniversalSqueaker.UI;
 /// </remarks>
 public sealed class UsTextFitAudit : IDisposable
 {
-    /// <summary>Open audited windows, so the one process-wide detection switch follows "any window is diagnosing".</summary>
+    /// <summary>
+    /// Open audited windows, so the one process-wide detection switch follows "any window is diagnosing".
+    /// <para>
+    /// <b>The three invariants this counter must hold</b> (it is the easiest thing in this file to get
+    /// wrong, and each failure is silent):
+    /// <list type="number">
+    /// <item>the count reaches EXACTLY zero when the last window closes, and the switch goes off there and
+    /// only there - a leak leaves measurement on for the rest of the process, paying the audit's cost for a
+    /// window that is gone;</item>
+    /// <item>closing one of two open windows must NOT switch detection off - that is the "early decrement"
+    /// failure, and its symptom is the other window silently reporting nothing;</item>
+    /// <item><see cref="Dispose"/> is IDEMPOTENT, because the call sites are a window's <c>PreClose</c> plus
+    /// the <c>using</c> scope a lane or a future caller may hold - a second dispose that decremented again
+    /// would turn the switch off under the other window.</item>
+    /// </list>
+    /// Invariant 3 is enforced by <see cref="disposed"/>; 1 and 2 are asserted by
+    /// <c>UsAuditRoutingLaneTests</c>, which closes one of two scopes and then disposes the same scope twice
+    /// before closing the last one.
+    /// </para>
+    /// </summary>
     private static int openWindows;
 
     private readonly UiDiagnosticSubscription subscription;
