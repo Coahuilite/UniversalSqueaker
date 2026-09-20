@@ -3,35 +3,25 @@ using System;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Chrome geometry owned by this consumer, kept pure (no Verse/Unity) so a lane can assert the rule
-/// instead of a screenshot. The shell (UiWindowHost) sizes its close affordance from a fixed 110x30 box;
-/// the first real in-game run caught that box as ui.text.overflow (width/tiny, needs 128.0px, has
-/// 110.0px) - the chrome draws outside the layout engine's element scope, so the finding was reported as
-/// "(unscoped)" and named no code site.
+/// Window geometry owned by this consumer, kept pure (no Verse/Unity) so a lane can assert the rule
+/// instead of a screenshot.
 ///
-/// The rule: never smaller than the shell's own box, never smaller than the text that will actually be
-/// drawn plus a padding margin, measured through the same metrics seam the fit audit uses so the two
-/// agree by construction. Font size is deliberately not an input: widening and shortening are the
-/// answers the rulings allow, shrinking the font is not.
+/// <para>
+/// <b>The close affordance is NOT here any more</b> (TODO:15, closed 2026-09-20). This file used to carry
+/// a second definition of the shell's close-button rule - a 16px padding, measured through a hardcoded
+/// <c>VerseFerriteTextMetrics.Instance</c> - while the shell derived the same affordance as
+/// <c>max(110, measured + 2 x CloseButtonPadding)</c> through its own <c>ITextMetrics</c> seam.
+/// Two definitions of one padding is a seam defect by construction: the shell could widen the button for a
+/// label and the audit could still report that label as overflowing, and a changed padding had to be
+/// changed twice. The shell owns the close affordance (its label is <c>CloseText</c>, which is the
+/// consumer's string), so the duplicate is deleted and the rule now has exactly one home.
+/// </para>
+///
+/// What remains is this consumer's own window-size policy, which IS consumer policy and has no library
+/// equivalent.
 /// </summary>
 public static class WindowChromeLayout
 {
-    /// <summary>Horizontal room around the close caption inside the affordance.</summary>
-    public const float ClosePadding = 16f;
-
-    /// <summary>The shell's own box width, kept as the floor so the shipped English/Chinese shape is unchanged.</summary>
-    public const float CloseWidthFloor = 110f;
-
-    /// <summary>The shell's own box height.</summary>
-    public const float CloseHeight = 30f;
-
-    /// <summary>Width of the close affordance for a caption measured through the injected text metrics.</summary>
-    public static float CloseButtonWidth(float measuredTextWidth)
-    {
-        float wanted = measuredTextWidth > 0f ? measuredTextWidth + ClosePadding : 0f;
-        return Math.Max(CloseWidthFloor, wanted);
-    }
-
     // ---- Settings window size policy (task-10) ------------------------------------------------------
     // The settings window opens NARROW like the vanilla ModSettings window and only widens when the
     // retractable help drawer expands. This is consumer policy - one consumer's screen fraction stays

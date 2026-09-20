@@ -262,6 +262,17 @@ public static class SqueakDiagnosticsOverlay
         return results;
     }
 
+    /// <summary>
+    /// Whether <paramref name="map"/> is the map this session actually tracks. The session caches one map
+    /// when it opens, so a mark may only be drawn on that map: see
+    /// <see cref="Patch_MapInterface_DiagnosticsMarks"/>. Read-only, so a lane can assert the predicate
+    /// without a game.
+    /// </summary>
+    internal static bool IsTrackingCurrentMap(Map? map)
+    {
+        return sessionActive && map != null && ReferenceEquals(cachedMap, map);
+    }
+
     /// <summary>Pure matcher (harness-testable): case-insensitive substring over the label OR the defName.</summary>
     internal static bool MatchesQuery(string label, string defName, string trimmedQuery)
         => trimmedQuery.Length > 0

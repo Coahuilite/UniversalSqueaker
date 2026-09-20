@@ -34,19 +34,26 @@ internal static class Patch_MapInterface_DiagnosticsMarks
         Map? map = Find.CurrentMap;
         if (map == null) return;
 
-        try
+        // The session tracks ONE map (it caches it when the session opens), and every entry it holds is a
+        // pawn of that map, so drawing on another map can only walk a list no entry belongs to. Skipping is
+        // observably neutral - a pawn of the new map owns no entry and would draw nothing - and it is what
+        // stops the per-frame walk over a map this session does not own.
+        if (!SqueakDiagnosticsOverlay.IsTrackingCurrentMap(map)) return;
+
+        IReadOnlyList<Pawn> pawns = map.mapPawns.AllPawnsSpawned;
+        for (int i = 0; i < pawns.Count; i++)
         {
-            IReadOnlyList<Pawn> pawns = map.mapPawns.AllPawnsSpawned;
-            for (int i = 0; i < pawns.Count; i++)
+            // One pawn's guard, not the loop's: a single throwing pawn used to abort every remaining pawn's
+            // mark for that frame, and the once-per-exception-type log made the missing marks look like
+            // "nothing to draw". Fail closed per pawn, report boundedly, and keep drawing the rest.
+            try
             {
                 pawns[i].GetComp<CompSqueaker>()?.TryDrawDiagnosticsMark();
             }
-        }
-        catch (Exception ex)
-        {
-            // Fail closed - a modded pawn must never break the game frame - but at most once per
-            // exception type per session, and never silently.
-            SqueakLog.DiagnosticsMarkDrawFailed(ex);
+            catch (Exception ex)
+            {
+                SqueakLog.DiagnosticsMarkDrawFailed(ex);
+            }
         }
     }
 }

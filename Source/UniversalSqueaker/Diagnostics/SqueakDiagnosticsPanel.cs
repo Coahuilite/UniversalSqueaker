@@ -84,12 +84,27 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateMain(source);
+    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    private UniversalSqueaker.UI.UsTextFitAudit? audit;
+
+    protected override UiHost CreateHost()
+    {
+        UiHost host = UsDiagnosticsHost.CreateMain(source);
+        // Per-HOST audit (FL-20): before this, this window shared the settings window's one process-wide
+        // Enabled/sink, so its overflow findings were logged as if the settings page had produced them and
+        // were measured with the settings window's ruler. Its own subscription ends both (the dev-logging
+        // gate is the same policy decision the settings window makes).
+        audit = SqueakLog.ShouldEmitDev ? UniversalSqueaker.UI.UsTextFitAudit.Open(host) : null;
+        return host;
+    }
 
     /// <summary>The window owns collapsed GEOMETRY (the source owns the flag): shrink to a bar of
     /// chrome + one row, restore the remembered rect on expand.</summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
+        audit?.Publish();
+
         // The collapsed bar carries a visible close (09 §3.3 rule 3): about-to-draw is the same
         // mid-draw close point the detail window already uses for its IsValid self-check.
         if (source.CloseRequested)
@@ -188,6 +203,9 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 
     public override void PreClose()
     {
+        // Final drain and release, before the shell disposes the host and its subscription.
+        audit?.Dispose();
+        audit = null;
         base.PreClose();
         SqueakDiagnosticsOverlay.NotifyPanelClosed();
     }

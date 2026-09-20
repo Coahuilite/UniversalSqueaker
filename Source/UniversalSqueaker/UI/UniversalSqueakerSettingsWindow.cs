@@ -69,27 +69,16 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     protected override string CloseText => Translator.Translate("US.Settings.Window.Close");
 
-    /// <summary>
-    /// The shell's close affordance, sized from the text that will actually be drawn instead of the
-    /// shell's fixed 110x30. The in-game fit audit caught the fixed box on the first real run:
-    /// <c>ui.text.overflow (unscoped) width/tiny needs 128.0px, has 110.0px</c>. The chrome draws outside
-    /// the layout engine's element scope, so that finding named no element; the rect it names is exactly
-    /// this one (110f is the only such rect in the tree). Measuring through the same seam the audit uses
-    /// widens the button for any language - including the unresolved-Keyed-literal case, which is what a
-    /// 24-character string measuring 128px implies - and never shrinks the font. Floored at the shell's
-    /// own size so the English/Chinese ship shapes are unchanged.
-    /// </summary>
-    protected override Vector2 CloseButtonSize
-    {
-        get
-        {
-            string text = CloseText ?? "";
-            float needed = text.Length == 0
-                ? 0f
-                : VerseFerriteTextMetrics.Instance.MeasureWidth(text, CloseFont);
-            return new Vector2(WindowChromeLayout.CloseButtonWidth(needed), WindowChromeLayout.CloseHeight);
-        }
-    }
+    // NO CloseButtonSize override any more (TODO:15, closed 2026-09-20). It was added when the shell
+    // still drew a fixed 110x30 box; the shell now sizes that affordance itself, as
+    // max(110, MeasureWidth(CloseText, CloseFont) + 2 x CloseButtonPadding) through its own Metrics seam -
+    // one definition instead of two. This override was the second one, and it was wrong twice: it padded by
+    // 16 instead of the shell's 2 x 10, and it read VerseFerriteTextMetrics.Instance directly instead of
+    // the seam the shell and the audit both measure with (which is how a shell that had just made room for
+    // a label could still be reported as overflowing it). For the shipped captions both rules return the
+    // 110 floor, so removing the duplicate changes no pixel of the English or Chinese ship shape; for a
+    // longer caption the shell's rule now applies, which is also the case the in-game finding really
+    // belonged to (the 128px record was the DIAGNOSTICS panel's own long close text, not this one).
 
     /// <summary>
     /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
@@ -142,11 +131,19 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// </summary>
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
+    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    private UsTextFitAudit? audit;
+
     protected override UiHost CreateHost()
     {
-        UsTextFitAudit.Begin();
         source = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
-        return UsKernelSettingsHost.Create(source);
+        UiHost host = UsKernelSettingsHost.Create(source);
+        // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
+        // subscription and are measured with THIS host's ruler. The dev-logging gate stays the window's
+        // policy decision - with dev logging off no subscription is created at all, so the measuring cost
+        // is not paid (FL-20).
+        audit = SqueakLog.ShouldEmitDev ? UsTextFitAudit.Open(host) : null;
+        return host;
     }
 
     /// <summary>
@@ -157,6 +154,10 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// </summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        // The per-host channel is a BOUNDED RING, not a push sink: drain what the previous pass's chrome
+        // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
+        // of the ring unread (FL-20).
+        audit?.Publish();
         mod.TickSettingsSaveForWindow();
         ApplyDrawerWidth();
     }
@@ -200,7 +201,10 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     public override void PreClose()
     {
-        UsTextFitAudit.End();
+        // Final drain + release this window's hold on the process-wide detection switch, BEFORE the shell
+        // disposes the host and with it the subscription.
+        audit?.Dispose();
+        audit = null;
         // Disposing the page host and its session is the shell's job.
         base.PreClose();
     }

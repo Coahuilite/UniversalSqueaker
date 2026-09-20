@@ -152,6 +152,7 @@ internal static class Program
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
         Step("checklist filtered item keys do not lie (step B-1)", () => ChecklistItemsLaneTests.RunAll());
+        Step("per-host audit routing and ruler isolation (FL-20)", () => UsAuditRoutingLaneTests.RunAll());
     }
 
     /// <summary>

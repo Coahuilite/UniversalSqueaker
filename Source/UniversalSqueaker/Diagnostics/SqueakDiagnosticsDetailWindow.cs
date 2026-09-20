@@ -58,10 +58,24 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateDetail(source);
+    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    private UniversalSqueaker.UI.UsTextFitAudit? audit;
+
+    protected override UiHost CreateHost()
+    {
+        UiHost host = UsDiagnosticsHost.CreateDetail(source);
+        // Per-HOST audit (FL-20). The detail windows are the multi-INSTANCE case, so the routing gain is at
+        // its clearest here: two open detail windows used to share one sink, and with one window per
+        // subscription their findings cannot overwrite each other.
+        audit = SqueakLog.ShouldEmitDev ? UniversalSqueaker.UI.UsTextFitAudit.Open(host) : null;
+        return host;
+    }
 
     protected override void BeforeDraw(Rect contentRect)
     {
+        // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
+        audit?.Publish();
+
         // Self-close the moment the pinned pawn stopped being tracked (dead/despawned/map change/
         // session end). BeforeDraw is inside THIS window's own pass, so Close here is the same
         // mid-draw close a button click performs.
@@ -136,6 +150,9 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     public override void PreClose()
     {
+        // Final drain and release, before the shell disposes the host and its subscription.
+        audit?.Dispose();
+        audit = null;
         base.PreClose();
         SqueakDiagnosticsOverlay.NotifyDetailWindowClosed(pinnedPawn);
     }
