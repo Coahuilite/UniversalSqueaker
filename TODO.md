@@ -68,6 +68,46 @@
 - [ ] **Two help gates widened (one-time)**: a manifest `HelpKey` may name a catalog ITEM, and counts as a claim in the bidirectionality pin; `PlaceholderKey` joined the collected manifest key attributes. Intent-preserving; without them the migration would have to keep its help claims imperative, which is the regression G1 exists to prevent.
 - [ ] **Not done this round**: `state/empty`/input adoption for the other 14 bucket-(i) widgets; the S2 third clause (per-row colour, §5.5 says AFTER the migration); layers stay composite (G2); S3-S7 untouched.
 
+## S3 frame reset (2026-09-21) - landed on the `0.5.x` line; ONE collected in-game pass, plus two follow-up slices
+
+Landed as six commits, each one green on its own: `1a171ed` (S3-0 spec section 0 re-verified against the real
+0.7 carrier), `0b601fd` (S3-1 the five-viewport frame guard + the narrow-frame nav overflow its first run found),
+`e4a8b0b` (S3-2a the Help switch into a declared header band), `bd78e7b` (S3-2b the title into that band,
++ the band's shape corrected from Overlay to Row), `5f95396` (S3-3 the footer band), `5489dc0` (S3-4a nav
+160->200), `7958376` (S3-4b the help column 176->320 + the window policy), `0f8847a` (S3-5 the page rhythm
+declared). Authority: docs/ui-redesign-0.7-zh.md sections 0, 2, 3 and 6.1.
+
+- [ ] **The one collected in-game pass** (maintainer; do NOT run these scattered - the maintainer asked for a
+  single session). It must cover, in this order:
+  1. **the new skeleton**: the header does not scroll, the title band, the Help switch staying put, the three
+     columns, the footer band, and the narrow (stacked) presentation;
+  2. **the five player-visible deltas of the landed checklist migration** (calibration drift): row hit target
+     narrowed to the checkbox band, the row surface/hover/selected rail gone, the orphan band above the list,
+     meta/coverage at the atom's font, placeholder ink TextSecondary;
+  3. **the known narrow state**: at a logical screen width <= 800 (which a normal 1920 monitor reaches at
+     UI scale >~2.5) the open drawer cannot widen the window, so the centre column is 168-192px - and the fit
+     audit reports 7 findings in EN / 2 in ZH there (spec section 2 lists them element by element);
+  4. **F-05**: is `ui.text.overflow` at zero on the normal path? (whatever this pass finds above is the
+     exception, and item 3 is the known one);
+  5. **F-07**: switching tabs throws nothing;
+  6. **the width axis**: the harness measures translation KEYS, so confirm real translations land inside the
+     single-line rects;
+  7. **the Help switch is a core input/button now** - its look differs from the hand-drawn selection button it
+     replaced, and that difference is deliberate but has never been seen;
+  8. **the title band no longer reserves 72px** for a control, and **the header band's height is a real
+     vertical cost** (it is content-measured, so it follows the worst of the five workspace captions);
+  9. the nav cards are 40px wider (144 -> 184).
+- [ ] **(乙1) narrow-screen help presentation - the NEXT slice after S3, not an option.** Named in spec section 2:
+  at a capped screen the open drawer steals the centre column instead of widening the window. Two candidates
+  are to be PRICED before one is chosen: a host-computed VisibleKey switching a second (stacked/overlay)
+  presentation, versus a host-computed affordable help width driven by WidthKey (which turns
+  `DrawerWidthDelta` from a constant into a function - it is pinned by `UniversalSqueakerUiLogicTests`).
+- [ ] **(甲) the global density (12/8/4/24/1) - the likely final form, deliberately NOT inside S3.** It moves
+  every control's INNER inset (the atoms read theme.Geometry.Padding as their own inset), so it needs its own
+  slice and its own in-game look. Spec section 3 records why it was separated.
+- [ ] **Route A decision input is unchanged but its premises moved**: WAVE-1's G1-G5 gaps are all closed (spec
+  section 0.4), so 'layers stay composite because of G2' no longer holds; the remaining blocker is
+  hierarchy x inline composition. Re-price before acting.
 ## Blocked on the lib session / maintainer (cloud publication chain)
 
 - **Cross-repo ledger**: rounds 1-3 are **CLOSED on both sides** (narratives byte-archived in `OBLIVIONIS.md`, durable facts in `MEMORY.md`); FL has since cut `v0.4.0-rc1`. The one remaining lib-side action is publishing FL's **`0.6.x` line** (local only today) - the maintainer's trial/publish call, not ours. Open adoptions are in the 2026-09-17 section below.
