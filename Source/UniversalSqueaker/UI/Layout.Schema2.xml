@@ -92,9 +92,15 @@
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
-    <!-- No Height attribute: it would override the widget's own measure, which is wrap-aware (the
-         in-game log kept reporting "footer needs 33px has 28px" while the attribute was pinning 28). -->
-    <Widget Id="footer" Kind="us/footer" />
+    <!-- Footer band (S3-3): the same structural slot as the header, so the frame's three bands are all
+         declared. It carries NO Height, for the reason its child never did - a pinned band overrides a
+         wrap-aware measure (the in-game log kept reporting "footer needs 33px has 28px" while the
+         attribute was pinning 28). §2's fragment wrote Height="26"; that is the same pin and is NOT
+         implemented. The band's CONTENT is still the us/footer composite: atomising it into a status and
+         a build text is S4's migration, not this slice's. -->
+    <Overlay Id="footer-band" Padding="0">
+      <Widget Id="footer" Kind="us/footer" />
+    </Overlay>
   </Column>
   <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
        ActionBind inside a template are qualified per item by the engine (<Items>.<itemKey>.<declaredKey>),

@@ -436,6 +436,23 @@ internal static class FrameGeometryLaneTests
             "positive control: the banner IS inside content-scroll, so the descendance predicate above"
             + " discriminates instead of answering false for everything");
 
+        // The footer band closes the frame: same two claims as the header band (a direct child of
+        // page-root, outside every scroll), plus it is the LAST flow child, which is what keeps the
+        // footer on screen under a filling body row.
+        Assert(byId.TryGetValue("footer-band", out UiElementSpec footerBand)
+            && string.Equals(footerBand.Kind, "Overlay", StringComparison.Ordinal),
+            "the manifest must declare a footer band");
+        Assert(IsDescendant(manifest, "page-root", "footer-band", direct: true)
+            && IsDescendant(manifest, "footer-band", "footer", direct: true),
+            "the footer band must be a direct child of page-root, holding the footer widget");
+        Assert(!IsDescendant(manifest, "content-scroll", "footer", direct: false),
+            "the footer must not live inside the scrolling centre column");
+
+        UiElementSpec lastChild = manifest.Roots[0].Children[manifest.Roots[0].Children.Count - 1];
+        Assert(string.Equals(lastChild.Id, "footer-band", StringComparison.Ordinal),
+            "the footer band must be the LAST flow child of page-root, so the filling body row cannot"
+            + " push it off screen; found '" + lastChild.Id + "'");
+
         var problems = new List<string>();
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try

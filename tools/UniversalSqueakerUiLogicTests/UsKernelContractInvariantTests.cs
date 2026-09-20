@@ -60,22 +60,37 @@ internal static class UsKernelContractInvariantTests
             "page-root Column declares Gap=8 Padding=12");
 
         XmlElement? bodyRow = null;
-        XmlElement? footer = null;
+        XmlElement? footerBand = null;
         foreach (XmlNode node in pageRoot!.ChildNodes)
         {
             if (node is not XmlElement element) continue;
             if (element.Name == "Row" && element.GetAttribute("Id") == "body-row") bodyRow = element;
-            if (element.Name == "Widget" && element.GetAttribute("Id") == "footer") footer = element;
+            if (element.Name == "Overlay" && element.GetAttribute("Id") == "footer-band") footerBand = element;
         }
 
         Assert(bodyRow != null, "body-row Row is a direct child of page-root");
-        // The footer is a direct child of page-root (outside every scroll), and it must NOT pin a Height:
-        // the attribute overrides the widget's wrap-aware measure, which is how the in-game log kept
-        // reporting "footer needs 33px has 28px" while the attribute held 28 (2026-09-15).
+        // The footer band is a direct child of page-root (outside every scroll), and NEITHER it nor its
+        // child may pin a Height: the attribute overrides the widget's wrap-aware measure, which is how the
+        // in-game log kept reporting "footer needs 33px has 28px" while the attribute held 28 (2026-09-15).
+        // S3-3 moved the footer one level down into the declared band, so the claim is now the band's as
+        // well - and it is asserted on BOTH, because the pin is just as wrong one level up.
+        Assert(footerBand != null
+            && footerBand.GetAttribute("Height") == "",
+            "footer-band Overlay is a direct child of page-root, outside every scroll, and carries no Height");
+
+        XmlElement? footer = null;
+        foreach (XmlNode node in footerBand!.ChildNodes)
+        {
+            if (node is not XmlElement element) continue;
+            Assert(footer == null, "the footer band must carry exactly one child");
+            footer = element;
+        }
+
         Assert(footer != null
+            && footer.Name == "Widget"
             && footer.GetAttribute("Kind") == "us/footer"
             && footer.GetAttribute("Height") == "",
-            "footer Widget (us/footer, no Height attribute) is a direct child of page-root, outside every scroll");
+            "footer Widget (us/footer, no Height attribute) is the footer band's only child");
 
         Assert(bodyRow!.GetAttribute("Gap") == "12", "body-row declares Gap=12");
 

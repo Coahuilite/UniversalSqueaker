@@ -143,10 +143,14 @@
       </Scroll>
     </Row>
 
-    <!-- 页脚：Overlay 左侧状态 + 右侧构建标识（placement 取代 spacer） -->
-    <Overlay Id="footer-band" Height="26">
-      <Widget Id="footer-status" Kind="text/wrapped" Bind="save-status" AlignX="Left" />
-      <Widget Id="footer-build"  Kind="text/wrapped" Bind="build-identity" AlignX="Right" TextKey="US.Footer.Build" />
+    <!-- 页脚：Overlay 左侧状态 + 右侧构建标识（placement 取代 spacer）。
+         [2026-09-21 更正，S3-3] `Height="26"` 未实现，且**不应**实现：它与 footer 当年那条教训同源
+         （钉死 Height 会盖掉 wrap-aware 的 measure，实机日志报过 needs 33px / has 28px），所以带子与它的
+         子元素都不写 Height，高度由内容量。S3-3 只立了**带子**（`Overlay Id="footer-band" Padding="0"`），
+         里面仍是保留的 `us/footer` composite —— 把它原子化成下面两个 `text/wrapped` 是 **S4 的迁移**，
+         不是这一刀的事。 -->
+    <Overlay Id="footer-band" Padding="0">
+      <Widget Id="footer" Kind="us/footer" />   <!-- S4: -> footer-status (AlignX=Left) + footer-build (AlignX=Right) -->
     </Overlay>
   </Column>
 </UiPage>
@@ -457,7 +461,7 @@
 | S3-1 | 五视口守护 lane（对**当前**几何先绿）+ 它抓到的窄态 nav-column 冗余 `Fill` | 落地 |
 | S3-2a | 页头 `Overlay` 带 + 右对齐帮助开关（`input/button`）+`toggle-help-drawer` 改 `BindCommand`；`us/page-title` 交出开关 | 落地 |
 | S3-2b | 把 `us/page-title` 搬进页头带（标题不再滚走）；**形状更正**：带子由 `Overlay` 改 `Row`、删 `Height`、标题按最坏值测带 | 落地 |
-| S3-3 | 页脚 `Overlay` 带（band-only，原子化留 S4） | 待做 |
+| S3-3 | 页脚 `Overlay` 带（band-only，原子化留 S4；`Height="26"` 更正为不写） | 落地 |
 | S3-4a | `nav-column` 160→200 | 待做 |
 | S3-4b | **原子步**：`help-scroll` 176→320 + `WindowChromeLayout` 常量（断点**不动**，裁 500） | 待做 |
 | S3-5 | density：(丁) —— 页面容器显式 `Padding`/`Gap`，token 不动 | 待做 |
