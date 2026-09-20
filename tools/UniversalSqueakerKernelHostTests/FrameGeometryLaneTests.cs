@@ -29,6 +29,16 @@ namespace UniversalSqueaker.KernelHostTests;
 /// share.
 /// </para>
 /// <para>
+/// <para>
+/// <b>The coordinate-space trap this lane exists next to.</b> A snapshot rect and a recorded control rect
+/// are NOT always in the same space: an element inside a <c>Scroll</c> has its arranged rect in the
+/// containing space, while the rect a widget hands to <c>UiNative</c> is in the SCROLL's local space (the
+/// engine's <c>ToDrawRect</c> subtracts the scroll container's own rect position for its children). A lane
+/// that filters one by the other is correct only by alignment, and it breaks the first time the frame
+/// shifts - which is how the S3 header band turned `MoodLayoutFocusedTests` red with no product fault at
+/// all. Translate both into one space first, or compare within one space only.
+/// </para>
+/// <para>
 /// What it deliberately does not do: it does not restate the engine's own breakpoint arithmetic as an
 /// expectation - that would be a tautology. It asserts the structural facts that arithmetic has to
 /// produce (the columns are either all side by side or all stacked, a stacked column shares the full inner
@@ -71,6 +81,7 @@ internal static class FrameGeometryLaneTests
         Step("no degenerate rect, no sibling overlap, every element inside its parent", TheFrameHoldsEverywhere);
         Step("the three-column frame keeps its declared shape across the five viewports", TheFrameKeepsItsShape);
         Step("the header band is fixed, right-aligned, and the page's ONLY help switch", TheHeaderBandIsFixed);
+        Step("placement vocabulary is refused where its container does not own the axis", PlacementIsRefusedWhereTheContainerDoesNotOwnIt);
         Console.WriteLine("FrameGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -408,19 +419,22 @@ internal static class FrameGeometryLaneTests
             "exactly one manifest element may bind the help toggle; found " + switches
             + " (the page-title widget carried a second, hand-drawn switch until S3-2a)");
         Assert(byId.TryGetValue("header-band", out UiElementSpec band)
-            && string.Equals(band.Kind, "Overlay", StringComparison.Ordinal),
-            "the manifest must declare the header band as an Overlay: it is the one container that places a"
-            + " child on both axes, which is how the switch is right-aligned without a spacer idiom");
+            && string.Equals(band.Kind, "Row", StringComparison.Ordinal),
+            "the manifest must declare the header band as a Row: it hands the title whatever the fixed-width"
+            + " switch leaves, so no reserved width has to be spelled in code");
         Assert(IsDescendant(manifest, "page-root", "header-band", direct: true),
             "header-band must be a DIRECT child of page-root, i.e. in the flow beside the body row and the"
             + " footer, never inside a scroll");
-        Assert(IsDescendant(manifest, "header-band", "help-toggle", direct: true),
-            "help-toggle must be a child of the header band");
-        Assert(!IsDescendant(manifest, "content-scroll", "help-toggle", direct: false),
-            "help-toggle must NOT be inside the scrolling centre column: that is the whole point of the band");
-        Assert(IsDescendant(manifest, "content-scroll", "page-title", direct: false),
-            "positive control: the page title IS inside content-scroll today, so the descendance predicate"
-            + " above discriminates instead of answering false for everything");
+        Assert(IsDescendant(manifest, "header-band", "help-toggle", direct: true)
+            && IsDescendant(manifest, "header-band", "page-title", direct: true),
+            "the header band must hold BOTH the page title and the help toggle");
+        Assert(!IsDescendant(manifest, "content-scroll", "help-toggle", direct: false)
+            && !IsDescendant(manifest, "content-scroll", "page-title", direct: false),
+            "neither the switch nor the title may live inside the scrolling centre column: that is the whole"
+            + " point of the band, and it is the assertion that says the header no longer scrolls away");
+        Assert(IsDescendant(manifest, "content-scroll", "banner", direct: false),
+            "positive control: the banner IS inside content-scroll, so the descendance predicate above"
+            + " discriminates instead of answering false for everything");
 
         var problems = new List<string>();
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
@@ -482,6 +496,52 @@ internal static class FrameGeometryLaneTests
         }
 
         Assert(problems.Count == 0, Report(problems));
+    }
+
+    /// <summary>
+    /// Negative evidence for the header band's shape: <c>AlignX</c> on a Row's child is refused AT
+    /// CREATION, which is the mechanical reason the switch is right-aligned by being the last
+    /// fixed-width child instead of by a placement attribute. Pinning the refusal here means nobody
+    /// "fixes" the switch by adding AlignX back and finds out in the game.
+    /// </summary>
+    private static void PlacementIsRefusedWhereTheContainerDoesNotOwnIt()
+    {
+        UsKernelWidgetRegistrar.EnsureRegistered();
+        UiWidgetRegistry.InitializeCore();
+
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(
+            "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
+            + "<Row Id=\"band\"><Widget Id=\"t\" Kind=\"us/page-title\" AlignX=\"Right\" /></Row>"
+            + "</UiPage>");
+
+        bool refused = false;
+        try
+        {
+            using var host = new UiHost(
+                "coahuilite.universalsqueaker",
+                manifest,
+                new UiBindings(),
+                UiTheme.DarkGold,
+                new Program.StubMetrics(),
+                new LaneTranslation());
+        }
+        catch (UiContractException)
+        {
+            refused = true;
+        }
+
+        Assert(refused,
+            "AlignX on a Row's child must be refused at creation: a Row's main axis already has an owner,"
+            + " so a second one is the ambiguity the placement vocabulary exists to refuse - and it is why"
+            + " the header band's switch carries AlignY only");
+    }
+
+    /// <summary>Key-echo translation: the lane only needs the manifest to be reachable, not readable.</summary>
+    private sealed class LaneTranslation : IUiTranslation
+    {
+        public string Translate(string key) => key;
+
+        public int TranslationRevision => 0;
     }
 
     /// <summary>

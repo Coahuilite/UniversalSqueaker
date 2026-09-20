@@ -115,13 +115,21 @@
 ```xml
 <UiPage Schema="2" Source="coahuilite.universalsqueaker">
   <Column Id="page-root" Gap="8" Padding="12">
-    <!-- 页头：不随内容滚动。Overlay = 双轴放置容器，帮助按钮右对齐 -->
-    <Overlay Id="header-band" Height="60">
+    <!-- [2026-09-21 更正，S3-2b 实测] 原稿这里是 <Overlay Id="header-band" Height="60"> + AlignX="Right"，
+         两处都被证伪，原文保留在此以免后人以为它被凭空改掉：
+         (1) Overlay 里不声明 AlignX 的子元素默认 Stretch（`UiPlacement.cs:13,77-84`）⇒ 标题会排到带子
+             右缘、被后画的按钮压住；而词表里**没有 MaxWidth、没有「取剩余」装置**，`Width="Auto"` 对无
+             label 集的 kind 无效，手写预留常数被 R14 禁止 ⇒ 那个字形在这套词表里**不可实现**。改用 Row。
+         (2) `Height="60"` 会裁掉换行的 caption（与 footer「钉死 Height 反而被日志报 needs 33px/28px」
+             同源的教训），所以删掉，改由内容量高。稳定性的职责移进 `us/page-title` 的 Measure：
+             它按**五个工作区的最坏值**测带，页头才不会被页签切换推动（nav 卡片 bounds 有 lane 钉死）。
+         注意 Row 的主轴已有主人 ⇒ `AlignX` 在 Row 子元素上会被创建期拒绝，开关只留 `AlignY="Middle"`；
+         「右对齐」由「它是最后一个定宽子元素」自然得到，并仍被断言（右缘 == 带子内右缘）。 -->
+    <Row Id="header-band" Padding="0">
       <Widget Id="page-title" Kind="us/page-title" />
       <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
-              ActionBind="toggle-help-drawer" Width="128" Height="26"
-              AlignX="Right" AlignY="Middle" />
-    </Overlay>
+              ActionBind="toggle-help-drawer" Width="128" Height="26" AlignY="Middle" />
+    </Row>
 
     <Row Id="body-row" Fill="true" Gap="12" Breakpoint="720" Narrow="Column">
       <Column Id="nav-column" Width="200" Fill="true">
@@ -448,7 +456,7 @@
 | S3-0 | 刷新本文 §0（本文件） | 落地 |
 | S3-1 | 五视口守护 lane（对**当前**几何先绿）+ 它抓到的窄态 nav-column 冗余 `Fill` | 落地 |
 | S3-2a | 页头 `Overlay` 带 + 右对齐帮助开关（`input/button`）+`toggle-help-drawer` 改 `BindCommand`；`us/page-title` 交出开关 | 落地 |
-| S3-2b | 把 `us/page-title` 搬进页头带（标题不再滚走） | 待做 |
+| S3-2b | 把 `us/page-title` 搬进页头带（标题不再滚走）；**形状更正**：带子由 `Overlay` 改 `Row`、删 `Height`、标题按最坏值测带 | 落地 |
 | S3-3 | 页脚 `Overlay` 带（band-only，原子化留 S4） | 待做 |
 | S3-4a | `nav-column` 160→200 | 待做 |
 | S3-4b | **原子步**：`help-scroll` 176→320 + `WindowChromeLayout` 常量（断点**不动**，裁 500） | 待做 |

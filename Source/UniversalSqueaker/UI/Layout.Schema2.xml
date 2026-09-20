@@ -13,15 +13,21 @@
     </Density>
   </Styles>
   <Column Id="page-root" Gap="8" Padding="12">
-    <Overlay Id="header-band" Height="60" Padding="0">
+    <Row Id="header-band" Padding="0">
+      <Widget Id="page-title" Kind="us/page-title" />
       <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
               ActionBind="toggle-help-drawer" Width="128" Height="26"
-              AlignX="Right" AlignY="Middle" HelpKey="us/page-title/help-drawer" />
-    </Overlay>
-    <!-- Fixed page-header band (S3-2a). The Help toggle lives HERE, outside every scroll: the shell
-         chrome has no action slot (FL-18 will not come), and a toggle inside content-scroll scrolled away
-         with the workspace content. Overlay is the one container that places a child on BOTH axes, so the
-         button is right-aligned and vertically centered through AlignX/AlignY instead of a spacer idiom.
+              AlignY="Middle" HelpKey="us/page-title/help-drawer" />
+    </Row>
+    <!-- Fixed page-header band (S3-2a added it, S3-2b moved the title in). Both the title and the Help
+         toggle live HERE, outside every scroll: the shell chrome has no action slot (FL-18 will not come),
+         and a header inside content-scroll scrolled away with the workspace.
+         It is a ROW and not an Overlay on purpose: a Row hands the title "whatever the fixed switch
+         leaves" with no reserved width spelled in code, and a Row's main axis already has an owner, so the
+         switch is right-aligned by being the last fixed-width child rather than by AlignX (which the engine
+         refuses on a Row child). With an Overlay the title would Stretch across the full inner width and
+         the caption would paint UNDER the switch, because the widget no longer reserves the switch's space
+         and a hand-written reservation is exactly the threshold this project bans.
          The engine claims a hovered element's HelpKey for any kind, which is why the toggle's catalog item
          (us/page-title/help-drawer) is declared here while the page-title widget no longer draws it.
          Exactly ONE element in this manifest may carry the help-toggle action binding (this comment
@@ -42,7 +48,6 @@
         <Widget Id="nav" Kind="us/nav" />
       </Column>
       <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
-        <Widget Id="page-title" Kind="us/page-title" />
         <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
         <Widget Id="global-volume" Kind="us/global-volume" TitleKey="US.Section.OutputLevel" HelpKey="us/global-volume" Tab="Overview" />

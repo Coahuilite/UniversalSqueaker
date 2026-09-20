@@ -50,11 +50,28 @@ public sealed class UsPageTitleWidget : IUiWidget
         bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
     }
 
+    /// <summary>
+    /// The band this widget asks for is measured over the WORST of the five workspace headings, not over
+    /// the active one. The reason is structural rather than tidy: the header band is a FIXED band in the
+    /// page frame now (S3-2b), so a caption that wraps to two lines in one workspace and one in another
+    /// would move the whole page - the nav column included - on every tab switch. Measuring the worst case
+    /// is the same shape the help panel uses (its band is sized by the whole catalog, not by the hovered
+    /// entry), and it needs no threshold: the reserve is computed, never written down.
+    /// </summary>
     public float Measure(UiWidgetContext ctx)
     {
-        (string title, string caption) = ResolveHeading(ctx);
         float textWidth = TextBandWidth(ctx.ViewWidth);
-        return TitleBand(textWidth, ctx, title) + CaptionGap + CaptionBand(textWidth, ctx, caption);
+        float worst = 0f;
+        foreach ((string titleKey, string captionKey) in HeadingKeys)
+        {
+            worst = Math.Max(
+                worst,
+                TitleBand(textWidth, ctx, ctx.Translation.Translate(titleKey))
+                    + CaptionGap
+                    + CaptionBand(textWidth, ctx, ctx.Translation.Translate(captionKey)));
+        }
+
+        return worst;
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -123,6 +140,16 @@ public sealed class UsPageTitleWidget : IUiWidget
     {
         return Math.Max(TitleMinHeight, Math.Max(1f, ctx.Metrics.MeasureText(title, UiFont.Medium, textWidth)));
     }
+
+    /// <summary>Every workspace's heading, the set the band is measured over.</summary>
+    private static readonly (string TitleKey, string CaptionKey)[] HeadingKeys =
+    {
+        ("US.Page.Overview.Title", "US.Page.Overview.Caption"),
+        ("US.Page.Distance.Title", "US.Page.Distance.Caption"),
+        ("US.Page.Packs.Title", "US.Page.Packs.Caption"),
+        ("US.Page.Tuning.Title", "US.Page.Tuning.Caption"),
+        ("US.Page.Presets.Title", "US.Page.Presets.Caption"),
+    };
 
     private static (string Title, string Caption) ResolveHeading(UiWidgetContext ctx)
     {
