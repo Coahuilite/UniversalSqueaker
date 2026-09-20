@@ -79,16 +79,17 @@ internal static class UsKernelContractInvariantTests
 
         Assert(bodyRow!.GetAttribute("Gap") == "12", "body-row declares Gap=12");
 
-        bool navFill = false;
+        bool navFixed = false;
+        bool navFlexSlot = false;
         bool contentScrollFill = false;
         bool helpScrollFill = false;
         foreach (XmlNode node in bodyRow.ChildNodes)
         {
             if (node is not XmlElement element) continue;
-            if (element.Name == "Column" && element.GetAttribute("Id") == "nav-column"
-                && element.GetAttribute("Width") == "160" && IsTrue(element.GetAttribute("Fill")))
+            if (element.Name == "Column" && element.GetAttribute("Id") == "nav-column")
             {
-                navFill = true;
+                navFixed = element.GetAttribute("Width") == "160";
+                navFlexSlot = IsTrue(element.GetAttribute("Fill"));
             }
 
             if (element.Name == "Scroll" && element.GetAttribute("Id") == "content-scroll"
@@ -104,8 +105,17 @@ internal static class UsKernelContractInvariantTests
             }
         }
 
-        Assert(navFill && contentScrollFill && helpScrollFill,
-            "body-row contains nav-column (160 Fill), content-scroll (Fill) and help-scroll (176 Fill)");
+        // The nav column is WIDTH-fixed, so it must NOT also be a vertical flex slot. It was one until the
+        // S3 frame guard lane measured the stacked (narrow) regime: a Fill column takes an equal height
+        // share of body-row's inner height (212px at 480x720), while us/nav measures 271px of natural
+        // content - so the nav painted ~60px into the stacked column below it. The two scrolls ARE flex
+        // slots, which is the half that makes this claim two-sided instead of an absence check.
+        Assert(navFixed && !navFlexSlot && contentScrollFill && helpScrollFill,
+            "body-row contains a width-fixed nav-column (160, and deliberately NOT Fill), content-scroll"
+            + " (Fill) and help-scroll (176 Fill)");
+        Assert(!navFlexSlot,
+            "nav-column must not declare Fill: it is width-fixed, and a Fill column in the stacked frame"
+            + " takes an equal height share that us/nav's 271px of natural content overflows");
 
         bool hasTabSections = false;
         foreach (XmlNode node in bodyRow.ChildNodes)

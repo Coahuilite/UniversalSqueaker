@@ -23,7 +23,7 @@
          (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with
          its scroll position). -->
     <Row Id="body-row" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
-      <Column Id="nav-column" Width="160" Padding="0" Fill="true">
+      <Column Id="nav-column" Width="160" Padding="0">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
       <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
