@@ -236,6 +236,17 @@
 **顺序**：迁移**不必**在本轮落地。若 freeze 时 checklist 迁移未完成且不干净，就只验证并提交已就绪的部分（S2 increment 1 + `IsHelpSelected` 的裸键等值修复），迁移带着自己的验证进入下一轮。**半迁移的清单不会靠近任何一次门禁运行。**
 
 **本轮已就绪（未提交）**：S2 increment 1（`UsTheme` 的 16 色表改为样式文档 + `UiStyleResolver.ApplyTo`）；(A) 修复（`UsSectionWidgetBase.IsHelpSelected` 接受裸区块键）。
+### 5.5 S2 第三条（清掉逐行选色）的实测结论：**它依赖迁移，不是迁移的前置**
+
+**测量**：US 侧逐行读主题色的点共 **77 处 / 20 个文件**（`ctx.Theme.TextPrimary|TextSecondary|TextDisabled|TextOnGold|TextOnDanger|Danger|Selected|Hover|Raised|Panel`；最多的是 `UsDiagnosticsWidgets.cs` 18、`UsScopeTreeWidget.cs` 11、`UsVoicePackChecklistWidget.cs` 10、`UsPresetListWidget.cs` 6、`UsFooterWidget.cs` 5）。清单里今天声明的 `Tone=` 属性数量是 **0**。
+
+**为什么这 77 处不是「顺手换成语义角色」就能清掉的**：它们绝大多数是**行状态**驱动的——选中行的墨、不可用行的墨、danger 状态的墨——而 `Tone`/`Emphasis` 是**元素级静态属性**：同一个元素的所有行共用一条角色，行与行之间的状态差异表达不了。这正是 §5.3 里已 CONFIRMED 的 `Tone`/`Emphasis` 只有字面量那条缺口的第二个后果。
+
+**可用的角色缝确实存在**（对消费侧公开）：`UiResolvedStyleTable.Resolve(tone, emphasis, writable)`（`UiResolvedStyle.cs:107`）与 `UiStyleResolver.Resolve(theme, nearestFirst, writable)`（`UiStyleResolver.cs:141`）；`UiWidgetContext` 也公开 `Theme` 与 `StyleChain`。但**缝存在不等于能表达行状态**：它解析的是「这个元素是什么角色」，不是「这一行处于什么状态」。
+
+**结论与改序**：S2 第三条**只在行已经声明式之后才可执行**——那时每一行的状态可以用「按状态一份模板 + item 局部 `VisibleKey`」或 per-item 的 Tone 变体表达；对**保留为 composite 的 kind**（例如 §5.4 保留的状态带）它**永远不可执行**，因为那条缺口没有被补。所以正确顺序是：**先迁移（§5.4），行变成声明式之后再做逐行选色清理**；把它当迁移的前置会得到一个无法验证的 77 处大扫除。维护者 2026-09-20 的裁定（「S2 第三条作为独立已验证增量」）因此**改序为迁移之后的增量**，这一改动记录在此。
+
+**顺带记录（供 FL 侧计价）**：如果 FL 想要「消费侧自定义 kind 也能按角色取墨」，缺口不是「没有 Resolve」，而是**没有 per-row 的角色输入面**（元素级 Tone 无法表达行状态，而 per-item 的角色绑定不存在）。这与 §5.3 的 Tone 条目是同一条，不另开请求。
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
