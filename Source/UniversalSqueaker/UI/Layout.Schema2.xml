@@ -39,7 +39,15 @@
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
         <Widget Id="race-layer" Kind="us/race-layer" TitleKey="US.Section.RaceDomain" HelpKey="us/race-layer" Tab="Packs" />
         <Widget Id="xenotype-layer" Kind="us/xenotype-layer" TitleKey="US.Section.XenotypeDomain" HelpKey="us/xenotype-layer" Tab="Packs" />
-        <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleKey="US.Section.ChooseVoicePacks" HelpKey="us/voice-pack-checklist" Tab="Packs" />
+        <!-- Step A of the checklist migration: the card is the engine's Section container, carrying the same
+             explicit geometry every other container on this page already declares (CP-0), gated by a
+             VisibleKey bool because the container vocabulary has no Tab. The section help sits on a WIDGET
+             (section/header) because HelpKey is refused on containers. Padding 12 + header 26 + Gap 6
+             reproduces UsCardLayout.MeasureBody (12 + 26 + 6 + body + 12) exactly. -->
+        <Section Id="checklist-card" VisibleKey="tab-packs" Padding="12" Gap="6">
+          <Widget Id="checklist-header" Kind="section/header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
+          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" />
+        </Section>
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
       </Scroll>

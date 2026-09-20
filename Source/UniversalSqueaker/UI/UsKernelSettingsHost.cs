@@ -164,6 +164,10 @@ public static class UsKernelSettingsHost
 
         // Navigation / page chrome.
         bindings.BindValue<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, source.SetActiveTab);
+        // S3/S5 step A: the container vocabulary has no Tab attribute (Tab is widget-only), so the
+        // declarative checklist card is gated by a VisibleKey bool over the same page state the engine's
+        // own Tab rule reads. Same behaviour as the widget's Tab="Packs": the card exists only on Packs.
+        bindings.BindReadOnly<bool>("tab-packs", () => string.Equals(state.ActiveTab, "Packs", StringComparison.OrdinalIgnoreCase));
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
         // Tab switches and scroll-to change which sections are visible (and the active section),
         // so they bump the session content revision through the Host boundary.

@@ -127,6 +127,13 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
     {
+        if (TitleHidden)
+        {
+            // Step A: the manifest's Section container owns the card, so this widget draws its body only.
+            DrawContent(rect, ctx);
+            return;
+        }
+
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 

@@ -40,8 +40,8 @@ public abstract class UsSectionWidgetBase : IUiWidget
             spec.Id,
             Kind,
             ctx.ElementPath,
-            CardHeight(FallbackHeight(ctx)),
-            () => CardHeight(MeasureBody(ctx)));
+            TitleHidden ? Math.Max(0f, FallbackHeight(ctx)) : CardHeight(FallbackHeight(ctx)),
+            () => TitleHidden ? Math.Max(0f, MeasureBody(ctx)) : CardHeight(MeasureBody(ctx)));
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -59,6 +59,22 @@ public abstract class UsSectionWidgetBase : IUiWidget
             () => DrawBody(rect, ctx),
             fallback => DrawCard(fallback, ctx, body =>
                 UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny)));
+    }
+
+    /// <summary>
+    /// True when a declarative container already provides the card chrome (S3/S5 step A). The measure then
+    /// drops the card math and the body width stops subtracting the card's side padding, because the
+    /// container's own Padding already inset the rect this widget was arranged in.
+    /// </summary>
+    protected bool TitleHidden
+    {
+        get
+        {
+            if (!spec.TryGetAttribute("TitleHidden", out string raw)) return false;
+            string value = raw.Trim();
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "1", StringComparison.Ordinal);
+        }
     }
 
     /// <summary>True when the section's Tab attribute (if any) matches the active-tab binding.</summary>
@@ -132,7 +148,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
     /// </summary>
     protected float BodyWidth(UiWidgetContext ctx)
     {
-        return Math.Max(1f, ctx.ViewWidth - UsCardLayout.Padding * 2f);
+        return TitleHidden ? Math.Max(1f, ctx.ViewWidth) : Math.Max(1f, ctx.ViewWidth - UsCardLayout.Padding * 2f);
     }
 
     /// <summary>Includes the same card chrome that DrawCard consumes.</summary>

@@ -53,6 +53,9 @@ public static class UsKernelWidgetRegistrar
     /// <summary>Shared attribute schema for US section composites.</summary>
     internal static readonly IReadOnlyCollection<string> SectionSchema = new[]
     {
-        "Id", "Kind", "Title", "TitleKey", "HelpKey", "Tab", "Hidden", "Height"
+        "Id", "Kind", "Title", "TitleKey", "HelpKey", "Tab", "Hidden", "Height",
+        // S3/S5 step A: the widget contributes the BODY only when a declarative container already owns the
+        // card chrome (UsSectionWidgetBase.TitleHidden).
+        "TitleHidden"
     };
 }
