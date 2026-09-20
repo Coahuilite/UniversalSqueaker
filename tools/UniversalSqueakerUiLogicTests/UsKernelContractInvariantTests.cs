@@ -114,7 +114,8 @@ internal static class UsKernelContractInvariantTests
             }
 
             if (element.Name == "Scroll" && element.GetAttribute("Id") == "help-scroll"
-                && element.GetAttribute("Width") == "176" && IsTrue(element.GetAttribute("Fill")))
+                && element.GetAttribute("Width") == "320" && element.GetAttribute("MinWidth") == "260"
+                && IsTrue(element.GetAttribute("Fill")))
             {
                 helpScrollFill = true;
             }
@@ -127,7 +128,7 @@ internal static class UsKernelContractInvariantTests
         // slots, which is the half that makes this claim two-sided instead of an absence check.
         Assert(navFixed && !navFlexSlot && contentScrollFill && helpScrollFill,
             "body-row contains a width-fixed nav-column (160, and deliberately NOT Fill), content-scroll"
-            + " (Fill) and help-scroll (176 Fill)");
+            + " (Fill) and help-scroll (320 with a 260 floor, Fill)");
         Assert(!navFlexSlot,
             "nav-column must not declare Fill: it is width-fixed, and a Fill column in the stacked frame"
             + " takes an equal height share that us/nav's 271px of natural content overflows");

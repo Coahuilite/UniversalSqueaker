@@ -463,7 +463,7 @@
 | S3-2b | 把 `us/page-title` 搬进页头带（标题不再滚走）；**形状更正**：带子由 `Overlay` 改 `Row`、删 `Height`、标题按最坏值测带 | 落地 |
 | S3-3 | 页脚 `Overlay` 带（band-only，原子化留 S4；`Height="26"` 更正为不写） | 落地 |
 | S3-4a | `nav-column` 160→200 | 落地 |
-| S3-4b | **原子步**：`help-scroll` 176→320 + `WindowChromeLayout` 常量（断点**不动**，裁 500） | 待做 |
+| S3-4b | **原子步**：`help-scroll` 176→320（+`MinWidth=260`）+ `WindowChromeLayout` 常量 + 三条 lane 常量（断点**不动**，裁 500） | 落地 |
 | S3-5 | density：(丁) —— 页面容器显式 `Padding`/`Gap`，token 不动 | 待做 |
 | S3-6 | 收尾：本表、TODO/MEMORY 指针、**一次收齐的实机清单** | 待做 |
 

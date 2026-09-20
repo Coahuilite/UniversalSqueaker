@@ -150,24 +150,24 @@ internal static class Program
     /// <summary>
     /// Pure size policy of the settings window (task-10): it opens NARROW - 24% of the screen width
     /// clamped into [600, 860] - and the retractable help drawer adds exactly the column it occupies
-    /// plus the body-row gap it introduces (176 + 12 = 188). Height keeps the shipped 0.66-of-screen
+    /// plus the body-row gap it introduces (320 + 12 = 332). Height keeps the shipped 0.66-of-screen
     /// shape with a 600 floor. This file is compiled by the zero-Verse gate, so these are float
     /// helpers; the window composes them into its UnityEngine.Vector2 at the Verse boundary.
-    /// The referenced declarations live in Layout.Schema2.xml (help-scroll Width 176, body-row Gap 12).
+    /// The referenced declarations live in Layout.Schema2.xml (help-scroll Width 320, body-row Gap 12).
     /// </summary>
     private static void TestSettingsWindowSizePolicy()
     {
         const float tolerance = 0.001f;
 
-        Assert(Math.Abs(WindowChromeLayout.HelpDrawerWidth - 176f) < tolerance,
-            "the help column declaration the policy mirrors is 176");
+        Assert(Math.Abs(WindowChromeLayout.HelpDrawerWidth - 320f) < tolerance,
+            "the help column declaration the policy mirrors is 320");
         Assert(Math.Abs(WindowChromeLayout.BodyRowGap - 12f) < tolerance,
             "the body-row gap declaration the policy mirrors is 12");
         Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta
                 - (WindowChromeLayout.HelpDrawerWidth + WindowChromeLayout.BodyRowGap)) < tolerance,
             "the drawer delta is derived from the two manifest declarations, not repeated");
-        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 188f) < tolerance,
-            "expanding the drawer costs the window exactly 176 + 12 = 188px");
+        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 332f) < tolerance,
+            "expanding the drawer costs the window exactly 320 + 12 = 332px");
 
         foreach ((float screen, float screenHeight) in new[]
             { (1024f, 768f), (1280f, 800f), (1920f, 1080f), (2560f, 1440f), (3840f, 2160f) })
@@ -224,10 +224,10 @@ internal static class Program
 
         // The expanded window may never be wider than the screen it lives in; below the drawer delta it is
         // capped at the screen, and under the width floor at the closed width itself.
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f, 1080f) - 1148f) < tolerance,
-            "1920 open = 960 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f, 1440f) - 1468f) < tolerance,
-            "2560 open = 1280 + 188");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f, 1080f) - 1292f) < tolerance,
+            "1920 open = 960 + 332 (the declared help column plus the row gap it introduces)");
+        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f, 1440f) - 1612f) < tolerance,
+            "2560 open = 1280 + 332");
         Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f, 600f) - 800f) < tolerance,
             "an 800-wide screen cannot be widened past the floor, so open == closed");
         Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(900f, 700f) - 900f) < tolerance,

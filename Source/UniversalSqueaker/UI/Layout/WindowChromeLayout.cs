@@ -60,7 +60,7 @@ public static class WindowChromeLayout
     public const float SettingsWidthFloor = 800f;
 
     /// <summary>Declared <c>Width</c> of the help Scroll in <c>Layout.Schema2.xml</c>.</summary>
-    public const float HelpDrawerWidth = 176f;
+    public const float HelpDrawerWidth = 320f;
 
     /// <summary>Declared <c>Gap</c> of body-row in <c>Layout.Schema2.xml</c>: the extra gap a third column costs.</summary>
     public const float BodyRowGap = 12f;

@@ -18,7 +18,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// This lane proves the whole contract against the REAL production Host, the REAL embedded Schema=2
 /// manifest, the REAL widget registrations and the REAL typed binding table:
 ///   1. the shipped page opens RETRACTED at the declared 160px nav column (task-10: the window opens
-///      narrow like the vanilla ModSettings window), and an explicit open installs the 176px help
+///      narrow like the vanilla ModSettings window), and an explicit open installs the 320px help
 ///      column without moving the nav column;
 ///   2. closing (value binding and toggle action) removes the column and gives the centre column
 ///      exactly the help width plus the removed row gap;
@@ -40,7 +40,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </summary>
 internal static class HelpDrawerLaneTests
 {
-    private const float HelpWidth = 176f;
+    private const float HelpWidth = 320f;
     private const float BodyRowGap = 12f;
     /// <summary>The manifest's fixed nav-column width (compact ruling: was 192).</summary>
     private const float NavColumnWidth = 200f;

@@ -84,7 +84,7 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
     /// clamps 44% of the screen width into [vanilla's own 650, 1600] - never below the dialog vanilla
     /// itself opens at the minimum canvas - and the retractable help drawer widens it by exactly the column
-    /// plus row gap it costs (188 = 176 + 12) once the player expands it (see
+    /// plus row gap it costs (332 = 320 + 12) once the player expands it (see
     /// <see cref="ApplyDrawerWidth"/>). Height is derived from the width at 16:9 and floored at vanilla's
     /// 600. The shell's default would be the game's own <see cref="Window.InitialSize"/>, so this policy is
     /// what makes the opening size a product decision instead of an accident.

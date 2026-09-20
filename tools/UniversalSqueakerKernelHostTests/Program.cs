@@ -611,8 +611,8 @@ internal static class Program
         System.Xml.Linq.XElement? column = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-scroll");
         Assert(column != null, "the manifest must declare the inspector column (help-scroll)");
-        Assert((string?)column!.Attribute("Width") == "176",
-            "the inspector column width must stay a manifest declaration of 176, got '"
+        Assert((string?)column!.Attribute("Width") == "320",
+            "the inspector column width must stay a manifest declaration of 320, got '"
             + ((string?)column.Attribute("Width") ?? "(none)") + "' in " + manifestPath);
         System.Xml.Linq.XElement? panel = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-panel");
@@ -630,15 +630,15 @@ internal static class Program
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
             Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect arranged),
                 "no arranged inspector column at " + viewport);
-            Assert(Math.Abs(arranged.width - 176f) < 0.01f,
-                "the arranged inspector column must be the declared 176 at " + viewport + ": " + arranged.width);
+            Assert(Math.Abs(arranged.width - 320f) < 0.01f,
+                "the arranged inspector column must be the declared 320 at " + viewport + ": " + arranged.width);
 
             host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
             UiNode? drawn = host.Session.GetNodeByElementId("help-scroll");
             Assert(drawn != null, "the drawn pass must carry the inspector column node at " + viewport);
             Rect drawnRect = drawn!.Rect ?? default;
-            Assert(Math.Abs(drawnRect.width - 176f) < 0.01f,
-                "the drawn inspector column must be the declared 176 at " + viewport + ": " + drawnRect.width);
+            Assert(Math.Abs(drawnRect.width - 320f) < 0.01f,
+                "the drawn inspector column must be the declared 320 at " + viewport + ": " + drawnRect.width);
         }
     }
 
