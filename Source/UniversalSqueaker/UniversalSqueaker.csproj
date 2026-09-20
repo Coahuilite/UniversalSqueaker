@@ -7,13 +7,13 @@
     <Nullable>enable</Nullable>
     <AssemblyName>UniversalSqueaker</AssemblyName>
     <RootNamespace>UniversalSqueaker</RootNamespace>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <!-- VersionPrefix must stay a bare numeric prefix and must never point at a suffixed Version:
          $(VersionPrefix) is what AssemblyVersion/FileVersion below are built from, so a suffix there
          produces an illegal assembly version. The identity axis moves with the release (<Version>,
          <VersionPrefix> and About.xml <modVersion> together); the suffix stays in the tag and the
          artifact name only, never in the identity axis. -->
-    <VersionPrefix>0.4.0</VersionPrefix>
+    <VersionPrefix>0.5.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
