@@ -199,6 +199,30 @@
 **建议顺序**：第 1 轮先做 `Repeat` 的两个旗舰（checklist、race/xenotype 行集）——它们产生 FL 最缺的消费侧证据，并且是唯一会触发上面两个 (B) 候选的采纳；第 2 轮做静态行集（basic-tuning、camera-indicator、global-volume）；第 3 轮做原子对换（mode-row、diagnostics、filter-bar、timing、nav、page-title、footer、camera-readout、attenuation-editor）。**每个采纳都要按 FL 的格式回报：验证了哪个组件、摩擦是什么、必须修的是 (A) 还是 (B)，并附失败敏感的 lane。**
 
 **维护者倾向（记录，不在本轮执行）**：对 bucket (ii) 的缺口，维护者倾向 **Route A —— 给 `container/tree` 一个可选的按行模板**，但明确要求**先等 US 真正用过现有组件**再决定；本节的 (ii) 数字（2 个部件 / 933 code 行）就是那个决定的价格依据。本轮不实现、不给 FL 提交请求。
+### 5.3 WAVE 1 采纳实测（2026-09-20）：迁移被三个**实测缺口**挡住，bucket (i) 必须修正
+
+**结论先说**：checklist 与 race/xenotype 行集的 `Repeat` + `<Templates>` 采纳**在动一行代码之前就撞墙**，而且是结构性的，不是排版细节。撞墙点不是 `Repeat` 本身——`Repeat` 的契约（`Items` = `IReadOnlyList<string>` 值绑定、`Template` 指向 `<Templates>`、item 局部绑定 `<Items>.<key>.<declaredKey>`、身份 `<declaredId>#<key>`）**实测可用**；挡住迁移的是它的**依赖面**：US 的悬停帮助、行交互与本地化。
+
+**G1（B，通用）没有任何声明式的帮助/悬停钩子。** FL 全库只有一个帮助形状的属性：`input/mode-row` 的 `HoverHelpKey`（且它是**选项级**的，不是元素级）；`Section` 的 schema 只有 `Title`/`TitleKey`。US 的悬停帮助由 **22 个 UI 文件里的 43 处 `UsKernelDraw.HelpHover`** 声明，区块级那一条来自 `UsSectionWidgetBase:109` 读清单的 `HelpKey` 属性，并且**双向**钉在 46 项帮助目录上（`Program.cs:306`）。推论：**把任何区块/行迁成声明式元素都会静默丢掉它的帮助覆盖**——双向测试会红，而删掉目录项等于发布一次帮助功能回退。通用性：任何带 inspect/帮助浮层的消费者都要把帮助身份挂到声明式控件上；与既有的 `Bind`/`ActionBind`/`LabelKey` 词表对称；FL 自己已经为 `input/mode-row` 单独发了 `HoverHelpKey`，那就是需求存在的证据。
+**G2（B，通用）重复行无法上报自己的 item key。** `input/button` 触发的是**无 payload 的命令**（`ButtonWidget.cs:83`）；`input/checkbox` 只能写自己的 item 局部 bool；`container/tree` 能上报行 key，但**不吃模板**、一行只画一个 label band（无两行、无换行生长）。可用绕法（属 (A)）：**item 限定绑定键本身就是身份载体**（每项一个 bool setter / 每项一个命令键），所以 `Repeat` + checkbox/button 行能为「自己那一项」动作；但点击目标必须是自带外观的控件，「点在一整行空白处」不可表达。通用性：任何「非按钮行」的列表（时间线、文件列表、域列表）都要；与 `container/tree` 既有的「ActionBind 上报行 key」对称，缺的只是**模板行做不到同样的事**。
+**G3（B，通用）没有无外观的命中区，也无法拉伸到内容测高的整行。** 所有可点击的核心 kind 都自绘外观；`input/button` 的高度是 `RowHeight` 或声明的 `Height`，所以「两行文本测高而成的行」之上铺一个整行命中区不可表达。通用性与对称性同 G2。
+**G4（B，通用，本轮新发现）`input/mode-row` 的选项标题是字面量，绕过翻译缝。** schema 只有 `Title1..8`/`Description1..8`（没有 `TitleKeyN`），源码里 `DrawOption` 直接用 `option.Title`，**全文件没有一处 `Translate`**。所以**本地化消费者用不了这个 kind**：US 的 `us/mode-row` 四个选项在 EN/ZH 两套 Keyed 表里。与每个 kind 上的 `LabelKey`/`TextKey` 对称。
+**G5（B，源码确认）`chrome/banner` 没有 `Tone`。** 它的 schema 是 `Bind/Text/TextKey/Height/Tab/Hidden`，没有 `ToneAndEmphasis`；US 的四条 banner 是**角色映射**的（冲突/目标缺失 = attention 青色带；dormant = 不可用 hatch），声明式表达不了角色。绕法：`text/wrapped Tone=…` + `chrome/rule` 组合，代价是丢掉 banner 自己的 band 契约。
+
+**四个候选的实测判定（本轮，而不是假设）**：
+
+| 候选 | 判定 | 依据 |
+|---|---|---|
+| `Tone`/`Emphasis` 只有字面量（无 `ToneBind`） | **CONFIRMED** | 三处都需要数据驱动的颜色：footer 的 save-status 颜色（`UsFooterWidget.cs:81-90`）、race 行的选中态、banner 角色；`AtomVocabulary` 只有 `ToneAttribute`/`EmphasisAttribute`，没有绑定形态 |
+| `chrome/banner` 没有 `Tone` | **CONFIRMED（源码）** | schema 无 `ToneAndEmphasis`（`ChromeBannerWidget.Register`）；未写 lane，因为迁移未开始 |
+| `state/empty` 不接受 `Bind` | **NOT PROVEN** | 它的两个句子（空域 / 空搜索）可以用两个 `VisibleKey` 门控的字面量元素表达，不构成阻塞 |
+| 没有 `MinHeight`/预留带 | **NOT PROVEN** | 本轮没有任何迁移走到「按最坏值预留 band」那一步；不重复上一轮的假设 |
+
+**§5.1 的修正（按维护者要求，接触现实后改表）**：bucket (i) 的 15 个部件在**布局**意义上确实可用现有词表表达，但**在 G1 未解决之前，没有一个可以无损迁移**——18 个部件全部带帮助 claim（22 个 UI 文件、43 处）。所以正确的表述是：**(i) = 15 个部件 / 1,969 code 行在布局上可表达，其中 0 个可以在不丢帮助覆盖的前提下迁移**；真正的前置条件是 G1，而不是「US 愿不愿意做」。这也解释了为什么 FL 的 `Repeat` 至今消费侧证据为零：**采纳被依赖面挡住，不是被 US 的意愿挡住**。
+
+**给维护者/lead 的绕行选项（本轮不自行决定）**：(a) FL 增加一个**元素级帮助/悬停身份钩子**（例如 `HelpKey` 走一个消费者绑定，与 `VisibleKey` 对称）→ 一次解锁全部 15 个；(b) US 接受迁移区块的帮助回退（删除对应目录项与两套语言键，46 → 更少）；(c) US 只在**新的、无帮助覆盖的页面**上用 `Repeat`（本轮不产生证据）。
+
+**本轮没有提交任何迁移（lines deleted = 0），这是有意的**：在 (a)/(b)/(c) 里选一条之前，任何迁移要么发布帮助回退，要么产出假证据。三个缺口的证据（FL 源码行 + US 的 43 处 claim + 46 项目录钉）已经写进本节，可供 FL 转录入 `MEMORY.md`。
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
