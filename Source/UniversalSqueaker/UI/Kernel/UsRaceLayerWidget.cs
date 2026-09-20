@@ -177,7 +177,17 @@ internal static class UsPacksText
     /// <summary>Formats a keyed template with invariant culture so digits stay as plain as before.</summary>
     internal static string Format(UiWidgetContext ctx, string key, params object[] args)
     {
-        return string.Format(System.Globalization.CultureInfo.InvariantCulture, ctx.Translation.Translate(key), args);
+        return Format(ctx.Translation, key, args);
+    }
+
+    /// <summary>
+    /// The same template for a caller that holds the translation seam but no widget context: the host's
+    /// per-item row bindings compose the pack row's meta line before any context exists (step B). One
+    /// implementation, so the two callers cannot format the same key differently.
+    /// </summary>
+    internal static string Format(IUiTranslation translation, string key, params object[] args)
+    {
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, translation.Translate(key), args);
     }
 
     /// <summary>The Tiny status line under a domain row: enabled/candidate counts, no state.</summary>

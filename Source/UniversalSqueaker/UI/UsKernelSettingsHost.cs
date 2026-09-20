@@ -59,14 +59,17 @@ public static class UsKernelSettingsHost
         // element keeping its node, which the 0.6 carrier no longer does: PruneNodesExcept releases a
         // removed identity together with its scroll position (UiSession.PruneNodesExcept).
         var bumper = new SessionRevisionBumper();
-        UiBindings bindings = BuildBindings(source, bumper);
+        // One translation seam instance for both the host and the per-item text bindings: the checklist's
+        // row meta line is composed from a Keyed template, and a second seam would be a second language.
+        var translation = new UsKernelTranslation();
+        UiBindings bindings = BuildBindings(source, bumper, translation);
         UiHost host = new(
             Source,
             manifest,
             bindings,
             UsTheme.Surface(),
             metrics,
-            new UsKernelTranslation());
+            translation);
         bumper.Attach(host.Session);
         // No first-frame reconciliation is needed any more: the manifest's VisibleKey is resolved
         // through the "help-open" binding on every arrange, so the RETRACTED default in the page state
@@ -156,7 +159,8 @@ public static class UsKernelSettingsHost
     private const string ContentScrollId = "content-scroll";
     private const string HelpScrollId = "help-scroll";
 
-    private static UiBindings BuildBindings(IUsKernelSettingsSource source, SessionRevisionBumper bumper)
+    private static UiBindings BuildBindings(
+        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -164,10 +168,6 @@ public static class UsKernelSettingsHost
 
         // Navigation / page chrome.
         bindings.BindValue<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, source.SetActiveTab);
-        // S3/S5 step A: the container vocabulary has no Tab attribute (Tab is widget-only), so the
-        // declarative checklist card is gated by a VisibleKey bool over the same page state the engine's
-        // own Tab rule reads. Same behaviour as the widget's Tab="Packs": the card exists only on Packs.
-        bindings.BindReadOnly<bool>("tab-packs", () => string.Equals(state.ActiveTab, "Packs", StringComparison.OrdinalIgnoreCase));
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
         // Tab switches and scroll-to change which sections are visible (and the active section),
         // so they bump the session content revision through the Host boundary.
@@ -311,7 +311,25 @@ public static class UsKernelSettingsHost
         // loop also uses (UsChecklistFilter). The query is read from the page state the "search-text"
         // binding above reads, so the key list and the screen cannot disagree about which pack a search
         // accepted; the both-directions contract is asserted by ChecklistItemsLaneTests.
-        bindings.BindReadOnly<IReadOnlyList<string>>("checklist-pack-keys", () => ChecklistPackKeys(source));
+        var checklistItems = new ChecklistItemBindings(source, bindings, translation, bump);
+        bindings.BindReadOnly<IReadOnlyList<string>>(ChecklistItemsKey, () =>
+        {
+            // The projection OWNS its item-local binding namespace: the rows the list names are exactly the
+            // rows whose per-item keys must resolve when the engine materializes them, and the engine reads
+            // this binding during Measure - before it measures or draws a single row - so registering here
+            // is what makes "the list and the screen are one answer" true by construction rather than by
+            // hope. A page-level pre-registration cannot do it: the pack set is a runtime projection of the
+            // catalog and the selected domain, and no creation-time table can enumerate it.
+            IReadOnlyList<string> keys = ChecklistPackKeys(source);
+            checklistItems.Ensure(keys);
+            return keys;
+        });
+        // The empty states and the "is there a domain at all" gate are read-only bools over the same
+        // projection, so a card can never draw both a list and an empty sentence.
+        bindings.BindReadOnly<bool>("checklist-has-domain", () => source.BuildView().SelectedDomain.HasValue);
+        bindings.BindReadOnly<bool>("checklist-empty-nodomain", () => !source.BuildView().SelectedDomain.HasValue);
+        bindings.BindReadOnly<bool>("checklist-empty-domain", () => EmptyDomain(source, noRows: false));
+        bindings.BindReadOnly<bool>("checklist-empty-search", () => EmptyDomain(source, noRows: true));
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
@@ -347,6 +365,121 @@ public static class UsKernelSettingsHost
         return domain.HasValue
             ? UsChecklistFilter.Keys(domain.Value, source.ViewState.SearchText)
             : Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// The declarative checklist row's item-local binding namespace
+    /// (<c>checklist-pack-keys.&lt;itemKey&gt;.&lt;declaredKey&gt;</c>), registered on demand by the
+    /// projection that names the rows.
+    /// <para>
+    /// <b>Why on demand rather than at creation.</b> The row set is a runtime projection of the catalog and
+    /// the selected domain, and the binding registry is a closed table with no prefix resolution - so the
+    /// only two honest options are "register every pack the catalog could ever contain" (which a filtered or
+    /// unloaded session cannot enumerate) or "register exactly the rows the list just named" (which is what
+    /// the engine is about to materialize). This is the second one. It also keeps the invariant that matters:
+    /// a key in the list ALWAYS has readable per-item bindings, so the library's fail-soft answer for an
+    /// absent item-local key - draw the default, report once - is never what a player sees.
+    /// </para>
+    /// <para>
+    /// Every getter resolves against the CURRENT view rather than a captured row: a row's label and its
+    /// selected state are live model data, and a captured struct would freeze the row at registration time.
+    /// The write resolves the domain at write time for the same reason - the item key is the identity
+    /// carrier, and the domain it belongs to is whatever domain currently lists it.
+    /// </para>
+    /// </summary>
+    private sealed class ChecklistItemBindings
+    {
+        private readonly IUsKernelSettingsSource source;
+        private readonly UiBindings bindings;
+        private readonly IUiTranslation translation;
+        private readonly Action bump;
+        private readonly HashSet<string> registered = new(StringComparer.Ordinal);
+
+        internal ChecklistItemBindings(
+            IUsKernelSettingsSource source, UiBindings bindings, IUiTranslation translation, Action bump)
+        {
+            this.source = source;
+            this.bindings = bindings;
+            this.translation = translation;
+            this.bump = bump;
+        }
+
+        /// <summary>Registers the item-local keys of the given rows, once per key.</summary>
+        internal void Ensure(IReadOnlyList<string> keys)
+        {
+            for (int i = 0; i < keys.Count; i++)
+            {
+                Register(keys[i]);
+            }
+        }
+
+        private void Register(string key)
+        {
+            if (string.IsNullOrEmpty(key) || !registered.Add(key)) return;
+
+            string scope = ChecklistItemsKey + "." + key + ".";
+            bindings.BindReadOnly<string>(scope + "label", () => Find(key)?.Label ?? "");
+            bindings.BindReadOnly<string>(scope + "meta", () => Meta(key));
+            bindings.BindReadOnly<string>(scope + "coverage", () => Find(key)?.Coverage ?? "");
+            // The row's state: the one writable item-local key, so the checkbox's click IS the row's toggle.
+            bindings.BindValue<bool>(scope + "enabled", () => Find(key)?.IsSelected ?? false, value => Toggle(key, value));
+        }
+
+        /// <summary>
+        /// The row this key names in the CURRENT view, or null when the model no longer supplies it. Null is
+        /// a legal frame: a row's node outlives the data for the frame in which the model dropped it, and the
+        /// leaf's documented answer to an unresolvable bound string is its empty default plus one report.
+        /// </summary>
+        private VoicePackRowView? Find(string key)
+        {
+            VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+            if (!domain.HasValue) return null;
+
+            IReadOnlyList<VoicePackRowView> packs = domain.Value.Packs;
+            if (packs == null) return null;
+            for (int i = 0; i < packs.Count; i++)
+            {
+                if (string.Equals(packs[i].Key, key, StringComparison.Ordinal)) return packs[i];
+            }
+
+            return null;
+        }
+
+        private string Meta(string key)
+        {
+            VoicePackRowView? row = Find(key);
+            return UsPacksText.Format(
+                translation, KeyPackChecklistMeta, row?.ModName ?? "", row?.Author ?? "");
+        }
+
+        private void Toggle(string key, bool enabled)
+        {
+            VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+            if (!domain.HasValue) return;
+            source.ToggleVoicePack(
+                domain.Value.Scope, domain.Value.RaceDefName, domain.Value.TargetDefName, key, enabled);
+            // A display write: the row's selected state and the "Forget dangling" count both flow back to
+            // the screen, so the session clock must advance or the revision-gated view keeps the old row.
+            bump();
+        }
+    }
+
+    /// <summary>The Repeat's Items binding: the ordered item keys the declarative row set is built from.</summary>
+    private const string ChecklistItemsKey = "checklist-pack-keys";
+
+    /// <summary>The pack row's composed meta line ("Mod — Author"); the one Keyed template it needs.</summary>
+    private const string KeyPackChecklistMeta = "US.Packs.Checklist.PackMeta";
+
+    /// <summary>
+    /// True when the selected domain exists and shows no row: <paramref name="noRows"/> picks the "the
+    /// domain has no packs at all" sentence, false the "the search matched nothing" one - the same split the
+    /// composite widget drew before the empty states became manifest elements.
+    /// </summary>
+    private static bool EmptyDomain(IUsKernelSettingsSource source, bool noRows)
+    {
+        VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+        if (!domain.HasValue) return false;
+        return noRows ? domain.Value.Packs.Count > 0 && ChecklistPackKeys(source).Count == 0 : domain.Value.Packs.Count == 0;
     }
 
     /// <summary>Four normalized attenuation points: start locked at 100%, end locked at 0%.</summary>

@@ -39,14 +39,31 @@
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
         <Widget Id="race-layer" Kind="us/race-layer" TitleKey="US.Section.RaceDomain" HelpKey="us/race-layer" Tab="Packs" />
         <Widget Id="xenotype-layer" Kind="us/xenotype-layer" TitleKey="US.Section.XenotypeDomain" HelpKey="us/xenotype-layer" Tab="Packs" />
-        <!-- Step A of the checklist migration: the card is the engine's Section container, carrying the same
-             explicit geometry every other container on this page already declares (CP-0), gated by a
-             VisibleKey bool because the container vocabulary has no Tab. The section help sits on a WIDGET
+        <!-- Step A/B of the checklist migration: the card is the engine's Section container, carrying the
+             same explicit geometry every other container on this page already declares (CP-0). It is gated
+             by the engine's own Tab attribute - the container vocabulary gained it as a coherence fix, so
+             the one-bool VisibleKey shim this card used while the container contract lacked the name is
+             deleted. A Tab-gated container takes its whole subtree with it, and a hidden container keeps its
+             node and state, so switching workspaces churns no identity. The section help sits on a WIDGET
              (section/header) because HelpKey is refused on containers. Padding 12 + header 26 + Gap 6
-             reproduces UsCardLayout.MeasureBody (12 + 26 + 6 + body + 12) exactly. -->
-        <Section Id="checklist-card" VisibleKey="tab-packs" Padding="12" Gap="6">
+             reproduces UsCardLayout.MeasureBody (12 + 26 + 6 + body + 12) exactly.
+
+             The card's body is declarative from step B: the retained status-band composite
+             (us/voice-pack-checklist: the three role-mapped domain banners and the orphan band - the G5
+             citation), then a search field, a Repeat of pack rows and two empty states, all gated by
+             VisibleKey bools. The two presentations are mutually exclusive, the same shape the diagnostics
+             nav column uses. The orphan band now draws ABOVE the list rather than below it: it is a band
+             about the list that follows, and a widget element cannot straddle manifest siblings. -->
+        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6">
           <Widget Id="checklist-header" Kind="section/header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
           <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" />
+          <Column Id="checklist-list" VisibleKey="checklist-has-domain" Gap="6" Padding="0">
+            <Widget Id="checklist-search" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="24" HelpKey="us/voice-pack-checklist/search" />
+            <Repeat Id="checklist-rows" Items="checklist-pack-keys" Template="checklist-row" Gap="2" />
+            <Widget Id="checklist-empty-domain" Kind="state/empty" TextKey="US.Packs.Checklist.EmptyDomain" VisibleKey="checklist-empty-domain" />
+            <Widget Id="checklist-empty-search" Kind="state/empty" TextKey="US.Packs.Checklist.EmptySearch" VisibleKey="checklist-empty-search" />
+          </Column>
+          <Widget Id="checklist-empty-nodomain" Kind="state/empty" TextKey="US.Packs.Checklist.NoDomains" VisibleKey="checklist-empty-nodomain" />
         </Section>
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
@@ -59,4 +76,18 @@
          in-game log kept reporting "footer needs 33px has 28px" while the attribute was pinning 28). -->
     <Widget Id="footer" Kind="us/footer" />
   </Column>
+  <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
+       ActionBind inside a template are qualified per item by the engine (<Items>.<itemKey>.<declaredKey>),
+       which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
+       every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
+  <Templates>
+    <Row Id="checklist-row" Gap="4" Padding="0">
+      <Column Id="checklist-row-text" Gap="2" Padding="0">
+        <Widget Id="checklist-row-label" Kind="text/wrapped" Bind="label" HelpKey="us/voice-pack-checklist/row" />
+        <Widget Id="checklist-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
+        <Widget Id="checklist-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
+      </Column>
+      <Widget Id="checklist-row-check" Kind="input/checkbox" Bind="enabled" Width="24" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
+    </Row>
+  </Templates>
 </UiPage>

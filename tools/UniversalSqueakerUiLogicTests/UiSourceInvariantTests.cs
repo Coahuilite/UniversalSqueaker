@@ -323,8 +323,15 @@ internal static class UiSourceInvariantTests
 
         foreach (string key in manifestHelpKeys)
         {
-            Assert(UsHelpCatalog.TryGetSection(key, out _),
-                "manifest HelpKey '" + key + "' has no UsHelpCatalog section (hover would show an empty panel)");
+            // A manifest HelpKey is a hover CLAIM identity, and the panel resolves a claim against the whole
+            // catalog: the item key first, then the active section's overview (UsHelpPanelLogic.Resolve ->
+            // UsHelpCatalog.TryFindItem). Both shapes are therefore valid declarations - step B is the first
+            // manifest that carries ITEM keys, because the engine's element-level HelpKey is what let the
+            // checklist's search field and row template keep their entries without a line of C#. What must
+            // not happen is a key the catalog cannot answer at all, which is what would show an empty panel.
+            Assert(UsHelpCatalog.TryFindItem(key, out _, out _) || UsHelpCatalog.TryGetSection(key, out _),
+                "manifest HelpKey '" + key + "' is neither a catalog item nor a catalog section "
+                + "(hover would show an empty panel)");
         }
 
         foreach (string key in mapKeys)
@@ -335,9 +342,11 @@ internal static class UiSourceInvariantTests
 
         foreach (string key in catalogSections)
         {
-            Assert(manifestHelpKeys.Contains(key) || mapKeys.Contains(key),
-                "catalog section '" + key + "' is unreachable: neither a manifest HelpKey nor a "
-                + "SectionHelpKeyOf value (dead catalog content)");
+            Assert(manifestHelpKeys.Contains(key)
+                || manifestHelpKeys.Any(help => help.StartsWith(key + "/", StringComparison.Ordinal))
+                || mapKeys.Contains(key),
+                "catalog section '" + key + "' is unreachable: neither a manifest HelpKey (itself or one of "
+                + "its items) nor a SectionHelpKeyOf value (dead catalog content)");
         }
 
         Assert(mapKeys.Contains("us/page-title"),
@@ -445,6 +454,21 @@ internal static class UiSourceInvariantTests
                 }
 
                 at = close + 1;
+            }
+        }
+
+        // Step B widened the claim SOURCES, not the rule: since the engine claims a hovered element's
+        // HelpKey, a claim can be DECLARED in the manifest - that is the hook that let the checklist's
+        // search field and row template drop their imperative UsKernelDraw.HelpHover sites without losing
+        // help coverage. A manifest HelpKey that names an item is therefore a claim like any other, and the
+        // bidirectionality below (every claim resolves, every item is claimed) covers both sources.
+        foreach (string key in EnumerateManifestAttributes(
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpKey"))
+        {
+            string[] parts = key.Split('/');
+            if (parts.Length == 3 && parts[0] == "us" && parts[1].Length > 0 && parts[2].Length > 0)
+            {
+                claimed.Add(key);
             }
         }
 
@@ -740,7 +764,10 @@ internal static class UiSourceInvariantTests
 
         foreach (string manifest in ManifestPaths(root))
         {
-            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey" })
+            // PlaceholderKey joined the list with step B: the checklist's search hint moved from a C#
+            // literal into the input/text-field element, and a key the scanner does not collect is a
+            // reference that can never be asserted to exist.
+            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey", "PlaceholderKey" })
             {
                 foreach (string value in EnumerateManifestAttributes(manifest, attribute))
                 {
