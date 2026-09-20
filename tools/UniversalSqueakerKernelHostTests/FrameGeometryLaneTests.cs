@@ -82,6 +82,7 @@ internal static class FrameGeometryLaneTests
         Step("the three-column frame keeps its declared shape across the five viewports", TheFrameKeepsItsShape);
         Step("the header band is fixed, right-aligned, and the page's ONLY help switch", TheHeaderBandIsFixed);
         Step("placement vocabulary is refused where its container does not own the axis", PlacementIsRefusedWhereTheContainerDoesNotOwnIt);
+        Step("every page container states its own rhythm instead of inheriting it", PageRhythmIsExplicit);
         Console.WriteLine("FrameGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -551,6 +552,63 @@ internal static class FrameGeometryLaneTests
             "AlignX on a Row's child must be refused at creation: a Row's main axis already has an owner,"
             + " so a second one is the ambiguity the placement vocabulary exists to refuse - and it is why"
             + " the header band's switch carries AlignY only");
+    }
+
+    /// <summary>
+    /// The ruling behind S3-5, made checkable: the page's rhythm is DECLARED on the page containers, and the
+    /// style document's density tokens stay the library baseline. A container that omits `Padding` silently
+    /// inherits that baseline (CP-0: an absent Padding falls back to `theme.Geometry.Padding`), which is
+    /// exactly the coupling this ruling removes - so a missing attribute is a failure here, not a default.
+    /// Explicit zero is the escape hatch and is used deliberately (`Padding="0"`), while a container with
+    /// two or more children must also state its `Gap`, because the space BETWEEN page regions is the thing
+    /// the rhythm is.
+    /// </summary>
+    private static void PageRhythmIsExplicit()
+    {
+        UiLayoutManifest manifest = LoadManifest();
+        var problems = new List<string>();
+        foreach (UiElementSpec root in manifest.Roots) CheckRhythm(root, problems);
+        Assert(problems.Count == 0, Report(problems));
+    }
+
+    private static void CheckRhythm(UiElementSpec spec, List<string> problems)
+    {
+        if (IsContainerKind(spec.Kind))
+        {
+            if (!spec.TryGetAttribute("Padding", out string padding) || padding.Trim().Length == 0)
+            {
+                problems.Add("container '" + spec.Id + "'(" + spec.Kind + ") declares no Padding, so it"
+                    + " inherits the density token instead of stating its own rhythm");
+            }
+
+            if (spec.Children.Count >= 2
+                && (!spec.TryGetAttribute("Gap", out string gap) || gap.Trim().Length == 0))
+            {
+                problems.Add("container '" + spec.Id + "'(" + spec.Kind + ") has " + spec.Children.Count
+                    + " children but declares no Gap, so the space BETWEEN page regions comes from the token");
+            }
+        }
+
+        foreach (UiElementSpec child in spec.Children) CheckRhythm(child, problems);
+    }
+
+    /// <summary>The engine's container kinds, restated here because UiHost.IsContainerKind is private.</summary>
+    private static bool IsContainerKind(string kind)
+    {
+        switch (kind)
+        {
+            case "Column":
+            case "Row":
+            case "Wrap":
+            case "Overlay":
+            case "Section":
+            case "Surface":
+            case "Scroll":
+            case "Clip":
+                return true;
+            default:
+                return false;
+        }
     }
 
     /// <summary>Key-echo translation: the lane only needs the manifest to be reachable, not readable.</summary>

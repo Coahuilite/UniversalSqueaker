@@ -158,6 +158,7 @@
 
 细则：
 - **`Breakpoint="720"` 对真实窗口是空条款（2026-09-21 实测并裁定）**：`Breakpoint` 比对的是**容器自己的内宽**（`UiLayoutEngine.cs:883` `width - padding.Left - padding.Right`，`IsNarrow` `:995-1010`），而 body-row 的内宽 = 窗宽 − 64。**真实窗宽地板是 800 ⇒ 内宽恒 ≥ 736 ⇒ 任何 ≤736 的断点对真实窗口零影响**（只对 480/320 两个人造探针生效）。所以**真正的窄屏保护不来自这个断点**，而来自下面的 (乙1)。
+- **这一档不只是"窄"，它会真的溢出文本（S3-4b 实测，harness 度量）**：在 **736（最小真实窗的内宽） + 抽屉开**时中心列是 **168px**（滚动条预留后内容带 152px），`ui.text.overflow` 报 **7 条（EN）/ 2 条（ZH）**：`mode-row` 54/36、`global-volume` 54/18、`basic-tuning` 42.7/22、`timing` 108/90、`camera-indicator` 42.7/22（ZH：`global-volume` 36/18、`timing` 72/54）。**这条要进实机清单的 F-05 项**（"overflow 是否归零"），并且是 (乙1) 那个切片必须解决的对象，不是「窄一点而已」。
 - **一个已知的玩家可见状态（裁定 (乙2) 接受，实机待看）**：`WindowChromeLayout.SettingsOpenWidth` 以屏幕宽度封顶（`:119`），所以在**逻辑屏宽 ≤ 800** 时抽屉展开无法把窗口撑宽：内宽 736 − nav 200 − 2×gap 12 − help 320 = **内容列 192px**（今天 176 的右栏是 376）。**1024 屏展开是 416px，已经好于今天**，只有 ≤800 落到 192。**注意「逻辑屏宽」是 UI 缩放后的值**：普通 1920 显示器在 UI scale ≳2.5 时就落到逻辑 768 ⇒ 同样 192px，这不是罕见硬件问题。
 - **(乙1) 是 S3 之后立刻做的独立切片**（不挂在「等谁碰到 800 屏」上）：到那一步要**量完再选**两条候选并给价签——宿主算出的 `VisibleKey` 切第二呈现（叠放/覆层）**vs** 用 `WidthKey` 让宿主算出「付得起的帮助列宽」（后者要把 `DrawerWidthDelta` 从常量改成函数，它被 `UniversalSqueakerUiLogicTests/Program.cs` 钉死）。
 - **页头固定**：`header-band` 是 `page-root` 的流内子元素，不参与 `content-scroll`，因此滚动时不动。
@@ -464,7 +465,7 @@
 | S3-3 | 页脚 `Overlay` 带（band-only，原子化留 S4；`Height="26"` 更正为不写） | 落地 |
 | S3-4a | `nav-column` 160→200 | 落地 |
 | S3-4b | **原子步**：`help-scroll` 176→320（+`MinWidth=260`）+ `WindowChromeLayout` 常量 + 三条 lane 常量（断点**不动**，裁 500） | 落地 |
-| S3-5 | density：(丁) —— 页面容器显式 `Padding`/`Gap`，token 不动 | 待做 |
+| S3-5 | density：(丁) —— 页面容器显式 `Padding`/`Gap`，token 不动；新增「每个容器必须自己声明节奏」的 lane | 落地 |
 | S3-6 | 收尾：本表、TODO/MEMORY 指针、**一次收齐的实机清单** | 待做 |
 
 ## 7. 风险

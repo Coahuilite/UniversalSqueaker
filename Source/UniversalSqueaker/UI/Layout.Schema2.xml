@@ -13,7 +13,7 @@
     </Density>
   </Styles>
   <Column Id="page-root" Gap="8" Padding="12">
-    <Row Id="header-band" Padding="0">
+    <Row Id="header-band" Padding="0" Gap="6">
       <Widget Id="page-title" Kind="us/page-title" />
       <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
               ActionBind="toggle-help-drawer" Width="128" Height="26"
