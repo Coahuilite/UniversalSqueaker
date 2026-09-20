@@ -103,7 +103,7 @@ internal static class UsKernelContractInvariantTests
             if (node is not XmlElement element) continue;
             if (element.Name == "Column" && element.GetAttribute("Id") == "nav-column")
             {
-                navFixed = element.GetAttribute("Width") == "160";
+                navFixed = element.GetAttribute("Width") == "200";
                 navFlexSlot = IsTrue(element.GetAttribute("Fill"));
             }
 

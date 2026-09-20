@@ -1475,7 +1475,7 @@ internal static class Program
                 "content scroll viewport is usable at " + viewport + " (got " + contentScroll + ")");
 
             Rect navColumn = snapshot.RectById["nav"];
-            Assert(Math.Abs(navColumn.width - 160f) < 0.5f, "nav column keeps its declared 160 width at " + viewport);
+            Assert(Math.Abs(navColumn.width - 200f) < 0.5f, "nav column keeps its declared 200 width at " + viewport);
             Assert(snapshot.ScrollContents.ContainsKey("content-scroll"), "content scroll content rect present at " + viewport);
 
             Rect footer = snapshot.RectById["footer"];

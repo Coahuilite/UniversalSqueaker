@@ -10,7 +10,9 @@ namespace UniversalSqueaker.UI;
 /// Workspace-only navigation for the five player tasks. It intentionally does not expose every
 /// child control: each destination owns one coherent flow in the centre workspace.
 ///
-/// Geometry contract: one fixed column width comes from the manifest (160 since the compact-nav ruling),
+/// Geometry contract: one fixed column width comes from the manifest (200 since the S3 frame reset; it was
+/// 192 -> 160 in the compact-nav round, and the frame reset is what gives the cards back the room the
+/// three-column target assumes),
 /// every card fills it exactly, and every card has the SAME outer bounds whichever one is selected. Card
 /// height is a single shared number, not a per-card measurement: <see cref="SubtitleLines"/> Tiny lines
 /// are reserved for the subtitle on every card in every language, so a wrapping translation can no longer

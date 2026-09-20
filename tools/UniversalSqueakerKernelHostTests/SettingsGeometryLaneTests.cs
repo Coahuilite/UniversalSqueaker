@@ -1256,7 +1256,7 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>The manifest's fixed nav-column width for the compact pass (was 192 before the ruling).</summary>
-    private const float NavColumnWidth = 160f;
+    private const float NavColumnWidth = 200f;
 
     /// <summary><c>UsNavWidget.SidePadding</c> of the same compact pass.</summary>
     private const float NavSidePadding = 8f;

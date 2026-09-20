@@ -43,7 +43,7 @@ internal static class HelpDrawerLaneTests
     private const float HelpWidth = 176f;
     private const float BodyRowGap = 12f;
     /// <summary>The manifest's fixed nav-column width (compact ruling: was 192).</summary>
-    private const float NavColumnWidth = 160f;
+    private const float NavColumnWidth = 200f;
     private const string HelpColumnId = "help-scroll";
     private const string HelpOpenKey = "help-open";
 
