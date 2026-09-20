@@ -151,6 +151,7 @@ internal static class Program
         Step("width + language layout evidence sweep (1024/736/480/320, EN/ZH)", WidthAndLanguageEvidenceSweep);
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
+        Step("checklist filtered item keys do not lie (step B-1)", () => ChecklistItemsLaneTests.RunAll());
     }
 
     /// <summary>

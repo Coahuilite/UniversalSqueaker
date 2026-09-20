@@ -28,6 +28,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
     public bool WrappingDomainText;
+
+    /// <summary>
+    /// When set, the rich view's selected domain carries exactly these pack rows instead of the default
+    /// two. The checklist projection lane needs rows whose search predicate accepts a STRICT, non-contiguous
+    /// subset (so both directions of the list are observable) and a duplicated business key (so the
+    /// engine's row-identity refusal is observable rather than assumed).
+    /// </summary>
+    public VoicePackRowView[]? ChecklistPacks;
     // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
 
     /// <summary>
@@ -210,7 +218,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             candidateCount: 2,
             orphanCount: 0,
             enabledKeys: new[] { "us.sang" },
-            packs: new[]
+            packs: ChecklistPacks ?? new[]
             {
                 new VoicePackRowView("us.sang", "Sanguophage Voice Pack", "TestMod", "AuthorA", "def.sang", "full", "sang", isSelected: true),
                 new VoicePackRowView("us.sang2", "Sanguophage Extra Pack", "TestMod2", "AuthorB", "def.sang2", "full", "extra", isSelected: false)
@@ -482,7 +490,16 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
-    public void SetSearchText(string text) => LastSearchText = text;
+    public void SetSearchText(string text)
+    {
+        // Mirror the production facade exactly: UsKernelSettingsSource.SetSearchText routes through
+        // VoicePacksPageModel.SetSearchText, which writes ViewState.SearchText - the very field the
+        // "search-text" binding READS. A fake that only recorded the write would leave the read-back
+        // stale, and the projection lane's whole point is that a search write and the list it produces
+        // are the same frame's answer.
+        LastSearchText = text;
+        state.SearchText = text ?? "";
+    }
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.

@@ -107,7 +107,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         int shown = 0;
         foreach (VoicePackRowView row in domain.Packs)
         {
-            if (!MatchesSearch(row, search)) continue;
+            if (!UsChecklistFilter.Matches(row, search)) continue;
             height += RowHeightFor(row, ctx) + RowGap;
             shown++;
         }
@@ -176,7 +176,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         int shown = 0;
         foreach (VoicePackRowView row in domain.Packs)
         {
-            if (!MatchesSearch(row, search)) continue;
+            if (!UsChecklistFilter.Matches(row, search)) continue;
             float rowHeight = RowHeightFor(row, ctx);
             DrawPackRow(new Rect(rect.x, y, rect.width, rowHeight), domain, row, ctx);
             y += rowHeight + RowGap;
@@ -419,12 +419,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
         return Math.Max(EmptyStateMinHeight, ctx.Metrics.MeasureText(text, UiFont.Small, BodyWidth(ctx)) + BandVerticalPadding);
     }
 
-    private static bool MatchesSearch(VoicePackRowView row, string query)
-    {
-        if (query == null || query.Trim().Length == 0) return true;
-        return row.SearchText.IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0
-            || row.Label.IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0
-            || row.DefName.IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0
-            || row.Key.IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
-    }
+    // Both row-loop call sites read UsChecklistFilter.Matches: the predicate lives with the projection the
+    // declarative row set is built from, so the drawn rows and the projected item keys cannot disagree
+    // about which pack a search accepts. See UsChecklistFilter for the both-directions contract.
 }

@@ -306,6 +306,12 @@ public static class UsKernelSettingsHost
             .Select(author => new FilterOptionView(author, author))
             .ToList());
         bindings.BindValue<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
+        // Step B-1: the declarative row set's identity projection - the ordered item keys of the selected
+        // domain that the CURRENT search accepts, produced by the one predicate the composite widget's row
+        // loop also uses (UsChecklistFilter). The query is read from the page state the "search-text"
+        // binding above reads, so the key list and the screen cannot disagree about which pack a search
+        // accepted; the both-directions contract is asserted by ChecklistItemsLaneTests.
+        bindings.BindReadOnly<IReadOnlyList<string>>("checklist-pack-keys", () => ChecklistPackKeys(source));
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
@@ -327,6 +333,20 @@ public static class UsKernelSettingsHost
             _ => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
         return bindings;
+    }
+
+    /// <summary>
+    /// The ordered pack keys of the selected domain that the current search accepts. One predicate and one
+    /// input with the drawn checklist: the query is the page state's own SearchText (the value the
+    /// "search-text" binding reads and writes), never the cached view's copy, so a search write and the row
+    /// set it produces are the same frame's answer.
+    /// </summary>
+    private static IReadOnlyList<string> ChecklistPackKeys(IUsKernelSettingsSource source)
+    {
+        VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+        return domain.HasValue
+            ? UsChecklistFilter.Keys(domain.Value, source.ViewState.SearchText)
+            : Array.Empty<string>();
     }
 
     /// <summary>Four normalized attenuation points: start locked at 100%, end locked at 0%.</summary>
