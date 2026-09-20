@@ -108,7 +108,15 @@ public abstract class UsSectionWidgetBase : IUiWidget
     {
         if (!spec.TryGetAttribute("HelpKey", out string helpKey) || helpKey.Trim().Length == 0) return false;
         string hover = ctx.Session.HoverClaim ?? "";
-        return hover.Length > 0 && hover.StartsWith(helpKey.Trim() + "/", StringComparison.Ordinal);
+        string section = helpKey.Trim();
+        // Two accepted shapes, and the second one is new with the engine-wide HelpKey contract: a control
+        // inside the card claims a SUB-key ("us/race-layer/row"), while the card's own widget can now be
+        // claimed by the engine with the BARE key when the pointer is over the card and no inner element
+        // claims first. StartsWith alone would leave the border dark for the bare case, which is the one the
+        // engine produces for the section itself.
+        return hover.Length > 0
+            && (hover.StartsWith(section + "/", StringComparison.Ordinal)
+                || string.Equals(hover, section, StringComparison.Ordinal));
     }
 
     /// <summary>Fallback body height used when Measure throws.</summary>

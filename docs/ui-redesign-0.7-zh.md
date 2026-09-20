@@ -223,6 +223,19 @@
 **给维护者/lead 的绕行选项（本轮不自行决定）**：(a) FL 增加一个**元素级帮助/悬停身份钩子**（例如 `HelpKey` 走一个消费者绑定，与 `VisibleKey` 对称）→ 一次解锁全部 15 个；(b) US 接受迁移区块的帮助回退（删除对应目录项与两套语言键，46 → 更少）；(c) US 只在**新的、无帮助覆盖的页面**上用 `Repeat`（本轮不产生证据）。
 
 **本轮没有提交任何迁移（lines deleted = 0），这是有意的**：在 (a)/(b)/(c) 里选一条之前，任何迁移要么发布帮助回退，要么产出假证据。三个缺口的证据（FL 源码行 + US 的 43 处 claim + 46 项目录钉）已经写进本节，可供 FL 转录入 `MEMORY.md`。
+### 5.4 维护者裁定（2026-09-20）：checklist 的**部分**迁移；layers 保持 composite
+
+**裁定形态**：checklist 卡片改为声明式——`Section` + `section/header`（`HelpKey` 挂在 widget 上，**永不挂在 `Section` 容器上**）+ `input/text-field`（搜索）+ `Repeat` + `<Templates>`（`input/checkbox` 行）+ `state/empty`（两个空态，`VisibleKey` 门控）。**一次验证四个 FL 组件**：`Repeat`（今天消费侧证据为零）、`input/checkbox`、`input/text-field`、`state/empty`。
+
+**角色化状态带保持 US 自有 composite kind，本轮不迁 `chrome/banner`。** 理由要写进证据、而不是当作妥协：**G5 是已记录、源码确认的缺口**（`ChromeBannerWidget.Register` 的 schema 没有 `ToneAndEmphasis`），对已记录缺口的诚实回应是**在 FL 提供能力之前保留消费侧 kind**，而不是为了让迁移看起来完整而发布一次玩家可见的颜色回退。**保留下来的 composite 就是 G5 的引证。**（选择：保留整条状态带 composite，而不是切出更小的 kind——代码更少、语义边界更清楚。）
+
+**layers 保持 composite，不迁移。** 它们的阻塞是 **G2（已证缺口，带锚点）**：`Repeat` 的行无法上报 item key——`input/button` 触发的是无 payload 命令（`ferritelib .../Widgets/ButtonWidget.cs:83`），`input/checkbox` 只能写自己的 item 局部 bool，`container/tree` 不吃模板且一行只画一个 band（`.../Widgets/TreeWidget.cs:41-47`）。**已证缺口的正确处置是记录并作为后续轮次候选**，而不是为了让迁移完整而扭曲 UI（加一个点击目标、改交互语义）。
+
+**被否决的两条路（记录理由）**：(i) 给行加 `input/button` = 玩家可见的外观回退（按钮表面盖住纯悬停行），架构目标不值得用它换；(ii) 把行改成 `input/checkbox` = **交互语义**变化（点选变勾选、点已选行由重选变取消选择），比外观变化更重。两条都不做。
+
+**顺序**：迁移**不必**在本轮落地。若 freeze 时 checklist 迁移未完成且不干净，就只验证并提交已就绪的部分（S2 increment 1 + `IsHelpSelected` 的裸键等值修复），迁移带着自己的验证进入下一轮。**半迁移的清单不会靠近任何一次门禁运行。**
+
+**本轮已就绪（未提交）**：S2 increment 1（`UsTheme` 的 16 色表改为样式文档 + `UiStyleResolver.ApplyTo`）；(A) 修复（`UsSectionWidgetBase.IsHelpSelected` 接受裸区块键）。
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
