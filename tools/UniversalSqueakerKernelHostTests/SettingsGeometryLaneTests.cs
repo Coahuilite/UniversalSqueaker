@@ -59,6 +59,7 @@ internal static class SettingsGeometryLaneTests
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
         Step("checkbox visible edge + support-row height growth evidence table", CheckboxEdgeAndRowHeightEvidence);
         Step("the eat-precision child row exists only while its parent switch is on", ChildRowFollowsTheParentSwitch);
+        Step("the declarative checklist card reproduces the card chrome (step A)", DeclarativeChecklistCardReproducesTheCardChrome);
         Console.WriteLine("SettingsGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -1450,6 +1451,39 @@ internal static class SettingsGeometryLaneTests
         }
 
         return field;
+    }
+
+    /// <summary>
+    /// S3/S5 step A's chrome claim as a MEASURED relation rather than an arithmetic argument: the
+    /// declarative card's height equals the container's own geometry (Padding 12 + header 26 + Gap 6) plus
+    /// the body it arranges. Both numbers come from the same snapshot, so changing the manifest's Padding,
+    /// the header's Height or the container's Gap reddens this instead of silently moving the card.
+    /// LIMITATION, stated in the lane itself: the PRE-SWAP card height is not measured here because the old
+    /// element left the manifest in step A; the pre-swap side of the comparison is the UsCardLayout formula
+    /// (12 + 26 + 6 + body + 12) that this asserts against, which is a derived constant, not a second
+    /// measurement.
+    /// </summary>
+    private static void DeclarativeChecklistCardReproducesTheCardChrome()
+    {
+        static void Check(bool ok, string message)
+        {
+            if (!ok) throw new InvalidOperationException("checklist card chrome (step A): " + message);
+        }
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Bindings.Invoke("set-tab", "Packs");
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(800f, 600f));
+
+        Check(snapshot.RectById.TryGetValue("checklist-card", out Rect card), "the declarative card element is arranged");
+        Check(snapshot.RectById.TryGetValue("checklist", out Rect body), "the checklist body is arranged inside it");
+        Check(snapshot.RectById.TryGetValue("checklist-header", out Rect header), "the section header is arranged");
+        Check(Math.Abs(header.height - 26f) <= 0.5f, "the header band is UsCardLayout's 26px, got " + header.height);
+        Check(card.height > body.height + 20f, "the body does not itself carry the card chrome (card " + card.height + ", body " + body.height + ")");
+
+        float expected = 12f + 26f + 6f + body.height + 12f;
+        Check(Math.Abs(card.height - expected) <= 0.5f,
+            "card height must equal Padding + header + Gap + body + Padding: card " + card.height + " vs " + expected);
     }
 
     private static void Step(string name, Action action)
