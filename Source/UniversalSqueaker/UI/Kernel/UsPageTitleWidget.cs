@@ -10,41 +10,23 @@ namespace UniversalSqueaker.UI;
 /// workspace through the host translation seam. Both lines are Keyed entries, never literals, so a
 /// non-English game gets a translated heading instead of leftover English prose.
 ///
-/// The title band also carries the discoverable Help toggle for the retractable right-side drawer:
-/// a reserved control area at the right edge of the band, drawn with the existing selection-button
-/// primitive and writing the Host's own "help-open" value binding. The toggle is NOT wired to
-/// <c>UiBindings.ActiveTabKey</c> - help visibility is independent state. It explains itself through
-/// the same single claim outlet every other control uses (<c>UsKernelDraw.HelpHover</c>), claiming the
-/// catalog item <c>us/page-title/help-drawer</c>: the drawer control was the one interactive control
-/// with no help entry (W2 audit, 2026-09-13), so hovering it now describes the drawer instead of
-/// falling back to the section overview.
+/// <para>
+/// The Help toggle used to be drawn HERE, as a reserved control area at the right edge of the band. It
+/// moved into the manifest's fixed header band in step S3-2a (`header-band` holding `help-toggle`, an
+/// `input/button` with an `ActionBind`): the toggle must not scroll away with the workspace content,
+/// and a declared element is where the engine-level `HelpKey` claims the catalog item
+/// `us/page-title/help-drawer` with no per-widget code at all - the claim moved with the control. This
+/// widget is a read/measure surface again: it resolves the heading and measures its two bands.
+/// </para>
 /// </summary>
 public sealed class UsPageTitleWidget : IUiWidget
 {
     public const string Kind = "us/page-title";
 
-    /// <summary>Keyed label of the help-drawer toggle.</summary>
-    private const string HelpToggleKey = "US.Help.Drawer.Toggle";
-
-    /// <summary>The drawer's own boolean binding; never the active-tab key.</summary>
-    private const string HelpOpenKey = "help-open";
-
-    /// <summary>Catalog item the header toggle claims on hover (see UsHelpCatalog).</summary>
-    private const string HelpDrawerHelpKey = "us/page-title/help-drawer";
-
     private const float TitleMinHeight = 30f;
     private const float CaptionHeight = 18f;
     private const float CaptionGap = 4f;
     private const float TextLeftInset = 2f;
-
-    /// <summary>Gap between the reduced text band and the reserved toggle control.</summary>
-    private const float ToggleGap = 8f;
-
-    /// <summary>Floor of the reserved control area, so a short translation never shrinks the hit target.</summary>
-    private const float ToggleMinWidth = 72f;
-
-    /// <summary>Height of the reserved control area (the title band is at least 30).</summary>
-    private const float ToggleHeight = 26f;
 
     string IUiWidget.Kind => Kind;
 
@@ -63,17 +45,15 @@ public sealed class UsPageTitleWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
+        // The heading is resolved from the active workspace, so that binding must exist. The widget
+        // writes nothing: the drawer's visibility belongs to the manifest's header button now.
         bindings.ValidateValue<string>(UiBindings.ActiveTabKey, elementPath);
-        // The toggle is this widget's one write: the binding must exist and be a bool, or the header
-        // would ship a control that silently does nothing.
-        bindings.ValidateValue<bool>(HelpOpenKey, elementPath);
     }
 
     public float Measure(UiWidgetContext ctx)
     {
         (string title, string caption) = ResolveHeading(ctx);
-        string toggleLabel = UsKernelDraw.Keyed(ctx, HelpToggleKey);
-        float textWidth = TextBandWidth(ctx.ViewWidth, ToggleWidth(ctx, toggleLabel));
+        float textWidth = TextBandWidth(ctx.ViewWidth);
         return TitleBand(textWidth, ctx, title) + CaptionGap + CaptionBand(textWidth, ctx, caption);
     }
 
@@ -82,13 +62,10 @@ public sealed class UsPageTitleWidget : IUiWidget
         if (rect.width <= 1f || rect.height <= 1f) return;
 
         (string title, string caption) = ResolveHeading(ctx);
-        string toggleLabel = UsKernelDraw.Keyed(ctx, HelpToggleKey);
-        float toggleWidth = ToggleWidth(ctx, toggleLabel);
 
-        // Measure and Draw share this ONE reduced width. The fit audit compares the band Measure
-        // allocated against the band Draw painted, so the reserved control area must shorten BOTH
-        // title and caption by exactly the same amount, or the audit reports a clipped heading.
-        float textWidth = TextBandWidth(rect.width, toggleWidth);
+        // Measure and Draw share this ONE width. The fit audit compares the band Measure allocated
+        // against the band Draw painted, so both lines must be shortened by exactly the same amount.
+        float textWidth = TextBandWidth(rect.width);
         float titleHeight = TitleBand(textWidth, ctx, title);
         float captionTop = rect.y + titleHeight + CaptionGap;
         float captionHeight = CaptionBand(textWidth, ctx, caption);
@@ -108,44 +85,12 @@ public sealed class UsPageTitleWidget : IUiWidget
             ctx.Theme.TextSecondary,
             UiFont.Tiny,
             TextAnchor.UpperLeft);
-
-        bool open = !ctx.Bindings.TryGet(HelpOpenKey, out bool bound) || bound;
-        Rect toggle = ToggleRect(rect, titleHeight, toggleWidth);
-        // Claim the toggle's own catalog entry while the pointer is over it, through the one outlet
-        // every control uses (session-owned claim; the panel resolves it).
-        UsKernelDraw.HelpHover(toggle, ctx, HelpDrawerHelpKey);
-        if (UsKernelDraw.SelectionButton(toggle, ctx, toggleLabel, ctx.Theme, open))
-        {
-            // Value-binding write (not the action): the setter routes through the business boundary
-            // and advances the session revision, which is what re-arranges onto the other variant.
-            ctx.Bindings.Set(HelpOpenKey, !open);
-        }
     }
 
-    /// <summary>The shared text band: the widget's width minus the left inset, the reserved control and the gap.</summary>
-    private static float TextBandWidth(float fullWidth, float toggleWidth)
+    /// <summary>The shared text band: the widget's width minus the left inset.</summary>
+    private static float TextBandWidth(float fullWidth)
     {
-        return Math.Max(1f, fullWidth - TextLeftInset - toggleWidth - ToggleGap);
-    }
-
-    /// <summary>
-    /// Reserved control width: the measured label plus the selection button's own side insets, floored
-    /// so a short translation still leaves a usable target. Measured at the drawn font.
-    /// </summary>
-    private static float ToggleWidth(UiWidgetContext ctx, string label)
-    {
-        float labelWidth = ctx.Metrics.MeasureWidth(label, UiFont.Tiny)
-            + UsKernelDraw.SelectionButtonLabelInset * 2f;
-        return Math.Max(ToggleMinWidth, labelWidth);
-    }
-
-    /// <summary>The reserved control rect: right-aligned in the band, vertically centered on the title line.</summary>
-    private static Rect ToggleRect(Rect rect, float titleHeight, float toggleWidth)
-    {
-        float width = Math.Min(toggleWidth, Math.Max(1f, rect.width - TextLeftInset));
-        float height = Math.Min(ToggleHeight, Math.Max(1f, rect.height));
-        float top = rect.y + Math.Max(0f, (titleHeight - height) / 2f);
-        return new Rect(rect.xMax - width, top, width, height);
+        return Math.Max(1f, fullWidth - TextLeftInset);
     }
 
     /// <summary>

@@ -62,11 +62,17 @@ internal static class HelpDrawerLaneTests
     };
 
     /// <summary>
-    /// The six production files allowed to carry drawer view state: the page's ephemeral state, its
-    /// typed business boundary, the host binding table, the drawer's header widget, and the settings
-    /// window - which since task-10 reads the per-window drawer state to size itself (narrow closed,
-    /// closed + 188 open). Anything else owning a drawer token means the per-window state leaked into
-    /// the persisted layer; the Scribe/save scan below still proves none of it is persisted.
+    /// The five production files allowed to carry drawer view state: the page's ephemeral state, its
+    /// typed business boundary, the host binding table, and the settings window - which since task-10
+    /// reads the per-window drawer state to size itself (narrow closed, closed + 188 open). Anything else
+    /// owning a drawer token means the per-window state leaked into the persisted layer; the Scribe/save
+    /// scan below still proves none of it is persisted.
+    /// <para>
+    /// `UsPageTitleWidget.cs` was the SIXTH until S3-2a, because it read `help-open` to paint its own
+    /// switch. The switch moved to the manifest (a core `input/button`), so the widget no longer holds
+    /// any drawer token and the owner set is exact again - which is the reason this list is asserted
+    /// instead of trusted.
+    /// </para>
     /// </summary>
     private static readonly string[] DrawerStateOwners =
     {
@@ -74,7 +80,6 @@ internal static class HelpDrawerLaneTests
         "Source/UniversalSqueaker/UI/IUsKernelSettingsSource.cs",
         "Source/UniversalSqueaker/UI/UsKernelSettingsSource.cs",
         "Source/UniversalSqueaker/UI/UsKernelSettingsHost.cs",
-        "Source/UniversalSqueaker/UI/Kernel/UsPageTitleWidget.cs",
         "Source/UniversalSqueaker/UI/UniversalSqueakerSettingsWindow.cs",
     };
 
@@ -181,7 +186,7 @@ internal static class HelpDrawerLaneTests
             }
             else
             {
-                host.Bindings.Invoke("toggle-help-drawer", "");
+                host.Bindings.Invoke("toggle-help-drawer");
             }
 
             Assert(fake.LastHelpDrawerOpen == false,
@@ -280,7 +285,7 @@ internal static class HelpDrawerLaneTests
         Assert(fake.LastHelpDrawerOpen == false, "the close write must route through the business boundary");
 
         int openRevision = session.ContentRevision;
-        host.Bindings.Invoke("toggle-help-drawer", "");
+        host.Bindings.Invoke("toggle-help-drawer");
         Assert(session.ContentRevision == openRevision + 1,
             "the toggle action must advance the session revision by exactly one ("
             + openRevision + " -> " + session.ContentRevision + ")");
@@ -290,7 +295,7 @@ internal static class HelpDrawerLaneTests
             "the reopen must reuse the same host/session");
 
         int secondCloseRevision = session.ContentRevision;
-        host.Bindings.Invoke("toggle-help-drawer", "");
+        host.Bindings.Invoke("toggle-help-drawer");
         Assert(session.ContentRevision == secondCloseRevision + 1 && fake.LastHelpDrawerOpen == false,
             "a second toggle must close again and advance the revision once more");
     }
@@ -393,9 +398,12 @@ internal static class HelpDrawerLaneTests
     }
 
     /// <summary>
-    /// 8. The header toggle is a real control: the page title widget's selection button writes the
-    /// help-open binding through the production binding table (pressed through UiNative's harness seam,
-    /// so this exercises the widget's actual Draw path rather than re-stating the binding).
+    /// 8. The header toggle is a real control again, but a DECLARED one. Since S3-2a the manifest's
+    /// `header-band` holds `help-toggle` (a core `input/button` with an `ActionBind`), and the page-title
+    /// widget no longer draws a switch of its own. The press goes through UiNative's harness seam against
+    /// the rect the production page ARRANGED, so this drives the real host rather than re-stating the
+    /// binding - and it is the behavioural half of "the page has exactly one Help switch", whose
+    /// declarative half the FL-first step below asserts.
     /// </summary>
     private static void HeaderToggleWritesThroughTheBinding(Program.StubMetrics metrics)
     {
@@ -403,34 +411,43 @@ internal static class HelpDrawerLaneTests
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         // The shipped default is retracted, so open first: the press below must close it again.
         host.Bindings.Set(HelpOpenKey, true);
-        var widget = new UsPageTitleWidget();
-        UiWidgetContext ctx = host.CreateContext(420f, "page-title");
-        float height = widget.Measure(ctx);
-        var rect = new Rect(0f, 0f, 420f, height);
+        var viewport = new Vector2(800f, 600f);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+
+        Assert(snapshot.RectById.TryGetValue("help-toggle", out Rect toggle),
+            "the fixed header band must arrange the declared help-toggle element");
+        Assert(toggle.width > 1f && toggle.height > 1f, "the help toggle must be a real hit target: " + toggle);
 
         FieldInfo? overrideField = typeof(UiNative).GetField(
             "ButtonOverride", BindingFlags.NonPublic | BindingFlags.Static);
         Assert(overrideField != null, "the harness needs UiNative.ButtonOverride to press the header toggle");
         if (overrideField == null) return;
 
-        Rect pressed = default;
-        overrideField.SetValue(null, new Func<Rect, bool>(r => { pressed = r; return true; }));
+        bool pressed = false;
+        overrideField.SetValue(null, new Func<Rect, bool>(rect =>
+        {
+            // Matched by SHAPE, not by position: the header band is an Overlay, so the rect its child is
+            // DRAWN with is the arranged rect minus the band's own origin (the engine's ToDrawRect
+            // subtracts the scoped container's position for its children). The toggle is the only 128x26
+            // button the page declares, so the shape identifies it and every other button stays inert.
+            if (Math.Abs(rect.width - toggle.width) > 0.5f || Math.Abs(rect.height - toggle.height) > 0.5f)
+            {
+                return false;
+            }
+
+            pressed = true;
+            return true;
+        }));
         try
         {
-            widget.Draw(rect, ctx);
+            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
         }
         finally
         {
             overrideField.SetValue(null, null);
         }
 
-        Assert(pressed.width > 0f, "the page header must draw the help toggle inside its title band");
-        Assert(Math.Abs(pressed.height - 26f) < 0.01f,
-            "the header toggle must reserve the ~26px control band: " + pressed);
-        Assert(pressed.width >= 72f - 0.01f,
-            "the header toggle must keep its ~72px floor so a short translation still fits: " + pressed);
-        Assert(pressed.xMax <= rect.xMax + 0.01f && pressed.xMax >= rect.xMax - 1.01f,
-            "the header toggle must sit at the right edge of the title band: " + pressed);
+        Assert(pressed, "drawing the page must hit-test the manifest's help-toggle rect");
         Assert(fake.LastHelpDrawerOpen == false,
             "pressing the header toggle must write the help-open binding (open -> closed)");
         Assert(!fake.ViewState.HelpDrawerOpen, "the header toggle write must land in the page state");
@@ -671,13 +688,26 @@ internal static class HelpDrawerLaneTests
         Assert(CountToken(StripComments(ForbiddenControlSource), "Widgets.") >= 1,
             "a real forbidden call must still be flagged after comment stripping");
 
-        // Positive routing evidence: the drawer control draws only through the FL primitives, and the
-        // toggle writes only through the typed binding table.
+        // Positive routing evidence: the title band draws only through the FL primitives, and it no
+        // longer owns a switch at all - the toggle is the CORE input/button the manifest declares, so a
+        // SelectionButton/Button call reappearing in this file means a second, hand-drawn switch is back.
         string title = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsPageTitleWidget.cs"));
         Assert(CountToken(title, "UsKernelDraw.Label(") >= 1
-            && CountToken(title, "UsKernelDraw.SelectionButton(") >= 1
             && CountToken(title, "UiThemeDraw.SectionBand(") >= 1,
-            "the drawer's header toggle must draw through UsKernelDraw and UiThemeDraw");
+            "the title band must draw through UsKernelDraw and UiThemeDraw");
+        Assert(CountToken(title, "UsKernelDraw.SelectionButton(") == 0
+            && CountToken(title, "UiNative.Button(") == 0,
+            "the page-title widget must draw no switch of its own since S3-2a: the help toggle is the"
+            + " declared input/button in the manifest's header band");
+
+        // ONE switch on the page, asserted rather than assumed: the page-title widget carried a second,
+        // hand-drawn toggle until S3-2a, so "there is one Help switch" is exactly the kind of property
+        // this page has already broken once.
+        string manifestText = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"));
+        Assert(CountToken(manifestText, "ActionBind=\"toggle-help-drawer\"") == 1,
+            "exactly ONE manifest element may be the help toggle (found "
+            + CountToken(manifestText, "ActionBind=\"toggle-help-drawer\"") + "); a second one is a second"
+            + " switch on the page, which is the shape S3-2a removed");
         string hostSource = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
         Assert(CountToken(hostSource, "UiNative.") >= 1,
             "the host must route its native trace/hit surface through UiNative");

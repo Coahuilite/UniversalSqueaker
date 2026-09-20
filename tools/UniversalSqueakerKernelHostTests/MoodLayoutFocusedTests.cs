@@ -166,8 +166,22 @@ internal static class MoodLayoutFocusedTests
                 ClearOverrides();
             }
 
+            // RECT SPACES, and this is not cosmetic: the card's rect from the snapshot is PAGE space while
+            // the button rects recorded above are in the scroll's LOCAL space (the engine's ToDrawRect
+            // subtracts the scroll container's own rect position for its children). Filtering across the two
+            // is a coordinate-space bug that happens to work until a layout shift moves the boundaries -
+            // which the S3 header band did, and this lane then selected a LATER section's checkbox row as
+            // "the first slot inside the card" and failed on the egg write. Translate the card into the
+            // controls' space first; ordering by y then really is the widget's own draw order.
+            Rect scrollViewport = snapshot.Viewports["content-scroll"];
+            var cardLocal = new Rect(
+                card.x - scrollViewport.x,
+                card.y - scrollViewport.y,
+                card.width,
+                card.height);
+
             List<Rect> slots = raw.Buttons
-                .Where(r => IsInside(r, card)
+                .Where(r => IsInside(r, cardLocal)
                     && Math.Abs(r.width - UsKernelDraw.CheckboxHit) <= 0.5f
                     && Math.Abs(r.height - UsKernelDraw.CheckboxHit) <= 0.5f)
                 .OrderBy(r => r.y)

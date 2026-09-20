@@ -346,9 +346,13 @@ public static class UsKernelSettingsHost
             "help-open",
             () => state.HelpDrawerOpen,
             value => { source.SetHelpDrawerOpen(value); bump(); });
-        bindings.BindAction<string>(
+        // A COMMAND, not an action with a payload: the manifest's header button is a core
+        // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
+        // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was
+        // discarded anyway, so this is the same write with the contract the declaring element actually has.
+        bindings.BindCommand(
             "toggle-help-drawer",
-            _ => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
+            () => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
         return bindings;
     }

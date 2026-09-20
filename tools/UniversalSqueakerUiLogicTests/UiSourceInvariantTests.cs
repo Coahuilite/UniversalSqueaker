@@ -718,9 +718,16 @@ internal static class UiSourceInvariantTests
             "the Host must not mutate the manifest root list: that is the removed-element path, and visibility"
             + " is declarative now");
 
-        CheckSourceContains(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"),
+        // The Help toggle's Keyed caption moved with the control (S3-2a): it is the manifest's header
+        // button that carries TextKey, and the page-title widget must no longer own either. Both halves are
+        // asserted, because "the caption exists" is not "the page exposes it" and not "the widget lost it".
+        CheckSourceContains(Path.Combine(ui, "Layout.Schema2.xml"),
             new[] { "\"US.Help.Drawer.Toggle\"" },
-            "the page header must expose the discoverable Help toggle through the Keyed table");
+            "the page header must expose the discoverable Help toggle through the Keyed table: the caption"
+            + " belongs to the manifest's header button now");
+        CheckSourceDoesNotContain(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"), "US.Help.Drawer.Toggle",
+            "the page-title widget must not carry the Help toggle's caption any more: the switch is declared"
+            + " in the manifest, and a caption without a control is the drift this pair exists to catch");
     }
     private static Dictionary<string, string> ReadKeyedTable(string path)
     {

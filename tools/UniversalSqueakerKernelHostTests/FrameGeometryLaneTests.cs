@@ -70,6 +70,7 @@ internal static class FrameGeometryLaneTests
     {
         Step("no degenerate rect, no sibling overlap, every element inside its parent", TheFrameHoldsEverywhere);
         Step("the three-column frame keeps its declared shape across the five viewports", TheFrameKeepsItsShape);
+        Step("the header band is fixed, right-aligned, and the page's ONLY help switch", TheHeaderBandIsFixed);
         Console.WriteLine("FrameGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -373,6 +374,163 @@ internal static class FrameGeometryLaneTests
         Assert(expectWide ? wide : stacked,
             width + " must be a " + (expectWide ? "three-column" : "stacked") + " frame: nav=" + Fmt(nav)
             + " centre=" + Fmt(centre) + " help=" + Fmt(help));
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 3. The fixed header band: structure first, then the two geometries it exists for.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The header band is what makes "the Help switch does not scroll away" true, so it is asserted
+    /// STRUCTURALLY, not by comparing snapshots across a scroll write: a scroll position never changes a
+    /// layout snapshot (positions are arrangement, not scroll offset), so that comparison would pass
+    /// whatever the manifest said. What actually decides the property is descendance - an element inside
+    /// <c>content-scroll</c> is drawn under <c>BeginScrollView</c> and moves; one in a sibling band cannot.
+    /// The predicate is made two-sided by asserting the positive control in the same run: the page title
+    /// IS inside the scroll today, which is exactly why it had to move in the next step.
+    /// </summary>
+    private static void TheHeaderBandIsFixed()
+    {
+        UiLayoutManifest manifest = LoadManifest();
+        Dictionary<string, UiElementSpec> byId = Index(manifest);
+
+        int switches = 0;
+        foreach (UiElementSpec spec in byId.Values)
+        {
+            if (spec.TryGetAttribute("ActionBind", out string action)
+                && string.Equals(action.Trim(), "toggle-help-drawer", StringComparison.Ordinal))
+            {
+                switches++;
+            }
+        }
+
+        Assert(switches == 1,
+            "exactly one manifest element may bind the help toggle; found " + switches
+            + " (the page-title widget carried a second, hand-drawn switch until S3-2a)");
+        Assert(byId.TryGetValue("header-band", out UiElementSpec band)
+            && string.Equals(band.Kind, "Overlay", StringComparison.Ordinal),
+            "the manifest must declare the header band as an Overlay: it is the one container that places a"
+            + " child on both axes, which is how the switch is right-aligned without a spacer idiom");
+        Assert(IsDescendant(manifest, "page-root", "header-band", direct: true),
+            "header-band must be a DIRECT child of page-root, i.e. in the flow beside the body row and the"
+            + " footer, never inside a scroll");
+        Assert(IsDescendant(manifest, "header-band", "help-toggle", direct: true),
+            "help-toggle must be a child of the header band");
+        Assert(!IsDescendant(manifest, "content-scroll", "help-toggle", direct: false),
+            "help-toggle must NOT be inside the scrolling centre column: that is the whole point of the band");
+        Assert(IsDescendant(manifest, "content-scroll", "page-title", direct: false),
+            "positive control: the page title IS inside content-scroll today, so the descendance predicate"
+            + " above discriminates instead of answering false for everything");
+
+        var problems = new List<string>();
+        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+        try
+        {
+            foreach (float width in Widths)
+            {
+                foreach (bool open in new[] { false, true })
+                {
+                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+                    host.Bindings.Invoke("set-tab", "Tuning");
+                    host.Bindings.Set("help-open", open);
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, Height));
+                    host.DrawChecked(new Rect(0f, 0f, width, Height));
+
+                    string context = "header at " + width.ToString("0", CultureInfo.InvariantCulture)
+                        + "/" + (open ? "open" : "closed");
+                    if (!snapshot.RectById.TryGetValue("header-band", out Rect bandRect))
+                    {
+                        problems.Add(context + ": the header band is not arranged");
+                        continue;
+                    }
+
+                    if (!snapshot.RectById.TryGetValue("help-toggle", out Rect toggle))
+                    {
+                        problems.Add(context + ": the help toggle is not arranged");
+                        continue;
+                    }
+
+                    Assert(snapshot.RectById.ContainsKey("footer"),
+                        context + ": the frame must still carry its footer");
+
+                    float bandRight = bandRect.xMax;
+                    if (Math.Abs(toggle.xMax - bandRight) > 1.5f)
+                    {
+                        problems.Add(context + ": the toggle must sit on the band's right edge; toggle="
+                            + Fmt(toggle) + " band=" + Fmt(bandRect));
+                    }
+
+                    float bandMiddle = bandRect.y + bandRect.height / 2f;
+                    float toggleMiddle = toggle.y + toggle.height / 2f;
+                    if (Math.Abs(bandMiddle - toggleMiddle) > 1.5f)
+                    {
+                        problems.Add(context + ": the toggle must be vertically centred in the band; toggle="
+                            + Fmt(toggle) + " band=" + Fmt(bandRect));
+                    }
+
+                    if (toggle.width < 1f || toggle.height < 1f)
+                    {
+                        problems.Add(context + ": the toggle must be a real hit target; got " + Fmt(toggle));
+                    }
+                }
+            }
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+
+        Assert(problems.Count == 0, Report(problems));
+    }
+
+    /// <summary>
+    /// True when <paramref name="ancestorId"/> contains <paramref name="descendantId"/> in the DECLARED
+    /// tree (<paramref name="direct"/> narrows it to a direct child).
+    /// </summary>
+    private static bool IsDescendant(UiLayoutManifest manifest, string ancestorId, string descendantId, bool direct)
+    {
+        foreach (UiElementSpec root in manifest.Roots)
+        {
+            UiElementSpec? node = Find(root, ancestorId);
+            if (node == null) continue;
+            if (direct)
+            {
+                foreach (UiElementSpec child in node.Children)
+                {
+                    if (string.Equals(child.Id, descendantId, StringComparison.Ordinal)) return true;
+                }
+
+                return false;
+            }
+
+            return Contains(node, descendantId);
+        }
+
+        return false;
+    }
+
+    private static UiElementSpec? Find(UiElementSpec spec, string id)
+    {
+        if (string.Equals(spec.Id, id, StringComparison.Ordinal)) return spec;
+        foreach (UiElementSpec child in spec.Children)
+        {
+            UiElementSpec? found = Find(child, id);
+            if (found != null) return found;
+        }
+
+        return null;
+    }
+
+    private static bool Contains(UiElementSpec spec, string id)
+    {
+        foreach (UiElementSpec child in spec.Children)
+        {
+            if (string.Equals(child.Id, id, StringComparison.Ordinal)) return true;
+            if (Contains(child, id)) return true;
+        }
+
+        return false;
     }
 
     private static void CheckStacked(string id, Rect rect, Rect centre, string context, List<string> problems)
