@@ -42,9 +42,16 @@ public sealed class UsTimingWidget : UsSectionWidgetBase
     private const float LabelGap = 8f;
     private const float StepperGap = 4f;
 
-    /// <summary>Sample caption used to size the interval caption band: the longest seconds text the
-    /// "0.0" field format can produce, so the band's height never depends on the live value.</summary>
-    private const string IntervalCaptionSample = "10.0";
+    /// <summary>
+    /// Sample caption used to size the interval caption band: the longest text the DRAW can produce at the
+    /// widest value, so the band's height never depends on the live value AND never under-reserves it. It
+    /// carries the unit suffix the draw appends - a bare "10.0" was one line while "10.0 s" was two at some
+    /// content widths, and the fit audit reported it as <c>timing Height needs 36 has 18</c> once the
+    /// narrow-screen help band took height off the body row and the centre column lost its scrollbar (so it
+    /// was 16px wider). Measure and Draw must format the SAME string, which is why the sample is written the
+    /// way the draw builds it rather than as the field's own format.
+    /// </summary>
+    private const string IntervalCaptionSample = "10.0 s";
 
     /// <summary>The slider covers 1..600 game ticks (10 s at 60 ticks/s); the field edits seconds.</summary>
     private const int MinIntervalTicksFloor = 1;

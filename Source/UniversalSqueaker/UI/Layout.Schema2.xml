@@ -43,7 +43,11 @@
          by Tab: the element stays in the definition so its node and scroll position survive a close/open
          (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with
          its scroll position). -->
-    <Row Id="body-row" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
+    <!-- Fill="true" is what makes this row the page's flex slot (it is what §2 always drew). Without it no
+         child of page-root yields, so the narrow help band's declared height was ADDED to the page instead
+         of taken out of the body - measured at the minimum logical resolution: footer bottom 667 against a
+         530 page. With it the band takes its 280 out of this row and the footer stays in by construction. -->
+    <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
       <Column Id="nav-column" Width="200" Padding="0">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
@@ -92,17 +96,35 @@
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
-    <!-- Narrow-screen help (乙1, decided 2026-09-21). When the logical screen cannot host the widened
-         window the drawer does NOT take a third column: the same help panel appears as a full-width band
-         here, between the body and the footer, so the centre column keeps the width it has with the drawer
-         retracted. Two mutually exclusive presentations and ONE player intent: help-open stays the only
-         value the toggle writes, and the host derives help-open-wide / help-open-narrow from it and the
-         screen (WindowChromeLayout.DrawerWidensTheWindow). Fill=true is the bound - the body row and this
-         band share the leftover height, so the band can never push the footer out of the window and no
-         written height is needed - and because it is a Scroll the panel scrolls inside its share
-         (UsHelpPanelWidget measures its band against the whole catalog, so an unbounded band would be as
-         tall as the worst help entry). -->
-    <Scroll Id="help-band" Fill="true" Padding="0" VisibleKey="help-open-narrow">
+    <!-- Narrow-screen help (乙1, decided 2026-09-21; height fixed 2026-09-21 after the maintainer's 1024x768
+         walkthrough). When the logical screen cannot host the widened window the drawer does NOT take a
+         third column: the same help panel appears as a full-width band here, between the body and the
+         footer, so the centre column keeps the width it has with the drawer retracted. Two mutually
+         exclusive presentations and ONE player intent: help-open stays the only value the toggle writes,
+         and the host derives help-open-wide / help-open-narrow from it and the screen
+         (WindowChromeLayout.DrawerWidensTheWindow).
+
+         Height="280" is a LAYOUT DECISION, not a measurement, and it is written down only because the
+         vocabulary has no other way to express a reserved band: there is no MinHeight/MaxHeight on a
+         container (width has MinWidth/MaxWidth, height does not), no fill weight, and no HeightKey. Two
+         things were measured before choosing it. (1) Fill="true" does NOT buy a share here: declared that
+         way the band kept its NATURAL height while the body row absorbed everything, and at the game's
+         minimum logical resolution (1024x768 -> an 800x600 window, so a 960x530 page) the page's natural
+         height came out 660.7 against a 530 viewport - the footer was pushed off screen, which is the
+         opposite of what the Fill rationale promised. (2) With a fixed band the column adds up exactly:
+         non-fill children are the measured header, this band and the footer, and the body row is the only
+         Fill child, so it absorbs whatever is left and the footer stays in the window by construction.
+         280 satisfies the two floors the lane asserts at that resolution, both measured: (a) it is at
+         least the panel's own measured band at this width (130.7 EN / 112.7 ZH in the stub, so the whole
+         panel is visible without scrolling in the measured model, ~2.1x headroom for the real font), and
+         (b) it is more than half of the page's vertical content area there (measured 511 = band + body row,
+         so the floor is 255.5 and 280 clears it by 24.5), which is the rule this band exists for: on a
+         screen that cannot widen, the help the player just opened takes the majority of the room, and the
+         content - still a Scroll - keeps the rest. A 240 first attempt cleared (a) but not (b), and was
+         raised rather than having the rule lowered. It stays a Scroll, so a longer real-font panel scrolls.
+         If the real need exceeds 280 the honest follow-up is the reserved-band capability itself, not
+         another number. -->
+    <Scroll Id="help-band" Height="280" Padding="0" VisibleKey="help-open-narrow">
       <Widget Id="help-panel-narrow" Kind="us/help-panel" />
     </Scroll>
     <!-- Footer band (S3-3): the same structural slot as the header, so the frame's three bands are all

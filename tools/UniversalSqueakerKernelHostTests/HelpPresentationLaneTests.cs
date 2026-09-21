@@ -76,6 +76,11 @@ internal static class HelpPresentationLaneTests
             {
                 Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
 
+                // The game's MINIMUM logical resolution (RimWorld's ResolutionUtility floors the logical
+                // size at 1024x768). There the window cannot widen - SettingsOpenWidth caps at the screen -
+                // so the narrow band is the ONLY help presentation, and it is the case the maintainer walked.
+                AssertMinimumResolution(language, metrics, reports);
+
                 AssertPresentations(language, 1920, 1080, WideViewport, expectWide: true, metrics, reports,
                     "a wide screen hosts the widened window, so the help takes its column");
 
@@ -91,6 +96,81 @@ internal static class HelpPresentationLaneTests
             Verse.UI.screenWidth = savedWidth;
             Verse.UI.screenHeight = savedHeight;
         }
+    }
+
+    /// <summary>
+    /// The narrow band must be USABLE at the resolution the game will not go below. The maintainer's
+    /// 1024x768 walkthrough found the opposite: the band appeared but was too short to hold the help, so
+    /// on that screen - where the band is the only way to read help at all - it amounted to no help.
+    ///
+    /// <para>
+    /// Three numeric properties, all of them about ROOM rather than about pixels for their own sake:
+    /// (1) the band's viewport is at least the panel's own measured band, so the measured model never shows
+    /// a truncated panel; (2) the band takes at least HALF of the page's vertical content area (the band
+    /// plus the body row) - on a screen that cannot widen, the help the player just opened takes the
+    /// majority of the room, and the content, still a Scroll, keeps the rest; (3) the footer is still inside
+    /// the page, which is the property the band's shape was chosen for and which the previous Fill-based
+    /// shape did NOT actually deliver (measured: page natural height 660.7 against a 530 viewport, footer
+    /// bottom 648.7).
+    ///
+    /// <para>
+    /// The first attempt at this lane asserted the stricter "band >= body row". That FAILED at the band
+    /// height the first fix chose (band 240, body 271), and the band was raised to 280 rather than the rule
+    /// being lowered - so the criterion here (half the content area, which is the floor the lead named) is
+    /// now satisfied with margin by the shipped number, and the previously-red properties stay red under the
+    /// old shape.
+    /// </para>
+    /// </para>
+    /// </summary>
+    private static void AssertMinimumResolution(string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
+    {
+        // 1024x768 logical -> an 800x600 window, widened to 1024x600 because the screen caps it, so the
+        // page box is 960 wide; 530 is the tight height that window leaves for the page.
+        const int ScreenWidth = 1024;
+        const int ScreenHeight = 768;
+        var page = new Vector2(960f, 530f);
+
+        Verse.UI.screenWidth = ScreenWidth;
+        Verse.UI.screenHeight = ScreenHeight;
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(page);
+        UiFitAudit.Reset();
+        reports.Clear();
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(page);
+        host.DrawChecked(new Rect(0f, 0f, page.x, page.y));
+
+        string where = "at the minimum logical resolution " + ScreenWidth + "x" + ScreenHeight
+            + " (" + language + ", page " + page.x + "x" + page.y + ")";
+
+        Assert(snapshot.Viewports.TryGetValue("help-band", out Rect band),
+            where + ": the narrow band must be the presentation (the screen cannot host the widened window)");
+        Assert(snapshot.RectById.TryGetValue("help-panel-narrow", out Rect panel),
+            where + ": the narrow panel must be arranged");
+        Assert(snapshot.RectById.TryGetValue("body-row", out Rect body),
+            where + ": the body row must be arranged");
+        Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer),
+            where + ": the footer band must be arranged");
+
+        Assert(band.height >= panel.height - 0.5f,
+            where + ": the band must be at least as tall as the panel's own measured band, or the help is"
+            + " truncated on the only screen where it can be read: band=" + band.height + " panel=" + panel.height);
+
+        float contentArea = band.height + body.height;
+        Assert(band.height >= contentArea * 0.5f - 0.5f,
+            where + ": on a screen that cannot widen, the help the player opened must take at least half of"
+            + " the page's vertical content area: band=" + band.height + " body=" + body.height
+            + " contentArea=" + contentArea);
+
+        Assert(footer.yMax <= page.y + 0.5f,
+            where + ": the footer must stay inside the page - the band's whole shape exists to keep it there:"
+            + " footer bottom=" + footer.yMax + " page=" + page.y);
+
+        Assert(reports.Count == 0,
+            where + ": the fit audit must report nothing with the narrow band arranged, got " + Describe(reports));
     }
 
     private static void AssertPresentations(
