@@ -513,13 +513,16 @@ manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那
 
 **结论二：G1 记账（5.6 口径，逐条）**
 
-- **删除的 claim 站点：8 个**（`HelpHover(` 代码行 33 → 25）：
-  `us/basic-tuning/egg`、`/scale-cooldown`、`/scale-talking`、`/scale-population`、`/eat-precision`、
-  `/eat-precision-include-drugs`、`us/global-volume/slider`、`us/global-volume/number`
-  （`us/camera-indicator/toggle` 是第 9 个，`UsCameraIndicatorWidget.cs:62`）。
+- **删除的 claim 站点：5 个代码站点**（`git grep -c 'HelpHover('` over `Source/**`：**32 → 27**）：
+  `UsBasicTuningWidget.cs:188`（egg 行）与 `:222`（`DrawBasicRow`，一个站点服务 5 行）、
+  `UsCameraIndicatorWidget.cs:62`、`UsGlobalVolumeWidget.cs:140`（slider）与 `:141`（number）。
+  被这 5 个站点覆盖、现在由 manifest `HelpKey` 接管的**键是 9 个**：`us/basic-tuning/egg`、
+  `/scale-cooldown`、`/scale-talking`、`/scale-population`、`/eat-precision`、
+  `/eat-precision-include-drugs`、`us/camera-indicator/toggle`、`us/global-volume/slider`、
+  `us/global-volume/number`（一个站点 ≠ 一个键，这正是 5 与 9 的差）。
 - **无法用字面量 `HelpKey` 表达的站点：0 个。** 既有例外清单不变（`UsScopeTreeWidget` 两处按行状态取键、
   `UsModeRowWidget`/`UsKernelDraw` 两处选项级）。
-- **键名集合前后完全一致**：8 个键由 manifest `HelpKey` 接管，三个 section 键由 `section/header` 的
+- **键名集合前后完全一致**：9 个键由 manifest `HelpKey` 接管，三个 section 键由 `section/header` 的
   `HelpKey` 接管。**目录 46 项与 gate 12 都不需要改。**
 
 **结论三：一条常驻不变式换了形式，必须记录。** composite 用「On/Off 两个字符串里更长的那个」量 egg 的
