@@ -515,9 +515,17 @@ internal static class DeclarativeOverviewLaneTests
         }
     }
 
+    /// <summary>
+    /// The egg row's drawn height in each of the fixture's two shipped views. The two states are driven by
+    /// those views themselves, not by a new seed: <c>RecordingSettingsSource</c> projects
+    /// <c>allowEasterEggs: true</c> in the rich view and <c>false</c> in the empty one, and those are
+    /// exactly the two inputs every other lane in this suite already runs against. A new seed field would
+    /// have moved the SHARED fixture's input for every lane that constructs it, and "the suite is still
+    /// green" cannot prove those lanes still measure what they were written to measure.
+    /// </summary>
     private static float EggRowHeight(float width, bool allowEggs)
     {
-        var source = new RecordingSettingsSource { RichData = true, AllowEasterEggs = allowEggs };
+        var source = new RecordingSettingsSource { RichData = allowEggs };
         using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
         host.Bindings.Invoke("set-tab", "Overview");
         UiLayoutSnapshot snapshot = Arrange(host, width);

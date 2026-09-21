@@ -88,6 +88,18 @@
 
 ## Evidence discipline (rules in `AGENTS.md`; these are the measured specimens)
 
+- **The sixth specimen, and a new mechanism: the mutation flow's own BUILD was the broken instrument**
+  (S4-1, 2026-09-21). `Layout.Schema2.xml` and the language tables are **embedded resources** of the main
+  assembly, and the mutation battery's `Copy-Item` restore preserves the source's old mtime - so an
+  incremental build reused the assembly built for the *previous* mutation and the next mutation observed
+  nothing. The symptom was convincing: M5 (a stretched egg string) first reported M3's geometry symptom,
+  then M7's binding symptom. Setting the resource's `LastWriteTime` to now before each build made M5 red on
+  its own assertion (`On=89 Off=67.67`). Promoted to `AGENTS.md` Evidence discipline.
+- **Do not move a SHARED fixture's input to give one lane the case it needs.** S4-1's first cut added a seed
+  field to `RecordingSettingsSource` whose default changed the empty view's egg value; the suite stayed
+  green, which proves nothing about the nine files that construct that fixture. The lane now drives its two
+  states from the fixture's own two shipped views (`RichData ? true : false`), and the fixture is byte-
+  identical to the revision before the change (`git diff` empty).
 - This phase caught **five greens-for-the-wrong-reason and one red-for-the-wrong-reason**. The red: a new lane
   measured widths without installing a Keyed table, so `Translate` passed keys through and the header switch
   was measured as the literal text `US.Help.Drawer.Toggle` (168px) against a 116px band, while the shipped

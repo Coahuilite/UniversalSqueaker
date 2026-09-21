@@ -574,7 +574,14 @@ manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那
 | **M7** `global-volume-number` 的 `Bind` → `global-volume`（百分比控件改绑归一值） | 本 lane `CardsAreDeclaredSections`：*the number field must own the percent projection 'global-volume-percent', got global-volume* |
 
 **M5 的实测值同时说明了 shipped 形态是安全的**：两个状态句在 4 宽 × 2 语言下的行高都是 **67.67**
-（相等），所以那条常驻不变式成立；M5 是把它拉断。
+（相等），所以那条常驻不变式成立；M5 是把它拉断（改完夹具后复跑，数值与断言不变）。
+
+**这一步的两态由夹具自己那两个 shipped 视图驱动**（rich 视图 `allowEasterEggs: true`、空视图
+`false`），**没有**给 `RecordingSettingsSource` 加种子字段。理由不是省事：该夹具被本套件 **9 个文件**
+构造，加一个默认值就会移动**所有**这些 lane 的输入，而「套件仍然全绿」证明不了那些 lane 还在测它们本来
+要测的东西。全量核对：每一处构造都只使用 `RichData` / `Authors` / `ChecklistPacks` /
+`WrappingDomainText` / `EatPrecisionEnabled`，egg 输入恒为 `RichData ? true : false`，**改动前后逐字节
+一致**（`git diff 1ac4bd0 -- tools/.../RecordingSettingsSource.cs` 为空）。
 
 > **变异实验本身的一个仪器教训（值得记，正是「先查量具的输入」那条纪律的标本）**：manifest 与语言表都是
 > **主程序集的嵌入资源**，而 `Copy-Item` 恢复文件会保留**旧 mtime**；增量构建因此可以复用「上一次变异构建
