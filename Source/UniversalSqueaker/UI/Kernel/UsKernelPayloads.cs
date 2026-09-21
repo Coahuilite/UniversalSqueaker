@@ -87,21 +87,6 @@ public readonly struct UsBaselineXenoToggle
     }
 }
 
-/// <summary>Domain selection write for the Packs page (race or xenotype domain).</summary>
-public readonly struct UsDomainSelection
-{
-    public readonly SqueakVoicePackScope Scope;
-    public readonly string RaceDefName;
-    public readonly string TargetDefName;
-
-    public UsDomainSelection(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
-    {
-        Scope = scope;
-        RaceDefName = raceDefName ?? "";
-        TargetDefName = targetDefName ?? "";
-    }
-}
-
 /// <summary>One VoicePack checkbox write inside a domain.</summary>
 public readonly struct UsPackToggle
 {

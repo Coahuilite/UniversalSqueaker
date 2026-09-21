@@ -37,8 +37,6 @@ internal static class Program
         ("scope-tree", "us/scope-tree"),
         ("preset-list", "us/preset-list"),
         ("filter-bar", "us/filter-bar"),
-        ("race-layer", "us/race-layer"),
-        ("xenotype-layer", "us/xenotype-layer"),
         ("checklist", "us/voice-pack-checklist"),
         ("footer", "us/footer"),
         ("help-panel", "us/help-panel"),
@@ -115,6 +113,7 @@ internal static class Program
         Step("typed bindings route to business boundary", TypedBindingsRouteToBusinessBoundary);
         Step("full typed write coverage", FullTypedWriteCoverage);
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
+        Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -1161,19 +1160,28 @@ internal static class Program
                 "resource declares widget " + id + " (" + kind + ")");
         }
 
-        // S4-1: the three Overview composites were dissolved and retired. Their IDS survive the
-        // migration - the workspace gate and the geometry/evidence lanes read the cards by id - but the
-        // kind does not: each id now names a declarative Section container.
-        foreach (string id in new[] { "global-volume", "basic-tuning", "camera-indicator" })
+        // S4-1/S4-2: the five dissolved composites were retired. Their IDS survive the migration - the
+        // workspace gate and the geometry/evidence lanes read the cards by id - but the kind does not: each
+        // id now names a declarative Section container.
+        foreach ((string id, string tab) in new[]
+                 {
+                     ("global-volume", "Overview"), ("basic-tuning", "Overview"),
+                     ("camera-indicator", "Overview"), ("race-layer", "Packs"), ("xenotype-layer", "Packs")
+                 })
         {
-            Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"Overview\""),
-                "the dissolved composite's id must name a declarative Section container: " + id);
+            Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"" + tab + "\""),
+                "the dissolved composite's id must name a declarative Section container gated by its own"
+                + " workspace: " + id + " (" + tab + ")");
         }
 
         // A HelpKey may still NAME these strings (they are catalog section keys); what must be gone is
         // the KIND. Asking for Kind="..." is the difference between "the page still explains this
         // section" and "the retired composite is still wired".
-        foreach (string kind in new[] { "us/basic-tuning", "us/global-volume", "us/camera-indicator" })
+        foreach (string kind in new[]
+                 {
+                     "us/basic-tuning", "us/global-volume", "us/camera-indicator",
+                     "us/race-layer", "us/xenotype-layer"
+                 })
         {
             Assert(!xml.Contains("Kind=\"" + kind + "\""),
                 "the retired composite kind must not survive as a manifest Kind: " + kind);
@@ -1220,7 +1228,22 @@ internal static class Program
         }
 
         Assert(declaredKinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
-        Assert(UiWidgetRegistry.KnownKinds(ExpectedSource).Count >= 15, "US scope registry holds the kernel composite kinds");
+        // The Registrar's complete set must be resolvable in the US scope, and the five kinds S4-1/S4-2
+        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (13 = 12 settings + the
+        // overlay readout); this one is a guard, and it is written as ">= 13" rather than "== 13" because the
+        // diagnostics panel registers its own seven kinds into the same scope lazily, so a count taken here
+        // depends on which lane ran first.
+        IReadOnlyCollection<string> usKinds = UiWidgetRegistry.KnownKinds(ExpectedSource);
+        Assert(usKinds.Count >= 13, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
+        foreach (string retired in new[]
+                 {
+                     "us/global-volume", "us/basic-tuning", "us/camera-indicator",
+                     "us/race-layer", "us/xenotype-layer"
+                 })
+        {
+            Assert(!usKinds.Contains(retired),
+                "the retired composite kind '" + retired + "' must not be registered any more");
+        }
     }
 
     private static void CollectKinds(IReadOnlyList<FerriteLib.UiKit.Kernel.UiElementSpec> elements, HashSet<string> kinds)
@@ -1308,7 +1331,8 @@ internal static class Program
         bindings.ValidateAction<UsMoodWrite>("set-mood-tuning", "test");
         bindings.ValidateAction<UsBaselineRaceToggle>("toggle-baseline-race", "test");
         bindings.ValidateAction<UsBaselineXenoToggle>("toggle-baseline-xenotype", "test");
-        bindings.ValidateAction<UsDomainSelection>("select-domain", "test");
+        // S4-2: the row's own key is the payload, so the action takes the string the button carries.
+        bindings.ValidateAction<string>("select-domain", "test");
         bindings.ValidateAction<UsPackToggle>("toggle-pack", "test");
         bindings.ValidateAction<UsDomainIdentity>("forget-unavailable", "test");
         bindings.ValidateAction<UiChartPointChange>("attenuation-point", "test");
@@ -2140,8 +2164,12 @@ internal static class Program
         Assert(fake.LastPackFilter == "AuthorB", "set-pack-filter action routes");
 
         // Dynamic list interactions: domain selection + checklist toggle + forget + baseline.
-        bindings.Invoke("select-domain", new UsDomainSelection(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
-        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Xenotype && fake.LastSelectedTarget == "sanguophage", "select-domain routes");
+        bindings.Invoke("select-domain", "human|sanguophage");
+        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Xenotype && fake.LastSelectedRace == "human"
+            && fake.LastSelectedTarget == "sanguophage", "a composite row key decodes into a xenotype selection");
+        bindings.Invoke("select-domain", "testrace");
+        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Race && fake.LastSelectedRace == "testrace"
+            && fake.LastSelectedTarget == "", "a bare row key decodes into a race selection");
         bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Xenotype, "human", "sanguophage", "us.sang2", true));
         Assert(fake.LastPackKey == "us.sang2" && fake.LastPackEnabled == true, "toggle-pack routes");
         bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));

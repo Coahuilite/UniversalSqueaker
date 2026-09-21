@@ -36,8 +36,6 @@ public static class UsKernelWidgetRegistrar
             UsScopeTreeWidget.Register();
             UsPresetListWidget.Register();
             UsFilterBarWidget.Register();
-            UsRaceLayerWidget.Register();
-            UsXenotypeLayerWidget.Register();
             UsVoicePackChecklistWidget.Register();
             UsKernelFooterWidget.Register();
             UsHelpPanelWidget.Register();

@@ -145,8 +145,35 @@
         <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
         <Widget Id="attenuation-editor" Kind="us/attenuation-editor" TitleKey="US.Section.DistanceAttenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
-        <Widget Id="race-layer" Kind="us/race-layer" TitleKey="US.Section.RaceDomain" HelpKey="us/race-layer" Tab="Packs" />
-        <Widget Id="xenotype-layer" Kind="us/xenotype-layer" TitleKey="US.Section.XenotypeDomain" HelpKey="us/xenotype-layer" Tab="Packs" />
+        <!-- S4-2: the two Packs layer cards are declarative row sets. us/race-layer and us/xenotype-layer
+             were the pair that could NOT be migrated while G2/G3 were missing (a repeated row could not
+             report its own key, and there was no appearance-less hit area), so this is their first use on a
+             real page. Each row's identity is its business key and that key IS the command payload:
+             input/button.PayloadKey receives it in the item's own binding scope (G2), and Chrome="none"
+             paints no surface at all (G3) so the same element is the row's hit area.
+
+             The hit area is TWO stacked bare bands, and that is a MEASURED consequence rather than a style
+             choice: ButtonWidget.Measure heights Height="Auto" from ITS OWN caption (an empty one falls back
+             to the density token, 24 here - spec section 0.4 G3 records exactly this boundary), and an
+             Overlay does not resize a child to its own band. Two 24px bands therefore reach the 48px row the
+             composite drew, where one band would leave the detail line dead. The boundary is asserted in
+             DeclarativePacksLaneTests: a row whose text wraps past 48px keeps a 48px hit area.
+
+             Selection is deliberately NOT styled here, and that is a recorded gap rather than an oversight.
+             SelectedKey is engine-wide on widgets but is NOT item-scoped inside a template
+             (UiLayoutEngine.QualifyItemBinding scopes Bind, ActionBind, OptionsBind, VisibleKey and
+             PayloadKey - not SelectedKey), and Tone/Emphasis are literals with no per-item form, so a
+             data-driven row cannot say "I am the selected one" in this vocabulary. Declaring SelectedKey in a
+             template would instead report an unresolvable binding once per row. The delta and the one-line
+             fix are in the S4-2 friction report (spec section 5.9). -->
+        <Section Id="race-layer" Tab="Packs" Padding="12" Gap="6">
+          <Widget Id="race-layer-header" Kind="section/header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
+          <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
+        </Section>
+        <Section Id="xenotype-layer" Tab="Packs" Padding="12" Gap="6">
+          <Widget Id="xenotype-layer-header" Kind="section/header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
+          <Repeat Id="xenotype-layer-rows" Items="xenotype-rows" Template="xenotype-layer-row" Padding="0" Gap="2" />
+        </Section>
         <!-- Step A/B of the checklist migration: the card is the engine's Section container, carrying the
              same explicit geometry every other container on this page already declares (CP-0). It is gated
              by the engine's own Tab attribute - the container vocabulary gained it as a coherence fix, so
@@ -226,6 +253,30 @@
        which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
        every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
   <Templates>
+    <!-- S4-2 rows: an Overlay because the hit area must COVER the text rather than sit beside it. The hit
+         column is declared first so it draws first (it paints nothing at all); the text column is drawn
+         over it. Both are full-width Overlay children, so the two bands and the two text lines share one
+         left/right edge by construction. -->
+    <Overlay Id="race-layer-row" Padding="0">
+      <Column Id="race-layer-row-hit" Gap="0" Padding="0">
+        <Widget Id="race-layer-row-hit-a" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
+        <Widget Id="race-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
+      </Column>
+      <Column Id="race-layer-row-text" Gap="2" Padding="0">
+        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
+        <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
+      </Column>
+    </Overlay>
+    <Overlay Id="xenotype-layer-row" Padding="0">
+      <Column Id="xenotype-layer-row-hit" Gap="0" Padding="0">
+        <Widget Id="xenotype-layer-row-hit-a" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
+        <Widget Id="xenotype-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
+      </Column>
+      <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
+        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
+        <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
+      </Column>
+    </Overlay>
     <Row Id="checklist-row" Gap="4" Padding="0">
       <Column Id="checklist-row-text" Gap="2" Padding="0">
         <Widget Id="checklist-row-label" Kind="text/wrapped" Bind="label" HelpKey="us/voice-pack-checklist/row" />

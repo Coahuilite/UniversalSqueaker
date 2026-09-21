@@ -281,9 +281,32 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<IReadOnlyList<RaceLayerRowView>>("races", () => source.BuildView().Races);
         bindings.BindReadOnly<IReadOnlyList<VoicePackDomainView>>("xenotype-domains", () => source.BuildView().XenotypeDomains);
         bindings.BindReadOnly<VoicePackDomainView?>("selected-domain", () => source.BuildView().SelectedDomain);
-        bindings.BindAction<UsDomainSelection>(
-            "select-domain",
-            selection => { source.SelectDomain(selection.Scope, selection.RaceDefName, selection.TargetDefName); bump(); });
+        // S4-2: the two layer cards are declarative row sets now, and each row's identity is the payload its
+        // input/button carries (ButtonWidget.PayloadKey, scoped per item). The payload is therefore a STRING
+        // - the row's own business key - and decoding it back into (scope, race, target) is the host's job.
+        // The key name is unchanged on purpose: it stays the one layout-affecting "which domain is selected"
+        // write, and UsKernelContractInvariantTests keeps pinning it by name.
+        //
+        // The key shape is the projection's own contract: a race row's key IS its raceDefName; a xenotype
+        // row's key is "<raceDefName>|<targetDefName>". '|' is safe where '/' and '#' are not - the engine
+        // refuses an item key carrying either of those (UiLayoutEngine.AcceptItemKey).
+        bindings.BindAction<string>("select-domain", key => { SelectDomainByKey(source, key); bump(); });
+        // The two row sets the Repeats are built from: one ordered business key per row, and the projection
+        // that names them also owns their item-local binding namespace (see LayerRowBindings).
+        var raceRows = new LayerRowBindings(source, bindings, translation, bump, RaceRowsKey, SqueakVoicePackScope.Race);
+        bindings.BindReadOnly<IReadOnlyList<string>>(RaceRowsKey, () =>
+        {
+            IReadOnlyList<string> keys = RaceRowKeys(source);
+            raceRows.Ensure(keys);
+            return keys;
+        });
+        var xenotypeRows = new LayerRowBindings(source, bindings, translation, bump, XenotypeRowsKey, SqueakVoicePackScope.Xenotype);
+        bindings.BindReadOnly<IReadOnlyList<string>>(XenotypeRowsKey, () =>
+        {
+            IReadOnlyList<string> keys = XenotypeRowKeys(source);
+            xenotypeRows.Ensure(keys);
+            return keys;
+        });
         bindings.BindAction<UsPackToggle>(
             "toggle-pack",
             toggle => { source.ToggleVoicePack(toggle.Scope, toggle.RaceDefName, toggle.TargetDefName, toggle.PackKey, toggle.Enabled); bump(); });
@@ -391,6 +414,205 @@ public static class UsKernelSettingsHost
             () => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
         return bindings;
+    }
+
+    /// <summary>The Race card's Repeat Items binding: one business key per race domain row.</summary>
+    private const string RaceRowsKey = "race-rows";
+
+    /// <summary>The Xenotype card's Repeat Items binding: one business key per (race, xenotype) row.</summary>
+    private const string XenotypeRowsKey = "xenotype-rows";
+
+    /// <summary>
+    /// The character that joins a xenotype row's two identity halves. <c>'|'</c> on purpose: the engine
+    /// refuses a row key carrying <c>'/'</c> or the item-key separator (UiLayoutEngine.AcceptItemKey), and
+    /// this key has to survive both as a binding-namespace segment and as a command payload.
+    /// </summary>
+    private const char RowKeySeparator = '|';
+
+    /// <summary>
+    /// Decodes a row's own key back into the business selection. One decode point, so the payload a row
+    /// sends and the domain the model receives cannot drift: the key IS the identity, and a row that carries
+    /// no separator is a race row by construction.
+    /// </summary>
+    private static void SelectDomainByKey(IUsKernelSettingsSource source, string key)
+    {
+        int split = key.IndexOf(RowKeySeparator);
+        if (split < 0)
+        {
+            source.SelectDomain(SqueakVoicePackScope.Race, key, "");
+            return;
+        }
+
+        source.SelectDomain(
+            SqueakVoicePackScope.Xenotype, key.Substring(0, split), key.Substring(split + 1));
+    }
+
+    /// <summary>The race rows' ordered keys: the race defName IS the row's identity.</summary>
+    private static IReadOnlyList<string> RaceRowKeys(IUsKernelSettingsSource source)
+    {
+        IReadOnlyList<RaceLayerRowView> rows = source.BuildView().Races;
+        var keys = new List<string>(rows?.Count ?? 0);
+        if (rows == null) return keys;
+        for (int i = 0; i < rows.Count; i++) keys.Add(rows[i].RaceDefName);
+        return keys;
+    }
+
+    /// <summary>The xenotype rows' ordered keys: "&lt;raceDefName&gt;|&lt;targetDefName&gt;".</summary>
+    private static IReadOnlyList<string> XenotypeRowKeys(IUsKernelSettingsSource source)
+    {
+        IReadOnlyList<VoicePackDomainView> rows = source.BuildView().XenotypeDomains;
+        var keys = new List<string>(rows?.Count ?? 0);
+        if (rows == null) return keys;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            keys.Add(rows[i].RaceDefName + RowKeySeparator + rows[i].TargetDefName);
+        }
+
+        return keys;
+    }
+
+    /// <summary>
+    /// A declarative layer row's item-local binding namespace
+    /// (<c>race-rows.&lt;itemKey&gt;.&lt;declaredKey&gt;</c>), registered on demand by the projection that
+    /// names the rows - the same shape, and for the same reason, as the checklist's
+    /// <see cref="ChecklistItemBindings"/>: the row set is a runtime projection and the binding registry has
+    /// no prefix resolution, so "register exactly the rows the list just named" is the only honest form.
+    ///
+    /// <para>
+    /// Three read-only keys per row: <c>payload</c> (the row's own key, which is what
+    /// <c>input/button.PayloadKey</c> hands to <c>select-domain</c>), <c>title</c> and <c>detail</c>. Every
+    /// getter resolves the CURRENT view rather than a captured row, so a row's text is live model data.
+    /// There is deliberately no <c>selected</c> key: the template cannot consume one - SelectedKey is not
+    /// item-scoped and Tone/Emphasis have no per-item form - and a binding nothing can read is the
+    /// "accepted but did nothing" shape this project refuses.
+    /// </para>
+    /// </summary>
+    private sealed class LayerRowBindings
+    {
+        private readonly IUsKernelSettingsSource source;
+        private readonly UiBindings bindings;
+        private readonly IUiTranslation translation;
+        private readonly Action bump;
+        private readonly string itemsKey;
+        private readonly SqueakVoicePackScope scope;
+        private readonly HashSet<string> registered = new(StringComparer.Ordinal);
+
+        internal LayerRowBindings(
+            IUsKernelSettingsSource source,
+            UiBindings bindings,
+            IUiTranslation translation,
+            Action bump,
+            string itemsKey,
+            SqueakVoicePackScope scope)
+        {
+            this.source = source;
+            this.bindings = bindings;
+            this.translation = translation;
+            this.bump = bump;
+            this.itemsKey = itemsKey;
+            this.scope = scope;
+        }
+
+        /// <summary>Registers the item-local keys of the given rows, once per key.</summary>
+        internal void Ensure(IReadOnlyList<string> keys)
+        {
+            for (int i = 0; i < keys.Count; i++) Register(keys[i]);
+        }
+
+        private void Register(string key)
+        {
+            if (string.IsNullOrEmpty(key) || !registered.Add(key)) return;
+
+            string prefix = itemsKey + "." + key + ".";
+            bindings.BindReadOnly<string>(prefix + "payload", () => key);
+            bindings.BindReadOnly<string>(prefix + "title", () => Title(key));
+            bindings.BindReadOnly<string>(prefix + "detail", () => Detail(key));
+            // ActionBind is item-scoped inside a template too (UiLayoutEngine.QualifyItemBinding), so one
+            // declared ActionBind cannot serve every row: the element asks for
+            // "<items>.<itemKey>.select-domain" and the host registers exactly one command per row. The
+            // payload stays load-bearing - it is what the command decodes - so a row that carried another
+            // row's key would still select the wrong domain, which is the property the lane presses for.
+            bindings.BindAction<string>(prefix + "select-domain", payload =>
+            {
+                SelectDomainByKey(source, payload);
+                // A display write: which domain is selected drives the checklist's contents and (before
+                // S4-2) the row's own ink, so the session clock must advance or the revision-gated view
+                // keeps serving the pre-write projection.
+                bump();
+            });
+        }
+
+        /// <summary>The row this key names in the CURRENT view, or null when the model dropped it. Null is a
+        /// legal frame: a row's node outlives its data for one frame, and the leaf's documented answer to an
+        /// unresolvable bound string is its empty default plus one report.</summary>
+        private RaceLayerRowView? RaceRow(string key)
+        {
+            IReadOnlyList<RaceLayerRowView> rows = source.BuildView().Races;
+            if (rows == null) return null;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (string.Equals(rows[i].RaceDefName, key, StringComparison.Ordinal)) return rows[i];
+            }
+
+            return null;
+        }
+
+        private VoicePackDomainView? XenotypeRow(string key)
+        {
+            int split = key.IndexOf(RowKeySeparator);
+            if (split < 0) return null;
+
+            string race = key.Substring(0, split);
+            string target = key.Substring(split + 1);
+            IReadOnlyList<VoicePackDomainView> rows = source.BuildView().XenotypeDomains;
+            if (rows == null) return null;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (string.Equals(rows[i].RaceDefName, race, StringComparison.Ordinal)
+                    && string.Equals(rows[i].TargetDefName, target, StringComparison.Ordinal))
+                {
+                    return rows[i];
+                }
+            }
+
+            return null;
+        }
+
+        private string Title(string key)
+        {
+            if (scope == SqueakVoicePackScope.Race)
+            {
+                RaceLayerRowView? row = RaceRow(key);
+                return row.HasValue
+                    ? UsPacksText.TitleWithState(translation, row.Value.DisplayName, row.Value.State)
+                    : "";
+            }
+
+            VoicePackDomainView? domain = XenotypeRow(key);
+            if (!domain.HasValue) return "";
+
+            // The xenotype row's title is the name qualified by its race's translated label - the same
+            // composition the composite drew, through the same resolver.
+            string name = UsPacksText.Format(
+                translation, UsPacksText.KeyXenotypeRaceContext, domain.Value.DisplayName, domain.Value.RaceDisplay);
+            return UsPacksText.TitleWithState(translation, name, domain.Value.State);
+        }
+
+        private string Detail(string key)
+        {
+            if (scope == SqueakVoicePackScope.Race)
+            {
+                RaceLayerRowView? row = RaceRow(key);
+                return row.HasValue
+                    ? UsPacksText.DetailText(translation, row.Value.EnabledCount, row.Value.CandidateCount)
+                    : "";
+            }
+
+            VoicePackDomainView? domain = XenotypeRow(key);
+            return domain.HasValue
+                ? UsPacksText.DetailText(translation, domain.Value.EnabledCount, domain.Value.CandidateCount)
+                : "";
+        }
     }
 
     /// <summary>
