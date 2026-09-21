@@ -57,8 +57,28 @@
   UpperLeft at the theme font plus `Padding*2` of vertical lead, so a declared label is top-anchored, sits at
   the card padding instead of `RowLeftPadding`, and `chrome/rule` paints the resolved role's **Border** ink
   rather than the shipped `Divider` token. All three are player-visible and are listed as such in §5.8.
-- **Next big goal: S4 continues = the remaining workspaces** (Distance / Packs / Tuning / Presets), one
-  failure-sensitive lane per workspace; the slice ladder is spec section 6.
+- **S4-2 LANDED 2026-09-21: the two Packs layer cards are declarative row sets and their kinds are
+  retired.** `us/race-layer` / `us/xenotype-layer` are gone; the Registrar's `us/*` kind set is **13** (was 15,
+  pinned by `UiSourceInvariantTests`), 388 widget lines and the `UsDomainSelection` payload struct retired with
+  them, `UsPacksText` moved to `UI/Layout/`, and `select-domain`'s payload became the row's own string key. This
+  is the **first real consumer of G2** (`input/button.PayloadKey`: a repeated row reports its own key - the lane
+  presses each row and asserts which domain the model received) and of G3 (`Chrome="none"` bare hit area).
+  Report + measured geometry + six mutations: spec §5.9.
+- **Two carrier gaps S4-2 recorded as (B), with file:line, and deliberately did NOT turn into requests.**
+  (1) `SelectedKey` is engine-wide but **not item-scoped** in a template
+  (`UiLayoutEngine.QualifyItemBinding` scopes Bind / ActionBind / OptionsBind / VisibleKey / PayloadKey only) and
+  `Tone`/`Emphasis` are literals, so **a data-driven row cannot say "I am the selected one"** - the selected row
+  loses its gold ink and its rail; the one-line fix candidate is adding `SelectedKey` to that list. (2)
+  `Height="Auto"` heights from the element's **own caption** (`ButtonWidget.cs:84-99`) while an Overlay keeps
+  every child at its measured height (`UiLayoutEngine.cs:1423-1450`) and `AlignY="Stretch"` names a position,
+  not an extent (`UiPlacement.cs:71-74`), so **a bare hit area cannot be stretched to the content-measured row it
+  covers**: the layer row's hit target is two bare bands (48px) = **69.9%** of a flat row and **53.3%** of a
+  wrapped one. Both are pinned as lane assertions so neither gap can be forgotten.
+- **A container that omits `Padding` gets the density default (6 per side), and this has now bitten twice.**
+  S4-2's `Repeat` did not declare it and the row set silently grew 12px; the lane now computes the row set from
+  the DECLARED padding, so an omission reddens instead of shifting the card (the S3-5 rule, second specimen).
+- **Next big goal: S4 continues = the remaining workspaces** (Distance / Tuning / Presets), one
+  failure-sensitive loop per workspace; the slice ladder is spec section 6.
 - **Green evidence at the current revision**: harness `ALL PASS` / EXIT 0 and `verify-local -NoRestore` 15/15
   EXIT 0 on a Release carrier with no PDB. Gate counts, key counts and catalog counts drift - the script's own
   `Invoke-Check` count and the parity/count gates are the authority, never a number quoted here.

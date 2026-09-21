@@ -590,6 +590,138 @@ manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那
 > （`(Get-Item …).LastWriteTime = Get-Date`）；顶了之后 M5 才红在自己的断言上（On=89 / Off=67.67）。
 > 结论：变异实验里，**构建的输入**就是量具的输入，改完文件不等于改了量具看到的东西。
 
+### 5.9 S4-2 摩擦报告（2026-09-21 实测：Packs 两个 layer 卡声明式化；G2/G3 第一次被真实页面使用）
+
+**提交**：代码 `7f54ea7`（本报告与它同批）。证据：harness **ALL PASS / EXIT 0**、
+`verify-local -NoRestore` **15/15 EXIT 0**（载体 Release）；**6 个变异**逐个实测、各自红在预期断言上。
+
+**消解对象与同批退役**
+
+| 对象 | code / draw | 处置 |
+|---|---:|---|
+| `UsRaceLayerWidget` | 153 / 53 | kind + 文件（221 行，含被移出的 `UsPacksText`） |
+| `UsXenotypeLayerWidget` | 128 / 56 | kind + 文件（167 行） |
+| `UsDomainSelection` | 15 行 | 退役：**行自己的 key 就是 payload**，三字段结构体没有存在理由 |
+
+- **Registrar 的 us/* kind 集 15 → 13**（`UiSourceInvariantTests` 基数钉同批改 13）。
+- `UsPacksText` **移出**到 `UI/Layout/UsPacksText.cs`（75 行）：它的调用者现在是 host 的 per-item 投影，
+  不是部件；随之删掉两个 `UiWidgetContext` 重载（没有调用者的入口就是「一段文本两个解析者」）。
+- `select-domain` 的动作键名不变（不变式按名字钉着它），**payload 类型 `UsDomainSelection` → `string`**：
+  行 key 本身就是身份，host 负责解码（race = defName；xenotype = `<race>|<target>`，`|` 安全——
+  引擎拒绝含 `/` 或 `#` 的 item key）。
+
+**声明形态**
+
+```xml
+<Section Id="race-layer" Tab="Packs" Padding="12" Gap="6">
+  <Widget Id="race-layer-header" Kind="section/header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
+  <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
+</Section>
+<Templates>
+  <Overlay Id="race-layer-row" Padding="0">
+    <Column Id="race-layer-row-hit" Gap="0" Padding="0">      <!-- 命中带：两格裸按钮，画在最底层 -->
+      <Widget Id="race-layer-row-hit-a" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
+      <Widget Id="race-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
+    </Column>
+    <Column Id="race-layer-row-text" Gap="2" Padding="0">     <!-- 两行文本画在命中带之上 -->
+      <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
+      <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
+    </Column>
+  </Overlay>
+</Templates>
+```
+
+### 5.9.1 本片验证了哪些 FL 组件（这就是本片的产出）
+
+| 组件 | 验证了什么 | 结果 |
+|---|---|---|
+| `Repeat` + `<Templates>` | 第二个真实消费者（第一个是 checklist）；item key 进身份（`race-layer-row#testrace`），per-item 绑定命名空间成立 | **成立**。行 key 直接可用作 binding 段与 payload |
+| `input/button.PayloadKey`（**G2**） | 命令收到**行自己的 key**，且在 item 作用域内解析 | **成立且是本片的证据核心**：lane 逐行按下、逐行断言模型收到的域名（M3 证明这个 payload 是**承重**的，不是装饰） |
+| `input/button Chrome="none" + Height="Auto"`（**G3**） | 无外观命中区、按自身内容量高 | **成立，但边界是实测的**（见 5.9.2 B2）：命中区**覆盖不了**内容量高的整行 |
+| `text/wrapped` + per-item `Bind` | 数据驱动的两行文本，按自身槽宽量测 | **成立** |
+| 容器 `Tab` / `section/header` / `Overlay` 作为模板根 | 声明式卡片与行封装 | **成立**（Overlay 作模板根可用，子元素同一内宽、同一上缘） |
+| `VisibleKey`（未被本片使用但对照） | item 作用域内唯一的可见性/状态钩子 | 见 B1：它是**唯一**被 scoped 的状态类属性 |
+
+### 5.9.2 摩擦：哪条是 (A)、哪条是 (B)
+
+**(A) US 自己的用法 —— `ActionBind` 在模板里是 item 作用域的，一条声明服务不了所有行。**
+元素实际索取的是 `<items>.<itemKey>.select-domain`，所以 host 必须**逐行注册一个命令**。这不是缺口
+（PayloadKey 已给出行身份，逐行命令只是引擎的作用域规则），但意味着「per-item action key」与
+「per-item payload」在用了 PayloadKey 之后**互为冗余**。第一版正是死在这里，trip 日志把答案写在脸上：
+`No action binding registered for 'race-rows.human.select-domain'`。
+
+**(B1) 真正的通用缺口：`SelectedKey` 没有被 item 作用域化 ⇒ 数据驱动列表无法表达「选中的是哪一行」。**
+`QualifyItemBinding`（`ferritelib/Source/FerriteLib.UiKit/Kernel/UiLayoutEngine.cs:1876-1891`）只作用域化
+`Bind` / `ActionBind` / `OptionsBind` / `VisibleKey` / `PayloadKey`；而 `SelectedKey` 是**元素级**的
+（`Kernel/Widgets/AtomVocabulary.cs:53`），`Tone`/`Emphasis` 又只有字面量。三者相加的后果是：
+**模板里的行说不出「我是被选中的那一行」**。
+
+- **最小复现**：在 `<Templates>` 的任意元素上加 `SelectedKey="selected"`。引擎给**每一行**都解析同一个
+  页级键 `selected`（不是 `<items>.<key>.selected`），于是要么所有行同色，要么每行各记一条
+  `unresolvable binding` 报告。
+- **一行修法候选**：把 `SelectedKey` 加进 `QualifyItemBinding` 的作用域名表。**未向 FL 提请求**（按本轮规则报 lead）。
+- **本片的处置**：不声明 `SelectedKey`（声明了就是每行一条无效绑定），并把这份缺失**钉成 lane 的断言**
+  ——`DeclarativePacksLaneTests` 断言两个模板里**没有**任何元素带 `SelectedKey` 或 `Tone`。缺口变成证据，
+  不再是注释。
+
+**(B2) 真正的通用缺口（已在 §0.4 G3 记录，这里是它的第一个真实消费者）：`Height="Auto"` 量的是「它自己
+那个 caption」，所以裸命中区**无法**拉伸到它盖着的那一行的内容高度。**
+`ButtonWidget.Measure`（`Kernel/Widgets/ButtonWidget.cs:84-99`）：Auto ⇒ 量自己的 caption，
+caption 为空 ⇒ 回落 `RowHeight`（本页 24）。而 `Overlay` 的子元素**保持自己的量测高度**、容器取最高子元素
+（`Kernel/UiLayoutEngine.cs:1423,1433,1436`）；`AlignY="Stretch"` 在 placement 规则里只是「分数 0 的位置」，
+**不是**一个延展（`Kernel/UiPlacement.cs:71-74`）。
+
+- **最小复现**：`<Overlay><Widget Kind="input/button" Chrome="none" Height="Auto" ActionBind=… PayloadKey=…/>
+  <Column><Widget Kind="text/wrapped" Bind="a"/><Widget Kind="text/wrapped" Bind="b"/></Column></Overlay>`
+  ⇒ 命中带 24px，行 68.67px。**没有任何声明属性**能让这条带子取到兄弟或父的高度。
+- **本片的处置（不是绕开，是照实记录）**：命中区做成**两条叠放的裸带**（2 × 24 = 48px），它服务的正是
+  行的两行文本；`Height="Auto"` 的空 caption 就是「一格密度 token」的忠实用法。边界因此可测量、可断言。
+
+### 5.9.3 实测几何（harness，StubMetrics；非真实像素）
+
+| 量 | 值 |
+|---|---|
+| 单行（不换行）行高 | **68.67px**（shipped floor 48） |
+| 命中带 | **48px**（2 × 24）⇒ 覆盖 **69.9%** |
+| 换行（`WrappingDomainText`）行高 | **90px** ⇒ 覆盖 **53.3%**，**42px 不可点** |
+| race 卡（3 行） | **266px**（header 26 + 行集 210 + 卡 padding 24） |
+| xenotype 卡（1 行） | **124.67px** |
+| Repeat 行集 | 行和 + 声明 `Gap` 2 × (n−1) + 声明 `Padding` 0 × 2 |
+
+> `Repeat` 的 `Padding` 必须**显式声明 0**：不声明会回落到密度默认的每侧 6（S3-5 那条「每个容器自己声明
+> 节奏」），行集凭空多 12px。这是本轮实测的第二次同类事故（S3-5 之后），lane 现在按声明值算这条关系。
+
+### 5.9.4 玩家可见差异（六条；全部**仍需实机**）
+
+1. **整行命中区的形状变了（本片核心观感差异）。** shipped：整行整宽、整高可点（内容量高，≥48px）。
+   现在：整宽的一摞 **2×24px** 落在行顶部 —— 不换行行覆盖 **69.9%**（48/68.67），换行行掉到 **53.3%**
+   （90px 行里 42px 是死的）。**detail 行的下半部分不再可点**。这是 B2 的直接后果，不是排版选择。
+2. **选中态在整个 Packs 工作区不可见。** shipped：选中行标题用 `TextOnGold`、行面用 Selected 填充、
+   左侧 3px 选中轨。现在三者全无（B1）：`text/wrapped` 不画 surface，且行说不出自己是否被选中。
+   玩家仍能通过下方 checklist 的内容推断选中的域，但**层级卡本身不再显示选中**。
+3. **行面 / hover 高亮消失**：`Chrome="none"` 什么都不画、`text/wrapped` 不画面（与 checklist / S4-1 同类差异）。
+4. **行高 +20.67px**（68.67 vs shipped 48 的 floor）：atom 每行带 `Padding*2`=12px 的纵向留白。
+   卡片随之变高（race 266 / xenotype 124.67）。
+5. **detail 行字号 Tiny → Small**（atom 只有主题字号），墨色保留（`Emphasis="Muted"` → TextSecondary）；
+   两行都从卡片 12px 内边距起排（shipped 另加 `RowLeftPadding` 10）⇒ 文本**左移 10px**；
+   两行都是 **UpperLeft**（shipped MiddleLeft 垂直居中）。
+6. **空列表**：shipped 与现在都只画卡片壳（body 0）—— 无差异，记录以说明这一点被核对过。
+
+### 5.9.5 变异证据（6 个，逐个实测）
+
+| 变异 | 实测红在哪（断言原文摘录） |
+|---|---|
+| **M1** 把 `Kind="us/race-layer"` 放回 manifest（旧 kind 恢复参与） | `real embedded resource + schema shape`：*the retired composite kind must not survive as a manifest Kind: us/race-layer* |
+| **M2** 去掉命中带的 `PayloadKey`（G2 之前那种「无 payload 命令」形态） | 本 lane G2 步：*G2: the hit band must carry the row's own key (PayloadKey="payload"), got ''* |
+| **M3** payload 从「行自己的 key」改成常量 `"human"` | 本 lane G2 步：*pressing band #3 must select row 1 ('testrace'); the model received scope=Race race='human'* —— **payload 承重的证明** |
+| **M4** 删掉两条命中带中的一条 | 本 lane G3 步：*the arranged snapshot must carry 'race-layer-row-hit-b#human'* |
+| **M5** 去掉 `Repeat` 的 `Padding="0"`（回落密度默认 6） | 本 lane G3 步的命中带普查：*must draw two bare bands per row (4 rows), got 6* |
+| **M6** 在模板里声明 `SelectedKey="selected"`（尝试按页级规则做行选中态） | 本 lane 声明形态步：*'race-layer-row-title' declares SelectedKey inside a template; that attribute is not item-scoped…* |
+
+**哪条断言是变异证明、哪条只是守卫**：步骤 2 由 M2/M6 证明；步骤「G3」由 M4/M5 证明；步骤「G2」由 M3 证明；
+**最后一步（清单带高算术）只是守卫**——它在基线绿，但 M5 先被 G3 步的普查抓住，所以这条关系没有被变异
+单独证明过。`CountBands` 这一层之所以被特意挪到 G3 步，就是让「少了一条带子」红在拥有那条带的步骤上。
+
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
@@ -632,7 +764,8 @@ manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那
 | S3-6 | 收尾：本表、TODO/MEMORY 指针、**一次收齐的实机清单** | 落地 |
 | (乙1) | 窄屏帮助呈现 = A：\(body-row 与 footer 之间的条件带\) + 宿主派生两个只读呈现键 + **fit 变硬门** | 落地（**已验证**：harness ALL PASS + 15/15） |
 | U1 | `global-volume` 的 18px 硬写带高 → 测量 | 落地（**已验证**）；S4-1 又把它换成 `text/wrapped` 的自量测 band，`GlobalVolumeBandLaneTests` 保持失败敏感（见 §5.8） |
-| S4-1 | Overview 三张卡原子化：`us/global-volume` + `us/basic-tuning` + `us/camera-indicator` 消解为 manifest 子树并**同批退役** | 落地（harness ALL PASS + 15/15，5 个变异红）—— **§5.8 是它的摩擦报告** |
+| S4-1 | Overview 三张卡原子化：`us/global-volume` + `us/basic-tuning` + `us/camera-indicator` 消解为 manifest 子树并**同批退役** | 落地（harness ALL PASS + 15/15，7 个变异红）—— **§5.8 是它的摩擦报告** |
+| S4-2 | Packs 两个 layer 卡：`us/race-layer` + `us/xenotype-layer` 消解为 `Repeat` + 模板行，**G2/G3 第一次被真实页面使用** | 落地（harness ALL PASS + 15/15，6 个变异红）—— **§5.9 是它的摩擦报告**（含 (B) 两条） |
 
 ## 7. 风险
 

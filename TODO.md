@@ -17,6 +17,15 @@
     shrank **18 → 15**, the seven `toggle-*` action bindings retired with them, and 493 lines of widget code
     were deleted. Friction report + the five player-visible deltas + the mutation ledger: spec **§5.8**.
     The in-game list below carries what still has to be looked at on a real screen.
+  - [x] **S4-2 LANDED (Packs: the two layer cards dissolved and retired).** `us/race-layer` and
+    `us/xenotype-layer` are `Repeat` + `<Templates>` row sets now, and this is the first real consumer of
+    **G2** (`input/button.PayloadKey` - a repeated row reporting its OWN key) and **G3** (`Chrome="none"`
+    bare hit area). The Registrar's `us/*` kind set went **15 -> 13**, 388 widget lines and the
+    `UsDomainSelection` payload struct retired with them, and `UsPacksText` moved to `UI/Layout/`. Two
+    **(B)** carrier gaps are recorded in spec §5.9 with file:line and a minimal repro, **no request filed**:
+    `SelectedKey` is not item-scoped (so a data-driven row cannot express "I am selected" - the selected row
+    loses its ink and rail) and a bare hit area cannot be stretched to a content-measured row (the hit target
+    is 69.9% of a flat row, 53.3% of a wrapped one).
 - [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
   gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
   is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
@@ -70,6 +79,11 @@ no `HeightKey`).
   with the segmented control's shared column, and the egg-state / global-volume captions moved from Tiny to the
   atom's Small font (the volume caption also from MiddleLeft to UpperLeft). Also the first in-game use of
   `input/slider` and `input/number-field` on this page — check the drag feel and the field's focus/commit;
+  (2c) **the S4-2 Packs deltas** (six, all "needs a real screen", spec §5.9): the **whole-row hit target**
+  became a full-width 2x24px stack at the row's top — 69.9% of a flat row and 53.3% of a wrapped one, so the
+  detail line's lower half is dead; **selection is invisible in the layer cards** (no gold title, no selected
+  fill, no rail — `SelectedKey` is not item-scoped); row surface/hover gone; rows +20.67px taller (cards 266
+  and 124.67px); the detail line moved Tiny -> Small and both lines sit 10px further left, top-anchored;
   (3) **the narrow help band (乙1) as shipped** — it REPLACES the body (the nav
   and the centre column are not drawn at all), fills header-to-footer, scrolls internally, never pushes the
   footer out, and closing the drawer brings the body back **with its scroll position intact**; the 7 EN / 2 ZH
