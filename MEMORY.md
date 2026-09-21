@@ -42,13 +42,29 @@
 - **(甲) the global density (12/8/4/24/1) is deliberately NOT inside S3.** It moves every control's INNER inset
   (the atoms read `theme.Geometry.Padding` as their own inset), so it needs its own slice and its own in-game
   look; spec section 3 records why it was separated.
-- **Next big goal: S4 = per-workspace atomisation** (Overview / Distance / Packs / Tuning / Presets), one
+- **S4-1 LANDED 2026-09-21: the Overview workspace's three composite cards are declarative and their kinds
+  are retired.** `us/global-volume` / `us/basic-tuning` / `us/camera-indicator` are gone; the Registrar's
+  `us/*` kind set is **15** (was 18, pinned by `UiSourceInvariantTests`), 493 widget lines were deleted, and
+  the seven `toggle-*` action bindings retired in the same change because a declarative `input/checkbox`
+  writes the inverse of the bool it read **through its value binding** - the value binding IS the toggle, so a
+  second write channel per row had no reason to exist. Evidence: harness ALL PASS + `verify-local` 15/15 on a
+  Release carrier, 5 mutations each red on the expected assertion. Report (measured geometry, the five
+  player-visible deltas, the mutation ledger): `docs/ui-redesign-0.7-zh.md` §5.8.
+- **The one atom fact S4-1 measured, durable.** `input/checkbox` paints `side = max(8, height -
+  theme.Geometry.Padding * 2)` **left-aligned** in its band and `Padding` is 6, so a declared `Height="30"`
+  is what reproduces the shipped 18px visual box (`Height="24"` draws a 12px one) - which makes a declarative
+  row 24x30, not the composite's 24x24. `text/wrapped` has no alignment axis and no font attribute: it is
+  UpperLeft at the theme font plus `Padding*2` of vertical lead, so a declared label is top-anchored, sits at
+  the card padding instead of `RowLeftPadding`, and `chrome/rule` paints the resolved role's **Border** ink
+  rather than the shipped `Divider` token. All three are player-visible and are listed as such in §5.8.
+- **Next big goal: S4 continues = the remaining workspaces** (Distance / Packs / Tuning / Presets), one
   failure-sensitive lane per workspace; the slice ladder is spec section 6.
 - **Green evidence at the current revision**: harness `ALL PASS` / EXIT 0 and `verify-local -NoRestore` 15/15
   EXIT 0 on a Release carrier with no PDB. Gate counts, key counts and catalog counts drift - the script's own
   `Invoke-Check` count and the parity/count gates are the authority, never a number quoted here.
-- **Known stale document**: spec section 6's per-slice status table still marks (乙1) and U1 as 未构建/未验证;
-  both landed and were verified on 2026-09-21.
+- **The (乙1)/U1 stale status rows in spec section 6 were corrected on 2026-09-21** in the S4-1 batch, and
+  S4-1's own row was added there. The remaining known drift is §5.3/§5.4, which are deliberately kept
+  verbatim as the record of why the pre-§0.4 conclusions were wrong.
 
 ## Environment facts that are easy to get wrong (written down once)
 

@@ -12,6 +12,11 @@
   subtrees, workspace by workspace, each with its own verification round and its own friction report
   (`docs/ui-redesign-0.7-zh.md` §5.7 is the checklist-card precedent and the reporting format). The first
   workspace is the maintainer's pick; **S2-S7 must not start without an explicit go**.
+  - [x] **S4-1 LANDED (Overview: the three composite cards dissolved and retired).** `us/global-volume`,
+    `us/basic-tuning` and `us/camera-indicator` are manifest subtrees now; the Registrar's `us/*` kind set
+    shrank **18 → 15**, the seven `toggle-*` action bindings retired with them, and 493 lines of widget code
+    were deleted. Friction report + the five player-visible deltas + the mutation ledger: spec **§5.8**.
+    The in-game list below carries what still has to be looked at on a real screen.
 - [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
   gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
   is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
@@ -57,7 +62,15 @@ no `HeightKey`).
   Help switch staying put, the three columns, the footer band, and the narrow (stacked) presentation;
   (2) the five player-visible deltas of the checklist migration: row hit target narrowed to the checkbox band,
   row surface/hover/selected rail gone, the orphan band above the list, meta/coverage at the atom's font,
-  placeholder ink `TextSecondary`; (3) **the narrow help band (乙1) as shipped** — it REPLACES the body (the nav
+  placeholder ink `TextSecondary`; (2b) **the S4-1 Overview deltas** (five, all "needs a real screen", spec
+  §5.8): every declared row is ~9px taller (the egg row ~16px), the row label moved 10px left and is
+  TOP-anchored instead of vertically centred, the whole-row hit target plus the row hover/surface rail are gone
+  (the 24x30 checkbox band is the only target), the row separator is now a `chrome/rule` in **Border** ink
+  (brighter than the shipped Divider), the checkbox's 18px box sits 4px further right and no longer lines up
+  with the segmented control's shared column, and the egg-state / global-volume captions moved from Tiny to the
+  atom's Small font (the volume caption also from MiddleLeft to UpperLeft). Also the first in-game use of
+  `input/slider` and `input/number-field` on this page — check the drag feel and the field's focus/commit;
+  (3) **the narrow help band (乙1) as shipped** — it REPLACES the body (the nav
   and the centre column are not drawn at all), fills header-to-footer, scrolls internally, never pushes the
   footer out, and closing the drawer brings the body back **with its scroll position intact**; the 7 EN / 2 ZH
   overflow findings must stay gone; (4) **F-05**: is `ui.text.overflow` zero on the normal path? (5) **F-07**:

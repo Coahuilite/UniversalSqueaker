@@ -438,6 +438,148 @@
 
 **盘点修正（§5.1 表）**：`UsVoicePackChecklistWidget` 的 code 实测为 **322 @46a580b**（原表 317 是更早一次测量，其间 step A 给它加了 TitleHidden 分支）；draw 未复测（本轮不再宣称该列数字）。更重要的一句：**bucket (i) 的 1,969 code 是「可搬走的绘制代码上限」，不是「可删除的净行数」**——每件还要付模板、per-item 投影、lane 与保留 composite 的代价，第一件的 Source 净行数是 +68。真正与「删除」直接对应的是 **1,060 draw** 那一列。
 
+### 5.8 S4-1 摩擦报告（2026-09-21 实测：Overview 三张卡声明式化，三个 kind 同批退役）
+
+**提交**：代码 `4d67199`（本报告与它同批，文档提交紧随其后）。证据：harness **ALL PASS / EXIT 0**、
+`verify-local -NoRestore` **15/15 EXIT 0**（载体 Release）。**7 个变异**逐个实测、各自红且红在预期断言上（见末段）。
+
+**消解对象与「同批退役」**
+
+| 对象 | code / draw | 退役物 |
+|---|---:|---|
+| `UsGlobalVolumeWidget` | 67 / 37 | kind + 文件（167 行） |
+| `UsBasicTuningWidget` | 172 / 95 | kind + 文件（244 行） |
+| `UsCameraIndicatorWidget` | 61 / 25 | kind + 文件（82 行） |
+
+- **Registrar 的 us/* kind 集 18 → 15**，`UiSourceInvariantTests` 的基数钉与「注册集 == manifest 集」
+  双向不变式同批改完（前者 18→15，后者不动）。
+- **7 个 `toggle-*` action 绑定同时退役**（`toggle-egg`、`toggle-scale-cooldown|talking|population`、
+  `toggle-camera-indicator`、`toggle-eat-precision[-include-drugs]`）。理由不是精简：`input/checkbox`
+  把「写入所读 bool 的反值」写在自己的 value 绑定上，**value 绑定本身就是开关**，留着 action 等于给同一个
+  值留第二条写通道 —— 这正是本项目反复付学费的「一个意图两个写者」。
+- 净删除：三个 widget 文件 **493 行**（含 157 行 draw/几何代码）。
+
+**新增的是绑定侧投影，不是新 kind**（§5.2 预判的 (A) 类，C# 不删）：`global-volume-percent`
+（0..100 ↔ 0..1；与 slider 走**同一个**业务 setter）、`global-volume-caption`（只读、格式化）、
+`easter-egg-on` / `easter-egg-off`（On/Off 两个 atom 的 `VisibleKey` 门）。
+
+**声明形态**（每张卡都是 `Section` + `section/header` + 声明行）
+
+```xml
+<Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="6">
+  <Widget Id="basic-tuning-header" Kind="section/header" TitleKey="US.Section.PlaybackBehaviour"
+          Height="26" HelpKey="us/basic-tuning" />
+  <Column Id="basic-tuning-body" Gap="2" Padding="0">
+    <Row Id="basic-cooldown-row" Gap="8" Padding="0">
+      <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown"
+              HelpKey="us/basic-tuning/scale-cooldown" />
+      <Widget Id="basic-cooldown-check" Kind="input/checkbox" Bind="scale-cooldown"
+              Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
+    </Row>
+    ...
+  </Column>
+</Section>
+```
+
+三个被验证的**词表事实**（都是本次实测，不是预判）：
+
+1. **`Height="30"` 不是行高常量，是让 atom 画出 18px 视觉框的算术输入。**
+   `input/checkbox` 的画法是 `side = max(8, rect.height - theme.Geometry.Padding * 2)`，而 Padding 是 6
+   ⇒ 30 才得到 18（与 shipped 的 `UsKernelDraw.CheckboxVisual` 同值）。声明 `Height="24"` 会得到 12px
+   的框（**视觉回退**，未采用）。
+2. **`text/wrapped` 没有对齐轴、也没有字号属性**：它固定 `UpperLeft` + 主题字号（Small）+
+   `Padding*2` 的上下留白，且 Measure 用的是**自己那一格的宽**（引擎 `WithViewWidth(width)`），所以
+   行内量测是准的，但行标签的**垂直居中与字号**与 composite 不同（见下面的玩家可见差异）。
+3. **`HelpKey` 是元素级的、引擎代为 claim**（widget 命中即写 session 的 hover claim）。因此 8 个
+   `UsKernelDraw.HelpHover` 站点被删除、键名一个不改，manifest 的 `HelpKey` 接管；`UiSourceInvariantTests`
+   的双向钉（每条 claim 都有目录项、每个目录项都被 claim）与 `SectionHelpKeyOf` 可达性钉都**不需要改**。
+
+**行数（`git numstat` 实测）**
+
+| 范围 | 增 | 删 |
+|---|---:|---:|
+| `Kernel/Us{GlobalVolume,BasicTuning,CameraIndicator}Widget.cs`（三个文件删除） | 0 | **493** |
+| `Kernel/UsKernelWidgetRegistrar.cs` | 0 | 3 |
+| `UI/Layout.Schema2.xml` | 78 | 3 |
+| `UI/UsKernelSettingsHost.cs` | 20 | 8 |
+| `tools/.../DeclarativeOverviewLaneTests.cs`（新） | **737** | 0 |
+| `tools/.../MoodLayoutFocusedTests.cs`（重裁） | 65 | 44 |
+| `tools/.../SettingsGeometryLaneTests.cs`（重裁） | 71 | 81 |
+| `tools/.../Program.cs` + `RecordingSettingsSource.cs` | 45 | 20 |
+| `tools/UniversalSqueakerUiLogicTests/`（两条不变式重裁） | 46 | 12 |
+
+**结论一：可表达 ≠ 可省，这一件把价签验证了。** `Source/**` 不是净删：删掉 493 行绘制代码的同时，
+manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那一列**（三件 157 行里的绝大部分）。
+
+**结论二：G1 记账（5.6 口径，逐条）**
+
+- **删除的 claim 站点：8 个**（`HelpHover(` 代码行 33 → 25）：
+  `us/basic-tuning/egg`、`/scale-cooldown`、`/scale-talking`、`/scale-population`、`/eat-precision`、
+  `/eat-precision-include-drugs`、`us/global-volume/slider`、`us/global-volume/number`
+  （`us/camera-indicator/toggle` 是第 9 个，`UsCameraIndicatorWidget.cs:62`）。
+- **无法用字面量 `HelpKey` 表达的站点：0 个。** 既有例外清单不变（`UsScopeTreeWidget` 两处按行状态取键、
+  `UsModeRowWidget`/`UsKernelDraw` 两处选项级）。
+- **键名集合前后完全一致**：8 个键由 manifest `HelpKey` 接管，三个 section 键由 `section/header` 的
+  `HelpKey` 接管。**目录 46 项与 gate 12 都不需要改。**
+
+**结论三：一条常驻不变式换了形式，必须记录。** composite 用「On/Off 两个字符串里更长的那个」量 egg 的
+状态带，好让行高**不随当前值变化**；声明式没有预留带（没有 `MinHeight`，没有权重），所以这条性质不再由
+构造保证，而是由**测量**保证：`DeclarativeOverviewLaneTests.TheEggStateBandDoesNotDependOnTheToggle` 在
+4 宽 × 2 语言下断言开/关两态行高相等（实测全为 67.67）。这是 §5.3 里被标为 **NOT PROVEN** 的
+「预留带」缺口在本件上的**第一次真实接触**：本次没有走到必须退化那一步（两个 atom 的实际测量相等），
+但它已经不是假设。
+
+**实测几何（harness，StubMetrics；非真实像素）**
+
+| 量 | shipped composite | 声明式实测 |
+|---|---|---|
+| basic-tuning 单行高（EN/ZH、1024/736/480） | 24（密度 token） | **33.33** |
+| egg 行高 | 52（floor） | **67.67** |
+| 320 EN 换行的行高 | 随标签量测 | **54.67** |
+| 卡片高（parent ON / OFF） | — | **315.33 / 280.00** |
+| checkbox 命中带 | 24×24 | **24×30** |
+| 18px 视觉框右缘 | 内容右缘 −10 | **内容右缘 −6** |
+| 行标签左缘 | 卡片左缘 +12 +**10** | 卡片左缘 **+12** |
+
+**五条玩家可见差异（不许声称观感等价；全部「仍需实机」）**
+
+1. **行高整体 +9.33px（egg 行 +15.67）**。原因是 atom 的 band = 文本 + `Padding*2`(12) + 其字号（Small）
+   的行高（21.33），而 composite 的 floor 是密度 token 24 且不带上下留白。320 EN 下多行换行的行到 54.67。
+2. **行标签**：左移 10px（不再有 `RowLeftPadding`）、**顶对齐**（`text/wrapped` 固定 UpperLeft，不再
+   MiddleLeft 垂直居中），字号仍是 Small（未变）。
+3. **整行命中区消失**：composite 的「标签区可点」没了，只有 24×30 的 checkbox 带是命中面；同时行的
+   surface / hover 高亮 / 底部分隔线（`RowBottomLine`，Divider 墨）消失，改由 `chrome/rule` 画分隔线 ——
+   而 `chrome/rule` 的 Neutral 走的是**主题 Border**（#333a46），比 Divider（#232833）亮。
+4. **18px 视觉框右移 4px**（不再与 `ControlColumnRightInset` 对齐），且命中带从 24×24 变成 24×30；
+   分段控件（us/diagnostics）的共享控制列**不再与这三张卡共享**（§5.1 的「共享控制列」契约降为
+   timing/diagnostics 自己的契约，`SettingsGeometryLaneTests.UniformControlColumn` 同批重裁）。
+5. **egg 状态带与 global-volume caption 的字号 Tiny → Small**（atom 只有主题字号），墨色保留
+   （`Emphasis="Muted"`）但 `global-volume` 的 caption 从 Tiny+TextSecondary+MiddleLeft 变为
+   Small+TextSecondary+UpperLeft。另外 `global-volume` 的数值框、slider 现在由 atom 自绘，
+   拖动/输入的手感与焦点环**从未在实机看过**（`input/slider`、`input/number-field` 在本页第一次被真实使用）。
+
+**变异证据（7 个，逐个实测；每条都真的跑了构建与 harness）**
+
+| 变异 | 实测红在哪（断言原文摘录） |
+|---|---|
+| **M1** 把 `Kind="us/camera-indicator"` 放回 manifest —— 即「旧 kind 恢复参与」 | `real embedded resource + schema shape`：*the retired composite kind must not survive as a manifest Kind: us/camera-indicator*（且该 kind 已不在 Registrar，Host 创建同样会拒） |
+| **M2** 子行 `VisibleKey="eat-precision"` → `scale-talking` | 本 lane `CardsAreDeclaredSections`：*the eat-precision child row must be gated by VisibleKey reading the parent's own bool binding* |
+| **M3** `basic-cooldown-check` 的 `Height="30"` → `24` | 本 lane `DeclaredRowsFollowTheManifestBandRule`：声明带 `24 x 30` 不成立（`MoodLayoutFocusedTests` 的「一行一个命中面」24×30 过滤同样会红） |
+| **M4** 删掉 cooldown 行 label 与 checkbox 两处 manifest `HelpKey` | UiLogicTests（gate 12）：*catalog item 'us/basic-tuning/scale-cooldown' is claimed by no control* |
+| **M5** 把 egg 的 On 文案拉长到换行 | 本 lane `TheEggStateBandDoesNotDependOnTheToggle`：*On=89 Off=67.67*（1024 English）—— 开/关行高不再相等 |
+| **M6** camera checkbox `Bind="camera-indicator"` → `allow-eggs` | 本 lane `CardsAreDeclaredSections`：（卡片的一个控件不再拥有它声明的值绑定） |
+| **M7** `global-volume-number` 的 `Bind` → `global-volume`（百分比控件改绑归一值） | 本 lane `CardsAreDeclaredSections`：*the number field must own the percent projection 'global-volume-percent', got global-volume* |
+
+**M5 的实测值同时说明了 shipped 形态是安全的**：两个状态句在 4 宽 × 2 语言下的行高都是 **67.67**
+（相等），所以那条常驻不变式成立；M5 是把它拉断。
+
+> **变异实验本身的一个仪器教训（值得记，正是「先查量具的输入」那条纪律的标本）**：manifest 与语言表都是
+> **主程序集的嵌入资源**，而 `Copy-Item` 恢复文件会保留**旧 mtime**；增量构建因此可以复用「上一次变异构建
+> 出来的」主程序集，让下一次变异根本观测不到自己的改动。实测症状很好认也很误导：M5 第一次跑出的是 M3 的
+> 行高症状（`got 5`），第二次跑出的是 M7 的绑定症状。修法是**每次变异构建前把 manifest 的 mtime 顶到当前**
+> （`(Get-Item …).LastWriteTime = Get-Date`）；顶了之后 M5 才红在自己的断言上（On=89 / Off=67.67）。
+> 结论：变异实验里，**构建的输入**就是量具的输入，改完文件不等于改了量具看到的东西。
+
 ## 6. 实施切片（0.5.x 线，短命分支）
 
 | 切片 | 内容 | 门 |
@@ -478,8 +620,9 @@
 | S3-4b | **原子步**：`help-scroll` 176→320（+`MinWidth=260`）+ `WindowChromeLayout` 常量 + 三条 lane 常量（断点**不动**，裁 500） | 落地 |
 | S3-5 | density：(丁) —— 页面容器显式 `Padding`/`Gap`，token 不动；新增「每个容器必须自己声明节奏」的 lane | 落地 |
 | S3-6 | 收尾：本表、TODO/MEMORY 指针、**一次收齐的实机清单** | 落地 |
-| (乙1) | 窄屏帮助呈现 = A：\(body-row 与 footer 之间的条件带\) + 宿主派生两个只读呈现键 + **fit 变硬门** | 落地（**未构建/未验证**） |
-| U1 | `global-volume` 的 18px 硬写带高 → 测量 | 落地（**未构建/未验证**） |
+| (乙1) | 窄屏帮助呈现 = A：\(body-row 与 footer 之间的条件带\) + 宿主派生两个只读呈现键 + **fit 变硬门** | 落地（**已验证**：harness ALL PASS + 15/15） |
+| U1 | `global-volume` 的 18px 硬写带高 → 测量 | 落地（**已验证**）；S4-1 又把它换成 `text/wrapped` 的自量测 band，`GlobalVolumeBandLaneTests` 保持失败敏感（见 §5.8） |
+| S4-1 | Overview 三张卡原子化：`us/global-volume` + `us/basic-tuning` + `us/camera-indicator` 消解为 manifest 子树并**同批退役** | 落地（harness ALL PASS + 15/15，5 个变异红）—— **§5.8 是它的摩擦报告** |
 
 ## 7. 风险
 
