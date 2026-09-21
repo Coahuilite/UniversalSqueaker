@@ -79,6 +79,7 @@ internal static class FrameGeometryLaneTests
     public static int RunAll()
     {
         Step("no degenerate rect, no sibling overlap, every element inside its parent", TheFrameHoldsEverywhere);
+        Step("the frame holds at the minimum logical resolution with the band replacing the body", TheNarrowFrameHoldsAtTheMinimumResolution);
         Step("the three-column frame keeps its declared shape across the five viewports", TheFrameKeepsItsShape);
         Step("the header band is fixed, right-aligned, and the page's ONLY help switch", TheHeaderBandIsFixed);
         Step("placement vocabulary is refused where its container does not own the axis", PlacementIsRefusedWhereTheContainerDoesNotOwnIt);
@@ -140,6 +141,104 @@ internal static class FrameGeometryLaneTests
             {
                 Program.SetTranslatorResolver(null);
             }
+        }
+
+        Assert(problems.Count == 0, Report(problems));
+    }
+
+    /// <summary>
+    /// The frame at the game's MINIMUM logical resolution with the help drawer open - the one configuration
+    /// the rest of this lane cannot reach. Everywhere else the screen is left at the stub's wide default, so
+    /// an open drawer takes its third COLUMN at every viewport width; on a screen that cannot host the
+    /// widened window the drawer REPLACES the body instead, and that frame needs the same checks
+    /// (containment, cross-parent overlap, real viewports) rather than a second implementation of them.
+    ///
+    /// <para>
+    /// The two slots are asserted as ONE room: with the drawer open exactly one of body-row / help-band is
+    /// arranged, so "the band is there" can never be satisfied by a shared page. THAT is what the pre-fix
+    /// shape did - a fixed band beside a body whose 271px of nav content overflowed its ~148px slot - and
+    /// the overlap walk below is what reports it, which is why this step is a mutation target rather than a
+    /// note. The controls are the other half: the retracted drawer must still arrange the body row, the band
+    /// must be arranged exactly while the drawer is open, and the centre column's viewport must be alive
+    /// exactly while the body row is.
+    /// </para>
+    /// </summary>
+    private static void TheNarrowFrameHoldsAtTheMinimumResolution()
+    {
+        const float PageWidth = 960f;
+        const float PageHeight = 530f;
+
+        UiLayoutManifest manifest = LoadManifest();
+        var problems = new List<string>();
+        int savedWidth = Verse.UI.screenWidth;
+        int savedHeight = Verse.UI.screenHeight;
+        try
+        {
+            // The game's MINIMUM logical resolution. The window cannot widen here
+            // (WindowChromeLayout.SettingsOpenWidth caps at the screen), so on this screen the band is the
+            // only help presentation there is - the configuration the maintainer walked.
+            Verse.UI.screenWidth = 1024;
+            Verse.UI.screenHeight = 768;
+
+            foreach (string language in Languages)
+            {
+                Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+                foreach (bool open in new[] { false, true })
+                {
+                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+                    host.Bindings.Invoke("set-tab", "Overview");
+                    host.Bindings.Set("help-open", open);
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+                    host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
+
+                    string context = "narrow frame " + (open ? "open" : "closed") + "/" + language;
+                    CheckRects(snapshot, context, problems);
+
+                    bool bodyArranged = snapshot.RectById.ContainsKey("body-row");
+                    bool bandArranged = snapshot.Viewports.ContainsKey("help-band");
+                    Assert(bodyArranged != bandArranged,
+                        context + ": exactly ONE of body-row / help-band may occupy the page's flex slot;"
+                        + " body=" + bodyArranged + " band=" + bandArranged);
+                    Assert(bandArranged == open,
+                        context + ": the narrow band must be arranged exactly while the drawer is open");
+                    Assert(bodyArranged == !open,
+                        context + ": the body row must be arranged exactly while the drawer is retracted");
+                    Assert(snapshot.Viewports.ContainsKey("content-scroll") == bodyArranged,
+                        context + ": the centre column's viewport must be alive exactly while the body row is"
+                        + " arranged, or a state with no content viewport at all would look like a pass");
+                    Assert(!snapshot.Viewports.ContainsKey("help-scroll"),
+                        context + ": the wide column must not be arranged on a screen that cannot host the"
+                        + " widened window");
+
+                    var window = new Rect(0f, 0f, PageWidth, PageHeight);
+                    var placed = new List<Placed>();
+                    foreach (UiElementSpec root in manifest.Roots)
+                    {
+                        Collect(root, window, "<page>", new List<string>(), false, snapshot, context,
+                            placed, problems);
+                    }
+
+                    CheckOverlaps(placed, problems, context);
+
+                    Console.WriteLine("[narrow-frame] " + context
+                        + " body=" + bodyArranged + " band=" + bandArranged
+                        + " contentViewport=" + snapshot.Viewports.ContainsKey("content-scroll")
+                        + " placed=" + placed.Count
+                        + " page=" + PageWidth.ToString("0", CultureInfo.InvariantCulture)
+                        + "x" + PageHeight.ToString("0", CultureInfo.InvariantCulture));
+
+                    Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer) && footer.yMax <= PageHeight + Tol,
+                        context + ": the footer must stay inside the page in BOTH drawer states; footer="
+                        + (snapshot.RectById.TryGetValue("footer-band", out Rect f2) ? Fmt(f2) : "(absent)"));
+                }
+            }
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            Verse.UI.screenWidth = savedWidth;
+            Verse.UI.screenHeight = savedHeight;
         }
 
         Assert(problems.Count == 0, Report(problems));

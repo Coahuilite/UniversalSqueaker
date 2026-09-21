@@ -24,7 +24,11 @@ namespace UniversalSqueaker.KernelHostTests;
 /// the column. (2) Which one is the policy answer: WindowChromeLayout.DrawerWidensTheWindow, pinned
 /// directly for both ends. (3) The retracted drawer arranges NEITHER, so the band cannot become a second
 /// place the drawer state lives. (4) On the capped screen with the drawer open, the fit audit reports
-/// nothing - the acceptance (乙1) is written against, measured rather than argued.
+/// nothing - the acceptance (乙1) is written against, measured rather than argued. (5) At the game's
+/// MINIMUM logical resolution with the drawer open the band REPLACES the body (exactly one of the two is
+/// arranged) and the band's height is at least the body's own measured content floor - the budget clause
+/// the earlier revision of this lane was missing, and the one that reddens when the band only SHARES the
+/// page with the body.
 /// </para>
 /// <para>
 /// The screen is set explicitly because that is the input the decision reads: a 1920 monitor reaches the
@@ -99,27 +103,37 @@ internal static class HelpPresentationLaneTests
     }
 
     /// <summary>
-    /// The narrow band must be USABLE at the resolution the game will not go below. The maintainer's
-    /// 1024x768 walkthrough found the opposite: the band appeared but was too short to hold the help, so
-    /// on that screen - where the band is the only way to read help at all - it amounted to no help.
+    /// The narrow band must be USABLE at the resolution the game will not go below, and usable means the
+    /// body has YIELDED its slot to it - not that the two share a page too small for both.
     ///
     /// <para>
-    /// Three numeric properties, all of them about ROOM rather than about pixels for their own sake:
-    /// (1) the band's viewport is at least the panel's own measured band, so the measured model never shows
-    /// a truncated panel; (2) the band takes at least HALF of the page's vertical content area (the band
-    /// plus the body row) - on a screen that cannot widen, the help the player just opened takes the
-    /// majority of the room, and the content, still a Scroll, keeps the rest; (3) the footer is still inside
-    /// the page, which is the property the band's shape was chosen for and which the previous Fill-based
-    /// shape did NOT actually deliver (measured: page natural height 660.7 against a 530 viewport, footer
-    /// bottom 648.7).
-    ///
-    /// <para>
-    /// The first attempt at this lane asserted the stricter "band >= body row". That FAILED at the band
-    /// height the first fix chose (band 240, body 271), and the band was raised to 280 rather than the rule
-    /// being lowered - so the criterion here (half the content area, which is the floor the lead named) is
-    /// now satisfied with margin by the shipped number, and the previously-red properties stay red under the
-    /// old shape.
+    /// Why sharing cannot work, in the arithmetic the maintainer's 1024x768 walkthrough exposed. The page
+    /// box is 960x530; header ~60 + footer ~26 + the gaps ~16 leave 428 for body + band, while the body's
+    /// own content floor is 271 (us/nav). So the band can never exceed ~157, and the shipped reserved band
+    /// of 280 left the body ~148 - its content then overflowed its box by ~123px and painted into the band.
+    /// "The band takes more than half the content area" and "the content fits" cannot both be true here.
+    /// The fix is therefore EXCLUSION (the body row is not arranged while the band is), which also makes the
+    /// overflow structurally impossible: with the body out of the flow the band is page-root's only flexible
+    /// fill child and takes the whole leftover.
     /// </para>
+    ///
+    /// <para>
+    /// Five numeric properties, all of them about ROOM: (1) the band is the presentation and the body is NOT
+    /// arranged - exactly one of the two occupies the slot; (2) the band's viewport is at least the panel's
+    /// own measured band, so the measured model never shows a truncated panel; (3) the SPACE BUDGET - the
+    /// band is at least the body's own content floor, measured on the same ruler in the retracted case, which
+    /// is the clause the previous revision of this lane did not have (it asserted the band was big enough and
+    /// the footer was in, but never that the room the body needs still exists anywhere); (4) the footer is
+    /// still inside the page; (5) the fit audit reports nothing.
+    /// </para>
+    ///
+    /// <para>
+    /// Clause (3) is also what makes the failure-mode mutation honest. Putting Fill="true" on the band while
+    /// letting the body stay arranged is not caught by clauses (2) or (4) - the band is still bigger than the
+    /// panel and the footer is still in - it is caught here: two flexible fill children split the leftover
+    /// (~198 each against a 271 floor). And the PRE-FIX shape (a fixed 280 band with the body arranged) is
+    /// caught by clause (1) and by the frame lane's containment/overlap check, where the nav column's 271px
+    /// of content overflows its ~148px slot into the band.
     /// </para>
     /// </summary>
     private static void AssertMinimumResolution(string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
@@ -133,6 +147,35 @@ internal static class HelpPresentationLaneTests
         Verse.UI.screenWidth = ScreenWidth;
         Verse.UI.screenHeight = ScreenHeight;
 
+        string where = "at the minimum logical resolution " + ScreenWidth + "x" + ScreenHeight
+            + " (" + language + ", page " + page.x + "x" + page.y + ")";
+
+        // THE RULER FIRST. The budget clause is stated against the BODY's own content floor, so the floor is
+        // MEASURED - the same metrics, the same page box, the same language, drawer retracted, i.e. the
+        // configuration in which the body is the presentation - instead of being written down as a number
+        // somebody picked. The measurement is then checked against the documented floor (us/nav = 271px) so a
+        // ruler that came back smaller cannot silently turn the comparison below into a tautology.
+        const float DocumentedContentFloor = 271f;
+        float contentFloor;
+        float bodySlotRetracted;
+        var retractedFake = new RecordingSettingsSource { RichData = true };
+        using (UiHost retractedHost = UsKernelSettingsHost.Create(retractedFake, metrics))
+        {
+            retractedHost.Bindings.Invoke("set-tab", "Overview");
+            UiLayoutSnapshot retracted = retractedHost.MeasureAndArrange(page);
+            Assert(retracted.RectById.TryGetValue("nav-column", out Rect navColumn),
+                where + ": the retracted drawer must arrange the nav column the content floor is measured on");
+            Assert(retracted.RectById.TryGetValue("body-row", out Rect retractedBody),
+                where + ": the retracted drawer must arrange the body row");
+            contentFloor = navColumn.height;
+            bodySlotRetracted = retractedBody.height;
+        }
+
+        Assert(contentFloor >= DocumentedContentFloor - 0.5f,
+            where + ": the measured content floor must still be the documented us/nav "
+            + DocumentedContentFloor + "px, got " + contentFloor
+            + " - the budget clause below would otherwise compare against a ruler that shrank");
+
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
@@ -143,34 +186,64 @@ internal static class HelpPresentationLaneTests
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(page);
         host.DrawChecked(new Rect(0f, 0f, page.x, page.y));
 
-        string where = "at the minimum logical resolution " + ScreenWidth + "x" + ScreenHeight
-            + " (" + language + ", page " + page.x + "x" + page.y + ")";
-
+        // (1) MUTUALLY EXCLUSIVE: the band is the presentation, and the body row is not arranged at all.
+        // Both halves are asserted: "the band is there" alone is what a SHARED page also satisfies.
         Assert(snapshot.Viewports.TryGetValue("help-band", out Rect band),
             where + ": the narrow band must be the presentation (the screen cannot host the widened window)");
         Assert(snapshot.RectById.TryGetValue("help-panel-narrow", out Rect panel),
             where + ": the narrow panel must be arranged");
-        Assert(snapshot.RectById.TryGetValue("body-row", out Rect body),
-            where + ": the body row must be arranged");
-        Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer),
-            where + ": the footer band must be arranged");
+        Assert(!snapshot.RectById.ContainsKey("body-row"),
+            where + ": the narrow band REPLACES the body, so the body row must not be arranged while it is -"
+            + " a shared page is exactly the collision this shape removes");
+        Assert(!snapshot.Viewports.ContainsKey("content-scroll") && !snapshot.RectById.ContainsKey("nav-column"),
+            where + ": the body's own sub-tree (its scroll and its nav column) goes with the body row");
+        Assert(!snapshot.Viewports.ContainsKey("help-scroll"),
+            where + ": the wide column must not be arranged on a screen that cannot host the widened window");
 
+        // (2) the band's viewport is a real reading surface, not a sliver of one.
         Assert(band.height >= panel.height - 0.5f,
             where + ": the band must be at least as tall as the panel's own measured band, or the help is"
             + " truncated on the only screen where it can be read: band=" + band.height + " panel=" + panel.height);
 
-        float contentArea = band.height + body.height;
-        Assert(band.height >= contentArea * 0.5f - 0.5f,
-            where + ": on a screen that cannot widen, the help the player opened must take at least half of"
-            + " the page's vertical content area: band=" + band.height + " body=" + body.height
-            + " contentArea=" + contentArea);
+        // (3) THE SPACE BUDGET: the room the help took must be at least the room the body's content needs.
+        Assert(band.height >= contentFloor - 0.5f,
+            where + ": the band must be handed at least the body's own content floor, or the help has been"
+            + " bought with the content's room: band=" + band.height + " floor(nav-column)=" + contentFloor
+            + " bodySlot(retracted)=" + bodySlotRetracted);
 
+        Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer),
+            where + ": the footer band must be arranged");
         Assert(footer.yMax <= page.y + 0.5f,
             where + ": the footer must stay inside the page - the band's whole shape exists to keep it there:"
             + " footer bottom=" + footer.yMax + " page=" + page.y);
 
         Assert(reports.Count == 0,
             where + ": the fit audit must report nothing with the narrow band arranged, got " + Describe(reports));
+
+        Console.WriteLine("[narrow-help] " + language + " screen " + ScreenWidth + "x" + ScreenHeight
+            + " page " + page.x.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            + "x" + page.y.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            + ": band=" + band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " panel=" + panel.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " floor(nav-column)=" + contentFloor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " bodySlot(retracted)=" + bodySlotRetracted.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " footerBottom=" + footer.yMax.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " bodyArranged=false wideColumn=false fit=0");
+
+        // (5) The body is HIDDEN and never REMOVED, and that difference is observable: the player's place in
+        // the centre column survives the band replacing it. A removed element's node and scroll position are
+        // released by the session's prune, so an implementation that dropped the body from the definition
+        // (or rebuilt the root list) would fail here rather than in the game.
+        host.Bindings.Set("help-open", false);
+        host.MeasureAndArrange(page);
+        Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 90f));
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(page);
+        host.Bindings.Set("help-open", false);
+        host.MeasureAndArrange(page);
+        Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 90f) < 0.01f,
+            where + ": the centre column's scroll position must survive the body being hidden by the band -"
+            + " hidden keeps the node and the state, removed does not");
     }
 
     private static void AssertPresentations(

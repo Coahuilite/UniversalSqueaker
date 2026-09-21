@@ -355,12 +355,21 @@ public static class UsKernelSettingsHost
         // Read-only because the player never writes it: a second writable flag would be a second truth.
         // Both read the screen lazily per arrange, so a screen change is picked up on the next bump - the
         // same edge the window resizes on.
-        bindings.BindReadOnly<bool>(
-            "help-open-wide",
-            () => state.HelpDrawerOpen && WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight));
-        bindings.BindReadOnly<bool>(
-            "help-open-narrow",
-            () => state.HelpDrawerOpen && !WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight));
+        bool drawerWidensTheScreen() =>
+            WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight);
+        bool drawerIsNarrow() => state.HelpDrawerOpen && !drawerWidensTheScreen();
+        bindings.BindReadOnly<bool>("help-open-wide", () => state.HelpDrawerOpen && drawerWidensTheScreen());
+        bindings.BindReadOnly<bool>("help-open-narrow", drawerIsNarrow);
+
+        // The body yields its SLOT to the narrow band rather than sharing the page with it (shape fixed
+        // 2026-09-21b). This is the same single player intent read one step further, not a second state:
+        // with the band arranged, this element is not ARRANGED, so the band is page-root's only flexible
+        // fill child and is handed the whole leftover by construction. It is hidden through VisibleKey and
+        // never removed: the definition keeps the element, so its node, its sub-tree and every scroll
+        // position survive the swap - the player's place in the centre column comes back with the body.
+        // Read-only, like the two presentations: the player never writes it, and a writable copy would be a
+        // second truth about which presentation is showing.
+        bindings.BindReadOnly<bool>("body-visible", () => !drawerIsNarrow());
         // A COMMAND, not an action with a payload: the manifest's header button is a core
         // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was

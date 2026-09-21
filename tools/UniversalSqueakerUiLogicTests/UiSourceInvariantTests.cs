@@ -720,6 +720,31 @@ internal static class UiSourceInvariantTests
             "the two help presentations must NOT share a visibility key, or they would be drawn at the same"
             + " time - which is exactly the mutual exclusion (乙1) is built on");
 
+        // The REPLACING shape (2026-09-21b), both halves. On the manifest: the narrow band takes its height
+        // from the slot the body frees (Fill="true" and NO Height - a declared Height makes the engine's
+        // flexible-fill rule refuse the slot and the footer then leaves the page, measured at 660.7 natural
+        // against a 530 viewport), and the body row yields that slot through its OWN derived key, hidden and
+        // never removed - removing it is what releases its node and its scroll position. On the host: the key
+        // is derived there, so there is no second writable truth about which presentation is showing.
+        XmlNode? bodyElement = document.SelectSingleNode("//*[@Id='body-row']");
+        Assert(bodyElement != null, "Layout.Schema2.xml must declare the Id='body-row' page body row");
+        Assert(((XmlElement)bodyElement!).HasAttribute("VisibleKey")
+            && string.Equals(((XmlElement)bodyElement!).GetAttribute("VisibleKey"), "body-visible", StringComparison.Ordinal),
+            "the body row must yield its slot DECLARATIVELY through VisibleKey=\"body-visible\" while the"
+            + " narrow band replaces it");
+        Assert(!((XmlElement)bodyElement!).HasAttribute("Tab"),
+            "the body row must not be Tab-gated: it yields to the help presentation, not to a workspace");
+        Assert(!string.Equals(((XmlElement)bodyElement!).GetAttribute("VisibleKey"),
+                ((XmlElement)narrowElement!).GetAttribute("VisibleKey"), StringComparison.Ordinal),
+            "the body row must not share the narrow band's visibility key, or the two could never swap");
+        Assert(string.Equals(((XmlElement)narrowElement!).GetAttribute("Fill"), "true", StringComparison.Ordinal)
+            && !((XmlElement)narrowElement!).HasAttribute("Height"),
+            "the narrow band must take its height from the freed slot (Fill=\"true\" and NO Height): a"
+            + " declared Height makes the engine refuse the flexible slot and pushes the footer off the page");
+        CheckSourceContains(hostPath, new[] { "\"body-visible\"" },
+            "the Host must derive the body's visibility key: the player never writes it, and a writable copy"
+            + " would be a second truth about which presentation is showing");
+
         // The retired mechanism must not come back in any form - not as the file, and not inlined into the
         // Host. Rebuilding the manifest root list removes the element from the definition, and the engine
         // releases a removed element's node together with its scroll position (0.4 -> 0.6 semantics).

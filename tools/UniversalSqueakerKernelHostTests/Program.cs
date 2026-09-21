@@ -1376,7 +1376,7 @@ internal static class Program
         Directory.CreateDirectory(outDir);
         var lines = new List<string>();
         lines.Add("# US settings layout sweep (harness-measured, StubMetrics; not real RimWorld pixels)");
-        lines.Add("viewport | lang | drawer | nav.w | content.w | help.w | contentArea.w | overflow | fitFindings");
+        lines.Add("viewport | lang | drawer | nav.w | content.w | help.w | band.h | contentArea.w | overflow | fitFindings");
         int violations = 0;
         foreach (string language in languages)
         {
@@ -1417,14 +1417,24 @@ internal static class Program
                         // created, so the sweep arranges once, pins the centre column to its top, and
                         // then arranges the frame it records and draws (the same probe pattern the
                         // focused lanes use).
-                        host.MeasureAndArrange(new Vector2(width, 600f));
-                        SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(width, 600f));
+                        // The centre column exists only in the states that arrange the body row; with the
+                        // narrow band REPLACING the body there is no content scroll to pin, and asking for
+                        // one is not a failure of the shape. The both-directions check below still fails
+                        // when a state arranges neither presentation.
+                        if (first.RectById.ContainsKey("body-row"))
+                        {
+                            SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        }
+
                         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, 600f));
                         host.DrawChecked(new Rect(0f, 0f, width, 600f));
 
                         Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
                         Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
-                        bool hasHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
+                        bool hasWideHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
+                        bool hasNarrowBand = snapshot.Viewports.TryGetValue("help-band", out Rect band);
+                        bool hasBody = snapshot.RectById.ContainsKey("body-row");
                         Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
                         bool overflow = contentArea.width > content.width + 0.5f;
 
@@ -1432,14 +1442,37 @@ internal static class Program
                             + language + " | " + (open ? "open" : "closed")
                             + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                             + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | help=" + (hasHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                            + " | help=" + (hasWideHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                            + " | band=" + (hasNarrowBand ? band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
                             + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                             + " | overflow=" + overflow
                             + " | fit=" + reports.Count);
 
-                        if (!open && hasHelp) violations++;
+                        // ONE presentation per drawer state: retracted arranges neither, open arranges exactly
+                        // one. This replaces the old "a closed drawer must not reserve the help width" check
+                        // and keeps its failure mode - an open drawer that arranges BOTH is a violation.
+                        if (open != (hasWideHelp != hasNarrowBand)) violations++;
+
+                        // The body row and the narrow band are two presentations of ONE slot (2026-09-21b):
+                        // the band REPLACES the body, so exactly one of them occupies the page while the
+                        // other is hidden. Arranging neither would leave the page with no reading surface at
+                        // all, and arranging both is the collision the shape exists to remove.
+                        if (hasBody == hasNarrowBand) violations++;
+
+                        // A live reading surface, whichever presentation the state produced: with the body
+                        // arranged the centre column's viewport must be real, and with the band arranged the
+                        // band's own viewport must be. The old form of this check asserted the centre column
+                        // unconditionally, which the replacing shape legitimately empties.
+                        if (hasBody)
+                        {
+                            if (content.width <= 1f) violations++;
+                        }
+                        else if (band.width <= 1f || band.height <= 1f)
+                        {
+                            violations++;
+                        }
+
                         if (overflow) violations++;
-                        if (content.width <= 1f) violations++;
                         // (乙1)'s ACCEPTANCE, as a gate rather than a reminder: real text overflow is a
                         // geometry violation like any other. It is only honest because the screen is stated
                         // above - the case that used to report 7 (EN) / 2 (ZH) findings was a page width no
