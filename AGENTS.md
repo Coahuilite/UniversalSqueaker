@@ -56,3 +56,16 @@ These extend the minimal ceremony above - they do not replace it.
 - **Short-lived feature branches must be deleted, together with their worktrees, when their work lands.** Eleven stale `feat/0.5-*` / `feat/0.6-*` branches and their `.fl-worktrees/` entries survived earlier rounds; they are hygiene debt *and* an audit liability under the previous rule. Verify `git worktree list` is down to the main checkout.
 - **Run `-FullHistory` before the FIRST push of a line, not only before a release.** A line that has never been pushed is exactly where a rewrite is still cheap.
 
+## Evidence, commit and artifact discipline (added 2026-09-21; every rule below was paid for once)
+
+- **Red and green are equally untrustworthy.** Before touching the product OR the assertion, verify the INSTRUMENT'S INPUT - the fixture, the ruler, the screen, the channel. A lane that cannot fail, or that fails for the wrong reason, is not evidence.
+- **A lane is evidence only if it reddens under a faithful revert**, and which assertions carry a mutation proof versus which are only guards belongs in the lane's own comment. Changing a measurement or notification channel invalidates every lane that asserts the old channel - re-audit them in the same change.
+- **Assert on the increment, not the accumulator**: a counter-style assertion must Reset first, or another lane's finding satisfies it.
+- **Do not claim what was not run.** Unbuilt or unverified work is labelled as such; "fixed" never covers it.
+- **One coherent step per commit, and never leave an uncommitted half-finished step.**
+- **Gates only get stronger, or are re-cut in the same batch as the fix.**
+- **Build only when the maintainer intends to test.**
+- **Never `Assembly.LoadFile` a built artifact in the caller's session to read its identity** - the handle lives to process exit. Read it in a child process or from a copy; a hash is identity only after the build has fully exited and the directory has been read; the artifact is exclusive, one process at a time, readers included.
+- **Dev and Release share one `OutputPath`, so the last build wins.** After any dev pack, rebuild Release, delete the PDB and re-verify the stamp.
+- **A docs-only commit turns "payload embedded commit == HEAD" red**, because the doc lands before the payload is rebuilt. That is expected, not a defect: announce that HEAD moved, and rebuild the payload rather than editing the carrier's source.
+
