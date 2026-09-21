@@ -10,7 +10,8 @@ namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
 /// Retractable right-side help drawer (outcome 1). The drawer is hidden DECLARATIVELY: the manifest's
-/// help-scroll element carries VisibleKey="help-open", and the Host's revision bumper advances the clock
+/// help-scroll element carries VisibleKey="help-open-wide" (and the narrow-screen band carries
+/// "help-open-narrow"; 乙1), and the Host's revision bumper advances the clock
 /// so the next arrange re-reads it. The element stays in the definition while closed - that is what
 /// keeps its node and its scroll position - which the retired root-list VARIANT could not do on 0.6
 /// (a removed element is released together with its scroll position).
@@ -717,8 +718,17 @@ internal static class HelpDrawerLaneTests
         // The retired root-list variant must not come back: removing an element from the definition is the
         // path whose node the 0.6 engine releases, so the drawer's visibility has to stay declarative.
         string manifest = File.ReadAllText(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"));
-        Assert(CountToken(manifest, "VisibleKey=\"help-open\"") == 1,
-            "the manifest must hide the drawer through VisibleKey=\"help-open\" exactly once");
+        // (乙1): the drawer now has TWO declared presentations, each hidden by its OWN visibility key, and
+        // the raw player intent gates neither of them directly - the host derives which one applies. Both
+        // counts are asserted so a regression that re-points one of them at the raw key (which would make
+        // both presentations appear together) is caught here as well as by the presentation lane.
+        Assert(CountToken(manifest, "VisibleKey=\"help-open-wide\"") == 1,
+            "the manifest must hide the WIDE help column through VisibleKey=\"help-open-wide\" exactly once");
+        Assert(CountToken(manifest, "VisibleKey=\"help-open-narrow\"") == 1,
+            "the manifest must hide the NARROW help band through VisibleKey=\"help-open-narrow\" exactly once");
+        Assert(CountToken(manifest, "VisibleKey=\"help-open\"") == 0,
+            "no element may be gated by the RAW help-open binding: that is the player's intent, and both"
+            + " presentations are derived from it - gating one directly would let both render at once");
         Assert(!File.Exists(Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout", "UsLayoutVariants.cs")),
             "the root-list variant must not come back: the engine releases an omitted element's node and scroll position");
 

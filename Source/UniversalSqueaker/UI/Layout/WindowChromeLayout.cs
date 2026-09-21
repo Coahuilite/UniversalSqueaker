@@ -119,6 +119,25 @@ public static class WindowChromeLayout
         return Math.Min(closed + DrawerWidthDelta, Math.Max(closed, screenWidth));
     }
 
+    /// <summary>
+    /// True when this SCREEN can host the expanded window: the drawer widens it by its whole cost instead
+    /// of being absorbed by the screen cap in <see cref="SettingsOpenWidth"/>. This is the question the
+    /// narrow-screen help presentation is decided by (乙1) - a logical screen that cannot grow would
+    /// otherwise have the drawer eat the centre column instead, which the fit audit reports as real text
+    /// overflow. Pure and screen-only on purpose: no page width and no manifest state enter it, so a lane
+    /// can pin it and a caller can ask it before any page exists.
+    /// <para>
+    /// The tolerance is half a pixel because every width this class returns is rounded up to a whole
+    /// <see cref="SettingsWidthStep"/>, so an exact comparison would be a coin flip at the boundary.
+    /// </para>
+    /// </summary>
+    public static bool DrawerWidensTheWindow(float screenWidth, float screenHeight)
+    {
+        float closed = SettingsClosedWidth(screenWidth, screenHeight);
+        float open = SettingsOpenWidth(screenWidth, screenHeight);
+        return open - closed >= DrawerWidthDelta - 0.5f;
+    }
+
     /// <summary>Width for one drawer state. The single entry the window and the lanes both read.</summary>
     public static float SettingsWindowWidth(float screenWidth, float screenHeight, bool drawerExpanded)
     {

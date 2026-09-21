@@ -699,10 +699,26 @@ internal static class UiSourceInvariantTests
             "HelpDrawerOpen must default to false: the shipped window opens narrow (vanilla-like) with the"
             + " help drawer retracted, and only widens when the player expands it");
 
+        // (乙1): there are TWO declared presentations of the help panel now, and neither is gated by the raw
+        // player intent. Each is hidden DECLARATIVELY - the elements stay in the definition, which is what
+        // lets their nodes and scroll positions survive a close/open - and the host derives which one is
+        // true from the screen. Asserting both keys (and that neither element is Tab-gated) is what keeps a
+        // future edit from re-pointing one of them at help-open and making the two appear together.
         Assert(((XmlElement)drawerElement!).HasAttribute("VisibleKey")
-            && string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"), "help-open", StringComparison.Ordinal),
-            "the help drawer must be hidden DECLARATIVELY through VisibleKey=\"help-open\": the element has to stay"
-            + " in the definition, because that is what lets its node and scroll position survive a close/open");
+            && string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"), "help-open-wide", StringComparison.Ordinal),
+            "the WIDE help column must be hidden DECLARATIVELY through VisibleKey=\"help-open-wide\"");
+        XmlNode? narrowElement = document.SelectSingleNode("//*[@Id='help-band']");
+        Assert(narrowElement != null,
+            "Layout.Schema2.xml must declare the Id='help-band' narrow-screen help presentation (乙1)");
+        Assert(!((XmlElement)narrowElement!).HasAttribute("Tab"),
+            "the narrow help band must not carry a Tab attribute either: help visibility is independent state");
+        Assert(((XmlElement)narrowElement!).HasAttribute("VisibleKey")
+            && string.Equals(((XmlElement)narrowElement!).GetAttribute("VisibleKey"), "help-open-narrow", StringComparison.Ordinal),
+            "the NARROW help band must be hidden DECLARATIVELY through VisibleKey=\"help-open-narrow\"");
+        Assert(!string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"),
+                ((XmlElement)narrowElement!).GetAttribute("VisibleKey"), StringComparison.Ordinal),
+            "the two help presentations must NOT share a visibility key, or they would be drawn at the same"
+            + " time - which is exactly the mutual exclusion (乙1) is built on");
 
         // The retired mechanism must not come back in any form - not as the file, and not inlined into the
         // Host. Rebuilding the manifest root list removes the element from the definition, and the engine

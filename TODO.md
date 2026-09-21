@@ -84,9 +84,11 @@ declared). Authority: docs/ui-redesign-0.7-zh.md sections 0, 2, 3 and 6.1.
   2. **the five player-visible deltas of the landed checklist migration** (calibration drift): row hit target
      narrowed to the checkbox band, the row surface/hover/selected rail gone, the orphan band above the list,
      meta/coverage at the atom's font, placeholder ink TextSecondary;
-  3. **the known narrow state**: at a logical screen width <= 800 (which a normal 1920 monitor reaches at
-     UI scale >~2.5) the open drawer cannot widen the window, so the centre column is 168-192px - and the fit
-     audit reports 7 findings in EN / 2 in ZH there (spec section 2 lists them element by element);
+  3. **the narrow-screen help band (乙1)**: at a logical screen width <= 800 (which a normal 1920 monitor
+     reaches at UI scale >~2.5) the open drawer must now appear as a FULL-WIDTH band between the body and the
+     footer - the centre column must keep the width it has with the drawer retracted, the band must scroll
+     internally and must never push the footer out, and **the 7 (EN) / 2 (ZH) text overflow findings this case
+     used to report must be gone** (that is the fit gate this slice turned into a violation);
   4. **F-05**: is `ui.text.overflow` at zero on the normal path? (whatever this pass finds above is the
      exception, and item 3 is the known one);
   5. **F-07**: switching tabs throws nothing;
@@ -97,11 +99,8 @@ declared). Authority: docs/ui-redesign-0.7-zh.md sections 0, 2, 3 and 6.1.
   8. **the title band no longer reserves 72px** for a control, and **the header band's height is a real
      vertical cost** (it is content-measured, so it follows the worst of the five workspace captions);
   9. the nav cards are 40px wider (144 -> 184).
-- [ ] **(乙1) narrow-screen help presentation - the NEXT slice after S3, not an option.** Named in spec section 2:
-  at a capped screen the open drawer steals the centre column instead of widening the window. Two candidates
-  are to be PRICED before one is chosen: a host-computed VisibleKey switching a second (stacked/overlay)
-  presentation, versus a host-computed affordable help width driven by WidthKey (which turns
-  `DrawerWidthDelta` from a constant into a function - it is pinned by `UniversalSqueakerUiLogicTests`).
+- **(乙1) narrow-screen help presentation = candidate A - LANDED, NOT BUILT AND NOT VERIFIED** (builds are frozen by the maintainer; the lane has never run and its mutation proof is PENDING). Shape: a conditional full-width `help-band` between `body-row` and `footer-band`, two mutually exclusive read-only presentation keys derived by the host from `WindowChromeLayout.DrawerWidensTheWindow`, and the fit audit turned into a hard gate in `WidthAndLanguageEvidenceSweep` (which now also states the SCREEN, because a page width the policy cannot produce is not a reachable configuration). Files: `Layout.Schema2.xml`, `UsKernelSettingsHost.cs`, `WindowChromeLayout.cs`, `HelpPresentationLaneTests.cs` (new), the sweep, and the two visibility pins. Candidate B (WidthKey + a host-computed affordable width) was priced and rejected because it would weaken two existing gates; the pricing is in the session report and spec section 0.2.
+- [ ] **FIRST ACTION WHEN BUILDS UNFREEZE**: run the harness and `verify-local`-equivalent against the three unverified commits (`c62d77b` U1, this (乙1) slice), then supply the two mutation proofs (revert U1's measurement to 18 -> red; make the presentation unconditional/always-wide -> red) and confirm the fit gate is green including 736/open. Expect the sweep's screen rule to need adjustment - it is the least verifiable part of the slice.
 - [ ] **(甲) the global density (12/8/4/24/1) - the likely final form, deliberately NOT inside S3.** It moves
   every control's INNER inset (the atoms read theme.Geometry.Padding as their own inset), so it needs its own
   slice and its own in-game look. Spec section 3 records why it was separated.

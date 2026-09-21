@@ -339,13 +339,28 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
 
         // Retractable help drawer: INDEPENDENT per-window visibility state, never the engine's
-        // active-tab gate (the manifest's drawer element deliberately carries no Tab). Both writes
-        // advance the session revision through the bumper, which installs the matching root variant
-        // BEFORE it bumps - so a toggle re-arranges the page and never recreates the host/session.
+        // active-tab gate (the manifest's drawer elements deliberately carry no Tab). Both writes advance
+        // the session revision through the bumper, so a toggle re-arranges the page and never recreates
+        // the host/session.
         bindings.BindValue<bool>(
             "help-open",
             () => state.HelpDrawerOpen,
             value => { source.SetHelpDrawerOpen(value); bump(); });
+
+        // (乙1) ONE player intent, TWO mutually exclusive presentations. help-open stays the only thing the
+        // header toggle writes; which presentation it produces is a SCREEN question, not a page-width one:
+        // a page can be narrow because the window cannot widen (a capped logical screen, which a 1920
+        // monitor reaches at UI scale >= ~2.5) or because the window is genuinely small. Only the first
+        // would have the drawer eat the centre column, and WindowChromeLayout answers that purely.
+        // Read-only because the player never writes it: a second writable flag would be a second truth.
+        // Both read the screen lazily per arrange, so a screen change is picked up on the next bump - the
+        // same edge the window resizes on.
+        bindings.BindReadOnly<bool>(
+            "help-open-wide",
+            () => state.HelpDrawerOpen && WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight));
+        bindings.BindReadOnly<bool>(
+            "help-open-narrow",
+            () => state.HelpDrawerOpen && !WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight));
         // A COMMAND, not an action with a payload: the manifest's header button is a core
         // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was

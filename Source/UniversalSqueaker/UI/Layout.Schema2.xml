@@ -88,10 +88,23 @@
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
       </Scroll>
-      <Scroll Id="help-scroll" Width="320" MinWidth="260" Fill="true" Padding="0" VisibleKey="help-open">
+      <Scroll Id="help-scroll" Width="320" MinWidth="260" Fill="true" Padding="0" VisibleKey="help-open-wide">
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
+    <!-- Narrow-screen help (乙1, decided 2026-09-21). When the logical screen cannot host the widened
+         window the drawer does NOT take a third column: the same help panel appears as a full-width band
+         here, between the body and the footer, so the centre column keeps the width it has with the drawer
+         retracted. Two mutually exclusive presentations and ONE player intent: help-open stays the only
+         value the toggle writes, and the host derives help-open-wide / help-open-narrow from it and the
+         screen (WindowChromeLayout.DrawerWidensTheWindow). Fill=true is the bound - the body row and this
+         band share the leftover height, so the band can never push the footer out of the window and no
+         written height is needed - and because it is a Scroll the panel scrolls inside its share
+         (UsHelpPanelWidget measures its band against the whole catalog, so an unbounded band would be as
+         tall as the worst help entry). -->
+    <Scroll Id="help-band" Fill="true" Padding="0" VisibleKey="help-open-narrow">
+      <Widget Id="help-panel-narrow" Kind="us/help-panel" />
+    </Scroll>
     <!-- Footer band (S3-3): the same structural slot as the header, so the frame's three bands are all
          declared. It carries NO Height, for the reason its child never did - a pinned band overrides a
          wrap-aware measure (the in-game log kept reporting "footer needs 33px has 28px" while the

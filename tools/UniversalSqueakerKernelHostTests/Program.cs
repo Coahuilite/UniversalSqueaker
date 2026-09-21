@@ -44,7 +44,8 @@ internal static class Program
         ("xenotype-layer", "us/xenotype-layer"),
         ("checklist", "us/voice-pack-checklist"),
         ("footer", "us/footer"),
-        ("help-panel", "us/help-panel")
+        ("help-panel", "us/help-panel"),
+        ("help-panel-narrow", "us/help-panel")
     };
 
     private static int Main()
@@ -155,6 +156,7 @@ internal static class Program
         Step("per-host audit routing and ruler isolation (FL-20)", () => UsAuditRoutingLaneTests.RunAll());
         Step("page frame geometry guard (5 viewports x EN/ZH x drawer x workspace)", () => FrameGeometryLaneTests.RunAll());
         Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
+        Step("one help presentation per screen (乙1)", () => HelpPresentationLaneTests.RunAll());
     }
 
     /// <summary>
@@ -1364,7 +1366,11 @@ internal static class Program
     /// </summary>
     private static void WidthAndLanguageEvidenceSweep()
     {
-        float[] widths = { 1024f, 736f, 480f, 320f };
+        // 1228 is not a round probe: it is the page width of the OPEN window on a 1920x1080 screen
+        // (SettingsOpenWidth 1292 - 64 chrome/page insets), so it is the WIDE presentation's real case.
+        // Every other width is below what such a screen would give the window, so those drawer-open cases
+        // are pinned to a capped screen and use the NARROW band (乙1).
+        float[] widths = { 1024f, 736f, 480f, 320f, 1228f };
         string[] languages = { "English", "ChineseSimplified" };
         string outDir = Path.Combine(EvidenceRoot(), "dist", "ui-evidence");
         Directory.CreateDirectory(outDir);
@@ -1385,6 +1391,22 @@ internal static class Program
                 {
                     foreach (bool open in new[] { true, false })
                     {
+                        // The drawer's presentation is a SCREEN question since (乙1), so a drawer-open case
+                        // has to state the screen it belongs to: a page width the shipped policy cannot
+                        // produce is not a configuration a player can reach, and sweeping one would keep the
+                        // fit gate below red forever for a shape that cannot occur.
+                        if (open)
+                        {
+                            bool wideCase = width >= 1228f;
+                            Verse.UI.screenWidth = wideCase ? 1920 : 800;
+                            Verse.UI.screenHeight = wideCase ? 1080 : 600;
+                        }
+                        else
+                        {
+                            Verse.UI.screenWidth = 1920;
+                            Verse.UI.screenHeight = 1080;
+                        }
+
                         var fake = new RecordingSettingsSource { RichData = true };
                         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
                         UiFitAudit.Reset();
@@ -1418,6 +1440,11 @@ internal static class Program
                         if (!open && hasHelp) violations++;
                         if (overflow) violations++;
                         if (content.width <= 1f) violations++;
+                        // (乙1)'s ACCEPTANCE, as a gate rather than a reminder: real text overflow is a
+                        // geometry violation like any other. It is only honest because the screen is stated
+                        // above - the case that used to report 7 (EN) / 2 (ZH) findings was a page width no
+                        // screen could produce with the drawer open.
+                        if (reports.Count > 0) violations++;
                     }
                 }
             }
@@ -1430,13 +1457,16 @@ internal static class Program
         }
 
         SetTranslatorResolver(null);
+        Verse.UI.screenWidth = 1920;
+        Verse.UI.screenHeight = 1080;
         string artifact = Path.Combine(outDir, "layout-sweep.txt");
         File.WriteAllLines(artifact, lines);
         Console.WriteLine("[evidence] width/language sweep written to " + artifact);
         foreach (string line in lines) Console.WriteLine("  " + line);
         Assert(violations == 0,
             "the width/language evidence sweep found " + violations + " geometry violation(s) "
-            + "(closed drawer still reserving help width, horizontal content overflow, or a dead content viewport); see " + artifact);
+            + "(closed drawer still reserving help width, horizontal content overflow, a dead content viewport,"
+            + " or text overflow reported by the fit audit); see " + artifact);
     }
 
     /// <summary>Repository root for evidence artifacts, found the same way the UI-logic lane finds it.</summary>
