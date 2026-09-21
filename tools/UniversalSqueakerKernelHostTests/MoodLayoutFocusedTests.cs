@@ -128,23 +128,27 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// The checkbox row's click contract (structure from task-100, assertion from task-103). Two facts,
+    /// The declared Overview checkbox row's click contract, re-cut for S4-1. The composite used to draw a
+    /// row-wide hit band truncated at the checkbox; the declarative row has exactly one hit surface - the
+    /// input/checkbox atom's own band - so the property to pin changed from "the band stops where the slot
+    /// starts" to "there IS no second band", which is the same failure caught one step earlier. Two facts,
     /// failing for different reasons:
     /// <list type="number">
-    /// <item>THE DRAW FACT. The row's hit band stops where the checkbox slot starts, so the two button
-    /// rects the row registers are disjoint and one press can only be decided by one of them. This is what
-    /// the truncation in the widgets is for, and it is measured on the recorded button rects, not inferred
-    /// from the source.</item>
-    /// <item>THE BEHAVIOUR FACT. One press on either rect advances the session's revision clock by exactly
-    /// one write and flips the value once. Two overlapping buttons both report the same press in IMGUI, so
-    /// a missing short-circuit would show up here as two writes and a value back where it started.</item>
+    /// <item>THE DRAW FACT. A declared control row registers exactly ONE hit surface inside the card and the
+    /// bands are pairwise disjoint. A page that put a <c>Chrome="none"</c> hit area behind a checkbox (the
+    /// row-wide target the composite had) registers a second, overlapping band here - and in IMGUI both
+    /// report the same press, which is a double toggle.</item>
+    /// <item>THE BEHAVIOUR FACT. One press advances the session's revision clock by exactly one write and
+    /// flips the value once.</item>
     /// </list>
     /// </summary>
     private static void CheckboxRowPressDecidesOnce()
     {
         const float Width = ViewportWidth;
         const float Height = 900f;
-        var source = new RecordingSettingsSource { RichData = true };
+        // Parent ON: the eat-precision child row exists only while its parent switch is on, so the card
+        // draws its full six declared control rows.
+        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         UiHost host = UsKernelSettingsHost.Create(source);
         try
         {
@@ -181,42 +185,45 @@ internal static class MoodLayoutFocusedTests
                 card.height);
 
             List<Rect> slots = raw.Buttons
-                .Where(r => IsInside(r, cardLocal)
-                    && Math.Abs(r.width - UsKernelDraw.CheckboxHit) <= 0.5f
-                    && Math.Abs(r.height - UsKernelDraw.CheckboxHit) <= 0.5f)
+                .Where(r => IsInside(r, cardLocal) && IsDeclaredCheckbox(r))
                 .OrderBy(r => r.y)
                 .ToList();
-            Assert(slots.Count > 0, "the basic-tuning card must register at least one 24px checkbox slot");
+            Assert(slots.Count == 6,
+                "the declared card draws six control rows with the parent ON (egg + three scalings + the"
+                + " eat-precision parent and child), got " + slots.Count);
 
-            // THE DRAW FACT, stated as the property itself: no row band in this card may reach into any
-            // checkbox slot. Nothing is assumed about which slot belongs to which row - a widget that
-            // restores a full-width row button fails here whichever row it is, and the band list is built
-            // from what the card actually registered (bands are 24 tall and wider than a slot).
-            foreach (Rect slotRect in slots)
+            // THE DRAW FACT, stated as the property itself: for every declared checkbox band, that band is
+            // the ONLY recorded hit surface that intersects it. Nothing is assumed about which band belongs
+            // to which row - a page that adds a row-wide hit area behind a checkbox fails here whichever row
+            // it is, because IMGUI hands one press to every hit rect it overlaps.
+            //
+            // The assertion is per-band rather than "everything inside the card rect" on purpose: the
+            // recorded rects live in scroll-CONTENT space while the card rect comes from the page-space
+            // snapshot, and trying to filter foreign controls by that translation is the coordinate-space
+            // bug this suite already paid for once.
+            for (int i = 0; i < slots.Count; i++)
             {
-                List<Rect> sameRow = RowBandsFor(raw.Buttons, slotRect);
-                Assert(sameRow.Count == 1,
-                    "every checkbox slot must own exactly one row hit band, got " + sameRow.Count + " for the slot at y " + slotRect.y);
-                Assert(Math.Abs(sameRow[0].xMax - slotRect.x) <= 0.01f,
-                    "and that band must end exactly where the slot starts (band ends at " + sameRow[0].xMax + ", slot starts at " + slotRect.x + ")");
+                int overlapping = raw.Buttons.Count(r => Overlaps(r, slots[i]));
+                Assert(overlapping == 1,
+                    "a declared checkbox band must be its row's only hit surface; band " + slots[i]
+                    + " intersects " + overlapping + " recorded surfaces. A second band behind a checkbox is"
+                    + " the double-toggle IMGUI hands to both controls");
+                for (int j = i + 1; j < slots.Count; j++)
+                {
+                    Assert(!Overlaps(slots[i], slots[j]),
+                        "two declared checkbox bands must not overlap: " + slots[i] + " vs " + slots[j]);
+                }
             }
 
-            // THE BEHAVIOUR FACT. The egg row is the widget's first checkbox row (it is drawn first), and
-            // that is verified by what the press does rather than assumed: if this row is not the egg row,
-            // allow-eggs does not move and the lane fails with a name.
+            // THE BEHAVIOUR FACT. The egg row is the first control row in the manifest, and that it really
+            // is the egg row is verified by what the press does rather than assumed: if it were another row,
+            // allow-eggs would not move and the lane fails with a name.
             Rect slot = slots[0];
-            Rect band = RowBandsFor(raw.Buttons, slot)[0];
-
-            // (a) A press that reaches BOTH the slot and the band - the overlapping-button case IMGUI hands
-            //     to both controls - must still be exactly one write and one flip. That is the short-circuit's
-            //     whole job; without it the value would end where it started after two writes.
-            // The observable is the source write (UsKernelSettingsHost wires toggle-egg to
-            // SetEasterEggs and bumps the revision clock), not the cached value binding.
             bool? before = source.LastEasterEggs;
             int revisionBefore = host.Session.ContentRevision;
             try
             {
-                SetButtonOverride(rect => Math.Abs(rect.y - slot.y) < 0.5f && Math.Abs(rect.height - slot.height) < 0.5f);
+                SetButtonOverride(rect => RectMatches(rect, slot));
                 host.DrawChecked(new Rect(0f, 0f, Width, Height));
             }
             finally
@@ -224,16 +231,18 @@ internal static class MoodLayoutFocusedTests
                 ClearOverrides();
             }
 
-            Assert(source.LastEasterEggs != before, "a press both controls report must flip the value exactly once");
+            Assert(source.LastEasterEggs != before, "a press on the declared checkbox must flip the value exactly once");
             Assert(host.Session.ContentRevision == revisionBefore + 1,
-                "and it must be exactly one write, not two (revision " + revisionBefore + " -> " + host.Session.ContentRevision + ")");
+                "and it must be exactly one write (revision " + revisionBefore + " -> " + host.Session.ContentRevision + ")");
 
-            // (b) A press on the row band only: the row decides and still writes once.
-            int rowRevisionBefore = host.Session.ContentRevision;
+            // The LAST band is the eat-precision child's, the one row whose presence depends on another
+            // control - so a press there must route to the child value and to nothing else.
+            Rect child = slots[slots.Count - 1];
+            int childRevisionBefore = host.Session.ContentRevision;
+            bool? parentBefore = source.LastEatPrecision;
             try
             {
-                Rect rowOnly = band;
-                SetButtonOverride(rect => Math.Abs(rect.x - rowOnly.x) < 0.5f && Math.Abs(rect.width - rowOnly.width) < 0.5f && Math.Abs(rect.y - rowOnly.y) < 0.5f);
+                SetButtonOverride(rect => RectMatches(rect, child));
                 host.DrawChecked(new Rect(0f, 0f, Width, Height));
             }
             finally
@@ -241,14 +250,26 @@ internal static class MoodLayoutFocusedTests
                 ClearOverrides();
             }
 
-            Assert(source.LastEasterEggs != before, "a press on the row band must flip it again, exactly once");
-            Assert(host.Session.ContentRevision == rowRevisionBefore + 1,
-                "and that press must be exactly one write too (revision " + rowRevisionBefore + " -> " + host.Session.ContentRevision + ")");
+            Assert(source.LastEatPrecisionIncludeDrugs == true,
+                "a press on the child row's declared checkbox must write the child value once");
+            Assert(source.LastEatPrecision == parentBefore, "and it must not touch the parent switch");
+            Assert(host.Session.ContentRevision == childRevisionBefore + 1,
+                "and that press must be exactly one write too (revision " + childRevisionBefore
+                + " -> " + host.Session.ContentRevision + ")");
         }
         finally
         {
             host.Dispose();
         }
+    }
+
+    /// <summary>The declared Overview checkbox band: the manifest's 24 x 30 input/checkbox cell. It is
+    /// deliberately NOT the composite's 24x24 <c>UsKernelDraw.CheckboxHit</c> slot - the atom owns its own
+    /// geometry now, and 30 is what makes it paint the shipped 18px visual box
+    /// (side = max(8, height - theme.Geometry.Padding * 2)).</summary>
+    private static bool IsDeclaredCheckbox(Rect rect)
+    {
+        return Math.Abs(rect.width - 24f) <= 0.5f && Math.Abs(rect.height - 30f) <= 0.5f;
     }
 
     /// <summary>One Repaint pass with the pointer parked at <paramref name="pointer"/> - the same frame

@@ -48,6 +48,17 @@ internal static class SettingsGeometryLaneTests
 
     private static readonly string[] Sections = { "basic-tuning", "timing", "camera-indicator", "diagnostics" };
 
+    /// <summary>
+    /// The Overview cards that STILL draw their own [label | control column] row. S4-1 dissolved
+    /// us/global-volume, us/basic-tuning and us/camera-indicator into manifest subtrees, so the shared
+    /// control column is from now on only us/timing's and us/diagnostics's contract. The three declarative
+    /// cards are covered by <c>DeclarativeOverviewLaneTests</c>, which measures the engine's own Row/atom
+    /// geometry from the manifest rather than a US hand-rolled column - the composite shape classifiers
+    /// below deliberately do not match an atom's band, so no composite assertion silently re-interprets a
+    /// declared row.
+    /// </summary>
+    private static readonly string[] CompositeSections = { "timing", "diagnostics" };
+
     private static FieldInfo ButtonOverrideField => RequireField("ButtonOverride", typeof(Func<Rect, bool>));
     private static FieldInfo SliderOverrideField => RequireField("SliderOverride", typeof(Func<Rect, float, float, float, float>));
     private static FieldInfo TextFieldOverrideField => RequireField("TextFieldOverride", typeof(Func<Rect, string, string>));
@@ -143,9 +154,14 @@ internal static class SettingsGeometryLaneTests
                         }
 
                         measurable++;
-                        Assert(survey.Slots.Count >= 8,
-                            "expected the eight support checkboxes (6 basic-tuning + camera + diagnostics) at " + width
-                            + " (" + language + "), got " + survey.Slots.Count);
+                        // S4-1 re-cut: the eight support checkboxes the composites drew are down to the one
+                        // us/diagnostics still draws itself (6 basic-tuning + camera left the composite world
+                        // entirely). The declarative cards' bands are asserted by DeclarativeOverviewLaneTests,
+                        // which measures them against the manifest; keeping the >= 8 pin here would only force
+                        // this lane to re-count controls it no longer owns.
+                        Assert(survey.Slots.Count >= 1,
+                            "the composite sections must still draw their own checkbox (us/diagnostics/localize)"
+                            + " at " + width + " (" + language + "), got " + survey.Slots.Count);
                         Assert(survey.Cells.Count == 3,
                             "the three-choice logging row must draw exactly one segmented control of three equal cells at "
                             + width + " (" + language + "), got " + survey.Cells.Count);
@@ -505,7 +521,10 @@ internal static class SettingsGeometryLaneTests
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Evidence table: the visible checkbox edge and the support-row height growth.
+    // Evidence table: the visible checkbox edge and the support-row height growth, for the two COMPOSITE
+    // support sections that remain after S4-1 (us/timing, us/diagnostics). The three declarative Overview
+    // cards are covered by DeclarativeOverviewLaneTests: their rows are engine Rows over atoms, so the
+    // composite rule asserted below is not their rule and re-using it here would measure the wrong thing.
     //
     // The lane answers the two questions the contract assertions above leave implicit, one printed line
     // per case, at 1024/736/480/320 x EN/ZH x drawer open/closed:
@@ -532,9 +551,11 @@ internal static class SettingsGeometryLaneTests
     /// - the row-height floor this evidence table measures the drawn rows against.</summary>
     private const float RowTokenPin = 24f;
 
-    /// <summary>Basic-tuning's egg row is a two-band stack with its own 52px floor (see
-    /// <c>UsBasicTuningWidget.EggRowHeight</c>); the packed row's own constants are repeated here because
-    /// the lane must predict the drawn height from the resolved label and then prove the prediction.</summary>
+    /// <summary>Retained from the pre-S4-1 composite egg stack (the two-band row with its own 52px
+    /// floor). No row in this lane's sweep is a custom row any more - every surviving composite row is a
+    /// shared-rule row - but the constant keeps the custom-row reporting branch below compiling and names
+    /// what the branch used to describe. The declarative egg row's own height is asserted by
+    /// DeclarativeOverviewLaneTests against the manifest, not against this number.</summary>
     private const float EggStackFloor = 52f;
 
     private static void CheckboxEdgeAndRowHeightEvidence()
@@ -771,6 +792,10 @@ internal static class SettingsGeometryLaneTests
                 Assert(offSlots.Count == 5,
                     "with the parent OFF the card draws five support checkboxes (egg + three scalings + the"
                     + " parent) - the child row does not exist at all, got " + offSlots.Count);
+                Assert(!rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                    "and the child ROW must leave the arrangement entirely, not merely paint nothing:"
+                    + " VisibleKey is the engine's gate, and an arranged-but-invisible row would still"
+                    + " measure and still take the pointer");
                 Assert(offSource.LastEatPrecisionIncludeDrugs == null,
                     "and nothing may write the child value while it is off screen");
             }
@@ -785,8 +810,10 @@ internal static class SettingsGeometryLaneTests
                 (onCard, onSlots) = BasicTuningSlotGeometry(rec);
 
                 Assert(onSlots.Count == offSlots.Count + 1,
-                    "turning the parent on adds exactly one checkbox slot (the child), got "
+                    "turning the parent on adds exactly one checkbox band (the child), got "
                     + offSlots.Count + " -> " + onSlots.Count);
+                Assert(rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                    "and the child ROW is arranged once its parent bool answers true");
                 Assert(onCard > offCard + 20f,
                     "and the card grows by the child row, got off=" + Num(offCard) + " on=" + Num(onCard));
                 for (int index = 0; index < offSlots.Count; index++)
@@ -818,15 +845,33 @@ internal static class SettingsGeometryLaneTests
         }
     }
 
-    /// <summary>The basic-tuning card's drawn height and its six checkbox slots (content-local space, top
-    /// to bottom), read from what the draw actually registered.</summary>
+    /// <summary>Width of the declared input/checkbox band every Overview card's control row ends in
+    /// (the manifest's Width attribute; the atom paints its own 18px box inside it).</summary>
+    private const float DeclaredCheckboxWidth = 24f;
+
+    /// <summary>Height of that band: the manifest's Height, which is what makes the atom's own box
+    /// geometry (side = max(8, height - Padding*2), Padding 6) land on the shipped 18px visual box.</summary>
+    private const float DeclaredCheckboxHeight = 30f;
+
+    /// <summary>
+    /// The basic-tuning card's drawn height and its checkbox bands (content-local space, top to bottom),
+    /// read from what the draw actually registered. Since S4-1 the card is declarative, so the bands come
+    /// from the ATOM's own hit rect: 24 wide and the manifest's 30 tall. The composite 24x24 classifier
+    /// deliberately does not match them, which is why this reads its own declared shape instead of
+    /// widening a composite rule the atom never satisfied.
+    /// </summary>
     private static (float CardHeight, List<Rect> Slots) BasicTuningSlotGeometry(Rec rec)
     {
         Assert(rec.Snapshot.RectById.TryGetValue("basic-tuning", out Rect pageRect),
             "the Overview workspace must arrange the basic-tuning card");
         Rect card = ToContentLocal(pageRect, rec.ContentViewport);
-        SectionControls controls = SectionControlsFor(rec, card);
-        return (card.height, controls.Slots.OrderBy(r => r.y).ToList());
+        List<Rect> slots = rec.Buttons
+            .Where(r => Inside(r, card)
+                && Math.Abs(r.width - DeclaredCheckboxWidth) <= 0.5f
+                && Math.Abs(r.height - DeclaredCheckboxHeight) <= 0.5f)
+            .OrderBy(r => r.y)
+            .ToList();
+        return (card.height, slots);
     }
 
     /// <summary>One draw pass whose only reported button is the requested rect - the harness seam the
@@ -858,8 +903,8 @@ internal static class SettingsGeometryLaneTests
         string language)
     {
         // The eat-precision child row exists only while its parent switch is on (ruling 2026-09-15), so the
-        // geometry sweep runs with the parent ON and asserts the six-slot card; the parent-off shape (five
-        // slots, no child) is covered by ChildRowFollowsTheParentSwitch.
+        // geometry sweep runs with the parent ON; the parent-off shape (five declared bands, no child row)
+        // is covered by ChildRowFollowsTheParentSwitch.
         var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
@@ -867,7 +912,7 @@ internal static class SettingsGeometryLaneTests
         Rec rec = Record(host, width, Height);
 
         var sections = new Dictionary<string, SectionControls>(StringComparer.Ordinal);
-        foreach (string id in Sections)
+        foreach (string id in CompositeSections)
         {
             Assert(rec.Snapshot.RectById.TryGetValue(id, out Rect pageRect),
                 "the snapshot must carry the " + id + " card at " + width + " (" + language + ")");
@@ -903,79 +948,26 @@ internal static class SettingsGeometryLaneTests
             }
         }
 
-        // (b) basic-tuning: egg, then the three scaling toggles, then the eat-occurrence group (parent
-        // row, the grey hint band, and the child row whose disabled-reason band is reserved in both
-        // parent states), top to bottom. Each height is solved from the row BELOW it (last row anchored
-        // on the card body's bottom padding), so the drawn height is measured and the production measure
-        // rule is a separate, later check. The hint band carries no control, so its own rule supplies the
-        // gap between the parent row and the child row.
-        SectionControls basic = sections["basic-tuning"];
-        List<Rect> basicSlots = basic.Slots.OrderBy(r => r.y).ToList();
-        Assert(basicSlots.Count == 6,
-            "basic-tuning must draw six support checkboxes (egg + three scaling rows + the eat-precision"
-            + " parent and child rows) at " + width + " (" + language + "), got " + basicSlots.Count);
-        float basicBand = UsKernelDraw.RowLabelWidth(BodyWidthOf(basic.Card));
-        float basicBodyTop = BodyTopOf(basic.Card);
-        float basicBottom = BodyBottomOf(basic.Card);
-        float[] centres = basicSlots.Select(CentreY).ToArray();
-
-        // The child row is an ORDINARY support row now (its checkbox is centred on the row like every other
-        // row's, because the reserved reason band is gone), so its drawn height comes back from the row centre
-        // exactly like its neighbours' - and there is no hint band between the parent and the child any more.
-        float eatChild = 2f * (basicBottom - 2f - centres[5]);
-        float eatParentBottom = basicBottom - 2f - eatChild - 2f;
-        float eatParent = 2f * (eatParentBottom - centres[4]);
-        float eatParentTop = eatParentBottom - eatParent;
-        float population = 2f * (eatParentTop - 2f - centres[3]);
-        float populationTop = eatParentTop - 2f - population;
-        float talking = 2f * (populationTop - 2f - centres[2]);
-        float talkingTop = populationTop - 2f - talking;
-        float cooldown = 2f * (talkingTop - 2f - centres[1]);
-        float cooldownTop = talkingTop - 2f - cooldown;
-        float egg = cooldownTop - 2f - (basicBodyTop + 2f);
-
-        AddRow(evidence, "basic-tuning/egg", 0, KeyedLabel(table, "US.Tuning.EasterEggs"), basicBand, egg,
-            basicSlots[0], metrics, sharedRule: false, eggRule: EggRuleHeight(metrics, table, basicBand));
-        AddRow(evidence, "basic-tuning/scale-cooldown", 1, KeyedLabel(table, "US.Tuning.ScaleCooldown"),
-            basicBand, cooldown, basicSlots[1], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/scale-talking", 2, KeyedLabel(table, "US.Tuning.ScaleTalking"),
-            basicBand, talking, basicSlots[2], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/scale-population", 3, KeyedLabel(table, "US.Tuning.ScalePopulation"),
-            basicBand, population, basicSlots[3], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/eat-precision", 4, KeyedLabel(table, "US.Tuning.EatPrecision"),
-            basicBand, eatParent, basicSlots[4], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/eat-precision-include-drugs", 5,
-            KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), basicBand, eatChild, basicSlots[5],
-            metrics, sharedRule: true, eggRule: 0f);
-
+        // (b) the two COMPOSITE support sections that remain, in draw order. Verified independently
+        // (DeclarativeOverviewLaneTests covers the three declarative cards), because the rule being
+        // asserted here is the composite's own [label | control column] arithmetic.
+        //
         // timing: the cooldown-multiplier row is the last one, so its height is anchored on the body's
         // bottom padding and its centre comes from the minus/plus steppers the widget centres on it.
         SectionControls timing = sections["timing"];
         Assert(timing.Steppers.Count == 2,
             "the cooldown-multiplier row must draw exactly its minus/plus steppers at " + width + " ("
             + language + "), got " + timing.Steppers.Count);
-        AddRow(evidence, "timing/cooldown-multiplier", 6, KeyedLabel(table, "US.Tuning.CooldownMultiplier"),
+        AddRow(evidence, "timing/cooldown-multiplier", 0, KeyedLabel(table, "US.Tuning.CooldownMultiplier"),
             UsKernelDraw.RowLabelWidth(BodyWidthOf(timing.Card)),
             2f * (BodyBottomOf(timing.Card) - 2f - CentreY(timing.Steppers[0])), null, metrics, true, 0f);
-
-        // camera-indicator: one row that fills its whole measured body; the two derivations must agree.
-        SectionControls camera = sections["camera-indicator"];
-        Assert(camera.Slots.Count == 1,
-            "the camera-indicator section must draw its one checkbox at " + width + " (" + language
-            + "), got " + camera.Slots.Count);
-        float cameraHeight = 2f * (CentreY(camera.Slots[0]) - BodyTopOf(camera.Card));
-        Assert(Math.Abs(cameraHeight - BodyHeightOf(camera.Card)) <= 0.01f,
-            "the single camera row must fill its measured card body at " + width + " (" + language
-            + "): drawn " + Num(cameraHeight) + " vs body " + Num(BodyHeightOf(camera.Card)));
-        AddRow(evidence, "camera-indicator/toggle", 7, KeyedLabel(table, "US.Tuning.CameraIndicator"),
-            UsKernelDraw.RowLabelWidth(BodyWidthOf(camera.Card)), cameraHeight, camera.Slots[0], metrics, true, 0f);
 
         // diagnostics: the localize row is the last row; the heading band above it is reported by the
         // table as context but the localize row is the support row under contract.
         Assert(diagnostics.Slots.Count == 1,
             "the diagnostics section must draw the localize checkbox at " + width + " (" + language
             + "), got " + diagnostics.Slots.Count);
-        AddRow(evidence, "diagnostics/localize-debug", 8, KeyedLabel(table, "US.Diagnostics.LocalizeDebugMenu"),
+        AddRow(evidence, "diagnostics/localize-debug", 1, KeyedLabel(table, "US.Diagnostics.LocalizeDebugMenu"),
             UsKernelDraw.RowLabelWidth(BodyWidthOf(diagnostics.Card)),
             2f * (BodyBottomOf(diagnostics.Card) - 2f - CentreY(diagnostics.Slots[0])), diagnostics.Slots[0],
             metrics, true, 0f);
@@ -994,10 +986,9 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>
-    /// The two-band egg row's own rule, repeated from <c>UsBasicTuningWidget.EggBands</c>: the title band
-    /// is measured at the row's label band, the On/Off state band at the LONGER of the two shipped state
-    /// strings, and the 52px floor wins while both fit. The table's drawn height is asserted against this
-    /// prediction, so the constants cannot drift unnoticed.
+    /// The retired composite egg row's own rule, kept only so the custom-row reporting branch has a
+    /// named prediction to print. S4-1 moved the egg row into the manifest, where its two bands are two
+    /// declared text/wrapped atoms gated by VisibleKey; DeclarativeOverviewLaneTests measures THAT shape.
     /// </summary>
     private static float EggRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
     {
@@ -1151,9 +1142,8 @@ internal static class SettingsGeometryLaneTests
 
     private static UiHost NewHost(Program.StubMetrics metrics)
     {
-        // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15), and the
-        // shared-column survey wants the full six-slot basic-tuning card. The parent-off shape is covered by
-        // ChildRowFollowsTheParentSwitch.
+        // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15). The
+        // parent-off shape is covered by ChildRowFollowsTheParentSwitch.
         var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Overview");

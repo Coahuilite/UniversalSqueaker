@@ -212,11 +212,12 @@ internal static class UiSourceInvariantTests
             + "(registered=" + registeredKinds.Count + ", manifest=" + manifestKinds.Count + "; "
             + "missing=[" + Join(registeredKinds, manifestKinds) + "], orphan=[" + Join(manifestKinds, registeredKinds) + "])");
 
-        // The 17 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
+        // The 14 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
         // the cardinality makes an accidental silent drop (registration removed AND manifest line
-        // deleted together) visible.
-        Assert(registeredKinds.Count == 18,
-            "the registered us/* kind set must have 18 members (17 settings + 1 overlay), got "
+        // deleted together) visible. S4-1 shrank it 18 -> 15 by dissolving us/global-volume,
+        // us/basic-tuning and us/camera-indicator into manifest subtrees.
+        Assert(registeredKinds.Count == 15,
+            "the registered us/* kind set must have 15 members (14 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 

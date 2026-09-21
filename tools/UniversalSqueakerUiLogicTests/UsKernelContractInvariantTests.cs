@@ -216,19 +216,52 @@ internal static class UsKernelContractInvariantTests
     }
 
     /// <summary>
-    /// Structural guard for the Overview workspace: Basic tuning owns Easter eggs plus the three
-    /// runtime scaling toggles. Distance presets belong exclusively to the attenuation workspace.
-    /// Measure and fallback must share one height formula.
+    /// Structural guard for the Overview workspace. S4-1 dissolved the us/basic-tuning composite into a
+    /// declared Section subtree, so the guard reads the manifest instead of a widget file - the property
+    /// is unchanged: Basic tuning owns Easter eggs plus the three runtime scaling toggles, each on its own
+    /// bool value binding, and the Distance workspace's preset action is named nowhere in the page.
     /// </summary>
     private static void VerifyBasicTuningHasNoDistanceDuplicate(string root)
     {
-        string path = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsBasicTuningWidget.cs");
-        string text = File.ReadAllText(path);
+        string path = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
+        var document = new XmlDocument();
+        document.XmlResolver = null;
+        document.Load(path);
 
-        Assert(!text.Contains("DrawDistanceRow") && !text.Contains("set-distance-preset"),
+        XmlElement? card = null;
+        foreach (XmlNode node in document.SelectNodes("//*[@Id='basic-tuning']")!)
+        {
+            if (node is XmlElement element) card = element;
+        }
+
+        Assert(card != null && card.Name == "Section",
+            "the basic-tuning card is the declarative Section container (us/basic-tuning is retired)");
+
+        var binds = new List<string>();
+        foreach (XmlNode node in card!.SelectNodes(".//Widget")!)
+        {
+            if (node is XmlElement widget && widget.HasAttribute("Bind")) binds.Add(widget.GetAttribute("Bind"));
+        }
+
+        foreach (string expected in new[] { "allow-eggs", "scale-cooldown", "scale-talking", "scale-population" })
+        {
+            Assert(binds.Contains(expected),
+                "the declarative basic-tuning card owns a control on binding '" + expected + "'");
+        }
+
+        // The parent/child rule is declarative too: the child row is gated by the parent's own bool.
+        XmlElement? child = null;
+        foreach (XmlNode node in card.SelectNodes(".//*[@Id='basic-eat-child-row']")!)
+        {
+            if (node is XmlElement element) child = element;
+        }
+
+        Assert(child != null && child.GetAttribute("VisibleKey") == "eat-precision",
+            "the eat-precision child row is gated by VisibleKey reading the parent's own bool binding");
+
+        string manifest = File.ReadAllText(path);
+        Assert(!manifest.Contains("set-distance-preset"),
             "Basic tuning does not duplicate the Distance workspace preset control");
-        Assert(text.Contains("FallbackHeight") && text.Contains("MeasureBody") && text.Contains("ContentHeight"),
-            "basic tuning shares one content-height formula across fallback and measure");
     }
 
     private static bool IsTrue(string value)

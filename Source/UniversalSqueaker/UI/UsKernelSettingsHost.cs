@@ -199,8 +199,20 @@ public static class UsKernelSettingsHost
             () => source.BuildView().Mode,
             value => { source.SetMode(value); bump(); });
 
-        // Basic: global volume.
+        // Basic: global volume. The 0..1 <-> percent split is a BINDING-side projection (spec 5.2), not a
+        // widget's arithmetic: the slider atom owns the 0..1 value and the number-field atom owns the
+        // 0..100 points, and both read the same business setter. The caption is a read-only string the
+        // page binds instead of formatting in C#, because the manifest has no format expression.
         bindings.BindValue<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
+        bindings.BindValue<float>(
+            "global-volume-percent",
+            () => source.BuildView().GlobalVolumeFactor * 100f,
+            value => { source.SetGlobalVolume(value / 100f); bump(); });
+        bindings.BindReadOnly<string>(
+            "global-volume-caption",
+            () => string.Format(
+                translation.Translate("US.Tuning.GlobalVolume"),
+                ((int)Math.Round(source.BuildView().GlobalVolumeFactor * 100f)).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%"));
 
         // Basic: distance preset/range + attenuation chart.
         bindings.BindReadOnly<float>("distance-range-min", () => source.BuildView().DistanceRangeMin);
@@ -211,25 +223,25 @@ public static class UsKernelSettingsHost
         bindings.BindAction<UiChartPointChange>("attenuation-point", change => { ApplyAttenuationPoint(source, source.BuildView(), change); bump(); });
 
         // Basic: toggles.
+        // S4-1: these rows are declarative now, so the value binding IS the toggle - input/checkbox writes
+        // the inverse of the bool it read through this setter, and the seven toggle-* action bindings the
+        // composites invoked are retired with them (no second write channel onto one value). The egg row's
+        // two state sentences are gated by VisibleKey, so the manifest keeps their keys and the host only
+        // answers "which of the two is true".
         bindings.BindValue<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
+        bindings.BindReadOnly<bool>("easter-egg-on", () => source.BuildView().AllowEasterEggs);
+        bindings.BindReadOnly<bool>("easter-egg-off", () => !source.BuildView().AllowEasterEggs);
         bindings.BindValue<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
         bindings.BindValue<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
         bindings.BindValue<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
-        bindings.BindAction<bool>("toggle-egg", value => { source.SetEasterEggs(value); bump(); });
-        bindings.BindAction<bool>("toggle-scale-cooldown", value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
-        bindings.BindAction<bool>("toggle-scale-talking", value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
-        bindings.BindAction<bool>("toggle-scale-population", value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
         bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
-        bindings.BindAction<bool>("toggle-camera-indicator", value => { source.SetCameraIndicator(value); bump(); });
 
         // Basic: the eat-precision pair. The parent gates the child, but the guard deliberately lives in
         // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
         // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
         // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
         bindings.BindValue<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
-        bindings.BindAction<bool>("toggle-eat-precision", value => { source.SetEatPrecision(value); bump(); });
         bindings.BindValue<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
-        bindings.BindAction<bool>("toggle-eat-precision-include-drugs", value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
 
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
         bindings.BindValue<int>("min-interval", () => source.BuildView().GlobalMinIntervalTicks, value => { source.SetGlobalMinIntervalTicks(value); bump(); });

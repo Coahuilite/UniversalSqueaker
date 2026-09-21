@@ -63,10 +63,85 @@
       <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
         <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
-        <Widget Id="global-volume" Kind="us/global-volume" TitleKey="US.Section.OutputLevel" HelpKey="us/global-volume" Tab="Overview" />
-        <Widget Id="basic-tuning" Kind="us/basic-tuning" TitleKey="US.Section.PlaybackBehaviour" HelpKey="us/basic-tuning" Tab="Overview" />
+        <!-- S4-1: the first three Overview cards are DECLARATIVE. The three composites that used to
+             own them (us/global-volume, us/basic-tuning, us/camera-indicator) were dissolved here and
+             retired in the same change, so the Registrar's us/* kind set shrank 18 -> 15.
+
+             Card chrome is the engine's Section container with the same explicit geometry the checklist
+             card already declares (Padding 12 + header 26 + Gap 6 reproduces UsCardLayout.MeasureBody).
+             Section help sits on the section/header WIDGET, never on the container: HelpKey is refused on
+             a container because only a widget is a hit surface.
+
+             Rows are [label | control] Rows. The label is text/wrapped, which measures its own wrapped
+             band; it deliberately carries no Width - a Row already hands a sized child's leftover to the
+             unsized one, exactly the arrangement the fixed header band uses - and no Fill, which the
+             attribute schema refuses on a widget. The checkbox is input/checkbox with Width 24 Height 30:
+             30 is not a row constant, it is what makes the atom's own box geometry
+             (side = max(8, height - theme.Geometry.Padding * 2), Padding 6) land on the shipped 18px
+             visual box the composite drew.
+
+             Each checkbox carries Bind only, never ActionBind: the atom writes the INVERSE of the bool it
+             read through the value binding's own setter, so the value binding IS the toggle and the seven
+             toggle-* action bindings the composites needed are retired with them. That is also why the row
+             hit band the composites drew no longer exists - the checkbox band is the row's only hit
+             surface (the same delta the checklist migration recorded).
+
+             The child of the eat-precision pair is gated by the engine's VisibleKey reading the parent's
+             own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
+        <Section Id="global-volume" Tab="Overview" Padding="12" Gap="6">
+          <Widget Id="global-volume-header" Kind="section/header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
+          <Row Id="global-volume-top" Gap="8" Padding="0">
+            <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
+            <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" AlignY="Top" HelpKey="us/global-volume/number" />
+          </Row>
+          <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
+        </Section>
+        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="6">
+          <Widget Id="basic-tuning-header" Kind="section/header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
+          <Column Id="basic-tuning-body" Gap="2" Padding="0">
+            <Row Id="basic-egg-row" Gap="8" Padding="0">
+              <Column Id="basic-egg-text" Gap="1" Padding="0">
+                <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpKey="us/basic-tuning/egg" />
+                <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
+                <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
+              </Column>
+              <Widget Id="basic-egg-check" Kind="input/checkbox" Bind="allow-eggs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
+            </Row>
+            <Widget Id="basic-egg-rule" Kind="chrome/rule" />
+            <Row Id="basic-cooldown-row" Gap="8" Padding="0">
+              <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
+              <Widget Id="basic-cooldown-check" Kind="input/checkbox" Bind="scale-cooldown" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
+            </Row>
+            <Widget Id="basic-cooldown-rule" Kind="chrome/rule" />
+            <Row Id="basic-talking-row" Gap="8" Padding="0">
+              <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
+              <Widget Id="basic-talking-check" Kind="input/checkbox" Bind="scale-talking" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
+            </Row>
+            <Widget Id="basic-talking-rule" Kind="chrome/rule" />
+            <Row Id="basic-population-row" Gap="8" Padding="0">
+              <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
+              <Widget Id="basic-population-check" Kind="input/checkbox" Bind="scale-population" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
+            </Row>
+            <Widget Id="basic-population-rule" Kind="chrome/rule" />
+            <Row Id="basic-eat-row" Gap="8" Padding="0">
+              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
+              <Widget Id="basic-eat-check" Kind="input/checkbox" Bind="eat-precision" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
+            </Row>
+            <Widget Id="basic-eat-rule" Kind="chrome/rule" />
+            <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision">
+              <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+              <Widget Id="basic-eat-child-check" Kind="input/checkbox" Bind="eat-precision-include-drugs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+            </Row>
+          </Column>
+        </Section>
         <Widget Id="timing" Kind="us/timing" TitleKey="US.Section.TriggerTiming" HelpKey="us/timing" Tab="Overview" />
-        <Widget Id="camera-indicator" Kind="us/camera-indicator" TitleKey="US.Section.InWorldIndicator" HelpKey="us/camera-indicator" Tab="Overview" />
+        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6">
+          <Widget Id="camera-indicator-header" Kind="section/header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
+          <Row Id="camera-indicator-row" Gap="8" Padding="0">
+            <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
+            <Widget Id="camera-indicator-check" Kind="input/checkbox" Bind="camera-indicator" Width="24" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
+          </Row>
+        </Section>
         <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
         <Widget Id="attenuation-editor" Kind="us/attenuation-editor" TitleKey="US.Section.DistanceAttenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />

@@ -30,11 +30,8 @@ public static class UsKernelWidgetRegistrar
             UsNavWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
-            UsGlobalVolumeWidget.Register();
             UsAttenuationEditorWidget.Register();
-            UsBasicTuningWidget.Register();
             UsTimingWidget.Register();
-            UsCameraIndicatorWidget.Register();
             UsDiagnosticsWidget.Register();
             UsScopeTreeWidget.Register();
             UsPresetListWidget.Register();

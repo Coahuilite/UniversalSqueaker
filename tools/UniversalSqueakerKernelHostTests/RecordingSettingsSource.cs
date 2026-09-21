@@ -49,6 +49,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool EatPrecisionIncludeDrugs = false;
 
     /// <summary>
+    /// The Easter-egg switch the fake's <see cref="BuildView"/> projects. Read by the egg row's On/Off
+    /// VisibleKey gates; the S4-1 lane flips it to prove the row's height does not follow the value
+    /// (the composite measured the band against the longer of the two strings for exactly that reason).
+    /// </summary>
+    public bool AllowEasterEggs = true;
+
+    /// <summary>
     /// Author strings used by the rich BuildView (the pack/author filter options). The D9 lane
     /// injects a label far wider than the 143px filter column to prove the popup grows and the
     /// trigger ellipsizes instead of clipping.
@@ -162,7 +169,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     {
         return new VoicePacksViewState(
             SqueakVoicePackMode.Vanilla,
-            allowEasterEggs: false,
+            allowEasterEggs: AllowEasterEggs,
             SqueakDistancePreset.Balanced,
             scaleCooldownWithTimeSpeed: true,
             scaleFrequencyWithTalking: true,
@@ -247,7 +254,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
         return new VoicePacksViewState(
             SqueakVoicePackMode.Remix,
-            allowEasterEggs: true,
+            allowEasterEggs: AllowEasterEggs,
             SqueakDistancePreset.Strong,
             scaleCooldownWithTimeSpeed: false,
             scaleFrequencyWithTalking: true,

@@ -33,10 +33,7 @@ internal static class Program
         ("page-title", "us/page-title"),
         ("banner", "chrome/banner"),
         ("mode-row", "us/mode-row"),
-        ("global-volume", "us/global-volume"),
         ("attenuation-editor", "us/attenuation-editor"),
-        ("basic-tuning", "us/basic-tuning"),
-        ("camera-indicator", "us/camera-indicator"),
         ("scope-tree", "us/scope-tree"),
         ("preset-list", "us/preset-list"),
         ("filter-bar", "us/filter-bar"),
@@ -117,6 +114,7 @@ internal static class Program
         Step("unknown attribute fails at creation", UnknownAttributeFailsAtCreation);
         Step("typed bindings route to business boundary", TypedBindingsRouteToBusinessBoundary);
         Step("full typed write coverage", FullTypedWriteCoverage);
+        Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -924,11 +922,12 @@ internal static class Program
         AssertBumped("scale-talking", () => host.Bindings.Set("scale-talking", false));
         AssertBumped("scale-population", () => host.Bindings.Set("scale-population", true));
         AssertBumped("camera-indicator", () => host.Bindings.Set("camera-indicator", false));
-        AssertBumped("toggle-egg", () => host.Bindings.Invoke("toggle-egg", false));
-        AssertBumped("toggle-scale-cooldown", () => host.Bindings.Invoke("toggle-scale-cooldown", false));
-        AssertBumped("toggle-scale-talking", () => host.Bindings.Invoke("toggle-scale-talking", false));
-        AssertBumped("toggle-scale-population", () => host.Bindings.Invoke("toggle-scale-population", true));
-        AssertBumped("toggle-camera-indicator", () => host.Bindings.Invoke("toggle-camera-indicator", false));
+        // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
+        // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole toggle
+        // and there is no second channel to keep in step. The three new display writes are asserted instead.
+        AssertBumped("eat-precision", () => host.Bindings.Set("eat-precision", true));
+        AssertBumped("eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true));
+        AssertBumped("global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f));
         AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
         AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
         AssertBumped("min-interval", () => host.Bindings.Set("min-interval", 300));
@@ -1160,6 +1159,24 @@ internal static class Program
         {
             Assert(xml.Contains("<Widget Id=\"" + id + "\" Kind=\"" + kind + "\""),
                 "resource declares widget " + id + " (" + kind + ")");
+        }
+
+        // S4-1: the three Overview composites were dissolved and retired. Their IDS survive the
+        // migration - the workspace gate and the geometry/evidence lanes read the cards by id - but the
+        // kind does not: each id now names a declarative Section container.
+        foreach (string id in new[] { "global-volume", "basic-tuning", "camera-indicator" })
+        {
+            Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"Overview\""),
+                "the dissolved composite's id must name a declarative Section container: " + id);
+        }
+
+        // A HelpKey may still NAME these strings (they are catalog section keys); what must be gone is
+        // the KIND. Asking for Kind="..." is the difference between "the page still explains this
+        // section" and "the retired composite is still wired".
+        foreach (string kind in new[] { "us/basic-tuning", "us/global-volume", "us/camera-indicator" })
+        {
+            Assert(!xml.Contains("Kind=\"" + kind + "\""),
+                "the retired composite kind must not survive as a manifest Kind: " + kind);
         }
     }
 
@@ -1592,16 +1609,17 @@ internal static class Program
         Assert(fake.LastBasicToggle == SqueakBasicToggle.ScalePopulation && fake.LastBasicToggleValue == false, "scale-population value write routes");
         bindings.Set("camera-indicator", true);
         Assert(fake.LastCameraIndicator == true, "camera-indicator value write routes");
-        bindings.Invoke("toggle-egg", false);
-        Assert(fake.LastEasterEggs == false, "toggle-egg action routes");
-        bindings.Invoke("toggle-scale-cooldown", true);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleCooldown, "toggle-scale-cooldown action routes");
-        bindings.Invoke("toggle-scale-talking", false);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleTalking, "toggle-scale-talking action routes");
-        bindings.Invoke("toggle-scale-population", true);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScalePopulation, "toggle-scale-population action routes");
-        bindings.Invoke("toggle-camera-indicator", false);
-        Assert(fake.LastCameraIndicator == false, "toggle-camera-indicator action routes");
+        bindings.Set("camera-indicator", false);
+        Assert(fake.LastCameraIndicator == false, "the checkbox's own write channel is the whole toggle");
+        // The percent projection is the number-field atom's binding: it must reach the SAME business setter
+        // the 0..1 slider binding uses, or the two controls on the card would show different volumes.
+        bindings.Set("global-volume-percent", 42f);
+        Assert(Math.Abs(fake.LastGlobalVolume.GetValueOrDefault() - 0.42f) < 0.001f,
+            "global-volume-percent writes the normalized volume through the business setter");
+        bindings.Set("eat-precision", true);
+        Assert(fake.LastEatPrecision == true, "eat-precision value write routes (the declared checkbox's channel)");
+        bindings.Set("eat-precision-include-drugs", true);
+        Assert(fake.LastEatPrecisionIncludeDrugs == true, "eat-precision-include-drugs value write routes");
         bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative);
         Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative, "set-distance-preset action routes");
         bindings.Set("min-interval", 300);
