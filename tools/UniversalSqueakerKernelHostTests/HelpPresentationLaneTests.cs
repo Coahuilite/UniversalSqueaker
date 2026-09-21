@@ -67,14 +67,25 @@ internal static class HelpPresentationLaneTests
             Assert(!WindowChromeLayout.DrawerWidensTheWindow(800f, 600f),
                 "an 800-wide logical screen cannot widen, so the drawer must not take a third column there");
 
-            AssertPresentations(1920, 1080, WideViewport, expectWide: true, metrics, reports,
-                "a wide screen hosts the widened window, so the help takes its column");
+            // The real Keyed tables, because this lane measures WIDTHS. Without them the translator passes
+            // the key through and every caption is measured as its own key text - the first build of this
+            // lane reported the header switch as needing 168px for "US.Help.Drawer.Toggle" when the shipped
+            // caption is "Help" (EN) / "帮助" (ZH) and fits. A fit assertion whose input is a key name is
+            // measuring the harness, not the product: the failure was real, the cause was the instrument.
+            foreach (string language in new[] { "English", "ChineseSimplified" })
+            {
+                Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
 
-            AssertPresentations(800, 600, CappedViewport, expectWide: false, metrics, reports,
-                "a capped screen must show the full-width band instead of stealing the centre column");
+                AssertPresentations(language, 1920, 1080, WideViewport, expectWide: true, metrics, reports,
+                    "a wide screen hosts the widened window, so the help takes its column");
+
+                AssertPresentations(language, 800, 600, CappedViewport, expectWide: false, metrics, reports,
+                    "a capped screen must show the full-width band instead of stealing the centre column");
+            }
         }
         finally
         {
+            Program.SetTranslatorResolver(null);
             UiFitAudit.Detach();
             UiFitAudit.Enabled = false;
             Verse.UI.screenWidth = savedWidth;
@@ -83,6 +94,7 @@ internal static class HelpPresentationLaneTests
     }
 
     private static void AssertPresentations(
+        string language,
         int screenWidth,
         int screenHeight,
         Vector2 viewport,
@@ -123,7 +135,7 @@ internal static class HelpPresentationLaneTests
         // presentation buys by not touching the centre column.
         Assert(reports.Count == 0,
             why + ": the fit audit must report nothing at " + screenWidth + "x" + screenHeight
-            + " with the drawer open, got " + Describe(reports));
+            + " (" + language + ") with the drawer open, got " + Describe(reports));
 
         host.Bindings.Set("help-open", false);
         UiLayoutSnapshot closed = host.MeasureAndArrange(viewport);
