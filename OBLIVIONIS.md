@@ -620,7 +620,7 @@ _moved from `TODO.md` on 2026-09-17_
 
 ## Memory compaction 2026-09-21c - superseded MEMORY.md and TODO.md (verbatim)
 
-- Reason: the active files had drifted into carrying finished implementation detail and session narrative (MEMORY 82 KB / 175 lines, TODO 60 KB / 250 lines), which AGENTS.md forbids. Both were distilled on 2026-09-21c; the two blocks below are the byte copies as they stood at commit 009b515, the HEAD when the compaction started.
+- Reason: the active files had drifted into carrying finished implementation detail and session narrative (MEMORY 84,246 B / 175 long-paragraph lines, TODO 61,827 B / 250 lines), which AGENTS.md forbids. Both were distilled on 2026-09-21c; the two blocks below are the byte copies as they stood at commit 009b515, the HEAD when the compaction started. **Result of the distillation: MEMORY ~45.5 KB / 497 hard-wrapped lines, TODO ~20.3 KB / 226 lines** - the durable facts and the current action surface only, with the rules promoted into AGENTS.md.
 - Read this section only for a historical conflict or an explicit request; it cannot override MEMORY.md, TODO.md, AGENTS.md or the code. Where the distilled files dropped a detail, it is here; where the two disagree on a FACT, the active file is current and this one is what the session believed at the time.
 - The compaction also promoted the engineering rules scattered through these files into AGENTS.md: evidence discipline, one coherent commit per step, and the carrier identity/exclusivity rules.
 
