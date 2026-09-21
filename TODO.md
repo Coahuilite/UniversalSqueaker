@@ -84,11 +84,15 @@ declared). Authority: docs/ui-redesign-0.7-zh.md sections 0, 2, 3 and 6.1.
   2. **the five player-visible deltas of the landed checklist migration** (calibration drift): row hit target
      narrowed to the checkbox band, the row surface/hover/selected rail gone, the orphan band above the list,
      meta/coverage at the atom's font, placeholder ink TextSecondary;
-  3. **the narrow-screen help band (乙1)**: at a logical screen width <= 800 (which a normal 1920 monitor
-     reaches at UI scale >~2.5) the open drawer must now appear as a FULL-WIDTH band between the body and the
-     footer - the centre column must keep the width it has with the drawer retracted, the band must scroll
-     internally and must never push the footer out, and **the 7 (EN) / 2 (ZH) text overflow findings this case
-     used to report must be gone** (that is the fit gate this slice turned into a violation);
+  3. **the narrow-screen help band (乙1, RE-CUT 2026-09-21b)**: at a logical screen width <= 800 (which a
+     normal 1920 monitor reaches at UI scale >~2.5) the open drawer must REPLACE the body with a full-width
+     band: the nav and the centre column are not drawn at all while the band is (that mutual exclusion is what
+     makes the collision impossible), the band fills everything between the header and the footer and scrolls
+     internally without pushing the footer out, and closing the drawer must bring the body back **with its
+     scroll position intact** (hidden keeps the node and the state; removed does not). **The 7 (EN) / 2 (ZH)
+     text overflow findings this case used to report must stay gone**, and the band must be at least as tall as
+     the body's own content floor (us/nav, 271px at this page) - the space-budget clause the first cut of this
+     slice lacked;
   4. **F-05**: is `ui.text.overflow` at zero on the normal path? (whatever this pass finds above is the
      exception, and item 3 is the known one);
   5. **F-07**: switching tabs throws nothing;
@@ -99,7 +103,19 @@ declared). Authority: docs/ui-redesign-0.7-zh.md sections 0, 2, 3 and 6.1.
   8. **the title band no longer reserves 72px** for a control, and **the header band's height is a real
      vertical cost** (it is content-measured, so it follows the worst of the five workspace captions);
   9. the nav cards are 40px wider (144 -> 184).
-- **(乙1) narrow-screen help presentation = candidate A - LANDED AND VERIFIED (2026-09-21).** Shape: a conditional full-width `help-band` between `body-row` and `footer-band`, two mutually exclusive read-only presentation keys derived by the host from `WindowChromeLayout.DrawerWidensTheWindow`, and the fit audit turned into a HARD GATE in `WidthAndLanguageEvidenceSweep` (which now also states the SCREEN, because a page width the policy cannot produce is not a reachable configuration; it sweeps 1024/736/480/320/1228, where 1228 is the open window's page width on a 1920 screen and is the wide-column case). **Measured outcome**: 736/open is now `content=500 help=- fit=0` in BOTH languages - the 7 (EN) / 2 (ZH) findings S3-4b introduced are gone - and 1228/open is `help=320 content=660 fit=0`. Candidate B (WidthKey + a host-computed affordable width) was priced and rejected: it would weaken two existing gates. Pricing in spec section 0.2.
+- **(乙1) narrow-screen help presentation = candidate A - LANDED AND VERIFIED (2026-09-21).** Shape: a conditional full-width `help-band` between `body-row` and `footer-band`, two mutually exclusive read-only presentation keys derived by the host from `WindowChromeLayout.DrawerWidensTheWindow`, and the fit audit turned into a HARD GATE in `WidthAndLanguageEvidenceSweep` (which now also states the SCREEN, because a page width the policy cannot produce is not a reachable configuration; it sweeps 1024/736/480/320/1228, where 1228 is the open window's page width on a 1920 screen and is the wide-column case). **Measured outcome**: 736/open is now `content=500 help=- fit=0` in BOTH languages - the 7 (EN) / 2 (ZH) findings S3-4b introduced are gone - and 1228/open is `help=320 content=660 fit=0`. Candidate B (WidthKey + a host-computed affordable width) was priced and rejected: it would weaken two existing gates. Pricing in spec section 0.2. *(Superseded in part by the RE-CUT below: with the replacing shape, 736/open draws the band and no content column at all.)*
+- **(乙1) RE-CUT to the replacing shape - LANDED AND VERIFIED (2026-09-21b, `4c4a19a`).** The first cut shared
+  the page between a 280px band and the body, and at 1024x768 the body's own content (nav-column 271px inside a
+  122px slot) overflowed into the band - the maintainer's in-game report. The frame lane's new minimum-resolution
+  step reproduces it numerically ('nav-column' (12, 72, 200, 271) leaves its parent's rect; parent (12, 72, 936,
+  122), plus an overlap with the band), and the new space-budget clause is the one that catches a band big enough
+  for itself but not for the slot it took (`band=130.7 floor(nav-column)=271`). Mutation proofs, all red: (a) the
+  band keeps `Fill` while the body is NOT hidden -> `HelpPresentationLaneTests` names the shared page; (b) the band
+  loses `Fill` with exclusivity kept -> the budget clause; (c) the pre-fix shape -> the frame lane's slot rule and
+  the sweep's 8 violations. Gates: harness `ALL PASS`, `verify-local -NoRestore` 15/15, `-PackDev` staged 7 files
+  (carrier Release `0.7.0-dev+bce1ba4c...`). The reserved-band vocabulary (no container `MinHeight`/`MaxHeight`,
+  no fill weight, no `HeightKey`) is still absent and this shape no longer needs it; a future band that must SHARE
+  the page while honouring a floor is the case that would still need the capability.
 - **Unfreeze verification round COMPLETE (2026-09-21)**: harness `ALL PASS`, `verify-local -NoRestore` 15/15, `-PackDev` staged 7 files. Both mutation proofs supplied and red: (U1) revert the caption band to the hard-coded 18 -> `GlobalVolumeBandLaneTests` reports `global-volume Height needs 234 has 18`; (乙1) drop the narrow presentation -> `HelpPresentationLaneTests` reports `exactly ONE presentation may be arranged at 800x600 (wide=False narrow=False)`, and making the presentation unconditional instead -> the sweep's fit gate reports `2 geometry violation(s)` with the artifact showing `736 | open | content=168.0 | help=320.0 | fit=6`. **One fixture defect was found and fixed in this round and is worth remembering**: the new lane measured widths WITHOUT installing a Keyed table, so it read the raw key text and reported the header switch as needing 168px against a 116px band - a RED for the wrong reason, the mirror of the four greens-for-the-wrong-reason this phase had already paid for. The rule extends: neither product nor assertion is touched until the instrument's INPUT is checked.
 - [ ] **(甲) the global density (12/8/4/24/1) - the likely final form, deliberately NOT inside S3.** It moves
   every control's INNER inset (the atoms read theme.Geometry.Padding as their own inset), so it needs its own
