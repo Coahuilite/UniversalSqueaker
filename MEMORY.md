@@ -285,6 +285,28 @@
   S4-1's own row was added there. The remaining known drift is §5.3/§5.4, which are deliberately kept
   verbatim as the record of why the pre-§0.4 conclusions were wrong.
 
+## Three lane facts the S4-2 close paid for (recorded 2026-09-22, reusable beyond that slice)
+
+- **A lane that counts DRAWN controls must draw the same frame its snapshot came from.** `DrawChecked` calls
+  `UiHost.DrawFrame`, and `DrawFrame` **re-arranges at the viewport it is handed** - so a census drawn at a
+  different width is counting a different layout. Measured: one and the same layer row reads **748px** in the
+  snapshot the step arranged at and **524px** when the census drew it at another width, and the census reported
+  "0 bands" for a page that visibly had four. It is the same defect class as the two-metrics incident: the
+  instrument's input was not the thing under test.
+- **At the hit seam, a row's identity is DRAW ORDER, not geometry.** The carrier opens one native group per row
+  Overlay, so every row control is handed its rect at its own group origin and the drawn rect carries no window
+  position; at 1024 flat all four layer rows even measure the **same** 68.67x524 box. A predicate that armed
+  "the first drawn rect matching this shape" therefore let a press aimed at the xenotype row select `human`
+  instead. What the lane may rely on is manifest/draw order (step 5 asserts arranged boxes in that order), so a
+  press arms the n-th control of the family and the PAYLOAD assertion proves which row it was.
+- **The engine does not hand the hit seam a control that falls outside the drawn viewport.** Measured: at a
+  720px canvas the xenotype row (y=632.67) is clipped, and a press aimed at it lands on the race row **above**
+  it - silently, because the rect it does get is that other row's. A lane that means to press every row must
+  arrange and draw a canvas tall enough for all of them (this one uses 1100px). Two facts that ride with it:
+  selecting a race is a **real filter write** that drops the xenotype card's row (so that row is pressed
+  first), and the fixture's row keys follow its own mode (so keys come from the live `Items` binding, never
+  from a literal list in the lane).
+
 ## Environment facts that are easy to get wrong (written down once)
 
 - **RimWorld's minimum supported resolution is 1024x768** (maintainer ruling 2026-09-06). 800x600 is NOT
