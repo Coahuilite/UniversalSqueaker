@@ -23,10 +23,11 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <item><b>input/button.PayloadKey</b> (G2) - the command receives the row's own key, resolved in the
 /// item-local binding scope. Asserted by PRESSING each row and checking that the model selected THAT
 /// row.</item>
-/// <item><b>input/button Chrome="none" + Height="Auto"</b> (G3) - a hit area that paints nothing. Asserted,
-/// together with the boundary spec section 0.4 already recorded: Auto heights from the element's OWN
-/// caption (empty =&gt; the density token), so the band cannot be stretched to the content-measured row it
-/// covers.</item>
+/// <item><b>input/button Chrome="none" + Height="MatchContent"</b> (G3) - a hit area that paints nothing
+/// and IS the row it covers. Asserted as the carrier's own rule: the declaring child contributes nothing to
+/// its parent's measured height, so it can resolve to the full content height of the non-declaring sibling
+/// it exists to cover. The retired shape could only reach 69.9% of a flat row and 53.3% of a wrapped one
+/// with two 24px <c>Auto</c> bands; the measured ratio is now 100% at every accepted width.</item>
 /// <item><b>text/wrapped with a bound string</b> - the per-item title/detail, measured by the atom.</item>
 /// </list>
 /// </para>
@@ -39,10 +40,13 @@ namespace UniversalSqueaker.KernelHostTests;
 /// element a <c>SelectedKey</c>/<c>Tone</c> (the recorded gap), reddens.</item>
 /// <item><b>EachRowReportsItsOwnKey</b> - a payload that is not per item (the pre-G2 shape) reddens: every
 /// row would select the same domain.</item>
-/// <item><b>TheHitBandIsTheDensityTokenNotTheRow</b> - dropping a band, or a caption that made Auto follow
-/// the content, reddens.</item>
-/// <item><b>TheRowsFollowTheManifestBandRule</b> - changing the template's Gap, the header Height or a
-/// declared band reddens.</item>
+/// <item><b>TheHitIsTheRow</b> - reverting the manifest's <c>Height="MatchContent"</c> to <c>Auto</c>
+/// reddens it, mutation-proven: the measured hit height drops to the 24px density token while the text
+/// column it exists to cover stays 68.67px ("the hit area must BE the text column's height"). The
+/// declaration guard in <b>CardsAreDeclaredRowSets</b> names the same defect one step earlier, so it is a
+/// GUARD and this is the proof.</item>
+/// <item><b>TheRowsFollowTheManifestBandRule</b> - changing the template's Gap, the header Height or the
+/// hit's declared height mode reddens.</item>
 /// </list>
 /// </para>
 ///
@@ -59,8 +63,8 @@ internal static class DeclarativePacksLaneTests
     private const float PageWidth = 800f;
     private const float PageHeight = 720f;
 
-    /// <summary>The density token the empty caption falls back to (manifest Styles/Density=regular).</summary>
-    private const float DensityRowHeight = 24f;
+    /// <summary>The step-3 canvas: tall enough that both layer cards draw in full (see FontsAndRows).</summary>
+    private const float StepThreeHeight = 1100f;
 
     private const float CardPadding = 12f;
     private const float CardGap = 6f;
@@ -75,16 +79,16 @@ internal static class DeclarativePacksLaneTests
 
     private static readonly string[] RetiredKinds = { "us/race-layer", "us/xenotype-layer" };
 
-    /// <summary>The two cards, their Repeat element, their Items binding, their template and the row keys the
-    /// rich fixture supplies (in projected order).</summary>
-    private static readonly (string Card, string RepeatId, string ItemsKey, string Template, string[] Keys)[]
-        Cards =
-        {
-            ("race-layer", "race-layer-rows", "race-rows", "race-layer-row",
-                new[] { "human", "testrace", "sanguophage" }),
-            ("xenotype-layer", "xenotype-layer-rows", "xenotype-rows", "xenotype-layer-row",
-                new[] { "human|sanguophage" }),
-        };
+    /// <summary>The two cards and the identifiers that connect them to the page: the Repeat element, the
+    /// ordered key binding the Repeat is built from, and the &lt;Templates&gt; name its rows are cut from.
+    /// The ROW KEYS deliberately do not appear here - they are the live model's, read through the Items
+    /// binding wherever a step needs them, because the fixture's keys follow its own mode (the wrapping
+    /// fixture renames the race row itself).</summary>
+    private static readonly (string Card, string RepeatId, string ItemsKey, string Template)[] Cards =
+    {
+        ("race-layer", "race-layer-rows", "race-rows", "race-layer-row"),
+        ("xenotype-layer", "xenotype-layer-rows", "xenotype-rows", "xenotype-layer-row"),
+    };
 
     public static int RunAll()
     {
@@ -93,7 +97,7 @@ internal static class DeclarativePacksLaneTests
         Step("selection lands on exactly one row (B1)", SelectionLandsOnExactlyOneRow);
         // G3 before G2 on purpose: the band census is an attribute of the declared shape, and running it
         // before the press step keeps "a band is missing" attributable to the step that owns the band.
-        Step("the hit band is the density token, not the row (G3 and its boundary)", TheHitBandIsTheDensityTokenNotTheRow);
+        Step("the hit IS the row it covers (G3, re-cut on Height=MatchContent)", TheHitIsTheRow);
         Step("every row reports its own key (G2)", EachRowReportsItsOwnKey);
         Step("the rows follow the manifest band rule", TheRowsFollowTheManifestBandRule);
         Console.WriteLine("DeclarativePacksLaneTests ALL PASS");
@@ -124,7 +128,7 @@ internal static class DeclarativePacksLaneTests
     {
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
 
-        foreach ((string card, string repeatId, string itemsKey, string template, string[] _) in Cards)
+        foreach ((string card, string repeatId, string itemsKey, string template) in Cards)
         {
             UiElementSpec? element = FindById(host.Manifest.Roots, card);
             Assert(element != null, "the shipped manifest must carry the card '" + card + "'");
@@ -148,20 +152,30 @@ internal static class DeclarativePacksLaneTests
                 "the row template must be an Overlay (the hit area has to COVER the text, not sit beside it),"
                 + " got " + root.Kind);
 
-            // The declared G2/G3 shape, read off the live template.
+            // The declared G2/G3 shape, read off the live template. ONE hit element since the carrier
+            // shipped Height="MatchContent" (FL 490d4f07): the two stacked bands were a MEASURED workaround
+            // (Auto measures a button's own caption), and together they reached only 69.9% of a flat row /
+            // 53.3% of a wrapped one.
             List<UiElementSpec> buttons = Descendants(root).Where(e => e.Kind == "input/button").ToList();
-            Assert(buttons.Count > 0, "the row template must declare its bare hit band(s)");
-            foreach (UiElementSpec button in buttons)
-            {
-                Assert(button.TryGetAttribute("Chrome", out string chrome) && chrome == "none",
-                    "G3: the row's hit band must paint nothing (Chrome=\"none\"), got '" + chrome + "'");
-                Assert(button.TryGetAttribute("Height", out string height) && height == "Auto",
-                    "G3: the hit band must be content-measured (Height=\"Auto\"), got '" + height + "'");
-                Assert(button.TryGetAttribute("ActionBind", out string action) && action == "select-domain",
-                    "the hit band must fire select-domain, got '" + action + "'");
-                Assert(button.TryGetAttribute("PayloadKey", out string payload) && payload == "payload",
-                    "G2: the hit band must carry the row's own key (PayloadKey=\"payload\"), got '" + payload + "'");
-            }
+            Assert(buttons.Count == 1,
+                "the row template must declare exactly ONE hit element: the two-band workaround has no reason"
+                + " to exist once the hit can take the row's measured content height, got " + buttons.Count);
+            UiElementSpec hit = buttons[0];
+            Assert(hit.TryGetAttribute("Chrome", out string chrome) && chrome == "none",
+                "G3: the row's hit area must paint nothing (Chrome=\"none\"), got '" + chrome + "'");
+            // Guard, not proof (see the lane's ledger): reverting this attribute is caught by the height
+            // assertion in the hit-IS-the-row step, and this line only brings the failure forward to the
+            // declaration it belongs to.
+            Assert(hit.TryGetAttribute("Height", out string height) && height == "MatchContent",
+                "the hit area must take the row's measured content height (Height=\"MatchContent\"), got '"
+                + height + "': Auto would measure the button's own caption and leave the row's lower half dead");
+            Assert(hit.TryGetAttribute("ActionBind", out string action) && action == "select-domain",
+                "the hit area must fire select-domain, got '" + action + "'");
+            Assert(hit.TryGetAttribute("PayloadKey", out string payload) && payload == "payload",
+                "G2: the hit area must carry the row's own key (PayloadKey=\"payload\"), got '" + payload + "'");
+            Assert(root.Children.Count == 2,
+                "the row Overlay must hold the hit plus the text column, so the mode has a sibling that does"
+                + " NOT declare it (the reference comes from the siblings), got " + root.Children.Count);
 
             List<UiElementSpec> texts = Descendants(root).Where(e => e.Kind == "text/wrapped").ToList();
             Assert(texts.Count == 2,
@@ -272,9 +286,9 @@ internal static class DeclarativePacksLaneTests
     private static List<string> RowsAnsweringSelected(UiHost host)
     {
         var found = new List<string>();
-        foreach ((string _, string _, string itemsKey, string _, string[] keys) in Cards)
+        foreach ((string _, string _, string itemsKey, string _) in Cards)
         {
-            foreach (string key in keys)
+            foreach (string key in host.Bindings.Get<IReadOnlyList<string>>(itemsKey))
             {
                 // TryGetBool, not Get: the per-row key is registered on demand, and a missing one must read
                 // as "not selected" through the same fail-soft query the carrier's own SelectedKey uses -
@@ -302,43 +316,70 @@ internal static class DeclarativePacksLaneTests
             FontsAndRows(out RecordingSettingsSource source, out UiHost host, out UiLayoutSnapshot snapshot);
             using (host)
             {
-                // The bands are recorded in the row Overlay's OWN group origin (the engine opens a native
-                // group per Overlay), so every row's first band is (0, 0, W, H) and its second is (0, H, W, H).
-                // Position therefore cannot identify a row inside the harness; what identifies it is the
-                // PAYLOAD, which is exactly the property under test. The lane presses the n-th band in draw
-                // order and asserts which domain the model received, so the mapping is proved rather than
-                // assumed.
-                float bandWidth = RectOf(snapshot, "race-layer-row-hit-a#" + Cards[0].Keys[0]).width;
+                // A row control is handed its rect in its row Overlay's OWN group origin (the engine opens a
+                // native group per Overlay), so a drawn rect carries no window position, and at 1024 flat all
+                // four layer rows even measure the same box. What the lane can rely on is DRAW ORDER (see
+                // PressBand), which is why the two row sets are collected below in manifest order, once, from
+                // the UNFILTERED snapshot. Which row a press actually reached is then asserted, not assumed:
+                // the payload is the property under test.
+                var viewport = new Vector2(PageWidth, StepThreeHeight);
 
-                // Race rows first (manifest order), two bands each, then the xenotype row.
-                for (int i = 0; i < Cards[0].Keys.Length; i++)
+                // The keys come from the live model rather than from the fixture list: a row's identity IS
+                // the projection's key, and the replay source changes the key one of the sets carries with
+                // its wrapping mode, so re-deriving them here is what keeps this step measuring the page.
+                //
+                // The PRESS ORDER is a product fact, not a lane convenience. Selecting a race is a real
+                // filter write, and the xenotype card then only keeps the domains of that race (measured: the
+                // first race press drops the 'human|...' row out of the replay source's XenotypeDomains, so a
+                // press addressed at it afterwards has no control to land on at all). The xenotype row is
+                // therefore pressed FIRST and the race rows after it - while both sets are still the ones the
+                // snapshot above was taken from.
+                var rowKeys = new List<string>();
+                var rowRects = new List<Rect>();
+                foreach ((string _, string _, string itemsKey, string template) in Cards)
                 {
-                    int ordinal = i * 2 + 1;
+                    foreach (string rowKey in host.Bindings.Get<IReadOnlyList<string>>(itemsKey))
+                    {
+                        rowKeys.Add(rowKey);
+                        rowRects.Add(RectOf(snapshot, template + "#" + rowKey));
+                    }
+                }
+
+                int raceCount = host.Bindings.Get<IReadOnlyList<string>>(Cards[0].ItemsKey).Count;
+                IReadOnlyList<string> raceKeys = rowKeys.GetRange(0, raceCount);
+
+                // The xenotype row: its key carries both identity halves, and the host decodes them.
+                source.LastSelectedScope = null;
+                source.LastSelectedRace = null;
+                source.LastSelectedTarget = null;
+                int revision = host.Session.ContentRevision;
+                PressBand(host, viewport, rowRects, raceCount + 1);
+                Assert(source.LastSelectedScope == SqueakVoicePackScope.Xenotype
+                       && source.LastSelectedRace == "human" && source.LastSelectedTarget == "sanguophage",
+                    "a composite row key must decode into a xenotype selection, got scope="
+                    + (source.LastSelectedScope?.ToString() ?? "null") + " race='" + (source.LastSelectedRace ?? "null")
+                    + "' target='" + (source.LastSelectedTarget ?? "null") + "'");
+                Assert(host.Session.ContentRevision == revision + 1,
+                    "and exactly one write (revision " + revision + " -> " + host.Session.ContentRevision + ")");
+
+                // Race rows (manifest order), one band each.
+                for (int i = 0; i < raceKeys.Count; i++)
+                {
+                    string key = raceKeys[i];
                     source.LastSelectedScope = null;
                     source.LastSelectedRace = null;
                     source.LastSelectedTarget = null;
-                    int revision = host.Session.ContentRevision;
-                    PressBand(host, bandWidth, ordinal);
+                    revision = host.Session.ContentRevision;
+                    PressBand(host, viewport, rowRects, i + 1);
                     Assert(source.LastSelectedScope == SqueakVoicePackScope.Race
-                           && source.LastSelectedRace == Cards[0].Keys[i],
-                        "pressing band #" + ordinal + " must select row " + i + " ('" + Cards[0].Keys[i]
+                           && source.LastSelectedRace == key,
+                        "pressing band #" + (i + 1) + " must select row " + i + " ('" + key
                         + "'); the model received scope=" + (source.LastSelectedScope?.ToString() ?? "null")
                         + " race='" + (source.LastSelectedRace ?? "null") + "'. A payload that is not per item is"
                         + " exactly the pre-G2 shape this slice exists to disprove");
                     Assert(host.Session.ContentRevision == revision + 1,
                         "and exactly one write (revision " + revision + " -> " + host.Session.ContentRevision + ")");
                 }
-
-                // The xenotype row: its key carries both identity halves, and the host decodes them.
-                source.LastSelectedScope = null;
-                source.LastSelectedRace = null;
-                source.LastSelectedTarget = null;
-                PressBand(host, bandWidth, Cards[0].Keys.Length * 2 + 1);
-                Assert(source.LastSelectedScope == SqueakVoicePackScope.Xenotype
-                       && source.LastSelectedRace == "human" && source.LastSelectedTarget == "sanguophage",
-                    "a composite row key must decode into a xenotype selection, got scope="
-                    + (source.LastSelectedScope?.ToString() ?? "null") + " race='" + (source.LastSelectedRace ?? "null")
-                    + "' target='" + (source.LastSelectedTarget ?? "null") + "'");
             }
         }
         finally
@@ -351,58 +392,102 @@ internal static class DeclarativePacksLaneTests
     // Step 4: G3 - and the boundary spec 0.4 recorded
     // ---------------------------------------------------------------------------------------------
 
-    private static void TheHitBandIsTheDensityTokenNotTheRow()
+    private static void TheHitIsTheRow()
     {
-        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
-        try
+        foreach (string language in new[] { "English", "ChineseSimplified" })
         {
-            float plainHit = HitHeight(wrapping: false);
-            float plainRow = RowHeight(wrapping: false);
-            float wrappedHit = HitHeight(wrapping: true);
-            float wrappedRow = RowHeight(wrapping: true);
-
-            // The census lives here so that the band shape and the band COUNT are proven by the same
-            // mutation: dropping a band has to redden this step rather than a later one.
-            Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
-            using (UiHost censusHost = UsKernelSettingsHost.Create(
-                       new RecordingSettingsSource { RichData = true }, new Program.StubMetrics()))
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
             {
-                censusHost.Bindings.Invoke("set-tab", PacksTab);
-                UiLayoutSnapshot census = Arrange(censusHost);
-                float bandWidth = RectOf(census, "race-layer-row-hit-a#" + Cards[0].Keys[0]).width;
-                int bandCount = CountBands(censusHost, bandWidth);
-                Assert(bandCount == (Cards[0].Keys.Length + Cards[1].Keys.Length) * 2,
-                    "the two layer cards must draw two bare bands per row ("
-                    + (Cards[0].Keys.Length + Cards[1].Keys.Length) + " rows), got " + bandCount);
+                foreach (float width in new[] { 1024f, 736f, 480f, 320f })
+                {
+                    var metrics = new Program.StubMetrics();
+                    var reports = new List<UiOverflowReport>();
+                    UiFitAudit.Attach(metrics, reports.Add);
+                    UiFitAudit.Enabled = true;
+                    try
+                    {
+                        foreach (bool wrapping in new[] { false, true })
+                        {
+                            using UiHost host = UsKernelSettingsHost.Create(
+                                new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping },
+                                metrics);
+                            host.Bindings.Invoke("set-tab", PacksTab);
+                            UiLayoutSnapshot snapshot = Arrange(host, width);
+                            host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
+
+                            // The row under test is the live model's first race row, not a fixture literal:
+                            // the replay source's keys carry its wrapping mode.
+                            string key = host.Bindings.Get<IReadOnlyList<string>>("race-rows")[0];
+                            Rect row = RectOf(snapshot, "race-layer-row#" + key);
+                            Rect hit = RectOf(snapshot, "race-layer-row-hit#" + key);
+                            Rect text = RectOf(snapshot, "race-layer-row-text#" + key);
+                            Rect title = RectOf(snapshot, "race-layer-row-title#" + key);
+                            Rect detail = RectOf(snapshot, "race-layer-row-detail#" + key);
+
+                            // (a) THE assertion: the hit IS the row. Same top, same width, and the same
+                            // MEASURED height as the text column it exists to cover - not merely "the
+                            // container grew".
+                            Assert(Math.Abs(hit.y - row.y) <= 0.5f,
+                                language + " " + width + ": the hit area must start at the row's top edge, "
+                                + Describe(hit) + " vs row " + Describe(row));
+                            Assert(Math.Abs(hit.x - row.x) <= 0.5f && Math.Abs(hit.xMax - row.xMax) <= 0.5f,
+                                language + " " + width + ": the hit area must span the row's full width, "
+                                + Describe(hit) + " vs row " + Describe(row));
+                            Assert(Math.Abs(hit.height - text.height) <= 0.5f,
+                                language + " " + width + ": the hit area must BE the text column's height -"
+                                + " hit " + Num(hit.height) + "px vs text " + Num(text.height) + "px");
+                            float coverage = hit.height / row.height * 100f;
+                            Assert(coverage >= 99.5f,
+                                language + " " + width + ": the hit area must cover the whole row - measured "
+                                + Num(coverage, "0.#") + "% of " + Num(row.height) + "px");
+
+                            // (b) the text column keeps its own shape (the two atom lines and the declared
+                            // 2px gap), so the box the hit matched is the box the player reads.
+                            float expectedText = title.height + 2f + detail.height;
+                            Assert(Math.Abs(text.height - expectedText) <= 0.5f,
+                                language + " " + width + ": the text column must stay title + 2px + detail ("
+                                + Num(expectedText) + "px), got " + Num(text.height) + "px");
+
+                            // (c) the census: ONE band per row now, across both cards. The draw pass must be
+                            // the SAME frame the snapshot came from - the frame re-arranges at the viewport it
+                            // is handed, so a census drawn at a different width counts a different layout (the
+                            // trap this step hit while the band identity was still the density token).
+                            var declaredRows = new List<Rect>();
+                            foreach ((string _, string _, string itemsKey, string template) in Cards)
+                            {
+                                foreach (string rowKey in host.Bindings.Get<IReadOnlyList<string>>(itemsKey))
+                                {
+                                    declaredRows.Add(RectOf(snapshot, template + "#" + rowKey));
+                                }
+                            }
+
+                            int bands = CountBands(host, width, declaredRows);
+                            Assert(bands == declaredRows.Count,
+                                language + " " + width + ": one hit area per row (" 
+                                + declaredRows.Count + " rows), got " + bands + " rows=["
+                                + string.Join(" | ", declaredRows.Select(r => Describe(r))) + "]");
+
+                            Console.WriteLine("[packs-hit] " + Num(width, "0") + " " + language
+                                + (wrapping ? " wrapped" : " flat ")
+                                + " row=" + Num(row.height) + "px hit=" + Num(hit.height) + "px text="
+                                + Num(text.height) + "px covered=" + Num(coverage, "0.#")
+                                + "% uncovered=" + Num(row.height - hit.height)
+                                + "px | control: the retired two-band workaround measured 69.9% flat / 53.3%"
+                                + " wrapped / 42px dead at the reference width");
+                        }
+                    }
+                    finally
+                    {
+                        UiFitAudit.Detach();
+                        UiFitAudit.Enabled = false;
+                    }
+                }
             }
-
-            // MUTATION PROOF for the band shape: the band is the density token the atom's empty caption falls
-            // back to, so it is INDEPENDENT of the row it covers. Dropping a band changes the height; a caption
-            // that made Auto follow content would change it too.
-            Assert(Math.Abs(plainHit - DensityRowHeight * 2f) <= 0.5f,
-                "the row's hit area must be the two declared bare bands, i.e. 2 x the density token ("
-                + (DensityRowHeight * 2f) + "px), got " + Num(plainHit));
-            Assert(Math.Abs(wrappedHit - plainHit) <= 0.5f,
-                "the hit area must not follow the row's content height: plain " + Num(plainHit) + "px vs"
-                + " wrapping " + Num(wrappedHit) + "px");
-
-            // THE BOUNDARY, measured rather than assumed (spec 0.4 G3): a wrapped row outgrows its band, and
-            // the uncovered remainder is named in px so the friction report can cite it.
-            Assert(wrappedRow > plainRow + 1f,
-                "the wrapping fixture must actually grow the row, or this step measures nothing: plain "
-                + Num(plainRow) + "px, wrapping " + Num(wrappedRow) + "px");
-            Assert(wrappedRow > wrappedHit,
-                "the wrapped row (" + Num(wrappedRow) + "px) must exceed its hit area (" + Num(wrappedHit)
-                + "px) - that gap IS the G3 boundary this slice records");
-
-            Console.WriteLine("[packs-hit] flat row=" + Num(plainRow) + "px hit=" + Num(plainHit) + "px covered="
-                + Num(plainHit / plainRow * 100f, "0.#") + "% | wrapped row=" + Num(wrappedRow) + "px hit="
-                + Num(wrappedHit) + "px covered=" + Num(wrappedHit / wrappedRow * 100f, "0.#")
-                + "% uncovered=" + Num(wrappedRow - wrappedHit) + "px");
-        }
-        finally
-        {
-            Program.SetTranslatorResolver(null);
+            finally
+            {
+                Program.SetTranslatorResolver(null);
+            }
         }
     }
 
@@ -423,7 +508,8 @@ internal static class DeclarativePacksLaneTests
                 UiLayoutSnapshot snapshot = Arrange(host);
                 host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
 
-                foreach ((string card, _, string itemsKey, string template, string[] keys) in Cards)
+                var expectedRows = new List<Rect>();
+                foreach ((string card, _, string itemsKey, string template) in Cards)
                 {
                     Rect cardRect = RectOf(snapshot, card);
                     float headerHeight = RectOf(snapshot, card + "-header").height;
@@ -432,51 +518,45 @@ internal static class DeclarativePacksLaneTests
 
                     float rowsHeight = 0f;
                     string evidence = "";
-                    foreach (string key in keys)
+                    IReadOnlyList<string> rowKeys = host.Bindings.Get<IReadOnlyList<string>>(itemsKey);
+                    foreach (string rowKey in rowKeys)
                     {
-                        Rect row = RectOf(snapshot, template + "#" + key);
-                        Rect hitA = RectOf(snapshot, template + "-hit-a#" + key);
-                        Rect hitB = RectOf(snapshot, template + "-hit-b#" + key);
-                        Rect title = RectOf(snapshot, template + "-title#" + key);
-                        Rect detail = RectOf(snapshot, template + "-detail#" + key);
+                        Rect row = RectOf(snapshot, template + "#" + rowKey);
+                        Rect hit = RectOf(snapshot, template + "-hit#" + rowKey);
+                        Rect title = RectOf(snapshot, template + "-title#" + rowKey);
+                        Rect detail = RectOf(snapshot, template + "-detail#" + rowKey);
 
-                        // The two bands are one stack with no gap, starting at the row's own top edge: the
-                        // whole band is the hit surface, which is what makes a click anywhere on the upper
-                        // part of the row select it.
-                        Assert(Math.Abs(hitB.y - hitA.yMax) <= 0.5f,
-                            key + ": the two bare bands must be stacked without a gap (" + Describe(hitA)
-                            + " then " + Describe(hitB) + ")");
-                        Assert(Math.Abs(hitA.y - row.y) <= 0.5f,
-                            key + ": the hit stack must start at the row's top edge (" + Describe(hitA)
-                            + " vs row " + Describe(row) + ")");
-                        Assert(Math.Abs(hitA.x - row.x) <= 0.5f && Math.Abs(hitA.xMax - row.xMax) <= 0.5f,
-                            key + ": the hit band must span the row's full width (" + Describe(hitA) + " vs "
+                        // The hit area IS the row: same origin, same width, and - the point of the re-cut -
+                        // the same MEASURED height. Height="MatchContent" resolves against the row's
+                        // non-declaring sibling, so the band can no longer be the density token the retired
+                        // Auto shape fell back to, and there is nothing left of the row for a click to miss.
+                        Assert(Close(hit.x, row.x) && Close(hit.y, row.y) && MatchesShape(hit, row),
+                            rowKey + ": the hit area must be the row's own box (" + Describe(hit) + " vs row "
                             + Describe(row) + ")");
+                        Assert(Math.Abs(row.height - Math.Max(1f, title.height + 2f + detail.height)) <= 0.5f,
+                            rowKey + ": the row must still be its text column's box at " + language + " (title "
+                            + Num(title.height) + " + 2 + detail " + Num(detail.height) + "), got "
+                            + Num(row.height) + " - a declaring child contributes nothing to the parent's height");
 
                         // The text lines share one width, and their bands are the atom's own rule.
-                        string titleText = host.Bindings.Get<string>(itemsKey + "." + key + ".title");
-                        string detailText = host.Bindings.Get<string>(itemsKey + "." + key + ".detail");
+                        string titleText = host.Bindings.Get<string>(itemsKey + "." + rowKey + ".title");
+                        string detailText = host.Bindings.Get<string>(itemsKey + "." + rowKey + ".detail");
                         Assert(Math.Abs(title.x - row.x) <= 0.5f && Math.Abs(title.xMax - row.xMax) <= 0.5f,
-                            key + ": the title line must span the row (" + Describe(title) + ")");
+                            rowKey + ": the title line must span the row (" + Describe(title) + ")");
                         Assert(Math.Abs(title.xMax - detail.xMax) <= 0.5f,
-                            key + ": both text lines must share one right edge");
+                            rowKey + ": both text lines must share one right edge");
                         float expectedTitle = WrappedBand(metrics, titleText, title.width);
                         float expectedDetail = WrappedBand(metrics, detailText, detail.width);
                         Assert(Math.Abs(title.height - expectedTitle) <= 0.5f,
-                            key + ": title band " + Num(title.height) + "px vs the atom's rule " + Num(expectedTitle)
+                            rowKey + ": title band " + Num(title.height) + "px vs the atom's rule " + Num(expectedTitle)
                             + "px for '" + titleText + "'");
                         Assert(Math.Abs(detail.height - expectedDetail) <= 0.5f,
-                            key + ": detail band " + Num(detail.height) + "px vs the atom's rule " + Num(expectedDetail)
+                            rowKey + ": detail band " + Num(detail.height) + "px vs the atom's rule " + Num(expectedDetail)
                             + "px for '" + detailText + "'");
 
-                        float expectedRow = Math.Max(hitA.height + hitB.height, title.height + 2f + detail.height);
-                        Assert(Math.Abs(row.height - expectedRow) <= 0.5f,
-                            key + ": the row must be the taller of its two Overlay children at " + language
-                            + " (bands " + Num(hitA.height + hitB.height) + " vs text "
-                            + Num(title.height + 2f + detail.height) + "), got " + Num(row.height));
-
                         rowsHeight += row.height;
-                        evidence += key + "=" + Num(row.height) + "/hit:" + Num(hitA.height + hitB.height) + " ";
+                        expectedRows.Add(row);
+                        evidence += rowKey + "=" + Num(row.height) + "/hit:" + Num(hit.height) + " ";
                     }
 
                     // Two relations, asserted separately so a failure names which one moved: the card over its
@@ -489,7 +569,7 @@ internal static class DeclarativePacksLaneTests
                         + Num(repeatHeight) + ")");
 
                     float repeatGap = RepeatGap;
-                    float expectedRepeat = RepeatPadding * 2f + rowsHeight + repeatGap * (keys.Length - 1);
+                    float expectedRepeat = RepeatPadding * 2f + rowsHeight + repeatGap * (rowKeys.Count - 1);
                     Assert(Math.Abs(repeatHeight - expectedRepeat) <= 0.5f,
                         "the " + card + " row set must be the rows plus the declared Repeat Gap at " + language
                         + ": set " + Num(repeatHeight) + " vs " + Num(expectedRepeat) + " (rows " + Num(rowsHeight)
@@ -498,6 +578,26 @@ internal static class DeclarativePacksLaneTests
                     Console.WriteLine("[packs-row] " + language + " " + card + " card=" + Num(cardRect.height)
                         + " header=" + Num(headerHeight) + " set=" + Num(repeatHeight) + " rows=[" + evidence + "]");
                 }
+
+                // The declared shape of the template is now ONE full-height hit, and this is that claim's
+                // own evidence: a single checked frame hands the hit seam exactly one band per row, in
+                // manifest order, and each band's drawn box is the row's arranged box. Before the re-cut the
+                // same census saw two boxes per row (the 24px Auto token plus a second copy), so this is the
+                // assertion the old shape reddens.
+                List<Rect> bands = OrderedBands(host, PageWidth, expectedRows);
+                Assert(bands.Count == expectedRows.Count,
+                    "one hit area per declared row (" + expectedRows.Count + " rows across both cards), got "
+                    + bands.Count + " - a second band per row means the template still carries the retired"
+                    + " two-box workaround");
+                for (int i = 0; i < bands.Count; i++)
+                {
+                    Assert(MatchesShape(bands[i], expectedRows[i]),
+                        "band #" + (i + 1) + " must be the row the manifest declares at that draw position: got "
+                        + Describe(bands[i]) + ", expected " + Describe(expectedRows[i]) + " at " + language);
+                }
+
+                Console.WriteLine("[packs-band] " + language + " bands=" + bands.Count + " rows="
+                    + string.Join(" | ", expectedRows.Select(r => Describe(r))));
             }
             finally
             {
@@ -510,72 +610,128 @@ internal static class DeclarativePacksLaneTests
     // Plumbing
     // ---------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// The step-3 fixture: a REAL full frame for every layer row. The canvas is taller than the page's own
+    /// 720px on purpose - the engine does not hand the hit seam a control that falls outside the viewport it
+    /// draws (measured: at 720px the xenotype row sits below the clip, and a press aimed at it lands on the
+    /// race row above instead).
+    /// </summary>
     private static void FontsAndRows(
         out RecordingSettingsSource source, out UiHost host, out UiLayoutSnapshot snapshot)
     {
         source = new RecordingSettingsSource { RichData = true };
         host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
         host.Bindings.Invoke("set-tab", PacksTab);
-        snapshot = Arrange(host);
+        host.MeasureAndArrange(new Vector2(PageWidth, StepThreeHeight));
+        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        snapshot = host.MeasureAndArrange(new Vector2(PageWidth, StepThreeHeight));
     }
 
     private static UiLayoutSnapshot Arrange(UiHost host)
     {
-        host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        return Arrange(host, PageWidth);
+    }
+
+    private static UiLayoutSnapshot Arrange(UiHost host, float width, float height = PageHeight)
+    {
+        host.MeasureAndArrange(new Vector2(width, height));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-        return host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        return host.MeasureAndArrange(new Vector2(width, height));
+    }
+
+    /// <summary>Sub-pixel comparison for rect edges: geometry here is float math on whole pixels.</summary>
+    private static bool Close(float a, float b)
+    {
+        return Math.Abs(a - b) <= 0.5f;
     }
 
     /// <summary>
-    /// True for a row's bare band as the draw hands it to the hit seam: every row Overlay opens its own native
-    /// group, so a band is the group-local rect <c>(0, k * RowHeight, W, RowHeight)</c>.
+    /// True when a drawn control's box is a declared row's MEASURED box. Only the box, not the position:
+    /// the carrier opens one native group per row Overlay, so every row control is handed its rect at that
+    /// overlay's own origin and the drawn rect carries no window position to compare. What identifies a
+    /// declared row here is therefore its size - and with one <c>MatchContent</c> hit per row that size IS
+    /// the row's own measured content box, which is the property this lane is about.
     /// </summary>
-    private static bool IsBand(Rect rect, float width)
+    private static bool MatchesShape(Rect rect, Rect row)
     {
-        return Math.Abs(rect.x) <= 0.5f
-            && (Math.Abs(rect.y) <= 0.5f || Math.Abs(rect.y - DensityRowHeight) <= 0.5f)
-            && Math.Abs(rect.height - DensityRowHeight) <= 0.5f
-            && Math.Abs(rect.width - width) <= 0.5f;
+        return Close(rect.width, row.width) && Close(rect.height, row.height);
     }
 
-    /// <summary>How many row bands one draw pass registers - the recording pass the presses are derived from.</summary>
-    private static int CountBands(UiHost host, float width)
+    /// <summary>
+    /// The band list one checked frame registers: one entry per declared row, resolved in draw order. The
+    /// row's identity at the hit seam is its MEASURED BOX (see MatchesShape), so a row whose drawn control is
+    /// missing shows up as a short list and a surplus control is invisible to every declared row - which is
+    /// what makes this census redden for both shapes of the defect.
+    /// </summary>
+    private static List<Rect> OrderedBands(UiHost host, float width, IReadOnlyList<Rect> declaredRows)
     {
-        int count = 0;
+        var drawn = new List<Rect>();
         try
         {
             SetField(ButtonOverrideField, new Func<Rect, bool>(rect =>
             {
-                if (IsBand(rect, width)) count++;
+                if (Math.Abs(rect.x) <= 0.5f) drawn.Add(rect);
                 return false;
             }));
-            host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
+            host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
         }
         finally
         {
             ClearOverrides();
         }
 
-        return count;
+        // One entry per declared row, addressed in draw order, so a missing band shows up as a short list
+        // and a second band per row is visible as a drawn box no declared row claims.
+        var found = new List<Rect>();
+        foreach (Rect row in declaredRows)
+        {
+            foreach (Rect rect in drawn)
+            {
+                if (MatchesShape(rect, row))
+                {
+                    found.Add(rect);
+                    break;
+                }
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>How many row bands one draw pass registers - the recording pass the presses are derived from.</summary>
+    private static int CountBands(UiHost host, float width, IReadOnlyList<Rect> declaredRows)
+    {
+        return OrderedBands(host, width, declaredRows).Count;
     }
 
     /// <summary>
-    /// Presses exactly the <paramref name="ordinal"/>-th band of the draw pass (1-based, draw order), and
-    /// nothing else: the override answers true only for that band, so one press can only be decided by one
-    /// control - the property IMGUI's overlapping-hit case would break.
+    /// Presses exactly one row: the <paramref name="ordinal"/>-th (1-based) control of the draw pass that
+    /// belongs to <paramref name="family"/>, and nothing else. The override answers true for one rect, so a
+    /// press can only ever be decided by one control - the property IMGUI's overlapping-hit case would break.
+    ///
+    /// <para>
+    /// WHY ORDER AND NOT GEOMETRY. The carrier opens a native group per row Overlay, so every row control is
+    /// handed its rect at that overlay's own origin and the drawn rect carries no window position. At 1024
+    /// flat all four layer rows measure the same 68.67px box, and the xenotype card's single row is
+    /// indistinguishable from the race card's first row by box alone - measured, and the failure it produced
+    /// was a press aimed at the xenotype row that selected 'human' instead. What IS dependable is that the
+    /// engine draws a row set in its declared item order (DeclarativePacksLaneTests step 5 asserts exactly
+    /// that against the arranged boxes), so the ordinal inside a family names the row; the payload assertion
+    /// after the press is what proves it.
+    /// </para>
     /// </summary>
-    private static void PressBand(UiHost host, float width, int ordinal)
+    private static void PressBand(UiHost host, Vector2 viewport, IReadOnlyList<Rect> family, int ordinal)
     {
         int seen = 0;
         try
         {
             SetField(ButtonOverrideField, new Func<Rect, bool>(rect =>
             {
-                if (!IsBand(rect, width)) return false;
+                if (!MatchesFamilyRow(rect, family)) return false;
                 seen++;
                 return seen == ordinal;
             }));
-            host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
+            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
         }
         finally
         {
@@ -583,27 +739,24 @@ internal static class DeclarativePacksLaneTests
         }
 
         Assert(seen >= ordinal,
-            "the draw pass registered only " + seen + " row bands, so band #" + ordinal + " was never reached");
+            "the draw pass registered only " + seen + " row band(s) of this set, so band #" + ordinal
+            + " was never reached");
     }
 
-    private static float HitHeight(bool wrapping)
+    /// <summary>
+    /// True when a drawn control is one of <paramref name="family"/>'s rows: a row's measured box at its
+    /// group's own x-origin. A control that is not a row (a header button, a checkbox) or belongs to another
+    /// card's set is never armed, so one press can only be decided by the row the caller intended.
+    /// </summary>
+    private static bool MatchesFamilyRow(Rect rect, IReadOnlyList<Rect> family)
     {
-        using UiHost host = UsKernelSettingsHost.Create(
-            new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping }, new Program.StubMetrics());
-        host.Bindings.Invoke("set-tab", PacksTab);
-        UiLayoutSnapshot snapshot = Arrange(host);
-        string key = wrapping ? "human" : "human";
-        return RectOf(snapshot, "race-layer-row-hit-a#" + key).height
-            + RectOf(snapshot, "race-layer-row-hit-b#" + key).height;
-    }
+        if (Math.Abs(rect.x) > 0.5f) return false;
+        foreach (Rect row in family)
+        {
+            if (MatchesShape(rect, row)) return true;
+        }
 
-    private static float RowHeight(bool wrapping)
-    {
-        using UiHost host = UsKernelSettingsHost.Create(
-            new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping }, new Program.StubMetrics());
-        host.Bindings.Invoke("set-tab", PacksTab);
-        UiLayoutSnapshot snapshot = Arrange(host);
-        return RectOf(snapshot, "race-layer-row#human").height;
+        return false;
     }
 
     /// <summary>The atom's own band contract: a text/wrapped element measures the wrapped height of its

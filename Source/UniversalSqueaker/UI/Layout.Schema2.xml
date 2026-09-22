@@ -361,25 +361,31 @@
        which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
        every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
   <Templates>
-    <!-- S4-2 rows: an Overlay because the hit area must COVER the text rather than sit beside it. The hit
-         column is declared first so it draws first (it paints nothing at all); the text column is drawn
-         over it. Both are full-width Overlay children, so the two bands and the two text lines share one
+    <!-- S4-2 rows, re-cut when the carrier shipped Height="MatchContent" (FL 490d4f07). An Overlay, because
+         the hit area must COVER the text rather than sit beside it; the hit is declared FIRST so it draws
+         first (Chrome="none" paints nothing) and the text column is drawn over it.
+
+         ONE hit element, and it takes the row's measured content height. The two stacked bare bands this
+         template used to carry were a MEASURED workaround, not a design: Height="Auto" measures a button's
+         own caption, so two 24px bands were the only way to reach the 48px row the composite drew - 69.9% of
+         a flat row and 53.3% of a wrapped one, leaving the detail line's lower half dead. MatchContent asks
+         the PARENT (an Overlay takes the maximum over its children) for the height its content resolved to,
+         and the hit contributes nothing to that reference, so the hit IS the row: measured coverage 100% at
+         every accepted width and in both languages (DeclarativePacksLaneTests prints the ratio and keeps the
+         old 69.9/53.3/42px numbers as its control).
+
+         The declaring child must have at least one sibling that does not declare the mode, which is exactly
+         the text column. Both are full-width Overlay children, so the hit and the two text lines share one
          left/right edge by construction. -->
     <Overlay Id="race-layer-row" Padding="0">
-      <Column Id="race-layer-row-hit" Gap="0" Padding="0">
-        <Widget Id="race-layer-row-hit-a" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
-        <Widget Id="race-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
-      </Column>
+      <Widget Id="race-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
       <Column Id="race-layer-row-text" Gap="2" Padding="0">
         <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/race-layer/row" />
         <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
       </Column>
     </Overlay>
     <Overlay Id="xenotype-layer-row" Padding="0">
-      <Column Id="xenotype-layer-row-hit" Gap="0" Padding="0">
-        <Widget Id="xenotype-layer-row-hit-a" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
-        <Widget Id="xenotype-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
-      </Column>
+      <Widget Id="xenotype-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
       <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
         <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/xenotype-layer/row" />
         <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
