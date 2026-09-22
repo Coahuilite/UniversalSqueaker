@@ -45,6 +45,7 @@ internal static class UsAuditRoutingLaneTests
         // single-line band on its own - a finding this lane would then blame on the ruler.
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
 
+
         try
         {
             // Two hosts with two DIFFERENT rulers. A floods, B is the calibrated stub.
@@ -76,12 +77,24 @@ internal static class UsAuditRoutingLaneTests
                 int floodedFindings = CountFit(floodedEvents);
                 int calibratedFindings = CountFit(calibratedEvents);
 
+#if US_FRAME_DEBUG
+                foreach (UiDiagnosticEvent dbg in floodedEvents)
+                {
+                    Console.WriteLine("[dbgE] " + dbg.Kind + " key=" + dbg.Key + " hasRecord=" + dbg.Overflow.HasValue);
+                }
+                foreach (UiDiagnosticEvent dbg in calibratedEvents)
+                {
+                    Console.WriteLine("[dbgE] B " + dbg.Kind + " key=" + dbg.Key + " hasRecord=" + dbg.Overflow.HasValue);
+                }
+#endif
                 Assert(floodedFindings > 0,
                     "the flood ruler's host must report fit findings at all, or this lane asserts nothing");
+
                 Assert(calibratedFindings == 0,
                     "host B must not inherit host A's ruler: B reported " + calibratedFindings
-                    + " finding(s) while the calibrated stub (the ruler B was created with) reports none on the "
-                    + "shipped page");
+                    + " overflow finding(s) while the calibrated stub (the ruler B was created with) reports"
+                    + " none on the shipped page [style-fallback records on B: " + StyleFallbacks(calibratedEvents)
+                    + "]");
                 Assert(legacySink.Count == 0,
                     "no path may consult the process-wide sink while a subscription is live; it received "
                     + legacySink.Count + " finding(s)");
@@ -149,12 +162,34 @@ internal static class UsAuditRoutingLaneTests
         return UsKernelSettingsHost.Create(fake, metrics);
     }
 
+    /// <summary>
+    /// The host's OVERFLOW findings - and the filter is the point, not a convenience. Both of the audit's
+    /// channels publish under one kind (<c>fit.overflow</c> and <c>fit.style-fallback</c> both arrive as
+    /// <see cref="UiDiagnosticKind.Fit"/>), and only the first carries an
+    /// <see cref="UiDiagnosticEvent.Overflow"/> record. A bare kind count therefore conflates "this
+    /// host's ruler decided a string does not fit its rect" - what this lane is about - with "some binding
+    /// answered a fallback" - a different finding with a different owner and its own lanes. Measured while
+    /// S4-3 re-cut this step: the calibrated host publishes exactly one style-fallback record and no
+    /// overflow record, so the unfiltered count reported a ruler leak that was not there.
+    /// </summary>
     private static int CountFit(IReadOnlyList<UiDiagnosticEvent> events)
     {
         int found = 0;
         foreach (UiDiagnosticEvent candidate in events)
         {
-            if (candidate.Kind == UiDiagnosticKind.Fit) found++;
+            if (candidate.Kind == UiDiagnosticKind.Fit && candidate.Overflow.HasValue) found++;
+        }
+
+        return found;
+    }
+
+    /// <summary>Fit-kind records that are NOT overflow findings, counted so the message above stays honest.</summary>
+    private static int StyleFallbacks(IReadOnlyList<UiDiagnosticEvent> events)
+    {
+        int found = 0;
+        foreach (UiDiagnosticEvent candidate in events)
+        {
+            if (candidate.Kind == UiDiagnosticKind.Fit && !candidate.Overflow.HasValue) found++;
         }
 
         return found;

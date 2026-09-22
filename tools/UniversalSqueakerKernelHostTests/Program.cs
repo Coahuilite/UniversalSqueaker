@@ -114,6 +114,7 @@ internal static class Program
         Step("full typed write coverage", FullTypedWriteCoverage);
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
+        Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -929,7 +930,10 @@ internal static class Program
         AssertBumped("global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f));
         AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
         AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
-        AssertBumped("min-interval", () => host.Bindings.Set("min-interval", 300));
+        AssertBumped("interval-ticks", () => host.Bindings.Set("interval-ticks", 300f));
+        AssertBumped("interval-seconds", () => host.Bindings.Set("interval-seconds", 5f));
+        AssertBumped("timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus"));
+        AssertBumped("timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus"));
         AssertBumped("cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f));
         AssertBumped("dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled));
         AssertBumped("localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true));
@@ -1228,17 +1232,17 @@ internal static class Program
         }
 
         Assert(declaredKinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
-        // The Registrar's complete set must be resolvable in the US scope, and the five kinds S4-1/S4-2
-        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (13 = 12 settings + the
-        // overlay readout); this one is a guard, and it is written as ">= 13" rather than "== 13" because the
+        // The Registrar's complete set must be resolvable in the US scope, and the six kinds S4-1..S4-3
+        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (12 = 11 settings + the
+        // overlay readout); this one is a guard, and it is written as ">= 12" rather than "== 12" because the
         // diagnostics panel registers its own seven kinds into the same scope lazily, so a count taken here
         // depends on which lane ran first.
         IReadOnlyCollection<string> usKinds = UiWidgetRegistry.KnownKinds(ExpectedSource);
-        Assert(usKinds.Count >= 13, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
+        Assert(usKinds.Count >= 12, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
         foreach (string retired in new[]
                  {
                      "us/global-volume", "us/basic-tuning", "us/camera-indicator",
-                     "us/race-layer", "us/xenotype-layer"
+                     "us/race-layer", "us/xenotype-layer", "us/timing"
                  })
         {
             Assert(!usKinds.Contains(retired),
@@ -1646,10 +1650,36 @@ internal static class Program
         Assert(fake.LastEatPrecisionIncludeDrugs == true, "eat-precision-include-drugs value write routes");
         bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative);
         Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative, "set-distance-preset action routes");
-        bindings.Set("min-interval", 300);
-        Assert(fake.LastMinIntervalTicks == 300, "min-interval value write routes");
+        // S4-3: the interval is one value in two units, so both declared atoms must land in the SAME
+        // business field, and the seconds projection must convert back into machine ticks.
+        bindings.Set("interval-ticks", 300f);
+        Assert(fake.LastMinIntervalTicks == 300, "interval-ticks value write routes");
+        bindings.Set("interval-seconds", 5f);
+        Assert(fake.LastMinIntervalTicks == 300, "interval-seconds writes the same field in ticks (5 s = 300)");
         bindings.Set("cooldown-multiplier", 1.5f);
         Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.5f) < 0.001f, "cooldown-multiplier value write routes");
+        // The two declarative stepper commands: the step and its window live on the host side of the
+        // command, exactly where the retired composite applied them. The expected values are read from the
+        // INSTRUMENT: this fixture's views carry a constant globalCooldownMultiplier of 1.0 (see
+        // RecordingSettingsSource.BuildRichView/BuildEmptyView), so the command's own arithmetic is what the
+        // two writes below measure - and the pair proves they step in opposite directions instead of both
+        // landing on one value.
+        fake.LastCooldownMultiplier = null;
+        bindings.Invoke("timing-multiplier-minus");
+        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 0.9f) < 0.001f,
+            "timing-multiplier-minus steps the viewed 1.0 down by the composite's 0.1, got "
+            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
+        fake.LastCooldownMultiplier = null;
+        bindings.Invoke("timing-multiplier-plus");
+        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.1f) < 0.001f,
+            "timing-multiplier-plus steps it up by 0.1, got "
+            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
+        // Deliberately NOT asserted here: "an out-of-window write is clamped". This fixture's
+        // SetGlobalCooldownMultiplier is a recording stub with no clamp (RecordingSettingsSource), so in
+        // THIS lane the assertion would measure the fake, not the product - the clamp lives in
+        // UniversalSqueakerSettings.SetGlobalCooldownMultiplier and assert on a route the instrument does
+        // not carry is the green-for-the-wrong-reason shape this project bans. The manifest's declared
+        // 0..3 window is pinned by DeclarativeTimingLaneTests against the manifest itself.
         bindings.Set("dev-logging", SqueakDevLoggingMode.Disabled);
         Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled, "dev-logging value write routes");
         bindings.Set("localize-debug-menu", true);

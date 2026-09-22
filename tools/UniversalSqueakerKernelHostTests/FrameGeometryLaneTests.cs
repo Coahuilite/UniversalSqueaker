@@ -123,6 +123,8 @@ internal static class FrameGeometryLaneTests
 
                             string context = width.ToString("0", CultureInfo.InvariantCulture) + "px/" + language
                                 + "/" + tab + "/" + (open ? "open" : "closed");
+
+
                             CheckRects(snapshot, context, problems);
                             var window = new Rect(0f, 0f, width, Height);
                             var placed = new List<Placed>();
@@ -243,6 +245,8 @@ internal static class FrameGeometryLaneTests
 
         Assert(problems.Count == 0, Report(problems));
     }
+
+
 
     /// <summary>Every rect the frame published is finite and non-negative; every scroll box is real.</summary>
     private static void CheckRects(UiLayoutSnapshot snapshot, string context, List<string> problems)

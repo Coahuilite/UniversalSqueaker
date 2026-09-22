@@ -134,7 +134,52 @@
             </Row>
           </Column>
         </Section>
-        <Widget Id="timing" Kind="us/timing" TitleKey="US.Section.TriggerTiming" HelpKey="us/timing" Tab="Overview" />
+        <!-- S4-3: the trigger-timing card is DECLARATIVE and its kind (us/timing) is retired in the same
+             change. Card chrome is the engine's Section with the checklist card's explicit geometry
+             (Padding 12 + header 26 + Section Gap 6 + body + Padding 12), which is what
+             UsCardLayout.MeasureBody drew.
+
+             The caption is the friction of this slice FIXED rather than routed around. The composite
+             reserved its caption band against a hand-written SAMPLE constant ("10.0 s") because measure and
+             draw had to agree; the declarative shape has no reserved-band vocabulary at all, so the caption
+             is a bound string instead: the host builds the ONE sentence the atom draws
+             (US.Tuning.MinInterval formatted with the live seconds value) and registers it as a read-only
+             string binding, and the atom measures exactly the string it paints. measure == draw now holds BY
+             CONSTRUCTION - the drift a sample constant could develop is gone, not moved.
+
+             What the declarative shape does NOT reproduce is the composite's reserved caption BAND. Its
+             floor came from that sample and the vocabulary has no MinHeight/reserved-band attribute, so
+             reserving one would have meant a fixed Height and a truncated band. The declaration takes the
+             other branch deliberately: the caption is a flex sibling that takes the row's leftover, exactly
+             like the global-volume card's caption, so nothing is reserved and nothing is clipped.
+             Consequence, measured: at the narrowest centre column the caption wraps to one extra line and
+             the card is taller there.
+
+             Both number fields are flex siblings for the same reason: a declared fixed width is what made
+             the engine place a child outside its own row when the drawer's degenerate arrangement shrank the
+             centre column below that width (FrameGeometryLaneTests measured it), while a flex field is
+             inside its row at every width by construction.
+
+             The multiplier row is the composite's stepper cluster declared directly: the label takes the
+             leftover (a translated label that needs two lines grows the row, which is what
+             WrappingTimingLabelGrowsTheCard measures), and the minus/plus buttons keep the composite's own
+             26px weight with the field flexing between them. The two buttons fire their own commands - a
+             declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
+             the host side of the command, exactly where the composite applied it. -->
+        <Section Id="timing" Tab="Overview" Padding="12" Gap="6">
+          <Widget Id="timing-header" Kind="section/header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
+          <Row Id="timing-interval-row" Gap="8" Padding="0">
+            <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
+            <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" />
+          </Row>
+          <Widget Id="timing-interval-slider" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
+          <Row Id="timing-multiplier-row" Gap="4" Padding="0">
+            <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-minus" Kind="input/button" Text="−" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-plus" Kind="input/button" Text="+" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
+          </Row>
+        </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6">
           <Widget Id="camera-indicator-header" Kind="section/header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0">

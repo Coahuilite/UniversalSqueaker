@@ -159,6 +159,32 @@ public static class UsKernelSettingsHost
     private const string ContentScrollId = "content-scroll";
     private const string HelpScrollId = "help-scroll";
 
+    // S4-3, the timing card. The interval atom is a float slider (input/slider validates float), and the
+    // window it declares in the manifest is 1..600 ticks - the same window the retired us/timing widget
+    // clamped into. The multiplier step and window are the widget's constants, moved to the host with the
+    // two commands the declarative stepper buttons fire.
+    private const float IntervalTicksFloor = 1f;
+    private const float IntervalTicksCeil = 600f;
+    private const float SecondsPerTick = 60f;
+    private const float MultiplierStep = 0.1f;
+    private const float MultiplierFloor = 0f;
+    private const float MultiplierCeil = 3f;
+
+    /// <summary>
+    /// The one interval sentence the card paints and sizes, built from the live value so the
+    /// <c>text/wrapped</c> atom's band is the wrap of the very string that is drawn. The retired composite
+    /// measured its caption band against a hand-written worst-case SAMPLE constant; here measure and draw
+    /// read the same string by construction, so the drift that constant could develop is fixed rather than
+    /// relocated.
+    /// </summary>
+    private static string IntervalCaption(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        string seconds = (source.BuildView().GlobalMinIntervalTicks / SecondsPerTick)
+            .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
+        return string.Format(translation.Translate("US.Tuning.MinInterval"), seconds);
+    }
+
+
     private static UiBindings BuildBindings(
         IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
     {
@@ -244,7 +270,48 @@ public static class UsKernelSettingsHost
         bindings.BindValue<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
 
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
-        bindings.BindValue<int>("min-interval", () => source.BuildView().GlobalMinIntervalTicks, value => { source.SetGlobalMinIntervalTicks(value); bump(); });
+        // S4-3 dissolved us/timing into manifest atoms. The interval is ONE value in two units, so the
+        // declarative card keeps the same split the global-volume card uses: the slider atom owns the
+        // machine ticks (a float binding, because input/slider validates float) and the number-field atom
+        // owns the player's seconds projection. Both read and write the same business setter.
+        bindings.BindValue<float>(
+            "interval-ticks",
+            () => source.BuildView().GlobalMinIntervalTicks,
+            value =>
+            {
+                source.SetGlobalMinIntervalTicks(Mathf.RoundToInt(Mathf.Clamp(value, IntervalTicksFloor, IntervalTicksCeil)));
+                bump();
+            });
+        bindings.BindValue<float>(
+            "interval-seconds",
+            () => source.BuildView().GlobalMinIntervalTicks / SecondsPerTick,
+            value =>
+            {
+                source.SetGlobalMinIntervalTicks(Mathf.Max(
+                    (int)IntervalTicksFloor,
+                    Mathf.RoundToInt(Mathf.Clamp(value, IntervalTicksFloor / SecondsPerTick, IntervalTicksCeil / SecondsPerTick) * SecondsPerTick)));
+                bump();
+            });
+        // The caption is a read-only projection of the same value, built HERE and nowhere else: the atom
+        // measures exactly the string it paints (see the manifest comment on this card).
+        bindings.BindReadOnly<string>("timing-interval-caption", () => IntervalCaption(source, translation));
+        // The declarative stepper: a button fires a command, and the step (0.1, clamped 0..3) stays here.
+        bindings.BindCommand(
+            "timing-multiplier-minus",
+            () =>
+            {
+                source.SetGlobalCooldownMultiplier(Mathf.Clamp(
+                    source.BuildView().GlobalCooldownMultiplier - MultiplierStep, MultiplierFloor, MultiplierCeil));
+                bump();
+            });
+        bindings.BindCommand(
+            "timing-multiplier-plus",
+            () =>
+            {
+                source.SetGlobalCooldownMultiplier(Mathf.Clamp(
+                    source.BuildView().GlobalCooldownMultiplier + MultiplierStep, MultiplierFloor, MultiplierCeil));
+                bump();
+            });
         bindings.BindValue<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
 
         // Diagnostics: dev logging level + vanilla debug-menu localization.
@@ -825,7 +892,7 @@ public static class UsKernelSettingsHost
 
     private static string ReadManifest()
     {
-        using Stream? stream = typeof(UsKernelSettingsHost).Assembly.GetManifestResourceStream(ManifestResourceName);
+        Stream? stream = typeof(UsKernelSettingsHost).Assembly.GetManifestResourceStream(ManifestResourceName);
         if (stream == null)
         {
             throw new InvalidOperationException(

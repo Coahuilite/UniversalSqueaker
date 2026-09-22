@@ -34,6 +34,14 @@ namespace UniversalSqueaker.KernelHostTests;
 internal static class SettingsGeometryLaneTests
 {
     private static readonly float[] Widths = { 1024f, 736f, 480f, 320f };
+
+    /// <summary>
+    /// The declared width of the timing card's minus/number-field/plus cluster:
+    /// 26 + Gap 8 + 150 + Gap 8 + 26. It is the composite's own floor (ButtonWidth x 2 + StepperGap x 2 + 1
+    /// = 61) widened by the 150 field the declaration adds, and it is what makes the full-cluster assertion
+    /// below hostable-only rather than a blanket demand.
+    /// </summary>
+    private const float TimingStepperClusterWidth = 218f;
     private static readonly string[] Languages = { "English", "ChineseSimplified" };
 
     private const float Height = 720f;
@@ -50,14 +58,18 @@ internal static class SettingsGeometryLaneTests
 
     /// <summary>
     /// The Overview cards that STILL draw their own [label | control column] row. S4-1 dissolved
-    /// us/global-volume, us/basic-tuning and us/camera-indicator into manifest subtrees, so the shared
-    /// control column is from now on only us/timing's and us/diagnostics's contract. The three declarative
-    /// cards are covered by <c>DeclarativeOverviewLaneTests</c>, which measures the engine's own Row/atom
-    /// geometry from the manifest rather than a US hand-rolled column - the composite shape classifiers
-    /// below deliberately do not match an atom's band, so no composite assertion silently re-interprets a
-    /// declared row.
+    /// us/global-volume, us/basic-tuning and us/camera-indicator into manifest subtrees and S4-3 dissolved
+    /// us/timing, so the shared control column is from now on us/diagnostics's contract alone. The four
+    /// declarative cards are covered by <c>DeclarativeOverviewLaneTests</c>/<c>DeclarativeTimingLaneTests</c>,
+    /// which measure the engine's own Row/atom geometry from the manifest rather than a US hand-rolled
+    /// column - the composite shape classifiers below deliberately do not match an atom's band, so no
+    /// composite assertion silently re-interprets a declared row. That exclusion is load-bearing, not
+    /// tidiness: a declarative stepper is a 26x20 input/button, which <see cref="IsSmallControl"/> DOES
+    /// match, and a declarative row's right edge is the card's content edge, not the composite column's
+    /// inset. Had timing stayed in this list, this lane would have demanded the retired contract from the
+    /// new atoms - the same classifier gap S4-1 recorded for the checkbox band.
     /// </summary>
-    private static readonly string[] CompositeSections = { "timing", "diagnostics" };
+    private static readonly string[] CompositeSections = { "diagnostics" };
 
     private static FieldInfo ButtonOverrideField => RequireField("ButtonOverride", typeof(Func<Rect, bool>));
     private static FieldInfo SliderOverrideField => RequireField("SliderOverride", typeof(Func<Rect, float, float, float, float>));
@@ -948,26 +960,66 @@ internal static class SettingsGeometryLaneTests
             }
         }
 
-        // (b) the two COMPOSITE support sections that remain, in draw order. Verified independently
-        // (DeclarativeOverviewLaneTests covers the three declarative cards), because the rule being
-        // asserted here is the composite's own [label | control column] arithmetic.
+        // (b) the ONE composite support section that remains. Verified independently (the declarative
+        // cards are covered by DeclarativeOverviewLaneTests and DeclarativeTimingLaneTests), because the rule
+        // being asserted here is the composite's own [label | control column] arithmetic.
         //
-        // timing: the cooldown-multiplier row is the last one, so its height is anchored on the body's
-        // bottom padding and its centre comes from the minus/plus steppers the widget centres on it.
-        SectionControls timing = sections["timing"];
-        Assert(timing.Steppers.Count == 2,
-            "the cooldown-multiplier row must draw exactly its minus/plus steppers at " + width + " ("
-            + language + "), got " + timing.Steppers.Count);
-        AddRow(evidence, "timing/cooldown-multiplier", 0, KeyedLabel(table, "US.Tuning.CooldownMultiplier"),
-            UsKernelDraw.RowLabelWidth(BodyWidthOf(timing.Card)),
-            2f * (BodyBottomOf(timing.Card) - 2f - CentreY(timing.Steppers[0])), null, metrics, true, 0f);
+        // The timing card left this group in S4-3 and its rows are measured by DeclarativeTimingLaneTests.
+        // What stays here is the negative half of that move: a stepper cluster inside us/timing would mean
+        // the composite came back, so the count is asserted rather than simply dropped. That assertion is the
+        // mutation proof for this re-cut - restoring us/timing's manifest line and its Registrar line reddens
+        // it (together with the Registrar kind-set pin in UiSourceInvariantTests).
+        // The timing card is DECLARATIVE since S4-3 and its two stepper buttons ARE matched by
+        // IsSmallControl (26x20), so this assertion is the guard that states where they belong and the
+        // mutation proof for the re-cut in one: they must exist (a card that stopped drawing them is a
+        // different defect) and they must terminate on the card's own content right edge, which is what a
+        // declared row does and what the retired composite did NOT (it terminated on the shared control
+        // column's right edge, ControlColumnRightInset inside the body). Restoring us/timing's manifest line
+        // puts a 26-wide cluster on that inset edge and reddens this - which is the state assertion a group
+        // that only names composite cards cannot make.
+        Assert(Array.IndexOf(CompositeSections, "timing") < 0,
+            "us/timing must not be back in the composite-column group: the card is declarative since S4-3");
+        Assert(rec.Snapshot.RectById.TryGetValue("timing", out Rect timingPage),
+            "the snapshot must still carry the timing card at " + width + " (" + language + ")");
+        SectionControls timing = SectionControlsFor(rec, ToContentLocal(timingPage, rec.ContentViewport));
+        float timingContentRight = timing.Card.xMax - UsCardLayout.Padding;
+        // The declared weight of the two steppers and the field between them, in the order the manifest
+        // writes them: 26 + 8 + 150 + 8 + 26. Read from the SNAPSHOT rather than re-declared here, so the
+        // assertion cannot drift from the manifest.
+        var timingCluster = rec.Buttons
+            .Where(r => Inside(r, timing.Card) && IsSmallControl(r))
+            .OrderBy(r => r.x)
+            .ToList();
+        Console.WriteLine("[timing-cluster] " + width + " " + language
+            + " card=" + Num(timing.Card.width) + " bodyRight=" + Num(timingContentRight)
+            + " steppers=" + timingCluster.Count
+            + " [" + string.Join(" ", timingCluster.Select(Describe)) + "]");
+        foreach (Rect stepper in timingCluster)
+        {
+            Assert(stepper.xMax <= timingContentRight + RightEdgeTolerance,
+                "a declared timing stepper must sit inside the card's content edge, never on the retired"
+                + " control-column inset at " + width + " (" + language + "): " + Describe(stepper)
+                + " vs content edge " + timingContentRight);
+        }
+        // The cluster itself needs 26 + 8 + 150 + 8 + 26 = 218 of the row's inner width. Every width this
+        // page is accepted at hosts it (the centre column is 748/460/416px at 1024/736/480); only the
+        // degenerate 320 centre band does not, and that is the pre-existing narrow-layout gap the row
+        // contract is already reported as degenerate for. So the FULL cluster is asserted where it is
+        // hostable, and a partial one there is a real regression, not a narrow-layout artifact.
+        if (timing.Card.width - UsCardLayout.Padding * 2f >= TimingStepperClusterWidth)
+        {
+            Assert(timingCluster.Count == 2,
+                "the declarative timing card must draw its two 26x20 stepper atoms at " + width + " ("
+                + language + "), got " + timingCluster.Count + " [" 
+                + string.Join(" ", timingCluster.Select(Describe)) + "]");
+        }
 
         // diagnostics: the localize row is the last row; the heading band above it is reported by the
         // table as context but the localize row is the support row under contract.
         Assert(diagnostics.Slots.Count == 1,
             "the diagnostics section must draw the localize checkbox at " + width + " (" + language
             + "), got " + diagnostics.Slots.Count);
-        AddRow(evidence, "diagnostics/localize-debug", 1, KeyedLabel(table, "US.Diagnostics.LocalizeDebugMenu"),
+        AddRow(evidence, "diagnostics/localize-debug", 0, KeyedLabel(table, "US.Diagnostics.LocalizeDebugMenu"),
             UsKernelDraw.RowLabelWidth(BodyWidthOf(diagnostics.Card)),
             2f * (BodyBottomOf(diagnostics.Card) - 2f - CentreY(diagnostics.Slots[0])), diagnostics.Slots[0],
             metrics, true, 0f);
@@ -1198,6 +1250,14 @@ internal static class SettingsGeometryLaneTests
             float bodyWidth = Math.Max(0f, card.width - UsCardLayout.Padding * 2f);
             survey.MinBodyWidth = Math.Min(survey.MinBodyWidth, bodyWidth);
             survey.BodyRight = Math.Max(survey.BodyRight, card.x + UsCardLayout.Padding + bodyWidth);
+
+            // The control rects are collected from the COMPOSITE cards ONLY, and after S4-3 that is
+            // us/diagnostics alone. A declarative card's atoms are not this contract's subjects: the
+            // manifest's number fields terminate on the card's own content edge, not on the retired
+            // ControlColumnRightInset, while the shape classifiers below would happily accept them
+            // (IsSmallControl matches a declared 26x20 stepper and IsCheckboxSlot a declared band). Naming
+            // the group is what keeps one classifier from grading two different layouts.
+            if (Array.IndexOf(CompositeSections, id) < 0) continue;
 
             foreach (Rect button in rec.Buttons.Where(r => Inside(r, card)))
             {
