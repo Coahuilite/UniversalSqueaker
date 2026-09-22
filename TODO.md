@@ -37,6 +37,9 @@
     reserved-band attribute), so the card is taller at the narrowest centre column - measured, and it is a
     real-screen item. Report: spec **§5.10**. **S4-3b (us/attenuation-editor, 12 -> 11) is NOT started** -
     the design is frozen in task-5's description and in spec §5.10.
+    **Blocked for the gate chain, not for S4-3b**: the FL checkout carries two uncommitted paths
+    (`AGENTS.md`, `scripts/verify-local.ps1` - the owner's task-8 retry-hint edit), and gate 6 refuses a
+    payload it cannot attribute to a commit. Gates 1-5 and 7-15 are green (7-15 run individually).
   - [ ] **Carried known limitation, CITED (spec §5.9.6): the selected row's fill and its left 3px rail are still
     not expressible.** `text/wrapped` paints no surface and the row has no surface-painting atom, so what is
     missing is a row-state CARRIER, not an attribute value. Citation: S4-2/S4-3's data-driven row sets are the

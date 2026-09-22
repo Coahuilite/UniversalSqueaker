@@ -91,6 +91,20 @@
   release**; no other FL file changed. Consequence: the next FREEZE NOTICE has to name the new hash, and
   "gate 6 is expected red for doc-first" is no longer true on this tree until FL lands another commit or the
   carrier is rebuilt again at a freeze.
+- **The full US gate chain was attempted after the re-freeze and stopped at gate 6 for a NEW reason: the FL
+  checkout is DIRTY.** `d1f2c50` plus **two uncommitted FL paths** (`AGENTS.md`, `scripts/verify-local.ps1` -
+  the owner's task-8 edit to the retry hints, in progress). Gate 6 refuses that state on purpose (a payload
+  cannot be attributed to a commit while its tree carries unreviewed source), so gates 7-15 were again
+  UNRUN by the chain. First five gates green; **6 UNRUN (blocked on the FL owner committing); 7, 8, 9, 10,
+  11, 12, 13, 14, 15 all green when run individually** (all 15 commands read from the script itself, none
+  invented). The new identity was verified read-only first (SHA `6094C8FB…DB10D6`, `0.7.0-dev+d1f2c5014de0…`,
+  Release, 249344 B, no PDB, exclusivity FREE - the maintainer's own run).
+- **Measured: gate 6's `dotnet build` targets the carrier, and whether it WRITES is conditional.** Running
+  the chain re-ran that build command against the same commit; the DLL's SHA-256 **and its mtime both stayed
+  put** (`6094C8FB…DB10D6`, 13:23:45, no PDB) because the payload was already current from that commit -
+  whereas the earlier standalone run of the SAME command at a commit whose payload was stale DID rewrite the
+  file and move the hash. So the hint is not harmless by nature, only when MSBuild finds the target
+  up-to-date; the FL rule stands: a gate's build hint is a delivery step, owner-only.
 - **S4-3a LANDED: the trigger-timing card is declarative and its kind is retired.** `us/timing` is gone;
   the Registrar's `us/*` kind set is **12 (13 before, pinned by `UiSourceInvariantTests`)**, the 263-line
   widget was deleted, and the card is a declared `Section` over `input/slider` + `input/number-field` +
