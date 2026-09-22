@@ -61,10 +61,16 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </para>
 ///
 /// <para>
-/// NOT CLAIMED: the look, and the reference geometry. The band is the row layout's 24x30, so the track is
-/// 24x18 rather than the reference's 34x18 (widening the band re-wraps one of the egg row's state lines at
-/// 320px - measured On=67.67 / Off=89 - so it is a separate layout step, not part of this kind). Beyond that,
-/// whether the track reads as "on" at a glance needs a real screen.
+/// THE REFERENCE GEOMETRY IS DELIVERED (2026-09-22): the band is 36x30, so the track renders its own
+/// 34x18 and the knob's throw is 16px - the values the reference draws (SqueakySettingsUI.Toggle,
+/// squeaky_ratkin). The 34x18 was ALWAYS this kind's own constant; the 24x30 band starved it. What the
+/// widening costs is measured and named: the row's text column loses 12px, which re-wraps the egg row's
+/// state line at the narrowest harness page widths. Those widths are NOT reachable in game - the settings
+/// window is floored at 800px wide (WindowChromeLayout.SettingsWidthFloor; the closed width clamps half
+/// the screen into [800, 1600]), so the page the host arranges is never narrower than that. The row-growth
+/// invariant those widths used to carry is re-cut against the reachable floor in DeclarativeOverviewLaneTests,
+/// in the same batch as this widening.
+/// STILL NOT CLAIMED: the look, and whether the track reads as "on" at a glance - both need a real screen.
 /// </para>
 /// </summary>
 internal static class UsSquareToggleLaneTests
@@ -73,9 +79,22 @@ internal static class UsSquareToggleLaneTests
     private const float PageWidth = 800f;
     private const float TallHeight = 1100f;
 
-    /// <summary>The band every toggle declares. 24 wide because the enclosing rows are laid out around it;
-    /// the track shrinks to it rather than overflowing.</summary>
-    public const float DeclaredBandWidth = 24f;
+    /// <summary>
+    /// The width the track RENDERS: its own constant, because the declared band is at least that wide (the
+    /// <c>TheTogglesAreDeclared</c> step asserts it rather than assuming it). Naming it separately is a
+    /// measured correction, not a style choice: the signature filter below used to key on
+    /// <see cref="DeclaredBandWidth"/>, which equalled the rendered track only because a 24px band CLAMPED the
+    /// 34px track. Widening the band to 36 exposed it - the record still held the fills, the filter simply
+    /// stopped recognising them ("no toggle track was drawn on this page at all"), which is a red for the
+    /// wrong reason and exactly the instrument-input check this project requires before touching an assertion.
+    /// </summary>
+    private const float RenderedTrackWidth = UsSquareToggleWidget.TrackWidth;
+
+    /// <summary>The band every toggle declares. 36 wide because that is what lets the track render its own
+    /// 34x18: at 24 the track shrank to 24x18 and the knob's throw fell to 6px, which is the difference
+    /// between a switch and a block. A narrower band still shrinks the track rather than overflowing.
+    /// </summary>
+    public const float DeclaredBandWidth = 36f;
     public const float DeclaredBandHeight = 30f;
 
     /// <summary>The scope the toggle rows draw in, so the lane asks the same theme the widget was handed.</summary>
@@ -112,6 +131,11 @@ internal static class UsSquareToggleLaneTests
 
     private static void TheTogglesAreDeclared()
     {
+        Assert(DeclaredBandWidth >= UsSquareToggleWidget.TrackWidth,
+            "the declared band (" + DeclaredBandWidth + "px) must host the track's own width ("
+            + UsSquareToggleWidget.TrackWidth + "px); below it the rendered track is CLAMPED to the band and"
+            + " every shape assertion in this lane would have to key on the band instead of on the track");
+
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
         foreach ((string _, string checkId, string bind, bool _) in Rows)
         {
@@ -148,14 +172,25 @@ internal static class UsSquareToggleLaneTests
     private static void BothStatesAreDrawnAndVisible()
     {
         var seen = new List<bool>();
+        var edges = new List<Color>();
         for (int i = 0; i < Rows.Length; i++)
         {
-            seen.Add(OneRowBothStates(Rows[i].RowId, Rows[i].CheckId, Rows[i].Bind, Rows[i].State, i));
+            seen.Add(OneRowBothStates(Rows[i].RowId, Rows[i].CheckId, Rows[i].Bind, Rows[i].State, i,
+                out Color edge));
+            edges.Add(edge);
         }
 
         Assert(seen.Contains(true) && seen.Contains(false),
             "the page's own two rows must be in OPPOSITE states, or this step would have measured one knob end"
             + " twice and could not tell the two apart: " + string.Join(",", seen));
+
+        // A1's own guard, and it is the one thing the per-row expectation cannot state: the reference's
+        // outline is ONE constant stroke in both states, so the ON row's edge and the OFF row's edge must be
+        // the same colour. A material that re-introduced a state-dependent edge reddens here even if both
+        // rows were then given matching expectations.
+        Assert(SameColor(edges[0], edges[1]),
+            "the ON row's track edge and the OFF row's must be the SAME neutral stroke (the reference keeps one"
+            + " outline in both states), got " + Hex(edges[0]) + " vs " + Hex(edges[1]));
     }
 
     /// <summary>
@@ -165,7 +200,7 @@ internal static class UsSquareToggleLaneTests
     /// be" would be measuring a different frame than the one the widget drew in.
     /// </summary>
     private static bool OneRowBothStates(string rowId, string checkId, string bind, bool expectedState,
-        int rowIndex)
+        int rowIndex, out Color edge)
     {
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try
@@ -246,8 +281,11 @@ internal static class UsSquareToggleLaneTests
             // stayed green under a state-blind mutation, which is a lane that cannot tell the two states
             // apart). These two expectations are the independently written contract:
             Color expectedFill = state ? theme.AccentWith(UsSquareToggleWidget.AccentAlpha) : theme.Raised;
-            Color expectedEdge = state ? theme.AccentGold : theme.Border;
-            Color expectedKnob = state ? theme.TextOnGold : theme.TextSecondary;
+            // S6-3 follow-up (A1/A2): the reference keeps ONE neutral outline in BOTH states and puts the
+            // accent on the KNOB, so the edge is state-blind while the knob is the accent itself when on.
+            // Both are still built from the theme + the state this lane read, never from the widget's helpers.
+            Color expectedEdge = theme.Border;
+            Color expectedKnob = state ? theme.AccentGold : theme.TextSecondary;
             Assert(SameColor(trackFill.Colour, expectedFill),
                 bind + "=" + state + ": the track must be filled with this state's own material ("
                 + Hex(expectedFill) + "), got " + Hex(trackFill.Colour) + " - a state-blind material reddens"
@@ -255,6 +293,7 @@ internal static class UsSquareToggleLaneTests
             Assert(SameColor(edges[0].Colour, expectedEdge),
                 bind + "=" + state + ": the track's edge must be this state's material edge ("
                 + Hex(expectedEdge) + "), got " + Hex(edges[0].Colour));
+            edge = edges[0].Colour;
             Assert(SameColor(knobs[0].Colour, expectedKnob),
                 bind + "=" + state + ": the knob must be inked with this state's own ink (" + Hex(expectedKnob)
                 + "), got " + Hex(knobs[0].Colour));
@@ -329,7 +368,7 @@ internal static class UsSquareToggleLaneTests
             + " draws inside that band");
 
         // The readable half of the same claim: the band each row declares is the band the engine hands the
-        // toggle (the control's arranged rect is the full 24x30 the manifest declares, not the 24x18 track).
+        // toggle (the control's arranged rect is the full 36x30 the manifest declares, not the 34x18 track).
         foreach ((string _, string checkId, string bind, bool _) in Rows)
         {
             using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
@@ -385,15 +424,15 @@ internal static class UsSquareToggleLaneTests
         Assert(rects.Count == colors.Count,
             "the stub's two solid recorders must stay in step: " + rects.Count + " vs " + colors.Count);
 
-        // A toggle's own boxes are exactly five: the track's fill, its edges, and the knob. Every one of them
-        // is either a full-width band box (24x18 fill, 24x1 edges) or the 14px knob - shapes that ARE the
-        // control's signature and that no other element on this page produces.
+        // A toggle's own boxes are exactly five: the track's fill, its four edge strips, and the knob. Every
+        // one of them is either a RENDERED-TRACK-width box (34x18 fill, 34x1 edges) or the 14px knob - shapes
+        // that ARE the control's signature and that no other element on this page produces.
         var signature = new List<(Rect Rect, Color Colour)>();
         for (int i = 0; i < rects.Count; i++)
         {
             Rect rect = (Rect)rects[i]!;
-            bool fill = Close(rect.width, DeclaredBandWidth) && Close(rect.height, UsSquareToggleWidget.TrackHeight);
-            bool edge = Close(rect.width, DeclaredBandWidth) && Close(rect.height, 1f);
+            bool fill = Close(rect.width, RenderedTrackWidth) && Close(rect.height, UsSquareToggleWidget.TrackHeight);
+            bool edge = Close(rect.width, RenderedTrackWidth) && Close(rect.height, 1f);
             bool knob = Close(rect.width, UsSquareToggleWidget.KnobSize)
                 && Close(rect.height, UsSquareToggleWidget.KnobSize);
             if (fill || edge || knob) signature.Add((rect, (Color)colors[i]!));

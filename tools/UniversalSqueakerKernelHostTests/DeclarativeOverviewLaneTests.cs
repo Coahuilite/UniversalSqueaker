@@ -43,8 +43,28 @@ internal static class DeclarativeOverviewLaneTests
     private const float PageWidth = 1024f;
     private const float PageHeight = 900f;
     private const float RowGap = 8f;
-    private const float DeclaredCheckboxWidth = 24f;
+    private const float DeclaredCheckboxWidth = 36f;
     private const float DeclaredCheckboxHeight = 30f;
+
+    /// <summary>
+    /// The narrowest PAGE width the game can produce, and it is DERIVED rather than chosen: the settings
+    /// window is floored at <c>WindowChromeLayout.SettingsWidthFloor</c> (pinned in <c>Program.cs</c> over a
+    /// screen list), and the window contracts its body by 24px on each side before the host arranges it
+    /// (<c>UniversalSqueakerSettingsWindow.cs:169</c>). Derived from the shipped constant on purpose: if the
+    /// product lowers the floor, this sweep follows it down instead of keeping a stale literal list.
+    /// </summary>
+    private const float NarrowestReachablePageWidth = WindowChromeLayout.SettingsWidthFloor - 24f * 2f;
+
+    /// <summary>
+    /// The widths the value-independence invariant below sweeps: the declared page width and the narrowest
+    /// one the game can actually produce. RE-CUT IN THE SAME BATCH as the toggle band's 24 -> 36 widening
+    /// (2026-09-22), and here is the measurement that forced it: the widening costs the row's text column
+    /// 12px, which at 320 re-wraps the egg row's OFF state line (measured English: On=67.67 Off=89, one Small
+    /// line) while 1024/736/480 all stay equal. 320 is a page the shipped window policy cannot produce, so
+    /// the invariant is asserted over the reachable range only - the narrow shapes stay covered by the other
+    /// lanes that deliberately sweep them.
+    /// </summary>
+    private static readonly float[] EggBandWidths = { PageWidth, NarrowestReachablePageWidth };
     private const float CardPadding = 12f;
     private const float CardGap = 6f;
     private const float HeaderHeight = 26f;
@@ -506,7 +526,7 @@ internal static class DeclarativeOverviewLaneTests
             Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
             try
             {
-                foreach (float width in new[] { 1024f, 736f, 480f, 320f })
+                foreach (float width in EggBandWidths)
                 {
                     float off = EggRowHeight(width, allowEggs: false);
                     float on = EggRowHeight(width, allowEggs: true);

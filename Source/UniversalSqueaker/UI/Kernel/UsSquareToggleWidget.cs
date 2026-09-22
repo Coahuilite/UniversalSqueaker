@@ -24,8 +24,8 @@ namespace UniversalSqueaker.UI;
 /// `SelectedKey` naming the same bool as `Bind`, so `AtomVocabulary.ResolveRole` answers the Active
 /// treatment while it is on (`AtomVocabulary.cs:221-234`) - the accent-filled Selected surface with the
 /// accent edge and `TextOnGold` ink - and the plain neutral treatment while it is off. This kind resolves
-/// nothing itself: it paints the role's own fill, edge and ink, so a re-tint or a scoped scheme moves the
-/// toggle with everything else.
+/// nothing itself: it paints its own material (MATERIAL, NOT ROLE below), so a re-tint or a scoped scheme
+/// moves the toggle with everything else.
 /// </para>
 ///
 /// <para>
@@ -39,6 +39,10 @@ namespace UniversalSqueaker.UI;
 /// spaces its control column, so an inset here would double it. The track is the full 34px only when the
 /// manifest gives the band at least that much - the declared band is 36x30, which is what makes the control
 /// the size the reference is. A narrower band shrinks the track rather than overflowing it.
+/// <b>Correction, S6-3 follow-up (2026-09-22):</b> this paragraph claimed a 36x30 band while the manifest
+/// declared 24x30, so the track rendered 24x18 with a 6px throw instead of the reference's 34x18 and 16px.
+/// The seven bands are 36 wide now and the claim is true again; it had been a doc defect for exactly as long
+/// as the manifest disagreed with it.
 /// </para>
 ///
 /// <para>
@@ -167,7 +171,10 @@ public sealed class UsSquareToggleWidget : IUiWidget
     /// <item><b>off</b>: the raised plane with the shared border edge - the "recessed track" the reference
     /// draws, and visibly NOT the flat card face because the edge is `Border`, which the flat scope
     /// deliberately does not alias to the fill.</item>
-    /// <item><b>on</b>: the accent at a quarter alpha, edged in the accent itself.</item>
+    /// <item><b>on</b>: the accent at a quarter alpha, edged in the SAME neutral 'Border' the off state
+    /// uses. Measured against the reference (2026-09-22): its outline is one constant stroke in BOTH states
+    /// and the state is told by the fill and the knob, so an accent edge here made the ON state say the same
+    /// thing three times (fill, edge, knob) where the reference says it twice.</item>
     /// </list>
     /// Hover and armed restate the same pair with the hover step / the full accent, so the control's own
     /// state stays readable while the pointer moves over it. A disabled element keeps the off material: the
@@ -180,7 +187,7 @@ public sealed class UsSquareToggleWidget : IUiWidget
         if (state)
         {
             Color fill = armed ? theme.AccentGold : theme.AccentWith(AccentAlpha);
-            return new UiSurfaceStyle(fill, theme.AccentGold);
+            return new UiSurfaceStyle(fill, theme.Border);
         }
 
         if (hovered)
@@ -192,16 +199,18 @@ public sealed class UsSquareToggleWidget : IUiWidget
     }
 
     /// <summary>
-    /// The knob's ink for one state. It rests one step BRIGHTER than the track fill in both states - a light
-    /// neutral over the dark track, the warm paper ink over the accent - so the knob is the thing the eye
-    /// finds, and it is distinguishable from the track it sits in and from the plane behind it (asserted, not
-    /// assumed: `UsSquareToggleLaneTests`).
+    /// The knob's ink for one state, and the state's own signal: off it is the theme's light neutral over the
+    /// dark track; on it is the ACCENT ITSELF at full alpha over the accent-washed fill. That is the
+    /// reference's own contrast split, measured 2026-09-22 - its ON knob is the saturated gold, and the gold
+    /// lives on the small moving part rather than on the whole perimeter. It stays distinguishable from the
+    /// fill it sits in because that fill is the accent at a QUARTER alpha (asserted, not assumed:
+    /// `UsSquareToggleLaneTests`).
     /// </summary>
     public static Color KnobInk(UiTheme theme, bool state, bool? writable)
     {
         if (theme == null) throw new ArgumentNullException(nameof(theme));
         if (writable == false) return theme.TextDisabled;
-        return state ? theme.TextOnGold : theme.TextSecondary;
+        return state ? theme.AccentGold : theme.TextSecondary;
     }
 
     /// <summary>Alpha of the accent that fills the track while the toggle is on.</summary>

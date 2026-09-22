@@ -859,7 +859,7 @@ internal static class SettingsGeometryLaneTests
 
     /// <summary>Width of the declared input/checkbox band every Overview card's control row ends in
     /// (the manifest's Width attribute; the atom paints its own 18px box inside it).</summary>
-    private const float DeclaredCheckboxWidth = 24f;
+    private const float DeclaredCheckboxWidth = 36f;
 
     /// <summary>Height of that band: the manifest's Height, which is what makes the atom's own box
     /// geometry (side = max(8, height - Padding*2), Padding 6) land on the shipped 18px visual box.</summary>

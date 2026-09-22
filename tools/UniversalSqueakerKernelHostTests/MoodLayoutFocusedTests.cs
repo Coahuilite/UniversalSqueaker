@@ -263,13 +263,18 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    /// <summary>The declared Overview checkbox band: the manifest's 24 x 30 input/checkbox cell. It is
-    /// deliberately NOT the composite's 24x24 <c>UsKernelDraw.CheckboxHit</c> slot - the atom owns its own
-    /// geometry now, and 30 is what makes it paint the shipped 18px visual box
-    /// (side = max(8, height - theme.Geometry.Padding * 2)).</summary>
+    /// <summary>
+    /// The declared Overview control band: the manifest's <c>us/square-toggle</c> cell, 36 x 30. It is the
+    /// ARRANGED rect (the whole band is the hit rule) and deliberately NOT the composite's 24x24
+    /// <c>UsKernelDraw.CheckboxHit</c> slot - the atom owns its own geometry now, and 30 is what makes it paint
+    /// the shipped 18px visual box (side = max(8, height - theme.Geometry.Padding * 2)). The 36 follows the
+    /// manifest: S6-3's follow-up widened all seven bands 24 -> 36 so the widget's own 34x18 track finally
+    /// renders, and this predicate - which selects the bands out of the draw record - was re-cut in the same
+    /// batch rather than silently matching nothing.
+    /// </summary>
     private static bool IsDeclaredCheckbox(Rect rect)
     {
-        return Math.Abs(rect.width - 24f) <= 0.5f && Math.Abs(rect.height - 30f) <= 0.5f;
+        return Math.Abs(rect.width - 36f) <= 0.5f && Math.Abs(rect.height - 30f) <= 0.5f;
     }
 
     /// <summary>One Repaint pass with the pointer parked at <paramref name="pointer"/> - the same frame

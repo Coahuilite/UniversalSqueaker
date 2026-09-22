@@ -125,27 +125,27 @@
                 <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
                 <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
               </Column>
-              <Widget Id="basic-egg-check" Kind="us/square-toggle" Bind="allow-eggs" SelectedKey="allow-eggs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
+              <Widget Id="basic-egg-check" Kind="us/square-toggle" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
             </Row>
             <Row Id="basic-cooldown-row" Gap="8" Padding="0">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
-              <Widget Id="basic-cooldown-check" Kind="us/square-toggle" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
+              <Widget Id="basic-cooldown-check" Kind="us/square-toggle" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
             </Row>
             <Row Id="basic-talking-row" Gap="8" Padding="0">
               <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
-              <Widget Id="basic-talking-check" Kind="us/square-toggle" Bind="scale-talking" SelectedKey="scale-talking" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
+              <Widget Id="basic-talking-check" Kind="us/square-toggle" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
             </Row>
             <Row Id="basic-population-row" Gap="8" Padding="0">
               <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
-              <Widget Id="basic-population-check" Kind="us/square-toggle" Bind="scale-population" SelectedKey="scale-population" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
+              <Widget Id="basic-population-check" Kind="us/square-toggle" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
             </Row>
             <Row Id="basic-eat-row" Gap="8" Padding="0">
               <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
-              <Widget Id="basic-eat-check" Kind="us/square-toggle" Bind="eat-precision" SelectedKey="eat-precision" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
+              <Widget Id="basic-eat-check" Kind="us/square-toggle" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
             </Row>
             <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision">
               <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
-              <Widget Id="basic-eat-child-check" Kind="us/square-toggle" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+              <Widget Id="basic-eat-child-check" Kind="us/square-toggle" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
             </Row>
           </Column>
         </Section>
@@ -199,7 +199,7 @@
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0">
             <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
-            <Widget Id="camera-indicator-check" Kind="us/square-toggle" Bind="camera-indicator" SelectedKey="camera-indicator" Width="24" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
+            <Widget Id="camera-indicator-check" Kind="us/square-toggle" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
           </Row>
         </Section>
         <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
