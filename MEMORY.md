@@ -19,6 +19,22 @@
   overrides** - the rest inherits the cloned baseline. Evidence: `FlatStyleLaneTests` (document tokens +
   resolved scoped theme + the page-level control + the states-still-differ mutation), three mutations red.
 
+- **S6-2/S6-3 step 2 LANDED: the cards lost their borders and the bodies lost their separators.** The five
+  `chrome/rule` elements in the basic-tuning body are deleted (the rows separate by the body Column's Gap,
+  raised 2 -> 6), and the **eight declarative Section cards** carry the flat scope. Composite cards
+  (`us/diagnostics`, `scope-tree`, `filter-bar`, `preset-list`, `footer`, `help`) are deliberately NOT
+  scoped: they paint their own chrome in C#, so flat is S4's destination rather than a shortcut around it.
+  `FlatStyleLaneTests` asserts the scope on every declarative card and that no `chrome/rule` survives.
+- **Two recorded workarounds, with their citations, NOT vocabulary requests:**
+  (a) **`Border=none` does not exist** - "no box" is expressed by setting a surface's BORDER token equal to
+  its FILL (the vocabulary paints a 1px frame in the border colour, so equal values make it invisible).
+  Citation: the nav column and the eight cards, S6-2/S6-3. No forced consumer for a real switch, so it stays
+  a workaround.
+  (b) **an unknown `Scheme` name falls back silently** while an unknown TOKEN is recorded, in the same
+  document (`UiStyleResolver.ApplyScheme` records and returns; `UiStyleDocument` refuses the token). Live
+  citation: the flat scheme first written into `UsTheme.SchemeXml` resolved to nothing and the scope kept the
+  page's values. Reported to the lead; FL is folding **diagnostics only, not a hard refusal** into task-9.
+
 ## Documentation-vs-code defect rule (measured 2026-09-22)
 
 - **When a document and the code disagree, the code is the fact and the document is the defect - unless the
