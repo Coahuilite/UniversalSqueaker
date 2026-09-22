@@ -12,7 +12,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <summary>
 /// S4-3 lane: the trigger-timing card, dissolved out of the US-owned composite <c>us/timing</c> and rebuilt
 /// as a manifest subtree over the library's own atoms (<c>input/slider</c>, <c>input/number-field</c>,
-/// <c>input/button</c>, <c>text/wrapped</c>, <c>section/header</c>).
+/// <c>input/button</c>, <c>text/wrapped</c>, <c>us/section-header</c>).
 ///
 /// <para>
 /// MUTATION LEDGER (the mutation each step is built to catch, and what reddens):

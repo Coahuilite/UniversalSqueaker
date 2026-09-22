@@ -28,6 +28,7 @@ public static class UsKernelWidgetRegistrar
             if (registered && UiWidgetRegistry.KnownKinds(Scope).Count > 0) return;
 
             UsNavWidget.Register();
+            UsSectionHeaderWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
             UsDiagnosticsWidget.Register();

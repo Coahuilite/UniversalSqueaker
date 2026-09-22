@@ -117,6 +117,7 @@ internal static class Program
         Step("the dissolved distance attenuation composite is declarative and retired (S4-3b)", () => DeclarativeAttenuationLaneTests.RunAll());
         Step("flat (borderless) style scope (S6-2/S6-3)", () => FlatStyleLaneTests.RunAll());
         Step("palette guard: flat pairs + ink contrast (S6-3)", () => PaletteLaneTests.RunAll());
+    Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
