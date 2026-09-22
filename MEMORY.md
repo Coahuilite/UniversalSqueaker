@@ -339,14 +339,24 @@
   was **flipped from negative to positive** (exactly one row answers true and it is the model's selected row);
   `Tone`/`Emphasis` stay forbidden in templates (still literal-only). Mutation pair M-A/M-B proves both
   directions of the one assertion.
-- **Carried known limitation, now CITED rather than a candidate (spec §5.9.6).** The selected row's **fill and
-  its left 3px rail** still cannot be expressed: `text/wrapped` paints no surface and the row has no
-  surface-painting atom at all, so what is missing is a row-state CARRIER, not an attribute value. The citation
-  is S4-2/S4-3's data-driven row sets (the first real consumer), which upgrades spec §5.2's "(B) candidate:
-  per-item Tone/Emphasis value binding" and §5.5's "no per-row role input surface" from candidate to
-  **CONFIRMED**. Debt boundary (maintainer rule: visible AND cheaply fixable must not spread): B1 was visible and
-  cheap, so it was fixed; this one is visible but NOT cheap (it needs a new capability), so it stays recorded
-  with its citation until a second consumer or the maintainer asks for it.
+- **The selected row's FILL: re-measured 2026-09-22, two routes tried and both blocked; the rail is still
+  outstanding (spec §5.9.6).** The old entry here said the fill "still cannot be expressed" and named a missing
+  row-state carrier. That is now precise rather than blanket:
+  (a) `text/wrapped` paints no surface, so the TEXT cannot carry the fill - that part of the old entry stands;
+  (b) letting **the hit element paint itself** works (measured: idle `#191612`, selected `#3A311F`, hit height
+  still equal to the text column's) but it **moves the hit band's own geometry** and reddens
+  `DeclarativePacksLaneTests` at 320px, so it is refused - the whole-row hit is the point of that slice;
+  (c) an **`input/button` painting SIBLING** keeps the geometry exactly (`covered=100%`) but cannot exist: the
+  atom invokes its command on every click, so without `ActionBind` it throws at the first press (measured
+  `KeyNotFoundException: No command binding registered for ''`), and with one it becomes a second hit surface
+  and the press ordinal maps to the wrong row.
+  **Untried candidate, with this round as its citation: a CONTAINER as the state sibling with its own flat
+  scope** (a container's `Chrome` is a non-interactive whole-rect fill + four edges, and pairing the edge to the
+  fill aliases the edges away). It is recorded, not measured.
+  The **left 3px rail** is a separate and still-open gap: `chrome/rule` paints a horizontal hairline only, so a
+  vertical rail needs drawing code (a real extra capability, not an attribute). Debt boundary unchanged: B1 was
+  visible and cheap and was fixed; these are visible and not cheap, so they stay recorded with their citation,
+  and the row fill/hover go to the REAL-SCREEN list rather than being re-opened unasked.
 - **The other (B) S4-2 recorded is now CLOSED by a carrier capability, not by a workaround.** The recorded
   facts were: `Height="Auto"` heights from the element's **own caption** (`ButtonWidget.cs:84-99`), an Overlay
   keeps every child at its measured height (`UiLayoutEngine.cs:1423-1450`), and `AlignY="Stretch"` names a

@@ -52,12 +52,16 @@
     gates, exit 0, against FL `b997f3a9f009…` (carrier `0F95DF35…`), with the carrier's SHA-256 and mtime
     unchanged before and after. (Earlier in the batch it had stopped at gate 6 on the FL tree's own
     uncommitted task-8 edit - a correct refusal - and gates 7-15 were run individually then.)
-  - [ ] **Carried known limitation, CITED (spec §5.9.6): the selected row's fill and its left 3px rail are still
-    not expressible.** `text/wrapped` paints no surface and the row has no surface-painting atom, so what is
-    missing is a row-state CARRIER, not an attribute value. Citation: S4-2/S4-3's data-driven row sets are the
-    first real consumer, which upgrades spec §5.2's "(B) candidate: per-item Tone/Emphasis value binding" and
-    §5.5's "no per-row role input surface" to **CONFIRMED**. Debt boundary: visible but NOT cheaply fixable, so
-    record + cite and wait for a second consumer or a maintainer ruling - do not re-open it unasked.
+  - [ ] **The selected row's FILL: two routes tried 2026-09-22, both blocked; the 3px rail still open
+    (spec §5.9.6).** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
+    (`text/wrapped` paints no surface); (b) letting the HIT paint itself works (idle `#191612`, selected
+    `#3A311F`, hit height still == the text column's) but moves the hit band's geometry and reddens
+    `DeclarativePacksLaneTests` at 320px, so it is refused; (c) an `input/button` SIBLING keeps the geometry
+    but cannot exist - the atom invokes its command on every click, so without `ActionBind` it throws at the
+    first press and with one it is a second hit surface. **Untried candidate with this round as its citation: a
+    CONTAINER state sibling with its own flat scope.** The **left 3px rail** is separate and needs drawing code
+    (a vertical rail is not declarable). Debt boundary: visible but not cheaply fixable - record + cite, and the
+    row fill/hover sit on the REAL-SCREEN list; do not re-open unasked.
 - [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
   gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
   is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
@@ -146,7 +150,8 @@ no `HeightKey`).
   now one `MatchContent` band covering the row in full (100% measured at every accepted width; the retired
   2x24px stack's 69.9% / 53.3% and its 42px dead zone are gone) — what still needs a real screen is whether the
   band's hover/armed paint reads right with the text column drawn over it; **selection in the layer cards is now HALF restored** — the selected row's
-  title ink is back (gold, as shipped), but the row's fill and its left 3px rail are still missing (§5.9.6);
+  title ink is back (gold, as shipped), but the row's fill and its left 3px rail are still missing (§5.9.6; the
+  fill's two tried routes and the untried container-sibling candidate are recorded there and in MEMORY);
   row surface/hover gone; rows +20.67px taller (cards 266
   and 124.67px); the detail line moved Tiny -> Small and both lines sit 10px further left, top-anchored;
   (3) **the narrow help band (乙1) as shipped** — it REPLACES the body (the nav
