@@ -107,7 +107,7 @@
 
              The child of the eat-precision pair is gated by the engine's VisibleKey reading the parent's
              own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
-        <Section Id="global-volume" Tab="Overview" Padding="12" Gap="6">
+        <Section Id="global-volume" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="global-volume-header" Kind="section/header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
           <Row Id="global-volume-top" Gap="8" Padding="0">
             <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
@@ -115,9 +115,9 @@
           </Row>
           <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
         </Section>
-        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="6">
+        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="basic-tuning-header" Kind="section/header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
-          <Column Id="basic-tuning-body" Gap="2" Padding="0">
+          <Column Id="basic-tuning-body" Gap="6" Padding="0">
             <Row Id="basic-egg-row" Gap="8" Padding="0">
               <Column Id="basic-egg-text" Gap="1" Padding="0">
                 <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpKey="us/basic-tuning/egg" />
@@ -126,27 +126,22 @@
               </Column>
               <Widget Id="basic-egg-check" Kind="input/checkbox" Bind="allow-eggs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
             </Row>
-            <Widget Id="basic-egg-rule" Kind="chrome/rule" />
             <Row Id="basic-cooldown-row" Gap="8" Padding="0">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
               <Widget Id="basic-cooldown-check" Kind="input/checkbox" Bind="scale-cooldown" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
             </Row>
-            <Widget Id="basic-cooldown-rule" Kind="chrome/rule" />
             <Row Id="basic-talking-row" Gap="8" Padding="0">
               <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
               <Widget Id="basic-talking-check" Kind="input/checkbox" Bind="scale-talking" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
             </Row>
-            <Widget Id="basic-talking-rule" Kind="chrome/rule" />
             <Row Id="basic-population-row" Gap="8" Padding="0">
               <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
               <Widget Id="basic-population-check" Kind="input/checkbox" Bind="scale-population" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
             </Row>
-            <Widget Id="basic-population-rule" Kind="chrome/rule" />
             <Row Id="basic-eat-row" Gap="8" Padding="0">
               <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
               <Widget Id="basic-eat-check" Kind="input/checkbox" Bind="eat-precision" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
             </Row>
-            <Widget Id="basic-eat-rule" Kind="chrome/rule" />
             <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision">
               <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
               <Widget Id="basic-eat-child-check" Kind="input/checkbox" Bind="eat-precision-include-drugs" Width="24" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
@@ -185,7 +180,7 @@
              26px weight with the field flexing between them. The two buttons fire their own commands - a
              declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
              the host side of the command, exactly where the composite applied it. -->
-        <Section Id="timing" Tab="Overview" Padding="12" Gap="6">
+        <Section Id="timing" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="timing-header" Kind="section/header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
           <Row Id="timing-interval-row" Gap="8" Padding="0">
             <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
@@ -199,7 +194,7 @@
             <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
           </Row>
         </Section>
-        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6">
+        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="camera-indicator-header" Kind="section/header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0">
             <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
@@ -234,7 +229,7 @@
              the current preset visible: the engine resolves the Active role for the one button whose bool
              answers true, so exactly one button is highlighted and the status sentence cannot disagree with
              it. -->
-        <Section Id="attenuation-editor" Tab="Distance" Padding="12" Gap="6">
+        <Section Id="attenuation-editor" Tab="Distance" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="attenuation-header" Kind="section/header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
           <Column Id="attenuation-body" Gap="4" Padding="0">
             <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point"
@@ -279,11 +274,11 @@
              CARRIER, not an attribute value. That half is recorded as its own known limitation with its
              citation in the friction report (spec section 5.9.4), never folded in with the ink that did
              come back. Tone/Emphasis stay absent from this template: they are still literal-only. -->
-        <Section Id="race-layer" Tab="Packs" Padding="12" Gap="6">
+        <Section Id="race-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="race-layer-header" Kind="section/header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
           <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
         </Section>
-        <Section Id="xenotype-layer" Tab="Packs" Padding="12" Gap="6">
+        <Section Id="xenotype-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="xenotype-layer-header" Kind="section/header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
           <Repeat Id="xenotype-layer-rows" Items="xenotype-rows" Template="xenotype-layer-row" Padding="0" Gap="2" />
         </Section>
@@ -302,7 +297,7 @@
              VisibleKey bools. The two presentations are mutually exclusive, the same shape the diagnostics
              nav column uses. The orphan band now draws ABOVE the list rather than below it: it is a band
              about the list that follows, and a widget element cannot straddle manifest siblings. -->
-        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6">
+        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="checklist-header" Kind="section/header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
           <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" />
           <Column Id="checklist-list" VisibleKey="checklist-has-domain" Gap="6" Padding="0">

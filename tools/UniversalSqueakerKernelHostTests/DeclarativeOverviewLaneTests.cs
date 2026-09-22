@@ -67,10 +67,10 @@ internal static class DeclarativeOverviewLaneTests
         ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "US.Tuning.EatPrecision.IncludeDrugs"),
     };
 
-    private static readonly string[] BasicRules =
-    {
-        "basic-egg-rule", "basic-cooldown-rule", "basic-talking-rule", "basic-population-rule", "basic-eat-rule"
-    };
+    /// <summary>S6-2: the body's declared Column Gap, and the width the checklist card already uses. The
+    /// rows used to be separated by five <c>chrome/rule</c> elements; they are separated by this gap now, so
+    /// the declaration is the separation and the lane measures it instead of a rule's hairline.</summary>
+    private const float BasicBodyGap = 6f;
 
     /// <summary>The seven declared value bindings the three cards own, and the business field each write
     /// must land in. The count is the point: the composites needed a value binding AND a toggle-* action per
@@ -448,16 +448,23 @@ internal static class DeclarativeOverviewLaneTests
                             + " " + width + " (" + language + "): card " + cardHeight + " vs " + expectedCard
                             + " (header " + headerHeight + ", body " + bodyHeight + ")");
 
-                        // MUTATION PROOF: the body is the declared stack - six rows, five declared rules, and
-                        // one Column Gap between every neighbour - so changing a declared band, a rule or the
-                        // body's own Gap reddens here instead of silently moving the card.
+                        // The SEPARATOR IS GONE (S6-2): the card may not carry a chrome/rule any more - the
+                        // row bands and the one Column Gap are the whole body.
+                        UiElementSpec? declaredCard = FindById(host.Manifest.Roots, "basic-tuning");
+                        Assert(declaredCard != null, "the shipped manifest must carry the basic-tuning card");
+                        Assert(FindByAttribute(declaredCard!, "Kind", "chrome/rule") == null,
+                            "the declarative rows must separate by whitespace: the card still declares a"
+                            + " chrome/rule separator at " + width + " (" + language + ")");
+
+                        // MUTATION PROOF: the body is the declared stack - six rows and one declared Column Gap
+                        // between every neighbour - so changing a declared band, a row or the body's own Gap
+                        // reddens here instead of silently moving the card.
                         float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height);
-                        float ruleSum = BasicRules.Sum(id => RectOf(snapshot, id).height);
-                        float expectedBody = rowSum + ruleSum + 2f * (BasicRows.Length + BasicRules.Length - 1);
+                        float expectedBody = rowSum + BasicBodyGap * (BasicRows.Length - 1);
                         Assert(Math.Abs(bodyHeight - expectedBody) <= 0.5f,
-                            "the declared body must be rows + rules + the Column's own Gap at " + width + " ("
+                            "the declared body must be the rows + the Column's own Gap at " + width + " ("
                             + language + "): body " + bodyHeight + " vs " + expectedBody + " (rows " + rowSum
-                            + ", rules " + ruleSum + ")");
+                            + ", gap " + BasicBodyGap + ")");
 
                         Console.WriteLine("[declared] " + width + " " + language + " card=" + Num(cardHeight)
                             + " header=" + Num(HeaderHeight) + " rows=[" + evidence + "]"

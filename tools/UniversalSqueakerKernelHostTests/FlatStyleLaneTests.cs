@@ -38,6 +38,7 @@ internal static class FlatStyleLaneTests
     {
         Step("the flat scheme is declared and its tokens are the flat ones", TheSchemeIsDeclared);
         Step("the nav column resolves the flat theme", TheNavColumnIsScoped);
+        Step("every declarative card is scoped flat, and the separators are gone", EveryDeclarativeCardIsFlat);
         Console.WriteLine("FlatStyleLaneTests ALL PASS");
         return 0;
     }
@@ -110,6 +111,51 @@ internal static class FlatStyleLaneTests
         Assert(!SameColor(page.RaisedSurface.Border, page.Raised),
             "control: the page theme is NOT flat, so the assertion above measures the scope and not the"
             + " document as a whole");
+    }
+
+    /// <summary>
+    /// The cards, not just the nav. The eight declarative Section cards all carry the scope, and the
+    /// separator rules are gone - the row bands and each Column's own Gap are the whole body now. Both
+    /// halves are asserted on the LIVE manifest, so a scope dropped from one card or a rule re-added
+    /// reddens here.
+    /// </summary>
+    private static void EveryDeclarativeCardIsFlat()
+    {
+        using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
+        string[] cards =
+        {
+            "global-volume", "basic-tuning", "timing", "camera-indicator",
+            "attenuation-editor", "race-layer", "xenotype-layer", "checklist-card"
+        };
+        foreach (string id in cards)
+        {
+            UiElementSpec? card = FindById(host.Manifest.Roots, id);
+            Assert(card != null, "the shipped manifest must carry the card '" + id + "'");
+            Assert(card!.Kind == "Section", "'" + id + "' must be the engine's Section container");
+            Assert(card.TryGetAttribute("Scheme", out string scheme) && scheme == SchemeName,
+                "the declarative card '" + id + "' must adopt the flat scope, got '" + scheme + "'");
+        }
+
+        Assert(FindByAttribute(host.Manifest.Roots, "Kind", "chrome/rule") == null,
+            "no body separator may survive: the rows separate by whitespace, and the declaration that says"
+            + " how much is each Column's own Gap");
+    }
+
+    private static UiElementSpec? FindByAttribute(IReadOnlyList<UiElementSpec> roots, string attribute, string value)
+    {
+        foreach (UiElementSpec spec in roots)
+        {
+            if (spec.TryGetAttribute(attribute, out string actual)
+                && string.Equals(actual, value, StringComparison.Ordinal))
+            {
+                return spec;
+            }
+
+            UiElementSpec? nested = FindByAttribute(spec.Children, attribute, value);
+            if (nested != null) return nested;
+        }
+
+        return null;
     }
 
     /// <summary>Exact per-channel equality: the stub Unity has no Color.op_Equality, and a tolerance would
