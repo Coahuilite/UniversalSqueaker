@@ -62,6 +62,32 @@
   `SelectedSurface`, so calling it with no colour is safe. A consumer that wants the accent passes
   `theme.AccentGold` (or omits the argument). FL recorded the same lesson on its consumer page without
   changing code or API, which is the right split: this is a consumer-side convention, not a component defect.
+- **S6-3 step 4 LANDED: the square ON/OFF toggle is a US kind (`us/square-toggle`), and the Registrar is
+  12 -> 13.** Seven Overview controls moved onto it. The reason is a SHAPE, measured first: there is **no
+  purely filled declarative element**, and **nothing lets geometry or position depend on a bound value** (the
+  engine-wide value-dependent attributes are Visible/VisibleKey/Hidden/SelectedKey - visibility and state,
+  never shape). "Position follows a bound bool" has exactly ONE consumer, so it is a recorded CANDIDATE with
+  this step as its citation, **never a carrier request**.
+- **ROLE DESCRIBES A SURFACE'S TONE, NOT A CONTROL'S MATERIAL (measured, and it overturned an instruction).**
+  The first version resolved the track through the role table (`Active` when on, `Neutral` when off). The
+  cards are the flat scope, which deliberately sets `SelectedBorder` equal to `Selected` and `RaisedBorder`
+  equal to `Raised` - the equality that IS "a flat surface paints no box" - so the OFF track's fill AND edge
+  were both exactly the plane behind them (**`#191612` on `#191612`**) and the control vanished. **A control
+  that must be VISIBLE on a flat plane cannot take its material from the role of the plane it sits on.** The
+  toggle paints off = `Raised` fill + `Border` edge, on = `AccentWith(0.25)` fill + `AccentGold` edge,
+  knob = `TextSecondary` off / `TextOnGold` on: theme values, no literal and no new token, but the material
+  belongs to the control. (One consequence recorded with it: on this page the track's fill coincides with the
+  card face by construction, so the **edge** is what separates them - the lane asserts the knob against both
+  the track and the plane, and the track against the plane through at least one half.)
+- **Two lane facts this step paid for, on top of the three already recorded.** (1) **Assert a widget's output
+  against an independently built expectation, never against the widget's own helper**: the first version asked
+  `UsSquareToggleWidget.Material(theme, state, …)` and compared the drawn fill to its answer - which stayed
+  GREEN when the material was made state-blind, because both sides read the same bool through the same
+  function. Built from the theme + the state the lane read, the same mutation reddens with the colours named.
+  (2) **The widget's press path is not harness-aimable here**: a press computed from the arranged snapshot
+  lands on the page but not on the control, because the drawing frame and the arranging frame are different
+  arrangements. The step therefore asserts the CONTRACT the press depends on and records the press itself as a
+  real-screen item; adding a public seam so a test could aim is vocabulary growth and was ruled out.
 - **S6-3 step 1 LANDED: the section header is a US surface again (`us/section-header`), with a 3px gold
   left rail and a geometric marker.** The Registrar's us/* set **grew 11 -> 12** - the pin's first growth, and
   the parity check above it keeps that honest (the kind exists only while a manifest element uses it). The
