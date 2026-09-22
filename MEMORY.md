@@ -110,11 +110,20 @@
   string-typed, and the enum parse moved to the host (the `select-domain` shape). (2) `SelectedKey` is how a
   static (non-repeated) button says "the model is on me": one read-only bool per button; the manifest pairing
   is what the lane must assert, because a constant fixture view can only ever make one key true.
-- **Recorded narrow-tier finding (measured, not asserted away).** At 320 the centre column is ~296px, so a
-  third of the preset row is ~76px and the English captions "Conservative"/"Balanced" need ~96px; the
-  `input/button` atom draws its caption single-line, so it clips there. The lane's overflow sweep covers the
-  three widths the page is accepted at (1024/736/480) and the narrow tier is recorded here instead.
-  (Unreachable in the shipped window, which never opens below 800 logical pixels.)
+- **Recorded narrow-tier finding (measured, not asserted away).** At a 320-wide PAGE the centre column is
+  ~296px, so a third of the preset row is ~76px and the English captions "Conservative"/"Balanced" need
+  ~96px; the `input/button` atom draws its caption single-line, so it clips there. The lane's overflow sweep
+  covers the three widths the page is accepted at (1024/736/480) and this tier is recorded instead.
+  **Provenance of every number, so the claim is not read as a fact about the product:** the 320 page width is
+  the HARNESS's own bottom tier (`FrameGeometryLaneTests.cs:72`, `Widths = { 1280, 1024, 736, 480, 320 }`) -
+  a stress case the lane drives directly, not a screen the game can present. The US window's own floor is
+  `WindowChromeLayout.SettingsWidthFloor = 800f` (`UI/Layout/WindowChromeLayout.cs:60`, derived as the
+  smallest whole-pixel 4:3 box covering vanilla's `Dialog_Options.InitialSize = (650, 600)`), so the narrowest
+  shipped window gives a 736-wide inner page, not 296. The logical SCREEN floor (1024) is the separate,
+  platform-enforced one (`UIScaleSafeWithResolution`), and at an 800-wide screen the drawer does not squeeze
+  the centre column at all - `DrawerWidensTheWindow` answers false, so `help-open-narrow` is true and the
+  band REPLACES the body (`UsKernelSettingsHost.cs:546-560`). **Not claimed:** whether any real screen can
+  drive the 320 tier - unmeasured; the lane asserts it directly rather than reaching it through the window.
 - **The dev rehearsal was re-staged at S4-3b** (clean tree, `commit=f378715`, carrier `0.7.0-dev+b997f3a9f009…`).
 - **The full US gate chain is GREEN end to end (2026-09-22) against the re-issued freeze.** FL HEAD
   `b997f3a9f009…`, carrier SHA-256 `0F95DF35D5E7F827848364B9A9C83081A64E4C2C3AF15924D8089430025A0B66`,
