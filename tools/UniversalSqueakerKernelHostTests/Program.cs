@@ -33,7 +33,6 @@ internal static class Program
         ("page-title", "us/page-title"),
         ("banner", "chrome/banner"),
         ("mode-row", "us/mode-row"),
-        ("attenuation-editor", "us/attenuation-editor"),
         ("scope-tree", "us/scope-tree"),
         ("preset-list", "us/preset-list"),
         ("filter-bar", "us/filter-bar"),
@@ -115,6 +114,7 @@ internal static class Program
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
         Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
+        Step("the dissolved distance attenuation composite is declarative and retired (S4-3b)", () => DeclarativeAttenuationLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -928,7 +928,9 @@ internal static class Program
         AssertBumped("eat-precision", () => host.Bindings.Set("eat-precision", true));
         AssertBumped("eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true));
         AssertBumped("global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f));
-        AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
+        // S4-3b: the preset buttons are declarative input/button atoms, so this action's payload is the
+        // preset NAME (the string a button carries), not the enum value the old dispatch took.
+        AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative)));
         AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
         AssertBumped("interval-ticks", () => host.Bindings.Set("interval-ticks", 300f));
         AssertBumped("interval-seconds", () => host.Bindings.Set("interval-seconds", 5f));
@@ -1164,13 +1166,16 @@ internal static class Program
                 "resource declares widget " + id + " (" + kind + ")");
         }
 
-        // S4-1/S4-2: the five dissolved composites were retired. Their IDS survive the migration - the
+        // S4-1/S4-2/S4-3: the dissolved composites were retired. Their IDS survive the migration - the
         // workspace gate and the geometry/evidence lanes read the cards by id - but the kind does not: each
-        // id now names a declarative Section container.
+        // id now names a declarative Section container (S4-3 moved timing and attenuation-editor into this
+        // list, and the timing gate below is why "timing" already appeared as a widget id here before).
         foreach ((string id, string tab) in new[]
                  {
                      ("global-volume", "Overview"), ("basic-tuning", "Overview"),
-                     ("camera-indicator", "Overview"), ("race-layer", "Packs"), ("xenotype-layer", "Packs")
+                     ("camera-indicator", "Overview"), ("timing", "Overview"),
+                     ("attenuation-editor", "Distance"),
+                     ("race-layer", "Packs"), ("xenotype-layer", "Packs")
                  })
         {
             Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"" + tab + "\""),
@@ -1184,7 +1189,7 @@ internal static class Program
         foreach (string kind in new[]
                  {
                      "us/basic-tuning", "us/global-volume", "us/camera-indicator",
-                     "us/race-layer", "us/xenotype-layer"
+                     "us/race-layer", "us/xenotype-layer", "us/timing", "us/attenuation-editor"
                  })
         {
             Assert(!xml.Contains("Kind=\"" + kind + "\""),
@@ -1232,17 +1237,17 @@ internal static class Program
         }
 
         Assert(declaredKinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
-        // The Registrar's complete set must be resolvable in the US scope, and the six kinds S4-1..S4-3
-        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (12 = 11 settings + the
-        // overlay readout); this one is a guard, and it is written as ">= 12" rather than "== 12" because the
+        // The Registrar's complete set must be resolvable in the US scope, and the seven kinds S4-1..S4-3
+        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (11 = 10 settings + the
+        // overlay readout); this one is a guard, and it is written as ">= 11" rather than "== 11" because the
         // diagnostics panel registers its own seven kinds into the same scope lazily, so a count taken here
         // depends on which lane ran first.
         IReadOnlyCollection<string> usKinds = UiWidgetRegistry.KnownKinds(ExpectedSource);
-        Assert(usKinds.Count >= 12, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
+        Assert(usKinds.Count >= 11, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
         foreach (string retired in new[]
                  {
                      "us/global-volume", "us/basic-tuning", "us/camera-indicator",
-                     "us/race-layer", "us/xenotype-layer", "us/timing"
+                     "us/race-layer", "us/xenotype-layer", "us/timing", "us/attenuation-editor"
                  })
         {
             Assert(!usKinds.Contains(retired),
@@ -1648,8 +1653,15 @@ internal static class Program
         Assert(fake.LastEatPrecision == true, "eat-precision value write routes (the declared checkbox's channel)");
         bindings.Set("eat-precision-include-drugs", true);
         Assert(fake.LastEatPrecisionIncludeDrugs == true, "eat-precision-include-drugs value write routes");
-        bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative);
-        Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative, "set-distance-preset action routes");
+        bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative));
+        Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative,
+            "set-distance-preset action routes the button's string payload into the enum boundary");
+        // The fail-soft half: a name no preset answers to must not drop the click into the wrong preset.
+        fake.LastDistancePreset = null;
+        bindings.Invoke("set-distance-preset", "not-a-preset");
+        Assert(fake.LastDistancePreset == SqueakDistancePreset.Custom,
+            "an unrecognised preset name must land on Custom rather than being ignored or mis-parsed, got "
+            + (fake.LastDistancePreset?.ToString() ?? "null"));
         // S4-3: the interval is one value in two units, so both declared atoms must land in the SAME
         // business field, and the seconds projection must convert back into machine ticks.
         bindings.Set("interval-ticks", 300f);

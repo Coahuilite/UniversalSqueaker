@@ -188,7 +188,51 @@
           </Row>
         </Section>
         <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
-        <Widget Id="attenuation-editor" Kind="us/attenuation-editor" TitleKey="US.Section.DistanceAttenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
+        <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
+             same change. Card chrome is the engine's Section with the checklist card's explicit geometry.
+             The chart is the engine's own chart/line declared directly - the composite used to build a
+             UiElementSpec by hand and drive the widget itself, which is exactly the wrapper this adoption
+             exists to remove; Editable + EditablePoints + Height are the same declarations that wrapper
+             wrote, and the drag still arrives as the typed attenuation-point action.
+
+             The status line is a read-only bound string for the same reason the timing caption is: the
+             assembly of the preset name and the printed range is presentation data the manifest has no
+             expression for, so the host builds ONE sentence and the atom paints it. The three presets are
+             input/button atoms whose selected state is a per-button read-only bool (SelectedKey), which is
+             how a data-driven button says "the model is on me" without a Tone binding.
+
+             NOT reproduced from the composite: its narrow branch (body < 200px, a one-line summary). The
+             window is never that narrow - the drawer REPLACES the body instead of squeezing it - so the
+             branch was only reachable in a degenerate frame that the frame-geometry lane already reports
+             as degenerate. Declaring it would need a Breakpoint plus a second subtree for an unreachable
+             state; DeclarativeAttenuationLaneTests measures the card's shape at every accepted width
+             instead, and its overflow assertions are what a genuinely too-narrow card would redden.
+
+             Each preset button declares PayloadKey, which opens input/button's STRING contract (G2: "with a
+             payload the consumer binds BindAction<string>"), so each button's payload lives in its own
+             read-only string binding rather than as a manifest literal. These three are static, so no item
+             scope is involved - the keys are plain page-level read-only strings. SelectedKey is what makes
+             the current preset visible: the engine resolves the Active role for the one button whose bool
+             answers true, so exactly one button is highlighted and the status sentence cannot disagree with
+             it. -->
+        <Section Id="attenuation-editor" Tab="Distance" Padding="12" Gap="6">
+          <Widget Id="attenuation-header" Kind="section/header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
+          <Column Id="attenuation-body" Gap="4" Padding="0">
+            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point"
+                    Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpKey="us/attenuation-editor/status" />
+            <!-- No Height on the preset buttons on purpose: at the narrowest accepted band a third of the
+               row is narrower than "Conservative"/"Balanced" need, and a declared 26px band would CLIP the
+               caption while a fit audit reported the overflow. Without it the atom measures its own caption,
+               so the label wraps and the button grows - the same rule WrappingTimingLabelGrowsTheCard pins
+               for the timing card. The three cells stay equal thirds at every width. -->
+          <Row Id="attenuation-presets" Gap="4" Padding="0">
+              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedKey="distance-preset-conservative" ActionBind="set-distance-preset" PayloadKey="distance-preset-conservative-value" HelpKey="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" />
+            </Row>
+          </Column>
+        </Section>
         <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
         <!-- S4-2: the two Packs layer cards are declarative row sets. us/race-layer and us/xenotype-layer
              were the pair that could NOT be migrated while G2/G3 were missing (a repeated row could not

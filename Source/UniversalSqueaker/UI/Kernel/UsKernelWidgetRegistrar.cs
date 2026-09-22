@@ -30,7 +30,6 @@ public static class UsKernelWidgetRegistrar
             UsNavWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
-            UsAttenuationEditorWidget.Register();
             UsDiagnosticsWidget.Register();
             UsScopeTreeWidget.Register();
             UsPresetListWidget.Register();

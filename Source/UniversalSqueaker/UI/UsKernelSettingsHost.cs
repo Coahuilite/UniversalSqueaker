@@ -170,6 +170,69 @@ public static class UsKernelSettingsHost
     private const float MultiplierFloor = 0f;
     private const float MultiplierCeil = 3f;
 
+    // S4-3b, the attenuation card. The three preset buttons carry SelectedKey bindings, so each needs its
+    // own read-only bool under the name the manifest declares.
+    private const string PresetConservativeKey = "distance-preset-conservative";
+    private const string PresetBalancedKey = "distance-preset-balanced";
+    private const string PresetStrongKey = "distance-preset-strong";
+
+    // The three buttons' payloads: the same names the SelectedKey bindings compare against.
+    private const string PresetConservativeValueKey = "distance-preset-conservative-value";
+    private const string PresetBalancedValueKey = "distance-preset-balanced-value";
+    private const string PresetStrongValueKey = "distance-preset-strong-value";
+
+    /// <summary>
+    /// The preset a clicked button names. The declarative button's payload is a STRING (ButtonWidget
+    /// validates <c>BindAction&lt;string&gt;</c>), so the enum parse lives on this side of the boundary. An
+    /// unrecognised name is <see cref="SqueakDistancePreset.Custom"/> - the same fail-soft answer the
+    /// retired composite gave, so a renamed preset degrades to "the model is on none of these buttons"
+    /// instead of dropping the click.
+    /// </summary>
+    private static SqueakDistancePreset ParseDistancePreset(string name)
+    {
+        return Enum.TryParse(name ?? "", ignoreCase: true, out SqueakDistancePreset preset)
+            && Enum.IsDefined(typeof(SqueakDistancePreset), preset)
+            ? preset
+            : SqueakDistancePreset.Custom;
+    }
+
+    /// <summary>One preset button's own selected answer, read from the same value the status sentence prints.</summary>
+    private static bool IsDistancePreset(IUsKernelSettingsSource source, SqueakDistancePreset preset)
+    {
+        return source.BuildView().DistancePreset == preset;
+    }
+
+    /// <summary>
+    /// The attenuation card's read-out: the preset's display name, then the range it covers. The composite
+    /// printed exactly this pair through the same two outlets (a Keyed name and
+    /// <see cref="AttenuationMath.FormatRangeDisplay"/>), so the sentence is unchanged - only the place that
+    /// assembles it moved, because the manifest has no format expression and this is presentation data.
+    /// </summary>
+    private static string AttenuationStatus(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        VoicePacksViewState view = source.BuildView();
+        float min = view.DistanceRangeMin;
+        float max = view.DistanceRangeMax;
+        AttenuationMath.SanitizeRange(ref min, ref max);
+        return DistancePresetDisplay(view.DistancePreset, translation)
+            + "  " + AttenuationMath.FormatRangeDisplay(min, max);
+    }
+
+    /// <summary>
+    /// Display text for a preset. The stored value is the enum name that <c>set-distance-preset</c> writes,
+    /// so only this label mapping is translated - the same split the retired composite documented.
+    /// </summary>
+    private static string DistancePresetDisplay(SqueakDistancePreset preset, IUiTranslation translation)
+    {
+        return preset switch
+        {
+            SqueakDistancePreset.Conservative => translation.Translate("US.Distance.Preset.Conservative"),
+            SqueakDistancePreset.Balanced => translation.Translate("US.Distance.Preset.Balanced"),
+            SqueakDistancePreset.Strong => translation.Translate("US.Distance.Preset.Strong"),
+            _ => translation.Translate("US.Distance.Preset.Custom"),
+        };
+    }
+
     /// <summary>
     /// The one interval sentence the card paints and sizes, built from the live value so the
     /// <c>text/wrapped</c> atom's band is the wrap of the very string that is drawn. The retired composite
@@ -244,8 +307,31 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<float>("distance-range-min", () => source.BuildView().DistanceRangeMin);
         bindings.BindReadOnly<float>("distance-range-max", () => source.BuildView().DistanceRangeMax);
         bindings.BindReadOnly<string>("distance-preset", () => source.BuildView().DistancePreset.ToString());
-        bindings.BindAction<SqueakDistancePreset>("set-distance-preset", preset => { source.SetDistancePreset(preset); bump(); });
+        // S4-3b: the three preset buttons are declarative input/button atoms, and a button with an
+        // ActionBind validates ValidateAction<string> (ButtonWidget: "with a payload the consumer binds
+        // BindAction<string>, without one BindCommand"). The payload is therefore the preset name as a
+        // string - the same shape select-domain already uses for a row's own key - and the enum parse
+        // lives here, on the host side of the boundary.
+        bindings.BindAction<string>(
+            "set-distance-preset",
+            name => { source.SetDistancePreset(ParseDistancePreset(name)); bump(); });
         bindings.BindReadOnly<IReadOnlyList<Vector2>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
+        // The status sentence is the same read-out the composite printed; the manifest has no format
+        // expression, so the host builds the one string the atom paints and measures.
+        bindings.BindReadOnly<string>("attenuation-status", () => AttenuationStatus(source, translation));
+        // Each button's own selected answer (SelectedKey). One read-only bool per preset, computed from the
+        // CURRENT preset through the same comparison the status line uses, so the highlighted button and the
+        // sentence can never name two different presets.
+        bindings.BindReadOnly<bool>(PresetConservativeKey, () => IsDistancePreset(source, SqueakDistancePreset.Conservative));
+        bindings.BindReadOnly<bool>(PresetBalancedKey, () => IsDistancePreset(source, SqueakDistancePreset.Balanced));
+        bindings.BindReadOnly<bool>(PresetStrongKey, () => IsDistancePreset(source, SqueakDistancePreset.Strong));
+        // Each button's own payload. A declarative input/button with a PayloadKey opens the STRING contract
+        // (G2), so each datum lives in a value binding rather than as a manifest literal - the same shape
+        // the layer rows use, minus the repeater (these three are static, so the keys are plain read-only
+        // strings and no item scope is involved).
+        bindings.BindReadOnly<string>(PresetConservativeValueKey, () => nameof(SqueakDistancePreset.Conservative));
+        bindings.BindReadOnly<string>(PresetBalancedValueKey, () => nameof(SqueakDistancePreset.Balanced));
+        bindings.BindReadOnly<string>(PresetStrongValueKey, () => nameof(SqueakDistancePreset.Strong));
         bindings.BindAction<UiChartPointChange>("attenuation-point", change => { ApplyAttenuationPoint(source, source.BuildView(), change); bump(); });
 
         // Basic: toggles.

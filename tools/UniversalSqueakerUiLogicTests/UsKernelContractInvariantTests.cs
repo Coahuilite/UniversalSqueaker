@@ -259,9 +259,18 @@ internal static class UsKernelContractInvariantTests
         Assert(child != null && child.GetAttribute("VisibleKey") == "eat-precision",
             "the eat-precision child row is gated by VisibleKey reading the parent's own bool binding");
 
-        string manifest = File.ReadAllText(path);
-        Assert(!manifest.Contains("set-distance-preset"),
-            "Basic tuning does not duplicate the Distance workspace preset control");
+        // The control lives in the Distance workspace and must not appear on this card. The assertion is
+        // scoped to the CARD rather than to the whole manifest: since S4-3b the Distance workspace's own
+        // three preset buttons are declarative input/button atoms, so the action legitimately exists in this
+        // file now - what must stay true is that no control on basic-tuning carries it.
+        foreach (XmlNode node in card.SelectNodes(".//*[@ActionBind]")!)
+        {
+            if (node is XmlElement bound)
+            {
+                Assert(bound.GetAttribute("ActionBind") != "set-distance-preset",
+                    "Basic tuning does not duplicate the Distance workspace preset control");
+            }
+        }
     }
 
     private static bool IsTrue(string value)

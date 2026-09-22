@@ -212,18 +212,18 @@ internal static class UiSourceInvariantTests
             + "(registered=" + registeredKinds.Count + ", manifest=" + manifestKinds.Count + "; "
             + "missing=[" + Join(registeredKinds, manifestKinds) + "], orphan=[" + Join(manifestKinds, registeredKinds) + "])");
 
-        // The 11 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
+        // The 10 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
         // the cardinality makes an accidental silent drop (registration removed AND manifest line
         // deleted together) visible. S4-1 shrank it 18 -> 15 (us/global-volume, us/basic-tuning,
         // us/camera-indicator); S4-2 shrank it 15 -> 13 (us/race-layer, us/xenotype-layer);
-        // S4-3a shrank it 13 -> 12 (us/timing).
+        // S4-3a shrank it 13 -> 12 (us/timing); S4-3b shrank it 12 -> 11 (us/attenuation-editor).
         //
         // This pin lives in the UI-LOGIC project, not in the kernel-host harness, and that is worth
         // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
         // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
         // is expected red, run it AND run what follows it separately.
-        Assert(registeredKinds.Count == 12,
-            "the registered us/* kind set must have 12 members (11 settings + 1 overlay), got "
+        Assert(registeredKinds.Count == 11,
+            "the registered us/* kind set must have 11 members (10 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 
