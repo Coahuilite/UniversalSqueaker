@@ -118,6 +118,7 @@ internal static class Program
         Step("flat (borderless) style scope (S6-2/S6-3)", () => FlatStyleLaneTests.RunAll());
         Step("palette guard: flat pairs + ink contrast (S6-3)", () => PaletteLaneTests.RunAll());
     Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
+    Step("US square toggle: drawn relations + the whole-band hit rule (S6-3)", () => UsSquareToggleLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -2100,7 +2101,7 @@ internal static class Program
         return table;
     }
 
-    private static string RepoRoot()
+    internal static string RepoRoot()
     {
         System.IO.DirectoryInfo? dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
         for (int i = 0; i < 8 && dir != null; i++)

@@ -29,6 +29,7 @@ public static class UsKernelWidgetRegistrar
 
             UsNavWidget.Register();
             UsSectionHeaderWidget.Register();
+            UsSquareToggleWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
             UsDiagnosticsWidget.Register();

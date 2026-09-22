@@ -162,9 +162,13 @@ internal static class DeclarativeOverviewLaneTests
         foreach (string bind in DeclaredValueBindings.Where(b => b != "camera-indicator"))
         {
             UiElementSpec? control = FindByAttribute(basic, "Bind", bind);
-            Assert(control != null && control.Kind == "input/checkbox",
-                "the basic-tuning card's '" + bind + "' control must be the input/checkbox atom, got "
+            Assert(control != null && control.Kind == "us/square-toggle",
+                "the basic-tuning card's '" + bind + "' control must be the us/square-toggle surface, got "
                 + (control == null ? "(missing)" : control.Kind));
+            // S6-3 step 4: the toggle draws its own track+knob and names the SAME bool in SelectedKey, so the
+            // engine's own role resolution agrees with the state the kind paints.
+            Assert(control!.TryGetAttribute("SelectedKey", out string selected) && selected == bind,
+                "the '" + bind + "' toggle must declare SelectedKey=\"" + bind + "\", got '" + selected + "'");
         }
 
         UiElementSpec childRow = FindById(host.Manifest.Roots, "basic-eat-child-row")!;
@@ -198,8 +202,8 @@ internal static class DeclarativeOverviewLaneTests
             "the global-volume caption is a bound text/wrapped atom, not a hand-formatted label");
 
         UiElementSpec camera = FindById(host.Manifest.Roots, "camera-indicator")!;
-        Assert(FindByAttribute(camera, "Bind", "camera-indicator")?.Kind == "input/checkbox",
-            "the camera-indicator card's one control is the input/checkbox atom");
+        Assert(FindByAttribute(camera, "Bind", "camera-indicator")?.Kind == "us/square-toggle",
+            "the camera-indicator card's one control is the us/square-toggle surface");
     }
 
     // ---------------------------------------------------------------------------------------------
