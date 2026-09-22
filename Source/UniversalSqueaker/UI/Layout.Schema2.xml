@@ -22,13 +22,13 @@
          no Border=none: UiThemeDraw.Surface paints a 1px frame in the border colour, so equal values make
          that frame invisible. Hover and Selected keep their own fills, so the states stay visible. -->
     <Scheme Name="us-flat-panel">
-      <Color Token="WorkspacePlane" Value="#171a21" />
-      <Color Token="Raised" Value="#171a21" />
-      <Color Token="RaisedBorder" Value="#171a21" />
-      <Color Token="Hover" Value="#232833" />
-      <Color Token="HoverBorder" Value="#232833" />
-      <Color Token="Selected" Value="#1f2531" />
-      <Color Token="SelectedBorder" Value="#1f2531" />
+      <Color Token="WorkspacePlane" Value="#191612" />
+      <Color Token="Raised" Value="#191612" />
+      <Color Token="RaisedBorder" Value="#191612" />
+      <Color Token="Hover" Value="#242019" />
+      <Color Token="HoverBorder" Value="#242019" />
+      <Color Token="Selected" Value="#3a311f" />
+      <Color Token="SelectedBorder" Value="#3a311f" />
     </Scheme>
   </Styles>
   <Column Id="page-root" Gap="8" Padding="12">

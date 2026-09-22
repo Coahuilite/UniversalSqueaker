@@ -88,29 +88,30 @@ internal static class UsSurfaceLaneTests
         Assert(Same(theme.AccentGold, library.AccentGold),
             "the identity accent must stay the library's series gold, not a new colour");
 
-        Assert(Same(theme.Base, Rgb(0x0f, 0x11, 0x16)) && Same(theme.WorkspacePlane, Rgb(0x0f, 0x11, 0x16)),
-            "s0 is the window and work plane");
-        Assert(Same(theme.Panel, Rgb(0x17, 0x1a, 0x21)) && Same(theme.SectionBand, Rgb(0x17, 0x1a, 0x21)),
-            "s1 is the panel and band plane");
-        Assert(Same(theme.Raised, Rgb(0x1f, 0x23, 0x2c)),
-            "s2 is the control base");
-        Assert(Same(theme.Hover, Rgb(0x1f, 0x23, 0x2c)),
-            "the hover plane is the spec's hover row plane");
-        Assert(Same(theme.Selected, Rgb(0x1c, 0x21, 0x2b)),
-            "the selected row keeps its own plane");
-        Assert(Same(theme.Border, Rgb(0x33, 0x3a, 0x46)) && Same(theme.Divider, Rgb(0x23, 0x28, 0x33)),
-            "structure and the row divider are the two line strengths");
-        Assert(Same(theme.BorderStrong, Rgb(0x3d, 0x44, 0x52)),
+        Assert(Same(theme.Base, Rgb(0x0e, 0x0d, 0x0c)) && Same(theme.WorkspacePlane, Rgb(0x0e, 0x0d, 0x0c)),
+            "s0 is the window and work plane (S6-3: the warm dark base)");
+        Assert(Same(theme.Panel, Rgb(0x17, 0x15, 0x12)) && Same(theme.SectionBand, Rgb(0x17, 0x15, 0x12)),
+            "s1 is the panel and band plane (S6-3: SR's Panel)");
+        Assert(Same(theme.Raised, Rgb(0x1d, 0x1b, 0x17)),
+            "s2 is the control base (S6-3: SR's Raised)");
+        Assert(Same(theme.Hover, Rgb(0x24, 0x20, 0x19)),
+            "the hover plane is one step above the raised plane (S6-3)");
+        Assert(Same(theme.Selected, Rgb(0x3a, 0x31, 0x1f)),
+            "the selected row keeps its own plane (S6-3: SR's Selected)");
+        Assert(Same(theme.Border, Rgb(0x57, 0x52, 0x47)) && Same(theme.Divider, Rgb(0x2a, 0x26, 0x20)),
+            "structure and the row divider are the two line strengths (S6-3: SR's Border, warm divider)");
+        Assert(Same(theme.BorderStrong, Rgb(0x6b, 0x64, 0x59)),
             "the window edge is one step brighter than the content rule");
-        Assert(Same(theme.TextPrimary, Rgb(0xe6, 0xe9, 0xee))
-            && Same(theme.TextSecondary, Rgb(0x98, 0xa1, 0xaf))
-            && Same(theme.TextDisabled, Rgb(0x98, 0xa1, 0xaf)),
-            "ink, dim, and dim again for unavailable text");
-        Assert(Same(theme.Danger, Rgb(0x3a, 0x1f, 0x1f))
+        Assert(Same(theme.TextPrimary, Rgb(0xea, 0xe6, 0xde))
+            && Same(theme.TextSecondary, Rgb(0xb0, 0xad, 0xa3))
+            && Same(theme.TextDisabled, Rgb(0x8a, 0x87, 0x80)),
+            "ink, dim, and a FURTHER dim for unavailable text (S6-3: the disabled ink is no longer the"
+            + " same value as the secondary one, since on a warm plane they read alike)");
+        Assert(Same(theme.Danger, Rgb(0x3f, 0x1c, 0x1a))
             && theme.DangerBorder.HasValue
-            && Same(theme.DangerBorder.Value, Rgb(0xc8, 0x5a, 0x5a))
-            && Same(theme.TextOnDanger, Rgb(0xff, 0xd9, 0xd9)),
-            "destructive action: dark plane, saturated edge, light text");
+            && Same(theme.DangerBorder.Value, Rgb(0xc9, 0x60, 0x57))
+            && Same(theme.TextOnDanger, Rgb(0xff, 0xdc, 0xd6)),
+            "destructive action: dark plane, saturated edge, light text (S6-3: warmed to sit beside gold)");
 
         Assert(!Same(theme.Base, theme.Panel) && !Same(theme.Panel, theme.Raised),
             "the three surface layers must stay distinguishable from each other");
