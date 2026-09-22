@@ -90,6 +90,28 @@
 | 18 | `US.Help.Timing.Interval.Label/.Text` | **是** | 标签 → 叫声间隔总控；正文补 1.0x 说明 |
 | 19 | `US.Help.Timing.Multiplier.Label/.Text` | **未动** | 样本中不可见 |
 
+## 3.5 第二轮（样本外，SR 全量基准 `squeaky_ratkin@99d7d7341c0a`）：已落地的 6 条
+
+依据 `1.6/Languages/{ChineseSimplified,English}/Keyed/SqueakyRatkin.xml`（两表行号一致）：
+
+| 键 | SR 原文（line） | 落地后 |
+|---|---|---|
+| `US.Section.PlaybackBehaviour` | 发声规则 / Voice rules（141） | **发声规则 / Voice rules**（中文也改了；第一轮那次的 header 改动当时并未落进表） |
+| `US.Section.DistanceAttenuation` | 听取距离 / Listening distance（357） | **听取距离 / Listening distance** |
+| `US.Distance.Status` | 形状不同（SR 用 HeaderWithSummary） | **听取距离 {0}  {1}**（只改词头，形状不动；形状对齐记入 S6-2） |
+| `US.Distance.Preset.Balanced` | 适中 / Balanced（361） | **适中 / Balanced** |
+| `US.Distance.Preset.Strong` | 激进 / Radical（362） | **激进 / Radical** |
+| `US.Help.Attenuation.Overview` | SR.Distance.Tooltip(375) + Preset.Tooltip(364) | 补两条**事实**：这里是**摄像机高度刻度、不是地图格距离**；**手动编辑后预设名变「自定义」** |
+| `US.Help.Attenuation.Presets.Text` | 同上 | 预设名随 §1 更新，并补「手动编辑→自定义」 |
+
+**未落地的一条（暂缓）**：SR 的 `SR.GlobalCooldownMultiplier.Label`「叫声间隔总控：{0}x / Master squeak interval: {0}x」(354) 对应的是 **US 的倍率控件**（`cooldown-multiplier` / `US.Tuning.CooldownMultiplier`），而：
+- US 的 `{0}` 走的是**区间说明**（host 传 `"3.6 s"`，见 `UsKernelSettingsHost.cs:IntervalCaption`），**不是裸数字** ⇒ 在模板里加 `x` 会得到 `3.6 sx`；
+- SR 把数值放进标签（`{0}x`），US 的倍率值是**独立 number-field**，标签是静态文本 ⇒ `{0}x` 在 US 的布局里无处安放；
+- US 的该控件确实是倍率（0..3），SR 的 `GlobalCooldownMultiplier` 也是倍率、只是名字叫"间隔总控"。
+⇒ **暂缓并报 lead**：US 的 `US.Tuning.MinInterval`（区间说明）**不该加 x**；若要对齐 SR 的命名，动的是 `US.Tuning.CooldownMultiplier` 的**标签文案**（"冷却倍率" vs "叫声间隔总控"），那是产品用词选择，不是机械替换。
+
+**基准优先于样本的实证（lead 要求保留）**：lead 从维护者截图转录的是「听取距离 · **激进** · 15–50」，而 SR 表里**激进 = Strong = 15–40**、**适中 = Balanced = 15–50**（`SqueakyRatkinSettings.cs:416-418`）⇒ **截图那一格本身就是标签与数值不一致的样本**（SR 自己的界面也这样显示）。**一切以 SR 表为准** —— 这正是「拿 SR 源而不是只看截图」的实证。
+
 ## 4. 三个结构风险的处置
 
 1. **标签/注文分键** ⇒ 本轮**成对改**：改标签的每一条，其 `US.Help.*` 注文同批更新（表 2/3 的 #13-#18）；`US.Help.Timing.Multiplier.*` 明确**豁免**（样本未给），不假装改过。

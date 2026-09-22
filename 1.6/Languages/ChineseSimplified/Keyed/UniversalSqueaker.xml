@@ -120,9 +120,9 @@
   <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
 
   <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
-  <US.Section.PlaybackBehaviour>播放行为</US.Section.PlaybackBehaviour>
+  <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
-  <US.Section.DistanceAttenuation>距离衰减</US.Section.DistanceAttenuation>
+  <US.Section.DistanceAttenuation>听取距离</US.Section.DistanceAttenuation>
   <US.Section.FilterDomains>1. 筛选音域</US.Section.FilterDomains>
   <US.Section.RaceDomain>2. 选择种族域</US.Section.RaceDomain>
   <US.Section.XenotypeDomain>2. 或选择异种域</US.Section.XenotypeDomain>
@@ -213,10 +213,10 @@
   <US.Tuning.Factor.Volume>音量</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>抖动</US.Tuning.Factor.Jitter>
   <US.Distance.Preset.Conservative>保守</US.Distance.Preset.Conservative>
-  <US.Distance.Preset.Balanced>均衡</US.Distance.Preset.Balanced>
-  <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
+  <US.Distance.Preset.Balanced>适中</US.Distance.Preset.Balanced>
+  <US.Distance.Preset.Strong>激进</US.Distance.Preset.Strong>
   <US.Distance.Preset.Custom>自定义</US.Distance.Preset.Custom>
-  <US.Distance.Status>衰减 {0}  {1}</US.Distance.Status>
+  <US.Distance.Status>听取距离 {0}  {1}</US.Distance.Status>
   <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
@@ -245,11 +245,11 @@
   <US.Help.GlobalVolume.Slider.Text>拖动滑条即在 0% 至 100% 间连续缩放全部最终音频，即时生效。</US.Help.GlobalVolume.Slider.Text>
   <US.Help.GlobalVolume.Number.Label>百分比输入框</US.Help.GlobalVolume.Number.Label>
   <US.Help.GlobalVolume.Number.Text>键入 0 至 100 的百分数。能解析的输入即时生效；按回车或点击别处只是结束编辑。</US.Help.GlobalVolume.Number.Text>
-  <US.Help.Attenuation.Overview>以镜头高度对应可闻距离：横轴为 15 至 65 的距离带，起点恒为 100% 响度、终点恒为 0%，水平拖动两端设出线性淡出。快速预设：保守 15-65、均衡 15-50、强效 15-40。</US.Help.Attenuation.Overview>
+  <US.Help.Attenuation.Overview>以镜头高度对应可闻距离：横轴为 15 至 65 的距离带，起点恒为 100% 响度、终点恒为 0%，水平拖动两端设出线性淡出。这里用的是 RimWorld 的摄像机高度刻度，不是 Pawn 到镜头中心的地图格距离。快速预设：保守 15-65、适中 15-50、激进 15-40；手动编辑区间后预设名会变成「自定义」。</US.Help.Attenuation.Overview>
   <US.Help.Attenuation.Chart.Label>衰减曲线</US.Help.Attenuation.Chart.Label>
   <US.Help.Attenuation.Chart.Text>水平拖动两个控制点，设定淡出的起点与终点；左点恒处 100% 可闻、右点恒处 0%，两点间距不小于 5。</US.Help.Attenuation.Chart.Text>
   <US.Help.Attenuation.Presets.Label>快速预设</US.Help.Attenuation.Presets.Label>
-  <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、均衡 15-50、强效 15-40；套用后曲线与状态行同步更新。</US.Help.Attenuation.Presets.Text>
+  <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、适中 15-50、激进 15-40；套用后曲线与状态行同步更新。手动编辑区间后标签会变成「自定义」。</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
   <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
