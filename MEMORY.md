@@ -79,6 +79,21 @@
   belongs to the control. (One consequence recorded with it: on this page the track's fill coincides with the
   card face by construction, so the **edge** is what separates them - the lane asserts the knob against both
   the track and the plane, and the track against the plane through at least one half.)
+- **S6-2 (B) MEASURED AND STOPPED: the row fill has NO working declarative route (2026-09-22).** Both
+  candidate shapes were built and run, and both are blocked by the vocabulary rather than by effort:
+  (a) **the hit element paints itself** - it WORKS (idle `#191612`, selected `#3A311F`, hit height still ==
+  the text column's) but it moves the hit band's own geometry and reddens `DeclarativePacksLaneTests` at
+  320px (`one hit area per row (4 rows), got 3`; the row's measured height 90 -> 68.67), and the whole-row hit
+  is the point of the slice, so it is refused; (b) **a painting SIBLING behind the hit** - the geometry holds
+  exactly (`covered=100% uncovered=0px` in all sixteen passes) but the sibling cannot exist:
+  `input/button` is the only surface-painting atom and it invokes its command on every click
+  (`ButtonWidget.Draw`), so a sibling without `ActionBind` throws the moment a press lands on it - measured
+  `KeyNotFoundException: No command binding registered for ''` at `.../race-layer-row-state#human`, the
+  element then replaced by a recovery band; with a command instead it is a SECOND hit surface and the press
+  step's ordinal maps to the wrong row (measured: band #1 selects `testrace`). There is no third state - the
+  vocabulary has no non-interactive element that paints a surface. **Row fill and row hover therefore join the
+  3px rail on the REAL-SCREEN list**, and the earlier "the selected fill IS expressible" is narrowed: it is
+  expressible only by changing the hit band's geometry, which this slice refuses.
 - **Two lane facts this step paid for, on top of the three already recorded.** (1) **Assert a widget's output
   against an independently built expectation, never against the widget's own helper**: the first version asked
   `UsSquareToggleWidget.Material(theme, state, …)` and compared the drawn fill to its answer - which stayed
