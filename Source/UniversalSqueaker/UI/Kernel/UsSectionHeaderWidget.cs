@@ -26,14 +26,18 @@ namespace UniversalSqueaker.UI;
 /// </para>
 ///
 /// <para>
-/// <b>Which token the rail paints, measured twice because the first answer was wrong.</b> `Tone="Active"`
-/// looks like the gold path - `SelectedSurface` is `(Selected, SelectedBorder ?? AccentGold)`,
-/// `UiTheme.cs:220-222` - but the flat scope `us-flat-panel` declares `SelectedBorder` EQUAL to
-/// `Selected` on purpose (that equality is how a flat surface paints no box), so inside UNSCOPED cards that
-/// token is the accent while inside the scoped ones it is `#3A311F`. Measured: a rail painted from
-/// `SelectedSurface.Border` came out `#3A311F` - i.e. the border resolved to the fill, which is exactly
-/// what the flat scheme asks for. The rail therefore uses `theme.AccentGold` directly: the series accent,
-/// the same token the navigation rail uses, and a colour identity that is deliberately NOT re-tinted.
+/// <b>Ask for the accent by name. This was measured twice, and the first answer was wrong because of an
+/// explicit argument, not because of a helper.</b> `UiTheme.SelectedSurface` is
+/// `(Selected, SelectedBorder ?? AccentGold)` (`UiTheme.cs:219-224`) and `SelectedBorder` IS assignable
+/// from a style document (`UiStyleDocument.cs:516` -> `UiStyleResolver.cs:272`) - so when the flat scope
+/// `us-flat-panel` sets it EQUAL to `Selected` (that equality is how a flat surface paints no box), the
+/// `?? AccentGold` fallback is ALIASED AWAY and the border reads as the fill. Measured: the first rail was
+/// passed `theme.SelectedSurface.Border` explicitly and came out `#3A311F`.
+/// <see cref="UiThemeDraw.AccentRail"/> itself is not the trap - its own fallback is
+/// `color ?? theme.AccentGold` (`UiThemeDraw.cs:150`), it never reads `SelectedSurface`, and calling it
+/// WITHOUT a colour is safe. The lesson is the calling convention: **when you want the accent, name the
+/// accent** - `theme.AccentGold`, the series colour the navigation rail uses and which is deliberately not
+/// re-tinted.
 /// </para>
 ///
 /// <para>

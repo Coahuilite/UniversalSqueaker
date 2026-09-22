@@ -51,6 +51,17 @@
   3.0). Mutations: a one-sided `RaisedBorder` change and a mud-dark `TextSecondary` both redden.
   `UsSurfaceLaneTests`' spec literals were re-cut in the same batch - they pin this palette, so a re-tint
   invalidates them by definition.
+- **When you want the accent, NAME the accent (measured 2026-09-22, corrected the same day).**
+  `UiTheme.SelectedSurface` is `(Selected, SelectedBorder ?? AccentGold)` (`UiTheme.cs:219-224`) and
+  `SelectedBorder` **is assignable from a style document** (`UiStyleDocument.cs:516` ->
+  `UiStyleResolver.cs:272`), so the flat scope `us-flat-panel` setting it EQUAL to `Selected` - the
+  equality that IS "a flat surface paints no box" - **aliases the `?? AccentGold` fallback away**: inside the
+  scoped cards `SelectedSurface.Border` reads `#3A311F`. The first `us/section-header` rail was passed that
+  value explicitly and came out that colour. **The trap is the CALL CONVENTION, not the helper**:
+  `UiThemeDraw.AccentRail`'s own fallback is `color ?? theme.AccentGold` (`UiThemeDraw.cs:150`), never
+  `SelectedSurface`, so calling it with no colour is safe. A consumer that wants the accent passes
+  `theme.AccentGold` (or omits the argument). FL recorded the same lesson on its consumer page without
+  changing code or API, which is the right split: this is a consumer-side convention, not a component defect.
 - **S6-3 step 1 LANDED: the section header is a US surface again (`us/section-header`), with a 3px gold
   left rail and a geometric marker.** The Registrar's us/* set **grew 11 -> 12** - the pin's first growth, and
   the parity check above it keeps that honest (the kind exists only while a manifest element uses it). The

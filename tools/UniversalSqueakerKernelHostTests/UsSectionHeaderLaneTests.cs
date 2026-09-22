@@ -21,10 +21,12 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <item><c>chrome/rule</c> paints a HORIZONTAL hairline only (<c>RuleWidget.cs:61-80</c>), and a
 /// container's chrome is a whole filled band, so a vertical 3px rail has no SHAPE in the declarative
 /// vocabulary.</item>
-/// <item>The colour exists, but not where it first looks: the flat scope sets <c>SelectedBorder</c> EQUAL to
-/// <c>Selected</c> (that equality is how a flat surface paints no box), so a rail painted from
-/// <c>SelectedSurface.Border</c> came out <c>#3A311F</c> - measured. The rail is painted from
-/// <c>theme.AccentGold</c>, the series accent the navigation rail already uses.</item>
+/// <item>The colour exists, but "the accent" has to be named: the flat scope sets <c>SelectedBorder</c>
+/// EQUAL to <c>Selected</c> (that equality is how a flat surface paints no box), which aliases away
+/// <c>SelectedSurface</c>'s <c>?? AccentGold</c> fallback, so a rail passed that border explicitly came out
+/// <c>#3A311F</c> - measured. <c>AccentRail</c> is not the trap (its own fallback is
+/// <c>color ?? theme.AccentGold</c>); passing a colour is. The rail asks for <c>theme.AccentGold</c>
+/// directly, the series accent the navigation rail already uses.</item>
 /// <item>No ink role resolves to gold: the style table gives gold only to <c>TextOnGold</c>, which travels
 /// WITH a gold fill. The marker is therefore drawn in <c>TextPrimary</c>, honestly, and "an emphasis ink
 /// with no fill under it" is a recorded backlog candidate rather than an invented token.</item>
