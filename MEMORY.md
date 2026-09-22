@@ -63,17 +63,38 @@
   them, `UsPacksText` moved to `UI/Layout/`, and `select-domain`'s payload became the row's own string key. This
   is the **first real consumer of G2** (`input/button.PayloadKey`: a repeated row reports its own key - the lane
   presses each row and asserts which domain the model received) and of G3 (`Chrome="none"` bare hit area).
-  Report + measured geometry + six mutations: spec §5.9.
-- **Two carrier gaps S4-2 recorded as (B), with file:line, and deliberately did NOT turn into requests.**
-  (1) `SelectedKey` is engine-wide but **not item-scoped** in a template
-  (`UiLayoutEngine.QualifyItemBinding` scopes Bind / ActionBind / OptionsBind / VisibleKey / PayloadKey only) and
-  `Tone`/`Emphasis` are literals, so **a data-driven row cannot say "I am the selected one"** - the selected row
-  loses its gold ink and its rail; the one-line fix candidate is adding `SelectedKey` to that list. (2)
-  `Height="Auto"` heights from the element's **own caption** (`ButtonWidget.cs:84-99`) while an Overlay keeps
-  every child at its measured height (`UiLayoutEngine.cs:1423-1450`) and `AlignY="Stretch"` names a position,
-  not an extent (`UiPlacement.cs:71-74`), so **a bare hit area cannot be stretched to the content-measured row it
-  covers**: the layer row's hit target is two bare bands (48px) = **69.9%** of a flat row and **53.3%** of a
-  wrapped one. Both are pinned as lane assertions so neither gap can be forgotten.
+  Report + measured geometry + eight mutations: spec §5.9.
+- **B1 FIXED on the carrier side (FL `e929fa11`), and the US half landed with it.** `SelectedKey` is now
+  item-scoped (`UiLayoutEngine.QualifyItemBinding` gained it alongside Bind / ActionBind / OptionsBind /
+  VisibleKey / PayloadKey), so a data-driven row CAN say "I am the selected one": the layer row's TITLE declares
+  `SelectedKey="selected"` and the host registers a per-row `<items>.<key>.selected` bool, which resolves the
+  `Active` role and paints the title in `TextOnGold` - the shipped selected ink. The **detail line
+  deliberately does NOT declare it**: the Active cell takes TextOnGold whatever `Emphasis` says, so declaring
+  it there would pull the detail's ink gold too while the shipped detail stayed TextSecondary. The S4-2 lane pin
+  was **flipped from negative to positive** (exactly one row answers true and it is the model's selected row);
+  `Tone`/`Emphasis` stay forbidden in templates (still literal-only). Mutation pair M-A/M-B proves both
+  directions of the one assertion.
+- **Carried known limitation, now CITED rather than a candidate (spec §5.9.6).** The selected row's **fill and
+  its left 3px rail** still cannot be expressed: `text/wrapped` paints no surface and the row has no
+  surface-painting atom at all, so what is missing is a row-state CARRIER, not an attribute value. The citation
+  is S4-2/S4-3's data-driven row sets (the first real consumer), which upgrades spec §5.2's "(B) candidate:
+  per-item Tone/Emphasis value binding" and §5.5's "no per-row role input surface" from candidate to
+  **CONFIRMED**. Debt boundary (maintainer rule: visible AND cheaply fixable must not spread): B1 was visible and
+  cheap, so it was fixed; this one is visible but NOT cheap (it needs a new capability), so it stays recorded
+  with its citation until a second consumer or the maintainer asks for it.
+- **The other (B) S4-2 recorded stays exactly as it was** (spec §5.9.2 B2): `Height="Auto"` heights from the
+  element's **own caption** (`ButtonWidget.cs:84-99`) while an Overlay keeps every child at its measured height
+  (`UiLayoutEngine.cs:1423-1450`) and `AlignY="Stretch"` names a position, not an extent
+  (`UiPlacement.cs:71-74`), so **a bare hit area cannot be stretched to the content-measured row it covers**:
+  the layer row's hit target is two bare bands (48px) = **69.9%** of a flat row and **53.3%** of a wrapped one.
+- **Gate 6's "payload commit == carrier HEAD" comparison is red whenever FL lands a doc-only commit after a
+  freeze, and that is expected, not a defect.** Measured 2026-09-21: FL `5052440` (docs only) moved HEAD past the
+  frozen build `e929fa11`. The round's acceptance identity is the FREEZE NOTICE (commit `e929fa11`,
+  Configuration Release, SHA-256 `C3B36923…0CA6FB`), never HEAD. **Also measured**: a stale
+  `FerriteLib.UiKit.pdb` (135 960 B, 16 s older than the DLL) sat beside the frozen carrier although the notice
+  said "no PDB" - FL's own ledger records that accident (a verify-only gate run after a freeze leaves the stale
+  Dev PDB behind). It does not move the DLL's identity. US must not build the carrier to "fix" it: FL's harness
+  is itself a writer of that folder, so verification on the consumer side is read-only.
 - **A container that omits `Padding` gets the density default (6 per side), and this has now bitten twice.**
   S4-2's `Repeat` did not declare it and the row set silently grew 12px; the lane now computes the row set from
   the DECLARED padding, so an omission reddens instead of shifting the card (the S3-5 rule, second specimen).

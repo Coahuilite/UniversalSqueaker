@@ -159,13 +159,18 @@
              composite drew, where one band would leave the detail line dead. The boundary is asserted in
              DeclarativePacksLaneTests: a row whose text wraps past 48px keeps a 48px hit area.
 
-             Selection is deliberately NOT styled here, and that is a recorded gap rather than an oversight.
-             SelectedKey is engine-wide on widgets but is NOT item-scoped inside a template
-             (UiLayoutEngine.QualifyItemBinding scopes Bind, ActionBind, OptionsBind, VisibleKey and
-             PayloadKey - not SelectedKey), and Tone/Emphasis are literals with no per-item form, so a
-             data-driven row cannot say "I am the selected one" in this vocabulary. Declaring SelectedKey in a
-             template would instead report an unresolvable binding once per row. The delta and the one-line
-             fix are in the S4-2 friction report (spec section 5.9). -->
+             Selection: SelectedKey sits on the row's TITLE only. It is item-scoped in the carrier since
+             e929fa11 (UiLayoutEngine.QualifyItemBinding gained it after S4-2 recorded the gap), so each row
+             answers for itself and the resolved role's text token is TextOnGold - the shipped selected
+             title's ink. The DETAIL line deliberately does NOT declare it: the Active cell takes TextOnGold
+             whatever Emphasis says, so declaring it there would pull the detail's ink gold too, while the
+             shipped detail stayed TextSecondary.
+
+             What selection still cannot show is the row's FILL and its left rail: text/wrapped paints no
+             surface and this row has no surface-painting atom at all, so the missing piece is a row-state
+             CARRIER, not an attribute value. That half is recorded as its own known limitation with its
+             citation in the friction report (spec section 5.9.4), never folded in with the ink that did
+             come back. Tone/Emphasis stay absent from this template: they are still literal-only. -->
         <Section Id="race-layer" Tab="Packs" Padding="12" Gap="6">
           <Widget Id="race-layer-header" Kind="section/header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
           <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
@@ -263,7 +268,7 @@
         <Widget Id="race-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
       </Column>
       <Column Id="race-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
+        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/race-layer/row" />
         <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
       </Column>
     </Overlay>
@@ -273,7 +278,7 @@
         <Widget Id="xenotype-layer-row-hit-b" Kind="input/button" Chrome="none" Height="Auto" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
       </Column>
       <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
+        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/xenotype-layer/row" />
         <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
       </Column>
     </Overlay>

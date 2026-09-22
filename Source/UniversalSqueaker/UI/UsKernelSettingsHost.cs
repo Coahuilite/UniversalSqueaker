@@ -479,12 +479,16 @@ public static class UsKernelSettingsHost
     /// no prefix resolution, so "register exactly the rows the list just named" is the only honest form.
     ///
     /// <para>
-    /// Three read-only keys per row: <c>payload</c> (the row's own key, which is what
-    /// <c>input/button.PayloadKey</c> hands to <c>select-domain</c>), <c>title</c> and <c>detail</c>. Every
-    /// getter resolves the CURRENT view rather than a captured row, so a row's text is live model data.
-    /// There is deliberately no <c>selected</c> key: the template cannot consume one - SelectedKey is not
-    /// item-scoped and Tone/Emphasis have no per-item form - and a binding nothing can read is the
-    /// "accepted but did nothing" shape this project refuses.
+    /// Four read-only keys per row: <c>payload</c> (the row's own key, which is what
+    /// <c>input/button.PayloadKey</c> hands to <c>select-domain</c>), <c>title</c>, <c>detail</c> and
+    /// <c>selected</c>. Every getter resolves the CURRENT view rather than a captured row, so a row's text
+    /// and its selected state are live model data.
+    /// <para>
+    /// <c>selected</c> is the key the carrier gained in e929fa11: SelectedKey answers which row is selected,
+    /// so it is item-scoped like the other binding roles, and the template's title element resolves THIS
+    /// row's answer. Without the per-row registration the title would fall back to the unresolved report
+    /// (all rows unselected), which is exactly what DeclarativePacksLaneTests asserts against.
+    /// </para>
     /// </para>
     /// </summary>
     private sealed class LayerRowBindings
@@ -527,6 +531,9 @@ public static class UsKernelSettingsHost
             bindings.BindReadOnly<string>(prefix + "payload", () => key);
             bindings.BindReadOnly<string>(prefix + "title", () => Title(key));
             bindings.BindReadOnly<string>(prefix + "detail", () => Detail(key));
+            // B1: this row's own selected answer. One bool per row, computed from the CURRENT selection, so
+            // the template's SelectedKey can never read another row's state.
+            bindings.BindReadOnly<bool>(prefix + "selected", () => IsSelected(key));
             // ActionBind is item-scoped inside a template too (UiLayoutEngine.QualifyItemBinding), so one
             // declared ActionBind cannot serve every row: the element asks for
             // "<items>.<itemKey>.select-domain" and the host registers exactly one command per row. The
@@ -596,6 +603,29 @@ public static class UsKernelSettingsHost
             string name = UsPacksText.Format(
                 translation, UsPacksText.KeyXenotypeRaceContext, domain.Value.DisplayName, domain.Value.RaceDisplay);
             return UsPacksText.TitleWithState(translation, name, domain.Value.State);
+        }
+
+        /// <summary>
+        /// Whether THIS row is the selected domain. The predicate is the composite's own, kept verbatim: a
+        /// race row compares the race defName under the Race scope, a xenotype row compares both halves under
+        /// the Xenotype scope. Zero or one row can answer true - the model holds one selected domain.
+        /// </summary>
+        private bool IsSelected(string key)
+        {
+            VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+            if (!domain.HasValue) return false;
+
+            if (scope == SqueakVoicePackScope.Race)
+            {
+                return domain.Value.Scope == SqueakVoicePackScope.Race
+                    && string.Equals(domain.Value.RaceDefName, key, StringComparison.Ordinal);
+            }
+
+            int split = key.IndexOf(RowKeySeparator);
+            if (split < 0) return false;
+            return domain.Value.Scope == SqueakVoicePackScope.Xenotype
+                && string.Equals(domain.Value.RaceDefName, key.Substring(0, split), StringComparison.Ordinal)
+                && string.Equals(domain.Value.TargetDefName, key.Substring(split + 1), StringComparison.Ordinal);
         }
 
         private string Detail(string key)

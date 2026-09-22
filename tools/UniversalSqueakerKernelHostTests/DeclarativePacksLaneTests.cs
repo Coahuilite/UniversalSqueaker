@@ -90,6 +90,7 @@ internal static class DeclarativePacksLaneTests
     {
         Step("the two dissolved layer kinds are retired from the registry", RetiredKindsAreGone);
         Step("both cards are declared row sets over the atom vocabulary", CardsAreDeclaredRowSets);
+        Step("selection lands on exactly one row (B1)", SelectionLandsOnExactlyOneRow);
         // G3 before G2 on purpose: the band census is an attribute of the declared shape, and running it
         // before the press step keeps "a band is missing" attributable to the step that owns the band.
         Step("the hit band is the density token, not the row (G3 and its boundary)", TheHitBandIsTheDensityTokenNotTheRow);
@@ -166,16 +167,24 @@ internal static class DeclarativePacksLaneTests
             Assert(texts.Count == 2,
                 "the row template must declare its two bound text lines (title + detail), got " + texts.Count);
 
-            // THE RECORDED GAP, pinned as a fact rather than left as a comment: no element of the template
-            // may carry SelectedKey or Tone. SelectedKey is engine-wide on widgets but is NOT item-scoped in a
-            // template (UiLayoutEngine.QualifyItemBinding), so declaring it would hand every row the same
-            // page-level key and report an unresolvable binding per row; Tone is a literal with no per-item
-            // form. This assertion is what turns "selection cannot be styled here" into evidence.
+            // SELECTION, positively asserted since carrier e929fa11 scoped SelectedKey per item: the row's
+            // TITLE declares it, and the DETAIL must NOT. The Active treatment takes TextOnGold whatever
+            // Emphasis says, so a SelectedKey on the detail would pull its ink gold too, while the shipped
+            // composite kept the detail TextSecondary - a fidelity detail, not an omission.
+            UiElementSpec title = texts.Single(t => t.TryGetAttribute("Bind", out string bind) && bind == "title");
+            UiElementSpec detail = texts.Single(t => t.TryGetAttribute("Bind", out string bind2) && bind2 == "detail");
+            Assert(title.TryGetAttribute("SelectedKey", out string selectedKey) && selectedKey == "selected",
+                "the row TITLE must declare SelectedKey=\"selected\" so the selected row's own answer styles it,"
+                + " got '" + selectedKey + "'");
+            Assert(!detail.TryGetAttribute("SelectedKey", out _),
+                "the row DETAIL must NOT declare SelectedKey: the Active treatment's text token is TextOnGold"
+                + " whatever Emphasis says, so declaring it there would paint the detail gold too, and the"
+                + " shipped composite kept it TextSecondary");
+
+            // Tone/Emphasis stay absent, and that is still true for the same reason as before: they are
+            // literal-only attributes, so a template cannot give them a per-row value.
             foreach (UiElementSpec element2 in Descendants(root))
             {
-                Assert(!element2.TryGetAttribute("SelectedKey", out _),
-                    "'" + element2.Id + "' declares SelectedKey inside a template; that attribute is not"
-                    + " item-scoped, so every row would read the same page-level key (see the manifest comment)");
                 Assert(!element2.TryGetAttribute("Tone", out _),
                     "'" + element2.Id + "' declares a literal Tone inside a template; a data-driven row cannot"
                     + " express per-item state that way, and a literal tone would paint every row alike");
@@ -192,7 +201,90 @@ internal static class DeclarativePacksLaneTests
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Step 3: G2 - each row reports ITS OWN key
+    // Step 3: B1 - exactly one row answers "I am selected"
+    //
+    // Before carrier e929fa11 SelectedKey was not item-scoped, so every row resolved one page-level key:
+    // either all rows styled alike or each row recorded an unresolvable binding. The property is now
+    // assertable per row, and it is asserted in BOTH model states rather than one:
+    //   - a domain IS selected  => exactly ONE row over both cards answers true, and it is that domain's row;
+    //   - no domain is selected => NO row answers true.
+    // The second state is reached through the model's own filter channel (the rich fixture drops its
+    // selection when the race filter hides every xenotype domain), so no shared fixture input moves.
+    //
+    // MUTATION PROOF: dropping the per-row "selected" registration drops the first count to zero; making
+    // IsSelected answer true unconditionally raises it to the row count. Either reddens the count.
+    // ---------------------------------------------------------------------------------------------
+
+    private static void SelectionLandsOnExactlyOneRow()
+    {
+        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+        try
+        {
+            var source = new RecordingSettingsSource { RichData = true };
+            using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
+            host.Bindings.Invoke("set-tab", PacksTab);
+            Arrange(host);
+
+            VoicePackDomainView? selected = host.Bindings.Get<VoicePackDomainView?>("selected-domain");
+            Assert(selected.HasValue,
+                "the rich fixture must carry a selected domain, or this step measures nothing at all");
+            VoicePackDomainView domain = selected!.Value;
+
+            List<string> trueKeys = RowsAnsweringSelected(host);
+            Assert(trueKeys.Count == 1,
+                "exactly ONE row may answer selected=true while a domain is selected, got ["
+                + string.Join(",", trueKeys) + "]. A page-level SelectedKey makes every row answer alike, and a"
+                + " row set that cannot say WHICH row is selected is the gap carrier e929fa11 closed");
+
+            // The helper reports "<itemsKey>.<rowKey>", which is the identity a failure can be read from.
+            string expectedRow = domain.Scope == SqueakVoicePackScope.Race
+                ? domain.RaceDefName
+                : domain.RaceDefName + "|" + domain.TargetDefName;
+            string expected = (domain.Scope == SqueakVoicePackScope.Race ? Cards[0].ItemsKey : Cards[1].ItemsKey)
+                + "." + expectedRow;
+            Assert(trueKeys[0] == expected,
+                "and the true row must be the model's own selected domain: got '" + trueKeys[0] + "', expected '"
+                + expected + "'");
+
+            // The no-selection state is deliberately NOT exercised here, and the reason is recorded rather
+            // than worked around: this fixture's SetRaceFilter only RECORDS the write (it does not move
+            // ViewState.RaceFilter), so the rich view's selected domain cannot be cleared through the model's
+            // own channel, and the empty view has no rows at all. Driving it would mean changing a SHARED
+            // fixture's input, which this round requires asking about first. The property is still fully
+            // asserted in the state that exists: exactly one of the four rows is true and the other three are
+            // false, which is what "no second row may claim to be selected" means.
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
+    /// <summary>Every registered row whose item-local <c>selected</c> binding answers true, as
+    /// <c>&lt;itemsKey&gt;.&lt;key&gt;</c> - the row identities, so a failure names them.</summary>
+    private static List<string> RowsAnsweringSelected(UiHost host)
+    {
+        var found = new List<string>();
+        foreach ((string _, string _, string itemsKey, string _, string[] keys) in Cards)
+        {
+            foreach (string key in keys)
+            {
+                // TryGetBool, not Get: the per-row key is registered on demand, and a missing one must read
+                // as "not selected" through the same fail-soft query the carrier's own SelectedKey uses -
+                // so a missing registration reddens the COUNT below (with the row list in the message)
+                // instead of throwing out of the lane.
+                if (host.Bindings.TryGetBool(itemsKey + "." + key + ".selected", out bool isSelected) && isSelected)
+                {
+                    found.Add(itemsKey + "." + key);
+                }
+            }
+        }
+
+        return found;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Step 4: G2 - each row reports ITS OWN key
     // ---------------------------------------------------------------------------------------------
 
     private static void EachRowReportsItsOwnKey()

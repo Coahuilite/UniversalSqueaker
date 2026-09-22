@@ -22,10 +22,19 @@
     **G2** (`input/button.PayloadKey` - a repeated row reporting its OWN key) and **G3** (`Chrome="none"`
     bare hit area). The Registrar's `us/*` kind set went **15 -> 13**, 388 widget lines and the
     `UsDomainSelection` payload struct retired with them, and `UsPacksText` moved to `UI/Layout/`. Two
-    **(B)** carrier gaps are recorded in spec §5.9 with file:line and a minimal repro, **no request filed**:
-    `SelectedKey` is not item-scoped (so a data-driven row cannot express "I am selected" - the selected row
-    loses its ink and rail) and a bare hit area cannot be stretched to a content-measured row (the hit target
-    is 69.9% of a flat row, 53.3% of a wrapped one).
+    **(B)** carrier gaps were recorded in spec §5.9 with file:line and a minimal repro, **no request filed**.
+    **The first is now FIXED**: the maintainer ruled it visible-and-cheap, FL scoped `SelectedKey` per item
+    (carrier `e929fa11`), and the US half landed with it - the row TITLE declares `SelectedKey="selected"`,
+    the host registers a per-row `selected` bool, the lane pin was flipped from negative to positive (exactly
+    one row is true and it is the model's), and `Tone`/`Emphasis` stay forbidden in templates. The second
+    stays exactly as recorded: a bare hit area cannot be stretched to a content-measured row (the hit target is
+    69.9% of a flat row, 53.3% of a wrapped one).
+  - [ ] **Carried known limitation, CITED (spec §5.9.6): the selected row's fill and its left 3px rail are still
+    not expressible.** `text/wrapped` paints no surface and the row has no surface-painting atom, so what is
+    missing is a row-state CARRIER, not an attribute value. Citation: S4-2/S4-3's data-driven row sets are the
+    first real consumer, which upgrades spec §5.2's "(B) candidate: per-item Tone/Emphasis value binding" and
+    §5.5's "no per-row role input surface" to **CONFIRMED**. Debt boundary: visible but NOT cheaply fixable, so
+    record + cite and wait for a second consumer or a maintainer ruling - do not re-open it unasked.
 - [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
   gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
   is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
@@ -81,8 +90,9 @@ no `HeightKey`).
   `input/slider` and `input/number-field` on this page — check the drag feel and the field's focus/commit;
   (2c) **the S4-2 Packs deltas** (six, all "needs a real screen", spec §5.9): the **whole-row hit target**
   became a full-width 2x24px stack at the row's top — 69.9% of a flat row and 53.3% of a wrapped one, so the
-  detail line's lower half is dead; **selection is invisible in the layer cards** (no gold title, no selected
-  fill, no rail — `SelectedKey` is not item-scoped); row surface/hover gone; rows +20.67px taller (cards 266
+  detail line's lower half is dead; **selection in the layer cards is now HALF restored** — the selected row's
+  title ink is back (gold, as shipped), but the row's fill and its left 3px rail are still missing (§5.9.6);
+  row surface/hover gone; rows +20.67px taller (cards 266
   and 124.67px); the detail line moved Tiny -> Small and both lines sit 10px further left, top-anchored;
   (3) **the narrow help band (乙1) as shipped** — it REPLACES the body (the nav
   and the centre column are not drawn at all), fills header-to-footer, scrolls internally, never pushes the

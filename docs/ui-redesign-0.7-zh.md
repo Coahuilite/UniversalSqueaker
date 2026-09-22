@@ -592,8 +592,26 @@ manifest 与绑定侧投影把行数加了回来。真正消失的是 **draw 那
 
 ### 5.9 S4-2 摩擦报告（2026-09-21 实测：Packs 两个 layer 卡声明式化；G2/G3 第一次被真实页面使用）
 
-**提交**：代码 `7f54ea7`（本报告与它同批）。证据：harness **ALL PASS / EXIT 0**、
-`verify-local -NoRestore` **15/15 EXIT 0**（载体 Release）；**6 个变异**逐个实测、各自红在预期断言上。
+**提交**：代码 `7f54ea7`（本报告与它同批），B1 修复后续另有一提交（见下）。证据：harness **ALL PASS /
+EXIT 0**、`verify-local -NoRestore` **15/15 EXIT 0**（载体 Release `e929fa11`）；**8 个变异**逐个实测、
+各自红在预期断言上。
+
+> **B1 修复后续（2026-09-21，载体 `e929fa11`）。** 维护者裁定「不能让技术债在可见且可修复的时候放任
+> 扩散」，fl-dev 把 `SelectedKey` 加进 `UiLayoutEngine.QualifyItemBinding` 的作用域名表，US 侧同一批：
+> 两个模板的行标题声明 `SelectedKey="selected"`、host 注册 per-row `<items>.<key>.selected`、§5.9 那条
+> 「模板里不许出现 SelectedKey」的钉**翻转成正向断言**（正好一行为真且是模型选中的那一行），
+> `Tone`/`Emphasis` 禁令保留。证据同上（harness ALL PASS + 15/15）。详见 §5.9.4 第 2 条与 §5.9.6。
+>
+> **门 6 的状态（如实记录）**：FL 在冻结之后又落了**一个纯文档提交**（`5052440`，只改 `docs/api-tiers.md`
+> 与两处 `docs/development/**`），而载体内嵌的构建修订仍是 `e929fa11` ⇒ 门 6 那句「payload 内嵌 commit
+> == carrier HEAD」机械比较会红。这是**文档先于载体重建的必然结果，不是缺陷**（规则在册：*A doc-only commit
+> reddens "embedded commit == HEAD" until the carrier is rebuilt. That is expected rather than a defect.*）。
+> 本轮的验收身份以 FREEZE NOTICE 为准：commit `e929fa11fd20473f20775e5902a761cb69d6d404`、Release、
+> SHA-256 `C3B36923400DF12E6143B1EA8DC76D9D4B65E2028BAE03CEB8402CBDEF0CA6FB`（两者均已复测一致）。
+> **实测偏离**：NOTICE 写「无 PDB」，而 `FerriteLib.UiKit.pdb` **存在**（135 960 B，12:39:58；
+> DLL 12:40:14）——正是 FL 自己 `AGENTS.md` 记的那起事故（冻结后一次只做验证的门链运行把陈旧的 Dev PDB
+> 留回了冻结载体旁）。它不影响 DLL 的身份（SHA/大小/Release 配置三者均与 NOTICE 一致），但它是 FL 侧的
+> 卫生项，**本会话按规矩没有构建 ferritelib、也没有触碰该文件**。
 
 **消解对象与同批退役**
 
@@ -696,9 +714,16 @@ caption 为空 ⇒ 回落 `RowHeight`（本页 24）。而 `Overlay` 的子元�
 1. **整行命中区的形状变了（本片核心观感差异）。** shipped：整行整宽、整高可点（内容量高，≥48px）。
    现在：整宽的一摞 **2×24px** 落在行顶部 —— 不换行行覆盖 **69.9%**（48/68.67），换行行掉到 **53.3%**
    （90px 行里 42px 是死的）。**detail 行的下半部分不再可点**。这是 B2 的直接后果，不是排版选择。
-2. **选中态在整个 Packs 工作区不可见。** shipped：选中行标题用 `TextOnGold`、行面用 Selected 填充、
-   左侧 3px 选中轨。现在三者全无（B1）：`text/wrapped` 不画 surface，且行说不出自己是否被选中。
-   玩家仍能通过下方 checklist 的内容推断选中的域，但**层级卡本身不再显示选中**。
+2. **选中态：拆成两半记录（B1 修复后重写，2026-09-21）。** shipped 的选中态是**三件**——金色标题墨、
+   行面 Selected 填充、左侧 3px 选中轨。载体 `e929fa11` 之后：
+   - **已恢复的一半 —— 选中行标题墨色。** `SelectedKey` 现在是 item 作用域的，行标题声明
+     `SelectedKey="selected"` ⇒ 解析到 `Active` 角色 ⇒ `text/wrapped` 的 Text = `TextOnGold`，
+     与 shipped 选中标题同色。**只声明在标题上、detail 不声明**：`Active` 对文本**一律**取
+     `TextOnGold` 而**忽略 `Emphasis`**，若 detail 也声明，它的墨会被一起拉成金色，而 shipped 的 detail
+     是 `TextSecondary`（现 `Emphasis="Muted"`）——所以只落在标题上是对 shipped 的忠实还原，不是漏了。
+     【仍需实机】
+   - **未恢复的一半 —— 独立成条已知限制，见下面的 §5.9.6。** 行面填充与左侧选中轨仍表达不了。
+   玩家仍能通过下方 checklist 的内容推断选中的域。
 3. **行面 / hover 高亮消失**：`Chrome="none"` 什么都不画、`text/wrapped` 不画面（与 checklist / S4-1 同类差异）。
 4. **行高 +20.67px**（68.67 vs shipped 48 的 floor）：atom 每行带 `Padding*2`=12px 的纵向留白。
    卡片随之变高（race 266 / xenotype 124.67）。
@@ -707,7 +732,7 @@ caption 为空 ⇒ 回落 `RowHeight`（本页 24）。而 `Overlay` 的子元�
    两行都是 **UpperLeft**（shipped MiddleLeft 垂直居中）。
 6. **空列表**：shipped 与现在都只画卡片壳（body 0）—— 无差异，记录以说明这一点被核对过。
 
-### 5.9.5 变异证据（6 个，逐个实测）
+### 5.9.5 变异证据（8 个，逐个实测）
 
 | 变异 | 实测红在哪（断言原文摘录） |
 |---|---|
@@ -716,11 +741,35 @@ caption 为空 ⇒ 回落 `RowHeight`（本页 24）。而 `Overlay` 的子元�
 | **M3** payload 从「行自己的 key」改成常量 `"human"` | 本 lane G2 步：*pressing band #3 must select row 1 ('testrace'); the model received scope=Race race='human'* —— **payload 承重的证明** |
 | **M4** 删掉两条命中带中的一条 | 本 lane G3 步：*the arranged snapshot must carry 'race-layer-row-hit-b#human'* |
 | **M5** 去掉 `Repeat` 的 `Padding="0"`（回落密度默认 6） | 本 lane G3 步的命中带普查：*must draw two bare bands per row (4 rows), got 6* |
-| **M6** 在模板里声明 `SelectedKey="selected"`（尝试按页级规则做行选中态） | 本 lane 声明形态步：*'race-layer-row-title' declares SelectedKey inside a template; that attribute is not item-scoped…* |
+| **M6**（B1 之前）在模板里声明 `SelectedKey="selected"`：当时它**跳过了**那条「模板里不许出现 SelectedKey」的钉 | 本 lane 声明形态步：*race-layer-row-title declares SelectedKey inside a template…*（该钉已在 B1 修复后**翻转成正向断言**） |
+| **M-A**（B1 修复后）删掉 per-row 的 `<items>.<key>.selected` 注册 | 本 lane 选中步：*exactly ONE row may answer selected=true while a domain is selected, got []* |
+| **M-B**（B1 修复后）让每行都回答 selected=true | 本 lane 选中步：*got [race-rows.human,race-rows.testrace,race-rows.sanguophage,xenotype-rows.human\|sanguophage]* —— 同一条断言的两个方向 |
 
-**哪条断言是变异证明、哪条只是守卫**：步骤 2 由 M2/M6 证明；步骤「G3」由 M4/M5 证明；步骤「G2」由 M3 证明；
+**哪条断言是变异证明、哪条只是守卫**：步骤 2 由 M2/M6 证明；B1 选中步由 M-A/M-B **双向**证明（少一个注册 ⇒
+`[]`；多回答 ⇒ 四行全真）；步骤「G3」由 M4/M5 证明；步骤「G2」由 M3 证明；
 **最后一步（清单带高算术）只是守卫**——它在基线绿，但 M5 先被 G3 步的普查抓住，所以这条关系没有被变异
 单独证明过。`CountBands` 这一层之所以被特意挪到 G3 步，就是让「少了一条带子」红在拥有那条带的步骤上。
+
+### 5.9.6 已知限制：选中行的**行面填充**与**左侧 3px 选中轨**仍不可表达（独立记档，带引证）
+
+**不是什么**：这不是「漏了一个属性值」。
+
+**机制（为什么表达不了）**：`text/wrapped` **不画 surface**（它只写文本），而这一行里**没有任何画表面的
+atom** —— 两个命中带是 `Chrome="none"`（什么都不画），其余全是文本。所以缺的是**行状态的承载面**
+（一个能被 `SelectedKey` 点亮的面），不是缺一个能填值的属性。
+
+**引证（升级规则：请求不是证据，引证才是）**：**S4-2/S4-3 的数据驱动行集**是它的第一个真实消费者 ——
+列表**说不出「选中的是哪一行」的可见状态**。因此此前记录的 **「(B) 候选：per-item `Tone`/`Emphasis` 值绑定」**
+按引证**从候选升级为已证 (CONFIRMED)**，锚点：
+- spec **§5.2** 的 layers 行：*「每行『选中』高亮若要走 `Tone`/`Emphasis`，二者都是**字面量属性**（无
+  `ToneBind`）→ 只能用『每个 tone 一份模板 + item-local `VisibleKey`』复制模板」*（**(B) 候选**）；
+- spec **§5.5**：*「缺口不是『没有 Resolve』，而是**没有 per-row 的角色输入面**（元素级 Tone 无法表达行状态，
+  而 per-item 的角色绑定不存在）」*。
+
+**判债分界**（维护者原则：技术债在**可见且可修复**时不许放任扩散）：
+- B1（`SelectedKey` 未 item 作用域化）属**可见且便宜可修** ⇒ 当场修（载体 `e929fa11`）。
+- 本条属**可见但不便宜可修**：要的是一个新的**行状态承载能力**（per-item 的角色/面绑定，或一个能画表面的
+  per-item 原子），不是一行改动 ⇒ **记录清楚 + 带引证 + 等第二个消费者或维护者要求时再升级为能力**。
 
 ## 6. 实施切片（0.5.x 线，短命分支）
 
