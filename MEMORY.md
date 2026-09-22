@@ -7,6 +7,18 @@
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
 
+- **S6-2/S6-3 started: the nav column is scoped flat, and the scheme had to live in the MANIFEST.**
+  A style scope that sets a surface's BORDER token equal to its FILL is how "no box" is spelled here (the
+  vocabulary has no `Border=none`; `UiThemeDraw.Surface` paints a 1px frame in the border colour).
+  **Durable pitfall measured on the lane's first run:** the engine resolves an element's `Scheme` against
+  **the document the Host was built with - the layout manifest's own `<Styles>` section** - while
+  `UsTheme.SchemeXml` is the in-code palette applied to the theme INSTANCE. A scheme declared only in
+  `UsTheme` is never resolved, and the scope silently keeps the page's bordered values (the resolver just
+  records "unknown scheme" and falls back); the lane caught it as `border #333A46FF vs fill #1F232CFF`.
+  So a new scheme goes in `Layout.Schema2.xml`'s `<Styles>`, and it should declare **only the tokens it
+  overrides** - the rest inherits the cloned baseline. Evidence: `FlatStyleLaneTests` (document tokens +
+  resolved scoped theme + the page-level control + the states-still-differ mutation), three mutations red.
+
 ## Documentation-vs-code defect rule (measured 2026-09-22)
 
 - **When a document and the code disagree, the code is the fact and the document is the defect - unless the
