@@ -46,6 +46,28 @@
 | 11 | `US.Section.DistanceAttenuation` | Distance attenuation | 距离衰减 | 样本中不可见（区块标题是「听取距离 · …」） | 待判 | **未动** |
 | 12 | `US.Nav.*` / `US.Page.*.Title` | Overview / VoicePack Routing … | 总览 / 语音包路由 … | 三个页签名与副标题 | SR 三页签 ≠ US 五工作区，不是同一层 | **未动**（属产品结构） |
 
+## 2.5 ScaleTalking 的代码结论（lead 要求：UI 不得撒谎）
+
+**结论：US 的实现是「按 Talking 能力缩放通过概率」，不是「正在交谈」的门控。样本措辞正确，本轮改文不变。**
+
+代码证据（全部在 `Source/UniversalSqueaker/` 内）：
+
+| 位置 | 代码 | 说明 |
+|---|---|---|
+| `CompSqueaker.cs:513-524` | `capability = SampleVocalCapability(); applyTalkingGate = ScaleFrequencyWithTalking && plan.Definition.VocalGatePolicy == ApplyTalkingGate; roll = capability.RequiresTalkingRoll(applyTalkingGate) ? Rand.Value : 0f; vocalDecision = capability.Decide(applyTalkingGate, roll);` 非 Allowed ⇒ 记 `VocalOrgansSilent` 或 `TalkingRejected` 并 **return（不播放）** | 决定性分支：一次**随机掷骰**决定这次尝试是否通过 |
+| `Runtime/SqueakVocalCapability.cs:21-29` | `RequiresTalkingRoll = applyTalkingGate && VocalOrganEfficiency > 0.001f && TalkingChance < 0.999f`；`Decide: ... && !(roll < TalkingChance) ? TalkingRollRejected : Allowed` | 通过条件 = `roll < TalkingChance`；`TalkingChance` 就是能力值（0..1，被 clamp） |
+| `CompSqueaker.cs:895-896` | `SampleVocalCapability() => new(GetVocalOrganEfficiency(), Pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Talking) ?? 1f)` | `TalkingChance` = **Talking 能力等级**，不是"是否正在说话" |
+
+推论（可核）：能力 = 1.0（≥0.999）时**不掷骰、恒通过**；能力 0.5 时约一半通过；能力趋近 0 时几乎不通过。
+
+**排除项**：全树没有任何"当前正在交谈"信号参与该判定——唯一相关的策略枚举是 `Pure/SqueakActionPlan.cs:7` 的
+`SqueakVocalGatePolicy { ApplyTalkingGate, ExemptTalkingGate }`，它只决定**这条动作是否参与上面那次掷骰**，
+不是"必须正在说话"。
+
+**因此**：样本的「Talking 能力越低，普通叫声尝试通过的概率越低」与实现一致；而**旧 US 注文**把机制写成
+「需在殖民者正在交谈时才可能通过」才是**对玩家的错误描述**（把概率机制说成了布尔门控）。本轮改文既是
+对齐 SR，也是**纠正一处 UI 撒谎**。若维护者希望改成真正的"仅交谈中发声"，那是**行为变更**，需他裁定。
+
 ## 3. 对照表 · 帮助注文层（`US.Help.*`）
 
 | # | 键 | 本轮是否跟随改 | 说明 |
@@ -72,6 +94,13 @@
 - `US.Distance.Status` 模板、`US.Help.Attenuation.*`、`US.Help.Timing.Multiplier.*`；
 - 页脚「版本 … / 关闭」（属 shell chrome）。
 
+## 5.5 占位符同构确认（lead 要求一句确认）
+
+`US.Tuning.MinInterval`：EN `Call interval master: {0}  ·  1.0x uses the default rhythm` 与 ZH
+`叫声间隔总控：{0}  ·  1.0x 使用当前默认节奏` —— **各含且仅含一个 `{0}`，位置在句首冒号后**，与
+`US.Tuning.GlobalVolume`（`{0}`）和 `US.Distance.Status`（`{0}` `{1}`）一样满足两表同构；
+`UiSourceInvariantTests` 的本地化契约门（键集相同 + 占位符同构）**ALL GREEN** 已实测通过。
+
 ## 6. 本轮实测（玩家可见差异，全部【仍需实机】）
 
 量测输出来自 `DeclarativeTimingLaneTests` / `DeclarativeOverviewLaneTests`：
@@ -88,3 +117,8 @@
 | basic-tuning | 320 | 400.67 | **422** | 379.33 |
 
 （timing 的 caption 说明行在 1024 由 33.33 → 54.67，即多一行；英文比中文多一行处是「句子更长」，不是布局缺陷。）
+
+## 7. 门链（本批）
+
+`verify-local -NoRestore`：**15 门全部 OK，`[verify] all checks passed.`，exit 0**；载体
+`0F95DF35…5A0B66`、mtime `2026-09-22 13:30:00`、249344 B、无 PDB，**跑前跑后 `sha moved=False mtime moved=False`**。
