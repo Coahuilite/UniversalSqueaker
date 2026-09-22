@@ -49,6 +49,28 @@ $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::N
 $buildExtraArgs = @()
 if ($NoRestore) { $buildExtraArgs += '--no-restore' }
 
+# A gate's retry hint is read inside "I am verifying", and SOME of these hints WRITE THE SHARED
+# CARRIER - the path every sibling checkout compiles against. That is the trap this session hit for real
+# on 2026-09-22: a verification-only session copied gate 6's rebuild hint, rebuilt the carrier and moved
+# the frozen hash. The criterion below is deliberately "does this command write the carrier", NOT "is it
+# a build": most of these hints build the US assembly, whose output path is US's own 1.6/Assemblies and
+# belongs to nobody else. Only a hint that names the carrier's own project is annotated, and the
+# annotation says what the command IS - a delivery step, owner-only, hash-moving, ended by a new FREEZE
+# NOTICE. (The carrier repository carries the same rule from its side; its scripts print their hints under
+# [hint] too, so the two read alike.)
+$retryWritesCarrier = [regex]'(?i)ferritelib[\\/]+Source[\\/]+FerriteLib\.UiKit[\\/]+FerriteLib\.UiKit\.csproj'
+$retryCarrierNotice = @(
+    '[hint ]   (a) this command REBUILDS/FORCE-REBUILDS the shared carrier'
+    '[hint ]       ../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll, the payload every sibling checkout'
+    '[hint ]       compiles against - it is a DELIVERY step, not a repair; and'
+    '[hint ]   (b) it REPLACES the current frozen identity: the SHA-256 moves (it is conditional only'
+    '[hint ]       while the payload is already up to date from the same commit - when the payload is'
+    '[hint ]       STALE, as it was on 2026-09-22, it rewrites the file and the hash a consumer already'
+    '[hint ]       verified stops describing these bytes). Only the CARRIER OWNER runs it; the delivery'
+    '[hint ]       step ends with the stale-PDB removal, the re-verification and a re-issued FREEZE'
+    '[hint ]       NOTICE. A verification-only session must not run it.'
+)
+
 function Invoke-Check {
     param([string]$Name, [string]$Retry, [scriptblock]$Action)
 
@@ -68,7 +90,8 @@ function Invoke-Check {
         if (Test-Path -LiteralPath $tempLog) {
             Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
         }
-        Write-Host "  retry: $Retry"
+        Write-Host "  [hint] retry: $Retry"
+        if ($Retry -match $retryWritesCarrier) { $retryCarrierNotice | ForEach-Object { Write-Host $_ } }
         Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
         exit 1
     }
@@ -107,7 +130,7 @@ if (-not $NoRestore) {
         if (Test-Path -LiteralPath $tempLog) {
             Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
         }
-        Write-Host "  retry: dotnet restore $setupFailedProject"
+        Write-Host "  [hint] retry: dotnet restore $setupFailedProject"
         Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
         exit 1
     }
