@@ -51,11 +51,34 @@
   3.0). Mutations: a one-sided `RaisedBorder` change and a mud-dark `TextSecondary` both redden.
   `UsSurfaceLaneTests`' spec literals were re-cut in the same batch - they pin this palette, so a re-tint
   invalidates them by definition.
-- **Carrier freeze MOVED to FL `490d4f076431` (2026-09-22), verified read-only here:** SHA-256
+- **S6-3 step 1 LANDED: the section header is a US surface again (`us/section-header`), with a 3px gold
+  left rail and a geometric marker.** The Registrar's us/* set **grew 11 -> 12** - the pin's first growth, and
+  the parity check above it keeps that honest (the kind exists only while a manifest element uses it). The
+  reason is a SHAPE, measured before it was written: `chrome/rule` paints a horizontal hairline only and a
+  container's chrome is a whole filled band, so a vertical rail is not declarable. **The rail's token was
+  measured twice and the first answer was wrong**: `SelectedSurface.Border` looks like the gold path
+  (`SelectedBorder ?? AccentGold`) but the flat scope sets `SelectedBorder` EQUAL to `Selected` - that
+  equality IS "a flat surface paints no box" - so inside the scoped cards that token is `#3A311F`. The rail
+  paints `theme.AccentGold`, the series accent the navigation rail uses. The marker is `U+25B6`, gated by
+  the D7 probe seam: a font that cannot draw it gets NO marker rather than an empty box. It is inked
+  `TextPrimary` honestly - no style-table cell resolves a gold ink without a gold fill - and "an emphasis ink
+  with no fill under it" is recorded as a BACKLOG candidate with this step as its citation. Lane:
+  `UsSectionHeaderLaneTests` (geometry + drawn-pixel existence, **not** a hit lane). Its two mutation proofs
+  are the declaration (a header back on the carrier kind) and the PIXEL (with that step disabled, the
+  assertion still names the offending rect `#2A2620`).
+- **The carrier defect behind that step is FIXED (FL `876750a`, task-10): `section/header` now reads
+  `Chrome="none"` and suppresses its rule.** Consequence recorded in both the widget and the lane so nobody
+  keeps the stale story: a declarative header can now have no rule, so **the surviving reason for
+  `us/section-header` is the RAIL** - if the rail is ever given up, the manifest can go back to
+  `section/header Chrome="none"` and both new files can be deleted.
+- **Carrier freeze MOVED to FL `876750a` (task-10's own rebuild), verified read-only here:** SHA-256
+  `58B57EAD732288AAC9A3BFE88AC88E2BCAD3D849AF40CF52D0459A7787AF0083`, 252416 B, Release, no PDB, mtime
+  `2026-09-22T06:50:11.2467159Z`. `verify-local`'s gate 6 (payload commit == carrier HEAD) is green against
+  it, and the full US chain ran green with the carrier unmoved by the run.
+- **Carrier freeze before the task-10 rebuild: FL `490d4f076431`**, SHA-256
   `E396E089FE0D59065F3E7D672427131EF01B70D4A07A7F71733A16FDB36E5ACB`, 252416 B, Release, no PDB, stamp
-  `0.7.0-dev+490d4f076431…` == HEAD. It **ships `Height="MatchContent"`**, so the whole-row hit area is
-  unlocked. **The full US chain ran green on it** (`[verify] all checks passed.`, exit 0, carrier SHA and
-  mtime unmoved).
+  `0.7.0-dev+490d4f076431…` == HEAD. It **shipped `Height="MatchContent"`**, which unlocked the whole-row hit
+  area; that step ran green on it.
 
 ## Documentation-vs-code defect rule (measured 2026-09-22)
 
