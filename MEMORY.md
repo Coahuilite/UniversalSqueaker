@@ -134,9 +134,16 @@
   `us/section-header` is the RAIL** - if the rail is ever given up, the manifest can go back to
   `section/header Chrome="none"` and both new files can be deleted.
 - **Carrier freeze MOVED to FL `876750a` (task-10's own rebuild), verified read-only here:** SHA-256
-  `58B57EAD732288AAC9A3BFE88AC88E2BCAD3D849AF40CF52D0459A7787AF0083`, 252416 B, Release, no PDB, mtime
-  `2026-09-22T06:50:11.2467159Z`. `verify-local`'s gate 6 (payload commit == carrier HEAD) is green against
-  it, and the full US chain ran green with the carrier unmoved by the run.
+  `58B57EAD732288AAC9A3BFE88AC88E2BCAD3D849AF40CF52D0459A7787AF0083`, 252416 B, Release, no PDB.
+  `verify-local`'s gate 6 (payload commit == carrier HEAD) is green against it, and the full US chain ran green
+  with the carrier unmoved by the run. **mtime baseline: `2026-09-22T11:29:56.3806212Z`** - FL rewrote the
+  payload with the SAME BYTES at that time (after the gold re-tint was cancelled it rebuilt back to the frozen
+  content), so the identity did not move and no re-verification is owed; every earlier `mtime moved=False`
+  fact line was true at the time and now compares against this new baseline.
+- **A hash and an mtime answer different questions, and the freeze needs both.** The hash says "are these the
+  same bytes"; the mtime says "was the file written". A rebuild of identical content moves the second and not
+  the first (measured above), so a FREEZE NOTICE that quotes only the SHA is under-specified for anyone
+  checking whether the payload was touched - quote the hash AND the mtime, and report the pair when verifying.
 - **Carrier freeze before the task-10 rebuild: FL `490d4f076431`**, SHA-256
   `E396E089FE0D59065F3E7D672427131EF01B70D4A07A7F71733A16FDB36E5ACB`, 252416 B, Release, no PDB, stamp
   `0.7.0-dev+490d4f076431…` == HEAD. It **shipped `Height="MatchContent"`**, which unlocked the whole-row hit
