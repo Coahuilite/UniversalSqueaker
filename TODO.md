@@ -26,9 +26,11 @@
     **The first is now FIXED**: the maintainer ruled it visible-and-cheap, FL scoped `SelectedKey` per item
     (carrier `e929fa11`), and the US half landed with it - the row TITLE declares `SelectedKey="selected"`,
     the host registers a per-row `selected` bool, the lane pin was flipped from negative to positive (exactly
-    one row is true and it is the model's), and `Tone`/`Emphasis` stay forbidden in templates. The second
-    stays exactly as recorded: a bare hit area cannot be stretched to a content-measured row (the hit target is
-    69.9% of a flat row, 53.3% of a wrapped one).
+    one row is true and it is the model's), and `Tone`/`Emphasis` stay forbidden in templates. **The second is
+    now FIXED too, not worked around**: the carrier shipped `Height="MatchContent"` (FL `490d4f07`), the two
+    24px `Height="Auto"` hit bands and the Column that stacked them are gone from both templates, and each row
+    now carries ONE full-height hit - measured 100% coverage at 1024/736/480/320 x EN/ZH x flat/wrapped, against
+    the retired shape's 69.9% / 53.3% / 42px dead.
   - [x] **S4-3a LANDED (Overview: the trigger-timing card dissolved and retired).** `us/timing` is a declared
     `Section` over `input/slider` + `input/number-field` + `text/wrapped` + `input/button` now; the
     Registrar's `us/*` kind set went **13 -> 12** and the 263-line widget was deleted. The caption's
@@ -140,9 +142,10 @@ no `HeightKey`).
   with the segmented control's shared column, and the egg-state / global-volume captions moved from Tiny to the
   atom's Small font (the volume caption also from MiddleLeft to UpperLeft). Also the first in-game use of
   `input/slider` and `input/number-field` on this page — check the drag feel and the field's focus/commit;
-  (2c) **the S4-2 Packs deltas** (six, all "needs a real screen", spec §5.9): the **whole-row hit target**
-  became a full-width 2x24px stack at the row's top — 69.9% of a flat row and 53.3% of a wrapped one, so the
-  detail line's lower half is dead; **selection in the layer cards is now HALF restored** — the selected row's
+  (2c) **the S4-2 Packs deltas** (six, all "needs a real screen", spec §5.9): the **whole-row hit target** is
+  now one `MatchContent` band covering the row in full (100% measured at every accepted width; the retired
+  2x24px stack's 69.9% / 53.3% and its 42px dead zone are gone) — what still needs a real screen is whether the
+  band's hover/armed paint reads right with the text column drawn over it; **selection in the layer cards is now HALF restored** — the selected row's
   title ink is back (gold, as shipped), but the row's fill and its left 3px rail are still missing (§5.9.6);
   row surface/hover gone; rows +20.67px taller (cards 266
   and 124.67px); the detail line moved Tiny -> Small and both lines sit 10px further left, top-anchored;

@@ -255,11 +255,16 @@
   **CONFIRMED**. Debt boundary (maintainer rule: visible AND cheaply fixable must not spread): B1 was visible and
   cheap, so it was fixed; this one is visible but NOT cheap (it needs a new capability), so it stays recorded
   with its citation until a second consumer or the maintainer asks for it.
-- **The other (B) S4-2 recorded stays exactly as it was** (spec §5.9.2 B2): `Height="Auto"` heights from the
-  element's **own caption** (`ButtonWidget.cs:84-99`) while an Overlay keeps every child at its measured height
-  (`UiLayoutEngine.cs:1423-1450`) and `AlignY="Stretch"` names a position, not an extent
-  (`UiPlacement.cs:71-74`), so **a bare hit area cannot be stretched to the content-measured row it covers**:
-  the layer row's hit target is two bare bands (48px) = **69.9%** of a flat row and **53.3%** of a wrapped one.
+- **The other (B) S4-2 recorded is now CLOSED by a carrier capability, not by a workaround.** The recorded
+  facts were: `Height="Auto"` heights from the element's **own caption** (`ButtonWidget.cs:84-99`), an Overlay
+  keeps every child at its measured height (`UiLayoutEngine.cs:1423-1450`), and `AlignY="Stretch"` names a
+  position, not an extent (`UiPlacement.cs:71-74`) - so the workaround was two bare 24px bands, **69.9%** of a
+  flat row and **53.3%** of a wrapped one with a 42px dead zone. FL `490d4f07` ships **`Height="MatchContent"`**
+  (the declaring child contributes NOTHING to its parent's measured height, so it resolves to the content height
+  of the non-declaring sibling it covers; valid on Row/Overlay), and the two templates now declare ONE
+  `Chrome="none"` + `Height="MatchContent"` hit each: **measured 100% coverage** at 1024/736/480/320 x EN/ZH x
+  flat/wrapped. The lane keeps the 69.9/53.3/42px numbers as its printed control, and reverting the attribute to
+  `Auto` reddens it ("hit 24px vs text 68.67px").
 - **Gate 6's "payload commit == carrier HEAD" comparison is red whenever FL lands a doc-only commit after a
   freeze, and that is expected, not a defect.** Measured 2026-09-21: FL `5052440` (docs only) moved HEAD past the
   frozen build `e929fa11`. The round's acceptance identity is the FREEZE NOTICE (commit `e929fa11`,
