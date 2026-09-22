@@ -29,6 +29,14 @@
     one row is true and it is the model's), and `Tone`/`Emphasis` stay forbidden in templates. The second
     stays exactly as recorded: a bare hit area cannot be stretched to a content-measured row (the hit target is
     69.9% of a flat row, 53.3% of a wrapped one).
+  - [x] **S4-3a LANDED (Overview: the trigger-timing card dissolved and retired).** `us/timing` is a declared
+    `Section` over `input/slider` + `input/number-field` + `text/wrapped` + `input/button` now; the
+    Registrar's `us/*` kind set went **13 -> 12** and the 263-line widget was deleted. The caption's
+    sample-constant friction is **fixed, not moved**: the host builds one sentence and the atom measures the
+    string it paints. What is NOT reproduced is the composite's reserved caption band (the vocabulary has no
+    reserved-band attribute), so the card is taller at the narrowest centre column - measured, and it is a
+    real-screen item. Report: spec **§5.10**. **S4-3b (us/attenuation-editor, 12 -> 11) is NOT started** -
+    the design is frozen in task-5's description and in spec §5.10.
   - [ ] **Carried known limitation, CITED (spec §5.9.6): the selected row's fill and its left 3px rail are still
     not expressible.** `text/wrapped` paints no surface and the row has no surface-painting atom, so what is
     missing is a row-state CARRIER, not an attribute value. Citation: S4-2/S4-3's data-driven row sets are the
@@ -55,6 +63,37 @@
   registry (the UI-logic harness hand-lists **20 of 46** write keys today). Land it BEFORE the migration deepens.
 - [ ] **Hot reload: demand-driven first.** Decide which need is real — XML layout-document hot reload, or non-UI
   writers of settings/model state — before adopting `UiDocumentService` + `HostAttached`.
+
+## S6 — align US with SR's visual language and wording (maintainer 2026-09-22; NOT started)
+
+The maintainer rejected the current US look against SR's on three counts (row style, the toggle's look and
+palette, and the nav bar) and named the common cause himself: US mixes bordered cards with divider lines,
+while the SR/Camera+ language is **borderless, separated by whitespace, with state (hover/selected) expressed
+by a FILL**. Everything below is that one rule applied. **Do not start any of it without an explicit go.**
+
+- [ ] **S6-1 wording and translation (pure (A), do it FIRST).** Rewrite the labels and notes of the
+ 发声规则 / frequency / interval / attenuation entries against SR's own wording, EN and ZH together, with the
+  controls and the structure untouched.
+- [ ] **S6-2 row style.** (A) drop the card borders and the separator rules; an optional small note per row -
+  **help stays the primary carrier**, so a note is used only where the layout genuinely needs one; **no
+  per-row `?` button** (the trailing `?` IS help, and US help is the three-column drawer - a per-row `?`
+  would introduce a second help mechanism); lay the row out in one line. (B) the whole-row hit area (US
+  citation: the S4-2/S4-3 wrapped row's 42px dead zone) and a declarative driver for row-level hover styling
+  (same family as "no per-row role input surface") - **measure before claiming**.
+- [ ] **S6-3 appearance (pure (A)).** The square toggle's look (on = gold, off = grey) and the palette
+  aligned to SR; a gold left rail plus a triangle marker on section headers. This is the APPEARANCE layer
+  only: under the four-ruler ruling the square toggle is indistinguishable from the click-filled button US
+  ships on the structure/layout/semantics rulers, so **there is no "new kind / new control" question here**
+  (it agrees with the existing F-02 ruling).
+- [ ] **The unified style rule**: borderless, whitespace-separated, state by fill. `us/nav` is the most
+  visible break of it and is already on the absorbed S4-5 list, so it becomes S6's first visible target; its
+  change is appearance-layer (structure/layout/semantics unchanged). **One capability to measure first**:
+  once the border is gone, where does the hover/selected FILL come from? `SelectedKey` only takes the text
+  to `TextOnGold`, `Chrome="none"` paints nothing, and `input/button` paints a raised surface - so
+  "an interactive item that is borderless but has a state-driven fill" may be a genuine gap, and if it is, it
+  serves two consumers at once (the layer rows and the nav items). **Citation discipline: Camera+ and SR are
+  appearance BENCHMARKS, not citations; only US's own real usage counts as a citation.**
+- [ ] **Merge**: the old S4-5 "atomic swap" list folds into S6 so the same screen is not done twice.
 
 ## Narrow help (乙1) — the shipped shape and its one known limitation
 

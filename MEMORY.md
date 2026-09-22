@@ -64,6 +64,31 @@
   is the **first real consumer of G2** (`input/button.PayloadKey`: a repeated row reports its own key - the lane
   presses each row and asserts which domain the model received) and of G3 (`Chrome="none"` bare hit area).
   Report + measured geometry + eight mutations: spec §5.9.
+- **S4-3a LANDED: the trigger-timing card is declarative and its kind is retired.** `us/timing` is gone;
+  the Registrar's `us/*` kind set is **12 (13 before, pinned by `UiSourceInvariantTests`)**, the 263-line
+  widget was deleted, and the card is a declared `Section` over `input/slider` + `input/number-field` +
+  `text/wrapped` + `input/button` with the checklist card's declared geometry. Report: spec §5.10.
+- **The S4-3 friction, and it is a FIX rather than a relocation.** The composite sized its interval caption band
+  against a hand-written worst-case SAMPLE constant (`"10.0 s"`) because measure and draw had to agree; the
+  declarative shape has no reserved-band vocabulary (no `MinHeight`), so the caption became a read-only string
+  binding the host builds once and the atom measures exactly the string it paints - measure == draw by
+  construction. What is NOT reproduced is the reserved band: the caption is a flex sibling taking the row's
+  leftover, so at the narrowest centre column it wraps one extra line and the card grows (~+10px at 320). That
+  is a real-screen delta, not a defect.
+- **Measured atom fact (durable): a fixed `Width` on a Row child is what makes the engine draw that child
+  OUTSIDE its own row.** Once the drawer's degenerate arrangement shrank the centre column below the declared
+  width, the multiplier/seconds number fields were placed past the row's right edge and `FrameGeometryLaneTests`
+  caught five violations. Making both number fields flex siblings fixed it at every width. A declarative row is
+  inside its parent by construction only when its children can flex.
+- **Measured instrument fact (durable): `UiDiagnosticKind.Fit` carries TWO channels** - `fit.overflow`
+  (which has an `Overflow` record) and `fit.style-fallback` (which does not). `UsAuditRoutingLaneTests`'s
+  calibrated-zero half counted bare Fit events, so a real (and harmless) style-fallback finding read as a ruler
+  leak. The lane now counts OVERFLOW records and reports the fallback count in its message: the instrument was
+  made faithful to what the lane claims to measure.
+- **Carrier-side `WidthKey` behaviour, measured:** a widget's `WidthKey` is consulted (and resolves) when its
+  key is a registered numeric binding; if the key is NOT registered the engine records one
+  `fit.style-fallback` and leaves the element unsized. Declaring `WidthKey` without registering the key is
+  therefore a silent unsize, and it is exactly the finding above.
 - **B1 FIXED on the carrier side (FL `e929fa11`), and the US half landed with it.** `SelectedKey` is now
   item-scoped (`UiLayoutEngine.QualifyItemBinding` gained it alongside Bind / ActionBind / OptionsBind /
   VisibleKey / PayloadKey), so a data-driven row CAN say "I am the selected one": the layer row's TITLE declares
