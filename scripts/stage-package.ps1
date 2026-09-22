@@ -54,7 +54,12 @@ $contentRoot = Join-Path $root '1.6'
 # folder AND the archive outside the repository whenever the caller's cwd was not the root.
 # Measured 2026-09-15: invoking the release sequence from a clone wrote dist/ into the
 # session root instead of the clone. An absolute path is still honoured as given.
-$stageDir = if ([System.IO.Path]::IsPathRooted($StageDir)) { Resolve-NormalizedPath $StageDir } else { Resolve-NormalizedPath (Join-Path $root $StageDir) }
+$deliveryDir = if ([System.IO.Path]::IsPathRooted($StageDir)) { Resolve-NormalizedPath $StageDir } else { Resolve-NormalizedPath (Join-Path $root $StageDir) }
+# Candidate-then-commit (2026-09-22, adopted from the demo's packer, which has always worked this way):
+# every copy and every assertion below runs against a SCRATCH tree, and the delivered folder is replaced
+# only once they have all passed. A refused pack therefore leaves the previous package byte-identical
+# instead of a half-written one - the folder a player reads is always a validated package.
+$stageDir = Join-Path (Split-Path -Parent $deliveryDir) ('.staging-' + (Split-Path -Leaf $deliveryDir))
 
 # What a staged US package always contains, and what it must never contain anywhere. Named rather than
 # filtered: an empty filtered enumeration lets a check pass vacuously, which is the bug class both
@@ -232,6 +237,12 @@ $assemblyCount = @($stagedFiles | Where-Object { $_ -like '*.dll' }).Count
 if ($assemblyCount -ne 1) {
     throw "The payload must be exactly one assembly; found $assemblyCount."
 }
+
+# --- commit: every assertion above passed, so replace the delivered folder now ---------------------
+if (Test-Path -LiteralPath $deliveryDir) { Remove-Item -LiteralPath $deliveryDir -Recurse -Force }
+Move-Item -LiteralPath $stageDir -Destination $deliveryDir
+$stageDir = $deliveryDir
+Write-Host "[stage-package] delivered $deliveryDir"
 
 Write-Host "[stage-package] flavor=$BuildFlavor measured=$stamp label=$VersionLabel commit=$CommitLabel carrier=$carrierStamp $carrierInfo"
 Write-Host "[stage-package] staged $($stagedFiles.Count) files -> $stageDir"

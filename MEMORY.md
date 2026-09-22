@@ -133,13 +133,16 @@
   keeps the stale story: a declarative header can now have no rule, so **the surviving reason for
   `us/section-header` is the RAIL** - if the rail is ever given up, the manifest can go back to
   `section/header Chrome="none"` and both new files can be deleted.
-- **Carrier freeze MOVED to FL `876750a` (task-10's own rebuild), verified read-only here:** SHA-256
-  `58B57EAD732288AAC9A3BFE88AC88E2BCAD3D849AF40CF52D0459A7787AF0083`, 252416 B, Release, no PDB.
-  `verify-local`'s gate 6 (payload commit == carrier HEAD) is green against it, and the full US chain ran green
-  with the carrier unmoved by the run. **mtime baseline: `2026-09-22T11:29:56.3806212Z`** - FL rewrote the
-  payload with the SAME BYTES at that time (after the gold re-tint was cancelled it rebuilt back to the frozen
-  content), so the identity did not move and no re-verification is owed; every earlier `mtime moved=False`
-  fact line was true at the time and now compares against this new baseline.
+- **Carrier freeze MOVED twice since; the current identity is FL `e668344`** (the first push of the 0.7.x
+  line) **/ SHA-256 `1BBF5F4DAE117569E3EB4F2B512AA07D76A59F8A486B034AF61EA89D9AF4EFA9`**, 252416 B,
+  Release, no PDB, mtime `2026-09-22T15:40:25.6322725Z`. It supersedes `876750a` / `58B57EAD…` (also
+  252416 B). Gate 6 is green again because the payload now embeds `e668344`, and the full US chain ran green
+  against it.
+- **"US reads the carrier read-only" is MEASURED, not asserted:** across that chain run the carrier was
+  byte-identical before and after (same SHA, same bytes, no PDB).
+- **The first push of `0.5.x` happened 2026-09-22**: `privacy-audit -FullHistory` CLEAN over 392 revisions,
+  upstream `origin/0.5.x` set, no tag created. **A pushed dev line is not a release**, and the workflows agree:
+  `ci.yml` triggers on `main` only and `release.yml` on tags/releases only.
 - **A hash and an mtime answer different questions, and the freeze needs both.** The hash says "are these the
   same bytes"; the mtime says "was the file written". A rebuild of identical content moves the second and not
   the first (measured above), so a FREEZE NOTICE that quotes only the SHA is under-specified for anyone
