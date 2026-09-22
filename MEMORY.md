@@ -133,11 +133,11 @@
   keeps the stale story: a declarative header can now have no rule, so **the surviving reason for
   `us/section-header` is the RAIL** - if the rail is ever given up, the manifest can go back to
   `section/header Chrome="none"` and both new files can be deleted.
-- **Carrier freeze MOVED twice since; the current identity is FL `e668344`** (the first push of the 0.7.x
-  line) **/ SHA-256 `1BBF5F4DAE117569E3EB4F2B512AA07D76A59F8A486B034AF61EA89D9AF4EFA9`**, 252416 B,
-  Release, no PDB, mtime `2026-09-22T15:40:25.6322725Z`. It supersedes `876750a` / `58B57EAD…` (also
-  252416 B). Gate 6 is green again because the payload now embeds `e668344`, and the full US chain ran green
-  against it.
+- **Carrier identity moved three times on 2026-09-22** (`876750a`/`58B57EAD…` -> `e668344`/`1BBF5F4D…` ->
+  `553fc53`/`3FA8CABE…`; all 252416 B, Release, no PDB). **Do not pin the live identity here.** Every commit
+  that moves FL's HEAD forces a payload rebuild, so a SHA written into a tracked file is stale the moment it
+  lands - that loop is why this bullet replaces a pinned one. The live identity is what the **FREEZE NOTICE**
+  states, quoted as **hash + mtime**; this file keeps the history.
 - **"US reads the carrier read-only" is MEASURED, not asserted:** across that chain run the carrier was
   byte-identical before and after (same SHA, same bytes, no PDB).
 - **The first push of `0.5.x` happened 2026-09-22**: `privacy-audit -FullHistory` CLEAN over 392 revisions,
