@@ -35,6 +35,28 @@
   citation: the flat scheme first written into `UsTheme.SchemeXml` resolved to nothing and the scope kept the
   page's values. Reported to the lead; FL is folding **diagnostics only, not a hard refusal** into task-9.
 
+- **S6-3 step 3 LANDED: the palette is SR's warm dark + gold, and the guard landed FIRST.** The re-tint
+  moved Base/WorkspacePlane #0f1116 -> #0e0d0c, Panel/SectionBand -> #171512, Raised -> #1d1b17, Hover ->
+  #242019, Selected -> #3a311f, Border/Divider -> #575247 / #2a2620, BorderStrong -> #6b6459, TextPrimary ->
+  #eae6de, TextSecondary -> #b0ada3, TextDisabled -> #8a8780 (split from TextSecondary, which it used to
+  equal, because on a warm plane the two read alike), Danger pair -> #3f1c1a / #c96057. **`AccentGold` was
+  deliberately NOT re-tinted**: `UsSurfaceLaneTests` pins it against `UiTheme.DarkGold` as the series
+  identity, so SR's #EBAD4D stays a benchmark. Unmapped SR roles (ButtonPrimary/Ghost, FilterChip,
+  HelpIndicator/Toggle, SelectableCard's own hover tone, knob greys, empty rail, dropdown ink, zebra band)
+  are recorded rather than invented into tokens.
+- **The guard is the point of the step: `PaletteLaneTests`.** A re-tint can silently resurrect every card
+  outline (the flat look is a surface's border token EQUALLING its fill), so the lane asserts every flat pair
+  is still equal, with the page level as the boxed control; and it measures WCAG contrast for the four inks
+  against the surfaces they are painted on (primary 14.64/13.81, secondary 8.12/7.66, active ink 9.30, floor
+  3.0). Mutations: a one-sided `RaisedBorder` change and a mud-dark `TextSecondary` both redden.
+  `UsSurfaceLaneTests`' spec literals were re-cut in the same batch - they pin this palette, so a re-tint
+  invalidates them by definition.
+- **Carrier freeze MOVED to FL `490d4f076431` (2026-09-22), verified read-only here:** SHA-256
+  `E396E089FE0D59065F3E7D672427131EF01B70D4A07A7F71733A16FDB36E5ACB`, 252416 B, Release, no PDB, stamp
+  `0.7.0-dev+490d4f076431…` == HEAD. It **ships `Height="MatchContent"`**, so the whole-row hit area is
+  unlocked. **The full US chain ran green on it** (`[verify] all checks passed.`, exit 0, carrier SHA and
+  mtime unmoved).
+
 ## Documentation-vs-code defect rule (measured 2026-09-22)
 
 - **When a document and the code disagree, the code is the fact and the document is the defect - unless the
