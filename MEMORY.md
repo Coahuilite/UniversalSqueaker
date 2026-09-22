@@ -99,6 +99,23 @@
   11, 12, 13, 14, 15 all green when run individually** (all 15 commands read from the script itself, none
   invented). The new identity was verified read-only first (SHA `6094C8FB…DB10D6`, `0.7.0-dev+d1f2c5014de0…`,
   Release, 249344 B, no PDB, exclusivity FREE - the maintainer's own run).
+- **The full US gate chain is GREEN end to end (2026-09-22) against the re-issued freeze.** FL HEAD
+  `b997f3a9f009…`, carrier SHA-256 `0F95DF35D5E7F827848364B9A9C83081A64E4C2C3AF15924D8089430025A0B66`,
+  249344 B, `0.7.0-dev+b997f3a9f009…` == FL HEAD. `verify-local -NoRestore` ran **all 15 gates, exit 0**,
+  including the seven that the previous attempts left UNRUN (6 payload identity, 7/8 the two configuration
+  builds, 9 single-carrier, 10 LICENSE, 11 manifests, 14 UI boundary, 15 stub coverage). The UNRUN list is
+  therefore closed.
+- **Measured and written as fact: the US chain does NOT move the shared carrier.** Read-only pre/post around
+  the whole run: SHA-256 `0F95DF35…` and mtime `2026-09-22 13:30:00` **both unchanged**, no PDB beside the
+  payload, size still 249344. (The lead's warning that a full `verify-local` moves the identity is about
+  **FL's** chain, not US's: US references the carrier through a `HintPath` and gate 6 only compares identity.)
+- **Dev rehearsal re-staged against the frozen carrier (2026-09-22).** `pack-dev` built US Dev and the
+  stager measured it: `flavor=dev measured=Dev label=0.5.0 commit=95fa9a0
+  carrier=Release 0.7.0-dev+b997f3a9f009…`; `dist/dev/UniversalSqueaker/` carries 7 files
+  (US dll 458752 B + 2 Keyed tables 37118/39067 + About.xml 2543 + LICENSE 15780 + LoadFolders.xml 104 +
+  version.txt 176). The staged DLL is **Dev-configured and has no PDB**, which is the shape `dist/dev`
+  documents and what a rehearsal dropped into `Mods/` should be (US_DEV also enables the dev logging and
+  the footer revision a rehearsal wants). The maintainer-side acceptance of this batch runs from this folder.
 - **Measured: gate 6's `dotnet build` targets the carrier, and whether it WRITES is conditional.** Running
   the chain re-ran that build command against the same commit; the DLL's SHA-256 **and its mtime both stayed
   put** (`6094C8FB…DB10D6`, 13:23:45, no PDB) because the payload was already current from that commit -
