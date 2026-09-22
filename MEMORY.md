@@ -7,6 +7,20 @@
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
 
+## Documentation-vs-code defect rule (measured 2026-09-22)
+
+- **When a document and the code disagree, the code is the fact and the document is the defect - unless the
+  maintainer says otherwise in the room.** A doc defect must never be promoted into a product decision.
+  Measured specimen: the old `US.Help.BasicTuning.ScaleTalking.Text` said the option only lets an action pass
+  "while the pawn is talking", which transcribed the CODE'S ENUM NAME (`SqueakVocalGatePolicy.ApplyTalkingGate`)
+  as if a name were a behaviour. The mechanism is a probability roll against the pawn's Talking capacity
+  (`CompSqueaker.cs:513-524`, `SqueakVocalCapability.cs:21-29`, `CompSqueaker.cs:895-896`). A lead scoped the
+  difference as a candidate behaviour change; the maintainer's reply was "I do not remember ever asking for
+  that", a workspace-wide search found the phrase ONLY in the language tables (and their `dist` copies) and in
+  that round's own reconnaissance note - never in a spec, TODO, MEMORY or design record - so the requirement
+  never existed. Debt boundary: the wording was corrected to say what the code does; "squeak only while
+  talking" would be a NEW FEATURE with its own entry, not a wording fix.
+
 ## Current state (2026-09-21)
 
 - **Product axis `0.5.x`; all three identity axes are `0.5.0`** (`<Version>` / `<VersionPrefix>` /
