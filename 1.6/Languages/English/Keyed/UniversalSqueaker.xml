@@ -135,15 +135,15 @@
   <US.Tuning.EasterEggs>Easter egg sounds</US.Tuning.EasterEggs>
   <US.Tuning.EasterEggs.On>On (eggs join the pool)</US.Tuning.EasterEggs.On>
   <US.Tuning.EasterEggs.Off>Off (ordinary entries only)</US.Tuning.EasterEggs.Off>
-  <US.Tuning.ScaleCooldown>Scale cooldown with time speed</US.Tuning.ScaleCooldown>
-  <US.Tuning.ScaleTalking>Scale frequency with talking</US.Tuning.ScaleTalking>
-  <US.Tuning.ScalePopulation>Scale periodic with audible population</US.Tuning.ScalePopulation>
-  <US.Tuning.EatPrecision>Only squeak while actually eating</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>Taking drugs also counts as eating</US.Tuning.EatPrecision.IncludeDrugs>
+  <US.Tuning.ScaleCooldown>Keep squeak timing steady at high game speed</US.Tuning.ScaleCooldown>
+  <US.Tuning.ScaleTalking>Adjust ordinary squeaks by the pawn's Talking ability</US.Tuning.ScaleTalking>
+  <US.Tuning.ScalePopulation>Fewer periodic squeaks when many kin are in earshot</US.Tuning.ScalePopulation>
+  <US.Tuning.EatPrecision>Eat squeaks only while actually eating (ingesting nutrition)</US.Tuning.EatPrecision>
+  <US.Tuning.EatPrecision.IncludeDrugs>Also for drugs</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
-  <US.Tuning.MinInterval>Minimum trigger interval: {0}</US.Tuning.MinInterval>
-  <US.Tuning.CooldownMultiplier>Global cooldown multiplier</US.Tuning.CooldownMultiplier>
+  <US.Tuning.MinInterval>Call interval master: {0}  ·  1.0x uses the default rhythm</US.Tuning.MinInterval>
+  <US.Tuning.CooldownMultiplier>Cooldown multiplier</US.Tuning.CooldownMultiplier>
   <!-- The stepper's two captions. Keyed on purpose: a shipped manifest may not carry a literal Text/Caption
        (UiSourceInvariantTests' localization guard), and an operator glyph is still a player-visible string,
        so it belongs to the language layer with every other one. -->
@@ -260,20 +260,20 @@
   <US.Help.BasicTuning.Egg.Label>Easter Egg Sounds</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>When on, Easter egg entries join the normal pool and can be drawn like any other clip; when off, only ordinary entries are eligible.</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>Time-Speed Scaling</US.Help.BasicTuning.ScaleCooldown.Label>
-  <US.Help.BasicTuning.ScaleCooldown.Text>When on, cooldowns are measured against the game's time speed, so two squeaks keep the same real-time spacing at 1x, 2x and 3x. On by default.</US.Help.BasicTuning.ScaleCooldown.Text>
+  <US.Help.BasicTuning.ScaleCooldown.Text>On, cooldowns follow the game's time speed, so two squeaks keep the same real-time spacing at 1x, 2x and 3x. Off, the raw tick cooldowns are used and high speed compresses them. On by default.</US.Help.BasicTuning.ScaleCooldown.Text>
   <US.Help.BasicTuning.ScaleTalking.Label>Talking Scaling</US.Help.BasicTuning.ScaleTalking.Label>
-  <US.Help.BasicTuning.ScaleTalking.Text>When on, actions that declare a talking gate only pass while the pawn is talking, so speech and conversation carry the sound; off ignores talking for those actions. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
+  <US.Help.BasicTuning.ScaleTalking.Text>Adjusts the ordinary squeaks by the pawn's Talking ability: the lower the ability, the lower the chance an ordinary attempt passes. Actions with their own talking gate are unaffected. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>Population Scaling</US.Help.BasicTuning.ScalePopulation.Label>
-  <US.Help.BasicTuning.ScalePopulation.Text>When on, periodic sounds divide their chance by the audible population (one step per ten pawns in earshot), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.ScalePopulation.Text>When many kin are within earshot, periodic squeaks are reduced (one step per ten audible pawns), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.BasicTuning.EatPrecision.Label>Eating Detection</US.Help.BasicTuning.EatPrecision.Label>
-  <US.Help.BasicTuning.EatPrecision.Text>Off, the whole eating job counts, including walking to the food. On, only the part where food is actually being ingested counts; zero-nutrition items such as smokeleaf joints are ignored unless "Include drugs" is on, while nutrition-bearing drinks such as beer and ambrosia still count. Turning this off also clears and hides the option below. Off by default.</US.Help.BasicTuning.EatPrecision.Text>
+  <US.Help.BasicTuning.EatPrecision.Text>Off by default: the whole eating trip counts as an Eat squeak, including the walk to the food. On, only the part where nutrition is actually being ingested counts; zero-nutrition items such as smokeleaf joints are ignored unless "Also for drugs" is on, while nutrition-bearing drinks such as beer and ambrosia still count. Turning this off also clears and hides the option below.</US.Help.BasicTuning.EatPrecision.Text>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>Include Drugs</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>Only shown while the option above is on. Counts the chewing or lighting stage, so zero-nutrition drugs also trigger. If that stage cannot be recognised, the whole eating job counts instead.</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>
-  <US.Help.Timing.Interval.Label>Minimum Interval</US.Help.Timing.Interval.Label>
-  <US.Help.Timing.Interval.Text>A hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). Raise it to thin out dense crowds; the default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
+  <US.Help.Timing.Interval.Label>Call Interval Master</US.Help.Timing.Interval.Label>
+  <US.Help.Timing.Interval.Text>The hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). 1.0x uses the default rhythm; raise it to thin out dense crowds. The default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>Scales every action cooldown and the global interval at once: 0.5 halves the wait (twice as chatty), 2.0 doubles it. 1.0 is the authored timing.</US.Help.Timing.Multiplier.Text>
   <US.Help.Diagnostics.Overview>Support tools: the developer log level and the vanilla debug-menu localization. Neither changes what pawns hear; they only affect the log file and the debug menu.</US.Help.Diagnostics.Overview>

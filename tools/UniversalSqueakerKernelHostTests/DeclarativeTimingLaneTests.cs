@@ -149,7 +149,14 @@ internal static class DeclarativeTimingLaneTests
                 Assert(string.Equals(expected, actual, StringComparison.Ordinal),
                     "the caption binding must be the host's own sentence at " + language + ": expected '"
                     + expected + "', got '" + actual + "'");
-                Assert(actual.Contains(template.Replace("{0}", "").Trim()),
+                // "Not the raw key": the caption must contain the template's STATIC text. The template now
+                // carries a trailing sentence after {0} ("... · 1.0x uses the default rhythm"), so the
+                // static half is split around the placeholder rather than assumed to be a prefix - the
+                // assertion is about the key being resolved, and it must not break when the wording grows.
+                int placeholder = template.IndexOf("{0}", StringComparison.Ordinal);
+                string before = template.Substring(0, placeholder).Trim();
+                string after = template.Substring(placeholder + 3).Trim();
+                Assert(actual.Contains(before) && actual.Contains(after),
                     "the caption must carry the translated template, not the raw key: '" + actual + "'");
             }
             finally
