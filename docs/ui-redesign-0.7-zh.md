@@ -745,6 +745,11 @@ caption 为空 ⇒ 回落 `RowHeight`（本页 24）。而 `Overlay` 的子元�
 | **M-A**（B1 修复后）删掉 per-row 的 `<items>.<key>.selected` 注册 | 本 lane 选中步：*exactly ONE row may answer selected=true while a domain is selected, got []* |
 | **M-B**（B1 修复后）让每行都回答 selected=true | 本 lane 选中步：*got [race-rows.human,race-rows.testrace,race-rows.sanguophage,xenotype-rows.human\|sanguophage]* —— 同一条断言的两个方向 |
 
+**零选中态**：**可达性未证** —— 没有任何证据表明真实页面能出现 `selected-domain == null`；本夹具也到不了
+（`SetRaceFilter` 只记录写入、不移动 `ViewState.RaceFilter`，空视图又没有行）。所以该状态**目前只作为变异态被
+触达**（M-A 删掉 per-row 注册即得到「全行皆假」）。**一旦有人证明它在产品里可达，再补那条 lane**；在证明之前
+「未证」就是它的正确记法——不为一个可能不存在的情景补输入。判别力本身不缺：两个方向已由同一条断言覆盖。
+
 **哪条断言是变异证明、哪条只是守卫**：步骤 2 由 M2/M6 证明；B1 选中步由 M-A/M-B **双向**证明（少一个注册 ⇒
 `[]`；多回答 ⇒ 四行全真）；步骤「G3」由 M4/M5 证明；步骤「G2」由 M3 证明；
 **最后一步（清单带高算术）只是守卫**——它在基线绿，但 M5 先被 G3 步的普查抓住，所以这条关系没有被变异

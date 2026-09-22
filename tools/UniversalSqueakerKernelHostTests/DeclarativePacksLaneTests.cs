@@ -246,13 +246,20 @@ internal static class DeclarativePacksLaneTests
                 "and the true row must be the model's own selected domain: got '" + trueKeys[0] + "', expected '"
                 + expected + "'");
 
-            // The no-selection state is deliberately NOT exercised here, and the reason is recorded rather
-            // than worked around: this fixture's SetRaceFilter only RECORDS the write (it does not move
-            // ViewState.RaceFilter), so the rich view's selected domain cannot be cleared through the model's
-            // own channel, and the empty view has no rows at all. Driving it would mean changing a SHARED
-            // fixture's input, which this round requires asking about first. The property is still fully
-            // asserted in the state that exists: exactly one of the four rows is true and the other three are
-            // false, which is what "no second row may claim to be selected" means.
+            // THE ZERO-SELECTION STATE IS NOT EXERCISED, and the reason is a missing reachability proof
+            // rather than a missing input. Two facts, kept separate on purpose:
+            //   - REACHABILITY IS UNPROVEN: nothing has shown that the real page can hold a null
+            //     selected-domain. This fixture cannot reach it either - SetRaceFilter only RECORDS the write
+            //     (it does not move ViewState.RaceFilter), and the empty view has no rows at all - so the
+            //     state is currently touched only as a MUTATION state (M-A below drives it by removing the
+            //     per-row registration, which makes every row answer false). Writing a lane for a state nobody
+            //     has shown a player can reach is measuring a scenario that may not exist; the project's answer
+            //     to "unproven" is to say UNPROVEN, not to add an input that makes it look tested.
+            //   - JUDGEMENT IS NOT THE GAP: both directions already redden on the assertion above (M-A gives
+            //     [], M-B gives all four rows), so what is missing is reachability evidence, not discriminating
+            //     power.
+            // WHEN someone proves the state is reachable in the product, add the lane here. Until then this
+            // comment is the record, and the state stays a mutation state only.
         }
         finally
         {
