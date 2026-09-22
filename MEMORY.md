@@ -99,6 +99,23 @@
   11, 12, 13, 14, 15 all green when run individually** (all 15 commands read from the script itself, none
   invented). The new identity was verified read-only first (SHA `6094C8FB…DB10D6`, `0.7.0-dev+d1f2c5014de0…`,
   Release, 249344 B, no PDB, exclusivity FREE - the maintainer's own run).
+- **S4-3b LANDED: the Distance card is declarative and `us/attenuation-editor` is retired.** The
+  Registrar's `us/*` kind set is **11 (12 before)**, the 195-line widget is deleted, and the card is a
+  Section over the engine's own `chart/line` - declared directly with `Editable`/`EditablePoints=1,2`/
+  `Height=64`, which is the hand-built `UiElementSpec` wrapper removed - plus a bound status sentence and
+  three declarative preset buttons. **S4's kind target is met: 18 -> 11.**
+- **Two contract facts this slice measured.** (1) A declarative `input/button` validates the STRING action
+  contract (its own `Validate`): a button with an `ActionBind` and no payload needs `BindCommand`, and one
+  with a `PayloadKey` needs `BindAction<string>` - so adopting a button made a previously enum-typed action
+  string-typed, and the enum parse moved to the host (the `select-domain` shape). (2) `SelectedKey` is how a
+  static (non-repeated) button says "the model is on me": one read-only bool per button; the manifest pairing
+  is what the lane must assert, because a constant fixture view can only ever make one key true.
+- **Recorded narrow-tier finding (measured, not asserted away).** At 320 the centre column is ~296px, so a
+  third of the preset row is ~76px and the English captions "Conservative"/"Balanced" need ~96px; the
+  `input/button` atom draws its caption single-line, so it clips there. The lane's overflow sweep covers the
+  three widths the page is accepted at (1024/736/480) and the narrow tier is recorded here instead.
+  (Unreachable in the shipped window, which never opens below 800 logical pixels.)
+- **The dev rehearsal was re-staged at S4-3b** (clean tree, `commit=f378715`, carrier `0.7.0-dev+b997f3a9f009…`).
 - **The full US gate chain is GREEN end to end (2026-09-22) against the re-issued freeze.** FL HEAD
   `b997f3a9f009…`, carrier SHA-256 `0F95DF35D5E7F827848364B9A9C83081A64E4C2C3AF15924D8089430025A0B66`,
   249344 B, `0.7.0-dev+b997f3a9f009…` == FL HEAD. `verify-local -NoRestore` ran **all 15 gates, exit 0**,

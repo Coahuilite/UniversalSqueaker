@@ -35,11 +35,21 @@
     sample-constant friction is **fixed, not moved**: the host builds one sentence and the atom measures the
     string it paints. What is NOT reproduced is the composite's reserved caption band (the vocabulary has no
     reserved-band attribute), so the card is taller at the narrowest centre column - measured, and it is a
-    real-screen item. Report: spec **§5.10**. **S4-3b (us/attenuation-editor, 12 -> 11) is NOT started** -
-    the design is frozen in task-5's description and in spec §5.10.
-    **Blocked for the gate chain, not for S4-3b**: the FL checkout carries two uncommitted paths
-    (`AGENTS.md`, `scripts/verify-local.ps1` - the owner's task-8 retry-hint edit), and gate 6 refuses a
-    payload it cannot attribute to a commit. Gates 1-5 and 7-15 are green (7-15 run individually).
+    real-screen item. Report: spec **§5.10**.
+  - [x] **S4-3b LANDED (Distance: the attenuation card dissolved and retired).** `us/attenuation-editor` is
+    a declared `Section` over the engine's own `chart/line` (declared directly with `Editable` /
+    `EditablePoints=1,2` / `Height=64` - the hand-built `UiElementSpec` wrapper is gone), a bound status
+    sentence and three declarative preset buttons. The Registrar's `us/*` kind set went **12 -> 11** and the
+    195-line widget was deleted. **S4's kind target is met: 18 -> 11.** Two contract facts it measured: a
+    declarative `input/button` validates the STRING action contract (so `set-distance-preset` became
+    `BindAction<string>` and the enum parse moved to the host), and `SelectedKey` is how a static button says
+    "the model is on me". Evidence: harness ALL PASS + `UiLogicTests` ALL GREEN, three mutations red. One
+    narrow-tier finding is recorded, not asserted away: at 320 the English preset captions clip
+    (`MEMORY.md`).
+  - [x] **The grade chain ran end to end after the re-issued freeze**: `verify-local -NoRestore` -> all 15
+    gates, exit 0, against FL `b997f3a9f009…` (carrier `0F95DF35…`), with the carrier's SHA-256 and mtime
+    unchanged before and after. (Earlier in the batch it had stopped at gate 6 on the FL tree's own
+    uncommitted task-8 edit - a correct refusal - and gates 7-15 were run individually then.)
   - [ ] **Carried known limitation, CITED (spec §5.9.6): the selected row's fill and its left 3px rail are still
     not expressible.** `text/wrapped` paints no surface and the row has no surface-painting atom, so what is
     missing is a row-state CARRIER, not an attribute value. Citation: S4-2/S4-3's data-driven row sets are the
