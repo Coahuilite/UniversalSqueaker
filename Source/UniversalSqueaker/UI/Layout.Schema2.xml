@@ -175,9 +175,9 @@
           <Widget Id="timing-interval-slider" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
           <Row Id="timing-multiplier-row" Gap="4" Padding="0">
             <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
-            <Widget Id="timing-multiplier-minus" Kind="input/button" Text="−" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
             <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
-            <Widget Id="timing-multiplier-plus" Kind="input/button" Text="+" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
           </Row>
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6">

@@ -143,6 +143,8 @@
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>
   <US.Tuning.CooldownMultiplier>全局冷却倍率</US.Tuning.CooldownMultiplier>
+  <US.Tuning.CooldownMultiplier.Minus>−</US.Tuning.CooldownMultiplier.Minus>
+  <US.Tuning.CooldownMultiplier.Plus>+</US.Tuning.CooldownMultiplier.Plus>
   <US.Tuning.Mode.Vanilla>原版</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>

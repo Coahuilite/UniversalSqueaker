@@ -382,10 +382,24 @@ attenuation 离开 `Sections` 时要一并重裁。
 |---|---|
 | 把 seconds field 重新绑到未注册 key | 红：host 创建期报该元素路径缺绑定 |
 | 把 slider 重新绑到未注册 key | 红：同上 |
-| 给 multiplier field 声明固定 `Width=150` | **绿**（未测到几何断言）—— 该断言只覆盖**宽度溢出**；诚实记录，见 §5.10.3 的说明 |
+| 给 multiplier field 声明固定 `Width=150` | **绿**（未测到几何断言）—— 诚实记录。**归属**：该性质**不是缺口**，而是**不在那条 lane 的范围内**——它由**帧 lane 的 containment** 覆盖：本片正是靠 `FrameGeometryLaneTests` 抓到 5 条 frame violation（§5.10.3），所以「固定宽度在 Row 被压时画到行外」是有 lane 的，只是那条 lane 不是 `DeclarativeTimingLaneTests` |
 | 恢复 `us/timing` 的 manifest 行 + Registrar 行 | 红（kind 集 pin / 创建期 kind 解析）—— 由本片与 `SettingsGeometryLaneTests` 的负断言共同承载 |
 
-#### 5.10.6 玩家可见差异（全部【仍需实机】）
+#### 5.10.6 「预期红」的代价与记录更正（2026-09-22，lead 核验后补）
+`a2e9547` 的提交信息写了 "harness ALL PASS + verify-local"，**实际没有跑 verify-local**（只跑了 kernel-host
+harness）。lead 其后执行：**门 6 FAIL / EXIT 1**（doc-first：载荷由 `e929fa1` 构建、carrier checkout 在
+`d1f2c50`），**门 6 之后的门全部 UNRUN**；载体只读复验未变。
+
+**这条红藏住了一个真缺陷**：门 6 一停，后面的门都没跑，而 `UiSourceInvariantTests`（**UiLogicTests 项目**，
+不是 kernel-host harness）里的注册集基数仍是 **13**。本批重裁为 **12**，并把两个步进按钮的说明从 manifest
+字面量 `Text` 移到 Keyed 表（`US.Tuning.CooldownMultiplier.Minus`/`.Plus`）——同一个项目的本地化守卫
+拒绝 shipped manifest 上的字面量 `Text`，所以这一改是隐藏缺陷的第二半。
+
+**规则（本批建立）**：遇到预期红的门，**照跑**，但把**该门之后的一切显式标为 UNRUN，并单独把那几道跑掉**。
+本批已单独跑：harness、KernelTests、ConfigCopyTests、SettingsMigrationTests、LogTests(Release/Dev)、
+UiLogicTests —— 全部通过。
+
+#### 5.10.7 玩家可见差异（全部【仍需实机】）
 1. 说明文字仍带实时秒值，但所在 band **不再按最坏样本预留** ⇒ 最窄中列多折一行、卡片更高；
 2. 说明从 `RowLeftPadding` 起排改为 **卡片内容左缘**（贴 12px 卡内边距）；
 3. 秒数字段与倍率字段**不再固定宽**（flex），其横向位置随中列宽度变化，不再与分隔式控件列的右缘对齐；

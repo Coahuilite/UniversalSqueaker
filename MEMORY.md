@@ -64,6 +64,33 @@
   is the **first real consumer of G2** (`input/button.PayloadKey`: a repeated row reports its own key - the lane
   presses each row and asserts which domain the model received) and of G3 (`Chrome="none"` bare hit area).
   Report + measured geometry + eight mutations: spec §5.9.
+- **S4-3a's commit message claims a `verify-local` run that did not happen; corrected here, not by amending.**
+  Commit `a2e9547` says "harness ALL PASS + verify-local"; only the kernel-host harness ran. The lead ran
+  `verify-local` afterwards: **gate 6 FAIL / EXIT 1** on the doc-first condition (payload built from
+  `e929fa1`, carrier checkout at `d1f2c50` - the expected red), so **everything from gate 6 onward is
+  UNRUN**. The carrier re-verified read-only (SHA `C3B369…0CA6FB`, no PDB).
+- **The measured cost of an "expected red" gate, and the rule it bought.** Gate 6 stopped `verify-local` in
+  S4-3a, so every later gate went unrun - which is how `UiSourceInvariantTests`'s registrar cardinality
+  stayed at **13** through the slice that made it 12. That pin lives in the **UI-logic project**, not in the
+  kernel-host harness, so the harness could not see it. **Rule: run the expected-red gate AND run what
+  follows it separately, marking the untaken range UNRUN.** Re-cut in this batch: the pin is **12**, and the
+  two stepper captions moved from manifest literals to Keyed entries
+  (`US.Tuning.CooldownMultiplier.Minus`/`.Plus`) because that project's localization guard refuses a
+  literal `Text` on a shipped manifest element - the hidden defect's second half.
+- **Measured this batch, individually (all green)**: kernel-host harness, `UiLogicTests`, `KernelTests`,
+  `ConfigCopyTests`, `SettingsMigrationTests`, `LogTests` Release and Dev. Still UNRUN because they sit
+  behind the expected red: the carrier/payload gates (6, 9), the LICENSE gate, the UI-boundary audit and the
+  stub-coverage gate.
+- **CARRIER IDENTITY MOVED in this batch, by me, against the discipline - recorded, not hidden.** While
+  re-running the post-gate-6 lanes I also ran `dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj
+  -c Release --no-incremental` - verbatim the command `verify-local`'s gate 6 runs - which **rebuilt the
+  carrier**: SHA `C3B36923…0CA6FB` -> **`6094C8FB…DB10D6`** (Release, no PDB). The FL checkout is clean at
+  `d1f2c50`, so the payload now embeds **`0.7.0-dev+d1f2c5014de0…`**: it is a real carrier build from that
+  commit, not a stale one, and gate 6's doc-first red is therefore **gone for the wrong reason** (the hash was
+  moved rather than left frozen). The old hash is what the previous FREEZE NOTICE named. **Zero push/tag/
+  release**; no other FL file changed. Consequence: the next FREEZE NOTICE has to name the new hash, and
+  "gate 6 is expected red for doc-first" is no longer true on this tree until FL lands another commit or the
+  carrier is rebuilt again at a freeze.
 - **S4-3a LANDED: the trigger-timing card is declarative and its kind is retired.** `us/timing` is gone;
   the Registrar's `us/*` kind set is **12 (13 before, pinned by `UiSourceInvariantTests`)**, the 263-line
   widget was deleted, and the card is a declared `Section` over `input/slider` + `input/number-field` +

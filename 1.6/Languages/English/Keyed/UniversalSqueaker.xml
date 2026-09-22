@@ -144,6 +144,11 @@
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>Minimum trigger interval: {0}</US.Tuning.MinInterval>
   <US.Tuning.CooldownMultiplier>Global cooldown multiplier</US.Tuning.CooldownMultiplier>
+  <!-- The stepper's two captions. Keyed on purpose: a shipped manifest may not carry a literal Text/Caption
+       (UiSourceInvariantTests' localization guard), and an operator glyph is still a player-visible string,
+       so it belongs to the language layer with every other one. -->
+  <US.Tuning.CooldownMultiplier.Minus>−</US.Tuning.CooldownMultiplier.Minus>
+  <US.Tuning.CooldownMultiplier.Plus>+</US.Tuning.CooldownMultiplier.Plus>
   <US.Tuning.Mode.Vanilla>Vanilla</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>Fallback</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>Remix</US.Tuning.Mode.Remix>
