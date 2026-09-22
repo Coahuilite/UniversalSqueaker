@@ -11,6 +11,25 @@
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
+    <!-- S6-2/S6-3, the flat (borderless) scope. This lives HERE, in the layout manifest's own <Styles>
+         section, and not only in UsTheme.SchemeXml, because the ENGINE resolves an element's Scheme
+         against the document the Host was built with - the manifest's section - while UsTheme's document
+         is the in-code palette applied to the theme instance. A scheme declared only in the latter is
+         never resolved, and the scope silently keeps the page's bordered values. The scope declares ONLY
+         the tokens it flattens: everything else inherits the cloned baseline.
+
+         "No box" is spelled as a fill whose border token is the SAME colour, because the vocabulary has
+         no Border=none: UiThemeDraw.Surface paints a 1px frame in the border colour, so equal values make
+         that frame invisible. Hover and Selected keep their own fills, so the states stay visible. -->
+    <Scheme Name="us-flat-panel">
+      <Color Token="WorkspacePlane" Value="#171a21" />
+      <Color Token="Raised" Value="#171a21" />
+      <Color Token="RaisedBorder" Value="#171a21" />
+      <Color Token="Hover" Value="#232833" />
+      <Color Token="HoverBorder" Value="#232833" />
+      <Color Token="Selected" Value="#1f2531" />
+      <Color Token="SelectedBorder" Value="#1f2531" />
+    </Scheme>
   </Styles>
   <Column Id="page-root" Gap="8" Padding="12">
     <Row Id="header-band" Padding="0" Gap="6">
@@ -57,7 +76,7 @@
          sub-tree and every scroll position survive the swap (see the help-band comment below). -->
     <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column"
          VisibleKey="body-visible">
-      <Column Id="nav-column" Width="200" Padding="0">
+      <Column Id="nav-column" Width="200" Padding="0" Scheme="us-flat-panel">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
       <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
