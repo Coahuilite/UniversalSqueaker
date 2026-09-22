@@ -71,6 +71,16 @@ public sealed class UsTextFitAudit : IDisposable
     private readonly UiDiagnosticSubscription subscription;
     private long loggedThrough;
     private bool disposed;
+#if US_DEV
+    /// <summary>The last press block this scope printed, so one press prints one block.</summary>
+    private string lastGeometryPress = "";
+
+    /// <summary>True once this scope turned the geometry instrument on, and therefore the one that turns it off.</summary>
+    private bool geometryEnabled;
+
+    /// <summary>One refusal line per process: a dev build on a release carrier is a legitimate state.</summary>
+    private static bool geometryRefused;
+#endif
 
     private UsTextFitAudit(UiDiagnosticSubscription subscription)
     {
@@ -99,7 +109,11 @@ public sealed class UsTextFitAudit : IDisposable
         }
 
         openWindows++;
-        return new UsTextFitAudit(subscription);
+        var scope = new UsTextFitAudit(subscription);
+#if US_DEV
+        scope.EnableGeometry();
+#endif
+        return scope;
     }
 
     /// <summary>
@@ -109,6 +123,10 @@ public sealed class UsTextFitAudit : IDisposable
     public void Publish()
     {
         if (disposed || !subscription.IsActive) return;
+
+#if US_DEV
+        PublishGeometry();
+#endif
 
         IReadOnlyList<UiDiagnosticEvent> events = subscription.Snapshot();
         for (int i = 0; i < events.Count; i++)
@@ -130,6 +148,10 @@ public sealed class UsTextFitAudit : IDisposable
         Publish();
         disposed = true;
 
+#if US_DEV
+        DisableGeometry();
+#endif
+
         openWindows--;
         if (openWindows <= 0)
         {
@@ -137,6 +159,112 @@ public sealed class UsTextFitAudit : IDisposable
             UiFitAudit.Enabled = false;
         }
     }
+
+#if US_DEV
+    /// <summary>
+    /// Opts this window's host subscription in to the carrier's development-only geometry instrument
+    /// (<c>UiDiagnosticSubscription.GeometryEnabled</c>): every node's arranged / draw / window rect, its
+    /// height mode and resolved height, plus - for every press-shaped hit query - the pointer, the queried
+    /// rect and the funnel's own verdict (disabled / covered / hit / miss).
+    /// <para>
+    /// <b>One place.</b> This scope is the only US code that touches the instrument: it is the same
+    /// per-window diagnostic scope the text-fit audit already uses, so nothing is instrumented inside a
+    /// widget and there is no second switch to keep in sync. The developer switch is the existing one - the
+    /// audit only opens while detailed logging is effective (<c>SqueakLog.ShouldEmitDev</c>), which the
+    /// Diagnostics workspace already toggles in game.
+    /// </para>
+    /// <para>
+    /// <b>Fail closed, and say so once.</b> The instrument is compiled into a development payload and out of
+    /// a release one, and the setter THROWS on the latter rather than answering with silence. A US
+    /// development build on a release carrier is a legitimate state - it is what the shared sibling path
+    /// holds most of the time - so the refusal is reported once per process on the out-of-protocol
+    /// <c>ltrace</c> channel and the window keeps drawing.
+    /// </para>
+    /// <para>
+    /// <b>To actually exercise it, the sibling carrier must hold a DEVELOPMENT payload.</b> US resolves
+    /// FerriteLib through a hard-coded sibling <c>HintPath</c> to the one shared
+    /// <c>ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll</c> (no <c>Directory.Build.props</c>, no
+    /// <c>FerriteLibArtifactDir</c> override - the demo and NGS have one, this repo does not), so the
+    /// carrier's own build decides the bytes and FL's dev build is what puts the instrument there.
+    /// </para>
+    /// </para>
+    /// </summary>
+    private void EnableGeometry()
+    {
+        try
+        {
+            subscription.GeometryEnabled = true;
+            geometryEnabled = true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (geometryRefused) return;
+            geometryRefused = true;
+            SqueakLog.LayoutTrace("geometry unavailable: " + ex.Message);
+        }
+    }
+
+    /// <summary>Turns the instrument back off; only the scope that turned it on does this.</summary>
+    private void DisableGeometry()
+    {
+        if (!geometryEnabled) return;
+        geometryEnabled = false;
+        try
+        {
+            subscription.GeometryEnabled = false;
+        }
+        catch (InvalidOperationException)
+        {
+            // The payload lost the instrument under us (a release carrier was swapped in). Nothing to undo.
+        }
+    }
+
+    /// <summary>
+    /// Prints the instrument's dump, once per distinct press block. The dump is press-shaped on the carrier's
+    /// own side (a hit query is sampled only while the pointer is down or up, or when a control fired), and
+    /// this side adds the second bound: the block goes out only when the PRESS LINES changed, so a frame that
+    /// merely repeats the last press costs nothing. The whole dump is written, because "which element was on
+    /// top" is answered by the other nodes' rects and not by the pressed line alone.
+    /// </summary>
+    private void PublishGeometry()
+    {
+        if (!geometryEnabled) return;
+
+        string dump = subscription.DumpGeometry();
+        if (dump.Length == 0) return;
+
+        string presses = PressLines(dump);
+        if (presses.Length == 0 || string.Equals(presses, lastGeometryPress, StringComparison.Ordinal)) return;
+        lastGeometryPress = presses;
+
+        int start = 0;
+        while (start < dump.Length)
+        {
+            int end = dump.IndexOf('\n', start);
+            if (end < 0) end = dump.Length;
+            string line = dump.Substring(start, end - start).TrimEnd('\r');
+            if (line.Length > 0) SqueakLog.LayoutTrace("geometry " + line);
+            start = end + 1;
+        }
+    }
+
+    /// <summary>The dump's own hit-query lines: the half that only a press produces.</summary>
+    private static string PressLines(string dump)
+    {
+        var text = new System.Text.StringBuilder();
+        int start = 0;
+        while (start < dump.Length)
+        {
+            int end = dump.IndexOf('\n', start);
+            if (end < 0) end = dump.Length;
+            string line = dump.Substring(start, end - start).TrimEnd('\r');
+            if (line.StartsWith("input ", StringComparison.Ordinal)) text.Append(line).Append('\n');
+            start = end + 1;
+        }
+
+        return text.ToString();
+    }
+#endif
 
     private static void Report(UiOverflowReport report)
     {
