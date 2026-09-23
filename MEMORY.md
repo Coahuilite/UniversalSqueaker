@@ -495,6 +495,12 @@
 
 ## Evidence discipline (rules in `AGENTS.md`; these are the measured specimens)
 
+- **Line numbers are not a stable coordinate.** A second edit to the same file must not read its target region
+  with the line numbers the FIRST edit left behind: the ranges shift, and the slice silently takes the wrong
+  text instead of failing. Re-read the file, and guard the slice with its own first and last line as an
+  assertion before editing. Measured 2026-09-22: a TODO re-cut read its second block at pre-edit offsets,
+  clobbered the neighbouring section, and was recovered by `git checkout` plus a guarded re-run. Same family
+  as "check the instrument's input" - here the instrument was the line number.
 - **The sixth specimen, and a new mechanism: the mutation flow's own BUILD was the broken instrument**
   (S4-1, 2026-09-21). `Layout.Schema2.xml` and the language tables are **embedded resources** of the main
   assembly, and the mutation battery's `Copy-Item` restore preserves the source's old mtime - so an
