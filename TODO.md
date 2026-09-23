@@ -6,52 +6,69 @@
 > **compress stale/verbose parts instead of appending session-shaped prose** (this file was compacted under
 > that ruling on 2026-09-21c).
 
-## Next big goal — S4: per-workspace atomisation (the 0.5.x main goal)
+## NOW — the handover queue (2026-09-22; read `MEMORY.md` "Handover — start here" first)
 
-- [ ] **S4, one workspace at a time.** Dissolve the remaining consumer-owned `us/*` widget kinds into manifest
-  subtrees, workspace by workspace, each with its own verification round and its own friction report
-  (`docs/ui-redesign-0.7-zh.md` §5.7 is the checklist-card precedent and the reporting format). The first
-  workspace is the maintainer's pick; **S2-S7 must not start without an explicit go**.
-  - [x] **S4-1 LANDED (Overview: the three composite cards dissolved and retired).** `us/global-volume`,
-    `us/basic-tuning` and `us/camera-indicator` are manifest subtrees now; the Registrar's `us/*` kind set
-    shrank **18 → 15**, the seven `toggle-*` action bindings retired with them, and 493 lines of widget code
-    were deleted. Friction report + the five player-visible deltas + the mutation ledger: spec **§5.8**.
-    The in-game list below carries what still has to be looked at on a real screen.
-  - [x] **S4-2 LANDED (Packs: the two layer cards dissolved and retired).** `us/race-layer` and
-    `us/xenotype-layer` are `Repeat` + `<Templates>` row sets now, and this is the first real consumer of
-    **G2** (`input/button.PayloadKey` - a repeated row reporting its OWN key) and **G3** (`Chrome="none"`
-    bare hit area). The Registrar's `us/*` kind set went **15 -> 13**, 388 widget lines and the
-    `UsDomainSelection` payload struct retired with them, and `UsPacksText` moved to `UI/Layout/`. Two
-    **(B)** carrier gaps were recorded in spec §5.9 with file:line and a minimal repro, **no request filed**.
-    **The first is now FIXED**: the maintainer ruled it visible-and-cheap, FL scoped `SelectedKey` per item
-    (carrier `e929fa11`), and the US half landed with it - the row TITLE declares `SelectedKey="selected"`,
-    the host registers a per-row `selected` bool, the lane pin was flipped from negative to positive (exactly
-    one row is true and it is the model's), and `Tone`/`Emphasis` stay forbidden in templates. **The second is
-    now FIXED too, not worked around**: the carrier shipped `Height="MatchContent"` (FL `490d4f07`), the two
-    24px `Height="Auto"` hit bands and the Column that stacked them are gone from both templates, and each row
-    now carries ONE full-height hit - measured 100% coverage at 1024/736/480/320 x EN/ZH x flat/wrapped, against
-    the retired shape's 69.9% / 53.3% / 42px dead.
-  - [x] **S4-3a LANDED (Overview: the trigger-timing card dissolved and retired).** `us/timing` is a declared
-    `Section` over `input/slider` + `input/number-field` + `text/wrapped` + `input/button` now; the
-    Registrar's `us/*` kind set went **13 -> 12** and the 263-line widget was deleted. The caption's
-    sample-constant friction is **fixed, not moved**: the host builds one sentence and the atom measures the
-    string it paints. What is NOT reproduced is the composite's reserved caption band (the vocabulary has no
-    reserved-band attribute), so the card is taller at the narrowest centre column - measured, and it is a
-    real-screen item. Report: spec **§5.10**.
-  - [x] **S4-3b LANDED (Distance: the attenuation card dissolved and retired).** `us/attenuation-editor` is
-    a declared `Section` over the engine's own `chart/line` (declared directly with `Editable` /
-    `EditablePoints=1,2` / `Height=64` - the hand-built `UiElementSpec` wrapper is gone), a bound status
-    sentence and three declarative preset buttons. The Registrar's `us/*` kind set went **12 -> 11** and the
-    195-line widget was deleted. **S4's kind target is met: 18 -> 11.** Two contract facts it measured: a
-    declarative `input/button` validates the STRING action contract (so `set-distance-preset` became
-    `BindAction<string>` and the enum parse moved to the host), and `SelectedKey` is how a static button says
-    "the model is on me". Evidence: harness ALL PASS + `UiLogicTests` ALL GREEN, three mutations red. One
-    narrow-tier finding is recorded, not asserted away: at 320 the English preset captions clip
-    (`MEMORY.md`).
-  - [x] **The grade chain ran end to end after the re-issued freeze**: `verify-local -NoRestore` -> all 15
-    gates, exit 0, against FL `b997f3a9f009…` (carrier `0F95DF35…`), with the carrier's SHA-256 and mtime
-    unchanged before and after. (Earlier in the batch it had stopped at gate 6 on the FL tree's own
-    uncommitted task-8 edit - a correct refusal - and gates 7-15 were run individually then.)
+Ordered by what unblocks what. Each item's detail lives in the section it names.
+
+- [ ] **1. The Packs workspace's race row does not respond to a click** (the filter does). `Player.log` shows
+  no exception, no TRIPPED/recovery band and no `KeyNotFound` ⇒ a missing command binding is ruled OUT. Four
+  candidates, NONE of them measured: `Chrome="none"` short-circuiting the hit, the `Overlay`'s paint order, a
+  `Scroll` consuming the press, the `MatchContent` band's real rect. **The carrier's dev geometry dump is the
+  instrument that answers it** (`MEMORY.md` "Handover — start here", item 2). **WAITS ON THE MAINTAINER**: the
+  dump exists only in a dev carrier.
+- [ ] **2. The dev round trip, in one sitting** (same trigger as item 1): the carrier repo builds Dev → US
+  `dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev` → test → the carrier owner's delivery
+  step back to Release (PDB removed, freeze notice re-issued). Nothing on the US side is missing; the wiring is
+  committed and compile-verified.
+- [ ] **3. Claims carried as claims** (each has its own line in §S6 and in `MEMORY.md`): the square toggle's
+  press path and hover lane; the 24 → 36 widening's lane re-cut at the 320 shape; row fill / row hover (the
+  CONTAINER-sibling candidate is untried); the 3px selected rail. **The rail WAITS ON FL**; the rest need a real
+  screen.
+- [ ] **4. The one style debt at the S4 finish line**: `us/diagnostics` is a C#-drawn composite, so the flat
+  scope cannot reach it and the Overview page keeps one boxed card. S4-shaped work, not a tweak.
+
+
+
+## S4 — per-workspace atomisation (CLOSED 2026-09-22; the 0.5.x main goal met)
+
+**All four slices landed, each migrating a workspace AND retiring the kinds it replaced: S4-1 Overview,
+S4-2 Packs, S4-3a trigger timing, S4-3b attenuation. The US kind set went 18 -> 15 -> 13 -> 12 -> 11, five
+composites and the seven `toggle-*` action bindings were deleted with them, and the whole grade chain ran
+end to end green.** Friction reports, player-visible deltas and mutation ledgers: `docs/ui-redesign-0.7-zh.md`
+§5.8-§5.10 plus the S4 bullets in `MEMORY.md`. The two carrier gaps found on the way were FIXED rather than
+worked around (per-item `SelectedKey`; `Height="MatchContent"` replacing the two 24px hit bands, measured
+100% row coverage). **Nothing below is a re-do.**
+
+  - [ ] **The selected row's FILL: two routes tried 2026-09-22, both blocked; the 3px rail still open
+    (spec §5.9.6).** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
+    (`text/wrapped` paints no surface); (b) letting the HIT paint itself works (idle `#191612`, selected
+    `#3A311F`, hit height still == the text column's) but moves the hit band's geometry and reddens
+    `DeclarativePacksLaneTests` at 320px, so it is refused; (c) an `input/button` SIBLING keeps the geometry
+    but cannot exist - the atom invokes its command on every click, so without `ActionBind` it throws at the
+    first press and with one it is a second hit surface. **Untried candidate with this round as its citation: a
+    CONTAINER state sibling with its own flat scope.** The **left 3px rail** is separate and needs drawing code
+    (a vertical rail is not declarable). Debt boundary: visible but not cheaply fixable - record + cite, and the
+    row fill/hover sit on the REAL-SCREEN list; do not re-open unasked.
+- [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
+  gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
+  is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
+  existing components used FIRST — do not take it on one data point.
+- [ ] **Carried: the per-frame `GetComp` over every spawned pawn** (`Patch_MapInterface_DiagnosticsMarks`).
+  Reducing it means either a cache with invalidation or reusing the overlay's viewport sweep — a P2/P3 shape
+  decision, not a seam fix.
+- [ ] **Carried: FL `a306cae`'s chrome-key runtime self-check.** US attaches no `UiWindowKey`, so every
+  multi-instance window's chrome scope identity is type-only (`SqueakDiagnosticsDetailWindow/chrome` for every
+  open detail window); implementing it means adopting `UiWindowCatalog` + key attachment on the very windows
+  P2 is retiring.
+- [ ] **Carried: the legacy audit channel boundary.** `UsTextFitAudit` is per-host now (FL-20), but the
+  process-wide `UiFitAudit.Enabled` is still shared and `Detach`/the legacy sink still exist. The actual
+  misattribution was **never reproduced** — keep it recorded as an open condition, never as "pollution already
+  happened".
+- [ ] **Invalidation discipline, made structural (adoption plan §9 item 6 / P3-2a)**: `IUiBindings` exposes no
+  full write-key enumeration, so register the write bindings centrally and emit the test metadata from that
+  registry (the UI-logic harness hand-lists **20 of 46** write keys today). Land it BEFORE the migration deepens.
+- [ ] **Hot reload: demand-driven first.** Decide which need is real — XML layout-document hot reload, or non-UI
+  writers of settings/model state — before adopting `UiDocumentService` + `HostAttached`.
   - [ ] **The selected row's FILL: two routes tried 2026-09-22, both blocked; the 3px rail still open
     (spec §5.9.6).** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
     (`text/wrapped` paints no surface); (b) letting the HIT paint itself works (idle `#191612`, selected
@@ -83,36 +100,30 @@
 - [ ] **Hot reload: demand-driven first.** Decide which need is real — XML layout-document hot reload, or non-UI
   writers of settings/model state — before adopting `UiDocumentService` + `HostAttached`.
 
-## S6 — align US with SR's visual language and wording (maintainer 2026-09-22; NOT started)
+## S6 — align US with SR's visual language and wording (landed 2026-09-22; one style debt left)
 
-The maintainer rejected the current US look against SR's on three counts (row style, the toggle's look and
-palette, and the nav bar) and named the common cause himself: US mixes bordered cards with divider lines,
-while the SR/Camera+ language is **borderless, separated by whitespace, with state (hover/selected) expressed
-by a FILL**. Everything below is that one rule applied. **Do not start any of it without an explicit go.**
+**Landed:** S6-1 wording (two rounds, EN+ZH, against the SR benchmark); S6-2 the nav column flat and the
+eight declarative cards de-boxed with the five body separators deleted; S6-3 the warm palette (guard first),
+the section header's 3px gold rail, and the square toggle as `us/square-toggle` (Registrar 11 -> 12 -> 13).
+**The toggle follow-up landed last:** all seven bands went 24 -> 36 wide so the widget renders the
+reference's own 34x18 (knob throw 6 -> 16px), the ON edge stays the neutral `Border` both states paint, and
+the ON knob is the accent itself.
 
-- [ ] **S6-1 wording and translation (pure (A), do it FIRST).** Rewrite the labels and notes of the
- 发声规则 / frequency / interval / attenuation entries against SR's own wording, EN and ZH together, with the
-  controls and the structure untouched.
-- [ ] **S6-2 row style.** (A) drop the card borders and the separator rules; an optional small note per row -
-  **help stays the primary carrier**, so a note is used only where the layout genuinely needs one; **no
-  per-row `?` button** (the trailing `?` IS help, and US help is the three-column drawer - a per-row `?`
-  would introduce a second help mechanism); lay the row out in one line. (B) the whole-row hit area (US
-  citation: the S4-2/S4-3 wrapped row's 42px dead zone) and a declarative driver for row-level hover styling
-  (same family as "no per-row role input surface") - **measure before claiming**.
-- [ ] **S6-3 appearance (pure (A)).** The square toggle's look (on = gold, off = grey) and the palette
-  aligned to SR; a gold left rail plus a triangle marker on section headers. This is the APPEARANCE layer
-  only: under the four-ruler ruling the square toggle is indistinguishable from the click-filled button US
-  ships on the structure/layout/semantics rulers, so **there is no "new kind / new control" question here**
-  (it agrees with the existing F-02 ruling).
-- [ ] **The unified style rule**: borderless, whitespace-separated, state by fill. `us/nav` is the most
-  visible break of it and is already on the absorbed S4-5 list, so it becomes S6's first visible target; its
-  change is appearance-layer (structure/layout/semantics unchanged). **One capability to measure first**:
-  once the border is gone, where does the hover/selected FILL come from? `SelectedKey` only takes the text
-  to `TextOnGold`, `Chrome="none"` paints nothing, and `input/button` paints a raised surface - so
-  "an interactive item that is borderless but has a state-driven fill" may be a genuine gap, and if it is, it
-  serves two consumers at once (the layer rows and the nav items). **Citation discipline: Camera+ and SR are
-  appearance BENCHMARKS, not citations; only US's own real usage counts as a citation.**
-- [ ] **Merge**: the old S4-5 "atomic swap" list folds into S6 so the same screen is not done twice.
+**Rulings that are decisions, not backlog:** help stays the primary channel and there is NO per-row `?`
+button (that would be a second help mechanism); the square toggle is an APPEARANCE variant, not a new control
+(four-ruler ruling + F-02); the OFF knob's ink stays `TextSecondary`, because the disabled branch already
+owns `TextDisabled` and reusing it would collapse "read-only ON" into "clickable OFF".
+
+- [ ] **The one style debt left: `us/diagnostics` paints its own chrome in C#**, so neither the manifest nor
+  the flat scope reaches it and the Overview page keeps one boxed card among flat ones. Closing it is
+  S4-shaped work (dissolve the composite), not a style tweak.
+- [ ] **Row fill / row hover in the layer cards.** Two routes measured blocked (the hit painting itself moves
+  the band's geometry; an `input/button` sibling throws or becomes a second hit surface). The third —
+  **a CONTAINER state sibling with its own flat scope** — is a cited candidate that has NEVER been tried.
+- [ ] **The 3px selected rail.** Needs drawing code today. **WAITS ON FL's per-edge stroke (task-11)**, then
+  re-price.
+- [ ] **The unified style rule** (borderless, whitespace-separated, state by fill) now holds on the
+  declarative surfaces; the composite survivors above are the remaining work.
 
 ## Narrow help (乙1) — the shipped shape and its one known limitation
 
@@ -163,6 +174,10 @@ no `HeightKey`).
   has never been seen; (8) the title band no longer reserves 72px for a control and the header band's height is
   a real vertical cost (content-measured, so it follows the worst workspace caption); (9) the nav cards are 40px
   wider (144 → 184).
+- [ ] **The seven square toggles at their new band (S6-3 follow-up)**: 36 wide, so the track renders 34x18
+  with a 16px knob throw, one neutral `Border` edge in both states, the accent on the ON knob. Needs a real
+  screen: does the ON state read at a glance, and does the wider control still fit the egg row at the narrow
+  tier?
 - [ ] **Packaging pre-flight**: the dev package is a **folder** — drop it in `Mods/`, no zip; read the package
   `version.txt` `carrier=` line before entering the game and confirm it is a `Release` carrier (on mismatch
   rebuild per the stager's refusal message).
@@ -304,6 +319,12 @@ no `HeightKey`).
   entirely (`SubtitleLines = 0`) to reclaim ~100px of stack height if the compact cards still read as tall.
 
 ## Landed — pointer lines (detail in git log / `MEMORY.md` / `OBLIVIONIS.md`)
+
+- **2026-09-22 evening — S6 closed and S4 closed in the same round**: S6-1 wording, S6-2 flat nav + de-boxed
+  cards + the separators deleted, S6-3 the warm palette (guard first), the section-header gold rail,
+  `us/square-toggle` (Registrar 11 -> 12 -> 13), then the toggle follow-up that made it render the
+  reference's 34x18 with the accent on the knob; S4 closed at 18 -> 11 kinds. Detail: the S4/S6 sections
+  above and `MEMORY.md`.
 
 - S3 frame reset (S3-0..S3-5, 2026-09-21), the narrow help band (乙1) and its 2026-09-21b re-cut, U1 (the
   global-volume caption band) and the checklist-card migration (B-1/B-2): all landed and verified; the durable

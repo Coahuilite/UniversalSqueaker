@@ -7,6 +7,67 @@
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
 
+## Handover — start here (2026-09-22)
+
+> The first ten minutes of a new session. Everything here is a POINTER: the code, the manifests and the
+> carrier outrank this file. Nothing here pins a live artifact identity — see item 2's last line.
+
+**1. Read these, in this order**
+
+1. `AGENTS.md` — the rules that were each paid for once (evidence, commit, carrier, push).
+2. `MEMORY.md` (this file), then `TODO.md` — the live action surface.
+3. `Source/UniversalSqueaker/UI/Layout.Schema2.xml` — the MAIN page manifest. `Layout.Overlay.Schema2.xml`
+   beside it is the in-world camera overlay, not a second settings page.
+4. `Source/UniversalSqueaker/UI/Kernel/UsKernelWidgetRegistrar.cs` — the US-owned kind set: **13
+   `Register()` calls**. The cardinality is pinned by `UiSourceInvariantTests` (13) and the per-lane checks
+   read `KnownKinds(scope)`, so a kind no manifest element uses, or a dropped registration, reddens.
+5. The maintainer's in-game checklist: `../modding_documents/team-mode/us-ingame-checklist-2026-09-22-zh.md`
+   — a WORKSPACE-level path one directory above this repository; it is not in-tree.
+6. Tooling: `scripts/verify-local.ps1 -NoRestore` (the 15-gate chain; gate 6 is the carrier boundary,
+   gates 14/15 the boundary and stub-coverage audits) and `tools/UniversalSqueakerKernelHostTests` — the
+   real-Host harness, one lane per slice.
+
+**2. How US uses the carrier's development geometry instrument**
+
+- **One place, zero widget instrumentation:** `Source/UniversalSqueaker/UI/Kernel/UsTextFitAudit.cs`. That
+  class is already the per-window host diagnostic scope and already owns the window's
+  `UiDiagnosticSubscription`, so it opts the subscription in (`Open`), prints the dump (`Publish`) and
+  turns it back off (`Dispose`). All of it is inside `#if US_DEV`.
+- **The switch is the existing one:** the scope only opens while detailed logging is effective
+  (`SqueakLog.ShouldEmitDev`), which the Diagnostics workspace toggles in game — no second switch to drift.
+- **The channel is the existing out-of-protocol `ltrace`** (`SqueakLog.LayoutTrace`), so no lane asserts it
+  and none had to be re-cut. Output is bounded: one block per DISTINCT press.
+- **Grep in `Player.log`** — the two line shapes that answer "who ate this click":
+  `ltrace: geometry input path=… kind=… point=(…) rect=(…) verdict=hit|miss|covered|disabled`
+  `ltrace: geometry rect path=… arranged=(…) draw=(…) window=(…) height=… h=…`
+- **Precondition — the instrument exists only in a DEVELOPMENT carrier.** The round trip is: the carrier
+  repository builds Dev (which writes its own payload) → `dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev`
+  → test → the carrier owner's delivery step back to Release (PDB removed, freeze notice re-issued). US
+  resolves the carrier through a hard-coded sibling `HintPath` to that one shared payload; there is no props
+  override mechanism here and none is needed.
+- **On a Release carrier** the enable setter throws by design; US catches it, writes ONE line per process
+  (`ltrace geometry unavailable: …`) and keeps drawing.
+- **A live carrier identity is never written here.** Only history. The current identity is whatever the
+  LATEST FREEZE NOTICE states, quoted as a hash AND an mtime pair — the two answer different questions.
+
+**3. Open defect, claims, and what is closed**
+
+- **OPEN, highest value: the Packs workspace's race row does not respond to a click** (the filter does).
+  `Player.log` shows no exception, no TRIPPED/recovery band and no `KeyNotFound`, so a missing command
+  binding is ruled OUT. Four candidates, **none of them measured**: `Chrome="none"` short-circuiting the hit,
+  the `Overlay`'s paint order, a `Scroll` consuming the press, the `MatchContent` band's real rect.
+  **Item 2 is the instrument that answers it, and it needs a dev carrier.**
+- **Claims, not facts — do not repeat them as done:** the square toggle's press path and its hover lane (only
+  the contract is asserted); the 24 -> 36 band widening's lane re-cut at the 320 shape (a page width the
+  window floor cannot produce); row fill / row hover in the layer cards (two routes measured blocked, the
+  third — a CONTAINER state sibling — never tried); the 3px selected rail (needs the carrier's per-edge
+  stroke).
+- **CLOSED with its reason, so nobody re-opens it:** the OFF knob's ink stays `TextSecondary` — the disabled
+  branch already returns `TextDisabled`, so reusing it for enabled-OFF would make a read-only ON toggle look
+  like a clickable OFF one. Semantic collapse, not a colour preference.
+- **Style debt at the S4 finish line:** `us/diagnostics` paints its own chrome in C#, so neither the manifest
+  nor the flat scope reaches it and the Overview page keeps one boxed card among flat ones.
+
 - **S6-2/S6-3 started: the nav column is scoped flat, and the scheme had to live in the MANIFEST.**
   A style scope that sets a surface's BORDER token equal to its FILL is how "no box" is spelled here (the
   vocabulary has no `Border=none`; `UiThemeDraw.Surface` paints a 1px frame in the border colour).
