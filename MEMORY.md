@@ -98,7 +98,10 @@
   #eae6de, TextSecondary -> #b0ada3, TextDisabled -> #8a8780 (split from TextSecondary, which it used to
   equal, because on a warm plane the two read alike), Danger pair -> #3f1c1a / #c96057. **`AccentGold` was
   deliberately NOT re-tinted**: `UsSurfaceLaneTests` pins it against `UiTheme.DarkGold` as the series
-  identity, so SR's #EBAD4D stays a benchmark. Unmapped SR roles (ButtonPrimary/Ghost, FilterChip,
+  identity, so SR's #EBAD4D stays a benchmark. **RULED 2026-09-24 (maintainer): the series gold IS the
+  identity and `AccentGold` keeps it; SR's #EBAD4D is a benchmark, never adopted** - that closes the last
+  undecided item on the appearance axis, so no US file may restate it as pending. Unmapped SR roles
+  (ButtonPrimary/Ghost, FilterChip,
   HelpIndicator/Toggle, SelectableCard's own hover tone, knob greys, empty rail, dropdown ink, zebra band)
   are recorded rather than invented into tokens.
 - **The guard is the point of the step: `PaletteLaneTests`.** A re-tint can silently resurrect every card
@@ -847,6 +850,11 @@
   does-not-lie lane, the card-probe re-derivation, the two help-gate widenings) is roughly 60% reusable and the
   per-widget remainder is dominated by the interaction shape. So "migrate 15 widgets" is NOT 15x the first one,
   and bucket (i)'s 1,969 code lines bound what can MOVE, not what can be deleted. Report: spec 5.7.
+- **Runtime mode, RULED 2026-09-24 (maintainer)**: FL stays in its `0.7.x` **development** state (no line or
+  minor move); the remote is **off-site backup only** - no tag and no release, and push is executed by the
+  Lead alone; local testing uses **Dev packages only** (`build-dev` / `pack-dev`), never
+  `pack-release` / `pack-steam`. Consequence: this round has no release vehicle, `main` and tags stay
+  untouched, and an acceptance claim rests on the paired Dev folder, not on a published artifact.
 
 ## Release state and version scope
 
