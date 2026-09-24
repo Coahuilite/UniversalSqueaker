@@ -28,9 +28,9 @@ Ordered by what unblocks what. Each item's detail lives in the section it names.
 ## S4 — per-workspace atomisation (CLOSED 2026-09-22; the 0.5.x main goal met)
 
 **All four slices landed, each migrating a workspace AND retiring the kinds it replaced: S4-1 Overview,
-S4-2 Packs, S4-3a trigger timing, S4-3b attenuation. The US kind set went 18 -> 15 -> 13 -> 12 -> 11, five
-composites and the seven `toggle-*` action bindings were deleted with them, and the whole grade chain ran
-end to end green.** Friction reports, player-visible deltas and mutation ledgers: `docs/ui-redesign-0.7-zh.md`
+S4-2 Packs, S4-3a trigger timing, S4-3b attenuation. The US kind set went 18 -> 15 -> 13 -> 12 -> 11: the
+seven `us/*` kinds those four commits retired (3 + 2 + 1 + 1) and the seven `toggle-*` action bindings were
+deleted with them, and the whole gate chain ran end to end green.** Friction reports, player-visible deltas and mutation ledgers: `docs/ui-redesign-0.7-zh.md`
 §5.8-§5.10 plus the S4 bullets in `MEMORY.md`. The two carrier gaps found on the way were FIXED rather than
 worked around (per-item `SelectedKey`; `Height="MatchContent"` replacing the two 24px hit bands, measured
 100% row coverage). **Nothing below is a re-do.**
