@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- One input shared by production, harnesses and their nested builds. Published mod layout is
+         the compatibility default; development can select a staged Dev carrier explicitly. -->
+    <FerriteLibArtifactPath Condition="'$(FerriteLibArtifactPath)' == ''">$(MSBuildThisFileDirectory)..\ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll</FerriteLibArtifactPath>
+    <FerriteLibArtifactFullPath>$([System.IO.Path]::GetFullPath('$(FerriteLibArtifactPath)', '$(MSBuildThisFileDirectory)'))</FerriteLibArtifactFullPath>
+  </PropertyGroup>
+</Project>

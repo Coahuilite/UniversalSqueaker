@@ -97,6 +97,11 @@ jobs:
             Where-Object { $_.Name -ne '.git' } |
             Copy-Item -Destination $sibling -Recurse -Force
           $produced = Join-Path $sibling '1.6/Assemblies/FerriteLib.UiKit.dll'
+          # Export the evaluated output explicitly; supports isolated and older carrier layouts.
+          $carrierOutput = (dotnet msbuild (Join-Path 'ci-ferritelib' 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -nologo -p:Configuration=Release -getProperty:TargetPath | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $carrierOutput)) { throw 'Cannot locate the built carrier.' }
+          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $produced) | Out-Null
+          Copy-Item -LiteralPath $carrierOutput -Destination $produced -Force
           if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
 
       - name: Restore
@@ -106,9 +111,8 @@ jobs:
             ForEach-Object { dotnet restore $_.FullName --nologo }
 
       # Order matters: gates run on the tree exactly as tagged, then the Release payload is built for
-      # staging. verify-local's Dev/Release build gates leave 1.6/Assemblies populated; stage-package
-      # reads that DLL and re-checks the single-carrier / no-audio / version red lines at assembly time.
-      - name: Verify (14 gates)
+      # staging. The stager reads dist/build/Release and verifies the selected carrier hash.
+      - name: Verify (15 gates)
         shell: pwsh
         run: ./scripts/verify-local.ps1 -NoRestore
 
@@ -118,9 +122,7 @@ jobs:
 
       - name: Build the release payload
         shell: pwsh
-        # --no-incremental for the same reason the packers use it: Dev and Release share one
-        # OutputPath, and the staging engine measures the configuration stamp rather than trusting the
-        # label - a stale Dev assembly at the payload path must be rebuilt, not quietly shipped.
+        # Build the final Release input; staging independently checks its configuration and identity.
         run: dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release --no-incremental --nologo
 
       - name: Stage the release asset

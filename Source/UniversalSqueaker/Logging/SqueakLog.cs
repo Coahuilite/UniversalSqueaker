@@ -29,7 +29,7 @@ public static class SqueakLog
 #else
         EffectiveDevLogging = mode == SqueakDevLoggingMode.Enabled;
 #endif
-        Assembly assembly = typeof(UniversalSqueakerMod).Assembly;
+        Assembly assembly = typeof(SqueakLog).Assembly;
         string informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "unknown";
 #if US_STEAM
         build = "steam";

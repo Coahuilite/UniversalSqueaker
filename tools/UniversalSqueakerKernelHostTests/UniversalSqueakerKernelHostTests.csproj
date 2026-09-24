@@ -19,6 +19,10 @@
     <FerriteLibHarness>$(MSBuildProjectDirectory)\..\..\..\ferritelib\tools\FerriteLib.UiKit.Tests</FerriteLibHarness>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
+    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+  </PropertyGroup>
+
   <!-- 真实 Schema2 Host creation regression：引用生产主程序集（连同 FerriteLib.UiKit 与
        Krafs.Rimworld.Ref 编译期引用）。运行时用 FerriteLib 仓库里的最小可执行桩程序集替换
        Verse/Unity，Host 创建/测量/绘制路径因此可在本地无游戏环境执行。
@@ -27,20 +31,20 @@
        会静默失败（MSB4276），但直接构建生产项目成功；直接引用保持“使用真实生产代码”且可在
        no-restore 的 focused harness 中稳定复现。 -->
   <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences">
-    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) --nologo -v quiet"
+    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactFullPath)&quot; --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <ItemGroup>
     <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
     <Reference Include="UniversalSqueaker">
-      <HintPath>..\..\1.6\Assemblies\UniversalSqueaker.dll</HintPath>
+      <HintPath>..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</HintPath>
       <Private>true</Private>
     </Reference>
     <Reference Include="FerriteLib.UiKit">
       <!-- The carrier mod's payload, built in the sibling repo. Never copied into US's own
            1.6/Assemblies, which is what keeps a second carrier from entering the US package. -->
-      <HintPath>..\..\..\ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll</HintPath>
+      <HintPath>$(FerriteLibArtifactFullPath)</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>

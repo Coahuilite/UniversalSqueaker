@@ -72,8 +72,10 @@ public sealed class UsTextFitAudit : IDisposable
     private long loggedThrough;
     private bool disposed;
 #if US_DEV
-    /// <summary>The last press block this scope printed, so one press prints one block.</summary>
-    private string lastGeometryPress = "";
+    // Explicit char[] selects the overload present on net472 (TrimEnd(char) is unavailable there).
+    private static readonly char[] LineEndings = { '\r' };
+    /// <summary>The last sampled pass printed; equal clicks in different passes remain separate evidence.</summary>
+    private string lastGeometryHeader = "";
 
     /// <summary>True once this scope turned the geometry instrument on, and therefore the one that turns it off.</summary>
     private bool geometryEnabled;
@@ -181,12 +183,8 @@ public sealed class UsTextFitAudit : IDisposable
     /// <c>ltrace</c> channel and the window keeps drawing.
     /// </para>
     /// <para>
-    /// <b>To actually exercise it, the sibling carrier must hold a DEVELOPMENT payload.</b> US resolves
-    /// FerriteLib through a hard-coded sibling <c>HintPath</c> to the one shared
-    /// <c>ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll</c> (no <c>Directory.Build.props</c>, no
-    /// <c>FerriteLibArtifactDir</c> override - the demo and NGS have one, this repo does not), so the
-    /// carrier's own build decides the bytes and FL's dev build is what puts the instrument there.
-    /// </para>
+    /// <b>To exercise it, explicitly select a Dev carrier with FerriteLibArtifactPath.</b>
+    /// The default compatibility input can remain Release. See docs/build-and-debug.md.
     /// </para>
     /// </summary>
     private void EnableGeometry()
@@ -220,11 +218,8 @@ public sealed class UsTextFitAudit : IDisposable
     }
 
     /// <summary>
-    /// Prints the instrument's dump, once per distinct press block. The dump is press-shaped on the carrier's
-    /// own side (a hit query is sampled only while the pointer is down or up, or when a control fired), and
-    /// this side adds the second bound: the block goes out only when the PRESS LINES changed, so a frame that
-    /// merely repeats the last press costs nothing. The whole dump is written, because "which element was on
-    /// top" is answered by the other nodes' rects and not by the pressed line alone.
+    /// Prints the full instrument dump once per sampled pass. Identical clicks in later passes are
+    /// separate evidence; repeated Publish calls in the same pass do not duplicate the block.
     /// </summary>
     private void PublishGeometry()
     {
@@ -234,15 +229,17 @@ public sealed class UsTextFitAudit : IDisposable
         if (dump.Length == 0) return;
 
         string presses = PressLines(dump);
-        if (presses.Length == 0 || string.Equals(presses, lastGeometryPress, StringComparison.Ordinal)) return;
-        lastGeometryPress = presses;
+        int headerEnd = dump.IndexOf('\n');
+        string header = headerEnd < 0 ? dump : dump.Substring(0, headerEnd);
+        if (presses.Length == 0 || string.Equals(header, lastGeometryHeader, StringComparison.Ordinal)) return;
+        lastGeometryHeader = header;
 
         int start = 0;
         while (start < dump.Length)
         {
             int end = dump.IndexOf('\n', start);
             if (end < 0) end = dump.Length;
-            string line = dump.Substring(start, end - start).TrimEnd('\r');
+            string line = dump.Substring(start, end - start).TrimEnd(LineEndings);
             if (line.Length > 0) SqueakLog.LayoutTrace("geometry " + line);
             start = end + 1;
         }
@@ -257,7 +254,7 @@ public sealed class UsTextFitAudit : IDisposable
         {
             int end = dump.IndexOf('\n', start);
             if (end < 0) end = dump.Length;
-            string line = dump.Substring(start, end - start).TrimEnd('\r');
+            string line = dump.Substring(start, end - start).TrimEnd(LineEndings);
             if (line.StartsWith("input ", StringComparison.Ordinal)) text.Append(line).Append('\n');
             start = end + 1;
         }

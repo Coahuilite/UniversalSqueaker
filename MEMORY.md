@@ -36,15 +36,11 @@
 - **The switch is the existing one:** the scope only opens while detailed logging is effective
   (`SqueakLog.ShouldEmitDev`), which the Diagnostics workspace toggles in game — no second switch to drift.
 - **The channel is the existing out-of-protocol `ltrace`** (`SqueakLog.LayoutTrace`), so no lane asserts it
-  and none had to be re-cut. Output is bounded: one block per DISTINCT press.
+  and none had to be re-cut. Output is bounded: one block per sampled pass; identical clicks in later passes are preserved.
 - **Grep in `Player.log`** — the two line shapes that answer "who ate this click":
   `ltrace: geometry input path=… kind=… point=(…) rect=(…) verdict=hit|miss|covered|disabled`
   `ltrace: geometry rect path=… arranged=(…) draw=(…) window=(…) height=… h=…`
-- **Precondition — the instrument exists only in a DEVELOPMENT carrier.** The round trip is: the carrier
-  repository builds Dev (which writes its own payload) → `dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev`
-  → test → the carrier owner's delivery step back to Release (PDB removed, freeze notice re-issued). US
-  resolves the carrier through a hard-coded sibling `HintPath` to that one shared payload; there is no props
-  override mechanism here and none is needed.
+- **Current build contract (2026-09-24):** outputs are isolated under `dist/build/Dev` and `dist/build/Release`; `FerriteLibArtifactPath` selects an explicit carrier (relative paths are US-root-relative). `build-dev` never builds FL. The compiler records the selected DLL hash and staging refuses a different one. Use `docs/build-and-debug.md` for the paired Dev workflow; the old shared-output round trip below is history.
 - **On a Release carrier** the enable setter throws by design; US catches it, writes ONE line per process
   (`ltrace geometry unavailable: …`) and keeps drawing.
 - **A live carrier identity is never written here.** Only history. The current identity is whatever the

@@ -31,9 +31,85 @@ internal static class UsAuditRoutingLaneTests
     public static int RunAll()
     {
         Step("per-host audit routing + ruler isolation + the shared detection switch", TheAuditIsRoutedPerHost);
+#if US_DEV
+        Step("repeated clicks retain separate geometry reports", RepeatedClicksAreSeparateEvidence);
+#endif
         Console.WriteLine("UsAuditRoutingLaneTests ALL PASS");
         return 0;
     }
+
+#if US_DEV
+    private static void RepeatedClicksAreSeparateEvidence()
+    {
+        var observer = typeof(Verse.Log).GetField("MessageObserver")
+            ?? throw new InvalidOperationException("The logging stub needs its scoped message observer.");
+        object? previousObserver = observer.GetValue(null);
+        SqueakDevLoggingMode previousMode = SqueakLog.Mode;
+        var lines = new List<string>();
+        int commands = 0;
+        var bindings = new UiBindings();
+        bindings.BindCommand("act", () => commands++);
+        var manifest = UiLayoutManifest.Parse("<UiPage Schema=\"2\" Source=\"audit-repeat\">"
+            + "<Widget Id=\"button\" Kind=\"input/button\" Text=\"Press\" Height=\"30\" ActionBind=\"act\" /></UiPage>");
+        using var host = new UiHost("audit-repeat", manifest, bindings, UiTheme.DarkGold,
+            new Program.StubMetrics(), new AuditTranslation());
+        try
+        {
+            observer.SetValue(null, (Action<string>)lines.Add);
+            SqueakLog.Configure(SqueakDevLoggingMode.Enabled);
+            using var audit = UsTextFitAudit.Open(host);
+            Assert(host.Diagnostics.GeometryEnabled, "this Dev integration lane requires a Dev carrier with geometry enabled");
+            var viewport = new Rect(0f, 0f, 200f, 100f);
+            Rect button = host.MeasureAndArrange(new Vector2(200f, 100f)).RectById["button"];
+            for (int click = 0; click < 2; click++)
+            {
+                foreach (EventType phase in new[] { EventType.MouseDown, EventType.MouseUp })
+                {
+                    Event raised = Event.KeyboardEvent("");
+                    raised.type = phase;
+                    raised.button = 0;
+                    raised.mousePosition = button.center;
+                    Event.current = raised;
+                    host.DrawFrame(viewport);
+                    audit.Publish();
+                    int logged = lines.Count;
+                    audit.Publish();
+                    Assert(lines.Count == logged, "publishing the same pass twice must not duplicate the block");
+                }
+            }
+            Assert(commands == 2, "both identical native clicks must execute the command");
+            Assert(lines.FindAll(line => line.Contains("geometry [ferritelib.geometry]")).Count == 4,
+                "both identical clicks must retain their down and up report blocks");
+            // Consecutive unclaimed releases have identical input text but distinct pass identities.
+            // They can occur when capture was lost; the publisher must preserve both observations.
+            for (int release = 0; release < 2; release++)
+            {
+                Event raised = Event.KeyboardEvent("");
+                raised.type = EventType.MouseUp;
+                raised.button = 0;
+                raised.mousePosition = button.center;
+                Event.current = raised;
+                host.DrawFrame(viewport);
+                audit.Publish();
+            }
+            Assert(lines.FindAll(line => line.Contains("geometry [ferritelib.geometry]")).Count == 6,
+                "identical unclaimed releases in different passes must not be deduplicated by their text");
+            Console.WriteLine("  ok: repeated clicks preserve four geometry passes; repeated Publish does not duplicate them");
+        }
+        finally
+        {
+            Event.current = null;
+            GUIUtility.hotControl = 0;
+            observer.SetValue(null, previousObserver);
+            SqueakLog.Configure(previousMode);
+        }
+    }
+    private sealed class AuditTranslation : IUiTranslation
+    {
+        public string Translate(string key) => key;
+        public int TranslationRevision => 0;
+    }
+#endif
 
     private static void TheAuditIsRoutedPerHost()
     {

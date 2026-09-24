@@ -1,5 +1,6 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$FerriteLibArtifactPath,
     [switch]$SkipVerify,
     [switch]$RequireReleaseMetadata
 )
@@ -11,7 +12,7 @@ $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $aboutFile = Join-Path $root 'About\About.xml'
 $versionedDir = Join-Path $root '1.6'
-$assembliesDir = Join-Path $versionedDir 'Assemblies'
+$assembliesDir = Join-Path $root 'dist\build\Release'
 $failures = @()
 
 function Assert-Check {
@@ -108,7 +109,7 @@ Assert-Check 'no SqueakyRatkin type references in Source' (@($squeakyHits).Count
 # F. Optional full verify
 if (-not $SkipVerify) {
     Write-Host '[run] verify-local.ps1 ...'
-    & (Join-Path $PSScriptRoot 'verify-local.ps1') -ProjectRoot $root
+    & (Join-Path $PSScriptRoot 'verify-local.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
     if ($LASTEXITCODE -ne 0) { $failures += 'verify-local.ps1' }
 }
 

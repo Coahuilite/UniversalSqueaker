@@ -10,16 +10,12 @@
 
 Ordered by what unblocks what. Each item's detail lives in the section it names.
 
-- [ ] **1. The Packs workspace's race row does not respond to a click** (the filter does). `Player.log` shows
-  no exception, no TRIPPED/recovery band and no `KeyNotFound` ⇒ a missing command binding is ruled OUT. Four
-  candidates, NONE of them measured: `Chrome="none"` short-circuiting the hit, the `Overlay`'s paint order, a
-  `Scroll` consuming the press, the `MatchContent` band's real rect. **The carrier's dev geometry dump is the
-  instrument that answers it** (`MEMORY.md` "Handover — start here", item 2). **WAITS ON THE MAINTAINER**: the
-  dump exists only in a dev carrier.
-- [ ] **2. The dev round trip, in one sitting** (same trigger as item 1): the carrier repo builds Dev → US
-  `dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev` → test → the carrier owner's delivery
-  step back to Release (PDB removed, freeze notice re-issued). Nothing on the US side is missing; the wiring is
-  committed and compile-verified.
+- [ ] **1. The Packs workspace's race row does not respond to a click** (the filter does). Reported logs show
+  no exception or recovery; this does not establish whether the command was reached. `Chrome="none"` does
+  not skip `UiNative.Button` in the current implementation. Overlay order, event consumption, clipping and
+  the `MatchContent` band's actual geometry still need in-game evidence. **The carrier's dev geometry dump is the
+  instrument that answers it** (`MEMORY.md` "Handover — start here", item 2). The dump requires the paired Dev packages; real-game reproduction and acceptance are still pending.
+- [x] **2. Paired Dev build path:** `docs/build-and-debug.md`. Builds are isolated, US explicitly selects the FL artifact, and package staging verifies the actual compiler-reference hash. This does not close item 1's in-game acceptance.
 - [ ] **3. Claims carried as claims** (each has its own line in §S6 and in `MEMORY.md`): the square toggle's
   press path and hover lane; the 24 → 36 widening's lane re-cut at the 320 shape; row fill / row hover (the
   CONTAINER-sibling candidate is untried); the 3px selected rail. **The rail WAITS ON FL**; the rest need a real
