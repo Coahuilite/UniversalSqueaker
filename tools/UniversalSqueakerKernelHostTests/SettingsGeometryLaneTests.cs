@@ -69,7 +69,13 @@ internal static class SettingsGeometryLaneTests
     /// inset. Had timing stayed in this list, this lane would have demanded the retired contract from the
     /// new atoms - the same classifier gap S4-1 recorded for the checkbox band.
     /// </summary>
-    private static readonly string[] CompositeSections = { "diagnostics" };
+    /// <summary>
+    /// The support sections this lane treats as COMPOSITES. T3-2 emptied it: us/diagnostics was the last one,
+    /// and its retirement took the composite control-column contract with it. The empty list is asserted in
+    /// UniformControlColumn on purpose - a composite that comes back must re-cut this lane rather than be
+    /// graded by the atom classifiers, which overlap the composite shapes by design.
+    /// </summary>
+    private static readonly string[] CompositeSections = Array.Empty<string>();
 
     private static FieldInfo ButtonOverrideField => RequireField("ButtonOverride", typeof(Func<Rect, bool>));
     private static FieldInfo SliderOverrideField => RequireField("SliderOverride", typeof(Func<Rect, float, float, float, float>));
