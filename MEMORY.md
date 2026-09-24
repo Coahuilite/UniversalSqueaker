@@ -761,7 +761,11 @@
   new key with no probe reddens, a stale probe reddens) and
   `UiSourceInvariantTests.VerifyWriteBindingsGoThroughTheRegistry` reddens on any raw
   `.BindValue`/`.BindAction`/`.BindCommand` under `UI/` outside the funnel and the one named, reasoned,
-  count-pinned exemption.
+  count-pinned exemption. **Recorded brittleness of that guard (audit G5, 2026-09-24): it counts TEXT
+  occurrences, so a comment or a string literal carrying one of those names would count too; the message says
+  CALL SITES for that reason. The alternative - reflecting over the production binding table to build a gate -
+  is banned by the adoption plan ("不要为了一个 gate 去反射生产表"), and an independent recount agrees with the
+  numbers above today.**
 - **The text-fit audit is per HOST since 2026-09-20 (FL-20)**: `UsTextFitAudit` is a per-window scope over
   that window's own `UiHost.Diagnostics` subscription, drained once per pass and once at close, while the
   process-wide `UiFitAudit.Enabled` stays reference-counted. **The boundary, easy to overclaim**: the gain is

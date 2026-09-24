@@ -112,10 +112,15 @@ internal static class UiSourceInvariantTests
             + "its own revision clock, exempt from the settings-page funnel), got " + exempt
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
-        int funnelOperations = CountWriteRegistrations(File.ReadAllText(funnel));
-        Assert(funnelOperations == 5,
-            "the funnel registers through exactly five IUiBindings operations (Value, Action, Command, "
-            + "ItemValue, ItemAction), got " + funnelOperations
+        // This counts TEXT OCCURRENCES of the three raw write calls in the funnel file, not "operations":
+        // the funnel exposes five methods (Value, Action, Command, ItemValue, ItemAction) but only the first
+        // three touch IUiBindings, and the two item-scoped wrappers delegate to them - so five CALL SITES is
+        // the honest description, and the pin is what makes a sixth one (a new operation, or a duplicate)
+        // a deliberate act. The text-scan brittleness is recorded in MEMORY.md.
+        int funnelCallSites = CountWriteRegistrations(File.ReadAllText(funnel));
+        Assert(funnelCallSites == 5,
+            "the funnel file must contain exactly five raw IUiBindings write-registration CALL SITES (Value, "
+            + "Action, Command plus the two item-scoped wrappers that delegate to them), got " + funnelCallSites
             + " - re-cut this pin in the batch that adds a sixth");
 
         var offenders = new List<string>();
