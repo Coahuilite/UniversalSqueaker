@@ -9,6 +9,13 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
+# resolve-carrier.ps1 has NO default carrier since 2026-09-24, so every caller must select one. This script
+# selects the SIBLING payload when none is given - the same path both workflows stage and the csproj HintPath
+# resolves - because "check the package this checkout built" is exactly what this script is for. The strict
+# refusal stays where it belongs (the resolver), so a caller that means a different artifact says so.
+if ([string]::IsNullOrWhiteSpace($FerriteLibArtifactPath)) {
+    $FerriteLibArtifactPath = Join-Path (Split-Path -Parent $root) 'ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+}
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $aboutFile = Join-Path $root 'About\About.xml'
 $versionedDir = Join-Path $root '1.6'

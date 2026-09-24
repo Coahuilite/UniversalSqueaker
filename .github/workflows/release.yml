@@ -114,7 +114,9 @@ jobs:
       # staging. The stager reads dist/build/Release and verifies the selected carrier hash.
       - name: Verify (15 gates)
         shell: pwsh
-        run: ./scripts/verify-local.ps1 -NoRestore
+        # Explicit carrier selection, same reason and same path as ci.yml: the staging step above put the
+        # built Release payload at the sibling path, and resolve-carrier no longer has a default.
+        run: ./scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       - name: Pack-readiness with release metadata (version axis + non-placeholder description)
         shell: pwsh

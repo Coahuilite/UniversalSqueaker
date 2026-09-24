@@ -23,7 +23,10 @@
    read `KnownKinds(scope)`, so a kind no manifest element uses, or a dropped registration, reddens.
 5. The maintainer's in-game checklist: `../modding_documents/team-mode/us-ingame-checklist-2026-09-22-zh.md`
    — a WORKSPACE-level path one directory above this repository; it is not in-tree.
-6. Tooling: `scripts/verify-local.ps1 -NoRestore` (the 15-gate chain; gate 6 is the carrier boundary,
+6. Tooling: `scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath <dll>` — **the carrier is SELECTED,
+   never defaulted** since 2026-09-24 (`resolve-carrier.ps1` refuses an empty path; the workflows pass the
+   sibling payload and `check-pack-readiness.ps1` defaults to it for its own call) — the 15-gate chain; gate 6
+   is the carrier boundary,
    gates 14/15 the boundary and stub-coverage audits) and `tools/UniversalSqueakerKernelHostTests` — the
    real-Host harness, one lane per slice.
 

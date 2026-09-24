@@ -103,7 +103,11 @@ jobs:
 
       - name: Verify (15 gates)
         shell: pwsh
-        run: ./scripts/verify-local.ps1 -NoRestore
+        # The carrier is SELECTED, never defaulted: resolve-carrier refuses an empty path since 2026-09-24
+        # (a silent pick of the repository-root Release payload was the wrong artifact for a Dev rehearsal).
+        # The staging step above put the built payload exactly here - the sibling path the csproj HintPath
+        # also resolves - and gate 6 verifies it against the ci-ferritelib checkout.
+        run: ./scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       # The privacy gate is a first-upload concern and cheap; run it on every CI pass so a personal
       # path or credential can never ride a commit to main. Full-history mode is reserved for the
