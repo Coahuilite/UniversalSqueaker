@@ -848,17 +848,6 @@ internal static class SettingsGeometryLaneTests
         return reports.Where(r => r.ElementPath.IndexOf("nav", StringComparison.Ordinal) >= 0).ToList();
     }
 
-    /// <summary>The box the checkbox actually paints: the 18px visual inset <see cref="UsKernelDraw.CheckboxInset"/>
-    /// inside the 24px hit slot that <c>UsKernelDraw.Checkbox</c> receives.</summary>
-    private static Rect VisualBox(Rect slot)
-    {
-        return new Rect(
-            slot.x + UsKernelDraw.CheckboxInset,
-            slot.y + UsKernelDraw.CheckboxInset,
-            UsKernelDraw.CheckboxVisual,
-            UsKernelDraw.CheckboxVisual);
-    }
-
     private static bool IsCheckboxSlot(Rect rect)
     {
         return Math.Abs(rect.width - UsKernelDraw.CheckboxHit) <= ShapeTolerance
