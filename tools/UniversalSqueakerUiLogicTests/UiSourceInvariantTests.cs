@@ -47,6 +47,7 @@ internal static class UiSourceInvariantTests
         VerifyLocalizationContract(root);
         VerifyPrerequisiteDesyncIsNamed(root);
         VerifyViewCacheSharesLayoutClock(root);
+        VerifyWriteBindingsGoThroughTheRegistry(root);
         VerifyHelpDrawerIsIndependentState(root);
     }
 
@@ -78,6 +79,89 @@ internal static class UiSourceInvariantTests
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"),
             new[] { "AttachRevisionSource(() => host.Session.ContentRevision)" },
             "the host must wire the view cache to the session revision");
+    }
+
+    // 10. Write registrations go through the ONE funnel (adoption plan section 9 item 6 / P3-2a).
+    //     IUiBindings exposes no full write-key enumeration, so the settings page registers every write key
+    //     through UsWriteBindings, which records them and lets the kernel-host revision-clock lane
+    //     enumerate the whole write set - as a hand-list that lane covered 21 of the 45 registration sites.
+    //     This guard is the other half: a RAW .BindValue/.BindAction/.BindCommand under UI/ is the bypass
+    //     that would register a write key no lane can see, so it fails here by file and count. The
+    //     exemption below is a NAME plus a REASON plus a pinned count, never a relaxed assertion, and both
+    //     directions are checked: a vanished funnel file and a vanished exemption file each fail the guard.
+    private static void VerifyWriteBindingsGoThroughTheRegistry(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        string funnel = Path.Combine(ui, "Kernel", "UsWriteBindings.cs");
+        string panelExemption = Path.Combine(ui, "Diagnostics", "UsDiagnosticsHost.cs");
+
+        Assert(File.Exists(funnel),
+            "the write-binding funnel UI/Kernel/UsWriteBindings.cs is missing: every settings-page write "
+            + "registration is supposed to go through it, and without it no lane can enumerate the write set");
+        Assert(File.Exists(panelExemption),
+            "the named write-registration exemption UI/Diagnostics/UsDiagnosticsHost.cs is missing; a vanished "
+            + "exemption file must fail this guard instead of silently widening it");
+
+        // EXEMPT, by name and with its reason: the diagnostics panel owns a SECOND host and its own
+        // DiagRevisionBumper clock, so its registrations are not settings-page write keys, and folding them
+        // into the settings funnel is the next adopter's work. The count is pinned so a new registration
+        // there is a deliberate act (re-cut this number in that batch) rather than an invisible write key.
+        int exempt = CountWriteRegistrations(File.ReadAllText(panelExemption));
+        Assert(exempt == 12,
+            "UI/Diagnostics/UsDiagnosticsHost.cs is expected to carry 12 write registrations (its own host and "
+            + "its own revision clock, exempt from the settings-page funnel), got " + exempt
+            + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
+
+        int funnelOperations = CountWriteRegistrations(File.ReadAllText(funnel));
+        Assert(funnelOperations == 5,
+            "the funnel registers through exactly five IUiBindings operations (Value, Action, Command, "
+            + "ItemValue, ItemAction), got " + funnelOperations
+            + " - re-cut this pin in the batch that adds a sixth");
+
+        var offenders = new List<string>();
+        foreach (string file in Directory.EnumerateFiles(ui, "*.cs", SearchOption.AllDirectories))
+        {
+            if (string.Equals(file, funnel, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(file, panelExemption, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            int hits = CountWriteRegistrations(File.ReadAllText(file));
+            if (hits > 0)
+            {
+                offenders.Add(file.Substring(ui.Length + 1).Replace('\\', '/') + " (" + hits + ")");
+            }
+        }
+
+        Assert(offenders.Count == 0,
+            "write registrations must go through UsWriteBindings: a raw IUiBindings write call is a write key "
+            + "no lane can enumerate, so the revision-clock contract would silently stop covering it. "
+            + "Offenders: " + string.Join(", ", offenders));
+    }
+
+    private static int CountWriteRegistrations(string text)
+    {
+        return CountOccurrences(text, ".BindValue")
+            + CountOccurrences(text, ".BindAction")
+            + CountOccurrences(text, ".BindCommand");
+    }
+
+    private static int CountOccurrences(string text, string fragment)
+    {
+        int count = 0;
+        int at = 0;
+        while (true)
+        {
+            int hit = text.IndexOf(fragment, at, StringComparison.Ordinal);
+            if (hit < 0)
+            {
+                return count;
+            }
+
+            count++;
+            at = hit + fragment.Length;
+        }
     }
 
     // 1. Settings window: since FL P2 the chrome and the whole-frame failure state machine belong to
@@ -431,10 +515,15 @@ internal static class UiSourceInvariantTests
 
         string host = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
+        // Re-cut 2026-09-24 (T3-1): this clause pinned the raw `BindAction<string>("scroll-to"` text, which
+        // the write-registration funnel renamed to `writes.Action<string>(...)`. Its INTENT is "the Host owns
+        // the scroll-to action wiring" - that is what is asserted now, receiver-agnostic - while the "a write
+        // registration must go through the funnel" half is owned by
+        // VerifyWriteBindingsGoThroughTheRegistry, so the receiver is deliberately not pinned here.
         Assert(host.Contains("BindReadOnly<string>(\"help-section-key\"")
                && host.Contains("host.Session.HoverGraceFrames = HelpHoverGracePasses")
                && !host.Contains("set-help-hover")
-               && host.Contains("BindAction<string>(\"scroll-to\""),
+               && host.Contains("Action<string>(\"scroll-to\""),
             "the Host owns help-section-key/scroll-to wiring, sets the grace length on the session, "
             + "and the retired hover/selection channels stay dead (single event authority)");
     }

@@ -718,6 +718,27 @@
 - **The engine registers declared keys only** (`Bind`/`ActionBind`/`OptionsBind`/`Tab`/`VisibleKey`/
   `Items`); it does not track a composite widget's internal C# getters, so a notification must be mapped onto
   the owning element's Id.
+- **The write keys are registered centrally since 2026-09-24 (adoption plan §9 item 6 / P3-2a).** `IUiBindings`
+  has no "enumerate every write key" surface, so `UI/Kernel/UsWriteBindings.cs` is a funnel every
+  SETTINGS-PAGE write registration goes through; it records (key, kind, item-scoped) and the kernel-host lane
+  enumerates that registry instead of a hand-list. **The counts, with their units, so nobody pits two "correct"
+  numbers against each other (measured 2026-09-24 at HEAD 5e88904, re-checked statically after the change):**
+  **45** = write REGISTRATION CALL SITES in `UsKernelSettingsHost.cs` (`BindValue` 22 + `BindAction` 20 +
+  `BindCommand` 3; includes `active-tab` and counts the two item-scoped sites once each); **43** = distinct
+  LITERAL keys (45 minus those two item-scoped sites); **3** = distinct item-scoped TEMPLATES
+  (`race-rows.<item>.select-domain`, `xenotype-rows.<item>.select-domain`,
+  `checklist-pack-keys.<item>.enabled` - three, not two, because the `LayerRowBindings` site is executed by
+  BOTH families, each with its own `itemsKey`); **46** = distinct REGISTRY KEYS = 43 + 3 = the lane's probe
+  count (the probe table is keyed by registry key, hence 46 = 45 + 1). `active-tab` is in all of them; nothing
+  is excluded. `UI/Diagnostics/UsDiagnosticsHost.cs` adds **12** more call sites on its own host and its own
+  `DiagRevisionBumper` clock and is NOT in the funnel (named next adopter) ⇒ **57** write call sites in US
+  `Source` today. The retired hand-list covered **21** of the settings page's 45, so the adoption plan's
+  "20 of 46" was stale in BOTH halves - and its 46 is not this 46 (that one was `BindValue`+`BindAction` call
+  sites, this one is distinct registry keys). The lane asserts probe-set == registry-set in both directions (a
+  new key with no probe reddens, a stale probe reddens) and
+  `UiSourceInvariantTests.VerifyWriteBindingsGoThroughTheRegistry` reddens on any raw
+  `.BindValue`/`.BindAction`/`.BindCommand` under `UI/` outside the funnel and the one named, reasoned,
+  count-pinned exemption.
 - **The text-fit audit is per HOST since 2026-09-20 (FL-20)**: `UsTextFitAudit` is a per-window scope over
   that window's own `UiHost.Diagnostics` subscription, drained once per pass and once at close, while the
   process-wide `UiFitAudit.Enabled` stays reference-counted. **The boundary, easy to overclaim**: the gain is

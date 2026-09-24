@@ -198,9 +198,13 @@ internal static class UsKernelContractInvariantTests
         Assert(draw.Contains("DropdownButton(rect, elementId, ctx);") && draw.Contains("OpenPopupAnchor"),
             "UsKernelDraw dropdown trigger stores the Host window-space anchor and draws from it");
 
-        Assert(host.Contains("BindAction<string>(\"set-pack-filter\"") && host.Contains("source.SetPackFilter(value); bump();"),
+        // Re-cut 2026-09-24 (T3-1): the write-registration funnel renamed the raw `BindAction<...>` calls to
+        // `writes.Action<...>`. Both clauses assert the same INTENT - the action exists on the Host and its
+        // handler invalidates the layout - so the receiver is no longer pinned; "it must be registered through
+        // the funnel" is asserted by VerifyWriteBindingsGoThroughTheRegistry instead.
+        Assert(host.Contains("Action<string>(\"set-pack-filter\"") && host.Contains("source.SetPackFilter(value); bump();"),
             "FilterBar reset action exists and invalidates layout");
-        Assert(host.Contains("BindAction<UsPackToggle>") && host.Contains("toggle.Enabled); bump();"),
+        Assert(host.Contains("Action<UsPackToggle>") && host.Contains("toggle.Enabled); bump();"),
             "VoicePack toggles invalidate filtered dynamic layout");
 
         string sourceInterface = File.ReadAllText(

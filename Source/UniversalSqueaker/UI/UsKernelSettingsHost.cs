@@ -44,6 +44,18 @@ public static class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics)
     {
+        return Create(source, metrics, out _);
+    }
+
+    /// <summary>
+    /// Host creation that also hands back the page's write-binding registry (<see cref="UsWriteBindings"/>).
+    /// The kernel-host harness is the only caller that needs it: it enumerates the registered write keys so
+    /// the D1/D6 revision-clock lane covers every one of them instead of a hand-list. Production code and
+    /// every other lane use the two-argument overload.
+    /// </summary>
+    public static UiHost Create(
+        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes)
+    {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
 
@@ -62,11 +74,11 @@ public static class UsKernelSettingsHost
         // One translation seam instance for both the host and the per-item text bindings: the checklist's
         // row meta line is composed from a Keyed template, and a second seam would be a second language.
         var translation = new UsKernelTranslation();
-        UiBindings bindings = BuildBindings(source, bumper, translation);
+        writes = BuildBindings(source, bumper, translation);
         UiHost host = new(
             Source,
             manifest,
-            bindings,
+            writes.Bindings,
             UsTheme.Surface(),
             metrics,
             translation);
@@ -248,25 +260,40 @@ public static class UsKernelSettingsHost
     }
 
 
-    private static UiBindings BuildBindings(
+    private static UsWriteBindings BuildBindings(
         IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
         var bindings = new UiBindings();
+        // Every WRITE registration below goes through this funnel; read-only/options bindings stay on the
+        // raw surface, because they are not write keys and the revision-clock contract does not apply to
+        // them. The funnel records each key it registers, which is what lets the harness enumerate the
+        // write set instead of restating it (see UsWriteBindings for the measured scope).
+        var writes = new UsWriteBindings(bindings);
 
         // Navigation / page chrome.
-        bindings.BindValue<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, source.SetActiveTab);
+        // The engine's Tab gate reads this key, and the page's visible sections follow the value it
+        // answers - so it IS a display write and it must move the same clock. Measured 2026-09-24: no
+        // current writer goes through this setter (the carrier never writes ActiveTabKey; the nav's
+        // "set-tab" action is the writer and it bumps), so this is the one-line close of a stale-view
+        // trap for the NEXT writer rather than a live defect. The dedicated lane
+        // ActiveTabWriteAdvancesSharedRevision drives it through the binding and reddens if the bump goes.
+        writes.Value<string>(UiBindings.ActiveTabKey, () => state.ActiveTab, value =>
+        {
+            source.SetActiveTab(value);
+            bump();
+        });
         bindings.BindReadOnly<string>("active-section", () => state.ActiveSectionKey);
         // Tab switches and scroll-to change which sections are visible (and the active section),
         // so they bump the session content revision through the Host boundary.
-        bindings.BindAction<string>("set-tab", tab =>
+        writes.Action<string>("set-tab", tab =>
         {
             source.SetActiveTab(tab);
             bumper.ResetScroll();
             bump();
         });
-        bindings.BindAction<string>("scroll-to", sectionKey =>
+        writes.Action<string>("scroll-to", sectionKey =>
         {
             source.ScrollToSection(sectionKey);
             bumper.SetScrollTarget(sectionKey);
@@ -281,9 +308,11 @@ public static class UsKernelSettingsHost
         // Display-write contract: every write whose value flows back to the screen through
         // BuildView must advance the session clock (bump), or the revision-gated view cache keeps
         // serving the pre-write projection until some other bumping write lands - the D1/D6 defect
-        // (clicks invisible until a workspace switch). Display-write bindings are asserted by the
-        // DisplayWriteAdvancesRevision contract lane in the kernel-host harness.
-        bindings.BindValue<SqueakVoicePackMode>(
+        // (clicks invisible until a workspace switch). Every write binding below registers through
+        // UsWriteBindings, so the DisplayWriteAdvancesSharedRevision contract lane in the kernel-host
+        // harness enumerates the whole write set instead of restating it, and a new write key with no
+        // probe reddens that lane.
+        writes.Value<SqueakVoicePackMode>(
             "mode",
             () => source.BuildView().Mode,
             value => { source.SetMode(value); bump(); });
@@ -292,8 +321,8 @@ public static class UsKernelSettingsHost
         // widget's arithmetic: the slider atom owns the 0..1 value and the number-field atom owns the
         // 0..100 points, and both read the same business setter. The caption is a read-only string the
         // page binds instead of formatting in C#, because the manifest has no format expression.
-        bindings.BindValue<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
-        bindings.BindValue<float>(
+        writes.Value<float>("global-volume", () => source.BuildView().GlobalVolumeFactor, value => { source.SetGlobalVolume(value); bump(); });
+        writes.Value<float>(
             "global-volume-percent",
             () => source.BuildView().GlobalVolumeFactor * 100f,
             value => { source.SetGlobalVolume(value / 100f); bump(); });
@@ -312,7 +341,7 @@ public static class UsKernelSettingsHost
         // BindAction<string>, without one BindCommand"). The payload is therefore the preset name as a
         // string - the same shape select-domain already uses for a row's own key - and the enum parse
         // lives here, on the host side of the boundary.
-        bindings.BindAction<string>(
+        writes.Action<string>(
             "set-distance-preset",
             name => { source.SetDistancePreset(ParseDistancePreset(name)); bump(); });
         bindings.BindReadOnly<IReadOnlyList<Vector2>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
@@ -332,7 +361,7 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<string>(PresetConservativeValueKey, () => nameof(SqueakDistancePreset.Conservative));
         bindings.BindReadOnly<string>(PresetBalancedValueKey, () => nameof(SqueakDistancePreset.Balanced));
         bindings.BindReadOnly<string>(PresetStrongValueKey, () => nameof(SqueakDistancePreset.Strong));
-        bindings.BindAction<UiChartPointChange>("attenuation-point", change => { ApplyAttenuationPoint(source, source.BuildView(), change); bump(); });
+        writes.Action<UiChartPointChange>("attenuation-point", change => { ApplyAttenuationPoint(source, source.BuildView(), change); bump(); });
 
         // Basic: toggles.
         // S4-1: these rows are declarative now, so the value binding IS the toggle - input/checkbox writes
@@ -340,27 +369,27 @@ public static class UsKernelSettingsHost
         // composites invoked are retired with them (no second write channel onto one value). The egg row's
         // two state sentences are gated by VisibleKey, so the manifest keeps their keys and the host only
         // answers "which of the two is true".
-        bindings.BindValue<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
+        writes.Value<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
         bindings.BindReadOnly<bool>("easter-egg-on", () => source.BuildView().AllowEasterEggs);
         bindings.BindReadOnly<bool>("easter-egg-off", () => !source.BuildView().AllowEasterEggs);
-        bindings.BindValue<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
-        bindings.BindValue<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
-        bindings.BindValue<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
-        bindings.BindValue<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
+        writes.Value<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
+        writes.Value<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
+        writes.Value<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
+        writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
         // Basic: the eat-precision pair. The parent gates the child, but the guard deliberately lives in
         // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
         // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
         // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
-        bindings.BindValue<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
-        bindings.BindValue<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
+        writes.Value<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
+        writes.Value<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
 
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
         // S4-3 dissolved us/timing into manifest atoms. The interval is ONE value in two units, so the
         // declarative card keeps the same split the global-volume card uses: the slider atom owns the
         // machine ticks (a float binding, because input/slider validates float) and the number-field atom
         // owns the player's seconds projection. Both read and write the same business setter.
-        bindings.BindValue<float>(
+        writes.Value<float>(
             "interval-ticks",
             () => source.BuildView().GlobalMinIntervalTicks,
             value =>
@@ -368,7 +397,7 @@ public static class UsKernelSettingsHost
                 source.SetGlobalMinIntervalTicks(Mathf.RoundToInt(Mathf.Clamp(value, IntervalTicksFloor, IntervalTicksCeil)));
                 bump();
             });
-        bindings.BindValue<float>(
+        writes.Value<float>(
             "interval-seconds",
             () => source.BuildView().GlobalMinIntervalTicks / SecondsPerTick,
             value =>
@@ -382,7 +411,7 @@ public static class UsKernelSettingsHost
         // measures exactly the string it paints (see the manifest comment on this card).
         bindings.BindReadOnly<string>("timing-interval-caption", () => IntervalCaption(source, translation));
         // The declarative stepper: a button fires a command, and the step (0.1, clamped 0..3) stays here.
-        bindings.BindCommand(
+        writes.Command(
             "timing-multiplier-minus",
             () =>
             {
@@ -390,7 +419,7 @@ public static class UsKernelSettingsHost
                     source.BuildView().GlobalCooldownMultiplier - MultiplierStep, MultiplierFloor, MultiplierCeil));
                 bump();
             });
-        bindings.BindCommand(
+        writes.Command(
             "timing-multiplier-plus",
             () =>
             {
@@ -398,37 +427,37 @@ public static class UsKernelSettingsHost
                     source.BuildView().GlobalCooldownMultiplier + MultiplierStep, MultiplierFloor, MultiplierCeil));
                 bump();
             });
-        bindings.BindValue<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
+        writes.Value<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
 
         // Diagnostics: dev logging level + vanilla debug-menu localization.
-        bindings.BindValue<SqueakDevLoggingMode>("dev-logging", () => source.BuildView().DevLoggingMode, value => { source.SetDevLoggingMode(value); bump(); });
-        bindings.BindValue<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
+        writes.Value<SqueakDevLoggingMode>("dev-logging", () => source.BuildView().DevLoggingMode, value => { source.SetDevLoggingMode(value); bump(); });
+        writes.Value<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
 
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);
         // Layer and domain switches swap the tuning editor's content, so they bump the revision.
-        bindings.BindAction<int>("set-tuning-layer", layer => { source.SetTuningLayer(layer); bump(); });
+        writes.Action<int>("set-tuning-layer", layer => { source.SetTuningLayer(layer); bump(); });
         bindings.BindReadOnly<string>("tuning-race", () => state.TuningRaceDefName);
         bindings.BindReadOnly<string>("tuning-xeno", () => state.TuningXenotypeDefName);
         bindings.BindReadOnly<IReadOnlyList<TuningDomainOptionView>>("tuning-domains", () => source.BuildView().TuningDomains);
-        bindings.BindAction<UsTuningDomainSelection>(
+        writes.Action<UsTuningDomainSelection>(
             "set-tuning-domain",
             selection => { source.SetTuningDomain(selection.RaceDefName, selection.TargetDefName); bump(); });
         bindings.BindReadOnly<IReadOnlyList<ActionScopeRowView>>("action-scopes", () => source.BuildView().ActionScopes);
-        bindings.BindAction<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
+        writes.Action<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
         bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
-        bindings.BindAction<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
-        bindings.BindAction<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
+        writes.Action<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
+        writes.Action<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
         bindings.BindReadOnly<IReadOnlyList<BaselinePresetView>>("baseline-presets", () => source.BuildView().BaselinePresets);
         // Preset expand/collapse, per-row selection and import all reflow the preset tree.
-        bindings.BindAction<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });
-        bindings.BindAction<UsBaselineRaceToggle>(
+        writes.Action<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });
+        writes.Action<UsBaselineRaceToggle>(
             "toggle-baseline-race",
             toggle => { source.ToggleBaselineRace(toggle.PresetDefName, toggle.RaceDefName, toggle.Selected); bump(); });
-        bindings.BindAction<UsBaselineXenoToggle>(
+        writes.Action<UsBaselineXenoToggle>(
             "toggle-baseline-xenotype",
             toggle => { source.ToggleBaselineXenotype(toggle.PresetDefName, toggle.RaceDefName, toggle.XenotypeDefName, toggle.Selected); bump(); });
-        bindings.BindAction<string>("import-baseline", preset => { source.ImportBaselinePreset(preset); bump(); });
+        writes.Action<string>("import-baseline", preset => { source.ImportBaselinePreset(preset); bump(); });
 
         // Packs: filters, selection, checklist.
         bindings.BindReadOnly<IReadOnlyList<RaceLayerRowView>>("races", () => source.BuildView().Races);
@@ -443,36 +472,36 @@ public static class UsKernelSettingsHost
         // The key shape is the projection's own contract: a race row's key IS its raceDefName; a xenotype
         // row's key is "<raceDefName>|<targetDefName>". '|' is safe where '/' and '#' are not - the engine
         // refuses an item key carrying either of those (UiLayoutEngine.AcceptItemKey).
-        bindings.BindAction<string>("select-domain", key => { SelectDomainByKey(source, key); bump(); });
+        writes.Action<string>("select-domain", key => { SelectDomainByKey(source, key); bump(); });
         // The two row sets the Repeats are built from: one ordered business key per row, and the projection
         // that names them also owns their item-local binding namespace (see LayerRowBindings).
-        var raceRows = new LayerRowBindings(source, bindings, translation, bump, RaceRowsKey, SqueakVoicePackScope.Race);
+        var raceRows = new LayerRowBindings(source, writes, bindings, translation, bump, RaceRowsKey, SqueakVoicePackScope.Race);
         bindings.BindReadOnly<IReadOnlyList<string>>(RaceRowsKey, () =>
         {
             IReadOnlyList<string> keys = RaceRowKeys(source);
             raceRows.Ensure(keys);
             return keys;
         });
-        var xenotypeRows = new LayerRowBindings(source, bindings, translation, bump, XenotypeRowsKey, SqueakVoicePackScope.Xenotype);
+        var xenotypeRows = new LayerRowBindings(source, writes, bindings, translation, bump, XenotypeRowsKey, SqueakVoicePackScope.Xenotype);
         bindings.BindReadOnly<IReadOnlyList<string>>(XenotypeRowsKey, () =>
         {
             IReadOnlyList<string> keys = XenotypeRowKeys(source);
             xenotypeRows.Ensure(keys);
             return keys;
         });
-        bindings.BindAction<UsPackToggle>(
+        writes.Action<UsPackToggle>(
             "toggle-pack",
             toggle => { source.ToggleVoicePack(toggle.Scope, toggle.RaceDefName, toggle.TargetDefName, toggle.PackKey, toggle.Enabled); bump(); });
         // Forget Unavailable changes the domain's pack list, so it reflows the checklist.
-        bindings.BindAction<UsDomainIdentity>(
+        writes.Action<UsDomainIdentity>(
             "forget-unavailable",
             identity => { source.ForgetUnavailable(identity.Scope, identity.RaceDefName, identity.TargetDefName); bump(); });
         // Filter/search value writes change which rows are visible, so they bump the revision.
-        bindings.BindValue<string>("race-filter", () => state.RaceFilter, value => { source.SetRaceFilter(value); bump(); });
-        bindings.BindValue<string>("xenotype-filter", () => state.XenotypeFilter, value => { source.SetXenotypeFilter(value); bump(); });
-        bindings.BindValue<string>("pack-filter", () => state.PackFilter.Author ?? "", value => { source.SetPackFilter(value); bump(); });
-        bindings.BindAction<string>("set-pack-filter", value => { source.SetPackFilter(value); bump(); });
-        bindings.BindAction<string>(
+        writes.Value<string>("race-filter", () => state.RaceFilter, value => { source.SetRaceFilter(value); bump(); });
+        writes.Value<string>("xenotype-filter", () => state.XenotypeFilter, value => { source.SetXenotypeFilter(value); bump(); });
+        writes.Value<string>("pack-filter", () => state.PackFilter.Author ?? "", value => { source.SetPackFilter(value); bump(); });
+        writes.Action<string>("set-pack-filter", value => { source.SetPackFilter(value); bump(); });
+        writes.Action<string>(
             "clear-pack-filters",
             _ =>
             {
@@ -493,13 +522,13 @@ public static class UsKernelSettingsHost
         bindings.BindOptions<FilterOptionView>("author-options", () => source.BuildView().Authors
             .Select(author => new FilterOptionView(author, author))
             .ToList());
-        bindings.BindValue<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
+        writes.Value<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
         // Step B-1: the declarative row set's identity projection - the ordered item keys of the selected
         // domain that the CURRENT search accepts, produced by the one predicate the composite widget's row
         // loop also uses (UsChecklistFilter). The query is read from the page state the "search-text"
         // binding above reads, so the key list and the screen cannot disagree about which pack a search
         // accepted; the both-directions contract is asserted by ChecklistItemsLaneTests.
-        var checklistItems = new ChecklistItemBindings(source, bindings, translation, bump);
+        var checklistItems = new ChecklistItemBindings(source, writes, bindings, translation, bump);
         bindings.BindReadOnly<IReadOnlyList<string>>(ChecklistItemsKey, () =>
         {
             // The projection OWNS its item-local binding namespace: the rows the list names are exactly the
@@ -519,7 +548,7 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<bool>("checklist-empty-domain", () => EmptyDomain(source, noRows: false));
         bindings.BindReadOnly<bool>("checklist-empty-search", () => EmptyDomain(source, noRows: true));
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
-        bindings.BindAction<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
+        writes.Action<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
         // fallback stays a binding because it is business state; the hover claim does not - since FL
         // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
@@ -530,7 +559,7 @@ public static class UsKernelSettingsHost
         // active-tab gate (the manifest's drawer elements deliberately carry no Tab). Both writes advance
         // the session revision through the bumper, so a toggle re-arranges the page and never recreates
         // the host/session.
-        bindings.BindValue<bool>(
+        writes.Value<bool>(
             "help-open",
             () => state.HelpDrawerOpen,
             value => { source.SetHelpDrawerOpen(value); bump(); });
@@ -562,11 +591,11 @@ public static class UsKernelSettingsHost
         // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was
         // discarded anyway, so this is the same write with the contract the declaring element actually has.
-        bindings.BindCommand(
+        writes.Command(
             "toggle-help-drawer",
             () => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
 
-        return bindings;
+        return writes;
     }
 
     /// <summary>The Race card's Repeat Items binding: one business key per race domain row.</summary>
@@ -647,6 +676,7 @@ public static class UsKernelSettingsHost
     private sealed class LayerRowBindings
     {
         private readonly IUsKernelSettingsSource source;
+        private readonly UsWriteBindings writes;
         private readonly UiBindings bindings;
         private readonly IUiTranslation translation;
         private readonly Action bump;
@@ -656,6 +686,7 @@ public static class UsKernelSettingsHost
 
         internal LayerRowBindings(
             IUsKernelSettingsSource source,
+            UsWriteBindings writes,
             UiBindings bindings,
             IUiTranslation translation,
             Action bump,
@@ -663,6 +694,7 @@ public static class UsKernelSettingsHost
             SqueakVoicePackScope scope)
         {
             this.source = source;
+            this.writes = writes;
             this.bindings = bindings;
             this.translation = translation;
             this.bump = bump;
@@ -692,7 +724,7 @@ public static class UsKernelSettingsHost
             // "<items>.<itemKey>.select-domain" and the host registers exactly one command per row. The
             // payload stays load-bearing - it is what the command decodes - so a row that carried another
             // row's key would still select the wrong domain, which is the property the lane presses for.
-            bindings.BindAction<string>(prefix + "select-domain", payload =>
+            writes.ItemAction<string>(itemsKey, key, "select-domain", payload =>
             {
                 SelectDomainByKey(source, payload);
                 // A display write: which domain is selected drives the checklist's contents and (before
@@ -835,15 +867,18 @@ public static class UsKernelSettingsHost
     private sealed class ChecklistItemBindings
     {
         private readonly IUsKernelSettingsSource source;
+        private readonly UsWriteBindings writes;
         private readonly UiBindings bindings;
         private readonly IUiTranslation translation;
         private readonly Action bump;
         private readonly HashSet<string> registered = new(StringComparer.Ordinal);
 
         internal ChecklistItemBindings(
-            IUsKernelSettingsSource source, UiBindings bindings, IUiTranslation translation, Action bump)
+            IUsKernelSettingsSource source, UsWriteBindings writes, UiBindings bindings,
+            IUiTranslation translation, Action bump)
         {
             this.source = source;
+            this.writes = writes;
             this.bindings = bindings;
             this.translation = translation;
             this.bump = bump;
@@ -867,7 +902,7 @@ public static class UsKernelSettingsHost
             bindings.BindReadOnly<string>(scope + "meta", () => Meta(key));
             bindings.BindReadOnly<string>(scope + "coverage", () => Find(key)?.Coverage ?? "");
             // The row's state: the one writable item-local key, so the checkbox's click IS the row's toggle.
-            bindings.BindValue<bool>(scope + "enabled", () => Find(key)?.IsSelected ?? false, value => Toggle(key, value));
+            writes.ItemValue<bool>(ChecklistItemsKey, key, "enabled", () => Find(key)?.IsSelected ?? false, value => Toggle(key, value));
         }
 
         /// <summary>

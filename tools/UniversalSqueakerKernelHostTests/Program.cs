@@ -145,7 +145,11 @@ internal static class Program
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
         Step("distance card draws its bands filled and disjoint", DistanceCardBandsFillTheMeasuredCard);
-        Step("every display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
+        // The single-key lane runs FIRST on purpose: it is the mutation proof for the active-tab bump, and a
+        // mutation that removes that bump must redden a step NAMED for it rather than being absorbed by the
+        // enumeration lane below (which drives the same key as one of its 46).
+        Step("the engine tab binding is a display write (active-tab bump)", ActiveTabWriteAdvancesSharedRevision);
+        Step("every registered display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
         Step("hover claims release to the overview only after the D10 grace window", HelpHoverClaimReleasesOnlyAfterGraceWindow);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
@@ -887,21 +891,31 @@ internal static class Program
     }
 
     /// <summary>
-    /// D1/D6 contract lane. The production view cache and the layout cache share ONE clock (the
-    /// session content revision, wired by AttachRevisionSource after 2026-09-04d); any write that
-    /// changes what the page displays must advance it, or the cache serves the pre-write
-    /// projection until some unrelated bumping write lands - exactly the "click does nothing until
-    /// a workspace switch" report from the 2026-09-05 acceptance round. The fake carries a
-    /// revision-gated cache (RecordingSettingsSource.RevisionSource) mirroring production; this
-    /// lane drives each display-write binding and asserts (1) the clock moved and (2) the very
-    /// next BuildView rebuilds instead of hitting the cache. Every key whose value flows back to
-    /// the screen belongs in this list. The visible read-back flip stays a production-only
-    /// property (the fake returns a constant view); FullTypedWriteCoverage pins write routing.
+    /// D1/D6 contract lane, REGISTRY-DRIVEN since 2026-09-24. The production view cache and the layout
+    /// cache share ONE clock (the session content revision, wired by AttachRevisionSource after
+    /// 2026-09-04d); any write that changes what the page displays must advance it, or the cache serves
+    /// the pre-write projection until some unrelated bumping write lands - exactly the "click does
+    /// nothing until a workspace switch" report from the 2026-09-05 acceptance round. The fake carries a
+    /// revision-gated cache (RecordingSettingsSource.RevisionSource) mirroring production; this lane
+    /// drives each display-write binding and asserts (1) the clock moved and (2) the very next BuildView
+    /// rebuilds instead of hitting the cache.
+    ///
+    /// The key set is NOT a list in this file any more. The host records every write registration in
+    /// UsWriteBindings, and this lane enumerates that registry. Measured 2026-09-24, with units: 45
+    /// registration CALL SITES resolve to 43 distinct literal keys + 3 item-scoped templates = 46 distinct
+    /// REGISTRY KEYS, which is why the probe table below has 46 entries and not 45 (it is keyed by registry
+    /// key, and the LayerRowBindings site serves two row families). The probe table below is
+    /// asserted EQUAL to the registry IN BOTH DIRECTIONS, so a new write binding with no probe, and a probe
+    /// for a key the host no longer registers, both fail here BY NAME instead of silently shrinking
+    /// coverage - which is the state the hand-list was in (it covered 21 of the 45 sites).
+    /// The visible read-back flip stays a production-only property (the fake returns a constant view);
+    /// FullTypedWriteCoverage pins write routing.
     /// </summary>
     private static void DisplayWriteAdvancesSharedRevision()
     {
         var fake = new RecordingSettingsSource { RichData = true };
-        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        UsWriteBindings writes;
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics(), out writes);
         fake.RevisionSource = () => host.Session.ContentRevision;
 
         void AssertBumped(string key, Action write)
@@ -919,32 +933,150 @@ internal static class Program
                 key + ": the new revision must rebuild the view, not serve the cached projection");
         }
 
-        AssertBumped("mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled));
-        AssertBumped("global-volume", () => host.Bindings.Set("global-volume", 0.42f));
-        AssertBumped("allow-eggs", () => host.Bindings.Set("allow-eggs", false));
-        AssertBumped("scale-cooldown", () => host.Bindings.Set("scale-cooldown", false));
-        AssertBumped("scale-talking", () => host.Bindings.Set("scale-talking", false));
-        AssertBumped("scale-population", () => host.Bindings.Set("scale-population", true));
-        AssertBumped("camera-indicator", () => host.Bindings.Set("camera-indicator", false));
-        // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
-        // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole toggle
-        // and there is no second channel to keep in step. The three new display writes are asserted instead.
-        AssertBumped("eat-precision", () => host.Bindings.Set("eat-precision", true));
-        AssertBumped("eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true));
-        AssertBumped("global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f));
-        // S4-3b: the preset buttons are declarative input/button atoms, so this action's payload is the
-        // preset NAME (the string a button carries), not the enum value the old dispatch took.
-        AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative)));
-        AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
-        AssertBumped("interval-ticks", () => host.Bindings.Set("interval-ticks", 300f));
-        AssertBumped("interval-seconds", () => host.Bindings.Set("interval-seconds", 5f));
-        AssertBumped("timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus"));
-        AssertBumped("timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus"));
-        AssertBumped("cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f));
-        AssertBumped("dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled));
-        AssertBumped("localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true));
-        AssertBumped("set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)));
-        AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
+        // The three item-scoped families register while the Packs workspace is measured AND drawn (each
+        // projection registers exactly the rows its own Items binding names), so materialize that
+        // workspace first: a probe for a family that was never materialized would throw KeyNotFound, and
+        // that would be a failure of the INSTRUMENT rather than of the write. Same protocol the
+        // checklist-projection lane uses (set-tab, then a real draw pass).
+        host.Bindings.Invoke("set-tab", "Packs");
+        Rect packsViewport = new(0f, 0f, 1280f, 720f);
+        host.MeasureAndArrange(new Vector2(packsViewport.width, packsViewport.height));
+        host.DrawChecked(packsViewport);
+        int itemScoped = 0;
+        foreach (UsWriteBinding entry in writes.Bound)
+        {
+            if (entry.ItemScoped) itemScoped++;
+        }
+
+        Assert(itemScoped == 3,
+            "arranging the Packs workspace must register the three item-scoped write families "
+            + "(race-rows.<item>.select-domain, xenotype-rows.<item>.select-domain, "
+            + "checklist-pack-keys.<item>.enabled), got " + itemScoped
+            + " - the registry is the instrument this lane reads");
+
+        // Concrete item keys come from the LIVE view, never from a literal list in the lane: a literal would
+        // keep passing while the projection renamed its own rows (the S4-2 lesson).
+        var rich = fake.BuildView();
+        string raceRowKey = rich.Races[0].RaceDefName;
+        var xenotypeRow = rich.XenotypeDomains[0];
+        string xenotypeRowKey = xenotypeRow.RaceDefName + "|" + xenotypeRow.TargetDefName;
+        string packRowKey = rich.SelectedDomain!.Value.Packs[0].Key;
+
+        var probes = new Dictionary<string, Action>(StringComparer.Ordinal)
+        {
+            // The engine's Tab gate key. It is a display write (the visible sections follow it); its own
+            // mutation proof is ActiveTabWriteAdvancesSharedRevision.
+            { UiBindings.ActiveTabKey, () => host.Bindings.Set(UiBindings.ActiveTabKey, "Packs") },
+            { "set-tab", () => host.Bindings.Invoke("set-tab", "Distance") },
+            { "scroll-to", () => host.Bindings.Invoke("scroll-to", "mode-row") },
+            { "mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled) },
+            { "global-volume", () => host.Bindings.Set("global-volume", 0.42f) },
+            { "global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f) },
+            { "set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative)) },
+            { "attenuation-point", () => host.Bindings.Invoke("attenuation-point", new UiChartPointChange(2, 0.7f, 0f)) },
+            // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
+            // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole
+            // toggle and there is no second channel to keep in step.
+            { "allow-eggs", () => host.Bindings.Set("allow-eggs", false) },
+            { "scale-cooldown", () => host.Bindings.Set("scale-cooldown", false) },
+            { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
+            { "scale-population", () => host.Bindings.Set("scale-population", true) },
+            { "camera-indicator", () => host.Bindings.Set("camera-indicator", false) },
+            { "eat-precision", () => host.Bindings.Set("eat-precision", true) },
+            { "eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true) },
+            { "interval-ticks", () => host.Bindings.Set("interval-ticks", 300f) },
+            { "interval-seconds", () => host.Bindings.Set("interval-seconds", 5f) },
+            { "timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus") },
+            { "timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus") },
+            { "cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f) },
+            { "dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled) },
+            { "localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true) },
+            { "set-tuning-layer", () => host.Bindings.Invoke("set-tuning-layer", 1) },
+            { "set-tuning-domain", () => host.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection("human", "")) },
+            { "set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)) },
+            { "set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)) },
+            { "reset-mood-to-preset", () => host.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(SqueakMood.Good)) },
+            { "toggle-baseline-preset", () => host.Bindings.Invoke("toggle-baseline-preset", "us.preset1") },
+            { "toggle-baseline-race", () => host.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle("us.preset1", "human", false)) },
+            { "toggle-baseline-xenotype", () => host.Bindings.Invoke("toggle-baseline-xenotype", new UsBaselineXenoToggle("us.preset1", "human", "sanguophage", true)) },
+            { "import-baseline", () => host.Bindings.Invoke("import-baseline", "us.preset1") },
+            { "select-domain", () => host.Bindings.Invoke("select-domain", raceRowKey) },
+            { "toggle-pack", () => host.Bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Xenotype, xenotypeRow.RaceDefName, xenotypeRow.TargetDefName, packRowKey, false)) },
+            { "forget-unavailable", () => host.Bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, xenotypeRow.RaceDefName, xenotypeRow.TargetDefName)) },
+            { "race-filter", () => host.Bindings.Set("race-filter", "sanguophage") },
+            { "xenotype-filter", () => host.Bindings.Set("xenotype-filter", "sanguophage") },
+            { "pack-filter", () => host.Bindings.Set("pack-filter", "AuthorA") },
+            { "set-pack-filter", () => host.Bindings.Invoke("set-pack-filter", "AuthorA") },
+            { "clear-pack-filters", () => host.Bindings.Invoke("clear-pack-filters", "") },
+            { "search-text", () => host.Bindings.Set("search-text", "sang") },
+            { "set-domain-filter", () => host.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, true)) },
+            { "help-open", () => host.Bindings.Set("help-open", true) },
+            { "toggle-help-drawer", () => host.Bindings.Invoke("toggle-help-drawer") },
+            { UsWriteBindings.ItemTemplate("race-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("race-rows", raceRowKey, "select-domain"), raceRowKey) },
+            { UsWriteBindings.ItemTemplate("xenotype-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("xenotype-rows", xenotypeRowKey, "select-domain"), xenotypeRowKey) },
+            { UsWriteBindings.ItemTemplate("checklist-pack-keys", "enabled"), () => host.Bindings.Set(UsWriteBindings.ItemKey("checklist-pack-keys", packRowKey, "enabled"), true) },
+        };
+
+        var registered = new List<string>();
+        foreach (UsWriteBinding entry in writes.Bound)
+        {
+            if (!registered.Contains(entry.Key)) registered.Add(entry.Key);
+        }
+
+        var missingProbe = new List<string>();
+        foreach (string key in registered)
+        {
+            if (!probes.ContainsKey(key)) missingProbe.Add(key);
+        }
+
+        var staleProbe = new List<string>();
+        foreach (string key in probes.Keys)
+        {
+            if (!registered.Contains(key)) staleProbe.Add(key);
+        }
+
+        Assert(missingProbe.Count == 0,
+            "every registered write key needs a probe in this lane (missing=[" + string.Join(", ", missingProbe)
+            + "]) - a write binding with no display-write probe is the D1/D6 hole this lane exists to stop");
+        Assert(staleProbe.Count == 0,
+            "the probe table must not name keys the host does not register (stale=[" + string.Join(", ", staleProbe)
+            + "]) - a renamed or deleted write key must fail here rather than silently shrink coverage");
+
+        foreach (string key in registered)
+        {
+            AssertBumped(key, probes[key]);
+        }
+    }
+
+    /// <summary>
+    /// The engine's tab binding is a DISPLAY WRITE, and this lane is its mutation proof: it writes
+    /// ActiveTabKey through the binding and requires the shared content revision to advance (and the
+    /// revision-gated view to rebuild). Removing the bump from that registration turns THIS lane red by
+    /// name. Why it needs its own lane: measured 2026-09-24, NO current writer goes through that setter -
+    /// the carrier only READS ActiveTabKey (UiLayoutEngine.cs:2797, plus the RecordKey at :454), and the
+    /// nav's "set-tab" action is the writer that actually switches workspaces - so the missing bump is
+    /// invisible in game today and would surface as a stale view the first time anything else wrote the
+    /// tab. DisplayWriteAdvancesSharedRevision enumerates the whole write set; this lane keeps the one key
+    /// whose bump has no other evidence as its own attributable proof.
+    /// </summary>
+    private static void ActiveTabWriteAdvancesSharedRevision()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+
+        fake.BuildView();
+        int primed = fake.BuildViewCount;
+        int rev0 = host.Session.ContentRevision;
+        host.Bindings.Set(UiBindings.ActiveTabKey, "Packs");
+        Assert(fake.LastActiveTab == "Packs",
+            "the tab binding must write through the business setter, got '" + (fake.LastActiveTab ?? "null") + "'");
+        Assert(host.Session.ContentRevision > rev0,
+            "writing the active tab through its binding must advance the shared revision clock: the visible "
+            + "sections follow this key, so a write with no bump serves the stale projection (D1/D6)");
+        fake.BuildView();
+        Assert(fake.BuildViewCount == primed + 1,
+            "the new revision must rebuild the view, not serve the cached projection");
     }
     /// <summary>
     /// One pass of the settings-window protocol: pump a Repaint pass with the pointer at
