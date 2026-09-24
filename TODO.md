@@ -60,39 +60,14 @@ worked around (per-item `SelectedKey`; `Height="MatchContent"` replacing the two
   process-wide `UiFitAudit.Enabled` is still shared and `Detach`/the legacy sink still exist. The actual
   misattribution was **never reproduced** — keep it recorded as an open condition, never as "pollution already
   happened".
-- [ ] **Invalidation discipline, made structural (adoption plan §9 item 6 / P3-2a)**: `IUiBindings` exposes no
-  full write-key enumeration, so register the write bindings centrally and emit the test metadata from that
-  registry (the UI-logic harness hand-lists **20 of 46** write keys today). Land it BEFORE the migration deepens.
-- [ ] **Hot reload: demand-driven first.** Decide which need is real — XML layout-document hot reload, or non-UI
-  writers of settings/model state — before adopting `UiDocumentService` + `HostAttached`.
-  - [ ] **The selected row's FILL: two routes tried 2026-09-22, both blocked; the 3px rail still open
-    (spec §5.9.6).** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
-    (`text/wrapped` paints no surface); (b) letting the HIT paint itself works (idle `#191612`, selected
-    `#3A311F`, hit height still == the text column's) but moves the hit band's geometry and reddens
-    `DeclarativePacksLaneTests` at 320px, so it is refused; (c) an `input/button` SIBLING keeps the geometry
-    but cannot exist - the atom invokes its command on every click, so without `ActionBind` it throws at the
-    first press and with one it is a second hit surface. **Untried candidate with this round as its citation: a
-    CONTAINER state sibling with its own flat scope.** The **left 3px rail** is separate and needs drawing code
-    (a vertical rail is not declarable). Debt boundary: visible but not cheaply fixable - record + cite, and the
-    row fill/hover sit on the REAL-SCREEN list; do not re-open unasked.
-- [ ] **Route A (give `container/tree` an optional per-row template) — re-price before acting.** WAVE-1's G1-G5
-  gaps are all closed (spec §0.4), so "layers stay composite because G2" no longer holds; the remaining blocker
-  is hierarchy x composition (2 widgets / 933 code lines, spec §5.1). The maintainer leant Route A but wants the
-  existing components used FIRST — do not take it on one data point.
-- [ ] **Carried: the per-frame `GetComp` over every spawned pawn** (`Patch_MapInterface_DiagnosticsMarks`).
-  Reducing it means either a cache with invalidation or reusing the overlay's viewport sweep — a P2/P3 shape
-  decision, not a seam fix.
-- [ ] **Carried: FL `a306cae`'s chrome-key runtime self-check.** US attaches no `UiWindowKey`, so every
-  multi-instance window's chrome scope identity is type-only (`SqueakDiagnosticsDetailWindow/chrome` for every
-  open detail window); implementing it means adopting `UiWindowCatalog` + key attachment on the very windows
-  P2 is retiring.
-- [ ] **Carried: the legacy audit channel boundary.** `UsTextFitAudit` is per-host now (FL-20), but the
-  process-wide `UiFitAudit.Enabled` is still shared and `Detach`/the legacy sink still exist. The actual
-  misattribution was **never reproduced** — keep it recorded as an open condition, never as "pollution already
-  happened".
-- [ ] **Invalidation discipline, made structural (adoption plan §9 item 6 / P3-2a)**: `IUiBindings` exposes no
-  full write-key enumeration, so register the write bindings centrally and emit the test metadata from that
-  registry (the UI-logic harness hand-lists **20 of 46** write keys today). Land it BEFORE the migration deepens.
+- [x] **Invalidation discipline, made structural (adoption plan §9 item 6 / P3-2a) — LANDED 2026-09-24
+  (commit 80b74a5, i.e. before the next migration deepens).** `UI/Kernel/UsWriteBindings.cs` is the one funnel
+  every settings-page write registration goes through, and the kernel-host revision-clock lane enumerates its
+  registry instead of a hand-list: measured **45 call sites -> 43 literal keys + 3 item-scoped templates = 46
+  registry keys**, all 46 driven (the retired hand-list covered **21**, so the plan's "20 of 46" was stale on
+  both halves). A new write key with no probe reddens that lane by name, a stale probe reddens too, and
+  `VerifyWriteBindingsGoThroughTheRegistry` reddens on a raw write call under `UI/` outside the funnel and its
+  one named exemption. The diagnostics panel's 12 registrations are the named next adopter.
 - [ ] **Hot reload: demand-driven first.** Decide which need is real — XML layout-document hot reload, or non-UI
   writers of settings/model state — before adopting `UiDocumentService` + `HostAttached`.
 
