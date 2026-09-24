@@ -134,24 +134,26 @@ internal static class SettingsGeometryLaneTests
                         // clauses below are the contract the row must satisfy; below it the layout cannot host
                         // the column and the width clause would be vacuous.
                         bool contractHostable = survey.MinBodyWidth >= ContractBodyFloor;
-                        float visualDeviation = float.NaN;
-                        if (survey.Slots.Count > 0 && survey.Cells.Count > 0)
-                        {
-                            float segmented = survey.Cells.Max(c => c.xMax);
-                            visualDeviation = survey.Slots.Max(s => Math.Abs(VisualBox(s).xMax - segmented));
-                        }
 
+                        // L1 (T17): the five composite fields this line used to print are RETIRED with the
+                        // composite control column. With an empty CompositeSections they printed
+                        // slots=0 cells=0 edges=0 rightEdge=0.0 visualVsSegmented=n/a at EVERY width and
+                        // language - not a false green (nothing asserted them), but the report was still
+                        // teaching a reader to watch a dead instrument. What is left is what the lane still
+                        // measures; the composite half is gone from ControlSurvey too, so it cannot come back
+                        // as a zero.
                         Console.WriteLine("[geometry] " + width + " " + language
                             + " body=" + survey.MinBodyWidth.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " slots=" + survey.Slots.Count
-                            + " cells=" + survey.Cells.Count
-                            + " edges=" + survey.Edges.Count
-                            + " rightEdge=" + survey.CommonRight.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " visualVsSegmented=" + (float.IsNaN(visualDeviation)
-                                ? "n/a"
-                                : visualDeviation.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "px")
                             + " spansSections=" + survey.SpansEverySection
                             + " contract=" + (contractHostable ? "asserted" : "degenerate-narrow-layout"));
+
+                        // CompositeSections is EMPTY, and stating that is the point: the composite column
+                        // contract retired with us/diagnostics, the last composite support section. A composite
+                        // that came back would redden the kind-set pin and the Declarative* lanes first; this
+                        // assertion is what stops THIS lane from quietly grading nothing.
+                        Assert(CompositeSections.Length == 0,
+                            "no Overview support section may be a composite any more; a new one needs this lane"
+                            + " re-cut, not a silently empty survey");
 
                         Assert(survey.SpansEverySection,
                             "all four Overview support sections must be laid out with a content-local rect at " + width
@@ -248,6 +250,11 @@ internal static class SettingsGeometryLaneTests
                 UiFitAudit.Reset();
                 Rec rec = Record(host, 1024f, Height);
                 baseline = DeclaredControlEdges(rec);
+                // GUARD (not a mutation-proven assertion in the T3-2 batch; the "collector returns empty"
+                // mutation is run separately in the T17 batch and its red is recorded under
+                // dist/t3-2-evidence/): the non-vacuity half of this re-cut. The audit classified it as a
+                // REAL assertion - the left side is a collected Count and the right side is the literal 0 -
+                // so it stays; what it needs is its own red record, not a stronger wording.
                 Assert(baseline.Count > 0,
                     "the four Overview support cards must draw controls for this lane to have a subject:"
                     + " an empty baseline would make every comparison below vacuously true");
@@ -660,16 +667,13 @@ internal static class SettingsGeometryLaneTests
         public readonly List<Rect> Sliders = new();
     }
 
-    /// <summary>The control rects of the four support sections plus the facts the assertions need.</summary>
+    /// <summary>The facts the sweep still asserts: how narrow the body gets and whether all four support
+    /// cards were laid out. The composite collections this used to carry (slots/cells/edges/rightEdge) were
+    /// RETIRED in T17 with their only consumer, the composite control-column contract.</summary>
     private sealed class ControlSurvey
     {
-        public readonly List<Rect> Slots = new();
-        public readonly List<Rect> Cells = new();
-        public readonly List<Rect> Edges = new();
-        public float BodyRight;
         public float MinBodyWidth = float.MaxValue;
         public bool SpansEverySection = true;
-        public float CommonRight;
     }
 
     private static UiHost NewHost(Program.StubMetrics metrics)
@@ -729,44 +733,6 @@ internal static class SettingsGeometryLaneTests
             Rect card = ToContentLocal(cardPage, rec.ContentViewport);
             float bodyWidth = Math.Max(0f, card.width - UsCardLayout.Padding * 2f);
             survey.MinBodyWidth = Math.Min(survey.MinBodyWidth, bodyWidth);
-            survey.BodyRight = Math.Max(survey.BodyRight, card.x + UsCardLayout.Padding + bodyWidth);
-
-            // The control rects are collected from the COMPOSITE cards ONLY, and after S4-3 that is
-            // us/diagnostics alone. A declarative card's atoms are not this contract's subjects: the
-            // manifest's number fields terminate on the card's own content edge, not on the retired
-            // ControlColumnRightInset, while the shape classifiers below would happily accept them
-            // (IsSmallControl matches a declared 26x20 stepper and IsCheckboxSlot a declared band). Naming
-            // the group is what keeps one classifier from grading two different layouts.
-            if (Array.IndexOf(CompositeSections, id) < 0) continue;
-
-            foreach (Rect button in rec.Buttons.Where(r => Inside(r, card)))
-            {
-                if (IsCheckboxSlot(button))
-                {
-                    // The recorded rect is the 24px HIT box. The box under the alignment contract is the
-                    // 18px VISUAL drawn inset 3 inside it, so the visual - not the hit band - joins the
-                    // row edge comparisons and the hit/slot pair is pinned separately below.
-                    survey.Slots.Add(button);
-                    survey.Edges.Add(VisualBox(button));
-                }
-                else if (IsSegmentedCell(button))
-                {
-                    survey.Cells.Add(button);
-                    survey.Edges.Add(button);
-                }
-                else if (IsSmallControl(button))
-                {
-                    survey.Edges.Add(button);
-                }
-            }
-
-            foreach (Rect field in rec.Fields.Where(r => Inside(r, card))) survey.Edges.Add(field);
-            foreach (Rect slider in rec.Sliders.Where(r => Inside(r, card))) survey.Edges.Add(slider);
-        }
-
-        if (survey.Edges.Count > 0)
-        {
-            survey.CommonRight = survey.Edges.Max(r => r.xMax);
         }
 
         return survey;

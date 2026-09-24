@@ -197,6 +197,19 @@ internal static class DeclarativeDiagnosticsLaneTests
                 "the logging row must draw exactly three declared buttons in the row own shape, got "
                 + buttons.Count + " [" + string.Join(" ", buttons.Select(Describe)) + "]");
 
+            // T17/L3: the presses below are matched by RECT IDENTITY and the three buttons are told apart by
+            // their INDEX in x order. If the layout ever degenerated so that two of them drew the SAME rect,
+            // index 0 would match the first press by accident and the routing assertion would pass for the
+            // wrong button - the "several rows measured to one box" family this project already recorded.
+            // Strictly increasing, mutually distinct x is the precondition that makes the index meaningful.
+            for (int i = 1; i < buttons.Count; i++)
+            {
+                Assert(buttons[i].x > buttons[i - 1].x,
+                    "the three logging buttons must draw at strictly increasing x, or index order cannot"
+                    + " identify them: button " + i + " at " + Describe(buttons[i]) + " follows "
+                    + Describe(buttons[i - 1]));
+            }
+
             for (int index = 0; index < buttons.Count; index++)
             {
                 source.LastDevLoggingMode = null;
@@ -267,14 +280,29 @@ internal static class DeclarativeDiagnosticsLaneTests
         return host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
     }
 
+    /// <summary>The manifest element whose viewport defines the coordinate space the recorded UiNative
+    /// rects live in. Named rather than repeated as a literal, so the two places that must agree (this
+    /// helper and the arrange) cannot drift apart silently.</summary>
+    private const string ScrollViewportId = "content-scroll";
+
     /// <summary>An arranged element's rect in the coordinate space the recorded UiNative rects live in: the
     /// content scroll's local space (page rect minus the scroll viewport origin). Comparing the two spaces
-    /// directly is the documented trap - the rects look plausible and match nothing.</summary>
+    /// directly is the documented trap - the rects look plausible and match nothing.
+    /// <para>
+    /// PRECONDITION, stated because a future edit can break it silently: the element must be a DIRECT
+    /// descendant of the scroll's content - no further scoped container (a nested Clip, another Scroll, a
+    /// Group with its own origin) may sit between ScrollViewportId and the target. The engine subtracts
+    /// exactly one scroll position and ToDrawRect does NOT subtract scrollPosition, so an extra scoped parent
+    /// would need its own translation while this helper kept returning a plausible rect that matches nothing.
+    /// </para>
+    /// </summary>
     private static Rect Local(UiLayoutSnapshot snapshot, string id)
     {
         Assert(snapshot.RectById.TryGetValue(id, out Rect page),
             "the arranged snapshot must carry '" + id + "'");
-        Rect viewport = snapshot.Viewports["content-scroll"];
+        Assert(snapshot.Viewports.TryGetValue(ScrollViewportId, out Rect viewport),
+            "the arranged snapshot must carry the '" + ScrollViewportId + "' viewport: the recorded UiNative"
+            + " rects live in that space, and without it this helper has no translation to apply");
         return new Rect(page.x - viewport.x, page.y - viewport.y, page.width, page.height);
     }
 
