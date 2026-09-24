@@ -32,7 +32,9 @@ public static class UsKernelWidgetRegistrar
             UsSquareToggleWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();
-            UsDiagnosticsWidget.Register();
+            // T3-2: UsDiagnosticsWidget is retired with its kind. The Overview diagnostics card is a declared
+            // Section over atoms now (three input/button options + one string action + the page's own square
+            // toggle), so the registration line and the widget file went together.
             UsScopeTreeWidget.Register();
             UsPresetListWidget.Register();
             UsFilterBarWidget.Register();

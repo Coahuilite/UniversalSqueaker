@@ -115,6 +115,7 @@ internal static class Program
         Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
         Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
         Step("the dissolved distance attenuation composite is declarative and retired (S4-3b)", () => DeclarativeAttenuationLaneTests.RunAll());
+        Step("the dissolved diagnostics composite is declarative and retired (T3-2)", () => DeclarativeDiagnosticsLaneTests.RunAll());
         Step("flat (borderless) style scope (S6-2/S6-3)", () => FlatStyleLaneTests.RunAll());
         Step("palette guard: flat pairs + ink contrast (S6-3)", () => PaletteLaneTests.RunAll());
     Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
@@ -989,7 +990,7 @@ internal static class Program
             { "timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus") },
             { "timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus") },
             { "cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f) },
-            { "dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled) },
+            { "set-dev-logging", () => host.Bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Enabled)) },
             { "localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true) },
             { "set-tuning-layer", () => host.Bindings.Invoke("set-tuning-layer", 1) },
             { "set-tuning-domain", () => host.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection("human", "")) },
@@ -1828,8 +1829,12 @@ internal static class Program
         // UniversalSqueakerSettings.SetGlobalCooldownMultiplier and assert on a route the instrument does
         // not carry is the green-for-the-wrong-reason shape this project bans. The manifest's declared
         // 0..3 window is pinned by DeclarativeTimingLaneTests against the manifest itself.
-        bindings.Set("dev-logging", SqueakDevLoggingMode.Disabled);
-        Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled, "dev-logging value write routes");
+        // T3-2: the retired us/diagnostics card's three-way choice is three declarative buttons over ONE
+        // string action, so the routing assertion moves to the action. Which BUTTON names which mode is
+        // asserted by DeclarativeDiagnosticsLaneTests against the real drawn buttons.
+        bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Disabled));
+        Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled,
+            "set-dev-logging action routes the button payload into the enum boundary");
         bindings.Set("localize-debug-menu", true);
         Assert(fake.LastLocalizeDebugActions == true, "localize-debug-menu value write routes");
         bindings.Invoke("set-action-scope", new UsScopeWrite("Work", null));

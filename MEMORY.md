@@ -326,6 +326,26 @@
   Section over the engine's own `chart/line` - declared directly with `Editable`/`EditablePoints=1,2`/
   `Height=64`, which is the hand-built `UiElementSpec` wrapper removed - plus a bound status sentence and
   three declarative preset buttons. **S4's kind target is met: 18 -> 11.**
+- **T3-2 LANDED 2026-09-24: `us/diagnostics` is dissolved and retired, and the kind set is 12 (13 before).**
+  The Overview diagnostics card is a declared `Section` over atoms: `us/section-header` + a `text/wrapped`
+  heading + three `input/button` options (each with its own `PayloadKey` and `SelectedKey`) over ONE
+  `set-dev-logging` string action, plus the page's own `us/square-toggle` for the localize bool. **This is a
+  STRUCTURAL change, not an appearance one**: the three-way choice is a typed `SqueakDevLoggingMode` and no
+  atom writes a typed N-way choice through a value binding (`input/mode-row` reads/writes a STRING binding and
+  takes its options as manifest literals; `us/mode-row` is hard-typed to `SqueakVoicePackMode`), so the
+  S4-3b button shape is the one that exists. The four `us/diagnostics/*` item help keys moved from the
+  retired widget's C# onto the manifest elements (the claim lane reads manifest HelpKeys, so they stay
+  claimed). `localize-debug-menu` stays a writable value binding. **The T3-1 registry did its job in this
+  batch**: the write call-site count is unchanged (one value write out, one action in), so the probe table
+  only had to rename `dev-logging` -> `set-dev-logging` - the bidirectional guard is what forces that edit.
+  `SettingsGeometryLaneTests`' composite control-column contract and its checkbox-edge/height evidence table
+  were RETIRED in the same batch (their only subject was this composite), and `LongLabelKeepsTheColumn` was
+  re-cut from the composite collector to every control the four support cards DRAW, with a non-vacuity
+  assertion so it can never pass on two empty lists. Lane: `DeclarativeDiagnosticsLaneTests`.
+  **UNVERIFIED VISIBLE DELTAS (real-screen list, NOT an equivalent migration):** the card loses its box (flat
+  scheme like its neighbours - the S4 style debt is closed), the segmented row becomes three buttons in the
+  page's Row rhythm, the localize row becomes the square toggle, and row heights/paddings follow the
+  declarative card rhythm.
 - **Two contract facts this slice measured.** (1) A declarative `input/button` validates the STRING action
   contract (its own `Validate`): a button with an `ActionBind` and no payload needs `BindCommand`, and one
   with a `PayloadKey` needs `BindAction<string>` - so adopting a button made a previously enum-typed action

@@ -202,7 +202,30 @@
             <Widget Id="camera-indicator-check" Kind="us/square-toggle" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
           </Row>
         </Section>
-        <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
+        <!-- T3-2: the diagnostics card is DECLARATIVE and us/diagnostics is retired in the same change.
+             STRUCTURE, not appearance: the three-way choice is a typed SqueakDevLoggingMode written through a
+             VALUE binding, and no atom writes a typed N-way choice that way. input/mode-row reads and writes a
+             STRING value binding and takes its option values as manifest LITERALS (Value1..8), so adopting it
+             would push a machine-token parse into the host; us/mode-row is hard-typed to SqueakVoicePackMode
+             over a four-entry static table. The S4-3b shape is the one that exists: three input/button atoms,
+             each carrying its own PayloadKey (G2 string contract) and its own SelectedKey (B1 per-element
+             answer), over ONE string action whose enum parse stays on the host. The localize row is the page
+             own square toggle over the same bool the composite wrote. The four us/diagnostics/* item help
+             keys move from the retired widget C# onto these elements, because a catalog item claimed by
+             nothing is dead help content. -->
+        <Section Id="diagnostics" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpKey="us/diagnostics" />
+          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpKey="us/diagnostics" />
+          <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedKey="dev-logging-auto" ActionBind="set-dev-logging" PayloadKey="dev-logging-auto-value" HelpKey="us/diagnostics/logging-auto" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" />
+          </Row>
+          <Row Id="diagnostics-localize-row" Gap="8" Padding="0">
+            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
+            <Widget Id="diagnostics-localize-check" Kind="us/square-toggle" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/localize-debug" />
+          </Row>
+        </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
              same change. Card chrome is the engine's Section with the checklist card's explicit geometry.
              The chart is the engine's own chart/line declared directly - the composite used to build a

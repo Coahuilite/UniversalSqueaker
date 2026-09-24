@@ -193,6 +193,18 @@ public static class UsKernelSettingsHost
     private const string PresetBalancedValueKey = "distance-preset-balanced-value";
     private const string PresetStrongValueKey = "distance-preset-strong-value";
 
+    // T3-2, the diagnostics card. The retired us/diagnostics composite drew a segmented control and wrote the
+    // typed mode through ONE value binding; the declarative shape is three input/button atoms, so each button
+    // carries its own read-only payload string (G2: a button with a PayloadKey opens the STRING action
+    // contract) and its own read-only selected answer (SelectedKey). One constant per element, so a renamed
+    // button and its binding cannot drift apart silently.
+    private const string DevLoggingAutoKey = "dev-logging-auto";
+    private const string DevLoggingEnabledKey = "dev-logging-enabled";
+    private const string DevLoggingDisabledKey = "dev-logging-disabled";
+    private const string DevLoggingAutoValueKey = "dev-logging-auto-value";
+    private const string DevLoggingEnabledValueKey = "dev-logging-enabled-value";
+    private const string DevLoggingDisabledValueKey = "dev-logging-disabled-value";
+
     /// <summary>
     /// The preset a clicked button names. The declarative button's payload is a STRING (ButtonWidget
     /// validates <c>BindAction&lt;string&gt;</c>), so the enum parse lives on this side of the boundary. An
@@ -206,6 +218,21 @@ public static class UsKernelSettingsHost
             && Enum.IsDefined(typeof(SqueakDistancePreset), preset)
             ? preset
             : SqueakDistancePreset.Custom;
+    }
+
+    /// <summary>
+    /// The logging mode a clicked button names. The declarative button's payload is a STRING (ButtonWidget
+    /// validates BindAction&lt;string&gt;), so the enum parse lives on this side of the boundary - the same
+    /// shape set-distance-preset uses. An unrecognised name is Auto: the fail-soft answer the retired
+    /// composite's own default gave, so a renamed option degrades to "the model is on none of these buttons"
+    /// instead of dropping the click.
+    /// </summary>
+    private static SqueakDevLoggingMode ParseDevLoggingMode(string name)
+    {
+        return Enum.TryParse(name ?? "", ignoreCase: true, out SqueakDevLoggingMode mode)
+            && Enum.IsDefined(typeof(SqueakDevLoggingMode), mode)
+            ? mode
+            : SqueakDevLoggingMode.Auto;
     }
 
     /// <summary>One preset button's own selected answer, read from the same value the status sentence prints.</summary>
@@ -429,8 +456,22 @@ public static class UsKernelSettingsHost
             });
         writes.Value<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
 
-        // Diagnostics: dev logging level + vanilla debug-menu localization.
-        writes.Value<SqueakDevLoggingMode>("dev-logging", () => source.BuildView().DevLoggingMode, value => { source.SetDevLoggingMode(value); bump(); });
+        // Diagnostics (T3-2: us/diagnostics is retired). The three-way logging choice is three declarative
+        // buttons over ONE string action, so the enum parse lives here on the host side of the boundary - the
+        // same split set-distance-preset uses. Each button's payload and its selected answer are READ-ONLY, so
+        // the manifest carries no machine token as a literal and exactly one button can answer "the model is
+        // on me" (B1's per-element SelectedKey).
+        writes.Action<string>(
+            "set-dev-logging",
+            name => { source.SetDevLoggingMode(ParseDevLoggingMode(name)); bump(); });
+        bindings.BindReadOnly<string>(DevLoggingAutoValueKey, () => nameof(SqueakDevLoggingMode.Auto));
+        bindings.BindReadOnly<string>(DevLoggingEnabledValueKey, () => nameof(SqueakDevLoggingMode.Enabled));
+        bindings.BindReadOnly<string>(DevLoggingDisabledValueKey, () => nameof(SqueakDevLoggingMode.Disabled));
+        bindings.BindReadOnly<bool>(DevLoggingAutoKey, () => source.BuildView().DevLoggingMode == SqueakDevLoggingMode.Auto);
+        bindings.BindReadOnly<bool>(DevLoggingEnabledKey, () => source.BuildView().DevLoggingMode == SqueakDevLoggingMode.Enabled);
+        bindings.BindReadOnly<bool>(DevLoggingDisabledKey, () => source.BuildView().DevLoggingMode == SqueakDevLoggingMode.Disabled);
+        // The localize row is the page's own square toggle over the same writable bool the composite's
+        // checkbox wrote; the manifest names it in both Bind and SelectedKey, like the camera-indicator row.
         writes.Value<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
 
         // Tuning: layer/domain/scope/mood/baseline.

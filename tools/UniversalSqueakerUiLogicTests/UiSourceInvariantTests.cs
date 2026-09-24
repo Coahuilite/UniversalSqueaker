@@ -304,16 +304,19 @@ internal static class UiSourceInvariantTests
         // S6-3 grew it 11 -> 12 with us/section-header and 12 -> 13 with us/square-toggle. Those are the
         // FIRST GROWTHS on this pin: neither is a dissolved composite returning, both are new US surfaces
         // the declarative vocabulary cannot express (a vertical 3px rail - chrome/rule paints horizontal
-        // lines only - and a track+knob whose geometry follows a bound bool). The parity assertion above is
-        // what keeps the growth honest: a kind exists only because a manifest element uses it, and it
+        // lines only - and a track+knob whose geometry follows a bound bool). T3-2 shrank it 13 -> 12
+        // (us/diagnostics): the Overview diagnostics card is a declared Section over three input/button
+        // options, one string action and the page's own square toggle, because no atom writes a typed
+        // three-way choice through a value binding. The parity assertion above is what keeps the pin
+        // honest in both directions: a kind exists only because a manifest element uses it, and it
         // disappears the day none does.
         //
         // This pin lives in the UI-LOGIC project, not in the kernel-host harness, and that is worth
         // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
         // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
         // is expected red, run it AND run what follows it separately.
-        Assert(registeredKinds.Count == 13,
-            "the registered us/* kind set must have 13 members (12 settings + 1 overlay), got "
+        Assert(registeredKinds.Count == 12,
+            "the registered us/* kind set must have 12 members (11 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 

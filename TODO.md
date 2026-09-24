@@ -20,8 +20,11 @@ Ordered by what unblocks what. Each item's detail lives in the section it names.
   press path and hover lane; the 24 → 36 widening's lane re-cut at the 320 shape; row fill / row hover (the
   CONTAINER-sibling candidate is untried); the 3px selected rail. **The rail WAITS ON FL**; the rest need a real
   screen.
-- [ ] **4. The one style debt at the S4 finish line**: `us/diagnostics` is a C#-drawn composite, so the flat
-  scope cannot reach it and the Overview page keeps one boxed card. S4-shaped work, not a tweak.
+- [x] **4. The one style debt at the S4 finish line**: LANDED 2026-09-24 (T3-2) - `us/diagnostics` is
+  dissolved and retired (kind set 13 -> 12) and the card is a declared Section over atoms that takes the flat
+  scheme like its neighbours. It was a STRUCTURAL change, not a style tweak: the three-way logging choice needed
+  the S4-3b button shape because no atom writes a typed N-way choice through a value binding. Lane:
+  `DeclarativeDiagnosticsLaneTests`; visible deltas are on the real-screen list below.
 
 
 
@@ -85,9 +88,9 @@ button (that would be a second help mechanism); the square toggle is an APPEARAN
 (four-ruler ruling + F-02); the OFF knob's ink stays `TextSecondary`, because the disabled branch already
 owns `TextDisabled` and reusing it would collapse "read-only ON" into "clickable OFF".
 
-- [ ] **The one style debt left: `us/diagnostics` paints its own chrome in C#**, so neither the manifest nor
-  the flat scope reaches it and the Overview page keeps one boxed card among flat ones. Closing it is
-  S4-shaped work (dissolve the composite), not a style tweak.
+- [x] **The one style debt left: `us/diagnostics` paints its own chrome in C#** - CLOSED 2026-09-24 (T3-2):
+  the composite is dissolved and retired, the card is a declared Section over atoms and takes the flat scheme.
+  Its visible deltas sit on the real-screen list below and are NOT claimed as an equivalent migration.
 - [ ] **Row fill / row hover in the layer cards.** Two routes measured blocked (the hit painting itself moves
   the band's geometry; an `input/button` sibling throws or becomes a second hit surface). The third —
   **a CONTAINER state sibling with its own flat scope** — is a cited candidate that has NEVER been tried.
@@ -145,6 +148,11 @@ no `HeightKey`).
   has never been seen; (8) the title band no longer reserves 72px for a control and the header band's height is
   a real vertical cost (content-measured, so it follows the worst workspace caption); (9) the nav cards are 40px
   wider (144 → 184).
+- [ ] **T3-2 diagnostics-card deltas (UNVERIFIED VISIBLE INCREMENT, not an equivalent migration)**: the
+  Overview diagnostics card is flat now (it was the last boxed card), its three-way logging choice is three
+  buttons in the page's Row rhythm instead of one segmented control, the localize row is the square toggle, and
+  its row heights/paddings follow the declarative card rhythm. Look for: does the flat card read as part of the
+  page, do the three buttons read as ONE choice, and does the localize toggle's ON state read at a glance?
 - [ ] **The seven square toggles at their new band (S6-3 follow-up)**: 36 wide, so the track renders 34x18
   with a 16px knob throw, one neutral `Border` edge in both states, the accent on the ON knob. Needs a real
   screen: does the ON state read at a glance, and does the wider control still fit the egg row at the narrow
