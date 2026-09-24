@@ -140,7 +140,7 @@ if (Test-Path -LiteralPath $carrierDll -PathType Leaf) {
 
 if ($RequireReleaseIdentity) {
     if ($carrierStamp -ne 'Release') {
-        throw "The release channel links a '$carrierStamp' carrier at $carrierDll; a published US asset must be built against the Release FerriteLib payload: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        throw "The release channel links a '$carrierStamp' carrier at $carrierDll; a published US asset must be built against the Release FerriteLib payload. Select one with -FerriteLibArtifactPath. Rebuilding the payload is NOT a packaging step: it is the CARRIER OWNER's DELIVERY STEP, it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. This repository never builds ../ferritelib."
     }
     $informational = Get-AssemblyInformationalVersion -Path $payloadDll
     if ([string]::IsNullOrWhiteSpace($informational)) {

@@ -86,8 +86,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path (Split-Path -Parent $produced) | Out-Null
           Copy-Item -LiteralPath $carrierOutput -Destination $produced -Force
           if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
-          # The carrier repo stays read-only from US's perspective: ci-ferritelib/ is never written to,
-          # and the sibling copy is runner scratch space that no push can reach.
+          # The carrier repo stays read-only from US's perspective: nothing here edits ci-ferritelib/'s
+          # SOURCE, and everything this workflow writes (that checkout's bin/obj and the payload it produces)
+          # lands in runner scratch no push can reach. "Read-only" means US never AUTHORS the carrier - not
+          # that the checkout is untouched, because building it is exactly what this step does.
 
       - name: Restore
         shell: pwsh

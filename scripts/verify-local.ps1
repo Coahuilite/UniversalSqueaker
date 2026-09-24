@@ -140,7 +140,7 @@ Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
 Invoke-Check 'selected FerriteLib carrier configuration and source identity' `
-    'select a current carrier with -FerriteLibArtifactPath; build it in its own repository if needed' `
+    'select the carrier this build linked with -FerriteLibArtifactPath (read-only; nothing in this repository rebuilds it). Rebuilding the FerriteLib payload is the CARRIER OWNER''S DELIVERY STEP: it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. A consumer selects the right carrier; it never builds one.' `
     {
         $carrierStamp = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll) -join ''
         if ($carrierStamp -notin @('Dev', 'Release')) { throw "Unrecognized carrier configuration '$carrierStamp'." }

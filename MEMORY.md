@@ -361,12 +361,18 @@
   version.txt 176). The staged DLL is **Dev-configured and has no PDB**, which is the shape `dist/dev`
   documents and what a rehearsal dropped into `Mods/` should be (US_DEV also enables the dev logging and
   the footer revision a rehearsal wants). The maintainer-side acceptance of this batch runs from this folder.
-- **Measured: gate 6's `dotnet build` targets the carrier, and whether it WRITES is conditional.** Running
-  the chain re-ran that build command against the same commit; the DLL's SHA-256 **and its mtime both stayed
-  put** (`6094C8FB…DB10D6`, 13:23:45, no PDB) because the payload was already current from that commit -
-  whereas the earlier standalone run of the SAME command at a commit whose payload was stale DID rewrite the
-  file and move the hash. So the hint is not harmless by nature, only when MSBuild finds the target
-  up-to-date; the FL rule stands: a gate's build hint is a delivery step, owner-only.
+- **Gate 6's retry hint is PROSE now, and that is the fix (task-7, 2026-09-24).** It used to print a
+  copyable cross-repository build command, and a red gate is exactly the frame that must not build: the
+  2026-09-22 incident rebuilt a frozen payload by pasting that hint in the name of "verifying". The hint now
+  states what is true - rebuilding the FerriteLib payload is the CARRIER OWNER'S DELIVERY STEP, it REPLACES
+  the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash
+  AND mtime as a pair; a consumer selects the carrier it compiled against and never builds one. The same
+  four points now carry in `stage-package.ps1`'s release refusal, and `resolve-carrier.ps1` has NO default
+  carrier any more (the old one silently resolved the root Release payload - the wrong artifact for a Dev
+  rehearsal). Historical measurement, kept because it is why the hint had to change: the old command targeted
+  the carrier and whether it WROTE was conditional - the DLL's SHA-256 **and its mtime both stayed put** when
+  MSBuild found the target up-to-date (`6094C8FB…DB10D6`, 13:23:45, no PDB), while the same command at a
+  stale payload DID rewrite the file and move the hash.
 - **S4-3a LANDED: the trigger-timing card is declarative and its kind is retired.** `us/timing` is gone;
   the Registrar's `us/*` kind set is **12 (13 before, pinned by `UiSourceInvariantTests`)**, the 263-line
   widget was deleted, and the card is a declared `Section` over `input/slider` + `input/number-field` +
@@ -526,13 +532,15 @@
 - `scripts/read-assembly-stamp.ps1` reads `AssemblyConfigurationAttribute` in a CHILD process, because a
   handle on a DLL that is copied or rebuilt moments later is fatal and because `MetadataReader` is absent from
   the Store PowerShell (both measured).
-- `pack-dev` builds `-c Dev --no-incremental` and produces a **folder, no archive** (a rehearsal is installed
-  by dropping it in `Mods/`; the old dev zip was shaped wrong too, contents at the root); `build-dev` rebuilds
-  the carrier `-c Release --no-incremental` and gate 6 asserts the carrier is Release-CONFIGURED, not merely
-  present. The engine refuses a `dev` label over Release bytes and the reverse. The need is that Dev and
-  Release share one `OutputPath` and up-to-dateness is judged per configuration: `pack-dev` after
-  `verify-local` reproducibly produced `build=dev` over a Release assembly, which in US is not cosmetic -
-  `US_DEV` gates Auto dev-logging and the footer revision.
+- `pack-dev` builds the US payload `-c Dev --no-incremental` and produces a **folder, no archive** (a
+  rehearsal is installed by dropping it in `Mods/`; the old dev zip was shaped wrong too, contents at the
+  root). **`build-dev` builds the US payload Dev and NEVER builds the carrier** - it resolves the carrier it
+  was handed and forwards it as `FerriteLibArtifactPath`; the old shared-output round trip in which
+  `build-dev` rebuilt FL is history (see the 2026-09-24 build contract in the handover section). Gate 6
+  asserts the SELECTED carrier is Release-CONFIGURED, not merely present, and the stager refuses a payload
+  whose recorded compiler-reference hash differs from the selected DLL. The engine refuses a `dev` label over
+  Release bytes and the reverse, which in US is not cosmetic: `US_DEV` gates Auto dev-logging and the footer
+  revision.
 - **Gate 6 reddens on any carrier commit, docs included**, since it compares the payload's identity against the
   carrier checkout HEAD. Never edit FL source to satisfy it - rebuild the payload and announce that HEAD moved.
 

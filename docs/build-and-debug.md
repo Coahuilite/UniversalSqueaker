@@ -5,8 +5,11 @@ US builds into `dist/build/<Configuration>`. Existing packers still produce inst
 `build-dev.ps1` now reads a selected FL artifact and calls the existing packer; it never rebuilds FL.
 
 `FerriteLibArtifactPath` is the common MSBuild/script input. Relative values are resolved against the US
-repository root. The default remains `../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll` for compatibility;
-ordinary FL builds no longer refresh that delivery. Prefer an explicit build or staged package while developing.
+repository root. **There is no default carrier**: `resolve-carrier.ps1` refuses an empty path, because the old
+default silently selected the repository-root Release payload - the wrong artifact for a Dev rehearsal, and one
+that ordinary FL builds no longer refresh. Select the DLL from the paired FL dev package or from an explicit FL
+build output. (A bare `dotnet build` still falls back to `Directory.Build.props`' root-carrier default for
+compatibility; every script and the paired workflow pass an explicit path.)
 The actual compiler reference hash is embedded as `AssemblyMetadata("FerriteLib.SHA256", ...)`.
 Staging rejects a different selected DLL and writes `carrier-sha256` into `version.txt`.
 
