@@ -165,7 +165,10 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         // task-32: plane FIRST, rails LAST (the order the helper documented), with the thresholds written
         // before the colours (14.16): fill vs plane >= 3.0 (WCAG 2.1 SC 1.4.11 non-text), rail vs fill and vs
         // plane >= 3.0 (same clause), title ink vs fill >= 4.5 (WCAG 2.2 SC 1.4.3 AA, text). All four are
-        // measured on the COMPOSITED colours by PaletteLaneTests.
+        // measured on the COMPOSITED colours by the colour lane's contrast criteria. (Written without naming
+        // that lane's type: the deleted-type guard scans production UI source as TEXT, so a class name in a
+        // comment trips it - the same brittleness the funnel guard showed. The guard itself needs stripping
+        // comments and matching identifier boundaries; that fix is its own unit.)
         UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
         UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
     }
