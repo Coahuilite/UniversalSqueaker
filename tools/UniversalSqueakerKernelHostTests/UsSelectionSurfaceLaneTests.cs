@@ -225,6 +225,22 @@ internal static class UsSelectionSurfaceLaneTests
                 + " declared rows: " + string.Join(" ", declaredRows.Select(Describe))
                 + " vs band " + Describe(row));
 
+            // A3: the surface's Measure returns 0, and MatchContent is what gives it the row's height. That
+            // was documentation until here; now it is asserted, on the elements the manifest declares.
+            // M7: this assertion has NO own red record - any manifest change that alters the surface's height
+            // also trips step 1's Height="MatchContent" check, which runs first. Recorded as a GUARD.
+            List<Rect> surfaceRects = snapshot.RectById.Keys
+                .Where(key => key.StartsWith("race-layer-row-surface#", StringComparison.Ordinal)
+                    || key.StartsWith("xenotype-layer-row-surface#", StringComparison.Ordinal))
+                .Select(key => Local(snapshot, key))
+                .ToList();
+            Assert(surfaceRects.Count >= 1,
+                "the arranged snapshot must carry the row-state surface elements, got " + surfaceRects.Count);
+            Assert(surfaceRects.Any(r => r.height > 1f && Math.Abs(r.height - row.height) <= 0.5f),
+                "the surface must be ARRANGED WITH THE ROW'S HEIGHT (MatchContent), not with its own Measure"
+                + " of 0: surfaces=" + string.Join(" ", surfaceRects.Select(Describe))
+                + " vs row " + Describe(row));
+
             Console.WriteLine("[t21-row] row=" + Describe(row) + " rail=" + Describe(rail)
                 + " accent=" + Hex(accent) + " fill=" + Hex(activeFill) + " solidsOnPage=" + solids.Count);
         }

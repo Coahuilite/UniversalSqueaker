@@ -79,10 +79,19 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     public void Draw(Rect rect, UiWidgetContext ctx)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
-        // TryGetBool, not TryGet<bool>: the row's 'selected' is a READ-ONLY registration, and the fail-soft
-        // bool query is the one the carrier's own SelectedKey resolution uses (DeclarativePacksLaneTests reads
-        // the same key the same way). Measured: with TryGet<bool> the surface was arranged with the row's exact
-        // rect - 524x68.67 at (12,518) - and painted NOTHING, because the read answered false.
+        // TryGetBool, as a CONVENTION and NOT as a fix. An earlier revision of this comment claimed the read
+        // failed because 'selected' is a READ-ONLY registration; that is wrong, and the correction is worth
+        // keeping: BindReadOnly and BindValue land in the same values table and TryGet<T> reads that same
+        // table, so read-only and writable behave identically there (audit read the chain: BindReadOnly ->
+        // AddValue -> values.Add). What TryGetBool adds is only "answer false when the key is bound to
+        // ANOTHER type". The convention is kept because it is what the carrier's own SelectedKey resolution
+        // and DeclarativePacksLaneTests use, so every reader of this key fails soft the same way.
+        //
+        // The ORIGINAL CAUSE IS NOT REPRODUCED. The edit that introduced TryGetBool shipped in the same batch
+        // as the cross-space filter fix, and the failure ("painted row rails: 0") persisted until THAT fix
+        // landed - so this change was never isolated and explains nothing. If the question is reopened, the
+        // most likely cause is that the key did not resolve at all at that moment (the item-scoped
+        // qualification of the template's Bind attribute), which is a thing to reproduce, not to assume.
         if (!ctx.Bindings.TryGetBool(BindingKey(), out bool selected) || !selected) return;
 
         // The SHIPPED selected-row treatment, reused rather than re-invented: RowSurface paints the whole
