@@ -402,6 +402,10 @@
          the text column. Both are full-width Overlay children, so the hit and the two text lines share one
          left/right edge by construction. -->
     <Overlay Id="race-layer-row" Padding="0">
+      <!-- T21: the selected row's VISIBLE state. It paints (fill + 3px left rail) and does not hit: the
+           hit band below stays Chrome="none" and keeps its exact geometry, which is why this is a sibling
+           and not a Chrome on the hit. Drawn first so the text column lands on top of it. -->
+      <Widget Id="race-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
       <Widget Id="race-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
       <Column Id="race-layer-row-text" Gap="2" Padding="0">
         <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/race-layer/row" />
@@ -409,6 +413,8 @@
       </Column>
     </Overlay>
     <Overlay Id="xenotype-layer-row" Padding="0">
+      <!-- Same surface as the race row: selection must read the same in both lists. -->
+      <Widget Id="xenotype-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
       <Widget Id="xenotype-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
       <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
         <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/xenotype-layer/row" />

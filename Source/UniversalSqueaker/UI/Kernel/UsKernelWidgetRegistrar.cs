@@ -29,6 +29,13 @@ public static class UsKernelWidgetRegistrar
 
             UsNavWidget.Register();
             UsSectionHeaderWidget.Register();
+            // T21: the THIRD growth on the kind pin, and the same class of addition as the two below it - a
+            // surface the declarative vocabulary cannot express. A selected domain row needs a FILL and a
+            // vertical 3px rail; chrome/rule paints horizontal lines only, and the row's only
+            // surface-capable element is its appearance-less hit band (Chrome="none"), which must not start
+            // painting because doing so MOVES its geometry at 320px (S4-2 measured exactly that). So the
+            // surface is a sibling that paints and does not hit.
+            UsSelectionSurfaceWidget.Register();
             UsSquareToggleWidget.Register();
             UsPageTitleWidget.Register();
             UsModeRowWidget.Register();

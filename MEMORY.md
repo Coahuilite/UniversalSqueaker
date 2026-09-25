@@ -58,9 +58,10 @@
   **Item 2 is the instrument that answers it, and it needs a dev carrier.**
 - **Claims, not facts — do not repeat them as done:** the square toggle's press path and its hover lane (only
   the contract is asserted); the 24 -> 36 band widening's lane re-cut at the 320 shape (a page width the
-  window floor cannot produce); row fill / row hover in the layer cards (two routes measured blocked, the
-  third — a CONTAINER state sibling — never tried); the 3px selected rail (needs the carrier's per-edge
-  stroke).
+  window floor cannot produce); **the layer row's HOVER treatment** (still open: T21 delivered the SELECTED
+  state as a draw-only sibling, and hover is the same shape, but nothing is claimed until it is drawn); the
+  row fill and the 3px selected rail are NO LONGER claims — they are drawn and mutation-proven
+  (`us/selection-surface`, T21), with the rail still US-drawn pending FL task-11's per-edge stroke.
 - **CLOSED with its reason, so nobody re-opens it:** the OFF knob's ink stays `TextSecondary` — the disabled
   branch already returns `TextDisabled`, so reusing it for enabled-OFF would make a read-only ON toggle look
   like a clickable OFF one. Semantic collapse, not a colour preference.
@@ -431,8 +432,21 @@
   was **flipped from negative to positive** (exactly one row answers true and it is the model's selected row);
   `Tone`/`Emphasis` stay forbidden in templates (still literal-only). Mutation pair M-A/M-B proves both
   directions of the one assertion.
-- **The selected row's FILL: re-measured 2026-09-22, two routes tried and both blocked; the rail is still
-  outstanding (spec §5.9.6).** The old entry here said the fill "still cannot be expressed" and named a missing
+- **CLOSED 2026-09-25 (T21): the selected row's fill AND its 3px rail are DELIVERED - by a US kind, not by
+  an attribute.** `us/selection-surface` reads the row's own `selected` bool and paints the fill through
+  `UiThemeDraw.StatusTreatment(Active)` plus the rail through `UiThemeDraw.AccentRail(..., theme.AccentGold)`,
+  the same 3px and the same accent the navigation card and the section header use. It is a **DRAW-ONLY sibling**
+  (no hit, no command, `Measure` contributes 0): that is precisely the route the three attempts below left open -
+  every atom route either moved the hit band's geometry or had to become a second hit surface. Registrar's us/*
+  set **grew 12 -> 13**; lane `UsSelectionSurfaceLaneTests` asserts the fill covers the whole row band and
+  exactly ONE accent rail exists at a row band's left edge, with the negative half asserting that unselected rows
+  paint neither (mutation-proven: dropping the `selected` check paints every row). `DeclarativePacksLaneTests`
+  was **re-cut in the same batch** (row Overlay children 2 -> 3) because a measurement channel that changed
+  invalidates the lane asserting it. The rail is US-drawn **pending FL task-11** (per-edge strokes): when those
+  land, this kind is the thing to retire - the fill can become a container state and the rail a one-sided edge.
+  Still open from the same family: the row's HOVER treatment, which stays on the REAL-SCREEN list.
+- **The selected row's FILL: re-measured 2026-09-22, two routes tried and both blocked (the history T21 closed;
+  spec §5.9.6).** The old entry here said the fill "still cannot be expressed" and named a missing
   row-state carrier. That is now precise rather than blanket:
   (a) `text/wrapped` paints no surface, so the TEXT cannot carry the fill - that part of the old entry stands;
   (b) letting **the hit element paint itself** works (measured: idle `#191612`, selected `#3A311F`, hit height

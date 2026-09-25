@@ -38,8 +38,12 @@ deleted with them, and the whole gate chain ran end to end green.** Friction rep
 worked around (per-item `SelectedKey`; `Height="MatchContent"` replacing the two 24px hit bands, measured
 100% row coverage). **Nothing below is a re-do.**
 
-  - [ ] **The selected row's FILL: two routes tried 2026-09-22, both blocked; the 3px rail still open
-    (spec §5.9.6).** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
+  - [x] **CLOSED 2026-09-25 (T21): the selected row's fill + 3px rail are delivered by the US kind
+    `us/selection-surface` (draw-only sibling; Registrar 12 -> 13; lane `UsSelectionSurfaceLaneTests`;
+    `DeclarativePacksLaneTests` re-cut 2 -> 3 children in the same batch).** Rail is US-drawn pending FL
+    task-11; the row's HOVER treatment remains open on the REAL-SCREEN list. The three blocked atom routes stay
+    below as the record of WHY a draw-only sibling is the shape that works:
+  - [ ] **The selected row's FILL (historical record, closed above): two routes tried 2026-09-22, both blocked.** Not "cannot be expressed" any more, but not delivered either: (a) the TEXT cannot carry it
     (`text/wrapped` paints no surface); (b) letting the HIT paint itself works (idle `#191612`, selected
     `#3A311F`, hit height still == the text column's) but moves the hit band's geometry and reddens
     `DeclarativePacksLaneTests` at 320px, so it is refused; (c) an `input/button` SIBLING keeps the geometry

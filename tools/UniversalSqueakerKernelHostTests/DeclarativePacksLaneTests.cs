@@ -173,9 +173,24 @@ internal static class DeclarativePacksLaneTests
                 "the hit area must fire select-domain, got '" + action + "'");
             Assert(hit.TryGetAttribute("PayloadKey", out string payload) && payload == "payload",
                 "G2: the hit area must carry the row's own key (PayloadKey=\"payload\"), got '" + payload + "'");
-            Assert(root.Children.Count == 2,
-                "the row Overlay must hold the hit plus the text column, so the mode has a sibling that does"
-                + " NOT declare it (the reference comes from the siblings), got " + root.Children.Count);
+            // T21 RE-CUT: the Overlay holds THREE children now - the row-state surface (fill + 3px rail),
+            // the hit and the text column. The mode's reference rule is unchanged and still satisfied: the
+            // text column is a sibling that does NOT declare Height="MatchContent", and it is the only one
+            // whose measured height is the row's. This count was 2 before T21 and is re-cut in the same batch
+            // as the surface, because a measurement channel that changed invalidates the lanes asserting it.
+            Assert(root.Children.Count == 3,
+                "the row Overlay must hold the row-state surface, the hit and the text column, got "
+                + root.Children.Count);
+            List<UiElementSpec> surfaces = Descendants(root).Where(e => e.Kind == "us/selection-surface").ToList();
+            Assert(surfaces.Count == 1,
+                "the row template must declare exactly ONE row-state surface (T21: the selected row's fill and"
+                + " 3px rail), got " + surfaces.Count);
+            Assert(surfaces[0].TryGetAttribute("Bind", out string surfaceBind) && surfaceBind == "selected",
+                "the row-state surface must read the row's own 'selected' bool, got '" + surfaceBind + "'");
+            Assert(!surfaces[0].TryGetAttribute("ActionBind", out _)
+                && !surfaces[0].TryGetAttribute("CommandBind", out _),
+                "the row-state surface must NOT take input: it is a sibling of the hit band, and a surface"
+                + " that also hit would give the row two competing hit areas");
 
             List<UiElementSpec> texts = Descendants(root).Where(e => e.Kind == "text/wrapped").ToList();
             Assert(texts.Count == 2,

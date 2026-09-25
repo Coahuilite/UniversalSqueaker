@@ -312,7 +312,10 @@ internal static class UiSourceInvariantTests
         // lines only - and a track+knob whose geometry follows a bound bool). T3-2 shrank it 13 -> 12
         // (us/diagnostics): the Overview diagnostics card is a declared Section over three input/button
         // options, one string action and the page's own square toggle, because no atom writes a typed
-        // three-way choice through a value binding. The parity assertion above is what keeps the pin
+        // three-way choice through a value binding. T21 grew it 12 -> 13 with us/selection-surface: the
+        // selected domain row's fill + vertical 3px rail, which no atom carries (text/wrapped paints no
+        // surface, and the row's only surface-capable element is its hit band, which must stay
+        // appearance-less or its geometry moves at 320px). The parity assertion above is what keeps the pin
         // honest in both directions: a kind exists only because a manifest element uses it, and it
         // disappears the day none does.
         //
@@ -320,8 +323,8 @@ internal static class UiSourceInvariantTests
         // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
         // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
         // is expected red, run it AND run what follows it separately.
-        Assert(registeredKinds.Count == 12,
-            "the registered us/* kind set must have 12 members (11 settings + 1 overlay), got "
+        Assert(registeredKinds.Count == 13,
+            "the registered us/* kind set must have 13 members (12 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 
