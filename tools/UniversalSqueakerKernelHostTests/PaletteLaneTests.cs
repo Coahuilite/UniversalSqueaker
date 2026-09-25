@@ -49,6 +49,7 @@ internal static class PaletteLaneTests
         Step("the flat pairs are still equal after a re-tint", TheFlatPairsSurviveARetint);
         Step("ink stays legible on its own surface", InkStaysLegible);
         Step("the contrast instrument composites alpha before it compares (task-32)", TheCompositorIsHonest);
+        Step("the selection is legible on the plane it sits on (task-32)", TheSelectionIsLegible);
         Console.WriteLine("PaletteLaneTests ALL PASS");
         return 0;
     }
@@ -136,6 +137,59 @@ internal static class PaletteLaneTests
             "50% white over black must be mid grey, got " + Hex(half));
         Console.WriteLine("[palette-composite] controls ok; opaque=" + Hex(new Color(0.5f, 0.25f, 0.75f, 1f))
             + " transparent=" + Hex(bg) + " half=" + Hex(half));
+    }
+
+    /// <summary>
+    /// task-32's PRIMARY NEW CRITERION, and why this lane could not see the defect it answers: the lane had
+    /// MinInkContrast (ink against the surface it is painted on) but NOTHING comparing a selection fill
+    /// against the card plane it sits on - which is how "the text and the background are almost the same,
+    /// there is no highlight, the player cannot tell what they picked" stayed green for so long.
+    ///
+    /// Thresholds, written BEFORE the colours (14.16), each with its clause:
+    ///   fill vs plane &gt;= 3.0 - WCAG 2.1 SC 1.4.11 Non-text Contrast (the selection state is non-text),
+    ///     also the floor MinInkContrast uses;
+    ///   rail vs fill and vs plane &gt;= 3.0 - same clause; the rail is the anchor that does not depend on text;
+    ///   title ink vs fill &gt;= 4.5 - WCAG 2.2 SC 1.4.3 AA, because that one IS text.
+    /// Every reading is taken on the COMPOSITED colour: an alpha-tinted fill compared raw is a number about a
+    /// colour nobody paints (measured: it reported 7.15 where the drawn fill was far darker).
+    ///
+    /// The gold-ink path is why the title had to change: gold ink needs L_fill &lt;= 0.119 for 4.5 while
+    /// fill-vs-plane needs L_fill &gt;= 0.124, so the two are mutually exclusive with a gold title ink. The
+    /// title now takes plain ink and the FILL carries the state.
+    /// </summary>
+    private const double MinSelectionFillContrast = 3.0;
+    private const double MinSelectionRailContrast = 3.0;
+    private const double MinSelectionTitleContrast = 4.5;
+
+    private static void TheSelectionIsLegible()
+    {
+        UiTheme page = UsTheme.Surface();
+        using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
+        UiTheme flat = new UiStyleResolver(page, host.Manifest.Styles)
+            .ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+
+        Color plane = flat.Raised;
+        Color fill = Composited(UsSelectionSurfaceWidget.SelectedFill(flat), plane);
+        Color rail = UsSelectionSurfaceWidget.SelectedRail(flat);
+        Color title = flat.TextPrimary;
+
+        AssertSelectionContrast("selection fill vs card plane", fill, plane, MinSelectionFillContrast);
+        AssertSelectionContrast("selection rail vs fill", rail, fill, MinSelectionRailContrast);
+        AssertSelectionContrast("selection rail vs card plane", rail, plane, MinSelectionRailContrast);
+        AssertSelectionContrast("selection title vs fill", title, fill, MinSelectionTitleContrast);
+    }
+
+    private static void AssertSelectionContrast(string name, Color a, Color b, double floor)
+    {
+        double ratio = Contrast(a, b);
+        Console.WriteLine("[palette-selection] " + name + " a=" + Hex(a) + " b=" + Hex(b) + " contrast="
+            + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " floor="
+            + floor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " margin="
+            + (ratio - floor).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+        Assert(ratio >= floor,
+            name + ": contrast " + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+            + " is below the " + floor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + " floor (a " + Hex(a) + " vs b " + Hex(b) + ")");
     }
 
     /// <summary>WCAG relative-luminance contrast ratio. Plain arithmetic on the channel values - the wheel

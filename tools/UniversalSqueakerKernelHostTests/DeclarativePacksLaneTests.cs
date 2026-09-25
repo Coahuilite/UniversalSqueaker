@@ -202,9 +202,17 @@ internal static class DeclarativePacksLaneTests
             // composite kept the detail TextSecondary - a fidelity detail, not an omission.
             UiElementSpec title = texts.Single(t => t.TryGetAttribute("Bind", out string bind) && bind == "title");
             UiElementSpec detail = texts.Single(t => t.TryGetAttribute("Bind", out string bind2) && bind2 == "detail");
-            Assert(title.TryGetAttribute("SelectedKey", out string selectedKey) && selectedKey == "selected",
-                "the row TITLE must declare SelectedKey=\"selected\" so the selected row's own answer styles it,"
-                + " got '" + selectedKey + "'");
+            // TASK-32 RE-CUT - NOT a loosening, a RELOCATION of the state signal. The maintainer's report was
+            // that an ink-only selection is invisible ("the text and the background are almost the same,
+            // there is no highlight"), so the signal moved from the title's ink to the row's FILL, painted by
+            // the us/selection-surface asserted just above. COMPENSATION, same batch: the four contrast
+            // criteria added to PaletteLaneTests (fill vs plane, rail vs fill, rail vs plane, title ink vs
+            // fill), none of which existed before. The gold-ink path could not satisfy them at all - gold ink
+            // needs L_fill <= 0.119 for 4.5 while fill-vs-plane needs L_fill >= 0.124, mutually exclusive -
+            // which is exactly WHY the title ink had to become plain.
+            Assert(!title.TryGetAttribute("SelectedKey", out string selectedKey),
+                "task-32: the row TITLE must NOT declare SelectedKey any more - the selection is carried by"
+                + " the row's fill, and the title keeps plain ink; got '" + selectedKey + "'");
             Assert(!detail.TryGetAttribute("SelectedKey", out _),
                 "the row DETAIL must NOT declare SelectedKey: the Active treatment's text token is TextOnGold"
                 + " whatever Emphasis says, so declaring it there would paint the detail gold too, and the"

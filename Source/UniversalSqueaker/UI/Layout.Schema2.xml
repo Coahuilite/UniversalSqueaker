@@ -408,7 +408,7 @@
       <Widget Id="race-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
       <Widget Id="race-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
       <Column Id="race-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/race-layer/row" />
+        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
         <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
       </Column>
     </Overlay>
@@ -417,7 +417,7 @@
       <Widget Id="xenotype-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
       <Widget Id="xenotype-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
       <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" SelectedKey="selected" HelpKey="us/xenotype-layer/row" />
+        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
         <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
       </Column>
     </Overlay>

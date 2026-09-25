@@ -45,6 +45,28 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// <summary>The same 3px the navigation rail and the section-header rail use: one rule, one width.</summary>
     public const float RailWidth = 3f;
 
+    /// <summary>
+    /// The selected row's fill: the accent tinted toward the surface, named ONCE so the widget and the palette
+    /// lane cannot disagree about what is painted. 0.57f is chosen against the COMPOSITED colour (the lane
+    /// composites before it compares, cf2e0a8): it lands the drawn fill so that title-vs-fill and
+    /// fill-vs-plane BOTH clear their floors with margin, which no value on the old gold-ink path could do.
+    /// </summary>
+    public static Color SelectedFill(UiTheme theme)
+    {
+        return theme.AccentWith(0.57f);
+    }
+
+    /// <summary>
+    /// The anchor's ink. NOT the accent, and the reason is MEASURED: a fill and a rail from the same colour
+    /// source share their RGB (only alpha differs), so rail-vs-fill contrast is exactly 1.00 by construction -
+    /// a gold rail on a gold fill is invisible whatever its width. The anchor's job is to be visible, not to be
+    /// gold (Lead's ruling 2026-09-25); gold is present as the fill.
+    /// </summary>
+    public static Color SelectedRail(UiTheme theme)
+    {
+        return theme.TextPrimary;
+    }
+
     private UiElementSpec spec = UiElementSpec.Empty;
 
     string IUiWidget.Kind => Kind;
@@ -103,7 +125,12 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         // "the current object" - the navigation card's active tab - and the two facts are deliberately kept
         // apart (UsKernelDraw.RowSurface's own contract). Hover is passed false: T21 is the SELECTED state;
         // the row's hover treatment is a separate item and nothing is claimed for it here.
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered: false, selected: true);
+        // task-32: plane FIRST, rails LAST (the order the helper documented), with the thresholds written
+        // before the colours (14.16): fill vs plane >= 3.0 (WCAG 2.1 SC 1.4.11 non-text), rail vs fill and vs
+        // plane >= 3.0 (same clause), title ink vs fill >= 4.5 (WCAG 2.2 SC 1.4.3 AA, text). All four are
+        // measured on the COMPOSITED colours by PaletteLaneTests.
+        UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
+        UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
     }
 
     private string BindingKey()
