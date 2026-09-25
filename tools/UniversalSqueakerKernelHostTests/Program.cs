@@ -2668,6 +2668,23 @@ internal static class Program
         /// is how constant bands of 16/18/24/26/28 passed this sweep and still clipped in game. Line
         /// advance is a per-font constant (it does not depend on the glyph set), so one calibrated
         /// table serves both language tables; the width axis keeps its own half-width model.
+        ///
+        /// <para>
+        /// DEVIATION FROM THE TWO-REPO CONVENTION, deliberate and ruled (Lead, 2026-09-25): the shared
+        /// convention would say height = lines * em * 1.25, i.e. 15 / 20 / 22.5 for these fonts. This table
+        /// keeps the CALIBRATED values instead, because they were measured against the real font and the
+        /// convention's numbers are LOWER - converging would replace a measurement with a formula. The
+        /// calibration's two sources, both in this repository: MEMORY.md:685 and OBLIVIONIS.md:726, the
+        /// latter carrying the warning that "a constant stub turns every height assertion into theatre".
+        /// </para>
+        ///
+        /// <para>
+        /// Large is NOT MEASURED. No calibrated line advance exists for it and it is deliberately NOT filled
+        /// in from the formula: the default arm below is the Small/Medium-calibrated 21.33333 value, and any
+        /// caller that needs Large's real advance has to measure it in game first. This is recorded rather
+        /// than silently defaulted, because a formula-filled Large would look measured in every lane that
+        /// reads it.
+        /// </para>
         /// </summary>
         private static float LineHeight(FerriteLib.UiKit.Kernel.UiFont font) => font switch
         {
