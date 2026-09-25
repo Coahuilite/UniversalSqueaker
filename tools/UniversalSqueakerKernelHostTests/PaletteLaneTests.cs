@@ -112,14 +112,13 @@ internal static class PaletteLaneTests
     /// brown, and every contrast reading taken before this step is a false reading in one direction or the
     /// other. Contrast is only about painted pixels after compositing.
     /// </summary>
+    /// <summary>The compositor now lives on the PRODUCT side (UsSelectionSurfaceWidget.Composite), and this
+    /// lane only CALLS it. The duplicate that used to sit here was line-for-line equivalent, and the identity
+    /// controls below were testing the COPY while the shipped one had no identity test at all - the exact
+    /// shape this session already paid for twice (one convention, two implementations).</summary>
     private static Color Composited(Color fg, Color bg)
     {
-        float a = Mathf.Clamp01(fg.a);
-        return new Color(
-            fg.r * a + bg.r * (1f - a),
-            fg.g * a + bg.g * (1f - a),
-            fg.b * a + bg.b * (1f - a),
-            1f);
+        return UsSelectionSurfaceWidget.Composite(fg, bg);
     }
 
     /// <summary>The compositor's own positive and negative controls: an opaque foreground passes through, a
