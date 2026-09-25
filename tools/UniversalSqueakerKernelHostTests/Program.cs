@@ -42,11 +42,54 @@ internal static class Program
         ("help-panel-narrow", "us/help-panel")
     };
 
-    private static int Main()
+    /// <summary>
+    /// Tooling only, and it changes NO lane semantics: when --lane &lt;substring&gt; is passed, Steps whose
+    /// name does not contain it are skipped; without the switch every Step runs exactly as before and the
+    /// output is unchanged (the filter prints nothing when it is inactive). It exists because this harness
+    /// stops at the first failing Step, so a red lane hides every lane after it - collecting a flip list or
+    /// re-cutting one lane used to require a full-tree run.
+    /// </summary>
+    private static string? laneFilter;
+
+    private static int ran;
+    private static int skipped;
+
+    private static int Main(string[] args)
     {
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], "--lane", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                laneFilter = args[i + 1];
+            }
+            else if (args[i].StartsWith("--lane=", StringComparison.OrdinalIgnoreCase))
+            {
+                laneFilter = args[i].Substring("--lane=".Length);
+            }
+        }
+
+        if (laneFilter != null)
+        {
+            Console.WriteLine("[lane-filter] --lane " + laneFilter + " (inactive by default; no lane semantics changed)");
+        }
+
         try
         {
             RunAll();
+
+            // A filter that matched nothing must not report success: zero lanes run is an empty-enumeration
+            // pass, and this project refuses that shape everywhere else.
+            if (laneFilter != null)
+            {
+                Console.WriteLine("[lane-filter] ran=" + ran + " skipped=" + skipped);
+                if (ran == 0)
+                {
+                    Console.Error.WriteLine("FAIL: --lane '" + laneFilter + "' matched no Step; refusing to"
+                        + " report success for a run that executed nothing.");
+                    return 1;
+                }
+            }
+
             Console.WriteLine("ALL PASS");
             return 0;
         }
@@ -92,6 +135,18 @@ internal static class Program
 
     private static void Step(string name, Action action)
     {
+        if (laneFilter != null && name.IndexOf(laneFilter, StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            skipped++;
+            return;
+        }
+
+        if (laneFilter != null)
+        {
+            ran++;
+            Console.WriteLine("[lane] " + name);
+        }
+
         try
         {
             action();
