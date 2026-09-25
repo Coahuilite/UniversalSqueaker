@@ -99,7 +99,7 @@
        (manifest TitleKey values). English text here is authoritative: it must match the
        literals these widgets displayed before they became translatable. -->
   <US.Page.Overview.Title>VoicePack Routing</US.Page.Overview.Title>
-  <US.Page.Overview.Caption>Choose routing and playback behaviour for this save.</US.Page.Overview.Caption>
+  <US.Page.Overview.Caption>Choose routing and playback behaviour for this mod.</US.Page.Overview.Caption>
   <US.Page.Distance.Title>Distance attenuation</US.Page.Distance.Title>
   <US.Page.Distance.Caption>Set one range, compare the curve, then choose a quick preset.</US.Page.Distance.Caption>
   <US.Page.Packs.Title>VoicePack selection</US.Page.Packs.Title>
