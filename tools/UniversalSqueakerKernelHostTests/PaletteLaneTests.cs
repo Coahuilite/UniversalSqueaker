@@ -48,6 +48,7 @@ internal static class PaletteLaneTests
     {
         Step("the flat pairs are still equal after a re-tint", TheFlatPairsSurviveARetint);
         Step("ink stays legible on its own surface", InkStaysLegible);
+        Step("the contrast instrument composites alpha before it compares (task-32)", TheCompositorIsHonest);
         Console.WriteLine("PaletteLaneTests ALL PASS");
         return 0;
     }
@@ -100,6 +101,41 @@ internal static class PaletteLaneTests
                 + MinInkContrast.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                 + " floor (ink " + Hex(ink) + " on " + Hex(surface) + ")");
         }
+    }
+
+    /// <summary>
+    /// Source-over alpha compositing: what DRAWING does, and what a contrast comparison must do first.
+    /// MEASURED (task-32): the selection fill is AccentWith(0.25f) = #D1993840, and comparing it to the card
+    /// plane WITHOUT compositing reported 7.15 - that is the contrast of the PURE accent against the plane,
+    /// a number about a colour nobody paints. The drawn fill is the accent at 25% over the plane, a mid
+    /// brown, and every contrast reading taken before this step is a false reading in one direction or the
+    /// other. Contrast is only about painted pixels after compositing.
+    /// </summary>
+    private static Color Composited(Color fg, Color bg)
+    {
+        float a = Mathf.Clamp01(fg.a);
+        return new Color(
+            fg.r * a + bg.r * (1f - a),
+            fg.g * a + bg.g * (1f - a),
+            fg.b * a + bg.b * (1f - a),
+            1f);
+    }
+
+    /// <summary>The compositor's own positive and negative controls: an opaque foreground passes through, a
+    /// fully transparent one leaves the background, and 50% white over black is mid grey. Without these the
+    /// helper could be wrong in the direction that flatters a colour and nothing would notice.</summary>
+    private static void TheCompositorIsHonest()
+    {
+        Color bg = new Color(0.1f, 0.2f, 0.3f, 1f);
+        Assert(SameColor(Composited(new Color(0.5f, 0.25f, 0.75f, 1f), bg), new Color(0.5f, 0.25f, 0.75f, 1f)),
+            "an OPAQUE foreground must pass through compositing unchanged");
+        Assert(SameColor(Composited(new Color(0.9f, 0.9f, 0.9f, 0f), bg), bg),
+            "a FULLY TRANSPARENT foreground must leave the background exactly as it was");
+        Color half = Composited(new Color(1f, 1f, 1f, 0.5f), new Color(0f, 0f, 0f, 1f));
+        Assert(Math.Abs(half.r - 0.5f) <= 0.002f && Math.Abs(half.g - 0.5f) <= 0.002f,
+            "50% white over black must be mid grey, got " + Hex(half));
+        Console.WriteLine("[palette-composite] controls ok; opaque=" + Hex(new Color(0.5f, 0.25f, 0.75f, 1f))
+            + " transparent=" + Hex(bg) + " half=" + Hex(half));
     }
 
     /// <summary>WCAG relative-luminance contrast ratio. Plain arithmetic on the channel values - the wheel
