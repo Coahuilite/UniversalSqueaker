@@ -67,6 +67,43 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         return theme.TextPrimary;
     }
 
+    /// <summary>Source-over alpha compositing. ONE implementation of this rule on the product side: a
+    /// contrast reading is about PERCEIVED pixels, and the lane must not carry a second copy of the
+    /// arithmetic (this session already paid twice for one convention living in two places).</summary>
+    public static Color Composite(Color foreground, Color background)
+    {
+        float a = Mathf.Clamp01(foreground.a);
+        return new Color(
+            foreground.r * a + background.r * (1f - a),
+            foreground.g * a + background.g * (1f - a),
+            foreground.b * a + background.b * (1f - a),
+            1f);
+    }
+
+    /// <summary>
+    /// The PERCEIVED fill - a DERIVED value: the written parameter composited over the card plane. The
+    /// recorder stores what the widget WROTE (RGBA); the player sees what IMGUI blends, and contrast is a
+    /// property of the second one. Real pixels are not directly observed here; this model rests on two
+    /// supports - UiThemeDraw.Solid forwards RGBA to DrawBoxSolid unchanged (code), and IMGUI alpha blending
+    /// is standard semantics. Corroboration to request from the maintainer: the selected row should read as
+    /// this composited colour (a dark olive/brown gold), NOT as the bright gold of the raw token.
+    ///
+    /// The margins are a STRUCTURAL ceiling, not a tuned number: a bright title ink (TextPrimary, L ~= 0.794)
+    /// and a very dark card plane pin the workable fill luminance to L_fill in [0.124, 0.138] - 0.014 wide -
+    /// because the title needs L_fill low enough for 4.5 while the fill must stay clear of the plane for 3.0.
+    /// A larger margin needs a different signal carrier, not a different alpha.
+    /// </summary>
+    public static Color PaintedFill(UiTheme theme)
+    {
+        return Composite(SelectedFill(theme), theme.Raised);
+    }
+
+    /// <summary>The perceived rail: opaque, so compositing is the identity.</summary>
+    public static Color PaintedRail(UiTheme theme)
+    {
+        return SelectedRail(theme);
+    }
+
     private UiElementSpec spec = UiElementSpec.Empty;
 
     string IUiWidget.Kind => Kind;

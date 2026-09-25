@@ -169,7 +169,9 @@ internal static class PaletteLaneTests
             .ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
 
         Color plane = flat.Raised;
-        Color fill = Composited(UsSelectionSurfaceWidget.SelectedFill(flat), plane);
+        // The PERCEIVED fill, from the widget's single source of truth - the lane does NOT composite a second
+        // time (one convention, one implementation).
+        Color fill = UsSelectionSurfaceWidget.PaintedFill(flat);
         Color rail = UsSelectionSurfaceWidget.SelectedRail(flat);
         Color title = flat.TextPrimary;
 

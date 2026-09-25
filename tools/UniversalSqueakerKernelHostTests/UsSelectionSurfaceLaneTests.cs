@@ -145,8 +145,18 @@ internal static class UsSelectionSurfaceLaneTests
             // The two tokens the SHIPPED selected treatment uses (UsKernelDraw.RowSurface): the selected
             // plane is theme.Selected and RowRail.Selected's rail ink is theme.TextSecondary. Named through
             // the theme rather than written down, so the lane and the widget cannot drift apart.
-            Color accent = theme.TextSecondary;
-            Color activeFill = theme.Selected;
+            // TASK-32 RE-CUT (product and lane in the same batch; no criterion changed). TWO CHANNELS, stated
+            // apart: the RECORDER stores what the widget WROTE (an RGBA parameter, alpha included), while the
+            // player sees what IMGUI blends. This lane asserts the WRITTEN channel against the widget's own
+            // tokens and checks the alpha explicitly, because alpha IS the evidence here - comparing RGB alone
+            // is what made the composited reading look like a raw-token reading last round. The perceived
+            // channel (PaintedFill) is asserted in PaletteLaneTests, which owns the contrast criteria.
+            Color accent = UsSelectionSurfaceWidget.PaintedRail(theme);
+            Color activeFill = UsSelectionSurfaceWidget.SelectedFill(theme);
+            Assert(Math.Abs(activeFill.a - 0.57f) <= 0.002f,
+                "the written fill parameter must carry alpha 0.57 (the tinted accent), got a=" + activeFill.a);
+            Assert(Math.Abs(accent.a - 1f) <= 0.002f,
+                "the written rail parameter must be OPAQUE, got a=" + accent.a);
 
             // ARRANGE FIRST, then draw. Measured the hard way: a snapshot taken AFTER a DrawChecked carries
             // only the container rects (14 of them - banner/body-row/content-scroll/footer/...), no widget ids
@@ -263,8 +273,18 @@ internal static class UsSelectionSurfaceLaneTests
                 new RecordingSettingsSource { RichData = true }, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Packs");
             UiTheme theme = UsTheme.Surface();
-            Color accent = theme.TextSecondary;
-            Color activeFill = theme.Selected;
+            // TASK-32 RE-CUT (product and lane in the same batch; no criterion changed). TWO CHANNELS, stated
+            // apart: the RECORDER stores what the widget WROTE (an RGBA parameter, alpha included), while the
+            // player sees what IMGUI blends. This lane asserts the WRITTEN channel against the widget's own
+            // tokens and checks the alpha explicitly, because alpha IS the evidence here - comparing RGB alone
+            // is what made the composited reading look like a raw-token reading last round. The perceived
+            // channel (PaintedFill) is asserted in PaletteLaneTests, which owns the contrast criteria.
+            Color accent = UsSelectionSurfaceWidget.PaintedRail(theme);
+            Color activeFill = UsSelectionSurfaceWidget.SelectedFill(theme);
+            Assert(Math.Abs(activeFill.a - 0.57f) <= 0.002f,
+                "the written fill parameter must carry alpha 0.57 (the tinted accent), got a=" + activeFill.a);
+            Assert(Math.Abs(accent.a - 1f) <= 0.002f,
+                "the written rail parameter must be OPAQUE, got a=" + accent.a);
 
             UiLayoutSnapshot snapshot = Arrange(host);
 
