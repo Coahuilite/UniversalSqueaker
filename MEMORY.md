@@ -1010,3 +1010,58 @@
   cutover") in `docs/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
 - `dist/ui-evidence/layout-sweep.txt` and the per-revision matrices are cold artifacts; the reviews live in
   `docs/review/**`.
+
+## task-32: the selection is visible (2026-09-25, HEAD 3c66383)
+
+- **The maintainer's report and what it was really about**: "the text and the background are almost the same,
+  there is no highlight, the player cannot tell what they picked". Selection changed only the row title's INK
+  (\`SelectedKey\`), and that signal was too weak to read. The defect is now fixed by moving the signal, not
+  by brightening the ink.
+- **Semantic split, now the rule**: **state = the FILL** (\`UsSelectionSurfaceWidget.SelectedFill\` =
+  \`theme.AccentWith(0.57f)\` composited over the card plane) - **anchor = the RAIL**
+  (\`SelectedRail\` = \`theme.TextPrimary\`) - **text = plain ink** (the row title no longer declares
+  \`SelectedKey\`). Removing that attribute is a **RE-CUT, not a loosening**: the state moved from ink to fill,
+  and the **compensation is the four contrast criteria** added to the colour lane in the same batch. The gold-ink
+  path could not satisfy them at all, which is why the title ink had to change (see the arithmetic below).
+- **Row geometry was not touched**: hit band still 68.67, S4-2 coverage >= 99.5, \`Chrome="none"\`,
+  \`Height="MatchContent"\`, \`hit.height == text.height\`, and the T21 structure/negative assertions all still
+  hold - only the expected COLOUR VALUES moved with the product.
+- **TWO CHANNELS, and this is the transferable lesson**: **the recorder stores the PARAMETER THAT WAS WRITTEN,
+  not the pixel that was seen.** \`DrawBoxSolidColors\` keeps RGBA, so a lane that compares RGB alone reads a
+  raw token as if it were the painted colour (measured: an alpha-tinted fill "reported 7.15" while the drawn
+  fill was far darker). Therefore every colour lane splits in two: the **written channel** asserts the token
+  AND **explicitly asserts the alpha** (0.57 for the fill; opaque for the rail - alpha IS the evidence), and the
+  **perceived channel** uses \`Composited(written, card plane)\` for the contrast criteria, read from the
+  widget's **single source of truth** (\`PaintedFill\` / \`Composite\`) so no lane carries a second copy of the
+  arithmetic. The chain: \`UiThemeDraw.Solid\` forwards RGBA to \`DrawBoxSolid\` unchanged, so the compositing
+  is IMGUI's - the perceived value is a DERIVED value, and real pixels are not directly observed here.
+- **Contrast criteria and the structural ceiling**: thresholds **3.0 / 3.0 / 3.0 / 4.5** (WCAG 2.1 SC 1.4.11
+  non-text for fill-vs-plane, rail-vs-fill and rail-vs-plane; WCAG 2.2 SC 1.4.3 AA for title-vs-fill), written
+  BEFORE the colours were chosen (14.16), measured on the composited values: **3.16 / 4.59 / 14.48 / 4.59**.
+  The margins **0.16 and 0.09 are a STRUCTURAL ceiling, not a tuned number**: a bright title ink
+  (\`TextPrimary\`, L ~= 0.794) and a very dark card plane pin the workable fill luminance to
+  **\`L_fill in [0.124, 0.138]\`** - 0.014 wide. **The gold title ink path has no solution at all**: gold ink
+  needs \`L_fill <= 0.119\` for 4.5 while fill-vs-plane needs \`L_fill >= 0.124\`, so the two are mutually
+  exclusive. A larger margin needs a different signal carrier (a darker card plane, or a higher-contrast ink
+  for the selected row), never a different alpha.
+- **Two alpha guards are GUARDS WITHOUT THEIR OWN RED**: \`a == 0.57\` and the rail's opacity have green only,
+  because the minimal mutation (\`AccentWith(0.57f)\` -> \`AccentWith(1f)\`) also changes the product and needs
+  its own window with a byte-level restore. Recorded as such in the M7 table rather than dressed up.
+- **Delivery payload identity**: US Dev = \`984AC479989F3F5353976E319343367DF0A9A291C395F22E741D5B53F039936C\` /
+  **476160** / \`2026-09-25T15:55:29.3290106Z\`, paired FL \`4729E2758929BBA52906828110E5F7980A0C77AC19CCF965AE3AC65E83B4956A\`
+  (embedded-pairing invariant asserted; \`416BE3C1\` absent). **VOID**: \`93915AB5...\` (cut from a tree where
+  \`UiLogicTests\` was red) and \`2881D319...\`.
+- **A text-scanning guard produced its SECOND false positive** (task-37): a widget COMMENT naming the colour
+  lane's test class tripped the "deleted UiKit type \`Palette\` reappears in production UI source" check, so a
+  green tree was reported red. The fix here was only the comment. The guard's own rules: **strip comments
+  before scanning + match on identifier boundaries + a positive control (a real reference must redden) + a
+  negative control (a class name in a comment must not) + a closed file set + prefer structural checks over
+  text scans**. Same family as the funnel guard, which counts text too.
+- **Tooling added this round**: \`--lane <substring>\` in the kernel-host harness (\`e144438\`; a filter that
+  matches NO step is REFUSED with a non-zero exit, because running zero lanes and reporting success is the
+  empty-enumeration shape this project bans everywhere else), and
+  \`tools/evidence/Write-EvidenceFooter.ps1\` (\`dd5c445\`; the artifact line is DERIVED from the configuration,
+  and the footer carries the M11 identity lines plus the pinned fingerprint).
+- **Process rule earned the hard way**: commit requires an **OBSERVED green**, not an **invoked check**
+  (14.45). One red lane reached HEAD in this round because the check and the commit were written into the same
+  script; it was fixed forward, and the fix is what split the written/perceived channels above.
