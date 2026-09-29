@@ -57,6 +57,15 @@
   <US.Diagnostics.Logging.Enabled>开启</US.Diagnostics.Logging.Enabled>
   <US.Diagnostics.Logging.Disabled>关闭</US.Diagnostics.Logging.Disabled>
   <US.Diagnostics.LocalizeDebugMenu>本地化调试菜单</US.Diagnostics.LocalizeDebugMenu>
+  <US.Diagnostics.Geometry.Label>布局采集（开发者）</US.Diagnostics.Geometry.Label>
+  <US.Diagnostics.Geometry.Off>布局采集已关闭。</US.Diagnostics.Geometry.Off>
+  <US.Diagnostics.Geometry.Active>正在采集本窗口的布局。</US.Diagnostics.Geometry.Active>
+  <US.Diagnostics.Geometry.Overlay>正在采集，并显示矩形描边。</US.Diagnostics.Geometry.Overlay>
+  <US.Diagnostics.Geometry.Unavailable>不可用：当前版本不含布局工具。请使用开发版的库包。</US.Diagnostics.Geometry.Unavailable>
+  <US.Diagnostics.Geometry.NoScope>不可用：本页面没有诊断作用域。</US.Diagnostics.Geometry.NoScope>
+  <US.Diagnostics.Geometry.Capture>采集</US.Diagnostics.Geometry.Capture>
+  <US.Diagnostics.Geometry.Outline>描边</US.Diagnostics.Geometry.Outline>
+  <US.Diagnostics.Geometry.Report>报告</US.Diagnostics.Geometry.Report>
 
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
@@ -277,6 +286,10 @@
   <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细路由日志，正式版同样生效。反馈音频问题时使用；用完请调回，日志增长很快。</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
   <US.Help.Diagnostics.LocalizeDebug.Text>开启后，原版调试菜单中的 Universal Squeaker 调试项显示翻译后的名称与分类。仅在开发者模式打开时可见。</US.Help.Diagnostics.LocalizeDebug.Text>
+  <US.Help.Diagnostics.LayoutDiagnosis.Text>开发者工具。状态行说明本窗口的布局是否正在被采集；若没有，也会说明原因：正式版的库包不含布局工具，任何开关都无法开启它。</US.Help.Diagnostics.LayoutDiagnosis.Text>
+  <US.Help.Diagnostics.LayoutCapture.Text>记录本窗口每个已排布元素的各坐标空间矩形、高度模式与最终高度。开启时会拖慢帧率，默认关闭，且从不写入存档。</US.Help.Diagnostics.LayoutCapture.Text>
+  <US.Help.Diagnostics.LayoutOutline.Text>为每个被采集的元素描出边框，让矩形可以被看到而不只是读到。它需要先开启采集，因为它描的是被采集的内容。</US.Help.Diagnostics.LayoutOutline.Text>
+  <US.Help.Diagnostics.LayoutReport.Text>把最近一次完成的采集写入日志一次，然后停止；再按一次才会再写一份。若某个矩形不响应点击，请看输入行：每行带有指针位置、被查询的矩形与判定结果（命中/未命中/被遮挡/不可用）。</US.Help.Diagnostics.LayoutReport.Text>
   <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
@@ -366,4 +379,7 @@
   <US.Diagnostics.Recency.JustNow>{0}，不到 1 分钟前</US.Diagnostics.Recency.JustNow>
   <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
+  <US.Tuning.BabyActions>路由婴幼儿哭泣与咯咯笑</US.Tuning.BabyActions>
+  <US.Help.BasicTuning.BabyActions.Label>路由婴幼儿哭泣与咯咯笑</US.Help.BasicTuning.BabyActions.Label>
+  <US.Help.BasicTuning.BabyActions.Text>默认关闭。启用 Biotech 时，开启后将 Crying（哭泣）和 Giggling（咯咯笑）纳入语音路由、动作调音和覆盖统计；关闭后，两者不路由，也不计入覆盖分子与总数。不改变原版精神状态或真正的精神崩溃。缺少音频的动作不会算作已覆盖；未启用 Biotech 时此选项不生效。</US.Help.BasicTuning.BabyActions.Text>
 </LanguageData>

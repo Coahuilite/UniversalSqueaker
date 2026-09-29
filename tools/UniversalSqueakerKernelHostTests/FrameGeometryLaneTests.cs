@@ -642,7 +642,7 @@ internal static class FrameGeometryLaneTests
                 "coahuilite.universalsqueaker",
                 manifest,
                 new UiBindings(),
-                UiTheme.DarkGold,
+                UsTheme.Surface(),
                 new Program.StubMetrics(),
                 new LaneTranslation());
         }

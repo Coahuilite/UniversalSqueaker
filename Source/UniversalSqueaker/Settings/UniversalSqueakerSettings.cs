@@ -62,6 +62,15 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<MoodTuningRecord> moodTuning = new();
     // Action gate: non-built-in external actions fire only when true. Default false (closed).
     public bool allowExternalActions = false;
+    // Add-only opt-in: missing old configuration fields stay false; the enum/catalog remain append-only.
+    public bool allowBabyActions = false;
+    public bool BabyActionsEnabled => allowBabyActions && ModsConfig.BiotechActive;
+    internal void SetAllowBabyActions(bool value)
+    {
+        if (allowBabyActions == value) return;
+        allowBabyActions = value;
+        QueuePersistence();
+    }
     // Eat occurrence granularity (two-level switch). Both fields are add-only and default false, and false
     // is omitted at the Scribe boundary, so settingsSchemaVersion stays 5 and a default config writes no
     // new node. Parent off forces the child false: see SetEatPrecision (UI write), the PostLoadInit

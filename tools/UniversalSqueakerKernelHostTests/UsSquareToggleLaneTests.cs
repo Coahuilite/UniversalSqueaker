@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -11,101 +11,109 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// S6-3 step 4: the square ON/OFF toggle. GEOMETRY AND HIT FIRST, appearance last - and both halves are
-/// asserted from the DRAW RECORD's own internal relations, never by predicting what a widget will draw from
-/// the arranged snapshot.
+/// The ON/OFF switch on the Overview page. <b>R2 (2026-09-28): the controls are the CARRIER's boolean kind
+/// now</b> — <c>input/checkbox</c> with <c>Appearance="switch"</c> — and the US-only kind
+/// <c>us/square-toggle</c> is retired with its file and its registration. This lane was re-cut in the same
+/// change rather than relaxed: the SUBJECT moved from "a US kind's own material" to "the shared kind's
+/// switch appearance", and every assertion below names which of the two it is.
 ///
 /// <para>
-/// WHY A KIND (measured before it was written, 2026-09-22; the citation for the candidate these two
-/// negatives produced):
+/// <b>WHY THE MIGRATION WAS POSSIBLE AT ALL</b> (the retiral's own justification, and the mutation it
+/// invites back): <c>us/square-toggle</c> existed for ONE reason — the knob's end depends on a bound bool,
+/// and no declarative element could express that. The carrier's checkbox gained the additive
+/// <c>Appearance</c> attribute (<c>switch</c> default, <c>checkbox</c> the explicit alternative) whose switch
+/// branch draws exactly this control's proportions (34x18 track, 14px knob, 2px inset, 6px label gap) over
+/// the SAME one boolean input path. One boolean BEHAVIOUR, two looks — so a second kind would freeze
+/// vocabulary the attribute already carries. Re-adding the US kind reddens
+/// <c>DeclarativeOverviewLaneTests.RetiredKindsAreGone</c>.
+/// </para>
+///
+/// <para>
+/// <b>WHAT DID NOT MOVE:</b> every band stays 36x30 (a 36-wide band is what lets the 34x18 track render at
+/// its own size instead of being clamped), each control still names the same bool in <c>Bind</c> AND
+/// <c>SelectedKey</c>, and the whole arranged band is still the hit target. The row layout is not what this
+/// change touches.
+/// </para>
+///
+/// <para>
+/// <b>WHAT THE SHARED KIND PAINTS (CURRENT INSPECTED, <c>CheckboxWidget.PaintSwitch</c>):</b> the ON track is
+/// the carrier's <c>Active</c> role — <c>SelectedSurface</c> fill + its resolved edge — with <b>the ACCENT
+/// ITSELF</b> (<c>AccentGold</c>) on the knob, and the OFF track is the raised plane's fill with the theme's
+/// control-edge ladder on its outline. In the flat scope (<c>SelectedBorder == Selected</c>) the ON track's
+/// edge is its own fill, so the ON signal is the FILL plus the accent knob, where the retired US kind used a
+/// saturated accent edge as well. It is asserted here as the shipped treatment, derived from the theme; see
+/// the note on <c>BothStatesAreDrawnAndVisible</c>.
+/// </para>
+///
+/// <para>
+/// MUTATION LEDGER (which assertion is the proof and which is only a guard):
 /// <list type="bullet">
-/// <item><b>There is no purely filled declarative element.</b> <c>chrome/banner</c> is a text band (it
-/// colours text), <c>chrome/rule</c> paints a HORIZONTAL hairline only (<c>RuleWidget.cs:61-80</c>), and a
-/// container's chrome is a whole filled band with four edges.</item>
-/// <item><b>Nothing lets geometry or position depend on a bound value.</b> The engine-wide value-dependent
-/// attributes are Visible / VisibleKey / Hidden / SelectedKey
-/// (<c>AtomVocabulary.EngineWideAttributes</c>) - visibility and STATE, never shape.</item>
+/// <item><b>TheSwitchesAreDeclaredOverTheirOwnBool</b> — a row left on another kind, an element that dropped
+/// <c>Appearance</c>, or a control whose <c>SelectedKey</c> names a different bool, reddens. It is the
+/// mutation that would silently re-open the migration.</item>
+/// <item><b>BothStatesAreDrawnAndVisible</b> — MUTATION-PROVEN. Every expectation is built from the THEME
+/// plus the state this lane READ, never from the widget's own helper: the retired lane measured that
+/// comparing against a widget's own <c>Material()</c> stayed green under a state-blind mutation, because
+/// both sides read the same bool through the same function.</item>
+/// <item><b>TheWholeBandIsTheHitRule</b> — a CONTRACT guard over the carrier's own source (the whole
+/// arranged rect is passed to <c>UiNative.Button</c> and the click writes the inverse of the bool it read),
+/// plus the readable half (the arranged band is the declared 36x30 and is taller than the track). The WRITE
+/// itself is proven next door, by
+/// <c>DeclarativeOverviewLaneTests.EachDeclaredControlIsTheOnlyWriteChannel</c>, which drives the real
+/// <c>UiNative.Button</c> seam against the same page and asserts one typed write and one revision bump per
+/// press — so it is not re-implemented here, and the two lanes must be read together.</item>
 /// </list>
 /// </para>
 ///
 /// <para>
-/// MATERIAL, NOT ROLE (a measured ruling, not a style preference). The toggle paints its own body from theme
-/// VALUES rather than asking the role table what an on/off surface looks like, because the cards it lives in
-/// are the flat scope: that scope sets <c>SelectedBorder</c> equal to <c>Selected</c> and <c>RaisedBorder</c>
-/// equal to <c>Raised</c> - the equality that IS "a flat surface paints no box" - so a track painted from the
-/// role table's OFF treatment came out <c>#191612</c> on a card whose face is <c>#191612</c>: the control
-/// vanished. <b>A control that must be VISIBLE on a flat plane cannot take its material from the role of the
-/// plane it sits on.</b> The values are still the theme's own (no literal, no new token).
-/// </para>
-///
-/// <para>
-/// MUTATION LEDGER:
-/// <list type="bullet">
-/// <item><b>TheTogglesAreDeclaredOverTheirOwnBool</b> - a row left on another kind, or a toggle whose
-/// SelectedKey names a different bool, reddens.</item>
-/// <item><b>BothStatesAreDrawnAndVisible</b> - MUTATION-PROVEN, twice over, and the second half is the one
-/// that took work: (a) the knob's END follows the state; (b) the track's fill, the track's edge and the knob's
-/// ink are each compared against an expectation built from the THEME + the state this lane read. Expecting
-/// them from the widget's own <c>Material()</c> instead would have been tautological - measured: the first
-/// version of that assertion stayed green when the material was made state-blind, because both sides read the
-/// same bool through the same function. With the independent expectation, "the OFF row painted the ON
-/// material" reddens (<c>scale-cooldown=False: expected #191612, got #D19938</c>).</item>
-/// <item><b>TheWholeBandIsTheHitRule</b> - a CONTRACT guard, NOT mutation-proven, and the step says so in
-/// place: the press path is a native IMGUI round trip whose pointer the lane cannot aim reliably (the frame a
-/// widget draws in and the frame the lane arranges are different arrangements - measured repeatedly in this
-/// lane), and the lead ruled against adding a public seam for it. So the step reads the widget's own source
-/// for the two facts a press depends on (the whole arranged rect is passed to <c>UiNative.Button</c>, and the
-/// click writes the inverse value) and asserts the band is taller than the track it draws. The press itself
-/// stays a REAL-SCREEN item, named rather than papered over.</item>
-/// </list>
-/// </para>
-///
-/// <para>
-/// THE REFERENCE GEOMETRY IS DELIVERED (2026-09-22): the band is 36x30, so the track renders its own
-/// 34x18 and the knob's throw is 16px - the values the reference draws (SqueakySettingsUI.Toggle,
-/// squeaky_ratkin). The 34x18 was ALWAYS this kind's own constant; the 24x30 band starved it. What the
-/// widening costs is measured and named: the row's text column loses 12px, which re-wraps the egg row's
-/// state line at the narrowest harness page widths. Those widths are NOT reachable in game - the settings
-/// window is floored at 800px wide (WindowChromeLayout.SettingsWidthFloor; the closed width clamps half
-/// the screen into [800, 1600]), so the page the host arranges is never narrower than that. The row-growth
-/// invariant those widths used to carry is re-cut against the reachable floor in DeclarativeOverviewLaneTests,
-/// in the same batch as this widening.
-/// STILL NOT CLAIMED: the look, and whether the track reads as "on" at a glance - both need a real screen.
+/// STILL NOT CLAIMED: the look on a real screen, and whether the ON state reads at a glance — the harness
+/// has no glyphs and no pixels. That remains a real-screen item, named rather than papered over.
 /// </para>
 /// </summary>
 internal static class UsSquareToggleLaneTests
 {
-    private const string ToggleKind = "us/square-toggle";
+    /// <summary>The carrier kind the eight controls are declared as now.</summary>
+    private const string SwitchKind = "input/checkbox";
+
+    /// <summary>The declared appearance. Asserted on the element rather than assumed: `switch` is the kind's
+    /// DEFAULT today, so a page that omitted it would keep looking right until the default moved — the
+    /// declaration is what makes the look authored.</summary>
+    private const string SwitchAppearance = "switch";
+
     private const float PageWidth = 800f;
     private const float TallHeight = 1100f;
 
     /// <summary>
-    /// The width the track RENDERS: its own constant, because the declared band is at least that wide (the
-    /// <c>TheTogglesAreDeclared</c> step asserts it rather than assuming it). Naming it separately is a
-    /// measured correction, not a style choice: the signature filter below used to key on
-    /// <see cref="DeclaredBandWidth"/>, which equalled the rendered track only because a 24px band CLAMPED the
-    /// 34px track. Widening the band to 36 exposed it - the record still held the fills, the filter simply
-    /// stopped recognising them ("no toggle track was drawn on this page at all"), which is a red for the
-    /// wrong reason and exactly the instrument-input check this project requires before touching an assertion.
+    /// The switch's own geometry, mirroring <c>CheckboxWidget</c>'s documented constants (34x18 track, 14px
+    /// knob, 2px inset). They are duplicated here on purpose: a lane that read them off the library would not
+    /// be able to redden when the library changed them under the US page, and this lane's whole subject is
+    /// "does the US page still get the control it declared". The band below is what US declares, and the
+    /// relationship between the two is asserted rather than assumed.
     /// </summary>
-    private const float RenderedTrackWidth = UsSquareToggleWidget.TrackWidth;
+    private const float TrackWidth = 34f;
+    private const float TrackHeight = 18f;
+    private const float KnobSize = 14f;
+    private const float KnobInset = 2f;
 
-    /// <summary>The band every toggle declares. 36 wide because that is what lets the track render its own
+    /// <summary>The band every switch declares. 36 wide because that is what lets the track render its own
     /// 34x18: at 24 the track shrank to 24x18 and the knob's throw fell to 6px, which is the difference
     /// between a switch and a block. A narrower band still shrinks the track rather than overflowing.
-    /// </summary>
+    /// Unchanged by the migration — this is US's own declaration and the reason it survives.</summary>
     public const float DeclaredBandWidth = 36f;
     public const float DeclaredBandHeight = 30f;
 
-    /// <summary>The scope the toggle rows draw in, so the lane asks the same theme the widget was handed.</summary>
+    /// <summary>The scope the switch rows draw in, so the lane asks the same theme the widget was handed.</summary>
     private const string FlatScheme = "us-flat-panel";
 
     /// <summary>
-    /// The rows this lane drives, in the order the page DRAWS them (top to bottom), with the state the
-    /// fixture's rich view gives each one. They are the two states of the knob's travel, and both come from
-    /// the page's own data - no lane-only seed, and no assumption about what a write through the binding
-    /// layer does to this fixture's read-only projection (measured: it does not move it, which is how an
-    /// earlier version of this step drew the "on" case with the off treatment).
+    /// The declared switches this lane drives, in the order the page DRAWS them (top to bottom), with the
+    /// state the fixture's rich view gives each one. They are the two states of the knob's travel, and both
+    /// come from the page's own data - no lane-only seed, and no assumption about what a write through the
+    /// binding layer does to this fixture's read-only projection (measured: it does not move it).
+    /// <para>
+    /// R2 re-cut: the CHECK ids and binds are unchanged (the migration is a kind swap), so this table is the
+    /// same contract it was — which is itself evidence that the row layout did not move.
+    /// </para>
     /// </summary>
     private static readonly (string RowId, string CheckId, string Bind, bool State)[] Rows =
     {
@@ -116,9 +124,19 @@ internal static class UsSquareToggleLaneTests
         ("basic-cooldown-row", "basic-cooldown-check", "scale-cooldown", false),
     };
 
+    /// <summary>Every declared switch on the shipped Overview page, by element id, so the retiral's own
+    /// completeness is an assertion rather than a claim: a control left behind on the old kind reddens here.
+    /// </summary>
+    private static readonly string[] DeclaredSwitches =
+    {
+        "basic-egg-check", "basic-baby-check", "basic-cooldown-check", "basic-talking-check",
+        "basic-population-check", "basic-eat-check", "basic-eat-child-check", "camera-indicator-check",
+        "diagnostics-localize-check"
+    };
+
     public static int RunAll()
     {
-        Step("the toggle kinds are declared over the bool each one owns", TheTogglesAreDeclared);
+        Step("the switch kinds are declared over the bool each one owns", TheSwitchesAreDeclaredOverTheirOwnBool);
         Step("both states are drawn, and the control is visible in both", BothStatesAreDrawnAndVisible);
         Step("the whole band is the hit rule", TheWholeBandIsTheHitRule);
         Console.WriteLine("UsSquareToggleLaneTests ALL PASS");
@@ -129,83 +147,152 @@ internal static class UsSquareToggleLaneTests
     // Step 1
     // ---------------------------------------------------------------------------------------------
 
-    private static void TheTogglesAreDeclared()
+    private static void TheSwitchesAreDeclaredOverTheirOwnBool()
     {
-        Assert(DeclaredBandWidth >= UsSquareToggleWidget.TrackWidth,
-            "the declared band (" + DeclaredBandWidth + "px) must host the track's own width ("
-            + UsSquareToggleWidget.TrackWidth + "px); below it the rendered track is CLAMPED to the band and"
-            + " every shape assertion in this lane would have to key on the band instead of on the track");
+        Assert(DeclaredBandWidth >= TrackWidth,
+            "the declared band (" + DeclaredBandWidth + "px) must host the track's own width (" + TrackWidth
+            + "px); below it the rendered track is CLAMPED to the band and every shape assertion in this lane"
+            + " would have to key on the band instead of on the track");
 
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
+
+        // (a) the two rows this lane drives, by id, with their bindings.
         foreach ((string _, string checkId, string bind, bool _) in Rows)
         {
             UiElementSpec? check = FindById(host.Manifest.Roots, checkId);
             Assert(check != null, "the shipped manifest must carry '" + checkId + "'");
-            Assert(check!.Kind == ToggleKind,
-                "'" + checkId + "' must be the US toggle surface, got '" + check.Kind + "'");
+            Assert(check!.Kind == SwitchKind,
+                "'" + checkId + "' must be the carrier's boolean surface, got '" + check.Kind + "'");
+            Assert(check.TryGetAttribute("Appearance", out string appearance) && appearance == SwitchAppearance,
+                "'" + checkId + "' must declare Appearance=\"" + SwitchAppearance + "\", got '"
+                + (check.TryGetAttribute("Appearance", out string raw) ? raw : "(none)") + "'");
             Assert(check.TryGetAttribute("Bind", out string actualBind) && actualBind == bind,
                 "'" + checkId + "' must own the bool binding '" + bind + "', got '" + actualBind + "'");
+            // The switch's drawn state comes from the value it READ (the bound bool). SelectedKey is the
+            // engine's role-resolution declaration over the SAME bool — the shared kind no longer consults it
+            // for the knob's end, but keeping both on one binding is what stops the painted state and the
+            // resolved role from drifting apart, so the pairing is asserted rather than tolerated.
             Assert(check.TryGetAttribute("SelectedKey", out string selected) && selected == bind,
                 "'" + checkId + "' must name the same bool in SelectedKey as in Bind, so the engine's own role"
-                + " resolution agrees with the state this kind paints, got '" + selected + "'");
+                + " resolution agrees with the state this control paints, got '" + selected + "'");
         }
 
-        // CONTROL, and it is a manifest-level one on purpose: the library's own checkbox atom must still be
-        // USED where a per-row toggle is not the intent (the checklist's pack rows). A blanket rename of the
-        // kind would have taken that one too - and the fixture's checklist happens to be empty in the rich
-        // view, so this reads the DECLARATION rather than an arranged element (the first version of this
-        // control looked for the row's element and found nothing, which is a control that cannot fail).
-        string manifestPath = System.IO.Path.Combine(
-            Program.RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
-        string manifest = System.IO.File.ReadAllText(manifestPath);
+        // (b) COMPLETENESS: every control the migration named is on the shared kind, and the count is tied to
+        // the manifest rather than to this list. A control left behind on the retired kind reddens here.
+        var onSharedKind = new List<string>();
+        foreach (string id in DeclaredSwitches)
+        {
+            UiElementSpec? spec = FindById(host.Manifest.Roots, id);
+            Assert(spec != null, "the shipped manifest must carry '" + id + "'");
+            if (spec!.Kind == SwitchKind) onSharedKind.Add(id);
+            Assert(spec.Kind == SwitchKind,
+                "'" + id + "' must be on the shared kind after the migration, got '" + spec.Kind + "'");
+        }
+
+        Assert(onSharedKind.Count == DeclaredSwitches.Length,
+            "all " + DeclaredSwitches.Length + " declared switches must be on the shared kind, got "
+            + onSharedKind.Count);
+
+        // CONTROL, and it is a manifest-level one on purpose: the library's checkbox appearance must still be
+        // USED where a per-row box is the intent (the checklist's pack rows), and it must NOT have been given
+        // the switch appearance by a blanket edit. The fixture's checklist is empty in the rich view, so this
+        // reads the DECLARATION rather than an arranged element.
+        string manifest = ReadShippedManifest();
         int checklistDeclarations = System.Text.RegularExpressions.Regex.Matches(
             manifest, "Id=\"checklist-row-check\" Kind=\"input/checkbox\"").Count;
         Assert(checklistDeclarations == 1,
             "control: the checklist's per-row checkbox must still be declared as input/checkbox, found "
             + checklistDeclarations + " such declaration(s) - a blanket kind rename would have taken it too");
+        Assert(!System.Text.RegularExpressions.Regex.IsMatch(
+                manifest, "Id=\"checklist-row-check\"[^>]*Appearance=\"switch\""),
+            "control: the checklist's per-row checkbox must NOT have been given the switch appearance - it is"
+            + " a per-row box, and the switch look is for the ON/OFF controls");
+        // The criterion is a DECLARATION, not the bare word: the manifest's own migration note names the
+        // retired kind to explain why it is gone, and documentation is not a usage. A blunt Contains() would
+        // report that note and would equally miss nothing real, so the matcher is the live declaration.
+        Assert(!System.Text.RegularExpressions.Regex.IsMatch(manifest, "Kind=\"us/square-toggle\""),
+            "the retired US kind must not survive as a live declaration in the shipped manifest");
     }
 
     // ---------------------------------------------------------------------------------------------
     // Step 2: drawn relations, not predicted geometry
     // ---------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// THE MATERIAL OF BOTH STATES, read from the DRAW RECORD, plus the visibility criterion the retired kind's
+    /// ruling left behind ("a control that must be visible on a flat plane cannot take its material from the
+    /// role of the plane it sits on").
+    /// <para>
+    /// <b>What the shared kind paints (CURRENT INSPECTED, <c>CheckboxWidget.PaintSwitch</c>).</b> ON is the
+    /// role table's <c>Active</c> treatment (<c>SelectedSurface</c>) with <b>the ACCENT ITSELF</b> on the
+    /// knob; OFF is the raised plane's FILL plus the theme's control-edge LADDER (<c>BorderStrong</c> when the
+    /// palette claims one, else <c>Border</c>), with <c>TextPrimary</c> on the knob. The ladder is what makes
+    /// the OFF half survive US's flat scope, which sets <c>Raised == RaisedBorder</c> — the equality that IS
+    /// "a flat surface paints no box". The two thumb inks are deliberately different KINDS of token: OFF is
+    /// neutral ink on a neutral track, ON is the accent, and neither is <c>TextOnGold</c> (which is ink FOR a
+    /// gold plane, not the control's own state).
+    /// </para>
+    /// <para>
+    /// <b>What time did to the ON signal, stated rather than buried.</b> The retired US kind painted an
+    /// accent-alpha track fill, a state-blind <c>Border</c> edge and the accent on the knob. The shared kind's
+    /// ON track is the <c>Selected</c> token (which the flat scope sets equal to <c>SelectedBorder</c>, so the
+    /// ON track's edge is its own fill), so the ON signal is the FILL plus the accent knob, with less gold on
+    /// the perimeter than before. The accent knob itself is restored, so the state still reads as the series
+    /// accent; whether that is enough at a glance is a REAL-SCREEN item, named rather than asserted.
+    /// </para>
+    /// </summary>
     private static void BothStatesAreDrawnAndVisible()
     {
         var seen = new List<bool>();
-        var edges = new List<Color>();
+        var fills = new List<Color>();
+        var knobs = new List<Color>();
         for (int i = 0; i < Rows.Length; i++)
         {
             seen.Add(OneRowBothStates(Rows[i].RowId, Rows[i].CheckId, Rows[i].Bind, Rows[i].State, i,
-                out Color edge));
-            edges.Add(edge);
+                out Color fill, out Color knob));
+            fills.Add(fill);
+            knobs.Add(knob);
         }
 
         Assert(seen.Contains(true) && seen.Contains(false),
             "the page's own two rows must be in OPPOSITE states, or this step would have measured one knob end"
             + " twice and could not tell the two apart: " + string.Join(",", seen));
 
-        // A1's own guard, and it is the one thing the per-row expectation cannot state: the reference's
-        // outline is ONE constant stroke in both states, so the ON row's edge and the OFF row's edge must be
-        // the same colour. A material that re-introduced a state-dependent edge reddens here even if both
-        // rows were then given matching expectations.
-        Assert(SameColor(edges[0], edges[1]),
-            "the ON row's track edge and the OFF row's must be the SAME neutral stroke (the reference keeps one"
-            + " outline in both states), got " + Hex(edges[0]) + " vs " + Hex(edges[1]));
+        // The state signal, stated as the shared kind's own contract: each state's knob ink differs from the
+        // track it sits in AND the two states' fills differ. Both are read from the draw record, so a
+        // state-blind mutation reddens here.
+        for (int i = 0; i < Rows.Length; i++)
+        {
+            Assert(!SameColor(knobs[i], fills[i]),
+                Rows[i].Bind + ": the knob must not be the same colour as its own track ("
+                + Hex(knobs[i]) + " on " + Hex(fills[i]) + ") - the knob is the state's own signal");
+        }
+
+        Assert(!SameColor(fills[0], fills[1]),
+            "the ON and OFF rows' track fills must differ, or the ONLY state signal left is the knob's end: "
+            + Hex(fills[0]) + " vs " + Hex(fills[1]));
     }
 
     /// <summary>
-    /// Draws one row TWICE - pointer parked away, then parked on the row - and reads the relations out of the
-    /// draw record's own boxes. Nothing here predicts a position from the arranged snapshot: measured, two
+    /// Draws one row and reads the relations out of the draw record's own boxes, with the state the page's
+    /// OWN data gives it. Nothing here predicts a position from the arranged snapshot: measured, two
     /// consecutive frames can arrange the same page 128px apart, so a lane that computed "where the band will
     /// be" would be measuring a different frame than the one the widget drew in.
     /// </summary>
     private static bool OneRowBothStates(string rowId, string checkId, string bind, bool expectedState,
-        int rowIndex, out Color edge)
+        int rowIndex, out Color fill, out Color knob)
     {
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try
         {
-            var source = new RecordingSettingsSource { RichData = true };
+            // EatPrecisionEnabled is pinned ON here, and that is a RE-CUT rather than a preference: the
+            // manifest declares one more switch than it arranges when the parent is off, because
+            // `basic-eat-child-row` carries `VisibleKey="eat-precision"`. With the parent off the page draws
+            // 8 tracks and this lane's "one cluster per DECLARED switch" assertion would redden on a page that
+            // is behaving correctly - a red for the wrong reason. The old version of this lane ran with the
+            // fixture's default (OFF) and counted the manifest's declarations, which is the same defect
+            // waiting to fire; the gate is now part of the fixture state the lane declares.
+            var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
             using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Overview");
             host.MeasureAndArrange(new Vector2(PageWidth, TallHeight));
@@ -221,112 +308,106 @@ internal static class UsSquareToggleLaneTests
             Color cardFace = theme.Raised;
 
             // Parked: the pointer sits outside the page, so nothing is hovered and the control draws its own
-            // material. The band's y range is what isolates this row's control from the other toggles.
-            List<(Rect Rect, Color Colour)> drawn = DrawAndCollect(host, new Vector2(-1000f, -1000f), band, rowIndex);
-
-            var byColour = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach ((Rect _, Color colour) in drawn)
-            {
-                string key = Hex(colour);
-                byColour[key] = byColour.TryGetValue(key, out int count) ? count + 1 : 1;
-            }
+            // material. The band's y range is what isolates this row's control from the other switches.
+            List<(Rect Rect, Color Colour)> drawn = DrawAndCollect(host, new Vector2(-1000f, -1000f), band,
+                rowIndex, out Rect trackFill, out Color trackFillColour);
 
             // The draw seam in this harness records three of the five: the track's left and right edge strips
             // are two boxes at the same x, so only one survives in the record. The shape is asserted rather
             // than assumed - a fill box, at least one edge strip, and exactly one knob.
             Assert(drawn.Count >= 3,
-                bind + ": the toggle must record its track fill, its edges and its knob, got " + drawn.Count
+                bind + ": the switch must record its track fill, its edges and its knob, got " + drawn.Count
                 + " boxes: " + Describe(drawn));
-            var fills = drawn.Where(d => Close(d.Rect.height, UsSquareToggleWidget.TrackHeight)).ToList();
-            Assert(fills.Count == 1,
-                bind + ": exactly one " + UsSquareToggleWidget.TrackHeight + "px track fill must be drawn, got "
-                + fills.Count + ": " + Describe(drawn));
-            (Rect Rect, Color Colour) trackFill = fills[0];
-            var edges = drawn.Where(d => Close(d.Rect.height, 1f)).ToList();
+            List<(Rect Rect, Color Colour)> edges = drawn.Where(d => Close(d.Rect.height, 1f)).ToList();
             Assert(edges.Count >= 1,
                 bind + ": the track must be edged (a 1px strip in the record), got " + Describe(drawn));
 
-            // The knob = the 14x14 box whose top-right corner is the track's, offset by the widget's own inset.
+            // The knob = the 14x14 box whose top is the track's top offset by the switch's own inset.
             List<(Rect Rect, Color Colour)> knobs = drawn
-                .Where(d => Close(d.Rect.width, UsSquareToggleWidget.KnobSize)
-                    && Close(d.Rect.height, UsSquareToggleWidget.KnobSize))
+                .Where(d => Close(d.Rect.width, KnobSize) && Close(d.Rect.height, KnobSize))
                 .ToList();
             Assert(knobs.Count == 1,
-                bind + ": exactly one " + UsSquareToggleWidget.KnobSize + "px knob must be drawn, got "
-                + knobs.Count + ": " + Describe(drawn));
-            Rect knob = knobs[0].Rect;
-            Assert(Close(knob.y, trackFill.Rect.y + 2f),
-                bind + ": the knob must sit 2px below the track's top edge, got " + Describe(knob) + " vs track "
-                + Describe(trackFill.Rect));
+                bind + ": exactly one " + KnobSize + "px knob must be drawn, got " + knobs.Count + ": "
+                + Describe(drawn));
+            Rect knobRect = knobs[0].Rect;
+            Assert(Close(knobRect.y, trackFill.y + KnobInset),
+                bind + ": the knob must sit " + KnobInset + "px below the track's top edge, got "
+                + Describe(knobRect) + " vs track " + Describe(trackFill));
 
-            // THE STATE: the knob's end. This is the property the whole kind exists for, and it is read from
-            // the drawn boxes rather than from the state the lane believes it set.
+            // THE STATE: the knob's end. This is the property the retired US kind existed for, and it is read
+            // from the drawn boxes rather than from the state the lane believes it set.
             if (state)
             {
-                Assert(Close(knob.xMax, trackFill.Rect.xMax - 2f),
-                    bind + "=on: the knob must sit at the track's RIGHT end, got " + Describe(knob)
-                    + " vs track " + Describe(trackFill.Rect));
+                Assert(Close(knobRect.xMax, trackFill.xMax - KnobInset),
+                    bind + "=on: the knob must sit at the track's RIGHT end, got " + Describe(knobRect)
+                    + " vs track " + Describe(trackFill));
             }
             else
             {
-                Assert(Close(knob.x, trackFill.Rect.x + 2f),
-                    bind + "=off: the knob must sit at the track's LEFT end, got " + Describe(knob)
-                    + " vs track " + Describe(trackFill.Rect));
+                Assert(Close(knobRect.x, trackFill.x + KnobInset),
+                    bind + "=off: the knob must sit at the track's LEFT end, got " + Describe(knobRect)
+                    + " vs track " + Describe(trackFill));
             }
 
-            // THE MATERIAL, and the expectation is built from the THEME + the STATE THIS LANE READ, not from
-            // the widget's Material() function. That distinction is the whole mutation sensitivity: asking
-            // Material() would agree with the widget even when the widget is state-blind, because both sides
-            // would read the same bool and the same function (measured - the first version of this assertion
-            // stayed green under a state-blind mutation, which is a lane that cannot tell the two states
-            // apart). These two expectations are the independently written contract:
-            Color expectedFill = state ? theme.AccentWith(UsSquareToggleWidget.AccentAlpha) : theme.Raised;
-            // S6-3 follow-up (A1/A2): the reference keeps ONE neutral outline in BOTH states and puts the
-            // accent on the KNOB, so the edge is state-blind while the knob is the accent itself when on.
-            // Both are still built from the theme + the state this lane read, never from the widget's helpers.
-            Color expectedEdge = theme.Border;
-            Color expectedKnob = state ? theme.AccentGold : theme.TextSecondary;
-            Assert(SameColor(trackFill.Colour, expectedFill),
-                bind + "=" + state + ": the track must be filled with this state's own material ("
-                + Hex(expectedFill) + "), got " + Hex(trackFill.Colour) + " - a state-blind material reddens"
+            // THE MATERIAL, and the expectation is built from the THEME + the STATE THIS LANE READ, never from
+            // the widget's own helper. The carrier's switch resolves its ON state through the Active role and
+            // its OFF state through the raised plane plus the theme's CONTROL-EDGE ladder; its knob is that
+            // state's role ink. R12-I re-cut the OFF EDGE expectation onto that ladder, and the re-cut is a
+            // fix rather than a loosening: under US's flat scope `Raised == RaisedBorder` (that equality IS
+            // "a flat surface paints no box"), so reading the OFF edge from `RaisedSurface.Border` asked for
+            // the fill's own colour - the two halves of the old expectation contradicted each other and the
+            // control collapsed onto the card face. The ladder (BorderStrong when the palette claims one, else
+            // Border) reads an edge from a token the scope does NOT flatten, so a fill and an edge from two
+            // independent tokens cannot both disappear.
+            Color expectedFill = state ? theme.Selected : theme.RaisedSurface.Fill;
+            Color expectedEdge = state
+                ? theme.SelectedSurface.Border
+                : (theme.BorderStrong.a > 0f ? theme.BorderStrong : theme.Border);
+            // The thumb's ink. The two halves are DIFFERENT KINDS of token on purpose (CURRENT INSPECTED,
+            // carrier `CheckboxWidget.PaintSwitch`): OFF is the neutral `TextPrimary` ink on a neutral track,
+            // ON is **the ACCENT ITSELF** (`AccentGold`) - "this is on" is what the accent means here. The
+            // carrier deliberately does not use `TextOnGold` for the thumb, because that token is ink FOR a
+            // gold plane rather than the control's own state. The restore from `TextOnGold` to the accent is
+            // the carrier change this lane was told to expect; the expectation is derived from the theme, so
+            // it follows US's accent wherever the palette puts it.
+            Color expectedKnob = state ? theme.AccentGold : theme.TextPrimary;
+            Assert(SameColor(trackFillColour, expectedFill),
+                bind + "=" + state + ": the track must be filled with this state's own role material ("
+                + Hex(expectedFill) + "), got " + Hex(trackFillColour) + " - a state-blind material reddens"
                 + " here");
             Assert(SameColor(edges[0].Colour, expectedEdge),
-                bind + "=" + state + ": the track's edge must be this state's material edge ("
+                bind + "=" + state + ": the track's edge must be this state's own role edge ("
                 + Hex(expectedEdge) + "), got " + Hex(edges[0].Colour));
-            edge = edges[0].Colour;
             Assert(SameColor(knobs[0].Colour, expectedKnob),
-                bind + "=" + state + ": the knob must be inked with this state's own ink (" + Hex(expectedKnob)
-                + "), got " + Hex(knobs[0].Colour));
+                bind + "=" + state + ": the knob must be inked with this state's own role ink ("
+                + Hex(expectedKnob) + "), got " + Hex(knobs[0].Colour));
 
-            // VISIBILITY, the ruling's own criterion: the knob's ink must be distinguishable from the track it
-            // sits in AND from the plane the whole control sits on. The second half is the one the role path
-            // failed: the OFF track used to equal the card's own face exactly.
-            Assert(!SameColor(knobs[0].Colour, trackFill.Colour),
-                bind + "=" + state + ": the knob must not be the same colour as its track ("
-                + Hex(knobs[0].Colour) + " on " + Hex(trackFill.Colour) + ")");
-            Assert(!SameColor(knobs[0].Colour, cardFace),
-                bind + "=" + state + ": the knob must not vanish into the card's own plane (" + Hex(cardFace) + ")");
-            // The track's EDGE is what draws the control on this page, and that is a measured fact rather
-            // than a shortcut: the flat scope's Raised IS the card's own face (#191612), so the track's fill
-            // necessarily coincides with the plane it sits on and only the Border-coloured edge separates
-            // them. The assertion therefore demands that AT LEAST ONE half of the track differ from the
-            // plane - which is exactly the difference between this material and the role table's OFF
-            // treatment, where BOTH halves were the plane's own colour and the control vanished.
-            Assert(!SameColor(trackFill.Colour, cardFace) || !SameColor(edges[0].Colour, cardFace),
+            // VISIBILITY, the criterion the retired kind's own ruling left behind: the control must be
+            // distinguishable from the plane it sits on. On this page the flat scope's Raised IS the card's own
+            // face (#191612), so the OFF track's FILL necessarily coincides with the plane and the EDGE is what
+            // separates them; the ON track's Selected fill is a different plane, so its fill does the work. The
+            // assertion therefore demands that AT LEAST ONE half of the track differ from the plane - which is
+            // exactly the difference between this material and the role table's old OFF treatment, where BOTH
+            // halves were the plane's own colour and the control vanished.
+            Assert(!SameColor(trackFillColour, cardFace) || !SameColor(edges[0].Colour, cardFace),
                 bind + "=" + state + ": the track must be visible against the card's own plane (" + Hex(cardFace)
-                + ") through at least one of its halves: fill=" + Hex(trackFill.Colour) + " edge="
-                + Hex(edges[0].Colour) + ". The role table's OFF treatment made BOTH equal to the plane"
-                + " (measured #191612 on #191612), which is why this control paints its own material.");
+                + ") through at least one of its halves: fill=" + Hex(trackFillColour) + " edge="
+                + Hex(edges[0].Colour));
 
             // The band stays the size the row layout was built around, and the boxes stay inside it.
             Assert(Close(band.width, DeclaredBandWidth) && Close(band.height, DeclaredBandHeight),
                 bind + ": the declared band must stay " + DeclaredBandWidth + "x" + DeclaredBandHeight
                 + ", got " + Describe(band));
+            Assert(trackFill.width <= band.width + 0.5f && trackFill.height <= band.height + 0.5f,
+                bind + ": the track must fit inside its declared band, got track " + Describe(trackFill)
+                + " in band " + Describe(band));
 
-            Console.WriteLine("[toggle] " + rowId + " state=" + state + " band=" + Describe(band) + " track="
-                + Describe(trackFill.Rect) + " fill=" + Hex(trackFill.Colour) + " edge=" + Hex(edges[0].Colour)
-                + " knob=" + Describe(knob) + " ink=" + Hex(knobs[0].Colour) + " cardFace=" + Hex(cardFace)
-                + " boxes=" + drawn.Count);
+            fill = trackFillColour;
+            knob = knobs[0].Colour;
+            Console.WriteLine("[switch] " + rowId + " state=" + state + " band=" + Describe(band) + " track="
+                + Describe(trackFill) + " fill=" + Hex(trackFillColour) + " edge=" + Hex(edges[0].Colour)
+                + " knob=" + Describe(knobRect) + " ink=" + Hex(knobs[0].Colour) + " cardFace="
+                + Hex(cardFace) + " boxes=" + drawn.Count);
             return state;
         }
         finally
@@ -341,61 +422,71 @@ internal static class UsSquareToggleLaneTests
 
     private static void TheWholeBandIsTheHitRule()
     {
-        // HOW FAR THIS GOES, and why it stops here. The press path is a native IMGUI round trip (MouseDown
-        // captures the control, MouseUp at the same point activates it), and this harness CAN drive it - the
-        // page's other interaction lanes do. What this lane cannot do reliably is AIM the pointer: measured
-        // six times while writing this step, the frame a widget DRAWS in and the frame the lane ARRANGES are
-        // separate arrangements (the same control read (736,270) in one and (752,398) in another), so a press
-        // computed from the arranged snapshot lands on the page but not on the control, and the write comes
-        // back null. The lead ruled against adding a public seam for it, and rightly: a seam that exists so a
-        // test can hit a control IS vocabulary growth.
+        // HOW FAR THIS GOES, and why the write itself lives in another lane. The press path is a native IMGUI
+        // round trip (MouseDown captures the control, MouseUp at the same point activates it), and this
+        // harness CAN drive it - but not by AIMING a pointer: measured repeatedly while the retired lane was
+        // written, the frame a widget DRAWS in and the frame the lane ARRANGES are separate arrangements (the
+        // same control read (736,270) in one and (752,398) in another), so a press computed from the arranged
+        // snapshot lands on the page but not on the control. The lead ruled against adding a public seam for
+        // it, and rightly: a seam that exists so a test can hit a control IS vocabulary growth.
         //
-        // So this step asserts the CONTRACT that the press depends on, read out of the widget's own source -
-        // the whole arranged rect is the hit, and the click writes the inverse of what was read. The press
-        // itself is therefore a real-screen item (the same "needs a real screen" class as the look), and it is
-        // named here rather than being papered over with a lane that would pass without ever hitting anything.
-        string sourcePath = System.IO.Path.Combine(
-            Program.RepoRoot(), "Source", "UniversalSqueaker", "UI", "Kernel", "UsSquareToggleWidget.cs");
-        string widget = System.IO.File.ReadAllText(sourcePath);
+        // The WRITE is therefore proven where it can be aimed honestly - DeclarativeOverviewLaneTests records
+        // every native button rect the page produces, presses one by RECT, and asserts one typed write and one
+        // revision bump per press for the camera control and for each basic-tuning row. Those assertions are
+        // the write-once and covered-control evidence; this step owns the two facts they depend on.
+        string sourcePath = ResolveCarrierWidgetSource();
+        string widget = File.ReadAllText(sourcePath);
 
         Assert(widget.Contains("if (UiNative.Button(rect, ctx))"),
-            "the toggle must take its hit through the same native button seam every other control uses, on the"
-            + " WHOLE arranged rect - the band is the target, not the drawn track");
+            "the shared switch must take its hit through the same native button seam every other control uses,"
+            + " on the WHOLE arranged rect - the band is the target, not the drawn track");
         Assert(widget.Contains("ctx.Bindings.Set<bool>(key, !state);"),
-            "a press must write the INVERSE of the bool the toggle read");
-        Assert(!widget.Contains("Geometry(rect, state, out Rect hit"),
-            "the toggle must not derive a separate hit rect: the band is the target and the track is what it"
-            + " draws inside that band");
+            "a press must write the INVERSE of the bool the control read");
+        Assert(widget.Contains("if (writable == false) return;"),
+            "a read-only control must refuse the pointer through the one writability funnel - that is the"
+            + " disabled half of this kind's contract, and it is not re-derived here");
 
-        // The readable half of the same claim: the band each row declares is the band the engine hands the
-        // toggle (the control's arranged rect is the full 36x30 the manifest declares, not the 34x18 track).
+        // The readable half of the same claim: the band each control declares is the band the engine hands the
+        // control (the arranged rect is the full 36x30 the manifest declares, not the 34x18 track), so
+        // "the whole band is the hit target" is a wider promise than "the track is the hit target".
         foreach ((string _, string checkId, string bind, bool _) in Rows)
         {
-            using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
+            // The same RE-CUT as step 2's own per-row lane, for the same measured reason: the manifest
+            // declares one more switch than it arranges while the eat-precision parent is OFF, because
+            // `basic-eat-child-row` carries VisibleKey="eat-precision". "One cluster per DECLARED switch row"
+            // is only a meaningful assertion when the declared set and the arranged set agree, so the gate is
+            // part of the fixture state this step declares rather than a count the lane narrows to fit.
+            using UiHost host = UsKernelSettingsHost.Create(
+                new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true });
             host.Bindings.Invoke("set-tab", "Overview");
             UiLayoutSnapshot snapshot = Arrange(host);
             Rect band = RectOf(snapshot, checkId);
             Assert(Close(band.width, DeclaredBandWidth) && Close(band.height, DeclaredBandHeight),
-                bind + ": the toggle's arranged rect must be the whole declared band (" + DeclaredBandWidth
+                bind + ": the control's arranged rect must be the whole declared band (" + DeclaredBandWidth
                 + "x" + DeclaredBandHeight + "), got " + Describe(band));
-            Assert(band.height > UsSquareToggleWidget.TrackHeight,
+            Assert(band.height > TrackHeight,
                 bind + ": and the band must be TALLER than the track it draws, so 'the band is the target' is"
                 + " a wider promise than 'the track is the target' (band " + Num(band.height) + "px vs track "
-                + UsSquareToggleWidget.TrackHeight + "px)");
-            Console.WriteLine("[toggle-hit] " + bind + " band=" + Describe(band) + " trackHeight="
-                + UsSquareToggleWidget.TrackHeight + " hit=wholeBand (press path: real screen, see the step comment)");
+                + TrackHeight + "px)");
+            Console.WriteLine("[switch-hit] " + bind + " band=" + Describe(band) + " trackHeight=" + TrackHeight
+                + " hit=wholeBand (press path + write: DeclarativeOverviewLaneTests)");
         }
     }
 
-    private static SqueakBasicToggle? ToggleOf(string bind)
+    /// <summary>
+    /// The carrier's checkbox source. The library is a SIBLING checkout and is read-only to this consumer; a
+    /// clone that does not have it must FAIL this step rather than pass silently, because a lane that quietly
+    /// asserted nothing would be the worst of both worlds.
+    /// </summary>
+    private static string ResolveCarrierWidgetSource()
     {
-        switch (bind)
-        {
-            case "scale-cooldown": return SqueakBasicToggle.ScaleCooldown;
-            case "scale-talking": return SqueakBasicToggle.ScaleTalking;
-            case "scale-population": return SqueakBasicToggle.ScalePopulation;
-            default: return null;
-        }
+        string root = Program.RepoRoot();
+        string sibling = Path.GetFullPath(Path.Combine(root, "..", "ferritelib", "Source", "FerriteLib.UiKit",
+            "Kernel", "Widgets", "CheckboxWidget.cs"));
+        Assert(File.Exists(sibling),
+            "the carrier's CheckboxWidget.cs must be readable at the sibling checkout for this step to assert"
+            + " the shared kind's hit and write contract; looked for '" + sibling + "'");
+        return sibling;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -405,7 +496,7 @@ internal static class UsSquareToggleLaneTests
     /// <summary>One draw with the stub pointer parked at <paramref name="pointer"/>, returning every solid the
     /// record holds for boxes inside the given band's y range.</summary>
     private static List<(Rect Rect, Color Colour)> DrawAndCollect(UiHost host, Vector2 pointer, Rect band,
-        int rowIndex)
+        int rowIndex, out Rect trackFillRect, out Color trackFillColour)
     {
         ClearSolids();
         SetField(DebugMousePositionField, pointer);
@@ -419,89 +510,56 @@ internal static class UsSquareToggleLaneTests
             SetField(DebugMousePositionEnabledField, false);
         }
 
-        IList rects = Recorded("DrawBoxSolidRects");
-        IList colors = Recorded("DrawBoxSolidColors");
+        System.Collections.IList rects = Recorded("DrawBoxSolidRects");
+        System.Collections.IList colors = Recorded("DrawBoxSolidColors");
         Assert(rects.Count == colors.Count,
             "the stub's two solid recorders must stay in step: " + rects.Count + " vs " + colors.Count);
 
-        // A toggle's own boxes are exactly five: the track's fill, its four edge strips, and the knob. Every
-        // one of them is either a RENDERED-TRACK-width box (34x18 fill, 34x1 edges) or the 14px knob - shapes
-        // that ARE the control's signature and that no other element on this page produces.
+        // A switch's own boxes are exactly five: the track's fill, its four edge strips, and the knob. Every
+        // one of them is a RENDERED-TRACK-width box (34x18 fill, 34x1 edges) or the 14px knob - shapes that
+        // ARE the control's signature and that no other element on this page produces.
         var signature = new List<(Rect Rect, Color Colour)>();
         for (int i = 0; i < rects.Count; i++)
         {
             Rect rect = (Rect)rects[i]!;
-            bool fill = Close(rect.width, RenderedTrackWidth) && Close(rect.height, UsSquareToggleWidget.TrackHeight);
-            bool edge = Close(rect.width, RenderedTrackWidth) && Close(rect.height, 1f);
-            bool knob = Close(rect.width, UsSquareToggleWidget.KnobSize)
-                && Close(rect.height, UsSquareToggleWidget.KnobSize);
+            bool fill = Close(rect.width, TrackWidth) && Close(rect.height, TrackHeight);
+            bool edge = Close(rect.width, TrackWidth) && Close(rect.height, 1f);
+            bool knob = Close(rect.width, KnobSize) && Close(rect.height, KnobSize);
             if (fill || edge || knob) signature.Add((rect, (Color)colors[i]!));
         }
 
-        // Which CLUSTER of that signature belongs to the row under test: the TOP-most one whose measured fill
-        // starts at or below the band the lane arranged. Measured reason this is a cluster and not a y window:
-        // the frame the widget DRAWS in and the frame the lane ARRANGES are not the same arrangement (the same
-        // control read (736,270) in one and (752,398) in another), so the drawn y and the arranged y do not
-        // coincide - but their ORDER does, and every toggle row contributes one cluster.
-        var fills = signature.Where(s => Close(s.Rect.height, UsSquareToggleWidget.TrackHeight)).ToList();
+        // Which CLUSTER of that signature belongs to the row under test: the TOP-most ones ordered by measured
+        // y. Measured reason this is a cluster and not a y window: the frame the widget DRAWS in and the frame
+        // the lane ARRANGES are not the same arrangement, so the drawn y and the arranged y do not coincide -
+        // but their ORDER does, and every switch row contributes one cluster.
+        var fills = signature.Where(s => Close(s.Rect.height, TrackHeight)).ToList();
         Assert(fills.Count >= 1,
-            "no toggle track was drawn on this page at all: " + Describe(signature));
-        // WHICH cluster is this row's. The rows are listed in manifest order and so are the clusters (the
-        // page scrolls to the top before every draw), so the two orders correspond; the lane ASSERTS that
-        // correspondence rather than assuming it silently, and a page that stopped drawing the two rows in
-        // order reddens instead of measuring the wrong control.
+            "no switch track was drawn on this page at all: " + Describe(signature));
+        // WHICH cluster is this row's. The rows are listed in manifest order and so are the clusters (the page
+        // scrolls to the top before every draw), so the two orders correspond; the lane ASSERTS that
+        // correspondence rather than assuming it silently, and a page that stopped drawing the rows in order
+        // reddens instead of measuring the wrong control.
         var ordered = fills.OrderBy(f => f.Rect.y).ToList();
 
-        // ONE CLUSTER PER TOGGLE ROW on the page, and the row under test is the index the caller names. The
-        // count is the number of rows the Overview's two cards DECLARE (six in basic-tuning plus the camera
-        // card's one): a page that stopped drawing one of them reddens here rather than letting the lane read
-        // the wrong row's boxes.
-        int declaredToggleRows = CountDeclaredToggles();
-        Assert(fills.Count == declaredToggleRows,
-            "every declared toggle row must draw exactly one track (" + declaredToggleRows + " rows), got "
+        // ONE CLUSTER PER DECLARED SWITCH ROW on the page, and the row under test is the index the caller
+        // names. The count is read from the manifest so it is tied to the page rather than to a literal here:
+        // a page that stopped drawing one of them reddens instead of letting the lane read the wrong row.
+        int declaredSwitches = CountDeclaredSwitchRows();
+        Assert(fills.Count == declaredSwitches,
+            "every declared switch row must draw exactly one track (" + declaredSwitches + " rows), got "
             + fills.Count + " tracks: " + Describe(signature));
         (Rect Rect, Color Colour) selected = ordered[rowIndex];
+        trackFillRect = selected.Rect;
+        // The COLOR the stub recorded for that same box, paired by index from its two parallel recorders.
+        // Observed, never the expected value: the material assertions below compare this against the theme.
+        trackFillColour = selected.Colour;
 
         var drawn = signature.Where(s => s.Rect.y >= selected.Rect.y - 2f
-            && s.Rect.y <= selected.Rect.y + UsSquareToggleWidget.TrackHeight + 2f).ToList();
+            && s.Rect.y <= selected.Rect.y + TrackHeight + 2f).ToList();
         Assert(drawn.Any(d => Close(d.Rect.y, selected.Rect.y) && Close(d.Rect.x, selected.Rect.x)),
             "the selected track must be part of its own cluster");
 
         return drawn;
-    }
-
-    /// <summary>One real press: MouseDown then MouseUp at the same point, through the stub's own hot-control
-    /// protocol (the seam the page's other interaction lanes drive).</summary>
-    private static void Press(UiHost host, Vector2 pointer)
-    {
-        SetField(DebugMousePositionField, pointer);
-        SetField(DebugMousePositionEnabledField, true);
-        try
-        {
-            DrawWithEvent(host, EventType.MouseDown, pointer);
-            DrawWithEvent(host, EventType.MouseUp, pointer);
-        }
-        finally
-        {
-            SetField(DebugMousePositionEnabledField, false);
-        }
-    }
-
-    private static void DrawWithEvent(UiHost host, EventType type, Vector2 pointer)
-    {
-        Event e = Event.KeyboardEvent("dummy");
-        e.type = type;
-        e.button = 0;
-        e.mousePosition = pointer;
-        Event.current = e;
-        try
-        {
-            host.DrawChecked(new Rect(0f, 0f, PageWidth, TallHeight));
-        }
-        finally
-        {
-            Event.current = null;
-        }
     }
 
     private static UiLayoutSnapshot Arrange(UiHost host)
@@ -516,6 +574,31 @@ internal static class UsSquareToggleLaneTests
         Assert(snapshot.RectById.TryGetValue(id, out Rect rect),
             "the arranged snapshot must carry '" + id + "'; a missing one means the page lost the control");
         return rect;
+    }
+
+    private static string ReadShippedManifest()
+    {
+        string path = Path.Combine(Program.RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
+        Assert(File.Exists(path), "the shipped manifest must exist at '" + path + "'");
+        return File.ReadAllText(path);
+    }
+
+    /// <summary>
+    /// How many switch rows the shipped manifest declares for the Overview workspace, counted from the
+    /// manifest itself so the lane's cluster count is tied to the page rather than to a number written here.
+    /// The basic-tuning card's rows plus the camera card's single control are the ones this lane's page draws;
+    /// both are gated to the Overview tab, so the declaration count and the drawn count are the same set.
+    /// </summary>
+    private static int CountDeclaredSwitchRows()
+    {
+        string manifest = ReadShippedManifest();
+        // Counted by the DECLARED APPEARANCE on an ELEMENT, not by the bare attribute text: the manifest's own
+        // migration note quotes the attribute while explaining it, and a textual match counted that note as a
+        // tenth control - a count that disagreed with every drawn frame for a reason that had nothing to do
+        // with the page. The checklist's per-row checkbox is the only input/checkbox that must NOT carry the
+        // switch appearance, and step 1 asserts exactly that.
+        return System.Text.RegularExpressions.Regex.Matches(
+            manifest, "<Widget[^>]*Appearance=\"switch\"").Count;
     }
 
     private static bool Close(float a, float b)
@@ -545,11 +628,6 @@ internal static class UsSquareToggleLaneTests
         return "(x=" + Num(rect.x) + " y=" + Num(rect.y) + " w=" + Num(rect.width) + " h=" + Num(rect.height) + ")";
     }
 
-    private static string Describe(Vector2 point)
-    {
-        return "(" + Num(point.x) + "," + Num(point.y) + ")";
-    }
-
     private static string Describe(List<(Rect Rect, Color Colour)> painted)
     {
         return "[" + string.Join(", ", painted.Select(p => Describe(p.Rect) + " " + Hex(p.Colour))) + "]";
@@ -572,23 +650,7 @@ internal static class UsSquareToggleLaneTests
         return null;
     }
 
-    /// <summary>
-    /// How many toggle rows the Overview's cards declare, counted from the manifest so the lane's cluster
-    /// count is tied to the page rather than to a number written here.
-    /// </summary>
-    private static int CountDeclaredToggles()
-    {
-        string manifestPath = System.IO.Path.Combine(
-            Program.RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
-        string manifest = System.IO.File.ReadAllText(manifestPath);
-        // The basic-tuning card's rows and the camera card's single control are the ones this lane's page
-        // draws; both are gated to the Overview workspace.
-        return System.Text.RegularExpressions.Regex.Matches(manifest, "Kind=\"us/square-toggle\"").Count
-            - System.Text.RegularExpressions.Regex.Matches(
-                manifest, "Kind=\"us/square-toggle\"[^>]*HelpKey=\"us/basic-tuning/eat-precision-include-drugs\"").Count;
-    }
-
-    private static IList Recorded(string fieldName)
+    private static System.Collections.IList Recorded(string fieldName)
     {
         FieldInfo? field = typeof(Verse.Widgets).GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
         if (field == null)
@@ -598,7 +660,7 @@ internal static class UsSquareToggleLaneTests
                 + " not pass silently");
         }
 
-        var list = field.GetValue(null) as IList;
+        var list = field.GetValue(null) as System.Collections.IList;
         if (list == null) throw new InvalidOperationException("the stub's '" + fieldName + "' recorder is not a list");
         return list;
     }

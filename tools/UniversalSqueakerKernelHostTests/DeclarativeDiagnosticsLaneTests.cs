@@ -159,13 +159,19 @@ internal static class DeclarativeDiagnosticsLaneTests
             "the localize row must carry a text/wrapped label, got "
             + (localizeLabel == null ? "(missing)" : localizeLabel.Kind));
         UiElementSpec? toggle = FindById(card.Children, "diagnostics-localize-check");
-        Assert(toggle != null && toggle.Kind == "us/square-toggle",
-            "the localize control must be the us/square-toggle surface, got "
+        Assert(toggle != null && toggle.Kind == "input/checkbox",
+            "the localize control must be the carrier's boolean surface, got "
             + (toggle == null ? "(missing)" : toggle.Kind));
-        Assert(toggle!.TryGetAttribute("Bind", out string bind) && bind == "localize-debug-menu",
-            "the toggle must write localize-debug-menu, got '" + bind + "'");
+        // R2 (2026-09-28): the localize row moved off `us/square-toggle` (retired with its registration) onto
+        // `input/checkbox`'s switch appearance. The look is declared, not inherited: `switch` is the kind's
+        // default today, so the attribute is what keeps this row authored if that default ever moves.
+        Assert(toggle!.TryGetAttribute("Appearance", out string appearance) && appearance == "switch",
+            "the localize control must declare Appearance=\"switch\", got '"
+            + (toggle.TryGetAttribute("Appearance", out string rawAppearance) ? rawAppearance : "(none)") + "'");
+        Assert(toggle.TryGetAttribute("Bind", out string bind) && bind == "localize-debug-menu",
+            "the control must write localize-debug-menu, got '" + bind + "'");
         Assert(toggle.TryGetAttribute("SelectedKey", out string toggleSelected) && toggleSelected == "localize-debug-menu",
-            "the toggle must name the SAME bool in SelectedKey, got '" + toggleSelected + "'");
+            "the control must name the SAME bool in SelectedKey, got '" + toggleSelected + "'");
     }
 
     // ---------------------------------------------------------------------------------------------

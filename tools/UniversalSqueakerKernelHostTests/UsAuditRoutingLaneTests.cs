@@ -32,11 +32,126 @@ internal static class UsAuditRoutingLaneTests
     {
         Step("per-host audit routing + ruler isolation + the shared detection switch", TheAuditIsRoutedPerHost);
 #if US_DEV
-        Step("repeated clicks retain separate geometry reports", RepeatedClicksAreSeparateEvidence);
+        Step("repeated clicks emit no geometry; each explicit report is its own pass",
+            RepeatedClicksAreSeparateEvidence);
+        Step("one report request produces one report AND one retained snapshot", TheReportIsOneShot);
 #endif
         Console.WriteLine("UsAuditRoutingLaneTests ALL PASS");
         return 0;
     }
+
+#if US_DEV
+    /// <summary>
+    /// R3-B's one-shot lifecycle, driven the way the page drives it: a REAL bound command asks for a report,
+    /// real <see cref="UiHost.DrawFrame"/> passes supply the captures, and the pending request is read back
+    /// through the same source the window calls.
+    /// <para>
+    /// MUTATION LEDGER. <b>TheRequestIsNotConsumedByTheClickAndNotUntilAPassCompletes</b> is the proof that the
+    /// request is deferred rather than served from the click's own pass: a straight
+    /// <c>request -&gt; report</c> (no latch) reddens it. <b>OneRequestOneReport</b> is the proof that the
+    /// request is CLEARED: a consume that forgot to clear reddens it on the second pass. Both are asserted
+    /// through returned pass numbers, not by counting log lines, so a message that changed shape cannot make
+    /// them pass for the wrong reason.
+    /// </para>
+    /// </summary>
+    private static void TheReportIsOneShot()
+    {
+        var observer = typeof(Verse.Log).GetField("MessageObserver")
+            ?? throw new InvalidOperationException("The logging stub needs its scoped message observer.");
+        object? previousObserver = observer.GetValue(null);
+        SqueakDevLoggingMode previousMode = SqueakLog.Mode;
+        var lines = new List<string>();
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+        fake.AttachHost(host);
+        UsKernelWidgetRegistrar.EnsureRegistered();
+
+        try
+        {
+            observer.SetValue(null, (Action<string>)lines.Add);
+            SqueakLog.Configure(SqueakDevLoggingMode.Enabled);
+            // `auditFit: true` because this lane exercises the fit path; the scope's existence no longer
+            // depends on the logging policy (R3-B fix 4).
+            using UsTextFitAudit audit = UsTextFitAudit.Open(host, auditFit: true);
+            var viewport = new Rect(0f, 0f, 1024f, 720f);
+
+            // The instrument is OFF until the real command asks for it, and reading status does not change
+            // that (R3-B fix 3).
+            Assert(!host.Diagnostics.GeometryEnabled,
+                "the developer command, not the scope, is what enables capture (R3-B / B2)");
+            Assert(UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.Off
+                && !host.Diagnostics.GeometryEnabled,
+                "reading the status must not enable capture (R3-B fix 3)");
+            host.Bindings.Invoke("set-tab", "Overview");
+            // A report requested BEFORE capture is on must be refused and not left pending, so a later enable
+            // cannot satisfy a stale click (R3-B fix 7).
+            host.Bindings.Invoke("request-layout-report");
+            Assert(!fake.LayoutReportPending && !audit.IsGeometryReportPending,
+                "a report request made while capture is off must be refused, not left pending");
+            host.Bindings.Set("layout-capture", true);
+            Assert(fake.LayoutCaptureOn && host.Diagnostics.GeometryEnabled,
+                "the page's own layout-capture binding must reach this host's instrument");
+
+            // One real pass, so a capture exists, and the pass number it produced.
+            host.DrawFrame(viewport);
+            Assert(host.Diagnostics.TryGetGeometrySnapshot(out UiDevGeometrySnapshot? first) && first != null,
+                "a real drawn pass must produce a capture for the instrument to report");
+            int capturePass = first!.Pass;
+
+            // THE REQUEST, from the real bound command the manifest dispatches.
+            host.Bindings.Invoke("request-layout-report");
+            Assert(fake.LayoutReportRequests == 1, "the report command must reach the source once");
+            Assert(audit.IsGeometryReportPending,
+                "the request must be PENDING after the click: it is not served from the click's own pass");
+            Assert(UsTextFitAudit.PublishGeometryReport(host) < 0 && audit.IsGeometryReportPending,
+                "and it must not be consumed while the pass it is waiting on is the one that already existed"
+                + " - a report served from the pre-click capture would describe the wrong frame");
+
+            // A real pass AFTER the request is what completes it.
+            host.DrawFrame(viewport);
+            int reported = UsTextFitAudit.PublishGeometryReport(host);
+            Assert(reported > capturePass,
+                "the report must describe a pass NEWER than the one that existed when it was requested"
+                + " (requested after pass " + capturePass + ", reported pass " + reported + ")");
+            Assert(!audit.IsGeometryReportPending, "and the request must be CLEARED in the same step");
+            Assert(lines.Exists(line => line.Contains("geometry [ferritelib.geometry]")),
+                "the report must go to the existing layout-trace channel, got " + lines.Count + " line(s)");
+
+            // ONE request is ONE report: another pass and another consume publish nothing.
+            int published = lines.Count;
+            host.DrawFrame(viewport);
+            Assert(UsTextFitAudit.PublishGeometryReport(host) < 0,
+                "a second pass must not produce a report: the request was cleared by the first");
+            Assert(lines.Count == published,
+                "and nothing new may be written either (" + published + " -> " + lines.Count + " lines)");
+
+            // FIX 5: the SAME capture is retained as data AND as text, reachable through the consumer's own
+            // accessor. A report that only kept one rendering could not be checked against the other, and a
+            // second read would have been free to describe a later pass.
+            UiDevGeometrySnapshot? retained = fake.LayoutReportSnapshot;
+            Assert(retained != null, "the explicit report must retain the STRUCTURED rendering, not only text");
+            Assert(retained!.Pass == reported,
+                "and the structured snapshot must describe the pass the report claims (" + retained.Pass
+                + " vs " + reported + "), so the two renderings are one capture");
+            Assert(audit.HasGeometryReport && audit.LatestGeometryReportText.Length > 0,
+                "with the matching TEXT rendering retained beside it");
+            Assert(audit.LastGeometryReportPass == reported
+                && audit.LastGeometryReportNodeCount == retained.Nodes.Count
+                && audit.LastGeometryReportInputCount == retained.Inputs.Count,
+                "and the text rendering's own identity must agree with the same snapshot (pass "
+                + audit.LastGeometryReportPass + ", nodes " + audit.LastGeometryReportNodeCount + ", inputs "
+                + audit.LastGeometryReportInputCount + ")");
+            Console.WriteLine("  ok: one request -> one report on pass " + reported
+                + " (nodes " + retained.Nodes.Count + ", inputs " + retained.Inputs.Count
+                + "), nothing on the next pass");
+        }
+        finally
+        {
+            SqueakLog.Configure(previousMode);
+            observer.SetValue(null, previousObserver);
+        }
+    }
+#endif
 
 #if US_DEV
     private static void RepeatedClicksAreSeparateEvidence()
@@ -51,16 +166,53 @@ internal static class UsAuditRoutingLaneTests
         bindings.BindCommand("act", () => commands++);
         var manifest = UiLayoutManifest.Parse("<UiPage Schema=\"2\" Source=\"audit-repeat\">"
             + "<Widget Id=\"button\" Kind=\"input/button\" Text=\"Press\" Height=\"30\" ActionBind=\"act\" /></UiPage>");
-        using var host = new UiHost("audit-repeat", manifest, bindings, UiTheme.DarkGold,
+        using var host = new UiHost("audit-repeat", manifest, bindings, UsTheme.Surface(),
             new Program.StubMetrics(), new AuditTranslation());
         try
         {
             observer.SetValue(null, (Action<string>)lines.Add);
             SqueakLog.Configure(SqueakDevLoggingMode.Enabled);
-            using var audit = UsTextFitAudit.Open(host);
+
+            // R3-B, and it is the MUTATION PROOF for the decoupling: turning detailed logging on and OPENING
+            // the audit scope must NOT start the geometry instrument. Before this slice the scope enabled it
+            // on open, which is exactly what made "set the log level to Enabled" silently begin capturing
+            // every rect. Re-coupling them reddens this assertion by name.
+            using var audit = UsTextFitAudit.Open(host, auditFit: true);
+            Assert(!host.Diagnostics.GeometryEnabled,
+                "opening the audit must not enable geometry: detailed logging and rect capture are separate"
+                + " developer decisions (R3-B / B2)");
+
+            // It is enabled only by the explicit, per-host request.
+            Assert(UsTextFitAudit.SetGeometryCapture(host, true),
+                "the explicit per-host enable must be honoured on a Dev carrier");
             Assert(host.Diagnostics.GeometryEnabled, "this Dev integration lane requires a Dev carrier with geometry enabled");
             var viewport = new Rect(0f, 0f, 200f, 100f);
             Rect button = host.MeasureAndArrange(new Vector2(200f, 100f)).RectById["button"];
+
+            // The geometry report is the EXPLICIT action now (R3-B fix 6): a business press emits nothing, so
+            // each phase below has to ask. This helper is the same requirement the page's Report button makes.
+            var reportedPasses = new List<int>();
+            Func<int> reportNow = () =>
+            {
+                Assert(UsTextFitAudit.RequestGeometryReport(host), "the explicit report request must be honoured");
+                for (int attempt = 0; attempt < 4; attempt++)
+                {
+                    host.DrawFrame(viewport);
+                    int pass = UsTextFitAudit.PublishGeometryReport(host);
+                    if (pass >= 0)
+                    {
+                        int logged = lines.Count;
+                        // Draining again in the same pass must not duplicate the block (the request is gone).
+                        Assert(UsTextFitAudit.PublishGeometryReport(host) < 0 && lines.Count == logged,
+                            "one report per request: a second drain in the same pass must write nothing");
+                        reportedPasses.Add(pass);
+                        return pass;
+                    }
+                }
+
+                throw new InvalidOperationException("a report request must be satisfied within a bounded number of passes");
+            };
+
             for (int click = 0; click < 2; click++)
             {
                 foreach (EventType phase in new[] { EventType.MouseDown, EventType.MouseUp })
@@ -70,18 +222,26 @@ internal static class UsAuditRoutingLaneTests
                     raised.button = 0;
                     raised.mousePosition = button.center;
                     Event.current = raised;
+                    // NO audit.Publish() geometry: a press must not spend a dump on the instrument.
+                    int before = lines.Count;
                     host.DrawFrame(viewport);
                     audit.Publish();
-                    int logged = lines.Count;
-                    audit.Publish();
-                    Assert(lines.Count == logged, "publishing the same pass twice must not duplicate the block");
+                    Assert(lines.Count == before || !lines[lines.Count - 1].StartsWith("geometry "),
+                        "a business press must not emit a geometry dump on its own (R3-B fix 6)");
+                    reportNow();
                 }
             }
+
             Assert(commands == 2, "both identical native clicks must execute the command");
-            Assert(lines.FindAll(line => line.Contains("geometry [ferritelib.geometry]")).Count == 4,
-                "both identical clicks must retain their down and up report blocks");
-            // Consecutive unclaimed releases have identical input text but distinct pass identities.
-            // They can occur when capture was lost; the publisher must preserve both observations.
+            Assert(reportedPasses.Count == 4,
+                "each of the four phases must produce exactly one explicit report, got " + reportedPasses.Count);
+            Assert(new HashSet<int>(reportedPasses).Count == reportedPasses.Count,
+                "and each must describe a DISTINCT pass (" + string.Join(",", reportedPasses) + "): identical"
+                + " input text in different passes must never be deduplicated into one observation");
+
+            // Consecutive unclaimed releases have identical input text but distinct pass identities. They can
+            // occur when capture was lost; the emitter must preserve both observations, which is what the old
+            // header dedup suppressed.
             for (int release = 0; release < 2; release++)
             {
                 Event raised = Event.KeyboardEvent("");
@@ -89,12 +249,19 @@ internal static class UsAuditRoutingLaneTests
                 raised.button = 0;
                 raised.mousePosition = button.center;
                 Event.current = raised;
-                host.DrawFrame(viewport);
-                audit.Publish();
+                reportNow();
             }
-            Assert(lines.FindAll(line => line.Contains("geometry [ferritelib.geometry]")).Count == 6,
-                "identical unclaimed releases in different passes must not be deduplicated by their text");
-            Console.WriteLine("  ok: repeated clicks preserve four geometry passes; repeated Publish does not duplicate them");
+
+            // One block per emitted report, and no more: the geometry count is the emitted count, not the
+            // number of frames or presses.
+            int blocks = lines.FindAll(line => line.Contains("geometry [ferritelib.geometry]")).Count;
+            Assert(blocks >= reportedPasses.Count,
+                "every emitted report must have written its block, got " + blocks + " for "
+                + reportedPasses.Count + " reports");
+            Assert(new HashSet<int>(reportedPasses).Count == 6,
+                "six explicit reports must describe six distinct passes");
+            Console.WriteLine("  ok: " + reportedPasses.Count + " explicit reports over distinct passes ("
+                + string.Join(",", reportedPasses) + "); presses emit no geometry; one block per report");
         }
         finally
         {
@@ -130,8 +297,8 @@ internal static class UsAuditRoutingLaneTests
 
             int floodedSession;
             int calibratedSession;
-            using (UsTextFitAudit floodedAudit = UsTextFitAudit.Open(flooded))
-            using (UsTextFitAudit calibratedAudit = UsTextFitAudit.Open(calibrated))
+            using (UsTextFitAudit floodedAudit = UsTextFitAudit.Open(flooded, auditFit: true))
+            using (UsTextFitAudit calibratedAudit = UsTextFitAudit.Open(calibrated, auditFit: true))
             {
                 floodedSession = flooded.Session.Identity;
                 calibratedSession = calibrated.Session.Identity;

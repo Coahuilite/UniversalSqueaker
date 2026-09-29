@@ -40,6 +40,7 @@ public interface IUsKernelSettingsSource
     /// ingesting food. Turning it off forces the child switch false in the same write.
     /// </summary>
     void SetEatPrecision(bool value);
+    void SetBabyActions(bool value);
 
     /// <summary>Child option "include drugs"; only meaningful while the parent switch is on.</summary>
     void SetEatPrecisionIncludeDrugs(bool value);
@@ -69,6 +70,31 @@ public interface IUsKernelSettingsSource
     void SetSearchText(string text);
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
     // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
+
+    // Developer layout diagnosis (R3-B). These are per-WINDOW developer switches, not settings: they are
+    // never persisted, never touch Config or a save, and they are deliberately NOT routed through
+    // UniversalSqueakerSettings. The source holds the request; the window's own diagnostic scope applies it.
+    /// <summary>Turn the layout capture on or off for this window's host. Off by default.</summary>
+    void SetLayoutCapture(bool on);
+
+    /// <summary>Turn the captured-rect outline on or off for this window's host.</summary>
+    void SetLayoutOutline(bool on);
+
+    /// <summary>Ask for exactly one layout report; the next drawn pass produces it and clears the request.</summary>
+    void RequestLayoutReport();
+
+    /// <summary>
+    /// Read-only status of the layout capture for this window, as a user-facing sentence. A carrier without
+    /// the development instrument reports that plainly, so a developer never reads "nothing captured" as
+    /// "the layout is clean".
+    /// </summary>
+    string LayoutDiagnosisStatus { get; }
+
+    /// <summary>Whether capture is currently on for this window (the switch's own checked state).</summary>
+    bool LayoutCaptureOn { get; }
+
+    /// <summary>Whether the captured-rect outline is currently on for this window.</summary>
+    bool LayoutOutlineOn { get; }
 
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);

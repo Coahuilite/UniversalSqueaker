@@ -57,6 +57,15 @@
   <US.Diagnostics.Logging.Enabled>Enabled</US.Diagnostics.Logging.Enabled>
   <US.Diagnostics.Logging.Disabled>Disabled</US.Diagnostics.Logging.Disabled>
   <US.Diagnostics.LocalizeDebugMenu>Localize debug menu</US.Diagnostics.LocalizeDebugMenu>
+  <US.Diagnostics.Geometry.Label>Layout capture (developer)</US.Diagnostics.Geometry.Label>
+  <US.Diagnostics.Geometry.Off>Layout capture is off.</US.Diagnostics.Geometry.Off>
+  <US.Diagnostics.Geometry.Active>Capturing this window's layout.</US.Diagnostics.Geometry.Active>
+  <US.Diagnostics.Geometry.Overlay>Capturing, with the rect outline on.</US.Diagnostics.Geometry.Overlay>
+  <US.Diagnostics.Geometry.Unavailable>Not available: this build has no layout instrument. Use a development library package.</US.Diagnostics.Geometry.Unavailable>
+  <US.Diagnostics.Geometry.NoScope>Not available: this page has no diagnosis scope.</US.Diagnostics.Geometry.NoScope>
+  <US.Diagnostics.Geometry.Capture>Capture</US.Diagnostics.Geometry.Capture>
+  <US.Diagnostics.Geometry.Outline>Outline</US.Diagnostics.Geometry.Outline>
+  <US.Diagnostics.Geometry.Report>Report</US.Diagnostics.Geometry.Report>
 
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>
@@ -281,6 +290,10 @@
   <US.Help.Diagnostics.LoggingEnabled.Text>Forces detailed routing logs on, even in release builds. Use it when reporting an audio problem; turn it back afterwards, the log grows fast.</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>Forces all developer logging off, even in dev builds.</US.Help.Diagnostics.LoggingDisabled.Text>
   <US.Help.Diagnostics.LocalizeDebug.Text>When on, the vanilla debug menu shows Universal Squeaker's debug actions with translated names and categories. Only visible while developer mode is enabled.</US.Help.Diagnostics.LocalizeDebug.Text>
+  <US.Help.Diagnostics.LayoutDiagnosis.Text>Developer tool. The status line says whether this window's layout is being captured, and if not, why: a release library package has no layout instrument, and no switch can create one.</US.Help.Diagnostics.LayoutDiagnosis.Text>
+  <US.Help.Diagnostics.LayoutCapture.Text>Records every arranged element of this window - its rect in each coordinate space, its height mode and resolved height. Costs frames while on, and is off by default; it is never saved.</US.Help.Diagnostics.LayoutCapture.Text>
+  <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around each captured element so a rect can be seen rather than read. It needs capture to be on, because it outlines what was captured.</US.Help.Diagnostics.LayoutOutline.Text>
+  <US.Help.Diagnostics.LayoutReport.Text>Writes the last completed capture once to the log, then stops. Press it again for another. For a rect that does not respond to clicks, read the input lines: each one carries the pointer, the queried rect and the verdict (hit, miss, covered or disabled).</US.Help.Diagnostics.LayoutReport.Text>
   <US.Help.ScopeTree.Overview>The three-layer tuning editor: Global, Race and Xenotype. Each action's scope either inherits (Auto) or is forced to Off, Any or Command within the states that action supports; four mood rows override pitch, volume and jitter per layer.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
@@ -370,4 +383,7 @@
   <US.Diagnostics.Recency.JustNow>at {0}, less than a minute ago</US.Diagnostics.Recency.JustNow>
   <US.Diagnostics.Recency.Ago>at {0}, {1} min ago</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>Back to list</US.Diagnostics.Nav.Back>
+  <US.Tuning.BabyActions>Route baby crying and giggling</US.Tuning.BabyActions>
+  <US.Help.BasicTuning.BabyActions.Label>Route baby crying and giggling</US.Help.BasicTuning.BabyActions.Label>
+  <US.Help.BasicTuning.BabyActions.Text>Off by default. With Biotech active, enable to route Crying and Giggling, expose their tuning rows and include both in action coverage. Off excludes both from routing and the coverage numerator/denominator. This does not change vanilla mental states or genuine mental breaks. Missing audio stays uncovered; without Biotech this option has no effect.</US.Help.BasicTuning.BabyActions.Text>
 </LanguageData>

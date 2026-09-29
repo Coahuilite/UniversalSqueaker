@@ -8,6 +8,7 @@ public sealed class VoicePacksViewState
 {
     public SqueakVoicePackMode Mode { get; }
     public bool AllowEasterEggs { get; }
+    public bool AllowBabyActions { get; }
     public SqueakDistancePreset DistancePreset { get; }
     public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
@@ -86,10 +87,12 @@ public sealed class VoicePacksViewState
         IReadOnlyList<FilterOptionView> raceFilterOptions,
         IReadOnlyList<FilterOptionView> xenotypeFilterOptions,
         bool eatPrecisionEnabled = false,
-        bool eatPrecisionIncludeDrugs = false)
+        bool eatPrecisionIncludeDrugs = false,
+        bool allowBabyActions = false)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
+        AllowBabyActions = allowBabyActions;
         DistancePreset = distancePreset;
         ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         ScaleFrequencyWithTalking = scaleFrequencyWithTalking;

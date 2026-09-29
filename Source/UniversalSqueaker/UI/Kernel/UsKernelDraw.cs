@@ -602,6 +602,10 @@ public static class UsKernelDraw
     /// <summary>
     /// Self-drawn dropdown trigger + session popup used by composites for dynamic option lists.
     /// Options are (display, value) pairs; selecting invokes <paramref name="onSelected"/>.
+    /// <para>
+    /// This is the string-payload form. A composite that owns a TYPED value uses the
+    /// <see cref="UiChoice{T}"/> overload below instead, so the committed value never becomes a string.
+    /// </para>
     /// </summary>
     public static void Dropdown(
         Rect rect,
@@ -613,6 +617,9 @@ public static class UsKernelDraw
     {
         if (options.Count == 0) return;
 
+        // The display rule this form has always used: an option whose value OR label matches the current
+        // string shows that option's label. Preserved here rather than delegated, because the typed form
+        // deliberately matches by value only.
         string display = current;
         foreach (KeyValuePair<string, string> option in options)
         {
@@ -624,6 +631,67 @@ public static class UsKernelDraw
             }
         }
 
+        DrawDropdownCore(rect, elementId, ctx, display, current, options, onSelected);
+    }
+
+    /// <summary>
+    /// The TYPED form (R4-A): options carry the value itself, so <paramref name="onSelected"/> receives the
+    /// real instance and nothing in this path converts a value to or from a string. The trigger matches the
+    /// current value by its VALUE, never by its label, so the displayed label and the committed value stay
+    /// separate concerns.
+    /// </summary>
+    public static void Dropdown<T>(
+        Rect rect,
+        string elementId,
+        UiWidgetContext ctx,
+        T current,
+        IReadOnlyList<UiChoice<T>> choices,
+        Action<T> onSelected)
+    {
+        if (choices.Count == 0) return;
+
+        string display = "";
+        string currentIndex = "";
+        for (int i = 0; i < choices.Count; i++)
+        {
+            if (EqualityComparer<T>.Default.Equals(choices[i].Value, current))
+            {
+                display = choices[i].Text;
+                currentIndex = i.ToString();
+                break;
+            }
+        }
+
+        // The row list FL draws is still string-payloaded, so the payload is the ROW INDEX: a row that is
+        // chosen maps straight back to its own choice. Matching by label instead would collapse two options
+        // that share a label, and the index is what makes "the chosen row" exact without a value round-trip.
+        var rows = new List<KeyValuePair<string, string>>(choices.Count);
+        for (int i = 0; i < choices.Count; i++)
+        {
+            rows.Add(new KeyValuePair<string, string>(choices[i].Text, i.ToString()));
+        }
+
+        DrawDropdownCore(rect, elementId, ctx, display, currentIndex, rows, selected =>
+        {
+            if (!int.TryParse(selected, out int index) || index < 0 || index >= choices.Count) return;
+            onSelected(choices[index].Value);
+        });
+    }
+
+    /// <summary>
+    /// The shared rendering the two public overloads feed: one trigger, one popup, one hit rule. It is the
+    /// only place in US that calls <see cref="UiPopup.DrawOptionList"/>, so the popup layer push, the
+    /// viewport clamp/flip and the owner-id hit behaviour exist once.
+    /// </summary>
+    private static void DrawDropdownCore(
+        Rect rect,
+        string elementId,
+        UiWidgetContext ctx,
+        string display,
+        string current,
+        IReadOnlyList<KeyValuePair<string, string>> options,
+        Action<string> onSelected)
+    {
         // Accent discipline (05 §3.1): a filled trigger means "this field carries a value", which is
         // not one of the accent's three uses. Openness stays a plane change (Selected fill with the
         // stronger neutral border), never a hue change; the text is always TextPrimary.

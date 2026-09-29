@@ -48,7 +48,106 @@ internal static class DiagnosticsPanelLaneTests
         Step("all 16 conditions show, and a group folds only when clicked", GroupFold);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
         Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
+#if US_DEV
+        Step("layout diagnosis is per host: settings capture leaves this panel's host alone", LayoutDiagnosisIsPerHost);
+#endif
     }
+
+#if US_DEV
+    /// <summary>
+    /// R3-B / B4: the developer layout capture is PER HOST, and this panel is the second US host that proves
+    /// it. Five checks, each about a different way the separation or the lifecycle could be lost:
+    /// <list type="number">
+    /// <item><b>Reading status is non-mutating</b> (fix 3): a status read before any explicit enable leaves
+    /// <c>GeometryEnabled</c> false, and it still answers "off" rather than "unavailable" on a Dev carrier;</item>
+    /// <item>the settings page's OWN bound command enables the settings host and leaves THIS panel's host
+    /// off - one scope per host, resolved by host identity, never a cached default;</item>
+    /// <item>with both scopes open the two report identities DIFFER (host name and session id), so a report
+    /// cannot be attributed to the other window;</item>
+    /// <item>one host's switch does not move the other;</item>
+    /// <item>closing one scope releases only its own capture: the survivor is still captured AND still
+    /// resolvable by the developer commands - the "closing the wrong window kills the tool" failure.</item>
+    /// </list>
+    /// <para>
+    /// <b>Ordering is part of the contract, and it is what this lane got wrong before (fix 2).</b> The
+    /// per-host commands resolve a scope, so a window must have OPENED one before its command can do anything
+    /// - which is exactly the production fix: every US window now opens its scope in every logging mode. The
+    /// lane therefore opens both scopes first, exactly as two open windows would, and only then drives the
+    /// bound command. The instrument itself is still OFF until that command asks for it.
+    /// </para>
+    /// </summary>
+    private static void LayoutDiagnosisIsPerHost()
+    {
+        var settingsFake = new RecordingSettingsSource { RichData = true };
+        using UiHost settings = UsKernelSettingsHost.Create(settingsFake, new Program.StubMetrics());
+        settingsFake.AttachHost(settings);
+        var panelFake = new FakeDiagnosticsSource();
+        FillRows(panelFake, 4);
+        using UiHost diagnostics = UsDiagnosticsHost.CreateMain(panelFake);
+        var viewport = new Rect(0f, 0f, 680f, 560f);
+
+        // Both windows are open, so both have a scope - the production lifecycle (auditFit: true here because
+        // this lane is about the geometry commands, not about the logging policy).
+        using UsTextFitAudit settingsAudit = UsTextFitAudit.Open(settings, auditFit: true);
+        using UsTextFitAudit diagnosticsAudit = UsTextFitAudit.Open(diagnostics, auditFit: true);
+
+        // Both hosts must have drawn a real pass before anything can be reported.
+        settings.DrawFrame(viewport);
+        diagnostics.DrawFrame(viewport);
+
+        // ---- (0) FIX 3: reading the status must not start capture, and it must still answer truthfully.
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "a window open with detailed logging must not have sampling on: capture is opt-in");
+        Assert(UsTextFitAudit.GetDevGeometryStatus(settings) == UsTextFitAudit.DevGeometryStatus.Off,
+            "a status read on a Dev carrier must answer Off, got "
+            + UsTextFitAudit.GetDevGeometryStatus(settings));
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "and READING the status must not have switched sampling on (R3-B fix 3: observation is not"
+            + " mutation - before this fix the readout said Off while capture had already started)");
+
+        // ---- (1) the settings host's own developer command, through the REAL binding the manifest dispatches.
+        settings.Bindings.Set("layout-capture", true);
+        Assert(settingsFake.LayoutCaptureOn && settings.Diagnostics.GeometryEnabled,
+            "the settings page's layout-capture command must enable THAT host's instrument");
+        Assert(!diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the diagnostics panel's instrument OFF - the two windows are separate hosts"
+            + " (R3-B / B4)");
+
+        // The panel's own scope, enabled through the same per-host entry point: this is what the panel does.
+        Assert(UsTextFitAudit.SetGeometryCapture(diagnostics, true),
+            "the panel's host must be enableable on its own");
+        Assert(diagnostics.Diagnostics.GeometryEnabled && settings.Diagnostics.GeometryEnabled,
+            "both hosts must be capturable at the same time");
+
+        // ---- (2) the two report identities differ.
+        Assert(settings.Diagnostics.Host == settings.Source && diagnostics.Diagnostics.Host == diagnostics.Source,
+            "each subscription must name its own consumer source; two US windows may share that source");
+        Assert(settings.Diagnostics.SessionId == settings.Session.Identity
+            && diagnostics.Diagnostics.SessionId == diagnostics.Session.Identity,
+            "each subscription must carry its own window session identity");
+        Assert(settings.Session.Identity != diagnostics.Session.Identity,
+            "and under different session ids (" + settings.Session.Identity + " vs "
+            + diagnostics.Session.Identity + "): a report that cannot name its window is the misattribution"
+            + " the per-host scope ends");
+
+        // ---- (3) one host's switch does not move the other.
+        Assert(UsTextFitAudit.SetGeometryCapture(settings, false), "turning the settings capture off must work");
+        Assert(!settings.Diagnostics.GeometryEnabled && diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the panel's capture running");
+
+        // ---- (4) closing one scope releases only its own capture.
+        Assert(UsTextFitAudit.SetGeometryCapture(settings, true) && settings.Diagnostics.GeometryEnabled,
+            "re-enable the settings host, so the release below has something to release");
+        settingsAudit.Dispose();
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "closing the settings scope must release the SETTINGS host's capture");
+        Assert(diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the panel's capture untouched (the other window is still open)");
+        Assert(UsTextFitAudit.GetDevGeometryStatus(diagnostics) != UsTextFitAudit.DevGeometryStatus.ScopeMissing,
+            "and the panel must still be resolvable by the developer commands: closing one window must not"
+            + " make the other's controls dead");
+    }
+#endif
 
     private static void Step(string name, Action action)
     {

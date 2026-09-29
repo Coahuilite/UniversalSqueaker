@@ -120,7 +120,7 @@ internal static class MoodLayoutFocusedTests
         Step("auto button routes typed set-mood-tuning", AutoButtonRoutesTypedMoodTuning);
         Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
         Step("reset controls route at every card width", ResetRoutingAcrossCardWidths);
-        Step("a popup-covered reset control yields the click", CoveredControlYieldsTheClick);
+        Step("a popup-covered nav control yields the click", CoveredControlYieldsTheClick);
         Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
@@ -147,7 +147,7 @@ internal static class MoodLayoutFocusedTests
         const float Width = ViewportWidth;
         const float Height = 900f;
         // Parent ON: the eat-precision child row exists only while its parent switch is on, so the card
-        // draws its full six declared control rows.
+        // draws its full seven declared control rows.
         var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         UiHost host = UsKernelSettingsHost.Create(source);
         try
@@ -188,8 +188,8 @@ internal static class MoodLayoutFocusedTests
                 .Where(r => IsInside(r, cardLocal) && IsDeclaredCheckbox(r))
                 .OrderBy(r => r.y)
                 .ToList();
-            Assert(slots.Count == 6,
-                "the declared card draws six control rows with the parent ON (egg + three scalings + the"
+            Assert(slots.Count == 7,
+                "the declared card draws seven control rows with the parent ON (egg + baby + three scalings + the"
                 + " eat-precision parent and child), got " + slots.Count);
 
             // THE DRAW FACT, stated as the property itself: for every declared checkbox band, that band is
@@ -264,13 +264,19 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// The declared Overview control band: the manifest's <c>us/square-toggle</c> cell, 36 x 30. It is the
-    /// ARRANGED rect (the whole band is the hit rule) and deliberately NOT the composite's 24x24
-    /// <c>UsKernelDraw.CheckboxHit</c> slot - the atom owns its own geometry now, and 30 is what makes it paint
-    /// the shipped 18px visual box (side = max(8, height - theme.Geometry.Padding * 2)). The 36 follows the
-    /// manifest: S6-3's follow-up widened all seven bands 24 -> 36 so the widget's own 34x18 track finally
-    /// renders, and this predicate - which selects the bands out of the draw record - was re-cut in the same
-    /// batch rather than silently matching nothing.
+    /// The declared Overview control band: the manifest's boolean-switch cell, 36 x 30. It is the ARRANGED
+    /// rect (the whole band is the hit rule) and deliberately NOT the composite's 24x24
+    /// <c>UsKernelDraw.CheckboxHit</c> slot - the atom owns its own geometry now, and 30 is what makes the
+    /// switch's 18px track fit inside the band's own padding. The 36 follows the manifest: S6-3's follow-up
+    /// widened all seven bands 24 -> 36 so the 34x18 track finally renders instead of being clamped, and this
+    /// predicate - which selects the bands out of the draw record - was re-cut in the same batch rather than
+    /// silently matching nothing.
+    /// <para>
+    /// R2 (2026-09-28): the KIND behind the cell changed (`us/square-toggle` -> the carrier's
+    /// <c>input/checkbox</c> with <c>Appearance="switch"</c>, the same 34x18/14/2/6 proportions). This
+    /// predicate keys on the BAND, which the migration deliberately kept at 36x30, so it survives the kind
+    /// swap unchanged - and that is the point: the row layout is not what moved.
+    /// </para>
     /// </summary>
     private static bool IsDeclaredCheckbox(Rect rect)
     {
@@ -1386,93 +1392,75 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// The ctx-contract assertion: with a popup covering a reset control, aiming a click at that control
-    /// must not fire it - the protected overload asks the hit stack first and returns false without ever
-    /// reaching the native button. The positive control (popup closed, same click, same pointer) proves the
-    /// assertion can go the other way, so this step dies the moment a call site falls back to the
-    /// context-free overload.
+    /// The production nav button must yield to a covering popup. The old fixture teleported a scope
+    /// popup over nav; live anchor reconciliation correctly invalidates that setup. This fixture places
+    /// a real core dropdown immediately above the real nav kind, so its actual popup covers the first
+    /// nav row. It tests the consumer's context-bearing button call, not the full page's geometry.
+    /// The closed-popup positive control proves the same pointer can reach that row. A faithful switch
+    /// of UsNavWidget's Button(card, ctx) to Button(card) was run and failed the covered-click assertion.
+    /// Fixture placement and the closed-popup positive control are guards, not independent mutation proofs.
     /// </summary>
     private static void CoveredControlYieldsTheClick()
     {
-        using CaptureContext ctx = CreateCaptureContext();
-
-        // The covered control must belong to a DIFFERENT element than the popup's owner: the hit-stack rule
-        // deliberately lets an element keep clicks over its own popup (that is what makes toggle-to-close
-        // work), so a popup owned by us/scope-tree can never be stolen from a sibling control inside the
-        // same widget. The nav rows are a separate element, are always drawn, and their click is observable
-        // through the active-tab binding.
+        UsKernelWidgetRegistrar.EnsureRegistered();
+        const string xml = "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
+            + "<Column Id=\"probe-column\" Padding=\"0\" Gap=\"0\">"
+            + "<Widget Id=\"probe-dropdown\" Kind=\"input/dropdown\" OptionsBind=\"probe-options\" Height=\"28\" />"
+            + "<Widget Id=\"probe-nav\" Kind=\"us/nav\" />"
+            + "</Column></UiPage>";
+        string activeTab = "Tuning", selected = "one";
+        var bindings = new UiBindings();
+        bindings.BindValue(UiBindings.ActiveTabKey, () => activeTab, value => activeTab = value);
+        bindings.BindAction<string>("set-tab", value => activeTab = value);
+        bindings.BindValue("probe-dropdown", () => selected, value => selected = value);
+        bindings.BindOptions("probe-options", () => new[] { "one", "two", "three", "four" });
+        using UiHost host = new(UsKernelWidgetRegistrar.Scope, UiLayoutManifest.Parse(xml), bindings,
+            UsTheme.Surface(), new Program.StubMetrics(), new PopupProbeTranslation());
+        Rect viewport = new(0f, 0f, 200f, 600f);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
         var navRects = new List<Rect>();
         try
         {
             SetButtonOverride(rect =>
             {
-                // The compact nav card measures ~144x49 under the stub metrics (160 column minus the
-                // widget's 2x8 padding), so the old >=160/>=50 filter no longer matches it: keep enough
-                // width to exclude support-row controls and a height floor that still isolates rows.
                 if (rect.width >= 100f && rect.height >= 30f) navRects.Add(rect);
                 return false;
             });
-            ctx.Host.DrawChecked(ctx.Viewport);
+            host.DrawChecked(viewport);
         }
-        finally
-        {
-            ClearOverrides();
-        }
-
-        Assert(navRects.Count >= 1, "expected at least one nav row for the covered-click case");
-        Rect target = navRects.OrderBy(r => r.y).ThenBy(r => r.x).First();
-        Rect targetWindow = target;
-        string tabBefore = ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string t0) ? t0 : "";
-        Assert(tabBefore == "Tuning", "the lane must start on Tuning, got " + tabBefore);
-
-        // Anchor a scope-dropdown popup just above the target so it opens downward over the control.
-        string? owner = null;
-        Rect popup = default;
-        foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
-        {
-            ctx.Host.Session.OpenPopup("scope-tree-scope-" + key, new Rect(targetWindow.x, targetWindow.y - 24f, targetWindow.width, 22f));
-            ctx.Host.DrawChecked(ctx.Viewport);
-            ctx.Host.DrawChecked(ctx.Viewport);
-            if (TryGetPopupHitLayerFromHost(ctx.Host, out UiHitLayer layer))
-            {
-                owner = key;
-                popup = layer.Rect;
-                break;
-            }
-
-            ctx.Host.Session.ClosePopup();
-        }
-
-        Assert(owner != null, "no scope dropdown published a popup layer for the covered-click case");
-        Vector2 pointerWindow = new(targetWindow.x + targetWindow.width / 2f, targetWindow.y + targetWindow.height / 2f);
-        Assert(popup.x <= pointerWindow.x && pointerWindow.x <= popup.xMax
-            && popup.y <= pointerWindow.y && pointerWindow.y <= popup.yMax,
-            "the popup must really cover the target control; popup=" + popup + " target=" + targetWindow);
-
+        finally { ClearOverrides(); }
+        Assert(navRects.Count == 5, "the fixture must capture exactly the five production nav rows");
+        Rect target = navRects.OrderBy(r => r.y).First();
+        host.Session.OpenPopup("probe-dropdown", snapshot.RectById["probe-dropdown"]);
+        host.DrawChecked(viewport);
+        host.DrawChecked(viewport);
+        Assert(TryGetPopupHitLayerFromHost(host, out UiHitLayer layer), "the real dropdown must publish a popup");
+        Vector2 pointerWindow = new(target.x + target.width / 2f, target.y + target.height / 2f);
+        Assert(layer.Rect.x <= pointerWindow.x && pointerWindow.x <= layer.Rect.xMax
+            && layer.Rect.y <= pointerWindow.y && pointerWindow.y <= layer.Rect.yMax,
+            "the actual popup must cover the first nav row");
         try
         {
             SetMousePosition(pointerWindow);
             SetButtonOverride(rect => RectMatches(rect, target));
-            ctx.Host.DrawChecked(ctx.Viewport);
-            Assert(!(ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string coveredTab) && coveredTab != tabBefore),
-                "a popup-covered control must not take the click (ctx overload); a raw UiNative.Button(Rect) site fails here");
-
-            // Positive control: same pointer, same click, popup gone - the tab must now switch.
-            ctx.Host.Session.ClosePopup();
-            ctx.Host.DrawChecked(ctx.Viewport);
-            ctx.Host.DrawChecked(ctx.Viewport);
-            SetButtonOverride(rect => RectMatches(rect, target));
-            ctx.Host.DrawChecked(ctx.Viewport);
-            string tabAfter = ctx.Host.Bindings.TryGet(UiBindings.ActiveTabKey, out string t1) ? t1 : "";
-            Assert(tabAfter != tabBefore,
-                "with no popup the same click must reach the control (positive control for the yield assertion); tab stayed " + tabAfter);
+            host.DrawChecked(viewport);
+            Assert(activeTab == "Tuning", "a popup-covered nav control must not take the click (ctx overload)");
+            host.Session.ClosePopup();
+            host.DrawChecked(viewport);
+            Assert(activeTab == "Overview", "without the popup the same click must reach the nav row");
         }
         finally
         {
             ClearMousePosition();
             ClearOverrides();
-            ctx.Host.Session.ClosePopup();
+            host.Session.ClosePopup();
         }
+    }
+
+    private sealed class PopupProbeTranslation : IUiTranslation
+    {
+        public string Translate(string key) => key;
+        public int TranslationRevision => 0;
     }
 
     private static bool TryGetPopupHitLayerFromHost(UiHost host, out UiHitLayer layer)

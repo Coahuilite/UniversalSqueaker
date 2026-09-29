@@ -187,6 +187,10 @@ internal static class UsHelpCatalog
                 // (including the zero-nutrition boundary), and the child's entry explains the
                 // chewing/lighting authority plus its fallback to the whole eating job.
                 new HelpItem(
+                    "us/basic-tuning/baby-actions",
+                    "US.Help.BasicTuning.BabyActions.Label",
+                    "US.Help.BasicTuning.BabyActions.Text"),
+                new HelpItem(
                     "us/basic-tuning/eat-precision",
                     "US.Help.BasicTuning.EatPrecision.Label",
                     "US.Help.BasicTuning.EatPrecision.Text"),
@@ -243,6 +247,25 @@ internal static class UsHelpCatalog
                     "us/diagnostics/localize-debug",
                     "US.Diagnostics.LocalizeDebugMenu",
                     "US.Help.Diagnostics.LocalizeDebug.Text"),
+                // R3-B: the developer layout diagnosis controls. One entry per control, because the help
+                // gate is bidirectional - a manifest HelpKey with no catalog item is dead hover, and a
+                // catalog item no control claims is dead content.
+                new HelpItem(
+                    "us/diagnostics/layout-diagnosis",
+                    "US.Diagnostics.Geometry.Label",
+                    "US.Help.Diagnostics.LayoutDiagnosis.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-capture",
+                    "US.Diagnostics.Geometry.Capture",
+                    "US.Help.Diagnostics.LayoutCapture.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-outline",
+                    "US.Diagnostics.Geometry.Outline",
+                    "US.Help.Diagnostics.LayoutOutline.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-report",
+                    "US.Diagnostics.Geometry.Report",
+                    "US.Help.Diagnostics.LayoutReport.Text"),
             }),
         ["us/scope-tree"] = new HelpSection(
             "us/scope-tree",

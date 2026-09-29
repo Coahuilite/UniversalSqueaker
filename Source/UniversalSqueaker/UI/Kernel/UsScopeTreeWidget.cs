@@ -73,9 +73,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float MoodGap = 6f;
 
     // Keyed display text. Every bound value stays untouched: the tuning layer is the "tuning-layer"
-    // int index, scope options bind SqueakActionScope.ToString(), the domain dropdown binds the
-    // (race, xeno) pair and the stepper element ids are built from enums. Only the text drawn to the
-    // player goes through these keys, resolved at the site that owns the Label/SelectionButton call.
+    // int index, scope options carry the SqueakActionScope value itself (R4-A / A2 - no string token),
+    // the domain dropdown carries the typed (race, xeno) selection and the stepper element ids are built
+    // from enums. Only the text drawn to the player goes through these keys, resolved at the site that
+    // owns the Label/SelectionButton call.
     private const string LayerLabelKey = "US.Tuning.Layer";
     private const string DomainLabelKey = "US.Tuning.Domain";
     private const string ActionScopeHeaderKey = "US.Tuning.ActionScope";
@@ -360,12 +361,14 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float dropdownWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 160f));
         Rect dropdownRect = new(rect.xMax - dropdownWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, dropdownWidth, ButtonHeight);
 
-        var options = new List<KeyValuePair<string, string>>();
-        string current = "";
+        // R4-A / A2: the option value is the typed selection itself, so the commit no longer splits a
+        // delimiter-joined token. Same labels, same trigger width, same popup.
+        var options = new List<UiChoice<UsTuningDomainSelection>>();
+        UsTuningDomainSelection current = default;
         foreach (TuningDomainOptionView domain in domains)
         {
-            string value = domain.RaceDefName + "\u0001" + domain.TargetDefName;
-            options.Add(new KeyValuePair<string, string>(domain.DisplayName, value));
+            var value = new UsTuningDomainSelection(domain.RaceDefName, domain.TargetDefName);
+            options.Add(new UiChoice<UsTuningDomainSelection>(domain.DisplayName, value));
             if (string.Equals(domain.RaceDefName, race, StringComparison.Ordinal)
                 && string.Equals(domain.TargetDefName, xeno, StringComparison.Ordinal))
             {
@@ -373,12 +376,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             }
         }
 
-        UsKernelDraw.Dropdown(dropdownRect, "scope-tree-domain", ctx, current, options, selected =>
-        {
-            string[] parts = selected.Split(new[] { '\u0001' }, StringSplitOptions.None);
-            if (parts.Length != 2) return;
-            ctx.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection(parts[0], parts[1]));
-        });
+        UsKernelDraw.Dropdown(dropdownRect, "scope-tree-domain", ctx, current, options,
+            selection => ctx.Bindings.Invoke("set-tuning-domain", selection));
     }
 
     private void DrawScopeRow(Rect rect, ActionScopeRowView row, UiWidgetContext ctx)
@@ -411,26 +410,24 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 TextAnchor.MiddleLeft);
         }
 
-        var options = new List<KeyValuePair<string, string>>
+        // R4-A / A2: the option list carries the TYPED value, and the Auto entry carries a real null - the
+        // null-inherit commit is a value, not an empty token. Nothing here converts a scope to a string.
+        var options = new List<UiChoice<SqueakActionScope?>>
         {
-            new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, AutoLabelKey), "")
+            new UiChoice<SqueakActionScope?>(UsKernelDraw.Keyed(ctx, AutoLabelKey), null)
         };
         foreach (SqueakActionScope scope in SupportedStates(row.Action))
         {
-            options.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, ScopeLabelKey(scope)), scope.ToString()));
+            options.Add(new UiChoice<SqueakActionScope?>(UsKernelDraw.Keyed(ctx, ScopeLabelKey(scope)), scope));
         }
 
-        string current = row.HasOwnScope ? row.Scope.ToString() : "";
+        SqueakActionScope? current = row.HasOwnScope ? row.Scope : null;
         Rect dropdownRect = new(rect.xMax - scopeButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, scopeButtonWidth, ButtonHeight);
         string elementId = "scope-tree-scope-" + row.ActionKey;
-        UsKernelDraw.Dropdown(dropdownRect, elementId, ctx, current, options, selected =>
+        UsKernelDraw.Dropdown(dropdownRect, elementId, ctx, current, options, scope =>
         {
-            SqueakActionScope? scope = null;
-            if (selected.Length > 0 && Enum.TryParse(selected, true, out SqueakActionScope parsed))
-            {
-                scope = parsed;
-            }
-
+            // The chosen option's own value, straight through: no parse, no default, and a row that owned
+            // no scope still commits null.
             ctx.Bindings.Invoke("set-action-scope", new UsScopeWrite(row.ActionKey, scope));
         });
     }
@@ -895,10 +892,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     }
 
     /// <summary>
-    /// Display-text key of a scope. Purely cosmetic: the bound value of a scope option is always
-    /// <c>scope.ToString()</c>, nothing parses this text back, and the inherited-scope hint is the only
-    /// other consumer. That is what lets the short label be translated while the persisted value stays
-    /// byte-identical.
+    /// Display-text key of a scope. Purely cosmetic: the option's bound value is the
+    /// <see cref="SqueakActionScope"/> instance itself (R4-A / A2), so the short label can be translated
+    /// while the committed value keeps its real identity. The inherited-scope hint is the only other
+    /// consumer.
     /// </summary>
     private static string ScopeLabelKey(SqueakActionScope scope)
     {

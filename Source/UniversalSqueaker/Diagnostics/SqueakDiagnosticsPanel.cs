@@ -84,7 +84,11 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    /// <summary>
+    /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope exists in every
+    /// logging mode (the developer geometry commands need a scope to target); only the text-fit audit inside it
+    /// follows the logging policy.
+    /// </summary>
     private UniversalSqueaker.UI.UsTextFitAudit? audit;
 
     protected override UiHost CreateHost()
@@ -92,9 +96,11 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         UiHost host = UsDiagnosticsHost.CreateMain(source);
         // Per-HOST audit (FL-20): before this, this window shared the settings window's one process-wide
         // Enabled/sink, so its overflow findings were logged as if the settings page had produced them and
-        // were measured with the settings window's ruler. Its own subscription ends both (the dev-logging
-        // gate is the same policy decision the settings window makes).
-        audit = SqueakLog.ShouldEmitDev ? UniversalSqueaker.UI.UsTextFitAudit.Open(host) : null;
+        // were measured with the settings window's ruler. Its own subscription ends both.
+        //
+        // `SqueakLog.ShouldEmitDev` remains the FIT-AUDIT policy (unchanged); it no longer decides whether a
+        // scope exists, because the layout-diagnosis commands need one in every mode.
+        audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
         return host;
     }
 

@@ -58,7 +58,11 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    /// <summary>
+    /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope exists in every
+    /// logging mode, so the per-host developer commands always have a scope to target; only the text-fit audit
+    /// inside it follows the logging policy.
+    /// </summary>
     private UniversalSqueaker.UI.UsTextFitAudit? audit;
 
     protected override UiHost CreateHost()
@@ -67,7 +71,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         // Per-HOST audit (FL-20). The detail windows are the multi-INSTANCE case, so the routing gain is at
         // its clearest here: two open detail windows used to share one sink, and with one window per
         // subscription their findings cannot overwrite each other.
-        audit = SqueakLog.ShouldEmitDev ? UniversalSqueaker.UI.UsTextFitAudit.Open(host) : null;
+        audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
         return host;
     }
 

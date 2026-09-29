@@ -98,6 +98,10 @@ public static class UsKernelSettingsHost
         if (source is UsKernelSettingsSource production)
         {
             production.AttachRevisionSource(() => host.Session.ContentRevision);
+            // R3-B: the layout-diagnosis commands are PER HOST, so the production source is told which host
+            // it draws. One place here rather than in every window; a harness fake attaches its own host
+            // explicitly in the lane that needs per-host separation.
+            production.AttachHost(host);
         }
 
         return host;
@@ -408,6 +412,7 @@ public static class UsKernelSettingsHost
         // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
         // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
         // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
+        writes.Value<bool>("allow-baby-actions", () => source.BuildView().AllowBabyActions, value => { source.SetBabyActions(value); bump(); });
         writes.Value<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
         writes.Value<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
 
@@ -473,6 +478,22 @@ public static class UsKernelSettingsHost
         // The localize row is the page's own square toggle over the same writable bool the composite's
         // checkbox wrote; the manifest names it in both Bind and SelectedKey, like the camera-indicator row.
         writes.Value<bool>("localize-debug-menu", () => source.BuildView().LocalizeDebugActions, value => { source.SetLocalizeDebugActions(value); bump(); });
+
+        // Developer layout diagnosis (R3-B). Three REAL commands the manifest dispatches: capture on/off,
+        // the captured-rect outline, and ONE report. Nothing here is implicit - the geometry instrument used
+        // to be switched on as a side effect of detailed logging, which is the coupling this replaces.
+        //
+        // Both switches are writable VALUE bindings over the source's own developer flags, which is the
+        // cleanest truthful shape: the flag is set from whether the instrument HONOURED the request, so get
+        // and set always agree and a refused request cannot leave a switch showing a capture that is not
+        // running. The status sentence beside them is a READ-ONLY bound string for the same reason the timing
+        // caption is: the unavailable case is carrier state the manifest has no expression for.
+        writes.Value<bool>("layout-capture", () => source.LayoutCaptureOn,
+            value => { source.SetLayoutCapture(value); bump(); });
+        writes.Value<bool>("layout-outline", () => source.LayoutOutlineOn,
+            value => { source.SetLayoutOutline(value); bump(); });
+        writes.Command("request-layout-report", () => { source.RequestLayoutReport(); bump(); });
+        bindings.BindReadOnly<string>("layout-diagnosis-status", () => source.LayoutDiagnosisStatus);
 
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);

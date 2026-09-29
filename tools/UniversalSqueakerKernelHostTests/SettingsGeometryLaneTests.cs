@@ -215,7 +215,7 @@ internal static class SettingsGeometryLaneTests
         try
         {
             UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
         }
         finally
@@ -505,8 +505,8 @@ internal static class SettingsGeometryLaneTests
                 host.Bindings.Invoke("set-tab", "Overview");
                 Rec rec = Record(host, 1024f, Height);
                 (offCard, offSlots) = BasicTuningSlotGeometry(rec);
-                Assert(offSlots.Count == 5,
-                    "with the parent OFF the card draws five support checkboxes (egg + three scalings + the"
+                Assert(offSlots.Count == 6,
+                    "with the parent OFF the card draws six support checkboxes (egg + baby + three scalings + the"
                     + " parent) - the child row does not exist at all, got " + offSlots.Count);
                 Assert(!rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
                     "and the child ROW must leave the arrangement entirely, not merely paint nothing:"

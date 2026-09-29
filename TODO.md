@@ -10,11 +10,32 @@
 
 Ordered by what unblocks what. Each item's detail lives in the section it names.
 
-- [ ] **1. The Packs workspace's race row does not respond to a click** (the filter does). Reported logs show
-  no exception or recovery; this does not establish whether the command was reached. `Chrome="none"` does
-  not skip `UiNative.Button` in the current implementation. Overlay order, event consumption, clipping and
-  the `MatchContent` band's actual geometry still need in-game evidence. **The carrier's dev geometry dump is the
-  instrument that answers it** (`MEMORY.md` "Handover — start here", item 2). The dump requires the paired Dev packages; real-game reproduction and acceptance are still pending.
+- [ ] **R3-B in-game check (developer tool, NOT a player feature):** open Overview → the Diagnostics card.
+  The layout controls appear under "Developer log level". With a DEV library package: Capture on → the status
+  line reads "Capturing this window's layout"; Report writes ONE geometry block to the log and a second press
+  writes another; the capture switch off stops it. With a RELEASE library package the status must read
+  "Not available: this build has no layout instrument" and neither switch may do anything - that refusal is
+  the point of the slice, and "a clean empty report" is the failure it prevents. Not compiled or run this
+  round: every lane written for it is UNRUN.
+- [ ] **R3-B-CORR-US build + lane check (PM):** both configurations must compile with zero warnings after the
+  guard split (`geometryEnabled` / `reportPending` / the report payload / the scope registry are unconditional;
+  only the carrier calls and `reportRequestPass` are `US_DEV`), and the KernelHost Dev run must pass
+  `LayoutDiagnosisIsPerHost`, `TheReportIsOneShot` and the re-cut `RepeatedClicksAreSeparateEvidence`.
+  The two in-game checks above still stand and depend on the carrier FL payload, not on this repository.
+
+- [x] **1a. P1 composite popup arbitration:** maintainer passed Packs/Tuning A/B; preserve the owner-id
+  repair and covered-control guards.
+- [ ] **1. Paired-package game acceptance:** open a Packs/Tuning dropdown, then scroll its containing page;
+  it must follow a visible trigger and close when the trigger leaves the inner clip or disappears. Check
+  the new Overview baby-action square switch: default OFF, coverage 15/15 versus 15/17 for a pack with only
+  the 15 normal actions, editor visibility, immediate effect and persistence. ON with both extra resources
+  permits 17/17; no Biotech keeps both ineligible. Genuine MentalBreak remains independent. Actual playback
+  still needs game evidence and matching pack resources. Technical verification and packaging passed;
+  do not request the old C0-C6 matrix again.
+- [ ] **1b. Modern settings design:** retain left navigation, main content and contextual help. Implement
+  shell/Overview, then Packs, then Tuning as consumer slices using existing FL composition/style surfaces.
+  Selected-row text readability and navigation-background enclosure remain visible P2 defects, not closed
+  by a design preview. Judge any proposed new kind by Structure/Layout/Semantics/Appearance ownership.
 - [x] **2. Paired Dev build path:** `docs/build-and-debug.md`. Builds are isolated, US explicitly selects the FL artifact, and package staging verifies the actual compiler-reference hash. This does not close item 1's in-game acceptance.
 - [ ] **3. Claims carried as claims** (each has its own line in §S6 and in `MEMORY.md`): the square toggle's
   press path and hover lane; the 24 → 36 widening's lane re-cut at the 320 shape; row fill / row hover (the
@@ -121,6 +142,34 @@ no `HeightKey`).
   inset (the atoms read `theme.Geometry.Padding` as their own inset), so it needs its own slice and its own
   in-game look; spec §3 records why it was separated.
 
+## R12-US — landed statically, NOT compiled or run (2026-09-28)
+
+**One bounded pass, static only: the shell sandbox is failing OS-side, so nothing was built, gated or run.**
+The durable half is the first section of `MEMORY.md`; the consumer-side contract page is
+`docs/r12-us-theme-contract-zh.md`. What this changes for the ONE collected in-game pass below:
+
+- [ ] **The nine ON/OFF controls are the carrier's `input/checkbox` now** (`Appearance="switch"`), and
+  `us/square-toggle` is retired. Same bands (36x30), same bools, same `SelectedKey` pairing — but the ON
+  track is the carrier's `Active` role (`Selected` fill + its edge) with **the accent itself (`AccentGold`)
+  on the knob** instead of the US kind's accent-alpha fill + saturated-accent edge. The ON signal is
+  therefore the fill plus the accent knob; the accent knob was restored by the carrier owner, so the ON state
+  still carries the series accent, but the perimeter carries less gold than before.
+  **Add to the real-screen list: does ON still read at a glance?**
+- [x] **US owns the complete `DarkGold` baseline** the carrier used to contribute: all 23 colour tokens
+  including `AccentGold` (`#d19a38`, unchanged) and the four per-surface edges, claimed at US's own
+  `Border`/`BorderStrong` values — the colours US actually painted before the template was retired.
+  **R12-CORR fixed an earlier round that had written the carrier template's own edge colours instead**, which
+  would have moved four surfaces' edges; the lane now pins *claimed value == shared token*, not a hex.
+- [x] **A palette is colour-only and repaints scoped regions** through the carrier's `ColourRevision` clock,
+  with no layout move and no session/focus/popup reset. The lane splits its evidence: a recorded DRAW for
+  "the palette reached the paint", an unchanged rect map + revision for "no layout moved", and the session's
+  own bookkeeping for "a colour is not a structural event" — it does **not** claim all-state redraw proof.
+- [x] **`UsFontMigration.cs` deleted** — the carrier's legacy `<Font>` redirect is the migration, and a
+  consumer-side copy of its mapping was redundant.
+- [ ] **NOT verified in any way that requires execution**: every lane written in this pass
+  (`UsPaletteLaneTests`, the re-cut `UsSquareToggleLaneTests`, the re-cut `Declarative*` assertions) is
+  UNRUN. The build owner runs them.
+
 ## The one collected in-game pass (maintainer; do NOT run these scattered)
 
 - [ ] **Single session, in this order**: (1) the new skeleton — the header does not scroll, the title band, the
@@ -157,10 +206,13 @@ no `HeightKey`).
   buttons in the page's Row rhythm instead of one segmented control, the localize row is the square toggle, and
   its row heights/paddings follow the declarative card rhythm. Look for: does the flat card read as part of the
   page, do the three buttons read as ONE choice, and does the localize toggle's ON state read at a glance?
-- [ ] **The seven square toggles at their new band (S6-3 follow-up)**: 36 wide, so the track renders 34x18
-  with a 16px knob throw, one neutral `Border` edge in both states, the accent on the ON knob. Needs a real
-  screen: does the ON state read at a glance, and does the wider control still fit the egg row at the narrow
-  tier?
+- [ ] **The eight square switches at their band (S6-3 follow-up + R12-US)**: 36 wide, so the carrier's track
+  renders 34x18 with a 16px knob throw. **The material changed with R12-US** and this line is re-cut to say what
+  the shared kind actually paints: OFF = the raised fill + the control-edge ladder (`BorderStrong`, else
+  `Border`) with `TextPrimary` on the thumb; ON = the `Selected` pair with **`AccentGold` on the thumb** (the
+  carrier restored the accent, so the state still reads as the series accent — but the perimeter no longer
+  carries it). Needs a real screen: does the ON state read at a glance, and does the wider control still fit
+  the egg row at the narrow tier?
 - [ ] **Packaging pre-flight**: the dev package is a **folder** — drop it in `Mods/`, no zip; read the package
   `version.txt` `carrier=` line before entering the game and confirm it is a `Release` carrier (on mismatch
   rebuild per the stager's refusal message).

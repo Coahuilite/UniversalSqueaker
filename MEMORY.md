@@ -6,8 +6,145 @@
 > **The pre-compaction text of this file and of `TODO.md` is archived byte-verbatim in `OBLIVIONIS.md`
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
+## PM integration checkpoint — 2026-09-30
+
+R1/R2/R3/R4-A pass the current 15-gate integration chain against the explicit current FL Dev carrier. PM fixed the dropdown's omitted current-value argument and its fixture: supported Eat/Disabled, MouseDown+MouseUp, actual Draft/null setter call and no outside-click write. FL and Demo checks also pass. This supersedes historical UNVERIFIED RUNTIME notes below. Game acceptance awaits the final integrated package. User authorized local checkpoint commits, not publication.
+
+## R4-A: the action-scope option carries its value, and the row index is the bridge (2026-09-29)
+
+- **The anti-pattern is gone.** `UsScopeTreeWidget` bound the scope as text (`scope.ToString()`) and
+  reversed it with `Enum.TryParse` on the commit path; the domain dropdown joined a `\u0001` token and
+  split it. Both commits now take the option's own typed value straight into
+  `Invoke("set-action-scope", new UsScopeWrite(...))` / `set-tuning-domain`.
+- **`UsKernelDraw.Dropdown<T>` is the typed form** (`UsKernelDraw.cs:643`) over FL's
+  `UiChoice<T>` (label `Text` + value `Value`); the trigger matches the current value by VALUE, never by
+  label. The string overload (`:610`) keeps the filter bar's path and its exact display rule, and both
+  share one private `DrawDropdownCore` (`:684`), so the popup layer push, the clamp/flip and the
+  owner-id hit rule still exist once.
+- **The row list FL draws is still string-payloaded, so the payload is the ROW INDEX** - a chosen row maps
+  straight back to its own `UiChoice<T>`. Matching by label instead would collapse two options that share
+  a label; that is why the bridge is an index and not the label or the value.
+- **`IUiTypedChoices` is deliberately unused here.** It is for a NON-generic widget that cannot name the
+  consumer's `T`; `UsScopeTreeWidget` can name `SqueakActionScope?`, so it consumes the carrier directly
+  and needs no type-erased probe. Nothing from this flow was missing.
+- **Null-inherit stayed a value:** the Auto entry is `new UiChoice<SqueakActionScope?>(label, null)` and
+  `row.HasOwnScope ? row.Scope : null` is the current value, so a row with no own scope still commits
+  `null` rather than a default scope.
+- **UNVERIFIED RUNTIME:** no build, gate or game run (the shell boundary stands). The new lane
+  (`Program.cs` step "a scope option commits its typed value, never its label (R4-A)") drives the real
+  popup and a real option-row press but has never executed.
+
+## R3-B: layout diagnosis is an explicit per-host developer control (2026-09-29; R3-B-CORR-US applied)
+
+- **The geometry instrument is no longer coupled to logging.** `UsTextFitAudit.Open` used to enable it, so
+  "set the log level to Enabled" silently started capturing every rect. It is now switched per host through
+  `UsTextFitAudit.SetGeometryCapture(host, on)` / `SetGeometryOverlay` / `RequestGeometryReport`, default OFF,
+  wired to three real page commands (`layout-capture`, `layout-outline`, `request-layout-report`).
+  `DisplayWriteAdvancesSharedRevision` covers all three as display writes, and the `!GeometryEnabled` assert
+  right after `Open` in `UsAuditRoutingLaneTests` is the decoupling's mutation proof.
+- **`Open(host, auditFit)` separates the SCOPE from the POLICY (R3-B fix 4).** Every US window opens its scope
+  in every logging mode, because the per-host developer commands resolve a scope by host identity - a command
+  with no open scope is dead, which was the measured per-host lane failure. `auditFit` is
+  `SqueakLog.ShouldEmitDev` at all three call sites and gates ONLY the text-fit audit (the process-wide
+  `UiFitAudit.Enabled` reference count and the ring drain), so the FIT/RECOVERY policy is byte-for-byte what it
+  was. Consequence to remember: **a window must open a scope before its geometry command can do anything** -
+  harness lanes must do the same or they test nothing.
+- **Status watching is not status changing (fix 3).** `GetDevGeometryStatus` is read-only; the capability probe
+  (`InstrumentAvailable`) asks the carrier once, caches the answer, and restores `GeometryEnabled` to false, so
+  only `SetGeometryCapture` ever leaves sampling on. The cached answer is why a later explicit enable still
+  succeeds after a status read already asked.
+- **Status vocabulary, so a release carrier is never a clean empty report:** `UsTextFitAudit.DevGeometryStatus`
+  answers `ScopeMissing` / `Off` / `Active` / `Overlay` / `Unavailable`, and it compiles in BOTH
+  configurations - a shipped build has to be able to say "the tool is not here". `geometryEnabled`,
+  `reportPending`, the report payload and the scope registry are unconditional; only the carrier CALLS and
+  `reportRequestPass` (nothing can ever be reported in Release) are `US_DEV`. That split is what made both
+  configurations compile with zero warnings: no pragma, no disabled warning, and no weakened refusal.
+- **The report is one-shot, explicit, and holds BOTH renderings of ONE capture.** `Publish` no longer emits
+  geometry at all (normal fit/recovery reporting is untouched): the Report command is the emission path, so a
+  business press costs no dump. `PublishGeometryReport(host)` returns the pass it described or -1; it waits for
+  a pass NEWER than the one that existed when it was clicked, then clears the request. `EmitGeometryReport`
+  reads `TryGetGeometrySnapshot` and `DumpGeometry` together and retains both, exposed to the same-assembly
+  consumer as `UsKernelSettingsSource.LayoutReportSnapshot` (internal: `UiDevGeometrySnapshot` is public in FL
+  but unlisted in its own `docs/api-tiers.md`, so naming it in a PUBLIC US signature would make US a second
+  consumer of an unreviewed surface). `TheReportIsOneShot` asserts the retained snapshot's pass equals the
+  reported pass and that the text identity agrees.
+- **Nothing dangles.** A report requested while capture is off/unavailable is REFUSED at request time (source
+  pending stays false) instead of waiting for a later enable, and `Dispose` removes the scope entry in both
+  builds, so a closed window is never findable by a developer command.
+- **Per-host separation is a lane, not a comment:** `DiagnosticsPanelLaneTests.LayoutDiagnosisIsPerHost`
+  opens both windows' scopes first, asserts a status read before any enable leaves sampling off, drives the
+  settings page's real `layout-capture` binding and asserts the diagnostics panel's host stays off, that the
+  two report identities (`Diagnostics.Host` / `Session.Identity`) differ, and that closing one scope releases
+  only its own capture. The controls live on the Overview diagnostics card (two switches, a status line, a
+  Report button); the status line is a READ-ONLY bound string, so it paints in the disabled ink on purpose.
+- **UNVERIFIED RUNTIME:** no build, gate, harness or game run this round (the shell boundary stands). Every
+  behavioural claim here is static plus a written lane; there is no human gate for this slice.
+
+
+## R12-US: US owns its baseline, the palette is colour-only, the switch is the carrier's (2026-09-28)
+
+- **The carrier deleted `UiTheme.DarkGold`; US owns the COMPLETE baseline.** `UsTheme.SchemeXml` now
+  declares all 23 colour tokens the retired template contributed, starting from `Configure(UiTheme.Vanilla)`
+  (`Source/UniversalSqueaker/UsTheme.cs`). Two facts worth keeping: **`AccentGold` = `#d19a38`** (the value
+  the deleted template carried, unchanged - the identity did not move with the ownership), and the four
+  per-surface edges are **claimed at US's own shared tokens' values** (`BaseBorder`/`PanelBorder`/
+  `RaisedBorder` = `Border` `#575247`, `HoverBorder` = `BorderStrong` `#6b6459`). **Corrected 2026-09-28
+  (R12-CORR):** those are the colours US actually PAINTED before this file owned the baseline (at HEAD it
+  started from DarkGold with every per-surface edge null and then applied its own `Border`/`BorderStrong`,
+  so each resolved through `?? Border` / `?? BorderStrong`); an earlier round wrote the carrier template's
+  own `#333330` / `#524d4c` into those slots, which moved four surfaces' edges - that was the defect this
+  correction fixed. Claiming rather than leaving them unclaimed makes "complete owned baseline" literal, and
+  the lane pins **claimed value == shared token** (not a frozen hex) so either half moving alone reddens.
+  `SelectedBorder` stays unclaimed on purpose (its fallback IS the accent, and a flat scope aliases it away to
+  spell "no box"); `SuccessBorder` stays unclaimed per its documented `?? BorderStrong` fallback.
+- **The carrier has TWO clocks now, and a palette may only move one.** `UiTheme.ColourRevision` moves on any
+  colour assignment that changes a value; `LayoutRevision`'s writers remain `DefaultFont` and `Geometry`.
+  `UiStyleResolver.ThemeFor` drops its cached region clones when EITHER has moved, which is what fixes the
+  stale-scoped-colour defect: re-tinting the injected theme now repaints a scoped region, and the arrangement,
+  the layout clock, node identity, focus, hover claim, scroll position and an open popup are untouched.
+  `UsPaletteLaneTests` asserts the disjointness, the clone rebuild, the scope's own override still winning,
+  and "the repaint reaches a DRAW" through the stub's `LabelColors` recorder - observed paint, not a property
+  read back. **Evidence split, corrected 2026-09-28 (R12-CORR):** the draw half is
+  `TheRetintIsDrawnAndReusesTheArrangement` (recorded ink changes, solid count unchanged, then a re-arrange
+  whose rect map and `ContentRevision` are unchanged and whose scoped clone carries the new palette); the
+  session half is `APaletteChangeLeavesSessionStateAlone`, which asserts the session's own bookkeeping only
+  and **explicitly does not claim all-state redraw proof** - a US lane cannot aim a redraw at one control,
+  so that property stays with the carrier's resolver/popup lanes. Contract page:
+  `docs/r12-us-theme-contract-zh.md`.
+- **The nine ON/OFF controls are the carrier's `input/checkbox` with `Appearance="switch"`; the US-only kind
+  `us/square-toggle` is retired** with its file, its registration and its `UsSquareToggleLaneTests` subject
+  (the lane was re-cut onto the shared kind, not deleted). The Registrar's `us/*` set is **12** again
+  (`UiSourceInvariantTests`). Every band stays 36x30 and every control still names the same bool in `Bind`
+  and `SelectedKey`.
+- **R12-I's OFF edge: a real re-cut, not a loosening.** The carrier's switch paints the OFF track as
+  `RaisedSurface.Fill` + a **control-edge ladder** (`BorderStrong` when the palette claims one, else
+  `Border`). Asserting the OFF edge against `RaisedSurface.Border` was self-contradictory under US's flat
+  scope, where `Raised == RaisedBorder` IS "no box": both halves would have collapsed onto the card face.
+- **R12-T: `UsFontMigration.cs` is DELETED.** The carrier's own legacy `<Font>` redirect now maps to a font
+  metric (never to a row height), records one issue naming the successor, and reports it through the
+  appearance channel - so a consumer-side ledger was a second convention free to contradict it.
+  `UsTheme.SchemeIssues` now only mirrors the carrier parser's own issues, and US's palette declares no font.
+- **NOTHING WAS COMPILED OR RUN.** No build, gate, harness or game ran in this session (the shell sandbox is
+  failing OS-side). Every claim in this section is a static reading plus written lanes; the in-game palette
+  and switch appearance check remains an open human step, and this foundation slice has NO human gate.
+
 
 ## Handover — start here (2026-09-22)
+
+**Current acceptance (2026-09-28):** the maintainer passed Packs and Tuning click-arbitration A/B.
+The separate live-popup scroll-anchor fix is in the paired FL Dev carrier; new game acceptance is pending.
+US Host fixtures now use drawn owners/anchors instead of synthetic popup teleportation; the revised nav
+occlusion and popup-width growth checks both failed under their targeted reverts.
+
+**Baby-action opt-in:** `allowBabyActions` defaults false and persists additively; effective eligibility also
+requires Biotech. Runtime admission, all action-scope layers and pack coverage share that policy. OFF
+excludes Crying/Giggling from both numerator and denominator (15 eligible); ON exposes/routes/counts them
+(17 eligible), without inventing missing resources or changing enum IDs and genuine MentalBreak routing.
+The Overview control is the carrier's `input/checkbox` with `Appearance="switch"` (the US-only
+`us/square-toggle` kind is retired - see the R12-I entry above). Policy, Scribe round-trip and typed-write reverts reddened
+their named assertions. The full 15-gate DevelopmentCarrier chain and paired build-dev passed; stub-based
+coverage is not in-game audio acceptance. Modern settings redesign remains authorized with the three
+columns and square switches retained; judge kinds by Structure/Layout/Semantics/Appearance ownership.
 
 > The first ten minutes of a new session. Everything here is a POINTER: the code, the manifests and the
 > carrier outrank this file. Nothing here pins a live artifact identity — see item 2's last line.
@@ -18,8 +155,8 @@
 2. `MEMORY.md` (this file), then `TODO.md` — the live action surface.
 3. `Source/UniversalSqueaker/UI/Layout.Schema2.xml` — the MAIN page manifest. `Layout.Overlay.Schema2.xml`
    beside it is the in-world camera overlay, not a second settings page.
-4. `Source/UniversalSqueaker/UI/Kernel/UsKernelWidgetRegistrar.cs` — the US-owned kind set: **13
-   `Register()` calls**. The cardinality is pinned by `UiSourceInvariantTests` (13) and the per-lane checks
+4. `Source/UniversalSqueaker/UI/Kernel/UsKernelWidgetRegistrar.cs` — the US-owned kind set: **12
+   `Register()` calls**. The cardinality is pinned by `UiSourceInvariantTests` (12) and the per-lane checks
    read `KnownKinds(scope)`, so a kind no manifest element uses, or a dropped registration, reddens.
 5. The maintainer's in-game checklist: `../modding_documents/team-mode/us-ingame-checklist-2026-09-22-zh.md`
    — a WORKSPACE-level path one directory above this repository; it is not in-tree.

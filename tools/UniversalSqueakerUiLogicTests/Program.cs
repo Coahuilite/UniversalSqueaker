@@ -289,7 +289,11 @@ internal static class Program
         // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item. The
         // eat-occurrence pair adds one entry per control: us/basic-tuning/eat-precision (parent) and
         // us/basic-tuning/eat-precision-include-drugs (the child row), 44 -> 46.
-        Assert(itemCount == 46, "catalog item count matches the shipped wiring table (46 items incl. the three per-row basic-tuning entries, the two eat-precision entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
+        // The baby-action opt-in adds its own help entry (46 -> 47).
+        // R3-B adds four: the diagnosis status line and its capture, outline
+        // and report controls (47 -> 51). The section overview is not an item. Each is claimed by a manifest
+        // HelpKey, which the bidirectional gate below checks in both directions.
+        Assert(itemCount == 51, "catalog item count matches the shipped wiring table (51 items: the baby-action opt-in plus R3-B's four layout-diagnosis entries): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).
@@ -439,7 +443,7 @@ internal static class Program
             "Giggling is hidden from the Action Scope editor by default");
         Assert(!ActionScopeRules.IsHiddenByDefault(SqueakAction.Call),
             "regular actions remain visible in the Action Scope editor");
-        Assert(!ActionScopeRules.ShowBiotechDefensiveActions,
+        Assert(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, false),
             "the Biotech defensive action UI switch defaults to hidden");
     }
 

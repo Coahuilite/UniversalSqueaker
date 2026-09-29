@@ -31,6 +31,21 @@
       <Color Token="SelectedBorder" Value="#3a311f" />
     </Scheme>
   </Styles>
+  <!-- R2 (2026-09-28): the eight ON/OFF controls are the CARRIER's boolean kind now, not a US kind.
+       `us/square-toggle` is retired with its registration and its file. The reason it existed is gone:
+       it was a kind because the SHAPE ("the knob sits left when false, right when true") depends on a bound
+       value, and no declarative element could express that. The carrier's `input/checkbox` gained the
+       additive `Appearance` attribute (`"switch"` is its default, `"checkbox"` the explicit alternative),
+       whose switch appearance draws exactly this control's proportions - 34x18 track, 14px knob, 2px inset,
+       6px label gap - over the SAME one boolean input path. One boolean BEHAVIOUR, two looks, so a second
+       kind would freeze vocabulary the attribute already carries.
+
+       What deliberately did NOT change: every band stays 36x30 (a 36-wide band is what lets the 34x18 track
+       render at its own size instead of being clamped), every control still names the same bool in `Bind` AND
+       `SelectedKey` (the engine's role resolution and the state the control paints must not be able to
+       disagree), and `Appearance="switch"` is written out rather than left to the default so the intent is
+       declared on the element. Height is the kind's own schema attribute; Width/AlignY/HelpKey/SelectedKey
+       are the engine-wide common vocabulary, so the migration is a kind swap and nothing else. -->
   <Column Id="page-root" Gap="8" Padding="12">
     <Row Id="header-band" Padding="0" Gap="6">
       <Widget Id="page-title" Kind="us/page-title" />
@@ -125,27 +140,31 @@
                 <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
                 <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
               </Column>
-              <Widget Id="basic-egg-check" Kind="us/square-toggle" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
+              <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
+            </Row>
+            <Row Id="basic-baby-row" Gap="8" Padding="0">
+              <Widget Id="basic-baby-label" Kind="text/wrapped" TextKey="US.Tuning.BabyActions" HelpKey="us/basic-tuning/baby-actions" />
+              <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/baby-actions" />
             </Row>
             <Row Id="basic-cooldown-row" Gap="8" Padding="0">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
-              <Widget Id="basic-cooldown-check" Kind="us/square-toggle" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
+              <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
             </Row>
             <Row Id="basic-talking-row" Gap="8" Padding="0">
               <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
-              <Widget Id="basic-talking-check" Kind="us/square-toggle" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
+              <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
             </Row>
             <Row Id="basic-population-row" Gap="8" Padding="0">
               <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
-              <Widget Id="basic-population-check" Kind="us/square-toggle" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
+              <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
             </Row>
             <Row Id="basic-eat-row" Gap="8" Padding="0">
               <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
-              <Widget Id="basic-eat-check" Kind="us/square-toggle" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
+              <Widget Id="basic-eat-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
             </Row>
             <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision">
               <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
-              <Widget Id="basic-eat-child-check" Kind="us/square-toggle" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+              <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
             </Row>
           </Column>
         </Section>
@@ -199,7 +218,7 @@
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0">
             <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
-            <Widget Id="camera-indicator-check" Kind="us/square-toggle" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
+            <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
           </Row>
         </Section>
         <!-- T3-2: the diagnostics card is DECLARATIVE and us/diagnostics is retired in the same change.
@@ -223,8 +242,34 @@
           </Row>
           <Row Id="diagnostics-localize-row" Gap="8" Padding="0">
             <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
-            <Widget Id="diagnostics-localize-check" Kind="us/square-toggle" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/localize-debug" />
+            <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/localize-debug" />
           </Row>
+          <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches and a status sentence, all bound
+               to real commands the host dispatches:
+                 layout-capture        - start/stop capturing every arranged node of THIS window's host
+                 layout-outline        - paint the outline around each captured draw rect (needs capture)
+                 request-layout-report - ONE report: the next drawn pass writes the capture to the layout
+                                         trace and clears the request, so a second pass writes nothing new
+               The status sentence is a READ-ONLY bound string, and that is why it paints in the disabled ink:
+               a read-only leaf is state, and state beats the authored role (the atom's own contract). It is
+               the right read for a diagnosis readout, and it is asserted in the lane rather than left to look
+               like an accident.
+
+               Deliberately plain: no new widget kind, no second collector, no export service. The capture the
+               report prints is the SAME per-host subscription capture the fit audit already drains. -->
+          <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
+          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpKey="us/diagnostics/layout-diagnosis" />
+          <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
+            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0">
+            <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedKey="layout-capture" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/layout-capture" />
+            <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+            </Row>
+            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0">
+            <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/layout-outline" />
+            <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+            </Row>
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" />
+          </Column>
         </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
              same change. Card chrome is the engine's Section with the checklist card's explicit geometry.

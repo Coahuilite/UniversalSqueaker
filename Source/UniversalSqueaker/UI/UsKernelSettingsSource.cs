@@ -1,4 +1,5 @@
 using System;
+using FerriteLib.UiKit.Kernel;
 using UnityEngine;
 using Verse;
 
@@ -102,6 +103,12 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetAllowEasterEggSounds(value);
     }
 
+    public void SetBabyActions(bool value)
+    {
+        settings.SetAllowBabyActions(value);
+        cachedView = null;
+    }
+
     public void SetEatPrecision(bool value)
     {
         settings.SetEatPrecision(value);
@@ -126,6 +133,123 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     {
         settings.SetDevLoggingMode(mode);
     }
+
+    // === Developer layout diagnosis (R3-B) =====================================================
+    // Per-window, never persisted, and NOT routed through UniversalSqueakerSettings: these are developer
+    // switches over this window's own diagnostic scope. The geometry instrument is per HOST, so enabling it
+    // here cannot reach the diagnostics panel's host or any other window's.
+    private UiHost? host;
+    private bool layoutCaptureOn;
+    private bool layoutOutlineOn;
+
+    /// <summary>
+    /// A report was asked for and has not been produced yet. The window consumes this after a real draw pass
+    /// (see <see cref="ConsumeLayoutReportRequest"/>), which is what makes the report one-shot: the request is
+    /// cleared in the same call that produces it, so the next pass reports nothing new.
+    /// </summary>
+    private bool layoutReportPending;
+
+    /// <summary>
+    /// The host this window's page is drawn by. The developer switches are per-host, and this is how a page
+    /// command reaches the instrument of ITS OWN host rather than a process-wide flag. The production host
+    /// factory attaches it (next to the revision source); a harness fake attaches its own.
+    /// </summary>
+    public void AttachHost(UiHost host)
+    {
+        this.host = host;
+    }
+
+    /// <summary>The switch's own checked state: what the instrument actually honoured, never the request.</summary>
+    public bool LayoutCaptureOn => layoutCaptureOn;
+
+    /// <summary>Whether the captured-rect outline is on for this window (blanked when capture is off).</summary>
+    public bool LayoutOutlineOn => layoutOutlineOn;
+
+    /// <summary>
+    /// The status sentence for the developer. The "unavailable" state is derived from the CARRIER, not from a
+    /// failed click: a development build on a release payload reports that the tool is missing, which is the
+    /// difference between "nothing was captured" and "capture cannot run here".
+    /// </summary>
+    public string LayoutDiagnosisStatus
+    {
+        get
+        {
+            if (host == null) return "US.Diagnostics.Geometry.NoScope".Translate();
+            switch (UsTextFitAudit.GetDevGeometryStatus(host))
+            {
+                case UsTextFitAudit.DevGeometryStatus.Unavailable:
+                    return "US.Diagnostics.Geometry.Unavailable".Translate();
+                case UsTextFitAudit.DevGeometryStatus.Overlay:
+                    return "US.Diagnostics.Geometry.Overlay".Translate();
+                case UsTextFitAudit.DevGeometryStatus.Active:
+                    return "US.Diagnostics.Geometry.Active".Translate();
+                case UsTextFitAudit.DevGeometryStatus.ScopeMissing:
+                    return "US.Diagnostics.Geometry.NoScope".Translate();
+                default:
+                    return "US.Diagnostics.Geometry.Off".Translate();
+            }
+        }
+    }
+
+    public void SetLayoutCapture(bool on)
+    {
+        bool honoured = UsTextFitAudit.SetGeometryCapture(host, on);
+        // A refusal is a status, not a silent no-op: the switch stays where the instrument actually is, and a
+        // refused capture cannot leave an outline switched on over nothing.
+        layoutCaptureOn = honoured && on;
+        if (!honoured && on) layoutOutlineOn = false;
+    }
+
+    public void SetLayoutOutline(bool on)
+    {
+        bool honoured = UsTextFitAudit.SetGeometryOverlay(host, on);
+        layoutOutlineOn = honoured && on;
+    }
+
+    public void RequestLayoutReport()
+    {
+        // A request that cannot be honoured is NOT left pending: the audit refuses it at request time, so
+        // nothing here can be satisfied by a later enable (R3-B fix 7).
+        layoutReportPending = UsTextFitAudit.RequestGeometryReport(host);
+    }
+
+    /// <summary>
+    /// Produces the pending report if a pass has completed since it was requested, clearing the request in the
+    /// same step. A return of -1 means "nothing was written" - no request, or the pass it waits on has not
+    /// completed - so the request survives to the next pass. One request is one report.
+    /// </summary>
+    public int ConsumeLayoutReportRequest()
+    {
+        if (!layoutReportPending || host == null) return -1;
+
+        UsTextFitAudit? scope = UsTextFitAudit.FindOpenScope(host);
+        int before = scope != null ? scope.LastGeometryReportPass : -1;
+        int pass = UsTextFitAudit.PublishGeometryReport(host);
+        if (pass >= 0)
+        {
+            layoutReportPending = false;
+            return pass;
+        }
+
+        // No report: either the pass it waits on has not completed (the request must survive - and the scope
+        // has still produced no report at all), or the request was refused/unavailable, which retires it. The
+        // distinction is "a report already exists", so a refused click can never dangle into a later enable.
+        if (scope == null || before >= 0) layoutReportPending = false;
+        return -1;
+    }
+
+    /// <summary>
+    /// The structured rendering of the last explicit geometry report, from the SAME capture as the text the
+    /// developer log carries (R3-B fix 5 / B1's "two renderings, one capture"). Null until a report exists.
+    /// <para>
+    /// internal, and here rather than on the audit, for the API-tier reason the audit's own accessor records:
+    /// the carrier's snapshot type is public there but unlisted in its <c>docs/api-tiers.md</c>, so a US
+    /// surface that names it must not be public. The harness reads it from this assembly against the real
+    /// bound commands, which is where the same-pass claim is asserted.
+    /// </para>
+    /// </summary>
+    internal UiDevGeometrySnapshot? LayoutReportSnapshot =>
+        host != null ? UsTextFitAudit.FindOpenScope(host)?.LatestGeometryReport : null;
 
     public void SetLocalizeDebugActions(bool value)
     {

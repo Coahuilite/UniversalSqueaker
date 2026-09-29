@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FerriteLib.UiKit.Kernel;
 using UniversalSqueaker.UI;
 
 namespace UniversalSqueaker.KernelHostTests;
@@ -196,7 +197,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilterOptions: Array.Empty<FilterOptionView>(),
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -342,7 +343,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions);
     }
 
     /// <summary>
@@ -401,6 +402,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
 
+    public bool AllowBabyActions;
+    public bool? LastBabyActions;
+    public void SetBabyActions(bool value) { LastBabyActions = value; AllowBabyActions = value; }
     public void SetEatPrecision(bool value) => LastEatPrecision = value;
 
     public void SetEatPrecisionIncludeDrugs(bool value) => LastEatPrecisionIncludeDrugs = value;
@@ -412,6 +416,88 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetDevLoggingMode(SqueakDevLoggingMode mode) => LastDevLoggingMode = mode;
 
     public void SetLocalizeDebugActions(bool value) => LastLocalizeDebugActions = value;
+
+    // === Developer layout diagnosis (R3-B) =====================================================
+    // The fake carries the same three commands and the same status surface as the production source, and it
+    // routes them through the SAME per-host helper the production path uses - so a lane that drives a real
+    // bound command exercises the real per-host separation rather than a fake that agrees with itself.
+
+    /// <summary>The host this fake's page draws into; attached explicitly by a lane that needs per-host
+    /// behaviour (the production factory attaches the real one).</summary>
+    internal UiHost? DiagnosisHost { get; private set; }
+
+    /// <summary>Records the host, mirroring <c>UsKernelSettingsSource.AttachHost</c>.</summary>
+    public void AttachHost(UiHost host) => DiagnosisHost = host;
+
+    public bool LayoutCaptureOn { get; private set; }
+
+    public bool LayoutOutlineOn { get; private set; }
+
+    public string LayoutDiagnosisStatus
+    {
+        get
+        {
+            if (DiagnosisHost == null) return "US.Diagnostics.Geometry.NoScope";
+            switch (UsTextFitAudit.GetDevGeometryStatus(DiagnosisHost))
+            {
+                case UsTextFitAudit.DevGeometryStatus.Unavailable: return "US.Diagnostics.Geometry.Unavailable";
+                case UsTextFitAudit.DevGeometryStatus.Overlay: return "US.Diagnostics.Geometry.Overlay";
+                case UsTextFitAudit.DevGeometryStatus.Active: return "US.Diagnostics.Geometry.Active";
+                case UsTextFitAudit.DevGeometryStatus.ScopeMissing: return "US.Diagnostics.Geometry.NoScope";
+                default: return "US.Diagnostics.Geometry.Off";
+            }
+        }
+    }
+
+    public void SetLayoutCapture(bool on)
+    {
+        bool honoured = UsTextFitAudit.SetGeometryCapture(DiagnosisHost, on);
+        LayoutCaptureOn = honoured && on;
+        if (!honoured && on) LayoutOutlineOn = false;
+    }
+
+    public void SetLayoutOutline(bool on)
+    {
+        bool honoured = UsTextFitAudit.SetGeometryOverlay(DiagnosisHost, on);
+        LayoutOutlineOn = honoured && on;
+    }
+
+    /// <summary>Counts report requests, so a lane can assert "one request, one report" without the log.</summary>
+    public int LayoutReportRequests { get; private set; }
+
+    /// <summary>
+    /// Whether a report request is outstanding. Mirrors the production source's pending flag: a request made
+    /// while capture is off or the instrument is unavailable is REFUSED, so this stays false and no later
+    /// enable can satisfy a stale click (R3-B fix 7).
+    /// </summary>
+    internal bool LayoutReportPending { get; private set; }
+
+    /// <summary>
+    /// The structured rendering of the last explicit report, from the SAME capture as its text (R3-B fix 5).
+    /// Mirrors the production source's accessor, which is internal for the API-tier reason recorded there.
+    /// </summary>
+    internal UiDevGeometrySnapshot? LayoutReportSnapshot
+    {
+        get
+        {
+            if (DiagnosisHost == null) return null;
+            // The production audit is in a separate assembly without friend access.
+            var find = typeof(UsTextFitAudit).GetMethod("FindOpenScope",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing audit scope accessor.");
+            var report = typeof(UsTextFitAudit).GetProperty("LatestGeometryReport",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing retained report accessor.");
+            object? scope = find.Invoke(null, new object[] { DiagnosisHost });
+            return scope == null ? null : (UiDevGeometrySnapshot?)report.GetValue(scope);
+        }
+    }
+
+    public void RequestLayoutReport()
+    {
+        LayoutReportPending = UsTextFitAudit.RequestGeometryReport(DiagnosisHost);
+        if (LayoutReportPending) LayoutReportRequests++;
+    }
 
     public void SetActiveTab(string tab)
     {

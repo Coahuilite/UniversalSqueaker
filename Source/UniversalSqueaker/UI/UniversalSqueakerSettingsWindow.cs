@@ -131,7 +131,11 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// </summary>
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    /// <summary>This window's own audit scope over its own host subscription; null while dev logging is off.</summary>
+    /// <summary>
+    /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope is opened in EVERY
+    /// logging mode (the developer geometry commands need a scope to target); only the text-fit audit inside it
+    /// follows the logging policy.
+    /// </summary>
     private UsTextFitAudit? audit;
 
     protected override UiHost CreateHost()
@@ -139,10 +143,12 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         source = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
         UiHost host = UsKernelSettingsHost.Create(source);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
-        // subscription and are measured with THIS host's ruler. The dev-logging gate stays the window's
-        // policy decision - with dev logging off no subscription is created at all, so the measuring cost
-        // is not paid (FL-20).
-        audit = SqueakLog.ShouldEmitDev ? UsTextFitAudit.Open(host) : null;
+        // subscription and are measured with THIS host's ruler.
+        //
+        // `SqueakLog.ShouldEmitDev` is still the policy, but it now selects the FIT AUDIT rather than whether
+        // a scope exists at all: with detailed logging off this window is a geometry-only handle (nothing is
+        // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
+        audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
         return host;
     }
 
@@ -158,6 +164,11 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
         // of the ring unread (FL-20).
         audit?.Publish();
+        // R3-B's one-shot report. It runs here, before the pass draws, so the capture it prints is the last
+        // pass that COMPLETED - the request is made during a draw, and this is the next one. One request is
+        // one report: the source clears its pending request in the same step that writes it, so the pass after
+        // that writes nothing, and a request whose pass has not completed yet simply waits.
+        source?.ConsumeLayoutReportRequest();
         mod.TickSettingsSaveForWindow();
         ApplyDrawerWidth();
     }

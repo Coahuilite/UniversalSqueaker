@@ -166,6 +166,14 @@ internal static class Program
         Step("unknown attribute fails at creation", UnknownAttributeFailsAtCreation);
         Step("typed bindings route to business boundary", TypedBindingsRouteToBusinessBoundary);
         Step("full typed write coverage", FullTypedWriteCoverage);
+        Step("baby eligibility uses the production metadata denominator", () =>
+        {
+            Assert(SqueakActionDefinitions.EligibleCount(false) == 15 && SqueakActionDefinitions.EligibleCount(true) == 17,
+                "coverage denominator follows the same opt-in");
+            Assert(!SqueakActionDefinitions.IsEligible(SqueakAction.Crying, false)
+                && !SqueakActionDefinitions.IsEligible(SqueakAction.Giggling, false)
+                && SqueakActionDefinitions.IsEligible(SqueakAction.MentalBreak, false), "baby gate leaves true breaks alone");
+        });
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
         Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
@@ -173,9 +181,10 @@ internal static class Program
         Step("the dissolved diagnostics composite is declarative and retired (T3-2)", () => DeclarativeDiagnosticsLaneTests.RunAll());
         Step("flat (borderless) style scope (S6-2/S6-3)", () => FlatStyleLaneTests.RunAll());
         Step("palette guard: flat pairs + ink contrast (S6-3)", () => PaletteLaneTests.RunAll());
-    Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
-    Step("the selected domain row paints a fill and a 3px rail (T21)", () => UsSelectionSurfaceLaneTests.RunAll());
-    Step("US square toggle: drawn relations + the whole-band hit rule (S6-3)", () => UsSquareToggleLaneTests.RunAll());
+        Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
+        Step("the selected domain row paints a fill and a 3px rail (T21)", () => UsSelectionSurfaceLaneTests.RunAll());
+        Step("US switch: the shared boolean kind's drawn relations (R2)", () => UsSquareToggleLaneTests.RunAll());
+        Step("US palette contract: colour-only, session-safe, missing vs transparent (R2)", () => UsPaletteLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
@@ -194,6 +203,7 @@ internal static class Program
         Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
         Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
+        Step("a scope option commits its typed value, never its label (R4-A)", TypedScopeChoiceCommitsTheValue);
         Step("long author filter truncates the display and writes the raw token", LongAuthorFilterTruncatesTheDisplayOnly);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
@@ -242,11 +252,10 @@ internal static class Program
         Rect viewport = new(0f, 0f, 800f, 600f);
         host.DrawChecked(viewport);
 
-        // Anchor low enough that two or more option rows cannot fit below it (the composite popup must
-        // flip above the trigger, the same branch the reported click loss exercised) and far enough
-        // right that the popup lands over a second widget: the yield rule below needs a node the popup
-        // really covers. The real page hands the trigger's own rect in; injecting the anchor is what
-        // lets this lane choose what sits underneath.
+        // Deliberately stale seed: the composite must replace it with its drawn trigger's live anchor.
+        // This lane no longer teleports the popup over another widget to force a flip. FL owns the
+        // independent below/flip/clamp geometry lanes; here we assert publication, live attachment and
+        // dispatch for a covered point through the actual production composite.
         Rect anchor = new(620f, 560f, 120f, 22f);
         string? publishedBy = null;
         Rect popup = default;
@@ -272,8 +281,12 @@ internal static class Program
             "composite popup height must be a whole number of option rows: " + popup.height);
         Assert(popup.y >= -0.01f && popup.yMax <= 600f + 0.01f,
             "composite popup must stay inside the host viewport: " + popup);
-        Assert(Math.Abs(popup.yMax - anchor.y) < 0.01f,
-            "a composite popup that cannot fit below its anchor must flip above it: " + popup);
+        Rect? liveAnchor = host.Session.OpenPopupAnchor;
+        Assert(liveAnchor.HasValue && Math.Abs(liveAnchor.Value.y - anchor.y) > 0.01f,
+            "the composite must replace the stale opening anchor with its actual trigger");
+        Assert(liveAnchor.HasValue && (Math.Abs(popup.y - liveAnchor.Value.yMax) < 0.01f
+            || Math.Abs(popup.yMax - liveAnchor.Value.y) < 0.01f),
+            "the composite popup must attach immediately below or above its live trigger");
 
         // 0.4.0 replaced the single published popup rect with the owned hit stack: UiPopup pushes a
         // popup layer and dispatch consults it topmost-first (UiSession.IsPointerOverHigherLayer).
@@ -295,7 +308,9 @@ internal static class Program
             "a popup layer must make a covered element yield the click (owned hit stack)");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, outside),
             "the yield predicate must not fire outside the popup");
-        Assert(!host.Session.IsPointerOverHigherLayer(owner!, inside),
+        Assert(host.Session.IsPointerOverHigherLayer(owner!, inside),
+            "a sibling sharing the composite node must yield to its popup");
+        Assert(!host.Session.IsPointerOverHigherLayer(owner!, inside, "scope-tree-scope-" + publishedBy),
             "the popup's own trigger keeps the click, which is what preserves toggle-to-close");
 
         // The layer is per-frame state: a second frame must republish it, and closing must drop it so a
@@ -307,6 +322,126 @@ internal static class Program
         Assert(!TryGetPopupHitLayer(host.Session, out _), "a closed composite popup must leave no popup layer");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, inside),
             "a closed popup must stop shadowing the elements it covered");
+    }
+
+    /// <summary>
+    /// R4-A / A2: the action-scope dropdown commits the option's TYPED value through
+    /// <c>set-action-scope</c> / <see cref="UsScopeWrite"/>. Driven through the real composite: the real
+    /// popup, a real pointer press on a real option row.
+    /// <list type="bullet">
+    /// <item>a row that owns no scope commits <b>null</b> - the value is not "whatever parses", and a
+    /// default scope would be a silent change of the player's setting;</item>
+    /// <item>a chosen scope arrives as the enum instance, and the label that was displayed is a different
+    /// string, so a commit that took the displayed text would red here;</item>
+    /// <item>the label/identity pair itself carries the separation: the option's text is the US key while
+    /// its value is the scope, which is what "display label separate from typed value" means.</item>
+    /// </list>
+    /// </summary>
+    private static void TypedScopeChoiceCommitsTheValue()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.Bindings.Set("help-open", false);
+        Rect viewport = new(0f, 0f, 800f, 600f);
+        host.DrawChecked(viewport);
+
+        // The fixture's Eat row is AnyOccurrence, so the press below is a real change; if that ever moves,
+        // the lane must say so rather than pass on a no-op commit.
+        Assert(fake.LastActionScope == null, "the lane starts from a clean commit record");
+
+        SqueakActionScope? committed = ClickScopeOption(host, fake, viewport, "Eat", SqueakActionScope.Disabled);
+        Assert(committed == SqueakActionScope.Disabled,
+            "a chosen scope option must commit the real enum instance, got "
+            + (committed.HasValue ? committed.Value.ToString() : "null"));
+        Assert(fake.LastActionKey == "Eat" && fake.LastActionScope == SqueakActionScope.Disabled,
+            "and it must arrive at SetActionScope unchanged");
+
+        committed = ClickScopeOption(host, fake, viewport, "Draft", null);
+        Assert(committed == null,
+            "a row with no own scope must commit null (inherit), not a default scope - got "
+            + (committed.HasValue ? committed.Value.ToString() : "null"));
+        Assert(fake.LastActionKey == "Draft" && fake.LastActionScope == null,
+            "and the Draft setter must actually receive null");
+
+        // A press that misses the option list must not write anything: the typed path is not a wider target
+        // than the row hit rule was.
+        PressScopePopup(host, fake, viewport, "Draft", out Rect missed);
+        Assert(fake.LastActionKey == null && fake.LastActionScope == null,
+            "a press outside the option list must not commit any scope ("
+            + missed + " is outside the popup)");
+    }
+
+    /// <summary>
+    /// Opens one scope popup and presses a point just below its last row. Returns the popup rect for the
+    /// failure message, so "the press missed" is stated in geometry rather than assumed.
+    /// </summary>
+    private static void PressScopePopup(
+        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, out Rect popup)
+    {
+        fake.LastActionScope = null;
+        fake.LastActionKey = null;
+        host.Session.ClosePopup();
+        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport);
+        Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
+            "the " + actionKey + " scope dropdown must publish its popup layer");
+        popup = layer.Rect;
+
+        Vector2 missedPoint = new(popup.x + popup.width / 2f, popup.yMax + 8f);
+        DrawWithEvent(host, viewport, EventType.MouseDown, missedPoint);
+        DrawWithEvent(host, viewport, EventType.MouseUp, missedPoint);
+    }
+
+    /// <summary>
+    /// Presses the real scope dropdown for one action and reports what it committed. The current value of
+    /// the row is deliberately NOT the target, so the press is a real change under test.
+    /// </summary>
+    private static SqueakActionScope? ClickScopeOption(
+        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, SqueakActionScope? target)
+    {
+        // The option list the widget builds: Auto (null) first, then the action's supported states. Locating
+        // the target the same way the widget does keeps the ROW index honest without this lane re-deriving
+        // the filtering rule.
+        var states = new List<SqueakActionScope>();
+        foreach (SqueakActionScope scope in new[]
+                 { SqueakActionScope.Disabled, SqueakActionScope.AnyOccurrence, SqueakActionScope.ActiveCommand })
+        {
+            if (SqueakActionDefinitions.NormalizeScope(TestActionOf(actionKey), scope) == scope) states.Add(scope);
+        }
+
+        int row = 0;
+        if (target.HasValue)
+        {
+            row = states.IndexOf(target.Value) + 1;
+            Assert(row > 0, "the target scope must be an allowed option for " + actionKey);
+        }
+
+        fake.LastActionScope = null;
+        fake.LastActionKey = null;
+        host.Session.ClosePopup();
+        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport);
+
+        Assert(Program.TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
+            "the " + actionKey + " scope dropdown must publish its popup layer");
+        Assert(layer.Rect.height >= (row + 1) * UiPopup.OptionHeight - 0.01f,
+            "the popup must hold the row this press targets (row " + row + " of " + layer.Rect.height + "px)");
+
+        Vector2 press = new(layer.Rect.x + layer.Rect.width / 2f,
+            layer.Rect.y + row * UiPopup.OptionHeight + UiPopup.OptionHeight / 2f);
+        DrawWithEvent(host, viewport, EventType.MouseDown, press);
+        DrawWithEvent(host, viewport, EventType.MouseUp, press);
+
+        return fake.LastActionScope;
+    }
+
+    /// <summary>The fixture rows' actions, by key, for the supported-states lookup.</summary>
+    private static SqueakAction TestActionOf(string actionKey)
+    {
+        return actionKey == "Draft" ? SqueakAction.Draft : SqueakAction.Eat;
     }
 
     /// <summary>
@@ -513,9 +648,9 @@ internal static class Program
     /// ruling 2026-09-15) put a consumer-side cut in front of that loop: <see cref="UsFilterBarWidget"/>
     /// truncates every option DISPLAY at half the settings window, so the popup follows the truncated
     /// label rather than the raw one. Each clause turns this lane red on its own:
-    /// (1) floor - every option fits the 143px trigger column, so the popup keeps exactly that width;
-    /// (2) growth - two option texts that both survive the cut (20 vs 50 characters) differ by exactly the
-    ///     measured 240px, and the shorter popup is exactly its label plus 12px;
+    /// (1) floor - short options keep the actual drawn trigger width, not an injected opening width;
+    /// (2) growth - two texts wider than the measured trigger and below the cut differ by exactly their
+    ///     measured text-width delta, and the shorter popup is exactly its label plus 12px;
     /// (3) truncation - a 200-character author and the longest author that still fits the cap draw the
     ///     SAME popup width, which fits the cap; a popup that follows the raw label fails here;
     /// (4) viewport cap - driven by pinning the screen so half the settings window reaches the viewport.
@@ -523,7 +658,9 @@ internal static class Program
     ///     truncation is what removed this clause's natural trigger; the carrier's UI stub documents
     ///     itself as the pin a lane uses, and the clause stays armed through it rather than being deleted.
     /// The option text is not the interesting part: the pack-filter authors are display == value, so the
-    /// lane can state each width as an exact number instead of a lower bound.
+    /// lane can state each width as an exact number instead of a lower bound. After the live-anchor
+    /// fixture re-cut, retaining the trigger width instead of growing it was run and reddened clause (2).
+    /// The floor/truncation/cap clauses remain guards; their mutations were not rerun in this batch.
     /// </summary>
     private static void PopupWidthFollowsWidestOptionThenViewport()
     {
@@ -533,27 +670,26 @@ internal static class Program
         float perChar = stub.MeasureWidth("A", UiFont.Small);
         Assert(perChar > 0f, "the stub must measure a character, or every width clause below is vacuous");
         float cap = OptionDisplayCap();
-        Assert(cap > anchor.width,
-            "the truncation cap must leave the growth clause a range above the trigger floor: cap=" + cap);
-
-        float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, anchor, viewport);
+        float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, ref anchor, viewport);
         Assert(Math.Abs(floorWidth - anchor.width) < 0.01f,
             "an option list that fits its trigger must keep the trigger width as the popup floor: "
             + floorWidth + " vs anchor " + anchor.width);
 
         // Both samples have to survive the F5 cut, or this clause silently re-tests the truncation clause.
-        string twenty = new('A', 20);
-        string fifty = new('A', 50);
-        Assert(20f * perChar <= cap && 50f * perChar <= cap,
+        int shortChars = Math.Max(20, (int)Math.Ceiling(anchor.width / perChar) + 1);
+        int longChars = Math.Max(50, shortChars + 1);
+        string twenty = new('A', shortChars);
+        string fifty = new('A', longChars);
+        Assert(shortChars * perChar <= cap && longChars * perChar <= cap,
             "the growth clause needs both option texts under the truncation cap (" + cap + "): the stub screen moved");
-        float twentyWidth = DrawnPopupWidth(new[] { twenty }, stub, anchor, viewport);
-        float fiftyWidth = DrawnPopupWidth(new[] { fifty }, stub, anchor, viewport);
-        Assert(Math.Abs(twentyWidth - (20f * perChar + 12f)) < 0.01f,
+        float twentyWidth = DrawnPopupWidth(new[] { twenty }, stub, ref anchor, viewport);
+        float fiftyWidth = DrawnPopupWidth(new[] { fifty }, stub, ref anchor, viewport);
+        Assert(Math.Abs(twentyWidth - (shortChars * perChar + 12f)) < 0.01f,
             "the popup must be exactly the widest label plus the 6px-per-side row padding: "
-            + twentyWidth + " vs " + (20f * perChar + 12f));
-        Assert(Math.Abs(fiftyWidth - twentyWidth - 30f * perChar) < 0.01f,
-            "30 more characters of option text must widen the popup by exactly 30 measured characters: "
-            + (fiftyWidth - twentyWidth) + " vs " + (30f * perChar));
+            + twentyWidth + " vs " + (shortChars * perChar + 12f));
+        Assert(Math.Abs(fiftyWidth - twentyWidth - (longChars - shortChars) * perChar) < 0.01f,
+            "extra option characters must widen the popup by exactly their measured width: "
+            + (fiftyWidth - twentyWidth) + " vs " + ((longChars - shortChars) * perChar));
 
         // The longest label that still fits the cap, and one far past it: both are cut to the same display,
         // so both popups are that display plus the row padding, and neither follows the raw label.
@@ -564,8 +700,8 @@ internal static class Program
             "the reference label must still fit the truncation cap");
         Assert(stub.MeasureWidth(overCap, UiFont.Small) > cap,
             "the truncation clause needs a label wider than the cap, or it asserts nothing");
-        float fitsWidth = DrawnPopupWidth(new[] { justFits }, stub, anchor, viewport);
-        float overCapWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+        float fitsWidth = DrawnPopupWidth(new[] { justFits }, stub, ref anchor, viewport);
+        float overCapWidth = DrawnPopupWidth(new[] { overCap }, stub, ref anchor, viewport);
         Assert(Math.Abs(overCapWidth - fitsWidth) < 0.01f,
             "an over-cap option must draw the same popup width as the longest option that fits the cap: "
             + overCapWidth + " vs " + fitsWidth);
@@ -589,7 +725,7 @@ internal static class Program
             float viewportCap = OptionDisplayCap();
             Assert(viewportCap >= viewport.width,
                 "the viewport clause needs the truncation cap at or above the viewport: " + viewportCap);
-            float cappedWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+            float cappedWidth = DrawnPopupWidth(new[] { overCap }, stub, ref anchor, viewport);
             Assert(Math.Abs(cappedWidth - viewport.width) < 0.01f,
                 "a popup wider than its viewport must be capped at the viewport width: "
                 + cappedWidth + " vs " + viewport.width);
@@ -642,7 +778,7 @@ internal static class Program
     /// <see cref="UiHitLayer.IsPopup" /> - the rule reads back the rect the popup was actually drawn with,
     /// not a width this lane recomputed).
     /// </summary>
-    private static float DrawnPopupWidth(string[] authors, StubMetrics stub, Rect anchor, Rect viewport)
+    private static float DrawnPopupWidth(string[] authors, StubMetrics stub, ref Rect anchor, Rect viewport)
     {
         var fake = new RecordingSettingsSource { RichData = true, Authors = authors };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
@@ -654,6 +790,8 @@ internal static class Program
         host.DrawChecked(viewport);
         Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
             "an open pack-filter dropdown must publish its popup layer (authors: " + string.Join(",", authors) + ")");
+        Assert(host.Session.OpenPopupAnchor.HasValue, "the drawn popup must have a live owner anchor");
+        anchor = host.Session.OpenPopupAnchor!.Value;
         return layer.Rect.width;
     }
 
@@ -1034,6 +1172,7 @@ internal static class Program
             // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
             // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole
             // toggle and there is no second channel to keep in step.
+            { "allow-baby-actions", () => host.Bindings.Set("allow-baby-actions", true) },
             { "allow-eggs", () => host.Bindings.Set("allow-eggs", false) },
             { "scale-cooldown", () => host.Bindings.Set("scale-cooldown", false) },
             { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
@@ -1048,6 +1187,11 @@ internal static class Program
             { "cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f) },
             { "set-dev-logging", () => host.Bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Enabled)) },
             { "localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true) },
+            // R3-B: the developer layout-diagnosis commands. Each is a display write - it changes what the
+            // card shows (the status sentence and the switches' own answers) - so each must advance the clock.
+            { "layout-capture", () => host.Bindings.Set("layout-capture", true) },
+            { "layout-outline", () => host.Bindings.Set("layout-outline", true) },
+            { "request-layout-report", () => host.Bindings.Invoke("request-layout-report") },
             { "set-tuning-layer", () => host.Bindings.Invoke("set-tuning-layer", 1) },
             { "set-tuning-domain", () => host.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection("human", "")) },
             { "set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)) },
@@ -1482,7 +1626,7 @@ internal static class Program
             + "</UiPage>");
 
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "unknown US kind must fail at Host creation");
     }
 
@@ -1496,7 +1640,7 @@ internal static class Program
             + "</UiPage>");
 
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "unknown widget attribute must fail at Host creation");
     }
 
@@ -1842,6 +1986,9 @@ internal static class Program
         bindings.Set("global-volume-percent", 42f);
         Assert(Math.Abs(fake.LastGlobalVolume.GetValueOrDefault() - 0.42f) < 0.001f,
             "global-volume-percent writes the normalized volume through the business setter");
+        bindings.Set("allow-baby-actions", true);
+        // Mutation-proven: removing source.SetBabyActions from the registered write fails here.
+        Assert(fake.LastBabyActions == true, "baby-actions write routes to the business boundary");
         bindings.Set("eat-precision", true);
         Assert(fake.LastEatPrecision == true, "eat-precision value write routes (the declared checkbox's channel)");
         bindings.Set("eat-precision-include-drugs", true);
@@ -1987,7 +2134,7 @@ internal static class Program
             reports.Clear();
             UiFitAudit.BeginElement("probe/single-line");
             FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
             UiFitAudit.EndElement();
             Assert(reports.Count == 1, "positive control failed: the audit saw nothing for a label that cannot fit (" + Describe(reports) + ")");
@@ -2001,7 +2148,7 @@ internal static class Program
             UiFitAudit.Reset();
             reports.Clear();
             FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
             Assert(reports.Count == 1 && reports[0].ElementPath == "(unscoped)",
                 "an unscoped draw must be reported under the fallback identity, got " + Describe(reports));
@@ -2429,7 +2576,7 @@ internal static class Program
 
     private static void SessionPopupIsolationAndCleanup()
     {
-        var fake = new RecordingSettingsSource();
+        var fake = new RecordingSettingsSource { RichData = true };
         using UiHost a = UsKernelSettingsHost.Create(fake);
         using UiHost b = UsKernelSettingsHost.Create(fake);
 
@@ -2442,10 +2589,17 @@ internal static class Program
 
         a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
         Assert(a.Session.PopupDrawActions.Count == 0, "popup draw actions are consumed at EndFrame");
-        Assert(a.Session.IsPopupOpen("a-popup"), "popup ownership survives the frame");
+        Assert(!a.Session.IsPopupOpen("a-popup"), "an undrawn owner releases its orphan popup in the same frame");
 
+        // A real dropdown continues to report its anchor; only ownerless popups are reconciled away.
+        a.Bindings.Invoke("set-tab", "Packs");
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        a.Session.OpenPopup("pack-filter", new Rect(0f, 0f, 10f, 10f));
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        Assert(a.Session.IsPopupOpen("pack-filter"), "a drawn owner's popup survives the frame");
+        Assert(!b.Session.IsPopupOpen("pack-filter"), "a real popup remains isolated to session A");
         a.Session.ClosePopup();
-        Assert(!a.Session.IsPopupOpen("a-popup"), "ClosePopup releases the popup");
+        Assert(!a.Session.IsPopupOpen("pack-filter"), "ClosePopup releases the popup");
 
         // Dispose clears popup + hot-control state for exactly this session.
         a.Session.OpenPopup("a-popup", new Rect(0f, 0f, 10f, 10f));
@@ -2504,7 +2658,7 @@ internal static class Program
         UiLayoutManifest manifest = UiLayoutManifest.Parse(xml);
         // Missing the required typed binding => the real widget's Validate must fail at creation.
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "missing camera-readout binding must fail at overlay Host creation");
     }
 
@@ -2781,7 +2935,7 @@ internal static class Program
         }
     }
 
-    private sealed class StubTranslation : FerriteLib.UiKit.Kernel.IUiTranslation
+    internal sealed class StubTranslation : FerriteLib.UiKit.Kernel.IUiTranslation
     {
         public string Translate(string key)
         {
@@ -2868,7 +3022,7 @@ internal static class Program
         public bool Prerequisite = true;
         public UiSession? BuiltSession;
 
-        protected override UiTheme Theme => UiTheme.DarkGold;
+        protected override UiTheme Theme => UsTheme.Surface();
         protected override string Title => "probe title";
         protected override string Subtitle => "probe subtitle";
         protected override string CloseText => "probe close";

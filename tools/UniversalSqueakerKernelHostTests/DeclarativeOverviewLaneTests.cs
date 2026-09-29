@@ -18,7 +18,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <para>
 /// MUTATION LEDGER (the mutation each step is built to catch, and what reddens):
 /// <list type="bullet">
-/// <item><b>RetiredKindsAreGone</b> - re-adding a Registrar line for any of the three kinds reddens the
+/// <item><b>RetiredKindsAreGone</b> - re-adding a Registrar line for any of the four kinds reddens the
 /// kind-set pin. It is the "restore the old kind's participation" mutation for the whole batch.</item>
 /// <item><b>CardsAreDeclaredSections</b> - putting a composite <c>&lt;Widget Kind="us/..."&gt;</c> element
 /// back into a card reddens the declared-shape assertion on the LIVE manifest tree.</item>
@@ -71,7 +71,12 @@ internal static class DeclarativeOverviewLaneTests
 
     private static readonly string[] RetiredKinds =
     {
-        "us/global-volume", "us/basic-tuning", "us/camera-indicator"
+        "us/global-volume", "us/basic-tuning", "us/camera-indicator",
+        // R2 (2026-09-28): the fourth retired kind, and the first one not dissolved into atoms - the eight
+        // ON/OFF controls are the carrier's `input/checkbox` with `Appearance="switch"` now. It belongs on
+        // this list for the same reason as the other three: re-adding its Registrar line must redden rather
+        // than silently re-introduce a second boolean kind over the same input path.
+        "us/square-toggle"
     };
 
     /// <summary>The declared control rows of the basic-tuning card, in manifest order: the row element, its
@@ -80,6 +85,7 @@ internal static class DeclarativeOverviewLaneTests
     private static readonly (string Row, string Label, string Check, string LabelKey)[] BasicRows =
     {
         ("basic-egg-row", "basic-egg-label", "basic-egg-check", "US.Tuning.EasterEggs"),
+        ("basic-baby-row", "basic-baby-label", "basic-baby-check", "US.Tuning.BabyActions"),
         ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check", "US.Tuning.ScaleCooldown"),
         ("basic-talking-row", "basic-talking-label", "basic-talking-check", "US.Tuning.ScaleTalking"),
         ("basic-population-row", "basic-population-label", "basic-population-check", "US.Tuning.ScalePopulation"),
@@ -92,12 +98,12 @@ internal static class DeclarativeOverviewLaneTests
     /// the declaration is the separation and the lane measures it instead of a rule's hairline.</summary>
     private const float BasicBodyGap = 6f;
 
-    /// <summary>The seven declared value bindings the three cards own, and the business field each write
+    /// <summary>The eight declared value bindings the three cards now own, and the business field each write
     /// must land in. The count is the point: the composites needed a value binding AND a toggle-* action per
-    /// row (14 channels), and the declarative shape needs one.</summary>
+    /// row; the declarative shape needs one channel per value.</summary>
     private static readonly string[] DeclaredValueBindings =
     {
-        "allow-eggs", "scale-cooldown", "scale-talking", "scale-population",
+        "allow-eggs", "allow-baby-actions", "scale-cooldown", "scale-talking", "scale-population",
         "eat-precision", "eat-precision-include-drugs", "camera-indicator"
     };
 
@@ -182,13 +188,23 @@ internal static class DeclarativeOverviewLaneTests
         foreach (string bind in DeclaredValueBindings.Where(b => b != "camera-indicator"))
         {
             UiElementSpec? control = FindByAttribute(basic, "Bind", bind);
-            Assert(control != null && control.Kind == "us/square-toggle",
-                "the basic-tuning card's '" + bind + "' control must be the us/square-toggle surface, got "
+            Assert(control != null && control.Kind == "input/checkbox",
+                "the basic-tuning card's '" + bind + "' control must be the carrier's boolean surface, got "
                 + (control == null ? "(missing)" : control.Kind));
-            // S6-3 step 4: the toggle draws its own track+knob and names the SAME bool in SelectedKey, so the
-            // engine's own role resolution agrees with the state the kind paints.
-            Assert(control!.TryGetAttribute("SelectedKey", out string selected) && selected == bind,
-                "the '" + bind + "' toggle must declare SelectedKey=\"" + bind + "\", got '" + selected + "'");
+            // R2 (2026-09-28): the control is `input/checkbox` with `Appearance="switch"`. The attribute is
+            // asserted rather than assumed: `switch` is the kind's default TODAY, so a page that omitted it
+            // would keep looking right until the default moved - the declaration is what makes the look
+            // authored.
+            Assert(control!.TryGetAttribute("Appearance", out string appearance) && appearance == "switch",
+                "the '" + bind + "' control must declare Appearance=\"switch\", got '"
+                + (control.TryGetAttribute("Appearance", out string rawAppearance) ? rawAppearance : "(none)")
+                + "'");
+            // The switch's drawn state comes from the value it READ (the bound bool); `SelectedKey` is the
+            // engine's role-resolution declaration over the SAME bool. Keeping both on one binding is what
+            // stops the painted state and the resolved role from drifting apart, so it is asserted here even
+            // though the shared kind no longer consults it for the knob's end.
+            Assert(control.TryGetAttribute("SelectedKey", out string selected) && selected == bind,
+                "the '" + bind + "' control must declare SelectedKey=\"" + bind + "\", got '" + selected + "'");
         }
 
         UiElementSpec childRow = FindById(host.Manifest.Roots, "basic-eat-child-row")!;
@@ -222,8 +238,8 @@ internal static class DeclarativeOverviewLaneTests
             "the global-volume caption is a bound text/wrapped atom, not a hand-formatted label");
 
         UiElementSpec camera = FindById(host.Manifest.Roots, "camera-indicator")!;
-        Assert(FindByAttribute(camera, "Bind", "camera-indicator")?.Kind == "us/square-toggle",
-            "the camera-indicator card's one control is the us/square-toggle surface");
+        Assert(FindByAttribute(camera, "Bind", "camera-indicator")?.Kind == "input/checkbox",
+            "the camera-indicator card's one control is the carrier's boolean surface");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -291,8 +307,8 @@ internal static class DeclarativeOverviewLaneTests
         basic = basic.OrderBy(r => r.y).ToList();
         Console.WriteLine("[declared-bands] card bands=" + basic.Count
             + " all=" + string.Join(" ", basic.Select(Describe)));
-        Assert(basic.Count == 6,
-            "the basic-tuning card must draw six declared checkbox bands with the parent ON, got "
+        Assert(basic.Count == 7,
+            "the basic-tuning card must draw seven declared toggle bands with the parent ON, got "
             + basic.Count + " [" + string.Join(" ", basic.Select(Describe)) + "]");
 
         for (int index = 0; index < basic.Count; index++)
@@ -302,6 +318,14 @@ internal static class DeclarativeOverviewLaneTests
                 + " intersects " + CountOverlapping(recorded, basic[index]) + " recorded surfaces. In IMGUI a"
                 + " second band behind a checkbox turns one press into two writes");
         }
+
+        // New baby's square toggle: actual declared hit surface, one typed write and one revision bump.
+        source.LastBabyActions = null;
+        int babyRevision = host.Session.ContentRevision;
+        DrawWithButtons(host, rect => RectMatches(rect, basic[1]));
+        Assert(source.LastBabyActions == true && host.Bindings.Get<bool>("allow-baby-actions"),
+            "baby square toggle must route and expose the new value in the same pass");
+        Assert(host.Session.ContentRevision == babyRevision + 1, "baby toggle invalidates the shared view/layout clock once");
 
         // The egg row is the first band; that it really is the egg row is verified by what the press does.
         bool eggBefore = host.Bindings.Get<bool>("allow-eggs");
@@ -355,8 +379,8 @@ internal static class DeclarativeOverviewLaneTests
             "the caption is a projection of the same value, got '"
             + host.Bindings.Get<string>("global-volume-caption") + "'");
 
-        // Guard (not a mutation proof): the seven declared value bindings are the whole write surface the
-        // three cards own - the composites also needed seven toggle-* actions, and those are gone.
+        // Guard (not a mutation proof): the eight declared value bindings are the whole write surface the
+        // three cards now own; no duplicate toggle-* action channel is required.
         foreach (string bind in DeclaredValueBindings)
         {
             Assert(host.Bindings.IsWritable(bind), "the declared value binding '" + bind + "' must be writable");

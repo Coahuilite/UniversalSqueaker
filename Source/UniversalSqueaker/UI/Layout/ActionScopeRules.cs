@@ -10,8 +10,7 @@ namespace UniversalSqueaker.UI;
 /// - <see cref="Operable"/>: player-commandable actions (default <see cref="SqueakActionScope.ActiveCommand"/>
 ///   or actions that support <see cref="SqueakActionScope.ActiveCommand"/>).
 ///
-/// Biotech defensive baby actions (Crying/Giggling) are hidden from the editor by default; they still
-/// remain runtime playable through the existing patches, this is purely a UI exposure policy.
+/// Baby actions share the runtime eligibility rule; the default editor excludes them.
 /// </summary>
 public enum ActionScopeGroup
 {
@@ -21,12 +20,6 @@ public enum ActionScopeGroup
 
 public static class ActionScopeRules
 {
-    /// <summary>
-    /// Set to true by maintainers who want Biotech defensive baby actions to reappear in the
-    /// Action Scope editor. Default false keeps the UI focused on gameplay-relevant behaviors.
-    /// </summary>
-    public const bool ShowBiotechDefensiveActions = false;
-
     public static ActionScopeGroup GroupFor(SqueakActionDefinition definition)
     {
         bool supportsCommand = (definition.SupportedScopes & SqueakActionScopeSupport.ActiveCommand) != 0;
@@ -34,9 +27,5 @@ public static class ActionScopeRules
         return supportsCommand || defaultsToCommand ? ActionScopeGroup.Operable : ActionScopeGroup.Autonomous;
     }
 
-    public static bool IsHiddenByDefault(SqueakAction action)
-    {
-        return !ShowBiotechDefensiveActions
-            && (action == SqueakAction.Crying || action == SqueakAction.Giggling);
-    }
+    public static bool IsHiddenByDefault(SqueakAction action) => !SqueakActionEligibility.IsEligible(action, false);
 }
