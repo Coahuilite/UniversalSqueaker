@@ -11,13 +11,12 @@
 Ordered by what unblocks what. Each item's detail lives in the section it names.
 
 - [ ] **R3-B in-game check (developer tool, NOT a player feature):** open Overview → the Diagnostics card.
-  The layout controls appear under "Developer log level". With a DEV library package: Capture on → the status
+  The layout controls appear under "Developer log level". Local compilation and host checks passed on 2026-09-30. With a DEV library package: Capture on → the status
   line reads "Capturing this window's layout"; Report writes ONE geometry block to the log and a second press
   writes another; the capture switch off stops it. With a RELEASE library package the status must read
   "Not available: this build has no layout instrument" and neither switch may do anything - that refusal is
-  the point of the slice, and "a clean empty report" is the failure it prevents. Not compiled or run this
-  round: every lane written for it is UNRUN.
-- [ ] **R3-B-CORR-US build + lane check (PM):** both configurations must compile with zero warnings after the
+  the point of the slice, and "a clean empty report" is the failure it prevents. Actual game behavior is still unverified.
+- [x] **R3-B-CORR-US build + lane check (PM):** both configurations compile and the host lanes pass, including the
   guard split (`geometryEnabled` / `reportPending` / the report payload / the scope registry are unconditional;
   only the carrier calls and `reportRequestPass` are `US_DEV`), and the KernelHost Dev run must pass
   `LayoutDiagnosisIsPerHost`, `TheReportIsOneShot` and the re-cut `RepeatedClicksAreSeparateEvidence`.

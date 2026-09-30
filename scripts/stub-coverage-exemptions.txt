@@ -32,6 +32,8 @@
 #   utility - Verse's static facade and helpers, reached only from the in-game paths above (Find, Current,
 #             Messages, LongEventHandler, FloatRange, Gen* helpers, TaggedString, Translator).
 #   debug   - the game's dev debug-action surface (LudeonTK): a panel US registers into in game.
+# R4-B resource adapter: native icon resolution needs the loaded game Defs/textures; fixtures supply data only.
+Assembly-CSharp!RimWorld.XenotypeDef::get_Icon() | defs
 #
 # Measured 2026-09-12 with ferritelib at 0b396c4: 239 member references from the US payload to the stub
 # surface, 74 declared by the stubs, 165 exempted below (the harness assembly adds 25 references, all of

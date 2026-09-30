@@ -475,7 +475,8 @@ public static class VoicePacksPageModel
                         xenotype.inheritFromRace,
                         xenoSelected,
                         (xenotype.actions ?? new List<BaselineActionTuning>()).Count(t => t != null && !string.IsNullOrWhiteSpace(t.actionKey)),
-                        (xenotype.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null)));
+                        (xenotype.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null),
+                        ResolveXenotypeIcon(xenotype.xenotypeDefName)));
                 }
 
                 bool raceSelected = selection.SelectedRaceDefNames.Contains(race.raceDefName);
@@ -520,8 +521,28 @@ public static class VoicePacksPageModel
 
     private static string ResolveXenotypeDisplayName(string xenotypeDefName)
     {
-        XenotypeDef? def = DefDatabase<XenotypeDef>.GetNamedSilentFail(xenotypeDefName);
+        XenotypeDef? def = ResolveXenotypeDef(xenotypeDefName);
         return def != null && !string.IsNullOrEmpty(def.LabelCap) ? def.LabelCap : xenotypeDefName;
+    }
+
+    /// <summary>The live def for a xenotype key, or null: an unloaded/no-Biotech/unknown-def miss is normal.</summary>
+    private static XenotypeDef? ResolveXenotypeDef(string xenotypeDefName)
+    {
+        if (string.IsNullOrWhiteSpace(xenotypeDefName)) return null;
+        return DefDatabase<XenotypeDef>.GetNamedSilentFail(xenotypeDefName);
+    }
+
+    /// <summary>
+    /// R4-B adapter boundary: the ONE place this page turns a xenotype into its native icon. The resource
+    /// lookup (<see cref="XenotypeDef.Icon"/>, which reads the def's <c>iconPath</c> through the content
+    /// finder) happens here on the Verse side; the view carries the resulting value and the Kernel widget
+    /// only hands it to the library's own image outlet. Null is a valid answer and every miss returns it:
+    /// an absent definition, a game without Biotech (the DefDatabase has no such def), or a def whose
+    /// texture failed to load all give null rather than throwing or inventing a placeholder.
+    /// </summary>
+    private static UnityEngine.Texture2D? ResolveXenotypeIcon(string xenotypeDefName)
+    {
+        return ResolveXenotypeDef(xenotypeDefName)?.Icon;
     }
 
     private static void ToggleBaselinePreset(VoicePacksPageState state, string presetDefName)

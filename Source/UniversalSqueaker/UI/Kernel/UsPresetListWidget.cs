@@ -4,6 +4,7 @@ using UnityEngine;
 using Verse;
 
 using FerriteLib.UiKit.Kernel;
+using FerriteLib.UiKit.Kernel.Widgets;
 
 namespace UniversalSqueaker.UI;
 
@@ -31,6 +32,8 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     // per-row constants that had drifted 2px apart.
     private const float RowGap = 2f;
     private const float XenotypeIndent = 18f;
+    /// <summary>The indent step below the 900px view, where the card narrows it.</summary>
+    private const float XenotypeIndentNarrow = 12f;
     private const float LeftPadding = 10f;
     private const float ImportButtonWidth = 76f;
     private const float ImportButtonHeight = 20f;
@@ -80,7 +83,6 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         if (presets.Count == 0) return TopPadding + 48f + BottomPadding;
 
         float width = BodyWidth(ctx);
-        float xenoIndent = ctx.ViewWidth >= 900f ? XenotypeIndent : 12f;
         float bodyHeight = TopPadding;
         foreach (BaselinePresetView preset in presets)
         {
@@ -93,16 +95,30 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                bodyHeight += MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, width - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx)) + RowGap;
-                float xenoWidth = Math.Max(1f, width - xenoIndent);
+                bodyHeight += ComposedRowHeight(ctx, preset.DefName + "|" + race.RaceDefName, 0, RaceLabel(ctx, race), race.Selected) + RowGap;
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    bodyHeight += MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx)) + RowGap;
+                    bodyHeight += ComposedRowHeight(
+                        ctx, preset.DefName + "|" + race.RaceDefName + "|" + xenotype.XenotypeDefName, 1, XenotypeLabel(ctx, xenotype),
+                        xenotype.Selected, xenotype.Image) + RowGap;
                 }
             }
         }
 
         return bodyHeight + BottomPadding;
+    }
+
+    /// <summary>
+    /// One composed row's reserved height: the card's own text measurement, raised by the shared primitive to
+    /// the picture's own height when the row carries an image - the same call Draw makes, so the height the
+    /// card reserves and the height the band occupies cannot disagree.
+    /// </summary>
+    private float ComposedRowHeight(
+        UiWidgetContext ctx, string key, int depth, string text, bool isChecked, Texture2D? image = null)
+    {
+        float textHeight = MeasuredRowHeight(
+            text, Math.Max(1f, BodyWidth(ctx) - LeftPadding - 48f), ctx, UsKernelDraw.RowVisualHeight(ctx));
+        return UiRowBand.Measure(BuildRow(key, depth, text, isChecked, image), ctx.Theme, textHeight);
     }
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -130,7 +146,6 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         float innerWidth = rect.width;
         float x = rect.x;
         float y = rect.y + TopPadding;
-        float xenoIndent = ctx.ViewWidth >= 900f ? XenotypeIndent : 12f;
 
         foreach (BaselinePresetView preset in presets)
         {
@@ -155,15 +170,16 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
             foreach (BaselineRaceView race in preset.Races)
             {
-                float raceRowHeight = MeasuredRowHeight(RaceLabel(ctx, race), Math.Max(1f, innerWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx));
+                float raceRowHeight = ComposedRowHeight(ctx, preset.DefName + "|" + race.RaceDefName, 0, RaceLabel(ctx, race), race.Selected);
                 DrawRaceRow(new Rect(x, y, innerWidth, raceRowHeight), preset.DefName, race, ctx);
                 y += raceRowHeight + RowGap;
 
-                float xenoWidth = Math.Max(1f, innerWidth - xenoIndent);
                 foreach (BaselineXenotypeView xenotype in race.Xenotypes)
                 {
-                    float xenoRowHeight = MeasuredRowHeight(XenotypeLabel(ctx, xenotype), Math.Max(1f, xenoWidth - 64f), ctx, UsKernelDraw.RowVisualHeight(ctx));
-                    DrawXenotypeRow(new Rect(x + xenoIndent, y, xenoWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
+                    float xenoRowHeight = ComposedRowHeight(
+                        ctx, preset.DefName + "|" + race.RaceDefName + "|" + xenotype.XenotypeDefName, 1, XenotypeLabel(ctx, xenotype),
+                        xenotype.Selected, xenotype.Image);
+                    DrawXenotypeRow(new Rect(x, y, innerWidth, xenoRowHeight), preset.DefName, race.RaceDefName, xenotype, ctx);
                     y += xenoRowHeight + RowGap;
                 }
             }
@@ -210,55 +226,104 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private void DrawRaceRow(Rect rect, string presetDefName, BaselineRaceView race, UiWidgetContext ctx)
     {
-        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
-        // The list convention the basic-tuning rows set: a single-line list row ends in one hairline in
-        // the divider token, so a stack of rows reads as a list. It is drawn inside the row's bottom edge,
-        // so the 24px hit promise is untouched.
-        UsKernelDraw.RowBottomLine(rect, ctx.Theme);
-
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + 3f, Math.Max(1f, rect.width - 64f), Math.Max(18f, rect.height - 6f)),
-            RaceLabel(ctx, race),
-            ctx.Theme,
-            ctx.Theme.TextPrimary,
-            UiFont.Small,
-            TextAnchor.MiddleLeft);
-        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
-        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, race.Selected);
-
-        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
-        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
-        if (toggled || UiNative.Button(rowHit, ctx))
-        {
-            ctx.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle(presetDefName, race.RaceDefName, !race.Selected));
-        }
+        // R4-B: the band is composed by the library's shared primitive - the same call `container/tree` makes.
+        // The card keeps what is its own: the hover plane, the list rule, and its right-aligned checkbox
+        // convention and indent step, both handed to the band as layout inputs.
+        DrawComposedRow(
+            rect,
+            ctx,
+            BuildRow(presetDefName + "|" + race.RaceDefName, depth: 0, RaceLabel(ctx, race), race.Selected),
+            bindings => ToggleRace(presetDefName, race, bindings));
     }
 
     private void DrawXenotypeRow(Rect rect, string presetDefName, string raceDefName, BaselineXenotypeView xenotype, UiWidgetContext ctx)
     {
+        // The native icon rides the row as data (resolved Verse-side); a null one is the band's own fallback.
+        DrawComposedRow(
+            rect,
+            ctx,
+            BuildRow(
+                presetDefName + "|" + raceDefName + "|" + xenotype.XenotypeDefName,
+                depth: 1,
+                XenotypeLabel(ctx, xenotype),
+                xenotype.Selected,
+                xenotype.Image),
+            bindings => ToggleXenotype(presetDefName, raceDefName, xenotype, bindings),
+            UiEmphasis.Muted);
+    }
+
+    /// <summary>
+    /// The row data the shared band composes. The key is the stable business key (never an index); the
+    /// callbacks below close over the row's own values, so nothing is parsed back out of it.
+    /// </summary>
+    private static UiTreeRow BuildRow(string key, int depth, string text, bool isChecked, Texture2D? image = null)
+    {
+        return new UiTreeRow(
+            key,
+            depth: depth,
+            text: text,
+            checkable: true,
+            isChecked: isChecked,
+            image: image);
+    }
+
+    /// <summary>
+    /// One composed band: the card's own hover plane and list rule, then the library's band. The indent step
+    /// and the right-aligned box inset are the card's own conventions, so the composed row lands where the
+    /// hand-drawn rows did, and either part (box or body) writes this row's own typed action.
+    /// </summary>
+    private static void DrawComposedRow(
+        Rect rect,
+        UiWidgetContext ctx,
+        UiTreeRow row,
+        Action<IUiBindings> toggle,
+        UiEmphasis emphasis = UiEmphasis.Normal)
+    {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/preset-list/tree");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        // The list convention the basic-tuning rows set: a single-line list row ends in one hairline in the
+        // divider token, so a stack of rows reads as a list.
         UsKernelDraw.RowBottomLine(rect, ctx.Theme);
 
-        UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y + 4f, Math.Max(1f, rect.width - 64f), Math.Max(14f, rect.height - 6f)),
-            XenotypeLabel(ctx, xenotype),
-            ctx.Theme,
-            ctx.Theme.TextPrimary,
-            UiFont.Tiny,
-            TextAnchor.MiddleLeft);
-        Rect checkbox = UsKernelDraw.CheckboxSlot(rect);
-        bool toggled = UsKernelDraw.Checkbox(checkbox, ctx, xenotype.Selected);
+        bool toggled = false;
+        var actions = new UiRowBandActions(
+            body: _ => toggled = true,
+            checkbox: _ => toggled = true);
+        UiRowBand.Draw(
+            row,
+            rect,
+            ctx,
+            UsKernelDraw.RowVisualHeight(ctx),
+            ctx.Theme.Styles.Resolve(UiStatusTone.Neutral, emphasis),
+            actions,
+            new UiRowBandLayout(indentStep: RowIndent(ctx), checkboxRightInset: CheckboxRightInset,
+                controlSize: UsKernelDraw.CheckboxVisual));
+        if (toggled) toggle(ctx.Bindings);
+    }
 
-        Rect rowHit = UsKernelDraw.RowHitRect(rect, ctx);
-        rowHit.width = Math.Max(1f, checkbox.x - rowHit.x);
-        if (toggled || UiNative.Button(rowHit, ctx))
-        {
-            ctx.Bindings.Invoke(
-                "toggle-baseline-xenotype",
-                new UsBaselineXenoToggle(presetDefName, raceDefName, xenotype.XenotypeDefName, !xenotype.Selected));
-        }
+    /// <summary>The card's own indent step, which the band is told to use instead of the theme's spacing.</summary>
+    /// <summary>The card's own indent step, which the band is told to use instead of the theme's spacing.</summary>
+    private static float RowIndent(UiWidgetContext ctx)
+    {
+        return ctx.ViewWidth >= 900f ? XenotypeIndent : XenotypeIndentNarrow;
+    }
+
+    /// <summary>
+    /// The checkbox's right-alignment inset for the composed band: the card's control-column convention, so
+    /// the box lands at the right end of the row rather than after the indent.
+    /// </summary>
+    private static float CheckboxRightInset => UsKernelDraw.ControlColumnRightInset;
+
+    private static void ToggleRace(string presetDefName, BaselineRaceView race, IUiBindings bindings)
+    {
+        bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle(presetDefName, race.RaceDefName, !race.Selected));
+    }
+
+    private static void ToggleXenotype(string presetDefName, string raceDefName, BaselineXenotypeView xenotype, IUiBindings bindings)
+    {
+        bindings.Invoke(
+            "toggle-baseline-xenotype",
+            new UsBaselineXenoToggle(presetDefName, raceDefName, xenotype.XenotypeDefName, !xenotype.Selected));
     }
 
     /// <summary>The preset header title as one outlet: the expander glyph plus the preset label.</summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace UniversalSqueaker.UI;
 
@@ -338,7 +339,16 @@ public sealed class BaselineXenotypeView
     public readonly int ActionCount;
     public readonly int MoodCount;
 
-    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int moodCount)
+    /// <summary>
+    /// The xenotype's native icon, or null when there is none to show. This is the R4-B adapter boundary:
+    /// the Verse-side model resolves it (<c>XenotypeDef.Icon</c>) and hands it over as a VALUE, so the
+    /// Kernel widget never performs a resource lookup. Null is a first-class answer - an absent
+    /// definition, no Biotech and a missing texture all land here - and the drawing side must fall back
+    /// rather than paint a substitute glyph.
+    /// </summary>
+    public readonly Texture2D? Image;
+
+    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int moodCount, Texture2D? image = null)
     {
         XenotypeDefName = xenotypeDefName ?? "";
         DisplayName = displayName ?? xenotypeDefName ?? "";
@@ -346,6 +356,7 @@ public sealed class BaselineXenotypeView
         Selected = selected;
         ActionCount = actionCount;
         MoodCount = moodCount;
+        Image = image;
     }
 }
 

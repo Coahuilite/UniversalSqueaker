@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using FerriteLib.UiKit.Kernel;
 using UniversalSqueaker.UI;
 
@@ -112,6 +113,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public string? LastBaselineXeno;
     public bool? LastBaselineXenoSelected;
     public string? LastBaselineImport;
+
+    /// <summary>
+    /// The xenotype icon the rich fixture hands over as DATA (R4-B). Null is the default and the case the
+    /// card must fall back on; a lane that wants the picture path sets it. It is a plain value - the fixture,
+    /// like the production adapter, never loads a resource.
+    /// </summary>
+    public Texture2D? XenotypeIcon { get; set; }
 
     // Packs writes.
     public SqueakVoicePackScope? LastPackScope;
@@ -229,7 +237,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             "us.preset1",
             "Balanced Test Preset",
             "Deterministic harness preset",
-            expanded: true,
+            expanded: PresetExpanded,
             races: new[]
             {
                 new BaselineRaceView(
@@ -240,7 +248,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     moodCount: 3,
                     xenotypes: new[]
                     {
-                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, moodCount: 3)
+                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, moodCount: 3, image: XenotypeIcon)
                     })
             },
             selectedRaceCount: 1,
@@ -609,7 +617,20 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastMoodPresetResetCount++;
     }
 
-    public void ToggleBaselinePreset(string presetDefName) => LastBaselinePresetToggle = presetDefName;
+    public void ToggleBaselinePreset(string presetDefName)
+    {
+        LastBaselinePresetToggle = presetDefName;
+        // R4-B: the rich fixture's preset starts expanded, and the card's only source of that answer is the
+        // model. A lane that needs to observe "collapsing hides the descendants" flips it through the real
+        // write, so the assert measures the card rather than a field on the fake.
+        if (PresetToggleFlipsExpandedState) PresetExpanded = !PresetExpanded;
+    }
+
+    /// <summary>When true, <see cref="ToggleBaselinePreset"/> flips <see cref="PresetExpanded"/>.</summary>
+    public bool PresetToggleFlipsExpandedState { get; set; }
+
+    /// <summary>The rich fixture preset's expanded answer, as the next view build will project it.</summary>
+    public bool PresetExpanded { get; set; } = true;
 
     public void ToggleBaselineRace(string presetDefName, string raceDefName, bool selected)
     {

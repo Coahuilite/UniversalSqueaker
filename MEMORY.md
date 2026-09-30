@@ -6,6 +6,10 @@
 > **The pre-compaction text of this file and of `TODO.md` is archived byte-verbatim in `OBLIVIONIS.md`
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
+## R4-B integrated checkpoint — 2026-09-30
+
+The preset subtree uses FL's shared UiRowBand with typed callbacks and native xenotype icon data supplied by the Verse adapter. PM aligned measure/draw heights, removed duplicate indentation, preserved the 18px checkbox and 10px right edge, and made row keys include their full business identity. Release/Dev compilation and all 15 normal integration checks pass against the current Dev carrier, including the drawn image height and real pointer down/up lane. Native Def texture loading remains game-only and is recorded in the stub exemption table; stub success is not game acceptance. Details: `docs/r4b-preset-subtree-row-composition.md`. Local commits authorized; no publication.
+
 ## PM integration checkpoint — 2026-09-30
 
 R1/R2/R3/R4-A pass the current 15-gate integration chain against the explicit current FL Dev carrier. PM fixed the dropdown's omitted current-value argument and its fixture: supported Eat/Disabled, MouseDown+MouseUp, actual Draft/null setter call and no outside-click write. FL and Demo checks also pass. This supersedes historical UNVERIFIED RUNTIME notes below. Game acceptance awaits the final integrated package. User authorized local checkpoint commits, not publication.
