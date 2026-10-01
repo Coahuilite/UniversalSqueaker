@@ -31,10 +31,11 @@ Ordered by what unblocks what. Each item's detail lives in the section it names.
   permits 17/17; no Biotech keeps both ineligible. Genuine MentalBreak remains independent. Actual playback
   still needs game evidence and matching pack resources. Technical verification and packaging passed;
   do not request the old C0-C6 matrix again.
-- [ ] **1b. Modern settings design:** retain left navigation, main content and contextual help. Implement
-  shell/Overview, then Packs, then Tuning as consumer slices using existing FL composition/style surfaces.
-  Selected-row text readability and navigation-background enclosure remain visible P2 defects, not closed
-  by a design preview. Judge any proposed new kind by Structure/Layout/Semantics/Appearance ownership.
+- [ ] **1b. Modern settings design:** V1 navigation surfaces, flatter Section edges and Overview spacing
+  are implemented; short-body navigation scrolling and narrow Overview input stacking remain open.
+  Real-game readability/enclosure is still pending. Continue with Packs (V2), Tuning (V3), then remaining
+  pages/help/footer (V4), using existing FL composition/style surfaces and retaining all current controls.
+  Judge any proposed new kind by Structure/Layout/Semantics/Appearance ownership.
 - [x] **2. Paired Dev build path:** `docs/build-and-debug.md`. Builds are isolated, US explicitly selects the FL artifact, and package staging verifies the actual compiler-reference hash. This does not close item 1's in-game acceptance.
 - [ ] **3. Claims carried as claims** (each has its own line in §S6 and in `MEMORY.md`): the square toggle's
   press path and hover lane; the 24 → 36 widening's lane re-cut at the 320 shape; row fill / row hover (the

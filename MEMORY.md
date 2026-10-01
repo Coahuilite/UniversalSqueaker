@@ -6,6 +6,17 @@
 > **The pre-compaction text of this file and of `TODO.md` is archived byte-verbatim in `OBLIVIONIS.md`
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
+## V1 partial: navigation surfaces and Overview spacing
+
+Navigation paints its own ordinary/hover/selected card surfaces on the shared measured and hit rect.
+The outer navigation outline is removed; flat Section edges are explicitly transparent, while Panel
+stays inherited so page-palette re-tints still work. Overview Section gaps are 8px; volume padding is
+16px. Original controls, bindings, translations, help and the committed report fix are retained.
+Relevant geometry checks keep their original relations with these authored values. The nav paint
+recorder is reset per draw. No new kind or library product change. This is only the paint/spacing
+part of V1: short-body navigation scrolling and narrow Overview input stacking remain open, as does
+real-game visual and revised-package report acceptance. No full V1 completion is claimed.
+
 ## DIAG-FIX: repeated reports keep waiting for their own pass
 
 The consumer no longer treats a previous successful report as a reason to retire a new request.

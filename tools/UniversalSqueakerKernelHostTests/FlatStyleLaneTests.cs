@@ -84,10 +84,26 @@ internal static class FlatStyleLaneTests
         Assert(!SameColor(flat.Selected, flat.Hover),
             "selected and hover must be distinguishable: " + Hex(flat.Selected) + " vs " + Hex(flat.Hover));
 
+        // V1 (2026-10-02): the CONTAINER surface is flattened too. An engine `Section` paints
+        // `UiThemeDraw.Panel(rect)` paints the parent palette's fill and an explicitly transparent edge.
+        // The fill must stay inherited so a colour-only page re-tint can still repaint this scoped card.
+        // Removing PanelBorder restores an opaque page edge; the faithful-revert check is recorded by PM.
+        Assert(flat.PanelSurface.Border.a == 0f,
+            "a flat CARD must paint no visible box: PanelBorder must be transparent, got border "
+            + Hex(flat.PanelSurface.Border) + " vs fill " + Hex(flat.Panel));
+
+        // CONTROL: the flattened card still reads as a lift, because the card FILL is a different tone from
+        // both the scope's plane and its raised surface - "fewer frames" must not become "no hierarchy".
+        Assert(!SameColor(flat.Panel, flat.WorkspacePlane) && !SameColor(flat.Panel, flat.Raised),
+            "the flattened card must still read as its own plane: panel " + Hex(flat.Panel)
+            + " vs plane " + Hex(flat.WorkspacePlane) + " vs raised " + Hex(flat.Raised));
+
         // CONTROL: the page level keeps its bordered values, so the assertions above measure the SCOPE and
         // not a document-wide re-tint.
         Assert(!SameColor(page.RaisedSurface.Border, page.Raised),
             "the page-level palette must keep its bordered Raised surface");
+        Assert(!SameColor(page.PanelSurface.Border, page.Panel),
+            "and its bordered Panel surface: the flattening belongs to the scope, not to the palette");
         Console.WriteLine("[flat] " + SchemeName + " raised=" + Hex(flat.Raised)
             + " hover=" + Hex(flat.Hover) + " selected=" + Hex(flat.Selected)
             + " | page raised=" + Hex(page.Raised) + " border=" + Hex(page.RaisedSurface.Border));

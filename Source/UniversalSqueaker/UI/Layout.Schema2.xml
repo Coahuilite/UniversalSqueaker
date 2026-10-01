@@ -20,9 +20,20 @@
 
          "No box" is spelled as a fill whose border token is the SAME colour, because the vocabulary has
          no Border=none: UiThemeDraw.Surface paints a 1px frame in the border colour, so equal values make
-         that frame invisible. Hover and Selected keep their own fills, so the states stay visible. -->
+         that frame invisible. Hover and Selected keep their own fills, so the states stay visible.
+
+         V1 (2026-10-02): `PanelBorder` is transparent, which removes the NESTED FRAMES. An
+         engine `Section` container paints `UiThemeDraw.Panel(rect)` (`UiLayoutEngine.cs:2905`) - the Panel
+         fill plus a 1px `PanelBorder` frame - so every declarative card used to be a bordered box inside
+         the page plane, and the nav column wrapped the nav's already-bordered cards in a third edge. With a
+         transparent edge the large planes are calmer and the structure is carried by the
+         section title, the secondary text and the accent rail the US section header draws. Separation
+         survives because the FILLS stay different (`Panel #171512` against the plane `#0e0d0c`), so a card
+         still reads as a lift without a line drawn around it. Panel remains inherited from the page
+         palette so an explicit colour-only re-tint can still repaint the scoped card. -->
     <Scheme Name="us-flat-panel">
       <Color Token="WorkspacePlane" Value="#191612" />
+      <Color Token="PanelBorder" Value="#17151200" />
       <Color Token="Raised" Value="#191612" />
       <Color Token="RaisedBorder" Value="#191612" />
       <Color Token="Hover" Value="#242019" />
@@ -91,6 +102,11 @@
          sub-tree and every scroll position survive the swap (see the help-band comment below). -->
     <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column"
          VisibleKey="body-visible">
+      <!-- V1 (2026-10-02): the nav column keeps `us-flat-panel` (the column itself stays a calm plane,
+           with no panel frame), and the nav WIDGET now paints its own card enclosure with an edge the
+           scheme cannot alias away - `RaisedBorder == Raised` is that scheme's own "no box" spelling, and
+           it was what made an ordinary row read as text floating outside its surface. Selected / hovered /
+           ordinary are three visibly different cards inside this one column. -->
       <Column Id="nav-column" Width="200" Padding="0" Scheme="us-flat-panel">
         <Widget Id="nav" Kind="us/nav" />
       </Column>
@@ -123,7 +139,7 @@
 
              The child of the eat-precision pair is gated by the engine's VisibleKey reading the parent's
              own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
-        <Section Id="global-volume" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="global-volume" Tab="Overview" Padding="16" Gap="8" Scheme="us-flat-panel">
           <Widget Id="global-volume-header" Kind="us/section-header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
           <Row Id="global-volume-top" Gap="8" Padding="0">
             <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
@@ -131,7 +147,7 @@
           </Row>
           <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
         </Section>
-        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
           <Column Id="basic-tuning-body" Gap="6" Padding="0">
             <Row Id="basic-egg-row" Gap="8" Padding="0">
@@ -200,7 +216,7 @@
              26px weight with the field flexing between them. The two buttons fire their own commands - a
              declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
              the host side of the command, exactly where the composite applied it. -->
-        <Section Id="timing" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="timing" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
           <Row Id="timing-interval-row" Gap="8" Padding="0">
             <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
@@ -214,7 +230,7 @@
             <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
           </Row>
         </Section>
-        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
           <Row Id="camera-indicator-row" Gap="8" Padding="0">
             <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
@@ -232,7 +248,7 @@
              own square toggle over the same bool the composite wrote. The four us/diagnostics/* item help
              keys move from the retired widget C# onto these elements, because a catalog item claimed by
              nothing is dead help content. -->
-        <Section Id="diagnostics" Tab="Overview" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="diagnostics" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpKey="us/diagnostics" />
           <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpKey="us/diagnostics" />
           <Row Id="diagnostics-logging-row" Gap="4" Padding="0">

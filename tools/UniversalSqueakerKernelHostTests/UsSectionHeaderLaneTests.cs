@@ -200,11 +200,23 @@ internal static class UsSectionHeaderLaneTests
                     "the rail must be as tall as the header band (the design's 'rail covers the section'), got "
                     + Describe(railRect) + " vs band " + Describe(header));
 
-                // (b) the card's flat plane is still there, so the rail is drawn ON the section rather than
-                // replacing it.
-                Assert(inBand.Count >= 2,
-                    "the '" + card + "' header band must paint its flat plane AND the rail, got "
-                    + inBand.Count + " solid(s): " + Describe(inBand));
+                // (b) the parent card paints the plane behind its header. Its left edge differs from the
+                // padded header edge; counting unrelated solids at header.x cannot identify that plane.
+                Rect cardRect = RectOf(snapshot, card);
+                Color panel = new UiStyleResolver(theme, host.Manifest.Styles)
+                    .ThemeFor(new[] { new UiStyleDeclaration("us-flat-panel") }).Panel;
+                bool planePainted = false;
+                for (int i = 0; i < rects.Count; i++)
+                {
+                    Rect painted = ToWindowSpace((Rect)rects[i]!, snapshot);
+                    if (Close(painted.x, cardRect.x) && Close(painted.y, cardRect.y)
+                        && Close(painted.width, cardRect.width) && Close(painted.height, cardRect.height)
+                        && SameColor((Color)colors[i]!, panel)) planePainted = true;
+                }
+                Assert(planePainted && header.x >= cardRect.x && header.xMax <= cardRect.xMax
+                    && header.y >= cardRect.y && header.yMax <= cardRect.yMax,
+                    "the '" + card + "' must paint its own plane behind the contained header: card "
+                    + Describe(cardRect) + ", header " + Describe(header));
 
                 Console.WriteLine("[header-rail] " + card + " band=" + Describe(header) + " rail="
                     + Describe(railRect) + " accent=" + Hex(accent) + " solidsInBand=" + inBand.Count);
@@ -423,13 +435,13 @@ internal static class UsSectionHeaderLaneTests
                             + " moved the band moves every card below it");
                     }
 
-                    // The Overview card, measured end to end: Padding 12 + header 26 + Gap 6 + body +
-                    // Padding 12, with the body read from the arranged body element rather than re-derived.
+                    // V1 authors volume Padding 16 and Gap 8. The header remains 26px, and its body stays
+                    // below that header and inside the padded card.
                     if (tab != "Overview") continue;
                     if (!snapshot.RectById.TryGetValue(OverviewCard, out Rect card)) continue;
                     if (!snapshot.RectById.TryGetValue(OverviewCardHeader, out Rect head)) continue;
-                    float bodyTop = head.yMax + 6f;
-                    float bodyBottom = card.yMax - 12f;
+                    float bodyTop = head.yMax + 8f;
+                    float bodyBottom = card.yMax - 16f;
                     Assert(bodyBottom >= bodyTop - 0.5f,
                         "the Overview card's body must start below its header + the declared Gap: header ends "
                         + Num(head.yMax) + ", body would start at " + Num(bodyTop) + ", card ends "

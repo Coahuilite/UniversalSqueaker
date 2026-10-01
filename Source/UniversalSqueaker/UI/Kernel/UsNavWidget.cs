@@ -26,6 +26,16 @@ namespace UniversalSqueaker.UI;
 /// the stability contract is unchanged; setting <see cref="SubtitleLines"/> back to 2 restores the previous
 /// shape in one line.
 /// </para>
+/// <para>
+/// V1 ENCLOSURE FIX (2026-10-02): the geometry was never the defect - the label, the description and the
+/// hit target already shared one rect - but the SURFACE was. The old neutral path painted
+/// <c>theme.RaisedSurface</c>, and this column's <c>us-flat-panel</c> scheme sets <c>RaisedBorder</c> equal
+/// to the <c>Raised</c> fill on purpose ("no box" is spelled as an invisible frame), so an ordinary row
+/// painted no enclosure and its text read as floating beside the column. The three states now paint the
+/// same one rect explicitly: selected takes the palette's Selected fill with the accent edge and the rail,
+/// hovered a softer step with a strong structural edge, ordinary the raised fill with the structural edge.
+/// The scheme is untouched, so every other flat panel keeps its own look.
+/// </para>
 /// </summary>
 public sealed class UsNavWidget : IUiWidget
 {
@@ -107,8 +117,12 @@ public sealed class UsNavWidget : IUiWidget
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        // V1 (2026-10-02): the COLUMN is a plane now, not a box. It used to paint its WorkspacePlane fill
+        // AND a full `theme.Border` frame around it, which made the nav read as three nested edges - the
+        // page plane, the column box, then each card's own enclosure. The column keeps the lifted plane (it
+        // is `#191612` against the page's `#0e0d0c`, so it still reads as its own region) and gives up the
+        // outline; the card enclosures below are the only edges left inside it.
         UiThemeDraw.BackgroundPlane(rect, ctx.Theme);
-        UiThemeDraw.Surface(rect, ctx.Theme, Color.clear, ctx.Theme.Border);
         ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
 
         float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
@@ -119,13 +133,32 @@ public sealed class UsNavWidget : IUiWidget
         for (int i = 0; i < Workspaces.Length; i++)
         {
             (string tab, string labelKey, string descriptionKey) = Workspaces[i];
+            // ONE envelope: this single rect is the card's surface, both text bounds' owner and the hit
+            // target below. V1's defect was the surface, not the geometry - the old neutral treatment
+            // inherited `us-flat-panel`, whose RaisedBorder IS its Raised fill, so an ordinary row painted
+            // no enclosure at all and its text read as floating. The frame is therefore painted HERE, with
+            // an edge the scheme cannot alias away, while the SELECTED fill still comes from the palette.
             Rect card = new(rect.x + SidePadding, y, innerWidth, cardHeight);
             bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
             bool hovered = UsKernelDraw.HelpHover(card, ctx, "us/page-title/nav");
 
-            // Selected/unselected differ in ink, fill and rail ONLY: the rect handed to every state is the
-            // same one, so the two states cannot diverge in x, width or height.
-            UiThemeDraw.StatusTreatment(card, ctx.Theme, active ? UiStatusTone.Active : UiStatusTone.Neutral);
+            // Selected / hovered / ordinary are three VISIBLY different enclosures: the selected card takes
+            // the palette's Selected fill with the accent as its edge and the rail, a hovered card a softer
+            // step of the same plane, an ordinary card the raised plane with a structural edge. No hue
+            // carries "ordinary", so the accent keeps its meaning.
+            if (active)
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme.AccentGold);
+            }
+            else if (hovered)
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme.BorderStrong);
+            }
+            else
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme.Border);
+            }
+
             UiThemeDraw.AccentRail(card, ctx.Theme, active, 3f);
 
             // Both bands are ellipsized into the card's fixed text column through the same metric seam the

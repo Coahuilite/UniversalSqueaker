@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -121,6 +122,7 @@ internal static class MoodLayoutFocusedTests
         Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
         Step("reset controls route at every card width", ResetRoutingAcrossCardWidths);
         Step("a popup-covered nav control yields the click", CoveredControlYieldsTheClick);
+        Step("every nav card paints its own enclosure (V1)", EveryNavCardPaintsItsOwnEnclosure);
         Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
@@ -1461,6 +1463,141 @@ internal static class MoodLayoutFocusedTests
     {
         public string Translate(string key) => key;
         public int TranslationRevision => 0;
+    }
+
+    /// <summary>
+    /// V1: the navigation ENCLOSURE. The probe host carries the nav alone UNDER the flat scope - which is
+    /// what the real column declares - so the two halves are independent: the scope keeps flattening the
+    /// column, and every card must still paint its own enclosing surface and edge at its OWN rect.
+    /// <para>
+    /// Original demand this replaces nothing of: the nav geometry lane still asserts the five cards' equal
+    /// bounds and the fixed column, and this step adds the SURFACE half those bounds could never observe.
+    /// PM faithfully restored the committed pre-V1 nav source and observed <b>EveryCardIsEnclosed</b>
+    /// fail. <b>SelectedAndOrdinaryDiffer</b> is a state distinction guard, not a separately executed
+    /// mutation proof. Each run clears the paint records before observing its own draw.
+    /// </para>
+    /// </summary>
+    private static void EveryNavCardPaintsItsOwnEnclosure()
+    {
+        UsKernelWidgetRegistrar.EnsureRegistered();
+        const string xml = "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
+            + "<Styles Schema=\"1\" Density=\"regular\">"
+            + "<Scheme Name=\"us-flat-panel\">"
+            + "<Color Token=\"WorkspacePlane\" Value=\"#191612\" />"
+            + "<Color Token=\"Raised\" Value=\"#191612\" />"
+            + "<Color Token=\"RaisedBorder\" Value=\"#191612\" />"
+            + "<Color Token=\"Hover\" Value=\"#242019\" />"
+            + "<Color Token=\"HoverBorder\" Value=\"#242019\" />"
+            + "<Color Token=\"Selected\" Value=\"#3a311f\" />"
+            + "<Color Token=\"SelectedBorder\" Value=\"#3a311f\" />"
+            + "</Scheme></Styles>"
+            + "<Column Id=\"probe-column\" Padding=\"0\" Gap=\"0\" Scheme=\"us-flat-panel\">"
+            + "<Widget Id=\"probe-nav\" Kind=\"us/nav\" />"
+            + "</Column></UiPage>";
+        string activeTab = "Tuning";
+        var bindings = new UiBindings();
+        bindings.BindValue(UiBindings.ActiveTabKey, () => activeTab, value => activeTab = value);
+        bindings.BindAction<string>("set-tab", value => activeTab = value);
+        using UiHost host = new(UsKernelWidgetRegistrar.Scope, UiLayoutManifest.Parse(xml), bindings,
+            UsTheme.Surface(), new Program.StubMetrics(), new PopupProbeTranslation());
+        Rect viewport = new(0f, 0f, 200f, 600f);
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+
+        IList rects = RecordedStub("DrawBoxSolidRects");
+        IList colours = RecordedStub("DrawBoxSolidColors");
+        rects.Clear();
+        colours.Clear();
+        var cards = new List<Rect>();
+        try
+        {
+            SetButtonOverride(rect =>
+            {
+                if (rect.width >= 100f && rect.height >= 30f) cards.Add(rect);
+                return false;
+            });
+            host.DrawChecked(viewport);
+        }
+        finally
+        {
+            ClearOverrides();
+        }
+
+        Assert(cards.Count == 5, "the probe must capture exactly the five nav cards, got " + cards.Count);
+        cards = cards.OrderBy(r => r.y).ToList();
+
+        Assert(rects.Count == colours.Count,
+            "the stub's two solid recorders must stay in step: " + rects.Count + " rects vs " + colours.Count);
+
+        // The SELECTED card is the one whose fill is the palette's Selected tone; the ordinary ones take the
+        // raised plane. Asking which enclosures were painted is the whole assertion: the pre-V1 neutral path
+        // inherited an invisible frame, so an ordinary card painted no edge at all.
+        var enclosures = new List<Color>();
+        for (int i = 0; i < cards.Count; i++)
+        {
+            Color? edge = EdgeOf(cards[i], rects, colours);
+            Assert(edge.HasValue,
+                "EveryCardIsEnclosed: nav card " + i + " painted no enclosing surface at "
+                + cards[i].x + "," + cards[i].y + " " + cards[i].width + "x" + cards[i].height);
+            enclosures.Add(edge!.Value);
+        }
+
+        List<Color> distinct = enclosures.Distinct().ToList();
+        Assert(distinct.Count == 2,
+            "SelectedAndOrdinaryDiffer: the five cards must paint exactly two enclosures - the selected tone"
+            + " and the ordinary one - got " + distinct.Count + " (" + string.Join(", ",
+                distinct.Select(c => "#" + Channel(c.r) + Channel(c.g) + Channel(c.b))) + ")");
+    }
+
+    /// <summary>
+    /// The enclosure edge a card actually painted: the first recorded solid whose rect IS the card's own
+    /// outline. <see cref="UiThemeDraw.Surface"/> paints the fill over the whole rect and then four 1px
+    /// strips in the edge colour, so a matching rect with a DIFFERENT colour on a sibling strip is exactly
+    /// "this card drew a box". A card that painted only its fill (no edge) answers null.
+    /// </summary>
+    private static Color? EdgeOf(Rect card, IList rects, IList colours)
+    {
+        for (int i = 0; i < rects.Count; i++)
+        {
+            if (rects[i] is not Rect rect || !RectMatches(rect, card)) continue;
+            if (colours[i] is not Color fill) continue;
+
+            for (int j = 0; j < rects.Count; j++)
+            {
+                if (rects[j] is not Rect strip || colours[j] is not Color edge) continue;
+                bool isCardEdge = Math.Abs(strip.x - card.x) <= 0.01f
+                    && Math.Abs(strip.y - card.y) <= 0.01f
+                    && Math.Abs(strip.height - 1f) <= 0.01f
+                    && Math.Abs(strip.width - card.width) <= 0.01f;
+                if (!isCardEdge) continue;
+                if (!SameColour(edge, fill)) return edge;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool SameColour(Color a, Color b)
+    {
+        return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+    }
+
+    private static string Channel(float value)
+    {
+        return Mathf.RoundToInt(Mathf.Clamp01(value) * 255f).ToString("X2");
+    }
+
+    private static IList RecordedStub(string fieldName)
+    {
+        FieldInfo? field = typeof(Verse.Widgets).GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException(
+                "the runtime stub does not record '" + fieldName + "'; this lane cannot observe a draw and"
+                + " must not pass silently");
+        }
+
+        return field.GetValue(null) as IList
+            ?? throw new InvalidOperationException("the stub's '" + fieldName + "' recorder is not a list");
     }
 
     private static bool TryGetPopupHitLayerFromHost(UiHost host, out UiHitLayer layer)

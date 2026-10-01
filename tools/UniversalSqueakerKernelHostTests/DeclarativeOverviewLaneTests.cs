@@ -66,7 +66,8 @@ internal static class DeclarativeOverviewLaneTests
     /// </summary>
     private static readonly float[] EggBandWidths = { PageWidth, NarrowestReachablePageWidth };
     private const float CardPadding = 12f;
-    private const float CardGap = 6f;
+    // V1 authors an 8px Overview Section gap; the padding/header/gap/body invariant is unchanged.
+    private const float CardGap = 8f;
     private const float HeaderHeight = 26f;
 
     private static readonly string[] RetiredKinds =

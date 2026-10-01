@@ -47,7 +47,8 @@ internal static class DeclarativeTimingLaneTests
     private const float PageWidth = 1024f;
     private const float PageHeight = 900f;
     private const float CardPadding = 12f;
-    private const float SectionGap = 6f;
+    // V1 authors an 8px Overview Section gap; retain the same card-height relation.
+    private const float SectionGap = 8f;
     private const float HeaderHeight = 26f;
     private const float IntervalRowGap = 8f;
     private const float MultiplierRowGap = 4f;
