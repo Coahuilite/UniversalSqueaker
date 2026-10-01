@@ -169,8 +169,6 @@ Assembly-CSharp!Verse.ModContentPack::get_Name() | defs
 Assembly-CSharp!Verse.ModContentPack::get_PackageId() | defs
 Assembly-CSharp!Verse.ModMetaData::get_AuthorsString() | defs
 Assembly-CSharp!Verse.ModMetaData::get_PackageIdNonUnique() | defs
-Assembly-CSharp!Verse.ModSettings::.ctor() | defs
-Assembly-CSharp!Verse.ModSettings::ExposeData() | defs
 Assembly-CSharp!Verse.ModsConfig::get_BiotechActive() | defs
 Assembly-CSharp!Verse.RaceProperties::body:c:Verse.BodyDef | defs
 Assembly-CSharp!Verse.ThingDef::comps:c:System.Collections.Generic.List`1<c:Verse.CompProperties> | defs

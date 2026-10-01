@@ -222,8 +222,6 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     {
         if (!layoutReportPending || host == null) return -1;
 
-        UsTextFitAudit? scope = UsTextFitAudit.FindOpenScope(host);
-        int before = scope != null ? scope.LastGeometryReportPass : -1;
         int pass = UsTextFitAudit.PublishGeometryReport(host);
         if (pass >= 0)
         {
@@ -231,10 +229,18 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
             return pass;
         }
 
-        // No report: either the pass it waits on has not completed (the request must survive - and the scope
-        // has still produced no report at all), or the request was refused/unavailable, which retires it. The
-        // distinction is "a report already exists", so a refused click can never dangle into a later enable.
-        if (scope == null || before >= 0) layoutReportPending = false;
+        // No report yet. Retire the request ONLY when it can no longer be honoured - the capture is off or
+        // the carrier has no instrument - so a Dev/OFF request still cannot dangle into a later enable.
+        // Retiring merely because an EARLIER report exists was the D1 defect: after the first report the
+        // request was cleared on its first consume attempt, which runs right after the click and before the
+        // next pass, so every later request in the same window died instead of waiting for its pass.
+        UsTextFitAudit.DevGeometryStatus status = UsTextFitAudit.GetDevGeometryStatus(host);
+        if (status != UsTextFitAudit.DevGeometryStatus.Active
+            && status != UsTextFitAudit.DevGeometryStatus.Overlay)
+        {
+            layoutReportPending = false;
+        }
+
         return -1;
     }
 

@@ -6,6 +6,16 @@
 > **The pre-compaction text of this file and of `TODO.md` is archived byte-verbatim in `OBLIVIONIS.md`
 > "Memory compaction 2026-09-21c"** - read it only for a historical conflict.
 
+## DIAG-FIX: repeated reports keep waiting for their own pass
+
+The consumer no longer treats a previous successful report as a reason to retire a new request.
+`ConsumeLayoutReportRequest` clears on success or when capture is no longer Active/Overlay; off requests
+remain refused. The regression instantiates production `UsKernelSettingsSource`, drives bound requests
+on a small real `UiHost`, and consumes through the production method. Restoring only the old production
+method fails `TheSecondReportDescribesANewerPass` (first 2, second -1); the fixed method passes.
+The former fake consume mirror was removed. The test runtime supplies only the `ModSettings` base type,
+not Scribe or a complete Verse window. Fixed-package game verification remains pending.
+
 ## R4-B integrated checkpoint — 2026-09-30
 
 The preset subtree uses FL's shared UiRowBand with typed callbacks and native xenotype icon data supplied by the Verse adapter. PM aligned measure/draw heights, removed duplicate indentation, preserved the 18px checkbox and 10px right edge, and made row keys include their full business identity. Release/Dev compilation and all 15 normal integration checks pass against the current Dev carrier, including the drawn image height and real pointer down/up lane. Native Def texture loading remains game-only and is recorded in the stub exemption table; stub success is not game acceptance. Details: `docs/r4b-preset-subtree-row-composition.md`. Local commits authorized; no publication.

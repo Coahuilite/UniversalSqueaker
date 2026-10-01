@@ -35,6 +35,7 @@ internal static class UsAuditRoutingLaneTests
         Step("repeated clicks emit no geometry; each explicit report is its own pass",
             RepeatedClicksAreSeparateEvidence);
         Step("one report request produces one report AND one retained snapshot", TheReportIsOneShot);
+        Step("a repeated report request survives to a newer pass (DIAG-FIX D1)", ARepeatedRequestSurvivesToANewerPass);
 #endif
         Console.WriteLine("UsAuditRoutingLaneTests ALL PASS");
         return 0;
@@ -150,6 +151,58 @@ internal static class UsAuditRoutingLaneTests
             SqueakLog.Configure(previousMode);
             observer.SetValue(null, previousObserver);
         }
+    }
+
+    /// <summary>
+    /// Replays the game-observed first/second request through the production settings source.
+    /// A small real UiHost supplies completed captures; it does not simulate the full Verse settings window.
+    /// Faithfully restoring the old production retire rule must fail the second-report assertion.
+    /// </summary>
+    private static void ARepeatedRequestSurvivesToANewerPass()
+    {
+        var source = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+        var bindings = new UiBindings();
+        bindings.BindValue<bool>("layout-capture", () => source.LayoutCaptureOn, source.SetLayoutCapture);
+        bindings.BindCommand("request-layout-report", source.RequestLayoutReport);
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(
+            "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
+            + "<Column Id=\"report-root\"><Widget Id=\"report\" Kind=\"input/button\""
+            + " Text=\"Report\" ActionBind=\"request-layout-report\" Width=\"100\" Height=\"24\" />"
+            + "</Column></UiPage>");
+        UsKernelWidgetRegistrar.EnsureRegistered();
+        using var host = new UiHost("coahuilite.universalsqueaker", manifest, bindings,
+            UsTheme.Surface(), new Program.StubMetrics(), new AuditTranslation());
+        source.AttachHost(host);
+        using UsTextFitAudit audit = UsTextFitAudit.Open(host, auditFit: false);
+        var viewport = new Rect(0f, 0f, 300f, 160f);
+
+        host.Bindings.Invoke("request-layout-report");
+        Assert(!audit.IsGeometryReportPending && source.ConsumeLayoutReportRequest() < 0,
+            "capture-off requests must be refused");
+        host.Bindings.Set("layout-capture", true);
+        host.DrawFrame(viewport);
+        Assert(source.ConsumeLayoutReportRequest() < 0,
+            "enabling capture must not satisfy the refused request");
+
+        host.Bindings.Invoke("request-layout-report");
+        Assert(source.ConsumeLayoutReportRequest() < 0 && audit.IsGeometryReportPending,
+            "the first request must wait for a newer completed pass");
+        host.DrawFrame(viewport);
+        int first = source.ConsumeLayoutReportRequest();
+        Assert(first >= 0 && !audit.IsGeometryReportPending,
+            "the first production request must emit one report and retire");
+
+        host.Bindings.Invoke("request-layout-report");
+        Assert(source.ConsumeLayoutReportRequest() < 0 && audit.IsGeometryReportPending,
+            "the second request must wait for its own completed pass");
+        host.DrawFrame(viewport);
+        int second = source.ConsumeLayoutReportRequest();
+        Assert(second > first && !audit.IsGeometryReportPending,
+            "TheSecondReportDescribesANewerPass: same-window production request was dropped"
+            + " (first " + first + ", second " + second + ")");
+        host.DrawFrame(viewport);
+        Assert(source.ConsumeLayoutReportRequest() < 0,
+            "a further pass without a request must emit no report");
     }
 #endif
 
