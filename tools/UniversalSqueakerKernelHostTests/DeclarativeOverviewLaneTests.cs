@@ -117,6 +117,7 @@ internal static class DeclarativeOverviewLaneTests
         // filter is about the checkbox shape, not about that band. Measuring the invariant first is what
         // keeps each mutation attributable to the step that owns it.
         Step("the egg state band does not depend on the toggle (4 widths x EN/ZH)", TheEggStateBandDoesNotDependOnTheToggle);
+        Step("Overview parameters keep wide columns and stack narrow labels above controls", ResponsiveOverviewRows);
         Step("the declared rows follow the manifest band rule (4 widths x EN/ZH)", DeclaredRowsFollowTheManifestBandRule);
         Step("each declared control is the row's only hit surface and writes exactly once", EachDeclaredControlIsTheOnlyWriteChannel);
         Console.WriteLine("DeclarativeOverviewLaneTests ALL PASS");
@@ -126,6 +127,64 @@ internal static class DeclarativeOverviewLaneTests
     // ---------------------------------------------------------------------------------------------
     // Step 1: the retirement is real
     // ---------------------------------------------------------------------------------------------
+
+    // V1: observed endpoint shapes in the real shipped Host, using both actual language tables.
+    // Restoring the pre-V1 Overview subtree must fail NarrowLabelAboveInput. Existing band assertions
+    // below retain gap, text measurement, card height and exact checkbox dimensions in both shapes.
+    private static void ResponsiveOverviewRows()
+    {
+        var rows = new (string Row, string Text, string Input)[]
+        {
+            ("global-volume-top", "global-volume-caption", "global-volume-number"),
+            ("basic-egg-row", "basic-egg-text", "basic-egg-check"),
+            ("basic-baby-row", "basic-baby-label", "basic-baby-check"),
+            ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check"),
+            ("basic-talking-row", "basic-talking-label", "basic-talking-check"),
+            ("basic-population-row", "basic-population-label", "basic-population-check"),
+            ("basic-eat-row", "basic-eat-label", "basic-eat-check"),
+            ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check"),
+            ("timing-interval-row", "timing-interval-caption", "timing-interval-seconds"),
+            ("timing-multiplier-row", "timing-multiplier-label", "timing-multiplier-minus"),
+            ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check"),
+            ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check"),
+            ("diagnostics-geometry-capture-row", "diagnostics-geometry-capture-label", "diagnostics-geometry-capture"),
+            ("diagnostics-geometry-outline-row", "diagnostics-geometry-outline-label", "diagnostics-geometry-outline")
+        };
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
+            {
+                // Check the newly required narrow presentation first, so restoring the old subtree
+                // fails its stacking requirement before the separate diagnostic-row ordering guard.
+                foreach (bool narrow in new[] { true, false })
+                {
+                    using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource
+                        { RichData = true, EatPrecisionEnabled = true }, new Program.StubMetrics());
+                    host.Bindings.Set("help-open", narrow);
+                    float width = narrow ? 736f : 1024f;
+                    UiLayoutSnapshot snapshot = Arrange(host, width);
+                    host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
+                    foreach (var ids in rows)
+                    {
+                        Rect row = RectOf(snapshot, ids.Row);
+                        Rect text = RectOf(snapshot, ids.Text);
+                        Rect input = RectOf(snapshot, ids.Input);
+                        Assert(narrow ? input.y >= text.yMax + 3.5f : input.x >= text.xMax + 3.5f,
+                            (narrow ? "NarrowLabelAboveInput" : "WideLabelBesideInput")
+                            + ": " + ids.Row + "/" + language + " text=" + Describe(text)
+                            + " input=" + Describe(input));
+                        Assert(input.x >= row.x - 0.5f && input.xMax <= row.xMax + 0.5f
+                               && input.y >= row.y - 0.5f && input.yMax <= row.yMax + 0.5f,
+                            ids.Row + ": input must remain inside its row in both presentations");
+                    }
+                    Console.WriteLine("[overview-responsive] " + language + " "
+                        + (narrow ? "stacked" : "wide") + " rows=" + rows.Length);
+                }
+            }
+            finally { Program.SetTranslatorResolver(null); }
+        }
+    }
 
     private static void RetiredKindsAreGone()
     {
@@ -443,14 +502,19 @@ internal static class DeclarativeOverviewLaneTests
                             Assert(Math.Abs(label.x - row.x) <= 0.5f,
                                 rowId + " at " + width + " (" + language + "): the label must start at the"
                                 + " row's left edge, label " + Describe(label) + " row " + Describe(row));
-                            Assert(Math.Abs(check.xMax - row.xMax) <= 0.5f,
+                            bool stacked = row.width < 400f;
+                            Assert(stacked ? Math.Abs(check.x - row.x) <= 0.5f
+                                           : Math.Abs(check.xMax - row.xMax) <= 0.5f,
                                 rowId + " at " + width + " (" + language + "): the declared checkbox must"
                                 + " terminate on the row's right edge, check " + Describe(check) + " row "
                                 + Describe(row));
-                            Assert(Math.Abs((check.x - label.xMax) - RowGap) <= 0.5f,
+                            Rect textBand = rowId == "basic-egg-row"
+                                ? RectOf(snapshot, "basic-egg-text") : label;
+                            float measuredGap = stacked ? check.y - textBand.yMax : check.x - label.xMax;
+                            Assert(Math.Abs(measuredGap - RowGap) <= 0.5f,
                                 rowId + " at " + width + " (" + language + "): the Row's declared Gap must be"
                                 + " the space between the label and the checkbox, got "
-                                + (check.x - label.xMax));
+                                + measuredGap);
                             Assert(Math.Abs(check.width - DeclaredCheckboxWidth) <= 0.5f
                                    && Math.Abs(check.height - DeclaredCheckboxHeight) <= 0.5f,
                                 rowId + " at " + width + " (" + language + "): the declared checkbox band is"
@@ -460,8 +524,7 @@ internal static class DeclarativeOverviewLaneTests
                             // MUTATION PROOF: the row height is the engine's own rule over the declared
                             // bands - max of the children's measured bands - so changing the checkbox
                             // Height, the atom's padding or a declared band reddens here.
-                            float expected = Math.Max(DeclaredCheckboxHeight,
-                                WrappedBand(metrics, table[labelKey], label.width));
+                            float textHeight = WrappedBand(metrics, table[labelKey], label.width);
 
                             // The egg row stacks a second band under the title, so its column is taller.
                             if (rowId == "basic-egg-row")
@@ -472,10 +535,13 @@ internal static class DeclarativeOverviewLaneTests
                                 Rect state = RectOf(snapshot, stateKey == "US.Tuning.EasterEggs.On"
                                     ? "basic-egg-state-on"
                                     : "basic-egg-state-off");
-                                expected = Math.Max(DeclaredCheckboxHeight,
-                                    WrappedBand(metrics, table[labelKey], label.width) + 1f
-                                    + WrappedBand(metrics, table[stateKey], state.width));
+                                textHeight += 1f + WrappedBand(metrics, table[stateKey], state.width);
                             }
+
+                            // V1 preserves the wide max-height contract; narrow rows add the full text
+                            // band, vertical gap and the original 36x30 control instead of clipping it.
+                            float expected = stacked ? textHeight + RowGap + DeclaredCheckboxHeight
+                                : Math.Max(DeclaredCheckboxHeight, textHeight);
 
                             Assert(Math.Abs(row.height - expected) <= 0.5f,
                                 rowId + " at " + width + " (" + language + ") was drawn " + row.height

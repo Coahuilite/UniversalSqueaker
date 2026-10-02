@@ -56,8 +56,10 @@ namespace UniversalSqueaker.KernelHostTests;
 /// why the guard exists.
 /// </para>
 /// <para>
-/// Evidence, per clause. <b>Mutation-proven:</b> the containment clause and the cross-parent overlap clause
-/// (restoring <c>Fill="true"</c> on nav-column reddens both, naming the element and both rects), and the
+/// Historical evidence, per clause. <b>Mutation-proven on the old plain Column:</b> containment and
+/// cross-parent overlap (restoring <c>Fill="true"</c> overflowed both). V1 now uses a real Scroll, whose
+/// clipped content may exceed its viewport; SettingsGeometryLaneTests proves the last destination reachable.
+/// The original non-scroll containment guards remain, including the
 /// containment clause alone (parking <c>banner</c> outside its parent's rect with
 /// <c>AlignX="Left" OffsetX="-60"</c> reddens it with every other step still green). <b>Guarded, not
 /// mutation-proven:</b> the finite/non-negative clause and the "every scroll box is a real box" clause -

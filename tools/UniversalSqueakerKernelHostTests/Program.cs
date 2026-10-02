@@ -757,7 +757,7 @@ internal static class Program
     /// through the carrier's faithful stub (hot-control capture on down, activation on up), which is what
     /// makes "which value did the row actually write" observable.
     /// </summary>
-    private static void DrawWithEvent(UiHost host, Rect viewport, EventType type, Vector2 pointer)
+    internal static void DrawWithEvent(UiHost host, Rect viewport, EventType type, Vector2 pointer)
     {
         Event e = Event.KeyboardEvent("dummy");
         e.type = type;
@@ -2276,8 +2276,9 @@ internal static class Program
     /// Failure sensitivity for the timing card's multiplier row (task-92). The bilingual sweep above is an
     /// absence - "no label overflowed its band" - and an absence cannot tell a band that grew to fit its
     /// text from a card that quietly kept drawing past its own bottom. This step drives the real Host
-    /// twice: the shipped English value, which does not fit one line in the narrow band, and a value short
-    /// enough to fit. The card must be one wrapped line TALLER in the first case, and both frames must
+    /// twice: a deliberately long translated value and a value short enough to fit. V1 gives the label
+    /// more room, so the shipped English value is no longer a wrapping probe. The card must grow in the
+    /// first case, and both frames must
     /// draw with the audit silent. Under the old fixed 20px band the two heights come out identical and
     /// this fails; so does a card that measures short while its row draws the grown band.
     /// </summary>
@@ -2294,15 +2295,19 @@ internal static class Program
             {
                 ["US.Tuning.CooldownMultiplier"] = "Cooldown"
             };
+            var wrapping = new Dictionary<string, string>(english, StringComparer.Ordinal)
+            {
+                ["US.Tuning.CooldownMultiplier"] = new string('W', 100)
+            };
 
             float fitsOneLine = TimingCardHeight(fits, metrics);
-            float wraps = TimingCardHeight(english, metrics);
+            float wraps = TimingCardHeight(wrapping, metrics);
 
             Assert(fitsOneLine > 0f && wraps > 0f,
                 "the rich fixture must place the timing card, got " + fitsOneLine + "px / " + wraps + "px");
             Assert(wraps > fitsOneLine + 10f,
-                "the shipped English multiplier label needs two lines in the narrow band, so the card must "
-                + "grow by that line: one-line " + fitsOneLine + "px, wrapping " + wraps + "px");
+                "the long translated multiplier label must grow the card instead of clipping: one-line "
+                + fitsOneLine + "px, wrapping " + wraps + "px");
             Assert(reports.Count == 0,
                 "and growing the band is the answer, not clipping the text: " + Describe(reports));
         }

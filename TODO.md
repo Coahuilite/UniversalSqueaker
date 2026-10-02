@@ -9,24 +9,17 @@
 
 Ordered by what unblocks what. Read `MEMORY.md` "Current state (2026-10-02)" first.
 
-- [ ] **1. V1 is PARTIAL - the two original requirements are still unimplemented.**
-  **(a) Independent short-body navigation scrolling.** `nav-column` is still a plain `Column`, not a `Scroll`,
-  so when the body slot is shorter than `us/nav`'s natural height (271px at this page) the last destinations
-  cannot be reached. The paint/enclosure work does NOT fix this. The recorded fix is to put `nav-column` inside
-  a `Scroll`, which also makes the body shrink-safe. Do not re-do the already-landed API, spacing, paint,
-  palette or recorder corrections.
-  **(b) Narrow central Overview label/description stacked with its input.** The Overview parameter rows still
-  have no local `Breakpoint`/narrow rule, so the label/description and the input do not re-arrange vertically at
-  narrow widths. The 8px/16px spacing changes are NOT responsive stacking and do not satisfy this.
-  Baseline for both: US `33a0aad`. Judge any proposed new kind by Structure/Layout/Semantics/Appearance
-  ownership, using existing FL composition/style surfaces and retaining all current controls.
+- [ ] **1. Rehearse the completed V1 implementation checkpoint in game.** Short-body navigation now has its
+  own shrinking Scroll and the fourteen Overview parameter rows stack at their own narrow breakpoint. All 15
+  normal checks pass; the two remaining requirement clauses have faithful-revert failures. Preserve the current
+  implementation while obtaining the combined visual/report observations below; do not reimplement these fixes.
 
-- [ ] **2. V1 real-game visual acceptance (pending).** The partial increment passed all 15 normal checks and two
-  faithful paint reverts failed their intended assertions, but that is LOCAL technical evidence only - not V1
-  completion and not in-game acceptance. In game, check: hover differs from selected on an ordinary nav row
-  (hover cannot be asserted in the harness - `IsMouseOver` needs the game mouse), the three card states read
+- [ ] **2. V1 real-game visual acceptance (pending).** Local technical checks and faithful-revert evidence
+  are not in-game acceptance. In game, check that hover differs from selected on an ordinary nav row, and that
+  the three card states read
   clearly, the flattened Section cards still read as separate groups, and the frameless nav column still reads
-  as its own region. **Do not call the partial checkpoint V1 acceptance.**
+  as its own region. If all five destinations already fit, no forced resolution change is needed to create
+  navigation overflow; the short viewport is covered technically. Final glyphs and wheel feel remain game-only.
 
 - [ ] **3. DIAG-FIX revised-package game verification (pending).** Technical acceptance is complete; with a
   revised DEV package, open Overview → Diagnostics: enable Capture → the status line reports capturing → the
@@ -132,9 +125,8 @@ Ordered by what unblocks what. Read `MEMORY.md` "Current state (2026-10-02)" fir
   drop the nav subtitle line entirely to reclaim ~100px of stack height if the compact cards still read tall.
 - [ ] **`ui.text.overflow` walk**: with detailed logging in both languages, walk all five workspaces and confirm
   `usdiag evt=ui.text.overflow` stays silent (any new line is a fix target with an exact need/have pair).
-- [ ] **Decide the narrow support-row shape**: rows grow for a wrapped translated label at 736-open /
-  736-closed-EN / 480-EN (growth is machine-checked as `grown <=> label width > label band`). Options: raise
-  `body-row` `Breakpoint` 500 so 736 stacks, or add a stacked narrow-row variant. Product call.
+- [ ] **Remaining custom-page row shapes** belong to V2-V4. Overview already has local responsive parameter
+  rows; do not revive the old proposal to raise the shared body breakpoint just to fix Overview.
 - [ ] **D4 Packs domain-selection redesign** (maintainer six-point spec): race/xenotype lists side by side, the
   xenotype list follows race selection, dropdowns into their own cards, an explicit clear option, an independent
   search box per list, visible list height 4.5 rows. The search-matching discussion precedes implementation.
@@ -163,8 +155,9 @@ Ordered by what unblocks what. Read `MEMORY.md` "Current state (2026-10-02)" fir
 
 ## In-game acceptance — still open (maintainer steps)
 
-- [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): open/close Help at
-  1024/736/480 in EN+ZH; the window opens narrow and widens by 332 (the 320 help column + the 12px row gap)
+- [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): open/close Help at the
+  actual supported resolution; 736/480 page widths are harness probes, not forced game-resolution instructions.
+  The window opens narrow and widens by 332 (the 320 help column + the 12px row gap)
   when Help expands - 2560x1440 opens 1280x960 (4:3) - stays centred and on screen; nav card compactness, the
   Playback help entries, the mood cards' readability, and a session save/reopen. Also the declarative drawer:
   open/close, scroll position preserved across close/reopen, and the real in-game window width.
@@ -178,8 +171,8 @@ Ordered by what unblocks what. Read `MEMORY.md` "Current state (2026-10-02)" fir
 - **2026-10-02 — DIAG-FIX**: repeated report requests wait for their own pass; the lane now drives the
   production settings source; Demo logs the full retained report once per success under its own prefix.
   Technical acceptance only; revised-package game verification pending (item 3 above).
-- **2026-10-02 — V1 partial**: nav card surfaces, flatter Section edges, Overview gaps 8 / volume padding 16,
-  plus PM's integration fixes. Two requirements remain (item 1 above).
+- **2026-10-02 — V1 implementation checkpoint**: nav surfaces, flatter Section edges, Overview spacing,
+  independent nav scrolling and responsive parameter rows. Technical checks passed; item 1 is game rehearsal.
 - **2026-09-30 — R4-A / R4-B**: typed action-scope choice (the `ToString`/`Enum.TryParse` round-trip is gone)
   and the preset subtree composed on FL's shared row band with native xenotype icons.
 - **R3-B / R12-US**: the per-host geometry instrument and the complete owned DarkGold baseline; durable facts in

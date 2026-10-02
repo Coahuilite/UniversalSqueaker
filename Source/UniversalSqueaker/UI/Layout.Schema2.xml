@@ -107,9 +107,11 @@
            scheme cannot alias away - `RaisedBorder == Raised` is that scheme's own "no box" spelling, and
            it was what made an ordinary row read as text floating outside its surface. Selected / hovered /
            ordinary are three visibly different cards inside this one column. -->
-      <Column Id="nav-column" Width="200" Padding="0" Scheme="us-flat-panel">
+      <!-- The nav owns a viewport: a short body clips and scrolls its natural five-card stack rather
+           than pushing it into the central column or footer. Width and node identity stay unchanged. -->
+      <Scroll Id="nav-column" Width="200" Fill="true" Gap="0" Padding="0" Scheme="us-flat-panel">
         <Widget Id="nav" Kind="us/nav" />
-      </Column>
+      </Scroll>
       <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
         <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
@@ -141,46 +143,64 @@
              own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
         <Section Id="global-volume" Tab="Overview" Padding="16" Gap="8" Scheme="us-flat-panel">
           <Widget Id="global-volume-header" Kind="us/section-header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
-          <Row Id="global-volume-top" Gap="8" Padding="0">
+          <!-- Responsive parameter rows keep label/control columns when roomy and stack the same
+               elements when their own inner band is narrow, independently of the body breakpoint. -->
+          <Row Id="global-volume-top" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
-            <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" AlignY="Top" HelpKey="us/global-volume/number" />
+            <Column Id="global-volume-number-slot" Width="64" Padding="0" AlignY="Top">
+              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpKey="us/global-volume/number" AlignX="Left" />
+            </Column>
           </Row>
           <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
         </Section>
         <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
           <Column Id="basic-tuning-body" Gap="6" Padding="0">
-            <Row Id="basic-egg-row" Gap="8" Padding="0">
+            <Row Id="basic-egg-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Column Id="basic-egg-text" Gap="1" Padding="0">
                 <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpKey="us/basic-tuning/egg" />
                 <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
                 <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
               </Column>
-              <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/egg" />
+              <Column Id="basic-egg-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" HelpKey="us/basic-tuning/egg" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-baby-row" Gap="8" Padding="0">
+            <Row Id="basic-baby-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-baby-label" Kind="text/wrapped" TextKey="US.Tuning.BabyActions" HelpKey="us/basic-tuning/baby-actions" />
-              <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/baby-actions" />
+              <Column Id="basic-baby-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" HelpKey="us/basic-tuning/baby-actions" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-cooldown-row" Gap="8" Padding="0">
+            <Row Id="basic-cooldown-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
-              <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-cooldown" />
+              <Column Id="basic-cooldown-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" HelpKey="us/basic-tuning/scale-cooldown" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-talking-row" Gap="8" Padding="0">
+            <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
-              <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-talking" />
+              <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" HelpKey="us/basic-tuning/scale-talking" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-population-row" Gap="8" Padding="0">
+            <Row Id="basic-population-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
-              <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/scale-population" />
+              <Column Id="basic-population-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" HelpKey="us/basic-tuning/scale-population" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-eat-row" Gap="8" Padding="0">
+            <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
-              <Widget Id="basic-eat-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision" />
+              <Column Id="basic-eat-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-eat-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision">
+            <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
-              <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" AlignY="Middle" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+              <Column Id="basic-eat-child-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision-include-drugs" AlignX="Left" />
+              </Column>
             </Row>
           </Column>
         </Section>
@@ -218,23 +238,27 @@
              the host side of the command, exactly where the composite applied it. -->
         <Section Id="timing" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
-          <Row Id="timing-interval-row" Gap="8" Padding="0">
+          <Row Id="timing-interval-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
             <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" />
           </Row>
           <Widget Id="timing-interval-slider" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
-          <Row Id="timing-multiplier-row" Gap="4" Padding="0">
+          <Row Id="timing-multiplier-row" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
+            <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
             <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
             <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
             <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
+            </Row>
           </Row>
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
-          <Row Id="camera-indicator-row" Gap="8" Padding="0">
+          <Row Id="camera-indicator-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
-            <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" AlignY="Middle" HelpKey="us/camera-indicator/toggle" />
+            <Column Id="camera-indicator-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" HelpKey="us/camera-indicator/toggle" AlignX="Left" />
+            </Column>
           </Row>
         </Section>
         <!-- T3-2: the diagnostics card is DECLARATIVE and us/diagnostics is retired in the same change.
@@ -256,9 +280,11 @@
             <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" />
             <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" />
           </Row>
-          <Row Id="diagnostics-localize-row" Gap="8" Padding="0">
+          <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
-            <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/localize-debug" />
+            <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" HelpKey="us/diagnostics/localize-debug" AlignX="Left" />
+            </Column>
           </Row>
           <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches and a status sentence, all bound
                to real commands the host dispatches:
@@ -276,13 +302,17 @@
           <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
           <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpKey="us/diagnostics/layout-diagnosis" />
           <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
-            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0">
-            <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedKey="layout-capture" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/layout-capture" />
-            <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+              <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedKey="layout-capture" Width="36" Height="30" HelpKey="us/diagnostics/layout-capture" AlignX="Left" />
+              </Column>
             </Row>
-            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0">
-            <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" AlignY="Middle" HelpKey="us/diagnostics/layout-outline" />
-            <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+              <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" HelpKey="us/diagnostics/layout-outline" AlignX="Left" />
+              </Column>
             </Row>
             <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" />
           </Column>

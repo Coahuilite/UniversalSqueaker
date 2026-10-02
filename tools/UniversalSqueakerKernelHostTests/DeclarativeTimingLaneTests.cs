@@ -295,9 +295,11 @@ internal static class DeclarativeTimingLaneTests
                         Assert(Math.Abs(caption.x - intervalRow.x) <= Tolerance,
                             "the caption must start at the interval row's left edge at " + width + " ("
                             + language + "): " + Describe(caption) + " row " + Describe(intervalRow));
-                        Assert(Math.Abs((seconds.x - caption.xMax) - IntervalRowGap) <= Tolerance,
+                        float captionGap = intervalRow.width < 400f
+                            ? seconds.y - caption.yMax : seconds.x - caption.xMax;
+                        Assert(Math.Abs(captionGap - IntervalRowGap) <= Tolerance,
                             "the interval row's declared Gap must be the space between caption and field at "
-                            + width + " (" + language + "), got " + Num(seconds.x - caption.xMax));
+                            + width + " (" + language + "), got " + Num(captionGap));
 
                         // The multiplier row: [label | minus | field | plus], the three declared fixed
                         // weights and the declared Gap, terminating on the row's right edge.

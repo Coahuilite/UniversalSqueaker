@@ -10,7 +10,7 @@
 
 ## Current state (2026-10-02)
 
-### V1 is PARTIAL - do not call it complete
+### V1 implementation checkpoint - real-game acceptance pending
 
 The V1 visual refresh shipped only its **paint/spacing increment**: navigation cards paint their own
 ordinary/hover/selected surfaces on the shared measured+hit rect (the outer navigation outline is gone; the
@@ -19,19 +19,22 @@ scoped cards), flat `Section` edges are explicitly transparent, Overview Section
 card's padding is 16. Original controls, bindings, translations, help and the committed report fix are
 retained; the 83 declared control semantics/help/translations/state attributes are preserved.
 
-**PM did not accept V1 as a whole** and reserved one concentrated correction 1/1. All 15 normal US checks pass
-on the partial baseline and two faithful paint reverts fail their intended assertions, but only paint/spacing
-landed. **Two original V1 requirements remain unimplemented** - see `TODO.md` §NOW item 1(a)/(b):
-independent short-body navigation scrolling, and narrow central Overview label/description + input stacking.
-V2 (Packs), V3 (Tuning) and V4 (remaining pages/help/footer) are FUTURE and unstarted. Real-game visual
-acceptance is pending.
+PM completed the remaining two layout requirements using existing composition. `nav-column` is a 200px-wide
+Fill Scroll: its natural five-card stack can exceed the clipped viewport and the last destination remains
+clickable. Fourteen Overview parameter rows have a local 400px breakpoint and stack label/description above
+the input when narrow. Small control slots retain the 36x30 switch band and 64px volume-number field; the timing
+stepper stays a horizontal minus/field/plus group beneath its label. Widget identifiers, business/state/help/
+translation declarations and window/help sizing policy remain unchanged. No new kind or library product edit.
 
-Three integration facts PM measured that a delivery had wrong, recorded so they are not re-derived:
-`DeclarativeOverviewLaneTests`' `basic-tuning` height expectation HAD to move (the new gap of 8 vs the lane's
-Gap-6 arithmetic: 361.6666 vs 359.6666 at EN/1024); an explicit `Panel` in the flat scope overrode the page
-re-tint and actually failed `UsPaletteLaneTests`; and a nav paint recorder must be cleared per draw because it
-otherwise reads a shared `DrawBoxSolid` record. V1 assertions that have not been executed are plans or source
-inference, never failure evidence.
+All 15 normal US checks pass with the explicit Dev carrier. The real Host selects Presets through native
+MouseDown/MouseUp after scrolling a 120px nav viewport over 271px content; central scroll stays independent.
+Both language tables satisfy all fourteen wide/narrow row endpoint checks. Restoring the committed old nav
+Column fails `NavOwnsViewport`; restoring the pre-responsive Overview subtree fails `NarrowLabelAboveInput`.
+Those two clauses are faithful-revert proven; wheel feel, glyph rendering and final visual/report acceptance
+remain game-only. Details and current shape: `docs/ui-redesign-0.7-zh.md` current checkpoint note.
+
+V2 (Packs), V3 (Tuning) and V4 (remaining pages/help/footer) are FUTURE and unstarted. V1 is ready for the
+combined revised-package game rehearsal; this is technical acceptance, not a claim of real-game acceptance.
 
 ### DIAG-FIX: repeated reports keep waiting for their own pass
 
@@ -405,10 +408,9 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   body** - `help-band` is a full-width `Scroll` with `Fill="true"` between `body-row` and `footer-band`, and
   `body-row` is hidden by its own host-derived key. Exclusion was forced by arithmetic at 1024x768 (header +
   footer + gaps leave 428 for body + band while the body's content floor is 271).
-- **Known frame limitation (durable)**: `nav-column` is a plain `Column`, **not** a `Scroll`, so `body-row`
-  cannot shrink below its content floor (`us/nav`, 271px). A band that SHARES the page with the body is therefore
-  not expressible - which is why the narrow help replaces it. **This is also the open V1 item: the fix is to put
-  `nav-column` inside a `Scroll`.** The reserved-band vocabulary is also still absent (no container
+- **Short-body navigation is now a Scroll**: its Fill viewport can shrink while the natural five-card
+  content remains clipped and reachable. The prior plain Column's 271px floor is historical; the narrow help
+  still replaces the body by product policy. Reserved-band vocabulary remains absent (no container
   `MinHeight`/`MaxHeight`, no fill weight, no `HeightKey`).
 - **US uses mixed declarative and composite rows**: the manifest owns containers, workspaces (`Tab`),
   breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.

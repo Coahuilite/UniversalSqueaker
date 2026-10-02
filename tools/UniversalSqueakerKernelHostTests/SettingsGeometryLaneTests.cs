@@ -26,9 +26,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// height. A long synthetic label and subtitle must not change any of it.
 /// </para>
 /// <para>
-/// Rect spaces: controls drawn inside the centre scroll are recorded in scroll-content space, the nav is
-/// recorded in page space. Section controls are matched by shape and by containment in the card's
-/// content-local rect; nav cards are matched by containment in the nav element's page rect.
+/// Controls are recorded in their own scroll-content spaces. The recorder separates nav controls by
+/// the active native group origin; page snapshots are translated to the matching scroll-local space.
 /// </para>
 /// </summary>
 internal static class SettingsGeometryLaneTests
@@ -83,6 +82,7 @@ internal static class SettingsGeometryLaneTests
 
     public static int RunAll()
     {
+        Step("a short nav viewport scrolls to a clickable last destination", ShortNavigationReachesPresets);
         Step("uniform support-row control column at 1024/736/480/320 in EN + ZH", UniformControlColumn);
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
@@ -325,7 +325,7 @@ internal static class SettingsGeometryLaneTests
             Program.SetTranslatorResolver(english);
 
             // The stack must be geometrically stable at every required width: the nav column is the
-            // manifest's fixed 160 in the three-column regime (inner width >= the row's 700 breakpoint) and
+            // manifest's fixed 200 in the three-column regime (inner width >= the row's 500 breakpoint) and
             // a full-width Fill container in the stacked one, so the same five-equal-cards facts are checked
             // at all four, and the fixed column/card size is checked where the column regime applies.
             foreach (float width in Widths)
@@ -336,7 +336,7 @@ internal static class SettingsGeometryLaneTests
                 Rec overview = Record(perWidth, width, Height);
                 List<Rect> baseline = NavCards(overview);
                 AssertNavigation(baseline, overview, "Overview at " + width);
-                bool fixedColumn = width >= 736f; // 736 - 24 page padding = 712 >= the row's 700 breakpoint
+                bool fixedColumn = width >= 736f; // 736 - 24 page padding = 712 >= the row's 500 breakpoint
                 Console.WriteLine("[nav] width=" + width
                     + " column=" + (overview.Snapshot.RectById.TryGetValue("nav", out Rect navRect)
                         ? navRect.width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
@@ -345,7 +345,8 @@ internal static class SettingsGeometryLaneTests
                     + "x" + baseline[0].height.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " gap=" + (baseline[1].y - baseline[0].yMax).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " stack=" + (baseline[baseline.Count - 1].yMax
-                        - (overview.Snapshot.RectById.TryGetValue("nav", out Rect navForStack) ? navForStack.y : baseline[0].y))
+                        - (overview.Snapshot.RectById.TryGetValue("nav", out Rect navForStack)
+                            ? navForStack.y - overview.Snapshot.Viewports["nav-column"].y : baseline[0].y))
                         .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " regime=" + (fixedColumn ? "fixed-column" : "stacked"));
 
@@ -462,9 +463,10 @@ internal static class SettingsGeometryLaneTests
         // height, and the last card's bottom is where the draw stopped.
         Assert(rec.Snapshot.RectById.TryGetValue("nav", out Rect navRect),
             "the snapshot must carry the nav element (" + label + ")");
-        Assert(Math.Abs(navRect.height - (cards[cards.Count - 1].yMax - navRect.y)) <= 0.01f,
+        Rect localNav = ToContentLocal(navRect, rec.Snapshot.Viewports["nav-column"]);
+        Assert(Math.Abs(navRect.height - (cards[cards.Count - 1].yMax - localNav.y)) <= 0.01f,
             "Measure must return exactly the drawn stack height (" + label + "): measured " + navRect.height
-            + ", drawn " + (cards[cards.Count - 1].yMax - navRect.y));
+            + ", drawn " + (cards[cards.Count - 1].yMax - localNav.y));
     }
 
     private static void AssertSameBounds(List<Rect> baseline, List<Rect> after, string because)
@@ -669,6 +671,7 @@ internal static class SettingsGeometryLaneTests
         public UiLayoutSnapshot Snapshot = null!;
         public Rect ContentViewport;
         public readonly List<Rect> Buttons = new();
+        public readonly List<Rect> NavButtons = new();
         public readonly List<Rect> Fields = new();
         public readonly List<Rect> Sliders = new();
     }
@@ -703,7 +706,17 @@ internal static class SettingsGeometryLaneTests
         var rec = new Rec { Snapshot = host.MeasureAndArrange(new Vector2(width, height)) };
         try
         {
-            SetField(ButtonOverrideField, new Func<Rect, bool>(rect => { rec.Buttons.Add(rect); return false; }));
+            SetField(ButtonOverrideField, new Func<Rect, bool>(rect =>
+            {
+                Rect navViewport = rec.Snapshot.Viewports["nav-column"];
+                Vector2 navScroll = Program.ScrollPositionById(host.Session, "nav-column");
+                // Stub-only observation of the actual native group, not a second hit algorithm.
+                Vector2 origin = (Vector2)typeof(GUI).GetProperty("GroupOrigin")!.GetValue(null)!;
+                bool inNav = Math.Abs(origin.x - (navViewport.x - navScroll.x)) < 0.01f
+                    && Math.Abs(origin.y - (navViewport.y - navScroll.y)) < 0.01f;
+                (inNav ? rec.NavButtons : rec.Buttons).Add(rect);
+                return false;
+            }));
             SetField(SliderOverrideField, new Func<Rect, float, float, float, float>((rect, value, min, max) =>
             {
                 rec.Sliders.Add(rect);
@@ -813,7 +826,7 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>
-    /// The five nav cards: buttons contained in the nav element's page rect. The height floor is what keeps
+    /// The five nav cards: buttons contained in the nav element's scroll-local rect. The height floor keeps
     /// this honest at the stacked widths, where the nav column spans the page and the section rows (drawn in
     /// scroll-content space, but numerically overlapping the nav's page rect) are recorded in the same
     /// list - a nav card is a subtitle-band card (~49px at the stub metrics), a support row band is 24px.
@@ -821,10 +834,57 @@ internal static class SettingsGeometryLaneTests
     private static List<Rect> NavCards(Rec rec)
     {
         Assert(rec.Snapshot.RectById.TryGetValue("nav", out Rect navRect), "the snapshot must carry the nav element");
-        return rec.Buttons
-            .Where(r => Inside(r, navRect) && r.width >= 100f && r.height >= 40f)
+        Rect localNav = ToContentLocal(navRect, rec.Snapshot.Viewports["nav-column"]);
+        return rec.NavButtons
+            .Where(r => Inside(r, localNav) && r.width >= 100f && r.height >= 40f)
             .OrderBy(r => r.y)
             .ToList();
+    }
+
+    // V1: a real Host and native MouseDown/MouseUp prove the last destination is reachable after
+    // scrolling. Restoring the old plain nav Column must fail NavOwnsViewport; game wheel feel remains
+    // an in-game observation. The content scroll's independent state is a regression guard.
+    private static void ShortNavigationReachesPresets()
+    {
+        foreach (string language in Languages)
+        {
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
+            {
+                using UiHost host = NewHost(new Program.StubMetrics());
+                var window = new Rect(0f, 0f, 1024f, 240f);
+                UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(window.width, window.height));
+                Assert(first.Viewports.ContainsKey("nav-column"), "NavOwnsViewport: short navigation needs its own scroll");
+                Rect viewport = first.Viewports["nav-column"];
+                Rect content = first.ScrollContents["nav-column"];
+                Assert(content.height > viewport.height + 1f, "short nav case must actually need scrolling");
+                Rec rec = Record(host, window.width, window.height);
+                List<Rect> cards = NavCards(rec);
+                Assert(cards.Count == 5, "short nav must retain all five destination cards");
+                Rect last = cards[4];
+                Assert(last.y + last.height / 2f > viewport.height, "last destination must start outside the short viewport");
+                Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 40f));
+                Program.SetScrollPositionById(host.Session, "nav-column", new Vector2(0f, 10000f));
+                host.DrawChecked(window);
+                float offset = Program.ScrollPositionById(host.Session, "nav-column").y;
+                Assert(Math.Abs(offset - (content.height - viewport.height)) < ShapeTolerance,
+                    "nav scroll must clamp at its own content end");
+                Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 40f) < 0.01f,
+                    "moving the nav must not move the central content scroll");
+                Vector2 pointer = new(viewport.x + last.x + last.width / 2f,
+                    viewport.y + last.y + last.height / 2f - offset);
+                Assert(pointer.x >= viewport.x && pointer.x < viewport.xMax
+                       && pointer.y >= viewport.y && pointer.y < viewport.yMax,
+                    "the last destination's click must be inside the nav viewport");
+                Program.DrawWithEvent(host, window, EventType.MouseDown, pointer);
+                Program.DrawWithEvent(host, window, EventType.MouseUp, pointer);
+                Assert(host.Bindings.Get<string>(UiBindings.ActiveTabKey) == "Presets",
+                    "LastDestinationIsClickable: scrolling and clicking must select Presets through the real nav");
+                Console.WriteLine("[nav-scroll] " + language + " viewport=" + viewport.height
+                    + " content=" + content.height + " offset=" + offset + " selected=Presets");
+            }
+            finally { Program.SetTranslatorResolver(null); }
+        }
     }
 
 
