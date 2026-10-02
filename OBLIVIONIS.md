@@ -1054,3 +1054,128 @@ Cross-repo board (snapshot, read it before sequencing anything): `../modding_doc
 - [ ] **0.5.x item A - file-driven invocation + hot reload (moved here from 0.4.x on 2026-09-14).** Requirement as ruled: editing a layout or a style file and **reopening the window** shows the change in game - no game restart, no recompile. **Adding / removing / changing widget kinds is explicitly out of scope and needs no file-driven path** (kinds are compiled C#). Library half = FL wiring `ParseFile`; this side must read a file at host construction, keep the embedded manifest as the safe fallback, and let a parse failure keep the previous page plus one loud warning.
 - [ ] **0.5.x item B - appearance file-driven + tier-2 granularity actually used.** `UsTheme.cs` palette moves into the style document, geometry constants become tokens, and sites that pick colours row by row through `UsKernelDraw` move to `Tone`/`Emphasis` where the vocabulary reaches them. FL's machinery already shipped (resolved style table, per-surface and geometry tokens, standalone style document, region theme); nothing here waits on FL.
 - [ ] **0.5.x item C - structural migration (the "fully layout/style-file driven" half that 0.4.x deliberately does not promise).** Dissolve the **18 consumer-owned `us/*` widget kinds** into manifest subtrees. **Prerequisite corrected 2026-09-20: the vocabulary already shipped** (`input/checkbox`, `Repeat` + `<Templates>`, `container/tree` are all in FL 0.5.0; US declares no `Repeat`/`Templates`), so what remains is US's own migration (bucket (A)) plus the one real gap - hierarchy x composition (2 widgets / 933 code lines; `docs/ui-redesign-0.7-zh.md` §5.1). Until then the honest claim is "appearance is file-driven; behaviour below the card stays C#", not "fully file-driven".
+
+## Memory compaction 2026-10-02 - material moved out of `MEMORY.md` / `TODO.md`
+
+> Cold archive. Superseded by the 2026-10-02 state in `MEMORY.md` and `TODO.md`; read only for a historical
+> conflict. This entry preserves the SUBSTANTIVE decisions and conflicts that left the two active files during
+> the MEM-20261002 consolidation; the narrative prose around them (session shape, raw logs, per-round
+> checklists, stale artifact identities) was not carried over, per the memory protocol.
+
+### Superseded "Current state (2026-09-21)" block - the parts that were still decisions
+
+- **The S3 frame reset landed 2026-09-21 on `0.5.x`** (S3-0..S3-5, one commit per step, plus the (乙1) re-cut):
+  a declared `Row` header band (title + the page's only Help switch) / the three-column body / a declared
+  `Overlay` footer band, with the page rhythm written on the containers (ruling 丁 - the density tokens stay the
+  library baseline).
+- **(乙1) narrow-screen help is LANDED and verified**: `help-scroll` (wide column, 320) and `help-band` (a
+  full-width `Scroll` between `body-row` and `footer-band`) are two MUTUALLY EXCLUSIVE presentations of one
+  player intent; `help-open` is the only value the toggle writes and the host derives the wide/narrow read-only
+  keys from the pure screen predicate. Exclusion was forced by arithmetic, not taste.
+- **Rule bought by the 2026-09-22 expected-red gate**: run the expected-red gate AND run what follows it
+  separately, marking the untaken range UNRUN. Gate 6 stopped the chain and a registrar cardinality pin stayed
+  stale through the slice that changed it - and that pin lives in the UI-logic project, not the kernel-host
+  harness, so the harness could not see it.
+- **The measured cost of an "expected red" gate, and the carrier-identity incident it caused**: while re-running
+  post-gate-6 lanes, running verbatim gate 6's own build command REBUILT the carrier and moved its hash, so the
+  doc-first red disappeared for the WRONG reason. Recorded rather than hidden. Consequence: the next freeze
+  notice had to name the new hash, and "gate 6 is expected red for doc-first" stopped being true on that tree.
+- **The full US gate chain went GREEN end to end (2026-09-22)** against a re-issued freeze - all 15 gates, exit
+  0 - and the US chain was measured NOT to move the shared carrier (SHA-256 and mtime both unchanged around the
+  whole run, no PDB beside the payload).
+
+### S4 - per-workspace atomisation (CLOSED 2026-09-22)
+
+All four slices landed, each migrating a workspace AND retiring the kinds it replaced: S4-1 Overview, S4-2
+Packs, S4-3a trigger timing, S4-3b attenuation. The US kind set went 18 -> 15 -> 13 -> 12 -> 11, the seven
+`us/*` kinds those commits retired and the seven `toggle-*` action bindings were deleted with them, and the
+whole gate chain ran green. Per-slice reports, player-visible deltas and mutation ledgers: spec §5.8-§5.10.
+**Nothing in this section is a re-do.**
+
+- **S4-1's one atom fact, durable**: `input/checkbox` paints `side = max(8, height - Padding*2)` left-aligned
+  in its band and `Padding` is 6, so a declared `Height="30"` reproduces the shipped 18px visual box
+  (`Height="24"` draws a 12px one) - which makes a declarative row 24x30, not the composite's 24x24.
+  `text/wrapped` has no alignment axis and no font attribute, so a declared label is top-anchored at the card
+  padding, and `chrome/rule` paints the resolved role's **Border** ink rather than the shipped `Divider` token.
+- **S4-2's first real consumers of G2/G3** (`input/button.PayloadKey`: a repeated row reports its own key;
+  `Chrome="none"` bare hit area), and two contract facts: a declarative `input/button` validates the STRING
+  action contract (so adopting one made a previously enum-typed action string-typed), and `SelectedKey` is how a
+  static button says "the model is on me".
+- **The S4-3 friction was a FIX, not a relocation**: the composite sized its caption band against a hand-written
+  worst-case SAMPLE constant; the declarative shape has no reserved-band vocabulary, so the caption became a
+  read-only string binding the host builds once and the atom measures exactly the string it paints -
+  measure == draw by construction. What is NOT reproduced is the reserved band.
+- **Measured atom fact**: a fixed `Width` on a Row child is what makes the engine draw that child OUTSIDE its
+  own row once the column shrinks below it. A declarative row is inside its parent only when its children can
+  flex.
+- **The T3-2 diagnostics dissolution is STRUCTURAL, not appearance**: no atom writes a typed N-way choice
+  through a value binding, so the three-way logging choice needed the button shape; the item help keys moved
+  from the retired widget's C# onto the manifest elements. Its visible deltas were an UNVERIFIED INCREMENT, not
+  an equivalent migration.
+- **Recorded narrow-tier finding**: at a 320-wide PAGE the centre column is ~296px and the English preset
+  captions need ~96px, so the button atom clips there. The 320 width is the HARNESS's own bottom tier, not a
+  screen the game can present - the US window floor is 800 and the logical screen floor is 1024.
+
+### S6 - the visual language (landed 2026-09-22; one style debt, since closed)
+
+S6-1 wording (two rounds, EN+ZH); S6-2 the nav column flat and the eight declarative cards de-boxed with the
+five body separators deleted; S6-3 the warm palette (guard first), the section header's 3px gold rail, and the
+square toggle (Registrar 11 -> 12 -> 13, later retired to the carrier kind). **Rulings that are decisions, not
+backlog**: help stays the primary channel and there is NO per-row `?` button (that would be a second help
+mechanism); the square toggle is an APPEARANCE variant, not a new control; the OFF knob's ink stays
+`TextSecondary`, because the disabled branch already owns `TextDisabled` and reusing it would collapse
+"read-only ON" into "clickable OFF".
+
+- **Two recorded workarounds with citations, NOT vocabulary requests**: (a) `Border=none` does not exist - "no
+  box" is a surface's BORDER token equal to its FILL; (b) an unknown `Scheme` name falls back silently while an
+  unknown TOKEN is refused, in the same document.
+- **The S6-2 (B) measured stop**: two candidate shapes were built and both are blocked - the hit element
+  painting itself moves the hit band's geometry (and reddened the Packs lane at 320px), and an `input/button`
+  sibling either throws without `ActionBind` or becomes a second hit surface. The untried third shape is a
+  CONTAINER state sibling with its own flat scope. `input/button` is the only atom that is interactive AND
+  paints a surface; a non-interactive surface is provided by a CONTAINER's `Chrome`.
+- **Two lane facts that step paid for**: assert a widget's output against an independently built expectation,
+  never against the widget's own helper (the first version compared the drawn fill to the widget's own
+  `Material(...)` answer and stayed green when the material was made state-blind); and a widget's press path may
+  not be harness-aimable, in which case assert the CONTRACT the press depends on and record the press as a
+  real-screen item rather than adding a public seam for the test.
+
+### task-32 - the selection is visible (2026-09-25) - durable residue
+
+- The maintainer's report was that the selected row was unreadable; the signal was moved, not brightened:
+  **state = the FILL**, **anchor = the RAIL**, **text = plain ink**. Removing the title's `SelectedKey` was a
+  RE-CUT, not a loosening - the compensation was four contrast criteria added to the colour lane in the same
+  batch.
+- **The structural ceiling, recorded so it is not re-derived**: with a bright title ink and a very dark card
+  plane the workable fill luminance is 0.014 wide, and **the gold title-ink path has NO solution at all** - gold
+  ink needs the fill darker than fill-vs-plane needs it lighter. A larger margin needs a different signal
+  carrier (a darker card plane, or a higher-contrast ink), never a different alpha.
+- **Process rule**: commit requires an OBSERVED green, not an INVOKED check - one red lane reached HEAD because
+  the check and the commit were written into the same script.
+- **A text-scanning guard produced its second false positive** (a widget comment naming a lane's test class
+  tripped a "deleted type reappears" check). The guard's own rules: strip comments before scanning, match on
+  identifier boundaries, keep a positive AND a negative control, use a closed file set, and prefer structural
+  checks over text scans.
+
+### Carrier identity history (closed; never re-pin a live identity in a tracked file)
+
+- The carrier's identity moved repeatedly during 2026-09-22 and again during the 2026-09-24 build-contract
+  change; several freezes quoted a SHA-256 with a size and configuration. **Every one of those numbers is
+  historical.** The live identity is whatever the LATEST FREEZE NOTICE states, quoted as a hash AND an mtime
+  pair, and a SHA written into a tracked file is stale the moment it lands - which is why the active file
+  carries the rule and not the value.
+- **Freeze/PDB accident**: a stale `FerriteLib.UiKit.pdb` sat beside a frozen carrier although the notice said
+  "no PDB"; it does not move the DLL's identity. US must not build the carrier to "fix" it - verification on the
+  consumer side is read-only.
+- **The 2026-09-24 build contract** (outputs isolated under `dist/build/<Configuration>`, an explicit carrier
+  selection that refuses an empty path, and a stager that compares the compiler-reference hash) is current and
+  summarised in `MEMORY.md`; the older shared-output round trip is history.
+
+### Landed-history pointer lines that left the active TODO
+
+Everything before 2026-10-02 is landed: the rebuild plan and UI migration S0-S5, the 6-way review findings, the
+old-UI Knives 1-2, the text-fit and localization rounds, the composite popup path, the desync and band
+calibration, the FerriteLib extraction, the first cloud upload and publication chain (`v0.2.0-rc1`),
+cross-repo rounds 1-3, the seam round, the diagnostics round-9 migration, the eat-granularity port, `v0.4.0-rc1`
+on both repositories, the declarative help drawer, the P1 seam batch, and the 2026-09-19/20 rounds. Detail:
+git log and `docs/review/**`.
