@@ -47,8 +47,8 @@ business correctness. Unexpected failures retain context and the original except
 is not success. Add tolerance for known business states or observed faults, guided by actual runtime feedback.
 
 **Next session:** development uses a fresh DSH leader with PM-designated roles; the old session is memory-only.
-PM prepares a separate observability patch after checking the real diagnostic-publish call path. This is pending,
-not an implemented fix or global audit. V1 game acceptance follows the PM's `PLAYTEST-V1.md`; V2–V4 remain future.
+Separate library observability work belongs to FL's current memory and is outside the frozen rehearsal package.
+V1 game acceptance follows the PM's `PLAYTEST-V1.md`; V2–V4 remain future.
 ### DIAG-FIX: repeated reports keep waiting for their own pass
 
 Technically accepted. The consumer no longer treats a previous successful report as a reason to retire a new
