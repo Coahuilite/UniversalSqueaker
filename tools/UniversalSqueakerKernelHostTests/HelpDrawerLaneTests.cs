@@ -10,9 +10,13 @@ namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
 /// Retractable right-side help drawer (outcome 1). The drawer is hidden DECLARATIVELY: the manifest's
-/// help-scroll element carries VisibleKey="help-open-wide" (and the narrow-screen band carries
+/// help-scroll element carries VisibleKey="help-open-wide" (and the defensive full-width band carries
 /// "help-open-narrow"; 乙1), and the Host's revision bumper advances the clock
-/// so the next arrange re-reads it. The element stays in the definition while closed - that is what
+/// so the next arrange re-reads it. Which of the two is arranged depends on the ACTUAL PAGE BOX:
+/// the column shares when the centre keeps the declared responsive floor. The normally sized open
+/// window shares at the game's 1024x768 minimum; a smaller box uses the defensive band
+/// (see HelpPresentationLaneTests for the pre-resize and synthetic stress probes).
+/// The element stays in the definition while closed - that is what
 /// keeps its node and its scroll position - which the retired root-list VARIANT could not do on 0.6
 /// (a removed element is released together with its scroll position).
 ///
@@ -26,7 +30,9 @@ namespace UniversalSqueaker.KernelHostTests;
 ///   3. close/open preserves the node identity, the help scroll position and the selected help topic;
 ///   4. switching tabs while open keeps the drawer open and updates the help topic;
 ///   5. every toggle advances the session revision without disposing or recreating the host/session;
-///   6. 480px and 320px resolve the three-column Row to a stacked Column with no horizontal overflow;
+///   6. 480px and 320px resolve the three-column Row to a stacked Column with no horizontal overflow
+///      (the stub's default WIDE screen is in force, so the drawer is the wide column there; the band
+///      branch is exercised by HelpPresentationLaneTests' synthetic UNREACHABLE probe);
 ///   7. the manifest's drawer element carries no Tab gate and a closed drawer survives every tab;
 ///   8. the header toggle writes the help-open binding through the real selection-button path;
 ///   9. the drawer is PER-WINDOW view state: closing it and reopening the window (page-state Reset or

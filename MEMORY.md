@@ -8,47 +8,32 @@
 > removed in that consolidation. It is not a verbatim copy; the original prose remains in Git history.
 > Read the cold archive only for a historical conflict.
 
-## Current state (2026-10-02)
+## Current state (2026-10-04)
 
-### V1 implementation checkpoint - real-game acceptance pending
+### V1 feedback and B3 integration
 
-The V1 visual refresh is **implemented and locally accepted** - technical acceptance only, with real-game
-acceptance pending. It contains the **paint/spacing increment**: navigation cards paint their own
-ordinary/hover/selected surfaces on the shared measured+hit rect (the outer navigation outline is gone; the
-flat scope makes only `PanelBorder` transparent and keeps `Panel` INHERITED so a page re-tint still reaches
-scoped cards), flat `Section` edges are explicitly transparent, Overview Section gaps are 8 and the volume
-card's padding is 16. Original controls, bindings, translations, help and the committed report fix are
-retained; the 83 declared control semantics/help/translations/state attributes are preserved.
+V1 retains the navigation surfaces, flat Sections, spacing, independently scrollable 200px navigation,
+and fourteen responsive Overview rows. Stable controls, bindings, translations, help and diagnostics
+remain intact. On the revised rehearsal packages, the user passed C1 (US repeated complete reports
+and capture off after reopening) and C2 (Demo complete report matching its page summary). Those close
+the earlier report failure; untriggered conditions remain untested.
 
-PM completed the remaining two layout requirements using existing composition. `nav-column` is a 200px-wide
-Fill Scroll: its natural five-card stack can exceed the clipped viewport and the last destination remains
-clickable. Fourteen Overview parameter rows have a local 400px breakpoint and stack label/description above
-the input when narrow. Small control slots retain the 36x30 switch band and 64px volume-number field; the timing
-stepper stays a horizontal minus/field/plus group beneath its label. Widget identifiers, business/state/help/
-translation declarations and window/help sizing policy remain unchanged. No new kind or library product edit.
+B3 failed in game at 1024x768: expanded help displaced the settings. The repair decides coexistence
+from the actual page box, applies the drawer resize before the frame reads the window rect, and
+invalidates layout when the sharing decision changes. The open 1024x600 window provides a 984x524
+page box: 416px centre plus 320px help. Both language tables have zero fit findings; the pre-resize
+box uses the defensive band. Help/body nodes preserve scroll state. Actual setting interaction,
+wheel feel and visual acceptance of the repaired package still require the user's game observation.
 
-All 15 normal US checks pass with the explicit Dev carrier. The real Host selects Presets through native
-MouseDown/MouseUp after scrolling a 120px nav viewport over 271px content; central scroll stays independent.
-Both language tables satisfy all fourteen wide/narrow row endpoint checks. Restoring the committed old nav
-Column fails `NavOwnsViewport`; restoring the pre-responsive Overview subtree fails `NarrowLabelAboveInput`.
-Those two clauses are faithful-revert proven; wheel feel, glyph rendering and final visual/report acceptance
-remain game-only. Details and current shape: `docs/ui-redesign-0.7-zh.md` current checkpoint note.
+The PM is integrating B3 before V2 (Packs), then V3 (Tuning) and V4 (remaining pages/help/footer).
+The user authorized continued UI development after B3; reuse the current DSH leader and independent
+runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
+identity and per-slice evidence belong to the PM delivery records, not this active memory.
 
-V2 (Packs), V3 (Tuning) and V4 (remaining pages/help/footer) are FUTURE and unstarted. V1 is ready for the
-combined revised-package game rehearsal; this is technical acceptance, not a claim of real-game acceptance.
-
-**Frozen playable packages (2026-10-04):** FL `b31e2c3`, US `889f34b`, Demo `d972dbc`; the PM's
-`v1-playable-package-manifest.json` records the rehearsal artifacts. Subsequent commits change HEAD,
-not this package. FL/US payloads are Dev; Demo is a Release-configured consumer paired with the Dev carrier.
-
-**Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
-at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
-business correctness. Unexpected failures retain context and the original exception; isolation or recovery
-is not success. Add tolerance for known business states or observed faults, guided by actual runtime feedback.
-
-**Next session:** development uses a fresh DSH leader with PM-designated roles; the old session is memory-only.
-Separate library observability work belongs to FL's current memory and is outside the frozen rehearsal package.
-V1 game acceptance follows the PM's `PLAYTEST-V1.md`; V2–V4 remain future.
+**Working direction:** specifications lead with purpose, ownership, main path and a few invariants.
+Validate at responsible boundaries, then use established internal contracts directly. Hashes identify
+payloads, not business correctness. Unexpected failures retain context and the original exception;
+isolation or recovery is not success. Add tolerance for observed faults and known business states.
 ### DIAG-FIX: repeated reports keep waiting for their own pass
 
 Technically accepted. The consumer no longer treats a previous successful report as a reason to retire a new
@@ -60,8 +45,8 @@ a real `UiHost`; restoring only the old production method fails `TheSecondReport
 complete retained dump **once per successful report** to a distinct `[FerriteLibUiKitDemo][ui-geometry]` entry
 carrying host/session/pass - never repurposed onto `ui-audit`, never per frame, never auto-enabled.
 
-**The old in-game failure is preserved as a FAIL**: the second same-window report did not appear in the game
-build. The fix has technical acceptance only; **revised-package game verification is still pending.**
+**Historical failure:** the old game build omitted the second same-window report. The user passed C1/C2
+on the revised rehearsal package on 2026-10-04; the original failure remains in the archived evidence.
 
 ### Historical product checkpoint (2026-10-02, before memory consolidation)
 
@@ -178,11 +163,14 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 
 - **RimWorld's minimum supported resolution is 1024x768** (maintainer ruling). 800x600 is NOT testable in game:
   every "800x600 in-game re-check" item is closed as impossible-by-platform, not deferred. The harness keeps its
-  800x600 sweep as deliberately-conservative narrow-tier evidence and the window keeps its 800x600 design floor
-  as defensive geometry.
-- `UIScaleSafeWithResolution` requires `w/scale >= 1024` **and** `h/scale >= 768`, so `UI.screenWidth` is always
-  >= 1024. The narrow-help trigger is therefore the band where the drawer cannot widen the window: **logical
-  screen width in [1024, 1131]** (a 1920 monitor reaches it only above UI scale ~2.5).
+  800x600 rows only as clearly labelled UNREACHABLE stress probes, and the window keeps its 800x600 design floor
+  as its normal initial window size; neither is a game screen.
+- **The minimum screen is a constant, not an estimate**: `RimWorld.ResolutionUtility` carries
+  `MinResolutionWidth = 1024` / `MinResolutionHeight = 768` (pinned reference `Krafs.Rimworld.Ref` 1.6.4871; that
+  reference keeps constants with extern bodies, so it proves the floor, not every runtime UI-scale clamp
+  path). Do not infer supported sub-1024 screens from a guessed UI-scale ratio. The old
+  "narrow-help trigger band [1024, 1131]" is retired: presentation now reads the actual page box.
+  The normally sized open window at the minimum screen shares; a smaller actual box can use the band.
 - **The fit audit's join is two halves**: `Enabled` only opens the switch; a host must ALSO hold its own
   `UiHost.Diagnostics` subscription. A host with no subscription is measured with a **null ruler** and measures
   nothing - which is what removes cross-window misattribution by construction.
@@ -398,8 +386,11 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - **Current window policy** (`UI/Layout/WindowChromeLayout.cs` - those constants are the single source of
   truth): `w = RoundUpToStep(clamp(min(0.5*screenWidth, 0.9*screenHeight*4/3), 800, 1600))`, `h = w * 3/4`, and
   `open = min(closed + 332, max(closed, screenWidth))` - the 332 is the 320 help column + the 12px row gap.
-  **The window opens narrow** and widens when Help expands; `DrawerWidensTheWindow(screenWidth, screenHeight)`
-  answers purely from the SCREEN with a half-pixel tolerance and decides the narrow presentation.
+  **The window opens narrow** and widens when Help expands. Which presentation the open drawer produces is
+  decided from the page box the shell ACTUALLY hands the page this pass -
+  `WindowChromeLayout.DrawerSharesTheBody(pageBox)`: the drawer shares the page while the centre column keeps
+  the manifest's own 400 floor. `DrawerWidensTheWindow` is DELETED: it answered the full-delta SCREEN question
+  that removed the settings at 1024x768 in the real playtest.
   1024x768 -> **800x600**; 1920x1080 -> 960x720; 2560x1440 -> **1280x960**. **Anything restating 0.44/16:9,
   `clamp(0.24*screenWidth, 600, 860)` or `max(600, 0.66*screenHeight)` is stale**: the old portrait policy
   opened 614x950 at 2560x1440, and that is what the 2026-09-14 feedback was really about.
@@ -409,22 +400,34 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   is the revert point). **The help catalog count is pinned** in `tools/UniversalSqueakerUiLogicTests/Program.cs`
   and `VerifyHoverClaimsMatchCatalogItems` is bidirectional, so a catalog edit and its widget claim land
   together.
-- **The help drawer is DECLARATIVE, and node identity is why**: `help-scroll` carries `VisibleKey="help-open"`
-  and `UI/Layout/UsLayoutVariants.cs` is DELETED. `help-open` stays the page's own value binding, so help
+- **The help drawer is DECLARATIVE, and node identity is why**: `help-scroll` carries
+  `VisibleKey="help-open-wide"` (host-derived: the page's own `help-open` AND the actual page box shares) and
+  `UI/Layout/UsLayoutVariants.cs` is DELETED. `help-open` stays the page's own value binding, so help
   visibility is independent state and is never `Tab`. `SessionRevisionBumper.Bump()` is still required because
   the layout snapshot cache compares `cachedContentRevision`. `UiSession.PruneNodesExcept` releases a node whose
   identity the definition no longer declares together with its `scrollPositions` entry, so a variant that
   REMOVES the drawer destroys its node and scroll position on every close: **keeping the element IN the
   definition is what preserves node identity and `ScrollPosition`.** That is a 0.4 -> 0.5 public-observable
   semantic reversal (a removed identity releases its node, a hidden one keeps it).
-- **(乙1) narrow help**: at a logical width that cannot host the widened window the open drawer **REPLACES the
-  body** - `help-band` is a full-width `Scroll` with `Fill="true"` between `body-row` and `footer-band`, and
-  `body-row` is hidden by its own host-derived key. Exclusion was forced by arithmetic at 1024x768 (header +
-  footer + gaps leave 428 for body + band while the body's content floor is 271).
+- **(乙1) help presentation, RE-CUT 2026-10-04 (B3 r2)**: the open drawer **SHARES the page as a third
+  column** while the actual page box leaves the centre column the manifest's own `Breakpoint="400"`. At the
+  game's minimum screen 1024x768 the open page box is 984 -> centre 416, so `body-row`, nav and the centre
+  scroll stay arranged beside the 320 help column (measured `fit=0` EN/ZH, `HelpPresentationLaneTests`).
+  `help-band` (full-width `Fill` `Scroll` between `body-row` and `footer-band`, with `body-row` hidden by
+  `body-visible`) remains a **defensive fallback** for a box that cannot afford the column, including a
+  pre-resize pass; a synthetic unsupported 800x600 screen also probes it. The 2026-09-21 shape (REPLACE the body at
+  1024x768) **FAILED the real playtest** (`PLAYTEST-V1-RESULTS-20261004.md` B3): its arithmetic is about sharing
+  the VERTICAL slot, which the band still does, not about the third column. US-only; no carrier change.
+- **The drawer's window resize is applied in `WindowOnGUI`, and the presentation reads the ACTUAL page box**:
+  `Verse.Window.WindowOnGUI` is virtual and reads `windowRect` for the pass (`GUI.Window`), and the library shell
+  does not override it, so `UniversalSqueakerSettingsWindow` applies the edge-guarded resize before the base call
+  - the pass that first presents the open drawer already has the widened page box. `BeforeDraw` feeds the width
+  the shell actually handed the page into the host's decision feed and bumps the layout clock when the answer
+  flips (a width-only change announces nothing). Both halves are what removed the one-frame pre-resize overflow;
+  the Verse-ordering half is static evidence until observed in game.
 - **Short-body navigation is now a Scroll**: its Fill viewport can shrink while the natural five-card
-  content remains clipped and reachable. The prior plain Column's 271px floor is historical; the narrow help
-  still replaces the body by product policy. Reserved-band vocabulary remains absent (no container
-  `MinHeight`/`MaxHeight`, no fill weight, no `HeightKey`).
+  content remains clipped and reachable. The prior plain Column's 271px floor is historical. Reserved-band
+  vocabulary remains absent (no container `MinHeight`/`MaxHeight`, no fill weight, no `HeightKey`).
 - **US uses mixed declarative and composite rows**: the manifest owns containers, workspaces (`Tab`),
   breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.
   Remaining row-level dissolution is US's backlog, not a general carrier limit; the genuine remaining FL gap

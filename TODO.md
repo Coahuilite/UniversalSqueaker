@@ -7,18 +7,16 @@
 
 ## NOW — current queue (2026-10-04)
 
-- [ ] **V1 revised-package game acceptance.** Implementation is complete; frozen packages are FL `b31e2c3`,
-  US `889f34b`, Demo `d972dbc`. Use the PM's `PLAYTEST-V1.md` for the single A/B/C session: observe visuals,
-  exercise naturally reachable input/scroll cases, and let PM check US's second same-window report plus
-  Demo's full `[FerriteLibUiKitDemo][ui-geometry]` outlet. The old second-report failure stays historical fail
-  until revised-package runtime evidence closes it. Conditions not reached in game remain untested.
-- [ ] **Next development uses a fresh DSH leader session.** PM assigns a US UI implementer and independent
-  runtime reviewer; hire a shared-library implementer when a slice touches FL. Select the slice from feedback.
-  V2 = Packs, V3 = Tuning, V4 = remaining pages/help/footer; all remain future and unstarted.
+- [ ] **B3 repaired-package game observation at 1024x768.** Verify settings remain visible and operable
+  with help open, help/body scroll independently, and closing/reopening preserves position. Technical
+  geometry/fit checks pass; the original game failure is historical evidence until the repair is observed.
+- [ ] **Continue the approved UI refactor.** V2 = Packs, V3 = Tuning, V4 = remaining pages/help/footer.
+  Finish each bounded slice through independent review, PM integration, local commit and paired package.
+  Reuse the current DSH leader and US implementer/read-only runtime reviewer; add FL only for a real gap.
 
-Package pairing is PM's delivery-boundary responsibility. The current manifest records the rehearsal bytes;
-subsequent source/docs commits change HEAD, not that package. A Release carrier is a refusal-control case,
-not the current rehearsal input. Build and instrumentation details stay in the delivery documents.
+C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat
+the complete report matrix by default. Package identity and current per-slice evidence live in the PM
+handoff. A Release carrier is a refusal-control case, not the current rehearsal input.
 ## Open decisions / blocked on the maintainer or on FL
 
 - [ ] **Retire the short-lived branch `feat/help-drawer-visiblekey`** (its work is already in the `0.5.x` line):

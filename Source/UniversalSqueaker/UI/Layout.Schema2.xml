@@ -79,27 +79,35 @@
          deliberately does not spell the literal: the drawer lane counts its occurrences in this file).
          The page-title widget carried a second, hand-drawn switch until this step, so "the page has one
          Help switch" is asserted by the frame lane and the drawer lane rather than assumed. -->
-    <!-- Responsive footer for the drawer. The closed window is 600 wide (WindowChromeLayout), i.e.
-         536 inner here, and Breakpoint 500 keeps that a two-column Row in BOTH drawer states - the
-         same Row at 736/1024 and the shipped three columns once the drawer opens; only 480/320 fall
-         below it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill
-         containers instead of three squeezed columns. The help column itself is toggled DECLARATIVELY
-         by the engine-level VisibleKey attribute bound to this page's own help-open value binding, never
-         by Tab: the element stays in the definition so its node and scroll position survive a close/open
-         (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with
-         its scroll position). -->
+    <!-- Responsive footer for the drawer. The closed window is 800 wide at the minimum canvas
+          (WindowChromeLayout), i.e. 736 inner here, where the drawer is retracted and Breakpoint 500 keeps
+          this a two-column Row. Once the drawer opens the window widens - 1024 at the minimum canvas (capped
+          by the screen), 1292 on a 1920x1080 one - so the inner width is 960/1228, still above 500, and the
+          same Row carries the shipped three columns (nav 200 + centre + help 320). Only 480/320 fall below
+          it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill containers
+          instead of three squeezed columns. The help column itself is toggled DECLARATIVELY by the
+          engine-level VisibleKey attribute bound to this page's own help-open value binding, never by Tab:
+          the element stays in the definition so its node and scroll position survive a close/open (a
+          root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with its
+          scroll position). -->
     <!-- Fill="true" is what makes this row the page's flex slot (it is what §2 always drew). Without it no
          child of page-root yields, so ANY band's declared height would be ADDED to the page instead of taken
          out of the body - measured at the minimum logical resolution: footer bottom 667 against a 530 page.
-         With it whichever slot is arranged - this row, or the narrow help band that replaces it - absorbs
-         what the fixed header and footer leave, so the footer stays in by construction.
+         With it whichever slot is arranged - this row, or the narrow help band in a smaller actual page
+         box (see the band comment below) - absorbs what the fixed header and
+         footer leave, so the footer stays in by construction.
 
-         VisibleKey="body-visible" is the other half of that exclusivity (shape fixed 2026-09-21b): on a
-         screen that cannot host the widened window the OPEN drawer does not share the page with the body,
-         it REPLACES it. The host derives body-visible as the negation of help-open-narrow, so the body is
-         not ARRANGED while the band is, and the band is then page-root's ONLY flexible fill child. Hiding
-         rather than removing is the whole point: the element stays in the definition, so its node, its
-         sub-tree and every scroll position survive the swap (see the help-band comment below). -->
+         VisibleKey="body-visible" is the other half of the presentation rule. The band is a DEFENSIVE
+         fallback for an actual page box too small to share, including the pre-resize box. The normally sized
+         open window at the game's minimum screen (1024x768 per RimWorld.ResolutionUtility) leaves the centre
+         column 416 (page-root box 984 -> body-row 960 -> 960 - 200 - 320 - 24 = 416),
+         above the Breakpoint 400 the page's own parameter rows declare, so the body stays visible and the
+         help column shares the page with it. A synthetic 800x600 screen (centre 192) exercises the band
+         branch as an UNREACHABLE stress probe; it is not real-screen evidence. The host derives body-visible
+         as the negation of help-open-narrow, so the body is not ARRANGED while the band is, and the band is
+         then page-root's ONLY flexible fill child. Hiding rather than removing is the whole point: the
+         element stays in the definition, so its node, its sub-tree and every scroll position survive the
+         swap (see the help-band comment below). -->
     <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column"
          VisibleKey="body-visible">
       <!-- V1 (2026-10-02): the nav column keeps `us-flat-panel` (the column itself stays a calm plane,
@@ -430,29 +438,39 @@
         <Widget Id="help-panel" Kind="us/help-panel" />
       </Scroll>
     </Row>
-    <!-- Narrow-screen help (乙1, decided 2026-09-21; the shape was re-cut 2026-09-21b after the
-         maintainer's 1024x768 walkthrough). When the logical screen cannot host the widened window the
-         drawer does NOT take a third column and does NOT share the room with the body: the same help panel
-         REPLACES the body as a full-width band between the header and the footer, and the body row is not
-         arranged (its own VisibleKey="body-visible"). Two mutually exclusive presentations and ONE player
-         intent: help-open stays the only value the toggle writes, and the host derives help-open-wide /
-         help-open-narrow from it and the screen (WindowChromeLayout.DrawerWidensTheWindow).
+    <!-- Narrow-screen help band (乙1, decided 2026-09-21; the DECISION was re-cut 2026-10-04 after the
+         maintainer's 1024x768 walkthrough). This band is a DEFENSIVE fallback, not the product shape: the
+         drawer shares the page as the third column (help-scroll above) whenever the OPEN window's centre
+         column keeps at least the 400 the page's own parameter rows declare - 1024x768 gives 416, so the
+         settings stay visible and operable there, and that is the ACCEPTANCE case. No REACHABLE screen
+         selects the band: the game's minimum logical resolution is 1024x768 (RimWorld.ResolutionUtility in
+         the pinned Krafs.Rimworld.Ref 1.6.4871), so every real screen leaves the centre at least 416. The
+         band is kept for a screen below that line - a synthetic 800x600 screen (centre 192) is used ONLY as
+         an UNREACHABLE stress probe to keep the branch exercised - where the same help panel REPLACES the
+         body as a full-width band between the header and the footer, with the body row not arranged (its own
+         VisibleKey="body-visible"). Two mutually exclusive presentations and ONE player intent: help-open
+         stays the only value the toggle writes, and the host derives help-open-wide / help-open-narrow from
+         it and the screen (WindowChromeLayout.DrawerSharesTheBody - the question is "is the third column
+         affordable", NOT "did the window gain the full drawer cost", which is what used to send 1024x768
+         down this path). The width that question reads is the page box the shell ACTUALLY hands the page on
+         the pass being arranged (fed by the settings window), so the pre-resize pass can never be presented
+         with the wide column.
 
          Fill="true" with NO Height is what makes the replacement exact rather than approximate. With the
          body out of the flow this band is page-root's ONLY flexible fill child, so it is handed the whole
          leftover BY CONSTRUCTION and the footer cannot leave the page - no number is written here at all.
-         Measured at the game's minimum logical resolution (1024x768 -> a 1024x600 window, so a 960x530
-         page): 506 inner - header ~60 - footer ~26 - 2 x Gap 8 = ~404 for the band, against the largest
-         natural content floor anywhere on the page (us/nav = 271). So the help is readable (the panel's
-         own measured band is ~130 in the stub) AND the text on the page has more room than it needs.
+         Measured on the synthetic 800x600 probe (page-root box 760x524): the band takes the whole leftover,
+         header/footer/gaps aside, against the largest natural content floor anywhere on the page (us/nav,
+         measured 404 there and 271 at the old 530-high probe). So the help is readable AND the text on the
+         page has more room than it needs.
 
          Why Height="280" is gone, and it is not coming back. That attribute was a reserved band, the only
          expression the vocabulary allowed - a container has no MinHeight/MaxHeight (width has
-         MinWidth/MaxWidth, height does not), no fill weight, and no HeightKey - and it cannot work at this
-         resolution: 530 - 60 (header) - 26 (footer) - 16 (gaps) leaves 428 for body + band while the body's
-         own content floor is 271, so the band can never exceed ~157 and a 280 band leaves the body ~148 and
-         its content overflows ~123px into the band (the maintainer's 1024x768 walkthrough). "A band more
-         than half the content area" and "the content fits" cannot both hold at 1024x768: it was a SHAPE
+         MinWidth/MaxWidth, height does not), no fill weight, and no HeightKey - and it cannot work on a
+         page this tight: 530 - 60 (header) - 26 (footer) - 16 (gaps) leaves 428 for body + band while the
+         body's own content floor is 271, so a reserved band can never exceed ~157 and a 280 band leaves the
+         body ~148 and its content overflows ~123px into the band (the maintainer's 1024x768 walkthrough).
+         "A band more than half the content area" and "the content fits" cannot both hold: it was a SHAPE
          problem, and the shape is fixed by EXCLUSION rather than by another number. A Height attribute here
          would also re-break it mechanically: IsFlexibleFill refuses a Fill child with a fixed Height, so the
          band would leave the flow and the footer would be pushed out (the earlier Fill attempt measured a

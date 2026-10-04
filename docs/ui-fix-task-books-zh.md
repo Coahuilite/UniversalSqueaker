@@ -2,6 +2,8 @@
 
 > 状态：已完成（T0–T5 全部落地，verify-local 14 门全绿）
 > 依据：`docs/ui-fix-triage-plan-zh.md`、`docs/ui-feedback-consolidated-zh.md`
+>
+> **[2026-10-04 已纠正，B3.5]** 本档的 800×600 "硬下限"是 US 初始**窗口**尺寸策略，不是游戏屏幕基线；游戏最低屏幕是 **1024×768**（`RimWorld.ResolutionUtility`）。其余内容按历史记录保留。
 > 目标：先排查后修复，每个全局风险至少一条自动化回归测试；完成后 `scripts/verify-local.ps1` 全绿。
 
 ## 总览

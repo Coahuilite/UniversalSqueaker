@@ -1560,15 +1560,47 @@ internal static class Program
             "the retracted default must still DECLARE the help panel: dropping it from the definition is what"
             + " loses its node and scroll position (see SessionRevisionBumper)");
 
-        var viewport = new Vector2(1024f, 768f);
-        UiLayoutSnapshot retracted = host.MeasureAndArrange(viewport);
-        Assert(!retracted.Viewports.ContainsKey("help-scroll"),
-            "the retracted default must not arrange the help panel");
+        // B3 (2026-10-04): the production pair, not a bare viewport. 1024x768 is the minimum logical
+        // resolution the game can produce: the window opens at 800x600, the drawer widens it to the screen
+        // cap (1024), and the shell hands the page UiWindowHost's ContentRect - window minus 2 x 20 chrome,
+        // minus the 56px title bar and the 20px bottom inset, i.e. 984x524. page-root then takes its own
+        // declared Padding 12 out of that, leaving body-row 960px, and the three columns take 200 + 416 +
+        // 320 + 2 x 12: the centre keeps 416, above the manifest's own Breakpoint 400, so the drawer SHARES
+        // the page and the settings stay arranged. Feeding the page width alone (the old 1024x768 viewport
+        // here) measured 24px narrow and hid this whole question.
+        int pinnedScreenWidth = Verse.UI.screenWidth;
+        int pinnedScreenHeight = Verse.UI.screenHeight;
+        Verse.UI.screenWidth = 1024;
+        Verse.UI.screenHeight = 768;
+        float openWindow = WindowChromeLayout.SettingsOpenWidth(1024f, 768f);
+        var page = new Vector2(
+            openWindow - WindowChromeLayout.WindowChromeInset,
+            WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - WindowChromeLayout.WindowChromeInset
+                - WindowChromeLayout.TitleBarHeight);
+        try
+        {
+            UiLayoutSnapshot retracted = host.MeasureAndArrange(page);
+            Assert(!retracted.Viewports.ContainsKey("help-scroll") && !retracted.Viewports.ContainsKey("help-band"),
+                "the retracted default must not arrange the help panel");
 
-        host.Bindings.Set("help-open", true);
-        UiLayoutSnapshot expanded = host.MeasureAndArrange(viewport);
-        Assert(expanded.Viewports.ContainsKey("help-scroll"),
-            "an explicit open must arrange the help panel");
+            host.Bindings.Set("help-open", true);
+            UiLayoutSnapshot expanded = host.MeasureAndArrange(page);
+            Assert(expanded.Viewports.TryGetValue("help-scroll", out Rect help),
+                "an explicit open at the minimum logical resolution must arrange the help COLUMN: the open"
+                + " window's centre column is 416px there, above the page's own Breakpoint 400");
+            Assert(!expanded.Viewports.ContainsKey("help-band"),
+                "the band is a defensive fallback for a synthetic page below the game's 1024x768 minimum, so"
+                + " it must not be arranged at the game's minimum logical resolution");
+            Assert(expanded.RectById.ContainsKey("body-row") && expanded.RectById.ContainsKey("nav-column")
+                && expanded.Viewports.ContainsKey("content-scroll"),
+                "the settings body, its navigation and its centre viewport must all stay arranged while the"
+                + " help column is open (B3.1)");
+        }
+        finally
+        {
+            Verse.UI.screenWidth = pinnedScreenWidth;
+            Verse.UI.screenHeight = pinnedScreenHeight;
+        }
 
         foreach ((string id, string kind) in ExpectedWidgets)
         {
@@ -1748,24 +1780,57 @@ internal static class Program
 
     /// <summary>
     /// The brief's required width/localization evidence: the real production page is measured and
-    /// DRAWN at the four logical widths in both shipped language tables, with the help drawer open and
-    /// closed, and one text artifact records what the harness actually measured. It is an evidence and
-    /// sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal overflow,
-    /// a dead content viewport, or a closed drawer that still reserves help width.
+    /// DRAWN at real screen/page configurations in both shipped language tables, with the help drawer
+    /// open and closed, and one text artifact records what the harness actually measured. It is an
+    /// evidence and sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal
+    /// overflow, a dead content viewport, or a wrongly-chosen help presentation.
+    ///
+    /// <para>
+    /// RE-CUT 2026-10-04. Each case used to be a bare page width, and the drawer-open rows inferred their
+    /// screen from a loose threshold (<c>wideCase = pageWidth >= 1228f ? 1920 : 800</c>). That pairing was
+    /// not a configuration any player can reach: the "1024" row pinned a fake 800x600 screen, so the real
+    /// 1024x768 minimum-logical-resolution pair - screen 1024x768 -> window 1024x600 -> page 960x530, the
+    /// exact configuration the B3 playtest failed on - never appeared in the evidence at all. Cases are now
+    /// explicit (screen, window, page) triples derived from <see cref="WindowChromeLayout"/>, and each case
+    /// states its expected presentation as a HAND-WRITTEN per-case flag (<c>ExpectBandWhenOpen</c>), never by
+    /// asking the production predicate: an expectation read out of the code under test could not disagree with
+    /// it, so it could never redden.
+    /// </para>
     /// </summary>
     private static void WidthAndLanguageEvidenceSweep()
     {
-        // 1228 is not a round probe: it is the page width of the OPEN window on a 1920x1080 screen
-        // (SettingsOpenWidth 1292 - 64 chrome/page insets), so it is the WIDE presentation's real case.
-        // Every other width is below what such a screen would give the window, so those drawer-open cases
-        // are pinned to a capped screen and use the NARROW band (乙1).
-        float[] widths = { 1024f, 736f, 480f, 320f, 1228f };
+        // The configurations, all derived from the size policy rather than written down twice. "page" here
+        // is the BOX the shell hands the host (UiWindowHost.ContentRect) - NOT the inner width: page-root
+        // takes its own declared Padding 12 out of the box, and that 24px is what decides whether the
+        // three-column body is affordable at 1024x768. The 800x600 row is a SYNTHETIC PROBE on a screen
+        // below the game's 1024x768 minimum (B3.5): it is UNREACHABLE and proves only that the band branch
+        // still behaves, never product behaviour.
+        //   screen 1024x768  -> window 1024x600 (closed 800 widened to the screen cap) -> box 984x524
+        //   screen 1024x768  -> window  800x600 (retracted)                             -> box 760x524
+        //   screen  800x600  -> window  800x600 (UNREACHABLE probe; screen caps the open width) -> box 760x524
+        //   screen 1920x1080 -> window 1292x720 (open)                                  -> box 1252x644
+        //   screen 1920x1080 -> window  960x720 (retracted)                             -> box 920x644
+        // ExpectBandWhenOpen is HAND-WRITTEN per pair, never read from the production predicate: comparing
+        // the host's answer against the same predicate over the same fed value could not redden under any
+        // revert. Mutation proof: reverting the host's criterion to the pre-fix full-delta question turns
+        // the 1024x768/open row into the band and reddens its expectation; a criterion that never answered
+        // "cannot share" reddens the 800x600 probe row.
+        var sweepCases = new (int ScreenW, int ScreenH, string State, float WindowW, bool ExpectBandWhenOpen)[]
+        {
+            (1024, 768, "open", WindowChromeLayout.SettingsOpenWidth(1024f, 768f), false),
+            (1024, 768, "closed", WindowChromeLayout.SettingsClosedWidth(1024f, 768f), false),
+            (800, 600, "open", WindowChromeLayout.SettingsOpenWidth(800f, 600f), true),
+            (1920, 1080, "open", WindowChromeLayout.SettingsOpenWidth(1920f, 1080f), false),
+            (1920, 1080, "closed", WindowChromeLayout.SettingsClosedWidth(1920f, 1080f), false),
+        };
+
         string[] languages = { "English", "ChineseSimplified" };
         string outDir = Path.Combine(EvidenceRoot(), "dist", "ui-evidence");
         Directory.CreateDirectory(outDir);
         var lines = new List<string>();
         lines.Add("# US settings layout sweep (harness-measured, StubMetrics; not real RimWorld pixels)");
-        lines.Add("viewport | lang | drawer | nav.w | content.w | help.w | band.h | contentArea.w | overflow | fitFindings");
+        lines.Add("# page = the box the shell hands the host (UiWindowHost.ContentRect); row = page - page-root padding 24");
+        lines.Add("screen | window | page | row | lang | drawer | nav.w | content.w | help.w | band.h | contentArea.w | overflow | fitFindings");
         int violations = 0;
         foreach (string language in languages)
         {
@@ -1776,98 +1841,110 @@ internal static class Program
             UiFitAudit.Enabled = true;
             try
             {
-                foreach (float width in widths)
+                foreach ((int screenW, int screenH, string state, float windowW, bool expectBandWhenOpen) in sweepCases)
                 {
-                    foreach (bool open in new[] { true, false })
+                    bool open = state == "open";
+                    // The window the policy produces is centred on the screen; the page box is what the shell
+                    // hands its UiHost: window minus the horizontal chrome, and minus the title bar plus the
+                    // bottom inset vertically.
+                    float windowX = (screenW - windowW) * 0.5f;
+                    float windowY = (screenH - WindowChromeLayout.SettingsWindowHeight(screenW, screenH)) * 0.5f;
+                    float pageWidth = windowW - WindowChromeLayout.WindowChromeInset;
+                    float pageHeight = WindowChromeLayout.SettingsWindowHeight(screenW, screenH)
+                        - WindowChromeLayout.TitleBarHeight - WindowChromeLayout.WindowChromeInset * 0.5f;
+
+                    Verse.UI.screenWidth = screenW;
+                    Verse.UI.screenHeight = screenH;
+
+                    var fake = new RecordingSettingsSource { RichData = true };
+                    // The presentation is decided from the page box the shell actually hands the page, so
+                    // the sweep feeds the case's own box (the window does this in BeforeDraw).
+                    float fedPageBox = pageWidth;
+                    using UiHost host = UsKernelSettingsHost.Create(fake, metrics, () => fedPageBox);
+                    UiFitAudit.Reset();
+                    reports.Clear();
+                    host.Bindings.Invoke("set-tab", "Overview");
+                    host.Bindings.Set("help-open", open);
+                    // A scroll position can only be written for an element an arrange has already
+                    // created, so the sweep arranges once, pins the centre column to its top, and
+                    // then arranges the frame it records and draws (the same probe pattern the
+                    // focused lanes use).
+                    UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
+                    // The centre column exists only in the states that arrange the body row; with the
+                    // narrow band REPLACING the body there is no content scroll to pin, and asking for
+                    // one is not a failure of the shape. The both-directions check below still fails
+                    // when a state arranges neither presentation.
+                    if (first.RectById.ContainsKey("body-row"))
                     {
-                        // The drawer's presentation is a SCREEN question since (乙1), so a drawer-open case
-                        // has to state the screen it belongs to: a page width the shipped policy cannot
-                        // produce is not a configuration a player can reach, and sweeping one would keep the
-                        // fit gate below red forever for a shape that cannot occur.
-                        if (open)
-                        {
-                            bool wideCase = width >= 1228f;
-                            Verse.UI.screenWidth = wideCase ? 1920 : 800;
-                            Verse.UI.screenHeight = wideCase ? 1080 : 600;
-                        }
-                        else
-                        {
-                            Verse.UI.screenWidth = 1920;
-                            Verse.UI.screenHeight = 1080;
-                        }
-
-                        var fake = new RecordingSettingsSource { RichData = true };
-                        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
-                        UiFitAudit.Reset();
-                        reports.Clear();
-                        host.Bindings.Invoke("set-tab", "Overview");
-                        host.Bindings.Set("help-open", open);
-                        // A scroll position can only be written for an element an arrange has already
-                        // created, so the sweep arranges once, pins the centre column to its top, and
-                        // then arranges the frame it records and draws (the same probe pattern the
-                        // focused lanes use).
-                        UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(width, 600f));
-                        // The centre column exists only in the states that arrange the body row; with the
-                        // narrow band REPLACING the body there is no content scroll to pin, and asking for
-                        // one is not a failure of the shape. The both-directions check below still fails
-                        // when a state arranges neither presentation.
-                        if (first.RectById.ContainsKey("body-row"))
-                        {
-                            SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                        }
-
-                        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, 600f));
-                        host.DrawChecked(new Rect(0f, 0f, width, 600f));
-
-                        Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
-                        Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
-                        bool hasWideHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
-                        bool hasNarrowBand = snapshot.Viewports.TryGetValue("help-band", out Rect band);
-                        bool hasBody = snapshot.RectById.ContainsKey("body-row");
-                        Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
-                        bool overflow = contentArea.width > content.width + 0.5f;
-
-                        lines.Add(width.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " | "
-                            + language + " | " + (open ? "open" : "closed")
-                            + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | help=" + (hasWideHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
-                            + " | band=" + (hasNarrowBand ? band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
-                            + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | overflow=" + overflow
-                            + " | fit=" + reports.Count);
-
-                        // ONE presentation per drawer state: retracted arranges neither, open arranges exactly
-                        // one. This replaces the old "a closed drawer must not reserve the help width" check
-                        // and keeps its failure mode - an open drawer that arranges BOTH is a violation.
-                        if (open != (hasWideHelp != hasNarrowBand)) violations++;
-
-                        // The body row and the narrow band are two presentations of ONE slot (2026-09-21b):
-                        // the band REPLACES the body, so exactly one of them occupies the page while the
-                        // other is hidden. Arranging neither would leave the page with no reading surface at
-                        // all, and arranging both is the collision the shape exists to remove.
-                        if (hasBody == hasNarrowBand) violations++;
-
-                        // A live reading surface, whichever presentation the state produced: with the body
-                        // arranged the centre column's viewport must be real, and with the band arranged the
-                        // band's own viewport must be. The old form of this check asserted the centre column
-                        // unconditionally, which the replacing shape legitimately empties.
-                        if (hasBody)
-                        {
-                            if (content.width <= 1f) violations++;
-                        }
-                        else if (band.width <= 1f || band.height <= 1f)
-                        {
-                            violations++;
-                        }
-
-                        if (overflow) violations++;
-                        // (乙1)'s ACCEPTANCE, as a gate rather than a reminder: real text overflow is a
-                        // geometry violation like any other. It is only honest because the screen is stated
-                        // above - the case that used to report 7 (EN) / 2 (ZH) findings was a page width no
-                        // screen could produce with the drawer open.
-                        if (reports.Count > 0) violations++;
+                        SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                     }
+
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
+                    host.DrawChecked(new Rect(windowX, windowY, windowW, WindowChromeLayout.SettingsWindowHeight(screenW, screenH)));
+
+                    Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
+                    Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
+                    bool hasWideHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
+                    bool hasNarrowBand = snapshot.Viewports.TryGetValue("help-band", out Rect band);
+                    bool hasBody = snapshot.RectById.ContainsKey("body-row");
+                    Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
+                    bool overflow = contentArea.width > content.width + 0.5f;
+                    // The presentation this PAIR must produce, from the hand-written table above.
+                    bool expectBand = open && expectBandWhenOpen;
+
+                    lines.Add(screenW + "x" + screenH
+                        + (screenW < 1024 ? " (UNREACHABLE stress probe)" : "")
+                        + " | " + windowW.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + WindowChromeLayout.SettingsWindowHeight(screenW, screenH).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + pageWidth.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + pageHeight.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + (pageWidth - 24f).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + (pageHeight - 24f).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + language + " | " + state
+                        + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | help=" + (hasWideHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | band=" + (hasNarrowBand ? band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | overflow=" + overflow
+                        + " | fit=" + reports.Count);
+
+                    // ONE presentation per drawer state: retracted arranges neither, open arranges exactly
+                    // one. GUARD: the pre-fix replacement shape also satisfied it, so it does not redden
+                    // under the criterion revert - it keeps its original failure mode (an open drawer that
+                    // arranges BOTH).
+                    if (open != (hasWideHelp != hasNarrowBand)) violations++;
+
+                    // The body row and the narrow band are two presentations of ONE slot: the band REPLACES
+                    // the body, so exactly one of them occupies the page while the other is hidden. GUARD
+                    // (both shipped shapes satisfy it): arranging neither would leave the page with no
+                    // reading surface at all, and arranging both is the collision the shape removes.
+                    if (hasBody == hasNarrowBand) violations++;
+
+                    // The presentation the PAIR must produce, against the hand-written expectation: the
+                    // acceptance pair 1024x768/open SHARES (band absent, help column present, body present)
+                    // and the synthetic UNREACHABLE 800x600 probe exercises the band branch. This is the
+                    // clause a reverted host criterion reddens (measured: pre-fix full-delta question ->
+                    // the 1024x768/open row arranges band=404 instead of the column, 2 violations); it is
+                    // NOT a guard.
+                    if (open && (hasNarrowBand != expectBand || hasWideHelp != !expectBand)) violations++;
+
+                    // A live reading surface, whichever presentation the state produced: with the body
+                    // arranged the centre column's viewport must be real, and with the band arranged the
+                    // band's own viewport must be. GUARD (both shapes satisfy it).
+                    if (hasBody)
+                    {
+                        if (content.width <= 1f) violations++;
+                    }
+                    else if (band.width <= 1f || band.height <= 1f)
+                    {
+                        violations++;
+                    }
+
+                    // GUARD: horizontal content overflow and any fit-audit finding are geometry failures in
+                    // either shape; they report a broken frame, not which presentation was chosen.
+                    if (overflow) violations++;
+                    if (reports.Count > 0) violations++;
                 }
             }
             finally
@@ -1887,8 +1964,8 @@ internal static class Program
         foreach (string line in lines) Console.WriteLine("  " + line);
         Assert(violations == 0,
             "the width/language evidence sweep found " + violations + " geometry violation(s) "
-            + "(closed drawer still reserving help width, horizontal content overflow, a dead content viewport,"
-            + " or text overflow reported by the fit audit); see " + artifact);
+            + "(wrong help presentation for the pair's screen, horizontal content overflow, a dead content"
+            + " viewport, or text overflow reported by the fit audit); see " + artifact);
     }
 
     /// <summary>Repository root for evidence artifacts, found the same way the UI-logic lane finds it.</summary>

@@ -20,13 +20,13 @@ namespace UniversalSqueaker.KernelHostTests;
 /// instead of a milestone nobody re-runs.
 /// </para>
 /// <para>
-/// The five viewports are not arbitrary round numbers. 736 is the innermost page width of the SMALLEST
-/// window the shipped size policy can produce (<c>WindowChromeLayout.SettingsWidthFloor</c> 800 - 2 x 20
-/// chrome - 2 x 12 page padding), i.e. the tightest case the wide three-column regime has to survive on a
-/// real screen. 1280 is the widest the policy reaches (a 2560x1440 screen). 1024/480/320 are the probes
-/// the rest of this suite already uses. Everything is asserted in BOTH shipped languages, with the drawer
-/// in BOTH states, on every one of the five workspaces, because the frame is the one thing all of them
-/// share.
+/// The five probe widths are PAGE BOXES handed to <c>MeasureAndArrange</c> (the shell's ContentRect, i.e.
+/// window minus 2 x 20 chrome), NOT window or inner widths, and they are SYNTHETIC stress inputs: 736 and
+/// 1280 happen to sit between the closed and open policy boxes of a real screen, while 1024/480/320 are the
+/// probes the rest of this suite already uses. None of them is a page box the window policy produces for an
+/// OPEN drawer on a reachable screen (B3.5), so they prove a stress property of the frame only and never
+/// product behaviour. Everything is asserted in BOTH shipped languages, with the drawer in BOTH states, on
+/// every one of the five workspaces, because the frame is the one thing all of them share.
 /// </para>
 /// <para>
 /// <para>
@@ -81,7 +81,10 @@ internal static class FrameGeometryLaneTests
     public static int RunAll()
     {
         Step("no degenerate rect, no sibling overlap, every element inside its parent", TheFrameHoldsEverywhere);
-        Step("the frame holds at the minimum logical resolution with the band replacing the body", TheNarrowFrameHoldsAtTheMinimumResolution);
+        Step("the frame at the minimum logical resolution shares the page with the help column",
+            TheMinimumResolutionFrameSharesThePage);
+        Step("the unreachable stress probe: the band replaces the body below the game's minimum screen",
+            TheCappedFrameReplacesTheBody);
         Step("the three-column frame keeps its declared shape across the five viewports", TheFrameKeepsItsShape);
         Step("the header band is fixed, right-aligned, and the page's ONLY help switch", TheHeaderBandIsFixed);
         Step("placement vocabulary is refused where its container does not own the axis", PlacementIsRefusedWhereTheContainerDoesNotOwnIt);
@@ -151,36 +154,37 @@ internal static class FrameGeometryLaneTests
     }
 
     /// <summary>
-    /// The frame at the game's MINIMUM logical resolution with the help drawer open - the one configuration
-    /// the rest of this lane cannot reach. Everywhere else the screen is left at the stub's wide default, so
-    /// an open drawer takes its third COLUMN at every viewport width; on a screen that cannot host the
-    /// widened window the drawer REPLACES the body instead, and that frame needs the same checks
-    /// (containment, cross-parent overlap, real viewports) rather than a second implementation of them.
+    /// The frame at the game's MINIMUM logical resolution - the configuration the B3 playtest actually
+    /// walked, and the one the rest of this lane cannot reach.
     ///
     /// <para>
-    /// The two slots are asserted as ONE room: with the drawer open exactly one of body-row / help-band is
-    /// arranged, so "the band is there" can never be satisfied by a shared page. THAT is what the pre-fix
-    /// shape did - a fixed band beside a body whose 271px of nav content overflowed its ~148px slot - and
-    /// the overlap walk below is what reports it, which is why this step is a mutation target rather than a
-    /// note. The controls are the other half: the retracted drawer must still arrange the body row, the band
-    /// must be arranged exactly while the drawer is open, and the centre column's viewport must be alive
-    /// exactly while the body row is.
+    /// Re-cut 2026-10-04. This step used to assert the BAND REPLACED the body here, because the old
+    /// presentation question ("did the window gain the drawer's full 332px cost") answered false at
+    /// 1024x768. It does not: the open window is capped at the 1024 screen, the page-root box is 984, and
+    /// the three-column body leaves the centre 960 - 200 - 320 - 2 x 12 = 416px, above the manifest's own
+    /// Breakpoint 400. So the step now walks the SHARING frame - and it walks it on the REAL page box
+    /// (<see cref="PageBoxFor"/>), because the page width this lane used to arrange (window - 64) is the
+    /// page's INNER width, which under-measured the body row by 24px and would have shown a centre of 392.
+    /// </para>
+    ///
+    /// <para>
+    /// Faithful revert that reddens it: restoring the old predicate (or making the host read its band key
+    /// from the full-delta question) hides the body and draws the band here, which the shape-premise clause
+    /// below reports before the walk runs.
     /// </para>
     /// </summary>
-    private static void TheNarrowFrameHoldsAtTheMinimumResolution()
+    private static void TheMinimumResolutionFrameSharesThePage()
     {
-        const float PageWidth = 960f;
-        const float PageHeight = 530f;
-
         UiLayoutManifest manifest = LoadManifest();
         var problems = new List<string>();
         int savedWidth = Verse.UI.screenWidth;
         int savedHeight = Verse.UI.screenHeight;
         try
         {
-            // The game's MINIMUM logical resolution. The window cannot widen here
-            // (WindowChromeLayout.SettingsOpenWidth caps at the screen), so on this screen the band is the
-            // only help presentation there is - the configuration the maintainer walked.
+            // The game's MINIMUM logical resolution, drawer open: an 800x600 window widened to the screen
+            // cap (1024), so the shell hands the page WindowChromeLayout's ContentRect - 984x524, not the
+            // inner width. page-root then takes its Padding 12 out of it, leaving body-row 960 and the centre
+            // column 416, above the manifest's own Breakpoint 400.
             Verse.UI.screenWidth = 1024;
             Verse.UI.screenHeight = 768;
 
@@ -193,29 +197,27 @@ internal static class FrameGeometryLaneTests
                     using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Overview");
                     host.Bindings.Set("help-open", open);
-                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
-                    host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
+                    Vector2 box = PageBoxFor(1024f, 768f, open);
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(box);
+                    host.DrawChecked(new Rect(0f, 0f, box.x, box.y));
 
-                    string context = "narrow frame " + (open ? "open" : "closed") + "/" + language;
+                    string context = "minimum-resolution frame " + (open ? "open" : "closed") + "/" + language;
                     CheckRects(snapshot, context, problems);
 
                     bool bodyArranged = snapshot.RectById.ContainsKey("body-row");
                     bool bandArranged = snapshot.Viewports.ContainsKey("help-band");
-                    Assert(bodyArranged != bandArranged,
-                        context + ": exactly ONE of body-row / help-band may occupy the page's flex slot;"
-                        + " body=" + bodyArranged + " band=" + bandArranged);
-                    Assert(bandArranged == open,
-                        context + ": the narrow band must be arranged exactly while the drawer is open");
-                    Assert(bodyArranged == !open,
-                        context + ": the body row must be arranged exactly while the drawer is retracted");
-                    Assert(snapshot.Viewports.ContainsKey("content-scroll") == bodyArranged,
-                        context + ": the centre column's viewport must be alive exactly while the body row is"
-                        + " arranged, or a state with no content viewport at all would look like a pass");
-                    Assert(!snapshot.Viewports.ContainsKey("help-scroll"),
-                        context + ": the wide column must not be arranged on a screen that cannot host the"
-                        + " widened window");
+                    bool helpArranged = snapshot.Viewports.ContainsKey("help-scroll");
 
-                    var window = new Rect(0f, 0f, PageWidth, PageHeight);
+                    // The SHAPE PREMISE of the walk below: the settings body stays arranged in both drawer
+                    // states, the fallback band is never the presentation here, and the help column is
+                    // arranged exactly while the drawer is open. This is the clause the faithful revert
+                    // (restoring the full-delta predicate) reddens - it would hide the body and draw the band.
+                    Assert(bodyArranged && !bandArranged && helpArranged == open,
+                        context + ": the minimum-resolution frame must SHARE the page (body arranged, band"
+                        + " absent, help column exactly while open); body=" + bodyArranged + " band=" + bandArranged
+                        + " help=" + helpArranged);
+
+                    var window = new Rect(0f, 0f, box.x, box.y);
                     var placed = new List<Placed>();
                     foreach (UiElementSpec root in manifest.Roots)
                     {
@@ -225,14 +227,103 @@ internal static class FrameGeometryLaneTests
 
                     CheckOverlaps(placed, problems, context);
 
-                    Console.WriteLine("[narrow-frame] " + context
+                    Console.WriteLine("[minimum-frame] " + context
+                        + " body=" + bodyArranged + " band=" + bandArranged + " help=" + helpArranged
+                        + " contentViewport=" + snapshot.Viewports.ContainsKey("content-scroll")
+                        + " placed=" + placed.Count
+                        + " box=" + box.x.ToString("0", CultureInfo.InvariantCulture)
+                        + "x" + box.y.ToString("0", CultureInfo.InvariantCulture));
+
+                    Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer) && footer.yMax <= box.y + Tol,
+                        context + ": the footer must stay inside the page in BOTH drawer states; footer="
+                        + (snapshot.RectById.TryGetValue("footer-band", out Rect f2) ? Fmt(f2) : "(absent)"));
+                }
+            }
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            Verse.UI.screenWidth = savedWidth;
+            Verse.UI.screenHeight = savedHeight;
+        }
+
+        Assert(problems.Count == 0, Report(problems));
+    }
+
+    /// <summary>
+    /// The UNREACHABLE stress probe with the drawer open: a SYNTHETIC 800x600 screen cannot afford the third
+    /// column (page box 760, body-row 736 - nav 200 - help 320 - 2 x Gap 12 = 192, below the page's declared
+    /// Breakpoint 400), so the band REPLACES the body.
+    ///
+    /// <para>
+    /// PROBE, NOT PRODUCT SHAPE (B3.5): 800x600 is a screen BELOW the game's own minimum logical resolution
+    /// (1024x768; <c>RimWorld.ResolutionUtility</c> in the pinned Krafs.Rimworld.Ref), so no reachable screen
+    /// selects this shape and it decides no product behaviour. It is kept only because it is the band's only
+    /// failure-sensitive frame - the pre-fix reserved band beside a body whose nav content overflowed its
+    /// slot is what the overlap walk below reports, and the walk needs a frame where the band is arranged.
+    /// The shape-premise clause asserts the retracted drawer still arranges the body and the open drawer
+    /// arranges the band.
+    /// </para>
+    /// </summary>
+    private static void TheCappedFrameReplacesTheBody()
+    {
+        UiLayoutManifest manifest = LoadManifest();
+        var problems = new List<string>();
+        int savedWidth = Verse.UI.screenWidth;
+        int savedHeight = Verse.UI.screenHeight;
+        try
+        {
+            // The synthetic probe: below the game's minimum screen, the window opens at its 800 floor and the
+            // drawer's 332px cost is absorbed by the screen cap, so the page box is 760x524 and the centre
+            // column would be 192 - far below the page's declared Breakpoint 400.
+            Verse.UI.screenWidth = 800;
+            Verse.UI.screenHeight = 600;
+
+            foreach (string language in Languages)
+            {
+                Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+                foreach (bool open in new[] { false, true })
+                {
+                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+                    host.Bindings.Invoke("set-tab", "Overview");
+                    host.Bindings.Set("help-open", open);
+                    Vector2 box = PageBoxFor(800f, 600f, open);
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(box);
+                    host.DrawChecked(new Rect(0f, 0f, box.x, box.y));
+
+                    string context = "band-probe frame " + (open ? "open" : "closed") + "/" + language
+                        + " (synthetic UNREACHABLE screen 800x600)";
+                    CheckRects(snapshot, context, problems);
+
+                    bool bodyArranged = snapshot.RectById.ContainsKey("body-row");
+                    bool bandArranged = snapshot.Viewports.ContainsKey("help-band");
+
+                    // The SHAPE PREMISE of the walk below: on this screen the band is the fallback and the
+                    // body row is not arranged while it is - the pre-fix reserved band beside a body whose
+                    // nav content overflowed its slot is what the walk is here to report.
+                    Assert(bodyArranged == !open && bandArranged == open,
+                        context + ": the probe frame must give the flex slot to the band (body only when"
+                        + " retracted); body=" + bodyArranged + " band=" + bandArranged);
+
+                    var window = new Rect(0f, 0f, box.x, box.y);
+                    var placed = new List<Placed>();
+                    foreach (UiElementSpec root in manifest.Roots)
+                    {
+                        Collect(root, window, "<page>", new List<string>(), false, snapshot, context,
+                            placed, problems);
+                    }
+
+                    CheckOverlaps(placed, problems, context);
+
+                    Console.WriteLine("[band-probe] " + context
                         + " body=" + bodyArranged + " band=" + bandArranged
                         + " contentViewport=" + snapshot.Viewports.ContainsKey("content-scroll")
                         + " placed=" + placed.Count
-                        + " page=" + PageWidth.ToString("0", CultureInfo.InvariantCulture)
-                        + "x" + PageHeight.ToString("0", CultureInfo.InvariantCulture));
+                        + " box=" + box.x.ToString("0", CultureInfo.InvariantCulture)
+                        + "x" + box.y.ToString("0", CultureInfo.InvariantCulture));
 
-                    Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer) && footer.yMax <= PageHeight + Tol,
+                    Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer) && footer.yMax <= box.y + Tol,
                         context + ": the footer must stay inside the page in BOTH drawer states; footer="
                         + (snapshot.RectById.TryGetValue("footer-band", out Rect f2) ? Fmt(f2) : "(absent)"));
                 }
@@ -785,6 +876,23 @@ internal static class FrameGeometryLaneTests
     // ---------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The page BOX the shell hands its host for a screen: <c>UiWindowHost.ContentRect</c>, i.e. the window
+    /// the size policy produces minus the horizontal chrome and minus the title bar plus the bottom inset
+    /// (<see cref="WindowChromeLayout.WindowChromeInset"/>, <see cref="WindowChromeLayout.TitleBarHeight"/>).
+    /// It is NOT the inner width: <c>page-root</c> takes its own declared Padding 12 out of this box, and
+    /// arranging the inner width instead measures a 24px-narrower frame than the game builds. Measured
+    /// 2026-10-04: 1024x768/open gives 984x524, whose body-row is 960 wide.
+    /// </summary>
+    private static Vector2 PageBoxFor(float screenWidth, float screenHeight, bool open)
+    {
+        float windowWidth = WindowChromeLayout.SettingsWindowWidth(screenWidth, screenHeight, open);
+        float windowHeight = WindowChromeLayout.SettingsWindowHeight(screenWidth, screenHeight);
+        return new Vector2(
+            windowWidth - WindowChromeLayout.WindowChromeInset,
+            windowHeight - WindowChromeLayout.TitleBarHeight - WindowChromeLayout.WindowChromeInset * 0.5f);
+    }
 
     private static UiLayoutManifest LoadManifest()
     {

@@ -8,49 +8,33 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// (乙1) lane: ONE player intent, TWO mutually exclusive help presentations, and the SCREEN decides which.
+/// (乙1) lane: ONE player intent, TWO mutually exclusive help presentations, decided by the page box the
+/// shell ACTUALLY hands the page this pass (fed by the settings window), never by a prediction of the
+/// post-resize one. At the game's minimum logical screen 1024x768 the open page box leaves the centre column
+/// 416px, so the help column shares the page with the settings; a box that cannot afford the column gets the
+/// full-width band instead.
 ///
-/// <para>
-/// Why the mechanism exists. When the logical screen cannot host the widened window, the drawer used to
-/// keep taking a third column and the centre column collapsed: at 736 (the minimum real window inner width)
-/// with the drawer open the column was 168px and the fit audit reported 7 findings in EN / 2 in ZH - real
-/// text overflow, measured, where the drawer-retracted case reported none. The fix is not a narrower column
-/// but a different SHAPE: the same help panel appears as a full-width band between the body and the footer,
-/// so the centre column keeps the geometry it has with the drawer retracted.
-/// </para>
-/// <para>
-/// What is asserted. (1) Exactly one presentation is arranged, on a wide screen and on a capped one - the
-/// clause the mutation "always present the wide column" reddens, because a capped screen would then arrange
-/// the column. (2) Which one is the policy answer: WindowChromeLayout.DrawerWidensTheWindow, pinned
-/// directly for both ends. (3) The retracted drawer arranges NEITHER, so the band cannot become a second
-/// place the drawer state lives. (4) On the capped screen with the drawer open, the fit audit reports
-/// nothing - the acceptance (乙1) is written against, measured rather than argued. (5) At the game's
-/// MINIMUM logical resolution with the drawer open the band REPLACES the body (exactly one of the two is
-/// arranged) and the band's height is at least the body's own measured content floor - the budget clause
-/// the earlier revision of this lane was missing, and the one that reddens when the band only SHARES the
-/// page with the body.
-/// </para>
-/// <para>
-/// The screen is set explicitly because that is the input the decision reads: a 1920 monitor reaches the
-/// capped case at UI scale >= ~2.5. Both fields are restored in a finally, so no later lane inherits them.
-/// </para>
+/// Mutation proofs, named at each clause: reverting <c>DrawerSharesTheBody</c> to the pre-fix full-delta
+/// question reddens the pinned arithmetic and the acceptance shape; making the host ignore the fed width
+/// (predicting the widened box) reddens the pre-resize edge clause's fit gate - that pairing is the overflow
+/// this round fixes. Every clause arranges a REAL page box, so a width the policy cannot produce is never
+/// asserted against.
 /// </summary>
 internal static class HelpPresentationLaneTests
 {
-    /// <summary>
-    /// Each case pairs its SCREEN with the page width that screen's window actually produces
-    /// (<c>SettingsWindowWidth - 64</c>): the two are one configuration, and feeding a page width the policy
-    /// cannot produce is how the old sweep ended up asserting against a shape no player can reach.
-    /// </summary>
-    private static readonly Vector2 WideViewport = new(1228f, 600f);
-    private static readonly Vector2 CappedViewport = new(736f, 600f);
+    // The shell's page box (UiWindowHost.ContentRect: window minus 2 x 20 chrome, minus the 56px title bar
+    // and the 20px bottom inset). page-root then takes its own declared Padding 12 out of it.
+    private static readonly Vector2 AcceptancePageBox = new(984f, 524f);  // 1024x768 -> window 1024x600
+    private static readonly Vector2 PreResizePageBox = new(760f, 524f);   // the closed 800x600 window's box
+    private static readonly Vector2 WidePageBox = new(1252f, 644f);       // 1920x1080 -> window 1292x720
+    private const int MinimumScreenWidth = 1024;
+    private const int MinimumScreenHeight = 768;
     private const string WideId = "help-scroll";
     private const string NarrowId = "help-band";
 
     public static int RunAll()
     {
-        Step("the drawer's presentation is decided by the screen, and exactly one is ever arranged",
-            ExactlyOnePresentationPerScreen);
+        Step("the help presentation is decided by the actual page box", ExactlyOnePresentationPerScreen);
         Console.WriteLine("HelpPresentationLaneTests ALL PASS");
         return 0;
     }
@@ -65,31 +49,26 @@ internal static class HelpPresentationLaneTests
         UiFitAudit.Enabled = true;
         try
         {
-            // The policy question, pinned at both ends before any page exists.
-            Assert(WindowChromeLayout.DrawerWidensTheWindow(1920f, 1080f),
-                "a 1920x1080 logical screen must be able to host the expanded window");
-            Assert(!WindowChromeLayout.DrawerWidensTheWindow(800f, 600f),
-                "an 800-wide logical screen cannot widen, so the drawer must not take a third column there");
+            // The policy answer per ACTUAL box, before any page exists. Mutation target: the pre-fix
+            // full-delta question over the SCREEN answered false at 984 (the playtest failure).
+            Assert(WindowChromeLayout.DrawerSharesTheBody(WidePageBox.x),
+                "the 1920x1080 open page box must share");
+            Assert(WindowChromeLayout.DrawerSharesTheBody(AcceptancePageBox.x),
+                "the acceptance page box 984 must share: centre = 984 - 24 - 200 - 320 - 24 = 416");
+            Assert(!WindowChromeLayout.DrawerSharesTheBody(PreResizePageBox.x),
+                "the pre-resize page box 760 cannot afford the column (centre 192)");
+            Assert(Math.Abs(WindowChromeLayout.CentreColumnWidthInPage(AcceptancePageBox.x) - 416f) < 0.01f,
+                "CentreColumnWidthInPage(984) must be 416, got "
+                + WindowChromeLayout.CentreColumnWidthInPage(AcceptancePageBox.x));
 
-            // The real Keyed tables, because this lane measures WIDTHS. Without them the translator passes
-            // the key through and every caption is measured as its own key text - the first build of this
-            // lane reported the header switch as needing 168px for "US.Help.Drawer.Toggle" when the shipped
-            // caption is "Help" (EN) / "帮助" (ZH) and fits. A fit assertion whose input is a key name is
-            // measuring the harness, not the product: the failure was real, the cause was the instrument.
+            // The real Keyed tables: this lane measures WIDTHS, and a lane without them measures the keys.
             foreach (string language in new[] { "English", "ChineseSimplified" })
             {
                 Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
-
-                // The game's MINIMUM logical resolution (RimWorld's ResolutionUtility floors the logical
-                // size at 1024x768). There the window cannot widen - SettingsOpenWidth caps at the screen -
-                // so the narrow band is the ONLY help presentation, and it is the case the maintainer walked.
-                AssertMinimumResolution(language, metrics, reports);
-
-                AssertPresentations(language, 1920, 1080, WideViewport, expectWide: true, metrics, reports,
-                    "a wide screen hosts the widened window, so the help takes its column");
-
-                AssertPresentations(language, 800, 600, CappedViewport, expectWide: false, metrics, reports,
-                    "a capped screen must show the full-width band instead of stealing the centre column");
+                AssertAcceptanceBoxSharesThePage(language, metrics, reports);
+                AssertPreResizeEdgeStaysInBounds(language, metrics, reports);
+                AssertWideScreenShares(language, metrics, reports);
+                AssertBandFallbackStress(language, metrics, reports);
             }
         }
         finally
@@ -103,78 +82,230 @@ internal static class HelpPresentationLaneTests
     }
 
     /// <summary>
-    /// The narrow band must be USABLE at the resolution the game will not go below, and usable means the
-    /// body has YIELDED its slot to it - not that the two share a page too small for both.
+    /// THE ACCEPTANCE CONFIGURATION (B3.1/B3.2): screen 1024x768, drawer open, the ACTUAL page box 984 fed by
+    /// the window. The settings body, the navigation (rect AND scroll viewport) and the centre scroll all stay
+    /// arranged beside the 320px help column, the centre keeps the manifest's declared floor, the footer stays
+    /// inside the page, the band is not arranged, and the fit audit reports nothing in EN and ZH.
     ///
-    /// <para>
-    /// Why sharing cannot work, in the arithmetic the maintainer's 1024x768 walkthrough exposed. The page
-    /// box is 960x530; header ~60 + footer ~26 + the gaps ~16 leave 428 for body + band, while the body's
-    /// own content floor is 271 (us/nav). So the band can never exceed ~157, and the shipped reserved band
-    /// of 280 left the body ~148 - its content then overflowed its box by ~123px and painted into the band.
-    /// "The band takes more than half the content area" and "the content fits" cannot both be true here.
-    /// The fix is therefore EXCLUSION (the body row is not arranged while the band is), which also makes the
-    /// overflow structurally impossible: with the body out of the flow the band is page-root's only flexible
-    /// fill child and takes the whole leftover.
-    /// </para>
-    ///
-    /// <para>
-    /// Five numeric properties, all of them about ROOM: (1) the band is the presentation and the body is NOT
-    /// arranged - exactly one of the two occupies the slot; (2) the band's viewport is at least the panel's
-    /// own measured band, so the measured model never shows a truncated panel; (3) the SPACE BUDGET - the
-    /// band is at least the body's own content floor, measured on the same ruler in the retracted case, which
-    /// is the clause the previous revision of this lane did not have (it asserted the band was big enough and
-    /// the footer was in, but never that the room the body needs still exists anywhere); (4) the footer is
-    /// still inside the page; (5) the fit audit reports nothing.
-    /// </para>
-    ///
-    /// <para>
-    /// Clause (3) is also what makes the failure-mode mutation honest. Putting Fill="true" on the band while
-    /// letting the body stay arranged is not caught by clauses (2) or (4) - the band is still bigger than the
-    /// panel and the footer is still in - it is caught here: two flexible fill children split the leftover
-    /// (~198 each against a 271 floor). And the PRE-FIX shape (a fixed 280 band with the body arranged) is
-    /// caught by clause (1) and by the frame lane's containment/overlap check, where the nav column's 271px
-    /// of content overflows its ~148px slot into the band.
-    /// </para>
+    /// Mutation proof: reverting <c>DrawerSharesTheBody</c> to the pre-fix full-delta question makes the
+    /// host's keys answer "band" here, so the help-scroll and band-absent clauses redden first.
     /// </summary>
-    private static void AssertMinimumResolution(string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
+    private static void AssertAcceptanceBoxSharesThePage(
+        string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
     {
-        // 1024x768 logical -> an 800x600 window, widened to 1024x600 because the screen caps it, so the
-        // page box is 960 wide; 530 is the tight height that window leaves for the page.
-        const int ScreenWidth = 1024;
-        const int ScreenHeight = 768;
-        var page = new Vector2(960f, 530f);
+        Verse.UI.screenWidth = MinimumScreenWidth;
+        Verse.UI.screenHeight = MinimumScreenHeight;
+        string where = "at 1024x768 with the actual page box " + AcceptancePageBox.x + "x" + AcceptancePageBox.y
+            + " (" + language + ")";
 
-        Verse.UI.screenWidth = ScreenWidth;
-        Verse.UI.screenHeight = ScreenHeight;
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics, () => AcceptancePageBox.x);
+        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(AcceptancePageBox);
+        UiFitAudit.Reset();
+        reports.Clear();
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(AcceptancePageBox);
+        host.DrawChecked(new Rect(0f, 0f, AcceptancePageBox.x, AcceptancePageBox.y));
 
-        string where = "at the minimum logical resolution " + ScreenWidth + "x" + ScreenHeight
-            + " (" + language + ", page " + page.x + "x" + page.y + ")";
+        Assert(snapshot.Viewports.TryGetValue(WideId, out Rect help),
+            where + ": the help column must be the presentation, with a real scroll viewport");
+        Assert(help.width > 0f && help.height > 0f,
+            where + ": the help viewport must be usable, got " + Fmt(help));
+        Assert(Math.Abs(help.width - WindowChromeLayout.HelpDrawerWidth) < 0.5f,
+            where + ": the help column must keep its declared " + WindowChromeLayout.HelpDrawerWidth
+            + "px width, got " + help.width);
+        Assert(snapshot.RectById.TryGetValue("help-panel", out Rect helpPanel),
+            where + ": the help panel must be arranged inside the help column");
+        Assert(help.height >= helpPanel.height - 0.5f,
+            where + ": the help viewport must be at least the panel's measured content, got viewport="
+            + help.height + " panel=" + helpPanel.height);
+        Assert(snapshot.RectById.ContainsKey("body-row") && snapshot.RectById.ContainsKey("nav-column"),
+            where + ": the settings body and the navigation must stay arranged");
+        Assert(snapshot.Viewports.TryGetValue("nav-column", out Rect navViewport),
+            where + ": the navigation must keep a scroll viewport");
+        Assert(navViewport.height > 0f && navViewport.width > 0f,
+            where + ": the navigation's viewport must be a real reading surface (B3.1's reachable input)");
+        Assert(snapshot.Viewports.TryGetValue("content-scroll", out Rect centre),
+            where + ": the centre column must keep a live viewport");
+        Assert(centre.width >= WindowChromeLayout.ResponsiveParameterRowBreakpoint - 0.5f,
+            where + ": the centre column must keep the page's declared Breakpoint "
+            + WindowChromeLayout.ResponsiveParameterRowBreakpoint + ", got " + centre.width);
+        Assert(centre.x >= snapshot.RectById["nav-column"].xMax - 0.5f && help.x >= centre.xMax - 0.5f,
+            where + ": nav, centre and help must be side by side, not stacked");
+        Assert(!snapshot.Viewports.ContainsKey(NarrowId) && !snapshot.RectById.ContainsKey("help-panel-narrow"),
+            where + ": the band must not be arranged when the box affords the third column");
+        Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer),
+            where + ": the footer band must be arranged");
+        Assert(footer.yMax <= AcceptancePageBox.y + 0.5f,
+            where + ": the footer must stay inside the page, got " + footer.yMax);
+        Assert(reports.Count == 0,
+            where + ": the fit audit must report nothing, got " + Describe(reports));
 
-        // THE RULER FIRST. The budget clause is stated against the BODY's own content floor, so the floor is
-        // MEASURED - the same metrics, the same page box, the same language, drawer retracted, i.e. the
-        // configuration in which the body is the presentation - instead of being written down as a number
-        // somebody picked. The measurement is then checked against the documented floor (us/nav = 271px) so a
-        // ruler that came back smaller cannot silently turn the comparison below into a tautology.
+        Console.WriteLine("[acceptance] " + language + " box " + AcceptancePageBox.x + "x" + AcceptancePageBox.y
+            + ": centre=" + Fmt1(centre.width) + " nav=" + Fmt1(navViewport.width)
+            + " help=" + Fmt1(help.width) + " helpViewportH=" + Fmt1(help.height)
+            + " footerBottom=" + Fmt1(footer.yMax) + " band=false fit=0");
+
+        // B3.2's state edge: the close/reopen must preserve the centre column's scroll offset and every
+        // column's node identity while the body stays arranged. The load-bearing clause is NODE IDENTITY,
+        // not an offset: at this acceptance geometry the nav column's content (271) and the help panel's
+        // (242) both FIT the 404px viewport under the stub ruler, so a non-zero offset there is not
+        // representable and the engine clamps it; HelpDrawerLaneTests covers non-zero offsets at geometries
+        // where they exist.
+        UiNode? contentNodeOrNull = host.Session.GetNodeByElementId("content-scroll");
+        UiNode? navNodeOrNull = host.Session.GetNodeByElementId("nav-column");
+        UiNode? helpNodeOrNull = host.Session.GetNodeByElementId(WideId);
+        Assert(contentNodeOrNull != null && navNodeOrNull != null && helpNodeOrNull != null,
+            where + ": the three scroll columns must be arranged nodes for the identity clause to mean anything");
+        UiNode contentNode = contentNodeOrNull!;
+        UiNode navNode = navNodeOrNull!;
+        UiNode helpNode = helpNodeOrNull!;
+        Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 90f));
+        host.Bindings.Set("help-open", false);
+        host.MeasureAndArrange(AcceptancePageBox);
+        host.Bindings.Set("help-open", true);
+        UiLayoutSnapshot reopened = host.MeasureAndArrange(AcceptancePageBox);
+        Assert(reopened.RectById.ContainsKey("body-row") && reopened.Viewports.ContainsKey(WideId),
+            where + ": reopening must restore the help column beside the still-arranged body");
+        Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 90f) < 0.01f,
+            where + ": the centre column's scroll offset must survive a close/reopen");
+        Assert(ReferenceEquals(contentNode, host.Session.GetNodeByElementId("content-scroll"))
+                && ReferenceEquals(navNode, host.Session.GetNodeByElementId("nav-column"))
+                && ReferenceEquals(helpNode, host.Session.GetNodeByElementId(WideId)),
+            where + ": all three columns must keep their node identity across a close/reopen");
+    }
+
+    /// <summary>
+    /// THE PRE-RESIZE EDGE (this round's regression proof, now GATED). The pass that first presents the open
+    /// drawer may still be handed the CLOSED page box; the criterion must answer "cannot share" there, the
+    /// pass must be fit-silent in EN and ZH, and the help must stay in bounds. Feeding the resized box on the
+    /// same host must then present the sharing shape again, so the settings viewport is reachable as soon as
+    /// the window has resized - without recreating the host.
+    ///
+    /// Mutation proof: ignoring the fed width (using the policy's open box, 984, while the shell hands the
+    /// page 760) arranges the wide column into 760 and the fit gate below reddens with the measured overflow.
+    /// </summary>
+    private static void AssertPreResizeEdgeStaysInBounds(
+        string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
+    {
+        Verse.UI.screenWidth = MinimumScreenWidth;
+        Verse.UI.screenHeight = MinimumScreenHeight;
+        string where = "at the pre-resize page box " + PreResizePageBox.x + " (" + language + ")";
+
+        float fedWidth = PreResizePageBox.x;
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics, () => fedWidth);
+        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(PreResizePageBox);
+        UiFitAudit.Reset();
+        reports.Clear();
+        UiLayoutSnapshot edge = host.MeasureAndArrange(PreResizePageBox);
+        host.DrawChecked(new Rect(0f, 0f, PreResizePageBox.x, PreResizePageBox.y));
+
+        Assert(host.Bindings.Get<bool>("help-open-narrow") && !host.Bindings.Get<bool>("help-open-wide"),
+            where + ": the criterion must answer cannot-share for the box it was actually given");
+        bool wide = edge.Viewports.TryGetValue(WideId, out Rect help);
+        bool band = edge.Viewports.TryGetValue(NarrowId, out Rect bandRect);
+        Assert(wide != band,
+            where + ": exactly one presentation may be arranged (wide=" + wide + " band=" + band + ")");
+        Assert(!wide,
+            where + ": the wide column must not be arranged into a box that cannot afford it");
+        Assert(bandRect.xMax <= PreResizePageBox.x + 0.5f && bandRect.yMax <= PreResizePageBox.y + 0.5f,
+            where + ": the help must stay inside the page, got " + Fmt(bandRect));
+        Assert(reports.Count == 0,
+            where + ": the pre-resize pass must be fit-silent, got " + Describe(reports));
+
+        Console.WriteLine("[edge] " + language + " box " + PreResizePageBox.x + ": band=" + Fmt1(bandRect.height)
+            + " inBounds=" + (bandRect.xMax <= PreResizePageBox.x + 0.5f)
+            + " bandArranged=" + band + " fit=0");
+
+        // The resized box on the SAME host: the presentation flips back to the sharing shape and the settings
+        // viewport is arranged again.
+        fedWidth = AcceptancePageBox.x;
+        UiLayoutSnapshot resized = host.MeasureAndArrange(AcceptancePageBox);
+        Assert(resized.RectById.ContainsKey("body-row")
+            && resized.RectById.ContainsKey("nav-column")
+            && resized.Viewports.ContainsKey(WideId)
+            && !resized.Viewports.ContainsKey(NarrowId),
+            where + ": the resized box must present the settings and the help together again");
+        Assert(resized.Viewports["content-scroll"].width >= WindowChromeLayout.ResponsiveParameterRowBreakpoint - 0.5f,
+            where + ": the settings viewport must be reachable once the window has resized, got "
+            + resized.Viewports["content-scroll"].width);
+    }
+
+    /// <summary>
+    /// The wide reference: 1920x1080, whose open page box is 1252. The retracted drawer arranges NEITHER
+    /// presentation, the open one arranges exactly the wide column, the fit audit is silent, and closing
+    /// retracts it again - no feed, so the no-window default path is exercised too.
+    /// </summary>
+    private static void AssertWideScreenShares(
+        string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
+    {
+        Verse.UI.screenWidth = 1920;
+        Verse.UI.screenHeight = 1080;
+        string where = "at 1920x1080 (" + language + ")";
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        host.Bindings.Invoke("set-tab", "Overview");
+
+        UiLayoutSnapshot retracted = host.MeasureAndArrange(WidePageBox);
+        Assert(!retracted.Viewports.ContainsKey(WideId) && !retracted.Viewports.ContainsKey(NarrowId),
+            where + ": the retracted drawer must arrange neither presentation");
+
+        host.Bindings.Set("help-open", true);
+        UiFitAudit.Reset();
+        reports.Clear();
+        host.MeasureAndArrange(WidePageBox);
+        UiLayoutSnapshot expanded = host.MeasureAndArrange(WidePageBox);
+        host.DrawChecked(new Rect(0f, 0f, WidePageBox.x, WidePageBox.y));
+        Assert(expanded.Viewports.ContainsKey(WideId) && !expanded.Viewports.ContainsKey(NarrowId),
+            where + ": the open drawer must take its third column");
+        Assert(reports.Count == 0, where + ": the fit audit must report nothing, got " + Describe(reports));
+
+        host.Bindings.Set("help-open", false);
+        UiLayoutSnapshot closed = host.MeasureAndArrange(WidePageBox);
+        Assert(!closed.Viewports.ContainsKey(WideId) && !closed.Viewports.ContainsKey(NarrowId),
+            where + ": closing must retract the column");
+    }
+
+    /// <summary>
+    /// STRESS-ONLY probe for the defensive band: a SYNTHETIC screen 800x600 (below the game's 1024x768
+    /// minimum, UNREACHABLE) whose open policy box is 760. It proves only that the band, when it is the
+    /// presentation, replaces the body and is handed at least the body's own measured content floor - the
+    /// pre-fix reserved band failed exactly that. It decides no product behaviour.
+    /// </summary>
+    private static void AssertBandFallbackStress(
+        string language, Program.StubMetrics metrics, List<UiOverflowReport> reports)
+    {
         const float DocumentedContentFloor = 271f;
         float contentFloor;
-        float bodySlotRetracted;
-        var retractedFake = new RecordingSettingsSource { RichData = true };
-        using (UiHost retractedHost = UsKernelSettingsHost.Create(retractedFake, metrics))
         {
-            retractedHost.Bindings.Invoke("set-tab", "Overview");
-            UiLayoutSnapshot retracted = retractedHost.MeasureAndArrange(page);
+            // The ruler: the body's own content floor, measured in the configuration where the body is the
+            // presentation (retracted at the acceptance box), on the same metrics and language.
+            Verse.UI.screenWidth = MinimumScreenWidth;
+            Verse.UI.screenHeight = MinimumScreenHeight;
+            var rulerFake = new RecordingSettingsSource { RichData = true };
+            using UiHost rulerHost = UsKernelSettingsHost.Create(rulerFake, metrics);
+            rulerHost.Bindings.Invoke("set-tab", "Overview");
+            UiLayoutSnapshot retracted = rulerHost.MeasureAndArrange(AcceptancePageBox);
             Assert(retracted.RectById.TryGetValue("nav-column", out Rect navColumn),
-                where + ": the retracted drawer must arrange the nav column the content floor is measured on");
-            Assert(retracted.RectById.TryGetValue("body-row", out Rect retractedBody),
-                where + ": the retracted drawer must arrange the body row");
+                "the ruler needs the nav column the content floor is measured on");
             contentFloor = navColumn.height;
-            bodySlotRetracted = retractedBody.height;
         }
 
         Assert(contentFloor >= DocumentedContentFloor - 0.5f,
-            where + ": the measured content floor must still be the documented us/nav "
-            + DocumentedContentFloor + "px, got " + contentFloor
-            + " - the budget clause below would otherwise compare against a ruler that shrank");
+            "the measured content floor must still be the documented us/nav " + DocumentedContentFloor
+            + "px, got " + contentFloor);
+
+        // No feed: the default (policy open box at the synthetic screen) is 760, so this also covers the
+        // no-window path.
+        Verse.UI.screenWidth = 800;
+        Verse.UI.screenHeight = 600;
+        var page = PreResizePageBox;
+        string where = "on the synthetic UNREACHABLE 800x600 probe (" + language + ")";
 
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
@@ -186,115 +317,26 @@ internal static class HelpPresentationLaneTests
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(page);
         host.DrawChecked(new Rect(0f, 0f, page.x, page.y));
 
-        // (1) MUTUALLY EXCLUSIVE: the band is the presentation, and the body row is not arranged at all.
-        // Both halves are asserted: "the band is there" alone is what a SHARED page also satisfies.
-        Assert(snapshot.Viewports.TryGetValue("help-band", out Rect band),
-            where + ": the narrow band must be the presentation (the screen cannot host the widened window)");
+        Assert(snapshot.Viewports.TryGetValue(NarrowId, out Rect band),
+            where + ": the band must be the presentation");
         Assert(snapshot.RectById.TryGetValue("help-panel-narrow", out Rect panel),
             where + ": the narrow panel must be arranged");
-        Assert(!snapshot.RectById.ContainsKey("body-row"),
-            where + ": the narrow band REPLACES the body, so the body row must not be arranged while it is -"
-            + " a shared page is exactly the collision this shape removes");
-        Assert(!snapshot.Viewports.ContainsKey("content-scroll") && !snapshot.RectById.ContainsKey("nav-column"),
-            where + ": the body's own sub-tree (its scroll and its nav column) goes with the body row");
-        Assert(!snapshot.Viewports.ContainsKey("help-scroll"),
-            where + ": the wide column must not be arranged on a screen that cannot host the widened window");
-
-        // (2) the band's viewport is a real reading surface, not a sliver of one.
-        Assert(band.height >= panel.height - 0.5f,
-            where + ": the band must be at least as tall as the panel's own measured band, or the help is"
-            + " truncated on the only screen where it can be read: band=" + band.height + " panel=" + panel.height);
-
-        // (3) THE SPACE BUDGET: the room the help took must be at least the room the body's content needs.
-        Assert(band.height >= contentFloor - 0.5f,
-            where + ": the band must be handed at least the body's own content floor, or the help has been"
-            + " bought with the content's room: band=" + band.height + " floor(nav-column)=" + contentFloor
-            + " bodySlot(retracted)=" + bodySlotRetracted);
-
+        Assert(!snapshot.RectById.ContainsKey("body-row")
+            && !snapshot.Viewports.ContainsKey("content-scroll")
+            && !snapshot.Viewports.ContainsKey(WideId),
+            where + ": the band must REPLACE the body and its sub-tree, and the wide column must be absent");
+        Assert(band.height >= panel.height - 0.5f && band.height >= contentFloor - 0.5f,
+            where + ": the band must be handed at least the panel's measured content and the body's own"
+            + " content floor: band=" + band.height + " panel=" + panel.height + " floor=" + contentFloor);
         Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer),
             where + ": the footer band must be arranged");
         Assert(footer.yMax <= page.y + 0.5f,
-            where + ": the footer must stay inside the page - the band's whole shape exists to keep it there:"
-            + " footer bottom=" + footer.yMax + " page=" + page.y);
+            where + ": the footer must stay inside the page, got " + footer.yMax);
+        Assert(reports.Count == 0, where + ": the fit audit must report nothing, got " + Describe(reports));
 
-        Assert(reports.Count == 0,
-            where + ": the fit audit must report nothing with the narrow band arranged, got " + Describe(reports));
-
-        Console.WriteLine("[narrow-help] " + language + " screen " + ScreenWidth + "x" + ScreenHeight
-            + " page " + page.x.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
-            + "x" + page.y.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
-            + ": band=" + band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " panel=" + panel.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " floor(nav-column)=" + contentFloor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " bodySlot(retracted)=" + bodySlotRetracted.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " footerBottom=" + footer.yMax.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " bodyArranged=false wideColumn=false fit=0");
-
-        // (5) The body is HIDDEN and never REMOVED, and that difference is observable: the player's place in
-        // the centre column survives the band replacing it. A removed element's node and scroll position are
-        // released by the session's prune, so an implementation that dropped the body from the definition
-        // (or rebuilt the root list) would fail here rather than in the game.
-        host.Bindings.Set("help-open", false);
-        host.MeasureAndArrange(page);
-        Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 90f));
-        host.Bindings.Set("help-open", true);
-        host.MeasureAndArrange(page);
-        host.Bindings.Set("help-open", false);
-        host.MeasureAndArrange(page);
-        Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 90f) < 0.01f,
-            where + ": the centre column's scroll position must survive the body being hidden by the band -"
-            + " hidden keeps the node and the state, removed does not");
-    }
-
-    private static void AssertPresentations(
-        string language,
-        int screenWidth,
-        int screenHeight,
-        Vector2 viewport,
-        bool expectWide,
-        Program.StubMetrics metrics,
-        List<UiOverflowReport> reports,
-        string why)
-    {
-        Verse.UI.screenWidth = screenWidth;
-        Verse.UI.screenHeight = screenHeight;
-
-        var fake = new RecordingSettingsSource { RichData = true };
-        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
-        host.Bindings.Invoke("set-tab", "Overview");
-
-        UiLayoutSnapshot retracted = host.MeasureAndArrange(viewport);
-        Assert(!retracted.Viewports.ContainsKey(WideId) && !retracted.Viewports.ContainsKey(NarrowId),
-            "the retracted drawer must arrange NEITHER presentation at " + screenWidth + "x" + screenHeight);
-
-        host.Bindings.Set("help-open", true);
-        UiFitAudit.Reset();
-        reports.Clear();
-        host.MeasureAndArrange(viewport);
-        UiLayoutSnapshot expanded = host.MeasureAndArrange(viewport);
-        host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
-
-        bool wide = expanded.Viewports.ContainsKey(WideId);
-        bool narrow = expanded.Viewports.ContainsKey(NarrowId);
-        Assert(wide != narrow,
-            why + ": exactly ONE presentation may be arranged at " + screenWidth + "x" + screenHeight
-            + " (wide=" + wide + " narrow=" + narrow + ")");
-        Assert(wide == expectWide,
-            why + ": expected the " + (expectWide ? "WIDE column" : "NARROW band") + " at "
-            + screenWidth + "x" + screenHeight + ", got wide=" + wide);
-
-        // The acceptance (乙1) is written against: with the drawer open on a screen that cannot widen, the
-        // page must be as free of text overflow as the drawer-retracted one - which is what the narrow
-        // presentation buys by not touching the centre column.
-        Assert(reports.Count == 0,
-            why + ": the fit audit must report nothing at " + screenWidth + "x" + screenHeight
-            + " (" + language + ") with the drawer open, got " + Describe(reports));
-
-        host.Bindings.Set("help-open", false);
-        UiLayoutSnapshot closed = host.MeasureAndArrange(viewport);
-        Assert(!closed.Viewports.ContainsKey(WideId) && !closed.Viewports.ContainsKey(NarrowId),
-            "closing must retract whichever presentation was arranged (the band is not a second home for the"
-            + " drawer state)");
+        Console.WriteLine("[band-probe] " + language + " synthetic UNREACHABLE screen 800x600 box "
+            + page.x + "x" + page.y + ": band=" + Fmt1(band.height) + " panel=" + Fmt1(panel.height)
+            + " floor=" + Fmt1(contentFloor) + " fit=0");
     }
 
     private static string Describe(List<UiOverflowReport> reports)
@@ -308,6 +350,16 @@ internal static class HelpPresentationLaneTests
         }
 
         return text.ToString();
+    }
+
+    private static string Fmt(Rect rect)
+    {
+        return "(" + Fmt1(rect.x) + ", " + Fmt1(rect.y) + ", " + Fmt1(rect.width) + ", " + Fmt1(rect.height) + ")";
+    }
+
+    private static string Fmt1(float value)
+    {
+        return value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static void Step(string name, Action action)

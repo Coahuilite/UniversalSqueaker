@@ -32,7 +32,7 @@ public static class UsKernelSettingsHost
     public static UiHost Create(IUsKernelSettingsSource source)
     {
         UiNative.Trace = SqueakLog.PopupTrace;
-        return Create(source, VerseFerriteTextMetrics.Instance);
+        return Create(source, VerseFerriteTextMetrics.Instance, out _, pageWidthFeed: null);
     }
 
     /// <summary>
@@ -44,7 +44,28 @@ public static class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics)
     {
-        return Create(source, metrics, out _);
+        return Create(source, metrics, out _, pageWidthFeed: null);
+    }
+
+    /// <summary>
+    /// Production creation with the page-width feed and the real Verse text metrics.
+    /// </summary>
+    public static UiHost Create(IUsKernelSettingsSource source, Func<float>? pageWidthFeed)
+    {
+        UiNative.Trace = SqueakLog.PopupTrace;
+        return Create(source, VerseFerriteTextMetrics.Instance, out _, pageWidthFeed);
+    }
+
+    /// <summary>
+    /// Production creation with the page-width feed: <paramref name="pageWidthFeed"/> answers the page box
+    /// the shell ACTUALLY hands the page on the pass being arranged (the window feeds it in BeforeDraw), so
+    /// the help presentation is decided from the current box and never from a prediction of the post-resize
+    /// one. A null feed means no window is feeding - the policy's open page box stands in.
+    /// </summary>
+    public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics, Func<float>? pageWidthFeed)
+    {
+        UiNative.Trace = SqueakLog.PopupTrace;
+        return Create(source, metrics, out _, pageWidthFeed);
     }
 
     /// <summary>
@@ -54,7 +75,8 @@ public static class UsKernelSettingsHost
     /// every other lane use the two-argument overload.
     /// </summary>
     public static UiHost Create(
-        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes)
+        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes,
+        Func<float>? pageWidthFeed = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
@@ -74,7 +96,7 @@ public static class UsKernelSettingsHost
         // One translation seam instance for both the host and the per-item text bindings: the checklist's
         // row meta line is composed from a Keyed template, and a second seam would be a second language.
         var translation = new UsKernelTranslation();
-        writes = BuildBindings(source, bumper, translation);
+        writes = BuildBindings(source, bumper, translation, pageWidthFeed);
         UiHost host = new(
             Source,
             manifest,
@@ -292,7 +314,8 @@ public static class UsKernelSettingsHost
 
 
     private static UsWriteBindings BuildBindings(
-        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
+        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
+        Func<float>? pageWidthFeed)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -627,28 +650,40 @@ public static class UsKernelSettingsHost
             value => { source.SetHelpDrawerOpen(value); bump(); });
 
         // (乙1) ONE player intent, TWO mutually exclusive presentations. help-open stays the only thing the
-        // header toggle writes; which presentation it produces is a SCREEN question, not a page-width one:
-        // a page can be narrow because the window cannot widen (a capped logical screen, which a 1920
-        // monitor reaches at UI scale >= ~2.5) or because the window is genuinely small. Only the first
-        // would have the drawer eat the centre column, and WindowChromeLayout answers that purely.
+        // header toggle writes; which presentation it produces is decided from the page box the shell
+        // ACTUALLY hands the page this pass (fed by the settings window in BeforeDraw), NEVER from a
+        // prediction of the post-resize window: at the drawer-open edge the shell may still hand the page the
+        // pre-resize box, and predicting the widened box there is what used to put the wide column into a
+        // 760px page. Without a feed (harness lanes, any non-window host) the policy's open page box stands
+        // in, which is the width this decision used before.
         // Read-only because the player never writes it: a second writable flag would be a second truth.
-        // Both read the screen lazily per arrange, so a screen change is picked up on the next bump - the
+        // Read lazily per arrange through the feed, so a box change is picked up on the next arrange - the
         // same edge the window resizes on.
-        bool drawerWidensTheScreen() =>
-            WindowChromeLayout.DrawerWidensTheWindow(Verse.UI.screenWidth, Verse.UI.screenHeight);
-        bool drawerIsNarrow() => state.HelpDrawerOpen && !drawerWidensTheScreen();
-        bindings.BindReadOnly<bool>("help-open-wide", () => state.HelpDrawerOpen && drawerWidensTheScreen());
-        bindings.BindReadOnly<bool>("help-open-narrow", drawerIsNarrow);
+        bool drawerSharesThePage()
+        {
+            float pageBoxWidth = pageWidthFeed != null
+                ? pageWidthFeed()
+                : WindowChromeLayout.SettingsOpenPageBoxWidth(Verse.UI.screenWidth, Verse.UI.screenHeight);
+            return WindowChromeLayout.DrawerSharesTheBody(pageBoxWidth);
+        }
 
-        // The body yields its SLOT to the narrow band rather than sharing the page with it (shape fixed
-        // 2026-09-21b). This is the same single player intent read one step further, not a second state:
-        // with the band arranged, this element is not ARRANGED, so the band is page-root's only flexible
-        // fill child and is handed the whole leftover by construction. It is hidden through VisibleKey and
-        // never removed: the definition keeps the element, so its node, its sub-tree and every scroll
-        // position survive the swap - the player's place in the centre column comes back with the body.
+        bool drawerIsABand() => state.HelpDrawerOpen && !drawerSharesThePage();
+        bindings.BindReadOnly<bool>("help-open-wide", () => state.HelpDrawerOpen && drawerSharesThePage());
+        bindings.BindReadOnly<bool>("help-open-narrow", drawerIsABand);
+
+        // The band REPLACES the body rather than sharing the page with it. This is the same single player
+        // intent read one step further, not a second state: with the band arranged, this element is not
+        // ARRANGED, so the band is page-root's only flexible fill child and is handed the whole leftover by
+        // construction. It is a DEFENSIVE fallback for an actual box too small to share, including a
+        // pre-resize pass. The normally sized open window at 1024x768 leaves a 416px centre and shares.
+        // It is hidden through VisibleKey
+        // and never removed: the definition keeps the element, so its node, its sub-tree and every scroll
+        // position survive the swap - the player's place in the centre column comes back with the body. The
+        // sharing case needs none of this: the body, its nav column and its centre scroll stay arranged and
+        // keep their own scroll positions while the help column is beside them.
         // Read-only, like the two presentations: the player never writes it, and a writable copy would be a
         // second truth about which presentation is showing.
-        bindings.BindReadOnly<bool>("body-visible", () => !drawerIsNarrow());
+        bindings.BindReadOnly<bool>("body-visible", () => !drawerIsABand());
         // A COMMAND, not an action with a payload: the manifest's header button is a core
         // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was
