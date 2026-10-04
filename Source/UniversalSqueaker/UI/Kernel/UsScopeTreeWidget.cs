@@ -21,6 +21,13 @@ namespace UniversalSqueaker.UI;
 ///    followed by the same two-line parameter block for Pitch, Volume and Jitter (localized label, minus,
 ///    numeric field and plus on the first line, the slider on the second). An unavailable control stays
 ///    drawn and greyed, and hovering it explains why in the help panel.
+///  - XG1.1: while the XENOTYPE layer has no tunable target (its own identity is empty, which is the state
+///    an empty domain catalog produces), one reason sentence is drawn under the target row and the action,
+///    value and reset controls become INERT: a static disabled-ink band replaces the scope trigger (no
+///    dropdown call, so no popup path exists), static number/minus/plus/slider representations replace the
+///    editing atoms (no focus/draft/drag path exists) and the reset controls are not even hit-tested - all in
+///    the SAME bands, so the row shapes are unchanged. The layer segment stays live so the player can leave.
+///    Nothing here redefines a target: the catalog definition and the persisted domain are the model's.
 /// All values come from typed read bindings; every write is a typed action.
 /// </summary>
 public sealed class UsScopeTreeWidget : UsSectionWidgetBase
@@ -120,6 +127,17 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const string ResetPresetNotFromPresetHelpKey = "us/scope-tree/mood-reset-not-from-preset";
     private const string ResetPresetMissingHelpKey = "us/scope-tree/mood-reset-preset-missing";
     private const string ResetPresetNoEntryHelpKey = "us/scope-tree/mood-reset-preset-no-entry";
+    /// <summary>XG1.1 additive key: the xenotype tuning layer has no tunable target, so nothing in this card
+    /// can be submitted until a target exists. Drawn as one sentence under the target row.</summary>
+    private const string EmptyXenotypeTargetKey = "US.Tuning.EmptyXenotypeTarget";
+    /// <summary>XG1.1: the mood area's own help entry, reused for a control that is inert because the LAYER has
+    /// no target. Reusing it keeps the message honest: the row-specific "no local value" / "not from a preset"
+    /// reasons would be false here (the row can be perfectly Ready while the layer has nothing to write to),
+    /// and no new help item is invented outside the help catalog this step does not own.</summary>
+    private const string MoodTuningAreaHelpKey = "us/scope-tree/mood-tuning";
+    /// <summary>XG1.1: band floor for the reason sentence (one Tiny line), measured and drawn through the same
+    /// metrics seam so the card grows by exactly the text it paints.</summary>
+    private const float EmptyTargetMinBand = 14f;
     private const string PitchLabelKey = "US.Tuning.Factor.Pitch";
     private const string VolumeLabelKey = "US.Tuning.Factor.Volume";
     private const string JitterLabelKey = "US.Tuning.Factor.Jitter";
@@ -130,6 +148,42 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// source and Measure can never size a different number of buttons than Draw makes.
     /// </summary>
     private static readonly string[] LayerKeys = { "US.Tuning.Layer.Global", "US.Tuning.Layer.Race", "US.Tuning.Layer.Xenotype" };
+
+    /// <summary>
+    /// XG1.1: the ONE predicate that says "this layer has nothing to tune". It is the xenotype layer's own
+    /// identity, and nothing else: the production model builds an EMPTY domain option list exactly when no
+    /// (race, xenotype) tuning domain exists, and leaves the target empty in that case
+    /// (<c>BuildTuningDomains</c>, layer 2). It deliberately does NOT read the colonist count, a Biotech flag
+    /// or the target catalog's definition - this control may not change what a target IS, only refuse to
+    /// submit one that does not exist. Measure, Draw and every write gate call this same function, so the
+    /// reserved band, the painted sentence and the blocked invokes cannot disagree.
+    /// <para>
+    /// Both callers evaluate it AFTER the view-backed reads (action-scopes / mood-rows), which is what makes
+    /// the identity here the one the model normalised on this pass rather than a stale pre-build value.
+    /// </para>
+    /// </summary>
+    private static bool XenotypeTargetIsEmpty(int layer, UiWidgetContext ctx)
+    {
+        if (layer != 2) return false;
+        string xeno = ctx.Bindings.TryGet("tuning-xeno", out string value) ? value : "";
+        return string.IsNullOrEmpty(xeno);
+    }
+
+    /// <summary>The reason sentence, resolved through the Host translation seam (never a source literal).</summary>
+    private static string EmptyTargetText(UiWidgetContext ctx)
+    {
+        return UsKernelDraw.Keyed(ctx, EmptyXenotypeTargetKey);
+    }
+
+    /// <summary>
+    /// XG1.1: height of the reason band. The SAME width expression is used by Measure and Draw, and the width
+    /// is the label rect's own width, so a wrap in either language grows the band instead of clipping.
+    /// </summary>
+    private static float EmptyTargetBandHeight(UiWidgetContext ctx, float bodyWidth)
+    {
+        float wrapWidth = Mathf.Max(1f, bodyWidth - LeftPadding);
+        return Mathf.Max(EmptyTargetMinBand, ctx.Metrics.MeasureText(EmptyTargetText(ctx), UiFont.Tiny, wrapWidth));
+    }
 
     public override string Kind => KindName;
 
@@ -174,6 +228,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float width = BodyWidth(ctx);
         float bodyHeight = TopPadding + LayerRowHeightFor(width) + RowGap;
         if (layer > 0) bodyHeight += DomainRowHeight + RowGap;
+        // XG1.1: the empty-target reason band. Measure and Draw both derive it from the SAME predicate and the
+        // same metrics seam, so the card can never reserve a band it does not paint (or paint one it did not
+        // reserve) - the failure that would move every control below it.
+        if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
         bodyHeight += RowHeight + RowGap; // "Action Scope" header
         if (scopeRows.Count > 0)
         {
@@ -244,6 +302,24 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             y += DomainRowHeight + RowGap;
         }
 
+        // XG1.1: the current XENOTYPE layer has no tunable target. The reason is stated ONCE, visibly, right
+        // under the target row it is about; the controls below stay drawn and greyed but cannot submit. The
+        // layer segment above stays live on purpose: switching layer (or picking a target when one exists) is
+        // the ONLY way out of this state, so blocking it would trap the player.
+        bool submittable = !XenotypeTargetIsEmpty(layer, ctx);
+        if (!submittable)
+        {
+            float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
+            UsKernelDraw.Label(
+                new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
+                EmptyTargetText(ctx),
+                ctx.Theme,
+                ctx.Theme.TextSecondary,
+                UiFont.Tiny,
+                TextAnchor.MiddleLeft);
+            y += reasonBand + RowGap;
+        }
+
         UsKernelDraw.Label(
             new Rect(x, y, innerWidth, RowHeight),
             UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
@@ -287,7 +363,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             {
                 if (row.Group != targetGroup) continue;
                 float rowHeight = ScopeRowHeightFor(innerWidth, row, ctx);
-                DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), row, ctx);
+                DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), row, ctx, submittable);
                 y += rowHeight + RowGap;
             }
         }
@@ -306,7 +382,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
             foreach (MoodTuningRowView mood in moodRows)
             {
-                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx, layer);
+                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx, layer, submittable);
                 y += moodLayout.TotalHeight + RowGap;
             }
         }
@@ -404,22 +480,24 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             selection => ctx.Bindings.Invoke("set-tuning-domain", selection));
     }
 
-    private void DrawScopeRow(Rect rect, ActionScopeRowView row, UiWidgetContext ctx)
+    private void DrawScopeRow(Rect rect, ActionScopeRowView row, UiWidgetContext ctx, bool submittable)
     {
         // A trigger that currently reads "Auto" claims the Auto/Clear entry instead of the generic
         // action-scope one, so the panel explains what the visible value means.
         bool hovered = UsKernelDraw.HelpHover(
             rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && submittable, UsKernelDraw.RowRail.None);
 
         ScopeRowLayout layout = ScopeRowLayoutFor(rect.width, UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey), HintTextFor(ctx, row), ctx.Metrics);
         float scopeButtonWidth = layout.DropdownWidth;
 
+        // XG1.1: the row is drawn in the disabled ink while the layer has no target. The carrier dropdown has
+        // no enabled flag this scope owns, so the ink plus the reason sentence above are how the state reads.
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, rect.y, layout.LabelWidth, layout.LabelLineHeight),
             UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            submittable ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -431,7 +509,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 new Rect(rect.x + layout.HintX, rect.y + layout.HintY, layout.HintWidth, layout.HintBandHeight),
                 layout.HintText,
                 ctx.Theme,
-                ctx.Theme.TextSecondary,
+                submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
                 UiFont.Tiny,
                 TextAnchor.MiddleLeft);
         }
@@ -450,12 +528,54 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         SqueakActionScope? current = row.HasOwnScope ? row.Scope : null;
         Rect dropdownRect = new(rect.xMax - scopeButtonWidth - ScopeDropdownGap, rect.y + (rect.height - ButtonHeight) * 0.5f, scopeButtonWidth, ButtonHeight);
         string elementId = "scope-tree-scope-" + row.ActionKey;
+
+        // XG1.1 (r2): with no target the trigger is not CALLED at all - a static band is drawn in the trigger's
+        // own rect instead. That is the difference between "the commit is gated" and "the interaction does not
+        // exist": no UiNative.DropdownButton call means no popup anchor, no element id to open and no popup
+        // path whatever; the band still shows the scope this row holds, in the disabled ink.
+        if (!submittable)
+        {
+            DrawDisabledScopeBand(dropdownRect, ctx, current, options);
+            return;
+        }
+
         UsKernelDraw.Dropdown(dropdownRect, elementId, ctx, current, options, scope =>
         {
             // The chosen option's own value, straight through: no parse, no default, and a row that owned
             // no scope still commits null.
             ctx.Bindings.Invoke("set-action-scope", new UsScopeWrite(row.ActionKey, scope));
         });
+    }
+
+    /// <summary>
+    /// XG1.1 (r2): the inert stand-in for the scope trigger - the same rect, the same surface vocabulary and
+    /// the same displayed value (matched by VALUE, exactly as <c>UsKernelDraw.Dropdown&lt;T&gt;</c> matches it),
+    /// but drawn by hand so no interactive atom is reached. The label is ellipsized through the widget's own
+    /// measuring seam for the same reason the real trigger is: a fixed-width band must not report an overflow
+    /// for a scope name it would have truncated.
+    /// </summary>
+    private static void DrawDisabledScopeBand(Rect rect, UiWidgetContext ctx, SqueakActionScope? current, IReadOnlyList<UiChoice<SqueakActionScope?>> options)
+    {
+        string display = "";
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (EqualityComparer<SqueakActionScope?>.Default.Equals(options[i].Value, current))
+            {
+                display = options[i].Text;
+                break;
+            }
+        }
+
+        UsKernelDraw.RowSurface(rect, ctx.Theme, false, UsKernelDraw.RowRail.None);
+        float textWidth = Mathf.Max(1f, rect.width - 12f);
+        UsKernelDraw.Label(
+            new Rect(rect.x + 6f, rect.y, textWidth, rect.height),
+            UsKernelDraw.Ellipsized(display, ctx, UiFont.Tiny, textWidth),
+            ctx.Theme,
+            ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft,
+            singleLine: true);
     }
 
     /// <summary>The inherited-scope hint text, or "" when the row's own scope IS the effective one (nothing
@@ -573,10 +693,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// second. The geometry comes from <see cref="MoodRowsLayoutFor"/> - the same function Measure uses -
     /// so a hover never changes a height and the section card can never clip a control.
     /// </summary>
-    private void DrawMoodRow(Rect rect, MoodTuningRowView row, MoodRowsLayout layout, UiWidgetContext ctx, int layer)
+    private void DrawMoodRow(Rect rect, MoodTuningRowView row, MoodRowsLayout layout, UiWidgetContext ctx, int layer, bool submittable)
     {
-        bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/mood-tuning");
-        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
+        bool hovered = UsKernelDraw.HelpHover(rect, ctx, MoodTuningAreaHelpKey);
+        UsKernelDraw.RowSurface(rect, ctx.Theme, hovered && submittable, UsKernelDraw.RowRail.None);
 
         float pitch = row.Own?.hasPitchFactor == true ? row.Own.pitchFactor : row.EffectivePitch;
         float volume = row.Own?.hasVolumeFactor == true ? row.Own.volumeFactor : row.EffectiveVolume;
@@ -591,7 +711,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, nameY, layout.NameBandWidth, layout.NameBandHeight),
             MoodName(ctx, row),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            submittable ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -601,7 +721,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 new Rect(rect.x + LeftPadding, nameY + layout.NameBandHeight + layout.SourceGap, layout.NameBandWidth, layout.SourceBandHeight),
                 MoodSourceText(ctx, row),
                 ctx.Theme,
-                ctx.Theme.TextSecondary,
+                submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
                 UiFont.Tiny,
                 TextAnchor.MiddleLeft);
         }
@@ -618,7 +738,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                         layout.TargetBandHeight),
                     target,
                     ctx.Theme,
-                    ctx.Theme.TextSecondary,
+                    submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
                     UiFont.Tiny,
                     TextAnchor.MiddleLeft);
             }
@@ -635,14 +755,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                     layout.ResetWidth,
                     layout.ResetHeight),
                 row,
-                ctx);
+                ctx,
+                submittable);
         }
         else
         {
             DrawMoodResetButtons(
                 new Rect(rect.x + LeftPadding, headerLeftBottom + RowGap, layout.ParameterWidth, layout.ResetHeight),
                 row,
-                ctx);
+                ctx,
+                submittable);
         }
 
         float parameterX = rect.x + LeftPadding;
@@ -687,7 +809,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 MoodParameterMax[i],
                 row,
                 factor,
-                ctx);
+                ctx,
+                submittable);
         }
     }
 
@@ -774,7 +897,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         return MoodResetWidthFor(ctx, ResetDefaultKey) + MoodGap + MoodResetWidthFor(ctx, ResetPresetKey);
     }
 
-    private void DrawMoodResetButtons(Rect rect, MoodTuningRowView row, UiWidgetContext ctx)
+    private void DrawMoodResetButtons(Rect rect, MoodTuningRowView row, UiWidgetContext ctx, bool submittable)
     {
         float defaultWidth = MoodResetWidthFor(ctx, ResetDefaultKey);
         float presetWidth = MoodResetWidthFor(ctx, ResetPresetKey);
@@ -787,21 +910,28 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             ? new(rect.xMax - presetWidth, rect.y, presetWidth, ButtonHeight)
             : new(rect.x, rect.y + ButtonHeight + RowGap, Math.Min(presetWidth, lineWidth), ButtonHeight);
 
+        // XG1.1 (r2): with no target the two controls are inert - drawn in the unavailable ink in their own
+        // bands, never hit-tested (no UiNative.Button call), so a click cannot consume the event or take the
+        // hot control. Their own unavailable reason keys would be false here - a row can be Ready while the
+        // LAYER has nothing to write to - so both hover states claim the mood area's own entry instead of
+        // inventing a help item this step does not own.
         DrawMoodResetButton(
             defaultRect,
             ResetDefaultKey,
-            ResetDefaultHelpKey,
-            ResetDefaultUnavailableHelpKey(row),
-            row.DefaultReset == SqueakMoodResetDefaultState.Ready,
+            submittable ? ResetDefaultHelpKey : MoodTuningAreaHelpKey,
+            submittable ? ResetDefaultUnavailableHelpKey(row) : MoodTuningAreaHelpKey,
+            submittable && row.DefaultReset == SqueakMoodResetDefaultState.Ready,
+            !submittable,
             () => ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, SqueakMoodFactor.Clear, null)),
             ctx);
 
         DrawMoodResetButton(
             presetRect,
             ResetPresetKey,
-            ResetPresetHelpKey,
-            ResetPresetUnavailableHelpKey(row),
-            row.PresetReset == SqueakMoodResetPresetState.Ready,
+            submittable ? ResetPresetHelpKey : MoodTuningAreaHelpKey,
+            submittable ? ResetPresetUnavailableHelpKey(row) : MoodTuningAreaHelpKey,
+            submittable && row.PresetReset == SqueakMoodResetPresetState.Ready,
+            !submittable,
             () => ctx.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(row.Mood)),
             ctx);
     }
@@ -812,6 +942,12 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// means greyed out and inert, never invisible: the control is still drawn and hovering it claims the
     /// help entry that carries its reason sentence (the reason channel of this UI). Available controls
     /// claim the entry that explains the action they perform.
+    /// <para>
+    /// XG1.1 (r2) adds a second, stronger state: <paramref name="inert"/> is the empty-target block, where the
+    /// control must not RESPOND at all - not even the hit test runs, so a click cannot consume the event or
+    /// take the hot control. The older unavailable state (a Ready-less row while the layer IS writable) keeps
+    /// its documented drawn-and-hit-testable behaviour; only the empty-target state is fully inert.
+    /// </para>
     /// </summary>
     private static void DrawMoodResetButton(
         Rect rect,
@@ -819,6 +955,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         string enabledHelpKey,
         string unavailableHelpKey,
         bool enabled,
+        bool inert,
         Action invoke,
         UiWidgetContext ctx)
     {
@@ -832,6 +969,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
+        if (inert) return;
         // The disabled control still claims its rect (it is drawn and hit-testable - unavailable is not
         // invisible); only the action is suppressed. Not routing the click keeps it out of every binding.
         bool clicked = UiNative.Button(rect, ctx);
@@ -874,8 +1012,19 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float max,
         MoodTuningRowView row,
         SqueakMoodFactor factor,
-        UiWidgetContext ctx)
+        UiWidgetContext ctx,
+        bool submittable)
     {
+        // XG1.1 (r2): with no target the value control is NOT an editing control. No UiNative.Slider, no
+        // UiNative.NumberField and no SelectionButton call happens, so there is no draft, no focus, no drag and
+        // no hot control to take - the four bands are drawn as static disabled representations in exactly the
+        // rects the interactive path uses. The label ink is the same disabled ink either way.
+        if (!submittable)
+        {
+            DrawDisabledMoodValue(labelRect, groupRect, buttonWidth, fieldWidth, sliderRect, labelKey, value, ctx);
+            return;
+        }
+
         UsKernelDraw.Label(
             labelRect,
             UsKernelDraw.Keyed(ctx, labelKey),
@@ -915,6 +1064,64 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             ctx.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(row.Mood, factor, UiNative.ClampValue(value + 0.05f, min, max)));
         }
+    }
+
+    /// <summary>
+    /// XG1.1 (r2): the inert stand-in for one parameter block. Same bands (label, minus, number, plus, slider),
+    /// same value text format as the real field (<c>0.###</c>), drawn with the plain surface/label vocabulary
+    /// so nothing here can take a click, a drag or the hot control. The slider band gets a surface only: a Tiny
+    /// line does not fit the 16px slider band, and inventing a shorter one would be a second text rule.
+    /// </summary>
+    private static void DrawDisabledMoodValue(
+        Rect labelRect,
+        Rect groupRect,
+        float buttonWidth,
+        float fieldWidth,
+        Rect sliderRect,
+        string labelKey,
+        float value,
+        UiWidgetContext ctx)
+    {
+        UsKernelDraw.Label(
+            labelRect,
+            UsKernelDraw.Keyed(ctx, labelKey),
+            ctx.Theme,
+            ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft);
+
+        Rect minusRect = new(groupRect.x, groupRect.y, buttonWidth, groupRect.height);
+        Rect fieldRect = new(minusRect.xMax + MoodControlGap, groupRect.y, fieldWidth, groupRect.height);
+        Rect plusRect = new(fieldRect.xMax + MoodControlGap, groupRect.y, buttonWidth, groupRect.height);
+
+        DrawDisabledGlyphBand(minusRect, "−", ctx);
+        DrawDisabledGlyphBand(plusRect, "+", ctx);
+
+        UsKernelDraw.RowSurface(fieldRect, ctx.Theme, false, UsKernelDraw.RowRail.None);
+        UsKernelDraw.Label(
+            new Rect(fieldRect.x + 4f, fieldRect.y, Mathf.Max(1f, fieldRect.width - 8f), fieldRect.height),
+            value.ToString("0.###", CultureInfo.InvariantCulture),
+            ctx.Theme,
+            ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleLeft,
+            singleLine: true);
+
+        UsKernelDraw.RowSurface(sliderRect, ctx.Theme, false, UsKernelDraw.RowRail.None);
+    }
+
+    /// <summary>The inert minus/plus stand-in: the band surface plus the same glyph in the disabled ink.</summary>
+    private static void DrawDisabledGlyphBand(Rect rect, string glyph, UiWidgetContext ctx)
+    {
+        UsKernelDraw.RowSurface(rect, ctx.Theme, false, UsKernelDraw.RowRail.None);
+        UsKernelDraw.Label(
+            new Rect(rect.x + 4f, rect.y, Mathf.Max(1f, rect.width - 8f), rect.height),
+            glyph,
+            ctx.Theme,
+            ctx.Theme.TextDisabled,
+            UiFont.Tiny,
+            TextAnchor.MiddleCenter,
+            singleLine: true);
     }
 
     /// <summary>

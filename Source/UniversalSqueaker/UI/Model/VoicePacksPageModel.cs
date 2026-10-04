@@ -1059,10 +1059,26 @@ public static class VoicePacksPageModel
 
     /// <summary>「重置为预设」：读本层末行的来源 → 解析预设 Def → 让 settings 把该 (mood,race,xeno) 的基线
     /// 因子值重新写回（来源保持）。不可用时（无来源 / Def 失效 / 无条目）什么都不做：可用性由
-    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。</summary>
+    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。
+    /// <para>
+    /// <b>XG1.2 - the identity boundary comes FIRST.</b> The (race, xenotype) pair is taken straight from the
+    /// state, and a layer-2 state with no target carries ("","") - which is exactly the GLOBAL row's identity.
+    /// Without this guard the scan below can match that row and rewrite a global baseline from an empty xenotype
+    /// domain; <c>settings.ResetMoodTuningToPreset</c> cannot catch it either (it only rejects xeno-without-race).
+    /// The guard is the SAME predicate the two mood writers use (<see cref="MoodLayerHasIdentity"/>), so the
+    /// three entries cannot drift apart, and layer 0 (Global) stays legitimately allowed.
+    /// </para>
+    /// </summary>
     public static void ResetMoodToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
     {
         if (state == null) return;
+        if (!MoodLayerHasIdentity(state)) return;
+        ResetMoodToPresetForIdentity(settings, state, mood);
+    }
+
+    // Keep the identity refusal independent of the game-only Def lookup, including JIT type resolution.
+    private static void ResetMoodToPresetForIdentity(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
+    {
         string race = state.TuningRaceDefName ?? "";
         string xeno = state.TuningXenotypeDefName ?? "";
 

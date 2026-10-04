@@ -227,6 +227,8 @@
   <US.Tuning.ResetToPreset.Reason.NotFromPreset>此行不是预设导入的。</US.Tuning.ResetToPreset.Reason.NotFromPreset>
   <US.Tuning.ResetToPreset.Reason.PresetMissing>该预设已失效。</US.Tuning.ResetToPreset.Reason.PresetMissing>
   <US.Tuning.ResetToPreset.Reason.NoEntry>该预设没有此行设置。</US.Tuning.ResetToPreset.Reason.NoEntry>
+  <!-- XG1.1：异种层没有可调音目标时说明原因，下方控件因此无法提交。 -->
+  <US.Tuning.EmptyXenotypeTarget>此异种层没有可调音目标，调音操作暂不可用。请选择其他目标或切换调音层。</US.Tuning.EmptyXenotypeTarget>
   <US.Tuning.Factor.Pitch>音高</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>音量</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>抖动</US.Tuning.Factor.Jitter>

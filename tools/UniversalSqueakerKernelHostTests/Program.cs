@@ -236,6 +236,8 @@ internal static class Program
         Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
         Step("RPT1 report button feedback: real reason, generated pass, real page boxes",
             () => ReportFeedbackLaneTests.RunAll());
+        Step("XG1 empty xenotype tuning target: reason, blocked submits, real boxes",
+            () => XenotypeEmptyTargetLaneTests.RunAll());
     }
 
     /// <summary>

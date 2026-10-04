@@ -28,8 +28,9 @@
   the user's package observation. Current identities/evidence belong to the PM delivery record.
 - [ ] **RPT1 report-button feedback game observation.** Technical production/Host checks pass;
   observe the adjacent refusal/wait/success sentence once a new rehearsal package is supplied.
-- [ ] **XG1 empty xenotype target.** Block unavailable edits and guard preset reset at the production
-  boundary. Tuning-layer redesign, composite splitting and page-layout changes remain deferred.
+- [ ] **XG1 empty xenotype target game observation.** Technical inert-input/identity checks pass.
+  Observe the unavailable message and ability to leave the empty layer; layer redesign, composite
+  splitting and page-layout changes remain deferred.
 - [ ] **Bottom help proposal.** Develop a separate shared-footer-space option from the user's feedback.
   Ordinary footer rendering passed; untriggered save states remain unverified.
 C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat

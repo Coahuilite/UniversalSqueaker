@@ -31,9 +31,10 @@ runtime reviewer, adding an FL implementer only for a demonstrated shared-librar
 identity and per-slice evidence belong to the PM delivery records, not this active memory.
 
 Report-button feedback is now technically verified: a per-window sentence beside the button tracks
-request/refusal and names only an actually generated pass. In-game clarity remains open. The next
-bounded correction blocks editing an empty xenotype tuning target. Tuning-layer redesign, composite
-splitting and page-layout changes are explicitly deferred; bottom help is a separate design proposal.
+request/refusal and names only an actually generated pass. In-game clarity remains open. Empty xenotype tuning targets now use inert controls and retain the
+layer selector; preset reset rejects an empty layer identity before entering game Def lookup. Technical
+checks pass; in-game disabled appearance remains open. Tuning-layer redesign, composite splitting and
+page-layout changes are explicitly deferred; bottom help is a separate design proposal.
 
 **Working direction:** specifications lead with purpose, ownership, main path and a few invariants.
 Validate at responsible boundaries, then use established internal contracts directly. Hashes identify

@@ -69,6 +69,21 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool MirrorTuningWrites;
 
     /// <summary>
+    /// XG1.1 instrument: when true the fixture yields the production-SHAPED "xenotype layer with no tunable
+    /// target" state - layer 2, race "" and xeno "", plus an empty <c>tuning-domains</c> list - while keeping
+    /// the production-shaped action-scope and mood rows. Off by default, so no earlier lane's input changes.
+    /// See <see cref="ApplyEmptyXenotypeTargetFixture"/> for what this does and does not prove.
+    /// </summary>
+    public bool EmptyXenotypeTarget;
+
+    /// <summary>
+    /// XG1.1 instrument: the rich view's tuning-domain option list. Null keeps the fixture's two-entry
+    /// race-level list; a lane that needs a VALID layer-2 target supplies its own (race, label, xenotype)
+    /// entries, and the empty-target lane leaves this null and sets <see cref="EmptyXenotypeTarget"/>.
+    /// </summary>
+    public TuningDomainOptionView[]? TuningDomains;
+
+    /// <summary>
     /// V3 task-18 instrument: per-factor SUPPLYING LAYERS for the four rich mood rows, in row order
     /// (mood-major, factor-minor: pitch, volume, jitter), 0=Global 1=Race 2=Xenotype -1=no layer (default).
     /// Null keeps the fixture's production-shaped mix. This is the input the corrected readout renders.
@@ -237,6 +252,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public VoicePacksViewState BuildView()
     {
+        ApplyEmptyXenotypeTargetFixture();
         if (RevisionSource == null)
         {
             return RichData ? BuildRichView() : BuildEmptyView();
@@ -251,6 +267,24 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         }
 
         return cachedView;
+    }
+
+    /// <summary>
+    /// XG1.1 fixture: the xenotype layer with NO tunable target. The production model reaches this state when
+    /// <c>BuildTuningDomains</c> finds no (race, xenotype) tuning domain - it then leaves BOTH identity halves
+    /// empty and returns an empty option list. The harness cannot run that model path (it needs the def
+    /// database), so this knob reproduces the RESULTING state/view pair instead of faking the model:
+    /// layer 2, race "" and xeno "" on the state the widget's bindings read, an empty <c>tuning-domains</c>
+    /// list, and the same values on the view it projects. Off by default - every existing lane keeps the
+    /// fixture it measured. What it does NOT prove: that <c>BuildTuningDomains</c> itself derives this state
+    /// (see XenotypeEmptyTargetLaneTests' header - that half is unverified here by construction).
+    /// </summary>
+    private void ApplyEmptyXenotypeTargetFixture()
+    {
+        if (!EmptyXenotypeTarget) return;
+        state.TuningLayer = 2;
+        state.TuningRaceDefName = "";
+        state.TuningXenotypeDefName = "";
     }
 
     private VoicePacksViewState BuildEmptyView()
@@ -366,14 +400,18 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
                 new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.Operable, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
             },
-            tuningLayer: 0,
-            tuningRaceDefName: "human",
+            tuningLayer: EmptyXenotypeTarget ? 2 : 0,
+            tuningRaceDefName: EmptyXenotypeTarget ? "" : "human",
             tuningXenotypeDefName: "",
-            tuningDomains: new[]
-            {
-                new TuningDomainOptionView("human", "Human"),
-                new TuningDomainOptionView("testrace", "Test Race")
-            },
+            // XG1.1: the empty-target state carries NO domain options (that is what makes the target empty in
+            // production); the override lets a control-case lane supply a real (race, xenotype) target.
+            tuningDomains: EmptyXenotypeTarget
+                ? Array.Empty<TuningDomainOptionView>()
+                : TuningDomains ?? new[]
+                {
+                    new TuningDomainOptionView("human", "Human"),
+                    new TuningDomainOptionView("testrace", "Test Race")
+                },
             // All FOUR product moods, in the production enumeration order (VoicePacksPageModel
             // builds one row per SqueakMood: Good, Neutral, Bad, Break). Availability is a VIEW input
             // (the model computes it from flags/source), so this fake sets it directly instead of

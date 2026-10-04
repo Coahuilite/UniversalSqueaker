@@ -231,6 +231,8 @@
   <US.Tuning.ResetToPreset.Reason.NotFromPreset>This row was not imported from a preset.</US.Tuning.ResetToPreset.Reason.NotFromPreset>
   <US.Tuning.ResetToPreset.Reason.PresetMissing>That preset is no longer available.</US.Tuning.ResetToPreset.Reason.PresetMissing>
   <US.Tuning.ResetToPreset.Reason.NoEntry>That preset has no entry for this row.</US.Tuning.ResetToPreset.Reason.NoEntry>
+  <!-- XG1.1: the xenotype layer has no tunable target, so the card states why nothing below can submit. -->
+  <US.Tuning.EmptyXenotypeTarget>This xenotype layer has no tunable target. Tuning is unavailable; choose another target or tuning layer.</US.Tuning.EmptyXenotypeTarget>
   <US.Tuning.Factor.Pitch>Pitch</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>Volume</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>Jitter</US.Tuning.Factor.Jitter>
