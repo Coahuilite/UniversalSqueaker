@@ -994,10 +994,10 @@ internal static class SettingsGeometryLaneTests
     /// The declarative checklist card's chrome as a MEASURED relation rather than an arithmetic argument.
     /// Step A established it over the card's two children (Padding 12 + header 26 + Gap 6 + body + 12); step
     /// B made the card's body declarative, so the same relation is now asserted over the children the
-    /// manifest actually arranges (header, the status-band composite, the list column, and the no-domain
-    /// empty state when it shows), with one Gap between each. Every number comes from the same snapshot, so
-    /// changing the manifest's Padding, the Section Gap, the header Height or the search band reddens this
-    /// instead of silently moving the card.
+    /// manifest actually arranges (header, the V2 scope line, the status-band composite, the list column, and
+    /// the no-domain empty state when it shows), with one Gap between each. Every number comes from the same
+    /// snapshot, so changing the manifest's Padding, the Section Gap, the header Height or the search band
+    /// reddens this instead of silently moving the card.
     /// <para>
     /// LIMITATION, stated in the lane itself: the PRE-SWAP card height is not measured here because the old
     /// element left the manifest in step A; the pre-swap side of the comparison is the UsCardLayout formula
@@ -1022,7 +1022,7 @@ internal static class SettingsGeometryLaneTests
         Check(snapshot.RectById.TryGetValue("checklist-header", out Rect header), "the section header is arranged");
         Check(Math.Abs(header.height - 26f) <= 0.5f, "the header band is UsCardLayout's 26px, got " + header.height);
 
-        string[] children = { "checklist-header", "checklist", "checklist-list", "checklist-empty-nodomain" };
+        string[] children = { "checklist-header", "checklist-scope", "checklist", "checklist-list", "checklist-empty-nodomain" };
         float sum = 0f;
         int count = 0;
         foreach (string id in children)

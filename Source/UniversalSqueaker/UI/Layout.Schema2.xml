@@ -370,7 +370,16 @@
             </Row>
           </Column>
         </Section>
-        <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
+        <!-- V2 P1: the filter band is the SAME card as the three below it - an engine Section (Padding 12,
+             Gap 6) whose first child is the us/section-header (26) that carries the title and the gold rail.
+             Before this it was a bare us/filter-bar widget drawing its own plain title + divider, so the
+             page's first band had a different title treatment from every other band. The header keeps the
+             HelpKey (HelpKey is refused on a container); the widget is body-only through TitleHidden, the
+             same pattern us/voice-pack-checklist already uses. -->
+        <Section Id="filter-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Widget Id="filter-layer-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
+          <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
+        </Section>
         <!-- S4-2: the two Packs layer cards are declarative row sets. us/race-layer and us/xenotype-layer
              were the pair that could NOT be migrated while G2/G3 were missing (a repeated row could not
              report its own key, and there was no appearance-less hit area), so this is their first use on a
@@ -378,19 +387,15 @@
              input/button.PayloadKey receives it in the item's own binding scope (G2), and Chrome="none"
              paints no surface at all (G3) so the same element is the row's hit area.
 
-             The hit area is TWO stacked bare bands, and that is a MEASURED consequence rather than a style
-             choice: ButtonWidget.Measure heights Height="Auto" from ITS OWN caption (an empty one falls back
-             to the density token, 24 here - spec section 0.4 G3 records exactly this boundary), and an
-             Overlay does not resize a child to its own band. Two 24px bands therefore reach the 48px row the
-             composite drew, where one band would leave the detail line dead. The boundary is asserted in
-             DeclarativePacksLaneTests: a row whose text wraps past 48px keeps a 48px hit area.
+             The hit area is ONE element with Height="MatchContent" (FL 490d4f07): the carrier sizes it to
+             the row's measured content height, so the hit IS the row. The retired two-band workaround
+             (ButtonWidget.Measure heights Height="Auto" from ITS own caption, two 24px bands reaching the
+             48px row the composite drew) was measured obsolete and removed when the carrier shipped the
+             mode; DeclarativePacksLaneTests asserts exactly one hit element per row template.
 
-             Selection: SelectedKey sits on the row's TITLE only. It is item-scoped in the carrier since
-             e929fa11 (UiLayoutEngine.QualifyItemBinding gained it after S4-2 recorded the gap), so each row
-             answers for itself and the resolved role's text token is TextOnGold - the shipped selected
-             title's ink. The DETAIL line deliberately does NOT declare it: the Active cell takes TextOnGold
-             whatever Emphasis says, so declaring it there would pull the detail's ink gold too, while the
-             shipped detail stayed TextSecondary.
+             Selection is carried by the row's FILL, not by the title's ink (task-32): the sibling
+             us/selection-surface element draws the selected fill and the 3px rail from the row's own
+             item-local "selected" bool, and no text element declares SelectedKey.
 
              What selection still cannot show is the row's FILL and its left rail: text/wrapped paints no
              surface and this row has no surface-painting atom at all, so the missing piece is a row-state
@@ -422,7 +427,18 @@
              about the list that follows, and a widget element cannot straddle manifest siblings. -->
         <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="checklist-header" Kind="us/section-header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
-          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" />
+          <!-- V2 P2: the enable band states the SCOPE it enables for - the browsed domain - through one
+               read-only string binding composed from the same domain name the browse row shows plus the axis
+               word. Title first, scope second; hidden with the list when no domain is selected (the card's
+               own no-domain empty state is the message then). No new write key and no new text key: the
+               composition reuses the existing "X - Y" template and the two filter axis words. -->
+          <Widget Id="checklist-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted"
+                  VisibleKey="checklist-has-domain" />
+          <!-- V2 P1 (empty-state phantom gap): the band composite measures 0 with no selected domain, but
+               the unwrapped Section still paid a Gap for the element. VisibleKey="checklist-has-domain" keeps
+               it out of the arrange entirely, exactly as the list below it already is. -->
+          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true"
+                  VisibleKey="checklist-has-domain" />
           <Column Id="checklist-list" VisibleKey="checklist-has-domain" Gap="6" Padding="0">
             <Widget Id="checklist-search" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="24" HelpKey="us/voice-pack-checklist/search" />
             <Repeat Id="checklist-rows" Items="checklist-pack-keys" Template="checklist-row" Gap="2" />
@@ -536,7 +552,12 @@
         <Widget Id="checklist-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
         <Widget Id="checklist-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
       </Column>
-      <Widget Id="checklist-row-check" Kind="input/checkbox" Bind="enabled" Width="24" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
+      <!-- V2 P2: the enable control is the SAME shipped switch as the other ON/OFF controls (R2 above):
+           36 wide, because a 24-wide band clamps the 34x18 track and the knob's throw falls to 6px, which
+           is the difference between a switch and a block. Bind and SelectedKey name the same item-local
+           bool, so the row's click and its visible state cannot disagree. The row's own hit area is NOT
+           extended in V2 - the switch is the only click channel here. -->
+      <Widget Id="checklist-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
     </Row>
   </Templates>
 </UiPage>

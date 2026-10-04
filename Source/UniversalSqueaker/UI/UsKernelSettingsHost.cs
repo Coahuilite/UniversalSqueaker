@@ -548,6 +548,10 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<IReadOnlyList<RaceLayerRowView>>("races", () => source.BuildView().Races);
         bindings.BindReadOnly<IReadOnlyList<VoicePackDomainView>>("xenotype-domains", () => source.BuildView().XenotypeDomains);
         bindings.BindReadOnly<VoicePackDomainView?>("selected-domain", () => source.BuildView().SelectedDomain);
+        // V2 P2: the enable card's SCOPE line - which browsed domain its pack list belongs to. Composed here
+        // from the SAME UsPacksText name the browse row shows plus the axis word, so it is translated, moves
+        // with the selection and cannot be written by any control.
+        bindings.BindReadOnly<string>("checklist-scope", () => ChecklistScopeText(source, translation));
         // S4-2: the two layer cards are declarative row sets now, and each row's identity is the payload its
         // input/button carries (ButtonWidget.PayloadKey, scoped per item). The payload is therefore a STRING
         // - the row's own business key - and decoding it back into (scope, race, target) is the host's job.
@@ -1046,6 +1050,32 @@ public static class UsKernelSettingsHost
 
     /// <summary>The pack row's composed meta line ("Mod — Author"); the one Keyed template it needs.</summary>
     private const string KeyPackChecklistMeta = "US.Packs.Checklist.PackMeta";
+
+    /// <summary>The two browse-axis words the scope line leads with (the same words the filter dropdowns use).</summary>
+    private const string KeyScopeRace = "US.Packs.Filter.Race";
+
+    private const string KeyScopeXenotype = "US.Packs.Filter.Xenotype";
+
+    /// <summary>
+    /// The enable card's scope line: the browse axis plus the browsed domain's own name, composed through the
+    /// same <see cref="UsPacksText"/> name the browse row draws and the existing "X — Y" keyed template. A
+    /// xenotype domain keeps its race context (<c>US.Packs.Domain.XenotypeRaceContext</c>), so the line names
+    /// the domain exactly as the selected browse row does. Empty when nothing is selected: the card's own
+    /// no-domain empty state is the message then.
+    /// </summary>
+    private static string ChecklistScopeText(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        VoicePackDomainView? domain = source.BuildView().SelectedDomain;
+        if (!domain.HasValue) return "";
+
+        bool xenotype = domain.Value.Scope == SqueakVoicePackScope.Xenotype;
+        string axis = translation.Translate(xenotype ? KeyScopeXenotype : KeyScopeRace);
+        string name = xenotype
+            ? UsPacksText.Format(
+                translation, UsPacksText.KeyXenotypeRaceContext, domain.Value.DisplayName, domain.Value.RaceDisplay)
+            : domain.Value.RaceDisplay;
+        return UsPacksText.Format(translation, UsPacksText.KeyNameWithState, axis, name);
+    }
 
     /// <summary>
     /// True when the selected domain exists and shows no row: <paramref name="noRows"/> picks the "the

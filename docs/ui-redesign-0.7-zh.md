@@ -16,6 +16,14 @@ V1 检查点（2026-10-02）：导航卡片表面、Section 去框线和总览�
 恢复旧导航 Column 和旧总览子树分别触发对应缺陷断言。实机视觉、滚轮体验与修复后日志仍待统一新包试玩；
 V2 Packs、V3 Tuning、V4 其他页面/帮助/footer 尚未实施，不把本检查点称为整套视觉方案完成。
 
+> **[2026-10-04 更正，V2 Packs]** 上一行的「V2 Packs 尚未实施」已不成立：V2 Packs 已按契约 r1 实施并通过技术检查——
+> 阅读顺序 筛选 → 种族/异种浏览 → 当前域启用；四条带统一 12/26/6 卡片节奏（筛选带改为 `Section` + `us/section-header` 包裹
+> `TitleHidden` 的 `us/filter-bar`）；浏览选中 = `us/selection-surface` 填充+3px 导轨，包启用 = 行内
+> `input/checkbox Appearance="switch"` 36×30；启用带用只读 `checklist-scope` 标明所属域；真实 page box 984×524 与 760×524
+> × 抽屉开关两态 × EN/ZH 实测 `fit=0`，三空态均已排布、弹出层留在页内。**实机视觉/滚轮/点击仍待新包观察**；V3/V4 未实施。
+> 已披露行为变化：筛选带不再绘制 help 焦点边框（`DrawHelpFocusBorder`），因为它现在是 Section + header；其余三条 Packs
+> 带本就没有该边框，故整页一致，未擅自加回。
+
 ## 0. 本次 FL 更新带来的新事实（决定设计的关键项）
 
 > **复核（2026-09-21，task-27 第 0 步）：载体 = FL HEAD `bce1ba4c88e557ee91fc1fbe87391b5107a2ff32`（Api 0.7.0，Release / 249 344 B / 无 PDB）。**

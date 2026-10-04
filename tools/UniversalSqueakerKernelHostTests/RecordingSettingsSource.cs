@@ -38,6 +38,22 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// engine's row-identity refusal is observable rather than assumed).
     /// </summary>
     public VoicePackRowView[]? ChecklistPacks;
+
+    /// <summary>V2 P4 instrument: an explicit browse row set when a lane measures how far a long race list
+    /// pushes the enable band down. Null keeps the built-in rows.</summary>
+    public RaceLayerRowView[]? Races;
+
+    /// <summary>V2 P2 instrument: when true the view follows the RECORDED selection, so a lane can assert
+    /// that a browse write re-derives the enable band's scope line. Default false - the built-in fixture
+    /// always selects its xenotype domain, which the other lanes rely on.</summary>
+    public bool ReflectSelectionInView;
+
+    /// <summary>V2 P2 instrument: production-shaped display fields for the fixture's xenotype domain
+    /// (<c>DisplayName</c> and the race-context label). Null keeps this fixture's built-in values, whose
+    /// "Sanguophage (Human)" display plus the defName fallback would double the race context in the scope
+    /// line - a fixture artifact, not a product string, so the V2 scope lane supplies clean ones.</summary>
+    public string? XenotypeDisplayName;
+    public string? XenotypeRaceDisplay;
     // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
 
     /// <summary>
@@ -217,7 +233,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             SqueakVoicePackScope.Xenotype,
             WrappingDomainText ? "a-very-long-race-definition-name-used-only-to-make-the-title-wrap" : "human",
             "sanguophage",
-            WrappingDomainText ? "Sanguophage" : "Sanguophage (Human)",
+            XenotypeDisplayName ?? (WrappingDomainText ? "Sanguophage" : "Sanguophage (Human)"),
             "test-catalog",
             SqueakVoicePackDomainState.Available,
             isDormant: false,
@@ -231,7 +247,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             {
                 new VoicePackRowView("us.sang", "Sanguophage Voice Pack", "TestMod", "AuthorA", "def.sang", "full", "sang", isSelected: true),
                 new VoicePackRowView("us.sang2", "Sanguophage Extra Pack", "TestMod2", "AuthorB", "def.sang2", "full", "extra", isSelected: false)
-            });
+            },
+            raceDisplay: XenotypeRaceDisplay);
 
         var preset = new BaselinePresetView(
             "us.preset1",
@@ -271,9 +288,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             distanceRangeMax: 45f,
             biotechActive: true,
             bannerText: "rich harness catalog",
-            races: RaceRowsFor(filterSanguophage),
+            races: Races ?? RaceRowsFor(filterSanguophage),
             xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
-            selectedDomain: filterSanguophage ? null : sang,
+            selectedDomain: SelectedForView(sang, filterSanguophage),
             actionScopes: new[]
             {
                 new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
@@ -355,10 +372,33 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     }
 
     /// <summary>
+    /// The domain the view presents as selected. Opt-in (<see cref="ReflectSelectionInView"/>): with it on,
+    /// a recorded RACE selection is projected as a race-scope domain so a lane can watch the enable band's
+    /// scope line follow the browse write; otherwise the fixture keeps its built-in xenotype selection.
+    /// </summary>
+    private VoicePackDomainView? SelectedForView(VoicePackDomainView sang, bool filterSanguophage)
+    {
+        if (filterSanguophage) return null;
+        if (!ReflectSelectionInView || LastSelectedScope != SqueakVoicePackScope.Race) return sang;
+
+        string race = LastSelectedRace ?? "";
+        foreach (RaceLayerRowView row in Races ?? RaceRowsFor(false))
+        {
+            if (!string.Equals(row.RaceDefName, race, StringComparison.Ordinal)) continue;
+            return new VoicePackDomainView(
+                SqueakVoicePackScope.Race, race, "", row.DisplayName, "test-catalog",
+                SqueakVoicePackDomainState.Available, isDormant: false, isTargetUnavailable: false,
+                hasCanonicalConflict: false, enabledCount: row.EnabledCount, candidateCount: row.CandidateCount,
+                orphanCount: 0, enabledKeys: Array.Empty<string>(),
+                packs: ChecklistPacks ?? Array.Empty<VoicePackRowView>(), raceDisplay: row.DisplayName);
+        }
+
+        return sang;
+    }
+
+    /// <summary>
     /// Mirrors the production race-filter semantics for the parity lane: selecting a race narrows the
-    /// race layer to that row, drops non-matching xenotype domains, and clears the selection. The
-    /// fake must respond to the filter or the harness can never compare "filtered live" against
-    /// "filtered from the start".
+    /// race layer to that row. The view also drops non-matching xenotype domains and clears selection.
     /// </summary>
     private IReadOnlyList<RaceLayerRowView> RaceRowsFor(bool filterSanguophage)
     {

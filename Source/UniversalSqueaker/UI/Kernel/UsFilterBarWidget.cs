@@ -11,8 +11,9 @@ namespace UniversalSqueaker.UI;
 /// <summary>
 /// Kernel-owned US filter bar: row 1 = All/Enabled/Conflicts/Orphan-only segment chips writing the
 /// typed "set-domain-filter" action; row 2 = Race / Xenotype / Author dropdowns (nested kernel
-/// dropdown widgets over typed OptionsBind lists) writing "race-filter", "xenotype-filter" and
-/// "set-pack-filter".
+/// dropdown widgets over typed OptionsBind lists) writing the "race-filter", "xenotype-filter" and
+/// "pack-filter" VALUE bindings (the "set-pack-filter" action is the older one-shot command and is not
+/// what these dropdowns call).
 /// </summary>
 public sealed class UsFilterBarWidget : UsSectionWidgetBase
 {
@@ -82,6 +83,14 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
     {
+        if (TitleHidden)
+        {
+            // V2 P1: the manifest's Section container owns the card and the us/section-header child owns the
+            // title, so this widget draws its rows only - the same body-only path us/voice-pack-checklist uses.
+            DrawContent(rect, ctx);
+            return;
+        }
+
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 

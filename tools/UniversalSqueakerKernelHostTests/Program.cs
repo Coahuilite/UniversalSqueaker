@@ -232,6 +232,7 @@ internal static class Program
         Step("page frame geometry guard (5 viewports x EN/ZH x drawer x workspace)", () => FrameGeometryLaneTests.RunAll());
         Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
         Step("one help presentation per screen (乙1)", () => HelpPresentationLaneTests.RunAll());
+        Step("V2 Packs hierarchy, order and browse-vs-enable", () => PacksHierarchyLaneTests.RunAll());
     }
 
     /// <summary>
@@ -2165,7 +2166,9 @@ internal static class Program
 
             foreach (Vector2 viewport in viewports)
             {
-                UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+                // The loop variable IS the viewport: this used to arrange a hardcoded 800x600 in every
+                // iteration, so the three-viewport matrix measured one viewport three times.
+                UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
                 foreach (string id in visible)
                 {
                     Assert(snapshot.RectById.ContainsKey(id), tab + " section " + id + " visible at " + viewport);

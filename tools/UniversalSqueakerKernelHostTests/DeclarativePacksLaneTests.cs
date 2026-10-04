@@ -51,9 +51,10 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </para>
 ///
 /// <para>
-/// NOT CLAIMED: the player-visible look. The row surface/hover/selected treatment and the per-row selected
-/// ink are NOT expressed (SelectedKey is not item-scoped - see the manifest comment); the deltas are listed
-/// in the S4-2 friction report (spec section 5.9) and need a real screen.
+/// NOT CLAIMED: the player-visible look. The per-row selection is carried by the us/selection-surface fill
+/// and its 3px rail (T21/task-32), and SelectedKey is item-scoped since carrier e929fa11, but hover/selected
+/// readability still needs a real screen; the deltas are listed in the S4-2 friction report (spec section
+/// 5.9) and need a real screen.
 /// </para>
 /// </summary>
 internal static class DeclarativePacksLaneTests
@@ -196,10 +197,10 @@ internal static class DeclarativePacksLaneTests
             Assert(texts.Count == 2,
                 "the row template must declare its two bound text lines (title + detail), got " + texts.Count);
 
-            // SELECTION, positively asserted since carrier e929fa11 scoped SelectedKey per item: the row's
-            // TITLE declares it, and the DETAIL must NOT. The Active treatment takes TextOnGold whatever
-            // Emphasis says, so a SelectedKey on the detail would pull its ink gold too, while the shipped
-            // composite kept the detail TextSecondary - a fidelity detail, not an omission.
+            // task-32 RE-CUT: the selection signal is the row FILL (asserted above), so NEITHER text line
+            // declares SelectedKey any more. It IS item-scoped in the carrier since e929fa11; the reason not
+            // to declare it here is ink: the Active treatment takes TextOnGold whatever Emphasis says, and
+            // the shipped title/detail keep plain ink.
             UiElementSpec title = texts.Single(t => t.TryGetAttribute("Bind", out string bind) && bind == "title");
             UiElementSpec detail = texts.Single(t => t.TryGetAttribute("Bind", out string bind2) && bind2 == "detail");
             // TASK-32 RE-CUT - NOT a loosening, a RELOCATION of the state signal. The maintainer's report was

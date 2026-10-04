@@ -25,7 +25,8 @@ page box: 416px centre plus 320px help. Both language tables have zero fit findi
 box uses the defensive band. Help/body nodes preserve scroll state. Actual setting interaction,
 wheel feel and visual acceptance of the repaired package still require the user's game observation.
 
-The PM is integrating B3 before V2 (Packs), then V3 (Tuning) and V4 (remaining pages/help/footer).
+B3 is integrated. V2 (Packs) has passed independent review and the normal 15 US integration checks;
+the PM is committing and packaging it before V3 (Tuning) and V4 (remaining pages/help/footer).
 The user authorized continued UI development after B3; reuse the current DSH leader and independent
 runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
 identity and per-slice evidence belong to the PM delivery records, not this active memory.
@@ -432,6 +433,19 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.
   Remaining row-level dissolution is US's backlog, not a general carrier limit; the genuine remaining FL gap
   is **hierarchy x inline composition**.
+- **Packs tab (V2, 2026-10-04)**: the reading order is filter -> race browse -> xenotype browse ->
+  current-domain pack enable, and all four bands share ONE card rhythm (Padding 12 / Gap 6 / header 26) - the
+  filter band is a `Section` + `us/section-header` wrapping the now-`TitleHidden` `us/filter-bar` composite,
+  so its title uses the same rail/marker header as the other three. The two states are deliberately different
+  channels: BROWSE selection is `us/selection-surface` (fill + 3px rail; the row's `select-domain` payload is
+  its business key and reaches page state only), PACK ENABLE is the item-local
+  `input/checkbox Appearance="switch" Bind/SelectedKey="enabled"` at the shipped 36x30 band (a 24px band
+  clamped the 34x18 track and cut the knob throw), and the enable band names its scope through the read-only
+  `checklist-scope` line. A browse write cannot reach an enable value or vice versa (asserted on increments
+  through the real boundary). No new write key, no model/save/translation change, no carrier change.
+  **Disclosed behaviour change**: the filter band lost its help-FOCUS border
+  (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header; no other Packs band ever had
+  one, so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
 - **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
   manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
   `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit

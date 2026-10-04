@@ -193,20 +193,25 @@ internal static class UsSquareToggleLaneTests
             "all " + DeclaredSwitches.Length + " declared switches must be on the shared kind, got "
             + onSharedKind.Count);
 
-        // CONTROL, and it is a manifest-level one on purpose: the library's checkbox appearance must still be
-        // USED where a per-row box is the intent (the checklist's pack rows), and it must NOT have been given
-        // the switch appearance by a blanket edit. The fixture's checklist is empty in the rich view, so this
-        // reads the DECLARATION rather than an arranged element.
+        // CONTROL, re-cut by V2 P2 (2026-10-04): the checklist's per-row ENABLE control is the same shipped
+        // switch as the ON/OFF controls above, because it is one too - a pack row's enable state. It was
+        // declared Width="24" until V2, which CLAMPS the 34x18 track to 24 and cuts the knob's throw to 6px
+        // (the clamp this lane's own band comment records); the shipped band is 36. The control is still
+        // manifest-level, so the retired kind cannot come back unnoticed.
         string manifest = ReadShippedManifest();
         int checklistDeclarations = System.Text.RegularExpressions.Regex.Matches(
             manifest, "Id=\"checklist-row-check\" Kind=\"input/checkbox\"").Count;
         Assert(checklistDeclarations == 1,
-            "control: the checklist's per-row checkbox must still be declared as input/checkbox, found "
-            + checklistDeclarations + " such declaration(s) - a blanket kind rename would have taken it too");
-        Assert(!System.Text.RegularExpressions.Regex.IsMatch(
+            "control: the checklist's per-row control must still be exactly one input/checkbox declaration, found "
+            + checklistDeclarations + " - a blanket kind rename would have taken it too");
+        Assert(System.Text.RegularExpressions.Regex.IsMatch(
                 manifest, "Id=\"checklist-row-check\"[^>]*Appearance=\"switch\""),
-            "control: the checklist's per-row checkbox must NOT have been given the switch appearance - it is"
-            + " a per-row box, and the switch look is for the ON/OFF controls");
+            "V2 P2: the checklist's per-row enable control must declare the shipped switch appearance - it is"
+            + " an ON/OFF control, and its look must not be left to the kind's default");
+        Assert(System.Text.RegularExpressions.Regex.IsMatch(
+                manifest, "Id=\"checklist-row-check\"[^>]*Width=\"36\""),
+            "V2 P2: the checklist's per-row enable control must declare the 36-wide band, or the switch's"
+            + " 34x18 track is clamped and the knob's throw falls to 6px");
         // The criterion is a DECLARATION, not the bare word: the manifest's own migration note names the
         // retired kind to explain why it is gone, and documentation is not a usage. A blunt Contains() would
         // report that note and would equally miss nothing real, so the matcher is the live declaration.
@@ -595,10 +600,20 @@ internal static class UsSquareToggleLaneTests
         // Counted by the DECLARED APPEARANCE on an ELEMENT, not by the bare attribute text: the manifest's own
         // migration note quotes the attribute while explaining it, and a textual match counted that note as a
         // tenth control - a count that disagreed with every drawn frame for a reason that had nothing to do
-        // with the page. The checklist's per-row checkbox is the only input/checkbox that must NOT carry the
-        // switch appearance, and step 1 asserts exactly that.
-        return System.Text.RegularExpressions.Regex.Matches(
-            manifest, "<Widget[^>]*Appearance=\"switch\"").Count;
+        // with the page.
+        //
+        // V2 P2 RE-CUT of the measurement channel: the checklist's per-row enable control is ALSO a declared
+        // switch now (36x30, Appearance="switch"), but it lives on the Packs tab and this lane draws Overview,
+        // so it is excluded by id. Counting it here would make the drawn-track count and the declared count
+        // disagree for a reason that is not the page.
+        int count = 0;
+        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
+                     manifest, "<Widget[^>]*Appearance=\"switch\"[^>]*>"))
+        {
+            if (match.Value.IndexOf("checklist-row-check", StringComparison.Ordinal) < 0) count++;
+        }
+
+        return count;
     }
 
     private static bool Close(float a, float b)
