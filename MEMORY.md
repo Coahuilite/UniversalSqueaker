@@ -12,7 +12,8 @@
 
 ### V1 implementation checkpoint - real-game acceptance pending
 
-The V1 visual refresh shipped only its **paint/spacing increment**: navigation cards paint their own
+The V1 visual refresh is **implemented and locally accepted** - technical acceptance only, with real-game
+acceptance pending. It contains the **paint/spacing increment**: navigation cards paint their own
 ordinary/hover/selected surfaces on the shared measured+hit rect (the outer navigation outline is gone; the
 flat scope makes only `PanelBorder` transparent and keeps `Panel` INHERITED so a page re-tint still reaches
 scoped cards), flat `Section` edges are explicitly transparent, Overview Section gaps are 8 and the volume
@@ -36,6 +37,18 @@ remain game-only. Details and current shape: `docs/ui-redesign-0.7-zh.md` curren
 V2 (Packs), V3 (Tuning) and V4 (remaining pages/help/footer) are FUTURE and unstarted. V1 is ready for the
 combined revised-package game rehearsal; this is technical acceptance, not a claim of real-game acceptance.
 
+**Frozen playable packages (2026-10-04):** FL `b31e2c3`, US `889f34b`, Demo `d972dbc`; the PM's
+`v1-playable-package-manifest.json` records the rehearsal artifacts. Subsequent commits change HEAD,
+not this package. FL/US payloads are Dev; Demo is a Release-configured consumer paired with the Dev carrier.
+
+**Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
+at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
+business correctness. Unexpected failures retain context and the original exception; isolation or recovery
+is not success. Add tolerance for known business states or observed faults, guided by actual runtime feedback.
+
+**Next session:** development uses a fresh DSH leader with PM-designated roles; the old session is memory-only.
+PM prepares a separate observability patch after checking the real diagnostic-publish call path. This is pending,
+not an implemented fix or global audit. V1 game acceptance follows the PM's `PLAYTEST-V1.md`; V2–V4 remain future.
 ### DIAG-FIX: repeated reports keep waiting for their own pass
 
 Technically accepted. The consumer no longer treats a previous successful report as a reason to retire a new

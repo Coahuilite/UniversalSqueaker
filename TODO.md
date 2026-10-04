@@ -5,44 +5,20 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — current queue (2026-10-02)
+## NOW — current queue (2026-10-04)
 
-Ordered by what unblocks what. Read `MEMORY.md` "Current state (2026-10-02)" first.
+- [ ] **V1 revised-package game acceptance.** Implementation is complete; frozen packages are FL `b31e2c3`,
+  US `889f34b`, Demo `d972dbc`. Use the PM's `PLAYTEST-V1.md` for the single A/B/C session: observe visuals,
+  exercise naturally reachable input/scroll cases, and let PM check US's second same-window report plus
+  Demo's full `[FerriteLibUiKitDemo][ui-geometry]` outlet. The old second-report failure stays historical fail
+  until revised-package runtime evidence closes it. Conditions not reached in game remain untested.
+- [ ] **Next development uses a fresh DSH leader session.** PM assigns a US UI implementer and independent
+  runtime reviewer; hire a shared-library implementer when a slice touches FL. Select the slice from feedback.
+  V2 = Packs, V3 = Tuning, V4 = remaining pages/help/footer; all remain future and unstarted.
 
-- [ ] **1. Rehearse the completed V1 implementation checkpoint in game.** Short-body navigation now has its
-  own shrinking Scroll and the fourteen Overview parameter rows stack at their own narrow breakpoint. All 15
-  normal checks pass; the two remaining requirement clauses have faithful-revert failures. Preserve the current
-  implementation while obtaining the combined visual/report observations below; do not reimplement these fixes.
-
-- [ ] **2. V1 real-game visual acceptance (pending).** Local technical checks and faithful-revert evidence
-  are not in-game acceptance. In game, check that hover differs from selected on an ordinary nav row, and that
-  the three card states read
-  clearly, the flattened Section cards still read as separate groups, and the frameless nav column still reads
-  as its own region. If all five destinations already fit, no forced resolution change is needed to create
-  navigation overflow; the short viewport is covered technically. Final glyphs and wheel feel remain game-only.
-
-- [ ] **3. DIAG-FIX revised-package game verification (pending).** Technical acceptance is complete; with a
-  revised DEV package, open Overview → Diagnostics: enable Capture → the status line reports capturing → the
-  Report action writes ONE geometry block to the log and a **second press writes another**; switching capture
-  off stops it. With a RELEASE library package the status must read "not available" and neither switch may do
-  anything - that refusal is the point of the slice, and "a clean empty report" is the failure it prevents.
-  **The old in-game failure (the second same-window report did not appear) is a HISTORICAL FAIL and must not be
-  rewritten as passed.**
-
-- [ ] **4. Future slices - NOT started, and not part of V1.** **V2 = Packs**, **V3 = Tuning**, **V4 = the
-  remaining pages plus help and footer** (footer technical-info folding belongs here). Each continues the same
-  visual direction with the existing FL composition/style surfaces, retaining all current controls.
-
-- [ ] **5. The one collected in-game pass (maintainer; do NOT run these scattered).** Combine with items 2-3
-  into a single session rather than scattering them: the V1 frame (header/body/footer, left nav, retractable
-  help, and the narrow stacked presentation), the Overview reading order and hierarchy, the diagnostics
-  four-point check above, and the standing F-05/F-07 questions (`ui.text.overflow` silent on the normal path;
-  switching tabs throws nothing). Historical per-round checklists are archived in `OBLIVIONIS.md`.
-
-- [ ] **6. Packaging pre-flight**: the current diagnostic rehearsal uses paired **Dev** folders and a Dev
-  carrier so the geometry instrument is available. Check the package stamp and compiler-carrier pairing.
-  A Release carrier is only a refusal-control case, not the package for the current visual/report rehearsal.
-
+Package pairing is PM's delivery-boundary responsibility. The current manifest records the rehearsal bytes;
+subsequent source/docs commits change HEAD, not that package. A Release carrier is a refusal-control case,
+not the current rehearsal input. Build and instrumentation details stay in the delivery documents.
 ## Open decisions / blocked on the maintainer or on FL
 
 - [ ] **Retire the short-lived branch `feat/help-drawer-visiblekey`** (its work is already in the `0.5.x` line):
