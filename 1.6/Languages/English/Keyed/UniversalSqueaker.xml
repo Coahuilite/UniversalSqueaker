@@ -388,4 +388,6 @@
   <US.Help.BasicTuning.BabyActions.Text>Off by default. With Biotech active, enable to route Crying and Giggling, expose their tuning rows and include both in action coverage. Off excludes both from routing and the coverage numerator/denominator. This does not change vanilla mental states or genuine mental breaks. Missing audio stays uncovered; without Biotech this option has no effect.</US.Help.BasicTuning.BabyActions.Text>
   <US.Tuning.Source.Default>Default</US.Tuning.Source.Default>
 
+  <US.Distance.AxisCaption>Camera height {0}–{1} (game values) · Volume 100%→0%</US.Distance.AxisCaption>
+  <US.Preset.List.BaselineNote>Read-only baselines. Apply writes to the checked domains; view and adjust current values on Tuning.</US.Preset.List.BaselineNote>
 </LanguageData>

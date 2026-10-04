@@ -207,11 +207,22 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public VoicePacksPageState ViewState => state;
 
-    public string BuildIdentity => "test-build";
+    public string BuildIdentity => BuildIdentityOverride ?? "test-build";
 
-    public string SaveStatus => "Idle";
+    /// <summary>V4.4 instrument: feeds a LONG technical identity (the dev form Mod.cs:132-143 builds) so the
+    /// footer lane can prove the band grows to fit it instead of clipping, in both languages.</summary>
+    public string? BuildIdentityOverride;
 
-    public bool IsDirty => false;
+    /// <summary>V4.2 instrument: the baseline preset's display label (null keeps the built-in short one).</summary>
+    public string? PresetLabel;
+
+    public string SaveStatus => SaveStatusOverride;
+    public string SaveStatusOverride = "Idle";
+    public bool SaveStatusVisible => SaveStatusVisibleOverride;
+    public bool SaveStatusVisibleOverride = true;
+
+    public bool IsDirty => IsDirtyOverride;
+    public bool IsDirtyOverride;
     /// <summary>
     /// When set, the fake behaves like the production source's view cache: the view is built once
     /// and only rebuilt when this revision changes, counting rebuilds. The D1/D6 display-write
@@ -310,7 +321,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
         var preset = new BaselinePresetView(
             "us.preset1",
-            "Balanced Test Preset",
+            PresetLabel ?? "Balanced Test Preset",
             "Deterministic harness preset",
             expanded: PresetExpanded,
             races: new[]

@@ -385,4 +385,6 @@
   <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
 
 
+  <US.Distance.AxisCaption>相机高度 {0}–{1}（游戏数值） · 音量 100%→0%</US.Distance.AxisCaption>
+  <US.Preset.List.BaselineNote>此处是只读基线。应用会写入勾选的域；当前值可在调音页查看和修改。</US.Preset.List.BaselineNote>
 </LanguageData>

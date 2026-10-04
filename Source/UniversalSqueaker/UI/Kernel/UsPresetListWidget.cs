@@ -43,6 +43,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     // Keyed UI text. English values in the Keyed table are verbatim copies of the former literals;
     // every string is resolved through Tr() so Measure and Draw share one outlet.
     private const string EmptyTextKey = "US.Preset.List.Empty";
+    private const string BaselineNoteKey = "US.Preset.List.BaselineNote";
     private const string SelectionSummaryKey = "US.Preset.List.Selection";
     private const string ImportKey = "US.Preset.List.Import";
     private const string RaceSummaryKey = "US.Preset.Race.Summary";
@@ -83,7 +84,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         if (presets.Count == 0) return TopPadding + 48f + BottomPadding;
 
         float width = BodyWidth(ctx);
-        float bodyHeight = TopPadding;
+        float bodyHeight = TopPadding + BaselineNoteHeight(ctx, width) + RowGap;
         foreach (BaselinePresetView preset in presets)
         {
             bodyHeight += HeaderBands(ctx, preset, width).Total + RowGap;
@@ -146,6 +147,11 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
         float innerWidth = rect.width;
         float x = rect.x;
         float y = rect.y + TopPadding;
+
+        float noteHeight = BaselineNoteHeight(ctx, innerWidth);
+        UsKernelDraw.Label(new Rect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
+            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.UpperLeft);
+        y += noteHeight + RowGap;
 
         foreach (BaselinePresetView preset in presets)
         {
@@ -335,6 +341,11 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
     private static string SummaryText(UiWidgetContext ctx, BaselinePresetView preset)
     {
         return string.Format(Tr(ctx, SelectionSummaryKey), preset.SelectedRaceCount, preset.SelectedXenotypeCount);
+    }
+
+    private static float BaselineNoteHeight(UiWidgetContext ctx, float width)
+    {
+        return ctx.Metrics.MeasureText(Tr(ctx, BaselineNoteKey), UiFont.Tiny, Math.Max(1f, width - LeftPadding * 2f));
     }
 
     /// <summary>

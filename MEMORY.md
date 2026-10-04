@@ -25,8 +25,8 @@ page box: 416px centre plus 320px help. Both language tables have zero fit findi
 box uses the defensive band. Help/body nodes preserve scroll state. Actual setting interaction,
 wheel feel and visual acceptance of the repaired package still require the user's game observation.
 
-B3, V2 (Packs) and V3 (Tuning) are technically integrated. V4 (remaining pages/help/footer) follows
-the approved slice contract; repaired-package game observation remains open.
+B3 and V2/V3/V4 are technically integrated. Subsequent UI work follows real game feedback and
+the approved scope; repaired-package game observation remains open.
 The user authorized continued UI development after B3; reuse the current DSH leader and independent
 runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
 identity and per-slice evidence belong to the PM delivery records, not this active memory.
@@ -457,6 +457,12 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   it) - it may be drawn ONLY as an explicitly labelled reset target and only while that target is Ready.
   Additive key `US.Tuning.Source.Default`; the action-side `Auto` word is not reused on the mood side. No
   model/save/command/stable-id change, no carrier change.
+- **Remaining pages (V4):** Presets uses the manifest's local Tiny font scheme so composed row paint and
+  measure agree. Its read-only baseline note distinguishes Def data from current Tuning values. Distance
+  captions describe the existing camera-height scale, without invented physical units. Footer visibility
+  is transient save status OR pending edits; full build identity remains readable with lower ink emphasis.
+  Existing help ownership, camera semantics and persistence stay unchanged. Per-slice proof lives in the
+  PM delivery record; game observation remains in TODO.
 - **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
   manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
   `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit

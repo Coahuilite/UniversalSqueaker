@@ -356,6 +356,7 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<string>("banner-text", () => source.BuildView().BannerText);
         bindings.BindReadOnly<string>("build-identity", () => source.BuildIdentity);
         bindings.BindReadOnly<string>("save-status", () => source.SaveStatus);
+        bindings.BindReadOnly<bool>("save-status-visible", () => source.SaveStatusVisible);
         bindings.BindReadOnly<bool>("is-dirty", () => source.IsDirty);
 
         // Basic: mode.
@@ -399,6 +400,10 @@ public static class UsKernelSettingsHost
             "set-distance-preset",
             name => { source.SetDistancePreset(ParseDistancePreset(name)); bump(); });
         bindings.BindReadOnly<IReadOnlyList<Vector2>>("attenuation-points", () => BuildAttenuationPoints(source.BuildView()));
+        bindings.BindReadOnly<string>("attenuation-axis-caption", () => string.Format(
+            translation.Translate("US.Distance.AxisCaption"),
+            AttenuationMath.MinDistance.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+            AttenuationMath.MaxDistance.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)));
         // The status sentence is the same read-out the composite printed; the manifest has no format
         // expression, so the host builds the one string the atom paints and measures.
         bindings.BindReadOnly<string>("attenuation-status", () => AttenuationStatus(source, translation));

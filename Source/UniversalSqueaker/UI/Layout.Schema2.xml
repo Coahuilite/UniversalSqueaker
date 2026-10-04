@@ -41,6 +41,9 @@
       <Color Token="Selected" Value="#3a311f" />
       <Color Token="SelectedBorder" Value="#3a311f" />
     </Scheme>
+    <Scheme Name="us-preset-rows">
+      <Metric Token="Font" Value="Tiny" />
+    </Scheme>
   </Styles>
   <!-- R2 (2026-09-28): the eight ON/OFF controls are the CARRIER's boolean kind now, not a US kind.
        `us/square-toggle` is retired with its registration and its file. The reason it existed is gone:
@@ -355,6 +358,7 @@
         <Section Id="attenuation-editor" Tab="Distance" Padding="12" Gap="6" Scheme="us-flat-panel">
           <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
           <Column Id="attenuation-body" Gap="4" Padding="0">
+            <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpKey="us/attenuation-editor/chart" />
             <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point"
                     Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
             <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpKey="us/attenuation-editor/status" />
@@ -448,7 +452,7 @@
           <Widget Id="checklist-empty-nodomain" Kind="state/empty" TextKey="US.Packs.Checklist.NoDomains" VisibleKey="checklist-empty-nodomain" />
         </Section>
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
-        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
+        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
       <Scroll Id="help-scroll" Width="320" MinWidth="260" Fill="true" Padding="0" VisibleKey="help-open-wide">
         <Widget Id="help-panel" Kind="us/help-panel" />

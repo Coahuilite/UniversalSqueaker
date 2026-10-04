@@ -23,6 +23,8 @@ public interface IUsKernelSettingsSource
 
     string SaveStatus { get; }
 
+    bool SaveStatusVisible { get; }
+
     bool IsDirty { get; }
 
     // Basic

@@ -10,10 +10,6 @@
 - [ ] **B3 repaired-package game observation at 1024x768.** Verify settings remain visible and operable
   with help open, help/body scroll independently, and closing/reopening preserves position. Technical
   geometry/fit checks pass; the original game failure is historical evidence until the repair is observed.
-- [ ] **Continue the approved UI refactor.** V2 = Packs and V3 = Tuning (both code landed, technically
-  checked), V4 = remaining pages/help/footer (future). Finish each bounded slice through independent review,
-  PM integration, local commit and paired package. Reuse the current DSH leader and US implementer/read-only
-  runtime reviewer; add FL only for a real gap.
 - [ ] **V2 Packs game observation at 1024x768.** The Packs tab reads filter -> race/xenotype browse ->
   current-domain pack enable with one card rhythm, a switch-shaped per-pack enable control and a read-only
   scope line naming the browsed domain. Both real page boxes x both drawer states x EN/ZH measure fit=0,
@@ -26,7 +22,11 @@
   and the preset anchor appears only as an explicitly labelled reset target. Both real page boxes x both drawer
   states x EN/ZH measure fit=0, with a pointer-driven popup and no click-through. **Stays open until the user
   observes it in a new package.** No carrier change; single FL carrier.
-
+- [ ] **V4 repaired-package game observation at 1024x768.** Distance axes describe the existing camera-height
+  scale; Presets distinguishes read-only baselines from current Tuning values and uses one Tiny row scale;
+  footer hides clean Idle, preserves dirty/saving/failure state and retains the full build identity in muted
+  ink. Technical checks and independent PM review are complete; real fonts, pointers and scrolling await
+  the user's package observation. Current identities/evidence belong to the PM delivery record.
 C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat
 the complete report matrix by default. Package identity and current per-slice evidence live in the PM
 handoff. A Release carrier is a refusal-control case, not the current rehearsal input.

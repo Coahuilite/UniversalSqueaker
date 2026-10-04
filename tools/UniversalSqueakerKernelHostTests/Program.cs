@@ -233,6 +233,7 @@ internal static class Program
         Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
         Step("one help presentation per screen (乙1)", () => HelpPresentationLaneTests.RunAll());
         Step("V2 Packs hierarchy, order and browse-vs-enable", () => PacksHierarchyLaneTests.RunAll());
+        Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
     }
 
     /// <summary>

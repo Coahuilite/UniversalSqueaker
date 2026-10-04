@@ -66,6 +66,8 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 
     public string SaveStatus => UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
 
+    public bool SaveStatusVisible => UniversalSqueakerMod.Instance?.SaveStatusVisible ?? true;
+
     public bool IsDirty => UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
 
     public void SetMode(SqueakVoicePackMode mode)
