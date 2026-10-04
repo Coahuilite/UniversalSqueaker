@@ -155,31 +155,42 @@ internal static class DeclarativeOverviewLaneTests
             Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
             try
             {
-                // Check the newly required narrow presentation first, so restoring the old subtree
-                // fails its stacking requirement before the separate diagnostic-row ordering guard.
-                foreach (bool narrow in new[] { true, false })
+                // BH1 re-cut: the regime a parameter row resolves to is a function of the page WIDTH alone.
+                // help-open costs the body row HEIGHT (the declared band above the footer) and never width,
+                // so the same box has to answer the same way with help open or closed. The pre-BH1 step set
+                // help-open to reach the narrow regime - a coupling that only existed while the drawer ate a
+                // 320px column, and exactly the conflation this lane must stop encoding. Both help states
+                // now run the SAME expectation for the SAME box.
+                foreach ((bool narrow, float width) in new[]
+                         {
+                             (true, 320f),   // below the row's own Breakpoint 400: label above control
+                             (false, 1024f), // wide regime: control beside the label
+                         })
                 {
-                    using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource
-                        { RichData = true, EatPrecisionEnabled = true }, new Program.StubMetrics());
-                    host.Bindings.Set("help-open", narrow);
-                    float width = narrow ? 736f : 1024f;
-                    UiLayoutSnapshot snapshot = Arrange(host, width);
-                    host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
-                    foreach (var ids in rows)
+                    foreach (bool helpOpen in new[] { false, true })
                     {
-                        Rect row = RectOf(snapshot, ids.Row);
-                        Rect text = RectOf(snapshot, ids.Text);
-                        Rect input = RectOf(snapshot, ids.Input);
-                        Assert(narrow ? input.y >= text.yMax + 3.5f : input.x >= text.xMax + 3.5f,
-                            (narrow ? "NarrowLabelAboveInput" : "WideLabelBesideInput")
-                            + ": " + ids.Row + "/" + language + " text=" + Describe(text)
-                            + " input=" + Describe(input));
-                        Assert(input.x >= row.x - 0.5f && input.xMax <= row.xMax + 0.5f
-                               && input.y >= row.y - 0.5f && input.yMax <= row.yMax + 0.5f,
-                            ids.Row + ": input must remain inside its row in both presentations");
+                        string where = language + ", " + (narrow ? "narrow" : "wide")
+                            + " at page box " + width + " (help " + (helpOpen ? "open" : "closed") + ")";
+                        using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource
+                            { RichData = true, EatPrecisionEnabled = true }, new Program.StubMetrics());
+                        host.Bindings.Set("help-open", helpOpen);
+                        UiLayoutSnapshot snapshot = Arrange(host, width);
+                        host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
+                        foreach (var ids in rows)
+                        {
+                            Rect row = RectOf(snapshot, ids.Row);
+                            Rect text = RectOf(snapshot, ids.Text);
+                            Rect input = RectOf(snapshot, ids.Input);
+                            Assert(narrow ? input.y >= text.yMax + 3.5f : input.x >= text.xMax + 3.5f,
+                                (narrow ? "NarrowLabelAboveInput" : "WideLabelBesideInput") + ": " + where
+                                + " " + ids.Row + " text=" + Describe(text) + " input=" + Describe(input));
+                            Assert(input.x >= row.x - 0.5f && input.xMax <= row.xMax + 0.5f
+                                   && input.y >= row.y - 0.5f && input.yMax <= row.yMax + 0.5f,
+                                ids.Row + ": input must remain inside its row in both presentations: " + where);
+                        }
+
+                        Console.WriteLine("[overview-responsive] " + where + " rows=" + rows.Length);
                     }
-                    Console.WriteLine("[overview-responsive] " + language + " "
-                        + (narrow ? "stacked" : "wide") + " rows=" + rows.Length);
                 }
             }
             finally { Program.SetTranslatorResolver(null); }

@@ -244,20 +244,20 @@
   <US.Card.FallbackNote>{0} failed to draw, so this section was skipped. Other sections are unaffected. Reopen the window to retry.</US.Card.FallbackNote>
   <US.Help.Header>HELP  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>Help</US.Help.EmptyTitle>
-  <!-- Help drawer chrome: the page-header toggle that retracts the right-side help drawer. -->
+  <!-- Bottom help panel (BH1): retain the existing machine keys across the footer move. -->
   <US.Help.Drawer.Toggle>Help</US.Help.Drawer.Toggle>
-  <US.Help.Drawer.Toggle.Hint>Show or hide the help drawer</US.Help.Drawer.Toggle.Hint>
+  <US.Help.Drawer.Toggle.Hint>Show or hide the bottom help panel</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>Select a section to see its help here.</US.Help.EmptyText>
   <US.Help.Overview>Overview</US.Help.Overview>
   <!-- Help catalog (C+A panel): authoritative Chinese copy, English translated from it. -->
   <US.Help.PageTitle.Title>Using This Window</US.Help.PageTitle.Title>
   <US.Help.PageTitle.Overview>The window is organized into workspaces - Overview, Distance, VoicePacks, Tuning and Presets - switched from the left navigation. Every change applies immediately and is saved to disk automatically.</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>Workspace Navigation</US.Help.PageTitle.Nav.Label>
-  <US.Help.PageTitle.Nav.Text>The left navigation switches between the five workspaces: Overview, Distance, VoicePacks, Tuning and Presets. Selecting a workspace also updates the help panel on the right.</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Nav.Text>The left navigation switches between the five workspaces: Overview, Distance, VoicePacks, Tuning and Presets. Selecting a workspace also updates the help panel at the bottom of the window.</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>Apply &amp; Save</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>Every change applies immediately. Settings are written to disk automatically right after each edit - the footer shows Saving / Saved - and closing the window performs a final forced flush.</US.Help.PageTitle.Apply.Text>
-  <US.Help.PageTitle.HelpDrawer.Label>Help Drawer Toggle</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>Shows or hides the right-side help drawer. The drawer explains whatever control the pointer is over; with it closed the centre column takes the full width, and the selected topic is kept across toggles.</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>Help Panel Toggle</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>Shows or hides the help panel just above this switch, beside the build identity and the save status. The panel explains whatever control the pointer is over; the settings keep their width and stay operable while it is open, and the selected topic plus each area's own scroll position are kept across toggles.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>

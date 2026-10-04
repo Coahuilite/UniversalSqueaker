@@ -169,8 +169,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     // View/navigation writes.
     public string? LastActiveTab;
-    /// <summary>Help drawer visibility writes; must stay independent of the workspace tab.</summary>
-    public bool? LastHelpDrawerOpen;
+    /// <summary>Bottom help panel visibility writes; must stay independent of the workspace tab.</summary>
+    public bool? LastHelpPanelOpen;
     public string? LastScrollToSection;
     public int? LastTuningLayer;
     public string? LastTuningDomainRace;
@@ -751,12 +751,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void ScrollToSection(string sectionKey) => LastScrollToSection = sectionKey;
 
-    public void SetHelpDrawerOpen(bool open)
+    public void SetHelpPanelOpen(bool open)
     {
-        LastHelpDrawerOpen = open;
-        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the drawer
-        // binding reads ViewState.HelpDrawerOpen, so the fake must answer the read-back too.
-        state.HelpDrawerOpen = open;
+        LastHelpPanelOpen = open;
+        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the help-open
+        // binding reads ViewState.HelpPanelOpen, so the fake must answer the read-back too.
+        state.HelpPanelOpen = open;
     }
 
     public void SetTuningLayer(int layer)

@@ -22,10 +22,12 @@ namespace UniversalSqueaker.KernelHostTests;
 /// accepted request is deferred, and prints the pass a report was ACTUALLY generated from: the success state
 /// is asserted to be absent before <c>ConsumeLayoutReportRequest</c> returns a pass, and to carry a strictly
 /// newer pass after a repeated click in the same window. (3) The line is per window and defaults off. (4) At
-/// the two REAL 1024x768 page boxes (984x524 with help-open really set, 760x524 retracted) in EN and ZH, the
-/// report band is scrolled into the viewport, the button's own drawn band is clicked through the carrier's
-/// button-override seam, and the sentence the page prints is asserted to have been DRAWN (metrics channel) with
-/// no fit finding on that row.
+/// the ONE real 1024x768 page box (760x524, since BH1 retired the drawer-expanded width so help open and
+/// help closed share it) in EN and ZH, the report band is scrolled into the viewport, the button's own drawn
+/// band is clicked through the carrier's button-override seam, and the sentence the page prints is asserted
+/// to have been DRAWN (metrics channel) with no fit finding on that row. The help switch sits in the footer
+/// band beside the build/status composite in this configuration, so the report row is reached in a page whose
+/// footer is that ROW.
 /// </para>
 ///
 /// <para>
@@ -50,8 +52,20 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </summary>
 internal static class ReportFeedbackLaneTests
 {
-    private static readonly Vector2 OpenPageBox = new(984f, 524f);
-    private static readonly Vector2 RetractedPageBox = new(760f, 524f);
+    // The page box the shell hands the page on the game's minimum logical screen. BH1 (2026-10-05) retired
+    // the drawer-expanded second width: the help panel reserves HEIGHT above the footer, so the open and the
+    // closed help state are arranged in the SAME box, read out of the policy instead of being spelled.
+    private const float MinimumScreenWidth = 1024f;
+    private const float MinimumScreenHeight = 768f;
+
+    /// <summary>The policy's page box for a screen: the window minus the side chrome, minus the title bar and
+    /// the shell's own bottom inset. Since BH1 this one function answers BOTH help states.</summary>
+    private static Vector2 PageBoxAt(float screenWidth, float screenHeight) => new Vector2(
+        WindowChromeLayout.SettingsWindowWidth(screenWidth, screenHeight) - WindowChromeLayout.WindowChromeInset,
+        WindowChromeLayout.SettingsWindowHeight(screenWidth, screenHeight)
+        - WindowChromeLayout.TitleBarHeight - WindowChromeLayout.WindowChromeInset * 0.5f);
+
+    private static readonly Vector2 PageBox = PageBoxAt(MinimumScreenWidth, MinimumScreenHeight);
 
     private const string Source = "coahuilite.universalsqueaker";
 
@@ -91,8 +105,8 @@ internal static class ReportFeedbackLaneTests
         Step("every report sentence resolves in both shipped tables", TheSentencesResolveInBothTables);
         Step("the production line names the real reason and the generated pass", TheLineNamesTheRealReasonAndTheGeneratedPass);
         Step("the report line is per window and defaults off", TheLineIsPerWindowAndDefaultsOff);
-        Step("the real 1024x768 page boxes keep the status readable and the button reachable (EN/ZH)",
-            TheRealBoxesKeepTheStatusReadableAndTheButtonReachable);
+        Step("the real 1024x768 page box keeps the status readable and the button reachable in both help"
+            + " states (EN/ZH)", TheRealBoxesKeepTheStatusReadableAndTheButtonReachable);
         Console.WriteLine("ReportFeedbackLaneTests ALL PASS");
         return 0;
     }
@@ -385,8 +399,8 @@ internal static class ReportFeedbackLaneTests
             {
                 foreach ((string state, Vector2 box, bool helpOpen) in new[]
                          {
-                             ("help open", OpenPageBox, true),
-                             ("help closed", RetractedPageBox, false),
+                             ("help open", PageBox, true),
+                             ("help closed", PageBox, false),
                          })
                 {
                     var metrics = new DrawnTextMetrics();
@@ -397,18 +411,25 @@ internal static class ReportFeedbackLaneTests
                     {
                         string where = "RPT1 " + language + ", " + state + " at " + box.x + "x" + box.y;
                         var source = new RecordingSettingsSource { RichData = true };
-                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box.x);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         source.AttachHost(host); // exactly what the production factory does for the real source
                         using UsTextFitAudit scope = UsTextFitAudit.Open(host, auditFit: false);
                         var page = new Rect(0f, 0f, box.x, box.y);
 
                         // The help state is INPUT here, not decoration: the open case really sets help-open, so
-                        // the 984x524 box is the drawer-open page and not a re-labelled retracted one.
+                        // the 760x524 box is the page WITH the bottom panel arranged and not a re-labelled
+                        // closed one - and BH1 makes it the same box either way, because the toggle no longer
+                        // changes the window's width.
                         host.Bindings.Set("help-open", helpOpen);
                         host.Bindings.Invoke("set-tab", "Overview");
                         host.MeasureAndArrange(box);
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         host.DrawChecked(page);
+
+                        // BH1's cross-state clauses on this host before anything else is measured: the policy
+                        // has ONE width function, so both help states are arranged in the same page box, and
+                        // the panel's whole cost is the height it reserves. The caller's help state is restored.
+                        AssertHelpPanelReservesHeightNotWidth(host, box, where);
 
                         UiLayoutSnapshot snapshot = host.MeasureAndArrange(box);
                         Assert(snapshot.Viewports.TryGetValue("content-scroll", out Rect viewport),
@@ -416,8 +437,16 @@ internal static class ReportFeedbackLaneTests
                         Assert(snapshot.ScrollContents.TryGetValue("content-scroll", out Rect content),
                             where + ": the centre column must publish its content box");
                         Assert(snapshot.Viewports.ContainsKey("help-scroll") == helpOpen,
-                            where + ": the help column must be arranged exactly while the drawer is open"
+                            where + ": the bottom help panel must be arranged exactly while help is open"
                             + " (the help-open input must really be set)");
+                        if (helpOpen)
+                        {
+                            Assert(snapshot.RectById.ContainsKey("body-row")
+                                    && snapshot.RectById.ContainsKey("nav-column"),
+                                where + ": the open help panel must be arranged with the body row and the nav"
+                                + " column still arranged - it takes height above the footer, not the settings");
+                        }
+
                         Assert(!scope.IsGeometryReportPending,
                             where + ": merely drawing the page must not request a report");
                         Assert(snapshot.RectById.ContainsKey(ReportWidgetId),
@@ -425,9 +454,39 @@ internal static class ReportFeedbackLaneTests
                         Assert(snapshot.RectById.ContainsKey(StatusWidgetId),
                             where + ": the report status must be arranged immediately below the button");
 
+                        // BH1 moved the single help switch into the footer band, so the report row is reached
+                        // beside that switch: the band is a ROW and the us/footer composite keeps exactly the
+                        // leftover after the declared switch width and the band gap (602 at the shipped box).
+                        UiElementSpec footerBandSpec = FindById(host.Manifest.Roots, "footer-band")
+                            ?? throw new InvalidOperationException("the manifest must declare the footer band");
+                        UiElementSpec toggleSpec = FindById(host.Manifest.Roots, "help-toggle")
+                            ?? throw new InvalidOperationException("the manifest must declare the help switch");
+                        Assert(string.Equals(footerBandSpec.Kind, "Row", StringComparison.Ordinal),
+                            where + ": BH1 declares the footer band as a ROW");
+                        Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footerBand),
+                            where + ": the footer band must be arranged");
+                        Assert(snapshot.RectById.TryGetValue("footer", out Rect footerComposite),
+                            where + ": the us/footer composite must be arranged");
+                        Assert(snapshot.RectById.TryGetValue("help-toggle", out Rect toggleRect),
+                            where + ": the help switch must be arranged inside the footer band");
+                        Assert(Math.Abs(toggleRect.width - DeclaredFloat(toggleSpec, "Width")) <= 0.5f
+                                && Math.Abs(footerComposite.width + DeclaredFloat(footerBandSpec, "Gap")
+                                    + toggleRect.width - footerBand.width) <= 0.5f,
+                            where + ": the band's width must be exactly the us/footer composite plus the gap and"
+                            + " the declared-width switch - footer " + Describe(footerComposite) + ", switch "
+                            + Describe(toggleRect) + ", band " + Describe(footerBand));
+                        if (helpOpen)
+                        {
+                            Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect helpReserved),
+                                where + ": the open pass must arrange the bottom help panel");
+                            Assert(helpReserved.yMax <= footerBand.y + 0.5f,
+                                where + ": the open help panel must be arranged directly ABOVE the footer band"
+                                + " that carries its own switch");
+                        }
+
                         // RPT1.3's scrolling clause: the Overview content really overflows, so the button is
                         // reached by scrolling rather than by a box that happens to fit it. The in-game record
-                        // for this page already showed a non-zero body scroll on the retracted box.
+                        // for this page already showed a non-zero body scroll on the help-closed box.
                         Assert(content.height > viewport.height,
                             where + ": the Overview content must overflow its viewport, or the scrolling clause"
                             + " measures nothing (content " + content.height + ", viewport " + viewport.height + ")");
@@ -473,7 +532,7 @@ internal static class ReportFeedbackLaneTests
                         Assert(rowFindings.Count == 0,
                             where + ": the report button and its status must fit at the real box, got "
                             + (rowFindings.Count == 0 ? "(none)" : string.Join(" | ", rowFindings)));
-                        Console.WriteLine("[rpt1-box] " + where + " help=" + (helpOpen ? "open" : "retracted")
+                        Console.WriteLine("[rpt1-box] " + where + " help=" + (helpOpen ? "open" : "closed")
                             + " content=" + Num(content.height) + "/" + Num(viewport.height)
                             + " scroll=" + Num(scroll.y) + " status='" + statusText + "'"
                             + " fit=" + rowFindings.Count);
@@ -672,6 +731,87 @@ internal static class ReportFeedbackLaneTests
     private static string Num(float value)
     {
         return value.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// BH1's cross-state clause, asserted on the host the caller is measuring: the window policy has ONE width
+    /// function and the help state is not an input to it, so both help states must be arranged in the SAME
+    /// page box; the bottom panel must appear exactly in the open pass; the open pass must still arrange the
+    /// body row, the nav column and the centre scroll; and closing the panel must hand its WHOLE reservation
+    /// (its declared height plus the page gap it no longer pays) back to the body. Numbers come from the
+    /// manifest and the policy, never from a re-declaration here. The caller's help state is restored.
+    /// </summary>
+    private static void AssertHelpPanelReservesHeightNotWidth(UiHost host, Vector2 box, string where)
+    {
+        UiElementSpec pageRoot = host.Manifest.Roots[0];
+        Assert(string.Equals(pageRoot.Id, "page-root", StringComparison.Ordinal),
+            where + ": the page's band column must be 'page-root', got '" + pageRoot.Id + "'");
+        UiElementSpec panel = FindById(host.Manifest.Roots, "help-scroll")
+            ?? throw new InvalidOperationException("the manifest must declare the bottom help panel 'help-scroll'");
+        float panelHeight = DeclaredFloat(panel, "Height");
+        float pageGap = DeclaredFloat(pageRoot, "Gap");
+        float pagePadding = DeclaredFloat(pageRoot, "Padding");
+        float policyPageWidth = WindowChromeLayout.SettingsWindowWidth(MinimumScreenWidth, MinimumScreenHeight)
+            - WindowChromeLayout.WindowChromeInset;
+        bool state = host.Bindings.Get<bool>("help-open");
+
+        host.Bindings.Set("help-open", true);
+        UiLayoutSnapshot open = host.MeasureAndArrange(box);
+        host.Bindings.Set("help-open", false);
+        UiLayoutSnapshot closed = host.MeasureAndArrange(box);
+        host.Bindings.Set("help-open", state);
+
+        Assert(open.RectById.TryGetValue("page-root", out Rect openPage),
+            where + ": the open pass must arrange the page root");
+        Assert(closed.RectById.TryGetValue("page-root", out Rect closedPage),
+            where + ": the closed pass must arrange the page root");
+        Assert(Math.Abs(openPage.width - policyPageWidth) <= 0.5f
+                && Math.Abs(closedPage.width - policyPageWidth) <= 0.5f
+                && Math.Abs(openPage.x - closedPage.x) <= 0.5f
+                && Math.Abs(openPage.y - closedPage.y) <= 0.5f
+                && Math.Abs(openPage.width - closedPage.width) <= 0.5f
+                && Math.Abs(openPage.height - closedPage.height) <= 0.5f,
+            where + ": BH1 leaves BOTH help states the same policy page box " + Num(policyPageWidth) + "x"
+            + Num(box.y) + " - open " + Describe(openPage) + ", closed " + Describe(closedPage));
+
+        Assert(open.Viewports.TryGetValue("help-scroll", out Rect helpRect),
+            where + ": the open pass must arrange the bottom help panel");
+        Assert(!closed.Viewports.ContainsKey("help-scroll"),
+            where + ": the closed pass must not arrange the bottom help panel");
+        Assert(Math.Abs(helpRect.height - panelHeight) <= 0.5f
+                && Math.Abs(helpRect.width - (openPage.width - pagePadding * 2f)) <= 0.5f,
+            where + ": the panel must hold its declared reservation across the page's inner width, got "
+            + Describe(helpRect) + " (declared Height " + Num(panelHeight) + ", inner width "
+            + Num(openPage.width - pagePadding * 2f) + ")");
+
+        Assert(open.RectById.TryGetValue("body-row", out Rect openBody),
+            where + ": the open pass must arrange the body row");
+        Assert(closed.RectById.TryGetValue("body-row", out Rect closedBody),
+            where + ": the closed pass must arrange the body row");
+        Assert(open.RectById.ContainsKey("nav-column") && open.Viewports.ContainsKey("content-scroll")
+                && closed.RectById.ContainsKey("nav-column") && closed.Viewports.ContainsKey("content-scroll"),
+            where + ": the body row, the nav column and the centre scroll must stay arranged in BOTH help states");
+        Assert(Math.Abs(closedBody.height - (openBody.height + panelHeight + pageGap)) <= 0.5f,
+            where + ": closing the panel must hand its whole reservation back to the body row (open "
+            + Num(openBody.height) + " + panel " + Num(panelHeight) + " + gap " + Num(pageGap) + " vs closed "
+            + Num(closedBody.height) + ")");
+        Assert(Math.Abs(openBody.width - closedBody.width) <= 0.01f
+                && Math.Abs(open.Viewports["content-scroll"].width
+                    - closed.Viewports["content-scroll"].width) <= 0.01f,
+            where + ": the help panel may cost the settings no width at all (body " + Num(openBody.width)
+            + " vs " + Num(closedBody.width) + ", centre " + Num(open.Viewports["content-scroll"].width)
+            + " vs " + Num(closed.Viewports["content-scroll"].width) + ")");
+    }
+
+    /// <summary>One declared numeric attribute, so a lane never re-spells a manifest number.</summary>
+    private static float DeclaredFloat(UiElementSpec spec, string attribute)
+    {
+        if (!spec.TryGetAttribute(attribute, out string raw))
+        {
+            throw new InvalidOperationException("'" + spec.Id + "' must declare " + attribute);
+        }
+
+        return float.Parse(raw.Trim(), CultureInfo.InvariantCulture);
     }
 
     private static UiElementSpec? FindById(IReadOnlyList<UiElementSpec> elements, string id)

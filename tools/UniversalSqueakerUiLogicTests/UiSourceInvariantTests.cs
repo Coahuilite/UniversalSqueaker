@@ -48,7 +48,7 @@ internal static class UiSourceInvariantTests
         VerifyPrerequisiteDesyncIsNamed(root);
         VerifyViewCacheSharesLayoutClock(root);
         VerifyWriteBindingsGoThroughTheRegistry(root);
-        VerifyHelpDrawerIsIndependentState(root);
+        VerifyHelpPanelIsIndependentState(root);
     }
 
     // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
@@ -777,89 +777,96 @@ internal static class UiSourceInvariantTests
             "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
-    // 10. The retractable help drawer is INDEPENDENT state (brief: "Help visibility is independent
+    // 10. The bottom help panel (BH1) is INDEPENDENT state (brief: "Help visibility is independent
     //     state. Do not reuse active-tab"). The engine compares the Tab attribute against
-    //     UiBindings.ActiveTabKey - so a drawer that rode active-tab would leak into workspace switching
-    //     and leave a reserved column whenever the workspace happened to match. The declarative switch
-    //     for this page is VisibleKey="help-open": a bool value binding that is this page's own state.
-    //     This guard is three-sided: the manifest's drawer element declares VisibleKey="help-open" and
-    //     no Tab; the consumer drives visibility through its own state/binding names; and the retired
-    //     root-list variant does not come back. A regression that re-binds help visibility to the
-    //     workspace, or that hides the drawer by REMOVING it from the definition, fails here.
-    private static void VerifyHelpDrawerIsIndependentState(string root)
+    //     UiBindings.ActiveTabKey - so a panel that rode active-tab would leak into workspace switching
+    //     and leave a reserved band whenever the workspace happened to match. The declarative switch for
+    //     this page is VisibleKey="help-open": a bool value binding that is this page's own state, gating
+    //     the ONE presentation. BH1 retired the two derived presentation keys (help-open-wide /
+    //     help-open-narrow) and body-visible together with the defensive band they selected, so the guard
+    //     now has a second half: the retired keys must stay absent, and the body row must be
+    //     unconditional again.
+    private static void VerifyHelpPanelIsIndependentState(string root)
     {
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
         string manifest = Path.Combine(ui, "Layout.Schema2.xml");
         var document = new XmlDocument();
         document.XmlResolver = null;
         document.Load(manifest);
-        XmlNode? drawerElement = document.SelectSingleNode("//*[@Id='help-scroll']");
-        Assert(drawerElement != null,
-            "Layout.Schema2.xml must keep the Id='help-scroll' drawer element; without it help has no home");
-        Assert(!((XmlElement)drawerElement!).HasAttribute("Tab"),
-            "the help drawer element must not carry a Tab attribute: Tab is the engine's active-tab switch, "
+        XmlElement? band = document.SelectSingleNode("//*[@Id='help-scroll']") as XmlElement;
+        Assert(band != null,
+            "Layout.Schema2.xml must keep the Id='help-scroll' band element; without it help has no home");
+        Assert(!band!.HasAttribute("Tab"),
+            "the help band must not carry a Tab attribute: Tab is the engine's active-tab switch, "
             + "and help visibility is independent state");
+        Assert(band.HasAttribute("VisibleKey")
+                && string.Equals(band.GetAttribute("VisibleKey"), "help-open", StringComparison.Ordinal),
+            "the help band must be hidden DECLARATIVELY through VisibleKey=\"help-open\" - the one key the"
+            + " player's footer switch writes");
+        Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal) == false,
+            "the band must not ask to Fill: a Fill child that also pins a Height is refused the flexible"
+            + " slot by the engine, and the footer would then leave the page");
+        Assert(band.HasAttribute("Height"),
+            "the band must declare its reservation as a Height (the number BH1.1 budgets and the panel lane"
+            + " reads back from this file)");
+
+        // The retired machinery must stay retired: a reappearing derived key means the drawer presentation
+        // came back in some form, and a body row gated by a key means a help state can eat the settings.
+        Assert(document.SelectSingleNode("//*[@Id='help-band']") == null,
+            "the defensive full-width band (help-band) must not come back: the single bottom element"
+            + " with the stable id 'help-scroll' owns the one declared presentation");
+        Assert(document.SelectSingleNode("//*[@Id='help-panel-narrow']") == null,
+            "the second help panel instance must not come back with the retired band");
+        XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='body-row']") as XmlElement;
+        Assert(bodyRow != null && !bodyRow!.HasAttribute("VisibleKey"),
+            "the body row must be unconditional again: BH1 removed the 'body-visible' swap so no help"
+            + " state can replace the settings");
+        Assert(document.SelectNodes("//*[@VisibleKey='help-open-wide']").Count == 0
+                && document.SelectNodes("//*[@VisibleKey='help-open-narrow']").Count == 0
+                && document.SelectNodes("//*[@VisibleKey='body-visible']").Count == 0,
+            "the derived presentation keys must be gone from the manifest: help-open is the only truth about"
+            + " whether the panel is showing");
+        Assert(document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count == 1,
+            "exactly ONE element may bind the panel command, found "
+            + document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count);
+        Assert(document.SelectNodes("//*[@ActionBind='toggle-help-panel']").Count == 0,
+            "the command the footer switch binds is the stable one: a renamed binding is a second token"
+            + " the persistence and retired scans would miss");
+        XmlElement? footer = document.SelectSingleNode("//*[@Id='footer-band']") as XmlElement;
+        Assert(footer != null && footer!.Name.Equals("Row", StringComparison.Ordinal)
+                && footer.SelectSingleNode("*[@Id='footer']") != null
+                && footer.SelectSingleNode("*[@Id='help-toggle']") != null,
+            "the footer band must be a Row holding the status widget and the page's single help switch");
+        XmlElement? header = document.SelectSingleNode("//*[@Id='header-band']") as XmlElement;
+        Assert(header != null && header!.SelectSingleNode("*[@Id='help-toggle']") == null,
+            "the header band must no longer hold the switch: BH1 moved it next to the band it opens");
 
         string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");
         CheckSourceContains(hostPath, new[]
         {
             "\"help-open\"",
-            "SetHelpDrawerOpen",
+            "SetHelpPanelOpen",
         },
-        "the Host must own help visibility as its own value binding and write the drawer state through the source boundary");
+        "the Host must own help visibility as its own value binding and write the panel state through the source boundary");
+        foreach (string retired in new[] { "\"help-open-wide\"", "\"help-open-narrow\"", "\"body-visible\"", "pageWidthFeed" })
+        {
+            CheckSourceDoesNotContain(hostPath, retired,
+                "the Host must not keep the retired presentation machinery: " + retired);
+        }
 
         string statePath = Path.Combine(ui, "Model", "VoicePacksPageState.cs");
-        CheckSourceContains(statePath, new[] { "HelpDrawerOpen" },
+        CheckSourceContains(statePath, new[] { "HelpPanelOpen" },
             "help visibility must live in the per-window page state");
-        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpDrawerOpen = false;", StringComparison.Ordinal) >= 0,
-            "HelpDrawerOpen must default to false: the shipped window opens narrow (vanilla-like) with the"
-            + " help drawer retracted, and only widens when the player expands it");
+        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpPanelOpen = false;", StringComparison.Ordinal) >= 0,
+            "HelpPanelOpen must default to false: the shipped window opens with the panel retracted above"
+            + " the footer, and expanding it never widens or moves the window");
 
-        // (乙1): there are TWO declared presentations of the help panel now, and neither is gated by the raw
-        // player intent. Each is hidden DECLARATIVELY - the elements stay in the definition, which is what
-        // lets their nodes and scroll positions survive a close/open - and the host derives which one is
-        // true from the screen. Asserting both keys (and that neither element is Tab-gated) is what keeps a
-        // future edit from re-pointing one of them at help-open and making the two appear together.
-        Assert(((XmlElement)drawerElement!).HasAttribute("VisibleKey")
-            && string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"), "help-open-wide", StringComparison.Ordinal),
-            "the WIDE help column must be hidden DECLARATIVELY through VisibleKey=\"help-open-wide\"");
-        XmlNode? narrowElement = document.SelectSingleNode("//*[@Id='help-band']");
-        Assert(narrowElement != null,
-            "Layout.Schema2.xml must declare the Id='help-band' narrow-screen help presentation (乙1)");
-        Assert(!((XmlElement)narrowElement!).HasAttribute("Tab"),
-            "the narrow help band must not carry a Tab attribute either: help visibility is independent state");
-        Assert(((XmlElement)narrowElement!).HasAttribute("VisibleKey")
-            && string.Equals(((XmlElement)narrowElement!).GetAttribute("VisibleKey"), "help-open-narrow", StringComparison.Ordinal),
-            "the NARROW help band must be hidden DECLARATIVELY through VisibleKey=\"help-open-narrow\"");
-        Assert(!string.Equals(((XmlElement)drawerElement!).GetAttribute("VisibleKey"),
-                ((XmlElement)narrowElement!).GetAttribute("VisibleKey"), StringComparison.Ordinal),
-            "the two help presentations must NOT share a visibility key, or they would be drawn at the same"
-            + " time - which is exactly the mutual exclusion (乙1) is built on");
-
-        // The REPLACING shape (2026-09-21b), both halves. On the manifest: the narrow band takes its height
-        // from the slot the body frees (Fill="true" and NO Height - a declared Height makes the engine's
-        // flexible-fill rule refuse the slot and the footer then leaves the page, measured at 660.7 natural
-        // against a 530 viewport), and the body row yields that slot through its OWN derived key, hidden and
-        // never removed - removing it is what releases its node and its scroll position. On the host: the key
-        // is derived there, so there is no second writable truth about which presentation is showing.
-        XmlNode? bodyElement = document.SelectSingleNode("//*[@Id='body-row']");
-        Assert(bodyElement != null, "Layout.Schema2.xml must declare the Id='body-row' page body row");
-        Assert(((XmlElement)bodyElement!).HasAttribute("VisibleKey")
-            && string.Equals(((XmlElement)bodyElement!).GetAttribute("VisibleKey"), "body-visible", StringComparison.Ordinal),
-            "the body row must yield its slot DECLARATIVELY through VisibleKey=\"body-visible\" while the"
-            + " narrow band replaces it");
-        Assert(!((XmlElement)bodyElement!).HasAttribute("Tab"),
-            "the body row must not be Tab-gated: it yields to the help presentation, not to a workspace");
-        Assert(!string.Equals(((XmlElement)bodyElement!).GetAttribute("VisibleKey"),
-                ((XmlElement)narrowElement!).GetAttribute("VisibleKey"), StringComparison.Ordinal),
-            "the body row must not share the narrow band's visibility key, or the two could never swap");
-        Assert(string.Equals(((XmlElement)narrowElement!).GetAttribute("Fill"), "true", StringComparison.Ordinal)
-            && !((XmlElement)narrowElement!).HasAttribute("Height"),
-            "the narrow band must take its height from the freed slot (Fill=\"true\" and NO Height): a"
-            + " declared Height makes the engine refuse the flexible slot and pushes the footer off the page");
-        CheckSourceContains(hostPath, new[] { "\"body-visible\"" },
-            "the Host must derive the body's visibility key: the player never writes it, and a writable copy"
-            + " would be a second truth about which presentation is showing");
+        // The settings window used to read the drawer state to resize itself. With one window width there is
+        // nothing left for it to read, so a window that names the panel state again is the widening coming
+        // back through the side door.
+        CheckSourceDoesNotContain(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"), "HelpPanelOpen",
+            "the settings window must not read or size for the help state any more: BH1 removed the second"
+            + " width, so the window owns no help decision");
 
         // The retired mechanism must not come back in any form - not as the file, and not inlined into the
         // Host. Rebuilding the manifest root list removes the element from the definition, and the engine
@@ -872,18 +879,23 @@ internal static class UiSourceInvariantTests
         CheckSourceDoesNotContain(hostPath, "TryReplaceRoots",
             "the Host must not install a rebuilt root list by hand");
         CheckSourceDoesNotContain(hostPath, "manifest.Roots",
-            "the Host must not mutate the manifest root list: that is the removed-element path, and visibility"
-            + " is declarative now");
+            "the Host must not mutate the manifest root list: that is the removed-element path, and"
+            + " visibility is declarative now");
 
-        // The Help toggle's Keyed caption moved with the control (S3-2a): it is the manifest's header
-        // button that carries TextKey, and the page-title widget must no longer own either. Both halves are
-        // asserted, because "the caption exists" is not "the page exposes it" and not "the widget lost it".
+        // The Help switch's Keyed caption moved with the control and kept its stable machine key
+        // (S3-2a into the header, BH1 into the footer). It is the manifest's footer button that carries
+        // TextKey, and the page-title widget must own neither the caption nor a drawn switch. Both halves
+        // are asserted, because "the caption exists" is not "the page exposes it" and not "the widget
+        // lost it". A renamed caption key would be a second live token the persistence and retired
+        // scans miss, so the placeholder name the presentation round briefly tried must stay out.
         CheckSourceContains(Path.Combine(ui, "Layout.Schema2.xml"),
             new[] { "\"US.Help.Drawer.Toggle\"" },
-            "the page header must expose the discoverable Help toggle through the Keyed table: the caption"
-            + " belongs to the manifest's header button now");
-        CheckSourceDoesNotContain(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"), "US.Help.Drawer.Toggle",
-            "the page-title widget must not carry the Help toggle's caption any more: the switch is declared"
+            "the footer switch must expose its caption through the Keyed table: the caption belongs to the"
+            + " declared footer button");
+        CheckSourceDoesNotContain(Path.Combine(ui, "Layout.Schema2.xml"), "US.Help.Panel.Toggle",
+            "no second caption key in the manifest: the switch keeps its stable machine name");
+        CheckSourceDoesNotContain(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"), "US.Help.",
+            "the page-title widget must not carry the Help switch's caption any more: the switch is declared"
             + " in the manifest, and a caption without a control is the drift this pair exists to catch");
     }
     private static Dictionary<string, string> ReadKeyedTable(string path)

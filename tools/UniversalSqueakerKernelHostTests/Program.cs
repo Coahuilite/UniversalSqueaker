@@ -39,8 +39,7 @@ internal static class Program
         ("filter-bar", "us/filter-bar"),
         ("checklist", "us/voice-pack-checklist"),
         ("footer", "us/footer"),
-        ("help-panel", "us/help-panel"),
-        ("help-panel-narrow", "us/help-panel")
+        ("help-panel", "us/help-panel")
     };
 
     /// <summary>
@@ -191,8 +190,8 @@ internal static class Program
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
         Step("rich dynamic data measure + draw", RichDynamicDataMeasureAndDraw);
         Step("preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
-        Step("800px three-column mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
-        Step("retractable right-side help drawer", () => HelpDrawerLaneTests.RunAll());
+        Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
+        Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
         Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
@@ -209,7 +208,7 @@ internal static class Program
         Step("long author filter truncates the display and writes the raw token", LongAuthorFilterTruncatesTheDisplayOnly);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
-        Step("inspector column width comes from the manifest", InspectorColumnWidthComesFromTheManifest);
+        Step("help panel height comes from the manifest", HelpPanelHeightComesFromTheManifest);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
@@ -229,9 +228,8 @@ internal static class Program
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
         Step("checklist filtered item keys do not lie (step B-1)", () => ChecklistItemsLaneTests.RunAll());
         Step("per-host audit routing and ruler isolation (FL-20)", () => UsAuditRoutingLaneTests.RunAll());
-        Step("page frame geometry guard (5 viewports x EN/ZH x drawer x workspace)", () => FrameGeometryLaneTests.RunAll());
+        Step("page frame geometry guard (5 viewports x EN/ZH x help open x workspace)", () => FrameGeometryLaneTests.RunAll());
         Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
-        Step("one help presentation per screen (乙1)", () => HelpPresentationLaneTests.RunAll());
         Step("V2 Packs hierarchy, order and browse-vs-enable", () => PacksHierarchyLaneTests.RunAll());
         Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
         Step("RPT1 report button feedback: real reason, generated pass, real page boxes",
@@ -254,8 +252,8 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
         host.Bindings.Invoke("set-tab", "Tuning");
-        // The covered element this lane asserts against is the help panel, which only exists while the
-        // drawer is expanded (the shipped default is retracted).
+        // The covered element this lane asserts against is the help panel, which only exists while help
+        // is open (the shipped default is retracted).
         host.Bindings.Set("help-open", true);
         Rect viewport = new(0f, 0f, 800f, 600f);
         host.DrawChecked(viewport);
@@ -754,7 +752,7 @@ internal static class Program
     {
         return Math.Max(
             UsFilterBarWidget.MinOptionDisplayWidth,
-            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
+            WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
     }
 
     /// <summary>
@@ -804,53 +802,69 @@ internal static class Program
     }
 
     /// <summary>
-    /// The inspector column is 176px as a manifest declaration, not as something the help widget reports
-    /// about itself (maintainer ruling on the lab window model: rail 148 / work flexible / inspector 176 /
-    /// footer 24). Three claims, because a declaration that nothing reads is not a width:
-    /// (1) the manifest declares Width 176 on the inspector column and declares no width on the help
-    ///     widget - the widget's vocabulary (Id/Kind/Tab/Hidden) refuses one at creation, and a widget that
-    ///     measured its own width would bury this responsive decision in the control;
-    /// (2) the arranged snapshot carries 176 at all three shipped viewports;
-    /// (3) the drawn node for the column carries 176 too, so the width a pass actually drew is the
-    ///     declared one rather than a number this lane recomputed from the manifest.
-    /// Re-declaring 232 (or 148/240) turns this step red at the declaration and again at the drawn rect;
-    /// the mutation this exists for is exactly a width that stops being a layout fact.
+    /// The bottom help panel's reserved HEIGHT (BH1) is a manifest declaration, not a number this lane
+    /// invents and not something the help widget reports about itself. Three claims, in the shape the
+    /// retired inspector-column lane used, because a declaration nothing reads is not a layout fact:
+    /// (1) the manifest declares Height 140 on the help-scroll Scroll, declares NO Height on the help
+    ///     WIDGET (the widget's vocabulary would refuse one anyway) and does not ask the band to Fill -
+    ///     UiLayoutEngine.IsFlexibleFill refuses a Fill child that also pins a Height, and that refusal is
+    ///     what keeps the footer inside the page;
+    /// (2) the arranged snapshot hands the band exactly the declared height at every shipped page box;
+    /// (3) the drawn node carries it too, so what a pass drew is what the page declared.
+    /// Re-declaring the number here (or moving it onto the widget, or turning the band into a Fill child)
+    /// reddens this step at the declaration and again at the drawn rect. The mutation it exists for is a
+    /// reservation that stops being a layout fact.
     /// </summary>
-    private static void InspectorColumnWidthComesFromTheManifest()
+    private static void HelpPanelHeightComesFromTheManifest()
     {
         string manifestPath = Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
         System.Xml.Linq.XDocument manifest = System.Xml.Linq.XDocument.Load(manifestPath);
-        System.Xml.Linq.XElement? column = manifest.Descendants()
+        System.Xml.Linq.XElement? band = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-scroll");
-        Assert(column != null, "the manifest must declare the inspector column (help-scroll)");
-        Assert((string?)column!.Attribute("Width") == "320",
-            "the inspector column width must stay a manifest declaration of 320, got '"
-            + ((string?)column.Attribute("Width") ?? "(none)") + "' in " + manifestPath);
+        Assert(band != null, "the manifest must declare the bottom help panel band (help-scroll)");
+        string declared = (string?)band!.Attribute("Height") ?? "(none)";
+        Assert(declared == "140",
+            "the help band's height must stay a manifest declaration of 140 (the 120-160 budget the BH1"
+            + " proposal allowed), got '" + declared + "' in " + manifestPath);
+        Assert((string?)band.Attribute("Fill") != "true",
+            "the reserved band must not also ask to Fill: the engine refuses a Fill child with a fixed"
+            + " Height, and the footer would then leave the page");
+        Assert((string?)band.Attribute("VisibleKey") == "help-open",
+            "the band must be toggled by the ONE player-intent key, got '"
+            + ((string?)band.Attribute("VisibleKey") ?? "(none)") + "'");
         System.Xml.Linq.XElement? panel = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-panel");
         Assert(panel != null, "the manifest must declare the help panel widget");
-        Assert(panel!.Attribute("Width") == null,
-            "the help widget must not declare its own width: the column owns that layout fact");
+        Assert(panel!.Attribute("Height") == null,
+            "the help widget must not declare its own height: the band owns that layout fact");
 
+        float height = float.Parse(declared, System.Globalization.CultureInfo.InvariantCulture);
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
-        // The inspector column only exists while the drawer is expanded, and the shipped default is
-        // retracted, so the lane expands it explicitly before it measures the declared width.
+        // The band only exists while help is open, and the shipped default is retracted, so the lane
+        // expands it explicitly before it measures the declared reservation.
         host.Bindings.Set("help-open", true);
-        foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
+        // The first two boxes are what the shell actually hands the page at the game's minimum (1024x768)
+        // and at 1920x1080 - BH1 makes the help state irrelevant to both. The third is a SYNTHETIC short
+        // box that proves the reservation is a declared height rather than a share of the page.
+        foreach (Vector2 pageBox in new[] { new Vector2(760f, 524f), new Vector2(920f, 644f), new Vector2(760f, 320f) })
         {
-            UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(pageBox);
             Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect arranged),
-                "no arranged inspector column at " + viewport);
-            Assert(Math.Abs(arranged.width - 320f) < 0.01f,
-                "the arranged inspector column must be the declared 320 at " + viewport + ": " + arranged.width);
+                "no arranged help band at the page box " + pageBox);
+            Assert(Math.Abs(arranged.height - height) < 0.01f,
+                "the arranged help band must be the declared " + height + " at " + pageBox + ": " + arranged.height);
+            Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer)
+                    && arranged.yMax <= footer.y + 0.01f && footer.yMax <= pageBox.y + 0.01f,
+                "the help band must sit above the footer band and the footer must stay inside the page at "
+                + pageBox + ": band=" + arranged + " footer=" + footer);
 
-            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+            host.DrawChecked(new Rect(0f, 0f, pageBox.x, pageBox.y));
             UiNode? drawn = host.Session.GetNodeByElementId("help-scroll");
-            Assert(drawn != null, "the drawn pass must carry the inspector column node at " + viewport);
+            Assert(drawn != null, "the drawn pass must carry the help band node at " + pageBox);
             Rect drawnRect = drawn!.Rect ?? default;
-            Assert(Math.Abs(drawnRect.width - 320f) < 0.01f,
-                "the drawn inspector column must be the declared 320 at " + viewport + ": " + drawnRect.width);
+            Assert(Math.Abs(drawnRect.height - height) < 0.01f,
+                "the drawn help band must be the declared " + height + " at " + pageBox + ": " + drawnRect.height);
         }
     }
 
@@ -1023,7 +1037,7 @@ internal static class Program
         using UiHost claimedHost = UsKernelSettingsHost.Create(claimedFake, new StubMetrics());
         claimedHost.Session.ClaimHover("us/page-title/apply");
         claimedHost.Bindings.Invoke("set-tab", "Overview");
-        // The help panel is the probe surface; the shipped drawer default is retracted, so both hosts
+        // The help panel is the probe surface; the shipped help default is retracted, so both hosts
         // must expand it before the panel exists to measure.
         claimedHost.Bindings.Set("help-open", true);
         float claimedHeight = claimedHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
@@ -1497,7 +1511,7 @@ internal static class Program
         Assert(xml.Contains("Schema=\"2\""), "resource root declares Schema=2");
         Assert(xml.Contains("Source=\"" + ExpectedSource + "\""), "resource root declares the US source scope");
         Assert(xml.Contains("<Scroll Id=\"content-scroll\""), "content scroll container present");
-        Assert(xml.Contains("<Scroll Id=\"help-scroll\""), "help scroll container present");
+        Assert(xml.Contains("<Scroll Id=\"help-scroll\""), "bottom help panel scroll declared (BH1)");
         // The footer is a body sibling OUTSIDE the scroll, and it must NOT carry a Height attribute: the
         // attribute overrides the widget's own wrap-aware measure, which is how the in-game log kept
         // reporting "footer needs 33px has 28px" while the attribute pinned 28 (2026-09-15).
@@ -1554,53 +1568,57 @@ internal static class Program
         // Creation succeeded => every kind in the real resource resolved through the real US/core
         // registries and every widget's Validate passed against the real typed binding table.
         //
-        // The drawer is DECLARATIVE now: the manifest ALWAYS declares us/help-panel, and the engine
+        // The help panel is DECLARATIVE (BH1): the manifest ALWAYS declares us/help-panel, and the engine
         // decides whether it is arranged. Both halves are asserted, because they are the two things the
         // mechanism has to get right - the definition must keep the element (that is what lets its node
         // and its scroll position survive a close/open), and the arrange must hide it while the page
         // state is retracted. The old root-list variant asserted the opposite (element absent from the
-        // roots), which is what made the property that carried the drawer's state disappear wholesale.
+        // roots), which is what made the property that carried the panel's state disappear wholesale.
         var declaredKinds = new HashSet<string>(StringComparer.Ordinal);
         CollectKinds(host.Manifest.Roots, declaredKinds);
         Assert(declaredKinds.Contains("us/help-panel"),
             "the retracted default must still DECLARE the help panel: dropping it from the definition is what"
             + " loses its node and scroll position (see SessionRevisionBumper)");
 
-        // B3 (2026-10-04): the production pair, not a bare viewport. 1024x768 is the minimum logical
-        // resolution the game can produce: the window opens at 800x600, the drawer widens it to the screen
-        // cap (1024), and the shell hands the page UiWindowHost's ContentRect - window minus 2 x 20 chrome,
-        // minus the 56px title bar and the 20px bottom inset, i.e. 984x524. page-root then takes its own
-        // declared Padding 12 out of that, leaving body-row 960px, and the three columns take 200 + 416 +
-        // 320 + 2 x 12: the centre keeps 416, above the manifest's own Breakpoint 400, so the drawer SHARES
-        // the page and the settings stay arranged. Feeding the page width alone (the old 1024x768 viewport
-        // here) measured 24px narrow and hid this whole question.
+        // B3's production pair, re-cut for BH1: the page box is the shell's ContentRect at the game's
+        // minimum logical resolution (1024x768) - the window the policy opens (800x600) minus 2 x 20
+        // chrome, minus the 56px title bar and the 20px bottom inset, i.e. 760x524 - and BH1.2 makes that
+        // box THE SAME in both help states, because the panel reserves height inside the page instead of
+        // widening the window. page-root takes its declared Padding 12 out of it, leaving the body row
+        // 736, and the two columns take 200 + 524 + one 12 gap: the centre keeps 524, above the manifest's
+        // own Breakpoint 400, so the settings stay arranged while the panel is open. Feeding the page width
+        // alone (the pre-BH1 habit) measures 24px narrow and hides the whole question.
         int pinnedScreenWidth = Verse.UI.screenWidth;
         int pinnedScreenHeight = Verse.UI.screenHeight;
         Verse.UI.screenWidth = 1024;
         Verse.UI.screenHeight = 768;
-        float openWindow = WindowChromeLayout.SettingsOpenWidth(1024f, 768f);
+        float window = WindowChromeLayout.SettingsWindowWidth(1024f, 768f);
         var page = new Vector2(
-            openWindow - WindowChromeLayout.WindowChromeInset,
+            window - WindowChromeLayout.WindowChromeInset,
             WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - WindowChromeLayout.WindowChromeInset
                 - WindowChromeLayout.TitleBarHeight);
         try
         {
             UiLayoutSnapshot retracted = host.MeasureAndArrange(page);
-            Assert(!retracted.Viewports.ContainsKey("help-scroll") && !retracted.Viewports.ContainsKey("help-band"),
+            Assert(!retracted.Viewports.ContainsKey("help-scroll"),
                 "the retracted default must not arrange the help panel");
+            Assert(retracted.RectById.TryGetValue("body-row", out Rect bodyClosed)
+                    && retracted.Viewports.ContainsKey("content-scroll"),
+                "the retracted page must arrange the body row and its centre scroll");
 
             host.Bindings.Set("help-open", true);
             UiLayoutSnapshot expanded = host.MeasureAndArrange(page);
             Assert(expanded.Viewports.TryGetValue("help-scroll", out Rect help),
-                "an explicit open at the minimum logical resolution must arrange the help COLUMN: the open"
-                + " window's centre column is 416px there, above the page's own Breakpoint 400");
-            Assert(!expanded.Viewports.ContainsKey("help-band"),
-                "the band is a defensive fallback for a synthetic page below the game's 1024x768 minimum, so"
-                + " it must not be arranged at the game's minimum logical resolution");
-            Assert(expanded.RectById.ContainsKey("body-row") && expanded.RectById.ContainsKey("nav-column")
-                && expanded.Viewports.ContainsKey("content-scroll"),
+                "an explicit open at the minimum logical resolution must arrange the bottom help panel");
+            Assert(expanded.RectById.TryGetValue("body-row", out Rect bodyOpen)
+                    && expanded.RectById.ContainsKey("nav-column")
+                    && expanded.Viewports.ContainsKey("content-scroll"),
                 "the settings body, its navigation and its centre viewport must all stay arranged while the"
-                + " help column is open (B3.1)");
+                + " help panel is open (BH1.1 / B3.1)");
+            Assert(Math.Abs(bodyOpen.width - bodyClosed.width) < 0.01f
+                    && Math.Abs(help.width - bodyOpen.width) < 0.01f,
+                "opening help must not change the body row's width and the panel must share the page's inner"
+                + " width: closed=" + bodyClosed + " open=" + bodyOpen + " panel=" + help);
         }
         finally
         {
@@ -1786,49 +1804,41 @@ internal static class Program
 
     /// <summary>
     /// The brief's required width/localization evidence: the real production page is measured and
-    /// DRAWN at real screen/page configurations in both shipped language tables, with the help drawer
+    /// DRAWN at real screen/page configurations in both shipped language tables, with the help panel
     /// open and closed, and one text artifact records what the harness actually measured. It is an
     /// evidence and sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal
-    /// overflow, a dead content viewport, or a wrongly-chosen help presentation.
+    /// overflow, a dead content viewport, a help panel that replaces the settings, or a toggle that moves
+    /// the page.
     ///
     /// <para>
-    /// RE-CUT 2026-10-04. Each case used to be a bare page width, and the drawer-open rows inferred their
-    /// screen from a loose threshold (<c>wideCase = pageWidth >= 1228f ? 1920 : 800</c>). That pairing was
-    /// not a configuration any player can reach: the "1024" row pinned a fake 800x600 screen, so the real
-    /// 1024x768 minimum-logical-resolution pair - screen 1024x768 -> window 1024x600 -> page 960x530, the
-    /// exact configuration the B3 playtest failed on - never appeared in the evidence at all. Cases are now
-    /// explicit (screen, window, page) triples derived from <see cref="WindowChromeLayout"/>, and each case
-    /// states its expected presentation as a HAND-WRITTEN per-case flag (<c>ExpectBandWhenOpen</c>), never by
-    /// asking the production predicate: an expectation read out of the code under test could not disagree with
-    /// it, so it could never redden.
+    /// RE-CUT for BH1 (2026-10-05). The pre-BH1 table carried a hand-written <c>ExpectBandWhenOpen</c> per
+    /// row because the product had TWO presentations and the question "which one does this box afford" was
+    /// itself the thing under test. There is now ONE presentation, so the pair-level claim is the one BH1.2
+    /// makes: for the same screen, help open and help closed hand the centre column the SAME width, and the
+    /// panel is an extra band above the footer rather than a replacement for the body. That comparison is
+    /// written per pair here and is never read out of the product predicate - a product change that hid the
+    /// body while help was open, or that let the toggle change the width, reddens it.
+    /// The 800x600 row stays as a SYNTHETIC PROBE on a screen below the game's 1024x768 minimum (B3.5): it
+    /// is UNREACHABLE and proves only that a small box still arranges both the body and the panel, never
+    /// product behaviour.
+    ///   screen 1024x768  -> window 800x600 (both states)  -> box 760x524
+    ///   screen  800x600  -> window 800x600 (UNREACHABLE)  -> box 760x524
+    ///   screen 1920x1080 -> window 960x720 (both states)  -> box 920x644
     /// </para>
     /// </summary>
     private static void WidthAndLanguageEvidenceSweep()
     {
-        // The configurations, all derived from the size policy rather than written down twice. "page" here
-        // is the BOX the shell hands the host (UiWindowHost.ContentRect) - NOT the inner width: page-root
-        // takes its own declared Padding 12 out of the box, and that 24px is what decides whether the
-        // three-column body is affordable at 1024x768. The 800x600 row is a SYNTHETIC PROBE on a screen
-        // below the game's 1024x768 minimum (B3.5): it is UNREACHABLE and proves only that the band branch
-        // still behaves, never product behaviour.
-        //   screen 1024x768  -> window 1024x600 (closed 800 widened to the screen cap) -> box 984x524
-        //   screen 1024x768  -> window  800x600 (retracted)                             -> box 760x524
-        //   screen  800x600  -> window  800x600 (UNREACHABLE probe; screen caps the open width) -> box 760x524
-        //   screen 1920x1080 -> window 1292x720 (open)                                  -> box 1252x644
-        //   screen 1920x1080 -> window  960x720 (retracted)                             -> box 920x644
-        // ExpectBandWhenOpen is HAND-WRITTEN per pair, never read from the production predicate: comparing
-        // the host's answer against the same predicate over the same fed value could not redden under any
-        // revert. Mutation proof: reverting the host's criterion to the pre-fix full-delta question turns
-        // the 1024x768/open row into the band and reddens its expectation; a criterion that never answered
-        // "cannot share" reddens the 800x600 probe row.
-        var sweepCases = new (int ScreenW, int ScreenH, string State, float WindowW, bool ExpectBandWhenOpen)[]
+        var sweepCases = new (int ScreenW, int ScreenH, string State)[]
         {
-            (1024, 768, "open", WindowChromeLayout.SettingsOpenWidth(1024f, 768f), false),
-            (1024, 768, "closed", WindowChromeLayout.SettingsClosedWidth(1024f, 768f), false),
-            (800, 600, "open", WindowChromeLayout.SettingsOpenWidth(800f, 600f), true),
-            (1920, 1080, "open", WindowChromeLayout.SettingsOpenWidth(1920f, 1080f), false),
-            (1920, 1080, "closed", WindowChromeLayout.SettingsClosedWidth(1920f, 1080f), false),
+            (1024, 768, "open"),
+            (1024, 768, "closed"),
+            (800, 600, "open"),
+            (800, 600, "closed"),
+            (1920, 1080, "open"),
+            (1920, 1080, "closed"),
         };
+        // language|screen|state -> the measured shape, compared across the pair after the sweep.
+        var measured = new Dictionary<string, (float ContentW, bool HasPanel, float PanelH, bool HasBody)>();
 
         string[] languages = { "English", "ChineseSimplified" };
         string outDir = Path.Combine(EvidenceRoot(), "dist", "ui-evidence");
@@ -1836,7 +1846,7 @@ internal static class Program
         var lines = new List<string>();
         lines.Add("# US settings layout sweep (harness-measured, StubMetrics; not real RimWorld pixels)");
         lines.Add("# page = the box the shell hands the host (UiWindowHost.ContentRect); row = page - page-root padding 24");
-        lines.Add("screen | window | page | row | lang | drawer | nav.w | content.w | help.w | band.h | contentArea.w | overflow | fitFindings");
+        lines.Add("screen | window | page | row | lang | help | nav.w | content.w | panel.h | body.h | contentArea.w | overflow | fitFindings");
         int violations = 0;
         foreach (string language in languages)
         {
@@ -1847,12 +1857,13 @@ internal static class Program
             UiFitAudit.Enabled = true;
             try
             {
-                foreach ((int screenW, int screenH, string state, float windowW, bool expectBandWhenOpen) in sweepCases)
+                foreach ((int screenW, int screenH, string state) in sweepCases)
                 {
                     bool open = state == "open";
-                    // The window the policy produces is centred on the screen; the page box is what the shell
-                    // hands its UiHost: window minus the horizontal chrome, and minus the title bar plus the
-                    // bottom inset vertically.
+                    // BH1: the window has ONE width per screen; the help state cannot change it. The window
+                    // is centred on the screen and the page box is what the shell hands its UiHost: window
+                    // minus the horizontal chrome, and minus the title bar plus the bottom inset vertically.
+                    float windowW = WindowChromeLayout.SettingsWindowWidth(screenW, screenH);
                     float windowX = (screenW - windowW) * 0.5f;
                     float windowY = (screenH - WindowChromeLayout.SettingsWindowHeight(screenW, screenH)) * 0.5f;
                     float pageWidth = windowW - WindowChromeLayout.WindowChromeInset;
@@ -1863,10 +1874,7 @@ internal static class Program
                     Verse.UI.screenHeight = screenH;
 
                     var fake = new RecordingSettingsSource { RichData = true };
-                    // The presentation is decided from the page box the shell actually hands the page, so
-                    // the sweep feeds the case's own box (the window does this in BeforeDraw).
-                    float fedPageBox = pageWidth;
-                    using UiHost host = UsKernelSettingsHost.Create(fake, metrics, () => fedPageBox);
+                    using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
                     UiFitAudit.Reset();
                     reports.Clear();
                     host.Bindings.Invoke("set-tab", "Overview");
@@ -1876,27 +1884,21 @@ internal static class Program
                     // then arranges the frame it records and draws (the same probe pattern the
                     // focused lanes use).
                     UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
-                    // The centre column exists only in the states that arrange the body row; with the
-                    // narrow band REPLACING the body there is no content scroll to pin, and asking for
-                    // one is not a failure of the shape. The both-directions check below still fails
-                    // when a state arranges neither presentation.
                     if (first.RectById.ContainsKey("body-row"))
                     {
                         SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                     }
-
                     UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
                     host.DrawChecked(new Rect(windowX, windowY, windowW, WindowChromeLayout.SettingsWindowHeight(screenW, screenH)));
 
                     Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
                     Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
-                    bool hasWideHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
-                    bool hasNarrowBand = snapshot.Viewports.TryGetValue("help-band", out Rect band);
-                    bool hasBody = snapshot.RectById.ContainsKey("body-row");
+                    bool hasPanel = snapshot.Viewports.TryGetValue("help-scroll", out Rect panel);
+                    bool hasBody = snapshot.RectById.TryGetValue("body-row", out Rect body);
                     Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
                     bool overflow = contentArea.width > content.width + 0.5f;
-                    // The presentation this PAIR must produce, from the hand-written table above.
-                    bool expectBand = open && expectBandWhenOpen;
+                    measured[language + "|" + screenW + "x" + screenH + "|" + state]
+                        = (content.width, hasPanel, hasPanel ? panel.height : 0f, hasBody);
 
                     lines.Add(screenW + "x" + screenH
                         + (screenW < 1024 ? " (UNREACHABLE stress probe)" : "")
@@ -1909,46 +1911,27 @@ internal static class Program
                         + " | " + language + " | " + state
                         + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                         + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                        + " | help=" + (hasWideHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
-                        + " | band=" + (hasNarrowBand ? band.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | panel=" + (hasPanel ? panel.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | body=" + (hasBody ? body.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
                         + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                         + " | overflow=" + overflow
                         + " | fit=" + reports.Count);
 
-                    // ONE presentation per drawer state: retracted arranges neither, open arranges exactly
-                    // one. GUARD: the pre-fix replacement shape also satisfied it, so it does not redden
-                    // under the criterion revert - it keeps its original failure mode (an open drawer that
-                    // arranges BOTH).
-                    if (open != (hasWideHelp != hasNarrowBand)) violations++;
+                    // BH1.1/BH1.3, per case: the body is ALWAYS arranged, and the panel is arranged exactly
+                    // while help is open. Reverting the panel's VisibleKey to a body-replacing shape (the
+                    // pre-BH1 band) reddens the first clause with the band present and the body absent;
+                    // re-pointing the panel at a derived key reddens the second.
+                    if (!hasBody) violations++;
+                    if (open != hasPanel) violations++;
 
-                    // The body row and the narrow band are two presentations of ONE slot: the band REPLACES
-                    // the body, so exactly one of them occupies the page while the other is hidden. GUARD
-                    // (both shipped shapes satisfy it): arranging neither would leave the page with no
-                    // reading surface at all, and arranging both is the collision the shape removes.
-                    if (hasBody == hasNarrowBand) violations++;
-
-                    // The presentation the PAIR must produce, against the hand-written expectation: the
-                    // acceptance pair 1024x768/open SHARES (band absent, help column present, body present)
-                    // and the synthetic UNREACHABLE 800x600 probe exercises the band branch. This is the
-                    // clause a reverted host criterion reddens (measured: pre-fix full-delta question ->
-                    // the 1024x768/open row arranges band=404 instead of the column, 2 violations); it is
-                    // NOT a guard.
-                    if (open && (hasNarrowBand != expectBand || hasWideHelp != !expectBand)) violations++;
-
-                    // A live reading surface, whichever presentation the state produced: with the body
-                    // arranged the centre column's viewport must be real, and with the band arranged the
-                    // band's own viewport must be. GUARD (both shapes satisfy it).
-                    if (hasBody)
-                    {
-                        if (content.width <= 1f) violations++;
-                    }
-                    else if (band.width <= 1f || band.height <= 1f)
-                    {
-                        violations++;
-                    }
+                    // A live reading surface in BOTH states: the centre column and the nav column must have
+                    // real viewports, and an open panel must have one too (a zero-height band would be the
+                    // reservation silently collapsing into the footer).
+                    if (content.width <= 1f || nav.width <= 1f) violations++;
+                    if (open && (panel.width <= 1f || panel.height <= 1f)) violations++;
 
                     // GUARD: horizontal content overflow and any fit-audit finding are geometry failures in
-                    // either shape; they report a broken frame, not which presentation was chosen.
+                    // either state; they report a broken frame, not which help state was chosen.
                     if (overflow) violations++;
                     if (reports.Count > 0) violations++;
                 }
@@ -1964,14 +1947,41 @@ internal static class Program
         SetTranslatorResolver(null);
         Verse.UI.screenWidth = 1920;
         Verse.UI.screenHeight = 1080;
+
+        // BH1.2, per language and screen: the toggle must not move the page. The two rows of a pair are
+        // compared against EACH OTHER's measured width, never against a constant this lane restates, so a
+        // policy that grew the window again for help (the pre-BH1 widening) reddens the pair.
+        foreach (string language in languages)
+        {
+            foreach ((int screenW, int screenH) in new[] { (1024, 768), (800, 600), (1920, 1080) })
+            {
+                string openKey = language + "|" + screenW + "x" + screenH + "|open";
+                string closedKey = language + "|" + screenW + "x" + screenH + "|closed";
+                Assert(measured.ContainsKey(openKey) && measured.ContainsKey(closedKey),
+                    "the sweep recorded no pair for " + language + " at " + screenW + "x" + screenH
+                    + " (both help states must be measured for every screen)");
+                (float ContentW, bool HasPanel, float PanelH, bool HasBody) open = measured[openKey];
+                (float ContentW, bool HasPanel, float PanelH, bool HasBody) closed = measured[closedKey];
+                Assert(Math.Abs(open.ContentW - closed.ContentW) < 0.01f && open.HasBody && closed.HasBody
+                        && open.HasPanel && !closed.HasPanel,
+                    language + " at " + screenW + "x" + screenH
+                    + ": opening help must not change the centre column's width, the body must stay arranged"
+                    + " in both states, and the panel must be the only thing that appears with help open"
+                    + " (open content=" + open.ContentW + " body=" + open.HasBody + " panel=" + open.HasPanel
+                    + ", closed content=" + closed.ContentW + " body=" + closed.HasBody
+                    + " panel=" + closed.HasPanel + ")");
+            }
+        }
+
         string artifact = Path.Combine(outDir, "layout-sweep.txt");
         File.WriteAllLines(artifact, lines);
         Console.WriteLine("[evidence] width/language sweep written to " + artifact);
         foreach (string line in lines) Console.WriteLine("  " + line);
         Assert(violations == 0,
             "the width/language evidence sweep found " + violations + " geometry violation(s) "
-            + "(wrong help presentation for the pair's screen, horizontal content overflow, a dead content"
-            + " viewport, or text overflow reported by the fit audit); see " + artifact);
+            + "(a help state that replaces the settings body, a panel that is arranged in the wrong state, a"
+            + " dead content or nav viewport, horizontal content overflow, or text overflow reported by the"
+            + " fit audit); see " + artifact);
     }
 
     /// <summary>Repository root for evidence artifacts, found the same way the UI-logic lane finds it.</summary>
@@ -1991,9 +2001,9 @@ internal static class Program
         var fake = new RecordingSettingsSource();
         using UiHost host = UsKernelSettingsHost.Create(fake);
 
-        // The shipped drawer default is RETRACTED (task-10: the window opens narrow). This lane is
-        // about the three-column page at the reference viewports, so it expands the drawer explicitly
-        // before asserting the help column is arranged.
+        // The shipped help default is RETRACTED (task-10: the window opens narrow). This lane is about the
+        // two-column page at the reference viewports, so it expands the panel explicitly before asserting
+        // the help band is arranged.
         host.Bindings.Set("help-open", true);
 
         // The maintainer-specified safe-area sizes (window ≈ 60-75% of the three reference
@@ -2003,7 +2013,7 @@ internal static class Program
         {
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
             Assert(snapshot.Viewports.ContainsKey("content-scroll"), "content scroll viewport present at " + viewport);
-            Assert(snapshot.Viewports.ContainsKey("help-scroll"), "help scroll viewport present at " + viewport);
+            Assert(snapshot.Viewports.ContainsKey("help-scroll"), "help panel band present at " + viewport);
             Assert(snapshot.RectById.ContainsKey("footer"), "footer rect present at " + viewport);
 
             Rect contentScroll = snapshot.Viewports["content-scroll"];
@@ -2572,8 +2582,8 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
 
-        // The shipped drawer default is retracted, so the lane expands it first: the reset contract
-        // covers BOTH page scrolls, and the help scroll only exists while the drawer is arranged.
+        // The shipped help default is retracted, so the lane expands it first: the reset contract covers
+        // BOTH page scrolls, and the help panel scroll only exists while the panel is arranged.
         host.Bindings.Set("help-open", true);
 
         // 0.4.0 keys scroll positions by element node, so arranging first is what makes the ids
@@ -2591,7 +2601,7 @@ internal static class Program
         Assert(content.x == 0f && content.y == 0f,
             "workspace switch resets the centre content scroll to top");
         Assert(help.x == 0f && help.y == 0f,
-            "workspace switch resets the right help scroll to top");
+            "workspace switch resets the bottom help panel scroll to top");
     }
 
     private static void RichDynamicDataMeasureAndDraw()

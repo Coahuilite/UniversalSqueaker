@@ -42,13 +42,14 @@ internal static class MoodLayoutFocusedTests
 {
     private const float ViewportWidth = 800f;
     private const float ViewportHeight = 600f;
-    // Below the manifest's 500px three-column breakpoint the body row resolves to a stacked column, so
-    // this viewport (480 - 24 page padding = 456 inner < 500) exercises the narrow page shape; the card
+    // Below the manifest's 500px body-row breakpoint the row resolves to a stacked column, so this
+    // viewport (480 - 24 page padding = 456 inner < 500) exercises the narrow page shape; the card
     // itself is then the full column width.
     private const float NarrowViewportWidth = 480f;
-    // A viewport comfortably inside the three-column row regime (724 inner 700 >= the row's 500
-    // breakpoint) - the narrow-card regime this lane exists for.
-    private const float NarrowestThreeColumnWidth = 724f;
+    // A viewport comfortably inside the two-column row regime (724 inner 700 >= the row's 500
+    // breakpoint) - the narrow-card regime this lane exists for. BH1: the row's two columns are nav +
+    // centre at every real width, because help no longer takes a third column out of the width.
+    private const float NarrowestRowRegimeWidth = 724f;
     // The rich RecordingSettingsSource fixture mirrors production: one mood row per SqueakMood, i.e.
     // ALL FOUR product moods (Good / Neutral / Bad / Break), each with distinct effective values.
     private const int MoodCount = 4;
@@ -111,8 +112,8 @@ internal static class MoodLayoutFocusedTests
         Step("the label column follows a longer resolved label", LabelColumnFollowsTheResolvedLabelWidth);
         Step("slider track widths are equal across parameters and moods", SliderTrackWidthsAreEqual);
         Step("narrow viewport keeps the template and every control", () => TwoLineMoodTemplateGeometry(NarrowViewportWidth, 720f));
-        Step("narrowest three-column card keeps every control", () => TwoLineMoodTemplateGeometry(NarrowestThreeColumnWidth, 720f));
-        Step("736px three-column card keeps the template", () => TwoLineMoodTemplateGeometry(736f, 720f));
+        Step("narrowest two-column card keeps every control", () => TwoLineMoodTemplateGeometry(NarrowestRowRegimeWidth, 720f));
+        Step("736px two-column card keeps the template", () => TwoLineMoodTemplateGeometry(736f, 720f));
         Step("mood value round-trip clamps to the factor ranges", MoodValueRoundTripClampsToFactorRanges);
         Step("minus click routes typed set-mood-tuning", MinusClickRoutesTypedMoodTuning);
         Step("plus click routes typed set-mood-tuning", PlusClickRoutesTypedMoodTuning);
@@ -380,7 +381,7 @@ internal static class MoodLayoutFocusedTests
     /// </summary>
     private static void EveryParameterRegistersEveryControl()
     {
-        using CaptureContext ctx = CreateCaptureContext(NarrowestThreeColumnWidth, 720f);
+        using CaptureContext ctx = CreateCaptureContext(NarrowestRowRegimeWidth, 720f);
         List<MoodRowControls> rows = ctx.Mood.Grouped(MoodCount);
         Assert(rows.Count == MoodCount, "expected one control group per mood card, got " + rows.Count);
         for (int m = 0; m < rows.Count; m++)
@@ -1345,15 +1346,17 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// Both reset controls must route their typed write at every card width: the narrowest three-column
-    /// card, the 800px reference, a mid width and the wide layout. The header may keep the controls beside
+    /// Both reset controls must route their typed write at every card width: the narrowest two-column
+    /// card, the 800px reference, a mid width and the widest sweep (BH1: every one of these is a nav + centre
+    /// row with help retracted, which is the page's only shape at these probes; the retired third column is
+    /// gone). The header may keep the controls beside
     /// the mood name or drop them to their own line(s) - only the placement changes, never the semantics.
     /// "Reset to default" is a CLEAR (set-mood-tuning with Clear and a null value); "reset to preset" is a
     /// typed reset-mood-to-preset WRITE. The two-line template must hold at every width as well.
     /// </summary>
     private static void ResetRoutingAcrossCardWidths()
     {
-        float[] widths = { NarrowestThreeColumnWidth, ViewportWidth, 1000f, 1920f };
+        float[] widths = { NarrowestRowRegimeWidth, ViewportWidth, 1000f, 1920f };
         foreach (float width in widths)
         {
             using CaptureContext ctx = CreateCaptureContext(width, 720f);
@@ -1474,9 +1477,11 @@ internal static class MoodLayoutFocusedTests
     }
 
     // ------------------------------------------------------------------------------------------------
-    // V3 (task-14) - the real boxes with their REAL drawer state, production-shaped layer/domain/mood
+    // V3 (task-14) - the real page box with its REAL help state, production-shaped layer/domain/mood
     // state, and the inheritance readouts. Every case below sets `help-open` itself and arranges the box
-    // that state produces (open 984x524, retracted 760x524); nothing is inferred from a viewport number.
+    // that state produces - since BH1 the SAME 760x524 box at both states, because the bottom help panel
+    // reserves its declared Height 140 out of the body's leftover instead of taking a 320px column out of
+    // the width; nothing is inferred from a viewport number.
     //
     // MUTATION LEDGER (each revert RUN during V3/task-18, all restored, suite green after):
     //  - task-18 A1 reporting the SELECTED layer for all three factors reddens the provenance clause
@@ -1489,6 +1494,10 @@ internal static class MoodLayoutFocusedTests
     //    reddens "DEVICE-INPUT NOTE: with NO action-scope rows the mood parameters must still be drawn".
     //  - R2 restoring the pre-V3 fixed 90/96 column pair reddens the column clause by name with the
     //    measured overlap: "label end 180, hint x 184 - the pre-V3 fixed 90/96 pair overlapped by 6px".
+    //    That pair is the RETIRED 392px body (what the 320px side column left the centre); the pre-V3
+    //    numbers were hardcoded, so the overlap itself reddens the clause at any body - only the printed
+    //    pair follows the box, and the single BH1 body (the 524 centre column less the card padding = 500)
+    //    measures label end 288 against hint x 304 there.
     //  - R2b restoring the pre-V3 hardcoded hint band (the hint text is never measured) reddens
     //    "the inherited-scope hint '→ Command' must be measured/drawn at this real body".
     //  - R3b dropping the source readout's band (so its text is never laid out) reddens
@@ -1498,12 +1507,24 @@ internal static class MoodLayoutFocusedTests
     //    stays inside the page, covers the next scope trigger, swallows that click, and is not replaced.
     // ------------------------------------------------------------------------------------------------
 
-    private const float V3OpenPageBox = 984f;
-    private const float V3RetractedPageBox = 760f;
+    // BH1 truth: the help toggle changes NO width. The window has ONE page box - 800 on the game's minimum
+    // screen minus 2 x 20 shell chrome = 760 wide, 600 minus the title bar and bottom inset = 524 high - and
+    // BOTH help states arrange it. The retired drawer pair (open 984x524 / retracted 760x524) went with the
+    // 320px side column, so the case below names its help state by a flag and never by a box.
+    private const float V3PageBoxWidth = 760f;   // the one page box, in both help states
     private const float V3PageBoxHeight = 524f;
+    /// <summary>What the centre column is: 760 less page-root's Padding 12 x 2 = 736 inner, less the
+    /// 200 nav column and the body-row Gap 12 = 524, at BOTH help states.</summary>
+    private const float V3CentreColumnWidth = 524f;
+    /// <summary>The engine's own scrollbar reservation (UiLayoutEngine.ScrollbarWidth): a Scroll's content is
+    /// laid out in its viewport less this, so the mood CARD is 16 narrower than the centre column. The B3
+    /// playtest measured the same relation at the old open box (card 400 inside centre 416).</summary>
+    private const float ScrollbarReserve = 16f;
+    /// <summary>The manifest's declared bottom help panel reservation (help-scroll Height="140").</summary>
+    private const float V3HelpPanelHeight = 140f;
 
     /// <summary>
-    /// P1 (V3.1): with the REAL boxes and their real drawer state, the Tuning page arranges its three areas
+    /// P1 (V3.1): with the REAL page box and each real help state, the Tuning page arranges its three areas
     /// in the order layer/domain -> Action Scope -> Mood, and the mood area sits below both. The order is
     /// read off the DRAWN rects (the layer segment, the dropdown triggers, the mood sliders/fields), not off
     /// the manifest; the heading roles are a source fact recorded in the class doc of this step (area
@@ -1518,12 +1539,17 @@ internal static class MoodLayoutFocusedTests
             Program.SetTranslatorResolver(table);
             try
             {
-                foreach ((string state, float box, bool helpOpen) in new[]
+                // BH1: both help states arrange the SAME box, so the loop switches one flag and records what
+                // the arrangement measured instead of naming a box per state.
+                var centreByState = new Dictionary<string, float>();
+                foreach ((string state, bool helpOpen) in new[]
                          {
-                             ("drawer open", V3OpenPageBox, true),
-                             ("drawer retracted", V3RetractedPageBox, false),
+                             ("help open", true),
+                             ("help closed", false),
                          })
                 {
+                    float box = V3PageBoxWidth;
+                    string where = "Tuning " + language + ", " + state + " at page box " + box;
                     var metrics = new Program.StubMetrics();
                     var reports = new List<UiOverflowReport>();
                     UiFitAudit.Attach(metrics, reports.Add);
@@ -1532,7 +1558,7 @@ internal static class MoodLayoutFocusedTests
                     {
                         var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
                         source.SetTuningLayer(1);
-                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         host.Bindings.Invoke("set-tab", "Tuning");
                         host.Bindings.Set("help-open", helpOpen);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
@@ -1541,7 +1567,27 @@ internal static class MoodLayoutFocusedTests
                         Assert(snapshot.RectById.TryGetValue("scope-tree", out Rect cardPage),
                             "the Tuning workspace must arrange scope-tree");
                         Assert(snapshot.Viewports.ContainsKey("help-scroll") == helpOpen,
-                            "the help column must be arranged exactly while the drawer is open");
+                            "the bottom help panel must be arranged exactly while help is open"
+                            + " (help-open really set; BH1 has ONE presentation and no side column)");
+                        Assert(snapshot.RectById.ContainsKey("body-row")
+                                && snapshot.Viewports.ContainsKey("content-scroll")
+                                && snapshot.Viewports.ContainsKey("nav-column"),
+                            where + ": BH1 never replaces the body - the body row, the centre content scroll"
+                            + " and the nav column stay arranged in BOTH help states");
+                        Assert(Math.Abs(snapshot.Viewports["content-scroll"].width - V3CentreColumnWidth) <= 0.5f
+                                && Math.Abs(cardPage.width
+                                    - (V3CentreColumnWidth - ScrollbarReserve)) <= 0.5f,
+                            where + ": the centre viewport is the 524 column and the mood card inside it is"
+                            + " that column less the engine's 16px scrollbar reservation, at BOTH help states"
+                            + " (help costs the body's height, never its width); viewport="
+                            + Num(snapshot.Viewports["content-scroll"].width) + " card=" + Num(cardPage.width));
+                        centreByState[state] = cardPage.width;
+                        if (helpOpen)
+                        {
+                            Assert(Math.Abs(snapshot.Viewports["help-scroll"].height - V3HelpPanelHeight) <= 0.5f,
+                                where + ": the bottom help panel is arranged at its declared Height 140, got "
+                                + Num(snapshot.Viewports["help-scroll"].height));
+                        }
 
                         Rect viewport = snapshot.Viewports["content-scroll"];
                         Vector2 scroll = Program.ScrollPositionById(host.Session, "content-scroll");
@@ -1559,13 +1605,13 @@ internal static class MoodLayoutFocusedTests
                         }
                         finally { ClearOverrides(); }
 
-                        string where = "Tuning " + language + ", " + state + " at page box " + box;
                         var buttons = raw.Buttons.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
                         var sliders = raw.Sliders.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
                         var fields = raw.TextFields.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
 
-                        // The dropdown TRIGGERS are the fixed 96px bands (layer buttons are 76/117 wide at
-                        // these two bodies, mood minus/plus are 20px): domain trigger + one per scope row.
+                        // The dropdown TRIGGERS are the fixed 96px bands (the layer segment is the three
+                        // equal-width buttons, 117px each at the single BH1 body; mood minus/plus are 20px):
+                        // domain trigger + one per scope row.
                         var triggers = buttons.Where(r => Math.Abs(r.width - 96f) <= 1.5f).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
                         Console.WriteLine("[v3-buttons] " + where + " cardLocal=" + Num(cardLocal.width) + "x" + Num(cardLocal.height)
                             + " layer=" + host.Bindings.Get<int>("tuning-layer")
@@ -1577,7 +1623,8 @@ internal static class MoodLayoutFocusedTests
                             where + ": the Race layer must draw the domain trigger plus the two scope triggers, got " + triggers.Count);
 
                         // The card header owns the widest band at the top; the layer segment is the three
-                        // equal-width buttons under it (76px at the 400-wide card, 117px at the 524-wide one).
+                        // equal-width buttons under it (117px at the 524-wide card, which since BH1 is the only
+                        // card either help state arranges - the retired side column left the open case a 416).
                         var layerBand = buttons
                             .Where(r => r.y < triggers[0].y - 0.5f && r.width > 40f && r.width <= 144f)
                             .ToList();
@@ -1662,6 +1709,12 @@ internal static class MoodLayoutFocusedTests
                         UiFitAudit.Enabled = false;
                     }
                 }
+                // BH1: the retired open/retracted pair is ONE box, and the claim is measured rather than
+                // restated - the card keeps its centre column while the panel is arranged, so help costs the
+                // body its HEIGHT (the declared 140) and never a width.
+                Assert(Math.Abs(centreByState["help open"] - centreByState["help closed"]) <= 0.5f,
+                    "BH1: help-open changes no width - the mood card measures " + Num(centreByState["help open"])
+                    + " with the panel against " + Num(centreByState["help closed"]) + " without it");
             }
             finally
             {
@@ -1671,14 +1724,18 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// P2 (V3): the two inheritance readouts are really LAID OUT at both real bodies, and the scope hint's
-    /// columns stay inside the card without overlapping the action name.
+    /// P2 (V3): the two inheritance readouts are really LAID OUT at the single real body both help states
+    /// arrange, and the scope hint's columns stay inside the card without overlapping the action name.
     /// <list type="bullet">
-    /// <item>The inheritance HINT: pre-V3 it was suppressed below a 480px element width, which is every real
-    /// help-open body (392) - the state simply vanished where the window is tightest. The lane passes the
-    /// production layout function at both real body widths and asserts the hint is present inline, inside the
-    /// card, and disjoint from the label band. Faithful revert: restoring the `ctx.ViewWidth &gt;= 480f`
-    /// suppression (or dropping the hint) reddens the "hint must be laid out" clause by name.</item>
+    /// <item>The inheritance HINT: pre-V3 it was suppressed below a 480px element width, which used to be
+    /// every real help-open body - the retired 320px side column left the open window a 392. BH1 arranges ONE
+    /// body at both help states (the 524 centre column less the card padding = 500), so the lane passes the
+    /// production layout function at that measured body and asserts the hint is present inline, inside the
+    /// card, and disjoint from the label band. Faithful revert: dropping the hint, or restoring the pre-V3
+    /// hardcoded (never measured) band, still reddens the "hint must be laid out" clause by name. The
+    /// `ctx.ViewWidth &gt;= 480f` suppression gate is NOT re-cut here and is named rather than deleted: at the
+    /// single 500px BH1 body that retired gate no longer bites, so what this clause pins at the real box is
+    /// the INLINE choice, not the suppression.</item>
     /// <item>The mood SOURCE readout: the text the widget resolves is captured through the real draw pass's
     /// metrics seam, so the row really drew one - the pre-V3 shape (one number, no source) measures none.</item>
     /// </list>
@@ -1691,15 +1748,20 @@ internal static class MoodLayoutFocusedTests
             Program.SetTranslatorResolver(table);
             try
             {
-                foreach ((string state, float box, bool helpOpen) in new[]
+                // BH1: one page box, two help states - the flag is the input and the body is what the
+                // arrangement measured, recorded per state and compared after the loop.
+                var bodyByState = new Dictionary<string, float>();
+                foreach ((string state, bool helpOpen) in new[]
                          {
-                             ("drawer open", V3OpenPageBox, true),
-                             ("drawer retracted", V3RetractedPageBox, false),
+                             ("help open", true),
+                             ("help closed", false),
                          })
                 {
+                    float box = V3PageBoxWidth;
                     // The real body the widget arranges at this box = the drawn card minus the card padding.
                     var probeMetrics = new Program.StubMetrics();
-                    float body = TuningBodyWidthAt(pageBox: box, helpOpen: helpOpen, metrics: probeMetrics);
+                    float body = TuningBodyWidthAt(helpOpen: helpOpen, metrics: probeMetrics);
+                    bodyByState[state] = body;
                     string where = "Tuning " + language + ", " + state + " at page box " + box + " (body " + Num(body) + ")";
 
                     // (a) the production layout function, at the REAL body, for both scope rows. The fixture's
@@ -1755,7 +1817,7 @@ internal static class MoodLayoutFocusedTests
                     {
                         var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
                         source.SetTuningLayer(1);
-                        using UiHost host = UsKernelSettingsHost.Create(source, recorder, () => box);
+                        using UiHost host = UsKernelSettingsHost.Create(source, recorder);
                         host.Bindings.Invoke("set-tab", "Tuning");
                         host.Bindings.Set("help-open", helpOpen);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
@@ -1802,7 +1864,7 @@ internal static class MoodLayoutFocusedTests
                     var hintRecorder = new RecordingMetrics();
                     var hintSource = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
                     hintSource.SetTuningLayer(1);
-                    using (UiHost host = UsKernelSettingsHost.Create(hintSource, hintRecorder, () => box))
+                    using (UiHost host = UsKernelSettingsHost.Create(hintSource, hintRecorder))
                     {
                         host.Bindings.Invoke("set-tab", "Tuning");
                         host.Bindings.Set("help-open", helpOpen);
@@ -1821,6 +1883,15 @@ internal static class MoodLayoutFocusedTests
                             where + ": the row that OWNS its scope must not draw an inheritance hint");
                     }
                 }
+                // BH1: the two help states hand the widget the SAME body, because the panel reserves its
+                // declared 140 out of the body's HEIGHT and takes nothing off any width on this page.
+                Assert(Math.Abs(bodyByState["help open"] - bodyByState["help closed"]) <= 0.01f,
+                    "BH1: help-open changes no body width - measured " + Num(bodyByState["help open"])
+                    + " with the panel against " + Num(bodyByState["help closed"]) + " without it");
+                Assert(Math.Abs(bodyByState["help open"]
+                        - (V3CentreColumnWidth - ScrollbarReserve - UsCardLayout.Padding * 2f)) <= 0.5f,
+                    "BH1: that one body is the 524 centre column less the card's own padding (the card being"
+                    + " the column less the scrollbar reservation), got " + Num(bodyByState["help open"]));
             }
             finally
             {
@@ -1840,7 +1911,7 @@ internal static class MoodLayoutFocusedTests
     private static void MoodAreaSurvivesMissingScopeRows()
     {
         var metrics = new Program.StubMetrics();
-        float box = V3OpenPageBox;
+        float box = V3PageBoxWidth;
         var source = new RecordingSettingsSource
         {
             RichData = true,
@@ -1848,8 +1919,10 @@ internal static class MoodLayoutFocusedTests
             TuningActionScopes = Array.Empty<ActionScopeRowView>(),
         };
         source.SetTuningLayer(1);
-        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
+        // BH1: with help open the panel really is arranged - the mood area has to survive the degenerate
+        // scope list AND the panel's declared 140 out of the body's height, at the one 760x524 box.
         host.Bindings.Set("help-open", true);
         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
@@ -1893,9 +1966,9 @@ internal static class MoodLayoutFocusedTests
         var metrics = new Program.StubMetrics();
         var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
         source.SetTuningLayer(1);
-                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => V3OpenPageBox);
+        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
-        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
+        host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
 
         // (1) a LAYER write touches the layer channel and nothing else.
         ResetTuningRecorders(source);
@@ -2028,8 +2101,9 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
-    /// <summary>Draws the Tuning page at the real help-open box with one matrix input and returns the real
-    /// draw pass's text recorder (a string the widget never lays out is never measured).</summary>
+    /// <summary>Draws the Tuning page at the one real page box with the help panel open, for one matrix
+    /// input, and returns the real draw pass's text recorder (a string the widget never lays out is never
+    /// measured).</summary>
     private static RecordingMetrics DrawMoodReadout(
         int[] sourceLayers, MoodTuningRecord? own, string targetLabel, SqueakMoodResetPresetState? row1PresetReset, int selectedLayer)
     {
@@ -2044,13 +2118,13 @@ internal static class MoodLayoutFocusedTests
             Row1PresetReset = row1PresetReset,
         };
         source.SetTuningLayer(selectedLayer);
-        using UiHost host = UsKernelSettingsHost.Create(source, recorder, () => V3OpenPageBox);
+        using UiHost host = UsKernelSettingsHost.Create(source, recorder);
         host.Bindings.Invoke("set-tab", "Tuning");
         host.Bindings.Set("help-open", true);
-        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
+        host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
-        host.DrawChecked(new Rect(0f, 0f, V3OpenPageBox, V3PageBoxHeight));
+        host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
+        host.DrawChecked(new Rect(0f, 0f, V3PageBoxWidth, V3PageBoxHeight));
         return recorder;
     }
 
@@ -2107,29 +2181,56 @@ internal static class MoodLayoutFocusedTests
     }
 
     // PM residual F3: synthetic long translations distinguish the resolved label from its short key.
-    // Input is the real help-open Host at 984x524, with wrap-aware calibrated StubMetrics.
+    // Input is the real Host at the ONE BH1 page box, 760x524 with the help panel arranged, using the
+    // wrap-aware calibrated StubMetrics.
     private static void ResolvedActionLabelGrowsTheRow()
     {
         foreach (string language in new[] { "English", "ChineseSimplified" })
         {
             var table = Program.ReadKeyedTable(language);
-            float Height(string draft)
+            // One draw per resolved label, returning the ARRANGED card so the growth is asserted against the
+            // body this box really gives and never against a restated width.
+            (float CardWidth, float CardHeight) Draw(string draft)
             {
                 var translated = new Dictionary<string, string>(table, StringComparer.Ordinal) { ["US.Action.Draft"] = draft };
                 Program.SetTranslatorResolver(translated);
                 var source = new RecordingSettingsSource { RichData = true };
-                using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics(), () => V3OpenPageBox);
+                using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
                 host.Bindings.Invoke("set-tab", "Tuning");
                 host.Bindings.Set("help-open", true);
-                return host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight)).RectById["scope-tree"].height;
+                Rect card = host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight)).RectById["scope-tree"];
+                return (card.width, card.height);
             }
             try
             {
-                float ordinary = Height(table["US.Action.Draft"]);
+                (float cardWidth, float ordinary) = Draw(table["US.Action.Draft"]);
                 string longer = string.Concat(Enumerable.Repeat(language == "English" ? "Long drafted action " : "很长的征召动作名称", 20));
-                float expanded = Height(longer);
-                Assert(expanded > ordinary + 100f, language + ": resolved long action label must grow the production row, key-only measurement cannot");
-                Console.WriteLine("[v3-resolved-row] " + language + " normal=" + Num(ordinary) + " long=" + Num(expanded));
+                (float longCardWidth, float expanded) = Draw(longer);
+                var ruler = new Program.StubMetrics();
+                float oneLine = ruler.MeasureText("x", UiFont.Small, 100000f);
+                float body = cardWidth - UsCardLayout.Padding * 2f;
+                string hint = "→ " + table["US.Tuning.Scope.Command"];
+                float predicted = UsScopeTreeWidget.ScopeRowLayoutFor(body, longer, hint, ruler).RowHeight
+                    - UsScopeTreeWidget.ScopeRowLayoutFor(body, table["US.Action.Draft"], hint, ruler).RowHeight;
+                // BH1 re-cut of the old flat 100px floor: that number was reachable ONLY because the retired
+                // 320px side column left the row a 392 body - the same Chinese label that wrapped into eight
+                // lines there wraps into five at the 524 centre column. The business claim is unchanged (the
+                // RESOLVED label wraps and a key never does), so it is stated in calibrated text lines read
+                // off the arrangement: the card must gain at least one wrapped line, and it must gain what the
+                // production row-layout helper predicts at the body this box measures, less one line of seam
+                // slack. A narrower drawn row than the probed body only ever ADDS lines, never removes them.
+                Assert(Math.Abs(longCardWidth - cardWidth) <= 0.01f,
+                    language + ": BH1 - the resolved label changes no width, got " + Num(cardWidth)
+                    + " -> " + Num(longCardWidth));
+                Assert(expanded > ordinary + oneLine - 0.01f,
+                    language + ": resolved long action label must grow the production row by at least one"
+                    + " wrapped text line (" + Num(oneLine) + "), key-only measurement cannot; got "
+                    + Num(ordinary) + " -> " + Num(expanded));
+                Assert(expanded >= ordinary + predicted - oneLine,
+                    language + ": the drawn growth " + Num(expanded - ordinary) + " must follow the row layout"
+                    + " the production helper predicts at the measured body " + Num(body) + " (" + Num(predicted) + ")");
+                Console.WriteLine("[v3-resolved-row] " + language + " card=" + Num(cardWidth) + " body=" + Num(body)
+                    + " normal=" + Num(ordinary) + " long=" + Num(expanded) + " predictedWrapGrowth=" + Num(predicted));
             }
             finally { Program.SetTranslatorResolver(null); }
         }
@@ -2173,16 +2274,17 @@ internal static class MoodLayoutFocusedTests
     }
 
     /// <summary>
-    /// The widget BODY width at one real page box: measured, not derived - the card is arranged at that box
-    /// with the same state the product uses and the body is the card minus the card padding.
+    /// The widget BODY width for one help state: measured, not derived - the card is arranged at the one BH1
+    /// page box (help never changes it) with the state the product uses, and the body is the card minus the
+    /// card padding.
     /// </summary>
-    private static float TuningBodyWidthAt(float pageBox, bool helpOpen, Program.StubMetrics metrics)
+    private static float TuningBodyWidthAt(bool helpOpen, Program.StubMetrics metrics)
     {
         var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
-        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => pageBox);
+        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
         host.Bindings.Set("help-open", helpOpen);
-        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(pageBox, V3PageBoxHeight));
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
         Rect card = snapshot.RectById["scope-tree"];
         return Math.Max(1f, card.width - UsCardLayout.Padding * 2f);
     }

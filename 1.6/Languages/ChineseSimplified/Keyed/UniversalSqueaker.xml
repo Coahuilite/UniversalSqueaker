@@ -240,20 +240,20 @@
   <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
-  <!-- 帮助抽屉：页头开关，用于收起/展开右侧帮助抽屉。 -->
+  <!-- 底部帮助面板（BH1）：移至页脚时保留既有机器标识。 -->
   <US.Help.Drawer.Toggle>帮助</US.Help.Drawer.Toggle>
-  <US.Help.Drawer.Toggle.Hint>显示或隐藏帮助抽屉</US.Help.Drawer.Toggle.Hint>
+  <US.Help.Drawer.Toggle.Hint>显示或隐藏底部帮助面板</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
   <US.Help.PageTitle.Title>本窗口的用法</US.Help.PageTitle.Title>
   <US.Help.PageTitle.Overview>窗口按工作区组织：总览、距离、语音包、调音与预设，由左侧导航切换。所有修改即时生效，并自动保存到磁盘。</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>工作区导航</US.Help.PageTitle.Nav.Label>
-  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新右侧帮助面板的内容。</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新窗口底部帮助面板的内容。</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
-  <US.Help.PageTitle.HelpDrawer.Label>帮助抽屉开关</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏右侧帮助抽屉。把指针停在任意控件上，抽屉即解释该控件；关闭后中间内容区获得完整宽度，已选主题在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>帮助面板开关</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏本开关上方的帮助面板；它与构建标识、保存状态同处页脚一行。把指针停在任意控件上，面板即解释该控件；展开时设置区宽度不变、仍可继续操作，已选主题与各区域自身的滚动位置在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>

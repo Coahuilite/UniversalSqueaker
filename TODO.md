@@ -5,13 +5,11 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — current queue (2026-10-04, handoff round)
+## NOW — current queue (2026-10-05, BH1)
 
-**This round closes the US feedback loop and hands over.** The user reported the final playtest, authorized
-this tidy, and is switching to another Harness - subsequent development starts there. Package identity stays US
-`1a54e1f` (full `1a54e1fbcb0d713faa4d0e518d3cdb75a1c71224`), FL `0181268`, Demo `9d4b7e0`; this docs-only
-round does not rebuild, so the payload's embedded commit will not equal HEAD until a rebuild - expected per
-`AGENTS.md`, not a defect.
+**BH1 implements the bottom help panel; the next package waits for a requested playtest.** Held package
+identity stays US `1a54e1f`, FL `0181268`, Demo `9d4b7e0`. Source/build verification is ahead of that US
+package; its embedded commit is expected to differ from HEAD until repackaging, per `AGENTS.md`.
 
 - The user reaffirmed C1/C2 as normal, keeping the original IDs; verbatim feedback and runtime evidence are
   in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`. Remaining coverage limits are in
@@ -23,19 +21,25 @@ round does not rebuild, so the payload's embedded commit will not equal HEAD unt
   - **XG1 empty xenotype target**: observe the unavailable message and that the layer can still be left.
   - **V2 Packs**: observe filter -> race/xenotype browse -> pack-enable order, the switch-shaped per-pack
     enable and the read-only scope line. Disclosed change: the filter band no longer draws the help-focus
-    border (a Section + `us/section-header` now; no other Packs band had one).
+    border (a Section + `us/section-header` now; no other Packs band had one). With BH1 open, the enable
+    card starts 2.90 current viewports down: assess scrolling comfort and native wheel reachability.
   - **V3 Tuning**: observe layer/domain -> action scope -> mood order, the no-longer width-suppressed
     inherited-scope hint, and per-factor provenance with the preset shown only as a labelled reset target.
   - **V4 Distance/Presets/footer**: observe the camera-height axis wording, the read-only baseline note
     versus current Tuning values, and the footer keeping dirty/saving/failure plus the build identity.
-  - **B3 help/settings coexistence**: observed usable at 1024x768; remaining are independent scrolling and
-    close/reopen position retention.
-- [ ] **Bottom help proposal**: develop the separate shared-footer-space option
-  (`../modding_documents/relay_mod/BOTTOM-HELP-PROPOSAL-20261004.md`); ordinary footer rendering passed,
-  untriggered save states unverified.
-- **Deferred (unchanged)**: tuning-layer redesign, composite splitting and page-layout changes; the bottom-help
-  plan stays separate. A new team starting here reads `MEMORY.md` first and treats the deferred list below as
-  the standing scope boundary.
+  - **B3 help/settings coexistence**: observed usable at 1024x768 with the OLD side-column shape. BH1
+    (2026-10-05) replaced that shape with the bottom band, so what is left to observe in game is the NEW
+    one: the footer switch opening and closing the panel without moving or widening the window, the panel
+    scrolling on its own while the settings keep their place, and the save-status line staying readable
+    beside the switch.
+- **BH1 bottom help implemented and locally verified; package/playtest remains open.** The 140px panel
+  opens above the footer switch without changing window width; stable machine identifiers are retained.
+  Contract and acceptance detail: `../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`
+  and its `evidence/bh1-bottom-help-20261005/pm-result.json`. Synthetic save-state fit does not verify
+  untriggered in-game saves; real fonts, pointer feel and independent wheel routing still need playtest.
+- **Deferred (unchanged)**: tuning-layer redesign, composite splitting and further page-layout changes.
+  A new team starting here reads `MEMORY.md` first and treats the deferred list below as the standing
+  scope boundary.
 
 Untriggered cases stay untested; a Release carrier is a refusal-control case, not the current rehearsal input.
 
@@ -152,11 +156,14 @@ Untriggered cases stay untested; a Release carrier is a refusal-control case, no
 ## In-game acceptance — still open (maintainer steps)
 
 - [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): open/close Help at the
-  actual supported resolution; 736/480 page widths are harness probes, not forced game-resolution instructions.
-  The window opens narrow and widens by 332 (the 320 help column + the 12px row gap)
-  when Help expands - 2560x1440 opens 1280x960 (4:3) - stays centred and on screen; nav card compactness, the
-  Playback help entries, the mood cards' readability, and a session save/reopen. Also the declarative drawer:
-  open/close, scroll position preserved across close/reopen, and the real in-game window width.
+  actual supported resolution; 736/480 page widths are harness probes, not forced game-resolution
+  instructions. **BH1 changed what this observes**: the window has ONE width per screen (2560x1440 opens
+  1280x960, 4:3) and stays centred and on screen while help opens and closes - the panel is a 140px band
+  above the footer, so nothing widens, shifts or replaces the settings. Observe: the footer switch executing
+  on a real click, the panel scrolling on its own while the settings keep their place, the status text and
+  the switch readable on one row in both languages, nav card compactness, the Playback help entries, the mood
+  cards' readability, and a session save/reopen. The old side-column/drawer wording is retired: the only
+  remaining shape question is what the player sees in game.
 - [ ] **`ui.text.overflow` and tab-switch smoke** (F-05/F-07) as part of the ONE collected pass above.
 - [ ] **Early-round remnants still unverified**: Packs/Presets linkage, Distance chart hover+drag, Tuning
   cross-session file round-trip, the Chinese help tone skim, and the composite-dropdown check (picking Auto

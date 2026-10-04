@@ -237,13 +237,14 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
         // F5 (maintainer ruling 2026-09-15): an author credit is unbounded user data, and the popup
         // grows to the widest option, so one over-long name used to size the popup off the settings
-        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own closed
-        // width - the same policy number the window opens with - floored so a degenerate screen still
-        // shows a readable prefix. The pair's VALUE stays the machine token: only what the player reads
-        // is shortened, never what gets written back.
+        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own width -
+        // the same policy number the window opens with (BH1 made it the only width, so help state cannot
+        // change this cap) - floored so a degenerate screen still shows a readable prefix. The pair's
+        // VALUE stays the machine token: only what the player reads is shortened, never what gets written
+        // back.
         float displayCap = Math.Max(
             MinOptionDisplayWidth,
-            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
+            WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
         var pairs = new List<KeyValuePair<string, string>>(options.Count);
         foreach (FilterOptionView option in options)
         {

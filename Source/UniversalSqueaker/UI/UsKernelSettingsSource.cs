@@ -420,9 +420,9 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.ScrollToSection(state, sectionKey);
     }
 
-    public void SetHelpDrawerOpen(bool open)
+    public void SetHelpPanelOpen(bool open)
     {
-        state.HelpDrawerOpen = open;
+        state.HelpPanelOpen = open;
     }
 
     public void SetTuningLayer(int layer)

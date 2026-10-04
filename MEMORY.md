@@ -357,54 +357,27 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 
 ## Settings page: window policy, frame and manifest shape
 
-- **Vanilla's options window is a FIXED size that does not scale with resolution**:
-  `RimWorld.Dialog_Options.InitialSize = (650, 600)` (1.6 source), confirmed by screenshot. That is US's
-  baseline.
-- **Current window policy** (`UI/Layout/WindowChromeLayout.cs` - those constants are the single source of
-  truth): `w = RoundUpToStep(clamp(min(0.5*screenWidth, 0.9*screenHeight*4/3), 800, 1600))`, `h = w * 3/4`, and
-  `open = min(closed + 332, max(closed, screenWidth))` - the 332 is the 320 help column + the 12px row gap.
-  **The window opens narrow** and widens when Help expands. Which presentation the open drawer produces is
-  decided from the page box the shell ACTUALLY hands the page this pass -
-  `WindowChromeLayout.DrawerSharesTheBody(pageBox)`: the drawer shares the page while the centre column keeps
-  the manifest's own 400 floor. `DrawerWidensTheWindow` is DELETED: it answered the full-delta SCREEN question
-  that removed the settings at 1024x768 in the real playtest.
-  1024x768 -> **800x600**; 1920x1080 -> 960x720; 2560x1440 -> **1280x960**. **Anything restating 0.44/16:9,
-  `clamp(0.24*screenWidth, 600, 860)` or `max(600, 0.66*screenHeight)` is stale**: the old portrait policy
-  opened 614x950 at 2560x1440, and that is what the 2026-09-14 feedback was really about.
-- **Frame and manifest shape** (`UI/Layout.Schema2.xml`; gate 11 asserts exactly the two shipped Schema=2
-  manifests): nav column 200, help column 320 with `MinWidth=260`, `body-row` `Breakpoint=500`, support rows
-  sharing one control column, cards reserving ONE subtitle line (the single documented `SubtitleLines` constant
-  is the revert point). **The help catalog count is pinned** in `tools/UniversalSqueakerUiLogicTests/Program.cs`
-  and `VerifyHoverClaimsMatchCatalogItems` is bidirectional, so a catalog edit and its widget claim land
-  together.
-- **The help drawer is DECLARATIVE, and node identity is why**: `help-scroll` carries
-  `VisibleKey="help-open-wide"` (host-derived: the page's own `help-open` AND the actual page box shares) and
-  `UI/Layout/UsLayoutVariants.cs` is DELETED. `help-open` stays the page's own value binding, so help
-  visibility is independent state and is never `Tab`. `SessionRevisionBumper.Bump()` is still required because
-  the layout snapshot cache compares `cachedContentRevision`. `UiSession.PruneNodesExcept` releases a node whose
-  identity the definition no longer declares together with its `scrollPositions` entry, so a variant that
-  REMOVES the drawer destroys its node and scroll position on every close: **keeping the element IN the
-  definition is what preserves node identity and `ScrollPosition`.** That is a 0.4 -> 0.5 public-observable
-  semantic reversal (a removed identity releases its node, a hidden one keeps it).
-- **(乙1) help presentation, RE-CUT 2026-10-04 (B3 r2)**: the open drawer **SHARES the page as a third
-  column** while the actual page box leaves the centre column the manifest's own `Breakpoint="400"`. At the
-  game's minimum screen 1024x768 the open page box is 984 -> centre 416, so `body-row`, nav and the centre
-  scroll stay arranged beside the 320 help column (measured `fit=0` EN/ZH, `HelpPresentationLaneTests`).
-  `help-band` (full-width `Fill` `Scroll` between `body-row` and `footer-band`, with `body-row` hidden by
-  `body-visible`) remains a **defensive fallback** for a box that cannot afford the column, including a
-  pre-resize pass; a synthetic unsupported 800x600 screen also probes it. The 2026-09-21 shape (REPLACE the body at
-  1024x768) **FAILED the real playtest** (`PLAYTEST-V1-RESULTS-20261004.md` B3): its arithmetic is about sharing
-  the VERTICAL slot, which the band still does, not about the third column. US-only; no carrier change.
-- **The drawer's window resize is applied in `WindowOnGUI`, and the presentation reads the ACTUAL page box**:
-  `Verse.Window.WindowOnGUI` is virtual and reads `windowRect` for the pass (`GUI.Window`), and the library shell
-  does not override it, so `UniversalSqueakerSettingsWindow` applies the edge-guarded resize before the base call
-  - the pass that first presents the open drawer already has the widened page box. `BeforeDraw` feeds the width
-  the shell actually handed the page into the host's decision feed and bumps the layout clock when the answer
-  flips (a width-only change announces nothing). Both halves are what removed the one-frame pre-resize overflow;
-  the Verse-ordering half is static evidence until observed in game.
-- **Short-body navigation is now a Scroll**: its Fill viewport can shrink while the natural five-card
-  content remains clipped and reachable. The prior plain Column's 271px floor is historical. Reserved-band
-  vocabulary remains absent (no container `MinHeight`/`MaxHeight`, no fill weight, no `HeightKey`).
+- `WindowChromeLayout.SettingsWindowWidth` owns the single window width; height is width * 3/4.
+  The minimum supported 1024x768 screen gives an 800x600 window and a 760x524 page box. Help changes
+  neither the window width nor its position. Larger examples: 1920x1080 -> 960x720; 2560x1440 -> 1280x960.
+- The Schema=2 page stacks header, flexible body row, conditional `help-scroll` (Height 140), and footer.
+  The body has a scrollable 200px navigation column and `content-scroll`; help and body scroll independently.
+  The footer Row contains status/build identity and the single help switch. At the minimum page box,
+  the content viewport stays 524px wide; opening help reduces its height from 404px to 256px.
+- Help is ephemeral per-window state, gated by `VisibleKey="help-open"` with a revision bump per toggle.
+  Hiding keeps the node, selected topic and scroll positions; removing a definition releases its node.
+  Reopening a fresh window starts closed. There is no window resize or page-width feed for help.
+- The move retains machine identifiers: `help-scroll`, `toggle-help-drawer`, `US.Help.Drawer.Toggle`
+  (including `.Hint`), `US.Help.PageTitle.HelpDrawer.*`, and `us/page-title/help-drawer`.
+  Side-column/narrow-band presentations and their derived visibility keys are retired.
+- BH1 contract and scoped evidence: `../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`
+  and `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/pm-result.json`.
+  Footer placement has a fresh faithful-revert proof; remaining BH1 measurements/input checks are guards.
+  Text metrics and game facts are stubbed. Synthetic 800x600 screens and 480/320px page probes are stress
+  inputs, not supported-screen acceptance. Real fonts, wheel routing and bottom-panel comfort need playtest.
+- Packs' enable card starts 2.90 current viewports below the fold with help open; the original two-screen
+  guard fails there. A Host guard scrolls near-tail pack row 29 through the session seam and clicks its
+  visible switch, reading the target typed write. This covers neither the last row nor native wheel input.
 - **US uses mixed declarative and composite rows**: the manifest owns containers, workspaces (`Tab`),
   breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.
   Remaining row-level dissolution is US's backlog, not a general carrier limit; the genuine remaining FL gap

@@ -26,13 +26,13 @@ public sealed class VoicePacksPageState
     public string ActiveSectionKey = "mode-row";
 
     /// <summary>
-    /// Retractable help drawer visibility. INDEPENDENT state on purpose: the engine's only
+    /// Bottom help panel visibility (BH1). INDEPENDENT state on purpose: the engine's only
     /// binding-driven visibility switch is the <c>Tab</c> attribute compared against
     /// <c>UiBindings.ActiveTabKey</c>, and help visibility must never follow workspace switching.
-    /// Defaults to false: the shipped window opens narrow (vanilla-like) with the drawer retracted,
-    /// and only widens once the player expands it.
+    /// Defaults to false: the shipped window opens with the panel retracted above the footer, and
+    /// expanding it neither widens nor moves the window - the body row just yields height.
     /// </summary>
-    public bool HelpDrawerOpen = false;
+    public bool HelpPanelOpen = false;
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
@@ -56,7 +56,7 @@ public sealed class VoicePacksPageState
         TuningXenotypeDefName = "";
         ActiveTab = "Overview";
         ActiveSectionKey = "mode-row";
-        HelpDrawerOpen = false;
+        HelpPanelOpen = false;
         DomainFilter = default;
         PackFilter = default;
         RaceFilter = "";

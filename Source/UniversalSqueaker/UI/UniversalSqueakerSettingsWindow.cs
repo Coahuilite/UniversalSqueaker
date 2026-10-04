@@ -41,18 +41,9 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     private readonly UniversalSqueakerMod mod;
 
-    // The page's per-window business boundary, kept so BeforeDraw can read the drawer state that
-    // decides the window width. CreateHost builds it once per window instance.
+    // The page's per-window business boundary, kept so BeforeDraw can read the layout-report request and
+    // tick the pending settings save. CreateHost builds it once per window instance.
     private UsKernelSettingsSource? source;
-
-    // The drawer state this window has already sized for. Starts retracted: that is the page state's
-    // default and the width InitialSizePolicy already opened with.
-    private bool appliedDrawerExpanded;
-
-    // The page box width the shell actually handed the page on the previous pass (negative until the first
-    // pass). The presentation decision reads this through the host's feed; before the first pass the policy's
-    // open page box stands in, which is the width that decision used before this feed existed.
-    private float actualPageWidth = -1f;
 
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
@@ -87,60 +78,20 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     /// <summary>
     /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
-    /// clamps 50% of the screen width into [800, 1600]. Height follows the closed width at 4:3,
-    /// with a 600px floor. The retractable help drawer adds its column and gap (332 = 320 + 12),
-    /// capped by the screen width (see <see cref="ApplyDrawerWidth"/>). At the 1024x768 game screen,
-    /// the closed window is 800x600 and the open window is 1024x600. The shell's default would be
-    /// the game's own <see cref="Window.InitialSize"/>, so this policy is
+    /// clamps 50% of the screen width into [800, 1600] and the height is that width at 4:3 with a 600px
+    /// floor. BH1 removed the drawer-expanded branch: the help panel reserves height inside the page above
+    /// the footer, so this is the window's size in BOTH help states. At the 1024x768 game screen that is
+    /// 800x600, and the page box the shell hands the page is 760x524 open or closed. The shell's default
+    /// would be the game's own <see cref="Window.InitialSize"/>, so this policy is
     /// what makes the opening size a product decision instead of an accident.
     /// </summary>
     protected override Func<Vector2>? InitialSizePolicy => InitialSizeFromScreen;
 
     private static Vector2 InitialSizeFromScreen()
     {
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, drawerExpanded: false);
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight);
         float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenWidth, Verse.UI.screenHeight);
         return new Vector2(width, height);
-    }
-
-    /// <summary>
-    /// Applies the drawer width BEFORE the base frame reads <c>windowRect</c> for this pass
-    /// (<c>Verse.Window.WindowOnGUI</c> rounds it and hands it to <c>GUI.Window</c>; the library shell does
-    /// not override this), so the pass that first presents the open drawer already has the resized window -
-    /// and therefore the page box the shell computes from it. <see cref="BeforeDraw"/> keeps its call as the
-    /// backstop for a pass that reaches the page without this one.
-    /// </summary>
-    public override void WindowOnGUI()
-    {
-        ApplyDrawerWidth();
-        base.WindowOnGUI();
-    }
-
-    /// <summary>
-    /// One-shot width change on the drawer STATE EDGE only: the page's header toggle is the only thing that
-    /// flips it, and the width is written at the top of the pass after the toggle
-    /// (<see cref="WindowOnGUI"/>, before the frame reads <c>windowRect</c>), so this never fights the
-    /// player's own drag or a per-frame relayout. The window stays horizontally centred on its own centre and
-    /// the result is clamped inside the screen.
-    /// </summary>
-    private void ApplyDrawerWidth()
-    {
-        UsKernelSettingsSource? current = source;
-        if (current == null) return;
-
-        bool expanded = current.ViewState.HelpDrawerOpen;
-        if (expanded == appliedDrawerExpanded) return;
-        appliedDrawerExpanded = expanded;
-
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, expanded);
-        float delta = width - windowRect.width;
-        if (Mathf.Abs(delta) < 0.5f) return;
-
-        float x = Mathf.Clamp(
-            windowRect.x - delta * 0.5f,
-            0f,
-            Mathf.Max(0f, Verse.UI.screenWidth - width));
-        windowRect = new Rect(x, windowRect.y, width, windowRect.height);
     }
 
     /// <summary>
@@ -160,10 +111,10 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     protected override UiHost CreateHost()
     {
         source = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
-        // The page-width feed: the presentation decision reads the box the shell actually hands the page
-        // (fed in BeforeDraw below). Before the first pass there is nothing fed, and the policy's open page
-        // box stands in - the same width that decision used before the feed existed.
-        UiHost host = UsKernelSettingsHost.Create(source, FedOrPolicyPageWidth);
+        // BH1: no page-width feed any more. The help panel's presentation does not depend on the box the
+        // shell hands the page - there is exactly one presentation, and the engine hides it declaratively -
+        // so the window has no width-shaped decision left to feed.
+        UiHost host = UsKernelSettingsHost.Create(source);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
         // subscription and are measured with THIS host's ruler.
         //
@@ -174,25 +125,16 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         return host;
     }
 
-    /// <summary>The page box width to decide from: the last one fed, or the open-window policy before the
-    /// first pass.</summary>
-    private float FedOrPolicyPageWidth()
-    {
-        return actualPageWidth >= 0f
-            ? actualPageWidth
-            : WindowChromeLayout.SettingsOpenPageBoxWidth(Verse.UI.screenWidth, Verse.UI.screenHeight);
-    }
-
     /// <summary>
     /// The one piece of frame bookkeeping the page cannot do for itself: a settings edit queued while
     /// the window is open must still flush on its own timer, or the footer status lies. The hover-claim
     /// frame boundary used to be called from here; since FL P3 <c>UiHost.DrawFrame</c> runs it on the
     /// session, so the window owns no frame protocol at all.
     /// <para>
-    /// It also owns the presentation decision's INPUT: the width the shell actually handed this pass is fed
-    /// here, before the page arranges, so the pre-resize box can never be presented with the wide column.
-    /// When that input flips the shape, the layout clock is advanced (the toggle's own write does not cover
-    /// a width-only change), because the engine's cached arrangement is keyed on the content revision.
+    /// BH1 retired the rest of what this method used to own: feeding the shell's actual page-box width to
+    /// the host's presentation decision, bumping the layout clock when that width flipped the shape, and
+    /// resizing the window on the drawer edge. The help panel changes no width, so a toggle is a page write
+    /// like any other and the toggle's own bumper covers it.
     /// </para>
     /// </summary>
     protected override void BeforeDraw(Rect contentRect)
@@ -212,21 +154,6 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
         if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Session.BumpContentRevision();
         mod.TickSettingsSaveForWindow();
-
-        bool helpOpen = source?.ViewState.HelpDrawerOpen ?? false;
-        bool sharesNow = helpOpen && WindowChromeLayout.DrawerSharesTheBody(contentRect.width);
-        bool hadPrevious = actualPageWidth >= 0f;
-        bool sharesBefore = helpOpen && hadPrevious
-            && WindowChromeLayout.DrawerSharesTheBody(actualPageWidth);
-        actualPageWidth = contentRect.width;
-        if (hadPrevious && sharesNow != sharesBefore)
-        {
-            Host?.Session.ClosePopup();
-            Host?.Session.BumpContentRevision();
-        }
-
-        // Backstop for WindowOnGUI's call: a pass that reaches the page without one still sizes the window.
-        ApplyDrawerWidth();
     }
 
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>

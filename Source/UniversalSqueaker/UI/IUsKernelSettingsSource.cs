@@ -57,11 +57,12 @@ public interface IUsKernelSettingsSource
     void ScrollToSection(string sectionKey);
 
     /// <summary>
-    /// Retractable help drawer visibility. Independent per-window view state, never the engine's
+    /// Bottom help panel visibility. Independent per-window view state, never the engine's
     /// active-tab gate: the Host writes it through its own "help-open" binding, and the revision
-    /// bumper turns the change into the matching layout variant at the next arrange.
+    /// bumper re-arranges the page (the panel is a declared element the engine hides, not a
+    /// rebuilt tree) at the next arrange. Since BH1 it never changes the window width.
     /// </summary>
-    void SetHelpDrawerOpen(bool open);
+    void SetHelpPanelOpen(bool open);
     void SetTuningLayer(int layer);
     void SetTuningDomain(string raceDefName, string targetDefName);
     void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName);

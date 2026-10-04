@@ -53,12 +53,14 @@ internal sealed class HelpItem
 }
 
 /// <summary>
-/// US-side structured help catalog backing the right-hand panel (C+A model: the panel shows the
+/// US-side structured help catalog backing the bottom help panel (C+A model: the panel shows the
 /// hovered control's entry, falling back to the active section's overview). Every string here is a
 /// Keyed entry name - the ChineseSimplified table is the authoritative copy (说明书体, terminology
 /// rulings applied: 异种/强效/已失效/清除失效) and the English table translates it. The audit
-/// gate (gate 15) drives both tables through the real panel, so every body must fit the 232px
-/// help column in both languages.
+/// gate drives both tables through the real panel, so every body must fit the panel's own wrapped band
+/// at the shipped page box in both languages (BH1: the panel spans the page's inner width above the
+/// footer instead of the old 320px side column; HelpPanelLaneTests measures the band it hands the
+/// widget and keeps the audit attached while it does).
 /// Item keys are globally unique and embed their section prefix ("us/&lt;section&gt;/&lt;item&gt;");
 /// hover claims in the widget tree resolve through <see cref="TryFindItem"/> across the whole
 /// catalog, and the zero-Verse gate pins both the uniqueness and the claim↔entry equality.
@@ -69,7 +71,7 @@ internal static class UsHelpCatalog
     {
         // Window-level fallback section: the section-map guard keeps it reachable via
         // SectionHelpKeyOf's default branch; its three items are claimed live by the navigation
-        // rows, the footer save status and the page-title Help toggle.
+        // rows, the footer save status and the footer Help switch.
         ["us/page-title"] = new HelpSection(
             "us/page-title",
             "US.Help.PageTitle.Title",
@@ -84,9 +86,9 @@ internal static class UsHelpCatalog
                     "us/page-title/apply",
                     "US.Help.PageTitle.Apply.Label",
                     "US.Help.PageTitle.Apply.Text"),
-                // The page-title Help toggle: the control that shows/hides the help drawer. W1 wires the
-                // matching HelpHover claim on the toggle itself; without that literal this entry is
-                // unclaimed and the claim<->catalog gate flags it.
+                // The footer Help switch (BH1): the single control that shows/hides the bottom help panel.
+                // W1 wires the matching HelpHover claim through the declared element's HelpKey; without that
+                // literal this entry is unclaimed and the claim<->catalog gate flags it.
                 new HelpItem(
                     "us/page-title/help-drawer",
                     "US.Help.PageTitle.HelpDrawer.Label",

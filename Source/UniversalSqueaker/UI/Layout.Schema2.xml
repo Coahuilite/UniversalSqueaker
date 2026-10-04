@@ -63,56 +63,44 @@
   <Column Id="page-root" Gap="8" Padding="12">
     <Row Id="header-band" Padding="0" Gap="6">
       <Widget Id="page-title" Kind="us/page-title" />
-      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
-              ActionBind="toggle-help-drawer" Width="128" Height="26"
-              AlignY="Middle" HelpKey="us/page-title/help-drawer" />
     </Row>
-    <!-- Fixed page-header band (S3-2a added it, S3-2b moved the title in). Both the title and the Help
-         toggle live HERE, outside every scroll: the shell chrome has no action slot (FL-18 will not come),
-         and a header inside content-scroll scrolled away with the workspace.
-         It is a ROW and not an Overlay on purpose: a Row hands the title "whatever the fixed switch
-         leaves" with no reserved width spelled in code, and a Row's main axis already has an owner, so the
-         switch is right-aligned by being the last fixed-width child rather than by AlignX (which the engine
-         refuses on a Row child). With an Overlay the title would Stretch across the full inner width and
-         the caption would paint UNDER the switch, because the widget no longer reserves the switch's space
-         and a hand-written reservation is exactly the threshold this project bans.
-         The engine claims a hovered element's HelpKey for any kind, which is why the toggle's catalog item
-         (us/page-title/help-drawer) is declared here while the page-title widget no longer draws it.
-         Exactly ONE element in this manifest may carry the help-toggle action binding (this comment
-         deliberately does not spell the literal: the drawer lane counts its occurrences in this file).
-         The page-title widget carried a second, hand-drawn switch until this step, so "the page has one
-         Help switch" is asserted by the frame lane and the drawer lane rather than assumed. -->
-    <!-- Responsive footer for the drawer. The closed window is 800 wide at the minimum canvas
-          (WindowChromeLayout), i.e. 736 inner here, where the drawer is retracted and Breakpoint 500 keeps
-          this a two-column Row. Once the drawer opens the window widens - 1024 at the minimum canvas (capped
-          by the screen), 1292 on a 1920x1080 one - so the inner width is 960/1228, still above 500, and the
-          same Row carries the shipped three columns (nav 200 + centre + help 320). Only 480/320 fall below
-          it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill containers
-          instead of three squeezed columns. The help column itself is toggled DECLARATIVELY by the
-          engine-level VisibleKey attribute bound to this page's own help-open value binding, never by Tab:
-          the element stays in the definition so its node and scroll position survive a close/open (a
-          root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases a removed element's node with its
-          scroll position). -->
-    <!-- Fill="true" is what makes this row the page's flex slot (it is what §2 always drew). Without it no
-         child of page-root yields, so ANY band's declared height would be ADDED to the page instead of taken
-         out of the body - measured at the minimum logical resolution: footer bottom 667 against a 530 page.
-         With it whichever slot is arranged - this row, or the narrow help band in a smaller actual page
-         box (see the band comment below) - absorbs what the fixed header and
-         footer leave, so the footer stays in by construction.
+    <!-- Fixed page-header band (S3-2a added it, S3-2b moved the title in, BH1 moved the Help switch out
+         of it into the footer band). The title lives HERE, outside every scroll: the shell chrome has no
+         action slot (FL-18 will not come), and a header inside content-scroll scrolled away with the
+         workspace.
+         It stays a ROW with one child rather than a bare widget: the frame lane asserts the three declared
+         bands (header / body / footer) are bands of the same page, and the header's own geometry was
+         measured as a Row. The Help switch moved with its stable machine identity - the widget, the
+         command binding, the TextKey and the catalog HelpKey all kept their names, because "exactly ONE
+         element in this manifest may carry the help-toggle action binding" is asserted by counting the
+         footer's declaration, not by renaming the control (this comment deliberately does not spell the
+         literal: the help panel lane counts its occurrences in this file). -->
+    <!-- BH1 (2026-10-05): the help panel shares the BOTTOM of the page with the version and save-status
+         row instead of taking a column beside the settings, so expanding it never widens or moves the
+         window (the maintainer's walkthrough: a usable help text that costs the settings their width is not
+         a win). The page is therefore three stacked bands plus the panel: header, the flex body-row, the
+         help panel (only while open) and the footer.
 
-         VisibleKey="body-visible" is the other half of the presentation rule. The band is a DEFENSIVE
-         fallback for an actual page box too small to share, including the pre-resize box. The normally sized
-         open window at the game's minimum screen (1024x768 per RimWorld.ResolutionUtility) leaves the centre
-         column 416 (page-root box 984 -> body-row 960 -> 960 - 200 - 320 - 24 = 416),
-         above the Breakpoint 400 the page's own parameter rows declare, so the body stays visible and the
-         help column shares the page with it. A synthetic 800x600 screen (centre 192) exercises the band
-         branch as an UNREACHABLE stress probe; it is not real-screen evidence. The host derives body-visible
-         as the negation of help-open-narrow, so the body is not ARRANGED while the band is, and the band is
-         then page-root's ONLY flexible fill child. Hiding rather than removing is the whole point: the
-         element stays in the definition, so its node, its sub-tree and every scroll position survive the
-         swap (see the help-band comment below). -->
-    <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column"
-         VisibleKey="body-visible">
+         Fill="true" on body-row is still what makes it the page's flex slot (it is what §2 always drew).
+         Without it no child of page-root yields, so ANY declared height would be ADDED to the page instead
+         of taken out of the body - measured at the minimum logical resolution: footer bottom 667 against a
+         530 page. With it, body-row absorbs exactly what the fixed header, the fixed-height help panel and
+         the footer leave, so the footer stays in by construction at BOTH help states.
+
+         The engine's own rule is why the panel declares a Height and no Fill: a Fill child that also
+         declares a fixed Height is refused the flex slot (UiLayoutEngine.IsFlexibleFill), and a filling
+         panel would then take the leftover the body needs. Non-Fill siblings are measured first and
+         subtracted from the inner height before the flex share is computed, so this panel's declared height
+         is a reservation the body pays for - which is exactly the trade the maintainer asked for. -->
+    <!-- The body is TWO columns at every real width now: the window never widens for help, so the inner
+         width is 736 at the game's minimum screen (800 window - 2x20 shell chrome) and the Breakpoint 500
+         keeps this a Row (nav 200 + centre). Only a synthetic 480/320 probe falls below it and resolves to a
+         stacked Column; that probe is exercised by FrameGeometryLaneTests and is not real-screen evidence.
+         Help visibility is still driven DECLARATIVELY by the engine-level VisibleKey bound to this page's own
+         help-open value binding, never by Tab: the panel stays in the definition while closed so its node and
+         scroll position survive a close/open (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases
+         a removed element's node with its scroll position). -->
+    <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
       <!-- V1 (2026-10-02): the nav column keeps `us-flat-panel` (the column itself stays a calm plane,
            with no panel frame), and the nav WIDGET now paints its own card enclosure with an edge the
            scheme cannot alias away - `RaisedBorder == Raised` is that scheme's own "no box" spelling, and
@@ -461,60 +449,49 @@
         <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
-      <Scroll Id="help-scroll" Width="320" MinWidth="260" Fill="true" Padding="0" VisibleKey="help-open-wide">
-        <Widget Id="help-panel" Kind="us/help-panel" />
-      </Scroll>
     </Row>
-    <!-- Narrow-screen help band (乙1, decided 2026-09-21; the DECISION was re-cut 2026-10-04 after the
-         maintainer's 1024x768 walkthrough). This band is a DEFENSIVE fallback, not the product shape: the
-         drawer shares the page as the third column (help-scroll above) whenever the OPEN window's centre
-         column keeps at least the 400 the page's own parameter rows declare - 1024x768 gives 416, so the
-         settings stay visible and operable there, and that is the ACCEPTANCE case. No REACHABLE screen
-         selects the band: the game's minimum logical resolution is 1024x768 (RimWorld.ResolutionUtility in
-         the pinned Krafs.Rimworld.Ref 1.6.4871), so every real screen leaves the centre at least 416. The
-         band is kept for a screen below that line - a synthetic 800x600 screen (centre 192) is used ONLY as
-         an UNREACHABLE stress probe to keep the branch exercised - where the same help panel REPLACES the
-         body as a full-width band between the header and the footer, with the body row not arranged (its own
-         VisibleKey="body-visible"). Two mutually exclusive presentations and ONE player intent: help-open
-         stays the only value the toggle writes, and the host derives help-open-wide / help-open-narrow from
-         it and the screen (WindowChromeLayout.DrawerSharesTheBody - the question is "is the third column
-         affordable", NOT "did the window gain the full drawer cost", which is what used to send 1024x768
-         down this path). The width that question reads is the page box the shell ACTUALLY hands the page on
-         the pass being arranged (fed by the settings window), so the pre-resize pass can never be presented
-         with the wide column.
+    <!-- Bottom help panel (BH1). ONE declared presentation replaces the two the drawer had (the 320px
+         side column and the defensive full-width band); the Scroll keeps its stable machine id
+         `help-scroll` while only its POSITION moves: it now sits above the footer, spans the page's
+         inner width, and scrolls its own content. help-open is the ONLY key it reads, and the player's
+         single footer switch is the only writer - so there is no derived "which presentation" truth left
+         to keep in sync, and no page box the presentation can disagree with. The duplicate narrow
+         element (Id `help-band`, child `help-panel-narrow`) left with the second presentation.
 
-         Fill="true" with NO Height is what makes the replacement exact rather than approximate. With the
-         body out of the flow this band is page-root's ONLY flexible fill child, so it is handed the whole
-         leftover BY CONSTRUCTION and the footer cannot leave the page - no number is written here at all.
-         Measured on the synthetic 800x600 probe (page-root box 760x524): the band takes the whole leftover,
-         header/footer/gaps aside, against the largest natural content floor anywhere on the page (us/nav,
-         measured 404 there and 271 at the old 530-high probe). So the help is readable AND the text on the
-         page has more room than it needs.
+         Hidden through VisibleKey and never removed: the element stays in the definition, so its node, its
+         sub-tree and its scroll position survive a close/open, and the body row - which is now ALWAYS
+         arranged - keeps its own nav and content scroll positions across the toggle.
 
-         Why Height="280" is gone, and it is not coming back. That attribute was a reserved band, the only
-         expression the vocabulary allowed - a container has no MinHeight/MaxHeight (width has
-         MinWidth/MaxWidth, height does not), no fill weight, and no HeightKey - and it cannot work on a
-         page this tight: 530 - 60 (header) - 26 (footer) - 16 (gaps) leaves 428 for body + band while the
-         body's own content floor is 271, so a reserved band can never exceed ~157 and a 280 band leaves the
-         body ~148 and its content overflows ~123px into the band (the maintainer's 1024x768 walkthrough).
-         "A band more than half the content area" and "the content fits" cannot both hold: it was a SHAPE
-         problem, and the shape is fixed by EXCLUSION rather than by another number. A Height attribute here
-         would also re-break it mechanically: IsFlexibleFill refuses a Fill child with a fixed Height, so the
-         band would leave the flow and the footer would be pushed out (the earlier Fill attempt measured a
-         page natural height of 660.7 against this 530 viewport). It stays a Scroll, so a longer real-font
-         panel scrolls instead of being clipped. -->
-    <Scroll Id="help-band" Fill="true" Padding="0" VisibleKey="help-open-narrow">
-      <Widget Id="help-panel-narrow" Kind="us/help-panel" />
+         Height="140" is the reservation the panel makes out of the body's leftover, inside the
+         120-160 band the proposal allowed. It is a layout declaration, not a measurement claim: the actual
+         budget at the game's minimum screen (a 760x524 page box in BOTH help states) and the resulting body
+         viewport are measured by HelpPanelLaneTests, which reads this number out of the manifest instead of
+         re-declaring it, and the acceptance is printed there (help viewport, body viewport, fit findings,
+         both languages). -->
+    <Scroll Id="help-scroll" Height="140" Padding="0" VisibleKey="help-open">
+      <Widget Id="help-panel" Kind="us/help-panel" />
     </Scroll>
-    <!-- Footer band (S3-3): the same structural slot as the header, so the frame's three bands are all
-         declared. It carries NO Height, for the reason its child never did - a pinned band overrides a
-         wrap-aware measure (the in-game log kept reporting "footer needs 33px has 28px" while the
-         attribute was pinning 28). §2's fragment wrote Height="26"; that is the same pin and is NOT
-         implemented. The band's CONTENT is still the us/footer composite: atomising it into a status and
-         a build text is S4's migration, not this slice's. -->
-    <Overlay Id="footer-band" Padding="0">
+    <!-- BH1: the footer band is the page's action strip as well as its status strip. It carries the
+         single help switch - moved out of the header, machine identity unchanged - beside the build
+         identity and the save status, because the switch's job is now to open the space directly
+         above itself.
+
+         It carries NO Height, for the reason its child never did - a pinned band overrides a wrap-aware
+         measure (the in-game log kept reporting "footer needs 33px has 28px" while the attribute was
+         pinning 28). §2's fragment wrote Height="26"; that is the same pin and is NOT implemented. The Row
+         resolves its own height as the max of its children: us/footer measures both text halves at the
+         width it is actually handed (a Row gives an unsized child the leftover after the fixed 128px switch
+         and the gap), and the switch contributes its declared 26.
+
+         The switch is the carrier's own input/button, declared with the command binding the Host registers:
+         no US kind, no hand-drawn hit band, so the click routes through the typed binding table like every
+         other control on this page. -->
+    <Row Id="footer-band" Padding="0" Gap="6">
       <Widget Id="footer" Kind="us/footer" />
-    </Overlay>
+      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
+              ActionBind="toggle-help-drawer" Width="128" Height="26"
+              AlignY="Middle" HelpKey="us/page-title/help-drawer" />
+    </Row>
   </Column>
   <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
        ActionBind inside a template are qualified per item by the engine (<Items>.<itemKey>.<declaredKey>),

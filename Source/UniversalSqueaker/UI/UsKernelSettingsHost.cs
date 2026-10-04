@@ -32,7 +32,7 @@ public static class UsKernelSettingsHost
     public static UiHost Create(IUsKernelSettingsSource source)
     {
         UiNative.Trace = SqueakLog.PopupTrace;
-        return Create(source, VerseFerriteTextMetrics.Instance, out _, pageWidthFeed: null);
+        return Create(source, VerseFerriteTextMetrics.Instance, out _);
     }
 
     /// <summary>
@@ -44,29 +44,9 @@ public static class UsKernelSettingsHost
     /// </summary>
     public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics)
     {
-        return Create(source, metrics, out _, pageWidthFeed: null);
+        return Create(source, metrics, out _);
     }
 
-    /// <summary>
-    /// Production creation with the page-width feed and the real Verse text metrics.
-    /// </summary>
-    public static UiHost Create(IUsKernelSettingsSource source, Func<float>? pageWidthFeed)
-    {
-        UiNative.Trace = SqueakLog.PopupTrace;
-        return Create(source, VerseFerriteTextMetrics.Instance, out _, pageWidthFeed);
-    }
-
-    /// <summary>
-    /// Production creation with the page-width feed: <paramref name="pageWidthFeed"/> answers the page box
-    /// the shell ACTUALLY hands the page on the pass being arranged (the window feeds it in BeforeDraw), so
-    /// the help presentation is decided from the current box and never from a prediction of the post-resize
-    /// one. A null feed means no window is feeding - the policy's open page box stands in.
-    /// </summary>
-    public static UiHost Create(IUsKernelSettingsSource source, ITextMetrics metrics, Func<float>? pageWidthFeed)
-    {
-        UiNative.Trace = SqueakLog.PopupTrace;
-        return Create(source, metrics, out _, pageWidthFeed);
-    }
 
     /// <summary>
     /// Host creation that also hands back the page's write-binding registry (<see cref="UsWriteBindings"/>).
@@ -75,8 +55,7 @@ public static class UsKernelSettingsHost
     /// every other lane use the two-argument overload.
     /// </summary>
     public static UiHost Create(
-        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes,
-        Func<float>? pageWidthFeed = null)
+        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
@@ -85,9 +64,9 @@ public static class UsKernelSettingsHost
 
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
 
-        // The retractable help drawer is DECLARATIVE: the manifest's help-scroll element carries
+        // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
         // VisibleKey="help-open", so the element stays in the definition and the engine simply does not
-        // arrange it while the drawer is closed. Staying in the definition is the whole point - it is
+        // arrange it while the panel is closed. Staying in the definition is the whole point - it is
         // what lets the Scroll keep its node AND its scroll position across a close/open. The pre-0.5
         // root-list VARIANT (a rebuilt root list with the help element omitted) relied on a removed
         // element keeping its node, which the 0.6 carrier no longer does: PruneNodesExcept releases a
@@ -96,7 +75,7 @@ public static class UsKernelSettingsHost
         // One translation seam instance for both the host and the per-item text bindings: the checklist's
         // row meta line is composed from a Keyed template, and a second seam would be a second language.
         var translation = new UsKernelTranslation();
-        writes = BuildBindings(source, bumper, translation, pageWidthFeed);
+        writes = BuildBindings(source, bumper, translation);
         UiHost host = new(
             Source,
             manifest,
@@ -158,7 +137,7 @@ public static class UsKernelSettingsHost
 
         /// <summary>
         /// Resets the session-owned scroll positions for the two page scroll containers. Used on
-        /// workspace switches so the centre content and right help start at their top; other
+        /// workspace switches so the centre content and the bottom help panel start at their top; other
         /// layout-affecting writes only bump the revision and keep the user's scroll place.
         /// </summary>
         public void ResetScroll()
@@ -181,7 +160,7 @@ public static class UsKernelSettingsHost
                 session.SetScrollPosition(contentNode, Vector2.zero);
             }
 
-            UiNode? helpNode = session.GetNodeByElementId(HelpScrollId);
+            UiNode? helpNode = session.GetNodeByElementId(HelpPanelScrollId);
             if (helpNode != null)
             {
                 session.SetScrollPosition(helpNode, Vector2.zero);
@@ -195,7 +174,7 @@ public static class UsKernelSettingsHost
     }
 
     private const string ContentScrollId = "content-scroll";
-    private const string HelpScrollId = "help-scroll";
+    private const string HelpPanelScrollId = "help-scroll";
 
     // S4-3, the timing card. The interval atom is a float slider (input/slider validates float), and the
     // window it declares in the manifest is 1..600 ticks - the same window the retired us/timing widget
@@ -314,8 +293,7 @@ public static class UsKernelSettingsHost
 
 
     private static UsWriteBindings BuildBindings(
-        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
-        Func<float>? pageWidthFeed)
+        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -653,57 +631,27 @@ public static class UsKernelSettingsHost
         // panel and the accent border read ctx.Session.HoverClaim).
         bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
 
-        // Retractable help drawer: INDEPENDENT per-window visibility state, never the engine's
-        // active-tab gate (the manifest's drawer elements deliberately carry no Tab). Both writes advance
-        // the session revision through the bumper, so a toggle re-arranges the page and never recreates
-        // the host/session.
+        // The retractable bottom help panel (BH1): INDEPENDENT per-window visibility state, never the
+        // engine's active-tab gate (the manifest's panel element deliberately carries no Tab). Both writes
+        // advance the session revision through the bumper, so a toggle re-arranges the page and never
+        // recreates the host/session. ONE key, ONE presentation: help-open shows the panel above the
+        // footer, and expanding it changes neither the window's width nor its position.
         writes.Value<bool>(
             "help-open",
-            () => state.HelpDrawerOpen,
-            value => { source.SetHelpDrawerOpen(value); bump(); });
+            () => state.HelpPanelOpen,
+            value => { source.SetHelpPanelOpen(value); bump(); });
 
-        // (乙1) ONE player intent, TWO mutually exclusive presentations. help-open stays the only thing the
-        // header toggle writes; which presentation it produces is decided from the page box the shell
-        // ACTUALLY hands the page this pass (fed by the settings window in BeforeDraw), NEVER from a
-        // prediction of the post-resize window: at the drawer-open edge the shell may still hand the page the
-        // pre-resize box, and predicting the widened box there is what used to put the wide column into a
-        // 760px page. Without a feed (harness lanes, any non-window host) the policy's open page box stands
-        // in, which is the width this decision used before.
-        // Read-only because the player never writes it: a second writable flag would be a second truth.
-        // Read lazily per arrange through the feed, so a box change is picked up on the next arrange - the
-        // same edge the window resizes on.
-        bool drawerSharesThePage()
-        {
-            float pageBoxWidth = pageWidthFeed != null
-                ? pageWidthFeed()
-                : WindowChromeLayout.SettingsOpenPageBoxWidth(Verse.UI.screenWidth, Verse.UI.screenHeight);
-            return WindowChromeLayout.DrawerSharesTheBody(pageBoxWidth);
-        }
-
-        bool drawerIsABand() => state.HelpDrawerOpen && !drawerSharesThePage();
-        bindings.BindReadOnly<bool>("help-open-wide", () => state.HelpDrawerOpen && drawerSharesThePage());
-        bindings.BindReadOnly<bool>("help-open-narrow", drawerIsABand);
-
-        // The band REPLACES the body rather than sharing the page with it. This is the same single player
-        // intent read one step further, not a second state: with the band arranged, this element is not
-        // ARRANGED, so the band is page-root's only flexible fill child and is handed the whole leftover by
-        // construction. It is a DEFENSIVE fallback for an actual box too small to share, including a
-        // pre-resize pass. The normally sized open window at 1024x768 leaves a 416px centre and shares.
-        // It is hidden through VisibleKey
-        // and never removed: the definition keeps the element, so its node, its sub-tree and every scroll
-        // position survive the swap - the player's place in the centre column comes back with the body. The
-        // sharing case needs none of this: the body, its nav column and its centre scroll stay arranged and
-        // keep their own scroll positions while the help column is beside them.
-        // Read-only, like the two presentations: the player never writes it, and a writable copy would be a
-        // second truth about which presentation is showing.
-        bindings.BindReadOnly<bool>("body-visible", () => !drawerIsABand());
-        // A COMMAND, not an action with a payload: the manifest's header button is a core
+        // A COMMAND, not an action with a payload: the manifest's footer button is a core
         // `input/button` with no PayloadKey, and ButtonWidget validates that shape with ValidateCommand
         // (ButtonWidget.cs:62-71 -> UiBindings.cs:412-418). The payload the old registration took was
         // discarded anyway, so this is the same write with the contract the declaring element actually has.
+        // BH1 retired the two derived presentation keys (help-open-wide / help-open-narrow) and body-visible
+        // together with the page-width feed they read: with one presentation there is nothing left to decide
+        // from the box, and a derived bool the player never writes would only be a second truth to keep in
+        // sync - which is what the pre-BH1 pre-resize defect lived on.
         writes.Command(
             "toggle-help-drawer",
-            () => { source.SetHelpDrawerOpen(!state.HelpDrawerOpen); bump(); });
+            () => { source.SetHelpPanelOpen(!state.HelpPanelOpen); bump(); });
 
         return writes;
     }

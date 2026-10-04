@@ -25,8 +25,10 @@ namespace UniversalSqueaker.KernelHostTests;
 /// WHAT THIS MEASURES, WITH WHICH INSTRUMENTS. (a) The empty-target state is REAL input: the fixture yields
 /// layer 2 with race "" and xeno "", an EMPTY <c>tuning-domains</c> list and the production-shaped action/mood
 /// rows, and the lane asserts that state through the page's own bindings before drawing. (b) The reason
-/// sentence is asserted through the metrics channel (it was really DRAWN, not only bound) at the two real
-/// 1024x768 page boxes in EN and ZH, with help-open truly set. (c) INERTNESS is measured on the CARRIER's own
+/// sentence is asserted through the metrics channel (it was really DRAWN, not only bound) at the ONE real
+/// page box on the 1024x768 minimum screen (760x524) in EN and ZH, with help-open truly set - BH1 arranges
+/// that SAME box in both help states, so a case names its state by the flag and never by a box.
+/// (c) INERTNESS is measured on the CARRIER's own
 /// seams, not on the write recorders alone: the button/slider/text-field override seams show that no
 /// interactive atom is reached in the blocked card (only the three layer buttons remain), REAL pointer events
 /// (each preceded by scrolling the target band into the scroll viewport, and asserting it is inside) leave no
@@ -69,9 +71,25 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </summary>
 internal static class XenotypeEmptyTargetLaneTests
 {
-    private const float OpenPageBox = 984f;
-    private const float ClosedPageBox = 760f;
+    // BH1: the help toggle changes NO width. The window has one page box on the game's minimum screen - 800
+    // less 2 x 20 shell chrome = 760 wide, 600 less the title bar and the bottom inset = 524 high - and BOTH
+    // help states arrange it. The retired 984px open box went with the 320px side column; the bottom panel
+    // now reserves its declared Height 140 out of the body's HEIGHT instead.
+    private const float PageBoxWidth = 760f;
     private const float PageBoxHeight = 524f;
+    /// <summary>The EXTERIOR centre column the content-scroll occupies: 760 less page-root Padding 12 x 2 =
+    /// 736 inner, less the 200 nav column and the body-row Gap 12 = 524, at both help states.</summary>
+    private const float CentreColumnWidth = 524f;
+    /// <summary>The engine's own scrollbar reservation (UiLayoutEngine.ScrollbarWidth, mirrored from the
+    /// pinned carrier and kept honest by the pair of assertions below): the content of a Scroll is laid out
+    /// in the centre column LESS this reserve, so the Tuning CARD is 16 narrower than the column that
+    /// contains it - the same card-inside-centre relation MoodLayoutFocusedTests records (400/416 at the
+    /// old open box). Asserting a drawn card against the EXTERIOR number was the r1 instrument-scale error.</summary>
+    private const float ScrollbarReserve = 16f;
+    /// <summary>The INTERIOR width the scope-tree card is really arranged at: centre column less reserve.</summary>
+    private const float TuningCardInnerWidth = CentreColumnWidth - ScrollbarReserve;
+    /// <summary>The manifest's declared bottom help panel reservation (help-scroll Height="140").</summary>
+    private const float HelpPanelHeight = 140f;
 
     /// <summary>The widget's declared dropdown width (<c>ButtonWidth</c>): the filter that tells a popup
     /// trigger apart from every other button at these boxes. The lane asserts the trigger count, so a
@@ -116,12 +134,17 @@ internal static class XenotypeEmptyTargetLaneTests
             Program.SetTranslatorResolver(table);
             try
             {
-                foreach ((string state, float box, bool helpOpen) in new[]
+                // BH1: one page box; the loop switches the help flag and records what the arrangement
+                // measured, so the "help changes no width" claim is compared, not assumed.
+                var referenceCardByState = new Dictionary<string, float>();
+                var blockedCardByState = new Dictionary<string, float>();
+                foreach ((string state, bool helpOpen) in new[]
                          {
-                             ("help open", OpenPageBox, true),
-                             ("help closed", ClosedPageBox, false),
+                             ("help open", true),
+                             ("help closed", false),
                          })
                 {
+                    float box = PageBoxWidth;
                     string where = "XG1 " + language + ", empty target, " + state + " at " + box + "x" + PageBoxHeight;
                     var metrics = new DrawnTextMetrics();
                     var reports = new List<UiOverflowReport>();
@@ -138,13 +161,27 @@ internal static class XenotypeEmptyTargetLaneTests
                         };
                         referenceSource.SetTuningLayer(2);
                         referenceSource.SetTuningDomain("human", "sanguophage");
-                        using UiHost referenceHost = UsKernelSettingsHost.Create(referenceSource, metrics, () => box);
+                        using UiHost referenceHost = UsKernelSettingsHost.Create(referenceSource, metrics);
                         referenceHost.Bindings.Set("help-open", helpOpen);
                         referenceHost.Bindings.Invoke("set-tab", "Tuning");
                         UiLayoutSnapshot referenceFrame = referenceHost.MeasureAndArrange(new Vector2(box, PageBoxHeight));
                         Assert(referenceFrame.Viewports.ContainsKey("help-scroll") == helpOpen,
-                            where + ": the help column must be arranged exactly while the drawer is open"
-                            + " (help-open really set)");
+                            where + ": the bottom help panel must be arranged exactly while help is open"
+                            + " (help-open really set; BH1 has ONE presentation and no side column)");
+                        Assert(referenceFrame.RectById.ContainsKey("body-row")
+                                && referenceFrame.Viewports.ContainsKey("content-scroll")
+                                && referenceFrame.Viewports.ContainsKey("nav-column"),
+                            where + ": BH1 never replaces the body - the body row, the centre content scroll"
+                            + " and the nav column stay arranged in BOTH help states");
+                        Assert(Math.Abs(referenceFrame.Viewports["content-scroll"].width - CentreColumnWidth) <= 0.5f,
+                            where + ": the EXTERIOR centre column is 524 in either help state, got "
+                            + Num(referenceFrame.Viewports["content-scroll"].width));
+                        if (helpOpen)
+                        {
+                            Assert(Math.Abs(referenceFrame.Viewports["help-scroll"].height - HelpPanelHeight) <= 0.5f,
+                                where + ": the bottom help panel is arranged at its declared Height 140, got "
+                                + Num(referenceFrame.Viewports["help-scroll"].height));
+                        }
                         Program.SetScrollPositionById(referenceHost.Session, "content-scroll", Vector2.zero);
                         CaseObservation reference = Observe(
                             referenceHost, box, metrics, reports, table, where, expectReason: false);
@@ -158,13 +195,21 @@ internal static class XenotypeEmptyTargetLaneTests
 
                         // The blocked case.
                         var source = new RecordingSettingsSource { RichData = true, EmptyXenotypeTarget = true };
-                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         host.Bindings.Set("help-open", helpOpen);
                         host.Bindings.Invoke("set-tab", "Tuning");
                         UiLayoutSnapshot blockedFrame = host.MeasureAndArrange(new Vector2(box, PageBoxHeight));
                         Assert(blockedFrame.Viewports.ContainsKey("help-scroll") == helpOpen,
-                            where + ": the help column must be arranged exactly while the drawer is open");
+                            where + ": the bottom help panel must be arranged exactly while help is open");
+                        Assert(blockedFrame.RectById.ContainsKey("body-row")
+                                && blockedFrame.Viewports.ContainsKey("content-scroll")
+                                && blockedFrame.Viewports.ContainsKey("nav-column"),
+                            where + ": BH1 never replaces the body - the blocked card keeps the body row, the"
+                            + " centre content scroll and the nav column in BOTH help states");
 
+                        Assert(Math.Abs(blockedFrame.Viewports["content-scroll"].width - CentreColumnWidth) <= 0.5f,
+                            where + ": the blocked card keeps the same 524 EXTERIOR centre column, got "
+                            + Num(blockedFrame.Viewports["content-scroll"].width));
                         // The fixture state is the lane's INPUT (AGENTS.md:61): layer 2, an empty target, no
                         // target options, and real rows whose controls must become inert.
                         Assert(host.Bindings.Get<int>("tuning-layer") == 2,
@@ -221,6 +266,10 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the blocked card may differ from the valid one only by the reason band ("
                             + Num(expectedBand) + " + " + Num(WidgetRowGap) + "); got delta " + Num(delta)
                             + " (blocked " + Num(blocked.Card.height) + ", valid " + Num(reference.Card.height) + ")");
+                        // BH1: the centre column is the same whether or not help is arranged, and a blocked
+                        // card loses nothing of it either - both widths are recorded and compared below.
+                        referenceCardByState[state] = reference.Card.width;
+                        blockedCardByState[state] = blocked.Card.width;
 
                         // (5) REAL POINTER EVENTS on the scope band: no popup may open, no layer be published.
                         // The band is brought into the scroll viewport first, and that visibility is asserted.
@@ -292,6 +341,17 @@ internal static class XenotypeEmptyTargetLaneTests
                         UiFitAudit.Enabled = false;
                     }
                 }
+                Assert(Math.Abs(referenceCardByState["help open"] - referenceCardByState["help closed"]) <= 0.01f
+                        && Math.Abs(blockedCardByState["help open"] - blockedCardByState["help closed"]) <= 0.01f,
+                    language + ": BH1 - help-open changes no width, for either card (valid reference "
+                    + Num(referenceCardByState["help open"]) + " -> " + Num(referenceCardByState["help closed"])
+                    + ", blocked " + Num(blockedCardByState["help open"]) + " -> "
+                    + Num(blockedCardByState["help closed"]) + ")");
+                Assert(Math.Abs(referenceCardByState["help open"] - TuningCardInnerWidth) <= 0.5f
+                        && Math.Abs(blockedCardByState["help open"] - TuningCardInnerWidth) <= 0.5f,
+                    language + ": and that one width is the 508 INTERIOR card (524 centre column less the"
+                    + " 16 scrollbar reserve, PM r2 ruling) in both help states, got "
+                    + Num(referenceCardByState["help open"]) + " / " + Num(blockedCardByState["help open"]));
             }
             finally
             {
@@ -312,19 +372,21 @@ internal static class XenotypeEmptyTargetLaneTests
             Program.SetTranslatorResolver(table);
             try
             {
-                foreach ((string label, float box, bool helpOpen, Action<RecordingSettingsSource> setUp, int triggers) in new (string, float, bool, Action<RecordingSettingsSource>, int)[]
+                foreach ((string label, bool helpOpen, Action<RecordingSettingsSource> setUp, int triggers) in new (string, bool, Action<RecordingSettingsSource>, int)[]
                          {
-                             ("Global", OpenPageBox, true, _ => { }, 2),
-                             ("Global", ClosedPageBox, false, _ => { }, 2),
-                             ("Race", OpenPageBox, true, source => { source.SetTuningLayer(1); source.SetTuningDomain("human", ""); }, 3),
-                             ("valid Xenotype", ClosedPageBox, false, source =>
+                             ("Global", true, _ => { }, 2),
+                             ("Global", false, _ => { }, 2),
+                             ("Race", true, source => { source.SetTuningLayer(1); source.SetTuningDomain("human", ""); }, 3),
+                             ("valid Xenotype", false, source =>
                              {
                                  source.SetTuningLayer(2);
                                  source.SetTuningDomain("human", "sanguophage");
                              }, 3),
                          })
                 {
-                    string where = "XG1 control " + language + ", " + label + " at " + box + "x" + PageBoxHeight;
+                    float box = PageBoxWidth;
+                    string where = "XG1 control " + language + ", " + label + ", "
+                        + (helpOpen ? "help open" : "help closed") + " at " + box + "x" + PageBoxHeight;
                     var metrics = new DrawnTextMetrics();
                     var reports = new List<UiOverflowReport>();
                     UiFitAudit.Attach(metrics, reports.Add);
@@ -341,15 +403,25 @@ internal static class XenotypeEmptyTargetLaneTests
                         }
 
                         setUp(source);
-                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         host.Bindings.Set("help-open", helpOpen);
                         host.Bindings.Invoke("set-tab", "Tuning");
                         UiLayoutSnapshot frame = host.MeasureAndArrange(new Vector2(box, PageBoxHeight));
                         Assert(frame.Viewports.ContainsKey("help-scroll") == helpOpen,
-                            where + ": the help column must be arranged exactly while the drawer is open");
+                            where + ": the bottom help panel must be arranged exactly while help is open");
+                        Assert(frame.RectById.ContainsKey("body-row")
+                                && frame.Viewports.ContainsKey("content-scroll")
+                                && frame.Viewports.ContainsKey("nav-column"),
+                            where + ": BH1 never replaces the body - the body row, the centre content scroll"
+                            + " and the nav column stay arranged in BOTH help states");
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
 
                         CaseObservation observed = Observe(host, box, metrics, reports, table, where, expectReason: false);
+                        Assert(Math.Abs(frame.Viewports["content-scroll"].width - CentreColumnWidth) <= 0.5f
+                                && Math.Abs(observed.Card.width - TuningCardInnerWidth) <= 0.5f,
+                            where + ": the tuning card is the 508 INTERIOR width inside the 524 EXTERIOR"
+                            + " centre column in either help state, got viewport "
+                            + Num(frame.Viewports["content-scroll"].width) + " card " + Num(observed.Card.width));
                         List<Rect> triggerRects = TriggerRects(observed.Buttons);
                         Assert(triggerRects.Count == triggers,
                             where + ": expected " + triggers + " dropdown trigger(s), got " + triggerRects.Count);

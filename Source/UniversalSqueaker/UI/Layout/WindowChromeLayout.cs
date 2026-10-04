@@ -22,13 +22,14 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class WindowChromeLayout
 {
-    // ---- Settings window size policy (task-10) ------------------------------------------------------
-    // The settings window opens NARROW like the vanilla ModSettings window and only widens when the
-    // retractable help drawer expands. Whether that widened window SHARES the page with the settings or
-    // hands the page to the defensive full-width help band is a second, separate question answered by
-    // DrawerSharesTheBody below. This is consumer policy - one consumer's screen fraction stays
-    // that consumer's policy - so it lives here beside the close affordance rule, still free of
-    // Verse/Unity: the zero-Verse UI gate compiles this file, and the Verse boundary (the window)
+    // ---- Settings window size policy (task-10, re-cut by BH1 2026-10-05) ----------------------------
+    // The settings window opens NARROW like the vanilla ModSettings window and BH1 removed the widening
+    // branch entirely: the help panel is a reservation taken out of the body's HEIGHT above the footer, so
+    // expanding it changes neither the width nor the position of the window. One width function therefore
+    // answers both help states, and the page box the shell hands the page (window minus the chrome insets
+    // below) is identical while help is open or closed. This is consumer policy - one consumer's screen
+    // fraction stays that consumer's policy - so it lives here beside the close affordance rule, still free
+    // of Verse/Unity: the zero-Verse UI gate compiles this file, and the Verse boundary (the window)
     // composes the two floats into its own Vector2. Keep it that way.
 
     /// <summary>
@@ -43,10 +44,10 @@ public static class WindowChromeLayout
     /// 13:12 (about 1.083), i.e. nearly square - far closer to 4:3 than to 16:9.</summary>
     public const float VanillaBaselineHeight = 600f;
 
-    /// <summary>Fraction of the screen width the retracted window opens at, above the floor below.</summary>
-    public const float SettingsClosedWidthFraction = 0.5f;
+    /// <summary>Fraction of the screen width the window opens at, above the floor below.</summary>
+    public const float SettingsWidthFraction = 0.5f;
 
-    /// <summary>Widest the retracted window may open, so a 4K screen does not get a near-full-width dialog.</summary>
+    /// <summary>Widest the window may open, so a 4K screen does not get a near-full-width dialog.</summary>
     public const float SettingsWidthCeiling = 1600f;
 
     /// <summary>Every width is a multiple of this, so the derived height is an exact integer.</summary>
@@ -61,24 +62,10 @@ public static class WindowChromeLayout
     /// </summary>
     public const float SettingsWidthFloor = 800f;
 
-    /// <summary>Declared <c>Width</c> of the help Scroll in <c>Layout.Schema2.xml</c>.</summary>
-    public const float HelpDrawerWidth = 320f;
-
-    /// <summary>Declared <c>Gap</c> of body-row in <c>Layout.Schema2.xml</c>: the extra gap a third column costs.</summary>
-    public const float BodyRowGap = 12f;
-
-    /// <summary>Declared <c>Width</c> of the nav Scroll in <c>Layout.Schema2.xml</c>: the first of the three
-    /// columns, so a three-column body costs this before the centre column gets anything.</summary>
-    public const float NavColumnWidth = 200f;
-
-    /// <summary>Declared <c>Padding</c> of page-root in <c>Layout.Schema2.xml</c>: the page box loses one of
-    /// these per side before body-row sees a width.</summary>
-    public const float PageRootPadding = 12f;
-
     /// <summary>
     /// The shell's horizontal chrome, i.e. the total width <c>UiWindowHost.ContentRect</c> removes from the
-    /// window rect (its <c>SidePadding</c> is 20 per side). The shell's content rect IS the page box that
-    /// <see cref="DrawerSharesTheBody"/> reads.
+    /// window rect (its <c>SidePadding</c> is 20 per side). The shell's content rect IS the page box the
+    /// page is arranged in, and since BH1 it is the same box in both help states.
     /// </summary>
     public const float WindowChromeInset = 40f;
 
@@ -88,69 +75,6 @@ public static class WindowChromeLayout
     /// mirrored here so a pure geometry helper and a lane can reconstruct the same page box.
     /// </summary>
     public const float TitleBarHeight = 56f;
-
-    /// <summary>
-    /// The page's declared room floor for the CENTRE COLUMN: the <c>Breakpoint="400"</c> the
-    /// Overview/Tuning/Diagnostics rows declare in <c>Layout.Schema2.xml</c>. body-row's own Breakpoint is
-    /// 500, a stronger floor; the sharing question is stated against this weaker one on purpose - 400 is
-    /// what the page asks the centre column to keep. The nested Section rows stacking at the acceptance
-    /// width is the DECLARED responsive behaviour, not a collapsed column: the engine compares a container's
-    /// OWN inner width, and at centre 416 those rows receive 384 (global-volume, Section Padding 16) and 392
-    /// (basic/timing/diagnostics, Padding 12), below their own 400, so they resolve to <c>Narrow="Column"</c>
-    /// and stack label-above-input.
-    /// </summary>
-    public const float ResponsiveParameterRowBreakpoint = 400f;
-
-    /// <summary>
-    /// The centre column's width inside a given page box: the box minus page-root's own declared padding
-    /// (<see cref="PageRootPadding"/>, both sides), minus the two fixed columns
-    /// (<see cref="NavColumnWidth"/>, <see cref="HelpDrawerWidth"/>) and minus both
-    /// <see cref="BodyRowGap"/>s a three-column Row introduces.
-    /// </summary>
-    public static float CentreColumnWidthInPage(float pageBoxWidth)
-    {
-        return pageBoxWidth - PageRootPadding * 2f - NavColumnWidth - HelpDrawerWidth - BodyRowGap * 2f;
-    }
-
-    /// <summary>
-    /// The presentation question, answered from the page box the shell ACTUALLY hands the page this pass
-    /// (the shell's content rect: 984 for the open 1024x600 window at 1024x768). The drawer may SHARE the
-    /// page as its third column while the centre column keeps at least the room the page's own responsive
-    /// rows declare (<see cref="ResponsiveParameterRowBreakpoint"/>); otherwise the defensive band replaces
-    /// the body.
-    /// <para>
-    /// The input is the CURRENT box, never a prediction of the post-resize one: at the drawer-open edge the
-    /// shell may still hand the page the pre-resize box, and predicting the widened box there is exactly
-    /// what put the wide column into a 760px page (centre 192, real text overflow). Reading the actual width
-    /// makes that pairing impossible - a box that cannot afford the column answers false.
-    /// </para>
-    /// <para>
-    /// The game's minimum logical resolution is 1024x768 (<c>RimWorld.ResolutionUtility</c>, pinned
-    /// Krafs.Rimworld.Ref 1.6.4871), whose normally sized open page box leaves a 416px centre.
-    /// A smaller actual box, including a pre-resize pass, uses the defensive band.
-    /// </para>
-    /// </summary>
-    public static bool DrawerSharesTheBody(float pageBoxWidth)
-    {
-        return CentreColumnWidthInPage(pageBoxWidth) >= ResponsiveParameterRowBreakpoint;
-    }
-
-    /// <summary>
-    /// The page box the OPEN window's policy produces on this screen: what the shell hands the page once the
-    /// drawer has widened the window (<see cref="SettingsOpenWidth"/> minus <see cref="WindowChromeInset"/>).
-    /// The host uses it as the stand-in when no window has fed an actual width.
-    /// </summary>
-    public static float SettingsOpenPageBoxWidth(float screenWidth, float screenHeight)
-    {
-        return SettingsOpenWidth(screenWidth, screenHeight) - WindowChromeInset;
-    }
-
-    /// <summary>
-    /// What the help drawer costs the window when it expands: the column it occupies plus the row gap
-    /// its third child introduces. Keep this derived from the two declarations above, so the window
-    /// width and the manifest cannot drift apart silently.
-    /// </summary>
-    public const float DrawerWidthDelta = HelpDrawerWidth + BodyRowGap;
 
     /// <summary>Narrowest the window may be vertically: vanilla's own height (the baseline above), which
     /// is also the height the 800-wide floor derives to.</summary>
@@ -173,47 +97,35 @@ public static class WindowChromeLayout
     public const float SettingsHeightCeilingFraction = 0.9f;
 
     /// <summary>
-    /// Width the window opens at while the help drawer is retracted. Every constraint is folded in HERE so the
-    /// window can never disagree with itself: half the screen, capped by the 90%-of-screen-height limit at 4:3
-    /// (a short, ultra-wide display shrinks the WIDTH instead of breaking the shape), floored at the 4:3 box
-    /// that covers vanilla's own dialog, capped for 4K, and rounded up to a whole pixel step so the derived
-    /// height is an exact integer.
+    /// The window's width on this screen - the ONLY width this policy has, since BH1 retired the
+    /// drawer-expanded branch. Every constraint is folded in HERE so the window can never disagree with
+    /// itself: half the screen, capped by the 90%-of-screen-height limit at 4:3 (a short, ultra-wide display
+    /// shrinks the WIDTH instead of breaking the shape), floored at the 4:3 box that covers vanilla's own
+    /// dialog, capped for 4K, and rounded up to a whole pixel step so the derived height is an exact
+    /// integer.
     /// </summary>
-    public static float SettingsClosedWidth(float screenWidth, float screenHeight)
+    public static float SettingsWindowWidth(float screenWidth, float screenHeight)
     {
-        float byWidth = screenWidth * SettingsClosedWidthFraction;
+        float byWidth = screenWidth * SettingsWidthFraction;
         float byHeight = screenHeight * SettingsHeightCeilingFraction * WindowAspectWidth / WindowAspectHeight;
         float wanted = Clamp(Math.Min(byWidth, byHeight), SettingsWidthFloor, SettingsWidthCeiling);
         return RoundUpToStep(wanted);
     }
 
-    /// <summary>
-    /// Width the window needs once the help drawer is expanded: the closed width plus its cost, capped at
-    /// the screen so an expanded window can never be wider than the display it lives in. Below the cap the
-    /// page keeps its own narrow-layout capability (body-row declares Breakpoint 500), so the centre column
-    /// and the drawer stay inside the window instead of the drawer hanging off the screen edge.
-    /// </summary>
-    public static float SettingsOpenWidth(float screenWidth, float screenHeight)
-    {
-        float closed = SettingsClosedWidth(screenWidth, screenHeight);
-        return Math.Min(closed + DrawerWidthDelta, Math.Max(closed, screenWidth));
-    }
-
-    /// <summary>Width for one drawer state. The single entry the window and the lanes both read.</summary>
-    public static float SettingsWindowWidth(float screenWidth, float screenHeight, bool drawerExpanded)
-    {
-        return drawerExpanded
-            ? SettingsOpenWidth(screenWidth, screenHeight)
-            : SettingsClosedWidth(screenWidth, screenHeight);
-    }
+    // Retired with BH1, and not coming back as an alias: SettingsOpenWidth, DrawerWidthDelta,
+    // SettingsOpenPageBoxWidth, HelpDrawerWidth, BodyRowGap, NavColumnWidth, PageRootPadding,
+    // CentreColumnWidthInPage, ResponsiveParameterRowBreakpoint and DrawerSharesTheBody were the widening
+    // and the "which presentation fits this box" question. A help panel that reserves height never needs to
+    // ask whether a third column is affordable, and a second width for a second help state is exactly the
+    // pre-resize box mismatch those helpers existed to paper over.
 
     /// <summary>
-    /// Height for a screen: the closed width at 4:3, which is an exact whole number for every width this class
-    /// returns, floored at vanilla's own height because the width floor derives from it.
+    /// Height for a screen: the window width at 4:3, which is an exact whole number for every width this
+    /// class returns, floored at vanilla's own height because the width floor derives from it.
     /// </summary>
     public static float SettingsWindowHeight(float screenWidth, float screenHeight)
     {
-        return SettingsClosedWidth(screenWidth, screenHeight) * WindowAspectHeight / WindowAspectWidth;
+        return SettingsWindowWidth(screenWidth, screenHeight) * WindowAspectHeight / WindowAspectWidth;
     }
 
     private static float RoundUpToStep(float value)

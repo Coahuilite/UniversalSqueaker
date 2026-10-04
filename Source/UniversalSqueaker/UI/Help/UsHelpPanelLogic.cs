@@ -3,7 +3,7 @@ using System;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Pure display resolution for the right-hand help panel (C+A model; D2 ruling retired the
+/// Pure display resolution for the bottom help panel (C+A model; D2 ruling retired the
 /// persistent index list and pinned selection with it). A hover claim wins while the pointer holds
 /// it and resolves across the WHOLE catalog (the always-visible surfaces - navigation, footer -
 /// claim entries of sections the content column is not showing, and the header follows the claimed

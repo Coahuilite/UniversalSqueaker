@@ -11,10 +11,11 @@ namespace UniversalSqueaker.UI;
 /// non-English game gets a translated heading instead of leftover English prose.
 ///
 /// <para>
-/// The Help toggle used to be drawn HERE, as a reserved control area at the right edge of the band. It
+/// The Help switch used to be drawn HERE, as a reserved control area at the right edge of the band. It
 /// moved into the manifest's fixed header band in step S3-2a (`header-band` holding `help-toggle`, an
-/// `input/button` with an `ActionBind`): the toggle must not scroll away with the workspace content,
-/// and a declared element is where the engine-level `HelpKey` claims the catalog item
+/// `input/button` with an `ActionBind`), and BH1 (2026-10-05) moved it ONCE MORE, into the footer band
+/// beside the status row it now opens space above. The toggle must not scroll away with the workspace
+/// content, and a declared element is where the engine-level `HelpKey` claims the catalog item
 /// `us/page-title/help-drawer` with no per-widget code at all - the claim moved with the control. This
 /// widget is a read/measure surface again: it resolves the heading and measures its two bands.
 /// </para>
