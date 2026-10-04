@@ -5,62 +5,41 @@
 > surface is `TODO.md`. Code and the carrier outrank this file.
 > **Compaction history:** the pre-2026-09-21c text of this file and of `TODO.md` is archived byte-verbatim in
 > `OBLIVIONIS.md` "Memory compaction 2026-09-21c"; the 2026-10-02 section summarizes substantive decisions
-> removed in that consolidation. It is not a verbatim copy; the original prose remains in Git history.
-> Read the cold archive only for a historical conflict.
+> removed in that consolidation. The 2026-10-04 HM1 consolidation compressed the landed
+> V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 round prose into the CURRENT STATE bullets and pointer lines below,
+> keeping every durable rule; that removed prose remains in **Git history only** - the cold archive was NOT
+> extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
+> archive only for a historical conflict.
 
 ## Current state (2026-10-04)
 
-### V1 feedback and B3 integration
-
-V1 retains the navigation surfaces, flat Sections, spacing, independently scrollable 200px navigation,
-and fourteen responsive Overview rows. Stable controls, bindings, translations, help and diagnostics
-remain intact. On the revised rehearsal packages, the user passed C1 (US repeated complete reports
-and capture off after reopening) and C2 (Demo complete report matching its page summary). Those close
-the earlier report failure; untriggered conditions remain untested.
-
-B3 failed in game at 1024x768: expanded help displaced the settings. The repair decides coexistence
-from the actual page box, applies the drawer resize before the frame reads the window rect, and
-invalidates layout when the sharing decision changes. The open 1024x600 window provides a 984x524
-page box: 416px centre plus 320px help. Both language tables have zero fit findings; the pre-resize
-box uses the defensive band. Help/body nodes preserve scroll state. The user observed help/settings coexistence in game. Scroll retention and untested interactions remain open.
-
-B3 and V2/V3/V4 are technically integrated. Subsequent UI work follows real game feedback and
-the approved scope. The user observed normal footer presentation and preliminary Packs usability; untriggered branches remain open.
-The user authorized continued UI development after B3; reuse the current DSH leader and independent
-runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
-identity and per-slice evidence belong to the PM delivery records, not this active memory.
-
-Report-button feedback is now technically verified: a per-window sentence beside the button tracks
-request/refusal and names only an actually generated pass. In-game clarity remains open. Empty xenotype tuning targets now use inert controls and retain the
-layer selector; preset reset rejects an empty layer identity before entering game Def lookup. Technical
-checks pass; in-game disabled appearance remains open. Tuning-layer redesign, composite splitting and
-page-layout changes are explicitly deferred; bottom help is a separate design proposal.
-
-**Working direction:** specifications lead with purpose, ownership, main path and a few invariants.
-Validate at responsible boundaries, then use established internal contracts directly. Hashes identify
-payloads, not business correctness. Unexpected failures retain context and the original exception;
-isolation or recovery is not success. Add tolerance for observed faults and known business states.
-### DIAG-FIX: repeated reports keep waiting for their own pass
-
-Technically accepted. The consumer no longer treats a previous successful report as a reason to retire a new
-request: `ConsumeLayoutReportRequest` clears on success or when capture is no longer `Active`/`Overlay`, and an
-off/unavailable request is refused at request time so a later enable cannot satisfy it. PM replaced the lane
-that mirrored the consume logic with a PRODUCTION `UsKernelSettingsSource` instance driven by bound requests on
-a real `UiHost`; restoring only the old production method fails `TheSecondReportDescribesANewerPass`
-(first 2, second −1). Default-off capture and the report output are retained. Demo's explicit Report writes the
-complete retained dump **once per successful report** to a distinct `[FerriteLibUiKitDemo][ui-geometry]` entry
-carrying host/session/pass - never repurposed onto `ui-audit`, never per frame, never auto-enabled.
-
-**Historical failure:** the old game build omitted the second same-window report. The user passed C1/C2
-on the revised rehearsal package on 2026-10-04; the original failure remains in the archived evidence.
-
-### Historical product checkpoint (2026-10-02, before memory consolidation)
-
-FL `b31e2c3` (minimal `ModSettings` base for the production regression - no library product change), US
-`33a0aad` (V1 paint/spacing partial), Demo `d972dbc` (one-shot geometry log outlet). All three trees were clean
-when packaged; that US Dev package matches the product checkpoint and selected FL carrier. A later docs-only
-commit moves HEAD without rebuilding that package. Read current package identity from its stamp. No publication,
-no install.
+- **Package identity is US `1a54e1f`** (full `1a54e1fbcb0d713faa4d0e518d3cdb75a1c71224`), FL `0181268`, Demo
+  `9d4b7e0`. **This docs-only round does not rebuild**: the playtest package keeps that identity, and a
+  docs-only commit moves HEAD so the payload's embedded commit will NOT equal HEAD until a rebuild - expected
+  per `AGENTS.md`, not a defect. Read a package's identity from its own stamp, never from HEAD.
+- **Latest human feedback reaffirms C1/C2 as normal.** Their original diagnostic IDs stay intact; the final
+  feedback did not name RPT1/XG1 individually. The verbatim feedback, runtime observations and evidence are
+  kept outside the product repository in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
+  Layout reports do not replace visual or interaction acceptance; unattributed mod-stack warnings remain
+  unattributed.
+- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1 and XG1 are technically integrated; their affected
+  checks passed. Remaining human observations cover V2/V3/V4 and B3's
+  remainder (independent scrolling, close/reopen retention), RPT1's sentence clarity, XG1's disabled feel, with
+  `TODO.md`'s NOW block owning the per-slice list. The V1/B3 observations the user already gave must NOT be
+  re-asked. Tuning-layer redesign, composite splitting and page-layout work stay deferred, and bottom help keeps
+  its separate plan (`../modding_documents/relay_mod/BOTTOM-HELP-PROPOSAL-20261004.md`). Technical coverage
+  limits remain separate, per `../modding_documents/relay_mod/PM_HANDOFF.md`.
+- **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
+  at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
+  business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
+  not success. Add tolerance for observed faults and known business states.
+- **Landed report/diagnosis rules (DIAG-FIX + R3-B; technical only).** `ConsumeLayoutReportRequest` clears on
+  success or when capture is no longer `Active`/`Overlay`, and an off/unavailable request is refused at request
+  time so a later enable cannot satisfy it; the production lane drives a real `UsKernelSettingsSource` on a real
+  `UiHost`, and `TheSecondReportDescribesANewerPass` is the mutation proof (restoring the old production method
+  measures first 2, second -1). Demo writes its complete retained dump **once per successful report** to its own
+  `[FerriteLibUiKitDemo][ui-geometry]` entry - never repurposed onto `ui-audit`, never per frame, never
+  auto-enabled. Package identity and per-slice evidence belong to the PM delivery record, not this file.
 
 ### R4-B (integrated 2026-09-30)
 
@@ -71,18 +50,15 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 
 ### R4-A: a typed choice carries its value, and the row index is the bridge
 
-- **The anti-pattern is gone.** `UsScopeTreeWidget` no longer binds the scope as text and reverses it with
-  `Enum.TryParse`; the domain dropdown no longer joins and splits a `\u0001` token. Both commit the option's own
-  typed value through `set-action-scope` / `set-tuning-domain`.
-- **`UsKernelDraw.Dropdown<T>` is the typed form** over FL's `UiChoice<T>` (label + value); the trigger matches
-  the current value by VALUE, never by label, and both it and the string overload share one
-  `DrawDropdownCore` so the popup push, clamp/flip and owner-id hit rule exist once.
-- **The payload bridge is the ROW INDEX** because FL's row list is still string-payloaded; matching by label
-  would collapse two options that share a label.
-- **`IUiTypedChoices` is deliberately unused in US**: it exists for a non-generic widget that cannot name the
-  consumer's `T`, and `UsScopeTreeWidget` can name `SqueakActionScope?`, so it consumes the carrier directly.
-- **Null-inherit stayed a value**: the Auto entry is a real `null` and a row with no own scope commits `null`,
-  never a default.
+- `UsScopeTreeWidget` commits the option's own typed value through `set-action-scope` / `set-tuning-domain`; no
+  scope is bound as text and reverse-parsed, and no domain token is joined/split.
+- `UsKernelDraw.Dropdown<T>` is the typed form over FL's `UiChoice<T>` (label + value): the trigger matches the
+  current value by VALUE, never by label, and both overloads share one `DrawDropdownCore`, so the popup push,
+  clamp/flip and owner-id hit rule exist once. The payload bridge is the **ROW INDEX** because FL's row list is
+  string-payloaded; matching by label would collapse two options that share a label.
+- `IUiTypedChoices` is deliberately unused in US (it exists for a non-generic widget that cannot name the
+  consumer's `T`; `UsScopeTreeWidget` can name `SqueakActionScope?`). **Null-inherit stays a value**: the Auto
+  entry is a real `null` and a row with no own scope commits `null`, never a default.
 
 ### R3-B: layout diagnosis is an explicit per-host developer control
 
@@ -90,32 +66,27 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   switched per host (`SetGeometryCapture` / `SetGeometryOverlay` / `RequestGeometryReport`), default OFF, wired
   to three real page commands. `!GeometryEnabled` right after `Open` is the decoupling's mutation proof.
 - **`Open(host, auditFit)` separates the SCOPE from the POLICY.** Every US window opens its scope in every
-  logging mode because the per-host commands resolve a scope by host identity - a command with no open scope is
-  dead. `auditFit` is `SqueakLog.ShouldEmitDev` at all three call sites and gates ONLY the text-fit audit, so
-  the FIT/RECOVERY policy is unchanged. **A window must open a scope before its geometry command can do
-  anything**, and harness lanes must do the same or they test nothing.
+  logging mode, because the per-host commands resolve a scope by host identity - a command with no open scope is
+  dead. `auditFit` is `SqueakLog.ShouldEmitDev` at all three call sites and gates ONLY the text-fit audit, so the
+  FIT/RECOVERY policy is unchanged. **A window (and a harness lane) must open a scope before its geometry
+  command can do anything.**
 - **Status watching is not status changing.** `GetDevGeometryStatus` is read-only; the capability probe asks the
   carrier once, caches the answer and restores `GeometryEnabled` to false, so only `SetGeometryCapture` leaves
   sampling on - and the cached answer is why a later explicit enable still succeeds.
 - **Status vocabulary, so a release carrier is never a clean empty report:** `ScopeMissing` / `Off` / `Active` /
   `Overlay` / `Unavailable`, compiled in BOTH configurations. `geometryEnabled`, `reportPending`, the report
-  payload and the scope registry are unconditional; only the carrier CALLS and `reportRequestPass` are
-  `US_DEV`. That split made both configurations compile with zero warnings - no pragma, no disabled warning, no
-  weakened refusal.
-- **The report is one-shot, explicit and holds BOTH renderings of ONE capture.** `Publish` emits no geometry
-  (normal fit/recovery reporting is untouched): the Report command is the emission path. `PublishGeometryReport`
-  returns the pass it described or -1, waits for a pass NEWER than the one that existed at the click, then
-  clears. `EmitGeometryReport` reads the snapshot and the dump together and retains both.
-- **Nothing dangles**: a request made while capture is off/unavailable is refused at request time, and `Dispose`
-  removes the scope entry in both builds.
-- **The instrument's human outlet is the existing `ltrace` channel**, and a developer greps the player log for
-  it: `SqueakLog.LayoutTrace` emits `[UniversalSqueaker] ltrace: <message>` and only under `ShouldEmitDev`, so
-  no lane asserts it and none had to be re-cut. `UsTextFitAudit` writes one line per dump record as
-  `ltrace: geometry <record>`, plus ONE refusal line per process,
-  `ltrace: geometry unavailable: …` - on a Release payload the reason is "this payload has no layout
-  instrument (a release library package)". That distinction is the whole of R3-B's B3: the developer must be
-  able to see that the tool is missing rather than that the layout was clean. **The record CONTENT on those
-  lines belongs to the carrier's own dump** - read the shapes from the carrier, do not restate them here.
+  payload and the scope registry are unconditional; only the carrier CALLS and `reportRequestPass` are `US_DEV`
+  (both configurations compile with zero warnings - no pragma, no weakened refusal).
+- **The report is one-shot, explicit, and holds BOTH renderings of ONE capture.** `Publish` emits no geometry;
+  the Report command is the emission path. `PublishGeometryReport` returns the pass it described or -1, waits
+  for a pass NEWER than the one that existed at the click, then clears. **Nothing dangles**: a request made while
+  capture is off/unavailable is refused at request time, and `Dispose` removes the scope entry in both builds.
+- **The instrument's human outlet is the existing `ltrace` channel** (`SqueakLog.LayoutTrace` under
+  `ShouldEmitDev`, so no lane asserts it): one line per dump record as `ltrace: geometry <record>`, plus ONE
+  refusal line per process, `ltrace: geometry unavailable: …` - on a Release payload the reason is "this payload
+  has no layout instrument (a release library package)". That distinction is the whole of R3-B's B3. **The record
+  CONTENT on those lines belongs to the carrier's own dump** - read the shapes from the carrier, do not restate
+  them here.
 
 ## Diagnostics panel, attention role
 
@@ -155,8 +126,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - **A palette may only move the colour clock.** `ColourRevision` moves on colour assignment;
   `LayoutRevision`'s writers stay `DefaultFont` and `Geometry`. `UiStyleResolver.ThemeFor` drops cached region
   clones when EITHER moved, so a re-tint repaints a scoped region while arrangement, node identity, focus, hover
-  claim, scroll and open popups are untouched. Evidence splits in two: a recorded DRAW for "the palette reached
-  the paint", and the session's own bookkeeping for "a colour is not a structural event" - the lane explicitly
+  claim, scroll and open popups are untouched. Evidence splits in two - a recorded DRAW for "the palette reached
+  the paint" and the session's own bookkeeping for "a colour is not a structural event" - and the lane explicitly
   does NOT claim all-state redraw proof. Contract page: `docs/r12-us-theme-contract-zh.md`.
 - **The nine ON/OFF controls are the carrier's `input/checkbox` with `Appearance="switch"`**; the US-only
   `us/square-toggle` is retired (its file, registration and lane subject - the lane was re-cut onto the shared
@@ -172,11 +143,11 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   800x600 rows only as clearly labelled UNREACHABLE stress probes, and the window keeps its 800x600 design floor
   as its normal initial window size; neither is a game screen.
 - **The minimum screen is a constant, not an estimate**: `RimWorld.ResolutionUtility` carries
-  `MinResolutionWidth = 1024` / `MinResolutionHeight = 768` (pinned reference `Krafs.Rimworld.Ref` 1.6.4871; that
-  reference keeps constants with extern bodies, so it proves the floor, not every runtime UI-scale clamp
-  path). Do not infer supported sub-1024 screens from a guessed UI-scale ratio. The old
-  "narrow-help trigger band [1024, 1131]" is retired: presentation now reads the actual page box.
-  The normally sized open window at the minimum screen shares; a smaller actual box can use the band.
+  `MinResolutionWidth = 1024` / `MinResolutionHeight = 768` (pinned reference `Krafs.Rimworld.Ref` 1.6.4871,
+  whose extern-body constants prove the floor, not every runtime UI-scale clamp path). Do not infer supported
+  sub-1024 screens from a guessed UI-scale ratio. The old "narrow-help trigger band [1024, 1131]" is retired:
+  presentation now reads the actual page box, the normally sized open window at the minimum screen shares, and
+  a smaller actual box can use the band.
 - **The fit audit's join is two halves**: `Enabled` only opens the switch; a host must ALSO hold its own
   `UiHost.Diagnostics` subscription. A host with no subscription is measured with a **null ruler** and measures
   nothing - which is what removes cross-window misattribution by construction.
@@ -438,36 +409,43 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.
   Remaining row-level dissolution is US's backlog, not a general carrier limit; the genuine remaining FL gap
   is **hierarchy x inline composition**.
-- **Packs tab (V2, 2026-10-04)**: the reading order is filter -> race browse -> xenotype browse ->
-  current-domain pack enable, and all four bands share ONE card rhythm (Padding 12 / Gap 6 / header 26) - the
-  filter band is a `Section` + `us/section-header` wrapping the now-`TitleHidden` `us/filter-bar` composite,
-  so its title uses the same rail/marker header as the other three. The two states are deliberately different
-  channels: BROWSE selection is `us/selection-surface` (fill + 3px rail; the row's `select-domain` payload is
-  its business key and reaches page state only), PACK ENABLE is the item-local
-  `input/checkbox Appearance="switch" Bind/SelectedKey="enabled"` at the shipped 36x30 band (a 24px band
-  clamped the 34x18 track and cut the knob throw), and the enable band names its scope through the read-only
+- **Packs tab (V2)**: the reading order is filter -> race browse -> xenotype browse -> current-domain pack
+  enable, and all four bands share ONE card rhythm (Padding 12 / Gap 6 / header 26); the filter band is a
+  `Section` + `us/section-header` wrapping the now-`TitleHidden` `us/filter-bar` composite. The two states are
+  deliberately different channels: BROWSE selection is `us/selection-surface` (fill + 3px rail, the row's
+  `select-domain` payload is its business key and reaches page state only), PACK ENABLE is the item-local
+  `input/checkbox Appearance="switch" Bind/SelectedKey="enabled"` at the shipped 36x30 band (24px clamped the
+  34x18 track and cut the knob throw), and the enable band names its scope through the read-only
   `checklist-scope` line. A browse write cannot reach an enable value or vice versa (asserted on increments
-  through the real boundary). No new write key, no model/save/translation change, no carrier change.
-  **Disclosed behaviour change**: the filter band lost its help-FOCUS border
-  (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header; no other Packs band ever had
-  one, so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
-- **Tuning tab (V3, 2026-10-04)**: one `us/scope-tree` card whose areas read layer/domain -> action scope
-  (Autonomous/Operable groups) -> mood, with area headings Small/TextPrimary and group headings
-  Tiny/TextSecondary. The mood area is gated on the mood rows ALONE in both Measure and Draw (the pre-V3
-  `scopeRows.Count > 0` vs `anyScopeDrawn` split was two predicates for one decision). The inherited-scope hint
-  is not width-gated: one pure row-layout function shared by Measure and Draw keeps it inline while the action
-  name keeps a floor, own-line otherwise, never hidden. Mood provenance is PER-FACTOR from the authoritative
-  fold (`bestPitchLayer`/`bestVolumeLayer`/`bestJitterLayer`, -1 = no supplier -> default), and
-  `MoodTuningRecord.sourcePresetDefName` is a RESET-TARGET ANCHOR, never provenance (Clear deliberately keeps
-  it) - it may be drawn ONLY as an explicitly labelled reset target and only while that target is Ready.
-  Additive key `US.Tuning.Source.Default`; the action-side `Auto` word is not reused on the mood side. No
-  model/save/command/stable-id change, no carrier change.
-- **Remaining pages (V4):** Presets uses the manifest's local Tiny font scheme so composed row paint and
-  measure agree. Its read-only baseline note distinguishes Def data from current Tuning values. Distance
-  captions describe the existing camera-height scale, without invented physical units. Footer visibility
-  is transient save status OR pending edits; full build identity remains readable with lower ink emphasis.
-  Existing help ownership, camera semantics and persistence stay unchanged. Per-slice proof lives in the
-  PM delivery record; game observation remains in TODO.
+  through the real boundary). **Disclosed change**: the filter band lost its help-FOCUS border
+  (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header (no other Packs band had one),
+  so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
+- **Tuning tab (V3)**: one `us/scope-tree` card whose areas read layer/domain -> action scope
+  (Autonomous/Operable groups) -> mood. The mood area is gated on the mood rows ALONE in both Measure and Draw
+  (the pre-V3 `scopeRows.Count > 0` vs `anyScopeDrawn` split was two predicates for one decision). The
+  inherited-scope hint is not width-gated: one pure row-layout function shared by Measure and Draw keeps it
+  inline while the action name keeps a floor, own-line otherwise, never hidden. Mood provenance is PER-FACTOR
+  from the authoritative fold (`bestPitchLayer`/`bestVolumeLayer`/`bestJitterLayer`, -1 = no supplier ->
+  default), and `MoodTuningRecord.sourcePresetDefName` is a RESET-TARGET ANCHOR, never provenance (Clear
+  deliberately keeps it) - it may be drawn ONLY as an explicitly labelled reset target and only while that
+  target is Ready. Additive key `US.Tuning.Source.Default`; the action-side `Auto` word is not reused on the
+  mood side.
+- **Remaining pages (V4):** Presets uses the manifest's local Tiny font scheme so composed row paint and measure
+  agree; its read-only baseline note distinguishes Def data from current Tuning values. Distance captions
+  describe the existing camera-height scale, without invented physical units. Footer visibility is transient
+  save status OR pending edits, and the full build identity stays readable in lower ink emphasis.
+- **Report button feedback (RPT1, landed)**: the report outcome is a READ-ONLY sentence printed immediately below
+  the Report button, in the existing Keyed mechanism (additive entries in both tables). It is derived from the
+  carrier's own facts: refused-at-request-time names the real reason (capture off / no instrument / no scope),
+  an accepted request says it is waiting, and only a pass the window actually consumed turns it into "written"
+  with that pass number - success can never be produced by the click. The window advances the shared content
+  revision on a produced report so the band re-measures; nothing else about report collection changed.
+- **Empty xenotype tuning target (XG1, landed)**: a non-Global tuning layer must HAVE an identity before any
+  tuning write - `MoodLayerHasIdentity` is shared by both mood writers and the preset reset, and layer 0
+  (Global) stays valid. When the xenotype layer has no target, the card states the reason and its action/value/
+  reset controls become INERT (static disabled bands; no dropdown, number, stepper or reset atom is even
+  called), while the layer segment stays live as the way out. The target-catalog definition, the persisted
+  domain and the valid-domain path are unchanged; the tuning-layer/composite/layout redesign stays deferred.
 - **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
   manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
   `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit
@@ -560,9 +538,19 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   session checkpoints 2026-08-24 -> 2026-09-10, the FL 0.3.0 migration round, the diagnostics round-9 audit, the
   US -> FL 0.4 migration and its append-only evidence, the pre-cutover architecture audit, the finished S3/S4/S6
   slice narratives, the superseded "Handover - start here" and "Current state (2026-09-21)" blocks, the task-32
-  selection narrative, and the gate-count history - together with the fact that `Palette` / `UiText` / `UiPanel` /
+  selection narrative and the gate-count history - together with the
+  fact that `Palette` / `UiText` / `UiPanel` /
   `SurfaceFrame` / `UiInteract` / `UiValueStore` / `UiGuard` / `VoicePacksLayout` / the Schema=1 `Layout.xml` and
-  the whole legacy page chain no longer exist.
+  the whole legacy page chain no longer exist. **The archive was not extended on 2026-10-04**: the prose the HM1
+  consolidation removed (the pre-compaction V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 round narrative) is in Git
+  history only, and a later round may archive it.
+- **2026-10-02 product checkpoint identities**: FL `b31e2c3` / US `33a0aad` / Demo `d972dbc` - all three trees
+  clean when packaged; a later docs-only commit moves HEAD without rebuilding it, so read a package's identity
+  from its own stamp.
+- **Superseded working authorization (pre-handoff)**: after B3 the user authorized continued UI development
+  reusing the then-current DSH leader and independent runtime reviewer, adding an FL implementer only for a
+  demonstrated shared-library gap; **superseded by the 2026-10-04 HM1 handoff** (development moves to a new
+  Harness), so it assigns no roles now and binds no future round.
 - The docs sweep still carries the OLD Gate-U constraint ("fallback must be retained / no clean cutover") in
   `docs/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
 - `dist/ui-evidence/**` and the per-revision matrices are cold artifacts; the reviews live in `docs/review/**`.

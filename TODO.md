@@ -1,41 +1,44 @@
 # TODO
 
 > Action surface only. Landed history lives in git log, `OBLIVIONIS.md` (cold archive - including the
-> the pre-2026-09-21c byte-copy and the 2026-10-02 substantive summary) and the pointer lines at the end;
+> pre-2026-09-21c byte-copy and the 2026-10-02 substantive summary) and the pointer lines at the end;
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — current queue (2026-10-04)
+## NOW — current queue (2026-10-04, handoff round)
 
-- [ ] **B3 repaired-package game observation at 1024x768.** Help/settings coexistence is observed usable. Remaining:
-  independent scrolling and closing/reopening position retention; do not repeat the passed observation.
-- [ ] **V2 Packs game observation at 1024x768.** The Packs tab reads filter -> race/xenotype browse ->
-  current-domain pack enable with one card rhythm, a switch-shaped per-pack enable control and a read-only
-  scope line naming the browsed domain. Both real page boxes x both drawer states x EN/ZH measure fit=0,
-  with the three empty states arranged and dropdown popups contained in the page. **Stays open until the user
-  observes it in a new package.** US-only: no carrier change, single FL carrier. Disclosed behaviour change:
-  the filter band no longer draws the help-focus border (it is a Section + `us/section-header` now; no other
-  Packs band had one).
-- [ ] **V3 Tuning game observation at 1024x768.** Layer/domain -> action scope -> mood parameters read in that
-  order inside one card; the inherited-scope hint is no longer width-suppressed; mood provenance is per-factor
-  and the preset anchor appears only as an explicitly labelled reset target. Both real page boxes x both drawer
-  states x EN/ZH measure fit=0, with a pointer-driven popup and no click-through. **Stays open until the user
-  observes it in a new package.** No carrier change; single FL carrier.
-- [ ] **V4 repaired-package game observation at 1024x768.** Distance axes describe the existing camera-height
-  scale; Presets distinguishes read-only baselines from current Tuning values and uses one Tiny row scale;
-  footer hides clean Idle, preserves dirty/saving/failure state and retains the full build identity in muted
-  ink. Technical checks and independent PM review are complete; real fonts, pointers and scrolling await
-  the user's package observation. Current identities/evidence belong to the PM delivery record.
-- [ ] **RPT1 report-button feedback game observation.** Technical production/Host checks pass;
-  observe the adjacent refusal/wait/success sentence once a new rehearsal package is supplied.
-- [ ] **XG1 empty xenotype target game observation.** Technical inert-input/identity checks pass.
-  Observe the unavailable message and ability to leave the empty layer; layer redesign, composite
-  splitting and page-layout changes remain deferred.
-- [ ] **Bottom help proposal.** Develop a separate shared-footer-space option from the user's feedback.
-  Ordinary footer rendering passed; untriggered save states remain unverified.
-C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat
-the complete report matrix by default. Package identity and current per-slice evidence live in the PM
-handoff. A Release carrier is a refusal-control case, not the current rehearsal input.
+**This round closes the US feedback loop and hands over.** The user reported the final playtest, authorized
+this tidy, and is switching to another Harness - subsequent development starts there. Package identity stays US
+`1a54e1f` (full `1a54e1fbcb0d713faa4d0e518d3cdb75a1c71224`), FL `0181268`, Demo `9d4b7e0`; this docs-only
+round does not rebuild, so the payload's embedded commit will not equal HEAD until a rebuild - expected per
+`AGENTS.md`, not a defect.
+
+- The user reaffirmed C1/C2 as normal, keeping the original IDs; verbatim feedback and runtime evidence are
+  in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`. Remaining coverage limits are in
+  `../modding_documents/relay_mod/PM_HANDOFF.md`; they are distinct from human observations.
+- [ ] **Remaining in-game observations of the landed UI rounds** - do not re-run or re-claim their
+  technical passes, and do not repeat the V1/B3 observations the user already gave. All are US-only with no
+  carrier change and a single FL carrier.
+  - **RPT1 report-button feedback**: observe the adjacent refusal/wait/success sentence in a new package.
+  - **XG1 empty xenotype target**: observe the unavailable message and that the layer can still be left.
+  - **V2 Packs**: observe filter -> race/xenotype browse -> pack-enable order, the switch-shaped per-pack
+    enable and the read-only scope line. Disclosed change: the filter band no longer draws the help-focus
+    border (a Section + `us/section-header` now; no other Packs band had one).
+  - **V3 Tuning**: observe layer/domain -> action scope -> mood order, the no-longer width-suppressed
+    inherited-scope hint, and per-factor provenance with the preset shown only as a labelled reset target.
+  - **V4 Distance/Presets/footer**: observe the camera-height axis wording, the read-only baseline note
+    versus current Tuning values, and the footer keeping dirty/saving/failure plus the build identity.
+  - **B3 help/settings coexistence**: observed usable at 1024x768; remaining are independent scrolling and
+    close/reopen position retention.
+- [ ] **Bottom help proposal**: develop the separate shared-footer-space option
+  (`../modding_documents/relay_mod/BOTTOM-HELP-PROPOSAL-20261004.md`); ordinary footer rendering passed,
+  untriggered save states unverified.
+- **Deferred (unchanged)**: tuning-layer redesign, composite splitting and page-layout changes; the bottom-help
+  plan stays separate. A new team starting here reads `MEMORY.md` first and treats the deferred list below as
+  the standing scope boundary.
+
+Untriggered cases stay untested; a Release carrier is a refusal-control case, not the current rehearsal input.
+
 ## Open decisions / blocked on the maintainer or on FL
 
 - [ ] **Retire the short-lived branch `feat/help-drawer-visiblekey`** (its work is already in the `0.5.x` line):
@@ -161,11 +164,15 @@ handoff. A Release carrier is a refusal-control case, not the current rehearsal 
 
 ## Landed — pointer lines (detail in git log / `MEMORY.md` / `OBLIVIONIS.md`)
 
+- **2026-10-04 — HM1 memory/handoff round**: `MEMORY.md` and this file compacted; the final user feedback
+  recorded at its own altitude; no product, build or package change (the package stays `1a54e1f`).
+- **2026-10-04 — RPT1 / XG1**: report-button result sentence and the empty-xenotype tuning block (inert
+  controls, live layer selector, identity guard before Def lookup) - technical passes only; in-game clarity and
+  disabled feel stay open.
 - **2026-10-02 — DIAG-FIX**: repeated report requests wait for their own pass; the lane now drives the
   production settings source; Demo logs the full retained report once per success under its own prefix.
-  Technical acceptance only; revised-package game verification pending (item 3 above).
 - **2026-10-02 — V1 implementation checkpoint**: nav surfaces, flatter Section edges, Overview spacing,
-  independent nav scrolling and responsive parameter rows. Technical checks passed; item 1 is game rehearsal.
+  independent nav scrolling and responsive parameter rows.
 - **2026-09-30 — R4-A / R4-B**: typed action-scope choice (the `ToString`/`Enum.TryParse` round-trip is gone)
   and the preset subtree composed on FL's shared row band with native xenotype icons.
 - **R3-B / R12-US**: the per-host geometry instrument and the complete owned DarkGold baseline; durable facts in
