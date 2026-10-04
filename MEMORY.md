@@ -22,14 +22,18 @@ B3 failed in game at 1024x768: expanded help displaced the settings. The repair 
 from the actual page box, applies the drawer resize before the frame reads the window rect, and
 invalidates layout when the sharing decision changes. The open 1024x600 window provides a 984x524
 page box: 416px centre plus 320px help. Both language tables have zero fit findings; the pre-resize
-box uses the defensive band. Help/body nodes preserve scroll state. Actual setting interaction,
-wheel feel and visual acceptance of the repaired package still require the user's game observation.
+box uses the defensive band. Help/body nodes preserve scroll state. The user observed help/settings coexistence in game. Scroll retention and untested interactions remain open.
 
 B3 and V2/V3/V4 are technically integrated. Subsequent UI work follows real game feedback and
-the approved scope; repaired-package game observation remains open.
+the approved scope. The user observed normal footer presentation and preliminary Packs usability; untriggered branches remain open.
 The user authorized continued UI development after B3; reuse the current DSH leader and independent
 runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
 identity and per-slice evidence belong to the PM delivery records, not this active memory.
+
+Report-button feedback is now technically verified: a per-window sentence beside the button tracks
+request/refusal and names only an actually generated pass. In-game clarity remains open. The next
+bounded correction blocks editing an empty xenotype tuning target. Tuning-layer redesign, composite
+splitting and page-layout changes are explicitly deferred; bottom help is a separate design proposal.
 
 **Working direction:** specifications lead with purpose, ownership, main path and a few invariants.
 Validate at responsible boundaries, then use established internal contracts directly. Hashes identify

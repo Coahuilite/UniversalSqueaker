@@ -7,9 +7,8 @@
 
 ## NOW — current queue (2026-10-04)
 
-- [ ] **B3 repaired-package game observation at 1024x768.** Verify settings remain visible and operable
-  with help open, help/body scroll independently, and closing/reopening preserves position. Technical
-  geometry/fit checks pass; the original game failure is historical evidence until the repair is observed.
+- [ ] **B3 repaired-package game observation at 1024x768.** Help/settings coexistence is observed usable. Remaining:
+  independent scrolling and closing/reopening position retention; do not repeat the passed observation.
 - [ ] **V2 Packs game observation at 1024x768.** The Packs tab reads filter -> race/xenotype browse ->
   current-domain pack enable with one card rhythm, a switch-shaped per-pack enable control and a read-only
   scope line naming the browsed domain. Both real page boxes x both drawer states x EN/ZH measure fit=0,
@@ -27,6 +26,12 @@
   footer hides clean Idle, preserves dirty/saving/failure state and retains the full build identity in muted
   ink. Technical checks and independent PM review are complete; real fonts, pointers and scrolling await
   the user's package observation. Current identities/evidence belong to the PM delivery record.
+- [ ] **RPT1 report-button feedback game observation.** Technical production/Host checks pass;
+  observe the adjacent refusal/wait/success sentence once a new rehearsal package is supplied.
+- [ ] **XG1 empty xenotype target.** Block unavailable edits and guard preset reset at the production
+  boundary. Tuning-layer redesign, composite splitting and page-layout changes remain deferred.
+- [ ] **Bottom help proposal.** Develop a separate shared-footer-space option from the user's feedback.
+  Ordinary footer rendering passed; untriggered save states remain unverified.
 C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat
 the complete report matrix by default. Package identity and current per-slice evidence live in the PM
 handoff. A Release carrier is a refusal-control case, not the current rehearsal input.

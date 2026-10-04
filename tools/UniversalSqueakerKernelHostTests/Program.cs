@@ -234,6 +234,8 @@ internal static class Program
         Step("one help presentation per screen (乙1)", () => HelpPresentationLaneTests.RunAll());
         Step("V2 Packs hierarchy, order and browse-vs-enable", () => PacksHierarchyLaneTests.RunAll());
         Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
+        Step("RPT1 report button feedback: real reason, generated pass, real page boxes",
+            () => ReportFeedbackLaneTests.RunAll());
     }
 
     /// <summary>

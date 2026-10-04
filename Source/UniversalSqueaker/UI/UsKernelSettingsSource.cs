@@ -152,6 +152,37 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     private bool layoutReportPending;
 
     /// <summary>
+    /// What this window's Report control is currently saying (RPT1.1). It is written ONLY where one of the
+    /// audit's own facts is known - a refused request, an accepted wait, or a produced pass - so a success
+    /// sentence can never be built out of a click.
+    /// </summary>
+    private LayoutReportOutcome reportOutcome = LayoutReportOutcome.None;
+
+    /// <summary>
+    /// The pass the last PRODUCED report described, or -1. Naming it in the sentence is what makes a later
+    /// re-click's newest result distinguishable from the previous one (RPT1.1).
+    /// </summary>
+    private int lastReportPass = -1;
+
+    /// <summary>
+    /// What the Report control says. <see cref="None"/> means "the instrument has not been asked anything
+    /// since it last changed", and the sentence is then derived from the instrument's own state - so the line
+    /// can never keep claiming a reason that the developer has just changed (RPT1.2's "real reason").
+    /// </summary>
+    private enum LayoutReportOutcome
+    {
+        None,
+        Ready,
+        CaptureOff,
+        RefusedCaptureOff,
+        Unavailable,
+        NoScope,
+        Waiting,
+        Written,
+        NotProduced,
+    }
+
+    /// <summary>
     /// The host this window's page is drawn by. The developer switches are per-host, and this is how a page
     /// command reaches the instrument of ITS OWN host rather than a process-wide flag. The production host
     /// factory attaches it (next to the revision source); a harness fake attaches its own.
@@ -193,6 +224,84 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         }
     }
 
+    /// <summary>
+    /// The outcome of this window's Report control, as the sentence the page prints immediately below the
+    /// Report button (RPT1.1). READ-ONLY for the page: the button's own command is the only writer, and every
+    /// sentence is a Keyed entry, so the same translation mechanism carries it.
+    /// <para>
+    /// Success is tied to the pass the audit actually generated (<see cref="lastReportPass"/>), never to the
+    /// click: <see cref="RequestLayoutReport"/> leaves the line at "requested", and only
+    /// <see cref="ConsumeLayoutReportRequest"/> returning a pass turns it into "written". When capture is off
+    /// or the carrier has no instrument, the same line names THAT reason instead of a generic failure
+    /// (RPT1.2).
+    /// </para>
+    /// </summary>
+    public string LayoutReportStatus
+    {
+        get
+        {
+            LayoutReportOutcome current = IdleReportOutcome(host);
+            LayoutReportOutcome outcome = reportOutcome;
+            if (outcome == LayoutReportOutcome.None || outcome == LayoutReportOutcome.Ready
+                || outcome == LayoutReportOutcome.CaptureOff || outcome == LayoutReportOutcome.Unavailable
+                || outcome == LayoutReportOutcome.NoScope)
+            {
+                outcome = current;
+            }
+            else if (outcome == LayoutReportOutcome.RefusedCaptureOff && current != LayoutReportOutcome.CaptureOff)
+            {
+                outcome = current;
+            }
+            switch (outcome)
+            {
+                case LayoutReportOutcome.Written:
+                    return WrittenReportSentence(lastReportPass);
+                case LayoutReportOutcome.Waiting:
+                    return "US.Diagnostics.Geometry.Report.Waiting".Translate();
+                case LayoutReportOutcome.NotProduced:
+                    return "US.Diagnostics.Geometry.Report.NotProduced".Translate();
+                case LayoutReportOutcome.RefusedCaptureOff:
+                    return "US.Diagnostics.Geometry.Report.RefusedCaptureOff".Translate();
+                case LayoutReportOutcome.Unavailable:
+                    return "US.Diagnostics.Geometry.Report.Unavailable".Translate();
+                case LayoutReportOutcome.NoScope:
+                    return "US.Diagnostics.Geometry.Report.NoScope".Translate();
+                case LayoutReportOutcome.Ready:
+                    return "US.Diagnostics.Geometry.Report.Ready".Translate();
+                default:
+                    return "US.Diagnostics.Geometry.Report.CaptureOff".Translate();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The sentence for the state the instrument is in when no attempt is recorded. This is the "real reason"
+    /// half of RPT1.2: it is read from the carrier's own status, so a shipped build says the tool is missing
+    /// and a window without a scope says exactly that, rather than blaming a capture that never ran.
+    /// </summary>
+    private static LayoutReportOutcome IdleReportOutcome(UiHost? host)
+    {
+        switch (UsTextFitAudit.GetDevGeometryStatus(host))
+        {
+            case UsTextFitAudit.DevGeometryStatus.Unavailable:
+                return LayoutReportOutcome.Unavailable;
+            case UsTextFitAudit.DevGeometryStatus.ScopeMissing:
+                return LayoutReportOutcome.NoScope;
+            case UsTextFitAudit.DevGeometryStatus.Active:
+            case UsTextFitAudit.DevGeometryStatus.Overlay:
+                return LayoutReportOutcome.Ready;
+            default:
+                return LayoutReportOutcome.CaptureOff;
+        }
+    }
+
+    /// <summary>The success sentence, carrying the pass the report was generated from as its format argument.</summary>
+    private static string WrittenReportSentence(int pass)
+    {
+        string template = "US.Diagnostics.Geometry.Report.Written".Translate();
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, template, pass);
+    }
+
     public void SetLayoutCapture(bool on)
     {
         bool honoured = UsTextFitAudit.SetGeometryCapture(host, on);
@@ -200,6 +309,14 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         // refused capture cannot leave an outline switched on over nothing.
         layoutCaptureOn = honoured && on;
         if (!honoured && on) layoutOutlineOn = false;
+        // The instrument moved, so a sentence that described the OLD instrument state ("capture is off") must
+        // not stay up: drop back to "nothing asked yet" and let the sentence follow the instrument (RPT1.2).
+        if (reportOutcome != LayoutReportOutcome.Waiting
+            && reportOutcome != LayoutReportOutcome.Written
+            && reportOutcome != LayoutReportOutcome.NotProduced)
+        {
+            reportOutcome = LayoutReportOutcome.None;
+        }
     }
 
     public void SetLayoutOutline(bool on)
@@ -213,6 +330,20 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         // A request that cannot be honoured is NOT left pending: the audit refuses it at request time, so
         // nothing here can be satisfied by a later enable (R3-B fix 7).
         layoutReportPending = UsTextFitAudit.RequestGeometryReport(host);
+        if (layoutReportPending)
+        {
+            // Accepted: the line now says what happens next, not that it already succeeded (RPT1.1).
+            reportOutcome = LayoutReportOutcome.Waiting;
+            return;
+        }
+
+        // Refused: the line says the REAL reason (RPT1.2). "No report written because capture is off" is a
+        // different sentence from the idle "capture is off", so a click that cannot produce a report still
+        // changes what the developer reads - a click with no visible answer at all was the reported defect.
+        LayoutReportOutcome reason = IdleReportOutcome(host);
+        reportOutcome = reason == LayoutReportOutcome.CaptureOff
+            ? LayoutReportOutcome.RefusedCaptureOff
+            : reason;
     }
 
     /// <summary>
@@ -228,6 +359,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         if (pass >= 0)
         {
             layoutReportPending = false;
+            // The pass IS the result the line prints, so a re-click can be told from the previous report by
+            // the number alone (RPT1.1).
+            lastReportPass = pass;
+            reportOutcome = LayoutReportOutcome.Written;
             return pass;
         }
 
@@ -241,6 +376,17 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
             && status != UsTextFitAudit.DevGeometryStatus.Overlay)
         {
             layoutReportPending = false;
+            // The reason the report can no longer be produced, from the instrument itself (RPT1.2).
+            reportOutcome = IdleReportOutcome(host);
+            return -1;
+        }
+
+        // Still instrumented, yet the audit no longer holds the request: it retired it without a report (the
+        // completed pass carried no capture). Say THAT, rather than leaving "requested" up for ever.
+        if (UsTextFitAudit.FindOpenScope(host)?.IsGeometryReportPending != true)
+        {
+            layoutReportPending = false;
+            reportOutcome = LayoutReportOutcome.NotProduced;
         }
 
         return -1;

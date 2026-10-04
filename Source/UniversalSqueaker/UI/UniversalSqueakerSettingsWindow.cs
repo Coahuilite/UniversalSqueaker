@@ -205,7 +205,12 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // pass that COMPLETED - the request is made during a draw, and this is the next one. One request is
         // one report: the source clears its pending request in the same step that writes it, so the pass after
         // that writes nothing, and a request whose pass has not completed yet simply waits.
-        source?.ConsumeLayoutReportRequest();
+        //
+        // RPT1: the generated pass is no longer discarded - the source retains it as the outcome the status
+        // sentence beside the button prints. A produced report advances the same content clock every other
+        // display write uses, so the band re-measures to the new sentence on the next pass instead of keeping
+        // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
+        if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Session.BumpContentRevision();
         mod.TickSettingsSaveForWindow();
 
         bool helpOpen = source?.ViewState.HelpDrawerOpen ?? false;

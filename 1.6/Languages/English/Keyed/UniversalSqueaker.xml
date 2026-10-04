@@ -66,6 +66,15 @@
   <US.Diagnostics.Geometry.Capture>Capture</US.Diagnostics.Geometry.Capture>
   <US.Diagnostics.Geometry.Outline>Outline</US.Diagnostics.Geometry.Outline>
   <US.Diagnostics.Geometry.Report>Report</US.Diagnostics.Geometry.Report>
+  <!-- RPT1: what the Report control says, immediately below the button. -->
+  <US.Diagnostics.Geometry.Report.Ready>Ready: press Report to write the next drawn pass into the layout log.</US.Diagnostics.Geometry.Report.Ready>
+  <US.Diagnostics.Geometry.Report.CaptureOff>No report to show yet: layout capture is off.</US.Diagnostics.Geometry.Report.CaptureOff>
+  <US.Diagnostics.Geometry.Report.RefusedCaptureOff>No report written: layout capture is off. Turn Capture on, then press Report.</US.Diagnostics.Geometry.Report.RefusedCaptureOff>
+  <US.Diagnostics.Geometry.Report.Unavailable>No report can be written: this build has no layout instrument.</US.Diagnostics.Geometry.Report.Unavailable>
+  <US.Diagnostics.Geometry.Report.NoScope>No report can be written: this page has no diagnosis scope.</US.Diagnostics.Geometry.Report.NoScope>
+  <US.Diagnostics.Geometry.Report.Waiting>Report requested: it is written on the next drawn pass.</US.Diagnostics.Geometry.Report.Waiting>
+  <US.Diagnostics.Geometry.Report.Written>Report written to the layout log: pass {0}.</US.Diagnostics.Geometry.Report.Written>
+  <US.Diagnostics.Geometry.Report.NotProduced>No report produced: the capture was empty. Try again after the next drawn pass.</US.Diagnostics.Geometry.Report.NotProduced>
 
   <US.Action.Call>Call</US.Action.Call>
   <US.Action.Eat>Eat</US.Action.Eat>

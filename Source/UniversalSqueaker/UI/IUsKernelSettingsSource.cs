@@ -92,6 +92,15 @@ public interface IUsKernelSettingsSource
     /// </summary>
     string LayoutDiagnosisStatus { get; }
 
+    /// <summary>
+    /// What this window's Report control is currently saying, as a user-facing sentence printed immediately
+    /// below the Report button (RPT1.1): the real reason a request was refused (capture off, no instrument,
+    /// no diagnosis scope), the wait for the pass an accepted request is deferred to, or the pass a report
+    /// was actually written from. Read-only - the button's own command is the only writer - and derived from
+    /// the carrier's own report facts, so a success sentence appears only after a real report exists.
+    /// </summary>
+    string LayoutReportStatus { get; }
+
     /// <summary>Whether capture is currently on for this window (the switch's own checked state).</summary>
     bool LayoutCaptureOn { get; }
 

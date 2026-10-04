@@ -66,6 +66,15 @@
   <US.Diagnostics.Geometry.Capture>采集</US.Diagnostics.Geometry.Capture>
   <US.Diagnostics.Geometry.Outline>描边</US.Diagnostics.Geometry.Outline>
   <US.Diagnostics.Geometry.Report>报告</US.Diagnostics.Geometry.Report>
+  <!-- RPT1: 报告按钮下方即时显示的结果。 -->
+  <US.Diagnostics.Geometry.Report.Ready>已就绪：点击「报告」把下一次绘制的结果写入布局日志。</US.Diagnostics.Geometry.Report.Ready>
+  <US.Diagnostics.Geometry.Report.CaptureOff>暂无报告：布局采集已关闭。</US.Diagnostics.Geometry.Report.CaptureOff>
+  <US.Diagnostics.Geometry.Report.RefusedCaptureOff>未生成报告：布局采集已关闭。请先开启「采集」，再点击「报告」。</US.Diagnostics.Geometry.Report.RefusedCaptureOff>
+  <US.Diagnostics.Geometry.Report.Unavailable>无法生成报告：当前版本不含布局工具。</US.Diagnostics.Geometry.Report.Unavailable>
+  <US.Diagnostics.Geometry.Report.NoScope>无法生成报告：本页面没有诊断作用域。</US.Diagnostics.Geometry.Report.NoScope>
+  <US.Diagnostics.Geometry.Report.Waiting>已请求报告：将在下一次绘制后写入。</US.Diagnostics.Geometry.Report.Waiting>
+  <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
+  <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
 
   <US.Action.Call>呼叫</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>

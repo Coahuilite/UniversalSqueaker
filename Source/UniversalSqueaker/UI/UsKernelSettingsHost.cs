@@ -522,6 +522,10 @@ public static class UsKernelSettingsHost
             value => { source.SetLayoutOutline(value); bump(); });
         writes.Command("request-layout-report", () => { source.RequestLayoutReport(); bump(); });
         bindings.BindReadOnly<string>("layout-diagnosis-status", () => source.LayoutDiagnosisStatus);
+        // RPT1: the sentence that answers the Report click, printed immediately below the button by the
+        // manifest. Read-only for the same reason the capture sentence is: the outcome is carrier state the
+        // manifest has no expression for, and only the command above may change it.
+        bindings.BindReadOnly<string>("layout-report-status", () => source.LayoutReportStatus);
 
         // Tuning: layer/domain/scope/mood/baseline.
         bindings.BindReadOnly<int>("tuning-layer", () => state.TuningLayer);

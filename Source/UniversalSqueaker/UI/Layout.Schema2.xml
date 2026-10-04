@@ -297,16 +297,17 @@
               <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" HelpKey="us/diagnostics/localize-debug" AlignX="Left" />
             </Column>
           </Row>
-          <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches and a status sentence, all bound
-               to real commands the host dispatches:
+          <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches, the capture status sentence and
+               the report answer, all bound to real commands the host dispatches:
                  layout-capture        - start/stop capturing every arranged node of THIS window's host
                  layout-outline        - paint the outline around each captured draw rect (needs capture)
                  request-layout-report - ONE report: the next drawn pass writes the capture to the layout
                                          trace and clears the request, so a second pass writes nothing new
-               The status sentence is a READ-ONLY bound string, and that is why it paints in the disabled ink:
-               a read-only leaf is state, and state beats the authored role (the atom's own contract). It is
-               the right read for a diagnosis readout, and it is asserted in the lane rather than left to look
-               like an accident.
+               The capture status sentence is a READ-ONLY bound string, and that is why it paints in the
+               disabled ink: a read-only leaf is state, and state beats the authored role (the atom's own
+               contract). It is the right read for a diagnosis readout, and it is asserted in the lane rather
+               than left to look like an accident. RPT1 added the report ANSWER below the button (see the
+               element comment there): the same read-only rule, carrying the click's own outcome.
 
                Deliberately plain: no new widget kind, no second collector, no export service. The capture the
                report prints is the SAME per-host subscription capture the fit audit already drains. -->
@@ -326,6 +327,12 @@
               </Column>
             </Row>
             <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" />
+            <!-- RPT1.1: the Report click's ANSWER, as the sibling immediately below the button. It is a
+                 read-only bound sentence (like the capture sentence above) because the outcome is carrier
+                 state the manifest has no expression for: the real reason a request was refused, the pass an
+                 accepted request is waiting for, or the pass a report was written from. It shares the
+                 button's help item on purpose - it explains the same action. -->
+            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpKey="us/diagnostics/layout-report" />
           </Column>
         </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the

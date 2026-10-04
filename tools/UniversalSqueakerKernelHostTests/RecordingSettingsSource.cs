@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Verse;
 using FerriteLib.UiKit.Kernel;
 using UniversalSqueaker.UI;
 
@@ -547,8 +548,22 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// behaviour (the production factory attaches the real one).</summary>
     internal UiHost? DiagnosisHost { get; private set; }
 
+    /// <summary>
+    /// The production report/status surface for this fixture's host (RPT1). The SENTENCE and the report state
+    /// machine have exactly one author, so the fixture forwards this one member to a real
+    /// <see cref="UsKernelSettingsSource"/> on the same host instead of carrying a copy that can drift from
+    /// the production wording and from the audit's own facts. Created on <see cref="AttachHost"/>, i.e. only
+    /// for lanes that really drive this fixture as a window would.
+    /// </summary>
+    private UsKernelSettingsSource? reportMirror;
+
     /// <summary>Records the host, mirroring <c>UsKernelSettingsSource.AttachHost</c>.</summary>
-    public void AttachHost(UiHost host) => DiagnosisHost = host;
+    public void AttachHost(UiHost host)
+    {
+        DiagnosisHost = host;
+        reportMirror = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+        reportMirror.AttachHost(host);
+    }
 
     public bool LayoutCaptureOn { get; private set; }
 
@@ -572,9 +587,15 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetLayoutCapture(bool on)
     {
-        bool honoured = UsTextFitAudit.SetGeometryCapture(DiagnosisHost, on);
+        reportMirror?.SetLayoutCapture(on);
+        bool honoured = reportMirror != null
+            ? reportMirror.LayoutCaptureOn == on
+            : UsTextFitAudit.SetGeometryCapture(DiagnosisHost, on);
         LayoutCaptureOn = honoured && on;
         if (!honoured && on) LayoutOutlineOn = false;
+        // Keep the production mirror's sentence in step with the switch this fixture really threw: RPT1.2's
+        // whole point is that the line follows the INSTRUMENT, so a fixture that left a stale "capture is off"
+        // sentence behind after the switch moved would assert the wrong product behaviour.
     }
 
     public void SetLayoutOutline(bool on)
@@ -616,8 +637,42 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void RequestLayoutReport()
     {
-        LayoutReportPending = UsTextFitAudit.RequestGeometryReport(DiagnosisHost);
+        reportMirror?.RequestLayoutReport();
+        LayoutReportPending = reportMirror != null
+            ? (bool)(typeof(UsKernelSettingsSource).GetField("layoutReportPending",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing production pending flag."))
+                .GetValue(reportMirror)!
+            : UsTextFitAudit.RequestGeometryReport(DiagnosisHost);
         if (LayoutReportPending) LayoutReportRequests++;
+        // Same click, same audit facts, production sentence: the mirror records the outcome the page prints.
+    }
+
+    /// <summary>
+    /// The sentence the page prints immediately below the Report button (RPT1.1). Forwarded to the production
+    /// source so a lane that drives this fixture reads the production wording and the production state
+    /// machine; before a host is attached (the full-page sweep fixtures) it reports the same "no diagnosis
+    /// scope" reason the production source reports for an unattached host.
+    /// </summary>
+    public string LayoutReportStatus
+    {
+        get
+        {
+            if (reportMirror != null) return reportMirror.LayoutReportStatus;
+            return "US.Diagnostics.Geometry.Report.NoScope".Translate();
+        }
+    }
+
+    /// <summary>
+    /// The settings window's own one-shot consumer (<c>BeforeDraw</c>), mirrored so a lane can drive the
+    /// fixture through the report lifecycle. Not on the interface: production's consumer is the window's
+    /// frame call, not a business-boundary member.
+    /// </summary>
+    internal int ConsumeLayoutReportRequest()
+    {
+        int pass = reportMirror?.ConsumeLayoutReportRequest() ?? -1;
+        if (pass >= 0) LayoutReportPending = false;
+        return pass;
     }
 
     public void SetActiveTab(string tab)
