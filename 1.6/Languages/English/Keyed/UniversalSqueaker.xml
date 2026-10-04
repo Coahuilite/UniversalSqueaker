@@ -386,4 +386,6 @@
   <US.Tuning.BabyActions>Route baby crying and giggling</US.Tuning.BabyActions>
   <US.Help.BasicTuning.BabyActions.Label>Route baby crying and giggling</US.Help.BasicTuning.BabyActions.Label>
   <US.Help.BasicTuning.BabyActions.Text>Off by default. With Biotech active, enable to route Crying and Giggling, expose their tuning rows and include both in action coverage. Off excludes both from routing and the coverage numerator/denominator. This does not change vanilla mental states or genuine mental breaks. Missing audio stays uncovered; without Biotech this option has no effect.</US.Help.BasicTuning.BabyActions.Text>
+  <US.Tuning.Source.Default>Default</US.Tuning.Source.Default>
+
 </LanguageData>

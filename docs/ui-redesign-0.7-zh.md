@@ -24,6 +24,13 @@ V2 Packs、V3 Tuning、V4 其他页面/帮助/footer 尚未实施，不把本检
 > 已披露行为变化：筛选带不再绘制 help 焦点边框（`DrawHelpFocusBorder`），因为它现在是 Section + header；其余三条 Packs
 > 带本就没有该边框，故整页一致，未擅自加回。
 
+> **[2026-10-04 更正，V3 Tuning]** 「V3 尚未实施」已不成立：V3 已按契约 r1 实施并通过技术检查——`us/scope-tree` 单卡内按
+> 编辑层级/域 → 动作范围（Autonomous/Operable）→ 心情参数 排布；心情区改由「心情行本身」在 Measure/Draw 两侧同一判据门控；
+> 继承提示不再按宽度隐藏（Measure/Draw 共用同一纯布局函数，窄时独占一行，永不隐藏）；心情「来源」改为**逐因子**取fold
+> （`best*Layer`，-1 = 默认），而 `sourcePresetDefName` 只是「重置为预设」的锚点、**不是**来源证据，故只能作为**显式标注**的
+> 重置目标出现且目标不可用时不再出现；新增 `US.Tuning.Source.Default` 一个词条（两语言表）。真实 page box 984×524（帮助开）
+> 与 760×524（帮助关）× EN/ZH 实测 `fit=0`，弹层由自身触发矩打开且不误触。**实机视觉/滚轮/真实字体仍待新包观察**；V4 未实施。
+
 ## 0. 本次 FL 更新带来的新事实（决定设计的关键项）
 
 > **复核（2026-09-21，task-27 第 0 步）：载体 = FL HEAD `bce1ba4c88e557ee91fc1fbe87391b5107a2ff32`（Api 0.7.0，Release / 249 344 B / 无 PDB）。**

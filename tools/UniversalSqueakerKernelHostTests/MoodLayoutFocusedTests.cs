@@ -124,6 +124,14 @@ internal static class MoodLayoutFocusedTests
         Step("a popup-covered nav control yields the click", CoveredControlYieldsTheClick);
         Step("every nav card paints its own enclosure (V1)", EveryNavCardPaintsItsOwnEnclosure);
         Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
+        Step("V3: the Tuning areas are ordered layer/domain -> scope -> mood at the real boxes", TuningAreasAtTheRealBoxes);
+        Step("V3: the inherited hint and the mood source readout are laid out at every real body", TuningInheritanceReadoutsAtRealBodies);
+        Step("V3: the mood area survives an empty scope list (defensive degenerate input)", MoodAreaSurvivesMissingScopeRows);
+        Step("V3: layer/domain and mood writes stay on their own channels (increments)", TuningChannelsDoNotCrossOnIncrements);
+        Step("V3/task-18: the mood readout is truthful about provenance vs the reset TARGET", MoodSourceReadoutMatrix);
+        Step("V3/PM: production record fold projects the real per-factor sources and reset target", ProductionMoodSourceProjection);
+        Step("V3/PM: action rows measure the resolved long label", ResolvedActionLabelGrowsTheRow);
+        Step("V3/PM: reset target remains inside the inline mood header", ResetTargetStaysInTheHeader);
 
         Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
         return 0;
@@ -1464,6 +1472,754 @@ internal static class MoodLayoutFocusedTests
         public string Translate(string key) => key;
         public int TranslationRevision => 0;
     }
+
+    // ------------------------------------------------------------------------------------------------
+    // V3 (task-14) - the real boxes with their REAL drawer state, production-shaped layer/domain/mood
+    // state, and the inheritance readouts. Every case below sets `help-open` itself and arranges the box
+    // that state produces (open 984x524, retracted 760x524); nothing is inferred from a viewport number.
+    //
+    // MUTATION LEDGER (each revert RUN during V3/task-18, all restored, suite green after):
+    //  - task-18 A1 reporting the SELECTED layer for all three factors reddens the provenance clause
+    //    ("the per-factor provenance readout 'Pitch Global · Volume Global · Jitter Default' must be drawn").
+    //  - task-18 A4/A5 the first cut (the action side's Auto word + an unattributed arrow onto the anchor)
+    //    reddens that same provenance clause by name; A5 must never come back (one word, two meanings).
+    //  - task-18 parity: dropping the new key from the ChineseSimplified table reddens the zero-Verse key
+    //    parity gate ("only-in-english={US.Tuning.Source.Default}") - the additive key is required in BOTH.
+    //  - R1 restoring the pre-V3 coupling (`scopeRows.Count > 0` in Measure / `anyScopeDrawn` in Draw)
+    //    reddens "DEVICE-INPUT NOTE: with NO action-scope rows the mood parameters must still be drawn".
+    //  - R2 restoring the pre-V3 fixed 90/96 column pair reddens the column clause by name with the
+    //    measured overlap: "label end 180, hint x 184 - the pre-V3 fixed 90/96 pair overlapped by 6px".
+    //  - R2b restoring the pre-V3 hardcoded hint band (the hint text is never measured) reddens
+    //    "the inherited-scope hint '→ Command' must be measured/drawn at this real body".
+    //  - R3b dropping the source readout's band (so its text is never laid out) reddens
+    //    the per-factor provenance readout clause (the first-cut Auto/anchor text is superseded).
+    //  - The popup-containment/click-through half is a GUARD over the shared popup owner rule (mutation-
+    //    proven for nav by CoveredControlYieldsTheClick); what is NEW here is measured: the Tuning popup
+    //    stays inside the page, covers the next scope trigger, swallows that click, and is not replaced.
+    // ------------------------------------------------------------------------------------------------
+
+    private const float V3OpenPageBox = 984f;
+    private const float V3RetractedPageBox = 760f;
+    private const float V3PageBoxHeight = 524f;
+
+    /// <summary>
+    /// P1 (V3.1): with the REAL boxes and their real drawer state, the Tuning page arranges its three areas
+    /// in the order layer/domain -> Action Scope -> Mood, and the mood area sits below both. The order is
+    /// read off the DRAWN rects (the layer segment, the dropdown triggers, the mood sliders/fields), not off
+    /// the manifest; the heading roles are a source fact recorded in the class doc of this step (area
+    /// headings Small/TextPrimary, sub-group headings Tiny/TextSecondary - UsScopeTreeWidget.cs:251-279).
+    /// Also the P5 half: green fit audit at both states in both languages.
+    /// </summary>
+    private static void TuningAreasAtTheRealBoxes()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            Program.SetTranslatorResolver(table);
+            try
+            {
+                foreach ((string state, float box, bool helpOpen) in new[]
+                         {
+                             ("drawer open", V3OpenPageBox, true),
+                             ("drawer retracted", V3RetractedPageBox, false),
+                         })
+                {
+                    var metrics = new Program.StubMetrics();
+                    var reports = new List<UiOverflowReport>();
+                    UiFitAudit.Attach(metrics, reports.Add);
+                    UiFitAudit.Enabled = true;
+                    try
+                    {
+                        var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
+                        source.SetTuningLayer(1);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+                        host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("help-open", helpOpen);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        Assert(snapshot.RectById.TryGetValue("scope-tree", out Rect cardPage),
+                            "the Tuning workspace must arrange scope-tree");
+                        Assert(snapshot.Viewports.ContainsKey("help-scroll") == helpOpen,
+                            "the help column must be arranged exactly while the drawer is open");
+
+                        Rect viewport = snapshot.Viewports["content-scroll"];
+                        Vector2 scroll = Program.ScrollPositionById(host.Session, "content-scroll");
+                        Rect cardLocal = ToContentLocal(cardPage, viewport, scroll);
+
+                        var raw = new CapturedRects();
+                        try
+                        {
+                            SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
+                            SetSliderOverride((rect, value, min, max) => { raw.Sliders.Add(rect); return value; });
+                            SetTextFieldOverride((rect, text) => { raw.TextFields.Add(rect); return text; });
+                            UiFitAudit.Reset();
+                            reports.Clear();
+                            host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+                        }
+                        finally { ClearOverrides(); }
+
+                        string where = "Tuning " + language + ", " + state + " at page box " + box;
+                        var buttons = raw.Buttons.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+                        var sliders = raw.Sliders.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
+                        var fields = raw.TextFields.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
+
+                        // The dropdown TRIGGERS are the fixed 96px bands (layer buttons are 76/117 wide at
+                        // these two bodies, mood minus/plus are 20px): domain trigger + one per scope row.
+                        var triggers = buttons.Where(r => Math.Abs(r.width - 96f) <= 1.5f).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+                        Console.WriteLine("[v3-buttons] " + where + " cardLocal=" + Num(cardLocal.width) + "x" + Num(cardLocal.height)
+                            + " layer=" + host.Bindings.Get<int>("tuning-layer")
+                            + " domains=" + host.Bindings.Get<IReadOnlyList<TuningDomainOptionView>>("tuning-domains").Count
+                            + " scopes=" + host.Bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes").Count
+                            + " buttons=" + string.Join(" ", buttons.Select(r => Num(r.width) + "@" + Num(r.y)))
+                            + " inCard=" + raw.Buttons.Count(r => IsInside(r, cardLocal)));
+                        Assert(triggers.Count == 3,
+                            where + ": the Race layer must draw the domain trigger plus the two scope triggers, got " + triggers.Count);
+
+                        // The card header owns the widest band at the top; the layer segment is the three
+                        // equal-width buttons under it (76px at the 400-wide card, 117px at the 524-wide one).
+                        var layerBand = buttons
+                            .Where(r => r.y < triggers[0].y - 0.5f && r.width > 40f && r.width <= 144f)
+                            .ToList();
+                        Assert(layerBand.Count == 3,
+                            where + ": the layer segment must be drawn above the domain row, got " + layerBand.Count + " layer buttons");
+                        Assert(layerBand.Select(r => r.y).Distinct().Count() == 1,
+                            where + ": the three layer buttons must share one line");
+
+                        Assert(sliders.Count == MoodCount * ParameterCount,
+                            where + ": every parameter of every mood must register a slider, got " + sliders.Count);
+                        Assert(fields.Count == MoodCount * ParameterCount,
+                            where + ": every parameter of every mood must register a numeric field, got " + fields.Count);
+                        Assert(layerBand[0].y < triggers[0].y,
+                            where + ": the LAYER area must be drawn above the domain row");
+                        Assert(triggers[0].y < triggers[1].y && triggers[1].y <= triggers[2].y,
+                            where + ": the DOMAIN trigger must be drawn above the scope triggers");
+                        Assert(triggers[2].y < sliders[0].y,
+                            where + ": the ACTION SCOPE area must be drawn above the mood parameters");
+                        Assert(reports.Count == 0,
+                            where + ": the fit audit must report nothing on the Tuning page, got " + DescribeFindings(reports));
+
+                        Console.WriteLine("[v3-areas] " + where + " layerY=" + Num(layerBand[0].y)
+                            + " domainY=" + Num(triggers[0].y) + " scopeY=" + Num(triggers[1].y) + "/" + Num(triggers[2].y)
+                            + " moodY=" + Num(sliders[0].y) + " card=" + Num(cardPage.width) + "x" + Num(cardPage.height)
+                            + " help=" + (helpOpen ? "open" : "retracted") + " fit=" + reports.Count);
+
+                        // P5: a Tuning dropdown opens INSIDE the page from its OWN trigger rect, and the click
+                        // lands on whatever the popup covers. MEASURED on this page: the popup is 96x72
+                        // anchored under its trigger, so what it covers is the NEXT scope trigger - the mood
+                        // cards sit ~120px further down and are NOT underneath (their rects are printed). The
+                        // underlying control must not take the click, and the popup must not be replaced.
+                        var resets = buttons
+                            .Where(r => r.width >= 50f && r.width <= 130f && r.y > triggers[2].y && r.y < sliders[0].y)
+                            .OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+                        Assert(resets.Count >= 2,
+                            where + ": the first mood card must draw its two reset controls, got " + resets.Count);
+                        Vector2 noScroll = Vector2.zero;
+                        Rect triggerPage = ToPageLocal(triggers[1], viewport, noScroll);
+                        Rect coveredPage = ToPageLocal(triggers[2], viewport, noScroll);
+                        Rect resetPage = ToPageLocal(resets[0], viewport, noScroll);
+                        host.Session.OpenPopup("scope-tree-scope-Eat", triggerPage);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+                        Assert(Program.TryGetPopupHitLayer(host.Session, out UiHitLayer layer) && layer.IsPopup,
+                            where + ": the Eat scope dropdown must publish a POPUP layer");
+                        Assert(layer.Rect.x >= -0.5f && layer.Rect.y >= -0.5f
+                            && layer.Rect.xMax <= box + 0.5f && layer.Rect.yMax <= V3PageBoxHeight + 0.5f,
+                            where + ": the Tuning popup must stay inside the page, got " + DescribeRect(layer.Rect));
+                        Vector2 clickPoint = new(coveredPage.x + coveredPage.width * 0.5f, coveredPage.y + coveredPage.height * 0.5f);
+                        bool coveredScope = layer.Rect.x <= clickPoint.x && clickPoint.x <= layer.Rect.xMax
+                            && layer.Rect.y <= clickPoint.y && clickPoint.y <= layer.Rect.yMax;
+                        bool moodUnderPopup = Overlaps(layer.Rect, resetPage);
+                        Assert(coveredScope,
+                            where + ": the popup must cover the next scope trigger this step clicks through"
+                            + " (popup " + DescribeRect(layer.Rect) + ", trigger " + DescribeRect(coveredPage) + ")");
+                        try
+                        {
+                            SetMousePosition(clickPoint);
+                            SetButtonOverride(rect => RectMatches(rect, triggers[2]));
+                            host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+                            Assert(source.LastActionScope == null && source.LastActionKey == null,
+                                where + ": a popup-covered scope trigger must NOT take the click (no scope write)");
+                            Assert(Program.TryGetPopupHitLayer(host.Session, out UiHitLayer still) && still.IsPopup
+                                && Math.Abs(still.Rect.y - layer.Rect.y) < 0.5f,
+                                where + ": the covered trigger must not replace the open popup with its own");
+                        }
+                        finally
+                        {
+                            ClearMousePosition();
+                            ClearOverrides();
+                            host.Session.ClosePopup();
+                        }
+
+                        Console.WriteLine("[v3-popup] " + where + " popup=" + DescribeRect(layer.Rect)
+                            + " coveredScopeTrigger=" + DescribeRect(coveredPage) + " coveredScope=" + coveredScope
+                            + " moodResetUnder=" + moodUnderPopup + " moodReset=" + DescribeRect(resetPage)
+                            + " clickThroughBlocked=true");
+                    }
+                    finally
+                    {
+                        UiFitAudit.Detach();
+                        UiFitAudit.Enabled = false;
+                    }
+                }
+            }
+            finally
+            {
+                Program.SetTranslatorResolver(null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// P2 (V3): the two inheritance readouts are really LAID OUT at both real bodies, and the scope hint's
+    /// columns stay inside the card without overlapping the action name.
+    /// <list type="bullet">
+    /// <item>The inheritance HINT: pre-V3 it was suppressed below a 480px element width, which is every real
+    /// help-open body (392) - the state simply vanished where the window is tightest. The lane passes the
+    /// production layout function at both real body widths and asserts the hint is present inline, inside the
+    /// card, and disjoint from the label band. Faithful revert: restoring the `ctx.ViewWidth &gt;= 480f`
+    /// suppression (or dropping the hint) reddens the "hint must be laid out" clause by name.</item>
+    /// <item>The mood SOURCE readout: the text the widget resolves is captured through the real draw pass's
+    /// metrics seam, so the row really drew one - the pre-V3 shape (one number, no source) measures none.</item>
+    /// </list>
+    /// </summary>
+    private static void TuningInheritanceReadoutsAtRealBodies()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            Program.SetTranslatorResolver(table);
+            try
+            {
+                foreach ((string state, float box, bool helpOpen) in new[]
+                         {
+                             ("drawer open", V3OpenPageBox, true),
+                             ("drawer retracted", V3RetractedPageBox, false),
+                         })
+                {
+                    // The real body the widget arranges at this box = the drawn card minus the card padding.
+                    var probeMetrics = new Program.StubMetrics();
+                    float body = TuningBodyWidthAt(pageBox: box, helpOpen: helpOpen, metrics: probeMetrics);
+                    string where = "Tuning " + language + ", " + state + " at page box " + box + " (body " + Num(body) + ")";
+
+                    // (a) the production layout function, at the REAL body, for both scope rows. The fixture's
+                    // Eat row OWNS its scope (Scope == EffectiveScope) so it has nothing to explain - the
+                    // production predicate (HintTextFor) yields ""; the Draft row inherits and needs the hint.
+                    var rowsToProbe = new[]
+                    {
+                        ("Eat", "US.Action.Eat", "US.Tuning.Scope.Any", true, "US.Tuning.Scope.Any"),
+                        ("Draft", "US.Action.Draft", "US.Tuning.Scope.Command", false, "US.Tuning.Scope.Command"),
+                    };
+                    foreach ((string actionKey, string displayKey, string effectiveKey, bool ownsScope, string ownScopeKey) in rowsToProbe)
+                    {
+                        bool needsHint = !ownsScope || !string.Equals(effectiveKey, ownScopeKey, StringComparison.Ordinal);
+                        string display = table[displayKey];
+                        string hint = needsHint ? "→ " + table[effectiveKey] : "";
+                        UsScopeTreeWidget.ScopeRowLayout layout = UsScopeTreeWidget.ScopeRowLayoutFor(
+                            body, display, hint, probeMetrics);
+                        if (!needsHint)
+                        {
+                            Assert(layout.HintText.Length == 0 && layout.HintBandHeight == 0f,
+                                where + ": a row whose own scope IS the effective one has nothing to explain, got '"
+                                + layout.HintText + "'");
+                            Console.WriteLine("[v3-hint] " + where + " " + actionKey + " owns its scope: no hint (correct)");
+                            continue;
+                        }
+
+                        Assert(layout.HintText.Length > 0, where + ": the inherited hint must be laid out for " + actionKey);
+                        Assert(layout.HintInline,
+                            where + ": the hint must stay INLINE beside the dropdown at this real body for " + actionKey);
+                        Assert(layout.HintBandHeight >= 14f,
+                            where + ": the hint band must hold a Tiny line for " + actionKey + ", got " + layout.HintBandHeight);
+                        Assert(layout.LabelWidth >= 120f - 0.01f,
+                            where + ": the action name must keep its minimum band next to the hint for " + actionKey
+                            + ", got " + Num(layout.LabelWidth));
+                        Assert(layout.HintX - layout.LabelWidth >= 10f - 0.01f,
+                            where + ": the hint must start after the action-name band PLUS the widget's left"
+                            + " padding for " + actionKey + " (label end " + Num(layout.LabelWidth)
+                            + ", hint x " + Num(layout.HintX) + ") - the pre-V3 fixed 90/96 pair overlapped by 6px");
+                        Assert(layout.HintX + layout.HintWidth <= body + 0.01f,
+                            where + ": the hint must stay inside the row for " + actionKey
+                            + " (hint " + Num(layout.HintX) + "+" + Num(layout.HintWidth) + " > body " + Num(body) + ")");
+                        Console.WriteLine("[v3-hint] " + where + " " + actionKey + " hint='" + layout.HintText
+                            + "' inline=" + layout.HintInline + " labelW=" + Num(layout.LabelWidth)
+                            + " hintX=" + Num(layout.HintX) + " hintW=" + Num(layout.HintWidth) + " rowH=" + Num(layout.RowHeight));
+                    }
+
+                    // (b) the source readout of every mood row, captured from the REAL draw pass.
+                    var recorder = new RecordingMetrics();
+                    var reports = new List<UiOverflowReport>();
+                    UiFitAudit.Attach(recorder, reports.Add);
+                    UiFitAudit.Enabled = true;
+                    try
+                    {
+                        var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
+                        source.SetTuningLayer(1);
+                        using UiHost host = UsKernelSettingsHost.Create(source, recorder, () => box);
+                        host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("help-open", helpOpen);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        UiFitAudit.Reset();
+                        reports.Clear();
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+
+                        // The projection half (task-18): the view rows must CARRY the per-factor supplying
+                        // layers the fold resolved, and the reset TARGET separately. A model that stops
+                        // projecting them (or a fixture that flattens every row to one source) reddens here.
+                        IReadOnlyList<MoodTuningRowView> rowViews = host.Bindings.Get<IReadOnlyList<MoodTuningRowView>>("mood-rows");
+                        Assert(rowViews.Any(r => (r.PitchSourceLayer >= 0 || r.VolumeSourceLayer >= 0 || r.JitterSourceLayer >= 0)
+                                && (r.PitchSourceLayer < 0 || r.VolumeSourceLayer < 0 || r.JitterSourceLayer < 0)),
+                            where + ": at least one row must MIX a supplied factor with a defaulted one");
+                        Assert(rowViews.Any(r => r.PitchSourceLayer == 0),
+                            where + ": at least one row must report the Global layer as a supplier");
+                        Assert(rowViews.Any(r => r.SourceLayerFor(SqueakMoodFactor.Pitch) == 1),
+                            where + ": at least one row must report the Race layer as a supplier");
+                        Assert(rowViews.Any(r => r.SourceLayerFor(SqueakMoodFactor.Pitch) == 2),
+                            where + ": at least one row must report the Xenotype layer as a supplier");
+
+                        // The DRAWN provenance of the mixed fixture row: Pitch Global · Volume Global · Jitter Default.
+                        string mixedProvenance = table["US.Tuning.Factor.Pitch"] + " " + table["US.Tuning.Layer.Global"]
+                            + " · " + table["US.Tuning.Factor.Volume"] + " " + table["US.Tuning.Layer.Global"]
+                            + " · " + table["US.Tuning.Factor.Jitter"] + " " + table["US.Tuning.Source.Default"];
+                        Assert(recorder.Measured(mixedProvenance),
+                            where + ": the per-factor provenance readout '" + mixedProvenance + "' must be drawn");
+                        // The readout must never borrow the ACTION side's "Auto" word (the widget's own
+                        // ruling): the composed line above is the only mood-side source wording, and the one
+                        // that mentions the defaulted factor says DEFAULT.
+                        Assert(reports.Count == 0,
+                            where + ": the source readout must not trip the fit audit, got " + DescribeFindings(reports));
+                        Console.WriteLine("[v3-source] " + where + " provenance='" + mixedProvenance + "' fit=" + reports.Count);
+                    }
+                    finally
+                    {
+                        UiFitAudit.Detach();
+                        UiFitAudit.Enabled = false;
+                    }
+
+                    // (c) the hint really reaches the metrics seam during a production draw at this box.
+                    var hintRecorder = new RecordingMetrics();
+                    var hintSource = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
+                    hintSource.SetTuningLayer(1);
+                    using (UiHost host = UsKernelSettingsHost.Create(hintSource, hintRecorder, () => box))
+                    {
+                        host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("help-open", helpOpen);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+                        // The fixture's Draft row inherits (HasOwnScope=false), so its hint is the one the real
+                        // draw pass must lay out at this body. The Eat row owns its scope, so it must NOT
+                        // produce a hint at all - both halves are asserted through the real pass + geometry.
+                        string hint = "→ " + table["US.Tuning.Scope.Command"];
+                        Assert(hintRecorder.Measured(hint),
+                            where + ": the inherited-scope hint '" + hint + "' must be measured/drawn at this real body;"
+                            + " the pre-V3 shape suppressed it below a 480px element width");
+                        Assert(!hintRecorder.Measured("→ " + table["US.Tuning.Scope.Any"]),
+                            where + ": the row that OWNS its scope must not draw an inheritance hint");
+                    }
+                }
+            }
+            finally
+            {
+                Program.SetTranslatorResolver(null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// P1 (V3.1) defensive probe: ONE predicate decides the mood area, and that predicate is the mood rows -
+    /// not the scope rows. The input here (an EMPTY action-scope list) is DEGENERATE and labelled as such:
+    /// production builds the rows from the action definition table, so the list is never empty in game. This
+    /// probe exists because two predicates for one decision is the defect class this repo bans - the pre-V3
+    /// shape hid the whole mood area behind `scopeRows.Count &gt; 0` / `anyScopeDrawn`, and this reddens by
+    /// name if either gate comes back.
+    /// </summary>
+    private static void MoodAreaSurvivesMissingScopeRows()
+    {
+        var metrics = new Program.StubMetrics();
+        float box = V3OpenPageBox;
+        var source = new RecordingSettingsSource
+        {
+            RichData = true,
+            MirrorTuningWrites = true,
+            TuningActionScopes = Array.Empty<ActionScopeRowView>(),
+        };
+        source.SetTuningLayer(1);
+        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => box);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+
+        var raw = new CapturedRects();
+        try
+        {
+            SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
+            SetSliderOverride((rect, value, min, max) => { raw.Sliders.Add(rect); return value; });
+            SetTextFieldOverride((rect, text) => { raw.TextFields.Add(rect); return text; });
+            host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+        }
+        finally { ClearOverrides(); }
+
+        Rect cardPage = snapshot.RectById["scope-tree"];
+        Rect cardLocal = ToContentLocal(cardPage, snapshot.Viewports["content-scroll"], Program.ScrollPositionById(host.Session, "content-scroll"));
+        int sliders = raw.Sliders.Count(r => IsInside(r, cardLocal));
+        int fields = raw.TextFields.Count(r => IsInside(r, cardLocal));
+        int triggers = raw.Buttons.Count(r => IsInside(r, cardLocal) && Math.Abs(r.width - 96f) <= 1.5f);
+        Assert(sliders == MoodCount * ParameterCount,
+            "DEVICE-INPUT NOTE: with NO action-scope rows the mood parameters must still be drawn"
+            + " (" + MoodCount + " moods x " + ParameterCount + " factors); got " + sliders
+            + " sliders. The mood area is gated on the mood rows, never on the scope list.");
+        Assert(fields == MoodCount * ParameterCount,
+            "with NO action-scope rows the mood numeric fields must still be drawn, got " + fields);
+        Assert(triggers == 1,
+            "with NO action-scope rows the layer-1 DOMAIN trigger is the only 96px trigger left (the scope"
+            + " rows are gone): got " + triggers);
+        Console.WriteLine("[v3-degenerate] no action-scope rows: moodSliders=" + sliders + " fields=" + fields
+            + " triggers=" + triggers);
+    }
+
+    /// <summary>
+    /// P4 (V3.2): cross-channel writes, asserted on the INCREMENT - reset every recorder, make exactly one
+    /// write, and require the OTHER channels' recorders to still be untouched. A selected layer/domain must
+    /// not touch a parameter, and a mood write must not move the layer/domain identity.
+    /// </summary>
+    private static void TuningChannelsDoNotCrossOnIncrements()
+    {
+        var metrics = new Program.StubMetrics();
+        var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
+        source.SetTuningLayer(1);
+                        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => V3OpenPageBox);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
+
+        // (1) a LAYER write touches the layer channel and nothing else.
+        ResetTuningRecorders(source);
+        host.Bindings.Invoke("set-tuning-layer", 2);
+        Assert(source.LastTuningLayer == 2, "the layer write must reach the business boundary");
+        Assert(source.LastActionScope == null && source.LastActionKey == null,
+            "selecting a layer must not write an action scope");
+        Assert(source.LastMood == null && source.LastMoodValue == null && source.LastMoodPresetReset == null,
+            "selecting a layer must not write a mood parameter");
+
+        // (2) a DOMAIN write touches the domain channel and nothing else.
+        ResetTuningRecorders(source);
+        host.Bindings.Invoke("set-tuning-domain", new UniversalSqueaker.UI.UsTuningDomainSelection("testrace", ""));
+        Assert(source.LastTuningDomainRace == "testrace", "the domain write must reach the business boundary");
+        Assert(source.LastTuningLayer == null, "selecting a domain must not write the layer");
+        Assert(source.LastActionScope == null && source.LastMood == null && source.LastMoodValue == null,
+            "selecting a domain must not write a parameter");
+
+        // (3) a MOOD write touches the mood channel and nothing else.
+        ResetTuningRecorders(source);
+        host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Bad, SqueakMoodFactor.Volume, 0.7f));
+        Assert(source.LastMood == SqueakMood.Bad && source.LastMoodFactor == SqueakMoodFactor.Volume
+            && Math.Abs((source.LastMoodValue ?? -1f) - 0.7f) < 0.001f,
+            "the mood write must reach the business boundary with its typed payload");
+        Assert(source.LastTuningLayer == null && source.LastTuningDomainRace == null,
+            "a mood write must not move the layer/domain identity");
+        Assert(source.LastActionScope == null && source.LastActionKey == null,
+            "a mood write must not write an action scope");
+
+        // (4) the two reset classes stay different: default = a CLEAR mood write, preset = its own typed action.
+        ResetTuningRecorders(source);
+        host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Clear, null));
+        Assert(source.LastMood == SqueakMood.Good && source.LastMoodFactor == SqueakMoodFactor.Clear
+            && source.LastMoodValue == null && source.LastMoodPresetReset == null,
+            "reset-to-default must remain a CLEAR mood write (null value), not the preset action");
+        ResetTuningRecorders(source);
+        host.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(SqueakMood.Good));
+        Assert(source.LastMoodPresetReset == SqueakMood.Good && source.LastMoodPresetResetCount == 1,
+            "reset-to-preset must remain its own typed write");
+        Assert(source.LastMood == null && source.LastMoodValue == null,
+            "reset-to-preset must not masquerade as a plain mood write");
+        Console.WriteLine("[v3-increments] layer/domain/mood/reset channels are pairwise disjoint on increments");
+    }
+
+    /// <summary>
+    /// V3 task-18: the PM's counterexample matrix, as REAL cases. The anchor
+    /// (<c>sourcePresetDefName</c>) is not provenance - it survives a clear - so the readout must name the
+    /// per-factor SUPPLYING LAYER (or the DEFAULT word) and may mention the preset ONLY inside the
+    /// explicitly labelled reset-to-preset TARGET clause, and only while that target is usable.
+    /// </summary>
+    private static void MoodSourceReadoutMatrix()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            Dictionary<string, string> table = Program.ReadKeyedTable(language);
+            Program.SetTranslatorResolver(table);
+            try
+            {
+                string LayerWord(int i) => table[new[] { "US.Tuning.Layer.Global", "US.Tuning.Layer.Race", "US.Tuning.Layer.Xenotype" }[Mathf.Clamp(i, 0, 2)]];
+                string def = table["US.Tuning.Source.Default"];
+                string prov(int p, int v, int j)
+                {
+                    return table["US.Tuning.Factor.Pitch"] + " " + (p < 0 ? def : LayerWord(p)) + " · "
+                        + table["US.Tuning.Factor.Volume"] + " " + (v < 0 ? def : LayerWord(v)) + " · "
+                        + table["US.Tuning.Factor.Jitter"] + " " + (j < 0 ? def : LayerWord(j));
+                }
+
+                string labelledTarget = table["US.Tuning.ResetToPreset"] + ": Harness Baseline";
+                var anchor = new MoodTuningRecord { sourcePresetDefName = "us.harness.anchor" };
+
+                // (0) fresh import: all three factors supplied by the layer, anchor present -> the target
+                // clause names it, explicitly labelled.
+                RecordingMetrics fresh = DrawMoodReadout(new[] { 1, 1, 1 }, null, "Harness Baseline", null, 1);
+                Assert(fresh.Measured(prov(1, 1, 1)), language + " (0) fresh import: provenance '" + prov(1, 1, 1) + "' must be drawn");
+                Assert(fresh.Measured(labelledTarget), language + " (0): the LABELLED reset target must be drawn");
+
+                // (i) THE COUNTEREXAMPLE: local flags cleared, anchor retained, and the real parent value
+                // differs from the preset baseline. The readout must NOT claim the preset as the source.
+                RecordingMetrics cleared = DrawMoodReadout(new[] { 0, -1, -1 }, anchor, "Harness Baseline", null, 1);
+                Assert(cleared.Measured(prov(0, -1, -1)),
+                    language + " (i) cleared + retained anchor: provenance '" + prov(0, -1, -1) + "' must be drawn");
+                Assert(!cleared.Measured("us.harness.anchor"),
+                    language + " (i): the raw anchor token must NEVER be drawn as provenance");
+                Assert(cleared.Measured(labelledTarget),
+                    language + " (i): the anchor may appear ONLY as the labelled reset target");
+
+                // (ii) mixed factors, no usable target: three different suppliers in one row.
+                RecordingMetrics mixed = DrawMoodReadout(new[] { 2, 0, -1 }, null, "", null, 1);
+                Assert(mixed.Measured(prov(2, 0, -1)), language + " (ii) mixed: '" + prov(2, 0, -1) + "' must be drawn");
+                Assert(!mixed.Measured(table["US.Tuning.ResetToPreset"] + ": "),
+                    language + " (ii): no reset-target clause may be drawn without a usable target");
+
+                // (iii) each of Global/Race/Xenotype SELECTED: the reported supplier must not follow the
+                // selection (revert A1 relabels all three factors as the selected layer).
+                foreach (int selected in new[] { 0, 1, 2 })
+                {
+                    RecordingMetrics sel = DrawMoodReadout(new[] { 1, 0, -1 }, null, "", null, selected);
+                    Assert(sel.Measured(prov(1, 0, -1)),
+                        language + " (iii) selected layer " + selected + ": the suppliers must stay the real ones");
+                }
+
+                // (iv) no local factor and no anchor: the suppliers are named and no preset appears at all.
+                RecordingMetrics noAnchor = DrawMoodReadout(new[] { 2, 2, 2 }, null, "", null, 1);
+                Assert(noAnchor.Measured(prov(2, 2, 2)), language + " (iv): provenance must be drawn without any anchor");
+                Assert(!noAnchor.Measured(table["US.Tuning.ResetToPreset"] + ": "),
+                    language + " (iv): a row with no anchor must not imply a preset target");
+
+                // (v) an anchor whose Def no longer resolves: the target clause must disappear rather than
+                // look like a usable preset. The first row gets a UNIQUE label so the assertion is scoped to
+                // the row under test (the fixture's third row keeps its own working target).
+                string uniqueMissing = table["US.Tuning.ResetToPreset"] + ": Missing Target";
+                RecordingMetrics missing = DrawMoodReadout(new[] { 1, 1, 1 }, anchor, "Missing Target",
+                    SqueakMoodResetPresetState.PresetMissing, 1);
+                Assert(missing.Measured(prov(1, 1, 1)), language + " (v): provenance must still be drawn");
+                Assert(!missing.Measured(uniqueMissing),
+                    language + " (v): a preset that no longer resolves must NOT be shown as a usable target");
+
+                Console.WriteLine("[v3-matrix] " + language
+                    + " (0)='" + prov(1, 1, 1) + "' + '" + labelledTarget + "'"
+                    + " (i)='" + prov(0, -1, -1) + "' + '" + labelledTarget + "' anchorDrawn=False"
+                    + " (ii)='" + prov(2, 0, -1) + "' target=None"
+                    + " (iii)='" + prov(1, 0, -1) + "'"
+                    + " (iv)='" + prov(2, 2, 2) + "' target=None"
+                    + " (v)='" + prov(1, 1, 1) + "' target=None(presetMissing)");
+            }
+            finally
+            {
+                Program.SetTranslatorResolver(null);
+            }
+        }
+    }
+
+    /// <summary>Draws the Tuning page at the real help-open box with one matrix input and returns the real
+    /// draw pass's text recorder (a string the widget never lays out is never measured).</summary>
+    private static RecordingMetrics DrawMoodReadout(
+        int[] sourceLayers, MoodTuningRecord? own, string targetLabel, SqueakMoodResetPresetState? row1PresetReset, int selectedLayer)
+    {
+        var recorder = new RecordingMetrics();
+        var source = new RecordingSettingsSource
+        {
+            RichData = true,
+            MirrorTuningWrites = true,
+            MoodSourceLayers = sourceLayers,
+            MoodOwnRecord = own,
+            ResetTargetLabel = targetLabel,
+            Row1PresetReset = row1PresetReset,
+        };
+        source.SetTuningLayer(selectedLayer);
+        using UiHost host = UsKernelSettingsHost.Create(source, recorder, () => V3OpenPageBox);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.Bindings.Set("help-open", true);
+        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
+        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight));
+        host.DrawChecked(new Rect(0f, 0f, V3OpenPageBox, V3PageBoxHeight));
+        return recorder;
+    }
+
+    // PM faithful reverts (executed; restored; evidence in the PM V3 delivery): selected-layer suppliers
+    // redden the retained-anchor clause; an ungated target reddens the non-Ready clause; key-only label
+    // measurement reddens ResolvedActionLabelGrowsTheRow; missing target centering reddens the header
+    // containment clause. Def lookup availability is injected input, not a claimed DefDatabase test.
+    // PM residual F1: the production method consumes real records; the fixture supplies Def lookup
+    // facts only. This is a projection boundary check, not a second implementation of the fold.
+    private static void ProductionMoodSourceProjection()
+    {
+        var global = new MoodTuningRecord { mood = SqueakMood.Good, hasPitchFactor = true, pitchFactor = 0.8f };
+        var race = new MoodTuningRecord { mood = SqueakMood.Good, raceDefName = "HarnessRace", sourcePresetDefName = "HarnessPreset" };
+        var xeno = new MoodTuningRecord { mood = SqueakMood.Good, raceDefName = "HarnessRace", xenotypeDefName = "HarnessXeno", hasVolumeFactor = true, volumeFactor = 0.6f };
+        var ignored = new MoodTuningRecord { mood = SqueakMood.Good, raceDefName = "OtherRace", hasPitchFactor = true, pitchFactor = 2f };
+        var records = new[] { global, race, xeno, ignored };
+        MoodTuningRowView cleared = ProjectRealMood(records, 1, "HarnessRace", "", true, true);
+        Assert(cleared.PitchSourceLayer == 0 && cleared.VolumeSourceLayer == -1 && cleared.JitterSourceLayer == -1,
+            "production projection: retained preset anchor must not supply any cleared factor");
+        Assert(Math.Abs(cleared.EffectivePitch - 0.8f) < 0.001f && cleared.EffectiveVolume == 1f,
+            "production projection: values and supplying layers must agree after clear");
+        Assert(cleared.DefaultReset == SqueakMoodResetDefaultState.NoLocalSetting
+            && cleared.PresetReset == SqueakMoodResetPresetState.Ready && cleared.ResetPresetTarget == "Resolved preset label",
+            "production projection: cleared anchor has an explicitly Ready reset target");
+        race.hasPitchFactor = true;
+        race.pitchFactor = 1.2f;
+        MoodTuningRowView mixed = ProjectRealMood(records, 2, "HarnessRace", "HarnessXeno", true, true);
+        Assert(mixed.PitchSourceLayer == 1 && mixed.VolumeSourceLayer == 2 && mixed.JitterSourceLayer == -1,
+            "production projection: mixed Race/Xenotype/default suppliers must remain distinct");
+        Assert(Math.Abs(mixed.EffectivePitch - 1.2f) < 0.001f && Math.Abs(mixed.EffectiveVolume - 0.6f) < 0.001f,
+            "production projection: mixed suppliers must carry their actual values");
+        foreach (bool defExists in new[] { false, true })
+        {
+            MoodTuningRowView unavailable = ProjectRealMood(records, 1, "HarnessRace", "", defExists, false);
+            Assert(unavailable.ResetPresetTarget.Length == 0 && unavailable.PresetReset != SqueakMoodResetPresetState.Ready,
+                "production projection: non-Ready preset must not expose a reset target");
+        }
+        race.sourcePresetDefName = "";
+        Assert(ProjectRealMood(records, 1, "HarnessRace", "", true, true).ResetPresetTarget.Length == 0,
+            "production projection: a local row without an anchor has no reset target");
+        Console.WriteLine("[v3-production] real records; clear=0/-1/-1 mixed=1/2/-1; Ready/missing/no-entry/no-anchor PASS");
+    }
+
+    private static MoodTuningRowView ProjectRealMood(
+        IEnumerable<MoodTuningRecord> records, int layer, string race, string xeno, bool defExists, bool hasEntry)
+    {
+        MethodInfo project = typeof(VoicePacksPageModel).GetMethod("ProjectMoodTuningRows", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("production projection seam missing");
+        Func<string, SqueakMood, string, string, Tuple<bool, bool, string>> resolver =
+            (source, mood, r, x) => Tuple.Create(defExists, hasEntry, "Resolved preset label");
+        var rows = (IReadOnlyList<MoodTuningRowView>)project.Invoke(null, new object[] { records, layer, race, xeno, resolver })!;
+        Assert(rows.Count == ProductMoods.Length, "production projection must retain all four moods");
+        return rows.Single(row => row.Mood == SqueakMood.Good);
+    }
+
+    // PM residual F3: synthetic long translations distinguish the resolved label from its short key.
+    // Input is the real help-open Host at 984x524, with wrap-aware calibrated StubMetrics.
+    private static void ResolvedActionLabelGrowsTheRow()
+    {
+        foreach (string language in new[] { "English", "ChineseSimplified" })
+        {
+            var table = Program.ReadKeyedTable(language);
+            float Height(string draft)
+            {
+                var translated = new Dictionary<string, string>(table, StringComparer.Ordinal) { ["US.Action.Draft"] = draft };
+                Program.SetTranslatorResolver(translated);
+                var source = new RecordingSettingsSource { RichData = true };
+                using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics(), () => V3OpenPageBox);
+                host.Bindings.Invoke("set-tab", "Tuning");
+                host.Bindings.Set("help-open", true);
+                return host.MeasureAndArrange(new Vector2(V3OpenPageBox, V3PageBoxHeight)).RectById["scope-tree"].height;
+            }
+            try
+            {
+                float ordinary = Height(table["US.Action.Draft"]);
+                string longer = string.Concat(Enumerable.Repeat(language == "English" ? "Long drafted action " : "很长的征召动作名称", 20));
+                float expanded = Height(longer);
+                Assert(expanded > ordinary + 100f, language + ": resolved long action label must grow the production row, key-only measurement cannot");
+                Console.WriteLine("[v3-resolved-row] " + language + " normal=" + Num(ordinary) + " long=" + Num(expanded));
+            }
+            finally { Program.SetTranslatorResolver(null); }
+        }
+    }
+
+    private static void ResetTargetStaysInTheHeader()
+    {
+        // Numeric input models a wrapped inline header: 21px name, 72px provenance, 54px target,
+        // two 2px gaps. Execute the same positioning helper DrawMoodRow consumes, not a copied formula.
+        Type layoutType = typeof(UsScopeTreeWidget).GetNestedType("MoodRowsLayout", BindingFlags.NonPublic)!;
+        object layout = Activator.CreateInstance(layoutType)!;
+        layoutType.GetField("HeaderInline")!.SetValue(layout, true);
+        foreach (var field in new Dictionary<string, float> { ["HeaderHeight"] = 151f, ["NameBandHeight"] = 21f,
+            ["SourceGap"] = 2f, ["SourceBandHeight"] = 72f, ["TargetGap"] = 2f, ["TargetBandHeight"] = 54f })
+            layoutType.GetField(field.Key)!.SetValue(layout, field.Value);
+        MethodInfo top = typeof(UsScopeTreeWidget).GetMethod("MoodHeaderLeftTopFor", BindingFlags.NonPublic | BindingFlags.Static)!;
+        float offset = (float)top.Invoke(null, new[] { layout })!;
+        Assert(offset >= 0f && offset + 151f <= 151.01f,
+            "inline mood header: centering must include target band and keep it above parameters");
+        Console.WriteLine("[v3-header] wrapped inline stack=151 header=151 offset=" + Num(offset));
+    }
+
+    private static void ResetTuningRecorders(RecordingSettingsSource source)
+    {
+        source.LastTuningLayer = null;
+        source.LastTuningDomainRace = null;
+        source.LastTuningDomainTarget = null;
+        source.LastActionKey = null;
+        source.LastActionScope = null;
+        source.LastMood = null;
+        source.LastMoodFactor = null;
+        source.LastMoodValue = null;
+        source.LastMoodPresetReset = null;
+        source.LastMoodPresetResetCount = 0;
+    }
+
+    /// <summary>The action display key the widget resolves for one fixture action row.</summary>
+    private static string ActionDisplayKey(string actionKey)
+    {
+        return actionKey == "Draft" ? "US.Action.Draft" : "US.Action.Eat";
+    }
+
+    /// <summary>
+    /// The widget BODY width at one real page box: measured, not derived - the card is arranged at that box
+    /// with the same state the product uses and the body is the card minus the card padding.
+    /// </summary>
+    private static float TuningBodyWidthAt(float pageBox, bool helpOpen, Program.StubMetrics metrics)
+    {
+        var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
+        using UiHost host = UsKernelSettingsHost.Create(source, metrics, () => pageBox);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.Bindings.Set("help-open", helpOpen);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(pageBox, V3PageBoxHeight));
+        Rect card = snapshot.RectById["scope-tree"];
+        return Math.Max(1f, card.width - UsCardLayout.Padding * 2f);
+    }
+
+    /// <summary>
+    /// The inherited-scope hint and the mood source readout are observed through the EXISTING
+    /// <see cref="RecordingMetrics"/> seam (the same instrument the header-resolution step uses): a string the
+    /// widget never lays out is never measured, so the pre-V3 suppression of the hint is observable here - it
+    /// simply never appears.
+    /// </summary>
+    private static string DescribeFindings(List<UiOverflowReport> reports)
+    {
+        if (reports.Count == 0) return "none";
+        var text = new System.Text.StringBuilder();
+        foreach (UiOverflowReport report in reports)
+        {
+            text.Append("[").Append(report.ElementPath).Append(" ").Append(report.Axis)
+                .Append(" needs ").Append(report.Needed).Append(" has ").Append(report.Available).Append("]");
+        }
+
+        return text.ToString();
+    }
+
+    private static string DescribeRect(Rect rect)
+    {
+        return "(" + Num(rect.x) + "," + Num(rect.y) + "," + Num(rect.width) + "," + Num(rect.height) + ")";
+    }
+
+    /// <summary>Content-local (the space the UiNative overrides record in) to page space: the inverse of
+    /// <see cref="ToContentLocal"/> for a scroll position of zero, which is where these steps pin the scroll.</summary>
+    private static Rect ToPageLocal(Rect contentLocal, Rect viewport, Vector2 scroll)
+    {
+        return new Rect(contentLocal.x + viewport.x - scroll.x, contentLocal.y + viewport.y - scroll.y,
+            contentLocal.width, contentLocal.height);
+    }
+
+    private static string Num(float value) => value.ToString("0.#", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// V1: the navigation ENCLOSURE. The probe host carries the nav alone UNDER the flat scope - which is

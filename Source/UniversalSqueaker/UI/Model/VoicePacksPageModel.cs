@@ -229,11 +229,12 @@ public static class VoicePacksPageModel
     /// <summary>Typed field-level mood write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。</summary>
     private static void ApplyMoodTuning(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood, string factor, float? value)
     {
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        if (!MoodLayerHasIdentity(state)) return;
         settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
     }
 
+    /// <summary>Typed field-level mood write (enum factor form). The guard is shared with the string-factor
+    /// overload above so the two can never drift apart (they were duplicated line for line).</summary>
     private static void ApplyMoodTuning(
         UniversalSqueakerSettings settings,
         VoicePacksPageState state,
@@ -241,9 +242,16 @@ public static class VoicePacksPageModel
         SqueakMoodFactor factor,
         float? value)
     {
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        if (!MoodLayerHasIdentity(state)) return;
         settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
+    }
+
+    /// <summary>非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。</summary>
+    private static bool MoodLayerHasIdentity(VoicePacksPageState state)
+    {
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return false;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return false;
+        return true;
     }
 
     /// <summary>Typed VoicePack checkbox write inside one domain.</summary>
@@ -395,6 +403,15 @@ public static class VoicePacksPageModel
     /// Effective = 默认(1/1/One) &lt; Global &lt; Race &lt; Xeno 字段级 last-wins（与运行时同规则）。</summary>
     private static IReadOnlyList<MoodTuningRowView> BuildMoodTuningRows(UniversalSqueakerSettings settings, int layer, string race, string xeno)
     {
+        return ProjectMoodTuningRows(settings.moodTuning ?? new List<MoodTuningRecord>(), layer, race, xeno, ResolveMoodPreset);
+    }
+
+    // The record fold and Ready-gated target projection are executed directly by the Host lane.
+    // Only Def lookup is supplied by the caller; settings and persistence remain outside this seam.
+    private static IReadOnlyList<MoodTuningRowView> ProjectMoodTuningRows(
+        IEnumerable<MoodTuningRecord> records, int layer, string race, string xeno,
+        Func<string, SqueakMood, string, string, Tuple<bool, bool, string>> resolvePreset)
+    {
         List<MoodTuningRowView> rows = new();
         foreach (SqueakMood mood in Enum.GetValues(typeof(SqueakMood)))
         {
@@ -406,7 +423,7 @@ public static class VoicePacksPageModel
             int bestPitchLayer = -1;
             int bestVolumeLayer = -1;
             int bestJitterLayer = -1;
-            foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+            foreach (MoodTuningRecord record in records)
             {
                 if (record == null || record.mood != mood || record.IsValidLayer(out int recordLayer) == false) continue;
                 bool layer0 = recordLayer == 0;
@@ -434,16 +451,32 @@ public static class VoicePacksPageModel
             SqueakMoodResetDefaultState defaultReset = SqueakMoodResetActions.EvaluateDefault(
                 own?.hasPitchFactor == true, own?.hasVolumeFactor == true, own?.hasPitchJitter == true);
             string sourcePreset = own?.sourcePresetDefName ?? "";
-            UniversalSqueakerTuningBaselineDef? presetDef = sourcePreset.Length > 0
-                ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(sourcePreset)
-                : null;
-            bool presetHasEntry = presetDef != null
-                && UniversalSqueakerSettings.TryFindMoodBaseline(presetDef, mood, race, xeno, out _);
-            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, presetDef != null, presetHasEntry);
+            Tuple<bool, bool, string> preset = resolvePreset(sourcePreset, mood, race, xeno);
+            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, preset.Item1, preset.Item2);
 
-            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset));
+            // V3 P2 (corrected in task-18): provenance is the PER-FACTOR SUPPLYING LAYER the fold above
+            // already resolved (-1 = no layer supplies it, so the effective value is the default). The
+            // persisted anchor `sourcePreset` is NOT provenance: it survives a clear (F-P). It is projected
+            // ONLY as the reset-to-preset TARGET, via the resolved Def's own display label and only while
+            // that target is actually usable (Ready); a PresetMissing/NoEntry/NotFromPreset row carries no
+            // target at all so the readout cannot imply one.
+            string resetTarget = presetReset == SqueakMoodResetPresetState.Ready
+                ? preset.Item3
+                : "";
+            rows.Add(new MoodTuningRowView(
+                mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset,
+                bestPitchLayer, bestVolumeLayer, bestJitterLayer, resetTarget));
         }
         return rows;
+    }
+
+    private static Tuple<bool, bool, string> ResolveMoodPreset(string source, SqueakMood mood, string race, string xeno)
+    {
+        UniversalSqueakerTuningBaselineDef? preset = source.Length > 0
+            ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source)
+            : null;
+        bool hasEntry = preset != null && UniversalSqueakerSettings.TryFindMoodBaseline(preset, mood, race, xeno, out _);
+        return Tuple.Create(preset != null, hasEntry, preset != null ? ResolvePresetLabel(preset) : "");
     }
 
     /// <summary>Project the tuning-baseline preset Defs into a selectable tree for the import widget.</summary>

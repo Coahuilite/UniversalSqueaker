@@ -57,6 +57,64 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
 
     /// <summary>
+    /// V3 instrument (audit item C): when true the tuning setters ALSO update the page state/view the host
+    /// reads, so an "after the write" assertion observes the new state instead of the fixture's constructor
+    /// constants. Opt-in: default false keeps every earlier lane's input exactly as it was.
+    /// <para>Channels mirrored here: layer and domain (both live on the page state) and action scope (the
+    /// drawn row set). A mood VALUE is deliberately NOT mirrored: reproducing the model's per-factor layer
+    /// merge inside the fake would be a second implementation of the thing under test - the cross-channel
+    /// increments are asserted on the write recorders instead, which fire on every write.</para>
+    /// </summary>
+    public bool MirrorTuningWrites;
+
+    /// <summary>
+    /// V3 task-18 instrument: per-factor SUPPLYING LAYERS for the four rich mood rows, in row order
+    /// (mood-major, factor-minor: pitch, volume, jitter), 0=Global 1=Race 2=Xenotype -1=no layer (default).
+    /// Null keeps the fixture's production-shaped mix. This is the input the corrected readout renders.
+    /// </summary>
+    public int[]? MoodSourceLayers;
+
+    /// <summary>
+    /// V3 task-18 instrument: the record the FIRST rich mood row (Good) reports as its own. The PM's
+    /// counterexample feeds a record whose factor flags are CLEARED but whose <c>sourcePresetDefName</c>
+    /// anchor is RETAINED - the readout must never present that anchor as the origin of the shown numbers.
+    /// </summary>
+    public MoodTuningRecord? MoodOwnRecord;
+
+    /// <summary>
+    /// V3 task-18 instrument: the display label the resolved reset-to-preset TARGET carries for the rich
+    /// rows whose <c>PresetReset</c> is Ready (the model projects the Def's own label). Empty keeps the
+    /// built-in "Harness Baseline"; rows with no usable target get "".
+    /// </summary>
+    public string ResetTargetLabel = "Harness Baseline";
+
+    /// <summary>V3 task-18 instrument: overrides the FIRST rich mood row's reset-to-preset availability, so
+    /// the matrix can feed an anchor whose Def no longer resolves (PresetMissing). Null keeps Ready.</summary>
+    public SqueakMoodResetPresetState? Row1PresetReset;
+
+    private static readonly int[] DefaultMoodSourceLayers = { 0, 0, -1, -1, -1, -1, 1, 1, 0, 2, 0, -1 };
+
+    /// <summary>Supplying layer of one factor slot: the lane's input when it feeds one, otherwise the
+    /// production-shaped mix (Global+default, all-default, Race+Global, Xenotype+Global+default).</summary>
+    private int SourceLayerAt(int index)
+    {
+        int[] layers = MoodSourceLayers ?? DefaultMoodSourceLayers;
+        return index >= 0 && index < layers.Length ? layers[index] : -1;
+    }
+
+    private static string ResetTargetFor(SqueakMoodResetPresetState state, string label)
+    {
+        return state == SqueakMoodResetPresetState.Ready ? label : "";
+    }
+
+    /// <summary>
+    /// V3 instrument: replaces the fixture's two production-shaped action-scope rows with the given set
+    /// (empty = a DEGENERATE input no production model produces; the V3 lane uses it only as a labelled
+    /// defensive probe of the mood area's coupling). Null keeps the two real rows.
+    /// </summary>
+    public ActionScopeRowView[]? TuningActionScopes;
+
+    /// <summary>
     /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
     /// its child row; the disabled-child lane flips the parent without writing anything, which is how
     /// the two drawn states are compared for identical geometry.
@@ -291,7 +349,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             races: Races ?? RaceRowsFor(filterSanguophage),
             xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
             selectedDomain: SelectedForView(sang, filterSanguophage),
-            actionScopes: new[]
+            actionScopes: TuningActionScopes ?? new[]
             {
                 new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
                 new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.Operable, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
@@ -318,12 +376,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new MoodTuningRowView(
                     SqueakMood.Good,
                     SqueakMood.Good.ToString(),
-                    own: null,
+                    own: MoodOwnRecord,
                     effectivePitch: 1f,
                     effectiveVolume: 1f,
                     effectiveJitterHalf: 0f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.Ready),
+                    presetReset: Row1PresetReset ?? SqueakMoodResetPresetState.Ready,
+                    pitchSourceLayer: SourceLayerAt(0), volumeSourceLayer: SourceLayerAt(1), jitterSourceLayer: SourceLayerAt(2), resetPresetTarget: ResetTargetFor(Row1PresetReset ?? SqueakMoodResetPresetState.Ready, ResetTargetLabel)),
                 new MoodTuningRowView(
                     SqueakMood.Neutral,
                     SqueakMood.Neutral.ToString(),
@@ -332,7 +391,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.8f,
                     effectiveJitterHalf: 0.1f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset),
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
+                    pitchSourceLayer: SourceLayerAt(3), volumeSourceLayer: SourceLayerAt(4), jitterSourceLayer: SourceLayerAt(5), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel)),
                 new MoodTuningRowView(
                     SqueakMood.Bad,
                     SqueakMood.Bad.ToString(),
@@ -341,7 +401,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.6f,
                     effectiveJitterHalf: 0.2f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.Ready),
+                    presetReset: SqueakMoodResetPresetState.Ready,
+                    pitchSourceLayer: SourceLayerAt(6), volumeSourceLayer: SourceLayerAt(7), jitterSourceLayer: SourceLayerAt(8), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.Ready, "Harness Baseline")),
                 new MoodTuningRowView(
                     SqueakMood.Break,
                     SqueakMood.Break.ToString(),
@@ -350,7 +411,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.4f,
                     effectiveJitterHalf: 0.3f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset)
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
+                    pitchSourceLayer: SourceLayerAt(9), volumeSourceLayer: SourceLayerAt(10), jitterSourceLayer: SourceLayerAt(11), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel))
             },
             baselinePresets: new[] { preset },
             buildIdentity: BuildIdentity,
@@ -593,12 +655,21 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         state.HelpDrawerOpen = open;
     }
 
-    public void SetTuningLayer(int layer) => LastTuningLayer = layer;
+    public void SetTuningLayer(int layer)
+    {
+        LastTuningLayer = layer;
+        if (MirrorTuningWrites) state.TuningLayer = layer;
+    }
 
     public void SetTuningDomain(string raceDefName, string targetDefName)
     {
         LastTuningDomainRace = raceDefName;
         LastTuningDomainTarget = targetDefName;
+        if (MirrorTuningWrites)
+        {
+            state.TuningRaceDefName = raceDefName;
+            state.TuningXenotypeDefName = targetDefName;
+        }
     }
 
     public void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName)

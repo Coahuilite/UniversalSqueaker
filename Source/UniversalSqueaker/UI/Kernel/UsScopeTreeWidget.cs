@@ -32,9 +32,19 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float LayerRowLabelBandHeight = 22f;
     private const float RowHeight = 28f;
 
-    // The inherited-scope hint is a Tiny line: its band has to hold a full Tiny line (a 14px band cut
-    // the tail of every scope name, in any language).
+    // V3 A1: the inherited-scope hint is part of the row's LAYOUT, not a width-gated decoration. The row
+    // keeps the hint inline beside the dropdown while the action name still gets ScopeLabelMinBand; when the
+    // body is too tight for both, the hint moves to its own line under the name instead of disappearing (the
+    // pre-V3 shape suppressed it entirely below a 480px element width, which is every real help-open body).
     private const float InheritedHintHeight = 18f;
+    /// <summary>Minimum band the hint keeps (measured text wins when it is wider).</summary>
+    private const float InheritedHintMinWidth = 86f;
+    /// <summary>Gap between the hint and the dropdown trigger / the action name.</summary>
+    private const float InheritedHintGap = 6f;
+    /// <summary>Right inset of the dropdown trigger inside the row.</summary>
+    private const float ScopeDropdownGap = 8f;
+    /// <summary>Smallest action-name band the row accepts before the hint drops to its own line.</summary>
+    private const float ScopeLabelMinBand = 120f;
 
     // A mood card is a repeated two-line parameter template: the mood name and its two reset controls on
     // the header line, then three parameter blocks - label, minus, numeric field and plus on the first
@@ -58,6 +68,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const float MoodLabelColumnPad = 8f;
     private const float MoodParameterLabelMinBand = 16f;
     private const float MoodNameMinBand = 18f;
+    /// <summary>V3 A2: band floor for the mood source/inheritance readout (a Tiny line).</summary>
+    private const float MoodSourceMinBand = 14f;
+    /// <summary>V3 A2: gap between the mood name and its source readout.</summary>
+    private const float MoodSourceGap = 2f;
     private const float MoodHeaderGap = 6f;
     private const float RowGap = 2f;
     private const float TopPadding = 2f;
@@ -87,6 +101,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// the action side only; the mood row's controls use the two "reset" phrases below instead
     /// (one word, two meanings was the direct cause of mis-clicks).</summary>
     private const string AutoLabelKey = "US.Tuning.Auto";
+    /// <summary>V3 task-18 additive key: no layer supplies this factor, so the value is the DEFAULT.</summary>
+    private const string DefaultSourceKey = "US.Tuning.Source.Default";
     /// <summary>Mood row, action one - "reset to default": clear this layer's three factor fields and keep
     /// the preset source, so the value falls through to inheritance again. A CLEAR.</summary>
     private const string ResetDefaultKey = "US.Tuning.ResetToDefault";
@@ -181,11 +197,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 {
                     if (row.Group == targetGroup)
                     {
-                        bodyHeight += ScopeRowHeightFor(width, row.DisplayName, ctx) + RowGap;
+                        bodyHeight += ScopeRowHeightFor(width, row, ctx) + RowGap;
                     }
                 }
             }
+        }
 
+        // V3 P1 deliberate rule: the MOOD area is NOT gated on the scope rows. It is the layer's own
+        // parameter area, so it depends on the mood rows alone - Measure and Draw use this same predicate.
+        if (moodRows.Count > 0)
+        {
             bodyHeight += RowHeight + RowGap; // "Mood Tuning" header
             MoodRowsLayout moodLayout = MoodRowsLayoutFor(width, ctx, moodRows);
             bodyHeight += moodRows.Count * (moodLayout.TotalHeight + RowGap);
@@ -232,9 +253,14 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             TextAnchor.MiddleLeft);
         y += RowHeight + RowGap;
 
-        bool anyScopeDrawn = false;
+        // V3 P1: ONE predicate decides each area, and the rule is deliberate: the scope GROUP rows depend on
+        // the scope list, the MOOD area depends only on the mood rows. Measure uses the same two predicates
+        // (moodRows.Count for the mood heading/rows, the group scan for the group headers), so the two passes
+        // can no longer disagree the way `scopeRows.Count > 0` vs `anyScopeDrawn` could.
+        bool hasScopeRows = scopeRows.Count > 0;
         for (int group = 0; group < 2; group++)
         {
+            if (!hasScopeRows) break;
             ActionScopeGroup targetGroup = group == 0 ? ActionScopeGroup.Autonomous : ActionScopeGroup.Operable;
             bool hasGroupRows = false;
             foreach (ActionScopeRowView row in scopeRows)
@@ -260,15 +286,13 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             foreach (ActionScopeRowView row in scopeRows)
             {
                 if (row.Group != targetGroup) continue;
-                float rowHeight = ScopeRowHeightFor(innerWidth, row.DisplayName, ctx);
+                float rowHeight = ScopeRowHeightFor(innerWidth, row, ctx);
                 DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), row, ctx);
                 y += rowHeight + RowGap;
             }
-
-            anyScopeDrawn = true;
         }
 
-        if (anyScopeDrawn)
+        if (moodRows.Count > 0)
         {
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
@@ -282,7 +306,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
             foreach (MoodTuningRowView mood in moodRows)
             {
-                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx);
+                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx, layer);
                 y += moodLayout.TotalHeight + RowGap;
             }
         }
@@ -388,22 +412,24 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             rect, ctx, row.HasOwnScope ? "us/scope-tree/action-scope" : "us/scope-tree/auto");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
 
-        string displayName = UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey);
-        float scopeButtonWidth = Math.Min(ButtonWidth, Math.Max(40f, rect.width - 120f));
+        ScopeRowLayout layout = ScopeRowLayoutFor(rect.width, UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey), HintTextFor(ctx, row), ctx.Metrics);
+        float scopeButtonWidth = layout.DropdownWidth;
 
         UsKernelDraw.Label(
-            new Rect(rect.x + LeftPadding, rect.y, Math.Max(1f, rect.width - LeftPadding - scopeButtonWidth - 90f), rect.height),
-            displayName,
+            new Rect(rect.x + LeftPadding, rect.y, layout.LabelWidth, layout.LabelLineHeight),
+            UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey),
             ctx.Theme,
             ctx.Theme.TextPrimary,
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
-        if (ctx.ViewWidth >= 480f && (!row.HasOwnScope || row.Scope != row.EffectiveScope))
+        // V3 A1: the inheritance state is drawn at EVERY body width the real boxes produce - inline beside
+        // the dropdown when it fits, on its own line under the name when it does not. Never suppressed.
+        if (layout.HintText.Length > 0)
         {
             UsKernelDraw.Label(
-                new Rect(rect.x + rect.width - scopeButtonWidth - 96f, rect.y + 6f, Math.Max(1f, 86f), InheritedHintHeight),
-                "→ " + UsKernelDraw.Keyed(ctx, ScopeLabelKey(row.EffectiveScope)),
+                new Rect(rect.x + layout.HintX, rect.y + layout.HintY, layout.HintWidth, layout.HintBandHeight),
+                layout.HintText,
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Tiny,
@@ -422,7 +448,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         SqueakActionScope? current = row.HasOwnScope ? row.Scope : null;
-        Rect dropdownRect = new(rect.xMax - scopeButtonWidth - 8f, rect.y + (rect.height - ButtonHeight) / 2f, scopeButtonWidth, ButtonHeight);
+        Rect dropdownRect = new(rect.xMax - scopeButtonWidth - ScopeDropdownGap, rect.y + (rect.height - ButtonHeight) * 0.5f, scopeButtonWidth, ButtonHeight);
         string elementId = "scope-tree-scope-" + row.ActionKey;
         UsKernelDraw.Dropdown(dropdownRect, elementId, ctx, current, options, scope =>
         {
@@ -432,6 +458,114 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         });
     }
 
+    /// <summary>The inherited-scope hint text, or "" when the row's own scope IS the effective one (nothing
+    /// to explain). Resolved through the same label keys the dropdown uses, so the hint never invents text.</summary>
+    private static string HintTextFor(UiWidgetContext ctx, ActionScopeRowView row)
+    {
+        if (row.HasOwnScope && row.Scope == row.EffectiveScope) return "";
+        return "→ " + UsKernelDraw.Keyed(ctx, ScopeLabelKey(row.EffectiveScope));
+    }
+
+    /// <summary>
+    /// V3 A1: the ONE geometry function the row's measure and draw passes share. It answers the questions the
+    /// pre-V3 code answered in two places with a hard-coded 90/96 pair (which overlapped by 6px): how wide the
+    /// action-name band is, whether the inherited hint stays inline, and how tall the row must be. The hint is
+    /// never dropped - it moves to its own line. Pure numbers + strings, so the harness lane can assert the
+    /// columns at the real body widths without re-deriving them.
+    /// </summary>
+    public static ScopeRowLayout ScopeRowLayoutFor(float rowWidth, string displayName, string hintText, ITextMetrics metrics)
+    {
+        string hint = hintText ?? "";
+        bool hasHint = hint.Length > 0;
+        float dropdownWidth = Math.Min(ButtonWidth, Math.Max(40f, rowWidth - 120f));
+        float dropdownX = rowWidth - dropdownWidth - ScopeDropdownGap;
+        float hintTextWidth = hasHint ? metrics.MeasureWidth(hint, UiFont.Tiny) + 2f : 0f;
+        float hintWidth = hasHint ? Math.Max(InheritedHintMinWidth, hintTextWidth) : 0f;
+        float hintX = dropdownX - InheritedHintGap - hintWidth;
+        float inlineLabelWidth = hintX - InheritedHintGap - LeftPadding;
+        bool hintInline = !hasHint || inlineLabelWidth >= ScopeLabelMinBand;
+        float labelWidth = Math.Max(1f, hasHint && hintInline
+            ? inlineLabelWidth
+            : dropdownX - InheritedHintGap - LeftPadding);
+        float hintBandHeight = hasHint
+            ? Math.Max(InheritedHintHeight, metrics.MeasureText(hint, UiFont.Tiny, Math.Max(1f, hintWidth)))
+            : 0f;
+        float labelLineHeight = Math.Max(RowHeight, metrics.MeasureText(displayName ?? "", UiFont.Small, labelWidth) + 8f);
+
+        if (!hasHint)
+        {
+            return new ScopeRowLayout(hint, dropdownWidth, labelWidth, true, 0f, 0f, labelLineHeight, 0f, 0f, labelLineHeight);
+        }
+
+        if (hintInline)
+        {
+            return new ScopeRowLayout(
+                hint,
+                dropdownWidth,
+                labelWidth,
+                true,
+                hintWidth,
+                hintBandHeight,
+                labelLineHeight,
+                hintX,
+                Math.Max(0f, (labelLineHeight - hintBandHeight) * 0.5f),
+                labelLineHeight);
+        }
+
+        // Own line: the name keeps the full line minus the trigger, the hint sits under it. Even a body far
+        // below the real boxes loses no state - it stacks instead.
+        return new ScopeRowLayout(
+            hint,
+            dropdownWidth,
+            labelWidth,
+            false,
+            hintWidth,
+            hintBandHeight,
+            labelLineHeight,
+            LeftPadding,
+            labelLineHeight + RowGap,
+            labelLineHeight + RowGap + hintBandHeight);
+    }
+
+    /// <summary>One action-scope row's column geometry (see <see cref="ScopeRowLayoutFor"/>).</summary>
+    public readonly struct ScopeRowLayout
+    {
+        public readonly string HintText;
+        public readonly float DropdownWidth;
+        public readonly float LabelWidth;
+        public readonly bool HintInline;
+        public readonly float HintWidth;
+        public readonly float HintBandHeight;
+        public readonly float LabelLineHeight;
+        public readonly float HintX;
+        public readonly float HintY;
+        public readonly float RowHeight;
+
+        public ScopeRowLayout(
+            string hintText,
+            float dropdownWidth,
+            float labelWidth,
+            bool hintInline,
+            float hintWidth,
+            float hintBandHeight,
+            float labelLineHeight,
+            float hintX,
+            float hintY,
+            float rowHeight)
+        {
+            HintText = hintText;
+            DropdownWidth = dropdownWidth;
+            LabelWidth = labelWidth;
+            HintInline = hintInline;
+            HintWidth = hintWidth;
+            HintBandHeight = hintBandHeight;
+            LabelLineHeight = labelLineHeight;
+            HintX = hintX;
+            HintY = hintY;
+            RowHeight = rowHeight;
+        }
+    }
+
     /// <summary>
     /// One mood card. The header line carries the mood name (resolved through its US.Mood.* key, so no
     /// language literal lives in this file) and the two reset controls; below it every parameter gets the
@@ -439,7 +573,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// second. The geometry comes from <see cref="MoodRowsLayoutFor"/> - the same function Measure uses -
     /// so a hover never changes a height and the section card can never clip a control.
     /// </summary>
-    private void DrawMoodRow(Rect rect, MoodTuningRowView row, MoodRowsLayout layout, UiWidgetContext ctx)
+    private void DrawMoodRow(Rect rect, MoodTuningRowView row, MoodRowsLayout layout, UiWidgetContext ctx, int layer)
     {
         bool hovered = UsKernelDraw.HelpHover(rect, ctx, "us/scope-tree/mood-tuning");
         UsKernelDraw.RowSurface(rect, ctx.Theme, hovered, UsKernelDraw.RowRail.None);
@@ -450,10 +584,9 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         // Header. When the name and the measured reset block cannot share the line, the controls drop to
         // their own line - they are never squeezed away, and an unavailable control stays drawn and inert
-        // while still claiming the help entry that carries its reason.
-        float nameY = layout.HeaderInline
-            ? rect.y + (layout.HeaderHeight - layout.NameBandHeight) * 0.5f
-            : rect.y;
+        // while still claiming the help entry that carries its reason. The source readout (V3 A2) sits under
+        // the name in BOTH shapes, so it is always visible and always adjacent to the value it explains.
+        float nameY = rect.y + MoodHeaderLeftTopFor(layout);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding, nameY, layout.NameBandWidth, layout.NameBandHeight),
             MoodName(ctx, row),
@@ -462,6 +595,37 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
+        if (layout.SourceBandHeight > 0f)
+        {
+            UsKernelDraw.Label(
+                new Rect(rect.x + LeftPadding, nameY + layout.NameBandHeight + layout.SourceGap, layout.NameBandWidth, layout.SourceBandHeight),
+                MoodSourceText(ctx, row),
+                ctx.Theme,
+                ctx.Theme.TextSecondary,
+                UiFont.Tiny,
+                TextAnchor.MiddleLeft);
+        }
+
+        if (layout.TargetBandHeight > 0f)
+        {
+            string target = MoodResetTargetText(ctx, row);
+            if (target.Length > 0)
+            {
+                UsKernelDraw.Label(
+                    new Rect(rect.x + LeftPadding,
+                        nameY + layout.NameBandHeight + layout.SourceGap + layout.SourceBandHeight + layout.TargetGap,
+                        layout.NameBandWidth,
+                        layout.TargetBandHeight),
+                    target,
+                    ctx.Theme,
+                    ctx.Theme.TextSecondary,
+                    UiFont.Tiny,
+                    TextAnchor.MiddleLeft);
+            }
+        }
+
+        float headerLeftBottom = nameY + layout.NameBandHeight + layout.SourceGap + layout.SourceBandHeight
+            + layout.TargetGap + layout.TargetBandHeight;
         if (layout.HeaderInline)
         {
             DrawMoodResetButtons(
@@ -476,7 +640,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         else
         {
             DrawMoodResetButtons(
-                new Rect(rect.x + LeftPadding, rect.y + layout.NameBandHeight + RowGap, layout.ParameterWidth, layout.ResetHeight),
+                new Rect(rect.x + LeftPadding, headerLeftBottom + RowGap, layout.ParameterWidth, layout.ResetHeight),
                 row,
                 ctx);
         }
@@ -532,6 +696,54 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private static string MoodName(UiWidgetContext ctx, MoodTuningRowView row)
     {
         return UsKernelDraw.Keyed(ctx, "US.Mood." + row.Mood);
+    }
+
+    // Centre the complete text stack, including its optional reset target, above the parameters.
+    private static float MoodHeaderLeftTopFor(MoodRowsLayout layout)
+    {
+        return layout.HeaderInline
+            ? (layout.HeaderHeight - layout.NameBandHeight - layout.SourceGap - layout.SourceBandHeight
+                - layout.TargetGap - layout.TargetBandHeight) * 0.5f
+            : 0f;
+    }
+
+    /// <summary>
+    /// V3 P2 (corrected in task-18): the read-only provenance readout of one mood row, PER FACTOR. Each
+    /// factor names the layer that actually supplies its effective value ("Global"/"Race"/"Xenotype"), or the
+    /// default word when no layer supplies it. Only existing keys plus that one additive key are used.
+    /// <para><b>Why the preset name is not here:</b> the persisted <c>sourcePresetDefName</c> is the
+    /// reset-to-preset ANCHOR - it survives a clear (F-P) - so it cannot prove where the shown numbers came
+    /// from. Printing it behind an arrow made a cleared or mixed row look as if it inherited from that preset.
+    /// The preset is expressed ONLY by the reset-to-preset control, which is what it actually targets.</para>
+    /// </summary>
+    private static string MoodSourceText(UiWidgetContext ctx, MoodTuningRowView row)
+    {
+        var text = new System.Text.StringBuilder();
+        for (int i = 0; i < MoodParameterFactors.Length; i++)
+        {
+            SqueakMoodFactor factor = MoodParameterFactors[i];
+            int supplying = row.SourceLayerFor(factor);
+            string source = supplying >= 0 && supplying < LayerKeys.Length
+                ? UsKernelDraw.Keyed(ctx, LayerKeys[supplying])
+                : UsKernelDraw.Keyed(ctx, DefaultSourceKey);
+            if (i > 0) text.Append(" · ");
+            text.Append(UsKernelDraw.Keyed(ctx, ParameterLabelKey(factor))).Append(' ').Append(source);
+        }
+
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// V3 task-18 (b): the reset-to-preset TARGET clause, SEPARATE from the provenance line and explicitly
+    /// labelled with the existing "Reset to preset" phrase, so the anchor can never read as an origin. Empty
+    /// when the row has no usable target (the view carries "" then), which keeps a missing preset from
+    /// looking like a live one.
+    /// </summary>
+    private static string MoodResetTargetText(UiWidgetContext ctx, MoodTuningRowView row)
+    {
+        return row.ResetPresetTarget.Length == 0
+            ? ""
+            : UsKernelDraw.Keyed(ctx, ResetPresetKey) + ": " + row.ResetPresetTarget;
     }
 
     /// <summary>Display-text key of one factor, index-aligned with <see cref="MoodParameterFactors"/>.</summary>
@@ -783,9 +995,37 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         layout.NameBandHeight = nameBand;
+
+        // V3 A2: the source/inheritance readout is a Tiny line under the mood name, laid out in the SAME
+        // band the name uses (measured, never a fixed band), so it can wrap but never clip. It is always
+        // drawn - one of the three states always applies - and it is what tells the player whether the
+        // numbers below are this layer's or inherited.
+        float sourceBand = 0f;
+        foreach (MoodTuningRowView row in rows)
+        {
+            sourceBand = Mathf.Max(sourceBand, ctx.Metrics.MeasureText(MoodSourceText(ctx, row), UiFont.Tiny, Mathf.Max(1f, layout.NameBandWidth)));
+        }
+
+        layout.SourceBandHeight = rows.Count > 0 ? Mathf.Max(MoodSourceMinBand, sourceBand) : 0f;
+        layout.SourceGap = rows.Count > 0 ? MoodSourceGap : 0f;
+
+        // V3 task-18 (b): the reset-target clause gets its OWN measured band so it reads as a separate,
+        // labelled statement; rows with no usable target contribute 0 and the band disappears entirely.
+        float targetBand = 0f;
+        foreach (MoodTuningRowView row in rows)
+        {
+            string target = MoodResetTargetText(ctx, row);
+            if (target.Length == 0) continue;
+            targetBand = Mathf.Max(targetBand, ctx.Metrics.MeasureText(target, UiFont.Tiny, Mathf.Max(1f, layout.NameBandWidth)));
+        }
+
+        layout.TargetBandHeight = targetBand > 0f ? Mathf.Max(MoodSourceMinBand, targetBand) : 0f;
+        layout.TargetGap = targetBand > 0f ? MoodSourceGap : 0f;
+        float headerLeftHeight = layout.NameBandHeight + layout.SourceGap + layout.SourceBandHeight
+            + layout.TargetGap + layout.TargetBandHeight;
         layout.HeaderHeight = layout.HeaderInline
-            ? Mathf.Max(ButtonHeight, nameBand)
-            : nameBand + RowGap + layout.ResetHeight;
+            ? Mathf.Max(ButtonHeight, headerLeftHeight)
+            : headerLeftHeight + RowGap + layout.ResetHeight;
 
         // Parameter labels. The column is the widest resolved label plus padding - never a fixed band, and
         // never a language literal. A card too narrow to carry that column beside the numeric group moves
@@ -847,6 +1087,12 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         public float HeaderHeight;
         public float NameBandWidth;
         public float NameBandHeight;
+        /// <summary>V3 A2: height of the mood source/inheritance readout line under the name.</summary>
+        public float SourceBandHeight;
+        public float SourceGap;
+        /// <summary>V3 task-18 (b): the separate, labelled reset-to-preset target line (0 = none).</summary>
+        public float TargetBandHeight;
+        public float TargetGap;
         public float ResetWidth;
         public float ResetHeight;
         public float ParameterWidth;
@@ -865,11 +1111,9 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         public float TotalHeight;
     }
 
-    private float ScopeRowHeightFor(float rowWidth, string displayName, UiWidgetContext ctx)
+    private float ScopeRowHeightFor(float rowWidth, ActionScopeRowView row, UiWidgetContext ctx)
     {
-        float labelWidth = Math.Max(1f, rowWidth - LeftPadding - Math.Min(ButtonWidth, Math.Max(40f, rowWidth - 120f)) - 90f);
-        float measured = ctx.Metrics.MeasureText(displayName, UiFont.Small, labelWidth);
-        return Math.Max(RowHeight, measured + 8f);
+        return ScopeRowLayoutFor(rowWidth, UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey), HintTextFor(ctx, row), ctx.Metrics).RowHeight;
     }
 
     private static SqueakActionScope[] SupportedStates(SqueakAction action)

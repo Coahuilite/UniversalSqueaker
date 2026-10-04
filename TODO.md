@@ -10,9 +10,9 @@
 - [ ] **B3 repaired-package game observation at 1024x768.** Verify settings remain visible and operable
   with help open, help/body scroll independently, and closing/reopening preserves position. Technical
   geometry/fit checks pass; the original game failure is historical evidence until the repair is observed.
-- [ ] **Continue the approved UI refactor.** V2 = Packs (code landed, technically checked), V3 = Tuning and
-  V4 = remaining pages/help/footer (both future). Finish each bounded slice through independent review, PM
-  integration, local commit and paired package. Reuse the current DSH leader and US implementer/read-only
+- [ ] **Continue the approved UI refactor.** V2 = Packs and V3 = Tuning (both code landed, technically
+  checked), V4 = remaining pages/help/footer (future). Finish each bounded slice through independent review,
+  PM integration, local commit and paired package. Reuse the current DSH leader and US implementer/read-only
   runtime reviewer; add FL only for a real gap.
 - [ ] **V2 Packs game observation at 1024x768.** The Packs tab reads filter -> race/xenotype browse ->
   current-domain pack enable with one card rhythm, a switch-shaped per-pack enable control and a read-only
@@ -21,6 +21,11 @@
   observes it in a new package.** US-only: no carrier change, single FL carrier. Disclosed behaviour change:
   the filter band no longer draws the help-focus border (it is a Section + `us/section-header` now; no other
   Packs band had one).
+- [ ] **V3 Tuning game observation at 1024x768.** Layer/domain -> action scope -> mood parameters read in that
+  order inside one card; the inherited-scope hint is no longer width-suppressed; mood provenance is per-factor
+  and the preset anchor appears only as an explicitly labelled reset target. Both real page boxes x both drawer
+  states x EN/ZH measure fit=0, with a pointer-driven popup and no click-through. **Stays open until the user
+  observes it in a new package.** No carrier change; single FL carrier.
 
 C1/C2 passed the user's revised-package game rehearsal. Untriggered cases stay untested; do not repeat
 the complete report matrix by default. Package identity and current per-slice evidence live in the PM

@@ -25,8 +25,8 @@ page box: 416px centre plus 320px help. Both language tables have zero fit findi
 box uses the defensive band. Help/body nodes preserve scroll state. Actual setting interaction,
 wheel feel and visual acceptance of the repaired package still require the user's game observation.
 
-B3 is integrated. V2 (Packs) has passed independent review and the normal 15 US integration checks;
-the PM is committing and packaging it before V3 (Tuning) and V4 (remaining pages/help/footer).
+B3, V2 (Packs) and V3 (Tuning) are technically integrated. V4 (remaining pages/help/footer) follows
+the approved slice contract; repaired-package game observation remains open.
 The user authorized continued UI development after B3; reuse the current DSH leader and independent
 runtime reviewer, adding an FL implementer only for a demonstrated shared-library gap. Package
 identity and per-slice evidence belong to the PM delivery records, not this active memory.
@@ -446,6 +446,17 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   **Disclosed behaviour change**: the filter band lost its help-FOCUS border
   (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header; no other Packs band ever had
   one, so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
+- **Tuning tab (V3, 2026-10-04)**: one `us/scope-tree` card whose areas read layer/domain -> action scope
+  (Autonomous/Operable groups) -> mood, with area headings Small/TextPrimary and group headings
+  Tiny/TextSecondary. The mood area is gated on the mood rows ALONE in both Measure and Draw (the pre-V3
+  `scopeRows.Count > 0` vs `anyScopeDrawn` split was two predicates for one decision). The inherited-scope hint
+  is not width-gated: one pure row-layout function shared by Measure and Draw keeps it inline while the action
+  name keeps a floor, own-line otherwise, never hidden. Mood provenance is PER-FACTOR from the authoritative
+  fold (`bestPitchLayer`/`bestVolumeLayer`/`bestJitterLayer`, -1 = no supplier -> default), and
+  `MoodTuningRecord.sourcePresetDefName` is a RESET-TARGET ANCHOR, never provenance (Clear deliberately keeps
+  it) - it may be drawn ONLY as an explicitly labelled reset target and only while that target is Ready.
+  Additive key `US.Tuning.Source.Default`; the action-side `Auto` word is not reused on the mood side. No
+  model/save/command/stable-id change, no carrier change.
 - **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
   manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
   `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit

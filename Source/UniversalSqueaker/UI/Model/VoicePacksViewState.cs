@@ -382,6 +382,9 @@ public readonly struct TuningDomainOptionView
 /// 现状消费者 <c>UsScopeTreeWidget</c> 已按 <c>hasXFactor == true</c> 门控，null 只表示本层没有行。</para></summary>
 public readonly struct MoodTuningRowView
 {
+    /// <summary>No layer supplies the factor: the effective value stays the built-in default (1f / FloatRange.One).</summary>
+    public const int NoSupplyingLayer = -1;
+
     public readonly SqueakMood Mood;
     public readonly string DisplayName;
     public readonly MoodTuningRecord? Own;
@@ -394,9 +397,43 @@ public readonly struct MoodTuningRowView
     /// <summary>「重置为预设」可用性：看来源字段 + 预设 Def/条目的可解析性，同样不看行是否存在。</summary>
     public readonly SqueakMoodResetPresetState PresetReset;
 
+    /// <summary>
+    /// V3 P2 (corrected in task-18): the layer that actually SUPPLIES each factor's effective value, taken
+    /// from the authoritative fold (0 = Global, 1 = Race, 2 = Xenotype, <see cref="NoSupplyingLayer"/> = no
+    /// layer supplies it, so the value is the DEFAULT). This is provenance, and it is PER FACTOR because one
+    /// row can mix a local pitch with an inherited volume and a default jitter.
+    /// <para><b>What is deliberately NOT projected:</b> <c>MoodTuningRecord.sourcePresetDefName</c>. It is the
+    /// reset-to-preset ANCHOR - deliberately retained when the local factor flags are cleared - so it proves
+    /// only what the reset-to-preset control may target, never where the shown numbers came from. The earlier
+    /// row-level "inherited from &lt;preset&gt;" label was exactly that misreading.</para>
+    /// </summary>
+    public readonly int PitchSourceLayer;
+    public readonly int VolumeSourceLayer;
+    public readonly int JitterSourceLayer;
+
+    /// <summary>
+    /// V3 task-18 (b): the reset-to-preset TARGET, separately and explicitly labelled by the widget - the
+    /// display label of the resolved preset Def, or "" when there is no USABLE target (no anchor, the Def no
+    /// longer resolves, or it has no entry for this row). It is never drawn as provenance: it only says what
+    /// the reset-to-preset control would write.
+    /// </summary>
+    public readonly string ResetPresetTarget;
+
+    /// <summary>The supplying layer of one factor (see the three fields above).</summary>
+    public int SourceLayerFor(SqueakMoodFactor factor)
+    {
+        return factor == SqueakMoodFactor.Volume ? VolumeSourceLayer
+            : factor == SqueakMoodFactor.Jitter ? JitterSourceLayer
+            : PitchSourceLayer;
+    }
+
     public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf,
         SqueakMoodResetDefaultState defaultReset = SqueakMoodResetDefaultState.NoLocalSetting,
-        SqueakMoodResetPresetState presetReset = SqueakMoodResetPresetState.NotFromPreset)
+        SqueakMoodResetPresetState presetReset = SqueakMoodResetPresetState.NotFromPreset,
+        int pitchSourceLayer = NoSupplyingLayer,
+        int volumeSourceLayer = NoSupplyingLayer,
+        int jitterSourceLayer = NoSupplyingLayer,
+        string resetPresetTarget = "")
     {
         Mood = mood;
         DisplayName = displayName ?? mood.ToString();
@@ -406,5 +443,9 @@ public readonly struct MoodTuningRowView
         EffectiveJitterHalf = Math.Max(0f, effectiveJitterHalf);
         DefaultReset = defaultReset;
         PresetReset = presetReset;
+        PitchSourceLayer = Math.Max(NoSupplyingLayer, pitchSourceLayer);
+        VolumeSourceLayer = Math.Max(NoSupplyingLayer, volumeSourceLayer);
+        JitterSourceLayer = Math.Max(NoSupplyingLayer, jitterSourceLayer);
+        ResetPresetTarget = resetPresetTarget ?? "";
     }
 }

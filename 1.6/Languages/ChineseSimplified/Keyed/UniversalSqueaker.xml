@@ -382,4 +382,7 @@
   <US.Tuning.BabyActions>路由婴幼儿哭泣与咯咯笑</US.Tuning.BabyActions>
   <US.Help.BasicTuning.BabyActions.Label>路由婴幼儿哭泣与咯咯笑</US.Help.BasicTuning.BabyActions.Label>
   <US.Help.BasicTuning.BabyActions.Text>默认关闭。启用 Biotech 时，开启后将 Crying（哭泣）和 Giggling（咯咯笑）纳入语音路由、动作调音和覆盖统计；关闭后，两者不路由，也不计入覆盖分子与总数。不改变原版精神状态或真正的精神崩溃。缺少音频的动作不会算作已覆盖；未启用 Biotech 时此选项不生效。</US.Help.BasicTuning.BabyActions.Text>
+  <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
+
+
 </LanguageData>
