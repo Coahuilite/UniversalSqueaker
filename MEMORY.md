@@ -11,23 +11,23 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Current state (2026-10-04)
+## Current state (2026-10-05)
 
-- **Package identity is US `1a54e1f`** (full `1a54e1fbcb0d713faa4d0e518d3cdb75a1c71224`), FL `0181268`, Demo
-  `9d4b7e0`. **This docs-only round does not rebuild**: the playtest package keeps that identity, and a
-  docs-only commit moves HEAD so the payload's embedded commit will NOT equal HEAD until a rebuild - expected
-  per `AGENTS.md`, not a defect. Read a package's identity from its own stamp, never from HEAD.
+- **BH1 bottom help is technically integrated at `1addf06`; real-game acceptance is now requested.**
+  Read the current US package identity from its own stamp and the PM paired manifest, never infer it from
+  HEAD. FL remains `0181268`, Demo `9d4b7e0`; BH1 needs no carrier or Demo change. Current playtest scope:
+  `../modding_documents/relay_mod/PLAYTEST-BH1-20261005.md`.
 - **Latest human feedback reaffirms C1/C2 as normal.** Their original diagnostic IDs stay intact; the final
   feedback did not name RPT1/XG1 individually. The verbatim feedback, runtime observations and evidence are
   kept outside the product repository in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
   Layout reports do not replace visual or interaction acceptance; unattributed mod-stack warnings remain
   unattributed.
-- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1 and XG1 are technically integrated; their affected
-  checks passed. Remaining human observations cover V2/V3/V4 and B3's
-  remainder (independent scrolling, close/reopen retention), RPT1's sentence clarity, XG1's disabled feel, with
+- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1, XG1 and BH1 are technically integrated; their affected
+  checks passed. Remaining human observations cover V2/V3/V4 and BH1's
+  bottom-panel fit, independent wheel routing and toggle retention, RPT1's sentence clarity, XG1's disabled feel, with
   `TODO.md`'s NOW block owning the per-slice list. The V1/B3 observations the user already gave must NOT be
   re-asked. Tuning-layer redesign, composite splitting and page-layout work stay deferred, and bottom help keeps
-  its separate plan (`../modding_documents/relay_mod/BOTTOM-HELP-PROPOSAL-20261004.md`). Technical coverage
+  its separate contract (`../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`). Technical coverage
   limits remain separate, per `../modding_documents/relay_mod/PM_HANDOFF.md`.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not

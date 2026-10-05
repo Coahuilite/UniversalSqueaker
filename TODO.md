@@ -7,9 +7,9 @@
 
 ## NOW — current queue (2026-10-05, BH1)
 
-**BH1 implements the bottom help panel; the next package waits for a requested playtest.** Held package
-identity stays US `1a54e1f`, FL `0181268`, Demo `9d4b7e0`. Source/build verification is ahead of that US
-package; its embedded commit is expected to differ from HEAD until repackaging, per `AGENTS.md`.
+**BH1 now enters requested real-game acceptance.** Package identity is owned by its stamp and the PM paired
+manifest. FL remains `0181268`, Demo `9d4b7e0`; only US needs the new package. Current human checklist:
+`../modding_documents/relay_mod/PLAYTEST-BH1-20261005.md`.
 
 - The user reaffirmed C1/C2 as normal, keeping the original IDs; verbatim feedback and runtime evidence are
   in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`. Remaining coverage limits are in
