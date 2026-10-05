@@ -61,6 +61,7 @@
   <US.Diagnostics.Geometry.Off>布局采集已关闭。</US.Diagnostics.Geometry.Off>
   <US.Diagnostics.Geometry.Active>正在采集本窗口的布局。</US.Diagnostics.Geometry.Active>
   <US.Diagnostics.Geometry.Overlay>正在采集，并显示矩形描边。</US.Diagnostics.Geometry.Overlay>
+  <US.Diagnostics.Geometry.OutlineOnly>描边开启、采集关闭：只绘制当前帧的矩形，不采样，也不会备好报告。</US.Diagnostics.Geometry.OutlineOnly>
   <US.Diagnostics.Geometry.Unavailable>不可用：当前版本不含布局工具。请使用开发版的库包。</US.Diagnostics.Geometry.Unavailable>
   <US.Diagnostics.Geometry.NoScope>不可用：本页面没有诊断作用域。</US.Diagnostics.Geometry.NoScope>
   <US.Diagnostics.Geometry.Capture>采集</US.Diagnostics.Geometry.Capture>
@@ -76,17 +77,17 @@
   <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
 
-  <US.Action.Call>呼叫</US.Action.Call>
+  <US.Action.Call>空闲</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>
-  <US.Action.Wounded>受伤</US.Action.Wounded>
+  <US.Action.Wounded>受击</US.Action.Wounded>
   <US.Action.Select>选中</US.Action.Select>
   <US.Action.Move>移动</US.Action.Move>
   <US.Action.Social>社交</US.Action.Social>
   <US.Action.Joy>娱乐</US.Action.Joy>
   <US.Action.Death>死亡</US.Action.Death>
   <US.Action.Draft>征召</US.Action.Draft>
-  <US.Action.Undraft>解除征召</US.Action.Undraft>
+  <US.Action.Undraft>取消征召</US.Action.Undraft>
   <US.Action.Attack>攻击</US.Action.Attack>
   <US.Action.Work>工作</US.Action.Work>
   <US.Action.Equip>装备</US.Action.Equip>
@@ -167,6 +168,15 @@
   <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>
   <US.Tuning.Mode.Disabled>禁用</US.Tuning.Mode.Disabled>
+  <!-- SA1.3：等权混合双确认（SR 参考文案正本转录；确认流程为 US 自有）。对话框关闭按钮即取消，共用 Cancel 键。 -->
+  <US.Common.Cancel>取消</US.Common.Cancel>
+  <US.Remix.Confirm.Title>启用等权混合？</US.Remix.Confirm.Title>
+  <US.Remix.Confirm1.Body>等权混合可能让相邻动作使用不同声音来源。当前可播放的异种、种族和原版层权重相同，不会优先使用某个语音包。</US.Remix.Confirm1.Body>
+  <US.Remix.Confirm.Continue>继续确认风险</US.Remix.Confirm.Continue>
+  <US.Remix.Confirm2.Body>启用后，播放可能在已安装语音包和原版声音之间明显切换。此操作只改变来源策略，不会清除已保存选择。</US.Remix.Confirm2.Body>
+  <US.Remix.Confirm.Enable>启用等权混合</US.Remix.Confirm.Enable>
+  <US.Remix.Notice.Prerequisite>该确认窗口当前无法打开。</US.Remix.Notice.Prerequisite>
+  <US.Remix.Notice.Unavailable>确认页加载失败；模式未改变。</US.Remix.Notice.Unavailable>
   <US.Packs.Filter.All>全部</US.Packs.Filter.All>
   <US.Packs.Filter.EnabledOnly>仅已启用</US.Packs.Filter.EnabledOnly>
   <US.Packs.Filter.Conflicts>仅冲突</US.Packs.Filter.Conflicts>
@@ -214,12 +224,31 @@
   <US.Tuning.Layer.Race>种族</US.Tuning.Layer.Race>
   <US.Tuning.Layer.Xenotype>异种</US.Tuning.Layer.Xenotype>
   <US.Tuning.ActionScope>动作范围</US.Tuning.ActionScope>
-  <US.Tuning.Group.Autonomous>自发行为</US.Tuning.Group.Autonomous>
-  <US.Tuning.Group.Operable>可操作 / 指令</US.Tuning.Group.Operable>
+  <US.Tuning.Group.PlayerTriggered>玩家可主动触发</US.Tuning.Group.PlayerTriggered>
+  <US.Tuning.Group.SystemOrEvent>系统或事件触发</US.Tuning.Group.SystemOrEvent>
   <US.Tuning.MoodTuning>心情调音</US.Tuning.MoodTuning>
   <US.Tuning.Scope.Off>关闭</US.Tuning.Scope.Off>
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
+  <!-- SA1.2 SR 正本同步：每动作 scope 文案。表内没有的动作（Crying/Giggling 为 US 独有）沿用上面的通用文案。 -->
+  <US.Action.DraftUndraft>征召 / 取消征召</US.Action.DraftUndraft>
+  <US.Tuning.Scope.Call.Any>空闲时发生</US.Tuning.Scope.Call.Any>
+  <US.Tuning.Scope.Eat.Any>进食时发生</US.Tuning.Scope.Eat.Any>
+  <US.Tuning.Scope.Sleep.Any>睡眠时发生</US.Tuning.Scope.Sleep.Any>
+  <US.Tuning.Scope.Wounded.Any>受伤事件</US.Tuning.Scope.Wounded.Any>
+  <US.Tuning.Scope.Select.Any>玩家选中</US.Tuning.Scope.Select.Any>
+  <US.Tuning.Scope.Move.Any>移动时发生</US.Tuning.Scope.Move.Any>
+  <US.Tuning.Scope.Social.Any>社交时发生</US.Tuning.Scope.Social.Any>
+  <US.Tuning.Scope.Joy.Any>娱乐时发生</US.Tuning.Scope.Joy.Any>
+  <US.Tuning.Scope.Death.Any>死亡事件</US.Tuning.Scope.Death.Any>
+  <US.Tuning.Scope.Attack.Any>任意符合资格的 Core 攻击</US.Tuning.Scope.Attack.Any>
+  <US.Tuning.Scope.Work.Any>任意工作任务</US.Tuning.Scope.Work.Any>
+  <US.Tuning.Scope.MentalBreak.Any>精神崩溃事件</US.Tuning.Scope.MentalBreak.Any>
+  <US.Tuning.Scope.Draft.Command>玩家征召指令</US.Tuning.Scope.Draft.Command>
+  <US.Tuning.Scope.Undraft.Command>玩家取消征召指令</US.Tuning.Scope.Undraft.Command>
+  <US.Tuning.Scope.Attack.Command>玩家强制攻击</US.Tuning.Scope.Attack.Command>
+  <US.Tuning.Scope.Work.Command>玩家强制工作</US.Tuning.Scope.Work.Command>
+  <US.Tuning.Scope.Equip.Command>玩家主动装备指令</US.Tuning.Scope.Equip.Command>
   <US.Tuning.Auto>自动</US.Tuning.Auto>
   <US.Tuning.ResetToDefault>重置为默认</US.Tuning.ResetToDefault>
   <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
@@ -299,7 +328,7 @@
   <US.Help.Diagnostics.LocalizeDebug.Text>开启后，原版调试菜单中的 Universal Squeaker 调试项显示翻译后的名称与分类。仅在开发者模式打开时可见。</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.Diagnostics.LayoutDiagnosis.Text>开发者工具。状态行说明本窗口的布局是否正在被采集；若没有，也会说明原因：正式版的库包不含布局工具，任何开关都无法开启它。</US.Help.Diagnostics.LayoutDiagnosis.Text>
   <US.Help.Diagnostics.LayoutCapture.Text>记录本窗口每个已排布元素的各坐标空间矩形、高度模式与最终高度。开启时会拖慢帧率，默认关闭，且从不写入存档。</US.Help.Diagnostics.LayoutCapture.Text>
-  <US.Help.Diagnostics.LayoutOutline.Text>为每个被采集的元素描出边框，让矩形可以被看到而不只是读到。它需要先开启采集，因为它描的是被采集的内容。</US.Help.Diagnostics.LayoutOutline.Text>
+  <US.Help.Diagnostics.LayoutOutline.Text>为本窗口绘制的矩形描出边框，让矩形可以被看到而不只是读到。它与采集互相独立（SA1.5）：采集开启时描出被保留的集合，采集关闭时描出每个绘制的矩形且不采样——本开关不会备好报告。</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>把最近一次完成的采集写入日志一次，然后停止；再按一次才会再写一份。若某个矩形不响应点击，请看输入行：每行带有指针位置、被查询的矩形与判定结果（命中/未命中/被遮挡/不可用）。</US.Help.Diagnostics.LayoutReport.Text>
   <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>

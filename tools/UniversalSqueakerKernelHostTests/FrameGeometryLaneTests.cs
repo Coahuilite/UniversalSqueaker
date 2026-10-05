@@ -958,12 +958,21 @@ internal static class FrameGeometryLaneTests
                             + Fmt(closedHeader) + " open=" + Fmt(header));
                     }
 
-                    // The switch's geometry, now a footer-band claim: right edge of the band, centred on the
-                    // band's cross axis by its AlignY, and a hit target rather than a painted label.
-                    if (Math.Abs(toggle.xMax - footer.xMax) > 1.5f)
+                    // The switch's geometry, now a footer-band claim: the band's RIGHT edge minus the
+                    // band's own declared SA1.4 padding (the inset is what keeps the switch off the
+                    // container edge), centred on the band's cross axis by its AlignY, and a hit target
+                    // rather than a painted label.
+                    float footerPad = footerSpec.TryGetAttribute("Padding", out string padRaw)
+                        && float.TryParse(padRaw.Trim(), System.Globalization.NumberStyles.Float,
+                            CultureInfo.InvariantCulture, out float parsedPad)
+                        ? parsedPad : 0f;
+                    Assert(footerPad >= 4f, context + ": SA1.4 demands a REAL inset - the footer band's"
+                        + " declared Padding must keep the switch clear of the container edge, got " + footerPad);
+                    if (Math.Abs(toggle.xMax - (footer.xMax - footerPad)) > 1.5f)
                     {
-                        problems.Add(context + ": the help toggle must sit on the footer band's right edge;"
-                            + " toggle=" + Fmt(toggle) + " band=" + Fmt(footer));
+                        problems.Add(context + ": the help toggle must sit on the footer band's right edge"
+                            + " inside its declared padding; toggle=" + Fmt(toggle) + " band=" + Fmt(footer)
+                            + " padding " + footerPad);
                     }
 
                     float bandMiddle = footer.y + footer.height / 2f;

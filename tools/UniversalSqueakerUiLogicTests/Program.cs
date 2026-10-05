@@ -415,34 +415,57 @@ internal static class Program
 
     private static void TestActionScopeRules()
     {
-        var draft = new SqueakActionDefinition(
-            SqueakAction.Draft,
-            "Draft",
-            "US_Draft",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.ActiveCommand,
-            SqueakActionScope.ActiveCommand);
-        var attack = new SqueakActionDefinition(
-            SqueakAction.Attack,
-            "Attack",
-            "US_Attack",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.AnyOccurrence | SqueakActionScopeSupport.ActiveCommand,
-            SqueakActionScope.AnyOccurrence);
-        var call = new SqueakActionDefinition(
-            SqueakAction.Call,
-            "Call",
-            "US_Call",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.AnyOccurrence,
-            SqueakActionScope.AnyOccurrence);
+        // SA1.2: the membership is SR's fixed semantic split, NOT derived from SupportedScopes. The two
+        // rows that prove the difference are pinned by name: Select joins the player group although it
+        // carries no command scope, Work joins the system group although it supports and defaults to one.
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Draft) == ActionScopeGroup.PlayerTriggered,
+            "Draft groups as player-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Attack) == ActionScopeGroup.PlayerTriggered,
+            "Attack groups as player-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Select) == ActionScopeGroup.PlayerTriggered,
+            "Select groups as player-triggered even with no command scope (SR membership, not derivation)");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Call) == ActionScopeGroup.SystemOrEvent,
+            "Call groups as system/event-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Work) == ActionScopeGroup.SystemOrEvent,
+            "Work groups as system/event-triggered even though it supports ActiveCommand (SR membership)");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Crying) == ActionScopeGroup.SystemOrEvent,
+            "the US-only Crying joins the system group tail (ruling: optional, later group only)");
 
-        Assert(ActionScopeRules.GroupFor(draft) == ActionScopeGroup.Operable,
-            "ActiveCommand-only actions group as Operable");
-        Assert(ActionScopeRules.GroupFor(attack) == ActionScopeGroup.Operable,
-            "actions supporting ActiveCommand group as Operable even when default is AnyOccurrence");
-        Assert(ActionScopeRules.GroupFor(call) == ActionScopeGroup.Autonomous,
-            "AnyOccurrence-only actions group as Autonomous");
+        // Two groups, no omission and no duplicate across the full built-in set (SA1.2 acceptance):
+        // every known action appears in exactly one order list, and the lists agree with GroupFor.
+        var seen = new HashSet<SqueakAction>();
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+        {
+            int inPlayer = ContainsAction(ActionScopeRules.PlayerGroupOrder, action) ? 1 : 0;
+            int inSystem = ContainsAction(ActionScopeRules.SystemGroupOrder, action) ? 1 : 0;
+            Assert(inPlayer + inSystem == 1,
+                "every built-in action sits in exactly one group order list: " + action);
+            Assert(inPlayer == 0
+                    || ActionScopeRules.GroupFor(action) == ActionScopeGroup.PlayerTriggered,
+                "the player order list agrees with GroupFor: " + action);
+            Assert(inSystem == 0
+                    || ActionScopeRules.GroupFor(action) == ActionScopeGroup.SystemOrEvent,
+                "the system order list agrees with GroupFor: " + action);
+            seen.Add(action);
+        }
+
+        // The SqueakAction enum IS the built-in set (all 17 are known); the two order lists must cover
+        // every one of them exactly once.
+        Assert(seen.Count == Enum.GetValues(typeof(SqueakAction)).Length,
+            "the classification scan covered all " + Enum.GetValues(typeof(SqueakAction)).Length
+            + " built-ins, got " + seen.Count);
+
+        // SA1.2 captions: per-action keys exist only where SR ships a caption; everything else falls
+        // back to the generic key, and Auto/Off never enter the per-action lookup.
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Work, SqueakActionScope.ActiveCommand)
+                == "US.Tuning.Scope.Work.Command",
+            "Work's command caption is the SR per-action key (玩家强制工作 / Player-forced work)");
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Crying, SqueakActionScope.AnyOccurrence)
+                == "US.Tuning.Scope.Any",
+            "Crying has no SR caption and keeps the generic Any key");
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Draft, SqueakActionScope.Disabled)
+                == "US.Tuning.Scope.Off",
+            "Off keeps the generic key whatever the action");
 
         Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Crying),
             "Crying is hidden from the Action Scope editor by default");
@@ -452,6 +475,16 @@ internal static class Program
             "regular actions remain visible in the Action Scope editor");
         Assert(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, false),
             "the Biotech defensive action UI switch defaults to hidden");
+    }
+
+    private static bool ContainsAction(System.Collections.Generic.IReadOnlyList<SqueakAction> order, SqueakAction action)
+    {
+        for (int i = 0; i < order.Count; i++)
+        {
+            if (order[i] == action) return true;
+        }
+
+        return false;
     }
 
     private static void TestRaceXenotypeFiltering()

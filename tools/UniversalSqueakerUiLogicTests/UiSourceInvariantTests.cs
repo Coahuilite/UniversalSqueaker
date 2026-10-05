@@ -19,9 +19,9 @@ namespace UniversalSqueaker.UiLogicTests;
 ///      may return.
 ///   2. No file under UI/ (widgets included) revives the deleted second event authority or the
 ///      second palette/surface/text helper set.
-///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the two
+///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the three
 ///      Schema2 manifests reference (both directions, parsed — not substring-guessed).
-///   4. The only embedded UI manifests are the two Schema2 files.
+///   4. The only embedded UI manifests are the three Schema2 files (settings, overlay, SA1.3 dialog).
 ///   5. The help catalog, the manifests' HelpKey attributes, the section help-key map and the
 ///      panel's item-count height formula agree with each other (no manifest/catalog drift in
 ///      either direction, no unreachable or empty catalog entries).
@@ -94,13 +94,17 @@ internal static class UiSourceInvariantTests
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
         string funnel = Path.Combine(ui, "Kernel", "UsWriteBindings.cs");
         string panelExemption = Path.Combine(ui, "Diagnostics", "UsDiagnosticsHost.cs");
+        string dialogExemption = Path.Combine(ui, "RemixConfirmationFlow.cs");
 
         Assert(File.Exists(funnel),
             "the write-binding funnel UI/Kernel/UsWriteBindings.cs is missing: every settings-page write "
             + "registration is supposed to go through it, and without it no lane can enumerate the write set");
         Assert(File.Exists(panelExemption),
-            "the named write-registration exemption UI/Diagnostics/UsDiagnosticsHost.cs is missing; a vanished "
-            + "exemption file must fail this guard instead of silently widening it");
+            "the named write-registration exemption UI/Diagnostics/UsDiagnosticsHost.cs is missing; a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(dialogExemption),
+            "the named write-registration exemption UI/RemixConfirmationFlow.cs is missing (SA1.3); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
 
         // EXEMPT, by name and with its reason: the diagnostics panel owns a SECOND host and its own
         // DiagRevisionBumper clock, so its registrations are not settings-page write keys, and folding them
@@ -111,6 +115,17 @@ internal static class UiSourceInvariantTests
             "UI/Diagnostics/UsDiagnosticsHost.cs is expected to carry 12 write registrations (its own host and "
             + "its own revision clock, exempt from the settings-page funnel), got " + exempt
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
+
+        // EXEMPT, same rule (SA1.3): the Remix confirmation dialog is a THIRD host - its own UiBindings
+        // and its own session clock (the flow bumps the attached dialog host), and its three commands are
+        // dialog-local step transitions, not settings-page write keys. The count is pinned: a fourth
+        // registration here must be a deliberate act.
+        int dialogExempt = CountWriteRegistrations(File.ReadAllText(dialogExemption));
+        Assert(dialogExempt == 3,
+            "UI/RemixConfirmationFlow.cs is expected to carry 3 write registrations (confirm-continue /"
+            + " confirm-cancel / confirm-enable on its own host and clock), got " + dialogExempt
+            + " - re-cut this pin deliberately in the batch that changes the dialog's write surface");
+
 
         // This counts TEXT OCCURRENCES of the three raw write calls in the funnel file, not "operations":
         // the funnel exposes five methods (Value, Action, Command, ItemValue, ItemAction) but only the first
@@ -127,7 +142,8 @@ internal static class UiSourceInvariantTests
         foreach (string file in Directory.EnumerateFiles(ui, "*.cs", SearchOption.AllDirectories))
         {
             if (string.Equals(file, funnel, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(file, panelExemption, StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(file, panelExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, dialogExemption, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -296,6 +312,15 @@ internal static class UiSourceInvariantTests
             if (kind.StartsWith("us/", StringComparison.Ordinal)) manifestKinds.Add(kind);
         }
 
+        // SA1.3: the Remix dialog manifest carries only core kinds today (text/wrapped, input/button),
+        // so it adds nothing to the us/* set - but it is enumerated so a future us/* kind there is
+        // counted by this gate instead of drifting past the "two manifests" blind spot.
+        foreach (string kind in EnumerateManifestKinds(
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.RemixConfirm.Schema2.xml")))
+        {
+            if (kind.StartsWith("us/", StringComparison.Ordinal)) manifestKinds.Add(kind);
+        }
+
         Assert(registeredKinds.Count == manifestKinds.Count && IsSameSet(registeredKinds, manifestKinds),
             "UsKernelWidgetRegistrar must register exactly the us/* kinds the Schema2 manifests use "
             + "(registered=" + registeredKinds.Count + ", manifest=" + manifestKinds.Count + "; "
@@ -399,10 +424,11 @@ internal static class UiSourceInvariantTests
             search = end;
         }
 
-        Assert(embedded.Count == 2,
-            "exactly two UI manifests are embedded, found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
-        Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml"),
-            "the embedded manifests must be Layout.Schema2.xml and Layout.Overlay.Schema2.xml, got ["
+        Assert(embedded.Count == 3,
+            "exactly three UI manifests are embedded (SA1.3 re-cut), found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
+        Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml")
+                && embedded.Contains("Layout.RemixConfirm.Schema2.xml"),
+            "the embedded manifests must be the settings page, the overlay and the SA1.3 Remix dialog, got ["
             + string.Join(",", embedded) + "]");
         Assert(!proj.Contains("\\Layout.xml") && !proj.Contains("/Layout.xml"),
             "the legacy UI/Layout.xml must not be embedded or referenced");
@@ -411,7 +437,8 @@ internal static class UiSourceInvariantTests
         foreach (string xml in Directory.EnumerateFiles(uiDir, "*.xml", SearchOption.AllDirectories))
         {
             string name = Path.GetFileName(xml);
-            Assert(name == "Layout.Schema2.xml" || name == "Layout.Overlay.Schema2.xml",
+            Assert(name == "Layout.Schema2.xml" || name == "Layout.Overlay.Schema2.xml"
+                    || name == "Layout.RemixConfirm.Schema2.xml",
                 "the UI tree may only carry Schema2 manifests, found " + xml);
         }
     }
@@ -960,6 +987,7 @@ internal static class UiSourceInvariantTests
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
         yield return Path.Combine(ui, "Layout.Schema2.xml");
         yield return Path.Combine(ui, "Layout.Overlay.Schema2.xml");
+        yield return Path.Combine(ui, "Layout.RemixConfirm.Schema2.xml");
     }
 
     private static bool SamePlaceholders(string english, string chinese)

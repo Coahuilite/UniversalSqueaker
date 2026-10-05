@@ -255,14 +255,22 @@ internal static class V4RemainingLaneTests
                             where + ": the footer band must be arranged");
                         Assert(snapshot.RectById.TryGetValue("help-toggle", out Rect toggleRect),
                             where + ": the help switch must be arranged inside the footer band");
+                        float bandPad = DeclaredFloat(footerBandSpec, "Padding");
                         Assert(Math.Abs(toggleRect.width - DeclaredFloat(toggleSpec, "Width")) <= 0.5f
                                 && Math.Abs(footer.width + DeclaredFloat(footerBandSpec, "Gap")
-                                    + toggleRect.width - footerBand.width) <= 0.5f,
-                            where + ": the band's width must be exactly the us/footer composite plus the gap and"
-                            + " the declared-width switch - footer " + Describe(footer) + ", switch "
-                            + Describe(toggleRect) + ", band " + Describe(footerBand));
+                                    + toggleRect.width - (footerBand.width - 2f * bandPad)) <= 0.5f,
+                            where + ": the band's INNER width (less the SA1.4 2x padding) must be exactly the"
+                            + " us/footer composite plus the gap and the declared-width switch - footer "
+                            + Describe(footer) + ", switch " + Describe(toggleRect) + ", band "
+                            + Describe(footerBand) + ", padding " + bandPad);
                         Assert(toggleRect.y >= footerBand.y - 0.5f && toggleRect.yMax <= footerBand.yMax + 0.5f,
                             where + ": the help switch must be arranged inside its band's height");
+                        // SA1.4: the switch stops short of the band's right edge by the declared padding - the
+                        // container-edge merge the user reported is the gap this clause pins.
+                        Assert(Math.Abs((footerBand.xMax - toggleRect.xMax) - bandPad) <= 0.5f
+                                && bandPad > 0f,
+                            where + ": the help switch must clear the band's right edge by the SA1.4 padding, got"
+                            + " inset " + Num(footerBand.xMax - toggleRect.xMax) + " vs padding " + bandPad);
 
                         Console.WriteLine("[v4-footer] " + where + " footer=" + Describe(footer)
                             + " half=" + Num(half) + " identity='" + host.Bindings.Get<string>("build-identity")

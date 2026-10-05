@@ -82,12 +82,15 @@
   </Target>
 
   <ItemGroup>
-    <!-- Schema=2 is the only shipped page manifest: settings page plus the camera-indicator overlay.
-         Both are read through Assembly.GetManifestResourceStream by their kernel Host. -->
+    <!-- Schema=2 is the only shipped page vocabulary: settings page, camera-indicator overlay and the
+         SA1.3 Remix confirmation dialog. All three are read through Assembly.GetManifestResourceStream
+         by their kernel-side owner (the two settings hosts, then the per-window RemixConfirmationFlow). -->
     <EmbeddedResource Include="UI\Layout.Schema2.xml" />
     <None Remove="UI\Layout.Schema2.xml" />
     <EmbeddedResource Include="UI\Layout.Overlay.Schema2.xml" />
     <None Remove="UI\Layout.Overlay.Schema2.xml" />
+    <EmbeddedResource Include="UI\Layout.RemixConfirm.Schema2.xml" />
+    <None Remove="UI\Layout.RemixConfirm.Schema2.xml" />
   </ItemGroup>
 
 </Project>

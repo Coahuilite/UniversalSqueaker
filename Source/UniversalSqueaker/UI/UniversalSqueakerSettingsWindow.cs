@@ -45,6 +45,12 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     // tick the pending settings save. CreateHost builds it once per window instance.
     private UsKernelSettingsSource? source;
 
+    /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
+    /// write below is the only writer it gates) and released at PostClose: closing the parent can never
+    /// leave a live dialog or a staged commit behind. The business state lives on this object - never on
+    /// a library global.</summary>
+    private RemixConfirmationFlow? remixFlow;
+
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
         this.mod = mod;
@@ -114,7 +120,11 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // BH1: no page-width feed any more. The help panel's presentation does not depend on the box the
         // shell hands the page - there is exactly one presentation, and the engine hides it declaratively -
         // so the window has no width-shaped decision left to feed.
-        UiHost host = UsKernelSettingsHost.Create(source);
+        // SA1.3: the Remix confirmation flow is THIS window's - one per parent, built before the host so
+        // the mode write registers against it, released in PostClose so no dialog or staged commit can
+        // outlive the page that created it.
+        remixFlow = new RemixConfirmationFlow(Find.WindowStack);
+        UiHost host = UsKernelSettingsHost.Create(source, remixFlow);
         // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
         // subscription and are measured with THIS host's ruler.
         //
@@ -123,6 +133,15 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
         audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
         return host;
+    }
+
+    /// <summary>SA1.3: the parent's close releases the confirmation flow. The dialog rides the same
+    /// WindowStack, so an un-aborted flow would strand an orphan dialog (and its staged commit) over the
+    /// next window. Close is idempotent: Abort answers the same way as the dialog's own Cancel.</summary>
+    public override void PostClose()
+    {
+        base.PostClose();
+        remixFlow?.Abort();
     }
 
     /// <summary>

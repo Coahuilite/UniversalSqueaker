@@ -214,6 +214,8 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
                     return "US.Diagnostics.Geometry.Unavailable".Translate();
                 case UsTextFitAudit.DevGeometryStatus.Overlay:
                     return "US.Diagnostics.Geometry.Overlay".Translate();
+                case UsTextFitAudit.DevGeometryStatus.OutlineOnly:
+                    return "US.Diagnostics.Geometry.OutlineOnly".Translate();
                 case UsTextFitAudit.DevGeometryStatus.Active:
                     return "US.Diagnostics.Geometry.Active".Translate();
                 case UsTextFitAudit.DevGeometryStatus.ScopeMissing:

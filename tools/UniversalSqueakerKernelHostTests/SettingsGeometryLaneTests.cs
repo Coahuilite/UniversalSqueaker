@@ -83,6 +83,7 @@ internal static class SettingsGeometryLaneTests
     public static int RunAll()
     {
         Step("a short nav viewport scrolls to a clickable last destination", ShortNavigationReachesPresets);
+        Step("the real 760x524 box scrolls the nav to the last card with a clear bottom inset (SA1.4)", NavKeepsABottomInsetAtTheRealBox);
         Step("uniform support-row control column at 1024/736/480/320 in EN + ZH", UniformControlColumn);
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
@@ -459,14 +460,17 @@ internal static class SettingsGeometryLaneTests
 
         Assert(firstGap > 0f, "the nav cards must not overlap (" + label + "): gap " + firstGap);
 
-        // Measure must return exactly the drawn stack height: the arranged nav rect is the measured
-        // height, and the last card's bottom is where the draw stopped.
+        // Measure must return exactly the drawn stack height PLUS the SA1.4 outer bottom inset: the
+        // arranged nav rect is the measured height, the last card's bottom is where the draw stopped,
+        // and the reserved StackBottomPadding is the space that keeps that bottom clear of the viewport
+        // edge at full scroll. The inset is read from the widget's own public constant, never restated.
         Assert(rec.Snapshot.RectById.TryGetValue("nav", out Rect navRect),
             "the snapshot must carry the nav element (" + label + ")");
         Rect localNav = ToContentLocal(navRect, rec.Snapshot.Viewports["nav-column"]);
-        Assert(Math.Abs(navRect.height - (cards[cards.Count - 1].yMax - localNav.y)) <= 0.01f,
-            "Measure must return exactly the drawn stack height (" + label + "): measured " + navRect.height
-            + ", drawn " + (cards[cards.Count - 1].yMax - localNav.y));
+        float drawnStack = cards[cards.Count - 1].yMax - localNav.y;
+        Assert(Math.Abs(navRect.height - (drawnStack + UsNavWidget.StackBottomPadding)) <= 0.01f,
+            "Measure must return the drawn stack height plus the SA1.4 bottom inset (" + label + "): measured "
+            + navRect.height + ", drawn " + drawnStack + " + inset " + UsNavWidget.StackBottomPadding);
     }
 
     private static void AssertSameBounds(List<Rect> baseline, List<Rect> after, string because)
@@ -882,6 +886,60 @@ internal static class SettingsGeometryLaneTests
                     "LastDestinationIsClickable: scrolling and clicking must select Presets through the real nav");
                 Console.WriteLine("[nav-scroll] " + language + " viewport=" + viewport.height
                     + " content=" + content.height + " offset=" + offset + " selected=Presets");
+            }
+            finally { Program.SetTranslatorResolver(null); }
+        }
+    }
+
+    /// <summary>
+    /// SA1.4 (user screenshot: the Presets card sat flush against the container's lower edge while the
+    /// top kept its padding): at the SHIPPED page box in BOTH help states the nav must clamp at its own
+    /// content end AND the last card's bottom must clear the viewport's lower edge - the widget's
+    /// measured stack now ends with the same outer inset it starts with. Help-open is the state that
+    /// really needs the scroll (the 140px panel leaves the body 256), so the clause also proves the
+    /// scroll moved: a lane that clamped at offset 0 would pass the gap by accident, not by the inset.
+    /// </summary>
+    private static void NavKeepsABottomInsetAtTheRealBox()
+    {
+        foreach (string language in Languages)
+        {
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
+            {
+                foreach (bool helpOpen in new[] { true, false })
+                {
+                    string where = "SA1.4 nav at 760x524, " + language + ", help " + (helpOpen ? "open" : "closed");
+                    using UiHost host = NewHost(new Program.StubMetrics());
+                    host.Bindings.Set("help-open", helpOpen);
+                    Rec rec = Record(host, 760f, 524f);
+                    UiLayoutSnapshot snapshot = rec.Snapshot;
+                    Rect viewport = snapshot.Viewports["nav-column"];
+                    Rect content = snapshot.ScrollContents["nav-column"];
+                    List<Rect> cards = NavCards(rec);
+                    Assert(cards.Count == 5, where + ": all five destination cards must be recorded, got " + cards.Count);
+                    Rect last = cards[4];
+
+                    Program.SetScrollPositionById(host.Session, "nav-column", new Vector2(0f, 10000f));
+                    host.DrawChecked(new Rect(0f, 0f, 760f, 524f));
+                    float offset = Program.ScrollPositionById(host.Session, "nav-column").y;
+                    Assert(Math.Abs(offset - Math.Max(0f, content.height - viewport.height)) < ShapeTolerance,
+                        where + ": the nav must clamp at its own content end, offset=" + offset
+                        + " content=" + content.height + " viewport=" + viewport.height);
+                    if (helpOpen)
+                    {
+                        Assert(offset > 0f, where + ": the help-open body must REALLY need the scroll to reach the last card");
+                    }
+
+                    // Page-space bottom of the last card at full scroll: viewport.y + last.yMax - offset.
+                    float lastBottomInViewport = last.y + last.height - offset;
+                    Assert(lastBottomInViewport <= viewport.height - 1f && last.y - offset >= 0f,
+                        where + ": at full scroll the last card must sit FULLY inside the viewport and clear"
+                        + " of its lower edge: last bottom " + lastBottomInViewport + " vs viewport height "
+                        + viewport.height + " (the stack's outer bottom inset is the difference)");
+                    Console.WriteLine("[sa14-nav] " + where + " viewport=" + viewport.height
+                        + " content=" + content.height + " offset=" + offset
+                        + " lastBottom=" + lastBottomInViewport);
+                }
             }
             finally { Program.SetTranslatorResolver(null); }
         }

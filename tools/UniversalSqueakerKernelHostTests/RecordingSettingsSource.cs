@@ -397,8 +397,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             selectedDomain: SelectedForView(sang, filterSanguophage),
             actionScopes: TuningActionScopes ?? new[]
             {
-                new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
-                new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.Operable, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
+                new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.SystemOrEvent, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
+                new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.PlayerTriggered, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
             },
             tuningLayer: EmptyXenotypeTarget ? 2 : 0,
             tuningRaceDefName: EmptyXenotypeTarget ? "" : "human",
@@ -617,6 +617,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 case UsTextFitAudit.DevGeometryStatus.Unavailable: return "US.Diagnostics.Geometry.Unavailable";
                 case UsTextFitAudit.DevGeometryStatus.Overlay: return "US.Diagnostics.Geometry.Overlay";
                 case UsTextFitAudit.DevGeometryStatus.Active: return "US.Diagnostics.Geometry.Active";
+                case UsTextFitAudit.DevGeometryStatus.OutlineOnly: return "US.Diagnostics.Geometry.OutlineOnly";
                 case UsTextFitAudit.DevGeometryStatus.ScopeMissing: return "US.Diagnostics.Geometry.NoScope";
                 default: return "US.Diagnostics.Geometry.Off";
             }

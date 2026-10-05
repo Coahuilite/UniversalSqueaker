@@ -45,6 +45,11 @@ public sealed class UsNavWidget : IUiWidget
     private const float Gap = 4f;
     private const float SidePadding = 8f;
     private const float TopPadding = 10f;
+    /// <summary>SA1.4: the OUTER bottom inset of the stack. The card's own BottomPadding is inside the
+    /// last card's rect, so without this inset the measured content ended exactly at the last card's
+    /// edge and scrolling to the bottom parked the Presets card flush against the container's lower
+    /// edge (the user's screenshot) while the top kept its 10px. One shared inset restores the pair.</summary>
+    public const float StackBottomPadding = 10f;
     private const float LabelTop = 4f;
     private const float LabelHeight = 20f;
     private const float DescriptionGap = 1f;
@@ -104,13 +109,15 @@ public sealed class UsNavWidget : IUiWidget
     }
 
     /// <summary>
-    /// The stack height: the header inset, five identical cards and four identical gaps. Draw walks the
-    /// exact same sequence (see <see cref="Draw"/>), so Measure returns what is drawn - never a value
-    /// derived from a per-card text measurement.
+    /// The stack height: the header inset, five identical cards, four identical gaps and the footer
+    /// inset. Draw walks the exact same sequence (see <see cref="Draw"/>), so Measure returns what is
+    /// drawn - never a value derived from a per-card text measurement. The footer inset is part of the
+    /// measured extent, which is what makes the LAST card stop short of the scroll viewport's bottom
+    /// edge at full scroll-down (SA1.4).
     /// </summary>
     public float Measure(UiWidgetContext ctx)
     {
-        return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap;
+        return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap + StackBottomPadding;
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)

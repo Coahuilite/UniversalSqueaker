@@ -101,8 +101,12 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private const string LayerLabelKey = "US.Tuning.Layer";
     private const string DomainLabelKey = "US.Tuning.Domain";
     private const string ActionScopeHeaderKey = "US.Tuning.ActionScope";
-    private const string GroupAutonomousKey = "US.Tuning.Group.Autonomous";
-    private const string GroupOperableKey = "US.Tuning.Group.Operable";
+    private const string GroupPlayerKey = "US.Tuning.Group.PlayerTriggered";
+    private const string GroupSystemKey = "US.Tuning.Group.SystemOrEvent";
+    /// <summary>SA1.2: SR's "征召 / 取消征召" sub-heading above the Draft/Undraft pair; the two settings
+    /// stay independent rows, the heading only names the pair.</summary>
+    private const string DraftUndraftKey = "US.Action.DraftUndraft";
+    private const float DraftHeadingHeight = 18f;
     private const string MoodTuningHeaderKey = "US.Tuning.MoodTuning";
     /// <summary>Action-scope dropdown option: "inherit from below". Per the term split this word belongs to
     /// the action side only; the mood row's controls use the two "reset" phrases below instead
@@ -237,26 +241,21 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             for (int group = 0; group < 2; group++)
             {
-                ActionScopeGroup targetGroup = group == 0 ? ActionScopeGroup.Autonomous : ActionScopeGroup.Operable;
-                bool hasGroupRows = false;
-                foreach (ActionScopeRowView row in scopeRows)
-                {
-                    if (row.Group == targetGroup)
-                    {
-                        hasGroupRows = true;
-                        break;
-                    }
-                }
-
-                if (!hasGroupRows) continue;
+                ActionScopeGroup targetGroup = group == 0
+                    ? ActionScopeGroup.PlayerTriggered
+                    : ActionScopeGroup.SystemOrEvent;
+                List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
+                if (groupRows.Count == 0) continue;
 
                 bodyHeight += RowHeight + RowGap; // group header
-                foreach (ActionScopeRowView row in scopeRows)
+                if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
                 {
-                    if (row.Group == targetGroup)
-                    {
-                        bodyHeight += ScopeRowHeightFor(width, row, ctx) + RowGap;
-                    }
+                    bodyHeight += DraftHeadingHeight + RowGap; // SA1.2 pair sub-heading
+                }
+
+                for (int i = 0; i < groupRows.Count; i++)
+                {
+                    bodyHeight += ScopeRowHeightFor(width, groupRows[i], ctx) + RowGap;
                 }
             }
         }
@@ -337,33 +336,37 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         for (int group = 0; group < 2; group++)
         {
             if (!hasScopeRows) break;
-            ActionScopeGroup targetGroup = group == 0 ? ActionScopeGroup.Autonomous : ActionScopeGroup.Operable;
-            bool hasGroupRows = false;
-            foreach (ActionScopeRowView row in scopeRows)
-            {
-                if (row.Group == targetGroup)
-                {
-                    hasGroupRows = true;
-                    break;
-                }
-            }
-
-            if (!hasGroupRows) continue;
+            ActionScopeGroup targetGroup = group == 0
+                ? ActionScopeGroup.PlayerTriggered
+                : ActionScopeGroup.SystemOrEvent;
+            List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
+            if (groupRows.Count == 0) continue;
 
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
-                UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.Operable ? GroupOperableKey : GroupAutonomousKey),
+                UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
                 ctx.Theme,
                 ctx.Theme.TextSecondary,
                 UiFont.Tiny,
                 TextAnchor.MiddleLeft);
             y += RowHeight + RowGap;
 
-            foreach (ActionScopeRowView row in scopeRows)
+            if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
             {
-                if (row.Group != targetGroup) continue;
-                float rowHeight = ScopeRowHeightFor(innerWidth, row, ctx);
-                DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), row, ctx, submittable);
+                UsKernelDraw.Label(
+                    new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
+                    UsKernelDraw.Keyed(ctx, DraftUndraftKey),
+                    ctx.Theme,
+                    ctx.Theme.AccentGold,
+                    UiFont.Tiny,
+                    TextAnchor.MiddleLeft);
+                y += DraftHeadingHeight + RowGap;
+            }
+
+            for (int i = 0; i < groupRows.Count; i++)
+            {
+                float rowHeight = ScopeRowHeightFor(innerWidth, groupRows[i], ctx);
+                DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), groupRows[i], ctx, submittable);
                 y += rowHeight + RowGap;
             }
         }
@@ -522,7 +525,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         };
         foreach (SqueakActionScope scope in SupportedStates(row.Action))
         {
-            options.Add(new UiChoice<SqueakActionScope?>(UsKernelDraw.Keyed(ctx, ScopeLabelKey(scope)), scope));
+            options.Add(new UiChoice<SqueakActionScope?>(UsKernelDraw.Keyed(ctx, ActionScopeRules.ScopeLabelKey(row.Action, scope)), scope));
         }
 
         SqueakActionScope? current = row.HasOwnScope ? row.Scope : null;
@@ -583,7 +586,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     private static string HintTextFor(UiWidgetContext ctx, ActionScopeRowView row)
     {
         if (row.HasOwnScope && row.Scope == row.EffectiveScope) return "";
-        return "→ " + UsKernelDraw.Keyed(ctx, ScopeLabelKey(row.EffectiveScope));
+        return "→ " + UsKernelDraw.Keyed(ctx, ActionScopeRules.ScopeLabelKey(row.Action, row.EffectiveScope));
     }
 
     /// <summary>
@@ -1343,18 +1346,58 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     }
 
     /// <summary>
-    /// Display-text key of a scope. Purely cosmetic: the option's bound value is the
-    /// <see cref="SqueakActionScope"/> instance itself (R4-A / A2), so the short label can be translated
-    /// while the committed value keeps its real identity. The inherited-scope hint is the only other
-    /// consumer.
+    /// SA1.2: the rows of one group in the fixed display order. A row whose action is not in the order
+    /// table (a future built-in nobody added there) is appended in list order rather than dropped: no
+    /// row may vanish from the editor because a presentation table lagged behind the model. Lives on
+    /// the widget, not on ActionScopeRules: the rules file is compiled into the zero-Verse gate and
+    /// must not name a view-row type.
     /// </summary>
-    private static string ScopeLabelKey(SqueakActionScope scope)
+    private static List<ActionScopeRowView> OrderedRows(ActionScopeGroup group, IReadOnlyList<ActionScopeRowView> rows)
     {
-        return scope switch
+        IReadOnlyList<SqueakAction> order = group == ActionScopeGroup.PlayerTriggered
+            ? ActionScopeRules.PlayerGroupOrder
+            : ActionScopeRules.SystemGroupOrder;
+        var result = new List<ActionScopeRowView>();
+        for (int i = 0; i < order.Count; i++)
         {
-            SqueakActionScope.AnyOccurrence => "US.Tuning.Scope.Any",
-            SqueakActionScope.ActiveCommand => "US.Tuning.Scope.Command",
-            _ => "US.Tuning.Scope.Off",
-        };
+            for (int r = 0; r < rows.Count; r++)
+            {
+                if (rows[r].Group == group && rows[r].Action == order[i]) result.Add(rows[r]);
+            }
+        }
+
+        for (int r = 0; r < rows.Count; r++)
+        {
+            if (rows[r].Group != group) continue;
+            bool known = false;
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (order[i] == rows[r].Action) { known = true; break; }
+            }
+
+            if (!known) result.Add(rows[r]);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// SA1.2: the sub-heading exists exactly when BOTH halves of the pair are drawn. Measure and Draw
+    /// call this on the same ordered list, so the band can never be reserved without being painted (or
+    /// the reverse) - the class of defect the XG1 reason band comment already pins for that band. The
+    /// scope CAPTION lookup itself moved to <see cref="ActionScopeRules.ScopeLabelKey"/>: the option's
+    /// bound value stays the SqueakActionScope instance (R4-A / A2), only the text key is chosen there.
+    /// </summary>
+    private static bool HasDraftPair(List<ActionScopeRowView> playerRows)
+    {
+        bool draft = false;
+        bool undraft = false;
+        for (int i = 0; i < playerRows.Count; i++)
+        {
+            if (playerRows[i].Action == SqueakAction.Draft) draft = true;
+            else if (playerRows[i].Action == SqueakAction.Undraft) undraft = true;
+        }
+
+        return draft && undraft;
     }
 }

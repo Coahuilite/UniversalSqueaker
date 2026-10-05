@@ -192,6 +192,7 @@ internal static class Program
         Step("preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
         Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
         Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
+        Step("equal-weight Remix double confirmation (SA1.3)", () => RemixConfirmationLaneTests.RunAll());
         Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);

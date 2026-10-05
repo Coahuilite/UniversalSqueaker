@@ -41,6 +41,24 @@
       <Color Token="Selected" Value="#3a311f" />
       <Color Token="SelectedBorder" Value="#3a311f" />
     </Scheme>
+    <!-- SA1.6 (user ruling 2026-10-05): command and grouped-option buttons must read as buttons at
+         REST. Inside `us-flat-panel` the neutral atom surface resolves Raised == RaisedBorder (the
+         scheme's own "no box" spelling, meant for CARDS and ROWS), so an `input/button` there painted a
+         borderless slab and the user could not tell it from text. This scope re-separates the pair for
+         the button elements only - the same colours US already ships at the root plane (Raised
+         #1d1b17 + Border #575247, Hover #242019 + BorderStrong #6b6459, Selected #3a311f + the AccentGold
+         edge) - and declares the selected edge on purpose: SelectedBorder is the one fallback this
+         scope claims rather than inherits (UsTheme.cs type comment), so the lane pinning the agreement
+         is the place a future edit must pass through. Hover/pressed come from the SAME scheme through
+         the carrier's own state ladder; no new kind, no C#. -->
+    <Scheme Name="us-command-button">
+      <Color Token="Raised" Value="#1d1b17" />
+      <Color Token="RaisedBorder" Value="#575247" />
+      <Color Token="Hover" Value="#242019" />
+      <Color Token="HoverBorder" Value="#6b6459" />
+      <Color Token="Selected" Value="#3a311f" />
+      <Color Token="SelectedBorder" Value="#d19a38" />
+    </Scheme>
     <Scheme Name="us-preset-rows">
       <Metric Token="Font" Value="Tiny" />
     </Scheme>
@@ -245,9 +263,9 @@
           <Row Id="timing-multiplier-row" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
             <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
-            <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" Scheme="us-command-button" />
             <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
-            <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" Scheme="us-command-button" />
             </Row>
           </Row>
         </Section>
@@ -275,9 +293,9 @@
           <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpKey="us/diagnostics" />
           <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpKey="us/diagnostics" />
           <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
-            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedKey="dev-logging-auto" ActionBind="set-dev-logging" PayloadKey="dev-logging-auto-value" HelpKey="us/diagnostics/logging-auto" />
-            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" />
-            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" />
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedKey="dev-logging-auto" ActionBind="set-dev-logging" PayloadKey="dev-logging-auto-value" HelpKey="us/diagnostics/logging-auto" Scheme="us-command-button" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" Scheme="us-command-button" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" Scheme="us-command-button" />
           </Row>
           <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
@@ -314,7 +332,7 @@
                 <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" HelpKey="us/diagnostics/layout-outline" AlignX="Left" />
               </Column>
             </Row>
-            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" />
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" Scheme="us-command-button" />
             <!-- RPT1.1: the Report click's ANSWER, as the sibling immediately below the button. It is a
                  read-only bound sentence (like the capture sentence above) because the outcome is carrier
                  state the manifest has no expression for: the real reason a request was refused, the pass an
@@ -363,9 +381,9 @@
                so the label wraps and the button grows - the same rule WrappingTimingLabelGrowsTheCard pins
                for the timing card. The three cells stay equal thirds at every width. -->
           <Row Id="attenuation-presets" Gap="4" Padding="0">
-              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedKey="distance-preset-conservative" ActionBind="set-distance-preset" PayloadKey="distance-preset-conservative-value" HelpKey="us/attenuation-editor/presets" />
-              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" />
-              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" />
+              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedKey="distance-preset-conservative" ActionBind="set-distance-preset" PayloadKey="distance-preset-conservative-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
+              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
+              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
             </Row>
           </Column>
         </Section>
@@ -486,11 +504,15 @@
          The switch is the carrier's own input/button, declared with the command binding the Host registers:
          no US kind, no hand-drawn hit band, so the click routes through the typed binding table like every
          other control on this page. -->
-    <Row Id="footer-band" Padding="0" Gap="6">
+    <!-- SA1.4 (user follow-up, PM r2): the band carries Padding 6 so the help switch and the status
+         text stop short of the band's own edges - at Padding 0 the switch's border merged with the
+         container edge the cards above end at. The band's rect is unchanged; only its children are
+         inset, so the footer stays in by construction at both help states. -->
+    <Row Id="footer-band" Padding="6" Gap="6">
       <Widget Id="footer" Kind="us/footer" />
       <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
               ActionBind="toggle-help-drawer" Width="128" Height="26"
-              AlignY="Middle" HelpKey="us/page-title/help-drawer" />
+              AlignY="Middle" HelpKey="us/page-title/help-drawer" Scheme="us-command-button" />
     </Row>
   </Column>
   <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
@@ -517,35 +539,63 @@
     <Overlay Id="race-layer-row" Padding="0">
       <!-- T21: the selected row's VISIBLE state. It paints (fill + 3px left rail) and does not hit: the
            hit band below stays Chrome="none" and keeps its exact geometry, which is why this is a sibling
-           and not a Chrome on the hit. Drawn first so the text column lands on top of it. -->
-      <Widget Id="race-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
+           and not a Chrome on the hit. Drawn first so the text column lands on top of it. SA1.7 adds
+           Hover="true": the pointer's plate on the navigation's own ladder, so the row answers the
+           pointer before it is ever clicked. -->
+      <Widget Id="race-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
       <Widget Id="race-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
-      <Column Id="race-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
-        <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
-      </Column>
+      <!-- SA1.7 (PM spacing review): the decoration rail and the text get REAL horizontal space - a
+           fixed-width empty gutter Column beside the natural-height text column, inside a content Row.
+           Drawing order is not space, and a uniform Padding on the text column would grow the row and
+           break the S4-2 hit-IS-the-row invariant; the gutter reserves 6px of WIDTH only (it measures
+           zero height), so the content Row stays exactly title + gap + detail tall and the hit band
+           still IS the row. The text column keeps Padding 0: the gutter, not the padding, is the inset. -->
+      <Row Id="race-layer-row-content" Gap="0" Padding="0">
+        <Column Id="race-layer-row-gutter" Width="6" Gap="0" Padding="0" />
+        <Column Id="race-layer-row-text" Gap="2" Padding="0">
+          <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
+          <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
+        </Column>
+      </Row>
     </Overlay>
     <Overlay Id="xenotype-layer-row" Padding="0">
-      <!-- Same surface as the race row: selection must read the same in both lists. -->
-      <Widget Id="xenotype-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" />
+      <!-- Same surface, hover and SA1.7 gutter structure as the race row: selection, hover and the
+           rail-to-text space must read the same in both lists. -->
+      <Widget Id="xenotype-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
       <Widget Id="xenotype-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
-      <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
-        <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
-        <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
-      </Column>
+      <Row Id="xenotype-layer-row-content" Gap="0" Padding="0">
+        <Column Id="xenotype-layer-row-gutter" Width="6" Gap="0" Padding="0" />
+        <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
+          <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
+          <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
+        </Column>
+      </Row>
     </Overlay>
-    <Row Id="checklist-row" Gap="4" Padding="0">
-      <Column Id="checklist-row-text" Gap="2" Padding="0">
-        <Widget Id="checklist-row-label" Kind="text/wrapped" Bind="label" HelpKey="us/voice-pack-checklist/row" />
-        <Widget Id="checklist-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
-        <Widget Id="checklist-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
-      </Column>
-      <!-- V2 P2: the enable control is the SAME shipped switch as the other ON/OFF controls (R2 above):
-           36 wide, because a 24-wide band clamps the 34x18 track and the knob's throw falls to 6px, which
-           is the difference between a switch and a block. Bind and SelectedKey name the same item-local
-           bool, so the row's click and its visible state cannot disagree. The row's own hit area is NOT
-           extended in V2 - the switch is the only click channel here. -->
-      <Widget Id="checklist-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
-    </Row>
+    <!-- SA1.7: the voice-pack list rows answer the pointer too - the user praised the navigation's
+         hover and found the pack list dead under the cursor. The row is an Overlay so a DRAW-ONLY
+         hover plate can sit behind the content; the CLICK channels are untouched: the switch stays
+         the only writer of 'enabled' (V2 P2), there is still no row-wide hit band, and the plate
+         reads the pointer without taking it. The content Row carries the same fixed-width gutter as
+         the browse rows, so the plate's edge does not run under the label either; the text column
+         keeps Padding 0 and the row height keeps its pre-SA1.7 value (the gutter reserves width,
+         never height), so the card height and the P4 reachability numbers do not move. The label
+         stays the primary ink, meta/coverage stay Muted. -->
+    <Overlay Id="checklist-row" Padding="0">
+      <Widget Id="checklist-row-surface" Kind="us/selection-surface" Height="MatchContent" Hover="true" />
+      <Row Id="checklist-row-content" Gap="4" Padding="0">
+        <Column Id="checklist-row-gutter" Width="6" Gap="0" Padding="0" />
+        <Column Id="checklist-row-text" Gap="2" Padding="0">
+          <Widget Id="checklist-row-label" Kind="text/wrapped" Bind="label" HelpKey="us/voice-pack-checklist/row" />
+          <Widget Id="checklist-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
+          <Widget Id="checklist-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
+        </Column>
+        <!-- V2 P2: the enable control is the SAME shipped switch as the other ON/OFF controls (R2 above):
+             36 wide, because a 24-wide band clamps the 34x18 track and the knob's throw falls to 6px, which
+             is the difference between a switch and a block. Bind and SelectedKey name the same item-local
+             bool, so the row's click and its visible state cannot disagree. The row's own hit area is NOT
+             extended - the switch is the only click channel here; the hover plate above is draw-only. -->
+        <Widget Id="checklist-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
+      </Row>
+    </Overlay>
   </Templates>
 </UiPage>

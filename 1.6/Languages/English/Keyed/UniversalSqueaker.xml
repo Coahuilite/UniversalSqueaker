@@ -61,6 +61,7 @@
   <US.Diagnostics.Geometry.Off>Layout capture is off.</US.Diagnostics.Geometry.Off>
   <US.Diagnostics.Geometry.Active>Capturing this window's layout.</US.Diagnostics.Geometry.Active>
   <US.Diagnostics.Geometry.Overlay>Capturing, with the rect outline on.</US.Diagnostics.Geometry.Overlay>
+  <US.Diagnostics.Geometry.OutlineOnly>Outline on without capture: drawn rects are painted, nothing is sampled and no report is armed.</US.Diagnostics.Geometry.OutlineOnly>
   <US.Diagnostics.Geometry.Unavailable>Not available: this build has no layout instrument. Use a development library package.</US.Diagnostics.Geometry.Unavailable>
   <US.Diagnostics.Geometry.NoScope>Not available: this page has no diagnosis scope.</US.Diagnostics.Geometry.NoScope>
   <US.Diagnostics.Geometry.Capture>Capture</US.Diagnostics.Geometry.Capture>
@@ -171,6 +172,16 @@
   <US.Tuning.Mode.Fallback>Fallback</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>Remix</US.Tuning.Mode.Remix>
   <US.Tuning.Mode.Disabled>Disabled</US.Tuning.Mode.Disabled>
+  <!-- SA1.3: the equal-weight Remix double confirmation (transcribed from the SR reference copy; the
+       flow itself is US's). The dialog window's close button answers Cancel, so it shares that key. -->
+  <US.Common.Cancel>Cancel</US.Common.Cancel>
+  <US.Remix.Confirm.Title>Enable equal-weight Remix?</US.Remix.Confirm.Title>
+  <US.Remix.Confirm1.Body>Remix can make the voice source change from one action to the next. It gives each currently playable Xenotype, Race, and Vanilla tier equal weight; it does not prioritize a preferred pack.</US.Remix.Confirm1.Body>
+  <US.Remix.Confirm.Continue>Review risk</US.Remix.Confirm.Continue>
+  <US.Remix.Confirm2.Body>Confirm equal-weight mixing. Playback may alternate noticeably between installed packs and Vanilla. This changes only the source policy; your selections remain saved.</US.Remix.Confirm2.Body>
+  <US.Remix.Confirm.Enable>Enable Remix</US.Remix.Confirm.Enable>
+  <US.Remix.Notice.Prerequisite>This confirmation cannot open right now.</US.Remix.Notice.Prerequisite>
+  <US.Remix.Notice.Unavailable>The confirmation page failed to load; the mode was not changed.</US.Remix.Notice.Unavailable>
   <US.Packs.Filter.All>All</US.Packs.Filter.All>
   <US.Packs.Filter.EnabledOnly>Enabled only</US.Packs.Filter.EnabledOnly>
   <US.Packs.Filter.Conflicts>Conflicts</US.Packs.Filter.Conflicts>
@@ -218,12 +229,32 @@
   <US.Tuning.Layer.Race>Race</US.Tuning.Layer.Race>
   <US.Tuning.Layer.Xenotype>Xenotype</US.Tuning.Layer.Xenotype>
   <US.Tuning.ActionScope>Action Scope</US.Tuning.ActionScope>
-  <US.Tuning.Group.Autonomous>Autonomous</US.Tuning.Group.Autonomous>
-  <US.Tuning.Group.Operable>Operable / Command</US.Tuning.Group.Operable>
+  <US.Tuning.Group.PlayerTriggered>Player-triggered actions</US.Tuning.Group.PlayerTriggered>
+  <US.Tuning.Group.SystemOrEvent>System or event-triggered actions</US.Tuning.Group.SystemOrEvent>
   <US.Tuning.MoodTuning>Mood Tuning</US.Tuning.MoodTuning>
   <US.Tuning.Scope.Off>Off</US.Tuning.Scope.Off>
   <US.Tuning.Scope.Any>Any</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>Command</US.Tuning.Scope.Command>
+  <!-- SA1.2 SR-parity captions: the per-action scope names SR ships. An action with no row here keeps
+       the generic Any/Command caption above (Crying/Giggling are US-only and have no SR caption). -->
+  <US.Action.DraftUndraft>Draft / Undraft</US.Action.DraftUndraft>
+  <US.Tuning.Scope.Call.Any>Idle occurrence</US.Tuning.Scope.Call.Any>
+  <US.Tuning.Scope.Eat.Any>Eating occurrence</US.Tuning.Scope.Eat.Any>
+  <US.Tuning.Scope.Sleep.Any>Sleeping occurrence</US.Tuning.Scope.Sleep.Any>
+  <US.Tuning.Scope.Wounded.Any>Damage event</US.Tuning.Scope.Wounded.Any>
+  <US.Tuning.Scope.Select.Any>Player selection</US.Tuning.Scope.Select.Any>
+  <US.Tuning.Scope.Move.Any>Movement occurrence</US.Tuning.Scope.Move.Any>
+  <US.Tuning.Scope.Social.Any>Social occurrence</US.Tuning.Scope.Social.Any>
+  <US.Tuning.Scope.Joy.Any>Joy occurrence</US.Tuning.Scope.Joy.Any>
+  <US.Tuning.Scope.Death.Any>Death event</US.Tuning.Scope.Death.Any>
+  <US.Tuning.Scope.Attack.Any>Any eligible Core attack</US.Tuning.Scope.Attack.Any>
+  <US.Tuning.Scope.Work.Any>Any work job</US.Tuning.Scope.Work.Any>
+  <US.Tuning.Scope.MentalBreak.Any>Mental-break event</US.Tuning.Scope.MentalBreak.Any>
+  <US.Tuning.Scope.Draft.Command>Draft command</US.Tuning.Scope.Draft.Command>
+  <US.Tuning.Scope.Undraft.Command>Undraft command</US.Tuning.Scope.Undraft.Command>
+  <US.Tuning.Scope.Attack.Command>Player-forced attack</US.Tuning.Scope.Attack.Command>
+  <US.Tuning.Scope.Work.Command>Player-forced work</US.Tuning.Scope.Work.Command>
+  <US.Tuning.Scope.Equip.Command>Player equip command</US.Tuning.Scope.Equip.Command>
   <US.Tuning.Auto>Auto</US.Tuning.Auto>
   <US.Tuning.ResetToDefault>Reset to default</US.Tuning.ResetToDefault>
   <US.Tuning.ResetToPreset>Reset to preset</US.Tuning.ResetToPreset>
@@ -303,7 +334,7 @@
   <US.Help.Diagnostics.LocalizeDebug.Text>When on, the vanilla debug menu shows Universal Squeaker's debug actions with translated names and categories. Only visible while developer mode is enabled.</US.Help.Diagnostics.LocalizeDebug.Text>
   <US.Help.Diagnostics.LayoutDiagnosis.Text>Developer tool. The status line says whether this window's layout is being captured, and if not, why: a release library package has no layout instrument, and no switch can create one.</US.Help.Diagnostics.LayoutDiagnosis.Text>
   <US.Help.Diagnostics.LayoutCapture.Text>Records every arranged element of this window - its rect in each coordinate space, its height mode and resolved height. Costs frames while on, and is off by default; it is never saved.</US.Help.Diagnostics.LayoutCapture.Text>
-  <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around each captured element so a rect can be seen rather than read. It needs capture to be on, because it outlines what was captured.</US.Help.Diagnostics.LayoutOutline.Text>
+  <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around the rects this window paints, so a rect can be seen rather than read. It is independent of capture (SA1.5): with capture on it outlines the retained set, with capture off it outlines every drawn rect and samples nothing - no report is armed by this switch.</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>Writes the last completed capture once to the log, then stops. Press it again for another. For a rect that does not respond to clicks, read the input lines: each one carries the pointer, the queried rect and the verdict (hit, miss, covered or disabled).</US.Help.Diagnostics.LayoutReport.Text>
   <US.Help.ScopeTree.Overview>The three-layer tuning editor: Global, Race and Xenotype. Each action's scope either inherits (Auto) or is forced to Off, Any or Command within the states that action supports; four mood rows override pitch, volume and jitter per layer.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>

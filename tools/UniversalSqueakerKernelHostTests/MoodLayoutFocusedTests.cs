@@ -1661,15 +1661,23 @@ internal static class MoodLayoutFocusedTests
                             .OrderBy(r => r.y).ThenBy(r => r.x).ToList();
                         Assert(resets.Count >= 2,
                             where + ": the first mood card must draw its two reset controls, got " + resets.Count);
+                        // SA1.2: the group order is Player first, so which ACTION sits at triggers[1] is a
+                        // consequence of the rules table, not a constant. The popup owner elementId is
+                        // derived from the drawn order (the same ActionScopeRules the widget walks) rather
+                        // than hardcoded to "Eat" - otherwise the re-cut order would open a popup whose
+                        // owner is not the row at this rect and the coverage claim would be vacuous.
+                        IReadOnlyList<ActionScopeRowView> scopeRows =
+                            host.Bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes");
+                        string firstScopeKey = DrawnScopeOrder(scopeRows)[0];
                         Vector2 noScroll = Vector2.zero;
                         Rect triggerPage = ToPageLocal(triggers[1], viewport, noScroll);
                         Rect coveredPage = ToPageLocal(triggers[2], viewport, noScroll);
                         Rect resetPage = ToPageLocal(resets[0], viewport, noScroll);
-                        host.Session.OpenPopup("scope-tree-scope-Eat", triggerPage);
+                        host.Session.OpenPopup("scope-tree-scope-" + firstScopeKey, triggerPage);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
                         Assert(Program.TryGetPopupHitLayer(host.Session, out UiHitLayer layer) && layer.IsPopup,
-                            where + ": the Eat scope dropdown must publish a POPUP layer");
+                            where + ": the " + firstScopeKey + " scope dropdown (first drawn by SA1.2 order) must publish a POPUP layer");
                         Assert(layer.Rect.x >= -0.5f && layer.Rect.y >= -0.5f
                             && layer.Rect.xMax <= box + 0.5f && layer.Rect.yMax <= V3PageBoxHeight + 0.5f,
                             where + ": the Tuning popup must stay inside the page, got " + DescribeRect(layer.Rect));
@@ -1723,6 +1731,43 @@ internal static class MoodLayoutFocusedTests
         }
     }
 
+    /// <summary>SA1.2: the action keys in the order the scope-tree widget DRAWS them - Player group
+    /// first, each group walking its public order list, unknown actions appended per group. Derived
+    /// from the same public tables the widget reads, so the popup clause names the row that is really
+    /// at the rect instead of hardcoding a name the ordering could move.</summary>
+    private static List<string> DrawnScopeOrder(IReadOnlyList<ActionScopeRowView> rows)
+    {
+        var keys = new List<string>();
+        AppendScopeGroup(keys, ActionScopeGroup.PlayerTriggered, ActionScopeRules.PlayerGroupOrder, rows);
+        AppendScopeGroup(keys, ActionScopeGroup.SystemOrEvent, ActionScopeRules.SystemGroupOrder, rows);
+        return keys;
+    }
+
+    private static void AppendScopeGroup(List<string> keys, ActionScopeGroup group,
+        IReadOnlyList<SqueakAction> order, IReadOnlyList<ActionScopeRowView> rows)
+    {
+        for (int i = 0; i < order.Count; i++)
+        {
+            for (int r = 0; r < rows.Count; r++)
+            {
+                if (rows[r].Group == group && rows[r].Action == order[i]) keys.Add(rows[r].ActionKey);
+            }
+        }
+
+        for (int r = 0; r < rows.Count; r++)
+        {
+            if (rows[r].Group != group) continue;
+            bool known = false;
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (order[i] == rows[r].Action) { known = true; break; }
+            }
+
+            if (!known) keys.Add(rows[r].ActionKey);
+        }
+    }
+
+
     /// <summary>
     /// P2 (V3): the two inheritance readouts are really LAID OUT at the single real body both help states
     /// arrange, and the scope hint's columns stay inside the card without overlapping the action name.
@@ -1769,8 +1814,8 @@ internal static class MoodLayoutFocusedTests
                     // production predicate (HintTextFor) yields ""; the Draft row inherits and needs the hint.
                     var rowsToProbe = new[]
                     {
-                        ("Eat", "US.Action.Eat", "US.Tuning.Scope.Any", true, "US.Tuning.Scope.Any"),
-                        ("Draft", "US.Action.Draft", "US.Tuning.Scope.Command", false, "US.Tuning.Scope.Command"),
+                        ("Eat", "US.Action.Eat", "US.Tuning.Scope.Eat.Any", true, "US.Tuning.Scope.Any"),
+                        ("Draft", "US.Action.Draft", "US.Tuning.Scope.Draft.Command", false, "US.Tuning.Scope.Command"),
                     };
                     foreach ((string actionKey, string displayKey, string effectiveKey, bool ownsScope, string ownScopeKey) in rowsToProbe)
                     {
@@ -1875,7 +1920,7 @@ internal static class MoodLayoutFocusedTests
                         // The fixture's Draft row inherits (HasOwnScope=false), so its hint is the one the real
                         // draw pass must lay out at this body. The Eat row owns its scope, so it must NOT
                         // produce a hint at all - both halves are asserted through the real pass + geometry.
-                        string hint = "→ " + table["US.Tuning.Scope.Command"];
+                        string hint = "→ " + table["US.Tuning.Scope.Draft.Command"];
                         Assert(hintRecorder.Measured(hint),
                             where + ": the inherited-scope hint '" + hint + "' must be measured/drawn at this real body;"
                             + " the pre-V3 shape suppressed it below a 480px element width");

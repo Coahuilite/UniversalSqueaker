@@ -692,28 +692,25 @@ public static class UsKernelDraw
         IReadOnlyList<KeyValuePair<string, string>> options,
         Action<string> onSelected)
     {
-        // Accent discipline (05 §3.1): a filled trigger means "this field carries a value", which is
-        // not one of the accent's three uses. Openness stays a plane change (Selected fill with the
-        // stronger neutral border), never a hue change; the text is always TextPrimary.
+        // SA1.1 (user ruling 2026-10-05): every real dropdown entry in US - including this composite
+        // path, which owns its trigger because the option list is dynamic - paints the SAME selector
+        // plane as the core `input/dropdown Appearance="selector"` by calling the ONE shared carrier
+        // entry `UiThemeDraw.SelectorField`: plane + hairline, the 3px accent rail, the arrow zone
+        // behind its own divider, and the value text in what remains. The open state stays the Active
+        // rung of the status ladder (the same SelectedSurface the old hand-composed plane painted);
+        // closed is Neutral. The accent rail is the shape's own reserved line - the 05 §3.1 accent
+        // discipline already admits it (nav and section rails are the same 3px), and no help-button
+        // slot exists in either look (SR's question mark is not adopted).
         bool open = ctx.Session.IsPopupOpen(elementId);
-        UiThemeDraw.Surface(
-            rect,
-            ctx.Theme,
-            open ? ctx.Theme.Selected : ctx.Theme.Raised,
-            open ? ctx.Theme.BorderStrong : ctx.Theme.Border);
-        // D9 (2026-09-06 in-game): the trigger column is a fixed width, so a selected label that
-        // outgrows it (long author credits, pack names) clipped. The trigger ellipsizes through the
-        // same metrics seam the fit audit measures with, so the cut is deliberate, not silent.
-        float triggerTextWidth = Mathf.Max(1f, rect.width - 12f);
-        string triggerDisplay = EllipsizeToFit(display, triggerTextWidth, ctx.Metrics, UiFont.Tiny);
-        Label(
-            new Rect(rect.x + 6f, rect.y, triggerTextWidth, rect.height),
-            triggerDisplay,
-            ctx.Theme,
-            ctx.Theme.TextPrimary,
-            UiFont.Tiny,
-            TextAnchor.MiddleLeft,
-            singleLine: true);
+        UiResolvedStyle fieldStyle = ctx.Theme.Styles.Resolve(
+            open ? UiStatusTone.Active : UiStatusTone.Neutral, UiEmphasis.Normal, writable: true);
+        // D9 (2026-09-06 in-game) stays: the trigger column is a fixed width, so a selected label that
+        // outgrows it (long author credits, pack names) is cut through the same metrics seam the fit
+        // audit measures with - now cut against the selector's OWN text outlet, not a hand-spelled 12px.
+        Rect textOutlet = UiThemeDraw.SelectorTextOutlet(rect, ctx.Theme);
+        string triggerDisplay = EllipsizeToFit(
+            display, Mathf.Max(1f, textOutlet.width), ctx.Metrics, UiFont.Tiny);
+        UiThemeDraw.SelectorField(rect, triggerDisplay, ctx.Theme, fieldStyle, UiFont.Tiny);
 
         // The trigger click stores the popup anchor in Host window space (the engine translates
         // draw rects inside scrolls/groups); the popup pass draws and hit-tests in that same

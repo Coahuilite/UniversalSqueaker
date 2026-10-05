@@ -369,13 +369,14 @@ internal static class UsSquareToggleLaneTests
                 ? theme.SelectedSurface.Border
                 : (theme.BorderStrong.a > 0f ? theme.BorderStrong : theme.Border);
             // The thumb's ink. The two halves are DIFFERENT KINDS of token on purpose (CURRENT INSPECTED,
-            // carrier `CheckboxWidget.PaintSwitch`): OFF is the neutral `TextPrimary` ink on a neutral track,
-            // ON is **the ACCENT ITSELF** (`AccentGold`) - "this is on" is what the accent means here. The
-            // carrier deliberately does not use `TextOnGold` for the thumb, because that token is ink FOR a
-            // gold plane rather than the control's own state. The restore from `TextOnGold` to the accent is
-            // the carrier change this lane was told to expect; the expectation is derived from the theme, so
-            // it follows US's accent wherever the palette puts it.
-            Color expectedKnob = state ? theme.AccentGold : theme.TextPrimary;
+            // carrier `CheckboxWidget.PaintSwitch`): since SA1.1 OFF is the switch's OWN declared grey
+            // (`SwitchThumbOff`, US declares #8a857a from the SR reference in UsTheme) on a neutral track -
+            // the grey thumb no longer borrows label ink, so greying it darkens no text - while ON is
+            // **the ACCENT ITSELF** (`AccentGold`): "this is on" is what the accent means here and the ON
+            // half answers AccentGold whatever SwitchThumbOff says. Unset, the token answers TextPrimary
+            // (the historical neutral thumb) - the expectation is derived from the theme, so it follows
+            // US's palette wherever the declaration puts it.
+            Color expectedKnob = state ? theme.AccentGold : theme.SwitchThumbOff;
             Assert(SameColor(trackFillColour, expectedFill),
                 bind + "=" + state + ": the track must be filled with this state's own role material ("
                 + Hex(expectedFill) + "), got " + Hex(trackFillColour) + " - a state-blind material reddens"
@@ -386,6 +387,19 @@ internal static class UsSquareToggleLaneTests
             Assert(SameColor(knobs[0].Colour, expectedKnob),
                 bind + "=" + state + ": the knob must be inked with this state's own role ink ("
                 + Hex(expectedKnob) + "), got " + Hex(knobs[0].Colour));
+            if (!state)
+            {
+                // SA1.1, named faithful-revert target: the OFF thumb answers the DECLARED grey (SR
+                // reference .54,.52,.48 = #8a857a) - not the label ink it used to borrow. Deleting the
+                // SwitchThumbOff declaration from UsTheme makes theme.SwitchThumbOff fall back to
+                // TextPrimary and reddens BOTH clauses below; greying the thumb must never darken a
+                // label, so the second clause pins the exact reference colour.
+                Assert(!SameColor(knobs[0].Colour, theme.TextPrimary),
+                    bind + ": the OFF thumb must not answer the label ink (SA1.1 declaration)");
+                Assert(SameColor(knobs[0].Colour, new Color(138f / 255f, 133f / 255f, 122f / 255f, 1f)),
+                    bind + ": the OFF thumb must be the SR-reference grey #8a857a, got "
+                    + Hex(knobs[0].Colour));
+            }
 
             // VISIBILITY, the criterion the retired kind's own ruling left behind: the control must be
             // distinguishable from the plane it sits on. On this page the flat scope's Raised IS the card's own

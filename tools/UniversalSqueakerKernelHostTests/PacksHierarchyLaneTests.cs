@@ -84,6 +84,10 @@ internal static class PacksHierarchyLaneTests
         "checklist-empty-nodomain",
         "race-layer-row", "xenotype-layer-row", "checklist-row", "race-layer-row-surface", "race-layer-row-hit",
         "xenotype-layer-row-surface", "xenotype-layer-row-hit", "checklist-row-check",
+        "checklist-row-surface", "checklist-row-content", "checklist-row-text",
+        "race-layer-row-content", "race-layer-row-gutter", "race-layer-row-text",
+        "xenotype-layer-row-content", "xenotype-layer-row-gutter", "xenotype-layer-row-text",
+        "checklist-row-gutter",
     };
 
     /// <summary>
@@ -215,8 +219,21 @@ internal static class PacksHierarchyLaneTests
                 "'" + template + "' must not carry an enable control: browse and enable are different channels");
         }
 
-        Assert(!Descendants(host.Manifest.Templates["checklist-row"]).Any(e => e.Kind == "us/selection-surface"),
-            "the enable row must not claim the browse selection surface");
+        // SA1.7 re-cut of the kind-ban: the enable row now DOES carry a us/selection-surface sibling -
+        // the hover plate the user asked for. The plate may only READ the pointer: it must bind no
+        // selection bool, and nothing in the row may bind or invoke the browse channel. Asserting the
+        // SEMANTICS is stronger than banning the kind name ever was.
+        UiElementSpec? enablePlate = Find(host.Manifest.Templates["checklist-row"], "checklist-row-surface");
+        Assert(enablePlate != null
+                && enablePlate!.Kind == "us/selection-surface"
+                && enablePlate.TryGetAttribute("Hover", out string plate) && plate == "true"
+                && !enablePlate.TryGetAttribute("Bind", out _),
+            "the enable row's surface is the SA1.7 hover plate and nothing else: Hover=\"true\", no Bind");
+        Assert(!Descendants(host.Manifest.Templates["checklist-row"]).Any(e =>
+                (e.TryGetAttribute("ActionBind", out string action) && action == "select-domain")
+                || (e.TryGetAttribute("Bind", out string bind) && bind == "selected")),
+            "no element of the enable row may bind or invoke the browse selection: the plate is paint,"
+            + " the switch stays the only writer");
         UiElementSpec check = Find(host.Manifest.Templates["checklist-row"], "checklist-row-check")
             ?? throw new InvalidOperationException("the manifest must declare the checklist row control");
         Assert(check.Kind == "input/checkbox"

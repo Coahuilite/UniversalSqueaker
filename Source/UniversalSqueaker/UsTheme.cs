@@ -136,6 +136,12 @@ public static class UsTheme
         + @"<Color Token='DangerBorder' Value='#c96057' />"
         // --- the series accent. US owns it now; the value is the retired template's, unchanged. ---
         + @"<Color Token='AccentGold' Value='#d19a38' />"
+        // --- SA1.1: the switch thumb's OFF ink (SR reference .54,.52,.48 ~= #8a857a). Declared so the
+        //     shared input/checkbox switch paints a grey OFF thumb WITHOUT darkening any label: unset the
+        //     carrier answers TextPrimary (the historical bright thumb), and the ON half keeps answering
+        //     AccentGold whatever this says. This is the colour the switch shape/kind already owns - US
+        //     declares it once here, it does not re-spell the arithmetic in a widget. ---
+        + @"<Color Token='SwitchThumbOff' Value='#8a857a' />"
         + @"</Scheme></Styles>";
 
     /// <summary>
@@ -165,7 +171,7 @@ public static class UsTheme
         "BaseBorder", "PanelBorder", "RaisedBorder", "HoverBorder",
         "TextPrimary", "TextSecondary", "TextDisabled", "TextOnGold", "TextOnDanger",
         "DangerBorder",
-        "AccentGold"
+        "AccentGold", "SwitchThumbOff"
     };
 
     /// <summary>

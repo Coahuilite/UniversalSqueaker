@@ -31,8 +31,19 @@ public static class UsKernelSettingsHost
     /// <summary>Production entry point: the Host measures text with the real Verse text engine.</summary>
     public static UiHost Create(IUsKernelSettingsSource source)
     {
+        return Create(source, (RemixConfirmationFlow?)null);
+    }
+
+    /// <summary>
+    /// SA1.3: the production entry with the parent window's Remix confirmation flow. The settings
+    /// window owns one flow per window instance and passes it here; the "mode" write below then routes
+    /// an ENTER-into-Remix through the two-step dialog instead of committing directly. A null flow (the
+    /// harness defaults, any host without a parent window) keeps the direct typed write.
+    /// </summary>
+    public static UiHost Create(IUsKernelSettingsSource source, RemixConfirmationFlow? remixFlow)
+    {
         UiNative.Trace = SqueakLog.PopupTrace;
-        return Create(source, VerseFerriteTextMetrics.Instance, out _);
+        return Create(source, VerseFerriteTextMetrics.Instance, out _, remixFlow);
     }
 
     /// <summary>
@@ -55,7 +66,8 @@ public static class UsKernelSettingsHost
     /// every other lane use the two-argument overload.
     /// </summary>
     public static UiHost Create(
-        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes)
+        IUsKernelSettingsSource source, ITextMetrics metrics, out UsWriteBindings writes,
+        RemixConfirmationFlow? remixFlow = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (metrics == null) throw new ArgumentNullException(nameof(metrics));
@@ -75,7 +87,7 @@ public static class UsKernelSettingsHost
         // One translation seam instance for both the host and the per-item text bindings: the checklist's
         // row meta line is composed from a Keyed template, and a second seam would be a second language.
         var translation = new UsKernelTranslation();
-        writes = BuildBindings(source, bumper, translation);
+        writes = BuildBindings(source, bumper, translation, remixFlow);
         UiHost host = new(
             Source,
             manifest,
@@ -293,7 +305,8 @@ public static class UsKernelSettingsHost
 
 
     private static UsWriteBindings BuildBindings(
-        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation)
+        IUsKernelSettingsSource source, SessionRevisionBumper bumper, IUiTranslation translation,
+        RemixConfirmationFlow? remixFlow)
     {
         Action bump = bumper.Bump;
         VoicePacksPageState state = source.ViewState;
@@ -348,7 +361,27 @@ public static class UsKernelSettingsHost
         writes.Value<SqueakVoicePackMode>(
             "mode",
             () => source.BuildView().Mode,
-            value => { source.SetMode(value); bump(); });
+            value =>
+            {
+                // SA1.3: ENTERING Remix from another mode is the one write the player confirms twice.
+                // Leaving Remix and every other mode commit directly. With a flow present (the
+                // production settings window) RequestRemix takes the request and returns true, so this
+                // setter writes nothing; the flow runs the SAME SetMode+bump closure only on the second
+                // step's explicit enable, and Cancel/ESC/close never reach it. A null flow (the harness
+                // default and every host without a parent window) keeps the direct typed write, so the
+                // existing mode lanes stay honest.
+                if (remixFlow != null
+                    && value == SqueakVoicePackMode.Remix
+                    && source.BuildView().Mode != SqueakVoicePackMode.Remix
+                    && remixFlow.RequestRemix(
+                        () => { source.SetMode(SqueakVoicePackMode.Remix); bump(); }))
+                {
+                    return;
+                }
+
+                source.SetMode(value);
+                bump();
+            });
 
         // Basic: global volume. The 0..1 <-> percent split is a BINDING-side projection (spec 5.2), not a
         // widget's arithmetic: the slider atom owns the 0..1 value and the number-field atom owns the

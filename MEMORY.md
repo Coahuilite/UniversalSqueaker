@@ -13,22 +13,22 @@
 
 ## Current state (2026-10-05)
 
-- **BH1 bottom help is technically integrated at `1addf06`; real-game acceptance is now requested.**
-  Read the current US package identity from its own stamp and the PM paired manifest, never infer it from
-  HEAD. FL remains `0181268`, Demo `9d4b7e0`; BH1 needs no carrier or Demo change. Current playtest scope:
-  `../modding_documents/relay_mod/PLAYTEST-BH1-20261005.md`.
+- **BH1 bottom help is integrated and its real-game acceptance PASSED (2026-10-06).** The measured
+  3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX; it is
+  recorded, not an acceptance blocker. Read the current US package identity from its own stamp and the
+  PM paired manifest, never infer it from HEAD. FL remains `0181268`, Demo `9d4b7e0`.
 - **Latest human feedback reaffirms C1/C2 as normal.** Their original diagnostic IDs stay intact; the final
   feedback did not name RPT1/XG1 individually. The verbatim feedback, runtime observations and evidence are
   kept outside the product repository in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
   Layout reports do not replace visual or interaction acceptance; unattributed mod-stack warnings remain
   unattributed.
-- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1, XG1 and BH1 are technically integrated; their affected
-  checks passed. Remaining human observations cover V2/V3/V4 and BH1's
-  bottom-panel fit, independent wheel routing and toggle retention, RPT1's sentence clarity, XG1's disabled feel, with
-  `TODO.md`'s NOW block owning the per-slice list. The V1/B3 observations the user already gave must NOT be
-  re-asked. Tuning-layer redesign, composite splitting and page-layout work stay deferred, and bottom help keeps
-  its separate contract (`../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`). Technical coverage
-  limits remain separate, per `../modding_documents/relay_mod/PM_HANDOFF.md`.
+- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1, XG1 and BH1 are technically integrated and BH1's
+  human pass landed. Remaining human observations cover V2/V3/V4, RPT1's sentence clarity and XG1's
+  disabled feel, with `TODO.md`'s NOW block owning the per-slice list. The V1/B3 observations the user
+  already gave must NOT be re-asked. Tuning-layer redesign, composite splitting and page-layout work
+  stay deferred, and bottom help keeps its separate contract
+  (`../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`). Technical coverage limits
+  remain separate, per `../modding_documents/relay_mod/PM_HANDOFF.md`.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
@@ -385,7 +385,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - **Packs tab (V2)**: the reading order is filter -> race browse -> xenotype browse -> current-domain pack
   enable, and all four bands share ONE card rhythm (Padding 12 / Gap 6 / header 26); the filter band is a
   `Section` + `us/section-header` wrapping the now-`TitleHidden` `us/filter-bar` composite. The two states are
-  deliberately different channels: BROWSE selection is `us/selection-surface` (fill + 3px rail, the row's
+  deliberately different channels: BROWSE selection is `us/selection-surface` (fill + 3px rail; since
+  SA1.7 also an opt-in `Hover="true"` plate on the navigation's own ladder - draw-only, never a hit), the row's
   `select-domain` payload is its business key and reaches page state only), PACK ENABLE is the item-local
   `input/checkbox Appearance="switch" Bind/SelectedKey="enabled"` at the shipped 36x30 band (24px clamped the
   34x18 track and cut the knob throw), and the enable band names its scope through the read-only
@@ -394,7 +395,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header (no other Packs band had one),
   so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
 - **Tuning tab (V3)**: one `us/scope-tree` card whose areas read layer/domain -> action scope
-  (Autonomous/Operable groups) -> mood. The mood area is gated on the mood rows ALONE in both Measure and Draw
+  (SA1.2: `PlayerTriggered`/`SystemOrEvent` groups, SR's fixed semantic membership, NOT derived from
+  `SupportedScopes`; `ActionScopeRules` owns the table + per-action scope captions) -> mood. The mood area is gated on the mood rows ALONE in both Measure and Draw
   (the pre-V3 `scopeRows.Count > 0` vs `anyScopeDrawn` split was two predicates for one decision). The
   inherited-scope hint is not width-gated: one pure row-layout function shared by Measure and Draw keeps it
   inline while the action name keeps a floor, own-line otherwise, never hidden. Mood provenance is PER-FACTOR
@@ -406,7 +408,18 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - **Remaining pages (V4):** Presets uses the manifest's local Tiny font scheme so composed row paint and measure
   agree; its read-only baseline note distinguishes Def data from current Tuning values. Distance captions
   describe the existing camera-height scale, without invented physical units. Footer visibility is transient
-  save status OR pending edits, and the full build identity stays readable in lower ink emphasis.
+  save status OR pending edits, and the full build identity stays readable in lower ink emphasis. The
+  footer band carries `Padding="6"` (SA1.4): the help switch clears the band's right edge by the declared
+  padding; the band rect itself is unchanged, only its children inset.
+
+- **SA1 appearance adoption:** composite dropdowns use the shared `UiThemeDraw.SelectorField`
+  without a help slot; `SwitchThumbOff=#8a857a` leaves important label ink independent; geometry
+  outlines work without capture. Command buttons use a visible state scheme, and selection rows
+  reserve a real gutter for the rail. Remix has one two-step flow per settings window, with equal-height
+  gated body scrolls and swapped buttons; only the final deliberate choice writes the original typed
+  mode closure. Navigation/footer inset is authored. Source checks cover the production dialog shell
+  and resolved EN/ZH text with synthetic metrics; real fonts, appearance and native keyboard behavior
+  remain human acceptance. DX1 diagnostics and Packs D4 are separate, undelivered work.
 - **Report button feedback (RPT1, landed)**: the report outcome is a READ-ONLY sentence printed immediately below
   the Report button, in the existing Keyed mechanism (additive entries in both tables). It is derived from the
   carrier's own facts: refused-at-request-time names the real reason (capture off / no instrument / no scope),

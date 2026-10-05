@@ -174,18 +174,21 @@ internal static class DeclarativePacksLaneTests
                 "the hit area must fire select-domain, got '" + action + "'");
             Assert(hit.TryGetAttribute("PayloadKey", out string payload) && payload == "payload",
                 "G2: the hit area must carry the row's own key (PayloadKey=\"payload\"), got '" + payload + "'");
-            // T21 RE-CUT: the Overlay holds THREE children now - the row-state surface (fill + 3px rail),
-            // the hit and the text column. The mode's reference rule is unchanged and still satisfied: the
-            // text column is a sibling that does NOT declare Height="MatchContent", and it is the only one
-            // whose measured height is the row's. This count was 2 before T21 and is re-cut in the same batch
-            // as the surface, because a measurement channel that changed invalidates the lanes asserting it.
+            // T21 RE-CUT, SA1.7 re-cut again: the Overlay holds THREE children - the row-state surface
+            // (fill + 3px rail + hover plate), the hit band and the CONTENT ROW (gutter + text column).
+            // The mode's reference rule is unchanged and still satisfied: the content Row is the sibling
+            // that does NOT declare Height="MatchContent", and its measured height - the text column
+            // inside it, the gutter reserves width only - is the row's. This count was 2 before T21 and
+            // is re-cut in the same batch as each measurement-channel change.
             Assert(root.Children.Count == 3,
-                "the row Overlay must hold the row-state surface, the hit and the text column, got "
+                "the row Overlay must hold the row-state surface, the hit and the content row, got "
                 + root.Children.Count);
             List<UiElementSpec> surfaces = Descendants(root).Where(e => e.Kind == "us/selection-surface").ToList();
             Assert(surfaces.Count == 1,
                 "the row template must declare exactly ONE row-state surface (T21: the selected row's fill and"
                 + " 3px rail), got " + surfaces.Count);
+            Assert(surfaces[0].TryGetAttribute("Hover", out string hover) && hover == "true",
+                "SA1.7: the row-state surface must declare the hover plate (Hover=\"true\")");
             Assert(surfaces[0].TryGetAttribute("Bind", out string surfaceBind) && surfaceBind == "selected",
                 "the row-state surface must read the row's own 'selected' bool, got '" + surfaceBind + "'");
             Assert(!surfaces[0].TryGetAttribute("ActionBind", out _)
@@ -549,6 +552,9 @@ internal static class DeclarativePacksLaneTests
                         Rect hit = RectOf(snapshot, template + "-hit#" + rowKey);
                         Rect title = RectOf(snapshot, template + "-title#" + rowKey);
                         Rect detail = RectOf(snapshot, template + "-detail#" + rowKey);
+                        Rect gutter = RectOf(snapshot, template + "-gutter#" + rowKey);
+                        Rect content = RectOf(snapshot, template + "-content#" + rowKey);
+                        float gutterWidth = DeclaredGutterWidth(host, template);
 
                         // The hit area IS the row: same origin, same width, and - the point of the re-cut -
                         // the same MEASURED height. Height="MatchContent" resolves against the row's
@@ -561,12 +567,25 @@ internal static class DeclarativePacksLaneTests
                             rowKey + ": the row must still be its text column's box at " + language + " (title "
                             + Num(title.height) + " + 2 + detail " + Num(detail.height) + "), got "
                             + Num(row.height) + " - a declaring child contributes nothing to the parent's height");
+                        // SA1.7: the empty fixed-width gutter IS accepted and reserves WIDTH only - it
+                        // starts at the row's left edge (clearing the 3px rail), measures the declared
+                        // width across and contributes no height; the content Row is the row's own box.
+                        Assert(Math.Abs(gutter.x - row.x) <= 0.5f
+                                && Math.Abs(gutter.width - gutterWidth) <= 0.5f && gutterWidth >= 4f
+                                && gutter.height <= 1f,
+                            rowKey + ": the SA1.7 gutter must sit at the row's left edge with the declared"
+                            + " width and zero height (" + Describe(gutter) + " vs width " + gutterWidth + ")");
+                        Assert(MatchesShape(content, row),
+                            rowKey + ": the content Row must BE the row's box (" + Describe(content)
+                            + " vs row " + Describe(row) + ")");
 
                         // The text lines share one width, and their bands are the atom's own rule.
                         string titleText = host.Bindings.Get<string>(itemsKey + "." + rowKey + ".title");
                         string detailText = host.Bindings.Get<string>(itemsKey + "." + rowKey + ".detail");
-                        Assert(Math.Abs(title.x - row.x) <= 0.5f && Math.Abs(title.xMax - row.xMax) <= 0.5f,
-                            rowKey + ": the title line must span the row (" + Describe(title) + ")");
+                        Assert(Math.Abs(title.x - (row.x + gutterWidth)) <= 0.5f
+                                && Math.Abs(title.xMax - row.xMax) <= 0.5f,
+                            rowKey + ": the title must start behind the gutter - real horizontal space from"
+                            + " the rail - and span to the row's right edge (" + Describe(title) + ")");
                         Assert(Math.Abs(title.xMax - detail.xMax) <= 0.5f,
                             rowKey + ": both text lines must share one right edge");
                         float expectedTitle = WrappedBand(metrics, titleText, title.width);
@@ -816,6 +835,23 @@ internal static class DeclarativePacksLaneTests
         }
 
         return null;
+    }
+
+    /// <summary>SA1.7: the gutter width the row template declares, read from the manifest so the
+    /// expectation moves with the declaration (the lane never restates the number).</summary>
+    private static float DeclaredGutterWidth(UiHost host, string template)
+    {
+        UiElementSpec? gutter = FindById(new[] { host.Manifest.Templates[template] }, template + "-gutter");
+        Assert(gutter != null, "SA1.7: '" + template + "' must declare a gutter column");
+        Assert(gutter!.TryGetAttribute("Width", out string raw)
+                && float.TryParse(raw.Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float parsed) && parsed > 0f,
+            "SA1.7: '" + template + "-gutter' must declare a positive numeric Width, got '"
+            + (gutter.TryGetAttribute("Width", out string shown) ? shown : "absent") + "'");
+        return float.Parse(
+            gutter.TryGetAttribute("Width", out string reuse) ? reuse.Trim() : "0",
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static void CollectKinds(IReadOnlyList<UiElementSpec> elements, HashSet<string> kinds)

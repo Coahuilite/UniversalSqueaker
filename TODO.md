@@ -5,12 +5,16 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — current queue (2026-10-05, BH1)
+## NOW — current queue (2026-10-06, SA1)
 
-**BH1 now enters requested real-game acceptance.** Package identity is owned by its stamp and the PM paired
-manifest. FL remains `0181268`, Demo `9d4b7e0`; only US needs the new package. Current human checklist:
-`../modding_documents/relay_mod/PLAYTEST-BH1-20261005.md`.
+BH1's observed help, position, font and pointer behavior was accepted on the held US `d770ae2`
+package. Scroll distance remains a nonblocking UX deferral; the new synthetic 3.04 ratio is recorded
+in PM evidence and is not a human measurement. Held FL `0181268` and Demo `9d4b7e0` remain paired.
 
+SA1 source is technically checked; PM integration/candidate export is the next step. Real-game
+selector/grey-thumb/hover appearance, modal text fit and native keyboard behavior remain open.
+DX1 diagnostics and Packs D4 remain independent follow-ups; the D4 search discussion precedes its
+implementation. Scope and acceptance: `../modding_documents/relay_mod/SA1-CONTRACT-20261005.md`.
 - The user reaffirmed C1/C2 as normal, keeping the original IDs; verbatim feedback and runtime evidence are
   in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`. Remaining coverage limits are in
   `../modding_documents/relay_mod/PM_HANDOFF.md`; they are distinct from human observations.
@@ -130,6 +134,9 @@ Untriggered cases stay untested; a Release carrier is a refusal-control case, no
 - [ ] **D4 Packs domain-selection redesign** (maintainer six-point spec): race/xenotype lists side by side, the
   xenotype list follows race selection, dropdowns into their own cards, an explicit clear option, an independent
   search box per list, visible list height 4.5 rows. The search-matching discussion precedes implementation.
+- [ ] **DX1 diagnostic-screenshot analysis** (the retained playtest diagnostics under the SA1 evidence
+  directory): NOT delivered - a future independent task per `SA1-CONTRACT-20261005.md`, never folded
+  into SA1 silently, alongside D4's own contract.
 - [ ] **MeowingKiiro skill-flow validation** (pack built, static green): the in-game pass - enable order,
   Kiiro-Race-domain tick, Fallback, Call/Select + spot-check, four modes, dispatch log - and record any
   skill-vs-implementation mismatch back into the production plan doc and the skill. Publication stays

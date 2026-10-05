@@ -625,7 +625,30 @@ internal static class HelpPanelLaneTests
             + navCards.Count);
 
         ResetWrites(fake);
-        Rect card = navCards[navCards.Count - 1];
+        // SA1.4 interaction: the footer inset costs the help-open body 12px, so the LAST nav card can
+        // sit below the fold at top scroll. The operability claim needs a card the player can really
+        // click WITHOUT scrolling: take the bottom-most FULLY visible card that is not the current tab
+        // (the nav draws Workspaces top-to-bottom), and expect the tab it names.
+        string[] workspaceOrder = { "Overview", "Distance", "Packs", "Tuning", "Presets" };
+        int pick = -1;
+        Rect card = default;
+        for (int i = navCards.Count - 1; i >= 0; i--)
+        {
+            Rect candidate = navCards[i];
+            if (i >= workspaceOrder.Length) continue;
+            if (string.Equals(workspaceOrder[i], "Tuning", StringComparison.Ordinal)) continue;
+            if (navViewport.y + candidate.y >= navViewport.y - 0.5f
+                    && navViewport.y + candidate.yMax <= navViewport.yMax + 0.5f)
+            {
+                pick = i;
+                card = candidate;
+                break;
+            }
+        }
+        Assert(pick >= 0,
+            "at least one non-current nav card must be fully visible at the top scroll while help is"
+            + " open (navViewport " + navViewport.y + ".." + navViewport.yMax + ")");
+        string expectedTab = workspaceOrder[pick];
         // The recorded card rect is in the nav scroll's CONTENT space; the pointer the stub sees is in the
         // page's space, so it converts through the nav viewport (the same pair SettingsGeometryLaneTests
         // uses). The nav is at its top here, so no scroll offset enters the conversion.
@@ -637,10 +660,13 @@ internal static class HelpPanelLaneTests
             EventType.MouseDown, pointer);
         Program.DrawWithEvent(host, new Rect(0f, 0f, AcceptancePageBox.x, AcceptancePageBox.y),
             EventType.MouseUp, pointer);
-        Assert(string.Equals(fake.LastActiveTab, "Presets", StringComparison.Ordinal),
+        Assert(string.Equals(fake.LastActiveTab, expectedTab, StringComparison.Ordinal),
             "a navigation click must still route to the business boundary while the panel is open, got '"
-            + (fake.LastActiveTab ?? "(none)") + "'");
-        Assert(string.Equals(fake.ViewState.ActiveTab, "Presets", StringComparison.Ordinal),
+            + (fake.LastActiveTab ?? "(none)") + "' for the " + expectedTab + " card (pointer "
+            + pointer.x + "," + pointer.y + "; card " + card.x + "," + card.y + " " + card.width
+            + "x" + card.height + "; navViewport " + navViewport.x + "," + navViewport.y + " "
+            + navViewport.width + "x" + navViewport.height + ")");
+        Assert(string.Equals(fake.ViewState.ActiveTab, expectedTab, StringComparison.Ordinal),
             "the routed click must land in the page state, so the workspace really moved");
         Assert(host.MeasureAndArrange(AcceptancePageBox).Viewports.ContainsKey(HelpBandId),
             "operating a settings control must not close the panel");
@@ -1105,7 +1131,14 @@ internal static class HelpPanelLaneTests
                             float pageRootPadding = DeclaredAttribute(host, "page-root", "Padding");
                             float declaredToggleWidth = DeclaredAttribute(host, ToggleElementId, "Width");
                             float declaredFooterGap = DeclaredAttribute(host, "footer-band", "Gap");
-                            float footerBandInnerWidth = AcceptancePageBox.x - pageRootPadding * 2f;
+                            // SA1.4: the footer band now carries its own Padding, so the width left to the
+                            // status half is the page inner MINUS the band's two padding edges.
+                            float footerBandPadding = DeclaredAttribute(host, "footer-band", "Padding");
+                            Assert(footerBandPadding >= 4f,
+                                where + ": SA1.4 - the footer band must declare a real inset (>=4), got "
+                                + footerBandPadding);
+                            float footerBandInnerWidth = AcceptancePageBox.x - pageRootPadding * 2f
+                                - footerBandPadding * 2f;
                             UiFitAudit.Reset();
                             reports.Clear();
                             host.DrawChecked(new Rect(0f, 0f, AcceptancePageBox.x, AcceptancePageBox.y));
@@ -1121,9 +1154,11 @@ internal static class HelpPanelLaneTests
                                 where + ": the switch must cost the status text exactly its declared width"
                                 + " plus the row gap, got footer=" + footerRect.width);
                             Assert(toggleRect.x >= footerRect.xMax - 0.5f
-                                    && toggleRect.xMax <= footerBandInnerWidth + pageRootPadding + 0.5f,
+                                    && toggleRect.xMax
+                                        <= footerBandInnerWidth + footerBandPadding + pageRootPadding + 0.5f,
                                 where + ": the switch must sit to the right of the status text inside the"
-                                + " page: footer=" + footerRect + " toggle=" + toggleRect);
+                                + " page (past the band's own SA1.4 padding): footer=" + footerRect
+                                + " toggle=" + toggleRect);
                             Assert(Math.Abs(toggleRect.height - 26f) < 0.01f,
                                 where + ": the switch keeps its declared 26px band inside the wrap-aware"
                                 + " footer row, got " + toggleRect.height);

@@ -469,12 +469,17 @@ internal static class ReportFeedbackLaneTests
                             where + ": the us/footer composite must be arranged");
                         Assert(snapshot.RectById.TryGetValue("help-toggle", out Rect toggleRect),
                             where + ": the help switch must be arranged inside the footer band");
+                        float bandPad = DeclaredFloat(footerBandSpec, "Padding");
                         Assert(Math.Abs(toggleRect.width - DeclaredFloat(toggleSpec, "Width")) <= 0.5f
                                 && Math.Abs(footerComposite.width + DeclaredFloat(footerBandSpec, "Gap")
-                                    + toggleRect.width - footerBand.width) <= 0.5f,
-                            where + ": the band's width must be exactly the us/footer composite plus the gap and"
-                            + " the declared-width switch - footer " + Describe(footerComposite) + ", switch "
-                            + Describe(toggleRect) + ", band " + Describe(footerBand));
+                                    + toggleRect.width - (footerBand.width - 2f * bandPad)) <= 0.5f,
+                            where + ": the band's INNER width (less the SA1.4 2x padding) must be exactly the"
+                            + " us/footer composite plus the gap and the declared-width switch - footer "
+                            + Describe(footerComposite) + ", switch " + Describe(toggleRect) + ", band "
+                            + Describe(footerBand) + ", padding " + bandPad);
+                        Assert(Math.Abs((footerBand.xMax - toggleRect.xMax) - bandPad) <= 0.5f && bandPad > 0f,
+                            where + ": SA1.4 - the help switch clears the band's right edge by the declared"
+                            + " padding, no longer merged with the container edge");
                         if (helpOpen)
                         {
                             Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect helpReserved),

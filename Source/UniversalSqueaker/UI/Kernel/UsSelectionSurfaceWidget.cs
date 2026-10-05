@@ -7,8 +7,10 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// US-owned row-state surface: the FILL and the 3px left rail a SELECTED domain row must show, painted
-/// from the row own bool. Draw only, no hit: it takes no input, claims no hover and declares no hit area,
-/// so it cannot steal a press from the row hit band.
+/// from the row's own bool, plus - since SA1.7 and only where the element declares <c>Hover="true"</c> -
+/// the pointer's hover plate on the navigation's own ladder. Draw only, no hit: it takes no input,
+/// claims no press and declares no hit area, so it cannot steal a click from the row's hit band.
+///
 ///
 /// <para>
 /// WHY A KIND, measured before it was written:
@@ -114,7 +116,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
             UsKernelWidgetRegistrar.Scope,
             Kind,
             () => new UsSelectionSurfaceWidget(),
-            new[] { "Id", "Kind", "Bind", "Height", "Tab", "Hidden" });
+            new[] { "Id", "Kind", "Bind", "Height", "Tab", "Hidden", "Hover" });
     }
 
     public void Configure(UiElementSpec value)
@@ -124,7 +126,13 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
-        bindings.ValidateValue<bool>(BindingKey(), elementPath);
+        // The SELECTED state is a bound bool; the SA1.7 HOVER plate needs no binding (it reads the
+        // pointer), so a surface that declares only Hover="true" validates nothing. A Bind, when
+        // present, must still resolve as a bool.
+        if (spec.TryGetAttribute("Bind", out string bind) && bind.Length > 0)
+        {
+            bindings.ValidateValue<bool>(bind, elementPath);
+        }
     }
 
     /// <summary>Contributes nothing to the row content reference: the manifest declares
@@ -151,26 +159,34 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         // landed - so this change was never isolated and explains nothing. If the question is reopened, the
         // most likely cause is that the key did not resolve at all at that moment (the item-scoped
         // qualification of the template's Bind attribute), which is a thing to reproduce, not to assume.
-        if (!ctx.Bindings.TryGetBool(BindingKey(), out bool selected) || !selected) return;
+        bool selected = ctx.Bindings.TryGetBool(BindingKey(), out bool bound) && bound;
+        if (selected)
+        {
+            // The SHIPPED selected-row treatment, reused rather than re-invented: plane FIRST, rails
+            // LAST (the order the helper documented), with the thresholds written before the colours
+            // (14.16): fill vs plane >= 3.0 (WCAG 2.1 SC 1.4.11 non-text), rail vs fill and vs plane
+            // >= 3.0 (same clause), title ink vs fill >= 4.5 (WCAG 2.2 SC 1.4.3 AA, text). All four are
+            // measured on the COMPOSITED colours by the colour lane's contrast criteria. The rail is
+            // RowRail.Selected's ink (theme.TextSecondary), not the accent: the accent rail means "the
+            // current object" - the navigation card's active tab - and the two facts stay deliberately
+            // apart (UsKernelDraw.RowSurface's own contract).
+            UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
+            UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
+            return;
+        }
 
-        // The SHIPPED selected-row treatment, reused rather than re-invented: RowSurface paints the whole
-        // plane first (theme.Selected for the selected rail state) and the rails LAST, so the plane's own
-        // edge cannot paint over the rail. Painting the two by hand in the other order is the one way to get
-        // this visibly wrong, which is why the helper is called instead of its two primitives.
-        //
-        // The rail is RowRail.Selected's ink (theme.TextSecondary), not the accent: the accent rail means
-        // "the current object" - the navigation card's active tab - and the two facts are deliberately kept
-        // apart (UsKernelDraw.RowSurface's own contract). Hover is passed false: T21 is the SELECTED state;
-        // the row's hover treatment is a separate item and nothing is claimed for it here.
-        // task-32: plane FIRST, rails LAST (the order the helper documented), with the thresholds written
-        // before the colours (14.16): fill vs plane >= 3.0 (WCAG 2.1 SC 1.4.11 non-text), rail vs fill and vs
-        // plane >= 3.0 (same clause), title ink vs fill >= 4.5 (WCAG 2.2 SC 1.4.3 AA, text). All four are
-        // measured on the COMPOSITED colours by the colour lane's contrast criteria. (Written without naming
-        // that lane's type: the deleted-type guard scans production UI source as TEXT, so a class name in a
-        // comment trips it - the same brittleness the funnel guard showed. The guard itself needs stripping
-        // comments and matching identifier boundaries; that fix is its own unit.)
-        UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
-        UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
+        // SA1.7 (user: the voice-pack list lacks the hover highlight the navigation cards already have):
+        // an OPT-IN hover plate - the SAME ladder the nav card paints on hover (HoverSurface.Fill with
+        // the BorderStrong structural edge), so a row under the pointer reads the same everywhere in the
+        // window. Declared per element with Hover="true"; a surface that does not declare it paints
+        // nothing when not selected, exactly as before. Still DRAW-ONLY: hover is READ, never taken - the
+        // row's own hit band stays the only click channel, so browse-vs-enable semantics are untouched.
+        if (spec.TryGetAttribute("Hover", out string hover)
+                && string.Equals(hover, "true", StringComparison.OrdinalIgnoreCase)
+                && UiNative.IsMouseOver(rect))
+        {
+            UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme.BorderStrong);
+        }
     }
 
     private string BindingKey()

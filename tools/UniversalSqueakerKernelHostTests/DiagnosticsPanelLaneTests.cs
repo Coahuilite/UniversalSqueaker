@@ -50,6 +50,7 @@ internal static class DiagnosticsPanelLaneTests
         Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
 #if US_DEV
         Step("layout diagnosis is per host: settings capture leaves this panel's host alone", LayoutDiagnosisIsPerHost);
+        Step("the outline switch is independent of capture (SA1.5)", OutlineIsIndependentOfCapture);
 #endif
     }
 
@@ -147,6 +148,74 @@ internal static class DiagnosticsPanelLaneTests
             "and the panel must still be resolvable by the developer commands: closing one window must not"
             + " make the other's controls dead");
     }
+    /// <summary>
+    /// SA1.5: the outline and the capture are ORTHOGONAL developer switches. Four checks:
+    /// <list type="number">
+    /// <item>the page's own outline command is honoured with capture OFF, sets no capture, and the
+    /// status answers OutlineOnly (not Off, not the borrowed "Capturing, with..." word);</item>
+    /// <item>outline-only arms no report: the request is refused and the sentence names capture off;</item>
+    /// <item>capture on with the outline already on reads Overlay, and capture OFF again leaves the
+    /// outline exactly where the developer put it;</item>
+    /// <item>the outline switch off returns to Off.</item>
+    /// </list>
+    /// NAMED FAITHFUL-REVERT: restoring the pre-SA1.5 <c>geometryEnabled</c> gate in
+    /// SetGeometryOverlay/GeometryOverlayOn reddens checks 1 and 3 by name.
+    /// </summary>
+    private static void OutlineIsIndependentOfCapture()
+    {
+        var table = Program.ReadKeyedTable("English");
+        Program.SetTranslatorResolver(table);
+        try
+        {
+            var fake = new RecordingSettingsSource { RichData = true };
+            using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+            fake.AttachHost(host);
+            using UsTextFitAudit audit = UsTextFitAudit.Open(host, auditFit: true);
+            var viewport = new Rect(0f, 0f, 760f, 524f);
+            host.DrawFrame(viewport);
+
+            // (1) outline opens WITHOUT capture, through the page's own bound command.
+            host.Bindings.Set("layout-outline", true);
+            Assert(fake.LayoutOutlineOn,
+                "SA1.5: the outline command must be honoured while capture is off");
+            Assert(!host.Diagnostics.GeometryEnabled,
+                "and opening the outline must not switch capture on");
+            Assert(UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.OutlineOnly,
+                "the status must answer OutlineOnly, got " + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            // (2) outline-only arms no report - the refusal names the real reason.
+            host.Bindings.Invoke("request-layout-report");
+            Assert(!fake.LayoutReportPending,
+                "a report request made with capture off must be refused, not left pending");
+            Assert(fake.LayoutReportStatus == table["US.Diagnostics.Geometry.Report.RefusedCaptureOff"],
+                "the refusal sentence must name capture-off as the reason, got " + fake.LayoutReportStatus);
+
+            // (3) capture on joins the still-running outline; capture off leaves the outline alone.
+            host.Bindings.Set("layout-capture", true);
+            Assert(host.Diagnostics.GeometryEnabled
+                    && UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.Overlay,
+                "capture on with the outline already on must read Overlay");
+            host.Bindings.Set("layout-capture", false);
+            Assert(!host.Diagnostics.GeometryEnabled, "capture must be off again");
+            Assert(fake.LayoutOutlineOn
+                    && UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.OutlineOnly,
+                "turning capture off must NOT close the outline the developer left on, got "
+                + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            // (4) the outline switch itself still turns it off.
+            host.Bindings.Set("layout-outline", false);
+            Assert(UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.Off,
+                "outline off must answer Off, got " + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            Console.WriteLine("[sa15-outline] outline opens without capture; report refused with the real"
+                + " reason; capture off keeps the outline");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
 #endif
 
     private static void Step(string name, Action action)

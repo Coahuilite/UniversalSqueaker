@@ -71,6 +71,11 @@ public sealed class UsTextFitAudit : IDisposable
         /// <summary>Capturing AND painting the outline around each sampled draw rect.</summary>
         Overlay,
 
+        /// <summary>SA1.5: the outline paints the drawn rects while NOTHING is captured. The two switches
+        /// are orthogonal, so the readout must be able to say "outline, no capture" rather than borrow a
+        /// word that means "capturing".</summary>
+        OutlineOnly,
+
         /// <summary>The carrier payload has no instrument (a release carrier). Enabling is refused.</summary>
         Unavailable
     }
@@ -321,10 +326,17 @@ public sealed class UsTextFitAudit : IDisposable
     {
         UsTextFitAudit? scope = FindScope(host);
         if (scope == null) return DevGeometryStatus.ScopeMissing;
-        if (!scope.geometryEnabled) return scope.InstrumentAvailable()
-            ? DevGeometryStatus.Off
-            : DevGeometryStatus.Unavailable;
-        return scope.GeometryOverlayOn() ? DevGeometryStatus.Overlay : DevGeometryStatus.Active;
+        if (!scope.InstrumentAvailable()) return DevGeometryStatus.Unavailable;
+        // SA1.5: the capture switch and the outline switch are read SEPARATELY - four honest answers,
+        // none of them borrowing another state's word. Before this the outline could not even be on
+        // without capture, so the three-way chain below could not be reached; the chain is what keeps
+        // the developer line truthful now that it can.
+        bool capturing = scope.geometryEnabled;
+        bool outlining = scope.GeometryOverlayOn();
+        if (capturing && outlining) return DevGeometryStatus.Overlay;
+        if (capturing) return DevGeometryStatus.Active;
+        if (outlining) return DevGeometryStatus.OutlineOnly;
+        return DevGeometryStatus.Off;
     }
 
     /// <summary>
@@ -363,14 +375,20 @@ public sealed class UsTextFitAudit : IDisposable
     }
 
     /// <summary>
-    /// Turns the outline painter on or off for THIS host. It requires the capture, so the carrier refuses it
-    /// while the instrument is off; that is reported as "not honoured" rather than thrown at the caller.
+    /// Turns the outline painter on or off for THIS host, INDEPENDENT of capture (SA1.5). The carrier's
+    /// own instrument makes the two switches orthogonal: with capture off the outline paints every rect
+    /// that reaches its draw step, samples nothing and holds no buffer; with capture on it outlines the
+    /// retained set. So this method no longer requires <c>geometryEnabled</c> - the only gate is that the
+    /// CARRIER has the instrument at all (a release payload throws on the setter and the request is
+    /// reported "not honoured" rather than answered with silence). Turning the outline on never sets
+    /// capture on and never arms a report; turning capture off (see <see cref="SetGeometryCapture"/>)
+    /// leaves this switch where the developer put it.
     /// </summary>
     public static bool SetGeometryOverlay(UiHost? host, bool enabled)
     {
         UsTextFitAudit? scope = FindScope(host);
         if (scope == null) return false;
-        if (!scope.geometryEnabled || !scope.InstrumentAvailable()) return false;
+        if (!scope.InstrumentAvailable()) return false;
 
 #if US_DEV
         try
@@ -629,11 +647,13 @@ public sealed class UsTextFitAudit : IDisposable
 #endif
     }
 
-    /// <summary>Whether THIS host is painting the captured-rect outline, read without mutating anything.</summary>
+    /// <summary>Whether THIS host is painting the outline, read without mutating anything. SA1.5: the
+    /// answer does NOT depend on capture - the carrier's outline step paints every drawn rect when nothing
+    /// is retained, so the switches are orthogonal by construction.</summary>
     private bool GeometryOverlayOn()
     {
 #if US_DEV
-        return geometryEnabled && subscription.GeometryOverlay;
+        return subscription.GeometryOverlay;
 #else
         return false;
 #endif

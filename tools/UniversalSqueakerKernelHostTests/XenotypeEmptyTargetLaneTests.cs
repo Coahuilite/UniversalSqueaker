@@ -246,7 +246,10 @@ internal static class XenotypeEmptyTargetLaneTests
 
                         // (3) Every static substitute band that carries text was really DRAWN (the metrics
                         // channel), so a "shape kept" claim cannot hide a band that stopped being painted.
-                        Assert(metrics.Measured(table["US.Tuning.Scope.Any"]),
+                        // SA1.2: the Eat row owns AnyOccurrence, so its inert band carries the PER-ACTION
+                        // caption (the Draft row inherits and shows Auto) - the generic key is no longer
+                        // drawn on this fixture.
+                        Assert(metrics.Measured(table["US.Tuning.Scope.Eat.Any"]),
                             where + ": the inert scope band must show the scope this row holds");
                         Assert(metrics.Measured("−") && metrics.Measured("+"),
                             where + ": the inert stepper must show its minus and plus bands");
@@ -274,10 +277,12 @@ internal static class XenotypeEmptyTargetLaneTests
                         // (5) REAL POINTER EVENTS on the scope band: no popup may open, no layer be published.
                         // The band is brought into the scroll viewport first, and that visibility is asserted.
                         ResetRecorders(source);
+                        // SA1.2: which trigger belongs to Eat is a consequence of the DRAWN group order
+                        // (Player first), not a constant index - derive it from the same public tables
+                        // the widget walks.
                         host.Session.ClosePopup();
                         Vector2 scopePoint = BringIntoViewAndGetPagePoint(
-                            host, box, Translate(referenceTriggers[1], delta));
-                        RealClick(host, box, scopePoint);
+                            host, box, Translate(ScopeTriggerFor(referenceHost, referenceTriggers, "Eat"), delta));
                         Assert(!host.Session.IsPopupOpen(EatScopeElementId),
                             where + ": the inert scope band must not open its popup");
                         Assert(!Program.TryGetPopupHitLayer(host.Session, out _),
@@ -433,11 +438,11 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the layer segment must be drawn, got " + layerButtons.Count);
                         ResetRecorders(source);
 
-                        // (1) THE SAME real click that is inert with no target must OPEN the popup here, and the
-                        // real option-row click under it must land the write. Eat is the upper of the last two
-                        // triggers (the domain trigger, when the layer has one, comes first).
+                        // (1) THE SAME real click that is inert with no target must OPEN the popup here, and
+                        // the real option-row click under it must land the write. The Eat trigger is located
+                        // by the drawn order (SA1.2), not by a hardcoded index.
                         host.Session.ClosePopup();
-                        Rect eatTrigger = triggerRects[triggerRects.Count - 2];
+                        Rect eatTrigger = ScopeTriggerFor(host, triggerRects, "Eat");
                         RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, eatTrigger));
                         Assert(host.Session.IsPopupOpen(EatScopeElementId),
                             where + ": a real click on the scope trigger must open its popup when the layer has a target");
@@ -703,6 +708,37 @@ internal static class XenotypeEmptyTargetLaneTests
             .Where(rect => Math.Abs(rect.width - TriggerWidth) <= TriggerTolerance)
             .OrderBy(rect => rect.y).ThenBy(rect => rect.x)
             .ToList();
+    }
+
+    /// <summary>SA1.2: the scope trigger of one action, located by the DRAWN order (Player group
+    /// first, then System; within a group the ActionScopeRules order-list index) instead of a fixed
+    /// ordinal - the group flip moved every hardcoded index. The domain trigger, when the layer has
+    /// one, is the topmost trigger and is skipped by the offset.</summary>
+    private static Rect ScopeTriggerFor(UiHost host, List<Rect> triggersByY, string actionKey)
+    {
+        IReadOnlyList<ActionScopeRowView> rows =
+            host.Bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes");
+        var ordered = rows.OrderBy(ScopeDrawRank).ToList();
+        int scopeIndex = ordered.FindIndex(r => string.Equals(r.ActionKey, actionKey, StringComparison.Ordinal));
+        Assert(scopeIndex >= 0, "the fixture has no scope row named '" + actionKey + "'");
+        int domainOffset = triggersByY.Count - ordered.Count;
+        Assert(domainOffset == 0 || domainOffset == 1,
+            "the trigger list must be the scope rows plus at most one domain trigger, got offset " + domainOffset);
+        return triggersByY[domainOffset + scopeIndex];
+    }
+
+    private static int ScopeDrawRank(ActionScopeRowView row)
+    {
+        IReadOnlyList<SqueakAction> table = row.Group == ActionScopeGroup.PlayerTriggered
+            ? ActionScopeRules.PlayerGroupOrder
+            : ActionScopeRules.SystemGroupOrder;
+        int index = 0;
+        for (int i = 0; i < table.Count; i++)
+        {
+            if (table[i] == row.Action) { index = i; break; }
+        }
+
+        return (row.Group == ActionScopeGroup.PlayerTriggered ? 0 : 1000) + index;
     }
 
     /// <summary>The layer segment: the three equal cells drawn ABOVE the first dropdown trigger.</summary>

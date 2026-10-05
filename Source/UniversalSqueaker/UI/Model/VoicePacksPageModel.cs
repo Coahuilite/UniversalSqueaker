@@ -366,7 +366,7 @@ public static class VoicePacksPageModel
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
             SqueakActionDefinition definition = SqueakActionDefinitions.Get(action);
             SqueakActionScope effective = definition.DefaultScope;
-            ActionScopeGroup group = ActionScopeRules.GroupFor(definition);
+            ActionScopeGroup group = ActionScopeRules.GroupFor(action);
             bool hasOwn = false;
             SqueakActionScope own = effective;
             // 按层优先级折叠（Default < Global < Race < Xeno）；同层多条按列表顺序后写胜出（与运行时 Merge 一致）。

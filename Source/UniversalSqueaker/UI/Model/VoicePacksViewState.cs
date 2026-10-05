@@ -228,7 +228,8 @@ public readonly struct ActionScopeRowView
 {
     public readonly string ActionKey;
     public readonly string DisplayName;
-    /// <summary>M2 分组：自主行为（Autonomous）或可操作行为（Operable/Command）。</summary>
+    /// <summary>SA1.2 分组（SR 正本成员表，非 scope 推导）：玩家可主动触发（PlayerTriggered）
+    /// 或系统/事件触发（SystemOrEvent）。纯呈现归属，不影响 typed 值与资格判定。</summary>
     public readonly ActionScopeGroup Group;
     /// <summary>本层记录的作用域（HasOwnScope=false 时无意义）。</summary>
     public readonly SqueakActionScope Scope;
