@@ -48,7 +48,12 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
     }
 
     // 320 -> 340: the same 40/60 value column the main panel now gives its detail (defect D4).
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(340f, 480f);
+    // DX1.6: the same budget rule as the panel - the outer size is what is set, it is clamped to the
+    // REAL scaled screen, and the collapsed state below adds the shell's actual chrome (title 56 +
+    // bottom 20) to the 44px bar content instead of reverse-deriving chrome from a content rect.
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
+        Mathf.Min(340f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
+        Mathf.Min(480f, Math.Max(TitleBarHeight + SidePadding + BarContentHeight, Verse.UI.screenHeight - 40f)));
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -98,7 +103,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         if (collapsed)
         {
             expandedRect = windowRect;
-            float chrome = Math.Max(0f, windowRect.height - contentRect.height);
+            float chrome = TitleBarHeight + SidePadding;
             windowRect = new Rect(windowRect.x, windowRect.y, windowRect.width, chrome + BarContentHeight);
         }
         else if (expandedRect.height > 1f)

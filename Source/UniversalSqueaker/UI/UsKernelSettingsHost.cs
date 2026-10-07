@@ -74,6 +74,15 @@ public static class UsKernelSettingsHost
 
         UsKernelWidgetRegistrar.EnsureRegistered();
 
+        // One translation seam instance for the host and the per-item text bindings: the checklist's
+        // row meta line is composed from a Keyed template, and a second seam would be a second
+        // language.
+        var translation = new UsKernelTranslation();
+        // D4: the raw embedded manifest is parsed as shipped - the domain viewports carry NO
+        // consumer-side number. The earlier creation-time floor-width injection was deleted per the
+        // PM ruling of 2026-10-07; the budget is the engine's own VisibleRows="4.5" counting on the
+        // arranged rows (FL capability in the working tree - the US build slot must use the freeze
+        // that carries it).
         UiLayoutManifest manifest = UiLayoutManifest.Parse(ReadManifest());
 
         // The bottom help panel (BH1) is DECLARATIVE: the manifest's help-scroll Scroll carries
@@ -84,9 +93,7 @@ public static class UsKernelSettingsHost
         // element keeping its node, which the 0.6 carrier no longer does: PruneNodesExcept releases a
         // removed identity together with its scroll position (UiSession.PruneNodesExcept).
         var bumper = new SessionRevisionBumper();
-        // One translation seam instance for both the host and the per-item text bindings: the checklist's
-        // row meta line is composed from a Keyed template, and a second seam would be a second language.
-        var translation = new UsKernelTranslation();
+        // (translation was created above the manifest parse - the D4 budget measures with it.)
         writes = BuildBindings(source, bumper, translation, remixFlow);
         UiHost host = new(
             Source,
@@ -532,6 +539,14 @@ public static class UsKernelSettingsHost
         writes.Value<bool>("layout-outline", () => source.LayoutOutlineOn,
             value => { source.SetLayoutOutline(value); bump(); });
         writes.Command("request-layout-report", () => { source.RequestLayoutReport(); bump(); });
+        // DT1: the Overview diagnostics band is the settings-window entry to the developer panel -
+        // the tool is reachable with the settings window by definition open, never standalone. The
+        // command IS a display write: the band button carries SelectedKey="dev-panel-open" (the panel's
+        // live open state), so opening it changes what the page draws and the clock must follow. The
+        // window seam goes through the source facade (the RequestLayoutReport precedent): production
+        // opens the real panel, the harness records the call - Verse.Find is not stubbable here.
+        bindings.BindReadOnly<bool>("dev-panel-open", () => UniversalSqueaker.UI.Dev.UsDevPanelWindow.Active != null);
+        writes.Command("open-dev-panel", () => { source.OpenDeveloperPanel(); bump(); });
         bindings.BindReadOnly<string>("layout-diagnosis-status", () => source.LayoutDiagnosisStatus);
         // RPT1: the sentence that answers the Report click, printed immediately below the button by the
         // manifest. Read-only for the same reason the capture sentence is: the outcome is carrier state the
@@ -550,6 +565,31 @@ public static class UsKernelSettingsHost
             selection => { source.SetTuningDomain(selection.RaceDefName, selection.TargetDefName); bump(); });
         bindings.BindReadOnly<IReadOnlyList<ActionScopeRowView>>("action-scopes", () => source.BuildView().ActionScopes);
         writes.Action<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
+        // VF1定稿 A2/A4: the multiplier fields and the action reset-to-preset join the same funnel -
+        // they change what the action rows display, so they move the same clock.
+        writes.Action<UsActionTuningWrite>("set-action-tuning", write => { source.SetActionTuning(write.ActionKey, write.IntervalField, write.Value); bump(); });
+        writes.Action<string>("reset-action-to-preset", key => { source.ResetActionToPreset(key); bump(); });
+    // VF1定稿: the tuning area + the final-fallback editor. The area is a value binding (the tabs
+    // write it); the editor's lists are read-only projections of the store, and every command bumps
+    // the clock because the editor's own rows change with them.
+    writes.Value<int>("tuning-area", () => state.TuningArea, value => { source.SetTuningArea(value); bump(); });
+    writes.Value<string>("tuning-selected-action", () => state.TuningSelectedAction, value => { source.SetTuningSelectedAction(value); bump(); });
+    bindings.BindReadOnly<IReadOnlyList<FallbackRaceView>>("fallback-races", () => source.BuildView().FallbackRaces);
+    bindings.BindReadOnly<string>("fallback-selected-race", () => source.BuildView().FallbackSelectedRace);
+    bindings.BindReadOnly<IReadOnlyList<FallbackEntryView>>("fallback-entries", () => source.BuildView().FallbackEntries);
+    bindings.BindReadOnly<string>("fallback-selected-entry", () => state.FallbackSelectedEntryAction);
+
+    bindings.BindOptions<FilterOptionView>("fallback-sound-options", () => source.BuildView().FallbackSoundOptions);
+    bindings.BindOptions<FilterOptionView>("fallback-candidate-options", () => source.BuildView().FallbackCandidateOptions);
+    bindings.BindReadOnly<string>("fallback-status", () => source.BuildView().FallbackStatusKey);
+    writes.Value<string>("fallback-sound-query", () => state.FallbackSoundQuery, value => { source.SetFallbackQueries(value, null); bump(); });
+    writes.Value<string>("fallback-new-race-query", () => state.FallbackNewRaceQuery, value => { source.SetFallbackQueries(null, value); bump(); });
+    writes.Action<UsFallbackSelection>("set-fallback-selection", write => { source.SetFallbackSelection(write.Race, write.EntryAction); bump(); });
+    writes.Action<UsFallbackEntryWrite>("set-fallback-entry", write => { source.SetFallbackEntry(write.ActionKey, write.SoundDefName); bump(); });
+    writes.Action<string>("create-fallback-table", race => { source.CreateFallbackTable(race); bump(); });
+    writes.Command("restore-fallback-default", () => { source.RestoreFallbackDefault(); bump(); });
+    writes.Action<string>("delete-fallback-table", race => { source.DeleteFallbackTable(race); bump(); });
+
         bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
         writes.Action<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
         writes.Action<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
@@ -621,17 +661,54 @@ public static class UsKernelSettingsHost
                 source.SetXenotypeFilter("");
                 source.SetPackFilter("");
                 source.SetSearchText("");
+                // D4: "All" clears the two domain searches too - one gesture, one honest answer.
+                source.SetRaceSearchText("");
+                source.SetXenotypeSearchText("");
                 bump();
             });
+        // D4 per-card Clear: the card's OWN narrowing resets - dropdown to All, its search to empty.
+        // The browsed selection is deliberately untouched (Clear filters the list, it does not leave
+        // it) - the label says "Clear filters" for exactly that reason. Registered as COMMANDS: the
+        // declarative button carries no payload.
+        writes.Command("clear-race-domain", () => { source.SetRaceFilter(""); source.SetRaceSearchText(""); bump(); });
+        writes.Command("clear-xenotype-domain", () => { source.SetXenotypeFilter(""); source.SetXenotypeSearchText(""); bump(); });
         // The filter dropdowns display translated labels but write machine tokens: the options
         // binding carries the (display, value) pair through, so a Chinese client never shows a raw
         // defName in the trigger or the list. Authors are proper nouns: display == value.
         bindings.BindOptions<FilterOptionView>("race-filter-options", () => source.BuildView().RaceFilterOptions);
         bindings.BindOptions<FilterOptionView>("xenotype-filter-options", () => source.BuildView().XenotypeFilterOptions);
+        // D4: the declarative card-header dropdowns read UiOption pairs (the dropdown kind's options
+        // contract); the FilterOptionView bindings above stay for the composites that map them.
+        bindings.BindOptions<UiOption>("race-domain-options", () =>
+        {
+            var list = new List<UiOption>();
+            foreach (FilterOptionView option in source.BuildView().RaceFilterOptions)
+            {
+                list.Add(new UiOption(option.DisplayName, option.Value));
+            }
+
+            return list;
+        });
+        bindings.BindOptions<UiOption>("xenotype-domain-options", () =>
+        {
+            var list = new List<UiOption>();
+            foreach (FilterOptionView option in source.BuildView().XenotypeFilterOptions)
+            {
+                list.Add(new UiOption(option.DisplayName, option.Value));
+            }
+
+            return list;
+        });
+
         bindings.BindOptions<FilterOptionView>("author-options", () => source.BuildView().Authors
             .Select(author => new FilterOptionView(author, author))
             .ToList());
         writes.Value<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
+        // D4: the two domain lists' own search boxes - same write/bump/read-back shape as the pack
+        // search, and the SAME predicate (UsChecklistFilter.QueryMatches), so all three boxes answer
+        // one rule.
+        writes.Value<string>("race-search-text", () => state.RaceSearchText, value => { source.SetRaceSearchText(value); bump(); });
+        writes.Value<string>("xenotype-search-text", () => state.XenotypeSearchText, value => { source.SetXenotypeSearchText(value); bump(); });
         // Step B-1: the declarative row set's identity projection - the ordered item keys of the selected
         // domain that the CURRENT search accepts, produced by the one predicate the composite widget's row
         // loop also uses (UsChecklistFilter). The query is read from the page state the "search-text"
@@ -656,6 +733,10 @@ public static class UsKernelSettingsHost
         bindings.BindReadOnly<bool>("checklist-empty-nodomain", () => !source.BuildView().SelectedDomain.HasValue);
         bindings.BindReadOnly<bool>("checklist-empty-domain", () => EmptyDomain(source, noRows: false));
         bindings.BindReadOnly<bool>("checklist-empty-search", () => EmptyDomain(source, noRows: true));
+        // D4: the two domain cards' empty notes - one bool per list, computed by the SAME projection
+        // that produced the row sets, so a note and a list can never both be on screen.
+        bindings.BindReadOnly<bool>("race-list-empty", () => source.BuildView().RaceListEmpty);
+        bindings.BindReadOnly<bool>("xenotype-list-empty", () => source.BuildView().XenotypeListEmpty);
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         writes.Action<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
@@ -825,61 +906,9 @@ public static class UsKernelSettingsHost
             });
         }
 
-        /// <summary>The row this key names in the CURRENT view, or null when the model dropped it. Null is a
-        /// legal frame: a row's node outlives its data for one frame, and the leaf's documented answer to an
-        /// unresolvable bound string is its empty default plus one report.</summary>
-        private RaceLayerRowView? RaceRow(string key)
-        {
-            IReadOnlyList<RaceLayerRowView> rows = source.BuildView().Races;
-            if (rows == null) return null;
-            for (int i = 0; i < rows.Count; i++)
-            {
-                if (string.Equals(rows[i].RaceDefName, key, StringComparison.Ordinal)) return rows[i];
-            }
-
-            return null;
-        }
-
-        private VoicePackDomainView? XenotypeRow(string key)
-        {
-            int split = key.IndexOf(RowKeySeparator);
-            if (split < 0) return null;
-
-            string race = key.Substring(0, split);
-            string target = key.Substring(split + 1);
-            IReadOnlyList<VoicePackDomainView> rows = source.BuildView().XenotypeDomains;
-            if (rows == null) return null;
-            for (int i = 0; i < rows.Count; i++)
-            {
-                if (string.Equals(rows[i].RaceDefName, race, StringComparison.Ordinal)
-                    && string.Equals(rows[i].TargetDefName, target, StringComparison.Ordinal))
-                {
-                    return rows[i];
-                }
-            }
-
-            return null;
-        }
-
-        private string Title(string key)
-        {
-            if (scope == SqueakVoicePackScope.Race)
-            {
-                RaceLayerRowView? row = RaceRow(key);
-                return row.HasValue
-                    ? UsPacksText.TitleWithState(translation, row.Value.DisplayName, row.Value.State)
-                    : "";
-            }
-
-            VoicePackDomainView? domain = XenotypeRow(key);
-            if (!domain.HasValue) return "";
-
-            // The xenotype row's title is the name qualified by its race's translated label - the same
-            // composition the composite drew, through the same resolver.
-            string name = UsPacksText.Format(
-                translation, UsPacksText.KeyXenotypeRaceContext, domain.Value.DisplayName, domain.Value.RaceDisplay);
-            return UsPacksText.TitleWithState(translation, name, domain.Value.State);
-        }
+        /// <summary>Title/Detail composition moved verbatim to <see cref="LayerRowText"/> so the D4
+        /// budget measures the SAME strings these bindings hand the rows; these are thin delegations.</summary>
+        private string Title(string key) => LayerRowText.Title(source, translation, scope, key);
 
         /// <summary>
         /// Whether THIS row is the selected domain. The predicate is the composite's own, kept verbatim: a
@@ -904,21 +933,7 @@ public static class UsKernelSettingsHost
                 && string.Equals(domain.Value.TargetDefName, key.Substring(split + 1), StringComparison.Ordinal);
         }
 
-        private string Detail(string key)
-        {
-            if (scope == SqueakVoicePackScope.Race)
-            {
-                RaceLayerRowView? row = RaceRow(key);
-                return row.HasValue
-                    ? UsPacksText.DetailText(translation, row.Value.EnabledCount, row.Value.CandidateCount)
-                    : "";
-            }
-
-            VoicePackDomainView? domain = XenotypeRow(key);
-            return domain.HasValue
-                ? UsPacksText.DetailText(translation, domain.Value.EnabledCount, domain.Value.CandidateCount)
-                : "";
-        }
+        private string Detail(string key) => LayerRowText.Detail(source, translation, scope, key);
     }
 
     /// <summary>

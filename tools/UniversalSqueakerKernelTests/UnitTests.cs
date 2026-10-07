@@ -291,12 +291,18 @@ public static class UnitTests
 
         Check(FallbackProfileOperations.DecideCopy(source, delta, 3, true) == CopyDisposition.RebuildFromSource,
             "fallback corrupt copy rebuilds from source", ref failures);
-        Check(FallbackProfileOperations.DecideCopy(source, delta, 2, false) == CopyDisposition.RebuildFromSource,
-            "fallback older copy rebuilds from source", ref failures);
+        // VF1 finalized ruling (2026-10-07): a version bump NEVER drops the player's delta - only
+        // corruption rebuilds. The old "older copy rebuilds from source" verdict was the E-scenario
+        // defect this replaces.
+        Check(FallbackProfileOperations.DecideCopy(source, delta, 2, false) == CopyDisposition.MergeDelta,
+            "fallback older copy KEEPS its delta (version bump is not a deletion trigger)", ref failures);
         Check(FallbackProfileOperations.DecideCopy(source, delta, 3, false) == CopyDisposition.MergeDelta,
             "fallback current copy with delta merges", ref failures);
         Check(FallbackProfileOperations.DecideCopy(source, null, 3, false) == CopyDisposition.KeepCopy,
             "fallback current copy without delta keeps copy", ref failures);
+        Check(FallbackProfileOperations.DecideCopy(source, null, 1, false) == CopyDisposition.KeepCopy
+                && FallbackProfileOperations.NeedsRestamp(source, 1),
+            "fallback stale clean copy keeps content but needs a version re-stamp", ref failures);
         Check(FallbackProfileOperations.DecideCopy(source, new FallbackDelta(new Dictionary<string, string>()), 3, false) == CopyDisposition.MergeDelta,
             "fallback current copy with explicit empty delta merges", ref failures);
 
@@ -304,6 +310,33 @@ public static class UnitTests
         Check(merged.Race == source.Race && merged.Version == source.Version
             && merged.SoundKeys["Call"] == "Core_Call_Override" && merged.SoundKeys["Eat"] == "US_Eat_Source",
             "fallback merge preserves source identity and untouched keys", ref failures);
+
+        // VF1: the empty sound value is the LEGAL explicit delete marker - the key is present (the
+        // player touched it) but resolves to no sound; merge removes the source entry.
+        FallbackDelta withDelete = new(new Dictionary<string, string>
+        {
+            ["Call"] = "Core_Call_Override",
+            ["Eat"] = "",
+        });
+        FallbackProfile deleted = FallbackProfileOperations.Merge(source, withDelete);
+        Check(deleted.SoundKeys["Call"] == "Core_Call_Override" && !deleted.SoundKeys.ContainsKey("Eat")
+                && !deleted.TryGetSoundKey("Eat", out _),
+            "fallback delete marker removes the source entry while other keys merge normally", ref failures);
+        FallbackProfile playerOnly = FallbackProfileOperations.Merge(
+            new FallbackProfile(Scenarios.RaceA, 0, new Dictionary<string, string>()), withDelete);
+        Check(playerOnly.SoundKeys.Count == 1 && playerOnly.SoundKeys["Call"] == "Core_Call_Override",
+            "a player-only table merges over the empty profile (delete markers of absent keys are inert)",
+            ref failures);
+        bool nullRejected = false;
+        try
+        {
+            _ = new FallbackDelta(new Dictionary<string, string> { ["Call"] = null! });
+        }
+        catch (ArgumentException)
+        {
+            nullRejected = true;
+        }
+        Check(nullRejected, "a NULL sound is still rejected - only the empty string is the marker", ref failures);
 
         bool rejected = false;
         try

@@ -5,47 +5,28 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — current queue (2026-10-06, SA1)
+## NOW — checkpoint acceptance (2026-10-07)
 
-BH1's observed help, position, font and pointer behavior was accepted on the held US `d770ae2`
-package. Scroll distance remains a nonblocking UX deferral; the new synthetic 3.04 ratio is recorded
-in PM evidence and is not a human measurement. Held FL `0181268` and Demo `9d4b7e0` remain paired.
+The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
+status and paired package identities are authoritative in the PM checkpoint evidence and manifest:
+`../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/`.
+The new candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
 
-SA1 source is technically checked; PM integration/candidate export is the next step. Real-game
-selector/grey-thumb/hover appearance, modal text fit and native keyboard behavior remain open.
-DX1 diagnostics and Packs D4 remain independent follow-ups; the D4 search discussion precedes its
-implementation. Scope and acceptance: `../modding_documents/relay_mod/SA1-CONTRACT-20261005.md`.
-- The user reaffirmed C1/C2 as normal, keeping the original IDs; verbatim feedback and runtime evidence are
-  in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`. Remaining coverage limits are in
-  `../modding_documents/relay_mod/PM_HANDOFF.md`; they are distinct from human observations.
-- [ ] **Remaining in-game observations of the landed UI rounds** - do not re-run or re-claim their
-  technical passes, and do not repeat the V1/B3 observations the user already gave. All are US-only with no
-  carrier change and a single FL carrier.
-  - **RPT1 report-button feedback**: observe the adjacent refusal/wait/success sentence in a new package.
-  - **XG1 empty xenotype target**: observe the unavailable message and that the layer can still be left.
-  - **V2 Packs**: observe filter -> race/xenotype browse -> pack-enable order, the switch-shaped per-pack
-    enable and the read-only scope line. Disclosed change: the filter band no longer draws the help-focus
-    border (a Section + `us/section-header` now; no other Packs band had one). With BH1 open, the enable
-    card starts 2.90 current viewports down: assess scrolling comfort and native wheel reachability.
-  - **V3 Tuning**: observe layer/domain -> action scope -> mood order, the no-longer width-suppressed
-    inherited-scope hint, and per-factor provenance with the preset shown only as a labelled reset target.
-  - **V4 Distance/Presets/footer**: observe the camera-height axis wording, the read-only baseline note
-    versus current Tuning values, and the footer keeping dirty/saving/failure plus the build identity.
-  - **B3 help/settings coexistence**: observed usable at 1024x768 with the OLD side-column shape. BH1
-    (2026-10-05) replaced that shape with the bottom band, so what is left to observe in game is the NEW
-    one: the footer switch opening and closing the panel without moving or widening the window, the panel
-    scrolling on its own while the settings keep their place, and the save-status line staying readable
-    beside the switch.
-- **BH1 bottom help implemented and locally verified; package/playtest remains open.** The 140px panel
-  opens above the footer switch without changing window width; stable machine identifiers are retained.
-  Contract and acceptance detail: `../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`
-  and its `evidence/bh1-bottom-help-20261005/pm-result.json`. Synthetic save-state fit does not verify
-  untriggered in-game saves; real fonts, pointer feel and independent wheel routing still need playtest.
-- **Deferred (unchanged)**: tuning-layer redesign, composite splitting and further page-layout changes.
-  A new team starting here reads `MEMORY.md` first and treats the deferred list below as the standing
-  scope boundary.
-
-Untriggered cases stay untested; a Release carrier is a refusal-control case, not the current rehearsal input.
+- [ ] **Whole-checkpoint human tasks**, per `../modding_documents/relay_mod/PLAYTEST-CHECKPOINT-20261007.md`:
+  select/search/enable a pack; tune and import/restore PRE1 A then B; edit the per-race final native
+  fallback and confirm new-race admission after a full restart; use the compact US diagnostics and
+  settings developer tools at 1024x768. Real fonts, native input, actual playback and game Scribe
+  persistence remain human evidence, distinct from local checks and type-loading stubs.
+- [ ] **PRE1 fixture acceptance:** use the Ratkin work copy outside US-testpack-archive, keep both
+  originals untouched, and preserve current Config before import. Removing test Defs does not undo
+  already imported settings. Restoring one field, one row and a preset must have distinguishable results.
+- **Already accepted:** BH1 help usability, same-window position, real-font footer/long-help appearance,
+  independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline.
+  Do not repeat these as separate matrices or reinstate mandatory whitespace. Observe regressions only.
+- **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below. Tuning redesign,
+  D4 page layout, final native fallback and US diagnostics ARE part of this checkpoint, not deferred work.
+- Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
+  rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
 
 ## Open decisions / blocked on the maintainer or on FL
 
@@ -101,25 +82,19 @@ Untriggered cases stay untested; a Release carrier is a refusal-control case, no
 
 ## Deferred / backlog (durable detail in `MEMORY.md` or `OBLIVIONIS.md`; not this round)
 
-- [ ] **D7 mood rows work surface** (the full text with file:line anchors is in `OBLIVIONIS.md`): no
-  hand-written thresholds or fixed bands; help lands on the factor name itself; Auto semantics move to field
-  level; **the editor's value chain is missing its author-baseline bottom layer** (the real Auto defect - the
-  view model seeds from 1/1/One while the runtime seeds from the mounted comp's `Props.moodMods`); jitter is a
-  lossy projection of an asymmetric range; the action-row Auto destroys two multipliers the UI never shows; the
-  field-level clear is a spec amendment; the region shape is the maintainer's open fork; mood names are not
-  localized; `MoodLayoutFocusedTests` must be re-derived from new geometry, never relaxed.
+- [ ] **Mood follow-ups beyond the checkpoint:** re-evaluate asymmetric jitter representation and
+  author-baseline presentation against current production code before proposing another slice. Archive-era
+  claims do not establish a current defect or gate. The current multiplier editor, per-field inheritance,
+  resolved-label measurement and redesigned geometry belong to this checkpoint.
 - [ ] **Text fit / localization decisions**: review the proposed Chinese wordings before publication (routing
   modes, distance presets, filter labels, card titles - product vocabulary, not mechanical translation); decide
   the help-key naming tightening (it changes shipped bytes and forces a re-test).
-- [ ] **VoicePack routing-table content/fixture gaps**: escape-hatch fixture; author-side coverage fixture;
-  **built-in content decision** (no fallback/baseline Def ships, so `Vanilla` is silent for every pawn and
-  Presets can only show its empty state - author per-race profiles, or de-scope the tier and rename the mode;
-  do not explain the silence away as design); brand-boundary ruling for fixture packs carrying Ratkin/SR names;
-  the D8/F6 preset fixture.
-- [ ] **Diagnostics product calls**: the collapsed bar is still as wide as the expanded panel - measure and
-  shrink the width, or keep it and tighten the content; the expanded detail column shows blank space with
-  nothing selected - decide the empty state; over-long author names overlap in the dropdown popup - single-line
-  + ellipsis in the library (cross-repo) or rows that grow (moves the pinned popup-height lane).
+- [ ] **Further VoicePack author fixtures:** escape-hatch and author-side coverage remain deferred.
+  The checkpoint ships neutral Ratkin final-fallback data with Core audio references; PRE1 uses a separate
+  work-copy fixture and its human acceptance is owned by NOW, not an absent-content design decision.
+- [ ] **Diagnostics follow-ups beyond DX1:** re-price author-name dropdown overflow only on a current
+  reproduction. Collapsed/expanded/empty geometry and compact navigation are implemented in DX1 and
+  await the whole-checkpoint human task.
 - [ ] **0.5.x items A/B/C** (`MEMORY.md` "Release state and version scope"): (A) file-driven invocation + hot
   reload; (B) appearance file-driven + tier-2 granularity actually used; (C) structural migration.
 - [ ] **Route A re-price** and **optional tail**: the runtime harness does not cover the adapter
@@ -131,12 +106,9 @@ Untriggered cases stay untested; a Release carrier is a refusal-control case, no
   `usdiag evt=ui.text.overflow` stays silent (any new line is a fix target with an exact need/have pair).
 - [ ] **Remaining custom-page row shapes** belong to V2-V4. Overview already has local responsive parameter
   rows; do not revive the old proposal to raise the shared body breakpoint just to fix Overview.
-- [ ] **D4 Packs domain-selection redesign** (maintainer six-point spec): race/xenotype lists side by side, the
-  xenotype list follows race selection, dropdowns into their own cards, an explicit clear option, an independent
-  search box per list, visible list height 4.5 rows. The search-matching discussion precedes implementation.
-- [ ] **DX1 diagnostic-screenshot analysis** (the retained playtest diagnostics under the SA1 evidence
-  directory): NOT delivered - a future independent task per `SA1-CONTRACT-20261005.md`, never folded
-  into SA1 silently, alongside D4's own contract.
+- [ ] **D4/DX1 human acceptance:** part of NOW's whole-checkpoint tasks. D4's VisibleRows4.5 viewport
+  follows actual measured rows in the same pass, without a fixed 189px floor. DX1's real-shell state-change
+  guard checks the whole window position; live fonts, world data and pointer behavior remain human checks.
 - [ ] **MeowingKiiro skill-flow validation** (pack built, static green): the in-game pass - enable order,
   Kiiro-Race-domain tick, Fallback, Call/Select + spot-check, four modes, dispatch log - and record any
   skill-vs-implementation mismatch back into the production plan doc and the skill. Publication stays

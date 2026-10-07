@@ -30,7 +30,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// pre-V2 and V2 shapes are labelled GUARD and are not evidence). The filter band's three declaration clauses
 /// were each attributed by its OWN revert, measured:
 ///  - band back to the pre-V2 bare widget (id filter-layer -> filter-bar) → the ORDER clause reddens, because
-///    the declared id list stops matching [filter-layer, race-layer, xenotype-layer, checklist-card];
+///    the declared top-level id list stops matching [filter-layer, domain-row, checklist-card];
 ///  - the id kept but the band declared as a Widget (not a Section) → the "must be an engine Section" clause;
 ///  - the Section kept but without the header first child → the "must be title-first with the 26px
 ///    us/section-header" clause. The measured header-at-Padding+12 clause is the layout half behind those
@@ -66,8 +66,11 @@ internal static class PacksHierarchyLaneTests
 
     private static readonly Vector2 PageBox = PageBoxAt(MinimumScreenWidth, MinimumScreenHeight);
 
-    /// <summary>The Packs bands in declared reading order (P1).</summary>
-    private static readonly string[] PacksBandOrder = { "filter-layer", "race-layer", "xenotype-layer", "checklist-card" };
+    /// <summary>The Packs bands in declared top-level order (P1). D4 (2026-10-07): the two browse
+    /// cards moved INSIDE one domain-row Row (side by side, stacked under the page breakpoint), so the
+    /// top-level list is filter -> browse row -> enable and the browse order is pinned inside the row.</summary>
+    private static readonly string[] PacksBandOrder = { "filter-layer", "domain-row", "checklist-card" };
+    private static readonly string[] PacksBrowseCards = { "race-layer", "xenotype-layer" };
 
     /// <summary>
     /// P5 completeness: the Packs elements the slice must not lose. Ids only, because the per-element
@@ -152,15 +155,27 @@ internal static class PacksHierarchyLaneTests
             .ToList();
 
         Assert(packs.Select(p => p.Id).SequenceEqual(PacksBandOrder),
-            "the Packs tab must declare exactly filter -> race browse -> xenotype browse -> enable, in that"
+            "the Packs tab must declare exactly filter -> domain browse row -> enable at the top level, in that"
             + " order; got [" + string.Join(", ", packs.Select(p => p.Id)) + "]");
 
-        foreach (UiElementSpec band in packs)
+        // D4: race browse -> xenotype browse is declared INSIDE the row, in that order (left to right).
+        UiElementSpec domainRow = packs.Single(p => p.Id == "domain-row");
+        Assert(domainRow.Kind == "Row"
+                && domainRow.Children.Select(c => c.Id).SequenceEqual(PacksBrowseCards),
+            "the domain browse row must be a Row declaring race browse -> xenotype browse, in that order;"
+            + " got " + domainRow.Kind + " [" + string.Join(", ", domainRow.Children.Select(c => c.Id)) + "]");
+        // The wrapper is not a fifth card: it carries no card chrome of its own.
+        Assert(domainRow.TryGetAttribute("Padding", out string rowPadding) && rowPadding == "0",
+            "'domain-row' must declare Padding 0 - it is a wrapper, not a card; got '" + rowPadding + "'");
+
+        // Card rhythm applies to the four BUSINESS cards wherever they are declared.
+        var cards = packs.Where(p => p.Id != "domain-row").Concat(domainRow.Children).ToList();
+        foreach (UiElementSpec band in cards)
         {
             // The filter band became a Section in V2; before it, this was false for filter-bar (a bare widget
             // drawing its own plain title), which is the revert this proof names.
             Assert(band.Kind == "Section",
-                "'" + band.Id + "' must be an engine Section so every Packs band gets the same card chrome, got "
+                "'" + band.Id + "' must be an engine Section so every Packs card gets the same card chrome, got "
                 + band.Kind);
             Assert(band.TryGetAttribute("Padding", out string padding) && padding == "12",
                 "'" + band.Id + "' must declare the card Padding 12, got '" + padding + "'");
@@ -173,8 +188,9 @@ internal static class PacksHierarchyLaneTests
                 "'" + band.Id + "' must not nest another card Section (V2 keeps the frame count down)");
         }
 
-        // Measured: the declared order IS the drawn order at the acceptance box, one card Padding between a
-        // band's top and its header.
+        // Measured: the declared order IS the drawn order at the acceptance box - the three top-level bands
+        // stack, the two browse cards sit side by side (equal y, race left), and every card keeps the
+        // one-Padding header offset.
         var metrics = new Program.StubMetrics();
         using UiHost measured = UsKernelSettingsHost.Create(
             new RecordingSettingsSource { RichData = true, WrappingDomainText = true }, metrics);
@@ -189,7 +205,17 @@ internal static class PacksHierarchyLaneTests
             Assert(bandRect.y > previousY,
                 "'" + band.Id + "' must be drawn below the band before it (declared order is the drawn order)");
             previousY = bandRect.y;
+        }
 
+        Rect raceRect = snapshot.RectById["race-layer"];
+        Rect xenoRect = snapshot.RectById["xenotype-layer"];
+        Assert(Math.Abs(raceRect.y - xenoRect.y) <= 0.5f && raceRect.x < xenoRect.x,
+            "the browse cards must sit side by side, race left, at the acceptance box: race "
+            + Describe(raceRect) + " xenotype " + Describe(xenoRect));
+
+        foreach (UiElementSpec band in cards)
+        {
+            Rect bandRect = snapshot.RectById[band.Id];
             string headerId = band.Children[0].Id;
             Assert(snapshot.RectById.TryGetValue(headerId, out Rect header),
                 "the band header '" + headerId + "' must be arranged");
@@ -199,7 +225,9 @@ internal static class PacksHierarchyLaneTests
         }
 
         Console.WriteLine("[v2-order] " + string.Join(" ", packs.Select(p => p.Id + "@"
-            + Num(snapshot.RectById[p.Id].y))) + " headerOffset=12");
+            + Num(snapshot.RectById[p.Id].y))) + " browse=[" + string.Join(" ", cards
+            .Where(c => c.Id != "filter-layer" && c.Id != "checklist-card")
+            .Select(c => c.Id + "@" + Num(snapshot.RectById[c.Id].y))) + "] headerOffset=12");
     }
 
     // P2 - browse vs enable expression.

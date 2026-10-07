@@ -30,7 +30,6 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     private bool lastCollapsed;
     private bool lastEmpty;
     private bool opened;
-    private Rect expandedRect = Rect.zero;
 
     public SqueakDiagnosticsPanel()
     {
@@ -66,15 +65,36 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     /// <summary>Content height while nothing is selected: the search row, the list header and the empty note.</summary>
     internal const float EmptyStateContentHeight = 240f;
 
-    /// <summary>The wide master/detail content size, used once a row is selected.</summary>
+    /// <summary>The wide master/detail content width, used once a row is selected.</summary>
     internal const float ExpandedContentWidth = 680f;
 
-    /// <summary>The wide master/detail content height.</summary>
+    /// <summary>The wide master/detail content height, used once a row is selected AND the scaled
+    /// screen is non-compact (DX1.2: <see cref="WideMinimumScreenHeight"/> plus the fit checks).</summary>
     internal const float ExpandedContentHeight = 560f;
+
+    /// <summary>DX1.2: content height of the NARROW selected shape - the in-window list/detail with
+    /// Back, search and paging kept - used on compact scaled screens and whenever the wide
+    /// 680x(76+560)=680x636 outer window would not fit. The DX1 ruling records the starting point
+    /// 600x~456 outer; the measured value this slice ships with is 600x(76+380)=600x456.</summary>
+    internal const float NarrowSelectedContentHeight = 380f;
+
+    /// <summary>DX1.2 (r2): the scaled screen height from which the wide master/detail may be
+    /// chosen at all. 900 puts the whole 768 class (1024x768 at 100% = 768, at 125% = 614) on the
+    /// narrow navigation shape per the contract, and keeps the 1080 class at 100%/110%
+    /// (1080/982) on the existing master/detail. A pure "does 636 fit" test was the defect this
+    /// constant closes: it passed at 1024x768.</summary>
+    internal const float WideMinimumScreenHeight = 900f;
+
+    /// <summary>DX1.1: the shell's REAL chrome budget - the title bar plus the bottom inset that
+    /// ContentRect subtracts. Every state's outer height is THIS plus the state's content height;
+    /// chrome is never reverse-derived from a content rect that may itself have been clamped (the
+    /// old 44px outer first frame clamped the content to 1px and the panel then "measured" 43px of
+    /// chrome out of the wreckage).</summary>
+    private float ChromeHeight => TitleBarHeight + SidePadding;
 
     protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
         Mathf.Clamp(CollapsedWidth, 320f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
-        UsDiagBarWidget.BarHeight);
+        ChromeHeight + BarContentHeight);
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -101,8 +121,14 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         // `SqueakLog.ShouldEmitDev` remains the FIT-AUDIT policy (unchanged); it no longer decides whether a
         // scope exists, because the layout-diagnosis commands need one in every mode.
         audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        // DT1 (user ruling): the diagnostics panel is NOT a settings-dev-panel target - its outline is
+        // switched only by its own Debug Action, which reads LiveHostForDebug below.
         return host;
     }
+
+    /// <summary>DT1: the panel's live page host for the Debug Actions outline toggle (null before the
+    /// first pass and after teardown - callers treat null as "nothing to toggle").</summary>
+    internal UiHost? LiveHostForDebug => Host;
 
     /// <summary>The window owns collapsed GEOMETRY (the source owns the flag): shrink to a bar of
     /// chrome + one row, restore the remembered rect on expand.</summary>
@@ -141,18 +167,64 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
             return;
         }
 
-        float chrome = Math.Max(0f, windowRect.height - contentRect.height);
-        float screenCap = Math.Max(120f, Verse.UI.screenWidth - 40f);
-        float width = collapsed
-            ? Math.Min(CollapsedWidth, screenCap)
-            : empty
-                ? Math.Min(EmptyStateWidth, screenCap)
-                : Math.Min(ExpandedContentWidth, screenCap);
-        float height = collapsed
-            ? chrome + BarContentHeight
-            : chrome + (empty ? EmptyStateContentHeight : ExpandedContentHeight);
-        windowRect = new Rect(windowRect.x, windowRect.y, width, height);
+        // DX1.2 (r2 correction): "636 fits inside 728" is NOT the contract's condition - at
+        // 1024x768 both old fits were true and the panel still picked the 680x636 master/detail,
+        // which the contract explicitly rejects. The wide shape now additionally requires a
+        // NON-COMPACT scaled screen: WideMinimumScreenHeight (900) keeps the 768 class - the
+        // user's real 1024x768 at 100% AND 125% UI scale (768 and 614) - on the narrow
+        // navigation shape at 600x456, while the 1080 class at 100%/110% (1080/982) keeps the
+        // existing master/detail. Recorded scaled inputs: 1024x768@1.0 -> 768 < 900 -> narrow;
+        // 1920x1080@1.0 -> 1080 >= 900 -> wide; 1920x1080@1.25 -> 864 < 900 -> narrow (the
+        // honest consequence of the same rule at high scale, listed for the human check).
+        // Heights: collapsed 76+44=120, empty 76+240=316, narrow selected 76+380=456,
+        // wide selected 76+560=636; the final clamp keeps the whole window - not a 24px grab
+        // strip - inside the screen. The first collapse and a collapse-after-expand run through
+        // THIS rule, so both land on the same geometry (DX1.1's symmetry clause).
+        float screenCapW = Math.Max(320f, Verse.UI.screenWidth - 40f);
+        float maxOuterH = Math.Max(ChromeHeight + BarContentHeight, Verse.UI.screenHeight - 40f);
+        bool fitsWide = !collapsed && !empty
+            && Verse.UI.screenHeight >= WideMinimumScreenHeight
+            && ChromeHeight + ExpandedContentHeight <= maxOuterH
+            && ExpandedContentWidth <= screenCapW;
+        float width;
+        float contentHeight;
+        if (collapsed)
+        {
+            width = Math.Min(CollapsedWidth, screenCapW);
+            contentHeight = BarContentHeight;
+        }
+        else if (empty)
+        {
+            width = Math.Min(EmptyStateWidth, screenCapW);
+            contentHeight = EmptyStateContentHeight;
+        }
+        else if (fitsWide)
+        {
+            width = Math.Min(ExpandedContentWidth, screenCapW);
+            contentHeight = ExpandedContentHeight;
+        }
+        else
+        {
+            width = Math.Min(EmptyStateWidth, screenCapW);
+            contentHeight = NarrowSelectedContentHeight;
+        }
 
+        float height = Math.Min(ChromeHeight + contentHeight, maxOuterH);
+        // DX1.2 (PM review 2026-10-07): a STATE change must keep the WHOLE window inside the scaled
+        // screen, so the position is corrected against the FINAL outer size, not only against the
+        // 24px grab strip. A centred 1024x768 first open (bar y=324, h=120) that expands to 600x456
+        // would otherwise put bottom=780 past the screen; the same rule catches a player-dragged low
+        // collapsed bar. Ordinary dragging is untouched: WindowOnGUI keeps its grab-strip clamp for
+        // moves that do not change the size.
+        float x = windowRect.x;
+        float y = windowRect.y;
+        if (collapsed != lastCollapsed || empty != lastEmpty)
+        {
+            x = Mathf.Clamp(x, 0f, Mathf.Max(0f, Verse.UI.screenWidth - width));
+            y = Mathf.Clamp(y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - height));
+        }
+
+        windowRect = new Rect(x, y, width, height);
         lastCollapsed = collapsed;
         lastEmpty = empty;
     }

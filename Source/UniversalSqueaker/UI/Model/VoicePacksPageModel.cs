@@ -1,8 +1,11 @@
 using System;
+using UniversalSqueaker.Kernel;
 using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using Verse;
+
+using UniversalSqueaker.Runtime;
 
 namespace UniversalSqueaker.UI;
 
@@ -42,6 +45,14 @@ public static class VoicePacksPageModel
         List<FilterOptionView> raceFilterOptions = BuildRaceFilterOptions(races);
         List<FilterOptionView> xenotypeFilterOptions = BuildXenotypeFilterOptions(xenotypes, state.RaceFilter);
 
+        // D4: each domain list narrows additionally by its OWN search box (the one shared substring
+        // rule, UsChecklistFilter.QueryMatches - display name and internal defName are both searchable)
+        // and the xenotype list FOLLOWS the selected race: while a race row is the browsed domain, only
+        // that race's xenotypes (plus race-less global ones) stay listed. Selecting a xenotype row
+        // leaves the list untouched, and clearing the race selection (or the card's Clear control)
+        // restores the full list - the browsed selection is the only input the follow reads.
+        bool followRace = state.SelectedScope == SqueakVoicePackScope.Race
+            && !string.IsNullOrEmpty(state.SelectedRaceDefName);
         List<RaceLayerRowView> filteredRaces = races
             .Where(race => VoicePacksFilters.DomainMatches(
                 false,
@@ -50,7 +61,8 @@ public static class VoicePacksPageModel
                 race.State == SqueakVoicePackDomainState.Orphan,
                 race.EnabledCount > 0,
                 in state.DomainFilter)
-                && VoicePacksFilters.RaceFilterMatches(state.RaceFilter, race.RaceDefName))
+                && VoicePacksFilters.RaceFilterMatches(state.RaceFilter, race.RaceDefName)
+                && UsChecklistFilter.QueryMatches(state.RaceSearchText, race.DisplayName, race.RaceDefName))
             .ToList();
         List<VoicePackDomainView> filteredXenotypes = xenotypes
             .Where(domain => VoicePacksFilters.DomainMatches(
@@ -64,8 +76,20 @@ public static class VoicePacksPageModel
                     state.RaceFilter,
                     state.XenotypeFilter,
                     domain.RaceDefName,
-                    domain.TargetDefName))
+                    domain.TargetDefName)
+                && (!followRace
+                    || string.IsNullOrEmpty(domain.RaceDefName)
+                    || string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal))
+                && UsChecklistFilter.QueryMatches(
+                    state.XenotypeSearchText, domain.DisplayName, domain.TargetDefName, domain.RaceDefName))
             .ToList();
+
+        // The per-list empty note shows when the list went empty while entries exist (or a search is
+        // active) - an unadopted page with no search keeps the banner as its only message.
+        bool raceListEmpty = filteredRaces.Count == 0
+            && (races.Count > 0 || state.RaceSearchText.Trim().Length > 0);
+        bool xenotypeListEmpty = filteredXenotypes.Count == 0
+            && (xenotypes.Count > 0 || state.XenotypeSearchText.Trim().Length > 0);
 
         IReadOnlyList<string> authors = CollectAuthors(settings, catalog);
 
@@ -82,13 +106,20 @@ public static class VoicePacksPageModel
         IReadOnlyList<TuningDomainOptionView> tuningDomains = BuildTuningDomains(settings, catalog, state.TuningLayer, ref tuningRace, ref tuningXeno);
         state.TuningRaceDefName = tuningRace;
         state.TuningXenotypeDefName = tuningXeno;
-        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
+        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno, settings.BabyActionsEnabled);
         IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
         string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
         string saveStatus = UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks, settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled, settings.eatPrecisionIncludeDrugs, settings.allowBabyActions);
+        // VF1定稿: the fallback editor's projection - supported races (maintainer tables ∪ player
+        // tables), the selected race's closed-17 entry rows, and the two query-filtered candidate
+        // lists. Computed here, from the live store, so the editor and the routing read ONE answer.
+        BuildFallbackProjection(state, out int tuningArea, out List<FallbackRaceView> fallbackRaces,
+            out string fallbackRace, out List<FallbackEntryView> fallbackEntries,
+            out List<FilterOptionView> fallbackSounds, out List<FilterOptionView> fallbackCandidates);
+
+        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks, settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled, settings.eatPrecisionIncludeDrugs, settings.allowBabyActions, raceListEmpty, xenotypeListEmpty, tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates, state.FallbackStatusKey);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -356,45 +387,83 @@ public static class VoicePacksPageModel
     /// <summary>S5 分层 scope 投影：17 内置动作 × 当前调音层。行携带本层记录（HasOwnScope/Scope）与
     /// 有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins，与运行时同规则）。
     /// 外部动作键不在编辑器范围内（与 BuildGlobalActions 的 YAGNI 契约一致）。</summary>
-    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno)
+    // The baby-eligibility flag arrives as a parameter (the caller reads settings.BabyActionsEnabled):
+    // the fold itself must not touch ModsConfig, so the real-writer/real-fold lane can run in the
+    // stub harness where Verse.ModsConfig is not loadable (the same reason BuildBannerText takes
+    // biotech as an argument).
+    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno, bool babyEnabled)
     {
         List<ActionScopeRowView> rows = new();
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             if (!SqueakActionDefinitions.IsKnown(action)) continue;
-            if (!SqueakActionDefinitions.IsEligible(action, settings.BabyActionsEnabled)) continue;
+            if (!SqueakActionDefinitions.IsEligible(action, babyEnabled)) continue;
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
             SqueakActionDefinition definition = SqueakActionDefinitions.Get(action);
             SqueakActionScope effective = definition.DefaultScope;
             ActionScopeGroup group = ActionScopeRules.GroupFor(action);
             bool hasOwn = false;
             SqueakActionScope own = effective;
-            // 按层优先级折叠（Default < Global < Race < Xeno）；同层多条按列表顺序后写胜出（与运行时 Merge 一致）。
-            int bestLayer = -1;
+            // PRE1/VF1定稿 A1: the three fields fold INDEPENDENTLY, exactly like the runtime merge
+            // (field-level last-wins over Default < Global < Race < Xenotype). One loop pass reads
+            // every matching record; each field keeps its own best layer and value, so a row can
+            // mix an inherited interval with a local probability and still tell the truth about
+            // both. The anchor (sourcePresetDefName) rides the CURRENT-layer identity like the
+            // mood rows: it proves what reset-to-preset may target, never where a value came from.
+            int bestScope = -1;
+            int bestInterval = -1;
+            int bestProbability = -1;
+            float effectiveInterval = 1f;
+            float effectiveProbability = 1f;
+            bool hasOwnInterval = false;
+            bool hasOwnProbability = false;
+            float ownInterval = 1f;
+            float ownProbability = 1f;
+            string anchor = "";
             foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
             {
-                if (record == null || record.IsValidLayer(out int recordLayer) == false || !record.hasScope) continue;
+                if (record == null || record.IsValidLayer(out int recordLayer) == false) continue;
                 if (!string.Equals(record.actionKey, key, StringComparison.Ordinal)) continue;
                 bool layer0 = recordLayer == 0;
                 bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
                 bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
                     && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
-                if ((layer0 || layer1 || layer2) && recordLayer >= bestLayer)
-                {
-                    bestLayer = recordLayer;
-                    effective = record.scope;
-                }
+                bool supplies = layer0 || layer1 || layer2;
                 bool isOwn = recordLayer == layer
                     && (layer == 0
                         || (layer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal))
                         || (layer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal) && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal)));
+
+                if (record.hasScope && supplies && recordLayer >= bestScope)
+                {
+                    bestScope = recordLayer;
+                    effective = record.scope;
+                }
+                if (record.hasIntervalMultiplier && supplies && recordLayer >= bestInterval)
+                {
+                    bestInterval = recordLayer;
+                    effectiveInterval = record.intervalMultiplier;
+                }
+                if (record.hasProbabilityMultiplier && supplies && recordLayer >= bestProbability)
+                {
+                    bestProbability = recordLayer;
+                    effectiveProbability = record.probabilityMultiplier;
+                }
                 if (isOwn)
                 {
-                    hasOwn = true;
-                    own = record.scope;
+                    if (record.hasScope) { hasOwn = true; own = record.scope; }
+                    if (record.hasIntervalMultiplier) { hasOwnInterval = true; ownInterval = record.intervalMultiplier; }
+                    if (record.hasProbabilityMultiplier) { hasOwnProbability = true; ownProbability = record.probabilityMultiplier; }
+                    if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
                 }
             }
-            rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), group, own, action, hasOwn, effective));
+            Tuple<bool, bool, string> preset = ResolveActionPreset(anchor, key, race, xeno);
+            rows.Add(new ActionScopeRowView(
+                key, SqueakLabels.Action(action), group, own, action, hasOwn, effective,
+                hasOwnInterval, ownInterval, hasOwnProbability, ownProbability,
+                effectiveInterval, effectiveProbability,
+                bestInterval, bestProbability,
+                anchor.Length > 0, preset.Item1 && preset.Item2, preset.Item3));
         }
         return rows;
     }
@@ -473,9 +542,21 @@ public static class VoicePacksPageModel
     private static Tuple<bool, bool, string> ResolveMoodPreset(string source, SqueakMood mood, string race, string xeno)
     {
         UniversalSqueakerTuningBaselineDef? preset = source.Length > 0
-            ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source)
+            ? SqueakGameDefs.BaselineByName(source)
             : null;
         bool hasEntry = preset != null && UniversalSqueakerSettings.TryFindMoodBaseline(preset, mood, race, xeno, out _);
+        return Tuple.Create(preset != null, hasEntry, preset != null ? ResolvePresetLabel(preset) : "");
+    }
+
+    /// <summary>VF1定稿 A1: the action-side twin of <see cref="ResolveMoodPreset"/> - does the
+    /// anchor resolve to a Def, and does that Def carry an entry for THIS action at this identity.
+    /// The label is the reset TARGET's name, never a provenance claim.</summary>
+    private static Tuple<bool, bool, string> ResolveActionPreset(string source, string actionKey, string race, string xeno)
+    {
+        UniversalSqueakerTuningBaselineDef? preset = string.IsNullOrEmpty(source)
+            ? null
+            : SqueakGameDefs.BaselineByName(source);
+        bool hasEntry = preset != null && UniversalSqueakerSettings.TryFindActionBaseline(preset, actionKey, race, xeno, out _);
         return Tuple.Create(preset != null, hasEntry, preset != null ? ResolvePresetLabel(preset) : "");
     }
 
@@ -483,7 +564,7 @@ public static class VoicePacksPageModel
     private static IReadOnlyList<BaselinePresetView> BuildBaselinePresets(VoicePacksPageState state)
     {
         List<BaselinePresetView> result = new();
-        foreach (UniversalSqueakerTuningBaselineDef preset in DefDatabase<UniversalSqueakerTuningBaselineDef>.AllDefs)
+        foreach (UniversalSqueakerTuningBaselineDef preset in SqueakGameDefs.AllBaselines())
         {
             if (preset == null) continue;
             BaselinePresetSelection selection = GetOrCreatePresetSelection(state, preset.defName);
@@ -605,7 +686,7 @@ public static class VoicePacksPageModel
     private static void ImportBaselinePreset(UniversalSqueakerSettings settings, string presetDefName, VoicePacksPageState state)
     {
         if (string.IsNullOrEmpty(presetDefName)) return;
-        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(presetDefName);
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(presetDefName);
         if (preset == null) return;
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
         BaselinePresetImporter.Selection importSelection = new();
@@ -1035,6 +1116,20 @@ public static class VoicePacksPageModel
         state.SearchText = text ?? "";
     }
 
+    /// <summary>D4: the race list's own search text (shared substring rule; empty = no narrowing).</summary>
+    public static void SetRaceSearchText(VoicePacksPageState state, string text)
+    {
+        if (state == null) return;
+        state.RaceSearchText = text ?? "";
+    }
+
+    /// <summary>D4: the xenotype list's own search text.</summary>
+    public static void SetXenotypeSearchText(VoicePacksPageState state, string text)
+    {
+        if (state == null) return;
+        state.XenotypeSearchText = text ?? "";
+    }
+
     // The hover-claim machine (D10 grace) moved to UiSession with FL 0.3.0 P3: widgets claim through
     // UsKernelDraw.HelpHover -> Session.ClaimHover, and the panel/border read Session.HoverClaim. The
     // pinned-selection channel stays retired with the index list (D2 ruling, 2026-09-05) - hover is
@@ -1045,6 +1140,38 @@ public static class VoicePacksPageModel
         if (state == null || string.IsNullOrEmpty(actionKey)) return;
         ApplyActionTuningScope(settings, state, actionKey, scope);
     }
+
+    /// <summary>VF1定稿 A2: multiplier write facade - the identity is the CURRENT tuning layer's
+    /// (race, xeno), guarded exactly like <see cref="SetActionScope"/>; value == null clears the
+    /// field (restore inheritance).</summary>
+    public static void SetActionTuningMultiplier(
+        UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, bool intervalField, float? value)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        settings.SetActionTuning(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, intervalField, value);
+    }
+
+    /// <summary>VF1定稿 A4: action reset-to-preset facade, the mood side's shape: the current-layer
+    /// identity's last-wins anchor names the preset; no anchor or no resolvable entry = no-op.</summary>
+    public static void ResetActionTuningToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        string anchor = "";
+        foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
+        {
+            if (record == null || !string.Equals(record.actionKey, actionKey, StringComparison.Ordinal)) continue;
+            if (record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
+            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", state.TuningRaceDefName ?? "", StringComparison.Ordinal)) continue;
+            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", state.TuningXenotypeDefName ?? "", StringComparison.Ordinal)) continue;
+            if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
+        }
+        if (anchor.Length == 0) return;
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(anchor);
+        settings.ResetActionTuningToPreset(actionKey, state.TuningRaceDefName ?? "", state.TuningXenotypeDefName ?? "", preset);
+    }
+
 
     public static void SetMoodTuning(
         UniversalSqueakerSettings settings,
@@ -1093,7 +1220,7 @@ public static class VoicePacksPageModel
         }
         if (source.Length == 0) return;
 
-        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source);
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(source);
         settings.ResetMoodTuningToPreset(mood, race, xeno, preset);
     }
 
@@ -1141,6 +1268,303 @@ public static class VoicePacksPageModel
     {
         if (string.IsNullOrEmpty(raceDefName)) return;
         ApplyForgetUnavailable(settings, scope, raceDefName, targetDefName);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // VF1 final-fallback editor: projection + commands (the store is the single authority)
+    // -----------------------------------------------------------------------------------------
+
+    /// <summary>The editor's projection over the LIVE store. Supported races = every table the
+    /// store resolved (maintainer data ∪ player files, per the VF1 support-set rule); entries are
+    /// the closed 17-key set; sound candidates are loaded SoundDefs filtered by the query and
+    /// labelled with the current production availability state - an unprobed sound says "unknown",
+    /// never "missing" (menu context has no map). Create candidates come from the loaded pawn
+    /// ThingDefs, so a race with no VoicePack at all (Monolyn) is a legal new table.</summary>
+    private static void BuildFallbackProjection(
+        VoicePacksPageState state,
+        out int tuningArea,
+        out List<FallbackRaceView> races,
+        out string selectedRace,
+        out List<FallbackEntryView> entries,
+        out List<FilterOptionView> soundOptions,
+        out List<FilterOptionView> candidateOptions)
+    {
+        tuningArea = state.TuningArea;
+        races = new List<FallbackRaceView>();
+        entries = new List<FallbackEntryView>();
+        soundOptions = new List<FilterOptionView>();
+        candidateOptions = new List<FilterOptionView>();
+
+        BuiltInFallbackTable? table = SqueakFallbackProfileStore.Current;
+        if (table != null)
+        {
+            foreach (FallbackProfile profile in table.Profiles)
+            {
+                int sounds = 0;
+                foreach (KeyValuePair<string, string> entry in profile.SoundKeys)
+                {
+                    if (!string.IsNullOrEmpty(entry.Value)) sounds++;
+                }
+
+                races.Add(new FallbackRaceView(
+                    profile.Race.DefName,
+                    ResolveRaceLabel(profile.Race.DefName),
+                    !SqueakFallbackProfileStore.HasMaintainerSource(profile.Race),
+                    sounds));
+            }
+        }
+
+        races.Sort((a, b) => string.CompareOrdinal(a.Label, b.Label));
+
+        string wanted = state.FallbackSelectedRace ?? "";
+        selectedRace = "";
+        if (races.Count > 0)
+        {
+            selectedRace = wanted;
+            bool holds = false;
+            for (int i = 0; i < races.Count; i++)
+            {
+                if (string.Equals(races[i].DefName, selectedRace, StringComparison.Ordinal)) { holds = true; break; }
+            }
+
+            if (!holds) selectedRace = races[0].DefName;
+        }
+
+        if (selectedRace.Length > 0)
+        {
+            RaceKey raceKey = new(selectedRace);
+            FallbackProfile? resolved = table == null ? null : table.For(raceKey);
+            FallbackProfile? maintainer = SqueakFallbackProfileStore.MaintainerSourceFor(raceKey);
+            // PM review (2026-10-07): the OVERRIDE/INHERIT line is FIELD PRESENCE in the player's raw
+            // delta, never value equality with the source - an override whose value happens to equal
+            // the shipped default is still the player's and survives a future source update exactly
+            // like any other override (ConfigCopy H pins the same rule at the store boundary).
+            FallbackDelta? playerDelta = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
+            foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
+            {
+                string sound = "";
+                if (resolved != null)
+                {
+                    resolved.SoundKeys.TryGetValue(key, out sound);
+                    sound ??= "";
+                }
+
+                string sourceValue = "";
+                bool fromMaintainer = false;
+                if (maintainer != null)
+                {
+                    fromMaintainer = maintainer.SoundKeys.TryGetValue(key, out sourceValue);
+                    sourceValue ??= "";
+                }
+
+                int viewState;
+                string soundLabel = "";
+                if (sound.Length == 0)
+                {
+                    viewState = FallbackEntryView.Unset;
+                }
+                else
+                {
+                    SoundDef? def = DefDatabase<SoundDef>.GetNamedSilentFail(sound);
+                    SqueakSoundAvailabilityState availability = SqueakSoundAvailabilityCache.PeekState(def);
+                    viewState = def == null
+                        || availability == SqueakSoundAvailabilityState.Empty
+                        || availability == SqueakSoundAvailabilityState.Failed
+                        ? FallbackEntryView.NoSound
+                        : playerDelta != null && playerDelta.Overrides.ContainsKey(key)
+                            ? FallbackEntryView.PlayerOverride
+                            : fromMaintainer
+                                ? FallbackEntryView.Maintainer
+                                : FallbackEntryView.PlayerOverride;
+                    soundLabel = def != null ? def.label ?? sound : sound;
+                }
+
+                string actionLabel = UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(key, out SqueakAction action)
+                    ? SqueakLabels.Action(action)
+                    : key;
+                entries.Add(new FallbackEntryView(key, actionLabel, sound, soundLabel, viewState));
+            }
+        }
+
+        string soundQuery = (state.FallbackSoundQuery ?? "").Trim();
+        // VF1定稿: candidates are the loaded CORE SoundDefs (Rimsage-confirmed: ModContentPack.IsCoreMod).
+        // The cap is a DISPLAY cap on the filtered answer, not a reachability limit: the query filters
+        // BEFORE the cap, so any legal candidate is reachable by typing its name or defName - no
+        // advanced search is added.
+        foreach (SoundDef def in DefDatabase<SoundDef>.AllDefs)
+        {
+            if (def == null || string.IsNullOrEmpty(def.defName)) continue;
+            if (def.modContentPack == null || !def.modContentPack.IsCoreMod) continue;
+            if (soundQuery.Length > 0
+                && !UsChecklistFilter.QueryMatches(soundQuery, def.defName, def.label ?? "")) continue;
+            SqueakSoundAvailabilityState availability = SqueakSoundAvailabilityCache.PeekState(def);
+            string suffix = availability switch
+            {
+                SqueakSoundAvailabilityState.Empty => " (!)",
+                SqueakSoundAvailabilityState.Failed => " (x)",
+                _ => "",
+            };
+            soundOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName + suffix, def.defName));
+            if (soundOptions.Count >= 40) break;
+        }
+
+        string raceQuery = (state.FallbackNewRaceQuery ?? "").Trim();
+        foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
+        {
+            if (def == null || def.race == null || def.category != ThingCategory.Pawn) continue;
+            bool supported = false;
+            for (int i = 0; i < races.Count; i++)
+            {
+                if (string.Equals(races[i].DefName, def.defName, StringComparison.Ordinal)) { supported = true; break; }
+            }
+
+            if (supported) continue;
+            if (raceQuery.Length > 0
+                && !UsChecklistFilter.QueryMatches(raceQuery, def.defName, def.label ?? "")) continue;
+            candidateOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName, def.defName));
+            if (candidateOptions.Count >= 20) break;
+        }
+    }
+
+    /// <summary>VF1 selection/query writes (page state only; they move the layout clock through the
+    /// Host funnel like every other display write).</summary>
+    public static void SetFallbackSelection(VoicePacksPageState state, string? race, string? entryAction)
+    {
+        if (state == null) return;
+        if (race != null) state.FallbackSelectedRace = race;
+        if (entryAction != null) state.FallbackSelectedEntryAction = entryAction;
+        state.FallbackStatusKey = "";
+    }
+
+    public static void SetFallbackQueries(VoicePacksPageState state, string? soundQuery, string? newRaceQuery)
+    {
+        if (state == null) return;
+        if (soundQuery != null) state.FallbackSoundQuery = soundQuery;
+        if (newRaceQuery != null) state.FallbackNewRaceQuery = newRaceQuery;
+    }
+
+    public static void SetTuningArea(VoicePacksPageState state, int area)
+    {
+        if (state == null) return;
+        state.TuningArea = area is >= 0 and <= 2 ? area : 0;
+    }
+
+    public static void SetTuningSelectedAction(VoicePacksPageState state, string actionKey)
+    {
+        if (state == null) return;
+        state.TuningSelectedAction = actionKey ?? "";
+    }
+
+    /// <summary>VF1 entry write (r5): the starting point is the player's REAL field-presence delta
+    /// read from the copy - not a diff against the resolved table, which would silently drop other
+    /// actions' delete markers and any override whose value happens to equal the shipped default.
+    /// Three distinct answers: value = override, "" = explicit no-sound marker, null = restore
+    /// INHERITANCE (remove the key; the entry follows future shipped updates again). The save result
+    /// is observable; a failed write never reports Saved. The status distinguishes an already-ADMITTED
+    /// race (the loaded pawn ThingDef carries a CompProperties_Squeaker - mounted at startup from a
+    /// pack/table, or patched by the author - so the resolver refresh reaches it this session) from a
+    /// first-time mount (new race: comp attach waits for the next full game start, and the editor
+    /// says so). Checking the STORE for support instead would be self-referential: SaveProfile has
+    /// just rebuilt that very table, so "saved support" always reads true (PM review 2026-10-07).</summary>
+    public static void SetFallbackEntry(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, string? soundDefName)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        string race = state.FallbackSelectedRace;
+        if (race.Length == 0) return;
+        if (soundDefName != null && soundDefName.Length > 0
+            && DefDatabase<SoundDef>.GetNamedSilentFail(soundDefName) == null) return;
+
+        RaceKey raceKey = new(race);
+        SqueakFallbackProfileStore.StoreOutcome outcome;
+        {
+            FallbackDelta? current = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
+            Dictionary<string, string> overrides = current == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(current.Overrides, StringComparer.Ordinal);
+            if (soundDefName == null) overrides.Remove(actionKey);
+            else overrides[actionKey] = soundDefName;
+            outcome = SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(overrides));
+        }
+
+        if (outcome != SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+            return;
+        }
+
+        settings.NotifyDiscreteResolverRuntimeChanged();
+        ThingDef? raceDef = DefDatabase<ThingDef>.GetNamedSilentFail(race);
+        bool admitted = raceDef != null && raceDef.race != null
+            && raceDef.comps != null && raceDef.comps.Any(comp => comp is CompProperties_Squeaker);
+        state.FallbackStatusKey = admitted
+            ? "US.VF1.Status.Saved"
+            : "US.VF1.Status.SavedRestart";
+    }
+
+    /// <summary>VF1 create-table: an empty player table for a loaded pawn race. Support (and the
+    /// comp mount) begins at the NEXT full launch; the status line says exactly that - and a failed
+    /// write says failed.</summary>
+    public static void CreateFallbackTable(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
+    {
+        if (settings == null || state == null) return;
+        ThingDef? def = DefDatabase<ThingDef>.GetNamedSilentFail(raceDefName ?? "");
+        if (def == null || def.race == null) return;
+        RaceKey raceKey = new(raceDefName!);
+        if (SqueakFallbackProfileStore.Current?.For(raceKey) != null) return;
+        if (SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(new Dictionary<string, string>()))
+            != SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+            return;
+        }
+
+        state.FallbackSelectedRace = raceDefName!;
+        state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";
+    }
+
+    /// <summary>VF1 restore-default: clear the player overrides back to the maintainer data. A
+    /// player-only race is refused here (there is no maintainer data to restore to) - delete is
+    /// that race's honest path; a failed write is reported as failed.</summary>
+    public static void RestoreFallbackDefault(UniversalSqueakerSettings settings, VoicePacksPageState state)
+    {
+        if (settings == null || state == null) return;
+        RaceKey raceKey = new(state.FallbackSelectedRace ?? "");
+        if (raceKey.DefName.Length == 0) return;
+        SqueakFallbackProfileStore.StoreOutcome outcome = SqueakFallbackProfileStore.RestoreDefault(raceKey);
+        state.FallbackStatusKey = outcome switch
+        {
+            SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Restored",
+            SqueakFallbackProfileStore.StoreOutcome.RefusedNoSource => "US.VF1.Status.NoMaintainerData",
+            _ => "US.VF1.Status.SaveFailed",
+        };
+        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            settings.NotifyDiscreteResolverRuntimeChanged();
+        }
+    }
+
+    /// <summary>VF1 delete: removes ONLY the player table; if no pack or other table supports the
+    /// race the support is withdrawn symmetrically (mount removal at the next full launch). Races
+    /// with maintainer data cannot be deleted - the store refuses and the status says so; a failed
+    /// file removal is reported as failed, not as deleted. r5: the target is the race the caller
+    /// ASKED ABOUT when it opened the confirmation, read from the command payload - never the
+    /// mutable selection at the later answer time, so a confirm can not delete a different table.</summary>
+    public static void DeleteFallbackTable(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
+    {
+        if (settings == null || state == null) return;
+        RaceKey raceKey = new(raceDefName ?? "");
+        if (raceKey.DefName.Length == 0) return;
+        SqueakFallbackProfileStore.StoreOutcome outcome = SqueakFallbackProfileStore.DeletePlayerTable(raceKey);
+        state.FallbackStatusKey = outcome switch
+        {
+            SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Deleted",
+            SqueakFallbackProfileStore.StoreOutcome.RefusedMaintainer => "US.VF1.Status.DeleteRefusedMaintainer",
+            _ => "US.VF1.Status.SaveFailed",
+        };
+        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            settings.NotifyDiscreteResolverRuntimeChanged();
+        }
     }
 
     private readonly struct XenotypeDomainKey

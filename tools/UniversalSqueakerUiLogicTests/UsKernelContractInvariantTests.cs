@@ -200,6 +200,8 @@ internal static class UsKernelContractInvariantTests
         {
             "set-tab", "scroll-to", "set-tuning-layer", "set-tuning-domain", "select-domain",
             "set-domain-filter", "set-pack-filter", "race-filter", "xenotype-filter", "pack-filter", "search-text",
+            // D4: the two domain cards' own searches narrow their row sets too - layout-affecting.
+            "race-search-text", "xenotype-search-text",
             "toggle-baseline-preset", "toggle-baseline-race", "toggle-baseline-xenotype",
             "import-baseline", "toggle-pack", "forget-unavailable"
         };

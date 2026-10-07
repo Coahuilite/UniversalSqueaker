@@ -180,7 +180,9 @@ public static class SqueakTimingModel
         ? 0
         : double.IsInfinity(value) || value >= int.MaxValue ? int.MaxValue : (int)Math.Ceiling(value);
 
-    private static float SanitizeIntervalMultiplier(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
+    // VF1定稿 A2: internal so the settings writer sanitizes on the SAME rule the runtime applies -
+    // one definition, no mirrored clamp in the UI layer.
+    internal static float SanitizeIntervalMultiplier(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(0f, value);
 
     private static float SanitizeTimeSpeedMultiplier(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(1f, value);
     private static float SanitizePopulationScale(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 1f : Math.Max(1f, value);

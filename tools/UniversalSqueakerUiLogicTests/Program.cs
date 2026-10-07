@@ -300,7 +300,9 @@ internal static class Program
         // R3-B adds four: the diagnosis status line and its capture, outline
         // and report controls (47 -> 51). The section overview is not an item. Each is claimed by a manifest
         // HelpKey, which the bidirectional gate below checks in both directions.
-        Assert(itemCount == 51, "catalog item count matches the shipped wiring table (51 items: the baby-action opt-in plus R3-B's four layout-diagnosis entries): " + itemCount);
+        // D4 replaces the joint race/xenotype filter with each card's existing layer help key;
+        // the retired joint-filter item is no longer claimed by a control (51 -> 50).
+        Assert(itemCount == 50, "catalog item count matches the shipped wiring table (50 items after D4 retires the joint race/xenotype filter): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

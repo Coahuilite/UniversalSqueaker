@@ -11,10 +11,12 @@ namespace UniversalSqueaker.ConfigCopyTests;
 /// replace，不经 WriteSettings）在 Scribe stub 上的端到端场景：
 ///   A 缺失 → RebuildFromSource（写出干净副本，重启幂等）
 ///   B 损坏 → RebuildFromSource（替换损坏文件 + 记 store-failed 日志）
-///   C 版本低 → RebuildFromSource（源版本覆盖副本）
+///   C 版本低（无 delta）→ 内容即源，仅回写版本戳（stale 不再是删除触发器）
 ///   D delta 合并 → MergeDelta（field-presence override 合入，副本回写并保留 delta）
-///   E 重置覆盖 → 源版本提升时旧 delta 被源覆盖（重建 = 源胜）
+///   E 版本提升 + delta → VF1 定稿裁定：delta 存活、副本回写新版本戳（旧「源胜丢覆盖」已废）
 ///   F 包身份不符（损坏类）→ RebuildFromSource
+///   G 玩家表：SaveProfile 创建 → 目录发现 → DeletePlayerTable 撤除（随包 race 拒绝删除）
+///   H 单项编辑以真实玩家 delta 为起点：其它动作的删除标记/覆盖不被复活也不丢失
 /// 内核无装配域过滤：A 场景同时断言两个源 race 都解析并写副本，且“第二遍加载不再变”幂等。
 /// 每个场景在临时 Config 目录运行，结束时清理。
 /// </summary>
@@ -40,8 +42,10 @@ internal static class Program
             CorruptCopyRebuildsAndLogs();
             StaleVersionCopyRebuilds();
             DeltaMergesIntoSource();
-            ResetOverwriteDropsStaleDelta();
+            VersionBumpKeepsDelta();
             ForeignPackageIdRebuilds();
+            PlayerTableCreateDiscoverDelete();
+            SingleEntryEditKeepsOtherMarkers();
             if (failures == 0)
             {
                 Console.WriteLine("Config copy characterization passed.");
@@ -132,18 +136,18 @@ internal static class Program
     private static void StaleVersionCopyRebuilds()
     {
         ResetState();
-        Scenario("C-stale-version");
+        Scenario("C-stale-version-clean");
         WritePlayerCopy(sourceVersion: 1, hasOverrides: false, overrides: null);
 
         BuiltInFallbackTable source = SourceV(3);
         FallbackProfile? profile = SqueakFallbackProfileStore.LoadOrRebuild(source).For(RaceA);
         Check(profile != null && profile.Version == 3 && profile.SoundKeys["Call"] == "US_Call_RaceA",
-            "stale: older copy rebuilds from current source", ref failures);
+            "stale: a clean older copy resolves to the current source (content was never the player's)", ref failures);
 
         string first = ReadFile(profilePath);
         Check(first.Contains("<sourceVersion>3</sourceVersion>") && !first.Contains("<hasOverrides>True</hasOverrides>"),
-            "stale: file rewritten at current source version without overrides", ref failures);
-        Check(SqueakLog.StoreFailures.Count == 0, "stale: version bump is not a corruption event", ref failures);
+            "stale: the version stamp is re-stamped to the current source without inventing overrides", ref failures);
+        Check(SqueakLog.StoreFailures.Count == 0, "stale: version skew is not a corruption event", ref failures);
 
         FallbackProfile? reload = SqueakFallbackProfileStore.LoadOrRebuild(source).For(RaceA);
         Check(reload != null && reload.Version == 3, "stale: second load stable at version 3", ref failures);
@@ -171,26 +175,35 @@ internal static class Program
         Check(ReadFile(profilePath) == first, "delta: second load did not rewrite the file (idempotent)", ref failures);
     }
 
-    private static void ResetOverwriteDropsStaleDelta()
+    private static void VersionBumpKeepsDelta()
     {
         ResetState();
-        Scenario("E-reset-overwrite");
-        // 玩家 override 副本 + 源版本提升：重建 = 源覆盖（override 不跨版本存活）。
+        Scenario("E-version-bump-keeps-delta");
+        // VF1 定稿裁定（2026-10-07）：默认数据版本提升 NOT 丢弃玩家 delta。旧 E 情景
+        // （"source version bump overwrites stale delta"）是被本裁定替换的缺陷。
         WritePlayerCopy(sourceVersion: 3, hasOverrides: true, overrides: new Dictionary<string, string> { ["Call"] = "US_Call_Override" });
 
-        BuiltInFallbackTable source = SourceV(4);
+        BuiltInFallbackTable source = new(new[]
+        {
+            new FallbackProfile(RaceA, 4, new Dictionary<string, string>
+            {
+                ["Call"] = "US_Call_V4", ["Eat"] = "US_Eat_V4", ["Sleep"] = "US_Sleep_RaceA",
+            }),
+        });
         FallbackProfile? profile = SqueakFallbackProfileStore.LoadOrRebuild(source).For(RaceA);
-        Check(profile != null && profile.Version == 4 && profile.SoundKeys["Call"] == "US_Call_RaceA",
-            "reset: source version bump overwrites stale delta (source wins)", ref failures);
+        Check(profile != null && profile.Version == 4 && profile.SoundKeys["Call"] == "US_Call_Override"
+                && profile.SoundKeys["Eat"] == "US_Eat_V4",
+            "bump: the player's Call delta survives while untouched Eat follows the NEW source sound", ref failures);
 
         string first = ReadFile(profilePath);
-        Check(first.Contains("<sourceVersion>4</sourceVersion>") && !first.Contains("<hasOverrides>True</hasOverrides>"),
-            "reset: file overwritten with a clean version-4 copy", ref failures);
-        Check(SqueakLog.StoreFailures.Count == 0, "reset: legitimate rebuild is not a corruption event", ref failures);
+        Check(first.Contains("<sourceVersion>4</sourceVersion>") && first.Contains("<hasOverrides>True</hasOverrides>")
+                && first.Contains("US_Call_Override"),
+            "bump: the copy is re-stamped at version 4 WITH the delta kept", ref failures);
+        Check(SqueakLog.StoreFailures.Count == 0, "bump: a legitimate merge is not a corruption event", ref failures);
 
         FallbackProfile? reload = SqueakFallbackProfileStore.LoadOrRebuild(source).For(RaceA);
-        Check(reload != null && reload.SoundKeys["Call"] == "US_Call_RaceA", "reset: second load stable at source", ref failures);
-        Check(ReadFile(profilePath) == first, "reset: second load did not rewrite the file (idempotent)", ref failures);
+        Check(reload != null && reload.SoundKeys["Call"] == "US_Call_Override", "bump: second load keeps the merged override", ref failures);
+        Check(ReadFile(profilePath) == first, "bump: second load did not rewrite the file (idempotent)", ref failures);
     }
 
     private static void ForeignPackageIdRebuilds()
@@ -214,6 +227,75 @@ internal static class Program
         Check(ReadFile(profilePath) == first, "foreign: second load did not rewrite the file (idempotent)", ref failures);
     }
 
+    /// <summary>VF1 (r5): the player-table lifecycle through the PRODUCTION store APIs - create via
+    /// SaveProfile, discover via the directory scan, withdraw via DeletePlayerTable, and the shipped
+    /// race's table refuses deletion. Temp dir only; the player's real Config is never touched.</summary>
+    private static void PlayerTableCreateDiscoverDelete()
+    {
+        ResetState();
+        Scenario("G-player-table-lifecycle");
+        RaceKey raceZ = new("RaceZ");
+        string raceZPath = Path.Combine(configDir, "UniversalSqueaker_Profile_RaceZ.xml");
+
+        BuiltInFallbackTable source = SourceV(1);
+        SqueakFallbackProfileStore.LoadOrRebuild(source);
+        Check(SqueakFallbackProfileStore.Current!.For(raceZ) == null, "create: RaceZ unsupported before the table", ref failures);
+
+        Check(SqueakFallbackProfileStore.SaveProfile(raceZ, new FallbackDelta(new Dictionary<string, string> { ["Call"] = "US_Call_RaceZ" }))
+                == SqueakFallbackProfileStore.StoreOutcome.Written,
+            "create: SaveProfile reports Written", ref failures);
+        Check(SqueakFallbackProfileStore.Current!.For(raceZ) != null
+                && SqueakFallbackProfileStore.Current!.For(raceZ)!.SoundKeys["Call"] == "US_Call_RaceZ",
+            "discover: the directory scan resolves the player table on reload", ref failures);
+        Check(File.Exists(raceZPath) && ReadFile(raceZPath).Contains("RaceZ"),
+            "discover: the copy carries its raceDefName identity in the file", ref failures);
+
+        Check(SqueakFallbackProfileStore.DeletePlayerTable(raceZ) == SqueakFallbackProfileStore.StoreOutcome.Written
+                && SqueakFallbackProfileStore.Current!.For(raceZ) == null && !File.Exists(raceZPath),
+            "delete: the player table and its support are withdrawn symmetrically", ref failures);
+        Check(SqueakFallbackProfileStore.DeletePlayerTable(RaceA) == SqueakFallbackProfileStore.StoreOutcome.RefusedMaintainer,
+            "delete: a shipped race's table refuses player deletion (restore-default is that path)", ref failures);
+    }
+
+    /// <summary>VF1 (r5): the single-entry edit starts from the player's REAL delta (LoadPlayerDelta),
+    /// so another action's delete marker is never resurrected and overrides that merely equal the
+    /// shipped default are not silently dropped - the exact loss the resolved-diff reconstruction
+    /// had.</summary>
+    private static void SingleEntryEditKeepsOtherMarkers()
+    {
+        ResetState();
+        Scenario("H-single-entry-edit");
+        BuiltInFallbackTable source = SourceV(1);
+        SqueakFallbackProfileStore.LoadOrRebuild(source);
+
+        // A player delta with: an explicit delete marker (Eat -> ""), an override that HAPPENS to
+        // equal the shipped Call value, and a real Sleep override.
+        WritePlayerCopy(sourceVersion: 1, hasOverrides: true, overrides: new Dictionary<string, string>
+        {
+            ["Eat"] = "",
+            ["Call"] = "US_Call_RaceA",
+            ["Sleep"] = "US_Sleep_Custom",
+        });
+
+        FallbackDelta? before = SqueakFallbackProfileStore.LoadPlayerDelta(RaceA);
+        Check(before != null && before.Overrides["Eat"] == "" && before.Overrides.Count == 3,
+            "readback: the REAL delta (markers included) is the edit's starting point", ref failures);
+
+        var edited = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in before!.Overrides) edited[entry.Key] = entry.Value;
+        edited.Remove("Call");               // restore inheritance for Call
+        edited["Sleep"] = "US_Sleep_Custom2"; // touch only Sleep
+        Check(SqueakFallbackProfileStore.SaveProfile(RaceA, new FallbackDelta(edited))
+                == SqueakFallbackProfileStore.StoreOutcome.Written,
+            "edit: the single-entry save reports Written", ref failures);
+
+        FallbackProfile? after = SqueakFallbackProfileStore.Current!.For(RaceA);
+        Check(after != null && after.SoundKeys["Call"] == "US_Call_RaceA"
+                && !after.SoundKeys.ContainsKey("Eat")
+                && after.SoundKeys["Sleep"] == "US_Sleep_Custom2",
+            "edit: removing an override restores inheritance, the untouched delete marker STAYS a "
+            + "marker (Eat is not resurrected), and only Sleep moved", ref failures);
+    }
     // ---- helpers ----
 
     private static void ResetState()
@@ -226,20 +308,23 @@ internal static class Program
     private static void Scenario(string name) => Console.WriteLine("Scenario " + name + "...");
 
     /// <summary>写一个「玩家/上次会话留下的」副本（与生产 store 同一 Scribe 形状）。</summary>
-    private static void WritePlayerCopy(int sourceVersion, bool hasOverrides, Dictionary<string, string>? overrides, string packageId = UniversalSqueakerMod.PackageId)
+    private static void WritePlayerCopy(int sourceVersion, bool hasOverrides, Dictionary<string, string>? overrides,
+        string packageId = UniversalSqueakerMod.PackageId, string? race = null, string? path = null)
     {
         SqueakFallbackProfileCopy copy = new()
         {
             packageId = packageId,
             sourceVersion = sourceVersion,
             hasOverrides = hasOverrides,
+            raceDefName = race ?? "RaceA",
         };
         if (overrides != null)
         {
             foreach (KeyValuePair<string, string> entry in overrides)
                 copy.overrides.Add(new SqueakFallbackProfileOverride { actionKey = entry.Key, soundKey = entry.Value });
         }
-        Verse.SafeSaver.Save(profilePath, "UniversalSqueakerFallbackProfile", () =>
+        string target = path ?? profilePath;
+        Verse.SafeSaver.Save(target, "UniversalSqueakerFallbackProfile", () =>
         {
             SqueakFallbackProfileCopy? saveable = copy;
             Scribe_Deep.Look(ref saveable, "FallbackProfile");

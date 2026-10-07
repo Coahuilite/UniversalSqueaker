@@ -132,6 +132,8 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // a scope exists at all: with detailed logging off this window is a geometry-only handle (nothing is
         // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
         audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        // DT1: the dev panel's default target - registered with the host, cleared in PreClose.
+        UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = host;
         return host;
     }
 
@@ -142,6 +144,9 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     {
         base.PostClose();
         remixFlow?.Abort();
+        // DT1: closing the settings window releases the dev panel with it - the panel is a companion
+        // of the settings workspace, not a standalone tool that outlives its subject.
+        UniversalSqueaker.UI.Dev.UsDevPanelWindow.CloseIfOpen();
     }
 
     /// <summary>
@@ -218,6 +223,10 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // disposes the host and with it the subscription.
         audit?.Dispose();
         audit = null;
+        if (UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost == Host)
+        {
+            UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = null;
+        }
         // Disposing the page host and its session is the shell's job.
         base.PreClose();
     }

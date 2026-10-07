@@ -18,7 +18,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// projection failure landing in the session guard's recovery instead of escaping the frame.
 /// Off-screen lock tracking itself is pinned by the pure model lane (SqueakDiagnostics-
 /// SessionModel); the window-level teardown interlock (main close cascades, close = unlock) is
-/// the maintainer live-walkthrough item - WindowStack is not stubbable at this seam.
+/// the maintainer live-walkthrough item. The DX1 state-change guard below now drives the real
+/// panel shell over the canonical type-loading stubs; it does not simulate the live pawn world.
 /// </summary>
 internal static class DiagnosticsPanelLaneTests
 {
@@ -46,6 +47,7 @@ internal static class DiagnosticsPanelLaneTests
         Step("the pinned detail page can never grow a Back control", PinnedDetailHasNoBack);
         Step("the detail value column fits the measured Chinese value", ValueColumnFitsMeasuredChinese);
         Step("all 16 conditions show, and a group folds only when clicked", GroupFold);
+        Step("DX1.2: the real shell keeps the whole window on screen across state changes", WholeWindowStaysOnScreen);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
         Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
 #if US_DEV
@@ -962,6 +964,57 @@ internal static class DiagnosticsPanelLaneTests
         {
             Assert(((string)texts[i]!).IndexOf("US.Diagnostics.Nav.Back", StringComparison.Ordinal) < 0,
                 "the pinned detail frame never draws a Back control");
+        }
+    }
+
+    // DX1.2 (PM review 2026-10-07): the outer window's state transitions run through the REAL shell
+    // (windowRect + WindowOnGUI, the Remix lane's precedent), not a constructed page box. The scaled
+    // screen is 1024x768 - the PM's overflow scenario: a low dragged bar that expands must not leave
+    // the screen. The compact-SELECTED shape (600x456) additionally needs a live pawn detail and
+    // stays a game-walkthrough item; the position rule exercised here is the same code path.
+    private static void WholeWindowStaysOnScreen()
+    {
+        int savedW = Verse.UI.screenWidth;
+        int savedH = Verse.UI.screenHeight;
+        Verse.UI.screenWidth = 1024;
+        Verse.UI.screenHeight = 768;
+        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+        try
+        {
+            // The panel type is internal to the product assembly; the shell handle is the same
+            // production type, reached the way the harness reaches other internal product seams.
+            Type panelType = typeof(UsKernelSettingsHost).Assembly
+                .GetType("UniversalSqueaker.SqueakDiagnosticsPanel", throwOnError: true)!;
+            Verse.Window panel = (Verse.Window)Activator.CreateInstance(panelType)!;
+            panel.windowRect = new Rect(282f, 324f, 460f, 120f);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.xMax <= 1024.5f
+                    && panel.windowRect.y >= -0.5f,
+                "DX1.2 first open (collapsed bar, centred): the whole window stays on screen, got " + panel.windowRect);
+
+            var sourceField = panelType
+                .GetField("source", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            object source = sourceField.GetValue(panel)!;
+            source.GetType().GetProperty("Collapsed")!.SetValue(source, false);
+            panel.windowRect = new Rect(panel.windowRect.x, 744f, panel.windowRect.width, panel.windowRect.height);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.height > 200f,
+                "DX1.2 the expanded pass must have resized (empty state), got h=" + panel.windowRect.height);
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.y >= 0f,
+                "DX1.2 a low dragged bar that EXPANDS must be pulled fully on screen by the state-change"
+                + " correction, got " + panel.windowRect);
+
+            source.GetType().GetProperty("Collapsed")!.SetValue(source, true);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.xMax <= 1024.5f,
+                "DX1.2 re-collapse keeps the whole window on screen too, got " + panel.windowRect);
+            Console.WriteLine("[dx1-shell] 1024x768: firstOpen centred, expand from y=744 pulled on screen, re-collapse on screen");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            Verse.UI.screenWidth = savedW;
+            Verse.UI.screenHeight = savedH;
         }
     }
 

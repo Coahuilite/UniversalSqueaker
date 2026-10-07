@@ -674,6 +674,11 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         }
     }
 
+    /// <summary>DT1: the fake records the open request; the real window seam needs Verse.Find.</summary>
+    public int DeveloperPanelOpenCalls { get; private set; }
+
+    public void OpenDeveloperPanel() => DeveloperPanelOpenCalls++;
+
     public void RequestLayoutReport()
     {
         reportMirror?.RequestLayoutReport();
@@ -810,6 +815,23 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastSearchText = text;
         state.SearchText = text ?? "";
     }
+    // D4: the two domain searches mirror the production facade exactly, same one-frame read-back
+    // contract as SetSearchText above.
+    public string? LastRaceSearchText { get; private set; }
+    public string? LastXenotypeSearchText { get; private set; }
+
+    public void SetRaceSearchText(string text)
+    {
+        LastRaceSearchText = text;
+        state.RaceSearchText = text ?? "";
+    }
+
+    public void SetXenotypeSearchText(string text)
+    {
+        LastXenotypeSearchText = text;
+        state.XenotypeSearchText = text ?? "";
+    }
+
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.
@@ -819,6 +841,62 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastActionKey = actionKey;
         LastActionScope = scope;
     }
+
+    // VF1定稿 A2/A4: the multiplier writes are recorded; lanes that need the view to answer set
+    // TuningActionScopes explicitly (the fake's view rows are fixture data by design).
+    public string? LastActionTuningKey { get; private set; }
+    public bool LastActionTuningIntervalField { get; private set; }
+    public float? LastActionTuningValue { get; private set; }
+    public string? LastActionPresetResetKey { get; private set; }
+
+    public void SetActionTuning(string actionKey, bool intervalField, float? value)
+    {
+        LastActionTuningKey = actionKey;
+        LastActionTuningIntervalField = intervalField;
+        LastActionTuningValue = value;
+    }
+
+    public void ResetActionToPreset(string actionKey)
+    {
+        LastActionPresetResetKey = actionKey;
+    }
+
+    // VF1定稿: the fake mirrors the production facade exactly (page state + store-free commands);
+    // the table commands are recorded, because the fake's view rows are fixture data by design.
+    public int LastTuningArea { get; set; } = -1;
+    public string? LastTuningSelectedAction { get; private set; }
+    public string? LastFallbackRace { get; private set; }
+    public string? LastFallbackEntryAction { get; private set; }
+    public string? LastFallbackEntrySound { get; private set; }
+    public string? LastFallbackCreatedRace { get; private set; }
+    public int FallbackRestoreCalls { get; private set; }
+    public int FallbackDeleteCalls { get; private set; }
+
+    public void SetTuningArea(int area) { LastTuningArea = area; VoicePacksPageModel.SetTuningArea(state, area); }
+    public void SetTuningSelectedAction(string actionKey) { LastTuningSelectedAction = actionKey; VoicePacksPageModel.SetTuningSelectedAction(state, actionKey); }
+    public void SetFallbackSelection(string? race, string? entryAction)
+    {
+        LastFallbackRace = race;
+        LastFallbackEntryAction = entryAction;
+        VoicePacksPageModel.SetFallbackSelection(state, race, entryAction);
+    }
+
+    public void SetFallbackQueries(string? soundQuery, string? newRaceQuery)
+        => VoicePacksPageModel.SetFallbackQueries(state, soundQuery, newRaceQuery);
+
+    public void SetFallbackEntry(string actionKey, string? soundDefName)
+    {
+        LastFallbackEntryAction = actionKey;
+        LastFallbackEntrySound = soundDefName;
+    }
+
+    public void CreateFallbackTable(string raceDefName) { LastFallbackCreatedRace = raceDefName; }
+    public void RestoreFallbackDefault() { FallbackRestoreCalls++; }
+    public void DeleteFallbackTable(string raceDefName) { LastFallbackDeletedRace = raceDefName; FallbackDeleteCalls++; }
+
+    /// <summary>r5: the delete command carries the race the confirmation ASKED ABOUT; the fake
+    /// records it so a lane can prove the payload identity survives to the boundary.</summary>
+    public string? LastFallbackDeletedRace { get; private set; }
 
     public void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value)
     {

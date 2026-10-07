@@ -135,8 +135,11 @@ internal static class DeclarativePacksLaneTests
             Assert(element != null, "the shipped manifest must carry the card '" + card + "'");
             Assert(element!.Kind == "Section",
                 "'" + card + "' must be the engine's Section container, got " + element.Kind);
-            Assert(element.TryGetAttribute("Tab", out string tab) && tab == PacksTab,
-                "'" + card + "' must stay gated by the Packs workspace");
+            // D4 moved the workspace gate up to the shared domain-row (a Tab-gated container takes
+            // its whole subtree); the card itself no longer repeats the attribute.
+            UiElementSpec? gate = FindById(host.Manifest.Roots, "domain-row");
+            Assert(gate != null && gate.TryGetAttribute("Tab", out string tab) && tab == PacksTab,
+                "'" + card + "' must stay gated by the Packs workspace (via the domain row)");
 
             UiElementSpec? repeat = FindById(host.Manifest.Roots, repeatId);
             Assert(repeat != null && repeat.Kind == "Repeat",
@@ -530,12 +533,13 @@ internal static class DeclarativePacksLaneTests
             try
             {
                 var metrics = new Program.StubMetrics();
-                using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics);
+                var packsSource = new RecordingSettingsSource { RichData = true };
+                using UiHost host = UsKernelSettingsHost.Create(packsSource, metrics);
                 host.Bindings.Invoke("set-tab", PacksTab);
                 UiLayoutSnapshot snapshot = Arrange(host);
                 host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
-
                 var expectedRows = new List<Rect>();
+                var expectedCardByCard = new Dictionary<string, float>();
                 foreach ((string card, _, string itemsKey, string template) in Cards)
                 {
                     Rect cardRect = RectOf(snapshot, card);
@@ -602,14 +606,64 @@ internal static class DeclarativePacksLaneTests
                         evidence += rowKey + "=" + Num(row.height) + "/hit:" + Num(hit.height) + " ";
                     }
 
-                    // Two relations, asserted separately so a failure names which one moved: the card over its
-                    // two children, and the Repeat over its rows.
+                    // Three relations, asserted separately so a failure names which one moved: the card
+                    // over its D4 children (header + controls + scroll), the viewport budget, and the
+                    // Repeat over its rows.
                     float repeatHeight = RectOf(snapshot, card == "race-layer" ? "race-layer-rows" : "xenotype-layer-rows").height;
-                    float expectedCard = CardPadding + headerHeight + CardGap + repeatHeight + CardPadding;
+                    float controlsHeight = RectOf(snapshot, card == "race-layer" ? "race-domain-controls" : "xenotype-domain-controls").height;
+                    float scrollHeight = RectOf(snapshot, card == "race-layer" ? "race-domain-scroll" : "xenotype-domain-scroll").height;
+                    float expectedCard = CardPadding + headerHeight + CardGap + controlsHeight + CardGap + scrollHeight + CardPadding;
+                    // Height contract (PM ruling 2026-10-07, after the 388/358 investigation): the
+                    // cards keep their NATURAL heights. An unsized Row child already shares the width
+                    // equally (ResolveColumnWidths); Fill="true" would ADDITIONALLY request the
+                    // available height (ResolveContainerHeight) and stretch a card to the scroll's
+                    // remaining viewport - dead space under a short list, which the earlier draft
+                    // mislabelled as a stretch the Row must reproduce. So each card equals its OWN
+                    // Padding + header + Gap + controls + Gap + scroll + Padding formula, and the
+                    // Row equals the taller card (max natural child) - checked after the loop.
                     Assert(Math.Abs(cardRect.height - expectedCard) <= 0.5f,
-                        "the " + card + " card must equal Padding + header + Gap + the row set + Padding at "
-                        + language + ": card " + Num(cardRect.height) + " vs " + Num(expectedCard) + " (repeat "
-                        + Num(repeatHeight) + ")");
+                        "the " + card + " card must equal its own band rule (natural height, no Fill"
+                        + " stretch) at " + language
+                        + ": card " + Num(cardRect.height) + " vs " + Num(expectedCard) + " (controls "
+                        + Num(controlsHeight) + ", scroll " + Num(scrollHeight) + ")");
+                    expectedCardByCard[card] = expectedCard;
+
+                    // D4 viewport, final wiring: the manifest declares the engine's VisibleRows
+                    // counting and NO numeric Height (the count only answers when no Height is
+                    // written), and the arranged viewport equals the budget recomputed HERE from
+                    // this same snapshot's row rects: four full rows to their measured bottoms,
+                    // the real gap, then half of the fifth row's own measured height. A different
+                    // number means the counting moved away from the rows' actual rects - exactly
+                    // what the PM ruling asked to keep impossible.
+                    string scrollId = card == "race-layer" ? "race-domain-scroll" : "xenotype-domain-scroll";
+                    UiElementSpec? scrollSpec = FindById(host.Manifest.Roots, scrollId);
+                    Assert(scrollSpec != null
+                            && scrollSpec.TryGetAttribute("VisibleRows", out string rowsRaw)
+                            && rowsRaw.Trim() == "4.5"
+                            && !(scrollSpec.TryGetAttribute("Height", out string hRaw)
+                                && float.TryParse(hRaw, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out float hNum) && hNum > 0f),
+                        "'" + scrollId + "' must declare VisibleRows=\"4.5\" and no numeric Height");
+                    if (rowKeys.Count >= 5)
+                    {
+                        Rect fourth = RectOf(snapshot, template + "#" + rowKeys[3]);
+                        Rect fifth = RectOf(snapshot, template + "#" + rowKeys[4]);
+                        Rect scrollRect = RectOf(snapshot, scrollId);
+                        float expectedViewport = fourth.yMax - scrollRect.y + RepeatGap + 0.5f * fifth.height;
+                        Assert(Math.Abs(scrollHeight - expectedViewport) <= 0.51f,
+                            "the " + card + " viewport must be the same-pass 4.5-row budget at " + language
+                            + ": scroll " + Num(scrollHeight) + " vs budget " + Num(expectedViewport)
+                            + " (four rows to " + Num(fourth.yMax - scrollRect.y) + " + gap + half of "
+                            + Num(fifth.height) + ")");
+                    }
+                    else
+                    {
+                        // Fewer rows than the count asks for: the engine answers natural (everything
+                        // visible) - the viewport must then hold the whole row set.
+                        Assert(scrollHeight >= repeatHeight - 0.51f,
+                            "the " + card + " viewport must show the whole short list at " + language
+                            + ": scroll " + Num(scrollHeight) + " vs rows " + Num(repeatHeight));
+                    }
 
                     float repeatGap = RepeatGap;
                     float expectedRepeat = RepeatPadding * 2f + rowsHeight + repeatGap * (rowKeys.Count - 1);
@@ -621,6 +675,14 @@ internal static class DeclarativePacksLaneTests
                     Console.WriteLine("[packs-row] " + language + " " + card + " card=" + Num(cardRect.height)
                         + " header=" + Num(headerHeight) + " set=" + Num(repeatHeight) + " rows=[" + evidence + "]");
                 }
+                // The Row's height is not free space: it must be the TALLER card's own content rule.
+                float rowHeightFinal = RectOf(snapshot, "domain-row").height;
+                float tallerCard = Math.Max(expectedCardByCard["race-layer"], expectedCardByCard["xenotype-layer"]);
+                Assert(Math.Abs(rowHeightFinal - tallerCard) <= 0.5f,
+                    "the domain-row height must equal the taller card's own band rule at " + language + ": row "
+                    + Num(rowHeightFinal) + " vs race " + Num(expectedCardByCard["race-layer"]) + " and xenotype "
+                    + Num(expectedCardByCard["xenotype-layer"]) + " - a row taller than both cards is invented"
+                    + " space, a shorter one clips a card");
 
                 // The declared shape of the template is now ONE full-height hit, and this is that claim's
                 // own evidence: a single checked frame hands the hit seam exactly one band per row, in

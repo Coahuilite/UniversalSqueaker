@@ -31,6 +31,54 @@ public readonly struct UsScopeWrite
     }
 }
 
+/// <summary>VF1定稿 A2: field-level action multiplier write. Which multiplier field, and the value
+/// (null = clear the field and restore inheritance). The layer identity is the page state's current
+/// tuning identity - the payload carries no race/xeno, exactly like the scope write.</summary>
+public readonly struct UsActionTuningWrite
+{
+    public readonly string ActionKey;
+    public readonly bool IntervalField;
+    public readonly float? Value;
+
+    public UsActionTuningWrite(string actionKey, bool intervalField, float? Value)
+    {
+        ActionKey = actionKey ?? "";
+        IntervalField = intervalField;
+        this.Value = Value;
+    }
+}
+
+/// <summary>VF1: fallback editor selection. Null halves mean "leave unchanged" - one command
+/// covers the race dropdown and the entry-row click without a second payload type.</summary>
+public readonly struct UsFallbackSelection
+{
+    public readonly string? Race;
+    public readonly string? EntryAction;
+
+    public UsFallbackSelection(string? race, string? entryAction)
+    {
+        Race = race;
+        EntryAction = entryAction;
+    }
+}
+
+/// <summary>VF1 (r5 semantics): one entry write in the selected race's final table. SoundDefName
+/// non-empty = override; empty string = the EXPLICIT no-sound marker (key stays present, resolves
+/// to silence); null = restore INHERITANCE (key removed, future shipped updates apply again).
+/// Explicit silence and inheritance are different states with different controls; the closed
+/// 17-key set is enforced by the store.</summary>
+public readonly struct UsFallbackEntryWrite
+{
+    public readonly string ActionKey;
+    public readonly string? SoundDefName;
+
+    public UsFallbackEntryWrite(string actionKey, string? soundDefName)
+    {
+        ActionKey = actionKey ?? "";
+        SoundDefName = soundDefName;
+    }
+}
+
 /// <summary>Field-level mood write. Clear restores inheritance; other factors require a value.</summary>
 public readonly struct UsMoodWrite
 {

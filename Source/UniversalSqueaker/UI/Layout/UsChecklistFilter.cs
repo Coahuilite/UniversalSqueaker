@@ -34,13 +34,26 @@ public static class UsChecklistFilter
     /// the two would show up as rows the list has and the screen does not (or the reverse).
     /// </summary>
     public static bool Matches(VoicePackRowView row, string query)
+        => QueryMatches(query, row.SearchText, row.Label, row.DefName, row.Key);
+
+    /// <summary>
+    /// The ONE substring rule, shared by the pack checklist and (since D4) the two domain lists: the
+    /// trimmed query must appear case-insensitively in at least one of the given fields; an empty query
+    /// accepts everything. The PM ruling of 2026-10-07 keeps exactly this rule for all three search
+    /// boxes - no tokenization, no fuzzy option - so "search finds it, search finds it the same way"
+    /// holds across the page, and one function is where the rule lives.
+    /// </summary>
+    public static bool QueryMatches(string query, params string[] fields)
     {
         if (query == null || query.Trim().Length == 0) return true;
         string needle = query.Trim();
-        return row.SearchText.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
-            || row.Label.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
-            || row.DefName.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
-            || row.Key.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0;
+        for (int i = 0; i < fields.Length; i++)
+        {
+            string field = fields[i];
+            if (field != null && field.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        }
+
+        return false;
     }
 
     /// <summary>

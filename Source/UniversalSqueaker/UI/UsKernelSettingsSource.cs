@@ -327,6 +327,8 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         layoutOutlineOn = honoured && on;
     }
 
+    public void OpenDeveloperPanel() => UniversalSqueaker.UI.Dev.UsDevPanelWindow.OpenOrFocus();
+
     public void RequestLayoutReport()
     {
         // A request that cannot be honoured is NOT left pending: the audit refuses it at request time, so
@@ -466,6 +468,40 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     {
         VoicePacksPageModel.SetSearchText(state, text);
     }
+
+    // D4: the two domain lists' own searches; same page-state channel as the pack search, so the
+    // one-frame write->projection contract holds for all three boxes.
+    public void SetRaceSearchText(string text)
+    {
+        VoicePacksPageModel.SetRaceSearchText(state, text);
+    }
+
+    public void SetXenotypeSearchText(string text)
+    {
+        VoicePacksPageModel.SetXenotypeSearchText(state, text);
+    }
+
+    // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
+    public void SetActionTuning(string actionKey, bool intervalField, float? value)
+    {
+        VoicePacksPageModel.SetActionTuningMultiplier(settings, state, actionKey, intervalField, value);
+    }
+
+    public void ResetActionToPreset(string actionKey)
+    {
+        VoicePacksPageModel.ResetActionTuningToPreset(settings, state, actionKey);
+    }
+
+    // VF1定稿: the area/selection commands are page-state writes; the table commands go through the
+    // model facade onto the store (the single authority for per-race final tables).
+    public void SetTuningArea(int area) => VoicePacksPageModel.SetTuningArea(state, area);
+    public void SetTuningSelectedAction(string actionKey) => VoicePacksPageModel.SetTuningSelectedAction(state, actionKey);
+    public void SetFallbackSelection(string? race, string? entryAction) => VoicePacksPageModel.SetFallbackSelection(state, race, entryAction);
+    public void SetFallbackQueries(string? soundQuery, string? newRaceQuery) => VoicePacksPageModel.SetFallbackQueries(state, soundQuery, newRaceQuery);
+    public void SetFallbackEntry(string actionKey, string? soundDefName) => VoicePacksPageModel.SetFallbackEntry(settings, state, actionKey, soundDefName);
+    public void CreateFallbackTable(string raceDefName) => VoicePacksPageModel.CreateFallbackTable(settings, state, raceDefName);
+    public void RestoreFallbackDefault() => VoicePacksPageModel.RestoreFallbackDefault(settings, state);
+    public void DeleteFallbackTable(string raceDefName) => VoicePacksPageModel.DeleteFallbackTable(settings, state, raceDefName);
 
     public void SetActionScope(string actionKey, SqueakActionScope? scope)
     {

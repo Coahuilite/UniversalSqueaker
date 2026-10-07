@@ -401,6 +401,171 @@ public partial class UniversalSqueakerSettings : ModSettings
             || !string.IsNullOrEmpty(record.sourcePresetDefName));
     }
 
+    /// <summary>
+    /// VF1定稿 A2: one multiplier field of one action identity, written or CLEARED (value == null =
+    /// restore inheritance for that field). Same identity normalization, last-wins target row,
+    /// per-field dedup across stale rows and "only delete rows that carry nothing" rules as
+    /// <see cref="SetActionTuningScope"/> - the multiplier rides the exact same account, because the
+    /// runtime merge treats the three fields as one field-level fold. Discrete flush + debounced
+    /// persistence, like every other tuning write.
+    /// </summary>
+    internal void SetActionTuning(string actionKey, string raceDefName, string xenotypeDefName, bool intervalField, float? value)
+    {
+        actionTuning ??= new List<ActionTuningRecord>();
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return;
+        if (string.IsNullOrEmpty(actionKey)) return;
+
+        string actionRaceDefName = raceDefName ?? "";
+        string actionXenotypeDefName = xenotypeDefName ?? "";
+
+        ActionTuningRecord? existing = null;
+        foreach (ActionTuningRecord candidate in actionTuning)
+        {
+            if (SameActionTuningIdentity(candidate, actionKey, actionRaceDefName, actionXenotypeDefName))
+            {
+                existing = candidate;
+            }
+        }
+
+        if (value == null)
+        {
+            foreach (ActionTuningRecord row in actionTuning)
+            {
+                if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
+                {
+                    if (intervalField) row.hasIntervalMultiplier = false;
+                    else row.hasProbabilityMultiplier = false;
+                }
+            }
+
+            actionTuning.RemoveAll(c => SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+                && !CarriesAnyActionTuningField(c));
+
+            NotifyDiscreteResolverRuntimeChanged();
+            QueuePersistence();
+            return;
+        }
+
+        float effectiveValue = intervalField
+            ? SqueakTimingModel.SanitizeIntervalMultiplier(value.Value)
+            : Math.Max(0f, value.Value);
+
+        ActionTuningRecord target;
+        if (existing != null)
+        {
+            target = existing;
+        }
+        else
+        {
+            target = new ActionTuningRecord
+            {
+                actionKey = actionKey,
+                raceDefName = actionRaceDefName,
+                xenotypeDefName = actionXenotypeDefName,
+            };
+            actionTuning.Add(target);
+        }
+
+        if (intervalField)
+        {
+            target.hasIntervalMultiplier = true;
+            target.intervalMultiplier = effectiveValue;
+        }
+        else
+        {
+            target.hasProbabilityMultiplier = true;
+            target.probabilityMultiplier = effectiveValue;
+        }
+
+        foreach (ActionTuningRecord row in actionTuning)
+        {
+            if (ReferenceEquals(row, target)) continue;
+            if (SameActionTuningIdentity(row, actionKey, actionRaceDefName, actionXenotypeDefName))
+            {
+                if (intervalField) row.hasIntervalMultiplier = false;
+                else row.hasProbabilityMultiplier = false;
+            }
+        }
+
+        actionTuning.RemoveAll(c => !ReferenceEquals(c, target)
+            && SameActionTuningIdentity(c, actionKey, actionRaceDefName, actionXenotypeDefName)
+            && !CarriesAnyActionTuningField(c));
+
+        NotifyDiscreteResolverRuntimeChanged();
+        QueuePersistence();
+    }
+
+    /// <summary>「重置为预设」（动作侧）：把预设里该 (actionKey, race, xeno) 条目的 scope + 两乘数
+    /// 重新写入本层（三旗标 true + 预设值），来源锚点不动。与心情侧同形：只写不清；无行/无来源/
+    /// 来源不符/预设无此条目 ⇒ false 且零副作用。</summary>
+    internal bool ResetActionTuningToPreset(string actionKey, string raceDefName, string xenotypeDefName, UniversalSqueakerTuningBaselineDef? preset)
+    {
+        actionTuning ??= new List<ActionTuningRecord>();
+        bool hasRace = !string.IsNullOrEmpty(raceDefName);
+        bool hasXeno = !string.IsNullOrEmpty(xenotypeDefName);
+        if (!hasRace && hasXeno) return false;
+
+        ActionTuningRecord? row = null;
+        foreach (ActionTuningRecord candidate in actionTuning)
+        {
+            if (SameActionTuningIdentity(candidate, actionKey, raceDefName, xenotypeDefName)) row = candidate;
+        }
+        if (row == null) return false;
+
+        string source = row.sourcePresetDefName ?? "";
+        if (source.Length == 0) return false;
+        if (preset == null || !string.Equals(preset.defName ?? "", source, StringComparison.Ordinal)) return false;
+        if (!TryFindActionBaseline(preset, actionKey, raceDefName, xenotypeDefName, out BaselineActionTuning? tuning) || tuning == null) return false;
+
+        row.hasScope = true;
+        row.scope = tuning.scope;
+        row.hasIntervalMultiplier = true;
+        row.intervalMultiplier = tuning.intervalMultiplier;
+        row.hasProbabilityMultiplier = true;
+        row.probabilityMultiplier = tuning.probabilityMultiplier;
+
+        NotifyDiscreteResolverRuntimeChanged();
+        QueuePersistence();
+        return true;
+    }
+
+    /// <summary>预设里该 (actionKey, race, xenotype) 的基线条目查找，镜像导入器合并规则（与
+    /// <see cref="TryFindMoodBaseline"/> 同形，键换成 actionKey；同键后写胜出）。</summary>
+    internal static bool TryFindActionBaseline(
+        UniversalSqueakerTuningBaselineDef? preset,
+        string actionKey,
+        string raceDefName,
+        string xenotypeDefName,
+        out BaselineActionTuning? tuning)
+    {
+        tuning = null;
+        if (preset == null || string.IsNullOrEmpty(actionKey)) return false;
+
+        Dictionary<string, BaselineActionTuning> byKey = new(StringComparer.Ordinal);
+        void Add(List<BaselineActionTuning>? list)
+        {
+            foreach (BaselineActionTuning entry in list ?? new List<BaselineActionTuning>())
+            {
+                if (entry == null || string.IsNullOrEmpty(entry.actionKey)) continue;
+                byKey[entry.actionKey] = entry;
+            }
+        }
+
+        if (string.IsNullOrEmpty(xenotypeDefName))
+        {
+            Add(FindBaselineRaceEntry(preset, raceDefName)?.actions);
+            return byKey.TryGetValue(actionKey, out tuning);
+        }
+
+        BaselineXenotypeEntry? xeno = FindBaselineXenotypeEntry(preset, raceDefName, xenotypeDefName);
+        if (xeno == null) return false;
+        if (xeno.inheritFromRace) Add(FindBaselineRaceEntry(preset, raceDefName)?.actions);
+        Add(xeno.actions);
+        return byKey.TryGetValue(actionKey, out tuning);
+    }
+
     /// <summary>心情记录是否仍承载任何可编辑字段：三个因子之一，或非空来源（锚点）。与
     /// <see cref="CarriesAnyActionTuningField"/> 同形；判定单位同样是「同身份组的并集」，不是 last-wins 幸存行。
     ///

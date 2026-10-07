@@ -138,6 +138,61 @@
   <US.Nav.Presets.Label>预设</US.Nav.Presets.Label>
   <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
 
+  <US.DevPanel.Title>US 开发面板</US.DevPanel.Title>
+  <US.DevPanel.Target>目标</US.DevPanel.Target>
+  <US.DevPanel.Target.Settings>设置页</US.DevPanel.Target.Settings>
+  <US.DevPanel.Target.Dialog>混音确认窗</US.DevPanel.Target.Dialog>
+  <US.DevPanel.Target.Diagnostics>诊断面板</US.DevPanel.Target.Diagnostics>
+  <US.DevPanel.Capture>采集</US.DevPanel.Capture>
+  <US.DevPanel.Outline>描边</US.DevPanel.Outline>
+  <US.DevPanel.Report>报告</US.DevPanel.Report>
+  <US.DevPanel.Status.Idle>就绪。</US.DevPanel.Status.Idle>
+  <US.DevPanel.Status.Capture>采集</US.DevPanel.Status.Capture>
+  <US.DevPanel.Status.Overlay>描边</US.DevPanel.Status.Overlay>
+  <US.DevPanel.Status.Page>已切到</US.DevPanel.Status.Page>
+  <US.DevPanel.Status.NoSettings>设置窗口未打开——页面按钮需要它打开。</US.DevPanel.Status.NoSettings>
+  <US.DevPanel.Status.ReportWritten>报告已写入</US.DevPanel.Status.ReportWritten>
+  <US.DevPanel.Status.ReportWaiting>报告已请求，等待下一个 pass</US.DevPanel.Status.ReportWaiting>
+  <US.DevPanel.Status.ReportUnavailable>该目标当前不可报告</US.DevPanel.Status.ReportUnavailable>
+  <US.Diagnostics.DevPanel.Label>开发面板：在任意设置页对设置页及其确认弹窗执行采集、描边与报告。</US.Diagnostics.DevPanel.Label>
+  <US.Diagnostics.DevPanel.Open>打开开发面板</US.Diagnostics.DevPanel.Open>
+  <US.Tuning.Area.Actions>动作规则</US.Tuning.Area.Actions>
+  <US.Tuning.Area.Mood>心情音色</US.Tuning.Area.Mood>
+  <US.Tuning.Area.Fallback>原生回退</US.Tuning.Area.Fallback>
+  <US.Tuning.Interval>间隔</US.Tuning.Interval>
+  <US.Tuning.Probability>概率</US.Tuning.Probability>
+  <US.Tuning.RestoreInherit>恢复继承</US.Tuning.RestoreInherit>
+  <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetPresetUnavailable>预设无此条目</US.Tuning.ResetPresetUnavailable>
+  <US.Tuning.ResetPresetNoAnchor>无预设来源</US.Tuning.ResetPresetNoAnchor>
+  <US.VF1.Source.Global>全局</US.VF1.Source.Global>
+  <US.VF1.Source.Race>种族</US.VF1.Source.Race>
+  <US.VF1.Source.Xenotype>异种</US.VF1.Source.Xenotype>
+  <US.VF1.Source.Default>默认</US.VF1.Source.Default>
+  <US.VF1.Race>种族</US.VF1.Race>
+  <US.VF1.Create>新建表</US.VF1.Create>
+  <US.VF1.NoTable>尚无回退表。在上方选择种族即可新建；新种族从下次完整启动游戏时生效。</US.VF1.NoTable>
+  <US.VF1.Unset>未设置（无声）</US.VF1.Unset>
+  <US.VF1.SoundSearch>搜索声音</US.VF1.SoundSearch>
+  <US.VF1.RestoreInherit>恢复继承</US.VF1.RestoreInherit>
+  <US.VF1.RestoreDefault>恢复默认</US.VF1.RestoreDefault>
+  <US.VF1.Delete>删除表</US.VF1.Delete>
+  <US.VF1.DeleteQuestion>确定删除这张玩家表？删除后可重新创建；随包声音不受影响。</US.VF1.DeleteQuestion>
+  <US.VF1.DeleteConfirm>确认删除</US.VF1.DeleteConfirm>
+  <US.VF1.State.Unset>未设置</US.VF1.State.Unset>
+  <US.VF1.State.Override>玩家覆盖</US.VF1.State.Override>
+  <US.VF1.State.Maintainer>随包数据</US.VF1.State.Maintainer>
+  <US.VF1.State.NoSound>缺声</US.VF1.State.NoSound>
+  <US.VF1.Status.Saved>已保存；该种族的表立即生效。</US.VF1.Status.Saved>
+  <US.VF1.Status.SavedRestart>已保存；本表新支持的种族从下次完整启动游戏时开始路由。</US.VF1.Status.SavedRestart>
+  <US.VF1.Status.CreatedRestart>表已创建；从下次完整启动游戏时开始路由。</US.VF1.Status.CreatedRestart>
+  <US.VF1.Status.Restored>已清除玩家覆盖，恢复随包数据。</US.VF1.Status.Restored>
+  <US.VF1.Status.NoMaintainerData>这是玩家自建表——请删除而不是恢复。</US.VF1.Status.NoMaintainerData>
+  <US.VF1.Status.Deleted>玩家表已删除；其种族支持在下次完整启动时撤除。</US.VF1.Status.Deleted>
+  <US.VF1.Status.DeleteRefusedMaintainer>随包表不可删除；请使用恢复默认。</US.VF1.Status.DeleteRefusedMaintainer>
+  <US.VF1.Status.SaveFailed>保存失败——磁盘上的表未改动，原因见日志。</US.VF1.Status.SaveFailed>
+
+
   <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
   <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
@@ -155,7 +210,7 @@
   <US.Tuning.EasterEggs.Off>关闭：仅普通语音条目</US.Tuning.EasterEggs.Off>
   <US.Tuning.ScaleCooldown>高倍速时保持叫声节奏稳定</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>按语言能力（Talking）调整普通叫声尝试</US.Tuning.ScaleTalking>
-  <US.Tuning.ScalePopulation>可听区域鼠族较多时减少周期叫声</US.Tuning.ScalePopulation>
+  <US.Tuning.ScalePopulation>可听区域内已接入 US 的 Pawn 较多时减少周期叫声</US.Tuning.ScalePopulation>
   <US.Tuning.EatPrecision>仅在真正进食（正在摄入营养）时触发 Eat 叫声</US.Tuning.EatPrecision>
   <US.Tuning.EatPrecision.IncludeDrugs>使用成瘾品</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
@@ -199,6 +254,9 @@
   <US.Packs.Checklist.OrphanBanner>已选包键不再存在。请使用“清除失效”清理。</US.Packs.Checklist.OrphanBanner>
   <US.Packs.Checklist.ForgetUnavailable>清除失效</US.Packs.Checklist.ForgetUnavailable>
   <US.Packs.Checklist.SearchPlaceholder>搜索语音包…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Domain.Clear>清除筛选</US.Packs.Domain.Clear>
+  <US.Packs.Domain.SearchPlaceholder>搜索本列表…</US.Packs.Domain.SearchPlaceholder>
+  <US.Packs.Domain.EmptySearch>没有符合当前筛选的条目。</US.Packs.Domain.EmptySearch>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
@@ -309,7 +367,7 @@
   <US.Help.BasicTuning.ScaleTalking.Label>语言能力缩放</US.Help.BasicTuning.ScaleTalking.Label>
   <US.Help.BasicTuning.ScaleTalking.Text>按发声者的语言能力（Talking）调整普通叫声：能力越低，普通叫声尝试通过的概率越低。自带交谈门控的动作不受影响。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>可听区域缩放</US.Help.BasicTuning.ScalePopulation.Label>
-  <US.Help.BasicTuning.ScalePopulation.Text>可听区域内鼠族较多时，周期叫声减少（每十名可闻殖民者一档），因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.ScalePopulation.Text>可听区域内已接入 US 的 Pawn 较多时，周期叫声减少：间隔随可闻 Pawn 数除以十的系数增大（不低于一倍），随机尝试的通过概率同比例下降，因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.BasicTuning.EatPrecision.Label>进食判定</US.Help.BasicTuning.EatPrecision.Label>
   <US.Help.BasicTuning.EatPrecision.Text>默认关：整段进食行程都算 Eat 叫声，含走向食物的路程。开启后只算真正摄入营养的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。</US.Help.BasicTuning.EatPrecision.Text>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>使用成瘾品</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
@@ -343,16 +401,16 @@
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选（含两张域卡自己的搜索）。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
-  <US.Help.FilterBar.RaceXeno.Text>两个并列下拉按种族与异种过滤第 2 步的域列表；选定种族后，异种选项自动收窄到该种族的域。下拉显示各自的已翻译名称。</US.Help.FilterBar.RaceXeno.Text>
+  <US.Help.FilterBar.RaceXeno.Text>种族与异种下拉现位于第 2 步各自卡片的头部，只收窄本卡列表；选定种族后，异种选项自动收窄到该种族的域，浏览某一行种族时右卡也只显示该种族的异种（含无种族归属项）。下拉显示各自的已翻译名称。</US.Help.FilterBar.RaceXeno.Text>
   <US.Help.FilterBar.Author.Text>按作者过滤语音包行；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
-  <US.Help.RaceLayer.Overview>按种族列出语音包域，每行显示"已启用 / 候选"数量与状态角标；选中一行即把下方包清单切到该域。</US.Help.RaceLayer.Overview>
+  <US.Help.RaceLayer.Overview>按种族列出语音包域，每行显示"已启用 / 候选"数量与状态角标；选中一行即把下方包清单切到该域，并让右侧异种卡跟随收窄。卡头含本卡的下拉、搜索框（显示名与内部名都可搜）与"清除"；列表区约 4.5 行高，超出滚动。</US.Help.RaceLayer.Overview>
   <US.Help.RaceLayer.Row.Label>种族行</US.Help.RaceLayer.Row.Label>
   <US.Help.RaceLayer.Row.Text>点击种族行选中该种族域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.RaceLayer.Row.Text>
-  <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。</US.Help.XenotypeLayer.Overview>
+  <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。浏览种族域时本卡只列该种族的异种（含无种族归属项）。卡头含本卡的下拉、搜索框与"清除"；列表区约 4.5 行高，超出滚动。</US.Help.XenotypeLayer.Overview>
   <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
   <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
   <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标未加载、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>

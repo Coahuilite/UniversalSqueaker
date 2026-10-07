@@ -138,6 +138,60 @@
   <US.Nav.Tuning.Description>Layered action and mood rules</US.Nav.Tuning.Description>
   <US.Nav.Presets.Label>Presets</US.Nav.Presets.Label>
   <US.Nav.Presets.Description>Def-provided baselines</US.Nav.Presets.Description>
+  <US.DevPanel.Title>US developer panel</US.DevPanel.Title>
+  <US.DevPanel.Target>Target</US.DevPanel.Target>
+  <US.DevPanel.Target.Settings>Settings page</US.DevPanel.Target.Settings>
+  <US.DevPanel.Target.Dialog>Remix dialog</US.DevPanel.Target.Dialog>
+  <US.DevPanel.Target.Diagnostics>Diagnostics panel</US.DevPanel.Target.Diagnostics>
+  <US.DevPanel.Capture>Capture</US.DevPanel.Capture>
+  <US.DevPanel.Outline>Outline</US.DevPanel.Outline>
+  <US.DevPanel.Report>Report</US.DevPanel.Report>
+  <US.DevPanel.Status.Idle>Ready.</US.DevPanel.Status.Idle>
+  <US.DevPanel.Status.Capture>Capture</US.DevPanel.Status.Capture>
+  <US.DevPanel.Status.Overlay>Outline</US.DevPanel.Status.Overlay>
+  <US.DevPanel.Status.Page>Switched to</US.DevPanel.Status.Page>
+  <US.DevPanel.Status.NoSettings>Settings window is closed - page buttons need it open.</US.DevPanel.Status.NoSettings>
+  <US.DevPanel.Status.ReportWritten>Report written</US.DevPanel.Status.ReportWritten>
+  <US.DevPanel.Status.ReportWaiting>Report requested - waiting for the next pass</US.DevPanel.Status.ReportWaiting>
+  <US.DevPanel.Status.ReportUnavailable>Report unavailable for this target</US.DevPanel.Status.ReportUnavailable>
+  <US.Diagnostics.DevPanel.Label>Developer panel: capture, outline and report for the settings page and its confirmation dialog, from any page.</US.Diagnostics.DevPanel.Label>
+  <US.Diagnostics.DevPanel.Open>Open developer panel</US.Diagnostics.DevPanel.Open>
+  <US.Tuning.Area.Actions>Action rules</US.Tuning.Area.Actions>
+  <US.Tuning.Area.Mood>Mood tones</US.Tuning.Area.Mood>
+  <US.Tuning.Area.Fallback>Native fallback</US.Tuning.Area.Fallback>
+  <US.Tuning.Interval>Interval</US.Tuning.Interval>
+  <US.Tuning.Probability>Probability</US.Tuning.Probability>
+  <US.Tuning.RestoreInherit>Inherit</US.Tuning.RestoreInherit>
+  <US.Tuning.ResetToPreset>Reset to preset</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetPresetUnavailable>Preset has no entry</US.Tuning.ResetPresetUnavailable>
+  <US.Tuning.ResetPresetNoAnchor>No preset anchor</US.Tuning.ResetPresetNoAnchor>
+  <US.VF1.Source.Global>global</US.VF1.Source.Global>
+  <US.VF1.Source.Race>race</US.VF1.Source.Race>
+  <US.VF1.Source.Xenotype>xenotype</US.VF1.Source.Xenotype>
+  <US.VF1.Source.Default>default</US.VF1.Source.Default>
+  <US.VF1.Race>Race</US.VF1.Race>
+  <US.VF1.Create>New table</US.VF1.Create>
+  <US.VF1.NoTable>No fallback tables yet. Pick a race above to create one; it takes effect at the next full game start.</US.VF1.NoTable>
+  <US.VF1.Unset>Unset (no sound)</US.VF1.Unset>
+  <US.VF1.SoundSearch>Search sounds</US.VF1.SoundSearch>
+  <US.VF1.RestoreInherit>Restore inheritance</US.VF1.RestoreInherit>
+  <US.VF1.RestoreDefault>Restore default</US.VF1.RestoreDefault>
+  <US.VF1.Delete>Delete table</US.VF1.Delete>
+  <US.VF1.DeleteQuestion>Delete this player table? A deleted table can be created again; the shipped sounds are never touched.</US.VF1.DeleteQuestion>
+  <US.VF1.DeleteConfirm>Confirm delete</US.VF1.DeleteConfirm>
+  <US.VF1.State.Unset>unset</US.VF1.State.Unset>
+  <US.VF1.State.Override>yours</US.VF1.State.Override>
+  <US.VF1.State.Maintainer>shipped</US.VF1.State.Maintainer>
+  <US.VF1.State.NoSound>no sound</US.VF1.State.NoSound>
+  <US.VF1.Status.Saved>Saved; this race updates immediately.</US.VF1.Status.Saved>
+  <US.VF1.Status.SavedRestart>Saved; a race newly supported by this table starts routing at the next full game start.</US.VF1.Status.SavedRestart>
+  <US.VF1.Status.CreatedRestart>Table created; it starts routing at the next full game start.</US.VF1.Status.CreatedRestart>
+  <US.VF1.Status.Restored>Player overrides cleared; shipped data restored.</US.VF1.Status.Restored>
+  <US.VF1.Status.NoMaintainerData>This is a player table - delete it instead of restoring.</US.VF1.Status.NoMaintainerData>
+  <US.VF1.Status.Deleted>Player table deleted; its support is withdrawn at the next full game start.</US.VF1.Status.Deleted>
+  <US.VF1.Status.DeleteRefusedMaintainer>A shipped table cannot be deleted; use Restore default.</US.VF1.Status.DeleteRefusedMaintainer>
+  <US.VF1.Status.SaveFailed>The save failed - the table on disk is unchanged. See the log for the reason.</US.VF1.Status.SaveFailed>
+
 
   <US.Section.OutputLevel>Output level</US.Section.OutputLevel>
   <US.Section.PlaybackBehaviour>Voice rules</US.Section.PlaybackBehaviour>
@@ -145,7 +199,7 @@
   <US.Section.DistanceAttenuation>Listening distance</US.Section.DistanceAttenuation>
   <US.Section.FilterDomains>1. Filter domains</US.Section.FilterDomains>
   <US.Section.RaceDomain>2. Choose a race domain</US.Section.RaceDomain>
-  <US.Section.XenotypeDomain>2. Or choose a xenotype domain</US.Section.XenotypeDomain>
+  <US.Section.XenotypeDomain>2. Or a xenotype domain</US.Section.XenotypeDomain>
   <US.Section.ChooseVoicePacks>3. Choose VoicePacks</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>Layered tuning</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def baseline presets</US.Section.DefBaselines>
@@ -156,7 +210,7 @@
   <US.Tuning.EasterEggs.Off>Off (ordinary entries only)</US.Tuning.EasterEggs.Off>
   <US.Tuning.ScaleCooldown>Keep squeak timing steady at high game speed</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>Adjust ordinary squeaks by the pawn's Talking ability</US.Tuning.ScaleTalking>
-  <US.Tuning.ScalePopulation>Fewer periodic squeaks when many kin are in earshot</US.Tuning.ScalePopulation>
+  <US.Tuning.ScalePopulation>Fewer periodic squeaks when many US-connected pawns are in earshot</US.Tuning.ScalePopulation>
   <US.Tuning.EatPrecision>Eat squeaks only while actually eating (ingesting nutrition)</US.Tuning.EatPrecision>
   <US.Tuning.EatPrecision.IncludeDrugs>Also for drugs</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
@@ -204,6 +258,9 @@
   <US.Packs.Checklist.OrphanBanner>Selected pack keys are no longer installed. Use Forget dangling to clean them.</US.Packs.Checklist.OrphanBanner>
   <US.Packs.Checklist.ForgetUnavailable>Forget dangling</US.Packs.Checklist.ForgetUnavailable>
   <US.Packs.Checklist.SearchPlaceholder>Search VoicePacks…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Domain.Clear>Clear filters</US.Packs.Domain.Clear>
+  <US.Packs.Domain.SearchPlaceholder>Search this list…</US.Packs.Domain.SearchPlaceholder>
+  <US.Packs.Domain.EmptySearch>No entries match the current filters.</US.Packs.Domain.EmptySearch>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>Actions {0}/{1}</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>No VoicePack domains are currently installed. Add a VoicePack that declares a raceDefName to configure audio.</US.Packs.Banner.NoDomains>
@@ -315,7 +372,7 @@
   <US.Help.BasicTuning.ScaleTalking.Label>Talking Scaling</US.Help.BasicTuning.ScaleTalking.Label>
   <US.Help.BasicTuning.ScaleTalking.Text>Adjusts the ordinary squeaks by the pawn's Talking ability: the lower the ability, the lower the chance an ordinary attempt passes. Actions with their own talking gate are unaffected. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>Population Scaling</US.Help.BasicTuning.ScalePopulation.Label>
-  <US.Help.BasicTuning.ScalePopulation.Text>When many kin are within earshot, periodic squeaks are reduced (one step per ten audible pawns), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.ScalePopulation.Text>When many US-connected pawns are within earshot, periodic squeaks thin out: the intervals lengthen and the probability of a random squeak attempt passing falls, both in proportion to the audible count divided by ten (the factor is never below one), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.BasicTuning.EatPrecision.Label>Eating Detection</US.Help.BasicTuning.EatPrecision.Label>
   <US.Help.BasicTuning.EatPrecision.Text>Off by default: the whole eating trip counts as an Eat squeak, including the walk to the food. On, only the part where nutrition is actually being ingested counts; zero-nutrition items such as smokeleaf joints are ignored unless "Also for drugs" is on, while nutrition-bearing drinks such as beer and ambrosia still count. Turning this off also clears and hides the option below.</US.Help.BasicTuning.EatPrecision.Text>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>Include Drugs</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
@@ -349,16 +406,16 @@
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>Applies the preset's ticked action and mood rows to the matching race / xenotype layers - same keys overwrite, new keys append - tags every imported row with its source preset, and feeds the runtime resolver immediately.</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>The narrowing tools of the Packs workspace: Enabled only keeps domains with enabled packs; Conflicts lists domains that are conflicting, dormant, target not loaded or dangling; Orphan only keeps domains with stale selections; the Author dropdown narrows pack rows; All clears every filter.</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>The narrowing tools of the Packs workspace: Enabled only keeps domains with enabled packs; Conflicts lists domains that are conflicting, dormant, target not loaded or dangling; Orphan only keeps domains with stale selections; the Author dropdown narrows pack rows; All clears every filter, the domain cards' own searches included.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Domain.Label>Domain Filter Chips</US.Help.FilterBar.Domain.Label>
   <US.Help.FilterBar.Domain.Text>The chips stack: Enabled only, Conflicts and Orphan each narrow the domain lists and the pack checklist, while All clears every filter, search included.</US.Help.FilterBar.Domain.Text>
   <US.Help.FilterBar.RaceXeno.Label>Race / Xenotype Filters</US.Help.FilterBar.RaceXeno.Label>
-  <US.Help.FilterBar.RaceXeno.Text>Two parallel dropdowns filter the step-2 domain lists by race and xenotype; choosing a race narrows the xenotype options to that race's domains. Each dropdown shows translated names.</US.Help.FilterBar.RaceXeno.Text>
+  <US.Help.FilterBar.RaceXeno.Text>The race and xenotype dropdowns now sit in the header of the card each one filters (step 2) and narrow only that list; choosing a race narrows the xenotype options to that race's domains, and browsing a race row also narrows the xenotype card to it (race-less domains stay). Each dropdown shows translated names.</US.Help.FilterBar.RaceXeno.Text>
   <US.Help.FilterBar.Author.Text>Narrows the VoicePack rows by author; packs without a declared author stand in by mod name. Matching is case-insensitive containment.</US.Help.FilterBar.Author.Text>
-  <US.Help.RaceLayer.Overview>Lists the VoicePack domains race by race - each row shows enabled/candidate counts and any state - and selecting a row points the pack checklist below at that domain.</US.Help.RaceLayer.Overview>
+  <US.Help.RaceLayer.Overview>Lists the VoicePack domains race by race - each row shows enabled/candidate counts and any state - and selecting a row points the pack checklist below at that domain while the xenotype card on the right follows it. The card header carries its own dropdown, a search box (display and internal names both match) and Clear; the list area is about 4.5 rows tall and scrolls beyond.</US.Help.RaceLayer.Overview>
   <US.Help.RaceLayer.Row.Label>Race Row</US.Help.RaceLayer.Row.Label>
   <US.Help.RaceLayer.Row.Text>Clicking a race row selects that race domain, and the Choose VoicePacks card below switches to its pack checklist.</US.Help.RaceLayer.Row.Text>
-  <US.Help.XenotypeLayer.Overview>Lists xenotype domains keyed by the (race, xenotype) pair - each row reads "xenotype (race)" - so the same xenotype is configured independently per race.</US.Help.XenotypeLayer.Overview>
+  <US.Help.XenotypeLayer.Overview>Lists xenotype domains keyed by the (race, xenotype) pair - each row reads "xenotype (race)" - so the same xenotype is configured independently per race. While a race domain is browsed this card lists only that race's xenotypes (plus race-less ones). The card header carries its own dropdown, search box and Clear; the list area is about 4.5 rows tall and scrolls beyond.</US.Help.XenotypeLayer.Overview>
   <US.Help.XenotypeLayer.Row.Label>Xenotype Row</US.Help.XenotypeLayer.Row.Label>
   <US.Help.XenotypeLayer.Row.Text>Clicking a xenotype row selects that (race, xenotype) domain, and the Choose VoicePacks card below switches to its pack checklist.</US.Help.XenotypeLayer.Row.Text>
   <US.Help.Checklist.Overview>Search and tick VoicePacks for the selected domain. Saved pack keys that are no longer installed are stale selections: they surface in a warning banner, and Forget dangling clears them at once. Dormant, target not loaded and conflict banners also sit atop the card.</US.Help.Checklist.Overview>

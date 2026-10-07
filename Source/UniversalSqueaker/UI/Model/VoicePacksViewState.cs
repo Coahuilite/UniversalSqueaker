@@ -52,6 +52,24 @@ public sealed class VoicePacksViewState
     public IReadOnlyList<FilterOptionView> RaceFilterOptions { get; }
     public IReadOnlyList<FilterOptionView> XenotypeFilterOptions { get; }
 
+    /// <summary>D4: the race list went empty while entries exist (or its search is active) - the card's
+    /// empty-note gate. The same rule for the xenotype list.</summary>
+    public bool RaceListEmpty { get; }
+    public bool XenotypeListEmpty { get; }
+
+    /// <summary>VF1定稿: the tuning page's internal area (0 actions / 1 moods / 2 fallback) and the
+    /// fallback editor's projection - races (maintainer ∪ player tables), the selected race's 17-key
+    /// entry rows, query-filtered sound candidates (labelled with the CURRENT production
+    /// availability, never the retired blanket verdict) and create candidates taken from the loaded
+    /// pawn ThingDefs, not from the pack catalog. All read-only; writes ride the source's commands.</summary>
+    public int TuningArea { get; }
+    public IReadOnlyList<FallbackRaceView> FallbackRaces { get; }
+    public string FallbackSelectedRace { get; }
+    public IReadOnlyList<FallbackEntryView> FallbackEntries { get; }
+    public IReadOnlyList<FilterOptionView> FallbackSoundOptions { get; }
+    public IReadOnlyList<FilterOptionView> FallbackCandidateOptions { get; }
+    public string FallbackStatusKey { get; }
+
     public VoicePacksViewState(
         SqueakVoicePackMode mode,
         bool allowEasterEggs,
@@ -89,7 +107,16 @@ public sealed class VoicePacksViewState
         IReadOnlyList<FilterOptionView> xenotypeFilterOptions,
         bool eatPrecisionEnabled = false,
         bool eatPrecisionIncludeDrugs = false,
-        bool allowBabyActions = false)
+        bool allowBabyActions = false,
+        bool raceListEmpty = false,
+        bool xenotypeListEmpty = false,
+        int tuningArea = 0,
+        IReadOnlyList<FallbackRaceView>? fallbackRaces = null,
+        string fallbackSelectedRace = "",
+        IReadOnlyList<FallbackEntryView>? fallbackEntries = null,
+        IReadOnlyList<FilterOptionView>? fallbackSoundOptions = null,
+        IReadOnlyList<FilterOptionView>? fallbackCandidateOptions = null,
+        string fallbackStatusKey = "")
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -128,6 +155,15 @@ public sealed class VoicePacksViewState
         XenotypeFilterOptions = xenotypeFilterOptions ?? Array.Empty<FilterOptionView>();
         EatPrecisionEnabled = eatPrecisionEnabled;
         EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
+        RaceListEmpty = raceListEmpty;
+        XenotypeListEmpty = xenotypeListEmpty;
+        TuningArea = tuningArea;
+        FallbackRaces = fallbackRaces ?? Array.Empty<FallbackRaceView>();
+        FallbackSelectedRace = fallbackSelectedRace ?? "";
+        FallbackEntries = fallbackEntries ?? Array.Empty<FallbackEntryView>();
+        FallbackSoundOptions = fallbackSoundOptions ?? Array.Empty<FilterOptionView>();
+        FallbackCandidateOptions = fallbackCandidateOptions ?? Array.Empty<FilterOptionView>();
+        FallbackStatusKey = fallbackStatusKey ?? "";
     }
 }
 
@@ -221,7 +257,48 @@ public readonly struct VoicePackDomainView
     public string DomainIdentity => (Scope == SqueakVoicePackScope.Xenotype ? TargetDefName : RaceDefName) ?? "";
 }
 
-/// <summary>One built-in action's effective Global-layer scope, projected for the scope tree.
+/// <summary>VF1: one race row in the final-fallback editor's race list.</summary>
+public readonly struct FallbackRaceView
+{
+    public readonly string DefName;
+    public readonly string Label;
+    /// <summary>True when no shipped profile Def owns this race - it exists because a player made it.</summary>
+    public readonly bool IsPlayerTable;
+    /// <summary>How many of the closed action keys the table resolves to a sound.</summary>
+    public readonly int SoundCount;
+
+    public FallbackRaceView(string defName, string label, bool isPlayerTable, int soundCount)
+    {
+        DefName = defName ?? "";
+        Label = label ?? defName ?? "";
+        IsPlayerTable = isPlayerTable;
+        SoundCount = soundCount;
+    }
+}
+
+/// <summary>VF1: one action row inside the fallback table editor. State vocabulary is the kernel's:
+/// 0 = unset (no entry), 1 = player override, 2 = maintainer data, 3 = entry present but the sound
+/// is loaded-empty/failed (the NORMAL missing-sound state - short note, never an error).</summary>
+public readonly struct FallbackEntryView
+{
+    public const int Unset = 0, PlayerOverride = 1, Maintainer = 2, NoSound = 3;
+
+    public readonly string ActionKey;
+    public readonly string ActionLabel;
+    public readonly string SoundDefName;
+    public readonly string SoundLabel;
+    public readonly int State;
+
+    public FallbackEntryView(string actionKey, string actionLabel, string soundDefName, string soundLabel, int state)
+    {
+        ActionKey = actionKey ?? "";
+        ActionLabel = actionLabel ?? actionKey ?? "";
+        SoundDefName = soundDefName ?? "";
+        SoundLabel = soundLabel ?? "";
+        State = state;
+    }
+}
+/// <summary>S5 分层：动作 × 当前层的作用域行。行携带本层记录与有效作用域。
 /// Carries the built-in <see cref="SqueakAction"/> so the widget can skip scope states the action
 /// does not support (e.g. Draft/Undraft/Equip are ActiveCommand-only).</summary>
 public readonly struct ActionScopeRowView
@@ -239,7 +316,32 @@ public readonly struct ActionScopeRowView
     /// <summary>S5 分层：有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins）。</summary>
     public readonly SqueakActionScope EffectiveScope;
 
-    public ActionScopeRowView(string actionKey, string displayName, ActionScopeGroup group, SqueakActionScope scope, SqueakAction action, bool hasOwnScope = false, SqueakActionScope effectiveScope = default)
+    // PRE1/VF1定稿 A1: the interval and probability multipliers ride the SAME fold the runtime uses
+    // (field-level last-wins over Default < Global < Race < Xenotype). Before this projection the
+    // multipliers were fully live in data and runtime but invisible in the UI - the maintainer's own
+    // comment in UniversalSqueakerSettings.cs named that fact. Own* = this layer's record (null =
+    // inherit); Effective* = the folded answer; the source layers say WHERE the effective value came
+    // from (0 Global / 1 Race / 2 Xenotype / -1 default).
+    public readonly bool HasOwnInterval;
+    public readonly float OwnInterval;
+    public readonly bool HasOwnProbability;
+    public readonly float OwnProbability;
+    public readonly float EffectiveInterval;
+    public readonly float EffectiveProbability;
+    public readonly int IntervalSourceLayer;
+    public readonly int ProbabilitySourceLayer;
+    /// <summary>Reset-to-preset anchor state, same vocabulary as the mood rows: whether an anchor
+    /// exists, whether it resolves to an entry for THIS action, and the target's display label.</summary>
+    public readonly bool HasPresetAnchor;
+    public readonly bool PresetResetReady;
+    public readonly string ResetPresetTarget;
+
+    public ActionScopeRowView(
+        string actionKey, string displayName, ActionScopeGroup group, SqueakActionScope scope, SqueakAction action,
+        bool hasOwnScope = false, SqueakActionScope effectiveScope = default,
+        bool hasOwnInterval = false, float ownInterval = 1f, bool hasOwnProbability = false, float ownProbability = 1f,
+        float effectiveInterval = 1f, float effectiveProbability = 1f, int intervalSourceLayer = -1, int probabilitySourceLayer = -1,
+        bool hasPresetAnchor = false, bool presetResetReady = false, string resetPresetTarget = "")
     {
         ActionKey = actionKey ?? "";
         DisplayName = displayName ?? actionKey ?? "";
@@ -249,6 +351,17 @@ public readonly struct ActionScopeRowView
         HasOwnScope = hasOwnScope;
         // 无条件保存有效值：本层有记录时，更高层（Race/Xeno）的覆盖也必须展示（折叠只认层优先级，与列表顺序无关）。
         EffectiveScope = effectiveScope;
+        HasOwnInterval = hasOwnInterval;
+        OwnInterval = ownInterval;
+        HasOwnProbability = hasOwnProbability;
+        OwnProbability = ownProbability;
+        EffectiveInterval = effectiveInterval;
+        EffectiveProbability = effectiveProbability;
+        IntervalSourceLayer = intervalSourceLayer;
+        ProbabilitySourceLayer = probabilitySourceLayer;
+        HasPresetAnchor = hasPresetAnchor;
+        PresetResetReady = presetResetReady;
+        ResetPresetTarget = resetPresetTarget ?? "";
     }
 }
 

@@ -95,6 +95,8 @@ internal static class UiSourceInvariantTests
         string funnel = Path.Combine(ui, "Kernel", "UsWriteBindings.cs");
         string panelExemption = Path.Combine(ui, "Diagnostics", "UsDiagnosticsHost.cs");
         string dialogExemption = Path.Combine(ui, "RemixConfirmationFlow.cs");
+        string confirmExemption = Path.Combine(ui, "UsConfirmWindow.cs");
+        string devPanelExemption = Path.Combine(ui, "Dev", "UsDevPanelWindow.cs");
 
         Assert(File.Exists(funnel),
             "the write-binding funnel UI/Kernel/UsWriteBindings.cs is missing: every settings-page write "
@@ -104,6 +106,12 @@ internal static class UiSourceInvariantTests
             + " exemption file must fail this guard instead of silently widening it");
         Assert(File.Exists(dialogExemption),
             "the named write-registration exemption UI/RemixConfirmationFlow.cs is missing (SA1.3); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(confirmExemption),
+            "the named write-registration exemption UI/UsConfirmWindow.cs is missing (VF1 r5); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(devPanelExemption),
+            "the named write-registration exemption UI/Dev/UsDevPanelWindow.cs is missing (DT1); a vanished"
             + " exemption file must fail this guard instead of silently widening it");
 
         // EXEMPT, by name and with its reason: the diagnostics panel owns a SECOND host and its own
@@ -126,6 +134,25 @@ internal static class UiSourceInvariantTests
             + " confirm-cancel / confirm-enable on its own host and clock), got " + dialogExempt
             + " - re-cut this pin deliberately in the batch that changes the dialog's write surface");
 
+        // EXEMPT, same rule (VF1 r5): the single confirmation window is its OWN host with its OWN
+        // session clock (the catalog-opened UiPageWindow), and its two commands are dialog-local
+        // answers (confirm / cancel) - not settings-page write keys. The confirm callback writes
+        // through the SETTINGS host's captured binding table, which the funnel already enumerates.
+        int confirmExempt = CountWriteRegistrations(File.ReadAllText(confirmExemption));
+        Assert(confirmExempt == 2,
+            "UI/UsConfirmWindow.cs is expected to carry 2 write registrations (confirm-yes / confirm-no"
+            + " on its own host and clock), got " + confirmExempt
+            + " - re-cut this pin deliberately in the batch that changes the confirmation's write surface");
+
+        // EXEMPT, same rule (DT1): the developer geometry panel owns its own host and clock; its
+        // registrations are page-local tools (page tabs, capture/outline switches, report, target
+        // picks) on a window that exists only while the settings window is open, never settings-page
+        // write keys. The count is pinned so a new tool button is a deliberate act.
+        int devPanelExempt = CountWriteRegistrations(File.ReadAllText(devPanelExemption));
+        Assert(devPanelExempt == 9,
+            "UI/Dev/UsDevPanelWindow.cs is expected to carry 9 write registrations (its own host and"
+            + " clock, exempt from the settings-page funnel), got " + devPanelExempt
+            + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
         // This counts TEXT OCCURRENCES of the three raw write calls in the funnel file, not "operations":
         // the funnel exposes five methods (Value, Action, Command, ItemValue, ItemAction) but only the first
@@ -143,7 +170,9 @@ internal static class UiSourceInvariantTests
         {
             if (string.Equals(file, funnel, StringComparison.OrdinalIgnoreCase)
                     || string.Equals(file, panelExemption, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(file, dialogExemption, StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(file, dialogExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, confirmExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, devPanelExemption, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

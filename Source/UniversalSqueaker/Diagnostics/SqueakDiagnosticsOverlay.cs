@@ -55,6 +55,10 @@ public static class SqueakDiagnosticsOverlay
     private static readonly Dictionary<Pawn, SqueakDiagnosticsDetailWindow> detailWindows = new();
 
     private static SqueakDiagnosticsPanel? mainPanel;
+    /// <summary>DT1: the open main panel for the Debug Actions outline toggle (null when closed -
+    /// <see cref="NotifyPanelClosed"/> clears the field with the session).</summary>
+    internal static SqueakDiagnosticsPanel? ActivePanelOrNull => mainPanel;
+
     private static Map? cachedMap;
     private static bool sessionActive;
     private static float nextSweepRealtime;

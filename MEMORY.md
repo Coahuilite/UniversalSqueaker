@@ -11,24 +11,29 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Current state (2026-10-05)
+## Current state (2026-10-07)
 
 - **BH1 bottom help is integrated and its real-game acceptance PASSED (2026-10-06).** The measured
   3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX; it is
   recorded, not an acceptance blocker. Read the current US package identity from its own stamp and the
-  PM paired manifest, never infer it from HEAD. FL remains `0181268`, Demo `9d4b7e0`.
+  PM paired manifest, never infer it from HEAD. The retained BH1 package uses FL `0181268` and Demo
+  `9d4b7e0`; the checkpoint candidate is separate and its identities belong to its paired manifest.
 - **Latest human feedback reaffirms C1/C2 as normal.** Their original diagnostic IDs stay intact; the final
   feedback did not name RPT1/XG1 individually. The verbatim feedback, runtime observations and evidence are
   kept outside the product repository in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
   Layout reports do not replace visual or interaction acceptance; unattributed mod-stack warnings remain
   unattributed.
-- **Slice status**: B3, V2, V3, V4, DIAG-FIX, RPT1, XG1 and BH1 are technically integrated and BH1's
-  human pass landed. Remaining human observations cover V2/V3/V4, RPT1's sentence clarity and XG1's
-  disabled feel, with `TODO.md`'s NOW block owning the per-slice list. The V1/B3 observations the user
-  already gave must NOT be re-asked. Tuning-layer redesign, composite splitting and page-layout work
-  stay deferred, and bottom help keeps its separate contract
-  (`../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`). Technical coverage limits
-  remain separate, per `../modding_documents/relay_mod/PM_HANDOFF.md`.
+- **Current checkpoint:** D4 has three independent name-search fields, race-following xenotypes and
+  same-pass VisibleRows4.5 sizing. Tuning now separates action rules, mood factors and per-race final
+  native fallback, with visible effective multipliers, suppliers and usable preset reset targets.
+  VoicePack OR final table admits a race; neither means no automatic comp/no routing. Shipped Ratkin
+  data references Core sounds; the Kernel carries no race seed. Player field-presence overrides
+  survive maintainer version changes; first table-only admission requires a full restart. The small
+  settings developer panel serves only its five pages/confirmation dialogs; in-game outline belongs
+  only to US diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks,
+  faithful proofs and real-game limits are recorded separately in the PM checkpoint evidence.
+  Prior human passes remain accepted; whole-checkpoint task acceptance is pending. Composite splitting
+  and scroll-distance polish remain deferred. `TODO.md` owns the remaining tasks.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
@@ -431,7 +436,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   (Global) stays valid. When the xenotype layer has no target, the card states the reason and its action/value/
   reset controls become INERT (static disabled bands; no dropdown, number, stepper or reset atom is even
   called), while the layer segment stays live as the way out. The target-catalog definition, the persisted
-  domain and the valid-domain path are unchanged; the tuning-layer/composite/layout redesign stays deferred.
+  domain and the valid-domain path are unchanged. The current checkpoint redesigns the tuning layout;
+  this identity guard still applies, while unrelated composite splitting remains deferred.
 - **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
   manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
   `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit

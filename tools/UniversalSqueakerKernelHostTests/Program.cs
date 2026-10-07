@@ -56,6 +56,15 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        // The stub harness names [0Harmony] only through the mod singleton's static field type; the
+        // real library is not shipped with the test stubs, so the assembly probe answers with the
+        // stub assembly that declares the minimum HarmonyLib surface (VerseStubs.HarmonyLib.cs).
+        // Nothing patches methods here - the type just has to LOAD for a class initializer to run.
+        AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            args.Name != null && args.Name.StartsWith("0Harmony", StringComparison.Ordinal)
+                ? typeof(UniversalSqueakerMod).BaseType!.Assembly
+                : null;
+
         for (int i = 0; i < args.Length; i++)
         {
             if (string.Equals(args[i], "--lane", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
@@ -112,8 +121,10 @@ internal static class Program
             // below the first InnerException and used to be invisible to whoever read the console.
             Exception? inner = ex.InnerException;
             int depth = 0;
+            Exception? deepest = ex;
             while (inner != null && depth < 8)
             {
+                deepest = inner;
                 string label = depth == 0 ? "INNER" : "INNER-" + (depth + 1);
                 Console.Error.WriteLine(label + ": " + inner.GetType().FullName);
                 try
@@ -127,6 +138,17 @@ internal static class Program
 
                 inner = inner.InnerException;
                 depth++;
+            }
+
+            // The deepest cause's stack names the throwing frame - the type-load chains here hide the
+            // real caller behind two reflection wrappers.
+            try
+            {
+                Console.Error.WriteLine("DEEPEST-STACK: " + deepest?.StackTrace);
+            }
+            catch (Exception stackError)
+            {
+                Console.Error.WriteLine("DEEPEST-STACK-UNPRINTABLE: " + stackError.GetType().FullName);
             }
 
             return 1;
@@ -193,6 +215,7 @@ internal static class Program
         Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
         Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
         Step("equal-weight Remix double confirmation (SA1.3)", () => RemixConfirmationLaneTests.RunAll());
+        Step("VF1 r5 confirmation window: real shell, audit lifecycle, one answer", () => ConfirmWindowLaneTests.RunAll());
         Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
@@ -237,6 +260,8 @@ internal static class Program
             () => ReportFeedbackLaneTests.RunAll());
         Step("XG1 empty xenotype tuning target: reason, blocked submits, real boxes",
             () => XenotypeEmptyTargetLaneTests.RunAll());
+        Step("PRE1/Tuning action multipliers: real writer to real fold round trip",
+            () => TuningMultiplierLaneTests.RunAll());
     }
 
     /// <summary>
@@ -1239,6 +1264,28 @@ internal static class Program
             { UsWriteBindings.ItemTemplate("race-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("race-rows", raceRowKey, "select-domain"), raceRowKey) },
             { UsWriteBindings.ItemTemplate("xenotype-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("xenotype-rows", xenotypeRowKey, "select-domain"), xenotypeRowKey) },
             { UsWriteBindings.ItemTemplate("checklist-pack-keys", "enabled"), () => host.Bindings.Set(UsWriteBindings.ItemKey("checklist-pack-keys", packRowKey, "enabled"), true) },
+            // DT1: opening the panel changes the band button's SelectedKey - a display write.
+            { "open-dev-panel", () => host.Bindings.Invoke("open-dev-panel") },
+            // VF1 three-area tuning: the area switch, the selected action, the multiplier chain and
+            // the action preset reset.
+            { "tuning-area", () => host.Bindings.Set("tuning-area", 1) },
+            { "tuning-selected-action", () => host.Bindings.Set("tuning-selected-action", "Eat") },
+            { "set-action-tuning", () => host.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite("Eat", true, 1.2f)) },
+            { "reset-action-to-preset", () => host.Bindings.Invoke("reset-action-to-preset", "Eat") },
+            // VF1 fallback table editor: selection, queries, the entry write, and the three table
+            // commands. The fake mirrors the commands without touching any real Config file.
+            { "set-fallback-selection", () => host.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection("RaceA", "Call")) },
+            { "fallback-sound-query", () => host.Bindings.Set("fallback-sound-query", "walk") },
+            { "fallback-new-race-query", () => host.Bindings.Set("fallback-new-race-query", "thrum") },
+            { "set-fallback-entry", () => host.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite("Call", "US_Move_Vanilla")) },
+            { "create-fallback-table", () => host.Bindings.Invoke("create-fallback-table", "RaceZ") },
+            { "restore-fallback-default", () => host.Bindings.Invoke("restore-fallback-default") },
+            { "delete-fallback-table", () => host.Bindings.Invoke("delete-fallback-table", "RaceZ") },
+            // D4 per-card domain controls.
+            { "clear-race-domain", () => host.Bindings.Invoke("clear-race-domain") },
+            { "clear-xenotype-domain", () => host.Bindings.Invoke("clear-xenotype-domain") },
+            { "race-search-text", () => host.Bindings.Set("race-search-text", "hum") },
+            { "xenotype-search-text", () => host.Bindings.Set("xenotype-search-text", "san") },
         };
 
         var registered = new List<string>();
@@ -1534,14 +1581,21 @@ internal static class Program
                  {
                      ("global-volume", "Overview"), ("basic-tuning", "Overview"),
                      ("camera-indicator", "Overview"), ("timing", "Overview"),
-                     ("attenuation-editor", "Distance"),
-                     ("race-layer", "Packs"), ("xenotype-layer", "Packs")
+                     ("attenuation-editor", "Distance")
                  })
         {
             Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"" + tab + "\""),
                 "the dissolved composite's id must name a declarative Section container gated by its own"
                 + " workspace: " + id + " (" + tab + ")");
         }
+
+        // D4 moved the two layer cards' workspace gate up to their shared Row (the engine takes the
+        // whole subtree with a Tab-gated container). The ids survive, the gate survives, the shape is
+        // the side-by-side pair - assert exactly that.
+        Assert(xml.Contains("<Row Id=\"domain-row\" Tab=\"Packs\"")
+                && xml.Contains("<Section Id=\"race-layer\"")
+                && xml.Contains("<Section Id=\"xenotype-layer\""),
+            "the two layer cards stay declarative Section containers under the Packs-gated domain row");
 
         // A HelpKey may still NAME these strings (they are catalog section keys); what must be gone is
         // the KIND. Asking for Kind="..." is the difference between "the page still explains this
@@ -2291,11 +2345,14 @@ internal static class Program
 
             // Failure sensitivity for the sweeping checks: one Keyed string is replaced with a value no
             // fixed column can hold, then the real page is drawn again. If the audit stays silent here,
-            // every "no overflow" result above is meaningless — that is the exact failure this guards.
+            // every "no overflow" result above is meaningless - that is the exact failure this guards.
+            // D4 re-cut: the race/xenotype dropdowns moved OUT of the filter bar into their cards, and
+            // the chip row now GROWS to its wrapped labels (no fixed-width overflow to catch there);
+            // the Author dropdown's label column is the filter band's remaining fixed-width keyed text.
             string impossible = new string('\u6d4b', 30);
             var stretched = new Dictionary<string, string>(chinese, StringComparer.Ordinal)
             {
-                ["US.Packs.Filter.Race"] = impossible
+                ["US.Packs.Filter.Author"] = impossible
             };
 
             SetTranslatorResolver(stretched);

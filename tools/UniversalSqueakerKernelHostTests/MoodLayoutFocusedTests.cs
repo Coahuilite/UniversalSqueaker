@@ -558,6 +558,7 @@ internal static class MoodLayoutFocusedTests
                 using (UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics))
                 {
                     host.Bindings.Invoke("set-tab", "Tuning");
+                                    host.Bindings.Set("tuning-area", 1);
                     host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
                     host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
                 }
@@ -653,6 +654,7 @@ internal static class MoodLayoutFocusedTests
         {
             using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, metrics);
             host.Bindings.Invoke("set-tab", "Tuning");
+                            host.Bindings.Set("tuning-area", 1);
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(ViewportWidth, ViewportHeight));
             host.DrawChecked(new Rect(0f, 0f, ViewportWidth, ViewportHeight));
             return snapshot.RectById.TryGetValue("scope-tree", out Rect card) ? card.height : 0f;
@@ -1135,6 +1137,7 @@ internal static class MoodLayoutFocusedTests
         try
         {
             host.Bindings.Invoke("set-tab", "Tuning");
+                            host.Bindings.Set("tuning-area", 1);
             // 0.4.0 keys scroll positions by element node, so the container must be arranged before its
             // id is addressable; this keeps the capture pinned to the top of the scroll content.
             host.MeasureAndArrange(new Vector2(viewportWidth, viewportHeight));
@@ -1190,10 +1193,21 @@ internal static class MoodLayoutFocusedTests
             Fields = raw.TextFields.Where(r => IsInside(r, cardLocal)).ToList(),
             SmallButtons = raw.Buttons.Where(r => IsInside(r, cardLocal) && IsSmallButton(r)).ToList(),
         };
-        SplitResetButtons(
-            raw.Buttons.Where(r => IsInside(r, cardLocal) && IsResetButton(r)).ToList(),
-            mood.AutoButtons,
-            mood.PresetButtons);
+        var resetCandidates = raw.Buttons.Where(r => IsInside(r, cardLocal) && IsResetButton(r)).ToList();
+        // VF1 three-area tabs draw at the same width band as the mood reset controls on some viewports
+        // (measured key literals vs the third-of-inner-width tab cells). They are told apart by SHAPE,
+        // not by a widened tolerance: the tab row is exactly THREE buttons on one y that together
+        // span the card's inner width; a mood row never draws three reset-width controls.
+        var tabRowYs = resetCandidates
+            .GroupBy(r => Math.Round(r.y, 1))
+            .Where(g => g.Count() == 3 && g.Min(r => r.x) <= cardLocal.x + UsCardLayout.Padding + 1f
+                && g.Max(r => r.xMax) >= cardLocal.xMax - UsCardLayout.Padding - 1f)
+            .Select(g => g.Key)
+            .ToHashSet();
+        resetCandidates = resetCandidates
+            .Where(r => !tabRowYs.Contains(Math.Round(r.y, 1)))
+            .ToList();
+        SplitResetButtons(resetCandidates, mood.AutoButtons, mood.PresetButtons);
         return mood;
     }
 
@@ -1500,8 +1514,10 @@ internal static class MoodLayoutFocusedTests
     //    measures label end 288 against hint x 304 there.
     //  - R2b restoring the pre-V3 hardcoded hint band (the hint text is never measured) reddens
     //    "the inherited-scope hint '→ Command' must be measured/drawn at this real body".
-    //  - R3b dropping the source readout's band (so its text is never laid out) reddens
-    //    the per-factor provenance readout clause (the first-cut Auto/anchor text is superseded).
+    //  - R3b is historical readout evidence; its first-cut Auto/anchor text is retired. Current
+    //    redesigned readout geometry is guarded here, not a newly executed R3b mutation proof.
+    //    TuningMultiplierLaneTests separately drives the production mood fold and carries the
+    //    executed Ready-gated reset-target backout for this checkpoint.
     //  - The popup-containment/click-through half is a GUARD over the shared popup owner rule (mutation-
     //    proven for nav by CoveredControlYieldsTheClick); what is NEW here is measured: the Tuning popup
     //    stays inside the page, covers the next scope trigger, swallows that click, and is not replaced.
@@ -1560,6 +1576,7 @@ internal static class MoodLayoutFocusedTests
                         source.SetTuningLayer(1);
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         host.Bindings.Invoke("set-tab", "Tuning");
+                                        host.Bindings.Set("tuning-area", 1);
                         host.Bindings.Set("help-open", helpOpen);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
@@ -1593,37 +1610,41 @@ internal static class MoodLayoutFocusedTests
                         Vector2 scroll = Program.ScrollPositionById(host.Session, "content-scroll");
                         Rect cardLocal = ToContentLocal(cardPage, viewport, scroll);
 
-                        var raw = new CapturedRects();
+                        // VF1 three-area re-cut (PM: recut on the real product contract, keep the old
+                        // failure context): the retired stacked page drew Action Scope AND Mood in ONE
+                        // scroll, so a single census ordered layer/domain -> scope -> mood. The
+                        // three-area page draws ONE body area at a time, so the census runs TWICE -
+                        // once per area - and the surviving order contract is: the shared header
+                        // (layer -> domain -> tabs) keeps its place in BOTH areas, the action area
+                        // draws its scope triggers under the tabs, and the mood area draws its
+                        // sliders/fields under the tabs. The areas really split: no mood slider exists
+                        // in the action area and no scope trigger exists in the mood area.
+                        host.Bindings.Set("tuning-area", 0);
+                        var rawActions = new CapturedRects();
                         try
                         {
-                            SetButtonOverride(rect => { raw.Buttons.Add(rect); return false; });
-                            SetSliderOverride((rect, value, min, max) => { raw.Sliders.Add(rect); return value; });
-                            SetTextFieldOverride((rect, text) => { raw.TextFields.Add(rect); return text; });
+                            SetButtonOverride(rect => { rawActions.Buttons.Add(rect); return false; });
+                            SetSliderOverride((rect, value, min, max) => { rawActions.Sliders.Add(rect); return value; });
+                            SetTextFieldOverride((rect, text) => { rawActions.TextFields.Add(rect); return text; });
                             UiFitAudit.Reset();
                             reports.Clear();
                             host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
                         }
                         finally { ClearOverrides(); }
 
-                        var buttons = raw.Buttons.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-                        var sliders = raw.Sliders.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
-                        var fields = raw.TextFields.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
+                        var buttons = rawActions.Buttons.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
 
-                        // The dropdown TRIGGERS are the fixed 96px bands (the layer segment is the three
-                        // equal-width buttons, 117px each at the single BH1 body; mood minus/plus are 20px):
-                        // domain trigger + one per scope row.
+                        // The dropdown TRIGGERS are the fixed 96px bands (the layer segment and the tabs
+                        // are the wide equal cells, mood minus/plus are 20px): domain + one per scope row.
                         var triggers = buttons.Where(r => Math.Abs(r.width - 96f) <= 1.5f).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-                        Console.WriteLine("[v3-buttons] " + where + " cardLocal=" + Num(cardLocal.width) + "x" + Num(cardLocal.height)
-                            + " layer=" + host.Bindings.Get<int>("tuning-layer")
-                            + " domains=" + host.Bindings.Get<IReadOnlyList<TuningDomainOptionView>>("tuning-domains").Count
-                            + " scopes=" + host.Bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes").Count
-                            + " buttons=" + string.Join(" ", buttons.Select(r => Num(r.width) + "@" + Num(r.y)))
-                            + " inCard=" + raw.Buttons.Count(r => IsInside(r, cardLocal)));
                         Assert(triggers.Count == 3,
-                            where + ": the Race layer must draw the domain trigger plus the two scope triggers, got " + triggers.Count);
+                            where + ": the ACTION area must draw the domain trigger plus the two scope triggers, got " + triggers.Count);
+                        Assert(rawActions.Sliders.Count(r => IsInside(r, cardLocal)) == 0,
+                            where + ": the action area must draw NO mood slider - the areas really split, got "
+                            + rawActions.Sliders.Count(r => IsInside(r, cardLocal)));
 
                         // The card header owns the widest band at the top; the layer segment is the three
-                        // equal-width buttons under it (117px at the 524-wide card, which since BH1 is the only
+                        // equal-width buttons under it (112px at the 508 card, which since BH1 is the only
                         // card either help state arranges - the retired side column left the open case a 416).
                         var layerBand = buttons
                             .Where(r => r.y < triggers[0].y - 0.5f && r.width > 40f && r.width <= 144f)
@@ -1632,17 +1653,49 @@ internal static class MoodLayoutFocusedTests
                             where + ": the layer segment must be drawn above the domain row, got " + layerBand.Count + " layer buttons");
                         Assert(layerBand.Select(r => r.y).Distinct().Count() == 1,
                             where + ": the three layer buttons must share one line");
-
-                        Assert(sliders.Count == MoodCount * ParameterCount,
-                            where + ": every parameter of every mood must register a slider, got " + sliders.Count);
-                        Assert(fields.Count == MoodCount * ParameterCount,
-                            where + ": every parameter of every mood must register a numeric field, got " + fields.Count);
                         Assert(layerBand[0].y < triggers[0].y,
                             where + ": the LAYER area must be drawn above the domain row");
                         Assert(triggers[0].y < triggers[1].y && triggers[1].y <= triggers[2].y,
                             where + ": the DOMAIN trigger must be drawn above the scope triggers");
-                        Assert(triggers[2].y < sliders[0].y,
-                            where + ": the ACTION SCOPE area must be drawn above the mood parameters");
+
+                        // Area 1: the mood body under the same shared header.
+                        host.Bindings.Set("tuning-area", 1);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        var rawMoods = new CapturedRects();
+                        try
+                        {
+                            SetButtonOverride(rect => { rawMoods.Buttons.Add(rect); return false; });
+                            SetSliderOverride((rect, value, min, max) => { rawMoods.Sliders.Add(rect); return value; });
+                            SetTextFieldOverride((rect, text) => { rawMoods.TextFields.Add(rect); return text; });
+                            UiFitAudit.Reset();
+                            reports.Clear();
+                            host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
+                        }
+                        finally { ClearOverrides(); }
+
+                        var moodButtons = rawMoods.Buttons.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ThenBy(r => r.x).ToList();
+                        var sliders = rawMoods.Sliders.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
+                        var fields = rawMoods.TextFields.Where(r => IsInside(r, cardLocal)).OrderBy(r => r.y).ToList();
+                        Assert(sliders.Count == MoodCount * ParameterCount,
+                            where + ": every parameter of every mood must register a slider, got " + sliders.Count);
+                        Assert(fields.Count == MoodCount * ParameterCount,
+                            where + ": every parameter of every mood must register a numeric field, got " + fields.Count);
+                        var moodTriggers = moodButtons.Where(r => Math.Abs(r.width - 96f) <= 1.5f).ToList();
+                        // The nav column draws 168x49 buttons in its own scroll-local space that the
+                        // override records at overlapping coordinates; the shape bands (layer 40-144,
+                        // trigger 96) tell them apart, exactly as in the action census.
+                        Assert(moodTriggers.Count == 1 && Math.Abs(moodTriggers[0].y - triggers[0].y) <= 0.5f,
+                            where + ": the mood area keeps ONLY the shared domain trigger at the SAME place,"
+                            + " got " + moodTriggers.Count);
+                        var moodLayerBand = moodButtons
+                            .Where(r => r.width > 40f && r.width <= 144f && r.y < moodTriggers[0].y - 0.5f)
+                            .ToList();
+                        Assert(moodLayerBand.Count == 3 && Math.Abs(moodLayerBand[0].y - layerBand[0].y) <= 0.5f,
+                            where + ": the shared layer row keeps its place in the mood area, got "
+                            + moodLayerBand.Count + "@" + Num(moodLayerBand.Count > 0 ? moodLayerBand[0].y : -1f));
+                        Assert(sliders[0].y > triggers[0].y,
+                            where + ": the mood body sits below the shared header (slider " + Num(sliders[0].y)
+                            + " vs domain " + Num(triggers[0].y) + ")");
                         Assert(reports.Count == 0,
                             where + ": the fit audit must report nothing on the Tuning page, got " + DescribeFindings(reports));
 
@@ -1651,16 +1704,16 @@ internal static class MoodLayoutFocusedTests
                             + " moodY=" + Num(sliders[0].y) + " card=" + Num(cardPage.width) + "x" + Num(cardPage.height)
                             + " help=" + (helpOpen ? "open" : "retracted") + " fit=" + reports.Count);
 
-                        // P5: a Tuning dropdown opens INSIDE the page from its OWN trigger rect, and the click
-                        // lands on whatever the popup covers. MEASURED on this page: the popup is 96x72
-                        // anchored under its trigger, so what it covers is the NEXT scope trigger - the mood
-                        // cards sit ~120px further down and are NOT underneath (their rects are printed). The
-                        // underlying control must not take the click, and the popup must not be replaced.
-                        var resets = buttons
-                            .Where(r => r.width >= 50f && r.width <= 130f && r.y > triggers[2].y && r.y < sliders[0].y)
-                            .OrderBy(r => r.y).ThenBy(r => r.x).ToList();
-                        Assert(resets.Count >= 2,
-                            where + ": the first mood card must draw its two reset controls, got " + resets.Count);
+                        // P5: a Tuning dropdown opens INSIDE the page from its OWN trigger rect, and the
+                        // click lands on whatever the popup covers. The popup test runs in the ACTION
+                        // area, where both scope triggers are drawn: the popup is 96x72 anchored under
+                        // its trigger, so what it covers is the NEXT SCOPE TRIGGER. The old stacked page
+                        // also measured "the mood cards are not underneath"; the three-area split makes
+                        // that structural (the mood body is not drawn in this area at all), and the
+                        // census above already pins the split. The underlying control must not take the
+                        // click, and the popup must not be replaced.
+                        host.Bindings.Set("tuning-area", 0);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         // SA1.2: the group order is Player first, so which ACTION sits at triggers[1] is a
                         // consequence of the rules table, not a constant. The popup owner elementId is
                         // derived from the drawn order (the same ActionScopeRules the widget walks) rather
@@ -1672,7 +1725,6 @@ internal static class MoodLayoutFocusedTests
                         Vector2 noScroll = Vector2.zero;
                         Rect triggerPage = ToPageLocal(triggers[1], viewport, noScroll);
                         Rect coveredPage = ToPageLocal(triggers[2], viewport, noScroll);
-                        Rect resetPage = ToPageLocal(resets[0], viewport, noScroll);
                         host.Session.OpenPopup("scope-tree-scope-" + firstScopeKey, triggerPage);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));
@@ -1684,7 +1736,7 @@ internal static class MoodLayoutFocusedTests
                         Vector2 clickPoint = new(coveredPage.x + coveredPage.width * 0.5f, coveredPage.y + coveredPage.height * 0.5f);
                         bool coveredScope = layer.Rect.x <= clickPoint.x && clickPoint.x <= layer.Rect.xMax
                             && layer.Rect.y <= clickPoint.y && clickPoint.y <= layer.Rect.yMax;
-                        bool moodUnderPopup = Overlaps(layer.Rect, resetPage);
+                        bool moodUnderPopup = false; // structural: the mood body is not drawn in the action area
                         Assert(coveredScope,
                             where + ": the popup must cover the next scope trigger this step clicks through"
                             + " (popup " + DescribeRect(layer.Rect) + ", trigger " + DescribeRect(coveredPage) + ")");
@@ -1708,8 +1760,7 @@ internal static class MoodLayoutFocusedTests
 
                         Console.WriteLine("[v3-popup] " + where + " popup=" + DescribeRect(layer.Rect)
                             + " coveredScopeTrigger=" + DescribeRect(coveredPage) + " coveredScope=" + coveredScope
-                            + " moodResetUnder=" + moodUnderPopup + " moodReset=" + DescribeRect(resetPage)
-                            + " clickThroughBlocked=true");
+                            + " moodUnderPopup=" + moodUnderPopup + " (split by area) clickThroughBlocked=true");
                     }
                     finally
                     {
@@ -1864,6 +1915,7 @@ internal static class MoodLayoutFocusedTests
                         source.SetTuningLayer(1);
                         using UiHost host = UsKernelSettingsHost.Create(source, recorder);
                         host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("tuning-area", 1);
                         host.Bindings.Set("help-open", helpOpen);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
@@ -1912,7 +1964,9 @@ internal static class MoodLayoutFocusedTests
                     using (UiHost host = UsKernelSettingsHost.Create(hintSource, hintRecorder))
                     {
                         host.Bindings.Invoke("set-tab", "Tuning");
-                        host.Bindings.Set("help-open", helpOpen);
+                        // VF1 three-area: the scope hint belongs to the ACTION area (area 1 is the mood
+                        // body); the mechanical area=1 sweep must not pin the hint probes to the mood area.
+                        host.Bindings.Set("tuning-area", 0);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
@@ -1966,6 +2020,7 @@ internal static class MoodLayoutFocusedTests
         source.SetTuningLayer(1);
         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("tuning-area", 1);
         // BH1: with help open the panel really is arranged - the mood area has to survive the degenerate
         // scope list AND the panel's declared 140 out of the body's height, at the one 760x524 box.
         host.Bindings.Set("help-open", true);
@@ -2013,6 +2068,7 @@ internal static class MoodLayoutFocusedTests
         source.SetTuningLayer(1);
         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("tuning-area", 1);
         host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
 
         // (1) a LAYER write touches the layer channel and nothing else.
@@ -2165,6 +2221,7 @@ internal static class MoodLayoutFocusedTests
         source.SetTuningLayer(selectedLayer);
         using UiHost host = UsKernelSettingsHost.Create(source, recorder);
         host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("tuning-area", 1);
         host.Bindings.Set("help-open", true);
         host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
@@ -2242,6 +2299,8 @@ internal static class MoodLayoutFocusedTests
                 var source = new RecordingSettingsSource { RichData = true };
                 using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
                 host.Bindings.Invoke("set-tab", "Tuning");
+                // VF1 three-area: the SCOPE rows live in the action area; the mood-area pin hides them.
+                host.Bindings.Set("tuning-area", 0);
                 host.Bindings.Set("help-open", true);
                 Rect card = host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight)).RectById["scope-tree"];
                 return (card.width, card.height);
@@ -2328,6 +2387,7 @@ internal static class MoodLayoutFocusedTests
         var source = new RecordingSettingsSource { RichData = true, MirrorTuningWrites = true };
         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
+                        host.Bindings.Set("tuning-area", 1);
         host.Bindings.Set("help-open", helpOpen);
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(V3PageBoxWidth, V3PageBoxHeight));
         Rect card = snapshot.RectById["scope-tree"];

@@ -40,6 +40,23 @@ public sealed class VoicePacksPageState
     public string RaceFilter = "";
     public string XenotypeFilter = "";
 
+    // D4: each domain list carries its OWN search text (same predicate as the pack search -
+    // UsChecklistFilter.QueryMatches: trimmed substring, OrdinalIgnoreCase). Empty = no narrowing.
+    public string RaceSearchText = "";
+    public string XenotypeSearchText = "";
+
+    // VF1定稿: the tuning page's three internal areas (0 = action rules, 1 = mood tones,
+    // 2 = native final fallback) and the editor selections / queries. Page state, never persisted.
+    public int TuningArea;
+    public string TuningSelectedAction = "";
+    public string FallbackSelectedRace = "";
+    public string FallbackSelectedEntryAction = "";
+    public string FallbackSoundQuery = "";
+    public string FallbackStatusKey = "";
+    public string FallbackStatusArg = "";
+
+    public string FallbackNewRaceQuery = "";
+
     public VoicePacksPageState()
     {
     }
@@ -61,6 +78,16 @@ public sealed class VoicePacksPageState
         PackFilter = default;
         RaceFilter = "";
         XenotypeFilter = "";
+        RaceSearchText = "";
+        XenotypeSearchText = "";
+        TuningArea = 0;
+        TuningSelectedAction = "";
+        FallbackSelectedRace = "";
+        FallbackSelectedEntryAction = "";
+        FallbackSoundQuery = "";
+        FallbackNewRaceQuery = "";
+        FallbackStatusKey = "";
+        FallbackStatusArg = "";
     }
 }
 

@@ -339,6 +339,13 @@
                  accepted request is waiting for, or the pass a report was written from. It shares the
                  button's help item on purpose - it explains the same action. -->
             <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpKey="us/diagnostics/layout-report" />
+            <!-- DT1: the settings-window entry to the developer panel (the tool also answers from the
+                 Debug Actions menu, but never without this window open). It sits AFTER the RPT1 status
+                 sibling so the report button keeps its immediate answer line. -->
+            <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
+              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedKey="dev-panel-open" Width="172" Height="24" HelpKey="us/diagnostics/layout-diagnosis" Scheme="us-command-button" />
+            </Row>
           </Column>
         </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
@@ -419,14 +426,54 @@
              CARRIER, not an attribute value. That half is recorded as its own known limitation with its
              citation in the friction report (spec section 5.9.4), never folded in with the ink that did
              come back. Tone/Emphasis stay absent from this template: they are still literal-only. -->
-        <Section Id="race-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
-          <Widget Id="race-layer-header" Kind="us/section-header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
-          <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
-        </Section>
-        <Section Id="xenotype-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
-          <Widget Id="xenotype-layer-header" Kind="us/section-header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
-          <Repeat Id="xenotype-layer-rows" Items="xenotype-rows" Template="xenotype-layer-row" Padding="0" Gap="2" />
-        </Section>
+        <!-- D4 (2026-10-07): the two domain cards sit SIDE BY SIDE in one Row - race left, xenotype
+             right - each carrying its OWN header controls (the dropdown moved out of the filter bar
+             into the card it filters, plus a per-card search box and a Clear) and a fixed-viewport
+             scroll list. The Row reuses the page's own Breakpoint idiom (same 500 as body-row): under
+             it, Narrow="Column" stacks the cards, so the narrow screen keeps the old vertical reading.
+             The viewport is the FINAL same-pass budget: VisibleRows="4.5" (FL's Scroll-only counting
+             attribute - no numeric Height is declared, so the count answers) sizes the viewport from
+             the rows THIS arrange round actually measured: four full materialized Repeat rows plus
+             the fraction of the fifth at its own measured height and real gap, re-counted after the
+             scrollbar-reserve re-measure so wrapped text at the narrowed width still costs exactly
+             what it occupies. No consumer arithmetic is copied and no creation-time estimate is
+             trusted - the floor-width injection of the earlier draft was deleted per the PM ruling
+             of 2026-10-07. Wiring note: the FL Dev DLL must be the freeze that carries VisibleRows
+             (see the current PM carrier freeze); DeclarativePacks guards the declaration and the
+             same-pass budget from the snapshot's own row rects.
+             The xenotype list additionally FOLLOWS the browsed race (model-side; selecting a race
+             narrows the right card to that race's xenotypes plus race-less ones).
+             Height contract (PM ruling 2026-10-07): the cards keep their NATURAL heights - unsized Row
+             children already share the width equally, and Fill="true" would additionally request the
+             available HEIGHT (ResolveContainerHeight), stretching a card to the scroll's remaining
+             viewport and inventing dead space under its short list. No equal-height background was
+             required, so no card declares Fill. -->
+        <Row Id="domain-row" Tab="Packs" Gap="8" Padding="0" Breakpoint="500" Narrow="Column">
+          <Section Id="race-layer" Padding="12" Gap="6" Scheme="us-flat-panel">
+            <Widget Id="race-layer-header" Kind="us/section-header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
+            <Row Id="race-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
+              <Widget Id="race-domain-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/race-layer" />
+              <Widget Id="race-domain-search" Kind="input/text-field" Bind="race-search-text" PlaceholderKey="US.Packs.Domain.SearchPlaceholder" Height="26" HelpKey="us/race-layer" />
+              <Widget Id="race-domain-clear" Kind="input/button" TextKey="US.Packs.Domain.Clear" ActionBind="clear-race-domain" Width="116" Height="26" Emphasis="Muted" HelpKey="us/race-layer" />
+            </Row>
+            <Scroll Id="race-domain-scroll" VisibleRows="4.5" Gap="2" Padding="0">
+              <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
+              <Widget Id="race-domain-empty" Kind="state/empty" TextKey="US.Packs.Domain.EmptySearch" VisibleKey="race-list-empty" />
+            </Scroll>
+          </Section>
+          <Section Id="xenotype-layer" Padding="12" Gap="6" Scheme="us-flat-panel">
+            <Widget Id="xenotype-layer-header" Kind="us/section-header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
+            <Row Id="xenotype-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
+              <Widget Id="xenotype-domain-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/xenotype-layer" />
+              <Widget Id="xenotype-domain-search" Kind="input/text-field" Bind="xenotype-search-text" PlaceholderKey="US.Packs.Domain.SearchPlaceholder" Height="26" HelpKey="us/xenotype-layer" />
+              <Widget Id="xenotype-domain-clear" Kind="input/button" TextKey="US.Packs.Domain.Clear" ActionBind="clear-xenotype-domain" Width="116" Height="26" Emphasis="Muted" HelpKey="us/xenotype-layer" />
+            </Row>
+            <Scroll Id="xenotype-domain-scroll" VisibleRows="4.5" Gap="2" Padding="0">
+              <Repeat Id="xenotype-layer-rows" Items="xenotype-rows" Template="xenotype-layer-row" Padding="0" Gap="2" />
+              <Widget Id="xenotype-domain-empty" Kind="state/empty" TextKey="US.Packs.Domain.EmptySearch" VisibleKey="xenotype-list-empty" />
+            </Scroll>
+          </Section>
+        </Row>
         <!-- Step A/B of the checklist migration: the card is the engine's Section container, carrying the
              same explicit geometry every other container on this page already declares (CP-0). It is gated
              by the engine's own Tab attribute - the container vocabulary gained it as a coherence fix, so

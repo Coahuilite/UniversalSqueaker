@@ -71,6 +71,9 @@ public interface IUsKernelSettingsSource
     void SetRaceFilter(string raceDefName);
     void SetXenotypeFilter(string xenotypeDefName);
     void SetSearchText(string text);
+    // D4: the two domain lists' own search texts (same one-frame read-back contract as SetSearchText).
+    void SetRaceSearchText(string text);
+    void SetXenotypeSearchText(string text);
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
     // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
 
@@ -85,6 +88,10 @@ public interface IUsKernelSettingsSource
 
     /// <summary>Ask for exactly one layout report; the next drawn pass produces it and clears the request.</summary>
     void RequestLayoutReport();
+    /// <summary>DT1: open (or focus) the developer geometry panel. Production reaches the real window
+    /// seam; the harness records the call because Verse.Find is not stubbable in this assembly.</summary>
+    void OpenDeveloperPanel();
+
 
     /// <summary>
     /// Read-only status of the layout capture for this window, as a user-facing sentence. A carrier without
@@ -110,7 +117,20 @@ public interface IUsKernelSettingsSource
 
     // Tuning
     void SetActionScope(string actionKey, SqueakActionScope? scope);
+    // VF1定稿 A2/A4: one multiplier field of the CURRENT tuning layer's action identity; value null
+    // clears the field (restore inheritance). reset writes the anchored preset's values back.
+    void SetActionTuning(string actionKey, bool intervalField, float? value);
+    void ResetActionToPreset(string actionKey);
     void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value);
+    // VF1定稿: tuning area/selection and the final-fallback table editor commands.
+    void SetTuningArea(int area);
+    void SetTuningSelectedAction(string actionKey);
+    void SetFallbackSelection(string? race, string? entryAction);
+    void SetFallbackQueries(string? soundQuery, string? newRaceQuery);
+    void SetFallbackEntry(string actionKey, string? soundDefName);
+    void CreateFallbackTable(string raceDefName);
+    void RestoreFallbackDefault();
+    void DeleteFallbackTable(string raceDefName);
 
     /// <summary>「重置为预设」：把本层来源指向的预设基线重新写回（来源保持）。不可用时是空操作。</summary>
     void ResetMoodToPreset(SqueakMood mood);

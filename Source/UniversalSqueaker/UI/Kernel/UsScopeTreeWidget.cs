@@ -212,6 +212,26 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         bindings.ValidateAction<UsTuningDomainSelection>("set-tuning-domain", elementPath);
         bindings.ValidateAction<UsScopeWrite>("set-action-scope", elementPath);
         bindings.ValidateAction<UsMoodWrite>("set-mood-tuning", elementPath);
+        // VF1定稿: the area switch, the selected-action editor and the fallback table editor all
+        // bind through this widget - a missing key must fail at creation, not half-draw a tab.
+        bindings.ValidateValue<int>("tuning-area", elementPath);
+        bindings.ValidateValue<string>("tuning-selected-action", elementPath);
+        bindings.ValidateValue<IReadOnlyList<FallbackRaceView>>("fallback-races", elementPath);
+        bindings.ValidateValue<string>("fallback-selected-race", elementPath);
+        bindings.ValidateValue<IReadOnlyList<FallbackEntryView>>("fallback-entries", elementPath);
+        bindings.ValidateValue<string>("fallback-selected-entry", elementPath);
+        bindings.ValidateValue<string>("fallback-new-race-query", elementPath);
+        bindings.ValidateValue<string>("fallback-sound-query", elementPath);
+        bindings.ValidateOptions<FilterOptionView>("fallback-sound-options", elementPath);
+        bindings.ValidateOptions<FilterOptionView>("fallback-candidate-options", elementPath);
+        bindings.ValidateAction<UsActionTuningWrite>("set-action-tuning", elementPath);
+        bindings.ValidateAction<string>("reset-action-to-preset", elementPath);
+        bindings.ValidateAction<UsFallbackSelection>("set-fallback-selection", elementPath);
+        bindings.ValidateAction<UsFallbackEntryWrite>("set-fallback-entry", elementPath);
+        bindings.ValidateAction<string>("create-fallback-table", elementPath);
+        bindings.ValidateCommand("restore-fallback-default", elementPath);
+        bindings.ValidateAction<string>("delete-fallback-table", elementPath);
+
     }
 
     protected override float FallbackHeight(UiWidgetContext ctx)
@@ -236,37 +256,55 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // same metrics seam, so the card can never reserve a band it does not paint (or paint one it did not
         // reserve) - the failure that would move every control below it.
         if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
-        bodyHeight += RowHeight + RowGap; // "Action Scope" header
-        if (scopeRows.Count > 0)
+        // VF1定稿: the page switches THREE internal areas under the shared header - action rules /
+        // mood tones / native final fallback - and the body handles exactly ONE task type at a
+        // time. This replaces the old long page that stacked actions AND moods together; the
+        // "just add two steppers per row" shape was explicitly rejected, so the multipliers live
+        // in the selected action's editor band below the list instead.
+        bodyHeight += AreaTabsHeight + RowGap;
+        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
+        if (area == 0)
         {
-            for (int group = 0; group < 2; group++)
+            bodyHeight += RowHeight + RowGap; // "Action rules" header
+            if (scopeRows.Count > 0)
             {
-                ActionScopeGroup targetGroup = group == 0
-                    ? ActionScopeGroup.PlayerTriggered
-                    : ActionScopeGroup.SystemOrEvent;
-                List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
-                if (groupRows.Count == 0) continue;
-
-                bodyHeight += RowHeight + RowGap; // group header
-                if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
+                for (int group = 0; group < 2; group++)
                 {
-                    bodyHeight += DraftHeadingHeight + RowGap; // SA1.2 pair sub-heading
-                }
+                    ActionScopeGroup targetGroup = group == 0
+                        ? ActionScopeGroup.PlayerTriggered
+                        : ActionScopeGroup.SystemOrEvent;
+                    List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
+                    if (groupRows.Count == 0) continue;
 
-                for (int i = 0; i < groupRows.Count; i++)
-                {
-                    bodyHeight += ScopeRowHeightFor(width, groupRows[i], ctx) + RowGap;
+                    bodyHeight += RowHeight + RowGap; // group header
+                    if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
+                    {
+                        bodyHeight += DraftHeadingHeight + RowGap; // SA1.2 pair sub-heading
+                    }
+
+                    for (int i = 0; i < groupRows.Count; i++)
+                    {
+                        bodyHeight += ScopeRowHeightFor(width, groupRows[i], ctx) + RowGap;
+                    }
                 }
             }
-        }
 
-        // V3 P1 deliberate rule: the MOOD area is NOT gated on the scope rows. It is the layer's own
-        // parameter area, so it depends on the mood rows alone - Measure and Draw use this same predicate.
-        if (moodRows.Count > 0)
+            bodyHeight += ActionEditorHeight(ctx, width) + RowGap;
+        }
+        else if (area == 1)
         {
-            bodyHeight += RowHeight + RowGap; // "Mood Tuning" header
-            MoodRowsLayout moodLayout = MoodRowsLayoutFor(width, ctx, moodRows);
-            bodyHeight += moodRows.Count * (moodLayout.TotalHeight + RowGap);
+            // V3 P1 deliberate rule survives the re-layout: the MOOD area is gated on the mood rows
+            // ALONE, never on the scope list - Measure and Draw share this predicate.
+            if (moodRows.Count > 0)
+            {
+                bodyHeight += RowHeight + RowGap; // "Mood Tuning" header
+                MoodRowsLayout moodLayout = MoodRowsLayoutFor(width, ctx, moodRows);
+                bodyHeight += moodRows.Count * (moodLayout.TotalHeight + RowGap);
+            }
+        }
+        else
+        {
+            bodyHeight += FallbackEditorHeight(ctx, width) + RowGap;
         }
 
         return bodyHeight + BottomPadding;
@@ -319,75 +357,396 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             y += reasonBand + RowGap;
         }
 
-        UsKernelDraw.Label(
-            new Rect(x, y, innerWidth, RowHeight),
-            UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
-            ctx.Theme,
-            ctx.Theme.TextPrimary,
-            UiFont.Small,
-            TextAnchor.MiddleLeft);
-        y += RowHeight + RowGap;
+        // VF1定稿: the three tabs sit above everything the body answers; one area is arranged at a
+        // time and Measure/Draw read the SAME "tuning-area" binding, so the two passes cannot
+        // disagree about which area is on screen.
+        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
+        DrawAreaTabs(new Rect(x, y, innerWidth, AreaTabsHeight), area, ctx);
+        y += AreaTabsHeight + RowGap;
 
-        // V3 P1: ONE predicate decides each area, and the rule is deliberate: the scope GROUP rows depend on
-        // the scope list, the MOOD area depends only on the mood rows. Measure uses the same two predicates
-        // (moodRows.Count for the mood heading/rows, the group scan for the group headers), so the two passes
-        // can no longer disagree the way `scopeRows.Count > 0` vs `anyScopeDrawn` could.
-        bool hasScopeRows = scopeRows.Count > 0;
-        for (int group = 0; group < 2; group++)
-        {
-            if (!hasScopeRows) break;
-            ActionScopeGroup targetGroup = group == 0
-                ? ActionScopeGroup.PlayerTriggered
-                : ActionScopeGroup.SystemOrEvent;
-            List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
-            if (groupRows.Count == 0) continue;
-
-            UsKernelDraw.Label(
-                new Rect(x, y, innerWidth, RowHeight),
-                UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
-                ctx.Theme,
-                ctx.Theme.TextSecondary,
-                UiFont.Tiny,
-                TextAnchor.MiddleLeft);
-            y += RowHeight + RowGap;
-
-            if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
-            {
-                UsKernelDraw.Label(
-                    new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
-                    UsKernelDraw.Keyed(ctx, DraftUndraftKey),
-                    ctx.Theme,
-                    ctx.Theme.AccentGold,
-                    UiFont.Tiny,
-                    TextAnchor.MiddleLeft);
-                y += DraftHeadingHeight + RowGap;
-            }
-
-            for (int i = 0; i < groupRows.Count; i++)
-            {
-                float rowHeight = ScopeRowHeightFor(innerWidth, groupRows[i], ctx);
-                DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), groupRows[i], ctx, submittable);
-                y += rowHeight + RowGap;
-            }
-        }
-
-        if (moodRows.Count > 0)
+        if (area == 0)
         {
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
-                UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
+                UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
                 ctx.Theme,
                 ctx.Theme.TextPrimary,
                 UiFont.Small,
                 TextAnchor.MiddleLeft);
             y += RowHeight + RowGap;
 
-            MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
-            foreach (MoodTuningRowView mood in moodRows)
+            bool hasScopeRows = scopeRows.Count > 0;
+            for (int group = 0; group < 2; group++)
             {
-                DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx, layer, submittable);
-                y += moodLayout.TotalHeight + RowGap;
+                if (!hasScopeRows) break;
+                ActionScopeGroup targetGroup = group == 0
+                    ? ActionScopeGroup.PlayerTriggered
+                    : ActionScopeGroup.SystemOrEvent;
+                List<ActionScopeRowView> groupRows = OrderedRows(targetGroup, scopeRows);
+                if (groupRows.Count == 0) continue;
+
+                UsKernelDraw.Label(
+                    new Rect(x, y, innerWidth, RowHeight),
+                    UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
+                    ctx.Theme,
+                    ctx.Theme.TextSecondary,
+                    UiFont.Tiny,
+                    TextAnchor.MiddleLeft);
+                y += RowHeight + RowGap;
+
+                if (targetGroup == ActionScopeGroup.PlayerTriggered && HasDraftPair(groupRows))
+                {
+                    UsKernelDraw.Label(
+                        new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
+                        UsKernelDraw.Keyed(ctx, DraftUndraftKey),
+                        ctx.Theme,
+                        ctx.Theme.AccentGold,
+                        UiFont.Tiny,
+                        TextAnchor.MiddleLeft);
+                    y += DraftHeadingHeight + RowGap;
+                }
+
+                for (int i = 0; i < groupRows.Count; i++)
+                {
+                    float rowHeight = ScopeRowHeightFor(innerWidth, groupRows[i], ctx);
+                    DrawScopeRow(new Rect(x, y, innerWidth, rowHeight), groupRows[i], ctx, submittable);
+                    y += rowHeight + RowGap;
+                }
             }
+
+            y = DrawActionEditor(y, x, innerWidth, scopeRows, ctx, submittable);
+        }
+        else if (area == 1)
+        {
+            if (moodRows.Count > 0)
+            {
+                UsKernelDraw.Label(
+                    new Rect(x, y, innerWidth, RowHeight),
+                    UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
+                    ctx.Theme,
+                    ctx.Theme.TextPrimary,
+                    UiFont.Small,
+                    TextAnchor.MiddleLeft);
+                y += RowHeight + RowGap;
+
+                MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
+                foreach (MoodTuningRowView mood in moodRows)
+                {
+                    DrawMoodRow(new Rect(x, y, innerWidth, moodLayout.TotalHeight), mood, moodLayout, ctx, layer, submittable);
+                    y += moodLayout.TotalHeight + RowGap;
+                }
+            }
+        }
+        else
+        {
+            DrawFallbackEditor(y, x, innerWidth, ctx);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // VF1定稿: area tabs, the selected-action editor band, and the final-fallback table editor
+    // -----------------------------------------------------------------------------------------
+
+    private const float AreaTabsHeight = 26f;
+    private const float MultiplierStep = 0.05f;
+    // A value no SoundDef can have: the display-only pair that lets an UNSET entry read as
+    // "unset" instead of masquerading as the explicit no-sound marker.
+    private const string DisplayOnlyCurrentValue = "\u0000vf1-display-only";
+
+    private static readonly string[] AreaTabKeys =
+    {
+        "US.Tuning.Area.Actions", "US.Tuning.Area.Mood", "US.Tuning.Area.Fallback",
+    };
+
+    private void DrawAreaTabs(Rect rect, int area, UiWidgetContext ctx)
+    {
+        float tabWidth = Math.Max(1f, (rect.width - RowGap * 2f) / 3f);
+        for (int i = 0; i < 3; i++)
+        {
+            var tab = new Rect(rect.x + i * (tabWidth + RowGap), rect.y, tabWidth, AreaTabsHeight);
+            if (UsKernelDraw.SelectionButton(tab, ctx, UsKernelDraw.Keyed(ctx, AreaTabKeys[i]), ctx.Theme, area == i))
+            {
+                ctx.Bindings.Set("tuning-area", i);
+            }
+        }
+    }
+
+    private static ActionScopeRowView? SelectedAction(IReadOnlyList<ActionScopeRowView> rows, UiWidgetContext ctx)
+    {
+        string key = ctx.Bindings.TryGet("tuning-selected-action", out string s) ? s ?? "" : "";
+        if (key.Length == 0) return null;
+        foreach (ActionScopeRowView row in rows)
+        {
+            if (string.Equals(row.ActionKey, key, StringComparison.Ordinal)) return row;
+        }
+
+        return null;
+    }
+
+    private float ActionEditorHeight(UiWidgetContext ctx, float width)
+    {
+        IReadOnlyList<ActionScopeRowView> rows = ctx.Bindings.TryGet("action-scopes", out IReadOnlyList<ActionScopeRowView> r)
+            ? r : Array.Empty<ActionScopeRowView>();
+        return RowHeight + RowGap + (SelectedAction(rows, ctx).HasValue ? 2f * (RowHeight + RowGap) : RowHeight);
+    }
+
+    /// <summary>The editor band for the selected action: effective value + per-factor source + this
+    /// layer's own multiplier with a stepper, single-field Clear (restore inheritance) and the
+    /// reset-to-preset with its Ready/Unavailable answer. The probability line states the runtime
+    /// rule instead of hiding it: the multiplier is open-ended, the FINAL probability still clamps.</summary>
+    private float DrawActionEditor(float y, float x, float width, IReadOnlyList<ActionScopeRowView> rows, UiWidgetContext ctx, bool submittable)
+    {
+        var pairs = new List<KeyValuePair<string, string>>();
+        foreach (ActionScopeRowView row in rows)
+        {
+            pairs.Add(new KeyValuePair<string, string>(row.DisplayName, row.ActionKey));
+        }
+
+        string current = ctx.Bindings.TryGet("tuning-selected-action", out string s) ? s ?? "" : "";
+        UsKernelDraw.Dropdown(
+            new Rect(x, y, width, RowHeight), "scope-tree-action-select", ctx, current, pairs,
+            selected => ctx.Bindings.Set("tuning-selected-action", selected));
+        y += RowHeight + RowGap;
+
+        ActionScopeRowView? rowView = SelectedAction(rows, ctx);
+        if (!rowView.HasValue) return y - RowGap;
+        ActionScopeRowView selected = rowView.Value;
+
+        y = DrawMultiplierLine(y, x, width, selected.ActionKey, intervalField: true, selected, ctx, submittable);
+        y = DrawMultiplierLine(y, x, width, selected.ActionKey, intervalField: false, selected, ctx, submittable);
+        return y - RowGap;
+    }
+
+    private float DrawMultiplierLine(
+        float y, float x, float width, string actionKey, bool intervalField, ActionScopeRowView row,
+        UiWidgetContext ctx, bool submittable)
+    {
+        float own = intervalField ? row.OwnInterval : row.OwnProbability;
+        bool hasOwn = intervalField ? row.HasOwnInterval : row.HasOwnProbability;
+        float effective = intervalField ? row.EffectiveInterval : row.EffectiveProbability;
+        int source = intervalField ? row.IntervalSourceLayer : row.ProbabilitySourceLayer;
+        string label = UsKernelDraw.Keyed(ctx, intervalField ? "US.Tuning.Interval" : "US.Tuning.Probability");
+        string valueText = "×" + effective.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+            + "  (" + UsKernelDraw.Keyed(ctx, source switch
+            {
+                0 => "US.VF1.Source.Global",
+                1 => "US.VF1.Source.Race",
+                2 => "US.VF1.Source.Xenotype",
+                _ => "US.VF1.Source.Default",
+            }) + ")";
+        UsKernelDraw.Label(new Rect(x, y, 110f, RowHeight), label, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new Rect(x + 114f, y, 150f, RowHeight), valueText, ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+
+        float bx = x + 270f;
+        float buttonWidth = 30f;
+        float display = hasOwn ? own : effective;
+        if (submittable && UsKernelDraw.SelectionButton(new Rect(bx, y, buttonWidth, RowHeight), ctx, "-", ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite(actionKey, intervalField, Math.Max(0f, display - MultiplierStep)));
+        }
+        bx += buttonWidth + 4f;
+        if (submittable && UsKernelDraw.SelectionButton(new Rect(bx, y, buttonWidth, RowHeight), ctx, "+", ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite(actionKey, intervalField, display + MultiplierStep));
+        }
+        bx += buttonWidth + 8f;
+        if (submittable && hasOwn
+            && UsKernelDraw.SelectionButton(new Rect(bx, y, 64f, RowHeight), ctx, UsKernelDraw.Keyed(ctx, "US.Tuning.RestoreInherit"), ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite(actionKey, intervalField, null));
+        }
+        bx += 68f;
+        string resetKey = row.PresetResetReady
+            ? "US.Tuning.ResetToPreset"
+            : row.HasPresetAnchor ? "US.Tuning.ResetPresetUnavailable" : "US.Tuning.ResetPresetNoAnchor";
+        if (submittable && row.PresetResetReady
+            && UsKernelDraw.SelectionButton(new Rect(bx, y, 96f, RowHeight), ctx, UsKernelDraw.Keyed(ctx, resetKey), ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("reset-action-to-preset", actionKey);
+        }
+        else
+        {
+            UsKernelDraw.Label(new Rect(bx, y, Math.Max(1f, width - (bx - x)), RowHeight), UsKernelDraw.Keyed(ctx, resetKey)
+                + (row.PresetResetReady || string.IsNullOrEmpty(row.ResetPresetTarget) ? "" : " " + row.ResetPresetTarget),
+                ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        }
+
+        return y + RowHeight + RowGap;
+    }
+
+    private float FallbackEditorHeight(UiWidgetContext ctx, float width)
+    {
+        // Mirrors DrawFallbackEditor line for line (r5): race line + status line + create line are
+        // drawn for every shape; the entry list, the SOUND QUERY field, the picker row and the
+        // button row only when a race is selected. A measure that forgets a drawn row clips it.
+        float height = 3 * (RowHeight + RowGap);
+        string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
+        if (selectedRace.Length > 0)
+        {
+            height += UniversalSqueaker.Kernel.BuiltInActionKeys.All.Count * RowHeight + RowGap;
+            height += 2 * (RowHeight + RowGap) + RowHeight + RowGap; // query + picker + buttons
+        }
+
+        return height;
+    }
+
+    /// <summary>The VF1 editor: race picker over the supported tables (maintainer ∪ player), the
+    /// closed 17-key entry list with per-row state, a query-filtered sound picker labelled with the
+    /// current production availability, create-from-loaded-pawn-races, restore-default and deletion
+    /// through ONE ordinary UiKit confirmation window.</summary>
+    private void DrawFallbackEditor(float y, float x, float width, UiWidgetContext ctx)
+    {
+        IReadOnlyList<FallbackRaceView> races = ctx.Bindings.TryGet("fallback-races", out IReadOnlyList<FallbackRaceView> rs)
+            ? rs : Array.Empty<FallbackRaceView>();
+        string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
+
+        var racePairs = new List<KeyValuePair<string, string>>();
+        foreach (FallbackRaceView race in races)
+        {
+            racePairs.Add(new KeyValuePair<string, string>(
+                race.Label + "  " + race.DefName + (race.IsPlayerTable ? "  (*)" : ""), race.DefName));
+        }
+
+        UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Race"),
+            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Dropdown(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), "vf1-race", ctx, selectedRace, racePairs,
+            selected => ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(selected, null)));
+        y += RowHeight + RowGap;
+
+        string status = ctx.Bindings.TryGet("fallback-status", out string st) ? st ?? "" : "";
+        UsKernelDraw.Label(new Rect(x, y, width, RowHeight),
+            status.Length > 0 ? UsKernelDraw.Keyed(ctx, status)
+            : races.Count == 0 ? UsKernelDraw.Keyed(ctx, "US.VF1.NoTable") : "",
+            ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        y += RowHeight + RowGap;
+
+        // Create row: query + candidate dropdown (candidates = loaded pawn races, so a race with no
+        // VoicePack at all is a legal new table).
+        UiValueState queryState = ctx.Session.GetOrCreateValueState("vf1-new-race-query");
+        string query = ctx.Bindings.TryGet("fallback-new-race-query", out string q) ? q ?? "" : "";
+        if (!queryState.Focused) queryState.EditText = query;
+        UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Create"),
+            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        string typed = UiNative.TextField(new Rect(x + 64f, y, 120f, RowHeight), queryState.EditText);
+        if (typed != queryState.EditText)
+        {
+            queryState.EditText = typed;
+            ctx.Bindings.Set("fallback-new-race-query", typed);
+        }
+
+        IReadOnlyList<FilterOptionView> candidates = ctx.Bindings.GetOptions<FilterOptionView>("fallback-candidate-options");
+        var candidatePairs = new List<KeyValuePair<string, string>>();
+        foreach (FilterOptionView option in candidates) candidatePairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+        UsKernelDraw.Dropdown(new Rect(x + 190f, y, Math.Max(1f, width - 190f), RowHeight), "vf1-candidate", ctx, "", candidatePairs,
+            selected => ctx.Bindings.Invoke("create-fallback-table", selected));
+        y += RowHeight + RowGap;
+
+        if (races.Count == 0 || selectedRace.Length == 0) return;
+
+        IReadOnlyList<FallbackEntryView> entries = ctx.Bindings.TryGet("fallback-entries", out IReadOnlyList<FallbackEntryView> en)
+            ? en : Array.Empty<FallbackEntryView>();
+        string selectedEntry = ctx.Bindings.TryGet("fallback-selected-entry", out string fs) ? fs ?? "" : "";
+        foreach (FallbackEntryView entry in entries)
+        {
+            var rowRect = new Rect(x, y, width, RowHeight - 2f);
+            bool isSel = string.Equals(entry.ActionKey, selectedEntry, StringComparison.Ordinal);
+            string stateWord = UsKernelDraw.Keyed(ctx, entry.State switch
+            {
+                FallbackEntryView.PlayerOverride => "US.VF1.State.Override",
+                FallbackEntryView.Maintainer => "US.VF1.State.Maintainer",
+                FallbackEntryView.NoSound => "US.VF1.State.NoSound",
+                _ => "US.VF1.State.Unset",
+            });
+            string text = entry.ActionLabel + "   " + (entry.SoundLabel.Length > 0 ? entry.SoundLabel : "-") + "   " + stateWord;
+            if (UsKernelDraw.SelectionButton(rowRect, ctx, text, ctx.Theme, isSel))
+            {
+                ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(null, entry.ActionKey));
+            }
+
+            y += RowHeight;
+        }
+
+        y += RowGap;
+
+        if (selectedEntry.Length > 0)
+        {
+            // The sound query is the user's REAL search input (r5 wiring gap): the candidate list is
+            // display-capped at 40 AFTER filtering, so typing a name or defName is how any legal Core
+            // sound becomes reachable. The value binding already existed on the Host; this is the
+            // control, with the same focus seam as the race-query field.
+            UiValueState soundQueryState = ctx.Session.GetOrCreateValueState("vf1-sound-query");
+            string soundQuery = ctx.Bindings.TryGet("fallback-sound-query", out string sq) ? sq ?? "" : "";
+            if (!soundQueryState.Focused) soundQueryState.EditText = soundQuery;
+            UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.SoundSearch"),
+                ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+            string typedSoundQuery = UiNative.TextField(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), soundQueryState.EditText);
+            if (typedSoundQuery != soundQueryState.EditText)
+            {
+                soundQueryState.EditText = typedSoundQuery;
+                ctx.Bindings.Set("fallback-sound-query", typedSoundQuery);
+            }
+
+            y += RowHeight + RowGap;
+
+            // Three distinct answers (r5): pick a sound = override; "Unset (no sound)" = the EXPLICIT
+            // silent marker (the key stays present with the delete value); "Restore inheritance"
+            // removes the key so the entry follows future shipped updates again. Explicit silence
+            // and inheritance are different states and get different controls.
+            FallbackEntryView selectedRow = default;
+            foreach (FallbackEntryView entry in entries)
+            {
+                if (string.Equals(entry.ActionKey, selectedEntry, StringComparison.Ordinal)) { selectedRow = entry; break; }
+            }
+
+            IReadOnlyList<FilterOptionView> sounds = ctx.Bindings.GetOptions<FilterOptionView>("fallback-sound-options");
+            var soundPairs = new List<KeyValuePair<string, string>>();
+            foreach (FilterOptionView option in sounds) soundPairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
+            soundPairs.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, "US.VF1.Unset"), ""));
+            // The CURRENT reading is unambiguous per state: an override/shipped sound shows its own
+            // defName (so the label resolves), the explicit marker shows "Unset (no sound)", and an
+            // unset entry gets a display-only pair so it never masquerades as the marker.
+            string currentSound = selectedRow.State switch
+            {
+                FallbackEntryView.Unset => DisplayOnlyCurrentValue,
+                FallbackEntryView.NoSound => "",
+                _ => selectedRow.SoundDefName ?? "",
+            };
+            if (selectedRow.State == FallbackEntryView.Unset)
+                soundPairs.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, "US.VF1.State.Unset"), DisplayOnlyCurrentValue));
+            UsKernelDraw.Dropdown(new Rect(x, y, Math.Max(1f, width - 150f - RowGap), RowHeight), "vf1-sound", ctx, currentSound, soundPairs,
+                selected =>
+                {
+                    if (selected == DisplayOnlyCurrentValue) return; // re-picking the display-only unset row writes nothing
+                    ctx.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite(selectedEntry, selected));
+                });
+            if (UsKernelDraw.SelectionButton(new Rect(x + Math.Max(1f, width - 146f), y, 146f, RowHeight), ctx,
+                    UsKernelDraw.Keyed(ctx, "US.VF1.RestoreInherit"), ctx.Theme, false))
+            {
+                ctx.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite(selectedEntry, null));
+            }
+
+            y += RowHeight + RowGap;
+        }
+
+        float half = Math.Max(1f, (width - RowGap) / 2f);
+        if (UsKernelDraw.SelectionButton(new Rect(x, y, half, RowHeight), ctx, UsKernelDraw.Keyed(ctx, "US.VF1.RestoreDefault"), ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("restore-fallback-default");
+        }
+
+        // VF1 (r5): deletion asks ONCE through the ordinary UiKit confirmation window - not the
+        // inline two-click arm, and not the Remix double-swap (that ceremony belongs to a mode
+        // change across pages, not to deleting one's own table).
+        if (UsKernelDraw.SelectionButton(new Rect(x + half + RowGap, y, half, RowHeight), ctx,
+                UsKernelDraw.Keyed(ctx, "US.VF1.Delete"), ctx.Theme, false))
+        {
+            IUiBindings editorBindings = ctx.Bindings;
+            string requestedRace = selectedRace;
+            UsConfirmWindow.Open(
+                UsKernelDraw.Keyed(ctx, "US.VF1.Delete"),
+                UsKernelDraw.Keyed(ctx, "US.VF1.DeleteQuestion") + " " + selectedRace,
+                UsKernelDraw.Keyed(ctx, "US.VF1.DeleteConfirm"),
+                () => editorBindings.Invoke("delete-fallback-table", requestedRace));
         }
     }
 

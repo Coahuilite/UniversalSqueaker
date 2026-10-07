@@ -349,10 +349,6 @@ internal static class UsHelpCatalog
                     "US.Help.FilterBar.Domain.Label",
                     "US.Help.FilterBar.Domain.Text"),
                 new HelpItem(
-                    "us/filter-bar/race-xeno",
-                    "US.Help.FilterBar.RaceXeno.Label",
-                    "US.Help.FilterBar.RaceXeno.Text"),
-                new HelpItem(
                     "us/filter-bar/author",
                     "US.Packs.Filter.Author",
                     "US.Help.FilterBar.Author.Text"),

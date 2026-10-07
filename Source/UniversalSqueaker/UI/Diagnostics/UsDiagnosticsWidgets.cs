@@ -69,14 +69,14 @@ public abstract class UsDiagWidgetBase : IUiWidget
     protected static int GetInt(IUiBindings b, string key) => b.TryGet(key, out int v) ? v : 0;
     protected static string GetString(IUiBindings b, string key) => b.TryGet(key, out string v) ? v ?? string.Empty : string.Empty;
 
-    /// <summary>Line count a wrapped string needs in this font, clamped so one paragraph cannot eat the page.</summary>
-    protected static int LineCount(UiWidgetContext ctx, string text, float width, int maxLines)
-    {
-        if (string.IsNullOrEmpty(text)) return 0;
-        float height = ctx.Metrics.MeasureText(text, UiFont.Tiny, Math.Max(1f, width));
-        int lines = (int)Math.Ceiling(height / LineHeight);
-        return lines < 1 ? 1 : lines > maxLines ? maxLines : lines;
-    }
+
+    /// <summary>DX1.5: the honest wrapped height of a text block at this width - measured through the
+    /// SAME metrics seam the draw path uses, never capped. A capped measure feeding an uncapped draw
+    /// is what let one paragraph paint over its neighbour (the logged Tiny need48/have36 pair).</summary>
+    protected static float MeasuredTextHeight(UiWidgetContext ctx, string text, float width)
+        => string.IsNullOrEmpty(text)
+            ? 0f
+            : Math.Max(LineHeight, ctx.Metrics.MeasureText(text, UiFont.Tiny, Math.Max(1f, width)));
 
     /// <summary>Calibrated single-line advance for Tiny text (the in-game audit's own need value).</summary>
     protected internal const float LineHeight = 18f;
@@ -278,7 +278,7 @@ public sealed class UsDiagNavBodyWidget : UsDiagWidgetBase
 
     protected override float MeasureBody(UiWidgetContext ctx)
         => IsCollapsed(ctx) ? 0f : IsListView(ctx)
-            ? UsDiagListWidget.BodyHeight + UsDiagPagerWidget.BodyHeight
+            ? UsDiagListWidget.BodyHeight(ctx) + UsDiagPagerWidget.BodyHeight
             : UsDiagDetailWidget.DetailHeight(ctx, ctx.ViewWidth);
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
@@ -290,9 +290,9 @@ public sealed class UsDiagNavBodyWidget : UsDiagWidgetBase
             return;
         }
 
-        UsDiagListWidget.DrawBodyCore(new Rect(rect.x, rect.y, rect.width, UsDiagListWidget.BodyHeight), ctx);
+        UsDiagListWidget.DrawBodyCore(new Rect(rect.x, rect.y, rect.width, UsDiagListWidget.BodyHeight(ctx)), ctx);
         UsDiagPagerWidget.DrawBodyCore(
-            new Rect(rect.x, rect.y + UsDiagListWidget.BodyHeight, rect.width, UsDiagPagerWidget.BodyHeight),
+            new Rect(rect.x, rect.y + UsDiagListWidget.BodyHeight(ctx), rect.width, UsDiagPagerWidget.BodyHeight),
             ctx);
     }
 
@@ -444,6 +444,10 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
     // here would let a style document resize the report's pagination, and the report is the surface that
     // has to stay comparable between two runs of the game.
     internal const float RowHeight = 22f;
+    // DX1.3: below the single-line column budget (UsDiagRowPainter.SingleLineMinimum) a row splits
+    // into two lines and grows to this height; the page rhythm stays arithmetic over the row height
+    // the painter actually draws.
+    internal const float TwoLineRowHeight = 38f;
     private const string SearchStateId = "diag-search-field";
 
     public override string Kind => KindName;
@@ -458,26 +462,39 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
         bindings.ValidateAction<int>(UsDiagnosticsHost.KeyRowClick, elementPath);
     }
 
-    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : BodyHeight;
+    protected override float MeasureBody(UiWidgetContext ctx) => IsCollapsed(ctx) ? 0f : BodyHeight(ctx);
 
-    /// <summary>The search field plus one page of rows; the navigation body composes the same number.</summary>
-    internal static float BodyHeight => FieldHeight + UsDiagnosticsProjection.RowsPerPage * RowHeight;
+    /// <summary>The search field plus one page of rows; the navigation body composes the same number.
+    /// DX1.4: the field reserves the MEASURED Small line plus its 2+2 insets - the fixed 24 left the
+    /// text box 20px where the engine asked for 22 (the logged need22/have20 pair).</summary>
+    internal static float FieldHeightFor(UiWidgetContext ctx)
+        => Math.Max(FieldHeight, ctx.Metrics.MeasureText("Ag", UiFont.Small, 10000f) + 4f);
+
+    /// <summary>DX1.3: the 232px master column cannot carry six single-line columns without crushing
+    /// the name; the wide navigation list can. The painter and this height arithmetic read ONE
+    /// decision, so a row is never measured as two lines and drawn as one (or the reverse).</summary>
+    internal static bool TwoLine(UiWidgetContext ctx) => ctx.ViewWidth < UsDiagRowPainter.SingleLineMinimum;
+
+    internal static float RowHeightFor(UiWidgetContext ctx) => TwoLine(ctx) ? TwoLineRowHeight : RowHeight;
+
+    internal static float BodyHeight(UiWidgetContext ctx)
+        => FieldHeightFor(ctx) + UsDiagnosticsProjection.RowsPerPage * RowHeightFor(ctx);
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
     {
         if (IsCollapsed(ctx)) return;
-        DrawBodyCore(new Rect(rect.x, rect.y, rect.width, BodyHeight), ctx);
+        DrawBodyCore(new Rect(rect.x, rect.y, rect.width, BodyHeight(ctx)), ctx);
     }
 
     /// <summary>
     /// The list's own content, reusable by the narrow navigation body (which stacks the pager under it).
-    /// It draws the search field and one page of rows into exactly <see cref="BodyHeight"/> pixels.
+    /// It draws the search field and one page of rows into exactly <see cref="BodyHeight(UiWidgetContext)"/> pixels.
     /// </summary>
     internal static void DrawBodyCore(Rect rect, UiWidgetContext ctx)
     {
         var b = ctx.Bindings;
-        string query = DrawSearchField(new Rect(rect.x, rect.y, rect.width, FieldHeight), ctx);
-        float y = rect.y + FieldHeight;
+        string query = DrawSearchField(new Rect(rect.x, rect.y, rect.width, FieldHeightFor(ctx)), ctx);
+        float y = rect.y + FieldHeightFor(ctx);
 
         if (!b.TryGet(UsDiagnosticsHost.KeyRows, out IReadOnlyList<UsDiagRow>? rows) || rows == null || rows.Count == 0)
         {
@@ -505,7 +522,7 @@ public sealed class UsDiagListWidget : UsDiagWidgetBase
         for (int i = 0; i < rows.Count; i++)
         {
             UsDiagRow row = rows[i];
-            Rect rowRect = new(rect.x, y + i * RowHeight, rect.width, RowHeight);
+            Rect rowRect = new(rect.x, y + i * RowHeightFor(ctx), rect.width, RowHeightFor(ctx));
             bool hovered = UiNative.IsMouseOver(rowRect);
             // A locked row is unavailable, not selected: it takes the disabled rail (hatch) so the hatch
             // and the selected plane can never be confused for one another.
@@ -675,11 +692,11 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         float width = Math.Max(1f, arrangedWidth);
         float content = Math.Max(1f, width - Indent);
         float height = HeaderHeight
-            + SectionHeight + TextHeight(ctx, detail.Summary.Headline, Math.Max(1f, width - 12f), 2)
-            + (detail.Summary.Detail.Length > 0 ? TextHeight(ctx, detail.Summary.Detail, Math.Max(1f, width - 12f), 2) : 0f)
+            + SectionHeight + MeasuredTextHeight(ctx, detail.Summary.Headline, Math.Max(1f, width - 12f))
+            + MeasuredTextHeight(ctx, detail.Summary.Detail, Math.Max(1f, width - 12f))
             + SectionHeight
-            + TextHeight(ctx, detail.Previous.EvaluationLine, content, 2)
-            + (detail.Previous.DispatchLine.Length > 0 ? TextHeight(ctx, detail.Previous.DispatchLine, content, 2) : 0f)
+            + MeasuredTextHeight(ctx, detail.Previous.EvaluationLine, content)
+            + MeasuredTextHeight(ctx, detail.Previous.DispatchLine, content)
             + SectionHeight;
 
         for (int band = 0; band < BandCount; band++)
@@ -774,12 +791,12 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         y = Section(y, rect, ctx, "US.Diagnostics.Section.Previous");
         if (detail.Previous.EvaluationLine.Length > 0)
         {
-            y = Wrapped(y, rect, ctx, detail.Previous.EvaluationLine, ctx.Theme.TextPrimary, 2);
+            y = Wrapped(y, rect, ctx, detail.Previous.EvaluationLine, ctx.Theme.TextPrimary);
         }
 
         if (detail.Previous.DispatchLine.Length > 0)
         {
-            y = Wrapped(y, rect, ctx, detail.Previous.DispatchLine, ctx.Theme.TextSecondary, 2);
+            y = Wrapped(y, rect, ctx, detail.Previous.DispatchLine, ctx.Theme.TextSecondary);
         }
 
         // 4. The conditions, grouped by side and split by clock basis inside a group.
@@ -880,7 +897,7 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
     private static float DrawSummary(float y, Rect rect, UiWidgetContext ctx, UsDiagCurrentSummary summary)
     {
         float width = Math.Max(1f, rect.width - 12f);
-        float headlineHeight = TextHeight(ctx, summary.Headline, width, 2);
+        float headlineHeight = MeasuredTextHeight(ctx, summary.Headline, width);
         if (summary.HasCurrentBlock)
         {
             // The primary finding gets the attention treatment: a neutral fill with a cyan border and a
@@ -902,7 +919,7 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         y += headlineHeight;
         if (summary.Detail.Length > 0)
         {
-            float detailHeight = TextHeight(ctx, summary.Detail, width, 2);
+            float detailHeight = MeasuredTextHeight(ctx, summary.Detail, width);
             UsKernelDraw.Label(new Rect(rect.x, y, width, detailHeight), summary.Detail, ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
             y += detailHeight;
         }
@@ -919,10 +936,10 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
     private static float DrawGate(float y, Rect rect, UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, bool firstCurrentBlock)
     {
         Func<string, string> tr = key => UsKernelDraw.Keyed(ctx, key);
-        int rowLines = RowLines(ctx, gate, contentWidth);
-        int reasonLines = ReasonLines(ctx, gate, contentWidth, tr);
-        float rowHeight = rowLines * LineHeight + reasonLines * LineHeight + 2f;
-        float lineSpan = rowLines * LineHeight;
+        float rowSpan = RowSpan(ctx, gate, contentWidth);
+        float reasonSpan = ReasonSpan(ctx, gate, contentWidth, tr);
+        float rowHeight = rowSpan + reasonSpan + 2f;
+        float lineSpan = rowSpan;
         float nameWidth = Math.Max(1f, (contentWidth - StatusWidth - BasisWidth - CellGap * 3f) * NameShare);
         float valueWidth = Math.Max(1f, contentWidth - StatusWidth - BasisWidth - nameWidth - CellGap * 3f);
         float x = rect.x + Indent;
@@ -954,11 +971,11 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
             UsDiagnosticsProjection.BasisText(gate, tr),
             ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
 
-        if (reasonLines > 0)
+        if (reasonSpan > 0f)
         {
             float reasonWidth = Math.Max(1f, contentWidth - 12f);
             UsKernelDraw.Label(
-                new Rect(x + 12f, y + lineSpan, reasonWidth, reasonLines * LineHeight),
+                new Rect(x + 12f, y + lineSpan, reasonWidth, reasonSpan),
                 UsDiagnosticsProjection.ReasonText(gate, tr),
                 ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: false);
         }
@@ -970,25 +987,24 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         => gate.State == UsDiagGateState.NA || gate.State == UsDiagGateState.Pending;
 
     /// <summary>
-    /// A condition row's measured height: the taller of the wrapped name and the wrapped value, plus the
-    /// reason line when the row has one. Long Chinese values therefore receive real height instead of
-    /// being clipped or shrunk.
+    /// A condition row's measured height: the taller of the wrapped name and the wrapped value, plus
+    /// the reason block when the row has one - all through MeasuredTextHeight, so measure and draw
+    /// share one ruler and one width (DX1.5). Long Chinese values therefore receive real height
+    /// instead of being clipped or shrunk.
     /// </summary>
     private static float RowHeight(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth)
-    {
-        return (RowLines(ctx, gate, contentWidth) * LineHeight)
-            + (ReasonLines(ctx, gate, contentWidth, key => UsKernelDraw.Keyed(ctx, key)) * LineHeight) + 2f;
-    }
+        => RowSpan(ctx, gate, contentWidth)
+            + ReasonSpan(ctx, gate, contentWidth, key => UsKernelDraw.Keyed(ctx, key)) + 2f;
 
-    private static int RowLines(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth)
+    private static float RowSpan(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth)
     {
         float nameWidth = Math.Max(1f, (contentWidth - StatusWidth - BasisWidth - CellGap * 3f) * NameShare);
         float valueWidth = Math.Max(1f, contentWidth - StatusWidth - BasisWidth - nameWidth - CellGap * 3f);
-        return Math.Max(LineCount(ctx, gate.Name, nameWidth, 2), LineCount(ctx, gate.Value, valueWidth, 2));
+        return Math.Max(MeasuredTextHeight(ctx, gate.Name, nameWidth), MeasuredTextHeight(ctx, gate.Value, valueWidth));
     }
 
-    private static int ReasonLines(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, Func<string, string> tr)
-        => HasReason(gate) ? LineCount(ctx, UsDiagnosticsProjection.ReasonText(gate, tr), Math.Max(1f, contentWidth - 12f), 2) : 0;
+    private static float ReasonSpan(UiWidgetContext ctx, UsDiagGateLine gate, float contentWidth, Func<string, string> tr)
+        => HasReason(gate) ? MeasuredTextHeight(ctx, UsDiagnosticsProjection.ReasonText(gate, tr), Math.Max(1f, contentWidth - 12f)) : 0f;
 
     private const int BandCount = 4;
 
@@ -1010,19 +1026,16 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         _ => "US.Diagnostics.Gate.Group.Audio",
     };
 
-    private static float TextHeight(UiWidgetContext ctx, string text, float width, int maxLines)
-        => LineCount(ctx, text, width, maxLines) * LineHeight;
-
     private static float Section(float y, Rect rect, UiWidgetContext ctx, string key)
     {
         UsKernelDraw.Label(new Rect(rect.x, y, rect.width, SectionHeight), UsKernelDraw.Keyed(ctx, key), ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
         return y + SectionHeight;
     }
 
-    private static float Wrapped(float y, Rect rect, UiWidgetContext ctx, string text, Color color, int maxLines)
+    private static float Wrapped(float y, Rect rect, UiWidgetContext ctx, string text, Color color)
     {
         float width = Math.Max(1f, rect.width - Indent);
-        float height = TextHeight(ctx, text, width, maxLines);
+        float height = MeasuredTextHeight(ctx, text, width);
         UsKernelDraw.Label(new Rect(rect.x + Indent, y, width, height), text, ctx, color, UiFont.Tiny, TextAnchor.MiddleLeft);
         return y + height;
     }
@@ -1032,9 +1045,10 @@ public sealed class UsDiagDetailWidget : UsDiagWidgetBase
         float nameWidth = rect.width * 0.38f - 4f;
         float valueX = rect.x + nameWidth + 4f;
         float valueWidth = Math.Max(1f, rect.width - nameWidth - 4f);
+        float valueHeight = MeasuredTextHeight(ctx, value, valueWidth);
         UsKernelDraw.Label(new Rect(rect.x, y, nameWidth, LineHeight), UsKernelDraw.Keyed(ctx, labelKey), ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
-        UsKernelDraw.Label(new Rect(valueX, y, valueWidth, LineHeight), value, ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: false);
-        return y + LineHeight;
+        UsKernelDraw.Label(new Rect(valueX, y, valueWidth, valueHeight), value, ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: false);
+        return y + Math.Max(LineHeight, valueHeight);
     }
 }
 
@@ -1050,9 +1064,22 @@ internal static class UsDiagRowPainter
     private const float AudioWidth = 44f;
     private const float StatusWidth = 40f;
     private const float CellGap = 4f;
+    private const float TwoLineHeight = 18f;
+
+    /// <summary>DX1.3: the narrowest row that can carry the six single-line columns without stealing
+    /// the name's real budget: dot + an 80px name floor + action + cooldown + audio + status + five
+    /// gaps. Below it the row splits into two lines instead of crushing the identity - the measured
+    /// 232px defect had pawnWidth = max(1, negative) with the action column invading the dot.</summary>
+    internal const float SingleLineMinimum = DotWidth + 80f + ActionWidth + CooldownWidth + AudioWidth + StatusWidth + 5f * CellGap;
 
     internal static void Paint(Rect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth = 0f, float audioWidth = 0f)
     {
+        if (rect.width < SingleLineMinimum)
+        {
+            PaintTwoLine(rect, row, ctx, cooldownWidth, audioWidth);
+            return;
+        }
+
         Color dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
         float x = rect.x + 2f;
         // D7: the dot is a glyph until the font says it cannot draw one, then it is the state word.
@@ -1082,5 +1109,46 @@ internal static class UsDiagRowPainter
         UsKernelDraw.Label(new Rect(statusX, rect.y, StatusWidth, rect.height),
             UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
             ctx, row.Ready ? ctx.Theme.TextSecondary : UsAttention.Brush, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+    }
+
+    /// <summary>DX1.3: below the single-line budget the row splits. Line one keeps the IDENTITY -
+    /// dot, the pawn name at the wide share (explicitly ellipsized, never dimmed away), status; line
+    /// two carries the numbers on the SAME measured column budgets - action left, cooldown and audio
+    /// right-aligned. Every cell clips through Ellipsized at exactly the width it measured, so values
+    /// cannot bleed into each other and the caller's rowRect stays the one hit band.</summary>
+    private static void PaintTwoLine(Rect rect, UsDiagRow row, UiWidgetContext ctx, float cooldownWidth, float audioWidth)
+    {
+        Color dotColor = UsDiagPaint.Dot(ctx.Theme, row.Tone);
+        Func<string, float> measure = text => ctx.Metrics.MeasureWidth(text, UiFont.Tiny);
+        var first = new Rect(rect.x, rect.y, rect.width, TwoLineHeight);
+        var second = new Rect(rect.x, rect.y + TwoLineHeight, rect.width, Math.Max(1f, rect.height - TwoLineHeight));
+
+        float x = first.x + 2f;
+        string dot = UsDiagGlyphs.DotText(ctx, row.Tone);
+        UsKernelDraw.Label(new Rect(x, first.y, DotWidth, first.height), dot, ctx, dotColor, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        x += DotWidth;
+
+        float pawnWidth = Math.Max(1f, first.xMax - StatusWidth - CellGap - x);
+        UsKernelDraw.Label(new Rect(x, first.y, pawnWidth, first.height),
+            UsKernelDraw.Ellipsized(row.PawnText, ctx, UiFont.Tiny, pawnWidth),
+            ctx, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new Rect(first.xMax - StatusWidth, first.y, StatusWidth, first.height),
+            UsKernelDraw.Keyed(ctx, row.Ready ? "US.Diagnostics.Ready" : "US.Diagnostics.Blocked"),
+            ctx, row.Ready ? ctx.Theme.TextSecondary : UsAttention.Brush, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+
+        float cw = Mathf.Clamp(cooldownWidth > 0f ? cooldownWidth : CooldownWidth, 24f, CooldownWidth);
+        float aw = Mathf.Clamp(audioWidth > 0f ? audioWidth : AudioWidth, 20f, AudioWidth);
+        float audioX = second.xMax - aw;
+        float cooldownX = audioX - CellGap - cw;
+        float actionWidth = Math.Max(1f, cooldownX - CellGap - (second.x + 2f));
+        UsKernelDraw.Label(new Rect(second.x + 2f, second.y, actionWidth, second.height),
+            UsKernelDraw.Ellipsized(row.ActionText, ctx, UiFont.Tiny, actionWidth),
+            ctx, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft, singleLine: true);
+        UsKernelDraw.Label(new Rect(cooldownX, second.y, cw, second.height),
+            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.CooldownText, cw, measure), ctx, UiFont.Tiny, cw),
+            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
+        UsKernelDraw.Label(new Rect(audioX, second.y, aw, second.height),
+            UsKernelDraw.Ellipsized(UsDiagnosticsProjection.PadNumeric(row.AudioText, aw, measure), ctx, UiFont.Tiny, aw),
+            ctx, UiFont.Tiny, TextAnchor.MiddleRight, singleLine: true);
     }
 }

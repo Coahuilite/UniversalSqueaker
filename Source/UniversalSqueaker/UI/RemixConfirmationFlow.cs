@@ -51,6 +51,13 @@ public sealed class RemixConfirmationFlow
     private readonly UiTheme theme;
     private readonly UiBindings bindings;
     private UiHost? dialogHost;
+    // DT1 (F03b closure): the dialog page gets its OWN audit scope over its OWN host, opened on the
+    // single attach seam and disposed on the single detach seam - the same per-host rule the settings
+    // window and the diagnostics panel follow. Before this the dialog inherited nothing: the parent's
+    // scope never reached it, so outline/capture could not name its widgets (the playtest's missing
+    // attribution). The scope exists in every logging mode; only the fit audit inside it follows the
+    // logging policy (R3-B rule, mirrored from the panel).
+    private UsTextFitAudit? dialogAudit;
     // Production passes null (the shell then uses the Verse metrics); the SA1.3 harness injects its
     // recording stub so the fit audit measures the SAME strings the real shell draws. Behaviour never
     // depends on this value - it only decides which ruler measures text.
@@ -177,7 +184,13 @@ public sealed class RemixConfirmationFlow
         // the flow is closed and the staged commit is dropped, never run.
         window.HostDetached += _ =>
         {
+            if (UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost == dialogHost)
+            {
+                UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost = null;
+            }
             dialogHost = null;
+            dialogAudit?.Dispose();
+            dialogAudit = null;
             step = 0;
             step1 = false;
             step2 = false;
@@ -197,7 +210,17 @@ public sealed class RemixConfirmationFlow
     {
         if (host == null) throw new ArgumentNullException(nameof(host));
         dialogHost = host;
+        // One scope per live host: a re-attach (the harness, or a reopen that skipped detach) replaces
+        // the previous scope before the new one opens, so no stale scope can be targeted by the
+        // developer commands after its host is gone.
+        dialogAudit?.Dispose();
+        dialogAudit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        UniversalSqueaker.UI.Dev.UsDevPanelTargets.DialogHost = host;
     }
+
+    /// <summary>The dialog page's own audit scope while the host is attached (null otherwise); the
+    /// DT1 developer panel targets it for outline/capture/report like any other US window.</summary>
+    public UsTextFitAudit? DialogAudit => dialogAudit;
 
     /// <summary>The dialog page's manifest and theme, exposed with the attach seam so a harness can build
     /// the SAME page the window draws - the two-step geometry proof needs the real arrange, not a copy.</summary>

@@ -104,13 +104,17 @@ public class UniversalSqueakerMod : Mod
             SqueakRuntimeResolver.InitializeMainThread();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
-            // Route table: mount the default squeak comp on every race declared by an admitted pack,
-            // replacing the canonical author patch. Reads the refreshed snapshot; runs on the main
-            // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
-            VoicePackCompAttach.Apply(SqueakXenotypeCatalog.Current);
-            // Profile copies are independent Config artifacts; load/rebuild before the first resolver snapshot.
-            // BuildBuiltIn consumes the resolved table and remains outside the ModSettings debounce/write path.
+            // VF1 order: the final-table store loads BEFORE the mount decision, because the support
+            // set is the union of pack-declared races and table races (maintainer or player). The
+            // store rebuilds from the immutable data-driven source; copies are independent Config
+            // artifacts outside the ModSettings debounce/write path.
             SqueakFallbackProfileStore.LoadOrRebuild(SqueakKernelAdapter.BuildBuiltInSource());
+            // Route table: mount the default squeak comp on the support set, replacing the canonical
+            // author patch. Reads the refreshed snapshot and the loaded tables; runs on the main
+            // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
+            VoicePackCompAttach.Apply(
+                SqueakXenotypeCatalog.Current,
+                SqueakFallbackProfileStore.SupportedRaceDefNames());
             Settings.ApplyToRuntime();
             // The first and only startup consumption of a schema migration happens after main-thread binding.
             Settings.QueuePendingMigrationPersistence();
