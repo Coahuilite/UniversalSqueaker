@@ -12,7 +12,8 @@ status and paired package identities are authoritative in the PM checkpoint evid
 `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/`.
 The candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
 Product implementation in `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md`
-waits until FL and US archive requirements finish; this file does not expand that product scope.
+is dispatched per the PM relay: the archive round and FL-IC1/IC2 are accepted (frozen at `d5af4d8`), and
+US-UI1/US-ESC1 have landed as local commits awaiting PM review; this file does not expand that product scope.
 
 - [ ] **Remaining whole-checkpoint human tasks** (do not re-run accepted matrices): pack select/search/enable
   as later revised by US-PACK1; compact US diagnostics and settings developer tools at 1024x768; per-race
@@ -22,9 +23,14 @@ waits until FL and US archive requirements finish; this file does not expand tha
   independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
   fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest). Observe
   regressions only. Unreported restore/restart branches are not a new PRE1 gate.
-- **Confirmed but not implemented (after archive):** FL-IC1/2 then US-UI1, US-ESC1, US-PACK1, US-RESET1 as
-  specified in the interaction document. Keep every independent fallback store on global restore. Exclude
-  only the unrelated broader FL library backlog (task-11, FL-17, FL-18/B6, FL-13/B10), not FL-IC1/2.
+- **Interaction chain state (2026-10-08):** FL-IC1/IC2 accepted and frozen; US preparation accepted;
+  **US-UI1 and US-ESC1 implemented locally** (diagnostic two-press Esc on `TryHandleUnansweredCancel` +
+  native eligibility, Call wording, F07 measured reset slot, F06 area-scoped context, ESC1 tree cancel
+  layers + cancelled marks) - full local gates green, PM acceptance pending. **Still to dispatch:**
+  US-PACK1 (one filter region, pack-card results, xenotype-hit expansion, enable identity unchanged) and
+  US-RESET1 (global/local restore per the accepted field-ownership table; keep every independent fallback
+  store), then Demo-IC1, then the ONE combined short human pass. Exclude only the FL-owned broader backlog
+  (task-11, FL-17, FL-18/B6, FL-13/B10), not FL-IC1/2.
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
@@ -125,13 +131,15 @@ waits until FL and US archive requirements finish; this file does not expand tha
   real fallback but the flag stays process-level and one-way; the eat child row's rule is mislabelled in
   non-shared-row failure messages.
 - [ ] **Diagnostics live-walkthrough** for the rebuilt panel: master-detail + locked detach windows, the
-  collapsed bars, the 16-line chain, four-tier dispatch labels, and the **unconsumed two-press Esc** - a leak
-  there is FL event-seam material, never a whitelist entry.
+  collapsed bars, the 16-line chain, four-tier dispatch labels, and the two-press Esc ON THE REAL STACK -
+  consumption is now the shell's (FL-IC2), so the open observation is which window the real WindowStack
+  hands the key to with the panel, main settings window and a confirmation dialog open together.
+  A leak there is FL event-seam material, never a whitelist entry.
 - [ ] **Attention palette + diagnostics state/layout** (harness-verified only): attention cyan legibility at
   real UIScale in both languages, grayscale distinctness of the states, the 592px split and the narrow Back
   restoring the SAME search/page/scroll, group folding that does not move when values update, the
-  previous-evaluation band's recency wording, the pinned window's lifecycle plus the two-press Esc leak, and the
-  checklist's role-split banners against the settings canary.
+  previous-evaluation band's recency wording, the pinned window's lifecycle plus its real-stack two-press
+  Esc, and the checklist's role-split banners against the settings canary.
 
 ## In-game acceptance — still open (maintainer steps)
 

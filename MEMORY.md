@@ -43,18 +43,19 @@
   diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks, named faithful
   proofs and real-game limits are recorded separately in the PM checkpoint evidence. Composite splitting
   and scroll-distance polish remain deferred.
-- **Pending after the archive checkpoint, not product work in this memory pass.** Hygiene/doc edits sit
-  in the index and working tree on `0.5.x` at `38b93e75dea2e24da05bd5e095b7b84d1ce46df2`; this pass does
-  not stage or commit them. Interaction follow-ups after FL/US archive acceptance are specified in
-  `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md` and are not dispatched here.
-  The agreed chain is FL-IC1/2 then US-UI1, US-ESC1, US-PACK1 and US-RESET1. US-UI1 covers developer tools
-  coexisting with the main window, Call wording, F07 double-paint/narrow width, and F06 layer/domain versus
-  race-only fallback. US-ESC1 is tree cancel without re-selecting the first item. US-PACK1 is one filter
-  region and pack-card results with xenotype hits expanding and enable identity unchanged. US-RESET1 is
-  global restore of ordinary settings, tuning overrides, pack selection and preset anchors, keeping every
-  independent fallback store, plus local action/distance restores. Remaining FL common-capability items
-  (task-11, FL-17, FL-18/B6, FL-13/B10) stay FL-owned backlog and are not pulled into this US checkpoint.
-  `TODO.md` owns the remaining action surface.
+- **Interaction checkpoint in progress (2026-10-08).** The archive round is complete and the work moved on:
+  FL-IC1/IC2 were accepted and FROZEN at ferritelib `d5af4d8` (PM-verified carrier/stub/payload identities in
+  the relay evidence), and US-UI1 plus US-ESC1 are now implemented on that freeze as local commits: the two
+  diagnostic windows' two-press Esc moved onto the shell's `TryHandleUnansweredCancel` with the window's own
+  native-eligibility opt-in, the Call wording is corrected (zh 普通叫声 / EN Periodic occurrence), F07 draws the
+  measured reset slot from STATE only (the click-return double-paint is gone), F06 gates the layer/domain and
+  empty-target context to the action/mood areas, and the ESC1 tree cancel layers ride FL-IC2 `CancelBind` with
+  explicit cancelled marks the auto-select projections honour. US-PACK1 and US-RESET1 stay on the agreed chain
+  and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
+  learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
+  the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
+  hashes) and never writes the carrier's canonical `bin/stubs`. FL-owned backlog (task-11, FL-17, FL-18/B6,
+  FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
