@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerResetTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.ResetTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+reset1-backend</InformationalVersion>
+    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
+    <NuGetAudit>false</NuGetAudit>
+    <!-- RESET1 边界（us/reset1-backend-contract.md）：bin/obj/project-extension 输出全部落在
+         tools/UniversalSqueakerResetTests/out/ 内（见本目录 Directory.Build.props），
+         不在 Source/ 下生成默认 obj，也不生成 dist。 -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- US-RESET1 restore harness. Links the PRODUCTION Settings/Models/Kernel/Pure sources and
+         drives the production restore operations (Settings/UniversalSqueakerSettings.Reset.cs)
+         plus the production Scribe boundary and the production fallback store (test seam only).
+         Verse/UnityEngine stubs are byte-pinned snapshots of the sibling migration-harness stubs
+         (hashes recorded in tools/UniversalSqueakerResetTests/logs); the US stub file additionally
+         carries the Probe publish/persistence counters (test-side shims only, never product code). -->
+    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Settings\*.cs" Link="Settings\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerTuningBaselineDef.cs" Link="Runtime\UniversalSqueakerTuningBaselineDef.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerFallbackProfileDef.cs" Link="Runtime\UniversalSqueakerFallbackProfileDef.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Fallback\SqueakFallbackProfileStore.cs" Link="Fallback\SqueakFallbackProfileStore.cs" />
+  </ItemGroup>
+
+</Project>

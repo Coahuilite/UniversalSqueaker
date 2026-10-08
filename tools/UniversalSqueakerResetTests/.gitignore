@@ -1,0 +1,3 @@
+# build outputs and validation temp never enter the tree's Git state (us/reset1-backend-contract.md)
+out/
+tmp/
