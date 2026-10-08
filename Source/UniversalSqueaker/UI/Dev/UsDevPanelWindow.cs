@@ -48,6 +48,15 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 
     private UsDevPanelWindow()
     {
+        // F01 (US-UI1): the settings main window is Dialog with absorbInputAroundWindow=true, and a
+        // click on it natively raises it in-layer - a SAME-layer panel then loses GetsInput and the
+        // recorded "panel stops responding" witness. The native-stack answer is layering, not a second
+        // input authority: the tool sits on SubSuper (Verse.WindowLayer order measured from the
+        // 1.6.4871 reference: GameUI < Dialog < SubSuper < Super), so the main window can never stand
+        // in front of it and the two coexist for the whole settings session. Confirmation dialogs sit
+        // one step higher again (Super) - the confirmation window keeps priority over tool AND main
+        // window. Which window the REAL stack ends up handing each key to is the named short-pass item.
+        layer = WindowLayer.SubSuper;
         forcePause = false;
         absorbInputAroundWindow = false;
         preventCameraMotion = false;

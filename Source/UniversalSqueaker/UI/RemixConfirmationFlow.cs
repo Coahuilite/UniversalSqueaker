@@ -178,6 +178,9 @@ public sealed class RemixConfirmationFlow
                 ? "US.Remix.Notice.Prerequisite"
                 : "US.Remix.Notice.Unavailable").Translate(),
             metrics: dialogMetrics);
+        // F01/US-UI1: the confirmation outranks the Dialog main window AND the SubSuper dev tools -
+        // the measured 1.6 reference order puts Super on top (UsDevPanelWindow's constructor cites it).
+        window.layer = WindowLayer.Super;
 
         window.HostAttached += AttachDialogHost;
         // ANY teardown of the dialog - ESC, the Cancel command, a failed page - answers the same way:

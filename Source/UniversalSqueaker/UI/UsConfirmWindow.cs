@@ -129,6 +129,10 @@ public sealed class UsConfirmWindow
                 ? "US.Settings.Prerequisite.Title"
                 : "US.Diagnostics.PageUnavailable.Title").Translate(),
             metrics: dialogMetrics);
+        // F01/US-UI1: confirmation priority over the Dialog main window and the SubSuper dev tools
+        // (measured 1.6 reference layer order; UsDevPanelWindow's constructor cites it).
+        window.layer = WindowLayer.Super;
+
         window.HostAttached += AttachDialogHost;
         // ANY teardown - ESC, Cancel, a failed page - answers the same way: drop the staged action.
         window.HostDetached += _ =>

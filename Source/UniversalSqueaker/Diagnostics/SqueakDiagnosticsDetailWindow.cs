@@ -39,6 +39,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
+        layer = WindowLayer.SubSuper; // F01 (US-UI1): dev-tool coexistence layering, see the panel.
         closeOnCancel = false; // two-press arm below; Esc is not the native close.
         // FL-IC2 native eligibility (frozen handoff §5): with closeOnCancel=false the window only hears the
         // Cancel key if it opts into this public Verse field itself; it cannot take the key from a window

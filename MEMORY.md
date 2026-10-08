@@ -49,8 +49,14 @@
   diagnostic windows' two-press Esc moved onto the shell's `TryHandleUnansweredCancel` with the window's own
   native-eligibility opt-in, the Call wording is corrected (zh 普通叫声 / EN Periodic occurrence), F07 draws the
   measured reset slot from STATE only (the click-return double-paint is gone), F06 gates the layer/domain and
-  empty-target context to the action/mood areas, and the ESC1 tree cancel layers ride FL-IC2 `CancelBind` with
-  explicit cancelled marks the auto-select projections honour. US-PACK1 and US-RESET1 stay on the agreed chain
+  empty-target context to the action/mood areas, F01's tool windows sit on SubSuper (main window stays Dialog,
+  confirmations on Super - the measured 1.6 layer order, so a main-window click can never absorb a tool's input),
+  and the ESC1 tree cancel layers ride FL-IC2 `CancelBind` with explicit cancelled marks; only the two
+  projections that can show a cancelled selection consult the marks (the domain browse and the fallback table) -
+  BuildTuningDomains never sees one because the ladder's context step always rests the page on the Global layer,
+  where no domain exists to auto-pick. Ladder steps are scoped to the VISIBLE branch: a row target left over
+  from another area folds into the context exit instead of acting as an invisible extra layer.
+  US-PACK1 and US-RESET1 stay on the agreed chain
   and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
   the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source

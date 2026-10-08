@@ -1609,9 +1609,12 @@ public static class VoicePacksPageModel
         state.DomainSelectionCanceled = true;
     }
 
-    /// <summary>Tuning page: is any business cancel step live? Fallback: entry, then the race table
-    /// (§4.1 "当前条目 → 当前种族表"); action/mood: the selected action row editor; then the layer/domain
-    /// + area context itself. The LAST step declining is what lets the key fall through to the page
+    /// <summary>Tuning page: is any business cancel step LIVE - and only in the branch the player can
+    /// SEE? Fallback area (2): entry, then the race table (§4.1 "当前条目 → 当前种族表"). Action area
+    /// (0): the selected action's editor row. The row target belongs to area 0 ONLY: an action selected
+    /// before switching areas is invisible elsewhere and must never act as an extra return layer there
+    /// (PM observation 2026-10-08: state stitched across areas is not the agreed tree return). Then the
+    /// layer/domain/area context itself. The LAST step declining lets the key fall through to the page
     /// root - the root then closes (next press), never this layer.</summary>
     public static bool CanCancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
@@ -1621,11 +1624,13 @@ public static class VoicePacksPageModel
             if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction)) return true;
             if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace)) return true;
         }
-        if (!string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
-        return view.TuningLayer != 0 || view.TuningArea != 0;
+        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
+        return view.TuningLayer != 0 || view.TuningArea != 0
+            || !string.IsNullOrEmpty(state.TuningSelectedAction);
     }
 
-    /// <summary>One press, one step, in the spec's order. State-only; never persists, never routes.</summary>
+    /// <summary>One press, one step, in the spec's order, scoped to the visible branch. State-only;
+    /// never persists, never routes.</summary>
     public static void CancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return;
@@ -1643,20 +1648,25 @@ public static class VoicePacksPageModel
                 return;
             }
         }
-        if (!string.IsNullOrEmpty(state.TuningSelectedAction))
+        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction))
         {
             state.TuningSelectedAction = "";
             return;
         }
-        if (view.TuningLayer != 0 || view.TuningArea != 0)
+        if (view.TuningLayer != 0 || view.TuningArea != 0 || !string.IsNullOrEmpty(state.TuningSelectedAction))
         {
             // Leave the layer/domain/area context back to the page's initial default (Global layer,
-            // action rules area). The domain identity re-normalises through the existing projection -
-            // this is a RETURN, not the reset (§4.3): no settings field moves.
+            // action rules area, no row target). The domain identity re-normalises through the existing
+            // projection - this is a RETURN, not the reset (§4.3): no settings field moves. A row target
+            // left behind from ANOTHER area belongs to this branch exit: it is never a separate invisible
+            // step, and BuildTuningDomains needs no cancelled mark of its own because the context never
+            // ends up on a domain-needing layer without a selection (layer returns to 0, where no
+            // domain exists or is auto-picked).
             state.TuningLayer = 0;
             state.TuningRaceDefName = "";
             state.TuningXenotypeDefName = "";
             state.TuningArea = 0;
+            state.TuningSelectedAction = "";
         }
     }
 

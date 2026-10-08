@@ -39,6 +39,10 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
+        // F01 (US-UI1): a dev-tool window coexists with the Dialog-layer settings window on SubSuper -
+        // see UsDevPanelWindow's constructor for the measured layer order and the rule; confirmations
+        // (Super) still outrank it.
+        layer = WindowLayer.SubSuper;
         closeOnCancel = false; // Esc handled by the two-press arm below.
         // FL-IC2 native eligibility (frozen handoff §5): a window with closeOnCancel=false never hears the
         // Cancel key unless it opts into the public Verse field itself. Setting it here is the one-line
