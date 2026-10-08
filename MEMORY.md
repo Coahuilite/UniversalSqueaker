@@ -60,22 +60,29 @@
   NON-PERSISTED `TuningContextActive` flag, never a nonzero layer/area inference, so the DEFAULT Global/Actions
   branch also owns one context return that reposes the page without writing config or auto-reselecting (row
   cancel stays visible-branch-scoped; the wrapper container carries the context `CancelBind`; the lane
-  establishes its subject with a REAL viewport-transformed click, never `SetCancelTarget`); and the tool windows
-  recompute `forceCatchAcceptAndCancelEventEvenIfUnfocused` at the TOP of `WindowOnGUI` before content - the
-  native dispatch reads eligibility before `DoWindowContents` - so an open menu claims the key inside the same
-  pass Verse reads while an idle tool releases both keys to the settings window's stock accept; the reachable
-  two-window witness names the double-walk vs real focused-stack order divergence for the ONE human pass.
+  establishes its subject with a REAL viewport-transformed click, never `SetCancelTarget`); and the DT1 dev
+  panel (`UsDevPanelWindow` ONLY - the two Diagnostics windows keep their constructor `forceCatch...=true`
+  and the unchanged two-press Esc policy) recomputes the eligibility field at the TOP of its own
+  `WindowOnGUI` before content, matching the native pre-contents dispatch. The witness proves the TOOL'S
+  OWN entry updates inside the pass; it cannot prove other windows' fields are fresh when the real stack
+  dispatches earlier (WindowStackOnGUI runs WindowOnGUI bottom-up, each InnerWindowOnGUI dispatching
+  pre-content) - that cross-window freshness stays in the agreed ONE human pass, with no new product
+  failure claimed from the simulation.
   ESC1's aggregate stays PARTIAL by PM ruling: the packs domain→result→root chain is carried into US-PACK1,
   not faked in the old layout.
   US-PACK1 and US-RESET1 stay on the agreed chain
   and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
   the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
-  hashes) and never writes the carrier's canonical `bin/stubs`. The hazard was REALIZED, not theoretical: the
-  pre-isolation nested build drifted the four canonical stub outputs during the consumer window (directory
-  mtimes prove the write time; FL owner restored byte-equality per `fl/post-consumer-restoration.md`). For
-  ignored artifacts the proof channel is hash+size+mtime (and the DIRECTORY mtime for replacement time) -
-  `git status` says nothing about them. FL-owned backlog (task-11, FL-17, FL-18/B6,
+  hashes) and never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four
+  ignored canonical outputs were OBSERVED with drifted identities during the consumer window; the specific
+  historical writer is UNPROVEN - a directory mtime does not reliably reflect content overwrite of existing
+  files and save/copy can preserve mtimes, and the PM's read of the actual early US commands found no
+  one-to-one writer (the 15:04:46Z product Release build does not evidence a KernelHost canonical build).
+  The FL owner restored byte-equality (`fl/post-consumer-restoration.md`); the current US structure uses
+  the private snapshot with independent before/after identity checks matching. The unknown historical
+  writer adds NO new development blocker. hash/size/mtime are IDENTITY checks, not write attribution, and
+  `git status` says nothing about ignored artifacts. FL-owned backlog (task-11, FL-17, FL-18/B6,
   FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not

@@ -27,8 +27,10 @@ US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file doe
   **US-UI1 and US-ESC1 implemented locally** (diagnostic two-press Esc on `TryHandleUnansweredCancel` +
   native eligibility, Call wording, F07 measured reset slot, F06 area-scoped context, ESC1 tree cancel
   layers + cancelled marks); PM review 1's bounded corrections landed at `1d40721` (non-persisted
-  `TuningContextActive` return on every branch incl. default Global, real-click subject lane, native
-  pre-contents eligibility recompute + reachable keyboard-cooperation witness) - full local gates green
+  `TuningContextActive` return on every branch incl. default Global, real-click subject lane, and the DEV
+  PANEL's own pre-contents eligibility recompute with a tool-entry keyboard-cooperation witness - the two
+  Diagnostics windows keep their constructor opt-in unchanged, and real-stack cross-window field freshness
+  stays in the agreed human pass) - full local gates green
   on both carriers, PM re-review pending; **ESC1 aggregate stays partial**: the packs result chain is
   carried into US-PACK1 by PM ruling. **Still to dispatch:**
   US-PACK1 (one filter region, pack-card results, xenotype-hit expansion, enable identity unchanged) and
