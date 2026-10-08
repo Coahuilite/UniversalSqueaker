@@ -394,15 +394,27 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             bannerText: "rich harness catalog",
             races: Races ?? RaceRowsFor(filterSanguophage),
             xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
-            selectedDomain: SelectedForView(sang, filterSanguophage),
+            // US-ESC1: the fake mirrors the production projection rule - a CANCELLED operation domain
+            // projects to null (the guard in VoicePacksPageModel.ResolveSelectedDomain), never a
+            // re-picked first row. Everything else the card shows stays intact.
+            selectedDomain: state.DomainSelectionCanceled ? null : SelectedForView(sang, filterSanguophage),
             actionScopes: TuningActionScopes ?? new[]
             {
                 new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.SystemOrEvent, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
                 new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.PlayerTriggered, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
             },
-            tuningLayer: EmptyXenotypeTarget ? 2 : 0,
+            // US-ESC1: layer and area FOLLOW the fake's own page state (production builds both straight
+            // from state); with the default state this equals the old constants.
+            tuningLayer: EmptyXenotypeTarget ? 2 : state.TuningLayer,
+            tuningArea: state.TuningArea,
             tuningRaceDefName: EmptyXenotypeTarget ? "" : "human",
             tuningXenotypeDefName: "",
+            // US-ESC1: the fallback table answer mirrors production's projection shape - the shown race
+            // is the selection, else the first entry, else NONE once the user cancelled the table.
+            fallbackRaces: FallbackTableAutoRace.Length > 0
+                ? new[] { new FallbackRaceView(FallbackTableAutoRace, FallbackTableAutoRace, false, 3) }
+                : Array.Empty<FallbackRaceView>(),
+            fallbackSelectedRace: FallbackSelectedRaceForView(),
             // XG1.1: the empty-target state carries NO domain options (that is what makes the target empty in
             // production); the override lets a control-case lane supply a real (race, xenotype) target.
             tuningDomains: EmptyXenotypeTarget
@@ -743,6 +755,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         // could observe the help topic following the workspace while the drawer stays open.
         if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
         {
+            // US-ESC1: a workspace switch re-establishes the active branch (mirrors production
+            // VoicePacksPageModel.SetActiveTab): last page's return marks never carry over.
+            state.DomainSelectionCanceled = false;
+            state.FallbackTableCanceled = false;
             state.ActiveTab = normalized;
             state.ActiveSectionKey = normalized switch
             {
@@ -763,6 +779,40 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the help-open
         // binding reads ViewState.HelpPanelOpen, so the fake must answer the read-back too.
         state.HelpPanelOpen = open;
+    }
+
+    // US-ESC1: the cancel surface routes through the SAME production statics the real source calls, so a
+    // lane that drives the bindings exercises the real ladder-step order and the real veto conditions.
+    public int CancelDomainSelectionCount;
+    public int CancelTuningTargetCount;
+
+    public bool CanCancelDomainSelection()
+        => VoicePacksPageModel.CanCancelDomainSelection(state, BuildView());
+
+    public void CancelDomainSelection()
+    {
+        CancelDomainSelectionCount++;
+        VoicePacksPageModel.CancelDomainSelection(state);
+    }
+
+    public bool CanCancelTuningTarget()
+        => VoicePacksPageModel.CanCancelTuningTarget(state, BuildView());
+
+    public void CancelTuningTarget()
+    {
+        CancelTuningTargetCount++;
+        VoicePacksPageModel.CancelTuningTarget(state, BuildView());
+    }
+
+    /// <summary>US-ESC1 fixture: the race a projection would show when nothing is selected yet (the
+    /// auto first entry); empty keeps today's no-table answer for every other lane, and the view's
+    /// fallback list follows it. The doubles do not load real SoundDefs.</summary>
+    public string FallbackTableAutoRace = "";
+
+    private string FallbackSelectedRaceForView()
+    {
+        if (state.FallbackTableCanceled) return "";
+        return state.FallbackSelectedRace.Length > 0 ? state.FallbackSelectedRace : FallbackTableAutoRace;
     }
 
     public void SetTuningLayer(int layer)
@@ -787,6 +837,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastSelectedScope = scope;
         LastSelectedRace = raceDefName;
         LastSelectedTarget = targetDefName;
+        // US-ESC1: mirror the production rule - a fresh selection replaces the cancel mark.
+        state.DomainSelectionCanceled = false;
     }
 
     public void SetDomainFilter(SqueakDomainFilterKind kind, bool flag)

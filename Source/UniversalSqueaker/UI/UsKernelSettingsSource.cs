@@ -428,6 +428,17 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     {
         state.HelpPanelOpen = open;
     }
+    // US-ESC1 tree cancel layers. Can reads the SAME projection the card shows, so "is there a selection
+    // to return from" has one answer; Cancel is state-only - it never touches settings, persistence or
+    // routing, and it never clears filters (§4.1).
+    public bool CanCancelDomainSelection()
+        => VoicePacksPageModel.CanCancelDomainSelection(state, BuildView());
+    public void CancelDomainSelection()
+        => VoicePacksPageModel.CancelDomainSelection(state);
+    public bool CanCancelTuningTarget()
+        => VoicePacksPageModel.CanCancelTuningTarget(state, BuildView());
+    public void CancelTuningTarget()
+        => VoicePacksPageModel.CancelTuningTarget(state, BuildView());
 
     public void SetTuningLayer(int layer)
     {

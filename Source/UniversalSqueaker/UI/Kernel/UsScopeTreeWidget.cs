@@ -231,6 +231,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         bindings.ValidateAction<string>("create-fallback-table", elementPath);
         bindings.ValidateCommand("restore-fallback-default", elementPath);
         bindings.ValidateAction<string>("delete-fallback-table", elementPath);
+        // US-ESC1: this element carries the manifest's CancelBind="cancel-tuning-target"; the key must
+        // exist at CREATION, or the tree layer would silently never answer (FL's walk skips unregistered
+        // keys instead of throwing - which is why an unvalidated typo needs this guard, not luck).
+        bindings.ValidateCommand("cancel-tuning-target", elementPath);
 
     }
 
@@ -248,21 +252,30 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         IReadOnlyList<MoodTuningRowView> moodRows = ctx.Bindings.TryGet("mood-rows", out IReadOnlyList<MoodTuningRowView> moods)
             ? moods
             : Array.Empty<MoodTuningRowView>();
+        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
 
         float width = BodyWidth(ctx);
-        float bodyHeight = TopPadding + LayerRowHeightFor(width) + RowGap;
-        if (layer > 0) bodyHeight += DomainRowHeight + RowGap;
-        // XG1.1: the empty-target reason band. Measure and Draw both derive it from the SAME predicate and the
-        // same metrics seam, so the card can never reserve a band it does not paint (or paint one it did not
-        // reserve) - the failure that would move every control below it.
-        if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
-        // VF1定稿: the page switches THREE internal areas under the shared header - action rules /
-        // mood tones / native final fallback - and the body handles exactly ONE task type at a
+        // F06 (US-UI1): the area decides what is PRESENTED. The layer/domain context rows and the
+        // empty-target reason band belong to the ACTION and MOOD areas alone - the fallback area answers
+        // to its own single race target (the editor's own dropdown) and must not be topped by the
+        // tuning layer's context or its empty-xenotype notice (the XG1-accepted row order stays exactly
+        // where it was in the two areas that own it). DrawContent walks the same sequence over the same
+        // bindings, so Measure never reserves rows Draw will not paint.
+        float bodyHeight = TopPadding;
+        if (area != 2)
+        {
+            bodyHeight += LayerRowHeightFor(width) + RowGap;
+            if (layer > 0) bodyHeight += DomainRowHeight + RowGap;
+            // XG1.1: the empty-target reason band. Measure and Draw both derive it from the SAME predicate
+            // and the same metrics seam, so the card can never reserve a band it does not paint (or paint
+            // one it did not reserve) - the failure that would move every control below it.
+            if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
+        }
+        bodyHeight += AreaTabsHeight + RowGap;
+        // VF1定稿: the page switches THREE internal areas and the body handles exactly ONE task type at a
         // time. This replaces the old long page that stacked actions AND moods together; the
         // "just add two steppers per row" shape was explicitly rejected, so the multipliers live
         // in the selected action's editor band below the list instead.
-        bodyHeight += AreaTabsHeight + RowGap;
-        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
         if (area == 0)
         {
             bodyHeight += RowHeight + RowGap; // "Action rules" header
@@ -329,38 +342,40 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float x = rect.x;
         float y = rect.y + TopPadding;
 
-        float layerRowHeight = LayerRowHeightFor(innerWidth);
-        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, ctx);
-        y += layerRowHeight + RowGap;
+        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
 
-        if (layer > 0)
-        {
-            DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), ctx);
-            y += DomainRowHeight + RowGap;
-        }
-
+        // F06 (US-UI1): only the ACTION and MOOD areas present their layer/domain context (MeasureBody
+        // walks the identical sequence); the fallback area shows its own single race target through the
+        // editor's dropdown. Within those areas the XG1-accepted order is unchanged.
         // XG1.1: the current XENOTYPE layer has no tunable target. The reason is stated ONCE, visibly, right
         // under the target row it is about; the controls below stay drawn and greyed but cannot submit. The
-        // layer segment above stays live on purpose: switching layer (or picking a target when one exists) is
+        // layer segment stays live on purpose: switching layer (or picking a target when one exists) is
         // the ONLY way out of this state, so blocking it would trap the player.
         bool submittable = !XenotypeTargetIsEmpty(layer, ctx);
-        if (!submittable)
+        if (area != 2)
         {
-            float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
-            UsKernelDraw.Label(
-                new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
-                EmptyTargetText(ctx),
-                ctx.Theme,
-                ctx.Theme.TextSecondary,
-                UiFont.Tiny,
-                TextAnchor.MiddleLeft);
-            y += reasonBand + RowGap;
+            float layerRowHeight = LayerRowHeightFor(innerWidth);
+            DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, ctx);
+            y += layerRowHeight + RowGap;
+
+            if (layer > 0)
+            {
+                DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), ctx);
+                y += DomainRowHeight + RowGap;
+            }
+
+            if (!submittable)
+            {
+                float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
+                UsKernelDraw.Label(
+                    new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
+                    EmptyTargetText(ctx),
+                    ctx.Theme, ctx.Theme.TextSecondary,
+                    UiFont.Tiny, TextAnchor.MiddleLeft);
+                y += reasonBand + RowGap;
+            }
         }
 
-        // VF1定稿: the three tabs sit above everything the body answers; one area is arranged at a
-        // time and Measure/Draw read the SAME "tuning-area" binding, so the two passes cannot
-        // disagree about which area is on screen.
-        int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
         DrawAreaTabs(new Rect(x, y, innerWidth, AreaTabsHeight), area, ctx);
         y += AreaTabsHeight + RowGap;
 
@@ -369,9 +384,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UsKernelDraw.Label(
                 new Rect(x, y, innerWidth, RowHeight),
                 UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
-                ctx.Theme,
-                ctx.Theme.TextPrimary,
-                UiFont.Small,
+                ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
                 TextAnchor.MiddleLeft);
             y += RowHeight + RowGap;
 
@@ -388,9 +401,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 UsKernelDraw.Label(
                     new Rect(x, y, innerWidth, RowHeight),
                     UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
-                    ctx.Theme,
-                    ctx.Theme.TextSecondary,
-                    UiFont.Tiny,
+                    ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny,
                     TextAnchor.MiddleLeft);
                 y += RowHeight + RowGap;
 
@@ -399,9 +410,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                     UsKernelDraw.Label(
                         new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
                         UsKernelDraw.Keyed(ctx, DraftUndraftKey),
-                        ctx.Theme,
-                        ctx.Theme.AccentGold,
-                        UiFont.Tiny,
+                        ctx.Theme, ctx.Theme.AccentGold, UiFont.Tiny,
                         TextAnchor.MiddleLeft);
                     y += DraftHeadingHeight + RowGap;
                 }
@@ -423,9 +432,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 UsKernelDraw.Label(
                     new Rect(x, y, innerWidth, RowHeight),
                     UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
-                    ctx.Theme,
-                    ctx.Theme.TextPrimary,
-                    UiFont.Small,
+                    ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
                     TextAnchor.MiddleLeft);
                 y += RowHeight + RowGap;
 
@@ -487,7 +494,57 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     {
         IReadOnlyList<ActionScopeRowView> rows = ctx.Bindings.TryGet("action-scopes", out IReadOnlyList<ActionScopeRowView> r)
             ? r : Array.Empty<ActionScopeRowView>();
-        return RowHeight + RowGap + (SelectedAction(rows, ctx).HasValue ? 2f * (RowHeight + RowGap) : RowHeight);
+        ActionScopeRowView? selected = SelectedAction(rows, ctx);
+        float height = RowHeight + RowGap + (selected.HasValue ? 2f * (RowHeight + RowGap) : RowHeight);
+        // F07 (US-UI1): the measured reset slot moves to its own line when the remaining band is narrower
+        // than its content - and the MEASURE pass adds exactly the same extra line Draw will paint, using
+        // the same helper. Both multiplier lines resolve the same row's anchor state, so one decision
+        // applies twice.
+        if (selected.HasValue)
+        {
+            int layer = ctx.Bindings.TryGet("tuning-layer", out int l) ? l : 0;
+            bool asButton = !XenotypeTargetIsEmpty(layer, ctx) && selected.Value.PresetResetReady;
+            if (MultiplierResetWraps(ctx, width, MultiplierResetText(ctx, selected.Value, asButton)))
+            {
+                height += 2f * (RowHeight + RowGap);
+            }
+        }
+
+        return height;
+    }
+
+    /// <summary>F07: the smallest reset-slot band the row accepts before the control drops to its own
+    /// line - the same floor discipline as <see cref="MoodResetWidthMin"/>.</summary>
+    private const float MultiplierResetWidthMin = 52f;
+
+    /// <summary>F07: the fixed lead the multiplier line spends before the reset slot - name 110 + value
+    /// 150 bands (x+270), the two 30px steppers with their gaps, and the 64px restore-inherit slot that is
+    /// reserved whether or not the row owns a value (270 + 34 + 38 + 68).</summary>
+    private const float MultiplierFixedLeadWidth = 410f;
+
+    /// <summary>
+    /// F07: the ONE text the reset slot answers with in both passes. A ready row gets the actionable label
+    /// alone (button or - when the line cannot submit - the same words as a plain explanation); an
+    /// anchored-but-unavailable or anchorless row states its reason, with the target sentence only while
+    /// there is a target to name.
+    /// </summary>
+    private static string MultiplierResetText(UiWidgetContext ctx, ActionScopeRowView row, bool asButton)
+    {
+        string resetKey = row.PresetResetReady
+            ? "US.Tuning.ResetToPreset"
+            : row.HasPresetAnchor ? "US.Tuning.ResetPresetUnavailable" : "US.Tuning.ResetPresetNoAnchor";
+        string text = UsKernelDraw.Keyed(ctx, resetKey);
+        if (asButton || row.PresetResetReady || string.IsNullOrEmpty(row.ResetPresetTarget)) return text;
+        return text + " " + row.ResetPresetTarget;
+    }
+
+    /// <summary>F07: does the resolved reset text need its own line at this body width? Measure and Draw
+    /// call THIS and only this, so the reserved height and the painted line cannot disagree.</summary>
+    private static bool MultiplierResetWraps(UiWidgetContext ctx, float width, string resetText)
+    {
+        float needed = Mathf.Max(MultiplierResetWidthMin,
+            ctx.Metrics.MeasureWidth(resetText, UiFont.Tiny) + UsKernelDraw.SelectionButtonLabelInset * 2f);
+        return width - MultiplierFixedLeadWidth < needed;
     }
 
     /// <summary>The editor band for the selected action: effective value + per-factor source + this
@@ -556,22 +613,36 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             ctx.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite(actionKey, intervalField, null));
         }
         bx += 68f;
-        string resetKey = row.PresetResetReady
-            ? "US.Tuning.ResetToPreset"
-            : row.HasPresetAnchor ? "US.Tuning.ResetPresetUnavailable" : "US.Tuning.ResetPresetNoAnchor";
-        if (submittable && row.PresetResetReady
-            && UsKernelDraw.SelectionButton(new Rect(bx, y, 96f, RowHeight), ctx, UsKernelDraw.Keyed(ctx, resetKey), ctx.Theme, false))
+
+        // F07 (US-UI1) - the double-draw fix. The pre-fix shape keyed the drawn form off
+        // SelectionButton's CLICK return value: a READY row drew the button, and because the button
+        // returns true only on the frame it is clicked, every non-click frame fell into the else branch
+        // and painted the explanation label OVER the button's own pixels. The drawn form now depends on
+        // STATE alone (submittable && PresetResetReady => button; anything else => the explanation
+        // label), and the slot's width comes from the measured content: when the band left of the fixed
+        // lead cannot hold it, the whole slot drops to its own line below, at full width. ActionEditorHeight
+        // calls the same wrap decision, so measure and draw agree by construction, and the old fixed
+        // 96px box (the narrow-width clip risk) is gone.
+        bool asButton = submittable && row.PresetResetReady;
+        string resetText = MultiplierResetText(ctx, row, asButton);
+        bool wraps = MultiplierResetWraps(ctx, width, resetText);
+        float resetX = wraps ? x : bx;
+        float resetY = wraps ? y + RowHeight + RowGap : y;
+        float resetW = wraps ? Math.Max(1f, width) : Math.Max(1f, width - (bx - x));
+        if (asButton)
         {
-            ctx.Bindings.Invoke("reset-action-to-preset", actionKey);
+            if (UsKernelDraw.SelectionButton(new Rect(resetX, resetY, resetW, RowHeight), ctx, resetText, ctx.Theme, false))
+            {
+                ctx.Bindings.Invoke("reset-action-to-preset", actionKey);
+            }
         }
         else
         {
-            UsKernelDraw.Label(new Rect(bx, y, Math.Max(1f, width - (bx - x)), RowHeight), UsKernelDraw.Keyed(ctx, resetKey)
-                + (row.PresetResetReady || string.IsNullOrEmpty(row.ResetPresetTarget) ? "" : " " + row.ResetPresetTarget),
+            UsKernelDraw.Label(new Rect(resetX, resetY, resetW, RowHeight), resetText,
                 ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
         }
 
-        return y + RowHeight + RowGap;
+        return wraps ? y + 2f * (RowHeight + RowGap) : y + RowHeight + RowGap;
     }
 
     private float FallbackEditorHeight(UiWidgetContext ctx, float width)

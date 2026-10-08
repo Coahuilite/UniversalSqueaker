@@ -295,7 +295,7 @@
   <!-- SA1.2 SR-parity captions: the per-action scope names SR ships. An action with no row here keeps
        the generic Any/Command caption above (Crying/Giggling are US-only and have no SR caption). -->
   <US.Action.DraftUndraft>Draft / Undraft</US.Action.DraftUndraft>
-  <US.Tuning.Scope.Call.Any>Idle occurrence</US.Tuning.Scope.Call.Any>
+  <US.Tuning.Scope.Call.Any>Periodic occurrence</US.Tuning.Scope.Call.Any>
   <US.Tuning.Scope.Eat.Any>Eating occurrence</US.Tuning.Scope.Eat.Any>
   <US.Tuning.Scope.Sleep.Any>Sleeping occurrence</US.Tuning.Scope.Sleep.Any>
   <US.Tuning.Scope.Wounded.Any>Damage event</US.Tuning.Scope.Wounded.Any>

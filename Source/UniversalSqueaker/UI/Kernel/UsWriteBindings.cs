@@ -115,6 +115,15 @@ public sealed class UsWriteBindings
         bindings.BindCommand(key, action);
         Record(key, UsWriteBindingKind.Command, false);
     }
+    /// <summary>Registers one command binding WITH the consumer's CanExecute veto and records its key.
+    /// FL-IC2's tree cancel layer needs exactly this shape: the engine asks <c>TryInvokeCommand</c> -
+    /// existence AND executability in one answer - so a return layer that currently has nothing to undo
+    /// is climbed PAST rather than swallowing the key with an empty action.</summary>
+    public void Command(string key, Action action, Func<bool> canExecute)
+    {
+        bindings.BindCommand(key, action, canExecute);
+        Record(key, UsWriteBindingKind.Command, false);
+    }
 
     /// <summary>Registers one item-scoped writable value binding and records its family template once.</summary>
     public void ItemValue<T>(string itemsKey, string itemKey, string leaf, Func<T> get, Action<T> set)

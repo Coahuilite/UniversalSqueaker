@@ -818,6 +818,9 @@ public static class VoicePacksPageModel
     {
         races ??= Array.Empty<RaceLayerRowView>();
         xenotypes ??= Array.Empty<VoicePackDomainView>();
+        // US-ESC1: the user CANCELLED the operation domain this session - do not re-pick the first row.
+        // First entry (never cancelled, or re-selected, or a workspace switch) keeps the auto default.
+        if (state.DomainSelectionCanceled) return null;
 
         if (state.SelectedScope == SqueakVoicePackScope.Xenotype)
         {
@@ -1029,6 +1032,11 @@ public static class VoicePacksPageModel
     {
         if (state == null) return;
         ApplyActiveTab(state, tab);
+        // US-ESC1: switching workspace RE-ESTABLISHES the active branch (§4.1): the cancelled marks are
+        // last session's return, not this page's, so each page opens with its accepted initial default
+        // (projection auto-select ON) again.
+        state.DomainSelectionCanceled = false;
+        state.FallbackTableCanceled = false;
     }
 
     public static void ScrollToSection(VoicePacksPageState state, string sectionKey)
@@ -1084,6 +1092,8 @@ public static class VoicePacksPageModel
         state.SelectedScope = scope;
         state.SelectedRaceDefName = raceDefName ?? "";
         state.SelectedTargetName = scope == SqueakVoicePackScope.Xenotype ? targetDefName ?? "" : "";
+        // US-ESC1: a fresh selection replaces the cancel - auto-selection is permitted again.
+        state.DomainSelectionCanceled = false;
     }
 
     public static void SetDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -1318,7 +1328,10 @@ public static class VoicePacksPageModel
 
         string wanted = state.FallbackSelectedRace ?? "";
         selectedRace = "";
-        if (races.Count > 0)
+        // US-ESC1: a cancelled table stays cancelled - the projection must not answer the Esc a second
+        // time by re-picking the first race. The list itself (races) is untouched: cancellation is a
+        // selection state, never a data change.
+        if (races.Count > 0 && !state.FallbackTableCanceled)
         {
             selectedRace = wanted;
             bool holds = false;
@@ -1431,7 +1444,12 @@ public static class VoicePacksPageModel
     public static void SetFallbackSelection(VoicePacksPageState state, string? race, string? entryAction)
     {
         if (state == null) return;
-        if (race != null) state.FallbackSelectedRace = race;
+        if (race != null)
+        {
+            state.FallbackSelectedRace = race;
+            // US-ESC1: naming a table again IS the selection; the cancelled mark only survives until one.
+            state.FallbackTableCanceled = false;
+        }
         if (entryAction != null) state.FallbackSelectedEntryAction = entryAction;
         state.FallbackStatusKey = "";
     }
@@ -1519,6 +1537,7 @@ public static class VoicePacksPageModel
         }
 
         state.FallbackSelectedRace = raceDefName!;
+        state.FallbackTableCanceled = false; // US-ESC1: the created table is a fresh selection, not a cancelled one.
         state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";
     }
 
@@ -1564,6 +1583,80 @@ public static class VoicePacksPageModel
         if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
         {
             settings.NotifyDiscreteResolverRuntimeChanged();
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+    // US-ESC1: the tree cancel layers (FL-IC2 CancelBind). One press answers ONE layer; executability is
+    // the command's own CanExecute answer, so a layer that has nothing left to undo is CLIMBED PAST by
+    // the engine instead of consuming the key with an empty gesture, and the settings main layer closes
+    // only when every declared layer has declined. Filters, queries and expansion state are never a
+    // cancel target (the spec keeps them), and no write below touches settings/persistence at all.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Packs page: can Esc return from the currently shown operation domain? (Result layer:
+    /// the card already shows no domain, or the user already cancelled → the layer declines.)</summary>
+    public static bool CanCancelDomainSelection(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return false;
+        return !state.DomainSelectionCanceled && view.SelectedDomain.HasValue;
+    }
+
+    /// <summary>Packs return layer: exit the operation domain. The filter conditions, the two domain
+    /// searches, the pack search and every enabled state are untouched; the page stays open.</summary>
+    public static void CancelDomainSelection(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.DomainSelectionCanceled = true;
+    }
+
+    /// <summary>Tuning page: is any business cancel step live? Fallback: entry, then the race table
+    /// (§4.1 "当前条目 → 当前种族表"); action/mood: the selected action row editor; then the layer/domain
+    /// + area context itself. The LAST step declining is what lets the key fall through to the page
+    /// root - the root then closes (next press), never this layer.</summary>
+    public static bool CanCancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return false;
+        if (view.TuningArea == 2)
+        {
+            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction)) return true;
+            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace)) return true;
+        }
+        if (!string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
+        return view.TuningLayer != 0 || view.TuningArea != 0;
+    }
+
+    /// <summary>One press, one step, in the spec's order. State-only; never persists, never routes.</summary>
+    public static void CancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return;
+        if (view.TuningArea == 2)
+        {
+            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction))
+            {
+                state.FallbackSelectedEntryAction = "";
+                return;
+            }
+            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace))
+            {
+                state.FallbackTableCanceled = true;
+                state.FallbackSelectedRace = "";
+                return;
+            }
+        }
+        if (!string.IsNullOrEmpty(state.TuningSelectedAction))
+        {
+            state.TuningSelectedAction = "";
+            return;
+        }
+        if (view.TuningLayer != 0 || view.TuningArea != 0)
+        {
+            // Leave the layer/domain/area context back to the page's initial default (Global layer,
+            // action rules area). The domain identity re-normalises through the existing projection -
+            // this is a RETURN, not the reset (§4.3): no settings field moves.
+            state.TuningLayer = 0;
+            state.TuningRaceDefName = "";
+            state.TuningXenotypeDefName = "";
+            state.TuningArea = 0;
         }
     }
 

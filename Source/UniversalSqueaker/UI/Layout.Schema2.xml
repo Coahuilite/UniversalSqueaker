@@ -78,7 +78,12 @@
        disagree), and `Appearance="switch"` is written out rather than left to the default so the intent is
        declared on the element. Height is the kind's own schema attribute; Width/AlignY/HelpKey/SelectedKey
        are the engine-wide common vocabulary, so the migration is a kind swap and nothing else. -->
-  <Column Id="page-root" Gap="8" Padding="12">
+  <!-- US-ESC1 (FL-IC2 CancelBind): the page root carries the help return layer - the bottom help panel
+       is an explicitly cancellable local layer (§4.1), and as an ancestor of EVERY band (nav, content,
+       footer) it is reachable from any interaction subject after the page's own deeper layers decline.
+       With it declined the key reaches Verse: the settings main layer closes - one press later, never
+       on the same press as a layer return. -->
+  <Column Id="page-root" Gap="8" Padding="12" CancelBind="cancel-help">
     <Row Id="header-band" Padding="0" Gap="6">
       <Widget Id="page-title" Kind="us/page-title" />
     </Row>
@@ -449,7 +454,7 @@
              viewport and inventing dead space under its short list. No equal-height background was
              required, so no card declares Fill. -->
         <Row Id="domain-row" Tab="Packs" Gap="8" Padding="0" Breakpoint="500" Narrow="Column">
-          <Section Id="race-layer" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Section Id="race-layer" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
             <Widget Id="race-layer-header" Kind="us/section-header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
             <Row Id="race-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
               <Widget Id="race-domain-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/race-layer" />
@@ -461,7 +466,7 @@
               <Widget Id="race-domain-empty" Kind="state/empty" TextKey="US.Packs.Domain.EmptySearch" VisibleKey="race-list-empty" />
             </Scroll>
           </Section>
-          <Section Id="xenotype-layer" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Section Id="xenotype-layer" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
             <Widget Id="xenotype-layer-header" Kind="us/section-header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
             <Row Id="xenotype-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
               <Widget Id="xenotype-domain-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/xenotype-layer" />
@@ -489,7 +494,7 @@
              VisibleKey bools. The two presentations are mutually exclusive, the same shape the diagnostics
              nav column uses. The orphan band now draws ABOVE the list rather than below it: it is a band
              about the list that follows, and a widget element cannot straddle manifest siblings. -->
-        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
+        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
           <Widget Id="checklist-header" Kind="us/section-header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
           <!-- V2 P2: the enable band states the SCOPE it enables for - the browsed domain - through one
                read-only string binding composed from the same domain name the browse row shows plus the axis
@@ -511,7 +516,7 @@
           </Column>
           <Widget Id="checklist-empty-nodomain" Kind="state/empty" TextKey="US.Packs.Checklist.NoDomains" VisibleKey="checklist-empty-nodomain" />
         </Section>
-        <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
+        <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" CancelBind="cancel-tuning-target" />
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
     </Row>

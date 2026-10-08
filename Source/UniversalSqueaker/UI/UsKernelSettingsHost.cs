@@ -766,6 +766,26 @@ public static class UsKernelSettingsHost
         writes.Command(
             "toggle-help-drawer",
             () => { source.SetHelpPanelOpen(!state.HelpPanelOpen); bump(); });
+        // US-ESC1: the tree cancel layers the manifest declares with CancelBind (FL-IC2). The engine's
+        // TryHandleCancel walks menu → held capture → open edit → the nearest EXECUTABLE CancelBind up
+        // from the interaction subject; each Can here is the spec's "one press, one layer, decline means
+        // climb past" answer, and none of these writes touches settings, persistence or routing - they
+        // are session return states (§4.1). The page root (the five-workspace container) carries
+        // cancel-help; the packs cards carry cancel-domain-selection; the tuning composite carries
+        // cancel-tuning-target. With every layer declined the key reaches Verse and the main layer
+        // closes - the spec's "only the root closes", one press later.
+        writes.Command(
+            "cancel-help",
+            () => { source.SetHelpPanelOpen(false); bump(); },
+            () => state.HelpPanelOpen);
+        writes.Command(
+            "cancel-domain-selection",
+            () => { source.CancelDomainSelection(); bump(); },
+            () => source.CanCancelDomainSelection());
+        writes.Command(
+            "cancel-tuning-target",
+            () => { source.CancelTuningTarget(); bump(); },
+            () => source.CanCancelTuningTarget());
 
         return writes;
     }

@@ -214,6 +214,7 @@ internal static class Program
         Step("preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
         Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
         Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
+        Step("US-ESC1/US-UI1 tree cancel layers + F06/F07 on the live page (FL-IC2)", () => CancelLayerLaneTests.RunAll());
         Step("equal-weight Remix double confirmation (SA1.3)", () => RemixConfirmationLaneTests.RunAll());
         Step("VF1 r5 confirmation window: real shell, audit lifecycle, one answer", () => ConfirmWindowLaneTests.RunAll());
         Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
@@ -1295,6 +1296,14 @@ internal static class Program
             { "clear-xenotype-domain", () => host.Bindings.Invoke("clear-xenotype-domain") },
             { "race-search-text", () => host.Bindings.Set("race-search-text", "hum") },
             { "xenotype-search-text", () => host.Bindings.Set("xenotype-search-text", "san") },
+            // US-ESC1: the three tree cancel layers are display writes too - the card visibly follows
+            // the cancelled mark. The probes go through TryInvokeCommand - the SAME gated entry the
+            // engine's tree walk uses - so the clock may only move when CanExecute actually allowed the
+            // step; the CANCELLABLE state is pre-set directly on the fake's own page state (never
+            // through a bumping write).
+            { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
+            { "cancel-domain-selection", () => { fake.ViewState.DomainSelectionCanceled = false; fake.ViewState.RaceFilter = ""; fake.ViewState.XenotypeFilter = ""; host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
+            { "cancel-tuning-target", () => { fake.ViewState.TuningSelectedAction = "Eat"; host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
         };
 
         var registered = new List<string>();

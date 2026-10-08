@@ -77,7 +77,7 @@
   <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
   <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
 
-  <US.Action.Call>空闲</US.Action.Call>
+  <US.Action.Call>普通叫声</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>
   <US.Action.Wounded>受击</US.Action.Wounded>
@@ -290,7 +290,7 @@
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
   <!-- SA1.2 SR 正本同步：每动作 scope 文案。表内没有的动作（Crying/Giggling 为 US 独有）沿用上面的通用文案。 -->
   <US.Action.DraftUndraft>征召 / 取消征召</US.Action.DraftUndraft>
-  <US.Tuning.Scope.Call.Any>空闲时发生</US.Tuning.Scope.Call.Any>
+  <US.Tuning.Scope.Call.Any>周期派发的普通叫声</US.Tuning.Scope.Call.Any>
   <US.Tuning.Scope.Eat.Any>进食时发生</US.Tuning.Scope.Eat.Any>
   <US.Tuning.Scope.Sleep.Any>睡眠时发生</US.Tuning.Scope.Sleep.Any>
   <US.Tuning.Scope.Wounded.Any>受伤事件</US.Tuning.Scope.Wounded.Any>

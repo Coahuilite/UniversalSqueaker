@@ -15,6 +15,12 @@ public sealed class VoicePacksPageState
     public SqueakVoicePackScope SelectedScope = SqueakVoicePackScope.Race;
     public string SelectedRaceDefName = "";
     public string SelectedTargetName = "";
+    // US-ESC1 (§4.1): the "user has cancelled" marks. The projections auto-select a first item on FIRST
+    // entry (the accepted initial default); an Escape that returns from a selection must NOT be undone by
+    // the next BuildView, so the cancel is stored as an explicit state, not by blanking the fields alone.
+    // A new selection or a workspace switch re-establishes the branch and clears the mark. Never persisted.
+    public bool DomainSelectionCanceled;
+    public bool FallbackTableCanceled;
     public string SearchText = "";
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
 
@@ -88,6 +94,8 @@ public sealed class VoicePacksPageState
         FallbackNewRaceQuery = "";
         FallbackStatusKey = "";
         FallbackStatusArg = "";
+        DomainSelectionCanceled = false;
+        FallbackTableCanceled = false;
     }
 }
 

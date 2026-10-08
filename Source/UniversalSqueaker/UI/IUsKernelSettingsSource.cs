@@ -63,6 +63,15 @@ public interface IUsKernelSettingsSource
     /// rebuilt tree) at the next arrange. Since BH1 it never changes the window width.
     /// </summary>
     void SetHelpPanelOpen(bool open);
+    /// <summary>US-ESC1 tree cancel layers: the packs return-from-selection layer. Can is the engine's
+    /// CanExecute answer (a vetoed layer is climbed past, never fired empty); Cancel exits the current
+    /// operation domain while every filter, search and enabled state stays exactly where it was.</summary>
+    bool CanCancelDomainSelection();
+    void CancelDomainSelection();
+    /// <summary>US-ESC1: the tuning return ladder - fallback entry, then race table, then the selected
+    /// action row, then the layer/domain/area context; one press answers one step.</summary>
+    bool CanCancelTuningTarget();
+    void CancelTuningTarget();
     void SetTuningLayer(int layer);
     void SetTuningDomain(string raceDefName, string targetDefName);
     void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName);

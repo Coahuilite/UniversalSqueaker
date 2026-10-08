@@ -155,15 +155,16 @@ internal static class UiSourceInvariantTests
             + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
 
         // This counts TEXT OCCURRENCES of the three raw write calls in the funnel file, not "operations":
-        // the funnel exposes five methods (Value, Action, Command, ItemValue, ItemAction) but only the first
-        // three touch IUiBindings, and the two item-scoped wrappers delegate to them - so five CALL SITES is
-        // the honest description, and the pin is what makes a sixth one (a new operation, or a duplicate)
-        // a deliberate act. The text-scan brittleness is recorded in MEMORY.md.
+        // the funnel exposes six methods (Value, Action, Command, Command-with-veto, ItemValue, ItemAction)
+        // and the raw calls land six: Value + ItemValue both hit .BindValue, Action + ItemAction both hit
+        // .BindAction, and the two Command forms hit .BindCommand twice - the second one being the
+        // US-ESC1 cancel layer's CanExecute overload, re-cut deliberately in THIS batch. The pin keeps
+        // every later addition a deliberate act. The text-scan brittleness is recorded in MEMORY.md.
         int funnelCallSites = CountWriteRegistrations(File.ReadAllText(funnel));
-        Assert(funnelCallSites == 5,
-            "the funnel file must contain exactly five raw IUiBindings write-registration CALL SITES (Value, "
-            + "Action, Command plus the two item-scoped wrappers that delegate to them), got " + funnelCallSites
-            + " - re-cut this pin in the batch that adds a sixth");
+        Assert(funnelCallSites == 6,
+            "the funnel file must contain exactly six raw IUiBindings write-registration CALL SITES (the "
+            + "plain and vetoed Command forms, the two value forms and the two action forms), got "
+            + funnelCallSites + " - re-cut this pin in the batch that changes the funnel's surface");
 
         var offenders = new List<string>();
         foreach (string file in Directory.EnumerateFiles(ui, "*.cs", SearchOption.AllDirectories))

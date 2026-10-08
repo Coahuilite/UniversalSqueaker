@@ -365,6 +365,8 @@ internal static class XenotypeEmptyTargetLaneTests
                         // (5) the LAYER and the AREA TABS stay live - a real click on the Race segment and
                         // on a tab must reach the boundary, so an empty target can never trap the player.
                         // Both rows sit ABOVE the reason band, so their rects are NOT translated by delta.
+                        // (F06 US-UI1: the fallback area no longer draws this context at all; the action
+                        // and mood areas keep the XG1-accepted order - layer row first, tabs second.)
                         ResetRecorders(source);
                         List<List<Rect>> blockedRows = WideRows(blockedMoods.Buttons);
                         Assert(blockedRows.Count == 2 && blockedRows[0].Count == 3 && blockedRows[1].Count == 3,
