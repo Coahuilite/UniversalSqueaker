@@ -40,6 +40,11 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         preventCameraMotion = false;
         draggable = true;
         closeOnCancel = false; // Esc handled by the two-press arm below.
+        // FL-IC2 native eligibility (frozen handoff §5): a window with closeOnCancel=false never hears the
+        // Cancel key unless it opts into the public Verse field itself. Setting it here is the one-line
+        // assignment the frozen contract names for the consumer; it cannot steal a key from a window above,
+        // because eligibility is ANDed with the stack's input test.
+        forceCatchAcceptAndCancelEventEvenIfUnfocused = true;
         closeOnAccept = false;
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = true;
@@ -237,12 +242,17 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
         windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - KeepGrabPx));
     }
 
-    public override void OnCancelKeyPressed()
+    /// <summary>
+    /// The two-press Esc policy (round 9), migrated onto the shell's extension point per the frozen
+    /// FL-IC2 contract: the page ladder (option menu → held capture → open edit → nearest CancelBind)
+    /// always gets first refusal, and this policy is asked only after the ladder declined. Answering true
+    /// makes the shell consume the key on the policy's behalf - the old override drew no consumption at all
+    /// (the pre-migration note recorded that leak as live-walkthrough material), so the leak question
+    /// now has a named shell-level answer; which window a REAL multi-window stack hands the key to remains
+    /// the human-pass observation it was.
+    /// </summary>
+    protected override bool TryHandleUnansweredCancel()
     {
-        // Two presses within EscArmSeconds close. NOTE: no Event.current consumption - the UiNative
-        // seam exposes none and the gate-14 contract requires zero raw backend calls in this file.
-        // Whether an unconsumed Esc leaks into game cancel/selection is a live-walkthrough check
-        // item; if it leaks, that is the shell-level gap to take to FerriteLib as round-4 material.
         float now = Time.realtimeSinceStartup;
         if (now > escArmedUntil)
         {
@@ -253,6 +263,8 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
             escArmedUntil = -1f;
             Close();
         }
+
+        return true;
     }
 
     /// <summary>Terminal notices in US's own vocabulary (the library ships zero strings).</summary>

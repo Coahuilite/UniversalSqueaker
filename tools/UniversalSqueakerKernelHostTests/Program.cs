@@ -340,10 +340,19 @@ internal static class Program
             "a popup layer must make a covered element yield the click (owned hit stack)");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, outside),
             "the yield predicate must not fire outside the popup");
+        // FL-IC1 (frozen d5af4d8) RETIRED the owner-id exemption: coverage is geometric for every
+        // caller, "the popup owner's identity is not a licence over the whole covering area"
+        // (INTERACTION-CONVERGENCE-TASKS §3.1). So a point INSIDE the covering menu now outranks even
+        // the owner's own trigger - the overlap the old exemption kept was the reported defect - and
+        // toggle-to-close lives on where the menu does NOT cover: an uncovered press still reaches the
+        // trigger, which the dropdown's own seam then routes to close. The 3-arg overload survives as
+        // public surface that ignores the id; the lane reads the two-arg truth instead of pinning the
+        // retired licence.
         Assert(host.Session.IsPointerOverHigherLayer(owner!, inside),
-            "a sibling sharing the composite node must yield to its popup");
-        Assert(!host.Session.IsPointerOverHigherLayer(owner!, inside, "scope-tree-scope-" + publishedBy),
-            "the popup's own trigger keeps the click, which is what preserves toggle-to-close");
+            "the covering menu wins the in-menu point over its own trigger - the retired exemption "
+            + "must not come back through a sibling of the composite");
+        Assert(!host.Session.IsPointerOverHigherLayer(owner!, outside),
+            "an uncovered point keeps reaching the owner - that is where toggle-to-close lives now");
 
         // The layer is per-frame state: a second frame must republish it, and closing must drop it so a
         // stale layer cannot shadow later clicks (the dispatch stack is read one pass after the close).

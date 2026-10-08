@@ -216,11 +216,8 @@ UnityEngine.CoreModule!UnityEngine.Camera::get_orthographicSize() | backend
 UnityEngine.CoreModule!UnityEngine.Component::get_transform() | backend
 UnityEngine.CoreModule!UnityEngine.Transform::get_position() | backend
 
-# ------------------------------------------------------------------------------------------------
-# gameui (2) - gameui - game-side window plumbing the harness deliberately does not model
-# ------------------------------------------------------------------------------------------------
-Assembly-CSharp!Verse.Window::get_IsOpen() | gameui
-
+# (gameui retired entirely: the frozen d5af4d8 double declares Window.get_IsOpen itself - FL-IC2's harness
+# additions - so the last entry here went STALE on this round and was deleted per the ratchet above.)
 # ------------------------------------------------------------------------------------------------
 # utility (11) - utility - Verse static facade/helpers reached only from the in-game paths above
 # ------------------------------------------------------------------------------------------------

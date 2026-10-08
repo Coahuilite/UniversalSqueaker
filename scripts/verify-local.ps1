@@ -30,8 +30,13 @@ $ErrorActionPreference = "Stop"
 #  15   harness stub coverage: the carrier's reference-driven scan (read-only) over the US payload AND
 #       the KernelHostTests harness assembly, against US's own exemption ledger
 #       (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose - gate 13 builds both scanned
-#       assemblies and the carrier's stub surface in place.
-# GATE PROVENANCE: 1-5 and 10-15 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
+#       assemblies, and since the frozen-delivery round the scanned stub surface is US's own byte-pinned
+#       snapshot (gate 16), not the carrier tree.
+#  16   frozen stub snapshot integrity: all five tools/FerriteLib.Stubs source files must equal the
+#       sha256 values recorded in fl/frozen-handoff.json (ferritelib 0.7.x@d5af4d8). Runs after 15
+#       because 15 consumes the same snapshot; the pin is what lets the snapshot stand in for the
+#       carrier's canonical stubs without drift.
+# GATE PROVENANCE: 1-5 and 10-16 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
 # entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and both scanned
 # assemblies (the payload and the KernelHostTests harness) are US's; the scanner's own fixture controls
@@ -39,7 +44,7 @@ $ErrorActionPreference = "Stop"
 # the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
 # Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
-# next number (this one: 15) instead of shifting the checks below it.
+# next number (this one: 16) instead of shifting the checks below it.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
@@ -287,14 +292,14 @@ Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whit
 # parameter binding (measured 2026-09-12), which silently scans one assembly and looks clean. This gate
 # sits after 13 because gate 13 builds both of the assemblies it scans.
 Invoke-Check 'harness stub coverage (every game member the US payload or the harness references resolves on the carrier stubs, or is exempted with a reason)' `
-    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir ../ferritelib/tools/FerriteLib.UiKit.Tests/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
+    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir tools/FerriteLib.Stubs/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
     {
         $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
         if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
             throw "The carrier's stub-coverage scanner is missing at $stubCoverageScan. It ships with the sibling ferritelib checkout (scripts/stub-coverage-scan.ps1); a scan that cannot run is not a clean result."
         }
 
-        $stubDir = Join-Path (Split-Path -Parent $root) 'ferritelib\tools\FerriteLib.UiKit.Tests\bin\stubs'
+        $stubDir = Join-Path $root 'tools\FerriteLib.Stubs\bin\stubs'
         $stubExemptions = Join-Path $root 'scripts\stub-coverage-exemptions.txt'
         $stubTargets = @(
             (Join-Path $root 'dist\build\Release\UniversalSqueaker.dll'),
@@ -320,6 +325,34 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
             # where they cannot be trimmed away.
             $stubFindings = @($stubOutput | Where-Object { $_ -match 'MISSING |STALE |NO-REASON |NOT SCANNED' } | Select-Object -First 10)
             throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $stubFindings.Count + " finding line(s) quoted). Findings: " + ($stubFindings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
+        }
+    }
+# Gate 16 (US-UI1/ESC1 frozen-delivery round): the harness runs against the FROZEN stub snapshot under
+# tools/FerriteLib.Stubs instead of building in the carrier's canonical bin/stubs (FL released the slot;
+# the consumer verifies in its own outputs - INTERACTION-EXECUTION-20261008.md). What keeps that snapshot
+# honest is not trust: every recorded source hash from fl/frozen-handoff.json must match byte-for-byte,
+# so a drifted double reddens here before gate 15's scan or any lane can agree with itself.
+Invoke-Check 'frozen stub snapshot integrity (all five recorded stub sources equal the frozen handoff hashes)' `
+    'Get-FileHash -Algorithm SHA256 over tools/FerriteLib.Stubs/Stubs/{VerseStub,UnityEngineStub,UnityEngineImGuiStub,UnityEngineTextRenderingModuleStub}/*.cs against the fl/frozen-handoff.json values' `
+    {
+        $frozenStubs = @(
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.cs'; Sha = 'e36efa95fbbeea4ddd1c7b8a6df9d0e46c90049c2d8e5ac9d985be3c78905822' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.RimWorld.cs'; Sha = 'ad8cee6e7bfec49af374d536fae1549ce0d102a8887c4031081ac941d1e95a42' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineStub\UnityStubs.cs'; Sha = '5a8d2ac4b4d83989b6e1bfb802ad652c56c6bffe2d32686bc3cf48d112b45086' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineImGuiStub\ImGuiStubs.cs'; Sha = '81def94dc748fc687f69181bca292eba9ef1e47a00d3603afcb35d5a97b6d75a' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineTextRenderingModuleStub\TextRenderingStubs.cs'; Sha = '2151e86613a4e6a14ccb42857f5ed25ef679b9dcbf250ce96cdfb0bef5e0934d' }
+        )
+
+        foreach ($entry in $frozenStubs) {
+            $file = Join-Path $root $entry.Path
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+                throw "frozen stub snapshot file missing: $($entry.Path). Re-take the snapshot from the accepted carrier tree (d5af4d8), never edit it in place."
+            }
+
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
+            if ($actual -ne $entry.Sha) {
+                throw "frozen stub snapshot drift at $($entry.Path): sha256 $actual, the frozen handoff recorded $($entry.Sha). The snapshot must equal the carrier's bytes; refresh it only from a NEW accepted freeze."
+            }
         }
     }
 

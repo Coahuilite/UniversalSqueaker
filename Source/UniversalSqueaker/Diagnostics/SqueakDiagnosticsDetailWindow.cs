@@ -39,7 +39,11 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
-        closeOnCancel = false;
+        closeOnCancel = false; // two-press arm below; Esc is not the native close.
+        // FL-IC2 native eligibility (frozen handoff §5): with closeOnCancel=false the window only hears the
+        // Cancel key if it opts into this public Verse field itself; it cannot take the key from a window
+        // above, because eligibility is ANDed with the stack's input test.
+        forceCatchAcceptAndCancelEventEvenIfUnfocused = true;
         closeOnAccept = false;
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = false; // multiple locks are allowed by ruling.
@@ -121,9 +125,13 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - KeepGrabPx));
     }
 
-    public override void OnCancelKeyPressed()
+    /// <summary>
+    /// Same two-press arm as the main panel, migrated onto the shell's extension point per the frozen
+    /// FL-IC2 contract: the page ladder gets first refusal, this policy is asked only after it declined,
+    /// and answering true makes the shell consume the key (the pre-migration override consumed nothing).
+    /// </summary>
+    protected override bool TryHandleUnansweredCancel()
     {
-        // Same two-press arm and the same no-consumption contract as the main window.
         float now = Time.realtimeSinceStartup;
         if (now > escArmedUntil)
         {
@@ -134,6 +142,8 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
             escArmedUntil = -1f;
             Close();
         }
+
+        return true;
     }
 
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)

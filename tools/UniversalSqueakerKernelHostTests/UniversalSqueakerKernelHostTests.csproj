@@ -14,9 +14,13 @@
     <NuGetAudit>false</NuGetAudit>
     <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- FerriteLib's own repo, sibling to this one. The stub assemblies live there now; this project
-         builds them in place so both repos always run against byte-identical stubs. -->
-    <FerriteLibHarness>$(MSBuildProjectDirectory)\..\..\..\ferritelib\tools\FerriteLib.UiKit.Tests</FerriteLibHarness>
+    <!-- FROZEN DELIVERY (US-UI1/ESC1 round): the stub sources come from the accepted FL freeze
+         d5af4d8 as a byte-verified SNAPSHOT under tools/FerriteLib.Stubs (gate 16 pins all five
+         recorded sha256 values), and this project builds them IN THE SNAPSHOT so the harness runs
+         against byte-identical doubles while NO US build ever writes into the carrier's canonical
+         bin/stubs output (INTERACTION-EXECUTION-20261008.md: the consumer verifies in its own
+         outputs; FL released the slot at the freeze). -p:FerriteLibHarness=<path> still overrides. -->
+    <FerriteLibHarness Condition="'$(FerriteLibHarness)' == ''">$(MSBuildProjectDirectory)\..\FerriteLib.Stubs</FerriteLibHarness>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
@@ -49,9 +53,11 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The stub assemblies belong to FerriteLib's own harness now (single source of truth: a second
-       copy is how the layout-vs-audit two-metrics defect happened). This project builds them in place
-       in the sibling repo and copies the binaries in, so both repos always run against identical stubs. -->
+  <!-- The stub sources are FerriteLib's (single source of truth: a second copy is how the
+       layout-vs-audit two-metrics defect happened). Under the frozen delivery the copy is not free:
+       verify-local gate 16 hashes all five recorded stub source files against frozen-handoff.json
+       before these builds run, so the snapshot IS the carrier's bytes and the sibling repo's canonical
+       bin/stubs output is never a US build target. -->
   <!-- -m:1 on the nested stub builds is deliberate and belongs with the note above: on this local
        machine a nested \`dotnet build\` whose graph has ProjectReferences dies silently in the child
        MSBuild node transport (exit 1, zero warnings, zero errors, no output even at -v n) while the same

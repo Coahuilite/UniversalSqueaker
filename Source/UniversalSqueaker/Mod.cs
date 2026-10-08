@@ -21,11 +21,17 @@ public class UniversalSqueakerMod : Mod
     /// creation-time <c>Height</c> validation, the Row/<c>Auto</c> fallback fix, the dropdown value
     /// precedence, and Batch 1's placement vocabulary (<c>AlignX</c>/<c>OffsetX</c>/<c>AlignY</c>/
     /// <c>OffsetY</c>), the density fallback for container <c>Padding</c>/<c>Gap</c> and the tone/accent
-    /// vocabulary tightening in which <c>HoverPoint</c> became the derived <c>AccentHover</c>).
+    /// vocabulary tightening in which <c>HoverPoint</c> became the derived <c>AccentHover</c>; the
+    /// accepted d5af4d8 freeze additionally carried the FL-IC1 interaction rules and the FL-IC2 ladder -
+    /// <c>UiWindowHost.TryHandleUnansweredCancel</c>, <c>UiHost.TryHandleCancel/TryHandleAccept</c>,
+    /// <c>IUiBindings.TryInvokeCommand</c> and the <c>CancelBind</c> manifest word).
     /// This line is also a semantic precondition, not bookkeeping: the declarative help drawer uses
     /// <c>VisibleKey</c>, which does not exist on the 0.4.0 carrier - so a 0.4.0 carrier fails at
-    /// CREATION (<c>UiContractException</c>: unknown attribute) rather than at first draw. Pre-1.0 any
-    /// public-surface change bumps the library's minor, so the accepted window is exactly one minor
+    /// CREATION (<c>UiContractException</c>: unknown attribute) rather than at first draw; the same now
+    /// holds twice over inside 0.7.0, because the settings manifest declares <c>CancelBind</c> and the
+    /// window subclasses call <c>TryHandleUnansweredCancel</c>, neither of which exists on an IC2-less
+    /// 0.7.0-dev carrier (creation refusal, not a draw-time surprise).
+    /// Pre-1.0 any public-surface change bumps the library's minor, so the accepted window is exactly one minor
     /// wide and a consumer newer than the loaded carrier fails Require with a readable report instead
     /// of exploding as a TypeLoadException at first draw. The kernel-host harness reads this pair out
     /// of this file (the pin stays private: US ships no InternalsVisibleTo and the Verse stub has no
