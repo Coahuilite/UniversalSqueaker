@@ -37,6 +37,9 @@ internal static class CancelLayerLaneTests
         F06FallbackAreaDropsTheTuningContext();
         F07MeasuredResetLineGrowsInsteadOfOverdrawing();
         DiagnosticsTwoPressEscThroughTheNativeStackDouble();
+        Console.WriteLine("[us-cancel] packs return = one press then decline-unconsumed; help at page-root;"
+            + " tuning ladder entry>table>action>context>decline; filters/enables untouched;"
+            + " two-press Esc armed + close-branch through the stack double with native eligibility set");
     }
 
     private static void Assert(bool condition, string message)
@@ -299,6 +302,9 @@ internal static class CancelLayerLaneTests
         Assert(moodEmpty > moodNormal + 30f,
             "the action/mood areas DO present their layer/domain context (the reason band plus the layer "
             + "rows grow the mood card), got " + moodNormal + " vs " + moodEmpty);
+        Console.WriteLine("[f06-gate] fallbackArea empty-vs-normal height " + fallbackEmpty + "/" + fallbackNormal
+            + " (identical: layer/domain/reason gated out), mood " + moodEmpty + "/" + moodNormal
+            + " (context kept)");
     }
 
     private static void F07MeasuredResetLineGrowsInsteadOfOverdrawing()
@@ -330,6 +336,9 @@ internal static class CancelLayerLaneTests
                 + "lines it paints (expected +60px, got +" + (wrapsHeight - fitsHeight) + ")");
             Assert(reports.Count == 0,
                 "the reset phrase is never overdrawn or clipped any more: " + Describe(reports));
+            Console.WriteLine("[f07-reset-line] fits=" + fitsHeight + " wrapped=" + wrapsHeight
+                + " delta=" + (wrapsHeight - fitsHeight) + " (exactly the two own-line rows)"
+                + " overflowReports=" + reports.Count);
         }
         finally
         {
