@@ -1303,7 +1303,8 @@ internal static class Program
             // through a bumping write).
             { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
             { "cancel-domain-selection", () => { fake.ViewState.DomainSelectionCanceled = false; fake.ViewState.RaceFilter = ""; fake.ViewState.XenotypeFilter = ""; host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
-            { "cancel-tuning-target", () => { fake.ViewState.TuningSelectedAction = "Eat"; host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
+            { "cancel-tuning-target", () => { fake.ViewState.TuningArea = 0; fake.ViewState.TuningSelectedAction = "Eat"; fake.ReprojectAtCurrentRevision(); host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
+            { "cancel-tuning-context", () => { fake.ViewState.TuningContextActive = true; host.Bindings.TryInvokeCommand("cancel-tuning-context"); } },
         };
 
         var registered = new List<string>();

@@ -231,6 +231,11 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         bindings.ValidateAction<string>("create-fallback-table", elementPath);
         bindings.ValidateCommand("restore-fallback-default", elementPath);
         bindings.ValidateAction<string>("delete-fallback-table", elementPath);
+        // US-ESC1: the manifest names BOTH tuning keys - cancel-tuning-target on this element and
+        // cancel-tuning-context on the container that wraps it (review1 observation 1). Validating both
+        // here keeps a typo of either layer a creation-time failure (FL's walk skips unregistered keys
+        // instead of throwing, and the composite is the owner of that branch of the tree).
+        bindings.ValidateCommand("cancel-tuning-context", elementPath);
         // US-ESC1: this element carries the manifest's CancelBind="cancel-tuning-target"; the key must
         // exist at CREATION, or the tree layer would silently never answer (FL's walk skips unregistered
         // keys instead of throwing - which is why an unvalidated typo needs this guard, not luck).

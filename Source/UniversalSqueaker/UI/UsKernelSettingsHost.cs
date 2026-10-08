@@ -771,9 +771,12 @@ public static class UsKernelSettingsHost
         // from the interaction subject; each Can here is the spec's "one press, one layer, decline means
         // climb past" answer, and none of these writes touches settings, persistence or routing - they
         // are session return states (§4.1). The page root (the five-workspace container) carries
-        // cancel-help; the packs cards carry cancel-domain-selection; the tuning composite carries
-        // cancel-tuning-target. With every layer declined the key reaches Verse and the main layer
-        // closes - the spec's "only the root closes", one press later.
+        // cancel-help; the packs cards carry cancel-domain-selection; the tuning COMPOSITE carries the
+        // visible-branch row steps and the container that WRAPS it carries the context return (review1
+        // observation 1: 当前层域/区域 is its own Parent/CancelBind layer, active by business state, so
+        // even the untouched default Global/Actions page returns once before the root may close). With
+        // every layer declined the key reaches Verse and the main layer closes - "only the root
+        // closes", one press after the last observable release.
         writes.Command(
             "cancel-help",
             () => { source.SetHelpPanelOpen(false); bump(); },
@@ -786,6 +789,10 @@ public static class UsKernelSettingsHost
             "cancel-tuning-target",
             () => { source.CancelTuningTarget(); bump(); },
             () => source.CanCancelTuningTarget());
+        writes.Command(
+            "cancel-tuning-context",
+            () => { VoicePacksPageModel.CancelTuningContext(state); bump(); },
+            () => VoicePacksPageModel.CanCancelTuningContext(state));
 
         return writes;
     }

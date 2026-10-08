@@ -34,15 +34,18 @@ internal static class CancelLayerLaneTests
         ReSelectAndWorkspaceSwitchRebuildTheBranch();
         ExplicitTargetsExpireAndRealClicksClimb();
         TuningLadderIsScopedToTheVisibleBranch();
+        DefaultGlobalContextReturnsOnceWithRealClick();
         PureLadderStaticsRoundTrip();
         F06FallbackAreaDropsTheTuningContext();
         F07MeasuredResetLineGrowsInsteadOfOverdrawing();
         WindowLayeringRelationships();
+        KeyboardCooperationWitness();
         DiagnosticsTwoPressEscThroughTheNativeStackDouble();
         Console.WriteLine("[us-cancel] packs return = one press then decline-unconsumed; help at page-root;"
-            + " tuning ladder scoped to the visible branch (fallback: entry>table>context-folds-stale;"
-            + " action: row>context); explicit targets expire off-play, real clicks climb the node chain;"
-            + " two-press Esc armed + close-branch through the stack double with native eligibility set");
+            + " tuning rows visible-branch-scoped over a context layer on the wrapper container;"
+            + " default-Global page returns context ONCE (real-click subject); explicit targets expire"
+            + " off-play; dev panel eligible only while its own page holds a layer - idle Esc goes to the"
+            + " settings ladder; two-press Esc armed + close-branch through the stack double");
     }
 
     private static void Assert(bool condition, string message)
@@ -179,6 +182,11 @@ internal static class CancelLayerLaneTests
         Assert(subject != null && string.Equals(subject.CancelBindingKey, "cancel-tuning-target", StringComparison.Ordinal),
             "the scope-tree element carries the CancelBind the manifest declares, got '"
             + (subject?.CancelBindingKey ?? "null") + "'");
+        // The CONTEXT layer is a real PARENT of that node, not a state stitched into the row command
+        // (review1 observation 1): the wrapper container publishes cancel-tuning-context one step up.
+        Assert(subject != null && subject.Parent != null
+                && string.Equals(subject.Parent.CancelBindingKey, "cancel-tuning-context", StringComparison.Ordinal),
+            "the container wrapping the composite must publish the context CancelBind on the parent chain");
 
         // PATH A (PM observation 10): the fallback branch WITH a row target left over from another area.
         // The stale selection is INVISIBLE here, so it must NOT be a return layer of its own - the ladder
@@ -200,9 +208,9 @@ internal static class CancelLayerLaneTests
             "the table LIST is untouched: cancellation is a selection state, never a data change");
         (bool p3, _) = PressEscape(host);
         Assert(p3 && fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0
-                && fake.ViewState.TuningSelectedAction.Length == 0,
-            "press 3 = leave the tuning context to the page default, folding the stale row target in - "
-            + "no invisible extra layer swallows a press");
+                && fake.ViewState.TuningSelectedAction.Length == 0 && !fake.ViewState.TuningContextActive,
+            "press 3: the ROW layer declines and the climb answers at the parent CONTEXT layer - the "
+            + "branch rests at the page default, folding the stale row target in as one context exit");
         (bool p4, Event fourth) = PressEscape(host);
         Assert(!p4 && fourth.type != EventType.Used,
             "press 4: every step declined, the key is left for the layers above (root)");
@@ -217,18 +225,28 @@ internal static class CancelLayerLaneTests
                 && fake.ViewState.TuningXenotypeDefName.Length == 0,
             "after the context exit the page rests on the Global layer with an empty domain identity");
 
-        // PATH B: in the ACTION area the row editor IS visible, so it IS its own step before the context.
+        // PATH B: in the ACTION area the row editor IS visible, so it IS its own layer-1 step; the
+        // context is the parent's single press after that, and after the context exits ANY tuning write
+        // re-arms it (the branch is active again while the player operates).
         host.Bindings.Invoke("set-tuning-layer", 1);
         host.Bindings.Set("tuning-selected-action", "Eat");
         ArrangeAndDraw(host);
+        Assert(fake.ViewState.TuningContextActive, "PATH B setup: the writes re-armed the context");
         (bool q1, _) = PressEscape(host);
-        Assert(q1 && fake.ViewState.TuningSelectedAction.Length == 0 && fake.ViewState.TuningLayer == 1,
-            "press 1 in the action area closes the visible row editor and leaves the layer/context");
+        Assert(q1 && fake.ViewState.TuningSelectedAction.Length == 0 && fake.ViewState.TuningLayer == 1
+                && fake.ViewState.TuningContextActive,
+            "press 1 in the action area closes the visible row editor only - context untouched");
         (bool q2, _) = PressEscape(host);
-        Assert(q2 && fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0,
-            "press 2 = the layer/domain/area context step");
+        Assert(q2 && fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0
+                && !fake.ViewState.TuningContextActive,
+            "press 2 = the parent context layer");
+        host.Bindings.Invoke("set-tuning-layer", 1);
+        Assert(fake.ViewState.TuningContextActive,
+            "operation after the exit re-arms the branch - the context is activity, not a one-shot");
         (bool q3, Event third) = PressEscape(host);
-        Assert(!q3 && third.type != EventType.Used, "then the ladder declines - the root keeps the next press");
+        Assert(q3 && fake.ViewState.TuningLayer == 0, "and it answers the new session too");
+        (bool q4, Event fourth2) = PressEscape(host);
+        Assert(!q4 && fourth2.type != EventType.Used, "then the ladder declines - the root keeps the next press");
 
         // The return ladder must never have written a persisted value: the fake settings side is not
         // wired here (no ToggleVoicePack/queue), and each step above asserts the exact field it moved.
@@ -323,13 +341,23 @@ internal static class CancelLayerLaneTests
         v2 = fake2.BuildView();
         VoicePacksPageModel.CancelTuningTarget(s2, v2);
         Assert(s2.FallbackTableCanceled && s2.FallbackSelectedRace.Length == 0, "step 2 = table");
-        v2 = fake2.BuildView();
-        VoicePacksPageModel.CancelTuningTarget(s2, v2);
-        Assert(s2.TuningLayer == 0 && s2.TuningArea == 0 && s2.TuningSelectedAction.Length == 0,
-            "step 3 = context exit, folding the stale action in - not a fourth invisible press");
+        // The row layer's steps are done; a THIRD row press changes nothing and vetoes (the stale action
+        // is NOT an invisible step, PM 10) - the context is a SEPARATE parent layer with its own gate.
         v2 = fake2.BuildView();
         Assert(!VoicePacksPageModel.CanCancelTuningTarget(s2, v2),
-            "then the whole ladder vetoes - the root keeps the next press");
+            "the row layer has nothing visible left - it vetoes rather than swallowing the press");
+        VoicePacksPageModel.CancelTuningTarget(s2, v2);   // must be a no-op
+        Assert(s2.TuningLayer == 1 && s2.TuningArea == 2 && s2.TuningSelectedAction == "Eat",
+            "a vetoed row layer changes no state - repose belongs to the context layer");
+        Assert(VoicePacksPageModel.CanCancelTuningContext(s2),
+            "the context layer is active (business state), independent of the non-zero layer/area");
+        VoicePacksPageModel.CancelTuningContext(s2);
+        Assert(s2.TuningLayer == 0 && s2.TuningArea == 0 && s2.TuningSelectedAction.Length == 0
+                && !s2.TuningContextActive,
+            "the context exit reposes the branch and folds the stale action - the single parent press");
+        v2 = fake2.BuildView();
+        Assert(!VoicePacksPageModel.CanCancelTuningTarget(s2, v2) && !VoicePacksPageModel.CanCancelTuningContext(s2),
+            "then both layers veto - the root keeps the next press");
 
         // The same statics on the ACTION area: the row target IS visible and IS its own step.
         BuildPacksView(out RecordingSettingsSource fake3);
@@ -339,13 +367,15 @@ internal static class CancelLayerLaneTests
         s3.TuningSelectedAction = "Eat";
         VoicePacksViewState v3 = fake3.BuildView();
         VoicePacksPageModel.CancelTuningTarget(s3, v3);
-        Assert(s3.TuningSelectedAction.Length == 0 && s3.TuningLayer == 1,
-            "in the action area the row editor is its own visible step");
+        Assert(s3.TuningSelectedAction.Length == 0 && s3.TuningLayer == 1 && s3.TuningContextActive,
+            "in the action area the row editor is its own visible step; the context stays active");
         v3 = fake3.BuildView();
-        VoicePacksPageModel.CancelTuningTarget(s3, v3);
-        Assert(s3.TuningLayer == 0, "then the context step");
-        v3 = fake3.BuildView();
-        Assert(!VoicePacksPageModel.CanCancelTuningTarget(s3, v3), "and the branch rests at the default");
+        Assert(!VoicePacksPageModel.CanCancelTuningTarget(s3, v3) && VoicePacksPageModel.CanCancelTuningContext(s3),
+            "the row layer now vetoes and the parent context layer answers");
+        VoicePacksPageModel.CancelTuningContext(s3);
+        Assert(s3.TuningLayer == 0 && !s3.TuningContextActive, "the context exit rests the branch");
+        VoicePacksPageModel.SetTuningLayer(s3, 1);   // operating again re-arms
+        Assert(s3.TuningContextActive, "re-arm: any tuning write makes the branch active again");
     }
 
     private static float ScopeTreeHeight(RecordingSettingsSource fake, Program.StubMetrics metrics)
@@ -460,6 +490,281 @@ internal static class CancelLayerLaneTests
             r => "(" + (r.ElementPath.Length == 0 ? "unscoped" : r.ElementPath) + " " + r.Axis
             + " " + r.Needed + "/" + r.Available + ")"));
     }
+    /// <summary>
+    /// Review1 observation 1's required path: NO manual SetCancelTarget, NO help layer. A real click on
+    /// a composite control (captured through the carrier's own button seam, then pressed for real through
+    /// MouseDown/MouseUp events) establishes the subject; the untouched default Global/Actions page must
+    /// still answer exactly ONE context return before the root may take the next press, and that exit
+    /// changes no settings and selects no domain.
+    /// </summary>
+    private static void DefaultGlobalContextReturnsOnceWithRealClick()
+    {
+        BuildPacksView(out RecordingSettingsSource fake);
+        using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+        host.Bindings.Invoke("set-tab", "Tuning");
+        ArrangeAndDraw(host);
+
+        var viewport = new Rect(0f, 0f, PageWidth, PageHeight);
+        List<Rect> captured = CaptureCompositeButtons(host, viewport, "scope-tree");
+        List<Rect> row = FirstWideRow(captured);
+        Assert(row.Count == 3, "the layer segment must have drawn three wide buttons, got ["
+            + string.Join(", ", captured.ConvertAll(r => (int)r.width + "px@" + (int)r.y)) + "]");
+
+        Assert(!fake.ViewState.HelpPanelOpen, "this path runs with the help layer closed (PM: no help fallback)");
+        Assert(fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0
+                && fake.ViewState.TuningSelectedAction.Length == 0 && fake.ViewState.TuningContextActive,
+            "setup: the untouched default Global/Actions branch, context active from entry");
+
+        // The seam's rects are content-local inside content-scroll; a real event carries window-space
+        // coordinates (same conversion the XG1 lane uses). The default-Global branch sits at the top of
+        // the column: pin scroll zero, then transform - and assert the point is genuinely inside the
+        // viewport, so "a real press recorded the subject" cannot pass on an off-screen event.
+        Rect globalButton = row[0];
+        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        UiLayoutSnapshot pressSnap = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        Assert(pressSnap.Viewports.TryGetValue("content-scroll", out Rect scrollViewport),
+            "the tuning column must publish its scroll viewport for a real pointer event");
+        Vector2 press = new(globalButton.x + globalButton.width / 2f + scrollViewport.x,
+            globalButton.y + globalButton.height / 2f + scrollViewport.y);
+        Assert(press.x > scrollViewport.x && press.x < scrollViewport.xMax
+                && press.y > scrollViewport.y && press.y < scrollViewport.yMax,
+            "the layer button must be inside the viewport for the honest real press, got " + press);
+        Program.DrawWithEvent(host, viewport, EventType.MouseDown, press);
+        Program.DrawWithEvent(host, viewport, EventType.MouseUp, press);
+        Assert(host.Session.LastInteractionNode != null,
+            "the real press must record its subject - no SetCancelTarget was used");
+
+        (bool answered, Event used) = PressEscape(host);
+        Assert(answered && used.type == EventType.Used,
+            "the default-Global page answers ONE context return before the root (review1 observation 1)");
+        Assert(!fake.ViewState.TuningContextActive && fake.ViewState.TuningLayer == 0
+                && fake.ViewState.TuningArea == 0 && fake.ViewState.TuningRaceDefName.Length == 0,
+            "the exit reposes the branch without changing settings or auto-selecting a domain");
+        (bool again, Event second) = PressEscape(host);
+        Assert(!again && second.type != EventType.Used,
+            "with rows and context both declined and no help open, the key reaches the root unconsumed");
+        Assert(fake.LastActionScope == null && fake.LastPackScope == null && fake.LastMood == null,
+            "and the whole path touched no persisted business value");
+    }
+
+    private static List<Rect> CaptureCompositeButtons(UiHost host, Rect viewport, string elementId)
+    {
+        var rects = new List<Rect>();
+        System.Reflection.FieldInfo? seam = typeof(UiNative).GetField("ButtonOverride",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic);
+        Assert(seam != null, "the carrier's ButtonOverride seam moved - the capture must fail, not fake");
+        try
+        {
+            seam!.SetValue(null, new Func<Rect, bool>(rect =>
+            {
+                UiNode node = host.Session.ActiveNode;
+                if (node != null && string.Equals(node.ElementId, elementId, StringComparison.Ordinal))
+                {
+                    rects.Add(rect);
+                }
+
+                return false; // observe only: nothing fires while capturing
+            }));
+            Program.DrawWithPointer(host, viewport, new Vector2(-4000f, -4000f));
+        }
+        finally
+        {
+            seam!.SetValue(null, null);
+        }
+
+        return rects;
+    }
+
+    private static List<Rect> FirstWideRow(List<Rect> rects)
+    {
+        foreach (Rect candidate in rects)
+        {
+            var row = new List<Rect>();
+            foreach (Rect other in rects)
+            {
+                if (Math.Abs(other.y - candidate.y) < 1f && other.width >= 100f) row.Add(other);
+            }
+
+            if (row.Count == 3) return row;
+        }
+
+        return new List<Rect>();
+    }
+
+    /// <summary>
+    /// Review1 observation 2 + the focus-timing observation's reachability witness. Everything runs
+    /// through the window's OWN native pass order: the panel's eligibility recompute happens at the top
+    /// of its WindowOnGUI, Verse's pre-content dispatch reads it in the SAME pass, and no lane call ever
+    /// refreshes the field by hand. Cases: (a) a menu opened by the previous frame is RECEIVABLE on the
+    /// very next Escape - the exact stale-BeforeDraw failure the observation named; (b) once the menu is
+    /// gone the next pass clears eligibility and Escape/Accept reach the settings window under; (c) a
+    /// confirmation on Super with absorption blocks the windows below while it is up. The stub walks its
+    /// list bottom-up while the real WindowStack walks top-down; the two readings agree on every case
+    /// asserted here (the disagreement case - focused main, active tool menu - is named in the print for
+    /// the human short pass). Main-window stand-ins carry the settings window's real public fields.
+    /// </summary>
+    private static void KeyboardCooperationWitness()
+    {
+        var stack = new WindowStack();
+        typeof(Find).GetProperty("WindowStack")!.SetValue(null, stack);
+        try
+        {
+            var main = new KeyReceiverStandIn
+            {
+                layer = WindowLayer.Dialog,
+                absorbInputAroundWindow = true,
+                closeOnAccept = true,
+                closeOnCancel = true,
+                windowRect = new Rect(200f, 100f, 600f, 400f),
+            };
+            stack.Add(main); // back: the settings window
+            Type devType = typeof(UsKernelSettingsHost).Assembly
+                .GetType("UniversalSqueaker.UI.Dev.UsDevPanelWindow", throwOnError: true)!;
+            var panel = (Window)Activator.CreateInstance(devType, nonPublic: true)!;
+            panel.windowRect = new Rect(60f, 60f, 360f, 240f);
+            Assert(panel.layer == WindowLayer.SubSuper && !panel.closeOnCancel && !panel.closeOnAccept
+                    && !panel.forceCatchAcceptAndCancelEventEvenIfUnfocused,
+                "the panel starts idle: above the settings window, claiming no key unconditionally");
+            stack.Add(panel); // front: the tool
+
+            PumpKeyPass(panel, EventType.Repaint, KeyCode.None);
+            var hostField = typeof(UiWindowHost).GetField("host",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert(hostField != null, "the shell's host field moved");
+            var panelHost = (UiHost?)hostField!.GetValue(panel);
+            Assert(panelHost != null, "a real panel pass must have built its own host");
+
+            // (a) The observation's exact sequence: last pass left the fields FALSE (panel idle), a click
+            // then opened the menu, the VERY NEXT event is Escape - with no manual refresh in between.
+            panelHost!.Session.OpenPopup("coop-target-menu", new Rect(70f, 70f, 120f, 24f));
+            Assert(!panel.forceCatchAcceptAndCancelEventEvenIfUnfocused,
+                "nothing has recomputed between the open and this press - the field is still last pass's false");
+            SetFocused(stack, panel);
+            PumpKeyPass(panel, EventType.KeyDown, KeyCode.Escape);
+            Assert(panel.forceCatchAcceptAndCancelEventEvenIfUnfocused,
+                "the panel's own pre-content recompute claimed eligibility inside the SAME pass Verse read");
+            Assert(panelHost.Session.OpenPopupId == null && main.CancelAnswers == 0 && stack.IsOpen(main)
+                    && stack.IsOpen(panel),
+                "that pass's dispatch closed exactly the panel's own menu; the settings window never moved");
+
+            // (b1) Menu-open routing: the menu was opened AFTER the last pass boundary, so the next
+            // event's pass-top recompute finds it live and the tool receives that event. The sealed
+            // Accept has nothing to answer (no edit) - and the observable is ROUTING: the settings
+            // window below was never asked. (A synthetic menu has no owning element, so the double
+            // also reclaims it at this pass's boundary; the "Accept answers only an edit" ladder rule
+            // itself is FL-IC2's own lane, not re-proven here.)
+            panelHost.Session.OpenPopup("coop-target-menu", new Rect(70f, 70f, 120f, 24f));
+            SetFocused(stack, panel);
+            PumpKeyPass(panel, EventType.KeyDown, KeyCode.Return);
+            Assert(main.AcceptAnswers == 0 && stack.IsOpen(main),
+                "an eligible tool takes Enter into its editless Accept door: the settings window "
+                + "underneath is never reached - one key, one receiver");
+            // (b1') Cancel on the same live footing closes exactly the tool's own menu layer.
+            panelHost.Session.OpenPopup("coop-target-menu", new Rect(70f, 70f, 120f, 24f));
+            PumpKeyPass(panel, EventType.KeyDown, KeyCode.Escape);
+            Assert(panelHost.Session.OpenPopupId == null && main.CancelAnswers == 0 && stack.IsOpen(main),
+                "and Cancel answers exactly one menu layer inside the tool, never the window below");
+
+            // (b2) idle: the next pass clears the claim and Enter reaches the settings window, where
+            // Verse's own closeOnAccept convention answers (stock semantics, not a lane invention).
+            PumpKeyPass(panel, EventType.Repaint, KeyCode.None);
+            Assert(!panel.forceCatchAcceptAndCancelEventEvenIfUnfocused,
+                "a closed menu releases the claim within the next pass - no stale true");
+            SetFocused(stack, main);
+            PumpKeyPass(panel, EventType.KeyDown, KeyCode.Return);
+            Assert(main.AcceptAnswers == 1 && !stack.IsOpen(main) && stack.IsOpen(panel),
+                "Enter reached the settings window and Verse's stock accept-close took it; the idle tool "
+                + "never blocks the key and survives its window's exit");
+
+            // (c) the confirmation outranks both while it is up: its absorption blocks the walk, and it
+            // alone answers.
+            var main3 = new KeyReceiverStandIn
+            {
+                layer = WindowLayer.Dialog,
+                absorbInputAroundWindow = true,
+                closeOnAccept = true,
+                closeOnCancel = true,
+                windowRect = new Rect(200f, 100f, 600f, 400f),
+            };
+            stack.Add(main3);
+            Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+            UsConfirmWindow? flow = UsConfirmWindow.Open("t", "m", "go", () => { }, stack);
+            Assert(flow?.OpenedWindow != null && ((Window)flow.OpenedWindow!).layer == WindowLayer.Super,
+                "the confirmation sits on Super above tool and main window");
+            SetFocused(stack, main3);
+            PumpKeyPass(panel, EventType.KeyDown, KeyCode.Escape);
+            Assert(main3.CancelAnswers == 0 && !panel.forceCatchAcceptAndCancelEventEvenIfUnfocused
+                    && stack.IsOpen(main3) && (flow!.OpenedWindow == null || !flow.OpenedWindow.IsOpen),
+                "the open question absorbed the key: exactly the dialog answered it (as Cancel), and "
+                + "neither the tool nor the settings window moved");
+            flow!.DialogBindings.Invoke("confirm-no"); // idempotent teardown of the lane's dialog
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            typeof(Find).GetProperty("WindowStack")!.SetValue(null, new WindowStack());
+        }
+
+        Console.WriteLine("[f01-keys] native pre-content recompute: menu-open survives the immediate-Escape "
+            + "order; idle clears BOTH keys to the settings window; confirmation absorbs first; the "
+            + "focused-main-with-active-panel ORDER differs between the double's walk and the real stack - "
+            + "named for the human short pass");
+    }
+
+    /// <summary>Stand-in carrying the settings window's real public fields (the actual class needs a
+    /// Verse.Mod the double omits); UiSourceInvariantTests pins the mirrored field block in source.</summary>
+    private sealed class KeyReceiverStandIn : Window
+    {
+        public int CancelAnswers;
+        public int AcceptAnswers;
+
+        public override void DoWindowContents(Rect inRect)
+        {
+        }
+
+        public override void OnCancelKeyPressed()
+        {
+            CancelAnswers++;
+            base.OnCancelKeyPressed();
+        }
+
+        public override void OnAcceptKeyPressed()
+        {
+            AcceptAnswers++;
+            base.OnAcceptKeyPressed();
+        }
+    }
+
+    private static void PumpKeyPass(Window window, EventType type, KeyCode key)
+    {
+        Event e = Event.KeyboardEvent("dummy");
+        e.type = type;
+        e.keyCode = key;
+        e.mousePosition = new Vector2(-4000f, -4000f);
+        Event.current = e;
+        try
+        {
+            window.WindowOnGUI();
+        }
+        finally
+        {
+            Event.current = null;
+        }
+    }
+
+    /// <summary>The reference assembly keeps WindowStack.focusedWindow private (the double made it
+    /// public only so FL's own lanes can observe it through reflection too): the witness sets it the
+    /// same way, never a compile-time shortcut the real shape would refuse.</summary>
+    private static void SetFocused(WindowStack stack, Window window)
+    {
+        System.Reflection.FieldInfo field = typeof(WindowStack).GetField("focusedWindow",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+            | System.Reflection.BindingFlags.Instance)!;
+        field.SetValue(stack, window);
+    }
+
 
     /// <summary>
     /// F01/US-UI1 window wiring: the settings main window stays Dialog with its absorption (its own

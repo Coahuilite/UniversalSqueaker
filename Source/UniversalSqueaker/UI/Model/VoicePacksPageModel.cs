@@ -1034,9 +1034,10 @@ public static class VoicePacksPageModel
         ApplyActiveTab(state, tab);
         // US-ESC1: switching workspace RE-ESTABLISHES the active branch (§4.1): the cancelled marks are
         // last session's return, not this page's, so each page opens with its accepted initial default
-        // (projection auto-select ON) again.
+        // (projection auto-select ON) again - and the tuning branch is ACTIVE until a Cancel exits it.
         state.DomainSelectionCanceled = false;
         state.FallbackTableCanceled = false;
+        state.TuningContextActive = true;
     }
 
     public static void ScrollToSection(VoicePacksPageState state, string sectionKey)
@@ -1073,7 +1074,7 @@ public static class VoicePacksPageModel
     public static void SetTuningLayer(VoicePacksPageState state, int layer)
     {
         if (state == null) return;
-        if (layer >= 0 && layer <= 2) state.TuningLayer = layer;
+        if (layer >= 0 && layer <= 2) { state.TuningLayer = layer; state.TuningContextActive = true; }
     }
 
     public static void SetTuningDomain(VoicePacksPageState state, string raceDefName, string targetDefName)
@@ -1083,6 +1084,7 @@ public static class VoicePacksPageModel
         {
             state.TuningRaceDefName = raceDefName;
             state.TuningXenotypeDefName = targetDefName ?? "";
+            state.TuningContextActive = true;
         }
     }
 
@@ -1148,6 +1150,7 @@ public static class VoicePacksPageModel
     public static void SetActionScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
     {
         if (state == null || string.IsNullOrEmpty(actionKey)) return;
+        state.TuningContextActive = true;
         ApplyActionTuningScope(settings, state, actionKey, scope);
     }
 
@@ -1159,6 +1162,7 @@ public static class VoicePacksPageModel
     {
         if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
         if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        state.TuningContextActive = true;
         if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
         settings.SetActionTuning(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, intervalField, value);
     }
@@ -1168,6 +1172,7 @@ public static class VoicePacksPageModel
     public static void ResetActionTuningToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey)
     {
         if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        state.TuningContextActive = true;
         string anchor = "";
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
@@ -1191,6 +1196,7 @@ public static class VoicePacksPageModel
         float? value)
     {
         if (state == null) return;
+        state.TuningContextActive = true;
         ApplyMoodTuning(settings, state, mood, factor, value);
     }
 
@@ -1209,6 +1215,7 @@ public static class VoicePacksPageModel
     public static void ResetMoodToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
     {
         if (state == null) return;
+        state.TuningContextActive = true;
         if (!MoodLayerHasIdentity(state)) return;
         ResetMoodToPresetForIdentity(settings, state, mood);
     }
@@ -1444,6 +1451,7 @@ public static class VoicePacksPageModel
     public static void SetFallbackSelection(VoicePacksPageState state, string? race, string? entryAction)
     {
         if (state == null) return;
+        state.TuningContextActive = true;
         if (race != null)
         {
             state.FallbackSelectedRace = race;
@@ -1459,18 +1467,21 @@ public static class VoicePacksPageModel
         if (state == null) return;
         if (soundQuery != null) state.FallbackSoundQuery = soundQuery;
         if (newRaceQuery != null) state.FallbackNewRaceQuery = newRaceQuery;
+        state.TuningContextActive = true;
     }
 
     public static void SetTuningArea(VoicePacksPageState state, int area)
     {
         if (state == null) return;
         state.TuningArea = area is >= 0 and <= 2 ? area : 0;
+        state.TuningContextActive = true;
     }
 
     public static void SetTuningSelectedAction(VoicePacksPageState state, string actionKey)
     {
         if (state == null) return;
         state.TuningSelectedAction = actionKey ?? "";
+        state.TuningContextActive = true;
     }
 
     /// <summary>VF1 entry write (r5): the starting point is the player's REAL field-presence delta
@@ -1489,6 +1500,7 @@ public static class VoicePacksPageModel
         if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
         string race = state.FallbackSelectedRace;
         if (race.Length == 0) return;
+        state.TuningContextActive = true;
         if (soundDefName != null && soundDefName.Length > 0
             && DefDatabase<SoundDef>.GetNamedSilentFail(soundDefName) == null) return;
 
@@ -1538,6 +1550,7 @@ public static class VoicePacksPageModel
 
         state.FallbackSelectedRace = raceDefName!;
         state.FallbackTableCanceled = false; // US-ESC1: the created table is a fresh selection, not a cancelled one.
+        state.TuningContextActive = true;
         state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";
     }
 
@@ -1609,13 +1622,11 @@ public static class VoicePacksPageModel
         state.DomainSelectionCanceled = true;
     }
 
-    /// <summary>Tuning page: is any business cancel step LIVE - and only in the branch the player can
-    /// SEE? Fallback area (2): entry, then the race table (§4.1 "当前条目 → 当前种族表"). Action area
-    /// (0): the selected action's editor row. The row target belongs to area 0 ONLY: an action selected
-    /// before switching areas is invisible elsewhere and must never act as an extra return layer there
-    /// (PM observation 2026-10-08: state stitched across areas is not the agreed tree return). Then the
-    /// layer/domain/area context itself. The LAST step declining lets the key fall through to the page
-    /// root - the root then closes (next press), never this layer.</summary>
+    /// <summary>The ROW layer of the tuning tree (FL-IC2 CancelBind on the scope-tree element): only the
+    /// branch the player can SEE answers here - fallback area: entry, then the race table (§4.1); action
+    /// area: the selected action's editor row. A row target selected in another area is invisible here and
+    /// is NOT a layer of this branch (PM observation 10); the context return above (observation 1) owns
+    /// repose. Declining sends the key one level up the real parent chain.</summary>
     public static bool CanCancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return false;
@@ -1625,12 +1636,10 @@ public static class VoicePacksPageModel
             if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace)) return true;
         }
         else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
-        return view.TuningLayer != 0 || view.TuningArea != 0
-            || !string.IsNullOrEmpty(state.TuningSelectedAction);
+        return false;
     }
 
-    /// <summary>One press, one step, in the spec's order, scoped to the visible branch. State-only;
-    /// never persists, never routes.</summary>
+    /// <summary>One press, one step, visible branch only. State-only; never persists, never routes.</summary>
     public static void CancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return;
@@ -1651,23 +1660,30 @@ public static class VoicePacksPageModel
         else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction))
         {
             state.TuningSelectedAction = "";
-            return;
         }
-        if (view.TuningLayer != 0 || view.TuningArea != 0 || !string.IsNullOrEmpty(state.TuningSelectedAction))
-        {
-            // Leave the layer/domain/area context back to the page's initial default (Global layer,
-            // action rules area, no row target). The domain identity re-normalises through the existing
-            // projection - this is a RETURN, not the reset (§4.3): no settings field moves. A row target
-            // left behind from ANOTHER area belongs to this branch exit: it is never a separate invisible
-            // step, and BuildTuningDomains needs no cancelled mark of its own because the context never
-            // ends up on a domain-needing layer without a selection (layer returns to 0, where no
-            // domain exists or is auto-picked).
-            state.TuningLayer = 0;
-            state.TuningRaceDefName = "";
-            state.TuningXenotypeDefName = "";
-            state.TuningArea = 0;
-            state.TuningSelectedAction = "";
-        }
+    }
+
+    /// <summary>The CONTEXT return layer above the row steps, declared on the container that wraps the
+    /// composite (PM observation 1, per §4.1 "当前层域/区域 → 设置主层"): the branch's activity is its own
+    /// business state, so even the untouched default Global/Actions page answers one press before the
+    /// settings main layer may close. The exit reposes the branch to its initial defaults - it changes NO
+    /// settings, selects no domain (the Global layer has none to auto-pick, the BuildTuningDomains
+    /// layer-0 branch), and any later tuning write re-arms the context.</summary>
+    public static bool CanCancelTuningContext(VoicePacksPageState state)
+        => state != null && state.TuningContextActive;
+
+    public static void CancelTuningContext(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.TuningContextActive = false;
+        state.TuningLayer = 0;
+        state.TuningRaceDefName = "";
+        state.TuningXenotypeDefName = "";
+        state.TuningArea = 0;
+        state.TuningSelectedAction = "";
+        state.FallbackSelectedEntryAction = "";
+        state.FallbackSelectedRace = "";
+        state.FallbackTableCanceled = false;
     }
 
     private readonly struct XenotypeDomainKey

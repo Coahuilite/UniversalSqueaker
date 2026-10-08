@@ -28,8 +28,10 @@ namespace UniversalSqueaker.UI.Dev;
 /// <para>
 /// <b>Entry and lifetime.</b> Reachable from the Overview diagnostics band (the settings window is
 /// by definition open there) and from the Debug Actions menu, which refuses without a settings
-/// target; closing the settings window closes the panel. The panel's OWN host never registers as a
-/// target - the tool's layout must not enter the dump it produces (DT1 pass condition 2).
+/// target; closing the settings window closes the panel, and Escape belongs to the window STACK, never
+/// to the tool by default - see the constructor and the PRE-CONTENT <c>WindowOnGUI</c> recompute. The
+/// panel's OWN host never registers as a target - the tool's layout must not enter the dump it produces
+/// (DT1 pass condition 2).
 /// </para>
 /// </summary>
 internal sealed class UsDevPanelWindow : UiWindowHost
@@ -48,19 +50,24 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 
     private UsDevPanelWindow()
     {
-        // F01 (US-UI1): the settings main window is Dialog with absorbInputAroundWindow=true, and a
-        // click on it natively raises it in-layer - a SAME-layer panel then loses GetsInput and the
-        // recorded "panel stops responding" witness. The native-stack answer is layering, not a second
-        // input authority: the tool sits on SubSuper (Verse.WindowLayer order measured from the
-        // 1.6.4871 reference: GameUI < Dialog < SubSuper < Super), so the main window can never stand
-        // in front of it and the two coexist for the whole settings session. Confirmation dialogs sit
-        // one step higher again (Super) - the confirmation window keeps priority over tool AND main
-        // window. Which window the REAL stack ends up handing each key to is the named short-pass item.
+        // F01/US-UI1 review1 (PM observation 2): KEYBOARD COOPERATION, not just layering. The real
+        // WindowStack hands Cancel to the first (top-down) window that is eligible -
+        // (closeOnCancel || forceCatchAcceptAndCancelEventEvenIfUnfocused) - and LetsInput decides,
+        // without any mouse-position test; a SubSuper tool with closeOnCancel=true would therefore take
+        // EVERY Esc away from the settings window's own menus, edits and business layers, and a tool that
+        // declined would still close itself at base. The panel instead owns no unconditional claim:
+        // Verse's own fields decide its eligibility at the top of every window pass (WindowOnGUI, before
+        // Verse's dispatch): while the panel's page
+        // has an open menu, held capture or focused edit the tool is the top layer and answers exactly
+        // one layer of ITS OWN; when it is idle it is not eligible at all, and Verse's search continues
+        // down the stack to the settings window's ladder and, at the settings root, to Verse's meaning
+        // of the key. The panel exits through its close button or with the settings window (PostClose) -
+        // it never swallows or hijacks another window's key, and Enter is gated by the same field.
         layer = WindowLayer.SubSuper;
+        closeOnCancel = false;
         forcePause = false;
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
-        closeOnCancel = true;
         closeOnAccept = false;
         closeOnClickedOutside = false;
         focusWhenOpened = false;
@@ -117,7 +124,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
                 PreventCameraMotion = false,
                 AbsorbInputAroundWindow = false,
                 CloseOnAccept = false,
-                CloseOnCancel = true,
+                CloseOnCancel = false, // review1 observation 2: the key belongs to the stack, not to the tool
                 AllowMultipleInstances = false,
                 NormalSize = new Vector2(360f, 240f),
             }, _ =>
@@ -189,6 +196,30 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     protected override void BeforeDraw(Rect contentRect)
     {
         Requery();
+    }
+
+    /// <summary>
+    /// F01/US-UI1 review1 (PM observation 2 + the focus-timing observation): Verse reads the key
+    /// eligibility fields in its PRE-CONTENT dispatch - before this window's BeforeDraw/DoWindowContents
+    /// ever run - so a per-pass refresh placed in BeforeDraw is one pass stale in BOTH directions: a menu
+    /// opened by a click could not receive the next event's Escape, and a menu just closed let the next
+    /// Enter answer to an idle tool and blocked the settings window underneath. That staleness is a
+    /// defect, not a limit. The recompute therefore runs at the top of WindowOnGUI, before <c>base</c>
+    /// reaches Verse's dispatch, and reads exactly this window's own session: the panel is eligible ONLY
+    /// while its page actually holds an open menu, a held capture or a focused edit - the library ladder
+    /// then answers exactly one of ITS layers and consumes (an open menu owning the keyboard is the
+    /// popup-layer rule, not a hijack). Idle, the field is cleared and Verse's stack search continues to
+    /// the settings window's own ladder and, at its root, to Verse's meaning of the key; Accept is gated
+    /// by the same field, so the tool never stands between the player and an edit elsewhere. No second
+    /// input authority: this is Verse's own field, computed live at the last point before Verse reads it.
+    /// </summary>
+    public override void WindowOnGUI()
+    {
+        UiSession? session = Host?.Session;
+        forceCatchAcceptAndCancelEventEvenIfUnfocused = session != null
+            && (session.OpenPopupId != null || session.ActiveEditNode != null
+                || (session.OwnedHotControl.HasValue && session.OwnedHotControlOwner != null));
+        base.WindowOnGUI();
     }
 
     private void Requery()

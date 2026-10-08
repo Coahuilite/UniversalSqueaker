@@ -270,6 +270,23 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     }
 
     /// <summary>
+    /// US-ESC1 cancel-probe support (D1/D6 lane): rebuild the cached projection from the CURRENT page
+    /// state at the CURRENT revision WITHOUT advancing the session clock and WITHOUT counting a rebuild.
+    /// The tuning-target cancel gate reads the projected view (visible area), and the cancel probes
+    /// pre-set that state directly (never through a bumping write, per the lane's own rule); without
+    /// this sync the revision cache would serve the pre-write projection and the gated CanExecute would
+    /// decline for a fixture-staleness reason, not a real one. Keeping the clock untouched preserves the
+    /// contract under test: ONLY the actual cancel command may move it.
+    /// </summary>
+    public void ReprojectAtCurrentRevision()
+    {
+        if (RevisionSource == null) return;   // no cache to sync when the lane does not gate revisions
+        ApplyEmptyXenotypeTargetFixture();
+        cachedView = RichData ? BuildRichView() : BuildEmptyView();
+        cachedRevision = RevisionSource();
+    }
+
+    /// <summary>
     /// XG1.1 fixture: the xenotype layer with NO tunable target. The production model reaches this state when
     /// <c>BuildTuningDomains</c> finds no (race, xenotype) tuning domain - it then leaves BOTH identity halves
     /// empty and returns an empty option list. The harness cannot run that model path (it needs the def
@@ -818,18 +835,17 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetTuningLayer(int layer)
     {
         LastTuningLayer = layer;
-        if (MirrorTuningWrites) state.TuningLayer = layer;
+        // Route through the SAME production static the real source calls (review1: the re-arm of the
+        // tuning CONTEXT is part of the write's meaning, not an extra the fake may forget). The
+        // MirrorTuningWrites gate keeps lanes that never entered the branch seeing stable state.
+        if (MirrorTuningWrites) VoicePacksPageModel.SetTuningLayer(state, layer);
     }
 
     public void SetTuningDomain(string raceDefName, string targetDefName)
     {
         LastTuningDomainRace = raceDefName;
         LastTuningDomainTarget = targetDefName;
-        if (MirrorTuningWrites)
-        {
-            state.TuningRaceDefName = raceDefName;
-            state.TuningXenotypeDefName = targetDefName;
-        }
+        if (MirrorTuningWrites) VoicePacksPageModel.SetTuningDomain(state, raceDefName, targetDefName);
     }
 
     public void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName)

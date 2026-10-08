@@ -516,7 +516,14 @@
           </Column>
           <Widget Id="checklist-empty-nodomain" Kind="state/empty" TextKey="US.Packs.Checklist.NoDomains" VisibleKey="checklist-empty-nodomain" />
         </Section>
-        <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" CancelBind="cancel-tuning-target" />
+        <!-- US-ESC1 review1 (PM observation 1): §4.1 "当前层域/区域 → 设置主层" is its own layer of the
+             REAL parent chain. The composite keeps the visible-branch row steps (cancel-tuning-target); a
+             zero-extra-spacing container wraps it and declares the context return (cancel-tuning-context),
+             and the Tuning tab gate moves to the wrapper so the composite's node sits inside that
+             CancelBind's subtree - no new kind, no FL API, no visual delta. -->
+        <Column Id="tuning-context" Tab="Tuning" Gap="0" Padding="0" CancelBind="cancel-tuning-context">
+          <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" CancelBind="cancel-tuning-target" />
+        </Column>
         <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
     </Row>

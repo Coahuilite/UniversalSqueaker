@@ -49,6 +49,7 @@ internal static class UiSourceInvariantTests
         VerifyViewCacheSharesLayoutClock(root);
         VerifyWriteBindingsGoThroughTheRegistry(root);
         VerifyHelpPanelIsIndependentState(root);
+        VerifyDevPanelPreContentEligibility(root);
     }
 
     // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
@@ -278,11 +279,85 @@ internal static class UiSourceInvariantTests
             "the settings class must not regain a xenotype-tab clear API");
     }
 
+    // 2b. US-UI1 review1 (focus-timing observation): the dev panel's key eligibility must be computed at
+    //     the TOP of WindowOnGUI, before the base call that reaches Verse's pre-content dispatch - a
+    //     refresh living inside BeforeDraw was the named defect (one pass stale in both directions) and
+    //     must not creep back. The settings window keeps its stock, unmoved key conventions, and
+    //     forceCatch may be claimed by exactly the three tool windows - nowhere else.
+    private static void VerifyDevPanelPreContentEligibility(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        string panel = File.ReadAllText(Path.Combine(ui, "Dev", "UsDevPanelWindow.cs"));
+        int onGui = panel.IndexOf("public override void WindowOnGUI()", StringComparison.Ordinal);
+        int assign = panel.IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused =", StringComparison.Ordinal);
+        int baseCall = panel.IndexOf("base.WindowOnGUI();", StringComparison.Ordinal);
+        if (onGui < 0 || assign < 0 || baseCall < 0 || assign > baseCall)
+        {
+            throw new InvalidOperationException(
+                "the dev panel must compute its key eligibility inside WindowOnGUI BEFORE base.WindowOnGUI() "
+                + "(Verse reads the field in the pre-content dispatch; a BeforeDraw refresh is one pass stale)");
+        }
+
+        int beforeDraw = panel.IndexOf("protected override void BeforeDraw", StringComparison.Ordinal);
+        int beforeDrawEnd = panel.IndexOf("\n    }", beforeDraw, StringComparison.Ordinal);
+        if (beforeDraw < 0 || beforeDrawEnd < 0
+                || panel.Substring(beforeDraw, beforeDrawEnd - beforeDraw)
+                        .IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+        {
+            throw new InvalidOperationException(
+                "BeforeDraw must not touch the eligibility field again - the recompute lives in WindowOnGUI only");
+        }
+
+        if (panel.IndexOf("closeOnCancel = false", StringComparison.Ordinal) < 0
+                || panel.IndexOf("layer = WindowLayer.SubSuper", StringComparison.Ordinal) < 0)
+        {
+            throw new InvalidOperationException(
+                "the panel keeps closeOnCancel=false (Verse never closes it) and the SubSuper layer "
+                + "(coexisting above the settings window)");
+        }
+
+        string settingsWindow = File.ReadAllText(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"));
+        if (settingsWindow.IndexOf("layer = WindowLayer.Dialog", StringComparison.Ordinal) < 0
+                || settingsWindow.IndexOf("absorbInputAroundWindow = true", StringComparison.Ordinal) < 0
+                || settingsWindow.IndexOf("closeOnCancel", StringComparison.Ordinal) >= 0
+                || settingsWindow.IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+        {
+            throw new InvalidOperationException(
+                "the settings window keeps its pinned modality block (Dialog + absorption, stock key "
+                + "conventions, no key claim of its own) - the keyboard-cooperation lane's stand-in mirrors THIS block");
+        }
+
+        string diagDir = Path.Combine(root, "Source", "UniversalSqueaker", "Diagnostics");
+        string[] claimers =
+        {
+            Path.Combine(ui, "Dev", "UsDevPanelWindow.cs"),
+            Path.Combine(diagDir, "SqueakDiagnosticsPanel.cs"),
+            Path.Combine(diagDir, "SqueakDiagnosticsDetailWindow.cs"),
+        };
+        foreach (string file in Directory.EnumerateFiles(Path.Combine(root, "Source"), "*.cs", SearchOption.AllDirectories))
+        {
+            bool allowed = false;
+            foreach (string c in claimers)
+            {
+                if (string.Equals(file, c, StringComparison.OrdinalIgnoreCase)) { allowed = true; break; }
+            }
+
+            if (!allowed && File.ReadAllText(file)
+                    .IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+            {
+                throw new InvalidOperationException(
+                    "a fourth window claims the Verse key field: " + file + " - eligibility belongs to the "
+                    + "dev panel and the two diagnostic windows only (review1 scope)");
+            }
+        }
+    }
+
     // 2. Second event authority / second palette must not resurrect anywhere under UI/. The list is the
     // one MEMORY's "Naming/harness bans" claims: `UiPanel` was reported as prose-only in FL→US round 2
     // (it was a real deleted type in the old chain - `Widgets/UiPanel.cs` - but sat in no source list),
     // so the name joined the scan rather than leaving the rule. Over-banning a dead name is the safe
     // direction; a memory that promises a check the check does not make is not.
+
     private static void VerifyNoSecondEventAuthorityOrPalette(string root)
     {
         string uiDir = Path.Combine(root, "Source", "UniversalSqueaker", "UI");

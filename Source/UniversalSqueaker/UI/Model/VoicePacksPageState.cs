@@ -20,6 +20,11 @@ public sealed class VoicePacksPageState
     // the next BuildView, so the cancel is stored as an explicit state, not by blanking the fields alone.
     // A new selection or a workspace switch re-establishes the branch and clears the mark. Never persisted.
     public bool DomainSelectionCanceled;
+    // US-ESC1 review1 (PM observation 1): the tuning branch's CONTEXT is its own return layer, expressed
+    // as business state rather than inferred from a non-zero layer/area - a user operating on the default
+    // Global layer must also be able to leave the context before the window closes. Active from the moment
+    // the branch is entered or touched; false ONLY after the cancel answered. Never persisted.
+    public bool TuningContextActive = true;
     public bool FallbackTableCanceled;
     public string SearchText = "";
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
@@ -96,6 +101,7 @@ public sealed class VoicePacksPageState
         FallbackStatusArg = "";
         DomainSelectionCanceled = false;
         FallbackTableCanceled = false;
+        TuningContextActive = true;
     }
 }
 
