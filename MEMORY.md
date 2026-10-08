@@ -68,10 +68,17 @@
   dispatches earlier (WindowStackOnGUI runs WindowOnGUI bottom-up, each InnerWindowOnGUI dispatching
   pre-content) - that cross-window freshness stays in the agreed ONE human pass, with no new product
   failure claimed from the simulation.
-  ESC1's aggregate stays PARTIAL by PM ruling: the packs domain→result→root chain is carried into US-PACK1,
-  not faked in the old layout.
-  US-PACK1 and US-RESET1 stay on the agreed chain
-  and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
+  US-PACK1 LANDED locally (commit `909f6f9`): one composable filter region (keyword/author/race/xenotype/
+  state + condition echo) above ONE pack-card result; a card's rows are the (scope, race, xenotype) domains
+  it serves, each with its own enable switch (no cross-domain global switch); the manual expansion set and
+  the query's xenotype-hit auto-expansion are SEPARATE flags, so clearing the keyword restores exactly the
+  player's own state. The real ESC1 chain domain→result→root→close rides the parent chain. Two engine facts
+  measured this round: a `CancelBind` declared INSIDE a Repeat template is item-qualified by the engine and
+  can never name a page-level command (declare it on a page-level ancestor - US uses the Repeat itself);
+  and every row control records at its OWN group origin, so a census pairs rail↔FILL rects and checks the
+  band against the DECLARED row - the domain-row hit band is deliberately narrower than the row (it stops
+  at the switch). US-RESET1 stays on the agreed chain and is NOT yet dispatched; its preparation table is
+  the accepted `us/preparation.md` §6. Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
   the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
   hashes) and never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four
