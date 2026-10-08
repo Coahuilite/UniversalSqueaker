@@ -1,0 +1,392 @@
+{
+  "decision": "2026-10-08 maintainer accepted preserving published history. Exceptions apply only to these exact historical blob+path+pattern tuples. They never waive current-tree, identity, credential, metadata, message, or runtime-anonymity checks, and they never authorize history rewrite.",
+  "source": "independently reviewed inventories in relay_mod/evidence/prepush-health-20261008/memory-push/pm-us-history-verification.json and us-history-blobs.json",
+  "count": 55,
+  "exceptions": [
+    {
+      "blob": "003bc39c44069b2d64f7f53ba059ef0ad29acec6",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "00e6adf925543831ad3d63e36ad02ae5c1c8bc5b",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "034d6f7f6242933c0c26cc75ddd8e350b62eac6c",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "1454cb7fbfafa5f34780de14c26ef81111e9aa3b",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "217e477867a3be39d10485744591c07869688dc6",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "21fcdd5a0db026604fdff6c8d0836c75a4d3e674",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "22476d09d51572989de3fbb258c5c7cfdff5ce47",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "286e41b81e0cf12b1977045036a6c3830d831040",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "2b6153b44eb1655b60cb118dee6ca0708d4a53af",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "2f91a9b72742da752e3f478144501656648face2",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "33f7c73c118403091a1ee685ab5faf8619b6d54f",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "3a6368ea1238447b993580c9912454de5fb03491",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "3ae8eb63fdd4c2ad8df849650789a987aac3af75",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "3c3445fd981b0e73b6a13c78643f6db09ed2451a",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "3c627c9151344d35ed90e5efb02cfd048af580eb",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "3f55227b79cf868ac5d81cffefb6a714526d6a6a",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "48ee10a1f757b810a4e0563dddaf6d84c426bb03",
+      "path": "OBLIVIONIS.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "4e3e45e94705ccf768e4d03384b5d59f99120cae",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "50af7bdb97924da31530a30d3cc56487a27402dd",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "51661eaa1d1f4faaa4c4e89bd8f8123b93322fa6",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "54320aa6a4c2814e1ceaefddca0b4389a12ec679",
+      "path": "tools/UniversalSqueakerLogTests/Program.cs",
+      "pattern": "personal-path",
+      "category": "fictional-log-fixture",
+      "reason": "fictional test fixture"
+    },
+    {
+      "blob": "657d9ca098ce0d7010c778b6e846e96ba19c49fd",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "670615114907bf7ba55d339a3e6f27dfe3c4ef7d",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "692f51a66419f76eb54e4cf26eda9a5033fca9e3",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "6c5e29c3e4dbff9a7698968f3ad1ee4bdd009228",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "79cd89dd75016a970af9d835749d95bd991c15c4",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "8603889062b0c124838d7c07efa74ec93ae1e725",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "8c9e6738ef68c2f7c6c44c417eaa8f9f1da24cb4",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "8ce52a016f3a5b1bcf62a1c1b50fb9a57e2019e2",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "8eda0e822b8943ed95f39065b1aa7b18f1b8528f",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "919ede64c65df8117841522ae1f0ca8ca15af0c0",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "935a210fe3a337f4e18edd80f8fdccbb1e119b2e",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "93cdf27da04db66e24231cdcd41de0d24c1b08ab",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "944332aa57459e8c947ab81b586f5932037335a6",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "9576dcee79e317d2131695bfa6283c45a9c030e4",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "a20c65fd1e3e2e5bf19bf419da612411ebe0d579",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "a8c138359a8b200c952ff479977819d8a0722b2c",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "a8feed78bb6abb1df726e5d5bd5797853266fdda",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "b4810f825a21dc7d54199b7d7afa86b80ecc18b2",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "b6f6be1805c8d2cd37553698050d8f47a2e4286c",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "be92bda46952a719eefab298ecf00a6690de897d",
+      "path": "docs/first-cloud-upload-zh.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "c14b1e287ac1485e998b6eb475c7de366efbbbee",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "cb554c5978118465bdb89b456f99014af59b6b32",
+      "path": "OBLIVIONIS.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "cb943497af79a670507aad34c810a11b4e9f7d04",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "cd96add8c67594a084b927eb3b0849fc78d3e1e4",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "ce74a59766137cd2b8a4d70c3881d36dc731b502",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "d1f9d5727800b6969fa9536a6fdc8bae7c816c14",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "d34b421d647d15a334b6bcfeec3fef1f4c84eab4",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "d848cf4470cf68c39c5b7af6aad71884e99fbaaf",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "ee24de8bf1f32ebbee28c9622efca01f1d8b7360",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "f5e1cf6ccf5d24b9062da74207bc2435509a81a1",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "f6e571aee9ec7b7023de888078f015028d41663a",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "f853041cfd52a5a45660db818679af1ef871eff1",
+      "path": "OBLIVIONIS.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "fddfbb212d9bba26c288fcfed3d736e468087299",
+      "path": "MEMORY.md",
+      "pattern": "personal-path",
+      "category": "public-runner-example",
+      "reason": "hosted-runner layout"
+    },
+    {
+      "blob": "fdf0ab51a3942ea9b68e0557d03303399325a35d",
+      "path": "docs/audio-formatting-meowing-kiiro-zh.md",
+      "pattern": "personal-path",
+      "category": "real-installation",
+      "reason": "reviewed installation directory"
+    }
+  ]
+}

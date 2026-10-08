@@ -11,29 +11,50 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Current state (2026-10-07)
+## Current state (2026-10-08)
 
+- **Push privacy automation (2026-10-08).** The five-vector Mwah-derived scanner has automatic per-clone
+  pre-push installation and all-branch GitHub CI. `docs/push-privacy-gate.md` defines its scope; current
+  documentation uses portable installation/runner references. 2026-10-08 maintainer decision: preserve
+  published history and continue development. FullHistory accepts only the independently reviewed 55
+  blob+path+`personal-path` tuples in `scripts/privacy-history-exceptions.json` (reviewed installation
+  directory, hosted-runner layout, or fictional test fixture). Filename-only matches are not exceptions.
+  Current-tree text, names, messages, identities, credentials, metadata and runtime anonymity stay fully
+  checked. History rewrite remains unauthorized. A clean current tree is not itself history success.
 - **BH1 bottom help is integrated and its real-game acceptance PASSED (2026-10-06).** The measured
   3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX; it is
   recorded, not an acceptance blocker. Read the current US package identity from its own stamp and the
   PM paired manifest, never infer it from HEAD. The retained BH1 package uses FL `0181268` and Demo
   `9d4b7e0`; the checkpoint candidate is separate and its identities belong to its paired manifest.
-- **Latest human feedback reaffirms C1/C2 as normal.** Their original diagnostic IDs stay intact; the final
-  feedback did not name RPT1/XG1 individually. The verbatim feedback, runtime observations and evidence are
-  kept outside the product repository in `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
-  Layout reports do not replace visual or interaction acceptance; unattributed mod-stack warnings remain
-  unattributed.
-- **Current checkpoint:** D4 has three independent name-search fields, race-following xenotypes and
-  same-pass VisibleRows4.5 sizing. Tuning now separates action rules, mood factors and per-race final
-  native fallback, with visible effective multipliers, suppliers and usable preset reset targets.
-  VoicePack OR final table admits a race; neither means no automatic comp/no routing. Shipped Ratkin
-  data references Core sounds; the Kernel carries no race seed. Player field-presence overrides
-  survive maintainer version changes; first table-only admission requires a full restart. The small
-  settings developer panel serves only its five pages/confirmation dialogs; in-game outline belongs
-  only to US diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks,
-  faithful proofs and real-game limits are recorded separately in the PM checkpoint evidence.
-  Prior human passes remain accepted; whole-checkpoint task acceptance is pending. Composite splitting
-  and scroll-distance polish remain deferred. `TODO.md` owns the remaining tasks.
+- **Accepted playtests, distinct from open feedback.** BH1 help usability, same-window position, real-font
+  footer/long-help, independent scrolling and accurate clicks remain accepted. SA1 mixed-mode confirmation
+  and independent outline remain accepted. PRE1 fixture A is human-confirmed effective; B is accepted by
+  the user on the same mechanism, without a separate B retest. Unreported restore/restart branches are not
+  claimed as independently measured, and they are not a new retest gate. C1/C2 remain normal; their
+  original diagnostic IDs stay intact. Verbatim older feedback lives outside this repo in
+  `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
+- **Current checkpoint technical delivery:** D4 has three independent name-search fields, race-following
+  xenotypes and same-pass VisibleRows4.5 sizing. Tuning separates action rules, mood factors and per-race
+  final native fallback, with visible effective multipliers, suppliers and usable preset reset targets.
+  VoicePack OR final table admits a race; neither means no automatic comp/no routing. Shipped Ratkin data
+  references Core sounds; the Kernel carries no race seed. Player field-presence overrides survive
+  maintainer version changes; first table-only admission requires a full restart. The small settings
+  developer panel serves only its five pages/confirmation dialogs; in-game outline belongs only to US
+  diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks, named faithful
+  proofs and real-game limits are recorded separately in the PM checkpoint evidence. Composite splitting
+  and scroll-distance polish remain deferred.
+- **Pending after the archive checkpoint, not product work in this memory pass.** Hygiene/doc edits sit
+  in the index and working tree on `0.5.x` at `38b93e75dea2e24da05bd5e095b7b84d1ce46df2`; this pass does
+  not stage or commit them. Interaction follow-ups after FL/US archive acceptance are specified in
+  `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md` and are not dispatched here.
+  The agreed chain is FL-IC1/2 then US-UI1, US-ESC1, US-PACK1 and US-RESET1. US-UI1 covers developer tools
+  coexisting with the main window, Call wording, F07 double-paint/narrow width, and F06 layer/domain versus
+  race-only fallback. US-ESC1 is tree cancel without re-selecting the first item. US-PACK1 is one filter
+  region and pack-card results with xenotype hits expanding and enable identity unchanged. US-RESET1 is
+  global restore of ordinary settings, tuning overrides, pack selection and preset anchors, keeping every
+  independent fallback store, plus local action/distance restores. Remaining FL common-capability items
+  (task-11, FL-17, FL-18/B6, FL-13/B10) stay FL-owned backlog and are not pulled into this US checkpoint.
+  `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
@@ -160,7 +181,14 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   errors, nothing at `-v n`) while the identical command succeeds with `-m:1`. `KernelHostTests.csproj` therefore
   passes `-m:1` to its four nested stub builds. Harness-only; no shipped byte moves.
 
-## Evidence discipline (rules in `AGENTS.md`; these are the measured specimens)
+## Evidence lessons (measured cases, not standing acceptance gates)
+
+- Earlier UI rounds produced misleading red and green results when the fixture, viewport, translator or
+  observation channel differed from the intended input. Faithful product backouts proved specific fixes;
+  guards and unexecuted cases retained their narrower status. A channel change changed which checks applied.
+  These are reasons to select relevant verification, rather than a requirement to keep enlarging every suite.
+- Counter-based checks once reused another lane's accumulated findings. Resetting the measurement and checking
+  the increment distinguished the current operation.
 
 - **Line numbers are not a stable coordinate.** A second edit to the same file must not read its region at the
   offsets the FIRST edit left behind. Re-read the file and guard the slice with its own first and last line.
@@ -195,24 +223,32 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - **Two alpha guards are guards without their own red** (`a == 0.57`, the rail's opacity) because the minimal
   mutation also changes the product and needs its own byte-level restore; recorded as such, not dressed up.
 - **Process rule earned the hard way: a commit requires an OBSERVED green, not an INVOKED check.** One red lane
-  reached HEAD because the check and the commit were written into the same script.
+  reached HEAD because the check and the commit were written into the same script. Coherent verified changes
+  were committed separately; invoking a check without observing its completion did not establish a green result.
 
 ## Carrier and artifact discipline
 
-- `scripts/read-assembly-stamp.ps1` reads `AssemblyConfigurationAttribute` in a CHILD process (a handle on a DLL
-  copied or rebuilt moments later is fatal; `MetadataReader` is absent from the Store PowerShell).
 - `pack-dev` builds the US payload `-c Dev --no-incremental` and produces a **folder, no archive** (a rehearsal
   is installed by dropping it in `Mods/`). **`build-dev` builds the US payload Dev and NEVER builds the
-  carrier** - it resolves the carrier it was handed and forwards it as `FerriteLibArtifactPath`. Gate 6 asserts
-  the SELECTED carrier is Release-CONFIGURED, not merely present, and the stager refuses a payload whose recorded
+  carrier** - it resolves the carrier it was handed and forwards it as `FerriteLibArtifactPath`. Dev and
+  Release output to `dist/build/<Configuration>`. `FerriteLibArtifactPath` selects the existing carrier
+  input; the stager compares its hash with the compiler reference recorded in US. Commands and current
+  behavior are authoritative in `docs/build-and-debug.md` and the scripts. Gate 6 asserts the SELECTED
+  carrier is Release-CONFIGURED, not merely present, and the stager refuses a payload whose recorded
   compiler-reference hash differs from the selected DLL. The engine refuses a `dev` label over Release bytes.
+- `scripts/read-assembly-stamp.ps1` reads `AssemblyConfigurationAttribute` in a CHILD process. An
+  `Assembly.LoadFile` handle on a DLL copied or rebuilt moments later lives until process exit, which is
+  fatal for a later rebuild in the same session; `MetadataReader` is absent from the Store PowerShell.
 - **The carrier payload's configuration has ONE judge: `AssemblyConfigurationAttribute`**, never the version
   suffix - FL's `<VersionSuffix>dev</VersionSuffix>` is unconditional, so a correct Release carrier still reads
   `0.7.0-dev+<sha>` and a suffix-keyed gate would refuse a good payload.
 - **Gate 6 reddens on any carrier commit, docs included**, since it compares the payload's identity against the
   carrier checkout HEAD. Never edit FL source to satisfy it: rebuild the payload and announce that HEAD moved.
   `verify-local`'s gate-6 retry hint is PROSE (task-7) precisely because a red gate is the frame that must not
-  build - the 2026-09-22 incident rebuilt a frozen payload by pasting the old hint.
+  build - the 2026-09-22 incident rebuilt a frozen payload by pasting the old hint. A docs-only commit
+  changes source HEAD without changing retained package bytes; a later build embeds the new source identity.
+  An identity mismatch alone does not establish a gameplay regression or require rebuilding a retained test
+  package. Read current US package identity from its own stamp and the PM paired manifest, never from HEAD.
 - **A hash and an mtime answer different questions**: the hash says "same bytes", the mtime says "was the file
   written". A rebuild of identical content moves the second only, so a freeze notice quotes BOTH.
 - **A live carrier identity is never pinned in a tracked file.** A SHA written here is stale the moment it lands.
@@ -424,7 +460,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   gated body scrolls and swapped buttons; only the final deliberate choice writes the original typed
   mode closure. Navigation/footer inset is authored. Source checks cover the production dialog shell
   and resolved EN/ZH text with synthetic metrics; real fonts, appearance and native keyboard behavior
-  remain human acceptance. DX1 diagnostics and Packs D4 are separate, undelivered work.
+  remain human acceptance. DX1 diagnostics and Packs D4 later landed in the 2026-10-07 checkpoint;
+  they are no longer undelivered. Open pack-page work is the later filter/card revision, not D4 delivery.
 - **Report button feedback (RPT1, landed)**: the report outcome is a READ-ONLY sentence printed immediately below
   the Report button, in the existing Keyed mechanism (additive entries in both tables). It is derived from the
   carrier's own facts: refused-at-request-time names the real reason (capture off / no instrument / no scope),
@@ -487,8 +524,18 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `SourceRevisionId` and gate 6 refuses the bytes as unattributable. The Runner SDK is pinned so CI equals the
   evidence baseline; `verify-local`'s harness gates run `--no-restore`, so any workflow must restore EVERY csproj
   first.
-- **Pre-push ceremony is deliberately minimal**: `privacy-audit.ps1 -FullHistory` plus the mechanical final
-  check. Do not re-add manual ritual, and run it before the FIRST push of a line, not only before a release.
+- **Privacy review before an authorized push:** `privacy-audit.ps1 -FullHistory` covers all reachable
+  refs. `-PrePush` adds release-oriented clean-tree/main/tag reporting and is not required for a normal
+  version-branch push. First-upload durable decisions from 2026-09-06 (CI sibling staging, release-axis
+  locks, push order) remain in this section and in `OBLIVIONIS.md` "First cloud upload: durable decisions".
+- **Prior push lessons (moved from AGENTS on 2026-10-08).** A placeholder identity in early commits
+  required pre-upload correction. The all-reachable scan includes local branches and tags, so a clean
+  tip or an added backup tag did not remove old findings; external bundles preserved recovery without
+  adding Git refs. Earlier cleanup rewrote unpublished commits with metadata/tree checks, and changed
+  SHAs required renewed downstream artifact identities. A sibling round's stale completed
+  branches/worktrees also kept history reachable. Those incidents explain checking actual refs and
+  inputs; they do not ban authorized history repair or require deleting this repository's current
+  branches automatically.
 - **Product axis `0.5.x`; carrier pin `[0.7.0, 0.8.0)`.** `<Version>` moves only by maintainer ruling, and
   `main` moves only when an rc or stable is cut.
 - **0.5.x scope**: item A = file-driven **invocation** + hot reload (editing a layout or style file and

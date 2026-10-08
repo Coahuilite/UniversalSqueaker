@@ -30,3 +30,4 @@ tools/UniversalSqueakerKernelTests/fixtures/corpus/*.txt text eol=lf
 
 # Replays and fixtures compare as raw bytes; a converted line ending is a content change there.
 fixtures/** text eol=lf
+scripts/githooks/* text eol=lf

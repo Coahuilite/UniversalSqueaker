@@ -5,26 +5,27 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — checkpoint acceptance (2026-10-07)
+## NOW — checkpoint acceptance and archive follow-up (2026-10-08)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
 status and paired package identities are authoritative in the PM checkpoint evidence and manifest:
 `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/`.
-The new candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
+The candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
+Product implementation in `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md`
+waits until FL and US archive requirements finish; this file does not expand that product scope.
 
-- [ ] **Whole-checkpoint human tasks**, per `../modding_documents/relay_mod/PLAYTEST-CHECKPOINT-20261007.md`:
-  select/search/enable a pack; tune and import/restore PRE1 A then B; edit the per-race final native
-  fallback and confirm new-race admission after a full restart; use the compact US diagnostics and
-  settings developer tools at 1024x768. Real fonts, native input, actual playback and game Scribe
-  persistence remain human evidence, distinct from local checks and type-loading stubs.
-- [ ] **PRE1 fixture acceptance:** use the Ratkin work copy outside US-testpack-archive, keep both
-  originals untouched, and preserve current Config before import. Removing test Defs does not undo
-  already imported settings. Restoring one field, one row and a preset must have distinguishable results.
+- [ ] **Remaining whole-checkpoint human tasks** (do not re-run accepted matrices): pack select/search/enable
+  as later revised by US-PACK1; compact US diagnostics and settings developer tools at 1024x768; per-race
+  final native fallback edit and new-race admission after a full restart. Real fonts, native input, actual
+  playback and game Scribe persistence remain human evidence, distinct from local checks and stubs.
 - **Already accepted:** BH1 help usability, same-window position, real-font footer/long-help appearance,
-  independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline.
-  Do not repeat these as separate matrices or reinstate mandatory whitespace. Observe regressions only.
-- **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below. Tuning redesign,
-  D4 page layout, final native fallback and US diagnostics ARE part of this checkpoint, not deferred work.
+  independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
+  fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest). Observe
+  regressions only. Unreported restore/restart branches are not a new PRE1 gate.
+- **Confirmed but not implemented (after archive):** FL-IC1/2 then US-UI1, US-ESC1, US-PACK1, US-RESET1 as
+  specified in the interaction document. Keep every independent fallback store on global restore. Exclude
+  only the unrelated broader FL library backlog (task-11, FL-17, FL-18/B6, FL-13/B10), not FL-IC1/2.
+- **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
 
@@ -90,8 +91,8 @@ The new candidate is separate from the retained BH1 and SA1 packages; no install
   modes, distance presets, filter labels, card titles - product vocabulary, not mechanical translation); decide
   the help-key naming tightening (it changes shipped bytes and forces a re-test).
 - [ ] **Further VoicePack author fixtures:** escape-hatch and author-side coverage remain deferred.
-  The checkpoint ships neutral Ratkin final-fallback data with Core audio references; PRE1 uses a separate
-  work-copy fixture and its human acceptance is owned by NOW, not an absent-content design decision.
+  The checkpoint ships neutral Ratkin final-fallback data with Core audio references; PRE1 used a separate
+  work-copy fixture. A/B effectiveness is already accepted; do not reopen that as an absent-content decision.
 - [ ] **Diagnostics follow-ups beyond DX1:** re-price author-name dropdown overflow only on a current
   reproduction. Collapsed/expanded/empty geometry and compact navigation are implemented in DX1 and
   await the whole-checkpoint human task.
@@ -134,15 +135,11 @@ The new candidate is separate from the retained BH1 and SA1 packages; no install
 
 ## In-game acceptance — still open (maintainer steps)
 
-- [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): open/close Help at the
-  actual supported resolution; 736/480 page widths are harness probes, not forced game-resolution
-  instructions. **BH1 changed what this observes**: the window has ONE width per screen (2560x1440 opens
-  1280x960, 4:3) and stays centred and on screen while help opens and closes - the panel is a 140px band
-  above the footer, so nothing widens, shifts or replaces the settings. Observe: the footer switch executing
-  on a real click, the panel scrolling on its own while the settings keep their place, the status text and
-  the switch readable on one row in both languages, nav card compactness, the Playback help entries, the mood
-  cards' readability, and a session save/reopen. The old side-column/drawer wording is retired: the only
-  remaining shape question is what the player sees in game.
+- [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): remaining unaccepted
+  observations at a supported resolution, without repeating the accepted BH1 help-open geometry. 736/480
+  page widths are harness probes, not forced game-resolution instructions. BH1 already established one
+  width per screen and an independent 140px help band; observe regressions only. Still open from earlier
+  rounds: nav card compactness, Playback help entries, mood-card readability, and a session save/reopen.
 - [ ] **`ui.text.overflow` and tab-switch smoke** (F-05/F-07) as part of the ONE collected pass above.
 - [ ] **Early-round remnants still unverified**: Packs/Presets linkage, Distance chart hover+drag, Tuning
   cross-session file round-trip, the Chinese help tone skim, and the composite-dropdown check (picking Auto
