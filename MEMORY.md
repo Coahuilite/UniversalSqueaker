@@ -71,7 +71,11 @@
   and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
   the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
-  hashes) and never writes the carrier's canonical `bin/stubs`. FL-owned backlog (task-11, FL-17, FL-18/B6,
+  hashes) and never writes the carrier's canonical `bin/stubs`. The hazard was REALIZED, not theoretical: the
+  pre-isolation nested build drifted the four canonical stub outputs during the consumer window (directory
+  mtimes prove the write time; FL owner restored byte-equality per `fl/post-consumer-restoration.md`). For
+  ignored artifacts the proof channel is hash+size+mtime (and the DIRECTORY mtime for replacement time) -
+  `git status` says nothing about them. FL-owned backlog (task-11, FL-17, FL-18/B6,
   FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
