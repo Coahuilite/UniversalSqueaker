@@ -200,10 +200,12 @@ internal static class UsKernelContractInvariantTests
         {
             "set-tab", "scroll-to", "set-tuning-layer", "set-tuning-domain", "select-domain",
             "set-domain-filter", "set-pack-filter", "race-filter", "xenotype-filter", "pack-filter", "search-text",
-            // D4: the two domain cards' own searches narrow their row sets too - layout-affecting.
-            "race-search-text", "xenotype-search-text",
+            // US-PACK1: the per-list searches retired with the browse cards; the card gesture and the
+            // result-layer return are the new layout-affecting writes (toggle-pack left with the checklist
+            // list - the card row's switch is the item-scoped enabled VALUE instead).
+            "toggle-pack-card", "cancel-pack-results",
             "toggle-baseline-preset", "toggle-baseline-race", "toggle-baseline-xenotype",
-            "import-baseline", "toggle-pack", "forget-unavailable"
+            "import-baseline", "forget-unavailable"
         };
         foreach (string key in layoutAffectingKeys)
         {
@@ -239,8 +241,11 @@ internal static class UsKernelContractInvariantTests
         // the funnel" is asserted by VerifyWriteBindingsGoThroughTheRegistry instead.
         Assert(host.Contains("Action<string>(\"set-pack-filter\"") && host.Contains("source.SetPackFilter(value); bump();"),
             "FilterBar reset action exists and invalidates layout");
-        Assert(host.Contains("Action<UsPackToggle>") && host.Contains("toggle.Enabled); bump();"),
-            "VoicePack toggles invalidate filtered dynamic layout");
+        // US-PACK1: the checklist's page-level "toggle-pack" ACTION retired with the list; the card row's
+        // switch is an item-scoped VALUE whose write resolves the (pack, domain) identity and bumps.
+        Assert(host.Contains("ItemValue<bool>(") && host.Contains("source.ToggleVoicePack(row.Value.Scope")
+                && host.Contains("ToggleRow(key, value)"),
+            "VoicePack card rows toggle the filtered dynamic layout through the item-scoped enabled value");
 
         string sourceInterface = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "IUsKernelSettingsSource.cs"));

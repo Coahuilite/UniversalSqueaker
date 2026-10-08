@@ -197,10 +197,9 @@
   <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
   <US.Section.DistanceAttenuation>听取距离</US.Section.DistanceAttenuation>
-  <US.Section.FilterDomains>1. 筛选音域</US.Section.FilterDomains>
-  <US.Section.RaceDomain>2. 选择种族域</US.Section.RaceDomain>
-  <US.Section.XenotypeDomain>2. 或选择异种域</US.Section.XenotypeDomain>
-  <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
+  <US.Section.FilterDomains>1. 筛选语音包</US.Section.FilterDomains>
+  <US.Section.PackResults>2. 语音包卡片</US.Section.PackResults>
+  <US.Section.ChooseVoicePacks>语音包域状态</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
   <US.Section.TriggerTiming>触发节奏</US.Section.TriggerTiming>
@@ -239,24 +238,20 @@
   <US.Packs.Filter.Race>种族</US.Packs.Filter.Race>
   <US.Packs.Filter.Xenotype>异种</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
-  <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
   <US.Packs.Domain.NameWithState>{0} {1}</US.Packs.Domain.NameWithState>
-  <US.Packs.Domain.State.Orphan>已失效</US.Packs.Domain.State.Orphan>
-  <US.Packs.Domain.State.TargetUnavailable>目标未加载</US.Packs.Domain.State.TargetUnavailable>
-  <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
-  <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
   <US.Packs.Checklist.DormantBanner>Biotech 未启用；该异种域处于休眠。</US.Packs.Checklist.DormantBanner>
   <US.Packs.Checklist.TargetUnavailableBanner>选中的异种目标未加载。相关选择已保留，便于恢复。</US.Packs.Checklist.TargetUnavailableBanner>
   <US.Packs.Checklist.ConflictBanner>多个异种 Def 共用该目标；解决前路由保持关闭。</US.Packs.Checklist.ConflictBanner>
-  <US.Packs.Checklist.EmptyDomain>该域未安装任何语音包。</US.Packs.Checklist.EmptyDomain>
-  <US.Packs.Checklist.EmptySearch>没有语音包匹配当前搜索。</US.Packs.Checklist.EmptySearch>
   <US.Packs.Checklist.OrphanBanner>已选包键不再存在。请使用“清除失效”清理。</US.Packs.Checklist.OrphanBanner>
   <US.Packs.Checklist.ForgetUnavailable>清除失效</US.Packs.Checklist.ForgetUnavailable>
   <US.Packs.Checklist.SearchPlaceholder>搜索语音包…</US.Packs.Checklist.SearchPlaceholder>
-  <US.Packs.Domain.Clear>清除筛选</US.Packs.Domain.Clear>
-  <US.Packs.Domain.SearchPlaceholder>搜索本列表…</US.Packs.Domain.SearchPlaceholder>
-  <US.Packs.Domain.EmptySearch>没有符合当前筛选的条目。</US.Packs.Domain.EmptySearch>
+  <US.Packs.Filter.Keyword>关键词</US.Packs.Filter.Keyword>
+  <US.Packs.Filter.SummaryCondition>{0}：{1}</US.Packs.Filter.SummaryCondition>
+  <US.Packs.Filter.SummaryCount>{0} 张卡片</US.Packs.Filter.SummaryCount>
+  <US.Packs.Card.Contents>内容</US.Packs.Card.Contents>
+  <US.Packs.Results.Empty>没有符合当前筛选的语音包。</US.Packs.Results.Empty>
+  <US.Packs.Results.None>未安装任何语音包。请安装声明 raceDefName 的语音包。</US.Packs.Results.None>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
@@ -401,23 +396,25 @@
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选（含两张域卡自己的搜索）。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>语音包工作区的一组可组合条件，全部作用于下方的唯一卡片结果：关键词匹配包显示名、内部名、Mod、作者及其提供的种族/异种域名；仅已启用留下该域已启用此包的行；仅冲突留下冲突、休眠、目标未加载或已失效域的行；仅已失效只看含失效选择域的行；作者、种族、异种下拉收窄同一批行；“全部”一次清空所有条件。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Keyword.Label>关键词</US.Help.FilterBar.Keyword.Label>
+  <US.Help.FilterBar.Keyword.Text>忽略大小写的连续子串，命中包显示名、defName、Mod、作者、包键，也命中包所提供的域名。关键词命中异种名时，提供该异种的卡片自动展开；清空关键词后恢复的是你自己展开的状态。</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
-  <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
-  <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
-  <US.Help.FilterBar.RaceXeno.Text>种族与异种下拉现位于第 2 步各自卡片的头部，只收窄本卡列表；选定种族后，异种选项自动收窄到该种族的域，浏览某一行种族时右卡也只显示该种族的异种（含无种族归属项）。下拉显示各自的已翻译名称。</US.Help.FilterBar.RaceXeno.Text>
-  <US.Help.FilterBar.Author.Text>按作者过滤语音包行；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
-  <US.Help.RaceLayer.Overview>按种族列出语音包域，每行显示"已启用 / 候选"数量与状态角标；选中一行即把下方包清单切到该域，并让右侧异种卡跟随收窄。卡头含本卡的下拉、搜索框（显示名与内部名都可搜）与"清除"；列表区约 4.5 行高，超出滚动。</US.Help.RaceLayer.Overview>
-  <US.Help.RaceLayer.Row.Label>种族行</US.Help.RaceLayer.Row.Label>
-  <US.Help.RaceLayer.Row.Text>点击种族行选中该种族域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.RaceLayer.Row.Text>
-  <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。浏览种族域时本卡只列该种族的异种（含无种族归属项）。卡头含本卡的下拉、搜索框与"清除"；列表区约 4.5 行高，超出滚动。</US.Help.XenotypeLayer.Overview>
-  <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
-  <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
-  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标未加载、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
-  <US.Help.Checklist.Search.Label>搜索框</US.Help.Checklist.Search.Label>
-  <US.Help.Checklist.Search.Text>对可见行做忽略大小写的子串过滤，命中范围：包名、defName、Mod 名、作者与包键。</US.Help.Checklist.Search.Text>
-  <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
-  <US.Help.Checklist.Row.Text>行内显示包名、Mod 与作者行以及动作覆盖数；点击整行即启用或停用该语音包。</US.Help.Checklist.Row.Text>
+  <US.Help.FilterBar.Domain.Text>仅已启用、仅冲突、仅已失效各自收窄卡片内的域行，可自由叠加；“全部”清除包括关键词在内的一切条件。</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.Author.Text>按作者过滤卡片；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
+  <US.Help.FilterBar.Race.Text>把域行收窄到一个种族：该种族自身的域与它的异种域留下，其余退出；异种下拉的选项随之收窄。下拉显示已翻译名称。</US.Help.FilterBar.Race.Text>
+  <US.Help.FilterBar.Xenotype.Text>把域行收窄到一个异种域；设定期间种族域退出列表。下拉显示已翻译名称。</US.Help.FilterBar.Xenotype.Text>
+  <US.Help.FilterBar.Summary.Label>条件回显</US.Help.FilterBar.Summary.Label>
+  <US.Help.FilterBar.Summary.Text>逐一列出当前生效的条件并统计留下的卡片数。它只读，且永远与控件一致。</US.Help.FilterBar.Summary.Text>
+  <US.Help.PackCards.Overview>本页唯一结果区：每个语音包一张卡片，列出它提供的种族与异种域行；每行有各自的启用开关——同一个包可以在一个域启用、在另一个域停用。</US.Help.PackCards.Overview>
+  <US.Help.PackCards.Card.Label>语音包卡片</US.Help.PackCards.Card.Label>
+  <US.Help.PackCards.Card.Text>卡头显示包的显示名、内部 defName、Mod 与作者行以及动作覆盖数。</US.Help.PackCards.Card.Text>
+  <US.Help.PackCards.Expand.Text>展开或收起本卡的域行。你手动展开的状态正是清空关键词后恢复的内容；关键词代开的卡片随关键词一起关闭。按 Esc 一次收起你打开的卡片——筛选与启用状态保持不变。</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Row.Label>域行</US.Help.PackCards.Row.Label>
+  <US.Help.PackCards.Row.Text>点击一行即把该域设为操作域——上方的状态横幅以它为对象——高亮行标示当前是哪一个。</US.Help.PackCards.Row.Text>
+  <US.Help.PackCards.Enable.Label>启用开关</US.Help.PackCards.Enable.Label>
+  <US.Help.PackCards.Enable.Text>只对本行的域启用或停用这个包。同一包的两行是两个独立的选择；筛选与展开从不写入它们。</US.Help.PackCards.Enable.Text>
+  <US.Help.Checklist.Overview>操作域的状态横幅：休眠、目标未加载与冲突提示，以及带“清除失效”按钮的失效选择横幅。</US.Help.Checklist.Overview>
   <US.Help.Checklist.Forget.Text>一次性移除本域中包键不再安装的已存选择；该按钮只随失效横幅出现，作用域限于当前域。</US.Help.Checklist.Forget.Text>
   <US.Diagnostics.Section.Verdict>结论</US.Diagnostics.Section.Verdict>
   <US.Diagnostics.Section.Raw>原始值</US.Diagnostics.Section.Raw>

@@ -90,63 +90,98 @@ internal static class CancelLayerLaneTests
         fake.RevisionSource = () => host.Session.ContentRevision;
         host.Bindings.Invoke("set-tab", "Packs");
         ArrangeAndDraw(host);
-        host.Bindings.Set("help-open", true);   // the layer BELOW the packs return, for the climb to find next
+        host.Bindings.Set("help-open", true);   // the layer BELOW the result, for the climb to find last
         ArrangeAndDraw(host);
 
-        // The state the return must NOT touch (§4.1: filters stay).
-        host.Bindings.Set("race-search-text", "hum");
+        // US-PACK1 (§4.1 real chain): the composed filter narrows the result to exactly the us.sang
+        // card with its enabled xenotype row (the chip drops the disabled race row and the second
+        // pack); the author condition is the second filter that must survive every return.
         host.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, true));
+        host.Bindings.Set("pack-filter", "AuthorA");
         ArrangeAndDraw(host);
+        Assert(fake.BuildView().PackCards.Count == 1
+                && fake.BuildView().PackCards[0].Key == "us.sang",
+            "setup: the author condition leaves exactly the us.sang card (the chip's write is asserted "
+            + "at the boundary below; the fake's projection mirrors the author filter, not the chip)");
 
-        Assert(host.Session.SetCancelTarget("checklist-card"),
-            "the packs enable card must be materialised as the walk's subject");
-        UiNode? subject = host.Session.CancelTargetNode;
-        Assert(subject != null && string.Equals(subject.CancelBindingKey, "cancel-domain-selection", StringComparison.Ordinal),
-            "the manifest's CancelBind on checklist-card must be published on the node (the word only works "
-            + "when the engine reads it), got '" + (subject?.CancelBindingKey ?? "null") + "'");
+        // The card opens through the SAME funnel write the header button invokes - the item-scoped
+        // toggle-pack-card action - and the manual set is what the result layer later collapses.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        ArrangeAndDraw(host);
+        Assert(fake.ViewState.PackCardsExpanded.Contains("us.sang"), "setup: the manual expansion recorded");
+        Assert(!fake.BuildView().PackCards[0].AutoExpanded,
+            "no keyword is up, so the open card is the player's own - not the query's");
+
+        // The subject is established by a press on the domain row's hit through the carrier's hit seam
+        // (the declarative row control is pressed the way the retired DeclarativePacks lane pressed its
+        // rows: the seam answers true for exactly that node, the engine records the subject and fires
+        // the item action). The domain CancelBind lives on the page-level Repeat above the rows - a
+        // Cancel inside a template is item-qualified and could not name the page command - so the walk
+        // climbs from this subject to it, which is what press 1 below proves by answering.
+        Rect viewport = new(0f, 0f, PageWidth, PageHeight);
+        string hitId = "pack-card-row-hit#us.sang|human|sanguophage";
+        int fired = Program.PressDeclarativeButton(host, viewport, hitId);
+        Assert(fired == 1, "the domain row's hit must answer exactly one press, got " + fired);
+        UiNode? subject = host.Session.LastInteractionNode;
+        Assert(subject != null && string.Equals(subject.ElementId, hitId, StringComparison.Ordinal),
+            "the press must record the row's own hit node as the walk's subject, got '"
+            + (subject?.ElementId ?? "null") + "'");
 
         (bool answered, Event first) = PressEscape(host);
         Assert(answered && first.type == EventType.Used,
-            "press 1 answers the packs return layer and the shell consumes the key");
-        Assert(fake.ViewState.DomainSelectionCanceled,
-            "press 1 exits the operation domain into the explicit cancelled state");
-        Assert(fake.BuildView().SelectedDomain == null,
-            "the cancelled projection answers NO domain - it must not re-pick the first row");
-        Assert(fake.ViewState.HelpPanelOpen,
-            "one press, ONE layer: the help layer below stays open while the return was answered");
-        Assert(string.Equals(fake.ViewState.RaceSearchText, "hum", StringComparison.Ordinal)
+            "press 1 answers the DOMAIN layer and the shell consumes the key");
+        Assert(fake.ViewState.DomainSelectionCanceled && fake.BuildView().SelectedDomain == null,
+            "press 1 exits the operation domain into the explicit cancelled state - no re-pick");
+        Assert(fake.ViewState.HelpPanelOpen && fake.ViewState.PackCardsExpanded.Contains("us.sang")
+                && fake.BuildView().PackCards.Count == 1 && fake.BuildView().PackCards[0].Expanded,
+            "one press, ONE layer: the card stays open and the help stays up (§4.1 退出选择不关闭包)");
+        Assert(fake.ViewState.RaceFilter.Length == 0
+                && string.Equals(fake.ViewState.PackFilter.Author, "AuthorA", StringComparison.Ordinal)
                 && fake.LastDomainFilterKind == SqueakDomainFilterKind.EnabledOnly && fake.LastDomainFilterFlag == true,
-            "the filter conditions survive the return (§4.1) - the domain search still reads 'hum' and the "
-            + "Enabled chip write recorded before the presses is unchanged; the return touched neither");
+            "the filter conditions survive the return (§4.1) - the author and the Enabled chip are exactly "
+            + "what they were before the presses; the return touched neither");
 
         (bool answered2, Event second) = PressEscape(host);
-        Assert(answered2 && second.type == EventType.Used && !fake.ViewState.HelpPanelOpen,
-            "press 2 climbs to the page-root help layer and closes the panel");
-        Assert(!fake.ViewState.DomainSelectionCanceled
-                || fake.BuildView().SelectedDomain == null,
-            "closing help must not silently re-select anything either");
+        Assert(answered2 && second.type == EventType.Used
+                && fake.ViewState.PackCardsExpanded.Count == 0
+                && fake.BuildView().PackCards.Count == 1 && !fake.BuildView().PackCards[0].Expanded,
+            "press 2: the domain layer declines (already cancelled) and the climb answers at the RESULT "
+            + "layer - the manually opened cards collapse, the card itself stays in the result, the "
+            + "filters stay, the help stays");
+        Assert(fake.ViewState.HelpPanelOpen && fake.BuildView().PackCards.Count == 1,
+            "the collapse touched neither the help layer below nor the surviving-card set");
 
         (bool answered3, Event third) = PressEscape(host);
-        Assert(!answered3 && third.type != EventType.Used,
-            "press 3: every declared layer declined, so nothing consumed the key - the settings main layer "
-            + "keeps Verse's meaning of Escape (only the root closes), which is the next press's job");
+        Assert(answered3 && third.type == EventType.Used && !fake.ViewState.HelpPanelOpen,
+            "press 3 climbs to the page-root help layer and closes the panel");
+
+        (bool answered4, Event fourth) = PressEscape(host);
+        Assert(!answered4 && fourth.type != EventType.Used,
+            "press 4: every declared layer declined, so nothing consumed the key - only the root closes, "
+            + "and that is Verse's job on this press");
     }
 
     private static void ReSelectAndWorkspaceSwitchRebuildTheBranch()
     {
         BuildPacksView(out RecordingSettingsSource fake);
         using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
-        fake.RevisionSource = () => host.Session.ContentRevision;
         host.Bindings.Invoke("set-tab", "Packs");
-        ArrangeAndDraw(host);
-
         string raceRowKey = fake.BuildView().Races[0].RaceDefName;
         Assert(fake.BuildView().SelectedDomain.HasValue,
             "first entry keeps the accepted initial default (the projection may auto-select)");
 
-        host.Session.SetCancelTarget("checklist-card");
+        // The subject is the domain row's hit element - it exists once a card is open. The domain
+        // CancelBind lives on the page-level Repeat above the rows, so the walk climbs from this
+        // subject to it (the sibling lane presses the same node through the seam).
+        ArrangeAndDraw(host);   // materialises the headers, which registers their toggle-pack-card
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        ArrangeAndDraw(host);
+        Assert(host.Session.SetCancelTarget("pack-card-row-hit#us.sang|human|sanguophage"),
+            "the materialised domain row must be a walkable subject");
         (bool answered, _) = PressEscape(host);
         Assert(answered && fake.ViewState.DomainSelectionCanceled, "setup: the return was taken");
+        Assert(fake.ViewState.PackCardsExpanded.Contains("us.sang"),
+            "the domain return left the manual expansion alone (each layer owns its own state)");
 
         host.Bindings.Invoke("select-domain", raceRowKey);
         Assert(!fake.ViewState.DomainSelectionCanceled,
@@ -154,9 +189,10 @@ internal static class CancelLayerLaneTests
         Assert(fake.BuildView().SelectedDomain.HasValue,
             "after re-selection the card shows the chosen domain");
 
-        host.Session.SetCancelTarget("checklist-card");
         PressEscape(host);
         Assert(fake.ViewState.DomainSelectionCanceled, "setup: cancelled again");
+        PressEscape(host);
+        Assert(fake.ViewState.PackCardsExpanded.Count == 0, "setup: the result layer collapsed too");
 
         host.Bindings.Invoke("set-tab", "Tuning");
         Assert(!fake.ViewState.DomainSelectionCanceled && !fake.ViewState.FallbackTableCanceled,
@@ -165,6 +201,9 @@ internal static class CancelLayerLaneTests
         host.Bindings.Invoke("set-tab", "Packs");
         Assert(fake.BuildView().SelectedDomain.HasValue,
             "the rebuilt branch auto-selects once more (cancel was this branch's, not the page's)");
+        Assert(fake.ViewState.PackCardsExpanded.Count == 0,
+            "and the collapse is NOT silently re-opened by the rebuild - expansion is only ever the "
+            + "player's own gesture or the query's");
     }
 
     private static void TuningLadderIsScopedToTheVisibleBranch()
@@ -269,8 +308,9 @@ internal static class CancelLayerLaneTests
         host.Bindings.Invoke("set-tab", "Packs");
         ArrangeAndDraw(host);
 
-        Assert(host.Session.SetCancelTarget("checklist-card") && host.Session.CancelTargetNode != null,
-            "setup: the explicit target is held while its branch is on the page");
+        Assert(host.Session.SetCancelTarget("packs-results") && host.Session.CancelTargetNode != null,
+            "setup: the explicit target - the packs RESULT Section, the node carrying cancel-pack-results -"
+            + " is held while its branch is on the page");
         host.Bindings.Invoke("set-tab", "Tuning");
         ArrangeAndDraw(host);   // the pass boundary reconciles the interaction records
         Assert(host.Session.CancelTargetNode == null && host.Session.LastInteractionNode == null,

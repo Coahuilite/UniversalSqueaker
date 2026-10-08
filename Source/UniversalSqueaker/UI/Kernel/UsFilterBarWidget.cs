@@ -12,10 +12,12 @@ namespace UniversalSqueaker.UI;
 /// Kernel-owned US filter bar: row 1 = All/Enabled/Conflicts/Orphan-only segment chips writing the
 /// typed "set-domain-filter" action; row 2 = the Author dropdown (nested kernel dropdown over the
 /// typed author-options list) writing the "pack-filter" VALUE binding (the "set-pack-filter" action
-/// is the older one-shot command and is not what this dropdown calls). Since D4 (2026-10-07) the
-/// Race and Xenotype dropdowns live in the header of the card they filter (domain-row in the
-/// manifest); this bar still READS "race-filter"/"xenotype-filter" because the "All" chip's active
-/// state is the honest answer over every narrowing the page knows, wherever its control sits.
+/// is the older one-shot command and is not what this dropdown calls). Since US-PACK1 (2026-10-09) the
+/// race/xenotype dropdowns are declarative siblings of the SAME packs-filter Section (the browse cards
+/// they used to sit on retired with the card redesign), and the unified keyword field is that region's
+/// first row; this bar still READS "race-filter"/"xenotype-filter"/"search-text" because the "All"
+/// chip's active state is the honest answer over every narrowing the page knows, wherever its control
+/// sits - and pressing All remains the region's single reset gesture.
 /// </summary>
 public sealed class UsFilterBarWidget : UsSectionWidgetBase
 {

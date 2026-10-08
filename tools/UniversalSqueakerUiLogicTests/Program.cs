@@ -254,7 +254,7 @@ internal static class Program
         {
             "us/page-title", "us/mode-row", "us/global-volume", "us/attenuation-editor",
             "us/basic-tuning", "us/timing", "us/camera-indicator", "us/diagnostics",
-            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
+            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/pack-cards", "us/voice-pack-checklist"
         };
         foreach (string key in sectionKeys)
         {
@@ -300,9 +300,10 @@ internal static class Program
         // R3-B adds four: the diagnosis status line and its capture, outline
         // and report controls (47 -> 51). The section overview is not an item. Each is claimed by a manifest
         // HelpKey, which the bidirectional gate below checks in both directions.
-        // D4 replaces the joint race/xenotype filter with each card's existing layer help key;
-        // the retired joint-filter item is no longer claimed by a control (51 -> 50).
-        Assert(itemCount == 50, "catalog item count matches the shipped wiring table (50 items after D4 retires the joint race/xenotype filter): " + itemCount);
+        // US-PACK1 re-cuts the Packs block: the two browse-layer sections retire (their row items leave),
+        // the checklist keeps only its forget entry, the filter region gains keyword/race/xenotype/summary
+        // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).
+        Assert(itemCount == 54, "catalog item count matches the shipped wiring table (54 items after US-PACK1's card re-cut): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

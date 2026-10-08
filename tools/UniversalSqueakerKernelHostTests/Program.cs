@@ -197,7 +197,7 @@ internal static class Program
                 && SqueakActionDefinitions.IsEligible(SqueakAction.MentalBreak, false), "baby gate leaves true breaks alone");
         });
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
-        Step("the two dissolved Packs layer composites report their own keys (S4-2)", () => DeclarativePacksLaneTests.RunAll());
+        Step("the pack-card result: projection, identities, channels and empties (US-PACK1)", () => PackCardsLaneTests.RunAll());
         Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
         Step("the dissolved distance attenuation composite is declarative and retired (S4-3b)", () => DeclarativeAttenuationLaneTests.RunAll());
         Step("the dissolved diagnostics composite is declarative and retired (T3-2)", () => DeclarativeDiagnosticsLaneTests.RunAll());
@@ -227,7 +227,7 @@ internal static class Program
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
-        Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
+        Step("wrapping Packs domain text grows the card row that shows it", WrappingDomainTextGrowsTheCardRow);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("a scope option commits its typed value, never its label (R4-A)", TypedScopeChoiceCommitsTheValue);
         Step("long author filter truncates the display and writes the raw token", LongAuthorFilterTruncatesTheDisplayOnly);
@@ -251,11 +251,9 @@ internal static class Program
         Step("width + language layout evidence sweep (1024/736/480/320, EN/ZH)", WidthAndLanguageEvidenceSweep);
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
-        Step("checklist filtered item keys do not lie (step B-1)", () => ChecklistItemsLaneTests.RunAll());
         Step("per-host audit routing and ruler isolation (FL-20)", () => UsAuditRoutingLaneTests.RunAll());
         Step("page frame geometry guard (5 viewports x EN/ZH x help open x workspace)", () => FrameGeometryLaneTests.RunAll());
         Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
-        Step("V2 Packs hierarchy, order and browse-vs-enable", () => PacksHierarchyLaneTests.RunAll());
         Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
         Step("RPT1 report button feedback: real reason, generated pass, real page boxes",
             () => ReportFeedbackLaneTests.RunAll());
@@ -971,7 +969,7 @@ internal static class Program
             new Rect(0f, 0f, 1129f, 600f),
             new Rect(0f, 0f, 1280f, 720f),
         };
-        string[] ids = { "filter-bar", "race-layer", "xenotype-layer", "checklist", "footer" };
+        string[] ids = { "filter-bar", "packs-filter", "packs-results", "checklist", "footer" };
 
         foreach (Rect viewport in viewports)
         {
@@ -1154,10 +1152,10 @@ internal static class Program
     /// rebuilds instead of hitting the cache.
     ///
     /// The key set is NOT a list in this file any more. The host records every write registration in
-    /// UsWriteBindings, and this lane enumerates that registry. Measured 2026-09-24, with units: 45
-    /// registration CALL SITES resolve to 43 distinct literal keys + 3 item-scoped templates = 46 distinct
-    /// REGISTRY KEYS, which is why the probe table below has 46 entries and not 45 (it is keyed by registry
-    /// key, and the LayerRowBindings site serves two row families). The probe table below is
+    /// UsWriteBindings, and this lane enumerates that registry. US-PACK1 re-cut the count: the page-level
+    /// toggle-pack, the two per-list searches and the two per-card Clears retired with the browse/checklist
+    /// lists, and cancel-pack-results joined the literals; the three item-scoped families are now the card's
+    /// toggle/enabled/select trio (measured on this tree: 42 distinct registry keys). The probe table below is
     /// asserted EQUAL to the registry IN BOTH DIRECTIONS, so a new write binding with no probe, and a probe
     /// for a key the host no longer registers, both fail here BY NAME instead of silently shrinking
     /// coverage - which is the state the hand-list was in (it covered 21 of the 45 sites).
@@ -1195,6 +1193,12 @@ internal static class Program
         Rect packsViewport = new(0f, 0f, 1280f, 720f);
         host.MeasureAndArrange(new Vector2(packsViewport.width, packsViewport.height));
         host.DrawChecked(packsViewport);
+        // US-PACK1: a collapsed card materialises NO row - the domain hit and its switch exist only
+        // once the card is open, exactly like a player's gesture. The funnel write that opens it is
+        // itself one of the three item-scoped families, so the probe table's own setup registers it.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        host.MeasureAndArrange(new Vector2(packsViewport.width, packsViewport.height));
+        host.DrawChecked(packsViewport);
         int itemScoped = 0;
         foreach (UsWriteBinding entry in writes.Bound)
         {
@@ -1202,9 +1206,9 @@ internal static class Program
         }
 
         Assert(itemScoped == 3,
-            "arranging the Packs workspace must register the three item-scoped write families "
-            + "(race-rows.<item>.select-domain, xenotype-rows.<item>.select-domain, "
-            + "checklist-pack-keys.<item>.enabled), got " + itemScoped
+            "arranging the expanded card must register the three item-scoped write families "
+            + "(pack-card-keys.<item>.toggle-pack-card, pack-card-keys.<item>.enabled, "
+            + "pack-card-keys.<item>.select-domain), got " + itemScoped
             + " - the registry is the instrument this lane reads");
 
         // Concrete item keys come from the LIVE view, never from a literal list in the lane: a literal would
@@ -1212,8 +1216,9 @@ internal static class Program
         var rich = fake.BuildView();
         string raceRowKey = rich.Races[0].RaceDefName;
         var xenotypeRow = rich.XenotypeDomains[0];
-        string xenotypeRowKey = xenotypeRow.RaceDefName + "|" + xenotypeRow.TargetDefName;
-        string packRowKey = rich.SelectedDomain!.Value.Packs[0].Key;
+        PackCardView sangCard = rich.PackCards[0];
+        string cardKey = sangCard.Key;
+        string cardRowKey = sangCard.Rows[0].RowKey(sangCard.Key);
 
         var probes = new Dictionary<string, Action>(StringComparer.Ordinal)
         {
@@ -1260,7 +1265,6 @@ internal static class Program
             { "toggle-baseline-xenotype", () => host.Bindings.Invoke("toggle-baseline-xenotype", new UsBaselineXenoToggle("us.preset1", "human", "sanguophage", true)) },
             { "import-baseline", () => host.Bindings.Invoke("import-baseline", "us.preset1") },
             { "select-domain", () => host.Bindings.Invoke("select-domain", raceRowKey) },
-            { "toggle-pack", () => host.Bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Xenotype, xenotypeRow.RaceDefName, xenotypeRow.TargetDefName, packRowKey, false)) },
             { "forget-unavailable", () => host.Bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, xenotypeRow.RaceDefName, xenotypeRow.TargetDefName)) },
             { "race-filter", () => host.Bindings.Set("race-filter", "sanguophage") },
             { "xenotype-filter", () => host.Bindings.Set("xenotype-filter", "sanguophage") },
@@ -1271,9 +1275,9 @@ internal static class Program
             { "set-domain-filter", () => host.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, true)) },
             { "help-open", () => host.Bindings.Set("help-open", true) },
             { "toggle-help-drawer", () => host.Bindings.Invoke("toggle-help-drawer") },
-            { UsWriteBindings.ItemTemplate("race-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("race-rows", raceRowKey, "select-domain"), raceRowKey) },
-            { UsWriteBindings.ItemTemplate("xenotype-rows", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("xenotype-rows", xenotypeRowKey, "select-domain"), xenotypeRowKey) },
-            { UsWriteBindings.ItemTemplate("checklist-pack-keys", "enabled"), () => host.Bindings.Set(UsWriteBindings.ItemKey("checklist-pack-keys", packRowKey, "enabled"), true) },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "toggle-pack-card"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", cardKey, "toggle-pack-card"), cardKey) },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "enabled"), () => host.Bindings.Set(UsWriteBindings.ItemKey("pack-card-keys", cardRowKey, "enabled"), false) },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", cardRowKey, "select-domain"), "human|sanguophage") },
             // DT1: opening the panel changes the band button's SelectedKey - a display write.
             { "open-dev-panel", () => host.Bindings.Invoke("open-dev-panel") },
             // VF1 three-area tuning: the area switch, the selected action, the multiplier chain and
@@ -1291,18 +1295,16 @@ internal static class Program
             { "create-fallback-table", () => host.Bindings.Invoke("create-fallback-table", "RaceZ") },
             { "restore-fallback-default", () => host.Bindings.Invoke("restore-fallback-default") },
             { "delete-fallback-table", () => host.Bindings.Invoke("delete-fallback-table", "RaceZ") },
-            // D4 per-card domain controls.
-            { "clear-race-domain", () => host.Bindings.Invoke("clear-race-domain") },
-            { "clear-xenotype-domain", () => host.Bindings.Invoke("clear-xenotype-domain") },
-            { "race-search-text", () => host.Bindings.Set("race-search-text", "hum") },
-            { "xenotype-search-text", () => host.Bindings.Set("xenotype-search-text", "san") },
-            // US-ESC1: the three tree cancel layers are display writes too - the card visibly follows
+            // US-PACK1: the D4 per-card Clear and the two domain-list searches retired WITH the browse
+            // cards - the unified keyword and the single All gesture replaced them.
+            // US-ESC1: the tree cancel layers are display writes too - the card visibly follows
             // the cancelled mark. The probes go through TryInvokeCommand - the SAME gated entry the
             // engine's tree walk uses - so the clock may only move when CanExecute actually allowed the
             // step; the CANCELLABLE state is pre-set directly on the fake's own page state (never
             // through a bumping write).
             { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
             { "cancel-domain-selection", () => { fake.ViewState.DomainSelectionCanceled = false; fake.ViewState.RaceFilter = ""; fake.ViewState.XenotypeFilter = ""; host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
+            { "cancel-pack-results", () => { fake.ViewState.PackCardsExpanded.Add(cardKey); host.Bindings.TryInvokeCommand("cancel-pack-results"); } },
             { "cancel-tuning-target", () => { fake.ViewState.TuningArea = 0; fake.ViewState.TuningSelectedAction = "Eat"; fake.ReprojectAtCurrentRevision(); host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
             { "cancel-tuning-context", () => { fake.ViewState.TuningContextActive = true; host.Bindings.TryInvokeCommand("cancel-tuning-context"); } },
         };
@@ -1389,6 +1391,46 @@ internal static class Program
         {
             Event.current = null;
         }
+    }
+
+    /// <summary>
+    /// US-PACK1: presses ONE declarative (engine-drawn) control through the carrier's own hit seam.
+    /// The ButtonOverride seam is armed so the ONE draw whose active node carries
+    /// <paramref name="elementId"/> answers true - the engine's real Button(rect, ctx) then records
+    /// the interaction subject (NoteInteractionTarget) and the control's own action/value write runs
+    /// through the real funnel. This is the press form the retired DeclarativePacks lane established
+    /// for template rows: a declarative control is drawn inside its row's own native group, so its
+    /// captured rect carries no window position a coordinate event could aim at; the node identity,
+    /// not a guessed point, names the pressed control. Returns how many times it answered.
+    /// </summary>
+    internal static int PressDeclarativeButton(UiHost host, Rect viewport, string elementId)
+    {
+        int fired = 0;
+        System.Reflection.FieldInfo? seam = typeof(UiNative).GetField("ButtonOverride",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic);
+        if (seam == null) throw new Exception("the carrier's ButtonOverride seam moved - the press must fail, not fake");
+        try
+        {
+            seam.SetValue(null, new Func<Rect, bool>(_ =>
+            {
+                UiNode node = host.Session.ActiveNode;
+                if (node != null && string.Equals(node.ElementId, elementId, StringComparison.Ordinal))
+                {
+                    fired++;
+                    return true;
+                }
+
+                return false;
+            }));
+            host.DrawChecked(new Rect(0f, 0f, viewport.width, viewport.height));
+        }
+        finally
+        {
+            seam.SetValue(null, null);
+        }
+
+        return fired;
     }
 
     /// <summary>
@@ -1608,13 +1650,16 @@ internal static class Program
                 + " workspace: " + id + " (" + tab + ")");
         }
 
-        // D4 moved the two layer cards' workspace gate up to their shared Row (the engine takes the
-        // whole subtree with a Tab-gated container). The ids survive, the gate survives, the shape is
-        // the side-by-side pair - assert exactly that.
-        Assert(xml.Contains("<Row Id=\"domain-row\" Tab=\"Packs\"")
-                && xml.Contains("<Section Id=\"race-layer\"")
-                && xml.Contains("<Section Id=\"xenotype-layer\""),
-            "the two layer cards stay declarative Section containers under the Packs-gated domain row");
+        // US-PACK1 replaced the side-by-side browse pair and the per-domain checklist card with ONE
+        // filter Section and ONE card-result Section, both Tab-gated on the Packs workspace. The ids
+        // the geometry/evidence lanes read are now these two; the cancel chain's two new levels are
+        // declared right on them (result) and on the page-level Repeat (domain - a Cancel declared
+        // INSIDE a template is item-qualified by the engine and could never name the page command).
+        Assert(xml.Contains("<Section Id=\"packs-filter\" Tab=\"Packs\"")
+                && xml.Contains("Id=\"packs-results\" Tab=\"Packs\" Padding=\"12\" Gap=\"6\" Scheme=\"us-flat-panel\" CancelBind=\"cancel-pack-results\"")
+                && xml.Contains("<Repeat Id=\"packs-card-rows\" Items=\"pack-card-keys\" Template=\"pack-card-row\" Padding=\"0\" Gap=\"2\" CancelBind=\"cancel-domain-selection\" />"),
+            "the Packs page is one filter region plus the declarative card result, with the domain return "
+            + "declared on the page-level Repeat and the result return on the Section");
 
         // A HelpKey may still NAME these strings (they are catalog section keys); what must be gone is
         // the KIND. Asking for Kind="..." is the difference between "the page still explains this
@@ -1811,8 +1856,10 @@ internal static class Program
         bindings.ValidateAction<UsBaselineXenoToggle>("toggle-baseline-xenotype", "test");
         // S4-2: the row's own key is the payload, so the action takes the string the button carries.
         bindings.ValidateAction<string>("select-domain", "test");
-        bindings.ValidateAction<UsPackToggle>("toggle-pack", "test");
-        bindings.ValidateAction<UsDomainIdentity>("forget-unavailable", "test");
+        // US-PACK1: the page-level "toggle-pack" ACTION retired with the checklist list - the card
+        // row's enable is the item-scoped VALUE (pack-card-keys.<row>.enabled), which exists only
+        // once the projection materialises rows and is therefore asserted through a real draw by
+        // PackCardsLaneTests, not against the creation-time table.
         bindings.ValidateAction<UiChartPointChange>("attenuation-point", "test");
 
         // Typed writes must reach the business boundary (the recording source) without any string
@@ -1836,12 +1883,9 @@ internal static class Program
             && fake.LastMoodValue == 1.25f,
             "set-mood-tuning typed action routes to the business surface");
 
-        bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Race, "human", "", "us.human", true));
-        Assert(fake.LastPackScope == SqueakVoicePackScope.Race
-            && fake.LastPackRace == "human"
-            && fake.LastPackKey == "us.human"
-            && fake.LastPackEnabled == true,
-            "toggle-pack typed action routes to the business surface");
+        // US-PACK1: the enable write's business-boundary routing is asserted where the key actually
+        // exists - on a materialised card row, in PackCardsLaneTests (the item-scoped enabled VALUE
+        // reaches source.ToggleVoicePack with the row's own (pack, domain) identity).
 
         bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
         Assert(fake.LastForgetScope == SqueakVoicePackScope.Xenotype && fake.LastForgetTarget == "sanguophage",
@@ -2234,15 +2278,15 @@ internal static class Program
         (string Tab, string[] Visible, string[] Hidden)[] tabs =
         {
             ("Overview", new[] { "mode-row", "global-volume", "basic-tuning", "camera-indicator" },
-                new[] { "attenuation-editor", "scope-tree", "preset-list", "filter-bar", "checklist" }),
+                new[] { "attenuation-editor", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
             ("Distance", new[] { "attenuation-editor" },
-                new[] { "mode-row", "scope-tree", "preset-list", "filter-bar", "checklist" }),
-            ("Packs", new[] { "filter-bar", "race-layer", "xenotype-layer", "checklist" },
+                new[] { "mode-row", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
+            ("Packs", new[] { "filter-bar", "packs-filter", "packs-results", "checklist" },
                 new[] { "mode-row", "attenuation-editor", "scope-tree", "preset-list" }),
             ("Tuning", new[] { "scope-tree" },
-                new[] { "mode-row", "attenuation-editor", "preset-list", "checklist" }),
+                new[] { "mode-row", "attenuation-editor", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
             ("Presets", new[] { "preset-list" },
-                new[] { "mode-row", "attenuation-editor", "scope-tree", "checklist" })
+                new[] { "mode-row", "attenuation-editor", "scope-tree", "filter-bar", "packs-filter", "packs-results", "checklist" })
         };
 
         foreach ((string tab, string[] visible, string[] hidden) in tabs)
@@ -2404,14 +2448,15 @@ internal static class Program
     }
 
     /// <summary>
-    /// Failure sensitivity for the Packs layer row heights. The bilingual fit sweep compares one label
-    /// against its own band, so it cannot see a row that is too short for the content stacked inside it —
-    /// exactly the bug that made the race and xenotype layers overdraw the sections below them. This step
-    /// drives the real Host twice, once with text that fits one line and once with text that cannot, and
-    /// requires both cards to grow. Under the old height formulas (title only, measured from the bare
-    /// xenotype name) the two arrangements come out identical and this fails.
+    /// Failure sensitivity for the pack-card row heights. The bilingual fit sweep compares one label
+    /// against its own band, so it cannot see a row that is too short for the content stacked inside it -
+    /// exactly the class of bug the retired browse cards once overdrove the sections below them with.
+    /// US-PACK1 re-founded the claim on the card: the domain row's composed title (xenotype name plus
+    /// race context through the SAME keyed template) must grow the row - and the result card around it -
+    /// when it cannot fit one line. Under a fixed row band the two arrangements come out identical and
+    /// this fails; a card that measures short while its row draws the grown band fails the audit half.
     /// </summary>
-    private static void WrappingDomainTextGrowsLayerRows()
+    private static void WrappingDomainTextGrowsTheCardRow()
     {
         var metrics = new StubMetrics();
         var reports = new List<UiOverflowReport>();
@@ -2419,23 +2464,20 @@ internal static class Program
         UiFitAudit.Enabled = true;
         try
         {
-            // The detail and title templates are Keyed: without a loaded table Translate returns the key
+            // The title templates are Keyed: without a loaded table Translate returns the key
             // itself, the numeric arguments are dropped and nothing is long enough to wrap, which would
             // make this step pass without measuring anything.
             SetTranslatorResolver(ReadKeyedTable("English"));
             var narrow = new Vector2(800f, 600f);
-            (float raceShort, float xenotypeShort) = LayerCardHeights(narrow, wrapping: false, metrics);
-            (float raceLong, float xenotypeLong) = LayerCardHeights(narrow, wrapping: true, metrics);
+            float shortHeight = PackCardResultHeight(narrow, wrapping: false, metrics);
+            float longHeight = PackCardResultHeight(narrow, wrapping: true, metrics);
 
-            Assert(raceShort > 0f && xenotypeShort > 0f, "the rich fixture must place both layer cards");
-            Assert(raceLong > raceShort + 10f,
-                "a race row title that cannot fit one line must grow the race-layer card: one-line "
-                + raceShort + "px, wrapping " + raceLong + "px");
-            Assert(xenotypeLong > xenotypeShort + 10f,
-                "a composed xenotype title that cannot fit one line must grow the xenotype-layer card: one-line "
-                + xenotypeShort + "px, wrapping " + xenotypeLong + "px");
+            Assert(shortHeight > 0f, "the rich fixture must place the card result");
+            Assert(longHeight > shortHeight + 10f,
+                "a composed domain title that cannot fit one line must grow the card that shows it: "
+                + "one-line " + shortHeight + "px, wrapping " + longHeight + "px");
             Assert(reports.Count == 0,
-                "wrapping layer text must be measured into its band, not clipped: " + Describe(reports));
+                "wrapping card text must be measured into its band, not clipped: " + Describe(reports));
         }
         finally
         {
@@ -2514,15 +2556,18 @@ internal static class Program
         return height;
     }
 
-    private static (float Race, float Xenotype) LayerCardHeights(Vector2 viewport, bool wrapping, StubMetrics metrics)
+    private static float PackCardResultHeight(Vector2 viewport, bool wrapping, StubMetrics metrics)
     {
         var fake = new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Packs");
-        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-        float Race = snapshot.RectById.TryGetValue("race-layer", out Rect raceRect) ? raceRect.height : 0f;
-        float Xenotype = snapshot.RectById.TryGetValue("xenotype-layer", out Rect xenoRect) ? xenoRect.height : 0f;
-        return (Race, Xenotype);
+        host.MeasureAndArrange(viewport);   // materialises the headers before the manual toggle
+        // The wrapped text lives on the DOMAIN ROW, so the card must be open to measure it.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        host.MeasureAndArrange(viewport);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+        host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+        return snapshot.RectById.TryGetValue("packs-results", out Rect cardRect) ? cardRect.height : 0f;
     }
 
     private static void CheckLanguageTable(
@@ -2735,8 +2780,8 @@ internal static class Program
         bindings.Invoke("select-domain", "testrace");
         Assert(fake.LastSelectedScope == SqueakVoicePackScope.Race && fake.LastSelectedRace == "testrace"
             && fake.LastSelectedTarget == "", "a bare row key decodes into a race selection");
-        bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Xenotype, "human", "sanguophage", "us.sang2", true));
-        Assert(fake.LastPackKey == "us.sang2" && fake.LastPackEnabled == true, "toggle-pack routes");
+        // US-PACK1: "toggle-pack" retired with the checklist list; the card row's enable is the
+        // item-scoped VALUE asserted through a real materialised row in PackCardsLaneTests.
         bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
         Assert(fake.LastForgetTarget == "sanguophage", "forget-unavailable routes");
         bindings.Invoke("toggle-baseline-preset", "us.preset1");

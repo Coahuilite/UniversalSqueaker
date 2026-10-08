@@ -345,6 +345,10 @@ internal static class UsHelpCatalog
             new[]
             {
                 new HelpItem(
+                    "us/filter-bar/keyword",
+                    "US.Help.FilterBar.Keyword.Label",
+                    "US.Help.FilterBar.Keyword.Text"),
+                new HelpItem(
                     "us/filter-bar/domain",
                     "US.Help.FilterBar.Domain.Label",
                     "US.Help.FilterBar.Domain.Text"),
@@ -352,28 +356,41 @@ internal static class UsHelpCatalog
                     "us/filter-bar/author",
                     "US.Packs.Filter.Author",
                     "US.Help.FilterBar.Author.Text"),
+                new HelpItem(
+                    "us/filter-bar/race",
+                    "US.Packs.Filter.Race",
+                    "US.Help.FilterBar.Race.Text"),
+                new HelpItem(
+                    "us/filter-bar/xenotype",
+                    "US.Packs.Filter.Xenotype",
+                    "US.Help.FilterBar.Xenotype.Text"),
+                new HelpItem(
+                    "us/filter-bar/summary",
+                    "US.Help.FilterBar.Summary.Label",
+                    "US.Help.FilterBar.Summary.Text"),
             }),
-        ["us/race-layer"] = new HelpSection(
-            "us/race-layer",
-            "US.Section.RaceDomain",
-            "US.Help.RaceLayer.Overview",
+        ["us/pack-cards"] = new HelpSection(
+            "us/pack-cards",
+            "US.Section.PackResults",
+            "US.Help.PackCards.Overview",
             new[]
             {
                 new HelpItem(
-                    "us/race-layer/row",
-                    "US.Help.RaceLayer.Row.Label",
-                    "US.Help.RaceLayer.Row.Text"),
-            }),
-        ["us/xenotype-layer"] = new HelpSection(
-            "us/xenotype-layer",
-            "US.Section.XenotypeDomain",
-            "US.Help.XenotypeLayer.Overview",
-            new[]
-            {
+                    "us/pack-cards/card",
+                    "US.Help.PackCards.Card.Label",
+                    "US.Help.PackCards.Card.Text"),
                 new HelpItem(
-                    "us/xenotype-layer/row",
-                    "US.Help.XenotypeLayer.Row.Label",
-                    "US.Help.XenotypeLayer.Row.Text"),
+                    "us/pack-cards/expand",
+                    "US.Packs.Card.Contents",
+                    "US.Help.PackCards.Expand.Text"),
+                new HelpItem(
+                    "us/pack-cards/row",
+                    "US.Help.PackCards.Row.Label",
+                    "US.Help.PackCards.Row.Text"),
+                new HelpItem(
+                    "us/pack-cards/enable",
+                    "US.Help.PackCards.Enable.Label",
+                    "US.Help.PackCards.Enable.Text"),
             }),
         ["us/voice-pack-checklist"] = new HelpSection(
             "us/voice-pack-checklist",
@@ -381,14 +398,6 @@ internal static class UsHelpCatalog
             "US.Help.Checklist.Overview",
             new[]
             {
-                new HelpItem(
-                    "us/voice-pack-checklist/search",
-                    "US.Help.Checklist.Search.Label",
-                    "US.Help.Checklist.Search.Text"),
-                new HelpItem(
-                    "us/voice-pack-checklist/row",
-                    "US.Help.Checklist.Row.Label",
-                    "US.Help.Checklist.Row.Text"),
                 new HelpItem(
                     "us/voice-pack-checklist/forget",
                     "US.Packs.Checklist.ForgetUnavailable",

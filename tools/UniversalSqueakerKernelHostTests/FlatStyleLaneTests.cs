@@ -130,7 +130,7 @@ internal static class FlatStyleLaneTests
     }
 
     /// <summary>
-    /// The cards, not just the nav. The eight declarative Section cards all carry the scope, and the
+    /// The cards, not just the nav. The seven declarative Section cards all carry the scope, and the
     /// separator rules are gone - the row bands and each Column's own Gap are the whole body now. Both
     /// halves are asserted on the LIVE manifest, so a scope dropped from one card or a rule re-added
     /// reddens here.
@@ -141,7 +141,7 @@ internal static class FlatStyleLaneTests
         string[] cards =
         {
             "global-volume", "basic-tuning", "timing", "camera-indicator",
-            "attenuation-editor", "race-layer", "xenotype-layer", "checklist-card"
+            "attenuation-editor", "packs-filter", "packs-results"
         };
         foreach (string id in cards)
         {

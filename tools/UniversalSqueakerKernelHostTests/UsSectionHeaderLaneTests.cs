@@ -78,7 +78,7 @@ internal static class UsSectionHeaderLaneTests
     private static readonly string[] HeaderIds =
     {
         "global-volume-header", "basic-tuning-header", "timing-header", "camera-indicator-header",
-        "attenuation-header", "race-layer-header", "xenotype-layer-header", "checklist-header",
+        "attenuation-header", "packs-filter-header", "packs-results-header",
     };
 
     /// <summary>The card this lane measures end to end. Its numbers are also pinned by

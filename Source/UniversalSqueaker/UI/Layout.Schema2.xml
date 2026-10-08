@@ -399,122 +399,45 @@
             </Row>
           </Column>
         </Section>
-        <!-- V2 P1: the filter band is the SAME card as the three below it - an engine Section (Padding 12,
-             Gap 6) whose first child is the us/section-header (26) that carries the title and the gold rail.
-             Before this it was a bare us/filter-bar widget drawing its own plain title + divider, so the
-             page's first band had a different title treatment from every other band. The header keeps the
-             HelpKey (HelpKey is refused on a container); the widget is body-only through TitleHidden, the
-             same pattern us/voice-pack-checklist already uses. -->
-        <Section Id="filter-layer" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
-          <Widget Id="filter-layer-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
+        <!-- US-PACK1 (§4.2): ONE filter region for the whole page. The composed conditions are the
+             unified keyword (search-text - the box the retired per-list searches folded into), the
+             author dropdown and the state chips (both still drawn by us/filter-bar, whose F5 display
+             cap and All=clear gesture are unchanged), and the race/xenotype dropdowns (declarative,
+             reading the same UiOption pairs the retired browse-card headers used). Every condition
+             acts on the SAME card result below it, and the echo line names each ACTIVE condition plus
+             the surviving-card count - "每一条件的作用在同一筛选区可见" is a drawn element, not a
+             promise. The band keeps the V2 P1 card rhythm (Section + us/section-header + TitleHidden
+             body widget). -->
+        <Section Id="packs-filter" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Widget Id="packs-filter-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
+          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpKey="us/filter-bar/keyword" />
           <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
+          <Row Id="packs-domain-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
+            <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/race" />
+            <Widget Id="packs-xenotype-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/xenotype" />
+          </Row>
+          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleKey="pack-filter-active" HelpKey="us/filter-bar/summary" />
         </Section>
-        <!-- S4-2: the two Packs layer cards are declarative row sets. us/race-layer and us/xenotype-layer
-             were the pair that could NOT be migrated while G2/G3 were missing (a repeated row could not
-             report its own key, and there was no appearance-less hit area), so this is their first use on a
-             real page. Each row's identity is its business key and that key IS the command payload:
-             input/button.PayloadKey receives it in the item's own binding scope (G2), and Chrome="none"
-             paints no surface at all (G3) so the same element is the row's hit area.
-
-             The hit area is ONE element with Height="MatchContent" (FL 490d4f07): the carrier sizes it to
-             the row's measured content height, so the hit IS the row. The retired two-band workaround
-             (ButtonWidget.Measure heights Height="Auto" from ITS own caption, two 24px bands reaching the
-             48px row the composite drew) was measured obsolete and removed when the carrier shipped the
-             mode; DeclarativePacksLaneTests asserts exactly one hit element per row template.
-
-             Selection is carried by the row's FILL, not by the title's ink (task-32): the sibling
-             us/selection-surface element draws the selected fill and the 3px rail from the row's own
-             item-local "selected" bool, and no text element declares SelectedKey.
-
-             What selection still cannot show is the row's FILL and its left rail: text/wrapped paints no
-             surface and this row has no surface-painting atom at all, so the missing piece is a row-state
-             CARRIER, not an attribute value. That half is recorded as its own known limitation with its
-             citation in the friction report (spec section 5.9.4), never folded in with the ink that did
-             come back. Tone/Emphasis stay absent from this template: they are still literal-only. -->
-        <!-- D4 (2026-10-07): the two domain cards sit SIDE BY SIDE in one Row - race left, xenotype
-             right - each carrying its OWN header controls (the dropdown moved out of the filter bar
-             into the card it filters, plus a per-card search box and a Clear) and a fixed-viewport
-             scroll list. The Row reuses the page's own Breakpoint idiom (same 500 as body-row): under
-             it, Narrow="Column" stacks the cards, so the narrow screen keeps the old vertical reading.
-             The viewport is the FINAL same-pass budget: VisibleRows="4.5" (FL's Scroll-only counting
-             attribute - no numeric Height is declared, so the count answers) sizes the viewport from
-             the rows THIS arrange round actually measured: four full materialized Repeat rows plus
-             the fraction of the fifth at its own measured height and real gap, re-counted after the
-             scrollbar-reserve re-measure so wrapped text at the narrowed width still costs exactly
-             what it occupies. No consumer arithmetic is copied and no creation-time estimate is
-             trusted - the floor-width injection of the earlier draft was deleted per the PM ruling
-             of 2026-10-07. Wiring note: the FL Dev DLL must be the freeze that carries VisibleRows
-             (see the current PM carrier freeze); DeclarativePacks guards the declaration and the
-             same-pass budget from the snapshot's own row rects.
-             The xenotype list additionally FOLLOWS the browsed race (model-side; selecting a race
-             narrows the right card to that race's xenotypes plus race-less ones).
-             Height contract (PM ruling 2026-10-07): the cards keep their NATURAL heights - unsized Row
-             children already share the width equally, and Fill="true" would additionally request the
-             available HEIGHT (ResolveContainerHeight), stretching a card to the scroll's remaining
-             viewport and inventing dead space under its short list. No equal-height background was
-             required, so no card declares Fill. -->
-        <Row Id="domain-row" Tab="Packs" Gap="8" Padding="0" Breakpoint="500" Narrow="Column">
-          <Section Id="race-layer" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
-            <Widget Id="race-layer-header" Kind="us/section-header" TitleKey="US.Section.RaceDomain" Height="26" HelpKey="us/race-layer" />
-            <Row Id="race-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
-              <Widget Id="race-domain-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/race-layer" />
-              <Widget Id="race-domain-search" Kind="input/text-field" Bind="race-search-text" PlaceholderKey="US.Packs.Domain.SearchPlaceholder" Height="26" HelpKey="us/race-layer" />
-              <Widget Id="race-domain-clear" Kind="input/button" TextKey="US.Packs.Domain.Clear" ActionBind="clear-race-domain" Width="116" Height="26" Emphasis="Muted" HelpKey="us/race-layer" />
-            </Row>
-            <Scroll Id="race-domain-scroll" VisibleRows="4.5" Gap="2" Padding="0">
-              <Repeat Id="race-layer-rows" Items="race-rows" Template="race-layer-row" Padding="0" Gap="2" />
-              <Widget Id="race-domain-empty" Kind="state/empty" TextKey="US.Packs.Domain.EmptySearch" VisibleKey="race-list-empty" />
-            </Scroll>
-          </Section>
-          <Section Id="xenotype-layer" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
-            <Widget Id="xenotype-layer-header" Kind="us/section-header" TitleKey="US.Section.XenotypeDomain" Height="26" HelpKey="us/xenotype-layer" />
-            <Row Id="xenotype-domain-controls" Gap="4" Padding="0" Breakpoint="320" Narrow="Column">
-              <Widget Id="xenotype-domain-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/xenotype-layer" />
-              <Widget Id="xenotype-domain-search" Kind="input/text-field" Bind="xenotype-search-text" PlaceholderKey="US.Packs.Domain.SearchPlaceholder" Height="26" HelpKey="us/xenotype-layer" />
-              <Widget Id="xenotype-domain-clear" Kind="input/button" TextKey="US.Packs.Domain.Clear" ActionBind="clear-xenotype-domain" Width="116" Height="26" Emphasis="Muted" HelpKey="us/xenotype-layer" />
-            </Row>
-            <Scroll Id="xenotype-domain-scroll" VisibleRows="4.5" Gap="2" Padding="0">
-              <Repeat Id="xenotype-layer-rows" Items="xenotype-rows" Template="xenotype-layer-row" Padding="0" Gap="2" />
-              <Widget Id="xenotype-domain-empty" Kind="state/empty" TextKey="US.Packs.Domain.EmptySearch" VisibleKey="xenotype-list-empty" />
-            </Scroll>
-          </Section>
-        </Row>
-        <!-- Step A/B of the checklist migration: the card is the engine's Section container, carrying the
-             same explicit geometry every other container on this page already declares (CP-0). It is gated
-             by the engine's own Tab attribute - the container vocabulary gained it as a coherence fix, so
-             the one-bool VisibleKey shim this card used while the container contract lacked the name is
-             deleted. A Tab-gated container takes its whole subtree with it, and a hidden container keeps its
-             node and state, so switching workspaces churns no identity. The section help sits on a WIDGET
-             (us/section-header) because HelpKey is refused on containers. Padding 12 + header 26 + Gap 6
-             reproduces UsCardLayout.MeasureBody (12 + 26 + 6 + body + 12) exactly.
-
-             The card's body is declarative from step B: the retained status-band composite
-             (us/voice-pack-checklist: the three role-mapped domain banners and the orphan band - the G5
-             citation), then a search field, a Repeat of pack rows and two empty states, all gated by
-             VisibleKey bools. The two presentations are mutually exclusive, the same shape the diagnostics
-             nav column uses. The orphan band now draws ABOVE the list rather than below it: it is a band
-             about the list that follows, and a widget element cannot straddle manifest siblings. -->
-        <Section Id="checklist-card" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-domain-selection">
-          <Widget Id="checklist-header" Kind="us/section-header" TitleKey="US.Section.ChooseVoicePacks" Height="26" HelpKey="us/voice-pack-checklist" />
-          <!-- V2 P2: the enable band states the SCOPE it enables for - the browsed domain - through one
-               read-only string binding composed from the same domain name the browse row shows plus the axis
-               word. Title first, scope second; hidden with the list when no domain is selected (the card's
-               own no-domain empty state is the message then). No new write key and no new text key: the
-               composition reuses the existing "X - Y" template and the two filter axis words. -->
-          <Widget Id="checklist-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted"
-                  VisibleKey="checklist-has-domain" />
-          <!-- V2 P1 (empty-state phantom gap): the band composite measures 0 with no selected domain, but
-               the unwrapped Section still paid a Gap for the element. VisibleKey="checklist-has-domain" keeps
-               it out of the arrange entirely, exactly as the list below it already is. -->
-          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true"
-                  VisibleKey="checklist-has-domain" />
-          <Column Id="checklist-list" VisibleKey="checklist-has-domain" Gap="6" Padding="0">
-            <Widget Id="checklist-search" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="24" HelpKey="us/voice-pack-checklist/search" />
-            <Repeat Id="checklist-rows" Items="checklist-pack-keys" Template="checklist-row" Gap="2" />
-            <Widget Id="checklist-empty-domain" Kind="state/empty" TextKey="US.Packs.Checklist.EmptyDomain" VisibleKey="checklist-empty-domain" />
-            <Widget Id="checklist-empty-search" Kind="state/empty" TextKey="US.Packs.Checklist.EmptySearch" VisibleKey="checklist-empty-search" />
-          </Column>
-          <Widget Id="checklist-empty-nodomain" Kind="state/empty" TextKey="US.Packs.Checklist.NoDomains" VisibleKey="checklist-empty-nodomain" />
+        <!-- US-PACK1 + US-ESC1 (§4.1/§4.2): the page's ONE result body - pack cards. The cancel chain
+             draws here as two REAL parent levels: the card's domain-row hit carries
+             cancel-domain-selection (the operation domain) and the result Section carries
+             cancel-pack-results (collapse exactly the manually opened cards); the page root above both
+             carries cancel-help; Verse closes only after every one of them declined. Clearing the
+             domain keeps filters and expansions ("筛选条件保留，退出选择不关闭包"); collapsing the
+             result keeps filters and the selection - neither layer writes what the other owns. The
+             status-band composite and its scope line stay the OPERATION DOMAIN's band (the G5 citation
+             is unchanged), gated by checklist-has-domain - the cards themselves need no domain at all.
+             The two empties are different sentences: an over-narrowed filter versus a catalog with no
+             packs behind it. The row rhythm (Overlay hit IS the row, selection carried by the FILL,
+             the SA1.7 gutter) is inherited from the retired templates unchanged - only the row KINDS
+             are new. -->
+        <Section Id="packs-results" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-pack-results">
+          <Widget Id="packs-results-header" Kind="us/section-header" TitleKey="US.Section.PackResults" Height="26" HelpKey="us/pack-cards" />
+          <Widget Id="packs-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted" VisibleKey="checklist-has-domain" />
+          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleKey="checklist-has-domain" />
+          <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Padding="0" Gap="2" CancelBind="cancel-domain-selection" />
+          <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleKey="pack-results-empty" />
+          <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleKey="pack-no-packs" />
         </Section>
         <!-- US-ESC1 review1 (PM observation 1): §4.1 "当前层域/区域 → 设置主层" is its own layer of the
              REAL parent chain. The composite keeps the visible-branch row steps (cancel-tuning-target); a
@@ -579,81 +502,45 @@
        which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
        every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
   <Templates>
-    <!-- S4-2 rows, re-cut when the carrier shipped Height="MatchContent" (FL 490d4f07). An Overlay, because
-         the hit area must COVER the text rather than sit beside it; the hit is declared FIRST so it draws
-         first (Chrome="none" paints nothing) and the text column is drawn over it.
+    <!-- US-PACK1: ONE template draws TWO row kinds over the flat pack-card-keys list. The kind is
+         decided by per-item VisibleKey bools the projection registers (is-header / is-domain): a header
+         row shows the pack identity and the Contents toggle; a domain row shows the owning card's
+         domain, the operation-domain highlight and that domain's own enable switch for that pack.
+         Hidden children are never materialized, so a header never resolves "enabled" and a domain row
+         never resolves "toggle-pack-card" - the item bindings registered per kind are exactly the keys
+         its visible children read (PackCardItemBindings).
 
-         ONE hit element, and it takes the row's measured content height. The two stacked bare bands this
-         template used to carry were a MEASURED workaround, not a design: Height="Auto" measures a button's
-         own caption, so two 24px bands were the only way to reach the 48px row the composite drew - 69.9% of
-         a flat row and 53.3% of a wrapped one, leaving the detail line's lower half dead. MatchContent asks
-         the PARENT (an Overlay takes the maximum over its children) for the height its content resolved to,
-         and the hit contributes nothing to that reference, so the hit IS the row: measured coverage 100% at
-         every accepted width and in both languages (DeclarativePacksLaneTests prints the ratio and keeps the
-         old 69.9/53.3/42px numbers as its control).
-
-         The declaring child must have at least one sibling that does not declare the mode, which is exactly
-         the text column. Both are full-width Overlay children, so the hit and the two text lines share one
-         left/right edge by construction. -->
-    <Overlay Id="race-layer-row" Padding="0">
-      <!-- T21: the selected row's VISIBLE state. It paints (fill + 3px left rail) and does not hit: the
-           hit band below stays Chrome="none" and keeps its exact geometry, which is why this is a sibling
-           and not a Chrome on the hit. Drawn first so the text column lands on top of it. SA1.7 adds
-           Hover="true": the pointer's plate on the navigation's own ladder, so the row answers the
-           pointer before it is ever clicked. -->
-      <Widget Id="race-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
-      <Widget Id="race-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/race-layer/row" />
-      <!-- SA1.7 (PM spacing review): the decoration rail and the text get REAL horizontal space - a
-           fixed-width empty gutter Column beside the natural-height text column, inside a content Row.
-           Drawing order is not space, and a uniform Padding on the text column would grow the row and
-           break the S4-2 hit-IS-the-row invariant; the gutter reserves 6px of WIDTH only (it measures
-           zero height), so the content Row stays exactly title + gap + detail tall and the hit band
-           still IS the row. The text column keeps Padding 0: the gutter, not the padding, is the inset. -->
-      <Row Id="race-layer-row-content" Gap="0" Padding="0">
-        <Column Id="race-layer-row-gutter" Width="6" Gap="0" Padding="0" />
-        <Column Id="race-layer-row-text" Gap="2" Padding="0">
-          <Widget Id="race-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/race-layer/row" />
-          <Widget Id="race-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/race-layer/row" />
+         The rhythm is inherited from the retired templates, not re-invented: an Overlay so the
+         selection/hover plate and the hit COVER the text (declared first, drawn under); the hit is ONE
+         MatchContent element so it IS its band; the SA1.7 gutter reserves the rail-to-text width only.
+         The domain row's hit lives in an inner Overlay BESIDE the switch, not across the whole row:
+         the switch stays the only writer of its value (V2 P2), so the hit stops where the switch
+         band begins. -->
+    <Overlay Id="pack-card-row" Padding="0">
+      <Widget Id="pack-card-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
+      <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleKey="is-header">
+        <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
+        <Column Id="pack-card-row-header-text" Gap="2" Padding="0">
+          <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/card" />
+          <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/pack-cards/card" />
+          <Widget Id="pack-card-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/pack-cards/card" />
         </Column>
+        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedKey="expanded"
+                ActionBind="toggle-pack-card" PayloadKey="payload" Width="116" Height="26" AlignY="Middle"
+                Emphasis="Muted" Scheme="us-command-button" HelpKey="us/pack-cards/expand" />
       </Row>
-    </Overlay>
-    <Overlay Id="xenotype-layer-row" Padding="0">
-      <!-- Same surface, hover and SA1.7 gutter structure as the race row: selection, hover and the
-           rail-to-text space must read the same in both lists. -->
-      <Widget Id="xenotype-layer-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
-      <Widget Id="xenotype-layer-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/xenotype-layer/row" />
-      <Row Id="xenotype-layer-row-content" Gap="0" Padding="0">
-        <Column Id="xenotype-layer-row-gutter" Width="6" Gap="0" Padding="0" />
-        <Column Id="xenotype-layer-row-text" Gap="2" Padding="0">
-          <Widget Id="xenotype-layer-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/xenotype-layer/row" />
-          <Widget Id="xenotype-layer-row-detail" Kind="text/wrapped" Bind="detail" Emphasis="Muted" HelpKey="us/xenotype-layer/row" />
-        </Column>
-      </Row>
-    </Overlay>
-    <!-- SA1.7: the voice-pack list rows answer the pointer too - the user praised the navigation's
-         hover and found the pack list dead under the cursor. The row is an Overlay so a DRAW-ONLY
-         hover plate can sit behind the content; the CLICK channels are untouched: the switch stays
-         the only writer of 'enabled' (V2 P2), there is still no row-wide hit band, and the plate
-         reads the pointer without taking it. The content Row carries the same fixed-width gutter as
-         the browse rows, so the plate's edge does not run under the label either; the text column
-         keeps Padding 0 and the row height keeps its pre-SA1.7 value (the gutter reserves width,
-         never height), so the card height and the P4 reachability numbers do not move. The label
-         stays the primary ink, meta/coverage stay Muted. -->
-    <Overlay Id="checklist-row" Padding="0">
-      <Widget Id="checklist-row-surface" Kind="us/selection-surface" Height="MatchContent" Hover="true" />
-      <Row Id="checklist-row-content" Gap="4" Padding="0">
-        <Column Id="checklist-row-gutter" Width="6" Gap="0" Padding="0" />
-        <Column Id="checklist-row-text" Gap="2" Padding="0">
-          <Widget Id="checklist-row-label" Kind="text/wrapped" Bind="label" HelpKey="us/voice-pack-checklist/row" />
-          <Widget Id="checklist-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
-          <Widget Id="checklist-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/voice-pack-checklist/row" />
-        </Column>
-        <!-- V2 P2: the enable control is the SAME shipped switch as the other ON/OFF controls (R2 above):
-             36 wide, because a 24-wide band clamps the 34x18 track and the knob's throw falls to 6px, which
-             is the difference between a switch and a block. Bind and SelectedKey name the same item-local
-             bool, so the row's click and its visible state cannot disagree. The row's own hit area is NOT
-             extended - the switch is the only click channel here; the hover plate above is draw-only. -->
-        <Widget Id="checklist-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/voice-pack-checklist/row" />
+      <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleKey="is-domain">
+        <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
+        <Overlay Id="pack-card-row-domain-area" Padding="0">
+          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent"
+                  ActionBind="select-domain" PayloadKey="payload" HelpKey="us/pack-cards/row" />
+          <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
+            <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />
+            <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/row" />
+          </Row>
+        </Overlay>
+        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled"
+                Width="36" Height="30" AlignY="Middle" HelpKey="us/pack-cards/enable" />
       </Row>
     </Overlay>
   </Templates>

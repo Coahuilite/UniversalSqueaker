@@ -68,6 +68,13 @@ public interface IUsKernelSettingsSource
     /// operation domain while every filter, search and enabled state stays exactly where it was.</summary>
     bool CanCancelDomainSelection();
     void CancelDomainSelection();
+    /// <summary>US-PACK1 (result layer, §4.1): the pack-card expand/collapse gesture writes ONLY the
+    /// manual expansion set; the query's auto-expansion is derived and never enters it. Can is the
+    /// engine's CanExecute for cancel-pack-results - the layer answers exactly while the player has
+    /// opened cards themselves, and a veto climbs to the page root.</summary>
+    void TogglePackCard(string packKey);
+    bool CanCancelPackResults();
+    void CancelPackResults();
     /// <summary>US-ESC1: the tuning return ladder - fallback entry, then race table, then the selected
     /// action row, then the layer/domain/area context; one press answers one step.</summary>
     bool CanCancelTuningTarget();
@@ -80,9 +87,8 @@ public interface IUsKernelSettingsSource
     void SetRaceFilter(string raceDefName);
     void SetXenotypeFilter(string xenotypeDefName);
     void SetSearchText(string text);
-    // D4: the two domain lists' own search texts (same one-frame read-back contract as SetSearchText).
-    void SetRaceSearchText(string text);
-    void SetXenotypeSearchText(string text);
+    // US-PACK1: the two domain lists' own search texts retired WITH the browse cards - the unified
+    // keyword (SetSearchText) is the page's only text condition and it narrows the card rows.
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
     // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
 

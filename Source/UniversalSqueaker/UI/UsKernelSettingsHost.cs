@@ -612,40 +612,33 @@ public static class UsKernelSettingsHost
         // from the SAME UsPacksText name the browse row shows plus the axis word, so it is translated, moves
         // with the selection and cannot be written by any control.
         bindings.BindReadOnly<string>("checklist-scope", () => ChecklistScopeText(source, translation));
-        // S4-2: the two layer cards are declarative row sets now, and each row's identity is the payload its
-        // input/button carries (ButtonWidget.PayloadKey, scoped per item). The payload is therefore a STRING
-        // - the row's own business key - and decoding it back into (scope, race, target) is the host's job.
-        // The key name is unchanged on purpose: it stays the one layout-affecting "which domain is selected"
-        // write, and UsKernelContractInvariantTests keeps pinning it by name.
+        // US-PACK1: the page's ONE result body is the pack-card projection. The Repeat's item keys are
+        // FLAT and ordered: a card header contributes its pack key, and while the card is expanded
+        // (manual OR query-hit auto) each surviving domain row contributes "<packKey>|<race>[|<target>]".
+        // One key, one row, one item-local namespace - the same on-demand registration discipline the
+        // retired browse/checklist row sets used, so the list and the screen are one answer.
         //
-        // The key shape is the projection's own contract: a race row's key IS its raceDefName; a xenotype
-        // row's key is "<raceDefName>|<targetDefName>". '|' is safe where '/' and '#' are not - the engine
-        // refuses an item key carrying either of those (UiLayoutEngine.AcceptItemKey).
+        // select-domain keeps its name and its key shape (race rows: the raceDefName; xenotype rows:
+        // "<race>|<target>") - UsKernelContractInvariantTests keeps pinning it by name. '|' is safe
+        // where '/' and '#' are not (UiLayoutEngine.AcceptItemKey). The retired "toggle-pack" payload
+        // action left with the checklist list: the card row's switch is its item-local "enabled" VALUE,
+        // which writes the SAME per-domain identity through ToggleVoicePack - one writer per identity.
         writes.Action<string>("select-domain", key => { SelectDomainByKey(source, key); bump(); });
-        // The two row sets the Repeats are built from: one ordered business key per row, and the projection
-        // that names them also owns their item-local binding namespace (see LayerRowBindings).
-        var raceRows = new LayerRowBindings(source, writes, bindings, translation, bump, RaceRowsKey, SqueakVoicePackScope.Race);
-        bindings.BindReadOnly<IReadOnlyList<string>>(RaceRowsKey, () =>
+        var packCards = new PackCardItemBindings(source, writes, bindings, translation, bump);
+        bindings.BindReadOnly<IReadOnlyList<string>>(PackCardKeysKey, () =>
         {
-            IReadOnlyList<string> keys = RaceRowKeys(source);
-            raceRows.Ensure(keys);
+            IReadOnlyList<string> keys = PackCardKeys(source);
+            packCards.Ensure(keys);
             return keys;
         });
-        var xenotypeRows = new LayerRowBindings(source, writes, bindings, translation, bump, XenotypeRowsKey, SqueakVoicePackScope.Xenotype);
-        bindings.BindReadOnly<IReadOnlyList<string>>(XenotypeRowsKey, () =>
-        {
-            IReadOnlyList<string> keys = XenotypeRowKeys(source);
-            xenotypeRows.Ensure(keys);
-            return keys;
-        });
-        writes.Action<UsPackToggle>(
-            "toggle-pack",
-            toggle => { source.ToggleVoicePack(toggle.Scope, toggle.RaceDefName, toggle.TargetDefName, toggle.PackKey, toggle.Enabled); bump(); });
         // Forget Unavailable changes the domain's pack list, so it reflows the checklist.
         writes.Action<UsDomainIdentity>(
             "forget-unavailable",
             identity => { source.ForgetUnavailable(identity.Scope, identity.RaceDefName, identity.TargetDefName); bump(); });
-        // Filter/search value writes change which rows are visible, so they bump the revision.
+        // Filter writes change which cards/rows are visible, so they bump the revision. US-PACK1: the
+        // unified keyword (search-text) plus the author/race/xenotype dropdowns and the state flags all
+        // narrow the ONE card result; the two per-domain search boxes and their per-card Clear retired
+        // with the browse cards, so "All" is the page's single reset gesture (clear-pack-filters).
         writes.Value<string>("race-filter", () => state.RaceFilter, value => { source.SetRaceFilter(value); bump(); });
         writes.Value<string>("xenotype-filter", () => state.XenotypeFilter, value => { source.SetXenotypeFilter(value); bump(); });
         writes.Value<string>("pack-filter", () => state.PackFilter.Author ?? "", value => { source.SetPackFilter(value); bump(); });
@@ -661,17 +654,8 @@ public static class UsKernelSettingsHost
                 source.SetXenotypeFilter("");
                 source.SetPackFilter("");
                 source.SetSearchText("");
-                // D4: "All" clears the two domain searches too - one gesture, one honest answer.
-                source.SetRaceSearchText("");
-                source.SetXenotypeSearchText("");
                 bump();
             });
-        // D4 per-card Clear: the card's OWN narrowing resets - dropdown to All, its search to empty.
-        // The browsed selection is deliberately untouched (Clear filters the list, it does not leave
-        // it) - the label says "Clear filters" for exactly that reason. Registered as COMMANDS: the
-        // declarative button carries no payload.
-        writes.Command("clear-race-domain", () => { source.SetRaceFilter(""); source.SetRaceSearchText(""); bump(); });
-        writes.Command("clear-xenotype-domain", () => { source.SetXenotypeFilter(""); source.SetXenotypeSearchText(""); bump(); });
         // The filter dropdowns display translated labels but write machine tokens: the options
         // binding carries the (display, value) pair through, so a Chinese client never shows a raw
         // defName in the trigger or the list. Authors are proper nouns: display == value.
@@ -703,40 +687,24 @@ public static class UsKernelSettingsHost
         bindings.BindOptions<FilterOptionView>("author-options", () => source.BuildView().Authors
             .Select(author => new FilterOptionView(author, author))
             .ToList());
+        // US-PACK1: the unified keyword - the page's ONE text condition (the retired per-list searches
+        // folded into it) - same write/bump/read-back shape as before, same single substring rule.
         writes.Value<string>("search-text", () => state.SearchText, value => { source.SetSearchText(value); bump(); });
-        // D4: the two domain lists' own search boxes - same write/bump/read-back shape as the pack
-        // search, and the SAME predicate (UsChecklistFilter.QueryMatches), so all three boxes answer
-        // one rule.
-        writes.Value<string>("race-search-text", () => state.RaceSearchText, value => { source.SetRaceSearchText(value); bump(); });
-        writes.Value<string>("xenotype-search-text", () => state.XenotypeSearchText, value => { source.SetXenotypeSearchText(value); bump(); });
-        // Step B-1: the declarative row set's identity projection - the ordered item keys of the selected
-        // domain that the CURRENT search accepts, produced by the one predicate the composite widget's row
-        // loop also uses (UsChecklistFilter). The query is read from the page state the "search-text"
-        // binding above reads, so the key list and the screen cannot disagree about which pack a search
-        // accepted; the both-directions contract is asserted by ChecklistItemsLaneTests.
-        var checklistItems = new ChecklistItemBindings(source, writes, bindings, translation, bump);
-        bindings.BindReadOnly<IReadOnlyList<string>>(ChecklistItemsKey, () =>
-        {
-            // The projection OWNS its item-local binding namespace: the rows the list names are exactly the
-            // rows whose per-item keys must resolve when the engine materializes them, and the engine reads
-            // this binding during Measure - before it measures or draws a single row - so registering here
-            // is what makes "the list and the screen are one answer" true by construction rather than by
-            // hope. A page-level pre-registration cannot do it: the pack set is a runtime projection of the
-            // catalog and the selected domain, and no creation-time table can enumerate it.
-            IReadOnlyList<string> keys = ChecklistPackKeys(source);
-            checklistItems.Ensure(keys);
-            return keys;
-        });
-        // The empty states and the "is there a domain at all" gate are read-only bools over the same
-        // projection, so a card can never draw both a list and an empty sentence.
+        // US-PACK1: the retired checklist-pack-keys row set leaves its item bindings to PackCardItemBindings
+        // (registered by the pack-card-keys projection above); the status-band composite keeps reading
+        // selected-domain, and checklist-has-domain stays its gate - the BAND is still the operation
+        // domain's, while the RESULT no longer needs a domain at all.
         bindings.BindReadOnly<bool>("checklist-has-domain", () => source.BuildView().SelectedDomain.HasValue);
-        bindings.BindReadOnly<bool>("checklist-empty-nodomain", () => !source.BuildView().SelectedDomain.HasValue);
-        bindings.BindReadOnly<bool>("checklist-empty-domain", () => EmptyDomain(source, noRows: false));
-        bindings.BindReadOnly<bool>("checklist-empty-search", () => EmptyDomain(source, noRows: true));
-        // D4: the two domain cards' empty notes - one bool per list, computed by the SAME projection
-        // that produced the row sets, so a note and a list can never both be on screen.
-        bindings.BindReadOnly<bool>("race-list-empty", () => source.BuildView().RaceListEmpty);
-        bindings.BindReadOnly<bool>("xenotype-list-empty", () => source.BuildView().XenotypeListEmpty);
+        // The result region's two empties are different sentences: an over-narrowed filter still has
+        // packs behind it, while an empty catalog has none to find. One bool each, both computed by the
+        // SAME projection that produced the cards, so a note and the list can never both be on screen.
+        bindings.BindReadOnly<bool>("pack-results-empty", () => source.BuildView().PackResultsEmpty);
+        bindings.BindReadOnly<bool>("pack-no-packs", () => source.BuildView().PackNoPacks);
+        // The condition echo: every ACTIVE condition of the region, named in the player's language, plus
+        // the surviving-card count - §4.2's "每一条件的作用在同一筛选区可见". Composed here from the live
+        // state and view; nothing writes it, so it cannot disagree with the controls.
+        bindings.BindReadOnly<string>("pack-filter-summary", () => PackFilterSummary(source, state, translation));
+        bindings.BindReadOnly<bool>("pack-filter-active", () => PackFilterActive(state));
         bindings.BindReadOnly<UiDomainFilter>("domain-filter", () => state.DomainFilter);
         writes.Action<UsDomainFilterWrite>("set-domain-filter", write => { source.SetDomainFilter(write.Kind, write.Flag); bump(); });
         // Help panel (C+A; D2 retired the pinned-selection channel with the index list). The section
@@ -771,9 +739,10 @@ public static class UsKernelSettingsHost
         // from the interaction subject; each Can here is the spec's "one press, one layer, decline means
         // climb past" answer, and none of these writes touches settings, persistence or routing - they
         // are session return states (§4.1). The page root (the five-workspace container) carries
-        // cancel-help; the packs cards carry cancel-domain-selection; the tuning COMPOSITE carries the
-        // visible-branch row steps and the container that WRAPS it carries the context return (review1
-        // observation 1: 当前层域/区域 is its own Parent/CancelBind layer, active by business state, so
+        // cancel-help; the packs RESULT carries cancel-pack-results (collapse the manually opened cards)
+        // and the card's operation-domain context carries cancel-domain-selection; the tuning COMPOSITE
+        // carries the visible-branch row steps and the container that WRAPS it carries the context
+        // return (review1 observation 1: 当前层域/区域 is its own Parent/CancelBind layer, active by business state, so
         // even the untouched default Global/Actions page returns once before the root may close). With
         // every layer declined the key reaches Verse and the main layer closes - "only the root
         // closes", one press after the last observable release.
@@ -785,6 +754,15 @@ public static class UsKernelSettingsHost
             "cancel-domain-selection",
             () => { source.CancelDomainSelection(); bump(); },
             () => source.CanCancelDomainSelection());
+        // US-PACK1 result layer (§4.1): the pack-card body is its own return layer BETWEEN the operation
+        // domain and the page root. It answers ONLY while the player has manually opened cards - a
+        // query-auto-expanded card is the query's answer, not a layer, and an all-collapsed result has
+        // nothing to release, so the veto climbs to cancel-help. Collapsing writes no settings and clears
+        // no filter or selection.
+        writes.Command(
+            "cancel-pack-results",
+            () => { source.CancelPackResults(); bump(); },
+            () => source.CanCancelPackResults());
         writes.Command(
             "cancel-tuning-target",
             () => { source.CancelTuningTarget(); bump(); },
@@ -797,11 +775,10 @@ public static class UsKernelSettingsHost
         return writes;
     }
 
-    /// <summary>The Race card's Repeat Items binding: one business key per race domain row.</summary>
-    private const string RaceRowsKey = "race-rows";
-
-    /// <summary>The Xenotype card's Repeat Items binding: one business key per (race, xenotype) row.</summary>
-    private const string XenotypeRowsKey = "xenotype-rows";
+    /// <summary>US-PACK1: the ONE declarative row set of the Packs page - the pack-card result. The
+    /// projection orders header keys and the domain rows of every EXPANDED card into one flat list, and
+    /// registers each row's item-local namespace on demand (see <see cref="PackCardItemBindings"/>).</summary>
+    private const string PackCardKeysKey = "pack-card-keys";
 
     /// <summary>
     /// The character that joins a xenotype row's two identity halves. <c>'|'</c> on purpose: the engine
@@ -828,176 +805,54 @@ public static class UsKernelSettingsHost
             SqueakVoicePackScope.Xenotype, key.Substring(0, split), key.Substring(split + 1));
     }
 
-    /// <summary>The race rows' ordered keys: the race defName IS the row's identity.</summary>
-    private static IReadOnlyList<string> RaceRowKeys(IUsKernelSettingsSource source)
-    {
-        IReadOnlyList<RaceLayerRowView> rows = source.BuildView().Races;
-        var keys = new List<string>(rows?.Count ?? 0);
-        if (rows == null) return keys;
-        for (int i = 0; i < rows.Count; i++) keys.Add(rows[i].RaceDefName);
-        return keys;
-    }
-
-    /// <summary>The xenotype rows' ordered keys: "&lt;raceDefName&gt;|&lt;targetDefName&gt;".</summary>
-    private static IReadOnlyList<string> XenotypeRowKeys(IUsKernelSettingsSource source)
-    {
-        IReadOnlyList<VoicePackDomainView> rows = source.BuildView().XenotypeDomains;
-        var keys = new List<string>(rows?.Count ?? 0);
-        if (rows == null) return keys;
-        for (int i = 0; i < rows.Count; i++)
-        {
-            keys.Add(rows[i].RaceDefName + RowKeySeparator + rows[i].TargetDefName);
-        }
-
-        return keys;
-    }
-
     /// <summary>
-    /// A declarative layer row's item-local binding namespace
-    /// (<c>race-rows.&lt;itemKey&gt;.&lt;declaredKey&gt;</c>), registered on demand by the projection that
-    /// names the rows - the same shape, and for the same reason, as the checklist's
-    /// <see cref="ChecklistItemBindings"/>: the row set is a runtime projection and the binding registry has
-    /// no prefix resolution, so "register exactly the rows the list just named" is the only honest form.
-    ///
-    /// <para>
-    /// Four read-only keys per row: <c>payload</c> (the row's own key, which is what
-    /// <c>input/button.PayloadKey</c> hands to <c>select-domain</c>), <c>title</c>, <c>detail</c> and
-    /// <c>selected</c>. Every getter resolves the CURRENT view rather than a captured row, so a row's text
-    /// and its selected state are live model data.
-    /// <para>
-    /// <c>selected</c> is the key the carrier gained in e929fa11: SelectedKey answers which row is selected,
-    /// so it is item-scoped like the other binding roles, and the template's title element resolves THIS
-    /// row's answer. Without the per-row registration the title would fall back to the unresolved report
-    /// (all rows unselected), which is exactly what DeclarativePacksLaneTests asserts against.
-    /// </para>
-    /// </para>
+    /// US-PACK1: the flat item-key list the pack-card Repeat materializes. A collapsed card contributes
+    /// ONLY its header key; an expanded card (manual OR query-hit auto) is followed by one row key per
+    /// surviving domain ("<packKey>|<race>" / "<packKey>|<race>|<target>"). Order is the projection's -
+    /// first appearance of each pack across the domain scan - and it is part of the contract, because
+    /// Repeat reuses a row's node and state by key.
     /// </summary>
-    private sealed class LayerRowBindings
+    private static IReadOnlyList<string> PackCardKeys(IUsKernelSettingsSource source)
     {
-        private readonly IUsKernelSettingsSource source;
-        private readonly UsWriteBindings writes;
-        private readonly UiBindings bindings;
-        private readonly IUiTranslation translation;
-        private readonly Action bump;
-        private readonly string itemsKey;
-        private readonly SqueakVoicePackScope scope;
-        private readonly HashSet<string> registered = new(StringComparer.Ordinal);
-
-        internal LayerRowBindings(
-            IUsKernelSettingsSource source,
-            UsWriteBindings writes,
-            UiBindings bindings,
-            IUiTranslation translation,
-            Action bump,
-            string itemsKey,
-            SqueakVoicePackScope scope)
+        IReadOnlyList<PackCardView> cards = source.BuildView().PackCards;
+        var keys = new List<string>();
+        for (int i = 0; i < cards.Count; i++)
         {
-            this.source = source;
-            this.writes = writes;
-            this.bindings = bindings;
-            this.translation = translation;
-            this.bump = bump;
-            this.itemsKey = itemsKey;
-            this.scope = scope;
-        }
-
-        /// <summary>Registers the item-local keys of the given rows, once per key.</summary>
-        internal void Ensure(IReadOnlyList<string> keys)
-        {
-            for (int i = 0; i < keys.Count; i++) Register(keys[i]);
-        }
-
-        private void Register(string key)
-        {
-            if (string.IsNullOrEmpty(key) || !registered.Add(key)) return;
-
-            string prefix = itemsKey + "." + key + ".";
-            bindings.BindReadOnly<string>(prefix + "payload", () => key);
-            bindings.BindReadOnly<string>(prefix + "title", () => Title(key));
-            bindings.BindReadOnly<string>(prefix + "detail", () => Detail(key));
-            // B1: this row's own selected answer. One bool per row, computed from the CURRENT selection, so
-            // the template's SelectedKey can never read another row's state.
-            bindings.BindReadOnly<bool>(prefix + "selected", () => IsSelected(key));
-            // ActionBind is item-scoped inside a template too (UiLayoutEngine.QualifyItemBinding), so one
-            // declared ActionBind cannot serve every row: the element asks for
-            // "<items>.<itemKey>.select-domain" and the host registers exactly one command per row. The
-            // payload stays load-bearing - it is what the command decodes - so a row that carried another
-            // row's key would still select the wrong domain, which is the property the lane presses for.
-            writes.ItemAction<string>(itemsKey, key, "select-domain", payload =>
+            PackCardView card = cards[i];
+            if (string.IsNullOrEmpty(card.Key)) continue;
+            keys.Add(card.Key);
+            if (!card.Expanded) continue;
+            for (int r = 0; r < card.Rows.Count; r++)
             {
-                SelectDomainByKey(source, payload);
-                // A display write: which domain is selected drives the checklist's contents and (before
-                // S4-2) the row's own ink, so the session clock must advance or the revision-gated view
-                // keeps serving the pre-write projection.
-                bump();
-            });
-        }
-
-        /// <summary>Title/Detail composition moved verbatim to <see cref="LayerRowText"/> so the D4
-        /// budget measures the SAME strings these bindings hand the rows; these are thin delegations.</summary>
-        private string Title(string key) => LayerRowText.Title(source, translation, scope, key);
-
-        /// <summary>
-        /// Whether THIS row is the selected domain. The predicate is the composite's own, kept verbatim: a
-        /// race row compares the race defName under the Race scope, a xenotype row compares both halves under
-        /// the Xenotype scope. Zero or one row can answer true - the model holds one selected domain.
-        /// </summary>
-        private bool IsSelected(string key)
-        {
-            VoicePackDomainView? domain = source.BuildView().SelectedDomain;
-            if (!domain.HasValue) return false;
-
-            if (scope == SqueakVoicePackScope.Race)
-            {
-                return domain.Value.Scope == SqueakVoicePackScope.Race
-                    && string.Equals(domain.Value.RaceDefName, key, StringComparison.Ordinal);
+                string rowKey = card.Rows[r].RowKey(card.Key);
+                if (!string.IsNullOrEmpty(rowKey) && !keys.Contains(rowKey)) keys.Add(rowKey);
             }
-
-            int split = key.IndexOf(RowKeySeparator);
-            if (split < 0) return false;
-            return domain.Value.Scope == SqueakVoicePackScope.Xenotype
-                && string.Equals(domain.Value.RaceDefName, key.Substring(0, split), StringComparison.Ordinal)
-                && string.Equals(domain.Value.TargetDefName, key.Substring(split + 1), StringComparison.Ordinal);
         }
 
-        private string Detail(string key) => LayerRowText.Detail(source, translation, scope, key);
+        return keys;
     }
 
     /// <summary>
-    /// The ordered pack keys of the selected domain that the current search accepts. One predicate and one
-    /// input with the drawn checklist: the query is the page state's own SearchText (the value the
-    /// "search-text" binding reads and writes), never the cached view's copy, so a search write and the row
-    /// set it produces are the same frame's answer.
-    /// </summary>
-    private static IReadOnlyList<string> ChecklistPackKeys(IUsKernelSettingsSource source)
-    {
-        VoicePackDomainView? domain = source.BuildView().SelectedDomain;
-        return domain.HasValue
-            ? UsChecklistFilter.Keys(domain.Value, source.ViewState.SearchText)
-            : Array.Empty<string>();
-    }
-
-    /// <summary>
-    /// The declarative checklist row's item-local binding namespace
-    /// (<c>checklist-pack-keys.&lt;itemKey&gt;.&lt;declaredKey&gt;</c>), registered on demand by the
-    /// projection that names the rows.
+    /// The pack-card row's item-local binding namespace (<c>pack-card-keys.&lt;itemKey&gt;.&lt;declaredKey&gt;</c>),
+    /// registered on demand by the projection that names the rows - the same discipline the retired
+    /// checklist/browse row sets established: the row set is a runtime projection, the registry has no
+    /// prefix resolution, so "register exactly the rows the list just named" is the only honest form.
     /// <para>
-    /// <b>Why on demand rather than at creation.</b> The row set is a runtime projection of the catalog and
-    /// the selected domain, and the binding registry is a closed table with no prefix resolution - so the
-    /// only two honest options are "register every pack the catalog could ever contain" (which a filtered or
-    /// unloaded session cannot enumerate) or "register exactly the rows the list just named" (which is what
-    /// the engine is about to materialize). This is the second one. It also keeps the invariant that matters:
-    /// a key in the list ALWAYS has readable per-item bindings, so the library's fail-soft answer for an
-    /// absent item-local key - draw the default, report once - is never what a player sees.
+    /// <b>Header vs domain is decided by the KEY, not by a flag the widget has to remember.</b> A key
+    /// without the separator names a card header; one with it names that card's domain row. The reads
+    /// resolve against the CURRENT view every frame (a captured struct would freeze the row), and the
+    /// writes parse the key at write time: the switch's identity is (packKey, scope, race, target) -
+    /// the per-domain whole-selection write the settings layer already owns, reached through exactly the
+    /// old checklist path, so two rows of one pack can not address each other's selection.
     /// </para>
     /// <para>
-    /// Every getter resolves against the CURRENT view rather than a captured row: a row's label and its
-    /// selected state are live model data, and a captured struct would freeze the row at registration time.
-    /// The write resolves the domain at write time for the same reason - the item key is the identity
-    /// carrier, and the domain it belongs to is whatever domain currently lists it.
+    /// The per-kind keys are registered for the kind ONLY: a header never resolves "enabled" and a domain
+    /// row never resolves "toggle-pack-card", because the template's other-kind children hide behind
+    /// per-item VisibleKey bools and a hidden subtree is never materialized. The two VisibleKey bools
+    /// themselves exist for both kinds, which is what lets one template draw both.
     /// </para>
     /// </summary>
-    private sealed class ChecklistItemBindings
+    private sealed class PackCardItemBindings
     {
         private readonly IUsKernelSettingsSource source;
         private readonly UsWriteBindings writes;
@@ -1006,7 +861,7 @@ public static class UsKernelSettingsHost
         private readonly Action bump;
         private readonly HashSet<string> registered = new(StringComparer.Ordinal);
 
-        internal ChecklistItemBindings(
+        internal PackCardItemBindings(
             IUsKernelSettingsSource source, UsWriteBindings writes, UiBindings bindings,
             IUiTranslation translation, Action bump)
         {
@@ -1017,68 +872,213 @@ public static class UsKernelSettingsHost
             this.bump = bump;
         }
 
-        /// <summary>Registers the item-local keys of the given rows, once per key.</summary>
         internal void Ensure(IReadOnlyList<string> keys)
         {
-            for (int i = 0; i < keys.Count; i++)
-            {
-                Register(keys[i]);
-            }
+            for (int i = 0; i < keys.Count; i++) Register(keys[i]);
         }
 
         private void Register(string key)
         {
             if (string.IsNullOrEmpty(key) || !registered.Add(key)) return;
 
-            string scope = ChecklistItemsKey + "." + key + ".";
-            bindings.BindReadOnly<string>(scope + "label", () => Find(key)?.Label ?? "");
-            bindings.BindReadOnly<string>(scope + "meta", () => Meta(key));
-            bindings.BindReadOnly<string>(scope + "coverage", () => Find(key)?.Coverage ?? "");
-            // The row's state: the one writable item-local key, so the checkbox's click IS the row's toggle.
-            writes.ItemValue<bool>(ChecklistItemsKey, key, "enabled", () => Find(key)?.IsSelected ?? false, value => Toggle(key, value));
+            string scope = PackCardKeysKey + "." + key + ".";
+            bool isHeader = key.IndexOf(RowKeySeparator) < 0;
+            bindings.BindReadOnly<bool>(scope + "is-header", () => IsHeaderLive(key));
+            bindings.BindReadOnly<bool>(scope + "is-domain", () => !IsHeaderLive(key));
+            bindings.BindReadOnly<string>(scope + "payload", () => Payload(key));
+            bindings.BindReadOnly<string>(scope + "title", () => Title(key));
+            // The selection-surface is drawn for BOTH kinds (it is the template's hover/selected plate),
+            // so "selected" must resolve on a header too. IsRowSelected parses the key as a domain and
+            // returns false for a header (no owning card for a separator-less key), which is exactly the
+            // header's answer: only a domain row can be the operating-domain highlight.
+            bindings.BindReadOnly<bool>(scope + "selected", () => IsRowSelected(key));
+            if (isHeader)
+            {
+                bindings.BindReadOnly<string>(scope + "meta", () => Meta(key));
+                bindings.BindReadOnly<string>(scope + "coverage", () => FindCard(key)?.Coverage ?? "");
+                bindings.BindReadOnly<bool>(scope + "expanded", () => FindCard(key)?.Expanded ?? false);
+                writes.ItemAction<string>(PackCardKeysKey, key, "toggle-pack-card", _ =>
+                {
+                    source.TogglePackCard(key);
+                    // A display write: the card's own body appears/disappears, so the clock must move.
+                    bump();
+                });
+                return;
+            }
+            writes.ItemValue<bool>(
+                PackCardKeysKey, key, "enabled",
+                () => FindRowEnabled(key),
+                value => ToggleRow(key, value));
+            writes.ItemAction<string>(PackCardKeysKey, key, "select-domain", payload =>
+            {
+                SelectDomainByKey(source, payload);
+                bump();
+            });
         }
 
-        /// <summary>
-        /// The row this key names in the CURRENT view, or null when the model no longer supplies it. Null is
-        /// a legal frame: a row's node outlives the data for the frame in which the model dropped it, and the
-        /// leaf's documented answer to an unresolvable bound string is its empty default plus one report.
-        /// </summary>
-        private VoicePackRowView? Find(string key)
+        /// <summary>Kind resolved LIVE, not from the registration-time parse: a key's shape is stable,
+        /// but the answer must track the current projection frame like every other getter.</summary>
+        private static bool IsHeaderLive(string key) => key.IndexOf(RowKeySeparator) < 0;
+
+        /// <summary>The select-domain payload of a domain row is its DOMAIN identity (the pack half is
+        /// already carried by the item key); a header's payload is its own card key.</summary>
+        private static string Payload(string key)
         {
-            VoicePackDomainView? domain = source.BuildView().SelectedDomain;
-            if (!domain.HasValue) return null;
+            int first = key.IndexOf(RowKeySeparator);
+            return first < 0 ? key : key.Substring(first + 1);
+        }
 
-            IReadOnlyList<VoicePackRowView> packs = domain.Value.Packs;
-            if (packs == null) return null;
-            for (int i = 0; i < packs.Count; i++)
-            {
-                if (string.Equals(packs[i].Key, key, StringComparison.Ordinal)) return packs[i];
-            }
+        private string Title(string key)
+        {
+            if (IsHeaderLive(key)) return FindCard(key)?.Label ?? "";
+            PackCardView? card = FindOwningCard(key);
+            if (card == null) return "";
+            PackCardDomainRowView? row = RowOf(card.Value, key);
+            if (!row.HasValue) return "";
+            return row.Value.Scope == SqueakVoicePackScope.Xenotype
+                ? UsPacksText.Format(translation, UsPacksText.KeyXenotypeRaceContext,
+                    row.Value.DisplayName, ResolveRaceDisplay(card.Value, key))
+                : row.Value.DisplayName;
+        }
 
-            return null;
+        private static string ResolveRaceDisplay(PackCardView card, string key)
+        {
+            PackCardDomainRowView? row = RowOf(card, key);
+            return row.HasValue ? row.Value.RaceDefName : "";
         }
 
         private string Meta(string key)
         {
-            VoicePackRowView? row = Find(key);
-            return UsPacksText.Format(
-                translation, KeyPackChecklistMeta, row?.ModName ?? "", row?.Author ?? "");
+            PackCardView? card = FindCard(key);
+            if (!card.HasValue) return "";
+            return UsPacksText.Format(translation, KeyPackChecklistMeta, card.Value.ModName, card.Value.Author);
         }
 
-        private void Toggle(string key, bool enabled)
+        private PackCardView? FindCard(string key)
+        {
+            IReadOnlyList<PackCardView> cards = source.BuildView().PackCards;
+            for (int i = 0; i < cards.Count; i++)
+                if (string.Equals(cards[i].Key, key, StringComparison.Ordinal)) return cards[i];
+            return null;
+        }
+
+        /// <summary>The card a domain-row key names by its pack half. Null when the model dropped the
+        /// card this frame - a legal frame, answered like every other unresolvable bound key.</summary>
+        private PackCardView? FindOwningCard(string rowKey)
+        {
+            int first = rowKey.IndexOf(RowKeySeparator);
+            if (first <= 0) return null;
+            return FindCard(rowKey.Substring(0, first));
+        }
+
+        private static PackCardDomainRowView? RowOf(PackCardView card, string rowKey)
+        {
+            for (int i = 0; i < card.Rows.Count; i++)
+                if (string.Equals(card.Rows[i].RowKey(card.Key), rowKey, StringComparison.Ordinal)) return card.Rows[i];
+            return null;
+        }
+
+        /// <summary>The switch's live answer for a domain row: the CURRENT view's row, never a captured
+        /// frame - a toggle's echo must read back from the same projection the screen draws.</summary>
+        private bool FindRowEnabled(string rowKey)
+        {
+            PackCardView? card = FindOwningCard(rowKey);
+            if (!card.HasValue) return false;
+            PackCardDomainRowView? row = RowOf(card.Value, rowKey);
+            return row.HasValue && row.Value.IsEnabled;
+        }
+
+        /// <summary>The operating-domain highlight: true when this row's domain IS the selected domain
+        /// (double-key compare for xenotypes, exactly the identity the model carries).</summary>
+        private bool IsRowSelected(string rowKey)
         {
             VoicePackDomainView? domain = source.BuildView().SelectedDomain;
-            if (!domain.HasValue) return;
-            source.ToggleVoicePack(
-                domain.Value.Scope, domain.Value.RaceDefName, domain.Value.TargetDefName, key, enabled);
-            // A display write: the row's selected state and the "Forget dangling" count both flow back to
+            if (!domain.HasValue) return false;
+            PackCardView? card = FindOwningCard(rowKey);
+            if (card == null) return false;
+            PackCardDomainRowView? row = RowOf(card.Value, rowKey);
+            if (!row.HasValue) return false;
+            return row.Value.Scope == domain.Value.Scope
+                && string.Equals(row.Value.RaceDefName, domain.Value.RaceDefName, StringComparison.Ordinal)
+                && string.Equals(row.Value.TargetDefName, domain.Value.TargetDefName, StringComparison.Ordinal);
+        }
+
+        private void ToggleRow(string rowKey, bool enabled)
+        {
+            PackCardView? card = FindOwningCard(rowKey);
+            if (card == null) return;
+            PackCardDomainRowView? row = RowOf(card.Value, rowKey);
+            if (!row.HasValue) return;
+            source.ToggleVoicePack(row.Value.Scope, row.Value.RaceDefName, row.Value.TargetDefName, card.Value.Key, enabled);
+            // A display write: the row's switch state and the header's enable badge both flow back to
             // the screen, so the session clock must advance or the revision-gated view keeps the old row.
             bump();
         }
     }
 
-    /// <summary>The Repeat's Items binding: the ordered item keys the declarative row set is built from.</summary>
-    private const string ChecklistItemsKey = "checklist-pack-keys";
+    /// <summary>US-PACK1: is any condition of the unified region active? Drives the echo's visibility -
+    /// an unfiltered page does not need a sentence telling it is unfiltered.</summary>
+    private static bool PackFilterActive(VoicePacksPageState state)
+        => state != null
+            && (state.SearchText.Trim().Length > 0
+                || (state.PackFilter.Author ?? "").Length > 0
+                || state.RaceFilter.Length > 0
+                || state.XenotypeFilter.Length > 0
+                || state.DomainFilter.EnabledOnly
+                || state.DomainFilter.ConflictOnly
+                || state.DomainFilter.OrphanOnly);
+
+    /// <summary>
+    /// US-PACK1 (§4.2 "每一条件的作用在同一筛选区可见"): the condition echo. Every ACTIVE condition is
+    /// named with its own control's label key (the same keys the controls carry, so the echo and the
+    /// control can never read differently), joined by the shared separator, and closed by the surviving-
+    /// card count through a keyed template. Read-only over the live state and view; no control writes it.
+    /// </summary>
+    private static string PackFilterSummary(
+        IUsKernelSettingsSource source, VoicePacksPageState state, IUiTranslation translation)
+    {
+        var parts = new List<string>();
+        string keyword = (state.SearchText ?? "").Trim();
+        if (keyword.Length > 0)
+            parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
+                translation.Translate(KeyLabelKeyword), keyword));
+        if (!string.IsNullOrEmpty(state.PackFilter.Author))
+            parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
+                translation.Translate("US.Packs.Filter.Author"), state.PackFilter.Author));
+        if (state.RaceFilter.Length > 0)
+            parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
+                translation.Translate(KeyScopeRace), FilterDisplay(source, state.RaceFilter, isRace: true)));
+        if (state.XenotypeFilter.Length > 0)
+            parts.Add(UsPacksText.Format(translation, KeySummaryCondition,
+                translation.Translate(KeyScopeXenotype), FilterDisplay(source, state.XenotypeFilter, isRace: false)));
+        if (state.DomainFilter.EnabledOnly) parts.Add(translation.Translate("US.Packs.Filter.EnabledOnly"));
+        if (state.DomainFilter.ConflictOnly) parts.Add(translation.Translate("US.Packs.Filter.Conflicts"));
+        if (state.DomainFilter.OrphanOnly) parts.Add(translation.Translate("US.Packs.Filter.OrphanOnly"));
+
+        int cards = source.BuildView().PackCards.Count;
+        string count = UsPacksText.Format(translation, KeySummaryCount, cards.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return parts.Count == 0
+            ? count
+            : string.Join(" · ", parts) + " · " + count;
+    }
+
+    /// <summary>The dropdown's own display for a machine token (translated race/xenotype label), falling
+    /// back to the token itself when the current options list no longer carries it.</summary>
+    private static string FilterDisplay(IUsKernelSettingsSource source, string value, bool isRace)
+    {
+        IReadOnlyList<FilterOptionView> options = isRace
+            ? source.BuildView().RaceFilterOptions
+            : source.BuildView().XenotypeFilterOptions;
+        for (int i = 0; i < options.Count; i++)
+            if (string.Equals(options[i].Value, value, StringComparison.Ordinal)) return options[i].DisplayName;
+        return value;
+    }
+
+    private const string KeySummaryCondition = "US.Packs.Filter.SummaryCondition";
+
+    private const string KeySummaryCount = "US.Packs.Filter.SummaryCount";
+
+    private const string KeyLabelKeyword = "US.Packs.Filter.Keyword";
 
     /// <summary>The pack row's composed meta line ("Mod — Author"); the one Keyed template it needs.</summary>
     private const string KeyPackChecklistMeta = "US.Packs.Checklist.PackMeta";
@@ -1107,18 +1107,6 @@ public static class UsKernelSettingsHost
                 translation, UsPacksText.KeyXenotypeRaceContext, domain.Value.DisplayName, domain.Value.RaceDisplay)
             : domain.Value.RaceDisplay;
         return UsPacksText.Format(translation, UsPacksText.KeyNameWithState, axis, name);
-    }
-
-    /// <summary>
-    /// True when the selected domain exists and shows no row: <paramref name="noRows"/> picks the "the
-    /// domain has no packs at all" sentence, false the "the search matched nothing" one - the same split the
-    /// composite widget drew before the empty states became manifest elements.
-    /// </summary>
-    private static bool EmptyDomain(IUsKernelSettingsSource source, bool noRows)
-    {
-        VoicePackDomainView? domain = source.BuildView().SelectedDomain;
-        if (!domain.HasValue) return false;
-        return noRows ? domain.Value.Packs.Count > 0 && ChecklistPackKeys(source).Count == 0 : domain.Value.Packs.Count == 0;
     }
 
     /// <summary>Four normalized attenuation points: start locked at 100%, end locked at 0%.</summary>

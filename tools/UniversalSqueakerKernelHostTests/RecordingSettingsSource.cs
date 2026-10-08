@@ -32,30 +32,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// </summary>
     public bool WrappingDomainText;
 
-    /// <summary>
-    /// When set, the rich view's selected domain carries exactly these pack rows instead of the default
-    /// two. The checklist projection lane needs rows whose search predicate accepts a STRICT, non-contiguous
-    /// subset (so both directions of the list are observable) and a duplicated business key (so the
-    /// engine's row-identity refusal is observable rather than assumed).
-    /// </summary>
-    public VoicePackRowView[]? ChecklistPacks;
-
-    /// <summary>V2 P4 instrument: an explicit browse row set when a lane measures how far a long race list
-    /// pushes the enable band down. Null keeps the built-in rows.</summary>
-    public RaceLayerRowView[]? Races;
-
-    /// <summary>V2 P2 instrument: when true the view follows the RECORDED selection, so a lane can assert
-    /// that a browse write re-derives the enable band's scope line. Default false - the built-in fixture
-    /// always selects its xenotype domain, which the other lanes rely on.</summary>
-    public bool ReflectSelectionInView;
-
-    /// <summary>V2 P2 instrument: production-shaped display fields for the fixture's xenotype domain
-    /// (<c>DisplayName</c> and the race-context label). Null keeps this fixture's built-in values, whose
-    /// "Sanguophage (Human)" display plus the defName fallback would double the race context in the scope
-    /// line - a fixture artifact, not a product string, so the V2 scope lane supplies clean ones.</summary>
-    public string? XenotypeDisplayName;
-    public string? XenotypeRaceDisplay;
-    // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
 
     /// <summary>
     /// V3 instrument (audit item C): when true the tuning setters ALSO update the page state/view the host
@@ -342,7 +318,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilterOptions: Array.Empty<FilterOptionView>(),
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            packNoPacks: true);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -354,7 +331,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             SqueakVoicePackScope.Xenotype,
             WrappingDomainText ? "a-very-long-race-definition-name-used-only-to-make-the-title-wrap" : "human",
             "sanguophage",
-            XenotypeDisplayName ?? (WrappingDomainText ? "Sanguophage" : "Sanguophage (Human)"),
+            WrappingDomainText ? "Sanguophage" : "Sanguophage (Human)",
             "test-catalog",
             SqueakVoicePackDomainState.Available,
             isDormant: false,
@@ -364,12 +341,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             candidateCount: 2,
             orphanCount: 0,
             enabledKeys: new[] { "us.sang" },
-            packs: ChecklistPacks ?? new[]
+            packs: new[]
             {
                 new VoicePackRowView("us.sang", "Sanguophage Voice Pack", "TestMod", "AuthorA", "def.sang", "full", "sang", isSelected: true),
                 new VoicePackRowView("us.sang2", "Sanguophage Extra Pack", "TestMod2", "AuthorB", "def.sang2", "full", "extra", isSelected: false)
             },
-            raceDisplay: XenotypeRaceDisplay);
+            raceDisplay: null);
 
         var preset = new BaselinePresetView(
             "us.preset1",
@@ -409,7 +386,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             distanceRangeMax: 45f,
             biotechActive: true,
             bannerText: "rich harness catalog",
-            races: Races ?? RaceRowsFor(filterSanguophage),
+            races: RaceRowsFor(filterSanguophage),
             xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
             // US-ESC1: the fake mirrors the production projection rule - a CANCELLED operation domain
             // projects to null (the guard in VoicePacksPageModel.ResolveSelectedDomain), never a
@@ -509,7 +486,43 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            // US-PACK1: the fake mirrors production's delegation exactly - fixture source pairs through
+            // the SAME pure PackCardProjection.Build the model calls, reading the live page state's
+            // filters and manual expansion set, so a lane drives the real rule end to end.
+            packCards: PackCardsForView(sang),
+            packResultsEmpty: PackCardsForView(sang).Count == 0,
+            packNoPacks: false);
+    }
+
+    /// <summary>
+    /// US-PACK1 fixture pairs: the xenotype domain the card view already carries, PLUS the same packs
+    /// under their race domain NOT enabled there - so one card shows two rows with two independent
+    /// enable answers, which is exactly the cross-domain identity the non-crosstalk assertion presses.
+    /// ChecklistPacks overrides flow through (they replace sang.Packs), so the projection lanes'
+    /// injected rows reach the card list too.
+    /// </summary>
+    private List<PackCardView> PackCardsForView(VoicePackDomainView sang)
+    {
+        var source = new List<PackCardSourceRow>();
+        foreach (VoicePackRowView pack in sang.Packs)
+        {
+            source.Add(new PackCardSourceRow(
+                pack.Key, pack.Label, pack.DefName, pack.ModName, pack.Author, pack.Coverage,
+                SqueakVoicePackScope.Xenotype, sang.RaceDefName, sang.TargetDefName, sang.DisplayName,
+                IsEnabledLive(SqueakVoicePackScope.Xenotype, sang.RaceDefName, sang.TargetDefName, pack.Key),
+                sang.HasCanonicalConflict, sang.IsDormant, sang.IsTargetUnavailable,
+                sang.OrphanCount > 0));
+            source.Add(new PackCardSourceRow(
+                pack.Key, pack.Label, pack.DefName, pack.ModName, pack.Author, pack.Coverage,
+                SqueakVoicePackScope.Race, sang.RaceDefName, "", sang.RaceDisplay,
+                IsEnabledLive(SqueakVoicePackScope.Race, sang.RaceDefName, "", pack.Key),
+                false, false, false, false));
+        }
+
+        return PackCardProjection.Build(
+            source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
+            in state.DomainFilter, state.PackCardsExpanded);
     }
 
     /// <summary>
@@ -519,22 +532,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// </summary>
     private VoicePackDomainView? SelectedForView(VoicePackDomainView sang, bool filterSanguophage)
     {
-        if (filterSanguophage) return null;
-        if (!ReflectSelectionInView || LastSelectedScope != SqueakVoicePackScope.Race) return sang;
-
-        string race = LastSelectedRace ?? "";
-        foreach (RaceLayerRowView row in Races ?? RaceRowsFor(false))
-        {
-            if (!string.Equals(row.RaceDefName, race, StringComparison.Ordinal)) continue;
-            return new VoicePackDomainView(
-                SqueakVoicePackScope.Race, race, "", row.DisplayName, "test-catalog",
-                SqueakVoicePackDomainState.Available, isDormant: false, isTargetUnavailable: false,
-                hasCanonicalConflict: false, enabledCount: row.EnabledCount, candidateCount: row.CandidateCount,
-                orphanCount: 0, enabledKeys: Array.Empty<string>(),
-                packs: ChecklistPacks ?? Array.Empty<VoicePackRowView>(), raceDisplay: row.DisplayName);
-        }
-
-        return sang;
+        // US-PACK1: the race-selection reflection this method once offered served the retired browse
+        // cards' scope-line parity lane; the projection's answer is now simply the fixture domain,
+        // gone when the race filter excludes it.
+        return filterSanguophage ? null : sang;
     }
 
     /// <summary>
@@ -883,21 +884,25 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastSearchText = text;
         state.SearchText = text ?? "";
     }
-    // D4: the two domain searches mirror the production facade exactly, same one-frame read-back
-    // contract as SetSearchText above.
-    public string? LastRaceSearchText { get; private set; }
-    public string? LastXenotypeSearchText { get; private set; }
+    // US-PACK1: the card gesture and the result-layer return route through the SAME production
+    // statics the real source calls, so a lane driving the bindings exercises the real manual-set
+    // rule and the real veto condition. Counts let a lane assert the write happened at the facade.
+    public int TogglePackCardCount;
+    public int CancelPackResultsCount;
 
-    public void SetRaceSearchText(string text)
+    public void TogglePackCard(string packKey)
     {
-        LastRaceSearchText = text;
-        state.RaceSearchText = text ?? "";
+        TogglePackCardCount++;
+        VoicePacksPageModel.TogglePackCard(state, packKey);
     }
 
-    public void SetXenotypeSearchText(string text)
+    public bool CanCancelPackResults()
+        => VoicePacksPageModel.CanCancelPackResults(state);
+
+    public void CancelPackResults()
     {
-        LastXenotypeSearchText = text;
-        state.XenotypeSearchText = text ?? "";
+        CancelPackResultsCount++;
+        VoicePacksPageModel.CancelPackResults(state);
     }
 
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
@@ -1018,6 +1023,40 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastPackTarget = targetDefName;
         LastPackKey = packKey;
         LastPackEnabled = enabled;
+        // US-PACK1: the fake mirrors the settings store's per-domain identity (the same double-keyed
+        // whole-selection replacement the real SetVoicePackSelection performs), so a card lane can read
+        // a switch back and prove two rows of one pack never address each other.
+        if (enabled) SelectionEnabled(DomainKey(scope, raceDefName, targetDefName)).Add(packKey);
+        else SelectionEnabled(DomainKey(scope, raceDefName, targetDefName)).Remove(packKey);
+    }
+
+    private static string DomainKey(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
+        => scope + "|" + (raceDefName ?? "") + "|" + (targetDefName ?? "");
+
+    private readonly Dictionary<string, HashSet<string>> selectionStore = new(StringComparer.Ordinal);
+
+    private HashSet<string> SelectionEnabled(string domainKey)
+    {
+        if (!selectionStore.TryGetValue(domainKey, out HashSet<string>? keys))
+        {
+            keys = new HashSet<string>(StringComparer.Ordinal);
+            selectionStore[domainKey] = keys;
+        }
+
+        return keys;
+    }
+
+    /// <summary>Live enable answer for one (domain, pack) pair: the seeded fixture selection first,
+    /// then every toggle this session wrote - one answer, read the same way the projection reads it.</summary>
+    private bool IsEnabledLive(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
+    {
+        if (selectionStore.TryGetValue(DomainKey(scope, raceDefName, targetDefName), out HashSet<string>? written))
+        {
+            return written.Contains(packKey);
+        }
+
+        // Fixture seed: the xenotype domain enables us.sang only; the race domain enables nothing.
+        return scope == SqueakVoicePackScope.Xenotype && string.Equals(packKey, "us.sang", StringComparison.Ordinal);
     }
 
     public void ForgetUnavailable(SqueakVoicePackScope scope, string raceDefName, string targetDefName)

@@ -200,16 +200,16 @@ internal static class UsSquareToggleLaneTests
         // manifest-level, so the retired kind cannot come back unnoticed.
         string manifest = ReadShippedManifest();
         int checklistDeclarations = System.Text.RegularExpressions.Regex.Matches(
-            manifest, "Id=\"checklist-row-check\" Kind=\"input/checkbox\"").Count;
+            manifest, "Id=\"pack-card-row-check\" Kind=\"input/checkbox\"").Count;
         Assert(checklistDeclarations == 1,
             "control: the checklist's per-row control must still be exactly one input/checkbox declaration, found "
             + checklistDeclarations + " - a blanket kind rename would have taken it too");
         Assert(System.Text.RegularExpressions.Regex.IsMatch(
-                manifest, "Id=\"checklist-row-check\"[^>]*Appearance=\"switch\""),
+                manifest, "Id=\"pack-card-row-check\"[^>]*Appearance=\"switch\""),
             "V2 P2: the checklist's per-row enable control must declare the shipped switch appearance - it is"
             + " an ON/OFF control, and its look must not be left to the kind's default");
         Assert(System.Text.RegularExpressions.Regex.IsMatch(
-                manifest, "Id=\"checklist-row-check\"[^>]*Width=\"36\""),
+                manifest, "Id=\"pack-card-row-check\"[^>]*Width=\"36\""),
             "V2 P2: the checklist's per-row enable control must declare the 36-wide band, or the switch's"
             + " 34x18 track is clamped and the knob's throw falls to 6px");
         // The criterion is a DECLARATION, not the bare word: the manifest's own migration note names the
@@ -624,7 +624,7 @@ internal static class UsSquareToggleLaneTests
         foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
                      manifest, "<Widget[^>]*Appearance=\"switch\"[^>]*>"))
         {
-            if (match.Value.IndexOf("checklist-row-check", StringComparison.Ordinal) < 0) count++;
+            if (match.Value.IndexOf("pack-card-row-check", StringComparison.Ordinal) < 0) count++;
         }
 
         return count;

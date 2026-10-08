@@ -52,13 +52,22 @@ public sealed class VoicePacksViewState
     public IReadOnlyList<FilterOptionView> RaceFilterOptions { get; }
     public IReadOnlyList<FilterOptionView> XenotypeFilterOptions { get; }
 
-    /// <summary>D4: the race list went empty while entries exist (or its search is active) - the card's
-    /// empty-note gate. The same rule for the xenotype list.</summary>
-    public bool RaceListEmpty { get; }
-    public bool XenotypeListEmpty { get; }
+    /// <summary>US-PACK1 (§4.2): the ONE result body - every pack that survives the composed filter,
+    /// aggregated into a card whose rows are the race/xenotype domains it provides. The card order and
+    /// the row order are deterministic (Ordinal on the identity); expansion is the manual set union the
+    /// query's xenotype-hit auto-expansion. Read-only projection; enable writes still ride the per-domain
+    /// identity through ToggleVoicePack unchanged.</summary>
+    public IReadOnlyList<PackCardView> PackCards { get; }
 
-    /// <summary>VF1定稿: the tuning page's internal area (0 actions / 1 moods / 2 fallback) and the
-    /// fallback editor's projection - races (maintainer ∪ player tables), the selected race's 17-key
+    /// <summary>The filter narrowed the result to zero cards while packs exist (empty-result note).</summary>
+    public bool PackResultsEmpty { get; }
+
+    /// <summary>The catalog carries no pack at all - the page's no-content sentence, distinct from an
+    /// over-narrowed filter.</summary>
+    public bool PackNoPacks { get; }
+
+    /// <summary>VF1定稿: the tuning page's three internal areas (0 actions / 1 moods / 2 fallback) and the
+    /// fallback editor's projection - races (maintainer ∪ player tables), the selected race's closed-17
     /// entry rows, query-filtered sound candidates (labelled with the CURRENT production
     /// availability, never the retired blanket verdict) and create candidates taken from the loaded
     /// pawn ThingDefs, not from the pack catalog. All read-only; writes ride the source's commands.</summary>
@@ -108,8 +117,9 @@ public sealed class VoicePacksViewState
         bool eatPrecisionEnabled = false,
         bool eatPrecisionIncludeDrugs = false,
         bool allowBabyActions = false,
-        bool raceListEmpty = false,
-        bool xenotypeListEmpty = false,
+        IReadOnlyList<PackCardView>? packCards = null,
+        bool packResultsEmpty = false,
+        bool packNoPacks = false,
         int tuningArea = 0,
         IReadOnlyList<FallbackRaceView>? fallbackRaces = null,
         string fallbackSelectedRace = "",
@@ -155,8 +165,9 @@ public sealed class VoicePacksViewState
         XenotypeFilterOptions = xenotypeFilterOptions ?? Array.Empty<FilterOptionView>();
         EatPrecisionEnabled = eatPrecisionEnabled;
         EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
-        RaceListEmpty = raceListEmpty;
-        XenotypeListEmpty = xenotypeListEmpty;
+        PackCards = packCards ?? Array.Empty<PackCardView>();
+        PackResultsEmpty = packResultsEmpty;
+        PackNoPacks = packNoPacks;
         TuningArea = tuningArea;
         FallbackRaces = fallbackRaces ?? Array.Empty<FallbackRaceView>();
         FallbackSelectedRace = fallbackSelectedRace ?? "";
@@ -395,6 +406,97 @@ public readonly struct VoicePackRowView
         Coverage = coverage ?? "";
         SearchText = searchText ?? "";
         IsSelected = isSelected;
+    }
+}
+
+/// <summary>
+/// US-PACK1: one domain row INSIDE a pack card - the (scope, race, xenotype) identity the pack provides,
+/// with that identity's own enable answer for THIS pack. Two rows of one card are two domains of one pack;
+/// their switches write two independent domain selections, which is what keeps the cross-domain
+/// non-crosstalk contract visible on screen (§4.2: no cross-domain global pack switch is added).
+/// <c>QueryHit</c> marks the row whose DOMAIN half the keyword matched AND whose scope is Xenotype -
+/// that hit is what auto-expands the owning card without touching the manual expansion set (§1 ruling).
+/// </summary>
+public readonly struct PackCardDomainRowView
+{
+    public readonly SqueakVoicePackScope Scope;
+    public readonly string RaceDefName;
+    public readonly string TargetDefName;
+    /// <summary>Translated domain name shown on the row (race label, or the xenotype label).</summary>
+    public readonly string DisplayName;
+    /// <summary>True when this row's domain currently has the pack enabled.</summary>
+    public readonly bool IsEnabled;
+    /// <summary>True when the active keyword matched this row's DOMAIN half (drives the auto-expand).</summary>
+    public readonly bool QueryHit;
+
+    public PackCardDomainRowView(
+        SqueakVoicePackScope scope, string raceDefName, string targetDefName, string displayName,
+        bool isEnabled, bool queryHit)
+    {
+        Scope = scope;
+        RaceDefName = raceDefName ?? "";
+        TargetDefName = targetDefName ?? "";
+        DisplayName = displayName ?? "";
+        IsEnabled = isEnabled;
+        QueryHit = queryHit;
+    }
+
+    /// <summary>The row's Repeat identity: the same '|'-joined shape the browse rows used, extended with
+    /// the pack key - one flat key per CARD-ROW pair, so a pack appearing in two domains is two distinct
+    /// item scopes and their switches can never share state.</summary>
+    public string RowKey(string packKey)
+        => Scope == SqueakVoicePackScope.Xenotype
+            ? packKey + "|" + RaceDefName + "|" + TargetDefName
+            : packKey + "|" + RaceDefName;
+}
+
+/// <summary>
+/// US-PACK1: one pack card. The header half is the pack identity (label, DefName, Mod, author, coverage);
+/// the body is its domain rows. <see cref="Expanded"/> is the ANSWER the screen draws - the manual set's
+/// membership OR a query hit on one of its rows - while <see cref="ManualExpanded"/> stays the user's own
+/// gesture, so clearing the keyword provably restores exactly what the player opened.
+/// </summary>
+public readonly struct PackCardView
+{
+    public readonly string Key;
+    public readonly string Label;
+    public readonly string DefName;
+    public readonly string ModName;
+    public readonly string Author;
+    public readonly string Coverage;
+    /// <summary>True when the player opened this card (the manual set's membership).</summary>
+    public readonly bool ManualExpanded;
+    /// <summary>True when the card is open because the keyword hit one of its domain rows.</summary>
+    public readonly bool AutoExpanded;
+    /// <summary>Manual OR auto - the single answer the body's visibility reads.</summary>
+    public readonly bool Expanded;
+    /// <summary>The domains that survived the composed filter for this pack (source order).</summary>
+    public readonly IReadOnlyList<PackCardDomainRowView> Rows;
+
+    public PackCardView(
+        string key, string label, string defName, string modName, string author, string coverage,
+        bool manualExpanded, bool autoExpanded, IReadOnlyList<PackCardDomainRowView> rows)
+    {
+        Key = key ?? "";
+        Label = label ?? defName ?? key ?? "";
+        DefName = defName ?? "";
+        ModName = modName ?? "";
+        Author = author ?? "";
+        Coverage = coverage ?? "";
+        ManualExpanded = manualExpanded;
+        AutoExpanded = autoExpanded;
+        Expanded = manualExpanded || autoExpanded;
+        Rows = rows ?? Array.Empty<PackCardDomainRowView>();
+    }
+
+    /// <summary>At least one of the pack's domains currently enables it (the header's enable badge).</summary>
+    public bool AnyDomainEnabled
+    {
+        get
+        {
+            for (int i = 0; i < Rows.Count; i++) if (Rows[i].IsEnabled) return true;
+            return false;
+        }
     }
 }
 

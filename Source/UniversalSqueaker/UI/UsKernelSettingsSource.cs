@@ -480,17 +480,18 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         VoicePacksPageModel.SetSearchText(state, text);
     }
 
-    // D4: the two domain lists' own searches; same page-state channel as the pack search, so the
-    // one-frame write->projection contract holds for all three boxes.
-    public void SetRaceSearchText(string text)
+    // US-PACK1: the two domain lists' own searches retired WITH the browse cards; the unified keyword
+    // above is the page's only text condition. The card gesture and the result-layer return take their place.
+    public void TogglePackCard(string packKey)
     {
-        VoicePacksPageModel.SetRaceSearchText(state, text);
+        VoicePacksPageModel.TogglePackCard(state, packKey);
     }
 
-    public void SetXenotypeSearchText(string text)
-    {
-        VoicePacksPageModel.SetXenotypeSearchText(state, text);
-    }
+    public bool CanCancelPackResults()
+        => VoicePacksPageModel.CanCancelPackResults(state);
+
+    public void CancelPackResults()
+        => VoicePacksPageModel.CancelPackResults(state);
 
     // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
     public void SetActionTuning(string actionKey, bool intervalField, float? value)

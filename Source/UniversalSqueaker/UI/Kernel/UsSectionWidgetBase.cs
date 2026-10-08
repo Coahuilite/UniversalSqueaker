@@ -126,7 +126,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
         string hover = ctx.Session.HoverClaim ?? "";
         string section = helpKey.Trim();
         // Two accepted shapes, and the second one is new with the engine-wide HelpKey contract: a control
-        // inside the card claims a SUB-key ("us/race-layer/row"), while the card's own widget can now be
+        // inside the card claims a SUB-key ("us/pack-cards/row"), while the card's own widget can now be
         // claimed by the engine with the BARE key when the pointer is over the card and no inner element
         // claims first. StartsWith alone would leave the border dark for the bare case, which is the one the
         // engine produces for the section itself.

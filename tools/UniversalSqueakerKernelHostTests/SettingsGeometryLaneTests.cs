@@ -88,7 +88,7 @@ internal static class SettingsGeometryLaneTests
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
         Step("the eat-precision child row exists only while its parent switch is on", ChildRowFollowsTheParentSwitch);
-        Step("the declarative checklist card reproduces the card chrome (step A)", DeclarativeChecklistCardReproducesTheCardChrome);
+        Step("the declarative result card reproduces the card chrome (step A)", PacksResultSectionReproducesTheCardChrome);
         Console.WriteLine("SettingsGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -1049,13 +1049,13 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>
-    /// The declarative checklist card's chrome as a MEASURED relation rather than an arithmetic argument.
-    /// Step A established it over the card's two children (Padding 12 + header 26 + Gap 6 + body + 12); step
-    /// B made the card's body declarative, so the same relation is now asserted over the children the
-    /// manifest actually arranges (header, the V2 scope line, the status-band composite, the list column, and
-    /// the no-domain empty state when it shows), with one Gap between each. Every number comes from the same
-    /// snapshot, so changing the manifest's Padding, the Section Gap, the header Height or the search band
-    /// reddens this instead of silently moving the card.
+    /// The declarative packs-result Section's chrome as a MEASURED relation rather than an arithmetic
+    /// argument. Step A established it over the card's two children (Padding 12 + header 26 + Gap 6 + body
+    /// + 12); step B made the card's body declarative and US-PACK1 re-cut that body as pack cards, so the
+    /// same relation is now asserted over the children the manifest actually arranges (header, the scope
+    /// line, the status-band composite, the card-row Repeat, and the empty states when they show), with one
+    /// Gap between each. Every number comes from the same snapshot, so changing the manifest's Padding, the
+    /// Section Gap, the header Height or the card rows reddens this instead of silently moving the card.
     /// <para>
     /// LIMITATION, stated in the lane itself: the PRE-SWAP card height is not measured here because the old
     /// element left the manifest in step A; the pre-swap side of the comparison is the UsCardLayout formula
@@ -1063,24 +1063,29 @@ internal static class SettingsGeometryLaneTests
     /// measurement.
     /// </para>
     /// </summary>
-    private static void DeclarativeChecklistCardReproducesTheCardChrome()
+    private static void PacksResultSectionReproducesTheCardChrome()
     {
         static void Check(bool ok, string message)
         {
-            if (!ok) throw new InvalidOperationException("checklist card chrome (step A/B): " + message);
+            if (!ok) throw new InvalidOperationException("packs result card chrome (step A/B): " + message);
         }
 
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
         host.Bindings.Invoke("set-tab", "Packs");
+        // US-PACK1: the card keys register during the FIRST projection pass and the domain rows
+        // materialize only once a card is open - arrange, open the us.sang card through the very funnel
+        // write the header's expand button invokes, then take the measured snapshot with rows present.
+        host.MeasureAndArrange(new Vector2(800f, 600f));
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(800f, 600f));
 
-        Check(snapshot.RectById.TryGetValue("checklist-card", out Rect card), "the declarative card element is arranged");
+        Check(snapshot.RectById.TryGetValue("packs-results", out Rect card), "the declarative result element is arranged");
         Check(snapshot.RectById.TryGetValue("checklist", out Rect bands), "the status-band composite is arranged inside it");
-        Check(snapshot.RectById.TryGetValue("checklist-header", out Rect header), "the section header is arranged");
+        Check(snapshot.RectById.TryGetValue("packs-results-header", out Rect header), "the section header is arranged");
         Check(Math.Abs(header.height - 26f) <= 0.5f, "the header band is UsCardLayout's 26px, got " + header.height);
 
-        string[] children = { "checklist-header", "checklist-scope", "checklist", "checklist-list", "checklist-empty-nodomain" };
+        string[] children = { "packs-results-header", "packs-scope", "checklist", "packs-card-rows", "packs-none" };
         float sum = 0f;
         int count = 0;
         foreach (string id in children)
@@ -1092,7 +1097,7 @@ internal static class SettingsGeometryLaneTests
             }
         }
 
-        Check(count >= 3, "the card must arrange its header, the band composite and the list column, got " + count);
+        Check(count >= 3, "the card must arrange its header, the band composite and the card rows, got " + count);
         float expected = 12f + sum + 6f * (count - 1) + 12f;
         Check(Math.Abs(card.height - expected) <= 0.5f,
             "card height must equal Padding + its arranged children + the Section gaps + Padding: card "
@@ -1100,21 +1105,20 @@ internal static class SettingsGeometryLaneTests
         Check(card.height > bands.height + 20f,
             "the band composite does not itself carry the card chrome (card " + card.height + ", bands " + bands.height + ")");
 
-        // The list column repeats the same relation one level down: the search field, the row set and
-        // whichever empty state is showing, one 6px gap between each.
-        Check(snapshot.RectById.TryGetValue("checklist-list", out Rect list), "the declarative list column is arranged");
-        Check(snapshot.RectById.TryGetValue("checklist-search", out Rect search), "the search field is arranged");
-        Check(snapshot.RectById.TryGetValue("checklist-rows", out Rect rows), "the row set is arranged");
-        Check(Math.Abs(search.height - 24f) <= 0.5f, "the search field is the declared 24px band, got " + search.height);
+        // The row set, one level down. US-PACK1 retired the list column and its search band with the
+        // browse cards - the keyword now lives in the filter Section, outside this card - so what the old
+        // "list = search + Gap + rows" relation measured is now the Repeat itself: one element arranging
+        // the materialized template per projected key (<templateId>#<itemKey>, which is what the item-key
+        // lanes read back in layout order). With us.sang opened by the setup above the projection names
+        // exactly four keys, so all four row elements must carry arranged rects.
+        Check(snapshot.RectById.TryGetValue("packs-card-rows", out Rect rows), "the card-row repeat is arranged");
         Check(rows.height > 0f, "the rich fixture must arrange at least one pack row, got " + rows.height);
-        float listExpected = search.height + 6f + rows.height;
-        Check(Math.Abs(list.height - listExpected) <= 0.5f,
-            "the list column must be search + Gap + rows: " + list.height + " vs " + listExpected);
-
-        // The rows are real tree elements whose identity carries the item key (Repeat materializes
-        // <templateId>#<itemKey>), which is what the item-key lane reads back in layout order.
-        Check(snapshot.RectById.ContainsKey("checklist-row#us.sang"),
-            "the Repeat must materialize one arranged row element per projected key");
+        Check(snapshot.RectById.ContainsKey("pack-card-row#us.sang")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang|human|sanguophage")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang|human")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang2"),
+            "the Repeat must materialize one arranged row element per projected key - the two headers and"
+            + " the opened card's race and xenotype domain rows");
     }
 
     private static void Step(string name, Action action)

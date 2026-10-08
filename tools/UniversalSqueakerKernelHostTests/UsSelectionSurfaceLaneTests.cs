@@ -39,7 +39,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <item><b>UnselectedRowsPaintNeither</b> - MUTATION-PROVEN: dropping the selected check in the kind
 /// paints a rail on EVERY row, and this is the assertion that catches it (the positive half cannot: it
 /// only asks for one).</item>
-/// <item><b>BothTemplatesDeclareTheSurface</b> - a surface in one list and not the other reddens by id.</item>
+/// <item><b>PackCardTemplateDeclaresTheSurface</b> - a surface dropped from the card template, or a
+/// second one added, reddens by id.</item>
 /// </list>
 /// </para>
 ///
@@ -53,21 +54,21 @@ internal static class UsSelectionSurfaceLaneTests
 {
     private const string SurfaceKind = "us/selection-surface";
 
-    /// <summary>The same page size DeclarativePacksLaneTests measures the row geometry at (800x720), on
-    /// purpose: this lane's numbers must be comparable with that lane's, and the two must disagree loudly
+    /// <summary>The page size the row geometry was measured at through the T21/T22 rounds (800x720), on
+    /// purpose: this lane's numbers must stay comparable with the sibling row measurements, and disagree
     /// rather than agree by construction. (The 960x530 real-window size is where T22's two-column question is
     /// argued; a first cut of this lane used it and found the Packs layer rows were not materialized in that
     /// snapshot at all, which is a separate fact about that size and not something to fold in here.)</summary>
     private const float PageWidth = 800f;
     private const float PageHeight = 720f;
 
-    /// <summary>Both domain lists, by template id: selection must read the same in each, and a surface
-    /// that landed in only one of them is named rather than merely uncounted.</summary>
-    private static readonly string[] RowTemplates = { "race-layer-row", "xenotype-layer-row" };
+    /// <summary>The row template, by id: since US-PACK1 ONE template draws both kinds - card header and
+    /// domain row - and a surface dropped from it is named rather than merely uncounted.</summary>
+    private static readonly string[] RowTemplates = { "pack-card-row" };
 
     public static int RunAll()
     {
-        Step("both domain lists declare the row-state surface", BothTemplatesDeclareTheSurface);
+        Step("the pack-card template declares the row-state surface", PackCardTemplateDeclaresTheSurface);
         Step("the selected row paints a fill and a 3px rail", TheSelectedRowPaintsAFillAndARail);
         Step("unselected rows paint neither", UnselectedRowsPaintNeither);
         Console.WriteLine("UsSelectionSurfaceLaneTests ALL PASS");
@@ -78,7 +79,7 @@ internal static class UsSelectionSurfaceLaneTests
     // Step 1: the declaration, read off the live manifest
     // ---------------------------------------------------------------------------------------------
 
-    private static void BothTemplatesDeclareTheSurface()
+    private static void PackCardTemplateDeclaresTheSurface()
     {
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
 
@@ -115,14 +116,18 @@ internal static class UsSelectionSurfaceLaneTests
                 + " (Height=\"MatchContent\"), got '" + surfaceHeight + "': a height of its own would either"
                 + " paint a band that is not the row or pull the row's height away from the text column's");
 
-            // CONTROL: the hit band is still appearance-less. If it ever paints, the surface and the band
-            // would both draw the row, and the geometry work S4-2 refused would be back.
-            List<UiElementSpec> hits = Descendants(root).Where(e => e.Kind == "input/button").ToList();
-            Assert(hits.Count == 1,
-                "'" + template + "' must keep exactly one hit element, got " + hits.Count);
-            Assert(hits[0].TryGetAttribute("Chrome", out string chrome) && chrome == "none",
-                "G3 still holds: the hit band must paint nothing (Chrome=none), got '" + chrome
-                + "' - the visible state belongs to the surface, not to the band that must not move");
+            // CONTROL, re-censused for US-PACK1: the template now carries TWO buttons - the domain row's
+            // hit band and the header's expand command. The HIT BAND is identified by the appearance it
+            // must have: Chrome=none. An expand command that dropped its chrome would paint a second
+            // competing band and reddens here by count, naming the buttons it found.
+            List<UiElementSpec> allButtons = Descendants(root).Where(e => e.Kind == "input/button").ToList();
+            List<UiElementSpec> hits = allButtons
+                .Where(e => e.TryGetAttribute("Chrome", out string c) && c == "none")
+                .ToList();
+            Assert(hits.Count == 1 && allButtons.Count == 2,
+                "G3 still holds: '" + template + "' must keep exactly ONE Chrome=none hit band - the"
+                + " visible state belongs to the surface, not to the band that must not move; buttons: "
+                + string.Join(",", allButtons.Select(b => b.Id)) + " (appearance-less: " + hits.Count + ")");
         }
     }
 
@@ -141,6 +146,12 @@ internal static class UsSelectionSurfaceLaneTests
             // the Overview preset list's expanded row (which also paints RowRail.Selected) instead of a
             // domain row. A lane that grades the wrong widget is not evidence about this one.
             host.Bindings.Invoke("set-tab", "Packs");
+            // US-PACK1: the card keys register during the FIRST projection pass and the domain rows
+            // materialize only once a card is open - so arrange once, open the us.sang card through the
+            // very funnel write the header's expand button invokes, and let the measured arranges below
+            // see the expanded page. A snapshot taken before the open carries headers only.
+            host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+            host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
             UiTheme theme = UsTheme.Surface();
             // The two tokens the SHIPPED selected treatment uses (UsKernelDraw.RowSurface): the selected
             // plane is theme.Selected and RowRail.Selected's rail ink is theme.TextSecondary. Named through
@@ -177,10 +188,11 @@ internal static class UsSelectionSurfaceLaneTests
             for (int i = 0; i < rects.Count; i++) solids.Add(((Rect)rects[i]!, (Color)colors[i]!));
             List<Rect> bands = ButtonsDrawn(host);
 
-            // The rail candidates: accent-coloured, 3px wide, and - the discriminator that keeps the
-            // navigation card and the section headers out - sitting at the left edge of a recorded HIT BAND.
-            // The nav rail is out by column (its x is left of the content viewport); a section header rail is
-            // out because no button band shares its y.
+            // The rail candidates: the SURFACE's own rail colour (TextPrimary per SelectedRail's measured
+            // ruling - a gold rail on the gold fill would be invisible), 3px wide, and - the discriminator
+            // that keeps the navigation card and the section headers out - sitting at the left edge of a
+            // recorded HIT BAND whose height equals the rail's. The section header's gold rail is now out
+            // by COLOUR as well as height: the census asks for the surface's rail token, not the accent.
             var rowRails = new List<(Rect Rect, Rect Band)>();
             foreach ((Rect rect, Color colour) in solids)
             {
@@ -195,7 +207,11 @@ internal static class UsSelectionSurfaceLaneTests
                 // navigation column lives at a NEGATIVE local x and is excluded by that.
                 if (rect.x < 0f) continue;
                 Rect band = bands.FirstOrDefault(b => Math.Abs(b.x - rect.x) <= 0.5f
-                    && b.y <= rect.y + 0.5f && b.yMax >= rect.yMax - 0.5f);
+                    && b.y <= rect.y + 0.5f && b.yMax >= rect.yMax - 0.5f
+                    // US-PACK1 discriminator: every row control records at its own group origin, so
+                    // x/y containment alone also matches the taller nav band (200x281) - the rail is as
+                    // tall as ITS row, so only a band of the rail's own height can be its band.
+                    && Math.Abs(b.height - rect.height) <= 0.5f);
                 if (band.width <= 0f) continue;
                 rowRails.Add((rect, band));
             }
@@ -205,29 +221,29 @@ internal static class UsSelectionSurfaceLaneTests
                 + rowRails.Count + " - solids inside the content scroll: "
                 + Describe(solids.Where(s => s.Rect.x >= 0f)));
             Rect rail = rowRails[0].Rect;
-            Rect row = rowRails[0].Band;
 
-            Assert(Math.Abs(rail.height - row.height) <= 0.5f,
-                "the rail must be as tall as the row (the design reads as one band), got "
-                + Describe(rail) + " vs row " + Describe(row));
-            Assert(Math.Abs(rail.y - row.y) <= 0.5f,
-                "the rail must start at the row's top edge, got " + Describe(rail) + " vs row " + Describe(row));
-
+            // US-PACK1: the ROW BAND is the surface's own painted fill rect. The hit band is NARROWER
+            // than the row (the domain row's hit stops where the switch band begins - 462 vs 524 measured),
+            // so "the fill spans the whole row" is checked between the FILL and the DECLARED row, never
+            // against the hit. The rail's job in the census is identification (which 3px solid belongs to
+            // a row button at all); the height equality with the fill is then the design claim: one band.
             var fills = solids.Where(s => SameColor(s.Colour, activeFill)
-                && Math.Abs(s.Rect.x - row.x) <= 0.5f && Math.Abs(s.Rect.y - row.y) <= 0.5f
-                && Math.Abs(s.Rect.width - row.width) <= 0.5f && Math.Abs(s.Rect.height - row.height) <= 0.5f)
+                    && Math.Abs(s.Rect.height - rail.height) <= 0.5f
+                    && s.Rect.width > rail.width * 10f)
                 .ToList();
-            Assert(fills.Count >= 1,
-                "the selected row must paint the Active fill ACROSS THE WHOLE ROW BAND (" + Hex(activeFill)
-                + "), not only its ink; solids at the band: "
-                + Describe(solids.Where(s => Math.Abs(s.Rect.y - row.y) <= 0.5f)));
+            Assert(fills.Count == 1,
+                "exactly ONE row-wide Active fill may sit at the rail's height (" + Hex(activeFill)
+                + "); fills: " + Describe(solids.Where(s => SameColor(s.Colour, activeFill))));
+            Rect row = fills[0].Rect;
+
+            Assert(Math.Abs(rail.y - row.y) <= 0.5f && Math.Abs(rail.x - row.x) <= 0.5f,
+                "the rail must start at the row band's top-left corner, got "
+                + Describe(rail) + " vs row " + Describe(row));
 
             // IDENTITY LINK, in the ONE dimension the two spaces agree on. MEASURED: the recorded rects are
-            // in the recording space (a row's children are recorded at the ROW's own origin - the hit and this
-            // surface both come back as (0,0,524,68.67)) while RectById is page space minus the viewport
-            // origin (the same row reads (12,518,524,68.67)). Only x/width/height or the origin can be
-            // compared, never both, and the first cut compared the origin and failed while both halves were
-            // right. So: the painted band must be ROW-SIZED against a declared domain row.
+            // in the recording space (a row's children are recorded at the ROW's own origin) while RectById
+            // is page space minus the viewport origin. Only size can be compared, not the origin. So: the
+            // painted band must be ROW-SIZED against a declared domain row.
             List<Rect> declaredRows = DeclaredRows(snapshot);
             Assert(declaredRows.Any(r => Math.Abs(r.width - row.width) <= 0.5f
                     && Math.Abs(r.height - row.height) <= 0.5f),
@@ -240,8 +256,7 @@ internal static class UsSelectionSurfaceLaneTests
             // M7: this assertion has NO own red record - any manifest change that alters the surface's height
             // also trips step 1's Height="MatchContent" check, which runs first. Recorded as a GUARD.
             List<Rect> surfaceRects = snapshot.RectById.Keys
-                .Where(key => key.StartsWith("race-layer-row-surface#", StringComparison.Ordinal)
-                    || key.StartsWith("xenotype-layer-row-surface#", StringComparison.Ordinal))
+                .Where(key => key.StartsWith("pack-card-row-surface#", StringComparison.Ordinal))
                 .Select(key => Local(snapshot, key))
                 .ToList();
             Assert(surfaceRects.Count >= 1,
@@ -272,6 +287,10 @@ internal static class UsSelectionSurfaceLaneTests
             using UiHost host = UsKernelSettingsHost.Create(
                 new RecordingSettingsSource { RichData = true }, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Packs");
+            // US-PACK1 setup, same as step 2: one pass registers the header keys, the funnel write opens
+            // the card, and the snapshot below is taken with the domain rows materialized.
+            host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+            host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
             UiTheme theme = UsTheme.Surface();
             // TASK-32 RE-CUT (product and lane in the same batch; no criterion changed). TWO CHANNELS, stated
             // apart: the RECORDER stores what the widget WROTE (an RGBA parameter, alpha included), while the
@@ -299,12 +318,13 @@ internal static class UsSelectionSurfaceLaneTests
             // The subjects are the domain rows, identified by SIZE in the recorded space and cross-checked
             // against the engine's own row ids in page space. Two earlier cuts failed here and both are worth
             // keeping: (1) selecting bands by "inside the content column and taller than 20px" graded a band
-            // that belongs to another widget which legitimately paints theme.Selected; (2) assuming every
-            // domain row shares one x, when the two lists sit in different columns at some page sizes.
+            // that belongs to another widget which legitimately paints theme.Selected; (2) since US-PACK1
+            // the ONE template draws both row kinds, and a card header is a taller row than a domain row -
+            // so the census keys on the domain item-key shape (the '|' scope separator), see DeclaredRows.
             List<Rect> declaredRows = DeclaredRows(snapshot);
-            Assert(declaredRows.Count >= 3,
-                "the fixture must draw several domain rows for this negative half to have subjects, got "
-                + declaredRows.Count);
+            Assert(declaredRows.Count >= 2,
+                "the opened card must draw at least its race row and its xenotype row for this negative half"
+                + " to have subjects, got " + declaredRows.Count);
             float rowWidth = declaredRows[0].width;
             float rowHeight = declaredRows[0].height;
             Assert(declaredRows.All(r => Math.Abs(r.width - rowWidth) <= 0.5f
@@ -312,15 +332,17 @@ internal static class UsSelectionSurfaceLaneTests
                 "every declared domain row must share one size for the recorded-space filter below to identify"
                 + " them: " + string.Join(" ", declaredRows.Select(Describe)));
 
-            // THE STATE HALF: exactly one declared row answers selected. Read through the fail-soft bool query
-            // the carrier's own SelectedKey resolution uses.
+            // THE STATE HALF: exactly one declared row answers selected. Read through the fail-soft bool
+            // query the carrier's own SelectedKey resolution uses. The walk covers EVERY card-row instance -
+            // headers included, since one template draws both kinds - and a header's "selected" resolves
+            // false (the production binder parses the key and a separator-less key has no owning domain),
+            // so the claim stays exactly "the operating domain's row, and nothing else, is selected".
             var selectedKeys = new List<string>();
             foreach (string key in snapshot.RectById.Keys.Where(k =>
-                k.StartsWith("race-layer-row#", StringComparison.Ordinal)
-                || k.StartsWith("xenotype-layer-row#", StringComparison.Ordinal)))
+                k.StartsWith("pack-card-row#", StringComparison.Ordinal)))
             {
-                string items = key.StartsWith("race-", StringComparison.Ordinal) ? "race-rows" : "xenotype-rows";
-                string bindKey = items + "." + key.Substring(key.IndexOf('#') + 1) + ".selected";
+                string bindKey = UsWriteBindings.ItemKey(
+                    "pack-card-keys", key.Substring(key.IndexOf('#') + 1), "selected");
                 if (host.Bindings.TryGetBool(bindKey, out bool isSelected) && isSelected) selectedKeys.Add(bindKey);
             }
 
@@ -329,10 +351,11 @@ internal static class UsSelectionSurfaceLaneTests
                 + " domain, got " + selectedKeys.Count + " [" + string.Join(",", selectedKeys) + "]");
 
             // THE PAINT HALF, and it is a COUNT rather than a per-row position ON PURPOSE. Measured: the
-            // recorded rects live in the recording space, where a row's children are recorded at the ROW's own
-            // origin - all four rows come back as the same (0,0,524,68.67) - so position cannot tell two rows
-            // apart there. What the mutation changes is how MANY row-sized surfaces exist: one rail and one
-            // fill today, four of each the moment the state check is dropped. That is the assertion below.
+            // recorded rects live in the recording space, where a row's children are recorded at the ROW's
+            // own origin - every same-sized domain row comes back as the same rect - so position cannot tell
+            // two rows apart there. What the mutation changes is how MANY row-sized surfaces exist: one rail
+            // and one fill today, one for EVERY domain row the moment the state check is dropped. That is
+            // the assertion below.
             var rowFills = solids.Where(s => SameColor(s.Colour, activeFill)
                 && Math.Abs(s.Rect.width - rowWidth) <= 0.5f
                 && Math.Abs(s.Rect.height - rowHeight) <= 0.5f).ToList();
@@ -356,12 +379,14 @@ internal static class UsSelectionSurfaceLaneTests
         }
     }
 
-    /// <summary>The domain rows the engine itself arranged, in page space minus the content viewport origin.</summary>
+    /// <summary>The DOMAIN rows the engine itself arranged, in page space minus the content viewport
+    /// origin. Since US-PACK1 one template draws both kinds, the census keys on the item shape: a header's
+    /// item key is the bare pack key; a domain row's carries the '|' scope separator.</summary>
     private static List<Rect> DeclaredRows(UiLayoutSnapshot snapshot)
     {
         return snapshot.RectById.Keys
-            .Where(key => key.StartsWith("race-layer-row#", StringComparison.Ordinal)
-                || key.StartsWith("xenotype-layer-row#", StringComparison.Ordinal))
+            .Where(key => key.StartsWith("pack-card-row#", StringComparison.Ordinal)
+                && key.Substring(key.IndexOf('#') + 1).IndexOf('|') >= 0)
             .Select(key => Local(snapshot, key))
             .ToList();
     }
@@ -447,9 +472,9 @@ internal static class UsSelectionSurfaceLaneTests
         clear.Invoke(null, null);
     }
 
-    /// <summary>Two passes, like DeclarativePacksLaneTests: the first materializes the Repeat subtrees, and
-    /// the snapshot returned by the first pass does not carry the materialized row ids yet. A lane that read
-    /// the first snapshot found NO 'race-layer-row#' key at all and would have measured nothing.</summary>
+    /// <summary>Two passes: the first materializes the Repeat subtrees, and the snapshot returned by the
+    /// first pass does not carry the materialized row ids yet. A lane that read the first snapshot found NO
+    /// 'pack-card-row#' key at all and would have measured nothing.</summary>
     private static UiLayoutSnapshot Arrange(UiHost host)
     {
         host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));

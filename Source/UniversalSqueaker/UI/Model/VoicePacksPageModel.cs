@@ -45,12 +45,12 @@ public static class VoicePacksPageModel
         List<FilterOptionView> raceFilterOptions = BuildRaceFilterOptions(races);
         List<FilterOptionView> xenotypeFilterOptions = BuildXenotypeFilterOptions(xenotypes, state.RaceFilter);
 
-        // D4: each domain list narrows additionally by its OWN search box (the one shared substring
-        // rule, UsChecklistFilter.QueryMatches - display name and internal defName are both searchable)
-        // and the xenotype list FOLLOWS the selected race: while a race row is the browsed domain, only
-        // that race's xenotypes (plus race-less global ones) stay listed. Selecting a xenotype row
-        // leaves the list untouched, and clearing the race selection (or the card's Clear control)
-        // restores the full list - the browsed selection is the only input the follow reads.
+        // US-PACK1: the two domain lists are no longer drawn as browse cards, so their OWN search boxes
+        // retired with them - the unified keyword narrows the CARD result instead. The lists stay as the
+        // model's internal domain inventory: the state/dropdown narrowing still answers "which domain may
+        // the projection fall back to" and feeds the banner's counts, exactly as before. The xenotype
+        // inventory still FOLLOWS the browsed race: while a race is the operating domain, only that
+        // race's xenotypes (plus race-less global ones) stay in the fallback inventory.
         bool followRace = state.SelectedScope == SqueakVoicePackScope.Race
             && !string.IsNullOrEmpty(state.SelectedRaceDefName);
         List<RaceLayerRowView> filteredRaces = races
@@ -61,8 +61,7 @@ public static class VoicePacksPageModel
                 race.State == SqueakVoicePackDomainState.Orphan,
                 race.EnabledCount > 0,
                 in state.DomainFilter)
-                && VoicePacksFilters.RaceFilterMatches(state.RaceFilter, race.RaceDefName)
-                && UsChecklistFilter.QueryMatches(state.RaceSearchText, race.DisplayName, race.RaceDefName))
+                && VoicePacksFilters.RaceFilterMatches(state.RaceFilter, race.RaceDefName))
             .ToList();
         List<VoicePackDomainView> filteredXenotypes = xenotypes
             .Where(domain => VoicePacksFilters.DomainMatches(
@@ -79,17 +78,16 @@ public static class VoicePacksPageModel
                     domain.TargetDefName)
                 && (!followRace
                     || string.IsNullOrEmpty(domain.RaceDefName)
-                    || string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal))
-                && UsChecklistFilter.QueryMatches(
-                    state.XenotypeSearchText, domain.DisplayName, domain.TargetDefName, domain.RaceDefName))
+                    || string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal)))
             .ToList();
 
-        // The per-list empty note shows when the list went empty while entries exist (or a search is
-        // active) - an unadopted page with no search keeps the banner as its only message.
-        bool raceListEmpty = filteredRaces.Count == 0
-            && (races.Count > 0 || state.RaceSearchText.Trim().Length > 0);
-        bool xenotypeListEmpty = filteredXenotypes.Count == 0
-            && (xenotypes.Count > 0 || state.XenotypeSearchText.Trim().Length > 0);
+        // US-PACK1 (§4.2): the ONE result body. Every pack the catalog provides becomes a card whose rows
+        // are the (scope, race, xenotype) domains that pack serves; the composed filter (keyword, author,
+        // race, xenotype, state) narrows ROWS, and a card survives while at least one row does. The
+        // keyword's DOMAIN hit is what auto-expands - the manual expansion set is never touched by a query.
+        List<PackCardView> packCards = BuildPackCards(settings, catalog, state);
+        bool packNoPacks = CountCataloguedPacks(catalog) == 0;
+        bool packResultsEmpty = !packNoPacks && packCards.Count == 0;
 
         IReadOnlyList<string> authors = CollectAuthors(settings, catalog);
 
@@ -119,7 +117,19 @@ public static class VoicePacksPageModel
             out string fallbackRace, out List<FallbackEntryView> fallbackEntries,
             out List<FilterOptionView> fallbackSounds, out List<FilterOptionView> fallbackCandidates);
 
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks, settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled, settings.eatPrecisionIncludeDrugs, settings.allowBabyActions, raceListEmpty, xenotypeListEmpty, tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates, state.FallbackStatusKey);
+        return new VoicePacksViewState(
+            mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed,
+            settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation,
+            settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks,
+            settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor,
+            settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces,
+            filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains,
+            moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter,
+            state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled,
+            settings.eatPrecisionIncludeDrugs, settings.allowBabyActions,
+            packCards, packResultsEmpty, packNoPacks,
+            tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
+            state.FallbackStatusKey);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -191,8 +201,8 @@ public static class VoicePacksPageModel
         if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
         if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
         if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "race-layer", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "xenotype-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "packs-filter", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "packs-results", StringComparison.Ordinal)
             || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
         {
             return "Packs";
@@ -972,6 +982,120 @@ public static class VoicePacksPageModel
         return orphan;
     }
 
+
+    /// <summary>
+    /// US-PACK1 (§4.2): the pack-card projection - the page's ONE result body. The scan visits every
+    /// domain the catalog and the player records produce (race domains in catalog order, then the sorted
+    /// xenotype inventory), and every pack that serves a domain contributes a ROW to that pack's CARD.
+    /// The composed filter narrows ROWS: the author/race/xenotype dropdowns and the state flags apply to
+    /// the row's domain exactly as the old browse lists applied them to their cards, and the keyword
+    /// accepts a row when it matches the PACK half (label/DefName/Mod/author/key - the same
+    /// <see cref="UsChecklistFilter.QueryMatches"/> substring rule, no second predicate) or the DOMAIN
+    /// half (domain display name and defNames). A card survives while one row does; a keyword hit on the
+    /// DOMAIN half is what auto-expands the card, while a pack-only hit lists the card collapsed - the
+    /// manual expansion set is never written by a query, so clearing the keyword provably restores it.
+    /// Enable answers are read per domain identity (the same double-keyed status lookup the settings
+    /// layer uses), which is what keeps two rows of one pack independent writes.
+    /// </summary>
+    private static List<PackCardView> BuildPackCards(
+        UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, VoicePacksPageState state)
+    {
+        // The Verse side COLLECTS, the pure side FILTERS (PackCardProjection): the same split
+        // UsChecklistFilter/VoicePacksFilters established, so the harness lane drives the real rule
+        // without a second copy of it. Scan order is the card order's first-appearance input: race
+        // domains in catalog order, then the sorted xenotype inventory.
+        var source = new List<PackCardSourceRow>();
+
+        foreach (string race in catalog.RaceDefNames)
+        {
+            if (string.IsNullOrEmpty(race)) continue;
+            IReadOnlyList<SqueakVoicePackDef> packs =
+                catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race) ?? Array.Empty<SqueakVoicePackDef>();
+            if (packs.Count == 0) continue;
+            SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, race);
+            IReadOnlyList<string> enabledKeys = status.EnabledKeys ?? Array.Empty<string>();
+            string display = ResolveRaceLabel(race);
+            bool orphan = status.State == SqueakVoicePackDomainState.Orphan || CountOrphanKeys(enabledKeys, packs) > 0;
+            foreach (SqueakVoicePackDef pack in packs)
+            {
+                if (pack == null) continue;
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                if (string.IsNullOrEmpty(identity.Key)) continue;
+                source.Add(new PackCardSourceRow(
+                    identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,
+                    SqueakVoicePackScope.Race, race, "", display,
+                    identity.IsSelected, false, false, false, orphan));
+            }
+        }
+
+        foreach (XenotypeDomainKey domainKey in CollectXenotypeDomains(settings, catalog))
+        {
+            IReadOnlyList<SqueakVoicePackDef> targetPacks = catalog.GetVoicePackDomainPacks(
+                SqueakVoicePackScope.Xenotype, domainKey.TargetDefName) ?? Array.Empty<SqueakVoicePackDef>();
+            List<SqueakVoicePackDef> packs = new();
+            foreach (SqueakVoicePackDef pack in targetPacks)
+                if (pack != null && string.Equals(pack.raceDefName, domainKey.RaceDefName, StringComparison.Ordinal))
+                    packs.Add(pack);
+            if (packs.Count == 0) continue;
+            SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(
+                SqueakVoicePackScope.Xenotype, domainKey.RaceDefName, domainKey.TargetDefName);
+            IReadOnlyList<string> enabledKeys = status.EnabledKeys ?? Array.Empty<string>();
+            string display = ResolveXenotypeLabel(catalog, domainKey.TargetDefName);
+            bool dormant = !ModsConfig.BiotechActive;
+            bool targetUnavailable = ModsConfig.BiotechActive && !catalog.XenotypeByDefName.ContainsKey(domainKey.TargetDefName);
+            bool hasConflict = catalog.AmbiguousCanonicalDefNames.Contains(domainKey.TargetDefName);
+            bool orphan = status.State == SqueakVoicePackDomainState.Orphan || CountOrphanKeys(enabledKeys, packs) > 0;
+            foreach (SqueakVoicePackDef pack in packs)
+            {
+                if (pack == null) continue;
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                if (string.IsNullOrEmpty(identity.Key)) continue;
+                source.Add(new PackCardSourceRow(
+                    identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,
+                    SqueakVoicePackScope.Xenotype, domainKey.RaceDefName, domainKey.TargetDefName, display,
+                    identity.IsSelected, hasConflict, dormant, targetUnavailable, orphan));
+            }
+        }
+
+        return PackCardProjection.Build(
+            source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
+            in state.DomainFilter, state.PackCardsExpanded);
+    }
+
+    /// <summary>Distinct pack keys the catalog carries at all - the "no packs here" sentence's denominator.</summary>
+    private static int CountCataloguedPacks(SqueakXenotypeCatalogSnapshot catalog)
+    {
+        HashSet<string> keys = new(StringComparer.Ordinal);
+        foreach (SqueakVoicePackDef pack in catalog.RacePacks ?? Array.Empty<SqueakVoicePackDef>())
+            if (pack != null && pack.TryGetPackKey(out string k)) keys.Add(k);
+        foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+            foreach (SqueakVoicePackDef pack in pair.Value)
+                if (pack != null && pack.TryGetPackKey(out string k)) keys.Add(k);
+        return keys.Count;
+    }
+
+    /// <summary>US-PACK1: the player's expand/collapse gesture on a card header (manual set only - the
+    /// query's auto-expansion is derived and cannot be toggled into the user's state).</summary>
+    public static void TogglePackCard(VoicePacksPageState state, string packKey)
+    {
+        if (state == null || string.IsNullOrEmpty(packKey)) return;
+        if (!state.PackCardsExpanded.Remove(packKey)) state.PackCardsExpanded.Add(packKey);
+    }
+
+    /// <summary>US-ESC1 (PACK1 result layer, §4.1): the result layer has an answer ONLY while the player
+    /// opened cards themselves; an auto-expanded-by-the-query card is the query's answer, not a layer.
+    /// Declining sends the key one level up (page-root help, then Verse) unchanged.</summary>
+    public static bool CanCancelPackResults(VoicePacksPageState state)
+        => state != null && state.PackCardsExpanded.Count > 0;
+
+    /// <summary>One press, one layer: collapse exactly the manual expansions. Never touches filters,
+    /// selection or any persisted value.</summary>
+    public static void CancelPackResults(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.PackCardsExpanded.Clear();
+    }
+
     /// <summary>
     /// Page banner. Every line here is a Keyed string: the model has no kernel translation seam, so
     /// it resolves through the Verse Translator the same way the audio-pool notice does.
@@ -1064,8 +1188,8 @@ public static class VoicePacksPageModel
             "scope-tree" => "us/scope-tree",
             "preset-list" => "us/preset-list",
             "filter-bar" => "us/filter-bar",
-            "race-layer" => "us/race-layer",
-            "xenotype-layer" => "us/xenotype-layer",
+            "packs-filter" => "us/filter-bar",
+            "packs-results" => "us/pack-cards",
             "checklist" => "us/voice-pack-checklist",
             _ => "us/page-title",
         };
@@ -1128,19 +1252,6 @@ public static class VoicePacksPageModel
         state.SearchText = text ?? "";
     }
 
-    /// <summary>D4: the race list's own search text (shared substring rule; empty = no narrowing).</summary>
-    public static void SetRaceSearchText(VoicePacksPageState state, string text)
-    {
-        if (state == null) return;
-        state.RaceSearchText = text ?? "";
-    }
-
-    /// <summary>D4: the xenotype list's own search text.</summary>
-    public static void SetXenotypeSearchText(VoicePacksPageState state, string text)
-    {
-        if (state == null) return;
-        state.XenotypeSearchText = text ?? "";
-    }
 
     // The hover-claim machine (D10 grace) moved to UiSession with FL 0.3.0 P3: widgets claim through
     // UsKernelDraw.HelpHover -> Session.ClaimHover, and the panel/border read Session.HoverClaim. The

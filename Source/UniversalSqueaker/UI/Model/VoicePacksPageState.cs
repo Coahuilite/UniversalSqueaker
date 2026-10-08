@@ -27,6 +27,11 @@ public sealed class VoicePacksPageState
     public bool TuningContextActive = true;
     public bool FallbackTableCanceled;
     public string SearchText = "";
+    // US-PACK1 (§4.2): the MANUAL card-expansion set (pack key = card identity). It is the user's own
+    // browsing state and the ONLY thing cancel-pack-results collapses. The query's xenotype-hit
+    // auto-expansion is never stored here - it is derived from SearchText per projection, so clearing
+    // the query restores exactly this manual set. Page state, never persisted, cleared on Reset.
+    public readonly HashSet<string> PackCardsExpanded = new(StringComparer.Ordinal);
     public readonly Dictionary<string, BaselinePresetSelection> BaselinePresets = new(StringComparer.Ordinal);
 
     // S5 调音编辑器（选项 ①）：当前编辑层（0=Global,1=Race,2=Xenotype）与层域身份。
@@ -47,14 +52,10 @@ public sealed class VoicePacksPageState
     public UiDomainFilter DomainFilter;
     public UiPackFilter PackFilter;
 
-    // Packs 页 race/xenotype 并列筛选：空字符串 = All。
+    // Packs 页统一筛选区（US-PACK1）：作者/种族/异种下拉与状态旗标共同缩小唯一的包卡片结果区。
+    // D4 的两条独立列表搜索随并列浏览卡退役：一个关键词字段（SearchText）现在承担全部文本命中。
     public string RaceFilter = "";
     public string XenotypeFilter = "";
-
-    // D4: each domain list carries its OWN search text (same predicate as the pack search -
-    // UsChecklistFilter.QueryMatches: trimmed substring, OrdinalIgnoreCase). Empty = no narrowing.
-    public string RaceSearchText = "";
-    public string XenotypeSearchText = "";
 
     // VF1定稿: the tuning page's three internal areas (0 = action rules, 1 = mood tones,
     // 2 = native final fallback) and the editor selections / queries. Page state, never persisted.
@@ -89,8 +90,7 @@ public sealed class VoicePacksPageState
         PackFilter = default;
         RaceFilter = "";
         XenotypeFilter = "";
-        RaceSearchText = "";
-        XenotypeSearchText = "";
+        PackCardsExpanded.Clear();
         TuningArea = 0;
         TuningSelectedAction = "";
         FallbackSelectedRace = "";
