@@ -56,6 +56,17 @@
   BuildTuningDomains never sees one because the ladder's context step always rests the page on the Global layer,
   where no domain exists to auto-pick. Ladder steps are scoped to the VISIBLE branch: a row target left over
   from another area folds into the context exit instead of acting as an invisible extra layer.
+  PM review 1 (2026-10-09, commit `1d40721`) corrected two reachable defects: the active tuning context is a
+  NON-PERSISTED `TuningContextActive` flag, never a nonzero layer/area inference, so the DEFAULT Global/Actions
+  branch also owns one context return that reposes the page without writing config or auto-reselecting (row
+  cancel stays visible-branch-scoped; the wrapper container carries the context `CancelBind`; the lane
+  establishes its subject with a REAL viewport-transformed click, never `SetCancelTarget`); and the tool windows
+  recompute `forceCatchAcceptAndCancelEventEvenIfUnfocused` at the TOP of `WindowOnGUI` before content - the
+  native dispatch reads eligibility before `DoWindowContents` - so an open menu claims the key inside the same
+  pass Verse reads while an idle tool releases both keys to the settings window's stock accept; the reachable
+  two-window witness names the double-walk vs real focused-stack order divergence for the ONE human pass.
+  ESC1's aggregate stays PARTIAL by PM ruling: the packs domain→result→root chain is carried into US-PACK1,
+  not faked in the old layout.
   US-PACK1 and US-RESET1 stay on the agreed chain
   and are NOT yet dispatched; their preparation tables are the accepted `us/preparation.md`. Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds

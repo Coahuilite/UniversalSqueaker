@@ -13,7 +13,7 @@ status and paired package identities are authoritative in the PM checkpoint evid
 The candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
 Product implementation in `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md`
 is dispatched per the PM relay: the archive round and FL-IC1/IC2 are accepted (frozen at `d5af4d8`), and
-US-UI1/US-ESC1 have landed as local commits awaiting PM review; this file does not expand that product scope.
+US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file does not expand that product scope.
 
 - [ ] **Remaining whole-checkpoint human tasks** (do not re-run accepted matrices): pack select/search/enable
   as later revised by US-PACK1; compact US diagnostics and settings developer tools at 1024x768; per-race
@@ -23,10 +23,14 @@ US-UI1/US-ESC1 have landed as local commits awaiting PM review; this file does n
   independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
   fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest). Observe
   regressions only. Unreported restore/restart branches are not a new PRE1 gate.
-- **Interaction chain state (2026-10-08):** FL-IC1/IC2 accepted and frozen; US preparation accepted;
+- **Interaction chain state (2026-10-09):** FL-IC1/IC2 accepted and frozen; US preparation accepted;
   **US-UI1 and US-ESC1 implemented locally** (diagnostic two-press Esc on `TryHandleUnansweredCancel` +
   native eligibility, Call wording, F07 measured reset slot, F06 area-scoped context, ESC1 tree cancel
-  layers + cancelled marks) - full local gates green, PM acceptance pending. **Still to dispatch:**
+  layers + cancelled marks); PM review 1's bounded corrections landed at `1d40721` (non-persisted
+  `TuningContextActive` return on every branch incl. default Global, real-click subject lane, native
+  pre-contents eligibility recompute + reachable keyboard-cooperation witness) - full local gates green
+  on both carriers, PM re-review pending; **ESC1 aggregate stays partial**: the packs result chain is
+  carried into US-PACK1 by PM ruling. **Still to dispatch:**
   US-PACK1 (one filter region, pack-card results, xenotype-hit expansion, enable identity unchanged) and
   US-RESET1 (global/local restore per the accepted field-ownership table; keep every independent fallback
   store), then Demo-IC1, then the ONE combined short human pass. Exclude only the FL-owned broader backlog
