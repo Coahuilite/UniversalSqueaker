@@ -280,6 +280,8 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   written". A rebuild of identical content moves the second only, so a freeze notice quotes BOTH.
 - **A live carrier identity is never pinned in a tracked file.** A SHA written here is stale the moment it lands.
   The current identity is what the latest FREEZE NOTICE states, as a hash + mtime pair; this file keeps history.
+  The workflows pin the release TAG name (`v0.7.0-rc1`) and derive the commit, digest and DLL hash at run time
+  (step outputs, step summary, release body) - the same rule, not an exception to it.
 
 ## Identity and enduring corrections (verified against source; do not re-derive)
 
@@ -522,13 +524,17 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `PayloadKey`, `Chrome="none"` + `Height="Auto"`, `mode-row` `TitleKey1..8` + per-option hover help, banner
   roles). Durable consequence: "layers stay composite because G2 is a proven gap" no longer holds - the
   remaining blocker there is hierarchy x inline composition.
-- **Runtime mode, RULED 2026-09-24 (maintainer)**: FL stays in its `0.7.x` **development** state (no line or
-  minor move); the remote is **off-site backup only** - no tag and no release; local testing uses **Dev packages
-  only**, never `pack-release` / `pack-steam`. So an acceptance claim rests on the paired Dev folder, not on a
-  published artifact.
+- **Runtime mode**: FL stays in its `0.7.x` **development** state (no line or minor move), and local testing uses
+  **Dev packages only**, never `pack-release` / `pack-steam` locally. The 2026-09-24 "remote is off-site backup
+  only - no tag and no release" reading is **SUPERSEDED by the 2026-10-09 publication decision**: the line's
+  first publication is the `v0.7.0-rc1` **GitHub Pre-release** (never stable/latest), built and uploaded by FL's
+  release workflow, and US CI consumes that release asset (next bullet). An acceptance claim still rests on the
+  paired Dev folder, not on a published artifact by itself.
 - **Carrier pin `[0.7.0, 0.8.0)`** (`Source/UniversalSqueaker/Mod.cs`). **The carrier is identified by COMMIT**
   (`AssemblyInformationalVersion`, which gate 6 compares against the carrier checkout HEAD), **never by `Api`**:
-  during the coordination phase FL may add surface inside `0.7.x` with no minor bump. US compiles against the
+  during the coordination phase FL could add surface inside `0.7.x` with no minor bump; that temporary exemption
+  ends with FL's first publication (`v0.7.0-rc1`, 2026-10-09 decision), after which an addition moves the minor
+  again - commit identification stays the method either way. US compiles against the
   sibling payload by relative `HintPath` with `Private=false`, ships no copy, and declares the dependency in
   `About/About.xml`. The kernel-host lane reads the pin **out of `Mod.cs`** rather than repeating it.
 
@@ -544,13 +550,16 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `-RequireReleaseMetadata`, release.yml (tag shape + tag == csproj == modVersion + ancestry), and the harness
   gate reading the carrier `Api` **from the loaded DLL** - never by parsing the sibling source tree, whose commit
   is whatever the local session left there.
-- **CI dependency chain = checkout + full-tree sibling staging.** `actions/checkout` resolves `path` INSIDE
-  `GITHUB_WORKSPACE`, so the workflows check the carrier out to `ci-ferritelib/` and stage the WHOLE tree (minus
-  `.git`) to the sibling path: the DLL-only variant died at gate 13 because `KernelHostTests` builds FerriteLib's
-  stub assemblies in place. The payload must be built INSIDE the checkout that has `.git`, or the SDK reads no
-  `SourceRevisionId` and gate 6 refuses the bytes as unattributable. The Runner SDK is pinned so CI equals the
-  evidence baseline; `verify-local`'s harness gates run `--no-restore`, so any workflow must restore EVERY csproj
-  first.
+- **CI dependency chain = pinned-tag checkout + verified release-asset carrier (2026-10-09).**
+  `actions/checkout` resolves `path` INSIDE `GITHUB_WORKSPACE`, so the workflows check the carrier SOURCE out to
+  `ci-ferritelib/` at the release tag and stage the whole tree (minus `.git`) to the sibling path for the
+  source-support reads (licence gate 10, stub-coverage scanner gate 15). The compile payload is NEVER built in
+  CI: `scripts/acquire-ferritelib-carrier.ps1` acquires the exact `FerriteLib-<tag>.zip` release asset (explicit
+  repo+tag; `latest` refused), checks the release flags, the asset API `digest` when present, the closed 5-file
+  payload set, `version.txt` and the DLL's embedded commit/configuration, asserts the commit equals the pinned
+  checkout HEAD, and stages that one DLL. Gate 6 then compares the same two independently produced facts. The
+  Runner SDK is pinned so CI equals the evidence baseline; `verify-local`'s harness gates run `--no-restore`, so
+  any workflow must restore EVERY csproj first.
 - **Privacy review before an authorized push:** `privacy-audit.ps1 -FullHistory` covers all reachable
   refs. `-PrePush` adds release-oriented clean-tree/main/tag reporting and is not required for a normal
   version-branch push. First-upload durable decisions from 2026-09-06 (CI sibling staging, release-axis

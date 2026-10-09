@@ -74,14 +74,16 @@ expands the product scope.
   dimming at zero candidate packs; minor `HideBodyLabel`; an explicit `All` row in the author dropdown - each
   with a failure-sensitive geometry + interaction assertion driven by the real Host. Alternative: drop them as
   legacy-anchored, deleting the matching help entries and backlog lines in the same commit.
-- [ ] **Cross-repo release alignment**: US pins `[0.7.0, 0.8.0)` and both CI workflows rebuild the carrier from
-  FL's default branch, so CI tracks FL `main` rather than a release; the lib-side publish is the maintainer's
-  call.
+- [x] **Cross-repo release alignment - closed 2026-10-09.** Both CI workflows now acquire the pinned CI-built
+  release carrier (`v0.7.0-rc1`; explicit repo+tag, release flags + asset digest + closed payload set + commit
+  paired against the pinned checkout) instead of rebuilding FL's default branch; the compile payload is the
+  release asset and US ships no copy of it (`scripts/acquire-ferritelib-carrier.ps1`; pinning noted in `MEMORY.md`).
 - [ ] **rc trial loop**: a bad rc is fixed by deleting release + tag and re-cutting the SAME rc number;
   `/releases/latest` 404ing is the correct rc-window state. The stable cut and the next product axis are
   maintainer decisions.
-- [ ] **The generated release body does not name the carrier release it was built against** - close it in the
-  release-body step of `.github/workflows/release.yml`.
+- [x] **The generated release body names the carrier release it was built against - closed 2026-10-09** in the
+  release-body step of `.github/workflows/release.yml` (carrier tag + commit + DLL SHA-256 from the acquisition
+  step's outputs).
 - [ ] **Workshop display name and license** (maintainer only; do not invent) + first-release prep: About
   icon/preview, final description, runbook US copy adaptation.
 - [ ] **`US_STEAM` is a code axis with no build axis** (recorded, not a bug): `#if US_STEAM` gates code but no

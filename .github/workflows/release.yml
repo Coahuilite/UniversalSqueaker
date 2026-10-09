@@ -30,10 +30,14 @@ jobs:
         with:
           fetch-depth: 0   # the ancestry check below needs origin/main, not a depth-1 clone
 
-      - name: Checkout the FerriteLib carrier
+      # Pinned at the release tag - NEVER the default branch (same contract as ci.yml: the source tree
+      # carries the harness support and gate 6's pairing commit; the compile payload comes from the
+      # Release asset acquired below).
+      - name: Checkout the FerriteLib carrier source at the pinned release tag
         uses: actions/checkout@v4
         with:
           repository: Coahuilite/FerriteLib
+          ref: v0.7.0-rc1
           path: ci-ferritelib
 
       - name: Setup .NET
@@ -77,32 +81,22 @@ jobs:
           git merge-base --is-ancestor $commit refs/remotes/origin/main
           if ($LASTEXITCODE -ne 0) { throw "Tag commit $commit is not in origin/main history. Merge to main, then tag." }
 
-      # Same sibling-staging contract as ci.yml (read its comment): the whole carrier tree lands at the
-      # sibling path because gate 13 builds FerriteLib's stubs in place and the licence gate compares
-      # ferritelib/LICENSE; building there puts the payload DLL exactly where the HintPath resolves.
-      - name: Stage and build the FerriteLib carrier at the sibling path
+      # Same acquisition contract as ci.yml (read its comment): the carrier SOURCE is staged for the
+      # sibling reads (licence + stub-coverage scanner) and the COMPILE PAYLOAD is the verified CI-built
+      # release asset - never a second FerriteLib runtime build (single carrier). Step outputs carry the
+      # pairing facts (tag, commit, DLL hash) into the release body below.
+      - name: Acquire the FerriteLib release carrier (v0.7.0-rc1)
+        id: carrier
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $sibling = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'ferritelib'
           New-Item -ItemType Directory -Path $sibling -Force | Out-Null
-          # Build in the CHECKOUT, not in the sibling. The payload embeds its source commit in
-          # AssemblyInformationalVersion, and the SDK reads that revision from the git checkout the
-          # project lives in; the sibling copy deliberately has no .git, so building there produced
-          # '0.4.0-dev' with no commit suffix and verify-local's gate 6 refused the bytes as
-          # unattributable (v0.4.0-rc1 release run 34873790997 and CI run 34873779968, 2026-09-14).
-          dotnet build (Join-Path 'ci-ferritelib' 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -c Release --nologo
-          if ($LASTEXITCODE -ne 0) { throw 'carrier build failed' }
           Get-ChildItem -LiteralPath 'ci-ferritelib' -Force |
             Where-Object { $_.Name -ne '.git' } |
             Copy-Item -Destination $sibling -Recurse -Force
-          $produced = Join-Path $sibling '1.6/Assemblies/FerriteLib.UiKit.dll'
-          # Export the evaluated output explicitly; supports isolated and older carrier layouts.
-          $carrierOutput = (dotnet msbuild (Join-Path 'ci-ferritelib' 'Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj') -nologo -p:Configuration=Release -getProperty:TargetPath | Out-String).Trim()
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $carrierOutput)) { throw 'Cannot locate the built carrier.' }
-          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $produced) | Out-Null
-          Copy-Item -LiteralPath $carrierOutput -Destination $produced -Force
-          if (-not (Test-Path -LiteralPath $produced -PathType Leaf)) { throw "carrier build produced no $produced" }
+          ./scripts/acquire-ferritelib-carrier.ps1 -Repo 'Coahuilite/FerriteLib' -Tag 'v0.7.0-rc1' -SourceCheckout 'ci-ferritelib' -SiblingRoot $sibling
+          # US never authors or builds the carrier: nothing in this workflow writes into ci-ferritelib/.
 
       - name: Restore
         shell: pwsh
@@ -114,8 +108,9 @@ jobs:
       # staging. The stager reads dist/build/Release and verifies the selected carrier hash.
       - name: Verify (15 gates)
         shell: pwsh
-        # Explicit carrier selection, same reason and same path as ci.yml: the staging step above put the
-        # built Release payload at the sibling path, and resolve-carrier no longer has a default.
+        # Explicit carrier selection, same reason and same path as ci.yml: the acquisition step above
+        # staged the verified release-asset DLL at the sibling path, and resolve-carrier no longer has a
+        # default.
         run: ./scripts/verify-local.ps1 -NoRestore -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
 
       - name: Pack-readiness with release metadata (version axis + non-placeholder description)
@@ -159,11 +154,14 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           ASSET_SHA256: ${{ steps.pack.outputs.sha256 }}
           ASSET_COMMIT: ${{ steps.pack.outputs.commit }}
+          FL_TAG: ${{ steps.carrier.outputs.fl-tag }}
+          FL_COMMIT: ${{ steps.carrier.outputs.fl-commit }}
+          FL_DLL_SHA256: ${{ steps.carrier.outputs.fl-dll-sha256 }}
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = $env:RELEASE_TAG
           $isRc = $tag -match '-rc[1-9]\d*$'
-          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks." } else { "This is the stable release. The identity table below names the exact commit." }
+          $trialNote = if ($isRc) { "This is a **release candidate**: an early-testing build. Try it and report what breaks. UI/UX design and copy work on this line is still in progress." } else { "This is the stable release. The identity table below names the exact commit." }
           # rc delta: show what changed since the previous tag so testers know the trial delta.
           $all = @(& git tag --list 'v*' --sort=v:refname)
           $idx = [Array]::IndexOf($all, $tag)
@@ -176,9 +174,9 @@ jobs:
 
           ## Installing
 
-          1. Install the prerequisite mod **FerriteLib** (``coahuilite.ferritelib``) from its own releases page.
+          1. Install the paired prerequisite **FerriteLib** release ``$env:FL_TAG`` (``coahuilite.ferritelib``) from https://github.com/Coahuilite/FerriteLib/releases - this build is compiled against that carrier.
           2. Unzip this archive **directly into** ``RimWorld/Mods/`` (it contains a top-level ``UniversalSqueaker`` folder).
-          3. Enable both in the mod list.
+          3. Enable both in the mod list. Universal Squeaker ships no copy of ``FerriteLib.UiKit.dll``; exactly one carrier - FerriteLib itself - must be installed.
 
           ## Version identity
 
@@ -187,6 +185,14 @@ jobs:
           | Release | ``$env:RELEASE_TAG`` |
           | Built from commit | ``$env:ASSET_COMMIT`` |
           | Asset SHA-256 | ``$env:ASSET_SHA256`` |
+          | FerriteLib dependency | ``$env:FL_TAG`` (built from ``$env:FL_COMMIT``) |
+          | FerriteLib.UiKit.dll SHA-256 | ``$env:FL_DLL_SHA256`` |
+
+          ## Notes
+
+          - This is a testing RC for **RimWorld 1.6**: UI/UX design and copy work continues, and this page does not claim complete compatibility coverage.
+          - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
+          - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
 
           $delta
           "@
