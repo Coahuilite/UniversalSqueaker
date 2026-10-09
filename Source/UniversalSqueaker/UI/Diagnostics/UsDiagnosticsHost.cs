@@ -22,6 +22,30 @@ public static class UsDiagnosticsHost
     public static UiHost CreateDetail(IUsDiagnosticsSource source)
         => Create(source, UsDiagnosticsSpec.DetailXml, VerseFerriteTextMetrics.Instance);
 
+    /// <summary>
+    /// Feeds the width the shell is about to arrange in, and moves the layout clock when that width
+    /// crossed the presentation threshold. The VisibleKey swap is read live by the arrange pass, but a
+    /// read-only binding announces no revision of its own - so without this bump the swap would depend
+    /// on the arrange size changing in the same frame (true of today's shell, false of any page that
+    /// arranges at a fixed size) and the two presentations could both be on screen for a frame.
+    /// Returns true when the presentation flipped. A null host (the shell's first pass draws chrome
+    /// before it creates one) still records the width; there is no arrangement to move yet.
+    /// </summary>
+    public static bool ApplyContentWidth(IUsDiagnosticsSource source, UiHost? host, float contentWidth)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        bool wasNarrow = source.Narrow;
+        source.SetContentWidth(contentWidth);
+        bool flipped = source.Narrow != wasNarrow;
+        if (flipped)
+        {
+            host?.Session.BumpContentRevision();
+        }
+
+        return flipped;
+    }
+
     public static UiHost Create(IUsDiagnosticsSource source, string pageXml, ITextMetrics metrics)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -63,6 +87,18 @@ public static class UsDiagnosticsHost
     /// <summary>Narrow-mode navigation: which in-window view is showing (writable, bumps the clock).</summary>
     public const string KeyNavView = "diag-navview";
 
+    /// <summary>
+    /// The two mutually exclusive presentations of the main page, read-only: wide = master list +
+    /// detail column, narrow = the single in-window navigation column. Each presentation's subtree
+    /// declares one of these as its VisibleKey, so exactly one of them is arranged (a hidden element
+    /// owns no geometry at all - the supported replacement for the retired "an Auto column collapses
+    /// to a 1px stub" idiom). The source owns the decision; the page never writes these.
+    /// </summary>
+    public const string KeyWide = "diag-wide";
+
+    /// <inheritdoc cref="KeyWide"/>
+    public const string KeyNarrow = "diag-narrow";
+
     /// <summary>Read-only: the narrow detail view is showing, so the Back control exists.</summary>
     public const string KeyShowBack = "diag-showback";
 
@@ -94,6 +130,12 @@ public static class UsDiagnosticsHost
         b.BindValue<UsDiagNavView>(KeyNavView, () => source.NavigationView,
             value => { source.NavigationView = value; bump(); });
         b.BindReadOnly<bool>(KeyShowBack, () => source.ShowBackControl);
+
+        // The presentation pair. One authority (the source's own narrow decision), two keys: the
+        // read-only getters are evaluated by the arrange pass, and ApplyContentWidth moves the content
+        // revision when the width crosses the threshold.
+        b.BindReadOnly<bool>(KeyWide, () => !source.Narrow);
+        b.BindReadOnly<bool>(KeyNarrow, () => source.Narrow);
 
         // One fold switch per group. A write goes through the binding, so the switch is page state on
         // the same clock as every other display write - and NOTHING in the data path touches it, which

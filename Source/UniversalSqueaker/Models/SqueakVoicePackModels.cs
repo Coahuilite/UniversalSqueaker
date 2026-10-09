@@ -9,6 +9,23 @@ namespace UniversalSqueaker;
 /// <summary>One Def is one selectable pack in one domain. It never carries behavior or mood data.</summary>
 public class SqueakVoicePackDef : Def
 {
+    public int CountPlayableActions(bool includeBabyActions)
+    {
+        if (actions == null) return 0;
+        var covered = new HashSet<SqueakAction>();
+        foreach (SqueakVoicePackAction action in actions)
+        {
+            if (action == null || action.sounds == null
+                || (!SqueakActionDefinitions.IsKnown(action.action) || !SqueakActionEligibility.IsEligible(action.action, includeBabyActions))) continue;
+            foreach (SoundDef sound in action.sounds)
+            {
+                if (sound != null) { covered.Add(action.action); break; }
+            }
+        }
+        return covered.Count;
+    }
+
+
     public SqueakVoicePackScope scope = SqueakVoicePackScope.Unspecified;
     /// <summary>Pack 唯一路由声明，必填（validator 硬要求），无缺省默认。
     /// 值 = 服务的 race 的精确、区分大小写 ThingDef.defName；装配由 catalog 的 race 域决定，无内置 race 特判。</summary>

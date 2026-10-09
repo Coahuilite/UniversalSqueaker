@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
+using Verse;
+using FerriteLib.UiKit.Kernel;
 using UniversalSqueaker.UI;
 
 namespace UniversalSqueaker.KernelHostTests;
@@ -28,7 +31,80 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// a one-line world cannot tell a measured band from a constant one.
     /// </summary>
     public bool WrappingDomainText;
-    // (No over-wide-domain knob: F5's consumer-side truncation is NOT landed - see TODO.)
+
+
+    /// <summary>
+    /// V3 instrument (audit item C): when true the tuning setters ALSO update the page state/view the host
+    /// reads, so an "after the write" assertion observes the new state instead of the fixture's constructor
+    /// constants. Opt-in: default false keeps every earlier lane's input exactly as it was.
+    /// <para>Channels mirrored here: layer and domain (both live on the page state) and action scope (the
+    /// drawn row set). A mood VALUE is deliberately NOT mirrored: reproducing the model's per-factor layer
+    /// merge inside the fake would be a second implementation of the thing under test - the cross-channel
+    /// increments are asserted on the write recorders instead, which fire on every write.</para>
+    /// </summary>
+    public bool MirrorTuningWrites;
+
+    /// <summary>
+    /// XG1.1 instrument: when true the fixture yields the production-SHAPED "xenotype layer with no tunable
+    /// target" state - layer 2, race "" and xeno "", plus an empty <c>tuning-domains</c> list - while keeping
+    /// the production-shaped action-scope and mood rows. Off by default, so no earlier lane's input changes.
+    /// See <see cref="ApplyEmptyXenotypeTargetFixture"/> for what this does and does not prove.
+    /// </summary>
+    public bool EmptyXenotypeTarget;
+
+    /// <summary>
+    /// XG1.1 instrument: the rich view's tuning-domain option list. Null keeps the fixture's two-entry
+    /// race-level list; a lane that needs a VALID layer-2 target supplies its own (race, label, xenotype)
+    /// entries, and the empty-target lane leaves this null and sets <see cref="EmptyXenotypeTarget"/>.
+    /// </summary>
+    public TuningDomainOptionView[]? TuningDomains;
+
+    /// <summary>
+    /// V3 task-18 instrument: per-factor SUPPLYING LAYERS for the four rich mood rows, in row order
+    /// (mood-major, factor-minor: pitch, volume, jitter), 0=Global 1=Race 2=Xenotype -1=no layer (default).
+    /// Null keeps the fixture's production-shaped mix. This is the input the corrected readout renders.
+    /// </summary>
+    public int[]? MoodSourceLayers;
+
+    /// <summary>
+    /// V3 task-18 instrument: the record the FIRST rich mood row (Good) reports as its own. The PM's
+    /// counterexample feeds a record whose factor flags are CLEARED but whose <c>sourcePresetDefName</c>
+    /// anchor is RETAINED - the readout must never present that anchor as the origin of the shown numbers.
+    /// </summary>
+    public MoodTuningRecord? MoodOwnRecord;
+
+    /// <summary>
+    /// V3 task-18 instrument: the display label the resolved reset-to-preset TARGET carries for the rich
+    /// rows whose <c>PresetReset</c> is Ready (the model projects the Def's own label). Empty keeps the
+    /// built-in "Harness Baseline"; rows with no usable target get "".
+    /// </summary>
+    public string ResetTargetLabel = "Harness Baseline";
+
+    /// <summary>V3 task-18 instrument: overrides the FIRST rich mood row's reset-to-preset availability, so
+    /// the matrix can feed an anchor whose Def no longer resolves (PresetMissing). Null keeps Ready.</summary>
+    public SqueakMoodResetPresetState? Row1PresetReset;
+
+    private static readonly int[] DefaultMoodSourceLayers = { 0, 0, -1, -1, -1, -1, 1, 1, 0, 2, 0, -1 };
+
+    /// <summary>Supplying layer of one factor slot: the lane's input when it feeds one, otherwise the
+    /// production-shaped mix (Global+default, all-default, Race+Global, Xenotype+Global+default).</summary>
+    private int SourceLayerAt(int index)
+    {
+        int[] layers = MoodSourceLayers ?? DefaultMoodSourceLayers;
+        return index >= 0 && index < layers.Length ? layers[index] : -1;
+    }
+
+    private static string ResetTargetFor(SqueakMoodResetPresetState state, string label)
+    {
+        return state == SqueakMoodResetPresetState.Ready ? label : "";
+    }
+
+    /// <summary>
+    /// V3 instrument: replaces the fixture's two production-shaped action-scope rows with the given set
+    /// (empty = a DEGENERATE input no production model produces; the V3 lane uses it only as a labelled
+    /// defensive probe of the mood area's coupling). Null keeps the two real rows.
+    /// </summary>
+    public ActionScopeRowView[]? TuningActionScopes;
 
     /// <summary>
     /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
@@ -69,8 +145,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     // View/navigation writes.
     public string? LastActiveTab;
-    /// <summary>Help drawer visibility writes; must stay independent of the workspace tab.</summary>
-    public bool? LastHelpDrawerOpen;
+    /// <summary>Bottom help panel visibility writes; must stay independent of the workspace tab.</summary>
+    public bool? LastHelpPanelOpen;
     public string? LastScrollToSection;
     public int? LastTuningLayer;
     public string? LastTuningDomainRace;
@@ -104,6 +180,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool? LastBaselineXenoSelected;
     public string? LastBaselineImport;
 
+    /// <summary>
+    /// The xenotype icon the rich fixture hands over as DATA (R4-B). Null is the default and the case the
+    /// card must fall back on; a lane that wants the picture path sets it. It is a plain value - the fixture,
+    /// like the production adapter, never loads a resource.
+    /// </summary>
+    public Texture2D? XenotypeIcon { get; set; }
+
     // Packs writes.
     public SqueakVoicePackScope? LastPackScope;
     public string? LastPackRace;
@@ -116,11 +199,22 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public VoicePacksPageState ViewState => state;
 
-    public string BuildIdentity => "test-build";
+    public string BuildIdentity => BuildIdentityOverride ?? "test-build";
 
-    public string SaveStatus => "Idle";
+    /// <summary>V4.4 instrument: feeds a LONG technical identity (the dev form Mod.cs:132-143 builds) so the
+    /// footer lane can prove the band grows to fit it instead of clipping, in both languages.</summary>
+    public string? BuildIdentityOverride;
 
-    public bool IsDirty => false;
+    /// <summary>V4.2 instrument: the baseline preset's display label (null keeps the built-in short one).</summary>
+    public string? PresetLabel;
+
+    public string SaveStatus => SaveStatusOverride;
+    public string SaveStatusOverride = "Idle";
+    public bool SaveStatusVisible => SaveStatusVisibleOverride;
+    public bool SaveStatusVisibleOverride = true;
+
+    public bool IsDirty => IsDirtyOverride;
+    public bool IsDirtyOverride;
     /// <summary>
     /// When set, the fake behaves like the production source's view cache: the view is built once
     /// and only rebuilt when this revision changes, counting rebuilds. The D1/D6 display-write
@@ -134,6 +228,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public VoicePacksViewState BuildView()
     {
+        ApplyEmptyXenotypeTargetFixture();
         if (RevisionSource == null)
         {
             return RichData ? BuildRichView() : BuildEmptyView();
@@ -148,6 +243,41 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         }
 
         return cachedView;
+    }
+
+    /// <summary>
+    /// US-ESC1 cancel-probe support (D1/D6 lane): rebuild the cached projection from the CURRENT page
+    /// state at the CURRENT revision WITHOUT advancing the session clock and WITHOUT counting a rebuild.
+    /// The tuning-target cancel gate reads the projected view (visible area), and the cancel probes
+    /// pre-set that state directly (never through a bumping write, per the lane's own rule); without
+    /// this sync the revision cache would serve the pre-write projection and the gated CanExecute would
+    /// decline for a fixture-staleness reason, not a real one. Keeping the clock untouched preserves the
+    /// contract under test: ONLY the actual cancel command may move it.
+    /// </summary>
+    public void ReprojectAtCurrentRevision()
+    {
+        if (RevisionSource == null) return;   // no cache to sync when the lane does not gate revisions
+        ApplyEmptyXenotypeTargetFixture();
+        cachedView = RichData ? BuildRichView() : BuildEmptyView();
+        cachedRevision = RevisionSource();
+    }
+
+    /// <summary>
+    /// XG1.1 fixture: the xenotype layer with NO tunable target. The production model reaches this state when
+    /// <c>BuildTuningDomains</c> finds no (race, xenotype) tuning domain - it then leaves BOTH identity halves
+    /// empty and returns an empty option list. The harness cannot run that model path (it needs the def
+    /// database), so this knob reproduces the RESULTING state/view pair instead of faking the model:
+    /// layer 2, race "" and xeno "" on the state the widget's bindings read, an empty <c>tuning-domains</c>
+    /// list, and the same values on the view it projects. Off by default - every existing lane keeps the
+    /// fixture it measured. What it does NOT prove: that <c>BuildTuningDomains</c> itself derives this state
+    /// (see XenotypeEmptyTargetLaneTests' header - that half is unverified here by construction).
+    /// </summary>
+    private void ApplyEmptyXenotypeTargetFixture()
+    {
+        if (!EmptyXenotypeTarget) return;
+        state.TuningLayer = 2;
+        state.TuningRaceDefName = "";
+        state.TuningXenotypeDefName = "";
     }
 
     private VoicePacksViewState BuildEmptyView()
@@ -188,7 +318,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilterOptions: Array.Empty<FilterOptionView>(),
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            packNoPacks: true);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -214,13 +345,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             {
                 new VoicePackRowView("us.sang", "Sanguophage Voice Pack", "TestMod", "AuthorA", "def.sang", "full", "sang", isSelected: true),
                 new VoicePackRowView("us.sang2", "Sanguophage Extra Pack", "TestMod2", "AuthorB", "def.sang2", "full", "extra", isSelected: false)
-            });
+            },
+            raceDisplay: null);
 
         var preset = new BaselinePresetView(
             "us.preset1",
-            "Balanced Test Preset",
+            PresetLabel ?? "Balanced Test Preset",
             "Deterministic harness preset",
-            expanded: true,
+            expanded: PresetExpanded,
             races: new[]
             {
                 new BaselineRaceView(
@@ -231,7 +363,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     moodCount: 3,
                     xenotypes: new[]
                     {
-                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, moodCount: 3)
+                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, moodCount: 3, image: XenotypeIcon)
                     })
             },
             selectedRaceCount: 1,
@@ -256,20 +388,36 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             bannerText: "rich harness catalog",
             races: RaceRowsFor(filterSanguophage),
             xenotypeDomains: filterSanguophage ? Array.Empty<VoicePackDomainView>() : new[] { sang },
-            selectedDomain: filterSanguophage ? null : sang,
-            actionScopes: new[]
+            // US-ESC1: the fake mirrors the production projection rule - a CANCELLED operation domain
+            // projects to null (the guard in VoicePacksPageModel.ResolveSelectedDomain), never a
+            // re-picked first row. Everything else the card shows stays intact.
+            selectedDomain: state.DomainSelectionCanceled ? null : SelectedForView(sang, filterSanguophage),
+            actionScopes: TuningActionScopes ?? new[]
             {
-                new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.Autonomous, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
-                new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.Operable, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
+                new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.SystemOrEvent, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
+                new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.PlayerTriggered, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
             },
-            tuningLayer: 0,
-            tuningRaceDefName: "human",
+            // US-ESC1: layer and area FOLLOW the fake's own page state (production builds both straight
+            // from state); with the default state this equals the old constants.
+            tuningLayer: EmptyXenotypeTarget ? 2 : state.TuningLayer,
+            tuningArea: state.TuningArea,
+            tuningRaceDefName: EmptyXenotypeTarget ? "" : "human",
             tuningXenotypeDefName: "",
-            tuningDomains: new[]
-            {
-                new TuningDomainOptionView("human", "Human"),
-                new TuningDomainOptionView("testrace", "Test Race")
-            },
+            // US-ESC1: the fallback table answer mirrors production's projection shape - the shown race
+            // is the selection, else the first entry, else NONE once the user cancelled the table.
+            fallbackRaces: FallbackTableAutoRace.Length > 0
+                ? new[] { new FallbackRaceView(FallbackTableAutoRace, FallbackTableAutoRace, false, 3) }
+                : Array.Empty<FallbackRaceView>(),
+            fallbackSelectedRace: FallbackSelectedRaceForView(),
+            // XG1.1: the empty-target state carries NO domain options (that is what makes the target empty in
+            // production); the override lets a control-case lane supply a real (race, xenotype) target.
+            tuningDomains: EmptyXenotypeTarget
+                ? Array.Empty<TuningDomainOptionView>()
+                : TuningDomains ?? new[]
+                {
+                    new TuningDomainOptionView("human", "Human"),
+                    new TuningDomainOptionView("testrace", "Test Race")
+                },
             // All FOUR product moods, in the production enumeration order (VoicePacksPageModel
             // builds one row per SqueakMood: Good, Neutral, Bad, Break). Availability is a VIEW input
             // (the model computes it from flags/source), so this fake sets it directly instead of
@@ -284,12 +432,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new MoodTuningRowView(
                     SqueakMood.Good,
                     SqueakMood.Good.ToString(),
-                    own: null,
+                    own: MoodOwnRecord,
                     effectivePitch: 1f,
                     effectiveVolume: 1f,
                     effectiveJitterHalf: 0f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.Ready),
+                    presetReset: Row1PresetReset ?? SqueakMoodResetPresetState.Ready,
+                    pitchSourceLayer: SourceLayerAt(0), volumeSourceLayer: SourceLayerAt(1), jitterSourceLayer: SourceLayerAt(2), resetPresetTarget: ResetTargetFor(Row1PresetReset ?? SqueakMoodResetPresetState.Ready, ResetTargetLabel)),
                 new MoodTuningRowView(
                     SqueakMood.Neutral,
                     SqueakMood.Neutral.ToString(),
@@ -298,7 +447,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.8f,
                     effectiveJitterHalf: 0.1f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset),
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
+                    pitchSourceLayer: SourceLayerAt(3), volumeSourceLayer: SourceLayerAt(4), jitterSourceLayer: SourceLayerAt(5), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel)),
                 new MoodTuningRowView(
                     SqueakMood.Bad,
                     SqueakMood.Bad.ToString(),
@@ -307,7 +457,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.6f,
                     effectiveJitterHalf: 0.2f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.Ready),
+                    presetReset: SqueakMoodResetPresetState.Ready,
+                    pitchSourceLayer: SourceLayerAt(6), volumeSourceLayer: SourceLayerAt(7), jitterSourceLayer: SourceLayerAt(8), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.Ready, "Harness Baseline")),
                 new MoodTuningRowView(
                     SqueakMood.Break,
                     SqueakMood.Break.ToString(),
@@ -316,7 +467,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     effectiveVolume: 0.4f,
                     effectiveJitterHalf: 0.3f,
                     defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset)
+                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
+                    pitchSourceLayer: SourceLayerAt(9), volumeSourceLayer: SourceLayerAt(10), jitterSourceLayer: SourceLayerAt(11), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel))
             },
             baselinePresets: new[] { preset },
             buildIdentity: BuildIdentity,
@@ -334,14 +486,61 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
             eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs);
+            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            // US-PACK1: the fake mirrors production's delegation exactly - fixture source pairs through
+            // the SAME pure PackCardProjection.Build the model calls, reading the live page state's
+            // filters and manual expansion set, so a lane drives the real rule end to end.
+            packCards: PackCardsForView(sang),
+            packResultsEmpty: PackCardsForView(sang).Count == 0,
+            packNoPacks: false);
+    }
+
+    /// <summary>
+    /// US-PACK1 fixture pairs: the xenotype domain the card view already carries, PLUS the same packs
+    /// under their race domain NOT enabled there - so one card shows two rows with two independent
+    /// enable answers, which is exactly the cross-domain identity the non-crosstalk assertion presses.
+    /// ChecklistPacks overrides flow through (they replace sang.Packs), so the projection lanes'
+    /// injected rows reach the card list too.
+    /// </summary>
+    private List<PackCardView> PackCardsForView(VoicePackDomainView sang)
+    {
+        var source = new List<PackCardSourceRow>();
+        foreach (VoicePackRowView pack in sang.Packs)
+        {
+            source.Add(new PackCardSourceRow(
+                pack.Key, pack.Label, pack.DefName, pack.ModName, pack.Author, pack.Coverage,
+                SqueakVoicePackScope.Xenotype, sang.RaceDefName, sang.TargetDefName, sang.DisplayName,
+                IsEnabledLive(SqueakVoicePackScope.Xenotype, sang.RaceDefName, sang.TargetDefName, pack.Key),
+                sang.HasCanonicalConflict, sang.IsDormant, sang.IsTargetUnavailable,
+                sang.OrphanCount > 0));
+            source.Add(new PackCardSourceRow(
+                pack.Key, pack.Label, pack.DefName, pack.ModName, pack.Author, pack.Coverage,
+                SqueakVoicePackScope.Race, sang.RaceDefName, "", sang.RaceDisplay,
+                IsEnabledLive(SqueakVoicePackScope.Race, sang.RaceDefName, "", pack.Key),
+                false, false, false, false));
+        }
+
+        return PackCardProjection.Build(
+            source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
+            in state.DomainFilter, state.PackCardsExpanded);
+    }
+
+    /// <summary>
+    /// The domain the view presents as selected. Opt-in (<see cref="ReflectSelectionInView"/>): with it on,
+    /// a recorded RACE selection is projected as a race-scope domain so a lane can watch the enable band's
+    /// scope line follow the browse write; otherwise the fixture keeps its built-in xenotype selection.
+    /// </summary>
+    private VoicePackDomainView? SelectedForView(VoicePackDomainView sang, bool filterSanguophage)
+    {
+        // US-PACK1: the race-selection reflection this method once offered served the retired browse
+        // cards' scope-line parity lane; the projection's answer is now simply the fixture domain,
+        // gone when the race filter excludes it.
+        return filterSanguophage ? null : sang;
     }
 
     /// <summary>
     /// Mirrors the production race-filter semantics for the parity lane: selecting a race narrows the
-    /// race layer to that row, drops non-matching xenotype domains, and clears the selection. The
-    /// fake must respond to the filter or the harness can never compare "filtered live" against
-    /// "filtered from the start".
+    /// race layer to that row. The view also drops non-matching xenotype domains and clears selection.
     /// </summary>
     private IReadOnlyList<RaceLayerRowView> RaceRowsFor(bool filterSanguophage)
     {
@@ -393,6 +592,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
 
+    public bool AllowBabyActions;
+    public bool? LastBabyActions;
+    public void SetBabyActions(bool value) { LastBabyActions = value; AllowBabyActions = value; }
     public void SetEatPrecision(bool value) => LastEatPrecision = value;
 
     public void SetEatPrecisionIncludeDrugs(bool value) => LastEatPrecisionIncludeDrugs = value;
@@ -404,6 +606,148 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void SetDevLoggingMode(SqueakDevLoggingMode mode) => LastDevLoggingMode = mode;
 
     public void SetLocalizeDebugActions(bool value) => LastLocalizeDebugActions = value;
+
+    // === Developer layout diagnosis (R3-B) =====================================================
+    // The fake carries the same three commands and the same status surface as the production source, and it
+    // routes them through the SAME per-host helper the production path uses - so a lane that drives a real
+    // bound command exercises the real per-host separation rather than a fake that agrees with itself.
+
+    /// <summary>The host this fake's page draws into; attached explicitly by a lane that needs per-host
+    /// behaviour (the production factory attaches the real one).</summary>
+    internal UiHost? DiagnosisHost { get; private set; }
+
+    /// <summary>
+    /// The production report/status surface for this fixture's host (RPT1). The SENTENCE and the report state
+    /// machine have exactly one author, so the fixture forwards this one member to a real
+    /// <see cref="UsKernelSettingsSource"/> on the same host instead of carrying a copy that can drift from
+    /// the production wording and from the audit's own facts. Created on <see cref="AttachHost"/>, i.e. only
+    /// for lanes that really drive this fixture as a window would.
+    /// </summary>
+    private UsKernelSettingsSource? reportMirror;
+
+    /// <summary>Records the host, mirroring <c>UsKernelSettingsSource.AttachHost</c>.</summary>
+    public void AttachHost(UiHost host)
+    {
+        DiagnosisHost = host;
+        reportMirror = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+        reportMirror.AttachHost(host);
+    }
+
+    public bool LayoutCaptureOn { get; private set; }
+
+    public bool LayoutOutlineOn { get; private set; }
+
+    public string LayoutDiagnosisStatus
+    {
+        get
+        {
+            if (DiagnosisHost == null) return "US.Diagnostics.Geometry.NoScope";
+            switch (UsTextFitAudit.GetDevGeometryStatus(DiagnosisHost))
+            {
+                case UsTextFitAudit.DevGeometryStatus.Unavailable: return "US.Diagnostics.Geometry.Unavailable";
+                case UsTextFitAudit.DevGeometryStatus.Overlay: return "US.Diagnostics.Geometry.Overlay";
+                case UsTextFitAudit.DevGeometryStatus.Active: return "US.Diagnostics.Geometry.Active";
+                case UsTextFitAudit.DevGeometryStatus.OutlineOnly: return "US.Diagnostics.Geometry.OutlineOnly";
+                case UsTextFitAudit.DevGeometryStatus.ScopeMissing: return "US.Diagnostics.Geometry.NoScope";
+                default: return "US.Diagnostics.Geometry.Off";
+            }
+        }
+    }
+
+    public void SetLayoutCapture(bool on)
+    {
+        reportMirror?.SetLayoutCapture(on);
+        bool honoured = reportMirror != null
+            ? reportMirror.LayoutCaptureOn == on
+            : UsTextFitAudit.SetGeometryCapture(DiagnosisHost, on);
+        LayoutCaptureOn = honoured && on;
+        if (!honoured && on) LayoutOutlineOn = false;
+        // Keep the production mirror's sentence in step with the switch this fixture really threw: RPT1.2's
+        // whole point is that the line follows the INSTRUMENT, so a fixture that left a stale "capture is off"
+        // sentence behind after the switch moved would assert the wrong product behaviour.
+    }
+
+    public void SetLayoutOutline(bool on)
+    {
+        bool honoured = UsTextFitAudit.SetGeometryOverlay(DiagnosisHost, on);
+        LayoutOutlineOn = honoured && on;
+    }
+
+    /// <summary>Counts report requests, so a lane can assert "one request, one report" without the log.</summary>
+    public int LayoutReportRequests { get; private set; }
+
+    /// <summary>
+    /// Whether a report request is outstanding. Mirrors the production source's pending flag: a request made
+    /// while capture is off or the instrument is unavailable is REFUSED, so this stays false and no later
+    /// enable can satisfy a stale click (R3-B fix 7).
+    /// </summary>
+    internal bool LayoutReportPending { get; private set; }
+
+    /// <summary>
+    /// The structured rendering of the last explicit report, from the SAME capture as its text (R3-B fix 5).
+    /// Mirrors the production source's accessor, which is internal for the API-tier reason recorded there.
+    /// </summary>
+    internal UiDevGeometrySnapshot? LayoutReportSnapshot
+    {
+        get
+        {
+            if (DiagnosisHost == null) return null;
+            // The production audit is in a separate assembly without friend access.
+            var find = typeof(UsTextFitAudit).GetMethod("FindOpenScope",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing audit scope accessor.");
+            var report = typeof(UsTextFitAudit).GetProperty("LatestGeometryReport",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing retained report accessor.");
+            object? scope = find.Invoke(null, new object[] { DiagnosisHost });
+            return scope == null ? null : (UiDevGeometrySnapshot?)report.GetValue(scope);
+        }
+    }
+
+    /// <summary>DT1: the fake records the open request; the real window seam needs Verse.Find.</summary>
+    public int DeveloperPanelOpenCalls { get; private set; }
+
+    public void OpenDeveloperPanel() => DeveloperPanelOpenCalls++;
+
+    public void RequestLayoutReport()
+    {
+        reportMirror?.RequestLayoutReport();
+        LayoutReportPending = reportMirror != null
+            ? (bool)(typeof(UsKernelSettingsSource).GetField("layoutReportPending",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing production pending flag."))
+                .GetValue(reportMirror)!
+            : UsTextFitAudit.RequestGeometryReport(DiagnosisHost);
+        if (LayoutReportPending) LayoutReportRequests++;
+        // Same click, same audit facts, production sentence: the mirror records the outcome the page prints.
+    }
+
+    /// <summary>
+    /// The sentence the page prints immediately below the Report button (RPT1.1). Forwarded to the production
+    /// source so a lane that drives this fixture reads the production wording and the production state
+    /// machine; before a host is attached (the full-page sweep fixtures) it reports the same "no diagnosis
+    /// scope" reason the production source reports for an unattached host.
+    /// </summary>
+    public string LayoutReportStatus
+    {
+        get
+        {
+            if (reportMirror != null) return reportMirror.LayoutReportStatus;
+            return "US.Diagnostics.Geometry.Report.NoScope".Translate();
+        }
+    }
+
+    /// <summary>
+    /// The settings window's own one-shot consumer (<c>BeforeDraw</c>), mirrored so a lane can drive the
+    /// fixture through the report lifecycle. Not on the interface: production's consumer is the window's
+    /// frame call, not a business-boundary member.
+    /// </summary>
+    internal int ConsumeLayoutReportRequest()
+    {
+        int pass = reportMirror?.ConsumeLayoutReportRequest() ?? -1;
+        if (pass >= 0) LayoutReportPending = false;
+        return pass;
+    }
 
     public void SetActiveTab(string tab)
     {
@@ -429,6 +773,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         // could observe the help topic following the workspace while the drawer stays open.
         if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
         {
+            // US-ESC1: a workspace switch re-establishes the active branch (mirrors production
+            // VoicePacksPageModel.SetActiveTab): last page's return marks never carry over.
+            state.DomainSelectionCanceled = false;
+            state.FallbackTableCanceled = false;
             state.ActiveTab = normalized;
             state.ActiveSectionKey = normalized switch
             {
@@ -443,20 +791,62 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void ScrollToSection(string sectionKey) => LastScrollToSection = sectionKey;
 
-    public void SetHelpDrawerOpen(bool open)
+    public void SetHelpPanelOpen(bool open)
     {
-        LastHelpDrawerOpen = open;
-        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the drawer
-        // binding reads ViewState.HelpDrawerOpen, so the fake must answer the read-back too.
-        state.HelpDrawerOpen = open;
+        LastHelpPanelOpen = open;
+        // Mirror the production source: the engine Tab gate reads state.ActiveTab, and the help-open
+        // binding reads ViewState.HelpPanelOpen, so the fake must answer the read-back too.
+        state.HelpPanelOpen = open;
     }
 
-    public void SetTuningLayer(int layer) => LastTuningLayer = layer;
+    // US-ESC1: the cancel surface routes through the SAME production statics the real source calls, so a
+    // lane that drives the bindings exercises the real ladder-step order and the real veto conditions.
+    public int CancelDomainSelectionCount;
+    public int CancelTuningTargetCount;
+
+    public bool CanCancelDomainSelection()
+        => VoicePacksPageModel.CanCancelDomainSelection(state, BuildView());
+
+    public void CancelDomainSelection()
+    {
+        CancelDomainSelectionCount++;
+        VoicePacksPageModel.CancelDomainSelection(state);
+    }
+
+    public bool CanCancelTuningTarget()
+        => VoicePacksPageModel.CanCancelTuningTarget(state, BuildView());
+
+    public void CancelTuningTarget()
+    {
+        CancelTuningTargetCount++;
+        VoicePacksPageModel.CancelTuningTarget(state, BuildView());
+    }
+
+    /// <summary>US-ESC1 fixture: the race a projection would show when nothing is selected yet (the
+    /// auto first entry); empty keeps today's no-table answer for every other lane, and the view's
+    /// fallback list follows it. The doubles do not load real SoundDefs.</summary>
+    public string FallbackTableAutoRace = "";
+
+    private string FallbackSelectedRaceForView()
+    {
+        if (state.FallbackTableCanceled) return "";
+        return state.FallbackSelectedRace.Length > 0 ? state.FallbackSelectedRace : FallbackTableAutoRace;
+    }
+
+    public void SetTuningLayer(int layer)
+    {
+        LastTuningLayer = layer;
+        // Route through the SAME production static the real source calls (review1: the re-arm of the
+        // tuning CONTEXT is part of the write's meaning, not an extra the fake may forget). The
+        // MirrorTuningWrites gate keeps lanes that never entered the branch seeing stable state.
+        if (MirrorTuningWrites) VoicePacksPageModel.SetTuningLayer(state, layer);
+    }
 
     public void SetTuningDomain(string raceDefName, string targetDefName)
     {
         LastTuningDomainRace = raceDefName;
         LastTuningDomainTarget = targetDefName;
+        if (MirrorTuningWrites) VoicePacksPageModel.SetTuningDomain(state, raceDefName, targetDefName);
     }
 
     public void SelectDomain(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
@@ -464,6 +854,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastSelectedScope = scope;
         LastSelectedRace = raceDefName;
         LastSelectedTarget = targetDefName;
+        // US-ESC1: mirror the production rule - a fresh selection replaces the cancel mark.
+        state.DomainSelectionCanceled = false;
     }
 
     public void SetDomainFilter(SqueakDomainFilterKind kind, bool flag)
@@ -482,7 +874,102 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
-    public void SetSearchText(string text) => LastSearchText = text;
+    public void SetSearchText(string text)
+    {
+        // Mirror the production facade exactly: UsKernelSettingsSource.SetSearchText routes through
+        // VoicePacksPageModel.SetSearchText, which writes ViewState.SearchText - the very field the
+        // "search-text" binding READS. A fake that only recorded the write would leave the read-back
+        // stale, and the projection lane's whole point is that a search write and the list it produces
+        // are the same frame's answer.
+        LastSearchText = text;
+        state.SearchText = text ?? "";
+    }
+    // US-PACK1: the card gesture and the result-layer return route through the SAME production
+    // statics the real source calls, so a lane driving the bindings exercises the real manual-set
+    // rule and the real veto condition. Counts let a lane assert the write happened at the facade.
+    public int TogglePackCardCount;
+    public int CancelPackResultsCount;
+
+    public void TogglePackCard(string packKey)
+    {
+        TogglePackCardCount++;
+        VoicePacksPageModel.TogglePackCard(state, packKey);
+    }
+
+    public bool CanCancelPackResults()
+        => VoicePacksPageModel.CanCancelPackResults(state, BuildView());
+
+    public void CancelPackResults()
+    {
+        CancelPackResultsCount++;
+        VoicePacksPageModel.CancelPackResults(state, BuildView());
+    }
+    // US-RESET1 UI integration: the fake mirrors the production facade's DECISIONS (layer-identity
+    // guard, draft cleanup through the attached host) and records the calls; the real publish/
+    // persistence funnel counts stay the dedicated reset backend harness's boundary (120 checks).
+    // Lanes inject the outcome (default Applied) so the Applied-only bump and the NoChange/Rejected
+    // silence are each drivable.
+    public int ResetAllCount;
+    public int ResetDistanceCount;
+    public int ResetNormalAreaCount;
+    public int ResetActionRowCount;
+    public int ResetActionAreaCount;
+    public int ResetMoodAreaCount;
+    public SqueakResetOutcome NextResetOutcome = SqueakResetOutcome.Applied;
+    public SqueakNormalResetArea? LastNormalResetArea;
+    public string? LastResetActionKey;
+
+    public bool CanResetTuningArea() => state.TuningLayer switch
+    {
+        0 => true,
+        1 => state.TuningRaceDefName.Length > 0,
+        2 => state.TuningRaceDefName.Length > 0 && state.TuningXenotypeDefName.Length > 0,
+        _ => false,
+    };
+
+    public SqueakResetOutcome ResetAllSettings()
+    {
+        ResetAllCount++;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetDistanceDefaults()
+    {
+        ResetDistanceCount++;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area)
+    {
+        ResetNormalAreaCount++;
+        LastNormalResetArea = area;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetActionTuningRow(string actionKey)
+    {
+        ResetActionRowCount++;
+        LastResetActionKey = actionKey;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
+
+    public SqueakResetOutcome ResetActionTuningArea()
+    {
+        ResetActionAreaCount++;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
+
+    public SqueakResetOutcome ResetMoodTuningArea()
+    {
+        ResetMoodAreaCount++;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
+
+    /// <summary>review1: the fake mirrors the production split - the restore call itself never
+    /// touches an edit; only the host command's scoped EndAffectedEdit (after Applied) can, and it
+    /// walks the SAME static the production facade calls, on the host this fake attached.</summary>
+    public void EndAffectedEdit(Func<string, bool> editIsAffected)
+        => UsKernelSettingsHost.EndAffectedEdit(DiagnosisHost, editIsAffected);
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.
@@ -492,6 +979,62 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastActionKey = actionKey;
         LastActionScope = scope;
     }
+
+    // VF1定稿 A2/A4: the multiplier writes are recorded; lanes that need the view to answer set
+    // TuningActionScopes explicitly (the fake's view rows are fixture data by design).
+    public string? LastActionTuningKey { get; private set; }
+    public bool LastActionTuningIntervalField { get; private set; }
+    public float? LastActionTuningValue { get; private set; }
+    public string? LastActionPresetResetKey { get; private set; }
+
+    public void SetActionTuning(string actionKey, bool intervalField, float? value)
+    {
+        LastActionTuningKey = actionKey;
+        LastActionTuningIntervalField = intervalField;
+        LastActionTuningValue = value;
+    }
+
+    public void ResetActionToPreset(string actionKey)
+    {
+        LastActionPresetResetKey = actionKey;
+    }
+
+    // VF1定稿: the fake mirrors the production facade exactly (page state + store-free commands);
+    // the table commands are recorded, because the fake's view rows are fixture data by design.
+    public int LastTuningArea { get; set; } = -1;
+    public string? LastTuningSelectedAction { get; private set; }
+    public string? LastFallbackRace { get; private set; }
+    public string? LastFallbackEntryAction { get; private set; }
+    public string? LastFallbackEntrySound { get; private set; }
+    public string? LastFallbackCreatedRace { get; private set; }
+    public int FallbackRestoreCalls { get; private set; }
+    public int FallbackDeleteCalls { get; private set; }
+
+    public void SetTuningArea(int area) { LastTuningArea = area; VoicePacksPageModel.SetTuningArea(state, area); }
+    public void SetTuningSelectedAction(string actionKey) { LastTuningSelectedAction = actionKey; VoicePacksPageModel.SetTuningSelectedAction(state, actionKey); }
+    public void SetFallbackSelection(string? race, string? entryAction)
+    {
+        LastFallbackRace = race;
+        LastFallbackEntryAction = entryAction;
+        VoicePacksPageModel.SetFallbackSelection(state, race, entryAction);
+    }
+
+    public void SetFallbackQueries(string? soundQuery, string? newRaceQuery)
+        => VoicePacksPageModel.SetFallbackQueries(state, soundQuery, newRaceQuery);
+
+    public void SetFallbackEntry(string actionKey, string? soundDefName)
+    {
+        LastFallbackEntryAction = actionKey;
+        LastFallbackEntrySound = soundDefName;
+    }
+
+    public void CreateFallbackTable(string raceDefName) { LastFallbackCreatedRace = raceDefName; }
+    public void RestoreFallbackDefault() { FallbackRestoreCalls++; }
+    public void DeleteFallbackTable(string raceDefName) { LastFallbackDeletedRace = raceDefName; FallbackDeleteCalls++; }
+
+    /// <summary>r5: the delete command carries the race the confirmation ASKED ABOUT; the fake
+    /// records it so a lane can prove the payload identity survives to the boundary.</summary>
+    public string? LastFallbackDeletedRace { get; private set; }
 
     public void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value)
     {
@@ -506,7 +1049,20 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastMoodPresetResetCount++;
     }
 
-    public void ToggleBaselinePreset(string presetDefName) => LastBaselinePresetToggle = presetDefName;
+    public void ToggleBaselinePreset(string presetDefName)
+    {
+        LastBaselinePresetToggle = presetDefName;
+        // R4-B: the rich fixture's preset starts expanded, and the card's only source of that answer is the
+        // model. A lane that needs to observe "collapsing hides the descendants" flips it through the real
+        // write, so the assert measures the card rather than a field on the fake.
+        if (PresetToggleFlipsExpandedState) PresetExpanded = !PresetExpanded;
+    }
+
+    /// <summary>When true, <see cref="ToggleBaselinePreset"/> flips <see cref="PresetExpanded"/>.</summary>
+    public bool PresetToggleFlipsExpandedState { get; set; }
+
+    /// <summary>The rich fixture preset's expanded answer, as the next view build will project it.</summary>
+    public bool PresetExpanded { get; set; } = true;
 
     public void ToggleBaselineRace(string presetDefName, string raceDefName, bool selected)
     {
@@ -532,6 +1088,40 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastPackTarget = targetDefName;
         LastPackKey = packKey;
         LastPackEnabled = enabled;
+        // US-PACK1: the fake mirrors the settings store's per-domain identity (the same double-keyed
+        // whole-selection replacement the real SetVoicePackSelection performs), so a card lane can read
+        // a switch back and prove two rows of one pack never address each other.
+        if (enabled) SelectionEnabled(DomainKey(scope, raceDefName, targetDefName)).Add(packKey);
+        else SelectionEnabled(DomainKey(scope, raceDefName, targetDefName)).Remove(packKey);
+    }
+
+    private static string DomainKey(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
+        => scope + "|" + (raceDefName ?? "") + "|" + (targetDefName ?? "");
+
+    private readonly Dictionary<string, HashSet<string>> selectionStore = new(StringComparer.Ordinal);
+
+    private HashSet<string> SelectionEnabled(string domainKey)
+    {
+        if (!selectionStore.TryGetValue(domainKey, out HashSet<string>? keys))
+        {
+            keys = new HashSet<string>(StringComparer.Ordinal);
+            selectionStore[domainKey] = keys;
+        }
+
+        return keys;
+    }
+
+    /// <summary>Live enable answer for one (domain, pack) pair: the seeded fixture selection first,
+    /// then every toggle this session wrote - one answer, read the same way the projection reads it.</summary>
+    private bool IsEnabledLive(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
+    {
+        if (selectionStore.TryGetValue(DomainKey(scope, raceDefName, targetDefName), out HashSet<string>? written))
+        {
+            return written.Contains(packKey);
+        }
+
+        // Fixture seed: the xenotype domain enables us.sang only; the race domain enables nothing.
+        return scope == SqueakVoicePackScope.Xenotype && string.Equals(packKey, "us.sang", StringComparison.Ordinal);
     }
 
     public void ForgetUnavailable(SqueakVoicePackScope scope, string raceDefName, string targetDefName)

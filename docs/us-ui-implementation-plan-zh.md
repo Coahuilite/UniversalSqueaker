@@ -2,6 +2,8 @@
 
 > 来源：2026-08-30 UI 审阅需求（`docs/us-ui-review-requirements-zh.md`）与设计调研（`docs/ui-ux-research-zh.md`）。
 > 状态：已完成（Phase 0–2 已落地，待独立审查与游戏内实机验证）。
+>
+> **[2026-10-04 已纠正，B3.5]** 本档把 800×600 写作"最低分辨率（硬下限）"；那是 US 自己的初始**窗口**尺寸策略，不是游戏屏幕基线。游戏最低屏幕是 **1024×768**（`RimWorld.ResolutionUtility`，固定 reference `Krafs.Rimworld.Ref` 1.6.4871，常量证据）。其余内容按历史记录保留。
 
 ## 目标
 

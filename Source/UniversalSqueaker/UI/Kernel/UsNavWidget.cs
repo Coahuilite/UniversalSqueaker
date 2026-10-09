@@ -10,7 +10,9 @@ namespace UniversalSqueaker.UI;
 /// Workspace-only navigation for the five player tasks. It intentionally does not expose every
 /// child control: each destination owns one coherent flow in the centre workspace.
 ///
-/// Geometry contract: one fixed column width comes from the manifest (160 since the compact-nav ruling),
+/// Geometry contract: one fixed column width comes from the manifest (200 since the S3 frame reset; it was
+/// 192 -> 160 in the compact-nav round, and the frame reset is what gives the cards back the room the
+/// three-column target assumes),
 /// every card fills it exactly, and every card has the SAME outer bounds whichever one is selected. Card
 /// height is a single shared number, not a per-card measurement: <see cref="SubtitleLines"/> Tiny lines
 /// are reserved for the subtitle on every card in every language, so a wrapping translation can no longer
@@ -24,6 +26,16 @@ namespace UniversalSqueaker.UI;
 /// the stability contract is unchanged; setting <see cref="SubtitleLines"/> back to 2 restores the previous
 /// shape in one line.
 /// </para>
+/// <para>
+/// V1 ENCLOSURE FIX (2026-10-02): the geometry was never the defect - the label, the description and the
+/// hit target already shared one rect - but the SURFACE was. The old neutral path painted
+/// <c>theme.RaisedSurface</c>, and this column's <c>us-flat-panel</c> scheme sets <c>RaisedBorder</c> equal
+/// to the <c>Raised</c> fill on purpose ("no box" is spelled as an invisible frame), so an ordinary row
+/// painted no enclosure and its text read as floating beside the column. The three states now paint the
+/// same one rect explicitly: selected takes the palette's Selected fill with the accent edge and the rail,
+/// hovered a softer step with a strong structural edge, ordinary the raised fill with the structural edge.
+/// The scheme is untouched, so every other flat panel keeps its own look.
+/// </para>
 /// </summary>
 public sealed class UsNavWidget : IUiWidget
 {
@@ -33,6 +45,11 @@ public sealed class UsNavWidget : IUiWidget
     private const float Gap = 4f;
     private const float SidePadding = 8f;
     private const float TopPadding = 10f;
+    /// <summary>SA1.4: the OUTER bottom inset of the stack. The card's own BottomPadding is inside the
+    /// last card's rect, so without this inset the measured content ended exactly at the last card's
+    /// edge and scrolling to the bottom parked the Presets card flush against the container's lower
+    /// edge (the user's screenshot) while the top kept its 10px. One shared inset restores the pair.</summary>
+    public const float StackBottomPadding = 10f;
     private const float LabelTop = 4f;
     private const float LabelHeight = 20f;
     private const float DescriptionGap = 1f;
@@ -92,21 +109,27 @@ public sealed class UsNavWidget : IUiWidget
     }
 
     /// <summary>
-    /// The stack height: the header inset, five identical cards and four identical gaps. Draw walks the
-    /// exact same sequence (see <see cref="Draw"/>), so Measure returns what is drawn - never a value
-    /// derived from a per-card text measurement.
+    /// The stack height: the header inset, five identical cards, four identical gaps and the footer
+    /// inset. Draw walks the exact same sequence (see <see cref="Draw"/>), so Measure returns what is
+    /// drawn - never a value derived from a per-card text measurement. The footer inset is part of the
+    /// measured extent, which is what makes the LAST card stop short of the scroll viewport's bottom
+    /// edge at full scroll-down (SA1.4).
     /// </summary>
     public float Measure(UiWidgetContext ctx)
     {
-        return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap;
+        return TopPadding + Workspaces.Length * CardHeight(ctx) + (Workspaces.Length - 1) * Gap + StackBottomPadding;
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
     {
         if (rect.width <= 1f || rect.height <= 1f) return;
 
+        // V1 (2026-10-02): the COLUMN is a plane now, not a box. It used to paint its WorkspacePlane fill
+        // AND a full `theme.Border` frame around it, which made the nav read as three nested edges - the
+        // page plane, the column box, then each card's own enclosure. The column keeps the lifted plane (it
+        // is `#191612` against the page's `#0e0d0c`, so it still reads as its own region) and gives up the
+        // outline; the card enclosures below are the only edges left inside it.
         UiThemeDraw.BackgroundPlane(rect, ctx.Theme);
-        UiThemeDraw.Surface(rect, ctx.Theme, Color.clear, ctx.Theme.Border);
         ctx.Bindings.TryGet(UiBindings.ActiveTabKey, out string activeTab);
 
         float innerWidth = Math.Max(1f, rect.width - SidePadding * 2f);
@@ -117,13 +140,32 @@ public sealed class UsNavWidget : IUiWidget
         for (int i = 0; i < Workspaces.Length; i++)
         {
             (string tab, string labelKey, string descriptionKey) = Workspaces[i];
+            // ONE envelope: this single rect is the card's surface, both text bounds' owner and the hit
+            // target below. V1's defect was the surface, not the geometry - the old neutral treatment
+            // inherited `us-flat-panel`, whose RaisedBorder IS its Raised fill, so an ordinary row painted
+            // no enclosure at all and its text read as floating. The frame is therefore painted HERE, with
+            // an edge the scheme cannot alias away, while the SELECTED fill still comes from the palette.
             Rect card = new(rect.x + SidePadding, y, innerWidth, cardHeight);
             bool active = string.Equals(tab, activeTab, StringComparison.Ordinal);
             bool hovered = UsKernelDraw.HelpHover(card, ctx, "us/page-title/nav");
 
-            // Selected/unselected differ in ink, fill and rail ONLY: the rect handed to every state is the
-            // same one, so the two states cannot diverge in x, width or height.
-            UiThemeDraw.StatusTreatment(card, ctx.Theme, active ? UiStatusTone.Active : UiStatusTone.Neutral);
+            // Selected / hovered / ordinary are three VISIBLY different enclosures: the selected card takes
+            // the palette's Selected fill with the accent as its edge and the rail, a hovered card a softer
+            // step of the same plane, an ordinary card the raised plane with a structural edge. No hue
+            // carries "ordinary", so the accent keeps its meaning.
+            if (active)
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme.AccentGold);
+            }
+            else if (hovered)
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme.BorderStrong);
+            }
+            else
+            {
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme.Border);
+            }
+
             UiThemeDraw.AccentRail(card, ctx.Theme, active, 3f);
 
             // Both bands are ellipsized into the card's fixed text column through the same metric seam the

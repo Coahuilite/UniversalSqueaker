@@ -71,6 +71,7 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref distanceRange, "distanceRange", GetDistancePresetRange(SqueakDistancePreset.Balanced));
         Scribe_Values.Look(ref allowEasterEggSounds, "allowEasterEggSounds", false);
         Scribe_Values.Look(ref allowExternalActions, "allowExternalActions", false);
+        Scribe_Values.Look(ref allowBabyActions, "allowBabyActions", false);
         // Eat occurrence granularity: add-only fields, default false omitted at the Scribe boundary, so the
         // default config keeps a zero-byte delta and settingsSchemaVersion stays 5.
         Scribe_Values.Look(ref eatPrecisionEnabled, "eatPrecisionEnabled", false);

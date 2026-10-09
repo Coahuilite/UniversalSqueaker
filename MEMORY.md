@@ -1,165 +1,632 @@
 # MEMORY
 
-## Current durable state
+> Durable facts, rules and pointers only. Session narrative, finished-implementation detail, raw logs and
+> commit chains live in `OBLIVIONIS.md` (cold archive); per-incident history lives in the git log. The action
+> surface is `TODO.md`. Code and the carrier outrank this file.
+> **Compaction history:** the pre-2026-09-21c text of this file and of `TODO.md` is archived byte-verbatim in
+> `OBLIVIONIS.md` "Memory compaction 2026-09-21c"; the 2026-10-02 section summarizes substantive decisions
+> removed in that consolidation. The 2026-10-04 HM1 consolidation compressed the landed
+> V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 round prose into the CURRENT STATE bullets and pointer lines below,
+> keeping every durable rule; that removed prose remains in **Git history only** - the cold archive was NOT
+> extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
+> archive only for a historical conflict.
 
-- This repository is the **Universal Squeaker (US)** local fork of Squeaky Ratkin (SR), created 2026-08-23. Remote `Coahuilite/UniversalSqueaker` pushed 2026-09-06; **public since 2026-09-07** (maintainer authorization: the collaborator needs to download rc1; full-history privacy audit CLEAN immediately before the flip). **First release `v0.2.0-rc1` (prerelease) live** - asset `UniversalSqueaker-v0.2.0-rc1.zip`, six-point reconciliation green, anonymous download digest-verified. Publication actions remain maintainer-gated per session.
-- Fork source: SR branch `0.3.x` tip `b19d68a` (post-0.3.2-pre1, including the `.slim` cleanup commits C34–C42). `b19d68a` is an object of the **SR repository** and is intentionally unreachable from this clone — it is not a lost commit; verify the doc's hash inventory against this repo before "fixing" it.
-- Confirmed identity: repo `coahuilite/UniversalSqueaker`, packageId `coahuilite.universalsqueaker`, namespace/prefix/log = `UniversalSqueaker` / `US_` / `usdiag`. Workshop display name and license are pending maintainer confirmation.
-- 0.4 co-existence policy (decided): SR owns Ratkin exclusively; US serves other races only; both mods may be enabled together; no `incompatibleWith`. The legacy SR compatibility bridge has been dropped; US ships no `SqueakyRatkin.*` types and no Ratkin audio/content/profiles/attachments.
-- SR 1.0.0 will shrink SR into a pure audio pack with US as prerequisite.
-- Old-UI removal is **executed** (see "UI engineering rules"); it supersedes the Gate U "fallback must be retained / no clean cutover" constraint that still appears in `docs/uikit-rebuild/**` and in the archived checkpoints. The pre-cutover audit itself (legacy LOC measurements, relocation set, shim set) is cold evidence in `OBLIVIONIS.md`.
-- FerriteLib spin-off is **executed** (2026-09-03): the library now lives in the sibling repository `../ferritelib` as prerequisite mod `coahuilite.ferritelib` (its first commit `8e32620`). US compiles against `../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll` by relative `HintPath` with `Private=false` and ships no copy of it; `About/About.xml` declares the dependency. Phase 0 (library-side prep) landed here first, in commits `a6f314c` + `1724f5f`. See "FerriteLib spin-off".
-- **Post-split numbering correction (2026-09-04; re-measured 2026-09-07; +1 gate 2026-09-07b; +1 gate 2026-09-12)**: US `verify-local.ps1` is **15 gates** — gate **15** is harness stub coverage: the carrier's reference-driven scan (`../ferritelib/scripts/stub-coverage-scan.ps1`, read-only) over the US payload **and the KernelHostTests harness assembly**, with US's own exemption ledger (`scripts/stub-coverage-exemptions.txt`, 165 entries with reason codes at the `0b396c4` measurement, one scan per assembly). The ledger has only shrunk: 188 -> 173 when the carrier's stub took the language/constant class (`f629e1a`), then -> 165 when it took eight pure helpers (`0b396c4`); the harness half adds 25 references and needs no entry. Gate **14** is the UI boundary audit (`scripts/ui-boundary-audit.ps1`), appended last because gate numbers here are **append-only**: `gate N` is cited across this file, `TODO.md` and `docs/`, so a new check never shifts the numbers below it. The script's own `Invoke-Check` count stays the only authority (README and both workflow labels said "15 gates" until corrected 2026-09-07; `README.zh-CN.md`/`CONTRIBUTING.md` still said 15 and were corrected in the same round as gate 14). The "gate 14"/"gate 15" named in the dated sections below are **older** prose: they mean assertions *inside* gates 12/13, not the boundary audit. Every `Source/FerriteLib.UiKit/**` path those sections mention lives in `../ferritelib` since the split. Tracked US source set measured 2026-09-07c: **101 files / 15,566 lines** (was 102/15,751 before the FL 0.3.0 migration deleted `UI/UsHoverProbe.cs` and moved the chrome and the claim machine out of consumer code); Keyed tables: **213 entries per language** (211 `US.*` + 2 DebugAction).
-- **HANDOFF.md is maintainer-local**: removed from all published history by the third targeted rewrite (2026-09-06) and gitignored; `.slim/` was never tracked. It is not one of the three active memory files and never gates a session.
-- **Hash archaeology - CLOSED by maintainer ruling (2026-09-07)**: history was rewritten three times before the first push (personal-path blobs, NGS-name blobs, HANDOFF removal), so citations in docs drift. The ruling: **stop chasing hashes and never rewrite existing history for them** - a dangling hash in any doc (live or cold) is archaeology, not damage; the reconciliation chain (`../UniversalSqueaker-mirror-backup.git`, `../UniversalSqueaker-mirror-gen2.git`, `.git/filter-repo/commit-map`) exists only if a genuine historical conflict must be resolved. New docs may cite hashes casually; no obligation to keep them resolvable.
-- **Carrier published (2026-09-06/07)**: `Coahuilite/FerriteLib` is **public** (canonical case: capital F and L), default branch `main` — byte-identical to the local `../ferritelib` sibling. Sole release `v0.2.0-rc1` (prerelease) carries `FerriteLib-v0.2.0-rc1.zip` (top-level `FerriteLib/` folder shape); `Api` = 0.2.0, inside US's `[0.2.0, 0.3.0)`. Both workflows check out `Coahuilite/FerriteLib` (canonical case fixed 2026-09-07).
-- **Series release conventions (learned cutting US rc1)**: asset name is exactly `<Mod>-<tag>.zip` (a per-rebuild name cannot be a reconciliation target); the zip roots at a top-level `<Mod>/` folder so unzipping into `Mods/` yields a valid mod directory; a bad rc is fixed by deleting release AND tag then re-pushing the same rc number (the ordering gate recomputes maxRc from surviving tags); `/releases/latest` 404 is the CORRECT state during an rc-only window. US's first release run failed reconciliation on the asset name, second on zip shape - both re-cut rc1 (0 downloads each time, collaborator had not received it).
-- **Branch protection on main: LIVE since the public flip (2026-09-07)** - carrier-minimal shape (force-push off, deletion off, no required checks, admins not enforced); it was impossible while private (free-plan REST 403) and applied immediately after flipping. The PUT needs `"restrictions": null` explicitly or GitHub 422s.
-- **Version axis (maintainer ruling 2026-09-07)**: US's first product version aligns with the carrier at **0.2.0**; the first release is an rc, not stable. Carrier rc-window discipline applies: identity axes freeze at the base (`<Version>`/`VersionPrefix`/`modVersion` = 0.2.0, `VersionSuffix` empty so InformationalVersion is `0.2.0+<sha>`), the rc suffix lives only in tag + artifact name; when the trial ends, the stable cut is a deliberate decision and main returns to a dev suffix (0.2.1-dev) for the next window. The corpus name `us-corpus-0.1.0.txt` is content identity, deliberately NOT renamed.
-- **Development-line model (maintainer ruling 2026-09-09; feature-branch clause amended 2026-09-10)**: one version development line at a time, named after the carrier API window - currently `0.3.x` (carrier pinned `[0.3.0, 0.4.0)`). **Feature discipline (09-10)**: each feature or behavior change is cut as a SHORT-LIVED branch from the line tip, worked and progress-pushed there; on completion it is merged back into the version line and the feature branch is DELETED (local + remote). Standing dev branches stay retired; what survives is only the short-lived shape - every branch carries a due date, none may outlive its work item. Pure maintainer-local doc/decision commits (no shipped bytes, no verification cycle) may land on the line directly. The line name tracks the API window, not the product axis - `<Version>` moves only at the maintainer's release decision. **`main` is a release-signal surface (09-09b)**: it moves ONLY when an rc or stable is cut (merging the line in is part of the release act); routine work never flows to `main`, and direct commits to `main` remain out of scope.
+## Current state (2026-10-09)
 
-## Authoritative entries
+- **Push privacy automation (2026-10-08).** The five-vector Mwah-derived scanner has automatic per-clone
+  pre-push installation and all-branch GitHub CI. `docs/push-privacy-gate.md` defines its scope; current
+  documentation uses portable installation/runner references. 2026-10-08 maintainer decision: preserve
+  published history and continue development. FullHistory accepts only the independently reviewed 55
+  blob+path+`personal-path` tuples in `scripts/privacy-history-exceptions.json` (reviewed installation
+  directory, hosted-runner layout, or fictional test fixture). Filename-only matches are not exceptions.
+  Current-tree text, names, messages, identities, credentials, metadata and runtime anonymity stay fully
+  checked. History rewrite remains unauthorized. A clean current tree is not itself history success.
+- **BH1 bottom help is integrated and its real-game acceptance PASSED (2026-10-06).** The measured
+  3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX. Read a
+  package's identity from its own stamp and the PM paired manifest, never infer it from HEAD; the
+  retained BH1 package identity numbers are archived in `OBLIVIONIS.md` (2026-10-09 section).
+- **Current checkpoint technical delivery (2026-10-07):** D4 = three independent name-search fields,
+  race-following xenotypes and same-pass VisibleRows4.5 sizing; Tuning separates action rules, mood
+  factors and the per-race final native fallback, with visible effective multipliers, suppliers and
+  usable preset reset targets. The small settings developer panel serves ONLY its five pages /
+  confirmation dialogs; in-game outline belongs ONLY to US diagnostics. DX1 = compact navigation at the
+  minimum game screen. Player field-presence overrides survive maintainer version changes. The admission
+  rule, Ratkin Core-sound data and restart semantics are standing product doctrine in `AGENTS.md`; the
+  delivery narrative is archived in `OBLIVIONIS.md` (2026-10-09 section).
+- **Interaction checkpoint closed and accepted in game (2026-10-09).** FL frozen `d5af4d8`; the four US
+  requirements are PM-accepted at the source/controlled-stub level, Demo-IC1 is accepted, and the paired
+  Dev candidate is staged from source `562fc47` and accepted - current state and receipt pointers live in
+  `TODO.md`, the settled commit chain and defect narratives in `OBLIVIONIS.md`. The ONE native human short
+  pass was accepted by the maintainer on 2026-10-09 (all seven items; the diagnostics layout and a quick
+  kernel smoke in their scopes). The durable engineering facts the round leaves behind:
+    - UI1/ESC1: the two diagnostic windows' two-press Esc rides the shell's `TryHandleUnansweredCancel`
+      with a per-window native-eligibility opt-in (the DT1 panel recomputes its own eligibility at the
+      TOP of `WindowOnGUI`; the two Diagnostics windows keep their constructor opt-in); Call wording
+      zh 普通叫声 / EN Periodic occurrence; F07 draws the measured reset slot from STATE only; F06 gates
+      layer/domain and empty-target context to the action/mood areas; tool windows on SubSuper, main on
+      Dialog, confirmations on Super (measured 1.6 layer order - a main-window click cannot absorb a
+      tool's input).
+    - ESC1/PACK1: cancel layers ride FL-IC2 `CancelBind` with explicit cancelled marks, consulted only
+      by the two projections that can show a cancelled selection (domain browse, fallback table;
+      BuildTuningDomains never sees one because the context step rests the page on Global). A
+      `CancelBind` INSIDE a Repeat template is item-qualified and can never name a page command
+      (declare on an ancestor - US uses the Repeat itself); row controls record at their OWN group
+      origin and the domain-row hit band is deliberately narrower than the row. The active tuning
+      context is the NON-PERSISTED `TuningContextActive` flag, so the default Global/Actions branch also
+      owns one context return; subject lanes use REAL clicks, never `SetCancelTarget`. Auto-expand is
+      the ACTIVE XENOTYPE CONDITION (keyword domain hit OR the dropdown alone, empty keyword included).
+      VISIBLE-branch cancel rules: the domain return answers only for a row of an EXPANDED card in the
+      current projection; the result return only for a manual-ONLY visible card - masked/hidden manual
+      state is retained for the query clear, never an invisible or empty layer; the root arrival IS the
+      last branch layer's visible release (no fabricated empty layer; help answers as its own layer and
+      cannot masquerade as the proof).
+    - RESET1: the backend owns the single publish/persistence funnel and the field-set truth (its
+      120-check harness is the funnel/identity/fallback-bytes boundary); the UI bumps only on Applied;
+      confirm ceremonies are NOT write keys (raw-site gate + revision-clock contract) and live in the
+      `us/reset-entry` composite and the scope-tree headers; the confirm shell sizes from the MEASURED
+      body (per-Open `UiWindowOptions`, because `UiPageWindow` is sealed) with the body in a Scroll
+      container, capped to the screen; the draft end is scoped to Applied + the operation's own fields
+      (facades never touch edits); area ceremonies capture the layer/domain token and REFUSE on drift.
+      Latent defect fixed at `a7e75c2`: `UsConfirmWindow.Open` nulled its `active` slot via
+      `CloseCurrent` right after claiming it - Open now keeps one slot per stack, so a superseded
+      question closes through the same catalog.
+    - Consumer-slot rule: a consumer integrates against the frozen delivery in its OWN outputs - the
+      harness builds the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16) and
+      never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four ignored
+      canonical outputs were OBSERVED with drifted identities during the consumer window; the
+      historical writer is UNPROVEN - a directory mtime does not reflect content overwrite, save/copy
+      can preserve mtimes, and `git status` says nothing about ignored artifacts (hash/size/mtime are
+      IDENTITY checks, not write attribution). The FL owner restored byte-equality
+      (`fl/post-consumer-restoration.md`); the current structure's before/after identity checks match;
+      the unknown historical writer adds NO new development blocker.
+    Cross-window field freshness under the real stack and native focus/IME/fonts rode the accepted ONE
+    human pass (2026-10-09); no product failure was ever claimed from the simulation. FL-owned backlog
+    (task-11, FL-17, FL-18/B6, FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
+- **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
+  at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
+  business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
+  not success. Add tolerance for observed faults and known business states.
+- **Landed report/diagnosis rules (DIAG-FIX + R3-B; technical only).** `ConsumeLayoutReportRequest` clears on
+  success or when capture is no longer `Active`/`Overlay`, and an off/unavailable request is refused at request
+  time so a later enable cannot satisfy it; the production lane drives a real `UsKernelSettingsSource` on a real
+  `UiHost`, and `TheSecondReportDescribesANewerPass` is the mutation proof (restoring the old production method
+  measures first 2, second -1). Demo writes its complete retained dump **once per successful report** to its own
+  `[FerriteLibUiKitDemo][ui-geometry]` entry - never repurposed onto `ui-audit`, never per frame, never
+  auto-enabled. Package identity and per-slice evidence belong to the PM delivery record, not this file.
 
-- Fork handoff and UI adaptation evaluation: `HANDOFF.md` (maintainer-local, not published; removed from history in the third rewrite).
-- Mod structure reference: `docs/mod-structure-reference-zh.md` (RimWorld Wiki + SR-minus-Extras/audio baseline).
-- Release flow: `docs/release-runbook-zh.md` (inherited from SR and adapted for US: no Extras/audio/OGG mirror/codemap checks; `version.txt` first line is `UniversalSqueaker <version>`). Local scripts: `scripts/verify-local.ps1` (**15 gates**; the four library gates and the neutrality guard live in `../ferritelib` now), `scripts/build-dev.ps1`, `scripts/pack-dev.ps1`, `scripts/stage-package.ps1`, `scripts/check-pack-readiness.ps1`, `scripts/privacy-audit.ps1` (pre-push gate, `-FullHistory` mode), `scripts/ui-boundary-audit.ps1` (runnable standalone; wired as gate 14). CI: `.github/workflows/ci.yml` (push/PR) + `release.yml` (tag `v*`). Dev packaging flow verified 2026-08-23 on commit `fafd760`: all gates green, package content/exclusions/version.txt/DLL identity pass the runbook Phase 0 checks.
-- Kernel compile set (rebuilt, zero-Verse, de-SR-ized): `Source/UniversalSqueaker/Kernel/`. Legacy root `Kernel/` was deleted in the Phase 4 cleanup (git history retains it).
-- Pure funnel logic (rebuilt, zero-Verse): `Source/UniversalSqueaker/Pure/SqueakActionPlan.cs`, `Source/UniversalSqueaker/Pure/SqueakTimingModel.cs`. Legacy root `Pure/` was deleted in the Phase 4 cleanup.
-- Kernel harness (rebuilt): `tools/UniversalSqueakerKernelTests/` links `Source/UniversalSqueaker/Kernel/`+`Pure/`; US 0.1.0 golden corpus committed and replay-green. Legacy `tools/KernelCharacterization/`, `fixtures/`, and `sr_reference/` were deleted in the Phase 4 cleanup (see `OBLIVIONIS.md`).
-- Runtime assembly (rebuilt): `Source/UniversalSqueaker/` builds Dev/Release clean (0 warnings). Catalog/resolver/settings/logging/comp/production patches all US-namespaced; `usdiag` protocol re-frozen; no `SqueakProductDomainFilter`, no HAR Ratkin special-casing (HAR discovery deferred TODO).
-- Data surface: `UniversalSqueakerFallbackProfileDef` injects fallback profiles from DefDatabase (no shipped seed Defs; empty = valid); `1.6/Languages/*/Keyed/UniversalSqueaker.xml` committed.
-- Tool gates: `tools/UniversalSqueakerConfigCopyTests/` and `tools/UniversalSqueakerLogTests/` both pass; they link Source kernel/fallback/logging files.
-- VoicePack authoring skill: `.github/skills/us-voicepack-authoring/SKILL.md` (migrated from SR; canonical `US_` authoring only). Revised 2026-09-13/14 (adds the `UniversalSqueakerTuningBaselineDef` preset channel; §2/§8 file-naming guidance unchanged).
-- **Content-pack packageId convention (maintainer ruling 2026-09-14)**: third-party/author voice packs namespace under the AUDIO AUTHOR's lowercase id (`saryaki.meowingkiiro.voices`), NOT `coahuilite.*` — coahuilite is the maintainer's own id. Applies to all collaborator-supplied packs.
-- **First skill-conformant production pack (2026-09-14)**: `dist/voicepacks/MeowingKiiro/` (`saryaki.meowingkiiro.voices` / `US_MeowingKiiro_Kiiro`, scope Race → `Kiiro_Race`, 15 actions / 53 clips, author Saryaki). It is the skill-flow validation vehicle, distinct from the archived `Kiiro-US-EXP` experiment (untouched). Audio license CONFIRMED (Saryaki cooperation agreement) — supersedes the old "licensing unconfirmed" blocker on this audio set. Raw clips formatted in place under `dist/voicepacks/raw/Meowing Kiiro/` (pristine backup `dist/voicepacks/backup/MeowingKiiro-raw-20260914/`); static checks green; in-game verification open. Records: `docs/audio-formatting-meowing-kiiro-zh.md`, `docs/voicepack-meowingkiiro-production-plan-zh.md`.
-- UI migration & orphan-feature development plan (locked 2026-08-24): `docs/us-ui-migration-plan-zh.md` (decision table §2, orphan inventory §3, tuning editor §4, layered action table §5, Disabled bypass §6, implementation order S1–S5 §12, action-entry wrapper + three-segment architecture + neutral/external split §13, review findings §14). `TODO.md` "Next development plan" mirrors it.
-- Phase A FerriteLib UiKit (2026-08-24, superseded by the 2026-09-02 cutover below): the neutral UI library lives in `Source/FerriteLib.UiKit/` as its own DLL with C# namespace `FerriteLib.UiKit` and XML scope/packageId `coahuilite.ferritelib.uikit`; neutrality means no US/SR product literals, while still referencing `Krafs.Rimworld.Ref` and Verse/Unity IMGUI types by design (`production uses Verse, tests use stubs`, per `docs/ui-shared-library-design-zh.md`). Harness: `tools/FerriteLib.UiKit.Tests/` with runtime stub assemblies under `Stubs/`.
-- Location note: the tree named in the entry above moved physically to `../ferritelib` on 2026-09-03 (see "FerriteLib spin-off"); nothing lives at `Source/FerriteLib.UiKit/` in this repository any more, not even build residue.
+### R4-B (integrated 2026-09-30)
 
-## Archived history
+The preset subtree composes through FL's shared `UiRowBand` with typed callbacks, and the native xenotype icon
+arrives as consumer-supplied data from the Verse-side adapter (`VoicePacksPageModel.ResolveXenotypeIcon` is the
+single resource lookup; `UI/Kernel` performs none). Native Def texture loading remains game-only. Detail:
+`docs/r4b-preset-subtree-row-composition.md`.
 
-- Session checkpoints 2026-08-24 → 2026-09-02 (rebuild planning, gate R/U, per-session resumes, and the pre-cutover architecture audit including the old "Gate U must retain the fallback / no clean cutover" constraint) were moved **verbatim** into `OBLIVIONIS.md` on 2026-09-02b, because `AGENTS.md` forbids session narratives in the active memory files. Byte-level copy, md5-verified; read the archive only for a historical conflict — it cannot override this file or the code.
-- Consequence to remember when reading old docs: gate counts drifted repeatedly (12 → 13 → 14 → 15, then back to **13** after the 2026-09-03 library split - the four library gates moved to `../ferritelib` - and **14** again from 2026-09-07b, where the new number is the appended boundary audit and 1-13 never moved), and `Palette`/`UiText`/`UiPanel`/`SurfaceFrame`/`UiInteract`/`UiValueStore`/`UiGuard`/`VoicePacksLayout`/`Layout.xml` (Schema=1) plus the whole legacy page chain no longer exist.
+### R4-A: a typed choice carries its value, and the row index is the bridge
 
-## FerriteLib spin-off (executed 2026-09-03; prep in `a6f314c`+`1724f5f`, library commit `8e32620`)
+- `UsScopeTreeWidget` commits the option's own typed value through `set-action-scope` / `set-tuning-domain`; no
+  scope is bound as text and reverse-parsed, and no domain token is joined/split.
+- `UsKernelDraw.Dropdown<T>` is the typed form over FL's `UiChoice<T>` (label + value): the trigger matches the
+  current value by VALUE, never by label, and both overloads share one `DrawDropdownCore`, so the popup push,
+  clamp/flip and owner-id hit rule exist once. The payload bridge is the **ROW INDEX** because FL's row list is
+  string-payloaded; matching by label would collapse two options that share a label.
+- `IUiTypedChoices` is deliberately unused in US (it exists for a non-generic widget that cannot name the
+  consumer's `T`; `UsScopeTreeWidget` can name `SqueakActionScope?`). **Null-inherit stays a value**: the Auto
+  entry is a real `null` and a row with no own scope commits `null`, never a default.
 
-- **One assembly, not Core+UiKit.** The visual core (`UiTheme`, `UiThemeDraw`, `UiFitAudit`, `UiKitFonts`, `UiFont`, `ITextMetrics`, `VerseFerriteTextMetrics`) has **zero** references to the page model — 7 of ~38 files, ~10% of 5,114 LOC. A split buys nothing the namespace does not already give, so the boundary is enforced by a gate in the library's own harness (`KernelContractTests.VerifyVisualCoreIsPageModelFree`, mutation-checked) instead of by an assembly edge. Revisit only if a consumer needs the core without the DLL.
-- **Second real consumer is `coahuilite.nivariansgrandstructure`, and it is not page-shaped**: a full-screen transparent world-map window that flows its panel rects by hand and keeps interaction state in private fields. Therefore: **physical independence now, API freeze not** — freezing before that consumer is wired calibrates the contract to n=1. The `01-...md:200` freeze trigger for `UiTheme` ("second real theme") is live.
-- Coupling measured for the record: ~90 IMGUI/Verse touchpoints in 7 files; ~4,300 LOC (manifest / registry / typed binding / session / layout / creation-time validation / fit audit) is backend-independent. So "abandon IMGUI" was never the lever for "get retained mode": state ownership is already retained, only submission and node identity are not.
-- `VerseFerriteTextMetrics` was `internal` inside consumer one while being the library interface's only production implementation — the reason it now lives in the library. Do not move production adapters back into `Source/UniversalSqueaker/`.
+### R3-B: layout diagnosis is an explicit per-host developer control
 
-## Enduring corrections (verified against source; do not re-derive)
+- **The geometry instrument is decoupled from logging.** `UsTextFitAudit.Open` no longer enables it; it is
+  switched per host (`SetGeometryCapture` / `SetGeometryOverlay` / `RequestGeometryReport`), default OFF, wired
+  to three real page commands. `!GeometryEnabled` right after `Open` is the decoupling's mutation proof.
+- **`Open(host, auditFit)` separates the SCOPE from the POLICY.** Every US window opens its scope in every
+  logging mode, because the per-host commands resolve a scope by host identity - a command with no open scope is
+  dead. `auditFit` is `SqueakLog.ShouldEmitDev` at all three call sites and gates ONLY the text-fit audit, so the
+  FIT/RECOVERY policy is unchanged. **A window (and a harness lane) must open a scope before its geometry
+  command can do anything.**
+- **Status watching is not status changing.** `GetDevGeometryStatus` is read-only; the capability probe asks the
+  carrier once, caches the answer and restores `GeometryEnabled` to false, so only `SetGeometryCapture` leaves
+  sampling on - and the cached answer is why a later explicit enable still succeeds.
+- **Status vocabulary, so a release carrier is never a clean empty report:** `ScopeMissing` / `Off` / `Active` /
+  `Overlay` / `Unavailable`, compiled in BOTH configurations. `geometryEnabled`, `reportPending`, the report
+  payload and the scope registry are unconditional; only the carrier CALLS and `reportRequestPass` are `US_DEV`
+  (both configurations compile with zero warnings - no pragma, no weakened refusal).
+- **The report is one-shot, explicit, and holds BOTH renderings of ONE capture.** `Publish` emits no geometry;
+  the Report command is the emission path. `PublishGeometryReport` returns the pass it described or -1, waits
+  for a pass NEWER than the one that existed at the click, then clears. **Nothing dangles**: a request made while
+  capture is off/unavailable is refused at request time, and `Dispose` removes the scope entry in both builds.
+- **The instrument's human outlet is the existing `ltrace` channel** (`SqueakLog.LayoutTrace` under
+  `ShouldEmitDev`, so no lane asserts it): one line per dump record as `ltrace: geometry <record>`, plus ONE
+  refusal line per process, `ltrace: geometry unavailable: …` - on a Release payload the reason is "this payload
+  has no layout instrument (a release library package)". That distinction is the whole of R3-B's B3. **The record
+  CONTENT on those lines belongs to the carrier's own dump** - read the shapes from the carrier, do not restate
+  them here.
 
-- Reflective HAR discovery is **not implemented**: `Catalog/SqueakXenotypeCatalog.cs:77` carries `TODO(HAR)`, discovery is assembled-only, and `HarHintDefNames`/`OfficialHarHintDefNames` are permanently empty. The `AGENTS.md` sentence about HAR being touched via reflection describes intent, not the shipped build.
-- `CompProperties_Squeaker` carries only `actions` and `moodMods`. The kernel registers **16** `us/*` kinds; older notes saying 17 are wrong.
-- The two correctness items the 2026-09-02 audit found are closed: `SqueakVoicePackModes.All`/`IsKnown` now makes `NormalizeMode` report an unknown value before degrading, and the `Disabled`-ignoring `CompSqueaker.PreviewFinal` surface was deleted as caller-less, so nothing can emit audio while the mod is off.
-- `Vanilla` silence is **unfinished content, not design**: no built-in fallback profile data ships, so every pawn resolving to the built-in tier is silent. Do not explain it away as a property of the mode.
-- **uGUI / UIElements are NOT absent from the game.** `UnityEngine.UI.dll`, `UnityEngine.UIModule.dll`, `Unity.TextMeshPro.dll` and `UnityEngine.UIElementsModule.dll` all ship in `Data/Managed` (they are in the Krafs ref set, which mirrors it) and are referenceable; `Assembly-CSharp` itself references `Unity.TextMeshPro` but neither uGUI nor UIModule. "Unity uGUI 与 UI Toolkit 没有 RimWorld mod 的公开接入路径" (`docs/ui-componentization-evaluation-zh.md:16`, `docs/ui-shared-library-design-zh.md:15`) is wrong as written. The accurate constraint: the game creates no Canvas and no EventSystem, and **IMGUI composites above every Canvas** (`GUI.depth` orders IMGUI against IMGUI only), so uGUI is reachable but cannot be placed over the game's own UI except via a RenderTexture blit.
-- The game's own UI palette is `Verse.Widgets`' 18 Color fields: five (fill, border) pairs plus normal/mouseover/inactive, separator and highlight — **no accent slot at all** — and vanilla chrome is carried by `ButtonBGAtlas`/`ButtonBGAtlasMouseover`/`ButtonBGAtlasClick` plus nine `AtlasUV_*` 9-slice rects, not flat fills. DarkGold matches the game's *content* palette (dark neutral, warm highlight, gold objects such as the Anomaly golden cube) and not its *widget* palette. State it that way; never use "matches RimWorld's design language" as grounds to reject another consumer's theme. Related vocabulary gap: `UiTheme` has one global `Border`, so it currently cannot express the game's per-surface fill/border pairing.
-- Prerequisite mechanics, measured: `Verse.ModRequirement` = {packageId, alternativePackageIds, displayName} and `ModDependency` adds only download URLs, so **`modDependencies` cannot carry a version** — negotiation must be mod code. Reuse `RimWorld.VersionControl` (`TryParseVersionString`/`IsCompatible`) and `ModMetaData.ModVersion`; never use `AssemblyInformationalVersion` as the negotiation value, it embeds the commit SHA (see the Packaging fact below). `Verse.ModAssemblyHandler` installs a global AssemblyResolve, so duplicate copies of the same assembly name resolve by load order and the loser cannot tell without enumerating loaded assemblies.
-- Layout cache-key audit settled: of the five inputs `01-...md:183-189` mandates, 可用尺寸 and 内容尺寸版本 were implemented, 布局定义版本 and 主题尺寸版本 are satisfied **by construction** (manifest and theme are constructor-injected readonly, engine is per-Host), and 语言/本地化版本 was genuinely missing and was added in `a6f314c`. **Correction (2026-09-04), do not repeat the stronger claim:** that addition is not a fix for an observable defect. Changing the game's language requires a restart, the restart destroys the settings window, and `UiHost` plus its cached snapshot are per-window — so a new window always sees a new language and the stale-band shape cannot occur in game. It is harness-proven insurance (`VerifyTranslationRevisionInvalidatesLayout`, mutation-checked) against a future in-place switch. Lesson kept: name which half is mutation-proven, and name whether the mechanism is reachable at all; the colour-geometry lane's equality assertion likewise has no available failing mutation and is a future-regression guard, not present evidence.
-- Cross-mod assembly binding is **proven in a running game (2026-09-04)**: US ships no FerriteLib payload, resolved `FerriteLib.UiKit` from the carrier mod, and its settings page plus camera overlay ran with no red text. `HintPath` + `<Private>False` is the settled design; the "second copy / `Private=true`" alternative is closed on evidence.
-- `01-product-and-architecture-decisions-zh.md:208` ("UiKit 的 fallback 文本使用 Ferrite 自有翻译键") is **intent, not build**: `Ferrite.UiKit` appears nowhere in `Source/**`. `UiSessionGuard` writes only an English `[FerriteLib.UiKit] fallback triggered ...` log line, and every player-visible fallback string comes from the consumer's own `fallback` delegate. So the library ships zero translation keys today.
-- Same family as the net472 `string.Contains(string, StringComparison)` note below: `string.IsNullOrEmpty` carries no `[NotNullWhen(false)]` on net472, so `IsNullOrEmpty(x) ? 0 : x.GetHashCode()` is CS8602 under Nullable + TreatWarningsAsErrors. Test `x == null` explicitly.
-- **Camera+ help mechanism, settled from source (2026-09-05; supersedes BOTH earlier claims).** Read `Source/Settings.cs` at GitHub tag `v3.4.7.0` (= the installed Workshop version). The right panel is **hover-driven with topic fallback**: `DrawHelp` (:864) resolves `hoveredHelpTitleKey ?? topic.LabelKey`, and the three `hoveredHelp*` fields are cleared at the top of every `DoWindowContents` (:254-256) — moving away falls back to the current topic's overview, **no pin state exists**. Every row type (checkbox/slider/radio/subheading/group-title/shortcut/color/nav-topic) wires hover through `DrawControlHover`, which also paints a 3.5%-white row highlight. Content tiers: 11 topics → 12 groups → control rows, each with its own `SettingsHelp_*` key. A third channel, `helpExtra`, appends dynamic amber text under the panel body (e.g. "Overridden by N rules", `CombineHelp`); the inline `SettingsNote_*` rows are runtime-state notes, NOT help. No `?` buttons, no mouse tooltips. Geometry: nav 160px, help column 220px responsive `min(220,max(190,w×0.25))`, panel non-scrolling (overflow clipped). Claim history: pass 1 asserted "hover swaps the panel" without reading anything (hallucination); pass 2 asserted "topic-driven only, per-control help is inline notes" from DLL strings + screenshot (incomplete — the hover fields were in the binary, I did not search for them). Camera+'s real shape = options C+A combined; US's pre-cutover reverse linkage was modeled on exactly this.
- - **Gate-14 key-reference regex had a silent hole until 2026-09-05 - measured scope: 152 of 211 shipped keys (72%) sat at 4+ dot-segments, so roughly 94 PRE-EXISTING keys (US.Tuning.Mode.Vanilla, US.Packs.*, ...) escaped the "every referenced Keyed entry exists in both tables" assertion from the day it was written; the scan only ever covered ≤3-segment keys.** The pattern was `"(US\.[A-Za-z0-9_]*)\""` - no dot in the class. Fixed to `[A-Za-z0-9_.]` in `9ccdbe8` (concatenation-prefix exclusion preserved) and mutation-verified by injecting a missing multi-segment constant, which the old scanner could never have caught. Rule: when a guard scans an identifier language, pin the scanner's alphabet itself - a green "zero missing" over a blind subset is worse than no gate, because it was trusted. Related naming ruling pending: role suffixes (.Title/.Overview/.Label/.Text) are schema noise; the accepted tightening is key=concept-id with the body on the bare name (all help keys ≤4 segments, every reference still a source literal - derived/concatenated keys are prohibited because the existence scan only sees literals).
-- **C+A help model landed (US `9ccdbe8`, 2026-09-05): Camera+ semantics with zero UiKit change.** `UsKernelDraw.HelpHover` is the single claim outlet (routes to the pre-existing global `set-help-hover` binding); the settings window clears the claim before every `DrawFrame` - per-frame transient, no pin, moving away falls back to the active section overview. `UsHelpPanelLogic.Resolve` gained whole-catalog hover resolution (`TryFindItem`) so nav/footer claim entries of sections the content column does not show; the panel's index rows claim through the same channel with an `overview` sentinel that beats a pinned selection. Panel bands are hover-invariant catalog maxima measured in the DRAWING font (the fit audit caught a Tiny-measure/Small-draw mismatch, and overviews outrun every item body - both are now measured candidates); hover switching never changes height, never bumps revision. The catalog is fully keyed: Chinese authoritative (58 new keys, 24 reuse control captions), English translated; `us/basic-tuning/distance` dead item removed (28 items); a bidirectional source guard pins widget claims == catalog items. The recording fake had to route help setters into ViewState - a record-only fake makes every end-to-end panel lane blind (first run caught this: claimed='' ).
-  - **D2 amendment (2026-09-06, US `62c00cf`): the panel is a pure read surface.** The persistent index list, pinned selection and the overview sentinel are retired - state field, model setter, source/interface method, Host read/write bindings and the panel's rows are all deleted. `Resolve(section, hoverKey, translate)` is two-argument plus the seam; the frame-boundary protocol (see the D10 amendment below) is the only fallback mechanism; the accent border (`UsKernelDraw.DrawHelpFocusBorder`) follows the live hover claim. Guards retargeted: the panel source must contain no `.Invoke`, the Host must contain no `set-help-selection`, and the layout-affecting key list lost that entry. Catalog-item reachability is now pinned ONLY by the bidirectional widget-claim == catalog-item guard (5c), not by the panel drawing a list.
-  - **D10 amendment (2026-09-06, US `c067de1`): the per-frame clear is no longer the only fallback.** A stamp-based grace machine (15 passes, ~0.25s): a claim that landed last pass re-arms and clears (the re-claim protocol is unchanged), gap passes restore the held claim so moving between adjacent controls goes A -> B with no overview flash, and only exhaustion releases to the section overview. A live claim always replaces the held one in-frame, so no pin semantics return. **Since the FL 0.3.0 migration (P3) the machine is `UiSession`'s** (`ClaimHover`/`HoverClaim`/`HoverGraceFrames`, boundary inside `UiHost.DrawFrame`); the consumer only chooses the length (`UsKernelSettingsHost` sets 15) and `UsKernelDraw.HelpHover` claims. `BeginHelpHoverFrame`, the `help-hover`/`set-help-hover` bindings and the `VoicePacksPageState` hover fields are deleted, and a source-invariant guard forbids any of them from returning; the grace arithmetic is pinned by the kernel-host lane of the same name.
+## Diagnostics panel, attention role
 
-- **RimWorld's minimum supported resolution is 1024x768 (maintainer ruling, 2026-09-06): 800x600 is NOT testable in game.** Every "800x600 in-game re-check" backlog item is closed as impossible-by-platform, not deferred. The harness's 800x600 sweep stays as deliberately-conservative narrow-tier evidence (it tests below the game's floor) and the window's 800x600 minimum-size design floor stays as defensive geometry, but no acceptance checklist may demand an in-game 800x600 pass. Do not re-add 800x600 to a real-machine list.
+- **Diagnostics panel rules (the round-9 contract; the nine ruling rounds are archived in `OBLIVIONIS.md`).**
+  Entry is the debug action ONLY, and its label key is `DebugAction_<MethodName>` - **a rename must re-key both
+  language tables in the same commit**. Settings stays the canary and gains no panel affordance. A dev-only page
+  may build its Schema=2 XML IN CODE and feed the real parser (gate 11 asserts exactly the two shipped
+  manifests, so no new embedded resource is needed). **A widget `Height` attribute overrides `Measure`**, so
+  collapse-governed pages must omit it. `lastDispatched` is the single audio-attribution outlet (G16 is
+  tri-state, and failures never clear the row). The four-tier labels show the supplying tier as-is, and
+  cross-tier pass-through is deliberately NOT a label - showing it would extend kernel `ChainResult` and force a
+  golden-corpus regeneration. **The two-press Esc never consumes the event by design**: an observed leak is FL
+  event-seam material, never a whitelist entry. All 16 conditions state their evidence basis, and
+  `UsDiagGateLine.IsCurrent` marks rows 0-12 as current observations while rows 13-15 read the REMEMBERED
+  evaluation - which matches the ACTION key and is therefore NOT freshness.
+- **Narrow mode there is an owned widget, not a carrier capability**: the page declares `Breakpoint=592` and
+  composes a US-owned narrow nav/body shape; the two shapes are mutually exclusive behind `VisibleKey`, and the
+  host must move the content revision when the fed width crosses the threshold, because a read-only binding
+  announces none.
+- **`UsAttention` is US's attention role, NOT a theme token** (`Source/UniversalSqueaker/UsAttention.cs`). It
+  owns the one hue `#86E7D8`, the dark ink `#0f1116` for text ON that fill, and the substrate draws. It is
+  US-side because `UiTheme.Warning` is the carrier's redirect onto `Danger`: assigning cyan there would repaint
+  every destructive control. `UsTheme` stays the surface table and deliberately gains no attention token.
+  `RowRail.Attention` is a 2px cyan edge over a neutral fill (location rails stay 3px). The four checklist
+  banners split by role - conflict and an unloaded target are attention, a dormant domain takes the
+  unavailable/hatch treatment, and only the destructive "Forget dangling" BUTTON keeps the danger family; the
+  footer save-status "Failed" keeps danger on purpose, because a save failure is not a gate failure.
 
-## First cloud upload: durable decisions (2026-09-06, execution session)
+### R12-US: US owns its baseline; palette is colour-only; the switch is the carrier's
 
-- **CI dependency chain = checkout + full-tree sibling staging.** `actions/checkout` resolves its `path` INSIDE `GITHUB_WORKSPACE` and throws on anything outside (verified against the action's own `input-helper.ts`), so the plan's literal `path: ../ferritelib` is impossible. The workflows check the carrier out to `ci-ferritelib/`, then a run step stages the WHOLE tree (minus `.git`) to the sibling path and builds there - the DLL-only variant passed gates 1-12 but died at gate 13, because `UniversalSqueakerKernelHostTests` builds FerriteLib's stub assemblies in place under `ferritelib/tools/FerriteLib.UiKit.Tests/Stubs` (single source of truth for the stubs) and the licence gate compares `ferritelib/LICENSE`. Path math verified against the csproj HintPath `..\..\..\ferritelib\...` (both resolve to `D:\a\UniversalSqueaker\ferritelib\...`). Option (ii) (download the carrier's release asset) stays available - the carrier now has `v0.2.0-rc1` + zip - but would not satisfy the stub-build or LICENSE needs without extra steps; switch only if the carrier build becomes the slow leg. Evidence: `.github/workflows/ci.yml` comments + the first green attempt's log.
-- **Release identity is set in the repo, never injected.** US's csproj pins `<Version>` explicitly, so `-p:VersionSuffix=` does NOT clear `-dev` (measured; the carrier's trick does not transfer). A release commit must change `<Version>` + About.xml `<modVersion>` to the clean base; three assertions lock the axes: check-pack-readiness `-RequireReleaseMetadata` (no `-dev`, description non-placeholder, Mod.cs declares the range), release.yml (tag shape + tag==csproj==modVersion + ancestry), and the existing `PrerequisiteRangeTracksCompiledApi` harness gate (carrier Api inside `[min,max)`, read from the loaded DLL - the only CI-reliable form; scripts must not parse `../ferritelib/Source/` because the sibling tree's commit is whatever the local session left there, while the DLL is the artifact actually compiled against).
-- **Runner SDK pinned `10.0.x` by self-measurement**: local default SDK is 10.0.204 (no global.json) and all gate evidence was produced on it; US also builds all-green under 8.0.424 on a clean restore (measured; the original record said "15/15" - the real count was 13 even then, see the gate-count correction above), but mixing majors across a shared obj/ triggers NETSDK1047 (measured locally). CI clones fresh, so the pin's purpose is CI==evidence-baseline, not compatibility.
-- **verify-local's six harness gates run `dotnet run --no-restore`**, so any CI workflow must restore EVERY csproj (Source + tools, glob) before calling it with `-NoRestore`; a hand-listed subset silently breaks when a tools project is added.
-- **Push order (dependency, not preference)**: lib side first - create repo -> push -> tag -> release asset downloadable. US side may prepare in parallel but push waits on lib: `git remote add` (no push) -> final check -> push. After push: branch protection on main, CI first run, then the six-point platform reconciliation reusing the carrier's `scripts/verify-release.ps1 -Tag -Repo -AssetPrefix UniversalSqueaker` (draft state / prerelease flag / asset name / server digest / `/releases/latest` semantics / dangling tags; non-zero exit = release incomplete, fix before announcing).
-- **Pre-push ceremony is deliberately minimal (maintainer ruling 2026-09-06)**: the only gate a human runs before push is `scripts/privacy-audit.ps1 -FullHistory` plus the mechanical final check (0 tags, single main, clean tree, noreply identity, mirror backup present). Everything else is already automated by verify-local / check-pack-readiness / the workflows; do not re-add manual ritual.
-- **NGS history ruling (2026-09-06)**: the 81 historical blobs carrying the unreleased sibling mod's name stay as-is - maintainer judged them acceptable (four unique sentences, no paths or credentials; exposure = the name to anyone who reads `git log -p`). No second history rewrite. The guide document `docs/first-cloud-upload-zh.md` - which held the last live mention at HEAD - is deleted before push per the same ruling; this section and the TODO ledger carry what survives.
-- **Repository naming contract**: the carrier is referenced by the relative path `../ferritelib` (lowercase, local sibling directory) and by `repository: Coahuilite/FerriteLib` in both workflows — the canonical case was confirmed when the lib session created the repo (2026-09-06) and the workflows were corrected to match on 2026-09-07. A wrong guess fails the first CI run loudly, never silently (measured: the first run died on REST 404 exactly here). **US's own repo is live: `Coahuilite/UniversalSqueaker` (private, pushed 2026-09-06)** - that exact name is a build contract for anything referencing it relatively.
+- **US owns the COMPLETE DarkGold baseline.** `UsTheme.SchemeXml` declares all 23 colour tokens, including
+  **`AccentGold` `#d19a38`** (unchanged - the identity did not move with ownership), and the four per-surface
+  edges are claimed at US's own shared-token values (`Border` `#575247` / `BorderStrong` `#6b6459`) - the colours
+  US actually painted before the template was retired. The lane pins *claimed value == shared token*, not a hex.
+  `SelectedBorder` stays **unclaimed on purpose** (its fallback IS the accent, and a flat scope aliases it away
+  to spell "no box").
+- **A palette may only move the colour clock.** `ColourRevision` moves on colour assignment;
+  `LayoutRevision`'s writers stay `DefaultFont` and `Geometry`. `UiStyleResolver.ThemeFor` drops cached region
+  clones when EITHER moved, so a re-tint repaints a scoped region while arrangement, node identity, focus, hover
+  claim, scroll and open popups are untouched. Evidence splits in two - a recorded DRAW for "the palette reached
+  the paint" and the session's own bookkeeping for "a colour is not a structural event" - and the lane explicitly
+  does NOT claim all-state redraw proof. Contract page: `docs/r12-us-theme-contract-zh.md`.
+- **The nine ON/OFF controls are the carrier's `input/checkbox` with `Appearance="switch"`**; the US-only
+  `us/square-toggle` is retired (its file, registration and lane subject - the lane was re-cut onto the shared
+  kind, not deleted). Every band stays 36x30 and every control names the same bool in `Bind` and `SelectedKey`.
+- **`UsFontMigration.cs` is DELETED**: the carrier's own legacy `<Font>` redirect now maps to a font metric and
+  reports one issue naming the successor, so a consumer-side ledger was a second convention free to contradict
+  it.
 
-## Repeated-UI-rework root causes (durable, evidence: `docs/ui-fix-triage-report.md` + commit history)
+## Environment facts that are easy to get wrong
 
-- Structural causes removed by the kernel path: dual coordinate spaces with late popup drawing, and deferred hit-rect registration that allowed a clickable rect with nothing drawn.
-- Structural cause NOT removed by the kernel: nothing enforced "narrow widths must keep controls reachable", which is why the same defect reappeared once in the kernel path before the geometry assertion existed. Any new UI work keeps needing failure-sensitive geometry assertions, not build-and-run assertions.
-- Process cause: completion was repeatedly declared at a pace that review could not match (seven accepted stages in 45 minutes; nine UI commits in 12 minutes), and no automated gate covered real-resolution, Chinese-text or real-catalog behaviour, so each cycle ended in a fresh maintainer feedback batch.
+- **RimWorld's minimum supported resolution is 1024x768** (maintainer ruling). 800x600 is NOT testable in game:
+  every "800x600 in-game re-check" item is closed as impossible-by-platform, not deferred. The harness keeps its
+  800x600 rows only as clearly labelled UNREACHABLE stress probes, and the window keeps its 800x600 design floor
+  as its normal initial window size; neither is a game screen.
+- **The minimum screen is a constant, not an estimate**: `RimWorld.ResolutionUtility` carries
+  `MinResolutionWidth = 1024` / `MinResolutionHeight = 768` (pinned reference `Krafs.Rimworld.Ref` 1.6.4871,
+  whose extern-body constants prove the floor, not every runtime UI-scale clamp path). Do not infer supported
+  sub-1024 screens from a guessed UI-scale ratio. The old "narrow-help trigger band [1024, 1131]" is retired:
+  presentation now reads the actual page box, the normally sized open window at the minimum screen shares, and
+  a smaller actual box can use the band.
+- **The fit audit's join is two halves**: `Enabled` only opens the switch; a host must ALSO hold its own
+  `UiHost.Diagnostics` subscription. A host with no subscription is measured with a **null ruler** and measures
+  nothing - which is what removes cross-window misattribution by construction.
+- **A nested `dotnet build` whose graph has ProjectReferences fails silently here** (exit 1, zero warnings, zero
+  errors, nothing at `-v n`) while the identical command succeeds with `-m:1`. `KernelHostTests.csproj` therefore
+  passes `-m:1` to its four nested stub builds. Harness-only; no shipped byte moves.
 
-## UI engineering rules (durable; per-incident narratives live in git log, hashes current as of 2026-09-07)
+## Evidence lessons (measured cases, not standing acceptance gates)
 
-- **Cutover facts (2026-09-02, `38b1247`)**: the legacy UI chain is deleted; `FerriteLib.UiKit` is a single `Kernel/` tree in `../ferritelib` and its root namespace exists in no file, so a stale `using FerriteLib.UiKit;` is a compile error. `UiKitFonts` is the only `UiFont`→`GameFont` mapping. The settings window and diagnostics panel draw through `UiTheme`/`UiThemeDraw` only (G4 dual-palette root cause closed). Whole-page fallback is replaced by the terminal `pageUnavailable` notice (switch deferred one frame via `noticeDueNextFrame`) — since FL 0.3.0 P2 that machine and all window chrome are `UiWindowHost`'s, and the consumer side is pinned to stay thin. Do not "restore for parity" the caller-less deletions (`PreviewFinal` family, `SqueakSettingsGameContext`, `VoicePacksPageModel.Execute*`, `UiCommand`). The only surviving secondary surface is the ~20-line pure-Verse camera readout in the overlay patch, pending the kernel-only decision.
-- **Mode drift**: `SqueakVoicePackModes.All`/`IsKnown` + reported `NormalizeMode` (unknown → one `Log.Error`, degrade to Vanilla); enum-length equality asserted by `UniversalSqueakerUiLogicTests`.
-- **Text fit**: the "long Chinese clips" premise is measurement-false (6 of 152 keys wider in Chinese by one half-unit; a CJK glyph costs one em, Latin averages half). Real causes were hardcoded prose and sub-line bands. `ITextMetrics` = `MeasureText` (wrapped height) + `MeasureWidth` (single-line); `UiFitAudit` hooks the single `UiThemeDraw.Label` outlet, dedupes per element+text, caps at 48 findings. **The audit's default axis must be height; width is opt-in `singleLine` only** — Verse wraps into the rect, so a width-first check flags every paragraph and hides the band defect. Every band measures or uses a calibrated line height, and its string resolves through one path shared by `Measure` and `Draw`.
-- **Metrics harness rule**: layout and audit must share ONE wrap-aware `ITextMetrics` instance (injected into `UsKernelSettingsHost`, never hard-coded). Stub one-line heights are calibrated from in-game `ui.text.overflow` need values (tiny 18.0, small 21.33333, medium 30.0); a constant stub turns every height assertion into theatre, and a width-axis positive control will not reveal it. If the height axis reports again, re-measure from the log's need values before touching bands. Real glyph advance exists only in game.
-- **Popup rule**: `FerriteLib.UiKit.Kernel.UiPopup` is the single owner of popup geometry/input (below/flip/pin/clamp + `SetPopupRect` publication); the manifest widget and the US composite both delegate to it. The library proves the yield guard **given** a published rect; the consumer proves publication through the real production host. Inside scroll containers the event pointer is group-space while published rects are window-space — translate through the caller's own `ctx` (`UiNative.PointerPositionIn`). Stub input harnesses must pump real event passes (Layout/MouseDown/MouseUp/Repaint) with hot-control capture, event consumption and group-origin-relative pointers; faked hit-testing cannot express click theft at all.
-- **Cache clock rule**: any cache whose contents feed layout must expire on the layout cache's clock (session `ContentRevision`), never a wall/Unity frame clock — two clocks guarantee a one-bump staleness window, visible only when the write lands mid-pass (the 2026-09-04d filter misalignment; pinned by `UiSourceInvariantTests.VerifyViewCacheSharesLayoutClock`).
-- **Localization contract**: manifests carry `TitleKey` only; every player-visible string resolves through Keyed; machine tokens (binding names, persisted filter tokens, tab tokens, `SqueakActionScope` values, element ids) are never translated; race/xenotype/author dropdowns display the Def's own `LabelCap` (US owns no keys for Defs it does not ship) while writes stay machine tokens. Tables: 271 entries per language with identical key sets (count drifts - the parity gate is the authority, not this number); the localization gate asserts parity, non-empty values, `{n}` placeholder multiset equality and referenced-key existence — its regex alphabet must cover multi-segment keys (a ≤3-segment scan once left 72% of keys unguarded). fmt=2 registry: **10** events including `ui.text.overflow` (DevOnly; the overflowing text itself i…
-- **Naming/harness bans**: no type under `Source/UniversalSqueaker/UI/**` may contain the substrings `UiText`/`UiPanel`/`Palette`/`SurfaceFrame`/`UiValueStore`/`UiInteract` — the gate scans exactly these six (hence `UiFitAudit`/`SqueakLog.LabelOverflow`). `UiPanel` was once only in this prose and in no source list (FL→US round 2); it joined the scan rather than leaving the rule, so the memory and the gate say the same thing. net472 has no runtime `string.Contains(string, StringComparison)` and no `[NotNullWhen]` on `IsNullOrEmpty`. `"Key".Translate(args)` binds `Verse.TranslatorFormattedStringExtensions`, so stubs must carry that type.
-- **UI boundary containment (verify-local gate 14)**: raw renderer-backend calls (`GUI`, `Event.current`, `Mouse.IsOver`, `Widgets.*`, `GUIUtility`) are confined to a **1-file whitelist** - only the frozen camera-indicator patch (豁免二, `Widgets.Label` legacy branch, Knife 3's fate) remains. 豁免一 (the dev diagnostics panel) RETIRED with the 2026-09-10 round-9 migration: the panel is UiKit's consumer like any other UI (shell `UiWindowHost`, `Scroll`, engine RecoveryBand recovery, zero exempt hits), landing the only-shrink ratchet. hover reads `UiNative.IsMouseOver`, layout frame gates read `UiNative.IsLayoutEvent`, close affordances read `UiNative.Button`, window chrome is the library's; a raw `Mouse.IsOver` anywhere fails the gate (count asserted 0). An undeclared hit, a vanished exemption file or a nonzero hover count fails it; the gate self-tests its scanner before trusting a green. It is the consumer half of FerriteLib's containment gate, so the two whitelists must agree entry by entry. The canary stays the player-facing settings window: its UiKit failures surface untouched, never harden.
-- **Diagnostics panel rules (round-9 contract, implemented 2026-09-10; the nine ruling rounds are archived in `OBLIVIONIS.md`)**: entry is the debug action ONLY (its label key is `DebugAction_<MethodName>` - a rename must re-key both language tables in the same commit); settings stays the canary and gains no panel affordance. A dev-only page may build its Schema=2 XML IN CODE and feed the real parser - gate 11 asserts exactly the two shipped manifests, no new embedded resource needed. Widget `Height` attributes override Measure - collapse-governed pages must omit them. `lastDispatched` is the single audio-attribution outlet (G16 is tri-state; failures never clear the row); four-tier labels show the supplying tier as-is, and cross-tier pass-through is deliberately NOT a label (showing it would extend kernel `ChainResult` and force a golden-corpus regeneration). The two-press Esc never consumes the event by design: an observed leak is FL round-4 material (event-consumption seam), never a whitelist entry.
-- **Packaging fact**: `AssemblyInformationalVersion` embeds the full commit SHA — every commit (docs included) changes `1.6/Assemblies/*.dll` bytes; never claim "no shipped-byte change" for a rebuilt package, and don't swap a maintainer's in-flight test build for a newer label.
-- **Packaging construction (after FL→US round 2, 2026-09-07)**: one staging engine (`scripts/stage-package.ps1`) serves both channels, and thin packers own only flavor identity. The channel is **measured, not declared**: `scripts/read-assembly-stamp.ps1` reads `AssemblyConfigurationAttribute` in a child process (a handle on a DLL that is copied/rebuilt moments later, and `MetadataReader` is absent from the Store PowerShell - both measured) and the engine refuses a `dev` label over Release bytes and the reverse. It was needed because Dev and Release share one `OutputPath` and up-to-dateness is judged per configuration: `verify-local` then the old `pack-dev` reproducibly produced `build=dev` over a Release assembly, and in US that is not cosmetic - `US_DEV` gates Auto dev-logging and the footer revision, so a mislabeled rehearsal loses the diagnostics the rehearsal exists to read. Consequences to keep: `pack-dev` builds `-c Dev --no-incremental` and produces a **folder, no archive** (a rehearsal is installed by dropping it in `Mods/`; the old dev zip was also shaped wrong - contents at the root); `build-dev` builds the carrier `-c Release --no-incremental` and gate 6 now asserts the carrier is Release-configured, not merely present; the release asset's archive writer lives in the engine too (names normalised to `/`, sorted, every entry stamped with the tagged commit's author date, one top-level `UniversalSqueaker/`), so the quoted SHA-256 is reproducible by another run instead of being a receipt; Workshop identity is excluded by construction (`About.xml` copied as one file, no strip step to forget), build debris is excluded on the copy and asserted absent afterwards, and the stable part of the tree is a closed set that fails on an intruder. `US_STEAM` is a code axis with no build axis (nothing defines it) - see TODO, do not debug it as a bug.
-- **Version-axis freeze during an rc window**: `pack-dev` labels itself from the csproj `<Version>`, so the dev folder can report `0.2.0` while the sibling carrier's own dev package reports `0.3.0-dev`. That asymmetry is the frozen-axis discipline, not drift (US pins the API range, not the release axis).
-- **Carrier lockstep**: pre-1.0, ANY library public-surface change (additions included) bumps `Api.Minor` and `About.xml modVersion` together; US pins the range (`[0.3.0, 0.4.0)` since the FL 0.3.0 migration), records the verdict in `PrerequisiteVerified`, and short-circuits to a named `US.Settings.Prerequisite.*` notice instead of drawing. The kernel-host lane reads the pin **out of `Mod.cs`** rather than repeating it (the Verse stub ships no `Verse.Mod`, so the type cannot be loaded there), and asserts one-minor-wide plus floor-equals-linked-Api — a restated constant is how a lockstep gate starts agreeing with itself. The 2026-09-04b desync (`TypeLoadException` on `UiPopup` under a stale carrier) is the proof case.
-- **Responsive vocabulary is already in the carrier US builds against (FL round 3; the package was refiled 0.4.0 → 0.3.0 by the maintainer on 2026-09-09, implemented and merged to FL `main` the same day).** FL's `UiLayoutEngine` resolves a child's `Width="Auto"` to a measured text-natural column (via `ITextMetrics.MeasureWidth` over the kind's declared label set, `MinWidth`/`MaxWidth` clamped, fixed siblings subtracted first), and a container may declare `Breakpoint` with `Narrow`/`Cols`/`NarrowCols`/`NarrowHidden`; a narrow-state attribute with no governing `Breakpoint` is refused at creation instead of being silently ignored. Why the delivery channel matters here: FL's remote default branch is `main` and both US workflows check the carrier out **without a `ref:`**, so CI compiles against this surface today — no FL release, tag or API bump is a precondition for adopting it, and "wait for the next minor" is no longer an argument against declarative sizing. Re-derive rather than quote: `git -C ../ferritelib show origin/main:Source/FerriteLib.UiKit/Kernel/UiLayoutEngine.cs` then grep `IsAutoWidth` / `"Breakpoint"`. Caveat carried over from the library's own memory: the harness proves the wiring against a linear character-count width model, so whether an Auto column really fits is still an in-game question (`MEMORY.md` gate-14/text-fit evidence class; FL `MEMORY.md` "Text fit").
-- **Refactor assessment (2026-09-04, panel half closed 2026-09-10)**: the popup family was the last structural duplication; **no broader refactor is warranted** — reopen only if a second geometry/input duplication appears. Remaining open UI items are maintainer decisions (Knife 3 behaviours, overlay kernel-only cut, Chinese wording review, built-in fallback/baseline content); of the two crash-lineage risks listed then, the `SqueakDiagnosticsPanel.DrawVisible` one died with the panel rewrite (engine `Scroll` owns the `finally`) - only the library-side `UiSessionGuard` one survives (restores GUI state in `catch` then keeps drawing), and it is FL's to close, never touch from US.
-- **Chinese term ruling (maintainer, 2026-09-04)**: xenotype = **异种**, not 异型/异形 — use 异种 in any new copy.
-- **Surface table (2026-09-12, `73abfed`)**: the reviewed palette lands as `Source/UniversalSqueaker/UsTheme.cs` (namespace root, `public` because the kernel-host harness references the production DLL) and maps the spec's tokens onto library slots (base/panel/raised, border, divider, three text slots, danger as deep fill + saturated edge + light text). **accent is deliberately not set** - it stays the library's series gold, and a lane asserts the table's accent still equals the library default, so a future silent rebrand fails a gate. Seven `UiTheme.DarkGold` call sites now read `UsTheme.Surface()`. Two trade-offs are written into the file: one `Hover` token serves both row hover and the shell's close affordance, so the spec's two-step hover (s2/s3) collapses to s2 with rows winning and the button step not expressible yet; and slots the spec does not define keep library defaults rather than inventing colors (so `Success` is still the library's green until the shapes batch decides). The file is **not** under `UI/**` because the naming ban scans six substrings there; put a table under `UI/**` and a comment alone can redden the gate.
-- **A carrier commit makes US gate 6 stale, docs included (measured 2026-09-12)**: gate 6 proves the payload's identity against the carrier checkout's HEAD, so any new FL commit - even a `MEMORY.md`-only one - reddens US's gates until the carrier payload is rebuilt. Rebuild the payload (a build artifact); never edit FL source to satisfy this gate. Two owner handoffs in one day hit this exact stale-gate signal, and it is a real coupling signal, not noise.
-- **Post-batch-2 verification residuals (2026-09-12, independent pass `16-verify-ingame-batch2.md`; none blocked the in-game test)**: the close-button seam has **two definitions of the same padding** - FL's shell default is `max(110, measured + 2x10)` while US's settings-window override still computes `max(110, measured + 16)` over a hardcoded `VerseFerriteTextMetrics.Instance` instead of FL's new virtual `Metrics` seam. Today all three windows land on 110 for short text, but a long text makes the settings window 4px narrower than the panel and detail windows, and the hardcoded ruler is exactly the two-rulers hazard the library's own docs warn about. Fix by deleting the US override (redundant since FL `a306cae`) or by aligning the padding to 20 and reading `Metrics`. **Also: gate 6 needs a real carrier git checkout as sibling** - a plain `git archive` sibling fails with 「no carrier git checkout … so its source commit cannot be proven」, which is a harness-layout fact, not a product defect.
-- **Marker patch residuals (same pass)**: the per-frame cost is fine when no session is active (`IsSessionActive` and `Find.CurrentMap == null` both guard before the loop), but while a session runs it walks `AllPawnsSpawned` and calls `GetComp` per pawn every frame; one `try` wraps the whole loop, so a single throwing pawn swallows that frame's remaining marks; and there is no `map == Find.CurrentMap` guard, so two maps' interface calls in one frame would double-draw the same pawns. The chrome-key runtime self-check that FL `a306cae` assigns to the host is **not implemented on this side** yet. All four are next-batch material, none is a live-game blocker.
-- **Record correction (2026-09-12)**: `b7cff2d`'s commit message states that the game was drawing the raw key `US.Settings.Window.Close` - that attribution is superseded. Both language tables carry the key (276 each, present since before the payload commit), `CloseText` is evaluated per frame, and the window is built on demand after language load, so the 128px finding's best explanation is the **diagnostics panel's** own long close text (`关闭（或连按两次 Esc）`) inside a fixed 110x30 box. The code fix is valid for both branches; the message's attribution is not.
-## US → FL 0.4 migration (executed 2026-09-11, task-20; authorized by the maintainer the same day)
+- Earlier UI rounds produced misleading red and green results when the fixture, viewport, translator or
+  observation channel differed from the intended input. Faithful product backouts proved specific fixes;
+  guards and unexecuted cases retained their narrower status. A channel change changed which checks applied.
+  These are reasons to select relevant verification, rather than a requirement to keep enlarging every suite.
+- Counter-based checks once reused another lane's accumulated findings. Resetting the measurement and checking
+  the increment distinguished the current operation.
 
-- **The pin and the product axis moved together**: `Source/UniversalSqueaker/Mod.cs` now pins `[0.4.0, 0.5.0)` (was `[0.3.0, 0.4.0)`); csproj `<Version>` and `About/About.xml <modVersion>` are `0.4.0` (was `0.2.0`). `v0.2.0-rc1` stays an archive: no tag touched, nothing pushed from the implementation session (the push is the lead's).
-- **Evidence, all re-run after the change**: `scripts/verify-local.ps1` 14/14 (EXIT 0); `tools/UniversalSqueakerKernelHostTests` ALL PASS (EXIT 0) - its `PrerequisiteRangeTracksCompiledApi` lane parses the pin out of `Mod.cs` and asserts floor-equals-linked-Api plus a one-minor window, so it is the lane that was red before the lift; `scripts/check-pack-readiness.ps1 -RequireReleaseMetadata` all checks passed (EXIT 0). `1.6/Defs/` is still `.gitkeep`-only (zero Def), re-checked after the change.
-- **Correction (2026-09-12, append-only)**: the 14/14 cited in the bullet above ran against carrier payload sha256 `470BF4728CBA50F4E16BEE7DFC73F3ACA2B01E16FF92234B1BE306C36B931670` (`0.4.0-dev+7402f12b5dd59bf40be641481e3fd75a27cc6530`) while the carrier checkout was already at `572c40b`: US's gate 6 asked only "payload present and Release-configured", so a payload built from an older carrier API stayed green until a rebuild forced the tool lanes to recompile. The 0.4 verification is re-established by commit `6710919` on a **rebuilt** carrier (checkout `ae489915566b51f4894e128b65d82c7f3faa6ac8`, payload sha256 `2282EF9F7440F65E931E4665F658F2A8910EEC9845DE3DC1F5E1C011E6DF2017`, IV `0.4.0-dev+ae48991...`): 14/14 live and 14/14 from a `git archive` of that commit beside a freshly built carrier copy, with no manual restore. The real migration face was **2 source call sites plus 14 harness sites** - the popup lane had to move to the owned hit stack (`OpenPopupRect`/`IsPointOverPopup` are gone) and the scroll lanes to node-keyed positions. **Gate 6 now proves payload identity**: the payload's AssemblyInformationalVersion must equal the carrier checkout's HEAD, and a dirty carrier tree is refused (CI's git-less sibling layout is covered via `ci-ferritelib`).
-- **Append-only supersession (do not fold yet)**: this supersedes the frozen base `0.2.0` in the "Version axis (maintainer ruling 2026-09-07)" entry and the `[0.3.0, 0.4.0)` in "Carrier lockstep"; both older lines are left verbatim because the task boundary was append-only. Fold them at the next compaction.
-- **Residual awaiting a maintainer ruling (not a defect)**: `<VersionPrefix>` is still `0.2.0`, so the built payload measures `AssemblyVersion 0.2.0.0` / `FileVersion 0.2.0.0` while `ProductVersion` (InformationalVersion) is `0.4.0+<sha>`. Nothing reads US's own AssemblyVersion: `scripts/pack-dev.ps1:25-27` derives the packaging label from `<Version>`, and `stage-package`'s identity check compares the payload's InformationalVersion base against that label, so both channels are consistent as they stand. The csproj comment block at lines 11-14 still describes the rc-window "frozen at 0.2.0" discipline and is stale for the `<Version>` axis.
-- **Ruling 2026-09-11, closure of the residual above (commit `7c64d3a`)**: the maintainer ruled "lift" - `<VersionPrefix>` is now `0.4.0`, so the payload's AssemblyVersion/FileVersion measure `0.4.0.0` and all four version axes agree, and the stale rc-window comment block the bullet above names was rewritten in that same commit. The bullet above stays verbatim for the record; nothing in it remains open.
-- **Deliberately untouched**: the `UiTheme.Warning` fill in `UI/Kernel/UsKernelDraw.cs` stays as-is - the carrier restored that name as a redirect to `Danger`, with recovery scheduled at the next minor boundary. No file under `Source/UniversalSqueaker/UI/**` changed in this migration.
+- **Line numbers are not a stable coordinate.** A second edit to the same file must not read its region at the
+  offsets the FIRST edit left behind. Re-read the file and guard the slice with its own first and last line.
+  Measured 2026-09-22: a TODO re-cut clobbered a neighbouring section and was recovered by `git checkout` plus a
+  guarded re-run.
+- **The mutation flow's own BUILD can be the broken instrument.** Manifests and language tables are embedded
+  resources; a `Copy-Item` restore preserves the old mtime, so an incremental build reused the previous
+  mutation's assembly and the next mutation observed nothing (M5 reported M3's symptom). Touch the resource
+  before every build.
+- **Do not move a SHARED fixture's input to give one lane the case it needs.** S4-1's first cut changed the
+  empty view's egg value for every file that constructs the fixture; the lane now drives its two states from the
+  fixture's own shipped views, and the fixture stayed byte-identical.
+- **Any lane that measures text must install the Keyed table per language**
+  (`Program.SetTranslatorResolver(Program.ReadKeyedTable(language))`), or `Translate` passes keys through and the
+  lane measures the literal key text - a measured red-for-the-wrong-reason.
+- **A lane that counts DRAWN controls must draw the same frame its snapshot came from.** `DrawFrame` re-arranges
+  at the viewport it is handed, so a census at another width counts a different layout (measured: one row read
+  748px vs 524px, and a page with four bands reported "0 bands").
+- **At the hit seam, a row's identity is DRAW ORDER, not geometry.** Every row control is handed its rect at its
+  own group origin and drawn rects carry no window position, so a "first rect matching this shape" predicate let
+  a press aimed at one row select another. Rely on manifest/draw order and prove the row by its PAYLOAD.
+- **The engine does not hand the hit seam a control outside the drawn viewport** - a press aimed at a clipped
+  row silently lands on a row above it, because the rect it does get is that other row's. Lanes that press every
+  row must arrange a canvas tall enough.
+- **Cross-space rect comparison is a trap**: an element inside a `Scroll` has its ARRANGED rect in the containing
+  space while the rect handed to `UiNative` is in the scroll's local space. Translate both into one space first.
+- **The recorder stores the PARAMETER THAT WAS WRITTEN, not the pixel that was seen.** `DrawBoxSolidColors` keeps
+  RGBA, so a lane comparing RGB alone reads a raw token as if it were painted. Every colour lane therefore splits
+  in two: the **written channel** asserts the token AND the alpha explicitly, and the **perceived channel** uses
+  the composited value read from the widget's single source of truth, so no lane carries a second copy of the
+  arithmetic. Real pixels are not directly observed here.
+- **Two alpha guards are guards without their own red** (`a == 0.57`, the rail's opacity) because the minimal
+  mutation also changes the product and needs its own byte-level restore; recorded as such, not dressed up.
+- **Process rule earned the hard way: a commit requires an OBSERVED green, not an INVOKED check.** One red lane
+  reached HEAD because the check and the commit were written into the same script. Coherent verified changes
+  were committed separately; invoking a check without observing its completion did not establish a green result.
 
-## Attention role, and diagnostics state/layout (2026-09-12; `89499b0` + `0254d85` + `f8316d3`)
+## Carrier and artifact discipline
 
-- **`UsAttention` is US's attention role, not a theme token.** `Source/UniversalSqueaker/UsAttention.cs` owns the one hue (`#86E7D8`), the dark ink `#0f1116` for text ON that fill, and the substrate draws (`Rail`/`Band`/`Badge`). It is US-side because `UiTheme.Warning` is the carrier's redirect onto `Danger`: assigning cyan there repaints every destructive control. `UsTheme` stays the surface table and deliberately gains no attention token. `RowRail.Attention` is a 2px cyan edge over a neutral fill (location rails stay 3px), and `RowSurface`'s danger fill now reads `theme.Danger` instead of the alias - identical bytes, honest name. The four checklist banners split by role: conflict and an unloaded target are attention, a dormant domain takes the unavailable/hatch treatment, and only the destructive "Forget dangling" BUTTON keeps the danger family. Footer save-status "Failed" keeps danger on purpose (a save failure is not a gate failure).
-- **Diagnostics keeps all 16 conditions and states each one's evidence basis.** `UsDiagGateLine.IsCurrent` marks the rows that are current observations (0-12); rows 13-15 read the remembered evaluation, which matches the ACTION key and is therefore NOT freshness. The current-only summary and the attention rail read `FirstCurrentBlockIndex`, while the legacy `FirstBlockedIndex` keeps its whole-chain meaning. Four-state paint (`UsDiagPaint`) runs through `UsAttention`: Pass neutral, Block cyan marker/label with a NEUTRAL value, Pending `...` plus its real reason (never "not reached"), N/A neutral plus a reason; exactly one marker per condition.
-- **Narrow mode is an owned widget, not a carrier capability.** The carrier refuses `Tab` on containers at creation time, so `UsDiagnosticsSpec` declares `Breakpoint=592` and the page composes a US-owned `us/diag/navbody`; `us/diag/nav`'s Back exists only in the narrow detail view and the pinned page declares none. Three group switches default open and are written only by a click, so a value update cannot move the developer's view.
-- **Sandbox build fact (measured 2026-09-12):** a nested `dotnet build` whose graph has ProjectReferences fails silently here - exit 1, zero warnings, zero errors, no output even at `-v n` - while the identical command succeeds with `-m:1`. `-nodeReuse:false`, `-tl:off`, `MSBUILDUSESERVER=0`, `Directory.Build.rsp`/`MSBuild.rsp` and killing stale dotnet nodes do NOT fix it, and it reproduces on clean sibling sources. `KernelHostTests.csproj` therefore passes `-m:1` to its four nested stub builds with the reason in a comment; harness-only, no shipped byte moves.
-## Settings UI shape: narrow window, compact nav, complete help coverage (2026-09-13)
+- `pack-dev` builds the US payload `-c Dev --no-incremental` and produces a **folder, no archive** (a rehearsal
+  is installed by dropping it in `Mods/`). **`build-dev` builds the US payload Dev and NEVER builds the
+  carrier** - it resolves the carrier it was handed and forwards it as `FerriteLibArtifactPath`. Dev and
+  Release output to `dist/build/<Configuration>`. `FerriteLibArtifactPath` selects the existing carrier
+  input; the stager compares its hash with the compiler reference recorded in US. Commands and current
+  behavior are authoritative in `docs/build-and-debug.md` and the scripts. Gate 6 asserts the SELECTED
+  carrier is Release-CONFIGURED, not merely present, and the stager refuses a payload whose recorded
+  compiler-reference hash differs from the selected DLL. The engine refuses a `dev` label over Release bytes.
+- `scripts/read-assembly-stamp.ps1` reads `AssemblyConfigurationAttribute` in a CHILD process. An
+  `Assembly.LoadFile` handle on a DLL copied or rebuilt moments later lives until process exit, which is
+  fatal for a later rebuild in the same session; `MetadataReader` is absent from the Store PowerShell.
+- **The carrier payload's configuration has ONE judge: `AssemblyConfigurationAttribute`**, never the version
+  suffix - FL's `<VersionSuffix>dev</VersionSuffix>` is unconditional, so a correct Release carrier still reads
+  `0.7.0-dev+<sha>` and a suffix-keyed gate would refuse a good payload.
+- **Gate 6 reddens on any carrier commit, docs included**, since it compares the payload's identity against the
+  carrier checkout HEAD. Never edit FL source to satisfy it: rebuild the payload and announce that HEAD moved.
+  `verify-local`'s gate-6 retry hint is PROSE (task-7) precisely because a red gate is the frame that must not
+  build - the 2026-09-22 incident rebuilt a frozen payload by pasting the old hint. A docs-only commit
+  changes source HEAD without changing retained package bytes; a later build embeds the new source identity.
+  An identity mismatch alone does not establish a gameplay regression or require rebuilding a retained test
+  package. Read current US package identity from its own stamp and the PM paired manifest, never from HEAD.
+- **A hash and an mtime answer different questions**: the hash says "same bytes", the mtime says "was the file
+  written". A rebuild of identical content moves the second only, so a freeze notice quotes BOTH.
+- **A live carrier identity is never pinned in a tracked file.** A SHA written here is stale the moment it lands.
+  The current identity is what the latest FREEZE NOTICE states, as a hash + mtime pair; this file keeps history.
+  The workflows pin the release TAG name (`v0.7.0-rc1`) and derive the commit, digest and DLL hash at run time
+  (step outputs, step summary, release body) - the same rule, not an exception to it.
 
-- **The carrier has no binding-driven column visibility; US composes the help drawer as a layout VARIANT.** `UiLayoutEngine.IsHidden` reads only a static `Hidden` plus `Tab` compared against `UiBindings.ActiveTabKey` (forbidden for help), `ResolveColumnWidths` reads only static `Width`/`Auto`/`Min`/`Max`, `UiHost`'s manifest is read-only and `UiWindowHost` caches its one host, so there is no supported rebuild path either. `Source/UniversalSqueaker/UI/Layout/UsLayoutVariants.cs` builds a closed root snapshot (the shipped tree with `help-scroll` omitted) and `UsKernelSettingsHost.SessionRevisionBumper.ApplyVariant()` installs it BEFORE `BumpContentRevision()`; the parsed tree is the OPEN variant, so `ApplyVariant()` must also run once right after `Attach` or the first frame shows the drawer while the state is retracted. `TryReplaceRoots` index-assigns the manifest's live `List<UiElementSpec>` and fails soft (one `Verse.Log.Warning`, shipped tree kept). Propose an FL `VisibleBind`/`WidthBind` (or a supported layout swap) so this seam can retire.
-- **Window policy (2026-09-13).** `WindowChromeLayout.SettingsClosedWidth` = `clamp(0.24 * screenWidth, 600, 860)`; `SettingsOpenWidth` = closed + `DrawerWidthDelta` (help 176 + body-row gap 12, derived from the manifest so window and layout cannot drift) capped at the screen width; height stays `max(600, 0.66 * screenHeight)`. `UniversalSqueakerSettingsWindow` keeps its `UsKernelSettingsSource` in a field and writes `windowRect` once per drawer-state edge (centred, clamped on screen) - the pattern `SqueakDiagnosticsPanel`/`SqueakDiagnosticsDetailWindow` already used; the carrier stub declares `Window.windowRect`, so gate 15 is safe. `HelpDrawerOpen` defaults CLOSED, so the window opens narrow like vanilla ModSettings and widens only when Help expands. The window's runtime `windowRect` mutation has no harness lane (it needs `Verse.Mod`): compile-verified and pure-policy-covered only.
-- **Manifest and card shape.** Nav column 192 -> 160; `body-row` `Breakpoint` 700 -> 500 (a 600-wide window has inner 536 and stays two-column; 736/1024 stay wide; 480/320 still stack). Nav cards reserve ONE subtitle line (user-directed deviation from the brief's two-line wording; the single documented `SubtitleLines` constant is the revert point) and measure 144x49 stub / 144x52 carrier - stack 34-35% shorter, five identical cards, selected == unselected. Support rows share one control column (`ControlColumnRightInset = 10`, `ControlColumnWidth = 210`); the VISIBLE 18px checkbox edge sits on that column edge (`CheckboxRightInset = 10 + 18 + 3 = 31`, the 24px hit band overhangs 3px by design); rows keep the density token as a floor and grow for a wrapped translated label (documented deviation, not avoidable without clipping at 736-open/736-closed-EN/480-EN/320).
-- **The help catalog is 44 items and the count is pinned** in `tools/UniversalSqueakerUiLogicTests/Program.cs`. The four Playback behaviour rows (Easter egg + three scalings) each own an item; `us/attenuation-editor/status` and `us/page-title/help-drawer` were the last two controls with no help at all. `VerifyHoverClaimsMatchCatalogItems` is bidirectional (claim <-> catalog), so a catalog edit and its widget claim must land in the same change.
-- **Evidence at the archived revision.** `scripts/verify-local.ps1` 16/16 (EXIT 0) on the frozen tree; `UniversalSqueakerUiLogicTests` ALL GREEN; `UniversalSqueakerKernelHostTests` ALL PASS including `HelpDrawerLaneTests`, `SettingsGeometryLaneTests`, the four-mood lane and the 16-row width x language sweep (`overflow=False`, `fit=0`); artifact `dist/ui-evidence/layout-sweep.txt`. Gate 6 reddened once because the FerriteLib payload was Dev-configured - the documented recovery is rebuilding the carrier Release (`dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental`), never editing FL. Reviews live in `docs/review/us-settings-*.md`.
+## Identity and enduring corrections (verified against source; do not re-derive)
 
-## Eat-granularity port + UI granularity axes (ruled 2026-09-14; work surface in TODO)
+- Repo `coahuilite/UniversalSqueaker`; packageId `coahuilite.universalsqueaker`; namespace / Def prefix / log
+  prefix = `UniversalSqueaker` / `US_` / `usdiag`; licence **MPL-2.0** series-wide. **Public since 2026-09-07**
+  with branch protection live (force-push off, deletion off, no required checks). Workshop display name and the
+  licence action stay maintainer-gated.
+- US is the local fork of Squeaky Ratkin (SR), created 2026-08-23 from SR branch `0.3.x` tip `b19d68a`. **SR
+  owns Ratkin exclusively**: US ships no `SqueakyRatkin.*` types and no Ratkin audio/content/profiles. The 0.4
+  co-existence policy is both mods enabled with no `incompatibleWith`.
+- **Content-pack packageIds namespace under the AUDIO AUTHOR's lowercase id**
+  (`saryaki.meowingkiiro.voices`), never `coahuilite.*`.
+- Reflective HAR discovery is **not implemented**: `Catalog/SqueakXenotypeCatalog.cs` carries `TODO(HAR)`,
+  discovery is assembled-only and the hint lists are permanently empty. The `AGENTS.md` HAR sentence is intent,
+  not the shipped build.
+- `CompProperties_Squeaker` carries only `actions` and `moodMods`. Older notes saying 17 kinds are wrong; the
+  Registrar's `us/*` set is pinned by `UiSourceInvariantTests` and the script's own count is the authority.
+- **`Vanilla` silence is unfinished content, not design**: no built-in fallback/baseline Def ships, so
+  `BuildBuiltInSource()` is always empty. Never explain it away as a property of the mode.
+- **uGUI / UIElements are NOT absent from the game** (`UnityEngine.UI.dll`, `UIModule`, `Unity.TextMeshPro`,
+  `UIElementsModule` all ship in `Data/Managed`). The accurate constraint is that the game creates no Canvas and
+  no EventSystem, and **IMGUI composites above every Canvas**, so uGUI is reachable but cannot go over the game's
+  own UI except through a RenderTexture blit. The "no public access path" claims in
+  `docs/ui-componentization-evaluation-zh.md` and `docs/ui-shared-library-design-zh.md` are wrong as written.
+- The game's widget palette is `Verse.Widgets`' 18 Color fields with **no accent slot**, and vanilla chrome is
+  `ButtonBGAtlas*` plus nine `AtlasUV_*` 9-slice rects, not flat fills. DarkGold matches the game's *content*
+  palette, not its *widget* palette; never use "matches RimWorld's design language" to reject another consumer's
+  theme. Related gap: `UiTheme` has one global `Border` and cannot express the game's per-surface pairing.
+- `Verse.ModRequirement` = {packageId, alternativePackageIds, displayName} and `ModDependency` adds only download
+  URLs, so **`modDependencies` cannot carry a version**: negotiation is mod code, reusing
+  `RimWorld.VersionControl` and `ModMetaData.ModVersion`, **never `AssemblyInformationalVersion`** (it embeds the
+  commit SHA). `Verse.ModAssemblyHandler` installs a global AssemblyResolve, so duplicate assembly names resolve
+  by load order and the loser cannot tell without enumerating loaded assemblies.
+- **Cross-mod assembly binding is proven in a running game**: `HintPath` + `<Private>False` is the settled
+  design and the "second copy / `Private=true`" alternative is closed on evidence.
+- **The library ships zero translation keys**; every player-visible fallback string comes from the consumer's own
+  delegate.
+- **Camera+ help mechanics** (from `Source/Settings.cs` at tag `v3.4.7.0`): the right panel is hover-driven with
+  topic fallback (`hoveredHelpTitleKey ?? topic.LabelKey`), hover fields are cleared each `DoWindowContents`, so
+  **no pin state exists**. Every row wires hover through `DrawControlHover`. Nav 160px, help column
+  `min(220, max(190, w*0.25))`, panel non-scrolling. No `?` buttons and no tooltips.
+- **Hash archaeology is CLOSED**: history was rewritten three times before the first push, so citations drift.
+  Stop chasing hashes and never rewrite history for them. The 81 historical blobs carrying the unreleased sibling
+  mod's name stay as-is.
+- **`HANDOFF.md` is maintainer-local**, gitignored, never one of the three active memory files, and never gates a
+  session.
 
-- **The port LANDED 2026-09-14** on the short-lived branch `feat/eat-granularity` @ `e414b71` (carrier `ferritelib` @ `a0b716a`, Release payload rebuilt so gate 6 stays attributable). Names are frozen in `../../modding_documents/team-mode/eat-granularity-contract-zh.md` and the independent pass is `../../modding_documents/team-mode/verify-us04/18-eat-granularity.md` (15/15 gates on an isolated archive, five mutations each red and naming their assertion, 264-file tree byte-identical after restore, no must-fix). The player-facing key family is `US.Tuning.EatPrecision` (parent row) + `US.Tuning.EatPrecision.IncludeDrugs` (child row) + `.Hint` / `.DisabledReason` notes, with help ids `us/basic-tuning/eat-precision[-include-drugs]`; the code family is `SqueakEatOccurrence` / `EatPrecisionEnabled` / `EatPrecisionIncludeDrugs` across pure, settings, runtime statics, view state and the four bindings. The pre-distribution review (`19-eat-review.md`) found one must-fix before the artifact could go out - the child row centred its checkbox and 24px hit band on the full row (label band + reserved reason band), so once that sentence wrapped the label was unclickable and the box sat below its own label - fixed in `712de50` (the controls anchor to the label sub-rect; the lane now observes the drawn height from the label-band centre and asserts the control centre against the production rule, so the pre-fix anchoring fails it), and re-verified SHIP-WITH-NOTES with the mutation reddening that assertion. The same pass rewrote four of the eight Keyed values: the child help no longer promises "never silent" (false once the stage has been recognised), "toil" is gone from player copy, the beer/ambrosia boundary is stated, and "switch" became "option" - the key NAMES did not move. Follow-ups (S3 disabled ink, S4 empty reserved strip, N2 unasserted Scribe default, S1 process-level one-way flag) live in `TODO.md`; the manual in-game matrix remains the maintainer's and is NOT claimed. Distribution pair and tester notes: `../../modding_documents/team-mode/verify-us04/20-distribution-brief.md`.
+## UI engineering rules (durable)
 
-- **SR handoff adopted for US** (`../squeaky_ratkin/docs/handoff-eat-occurrence-granularity-zh.md`): two-level controls - parent "Eat only during real nutrition" (`GainingNutritionNow`) + child "include drugs" (`CurToilString == "ChewIngestible"`, unconfirmed toil name falls back to whole job). Placement ruled: the nested pair lands in **Overview `us/basic-tuning` below the four existing rows** (a whole-behaviour gate, not a layered tuning field, so never scope-tree; not timing either). Defaults `false/false` are a compatibility policy: rc1 shipped the job-level feel, so parent-off = WholeJob never re-litigates. Pure rule goes to `Pure/` (strategy layer, zero Verse); sampling stays in `PeriodicStateBinding`, whose single `CurrentAction` outlet means the diagnostics panel shows the narrowed attribution for free - no new log event. Persistence add-only default-false, `settingsSchemaVersion` stays 5. US has no SR-style settings fixture gate (verify-local header says so); gate 3 green is the equivalent.
-- **US layout granularity stops at the card.** The two embedded Schema=2 manifests (gate 11 asserts exactly these two) declare containers, workspaces (`Tab`), breakpoints and the card list - nothing below: a card's rows (which checkboxes, order, heights) are widget C# (`ContentHeight`/`DrawContent`). FL's kernel vocabulary ships no checkbox atom among its 12 core kinds; US checkboxes paint through `UsKernelDraw` under gate 14's contract exemption. Consequence: "add one option" is never a data-file edit; the eat port's floor is ~8 source files + 2 language tables + 1 ledger + 1 geometry lane + 1 help count pin.
-- **Style is half-file-driven; US sits at the coarsest level it chose.** FL's style machinery is real: one parser, two text origins (standalone `<Styles>` file via `ParseFile`, or the manifest's embedded `<Styles>` section US uses), 26 colour tokens + 5 density metrics + font, page/element nearest-first `Scheme`/`Density`, resolve-before-Measure riding the theme's `LayoutRevision`, fail-soft drops recorded to `UiFitAudit`. US's shipped use is the density axis only (regular/dense `RowHeight` 24/20 in the manifest) while the palette stays the `UsTheme.cs` C# factory (2026-09-12 surface-table ruling) - file-driven appearance in US is deliberate and partial, not a carrier gap.
-- **The web preset-kit ladder measured this session**: Bootstrap's build-time SASS variables ≈ FL's embedded `<Styles>` section shipped inside the assembly; MUI's runtime `createTheme` scopes / per-component style overrides ≈ element-level `Scheme`/`Density` nearest-first; Ant Design v5's per-component design tokens (`ConfigProvider` token injection) ≈ the escape hatch US still owns in C# (`UsKernelDraw` per-row paint) - the third rung nothing upstream reaches. A future "raise US's style granularity" ask must name which rung FL is asked to cover.
+- **Cutover facts**: the legacy chain is deleted, `UiKitFonts` is the only `UiFont`->`GameFont` mapping, and the
+  settings window and diagnostics panel draw through `UiTheme`/`UiThemeDraw` only. Whole-page fallback is the
+  terminal `pageUnavailable` notice, and since FL 0.3.0 P2 that machine plus all window chrome are
+  `UiWindowHost`'s. Do not "restore for parity" the caller-less deletions. The only surviving secondary surface
+  is the ~20-line pure-Verse camera readout in the overlay patch.
+- **Substring ban**: no type under `Source/UniversalSqueaker/UI/**` may contain `UiText`, `UiPanel`, `Palette`,
+  `SurfaceFrame`, `UiValueStore` or `UiInteract`; the gate scans exactly these six, which is why `UsTheme.cs`
+  lives at the namespace root. net472 has no runtime `string.Contains(string, StringComparison)` and no
+  `[NotNullWhen]`; `"Key".Translate(args)` binds `Verse.TranslatorFormattedStringExtensions`, so stubs must carry
+  that type.
+- **Text fit**: "long Chinese clips" is measurement-false (6 of 152 keys were wider in Chinese, by half a unit; a
+  CJK glyph costs one em, Latin averages half). The real causes were hardcoded prose and sub-line bands.
+  `ITextMetrics` = `MeasureText` (wrapped height) + `MeasureWidth` (single line), and the audit hooks the single
+  `UiThemeDraw.Label` outlet, dedupes per element+text and caps at 48 findings. **Its default axis is height;
+  width is opt-in `singleLine` only**, because Verse wraps into the rect. Every band must measure or use a
+  calibrated line height, and its string must resolve through ONE path shared by Measure and Draw.
+- **Metrics harness**: layout and audit share ONE wrap-aware `ITextMetrics` instance. Stub one-line heights are
+  calibrated from in-game `ui.text.overflow` need values (tiny 18.0, small 21.33333, medium 30.0); a constant
+  stub turns every height assertion into theatre. Real glyph advance exists only in game.
+- **Popup**: `UiPopup` is the single owner of popup geometry/input (below/flip/pin/clamp + `SetPopupRect`), and
+  both the manifest widget and the US composite delegate to it. Inside a scroll container the event pointer is
+  group-space while published rects are window-space - translate through the caller's own `ctx`. Stub input
+  harnesses must pump real event passes with hot-control capture and group-origin-relative pointers; faked
+  hit-testing cannot express click theft at all.
+- **Cache clock**: any cache whose contents feed layout must expire on the session `ContentRevision`, never a
+  wall/Unity frame clock - two clocks guarantee a one-bump staleness window.
+- **Localization contract**: manifests carry `TitleKey` only; every player-visible string resolves through Keyed;
+  machine tokens (binding names, persisted filter/tab tokens, `SqueakActionScope`, element ids) are never
+  translated; Def dropdowns display the Def's own `LabelCap` while writes stay machine tokens. The gate asserts
+  key-set parity, non-empty values, `{n}` placeholder multiset equality and referenced-key existence, **and its
+  regex alphabet must cover multi-segment keys** (the original pattern left 72% of shipped keys unguarded).
+  Derived/concatenated keys are prohibited. The fmt=2 registry has 10 events incl. DevOnly `ui.text.overflow`.
+- **Chinese term** (ruling 2026-09-04): xenotype = **异种**, never 异型/异形.
+- **UI boundary containment (gate 14)**: raw renderer calls (`GUI`, `Event.current`, `Mouse.IsOver`, `Widgets.*`,
+  `GUIUtility`) are confined to a **1-file whitelist** (the frozen camera-indicator patch). Hover reads
+  `UiNative.IsMouseOver`, close affordances read `UiNative.Button`, chrome is the library's, and a raw
+  `Mouse.IsOver` anywhere fails it. An undeclared hit, a vanished exemption file or a nonzero hover count fails
+  it, and the gate self-tests its scanner before trusting a green. It is the consumer half of FerriteLib's
+  containment gate, so the two whitelists must agree entry by entry. The canary stays the settings window.
+- **Packaging**: `AssemblyInformationalVersion` embeds the full commit SHA, so **every commit - docs included -
+  changes `1.6/Assemblies/*.dll` bytes**: never claim "no shipped-byte change" for a rebuilt package and never
+  swap a maintainer's in-flight test build. One staging engine serves both channels; the channel is **measured,
+  not declared**. `US_STEAM` is a code axis with **no build axis** - do not debug the dead branch.
+- **US -> FL request classification (binding policy)**: classify BEFORE asking and write it down. **(A) US misuse
+  / US's own job** - US relied on incidental behaviour FL never contracted, or the need is satisfiable with US's
+  own kinds: fix here, file NO request. **(B) a genuine FL gap** - and it must be a GENERAL capability (neutral,
+  symmetric with an existing general property, useful to a non-US consumer), with that generality argument
+  stated. The single findings ledger is the FL issues file under the workspace's team-mode directory - reference
+  it, never copy it into this repo.
+- **Responsive vocabulary is already in the carrier US builds against**: `Width="Auto"` resolves to a measured
+  text-natural column, and a container may declare `Breakpoint` with `Narrow`/`Cols`/`NarrowCols`/`NarrowHidden`;
+  a narrow-state attribute with no governing `Breakpoint` is refused at creation. **Row `Width="Auto"` semantics
+  CHANGED at FL 0.7**: the 0.6-era "collapses to 1px" reading is SUPERSEDED - that child now takes a share of
+  the leftover. The supported replacement for shape-changing is **two mutually exclusive presentations +
+  `VisibleKey`**, one child per shape; a narrow-only *child* has no single-attribute form in 0.7. Two traps: an
+  unresolvable `VisibleKey` stays **VISIBLE** (fail-soft), so key-name drift shows both presentations at once;
+  and a read-only `VisibleKey` announces no revision, so whatever flips it must move the content revision itself.
+- **The engine registers declared keys only** (`Bind`/`ActionBind`/`OptionsBind`/`Tab`/`VisibleKey`/`Items`); it
+  does not track a composite widget's internal C# getters, so a notification must be mapped onto the owning
+  element's Id.
+- **Write keys are registered centrally since 2026-09-24.** `UI/Kernel/UsWriteBindings.cs` is the funnel every
+  SETTINGS-PAGE write registration goes through; the kernel-host lane enumerates that registry instead of a
+  hand-list, and `UiSourceInvariantTests.VerifyWriteBindingsGoThroughTheRegistry` reddens on a raw
+  `.BindValue`/`.BindAction`/`.BindCommand` under `UI/` outside the funnel and its one named exemption. Recorded
+  brittleness: the guard counts TEXT occurrences, so a comment carrying one of those names would count too.
+- **Legacy flat scopes set a surface's BORDER token equal to its FILL to hide the box** (the
+  vocabulary has no `Border=none`; `UiThemeDraw.Surface` paints a 1px frame in the border colour). Current V1
+  Section scopes instead use an explicitly transparent `PanelBorder`, preserving inherited Panel re-tints. **Durable
+  pitfall: the engine resolves an element's `Scheme` against the DOCUMENT the Host was built with - the
+  manifest's own `<Styles>` section - while `UsTheme.SchemeXml` is the in-code palette applied to the theme
+  INSTANCE.** A scheme declared only in `UsTheme` is never resolved and the scope silently keeps the page's
+  bordered values; the resolver records "unknown scheme" and falls back, while an unknown TOKEN is refused. So a
+  new scheme goes in `Layout.Schema2.xml`'s `<Styles>` and declares **only the tokens it overrides**.
+- **When you want the accent, NAME the accent.** `UiTheme.SelectedSurface` is `(Selected, SelectedBorder ??
+  AccentGold)` and `SelectedBorder` IS assignable from a style document, so the flat scope setting it EQUAL to
+  `Selected` **aliases the `?? AccentGold` fallback away** - inside scoped cards `SelectedSurface.Border` reads
+  the selection fill colour. `UiThemeDraw.AccentRail`'s own fallback is `color ?? theme.AccentGold`, never
+  `SelectedSurface`, so calling it with no colour is safe; a consumer that wants the accent passes
+  `theme.AccentGold` or omits the argument. **The trap is the CALL CONVENTION, not the helper.**
+- **A control that must be VISIBLE on a flat plane cannot take its material from the role of the plane it sits
+  on.** The first square-toggle cut resolved the track through the role table and the OFF track's fill AND edge
+  both equalled the plane behind it (`#191612` on `#191612`), so the control vanished. The material belongs to
+  the control.
+- **A re-tint can resurrect outlines in legacy equal-fill scopes** if their border tokens do not follow the
+  fill. Palette guards retain those pairs and the boxed page control; V1 Section edges have their own transparent
+  border assertion. The colour lane also measures contrast for the four inks against their surfaces.
+- **Invalidation/notification**: a structural change is not a notification - rebuild the filtered list, the item
+  bindings and the adapter mapping BEFORE announcing, or the UI hears about the new list while the old set is
+  still held.
+- **Repeated-rework root cause**: "nothing enforces that narrow widths keep controls reachable" - which is why
+  the same defect reappeared once before a geometry assertion existed. **Process cause**: completion repeatedly
+  declared faster than review could match, and no gate covered real-resolution, Chinese-text or real-catalog
+  behaviour.
 
-## Settings-window size is based on vanilla's own dialog (maintainer ruling + measurement 2026-09-14)
+## Settings page: window policy, frame and manifest shape
 
-- **Vanilla's options window is a FIXED size that does not scale with resolution**: `RimWorld.Dialog_Options.InitialSize = (650, 600)` (read from the 1.6 source; `CategoryListWidth = 160`, `OkayButtonSize = (160,40)`), and the maintainer's 1024x768 screenshot measures the same footprint. The maintainer ruled that this is the baseline for US's settings window.
-- **The old policy grew the wrong axis and that is what the in-game feedback was really about**: `clamp(0.24 * screenWidth, 600, 860)` wide against `max(600, 0.66 * screenHeight)` tall opened **portrait** at 2560x1440 (614x950), so long labels wrapped (the 2026-09-14 Player.log: `page-root/footer` needs 47.3px in a 28px band, `global-volume` 32.7/18, `checklist` 32.7/20) and the vertical stack plus its scrollbar grew.
-- **New policy (commit `6538a6c`)**: `w = clamp(max(650, 0.44 * screenWidth), 650, 1600)`, `h = clamp(w * 9/16, 600, 0.9 * screenHeight)`. 1024x768 -> **exactly the vanilla 650x600**; 1920x1080 -> 844.8x600; 2560x1440 -> **1126.4x633.6** (16:9); 3840x2160 -> 1600x900. `SettingsWindowHeight` now takes `(screenWidth, screenHeight)`. Anything that restates the old 600/860/0.66 numbers is stale.
-- **The collapsed diagnostics bar was clipping its own text**: it drew two 14px lines in a 32px strip, but a Tiny line needs 18 and the identity line draws at Small (~21.3) - six `ui.text.overflow` hits on `diag-bar`. Fixed in the same commit: `StripLineHeight` 14 -> 18, new `TitleLineHeight` 22, `BarHeight` 32 -> 44. Two items from the same feedback round are still OPEN and need a product call: the collapsed panel keeps its expanded width (`SqueakDiagnosticsPanel.cs` shrinks height only), and the expanded detail column shows blank space when it has nothing to say.
+- `WindowChromeLayout.SettingsWindowWidth` owns the single window width; height is width * 3/4.
+  The minimum supported 1024x768 screen gives an 800x600 window and a 760x524 page box. Help changes
+  neither the window width nor its position. Larger examples: 1920x1080 -> 960x720; 2560x1440 -> 1280x960.
+- The Schema=2 page stacks header, flexible body row, conditional `help-scroll` (Height 140), and footer.
+  The body has a scrollable 200px navigation column and `content-scroll`; help and body scroll independently.
+  The footer Row contains status/build identity and the single help switch. At the minimum page box,
+  the content viewport stays 524px wide; opening help reduces its height from 404px to 256px.
+- Help is ephemeral per-window state, gated by `VisibleKey="help-open"` with a revision bump per toggle.
+  Hiding keeps the node, selected topic and scroll positions; removing a definition releases its node.
+  Reopening a fresh window starts closed. There is no window resize or page-width feed for help.
+- The move retains machine identifiers: `help-scroll`, `toggle-help-drawer`, `US.Help.Drawer.Toggle`
+  (including `.Hint`), `US.Help.PageTitle.HelpDrawer.*`, and `us/page-title/help-drawer`.
+  Side-column/narrow-band presentations and their derived visibility keys are retired.
+- BH1 contract and scoped evidence: `../modding_documents/relay_mod/BH1-BOTTOM-HELP-CONTRACT-20261005.md`
+  and `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/pm-result.json`.
+  Footer placement has a fresh faithful-revert proof; remaining BH1 measurements/input checks are guards.
+  Text metrics and game facts are stubbed. Synthetic 800x600 screens and 480/320px page probes are stress
+  inputs, not supported-screen acceptance. Real fonts, wheel routing and bottom-panel comfort need playtest.
+- Packs' enable card starts 2.90 current viewports below the fold with help open; the original two-screen
+  guard fails there. A Host guard scrolls near-tail pack row 29 through the session seam and clicks its
+  visible switch, reading the target typed write. This covers neither the last row nor native wheel input.
+- **US uses mixed declarative and composite rows**: the manifest owns containers, workspaces (`Tab`),
+  breakpoints and many Overview/Timing controls; richer custom widgets still own some row compositions.
+  Remaining row-level dissolution is US's backlog, not a general carrier limit; the genuine remaining FL gap
+  is **hierarchy x inline composition**.
+- **Packs tab (V2)**: the reading order is filter -> race browse -> xenotype browse -> current-domain pack
+  enable, and all four bands share ONE card rhythm (Padding 12 / Gap 6 / header 26); the filter band is a
+  `Section` + `us/section-header` wrapping the now-`TitleHidden` `us/filter-bar` composite. The two states are
+  deliberately different channels: BROWSE selection is `us/selection-surface` (fill + 3px rail; since
+  SA1.7 also an opt-in `Hover="true"` plate on the navigation's own ladder - draw-only, never a hit), the row's
+  `select-domain` payload is its business key and reaches page state only), PACK ENABLE is the item-local
+  `input/checkbox Appearance="switch" Bind/SelectedKey="enabled"` at the shipped 36x30 band (24px clamped the
+  34x18 track and cut the knob throw), and the enable band names its scope through the read-only
+  `checklist-scope` line. A browse write cannot reach an enable value or vice versa (asserted on increments
+  through the real boundary). **Disclosed change**: the filter band lost its help-FOCUS border
+  (`UsSectionWidgetBase.DrawHelpFocusBorder`) now that it is a Section + header (no other Packs band had one),
+  so the tab is uniform - a PM/acceptance call, deliberately not reintroduced.
+- **Tuning tab (V3)**: one `us/scope-tree` card whose areas read layer/domain -> action scope
+  (SA1.2: `PlayerTriggered`/`SystemOrEvent` groups, SR's fixed semantic membership, NOT derived from
+  `SupportedScopes`; `ActionScopeRules` owns the table + per-action scope captions) -> mood. The mood area is gated on the mood rows ALONE in both Measure and Draw
+  (the pre-V3 `scopeRows.Count > 0` vs `anyScopeDrawn` split was two predicates for one decision). The
+  inherited-scope hint is not width-gated: one pure row-layout function shared by Measure and Draw keeps it
+  inline while the action name keeps a floor, own-line otherwise, never hidden. Mood provenance is PER-FACTOR
+  from the authoritative fold (`bestPitchLayer`/`bestVolumeLayer`/`bestJitterLayer`, -1 = no supplier ->
+  default), and `MoodTuningRecord.sourcePresetDefName` is a RESET-TARGET ANCHOR, never provenance (Clear
+  deliberately keeps it) - it may be drawn ONLY as an explicitly labelled reset target and only while that
+  target is Ready. Additive key `US.Tuning.Source.Default`; the action-side `Auto` word is not reused on the
+  mood side.
+- **Remaining pages (V4):** Presets uses the manifest's local Tiny font scheme so composed row paint and measure
+  agree; its read-only baseline note distinguishes Def data from current Tuning values. Distance captions
+  describe the existing camera-height scale, without invented physical units. Footer visibility is transient
+  save status OR pending edits, and the full build identity stays readable in lower ink emphasis. The
+  footer band carries `Padding="6"` (SA1.4): the help switch clears the band's right edge by the declared
+  padding; the band rect itself is unchanged, only its children inset.
 
-## v0.4.0-rc1 cut, and the released pipeline state (2026-09-15)
+- **SA1 appearance adoption:** composite dropdowns use the shared `UiThemeDraw.SelectorField`
+  without a help slot; `SwitchThumbOff=#8a857a` leaves important label ink independent; geometry
+  outlines work without capture. Command buttons use a visible state scheme, and selection rows
+  reserve a real gutter for the rail. Remix has one two-step flow per settings window, with equal-height
+  gated body scrolls and swapped buttons; only the final deliberate choice writes the original typed
+  mode closure. Navigation/footer inset is authored. Source checks cover the production dialog shell
+  and resolved EN/ZH text with synthetic metrics; real fonts, appearance and native keyboard behavior
+  remain human acceptance. DX1 diagnostics and Packs D4 later landed in the 2026-10-07 checkpoint;
+  they are no longer undelivered. Open pack-page work is the later filter/card revision, not D4 delivery.
+- **Report button feedback (RPT1, landed)**: the report outcome is a READ-ONLY sentence printed immediately below
+  the Report button, in the existing Keyed mechanism (additive entries in both tables). It is derived from the
+  carrier's own facts: refused-at-request-time names the real reason (capture off / no instrument / no scope),
+  an accepted request says it is waiting, and only a pass the window actually consumed turns it into "written"
+  with that pass number - success can never be produced by the click. The window advances the shared content
+  revision on a produced report so the band re-measures; nothing else about report collection changed.
+- **Empty xenotype tuning target (XG1, landed)**: a non-Global tuning layer must HAVE an identity before any
+  tuning write - `MoodLayerHasIdentity` is shared by both mood writers and the preset reset, and layer 0
+  (Global) stays valid. When the xenotype layer has no target, the card states the reason and its action/value/
+  reset controls become INERT (static disabled bands; no dropdown, number, stepper or reset atom is even
+  called), while the layer segment stays live as the way out. The target-catalog definition, the persisted
+  domain and the valid-domain path are unchanged. The current checkpoint redesigns the tuning layout;
+  this identity guard still applies, while unrelated composite splitting remains deferred.
+- **Style is half-file-driven; US sits at the coarsest level it chose.** FL's machinery is real (one parser, the
+  manifest's embedded `<Styles>` section, 26 colour tokens + 5 density metrics + font, nearest-first
+  `Scheme`/`Density`, resolve-before-Measure riding `LayoutRevision`, fail-soft drops recorded to the fit
+  audit). US uses declared density and local surface-token overrides while the complete baseline palette stays
+  in the `UsTheme.cs` C# factory: deliberate and partial, not a carrier gap. A future "raise style granularity"
+  ask must name which rung.
 
-- **Both repositories carry a verified `v0.4.0-rc1`.** FL cut its own asset through its release CI (`FerriteLib-v0.4.0-rc1.zip`, 68,777 B). US's asset is `UniversalSqueaker-v0.4.0-rc1.zip` (199,874 B, SHA-256 `E879651880220A8CAB629934D76F2DE6156A36F3D8939A23DD9BBE8E4E1F678E`), built from the tagged commit `3332a88` and published with `gh release create` after the same six-point reconciliation the carrier's `scripts/verify-release.ps1` performs. Both are prereleases and `/releases/latest` 404s, which is the correct state in an rc-only window. Version axes freeze at the base: US `Version` / `VersionPrefix` / `<modVersion>` = 0.4.0, FL `Api` / `<modVersion>` / `VersionPrefix` = 0.4.0, and the staged `carrier=` line names the FL 0.4.0-rc1 payload.
-- **US's release CI could not attribute its own payload; FIXED, PUSHED and live-verified.** Both workflows staged the carrier tree (minus `.git`) into the sibling directory and built it there, so the SDK read `SourceRevisionId` from a checkout with no git metadata and stamped the payload `0.4.0-dev` with no `+sha` suffix; gate 6 then refused the bytes as unattributable, which is why rc1's release run and its `main` CI run both failed. The fix builds inside `ci-ferritelib/` - the checkout that HAS `.git` - and copies the built tree to the sibling afterwards. It is pushed as `67aa84c` on `main` and `41724d7` on `0.4.x`, and CI run `34875851981` on the fixed `main` is green including `Verify (14 gates)`. The release path was then rehearsed end-to-end in a throwaway clone of that pushed tree: carrier staged, 15/15 gates, pack-readiness, Release payload, staged release asset 199,885 B SHA-256 `565CEC95165278041676EFC2541EB00F0BFCB3CF8D39D00717A241AEAE7D2BC4` - produced twice, byte-identical. The published rc1 asset is untouched and still valid; the next tag is the first live run.
-- **A release-path script resolved its output against the process cwd (found and fixed 2026-09-15).** `scripts/stage-package.ps1` resolved a relative `-StageDir` through `[IO.Path]::GetFullPath`, which follows the .NET current directory rather than PowerShell's location; the rehearsal therefore staged the folder and the archive outside the repository. A relative `-StageDir` now resolves against the repository root (an absolute path is still honoured as given). Verified both ways: with the cwd at the root the staged bytes and digest are unchanged, and from a foreign cwd the stage lands in-repo with nothing leaking to the caller's directory.
-- **Window chrome is not consumer-free.** `UiWindowHost.DoWindowContents` is a sealed override, so a consumer can only set identity and size strings (Title / Subtitle / CloseText / TitleBarHeight / SidePadding / CloseButtonSize) and cannot take part in the chrome band at all. The consequence in this tree and the open design question are recorded in `TODO.md`; the routing fact is the durable half.
+## Cross-repo state (US <-> FL)
 
-## Version scope convergence and the file-driven requirement (maintainer ruling 2026-09-14)
+- **Dispositions**: authority order is code > FL `MEMORY.md` > the team-mode disposition file. The single
+  findings ledger is the FL issues file under the workspace's team-mode directory - reference it, never copy it.
+  Per-item (A)/(B) buckets and the open Batch 2 surface live in `TODO.md`.
+- **FL's delivery order**: commit everything -> gates -> forced Release rebuild -> delete the Dev-leftover PDB ->
+  report identity; `-PackDev` is never the last step.
+- **Provenance must be COMMITTED before FL may cite it** (the citation form is `owner/repo@sha:path:line`).
+  Corollary: commit the doc that is the provenance of an FL ask before filing the ask.
+- **WAVE-1's five gaps G1-G5 are ALL closed on the same carrier** (element-level `HelpKey`, `input/button`
+  `PayloadKey`, `Chrome="none"` + `Height="Auto"`, `mode-row` `TitleKey1..8` + per-option hover help, banner
+  roles). Durable consequence: "layers stay composite because G2 is a proven gap" no longer holds - the
+  remaining blocker there is hierarchy x inline composition.
+- **Runtime mode**: FL stays in its `0.7.x` **development** state (no line or minor move), and local testing uses
+  **Dev packages only**, never `pack-release` / `pack-steam` locally. The 2026-09-24 "remote is off-site backup
+  only - no tag and no release" reading is **SUPERSEDED by the 2026-10-09 publication decision**: the line's
+  first publication is the `v0.7.0-rc1` **GitHub Pre-release** (never stable/latest), built and uploaded by FL's
+  release workflow, and US CI consumes that release asset (next bullet). An acceptance claim still rests on the
+  paired Dev folder, not on a published artifact by itself.
+- **Carrier pin `[0.7.0, 0.8.0)`** (`Source/UniversalSqueaker/Mod.cs`). **The carrier is identified by COMMIT**
+  (`AssemblyInformationalVersion`, which gate 6 compares against the carrier checkout HEAD), **never by `Api`**:
+  during the coordination phase FL could add surface inside `0.7.x` with no minor bump; that temporary exemption
+  ends with FL's first publication (`v0.7.0-rc1`, 2026-10-09 decision), after which an addition moves the minor
+  again - commit identification stays the method either way. US compiles against the
+  sibling payload by relative `HintPath` with `Private=false`, ships no copy, and declares the dependency in
+  `About/About.xml`. The kernel-host lane reads the pin **out of `Mod.cs`** rather than repeating it.
 
-- **0.4.x converges to one item.** The line ships the **eat occurrence granularity** port (the Steam-review feedback closure) and then release prep. **0.4.x takes no source changes**; the only exception is a change that holds without touching source, which in practice means docs and release metadata. Hot reload and appearance-file-driven + tier-2 adoption were briefly drafted into 0.4.x and both moved to 0.5.x.
-- **Hot reload means file-driven INVOCATION, not file-driven kinds.** The ruling: while developing, editing a layout or style file and **reopening the window** must show the change in the running game - no game restart, no recompile. **Adding / removing / changing widget kinds is explicitly rejected from hot reload** because kinds are compiled C#. That is the same line as FL's use/extend boundary (XML is the surface for *using* components, layout and appearance; C# is the surface for *extending* the vocabulary), so the requirement adds no new axis. The gap is only that today even the use half is baked into the assembly: this repo embeds `UI/Layout.Schema2.xml` (read through `GetManifestResourceStream`) and hands FL **no** style document, and both `ParseFile` loaders have zero callers. Closing it means reading a file at host construction with the embedded copy kept as the safe fallback, so a dev build is file-driven while a release build cannot be broken by a missing file.
-- **Structural migration stays the 0.5.x main goal**: dissolving the **18 consumer-owned `us/*` widget kinds** into manifest subtrees, still blocked on FL 0.5.0 vocabulary (checkbox atom, repeater/list template, tree kind).
-- **Scope discipline, recorded so it is not re-litigated**: a proposal that touches source is a 0.5.x item unless the maintainer unlocks 0.4.x in that same instruction.
+## Release state and version scope
+
+- **Current release: `v0.4.0-rc1` on both repositories, prerelease; `/releases/latest` 404ing is the CORRECT
+  state in an rc-only window.** A bad rc is fixed by deleting the release AND the tag and re-cutting the SAME rc
+  number from a fixed head. The asset name is exactly `<Mod>-<tag>.zip`, the zip roots at a top-level `<Mod>/`,
+  and the identity axes freeze at the base during an rc window with `main` returning to a dev suffix only at a
+  deliberate stable cut.
+- **Release identity is set in the repo, never injected**: US's csproj pins `<Version>` explicitly, so
+  `-p:VersionSuffix=` does NOT clear `-dev`. Three assertions lock the axes: check-pack-readiness
+  `-RequireReleaseMetadata`, release.yml (tag shape + tag == csproj == modVersion + ancestry), and the harness
+  gate reading the carrier `Api` **from the loaded DLL** - never by parsing the sibling source tree, whose commit
+  is whatever the local session left there.
+- **CI dependency chain = pinned-tag checkout + verified release-asset carrier (2026-10-09).**
+  `actions/checkout` resolves `path` INSIDE `GITHUB_WORKSPACE`, so the workflows check the carrier SOURCE out to
+  `ci-ferritelib/` at the release tag and stage the whole tree (minus `.git`) to the sibling path for the
+  source-support reads (licence gate 10, stub-coverage scanner gate 15). The compile payload is NEVER built in
+  CI: `scripts/acquire-ferritelib-carrier.ps1` acquires the exact `FerriteLib-<tag>.zip` release asset (explicit
+  repo+tag; `latest` refused), checks the release flags, the asset API `digest` when present, the closed 5-file
+  payload set, `version.txt` and the DLL's embedded commit/configuration, asserts the commit equals the pinned
+  checkout HEAD, and stages that one DLL. Gate 6 then compares the same two independently produced facts. The
+  Runner SDK is pinned so CI equals the evidence baseline; `verify-local`'s harness gates run `--no-restore`, so
+  any workflow must restore EVERY csproj first.
+- **Privacy review before an authorized push:** `privacy-audit.ps1 -FullHistory` covers all reachable
+  refs. `-PrePush` adds release-oriented clean-tree/main/tag reporting and is not required for a normal
+  version-branch push. First-upload durable decisions from 2026-09-06 (CI sibling staging, release-axis
+  locks, push order) remain in this section and in `OBLIVIONIS.md` "First cloud upload: durable decisions".
+- **Prior push lessons (moved from AGENTS on 2026-10-08).** A placeholder identity in early commits
+  required pre-upload correction. The all-reachable scan includes local branches and tags, so a clean
+  tip or an added backup tag did not remove old findings; external bundles preserved recovery without
+  adding Git refs. Earlier cleanup rewrote unpublished commits with metadata/tree checks, and changed
+  SHAs required renewed downstream artifact identities. A sibling round's stale completed
+  branches/worktrees also kept history reachable. Those incidents explain checking actual refs and
+  inputs; they do not ban authorized history repair or require deleting this repository's current
+  branches automatically.
+- **Product axis `0.5.x`; carrier pin `[0.7.0, 0.8.0)`.** `<Version>` moves only by maintainer ruling, and
+  `main` moves only when an rc or stable is cut.
+- **0.5.x scope**: item A = file-driven **invocation** + hot reload (editing a layout or style file and
+  REOPENING the window shows the change; **adding/removing/changing widget KINDS is explicitly out of scope**
+  because kinds are compiled C#). Item B = appearance file-driven + tier-2 granularity. Item C = structural
+  migration. A proposal that touches source is a 0.5.x item unless the maintainer unlocks it in that same
+  instruction.
+- **Eat-granularity port (LANDED)**: two-level controls - parent "Eat only during real nutrition" and child
+  "include drugs" - in Overview `us/basic-tuning`. Defaults `false/false` are a **compatibility policy**:
+  parent-off = WholeJob is never re-litigated. Add-only Scribe at `settingsSchemaVersion` 5; pure rule in
+  `Pure/SqueakEatOccurrence.cs`. The manual in-game matrix remains the maintainer's and is NOT claimed.
+- **MeowingKiiro** is the first skill-conformant production pack (`dist/voicepacks/MeowingKiiro/`,
+  `saryaki.meowingkiiro.voices`, scope Race -> `Kiiro_Race`, 15 actions / 53 clips; audio licence CONFIRMED).
+  Static checks green; in-game verification open.
+
+## Pointers (authoritative sources; read these, not this file)
+
+- Mod structure: `docs/mod-structure-reference-zh.md`. Release flow: `docs/release-runbook-zh.md`.
+- Scripts: `verify-local.ps1` (**15 gates**; numbering is append-only and the script's own `Invoke-Check` count
+  is the authority - gate 14 is the UI boundary audit, gate 15 is harness stub coverage with the exemption
+  ledger; the library gates and the neutrality guard live in the sibling FL repo), `build-dev.ps1`,
+  `pack-dev.ps1`, `stage-package.ps1`, `check-pack-readiness.ps1`, `privacy-audit.ps1`, `ui-boundary-audit.ps1`,
+  `read-assembly-stamp.ps1`. CI: `.github/workflows/ci.yml` + `release.yml`.
+- Harnesses: `tools/UniversalSqueakerKernelTests/` (links `Kernel/` + `Pure/`, replays the committed 0.1.0
+  golden corpus), `tools/UniversalSqueakerKernelHostTests/`, `tools/UniversalSqueakerUiLogicTests/`,
+  `tools/UniversalSqueakerConfigCopyTests/`, `tools/UniversalSqueakerLogTests/`.
+- Kernel compile set (zero-Verse): `Source/UniversalSqueaker/Kernel/`; pure funnel logic (also zero-Verse):
+  `Source/UniversalSqueaker/Pure/`.
+- UI design and slice ladder: `docs/ui-redesign-0.7-zh.md` (section 0 carrier re-verification, section 2 frame
+  XML, section 5 migration pricing, section 6 slices). Migration plan: `docs/us-ui-migration-plan-zh.md`.
+  Historical conflict only: `OBLIVIONIS.md`.
+- Consumer-side contract pages: `docs/r12-us-theme-contract-zh.md`, `docs/r4a-action-scope-typed-choice-prep.md`,
+  `docs/r4b-preset-subtree-row-composition.md`.
+
+## Archived history (pointer)
+
+- Earlier verbatim compactions and the latest substantive summaries live in `OBLIVIONIS.md`; exact removed
+  prose remains in Git history. The archive covers the pre-distill text of MEMORY and TODO, the
+  session checkpoints 2026-08-24 -> 2026-09-10, the FL 0.3.0 migration round, the diagnostics round-9 audit, the
+  US -> FL 0.4 migration and its append-only evidence, the pre-cutover architecture audit, the finished S3/S4/S6
+  slice narratives, the superseded "Handover - start here" and "Current state (2026-09-21)" blocks, the task-32
+  selection narrative and the gate-count history - together with the
+  fact that `Palette` / `UiText` / `UiPanel` /
+  `SurfaceFrame` / `UiInteract` / `UiValueStore` / `UiGuard` / `VoicePacksLayout` / the Schema=1 `Layout.xml` and
+  no longer exist. **The archive was extended on 2026-10-09**: the interaction round's commit chain,
+  review-1 defect narratives, candidate-staging facts, the BH1 retained-package identity and the
+  accepted-playtest enumeration moved into its `Memory compaction 2026-10-09` section; the HM1-removed
+  prose (the pre-compaction V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 narrative) remains in Git history only.
+- **2026-10-02 product checkpoint identities**: FL `b31e2c3` / US `33a0aad` / Demo `d972dbc` - all three trees
+  clean when packaged; a later docs-only commit moves HEAD without rebuilding it, so read a package's identity
+  from its own stamp.
+- **Superseded working authorization (pre-handoff)**: after B3 the user authorized continued UI development
+  reusing the then-current DSH leader and independent runtime reviewer, adding an FL implementer only for a
+  demonstrated shared-library gap; **superseded by the 2026-10-04 HM1 handoff** (development moves to a new
+  Harness), so it assigns no roles now and binds no future round.
+- The docs sweep still carries the OLD Gate-U constraint ("fallback must be retained / no clean cutover") in
+  `docs/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
+- `dist/ui-evidence/**` and the per-revision matrices are cold artifacts; the reviews live in `docs/review/**`.

@@ -40,6 +40,7 @@ public sealed class UsKernelFooterWidget : IUiWidget
     {
         bindings.ValidateValue<string>("build-identity", elementPath);
         bindings.ValidateValue<string>("save-status", elementPath);
+        bindings.ValidateValue<bool>("save-status-visible", elementPath);
         bindings.ValidateValue<bool>("is-dirty", elementPath);
     }
 
@@ -53,7 +54,9 @@ public sealed class UsKernelFooterWidget : IUiWidget
         ctx.Bindings.TryGet("save-status", out string saveStatus);
         float half = Math.Max(1f, ctx.ViewWidth * 0.5f - Padding);
         float left = ctx.Metrics.MeasureText(buildIdentity ?? "", UiFont.Tiny, half);
-        float right = ctx.Metrics.MeasureText(SaveStatusText(ctx, saveStatus), UiFont.Tiny, half);
+        bool visible = StatusVisible(ctx);
+        bool dirty = ctx.Bindings.Get<bool>("is-dirty");
+        float right = visible ? ctx.Metrics.MeasureText(StatusLabel(ctx, saveStatus, dirty), UiFont.Tiny, half) : 0f;
         return Math.Max(FooterHeight, Math.Max(left, right) + 6f);
     }
 
@@ -71,9 +74,11 @@ public sealed class UsKernelFooterWidget : IUiWidget
             new Rect(rect.x + Padding, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height),
             buildIdentity,
             ctx.Theme,
-            ctx.Theme.TextSecondary,
+            ctx.Theme.TextDisabled,
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
+
+        if (!StatusVisible(ctx)) return;
 
         // Accent discipline (05 §3.1): "saving" and "dirty" are activity, not "currently in effect" -
         // the ● prefix and the text already carry that, so the color only steps up from secondary to
@@ -89,26 +94,31 @@ public sealed class UsKernelFooterWidget : IUiWidget
             statusColor = ctx.Theme.TextPrimary;
         }
 
-        string prefix = saveStatus == "Saving" || isDirty ? "● " : "";
         Rect statusRect = new(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height);
         UsKernelDraw.HelpHover(statusRect, ctx, "us/page-title/apply");
         UsKernelDraw.Label(
             statusRect,
-            prefix + SaveStatusText(ctx, saveStatus),
+            StatusLabel(ctx, saveStatus, isDirty),
             ctx.Theme,
             statusColor,
             UiFont.Tiny,
             TextAnchor.MiddleRight);
     }
 
-    /// <summary>
-    /// Display-only translation of the save-status token. All status logic in Draw (color, dot
-    /// prefix) keeps matching on the raw token from the binding - never on translated text. The
-    /// token set is a closed enum surface: an unrecognized token is drift (a new state without a
-    /// Keyed entry), so it is reported once per value and still rendered raw as the last resort.
-    /// </summary>
+    // A pending edit is necessary state even after the transient save sentence has expired.
+    private static bool StatusVisible(UiWidgetContext ctx)
+    {
+        return ctx.Bindings.Get<bool>("save-status-visible") || ctx.Bindings.Get<bool>("is-dirty");
+    }
+
+    private static string StatusLabel(UiWidgetContext ctx, string token, bool dirty)
+    {
+        return (token == "Saving" || dirty ? "● " : "") + SaveStatusText(ctx, token);
+    }
+
     private static readonly HashSet<string> ReportedStatusTokens = new HashSet<string>();
 
+    /// <summary>Translate the raw status token only for display; colour and marker logic use the token.</summary>
     private static string SaveStatusText(UiWidgetContext ctx, string token)
     {
         string? key = token switch

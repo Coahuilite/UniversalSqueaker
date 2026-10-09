@@ -1,6 +1,9 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
     [switch]$PackDev,
+    [string]$FerriteLibArtifactPath,
+    # Explicit opt-in for integration against a local Dev/dirty carrier; never release evidence.
+    [switch]$DevelopmentCarrier,
     [switch]$NoRestore
 )
 
@@ -14,21 +17,26 @@ $ErrorActionPreference = "Stop"
 #   3   settings migration characterization (schema migration, write bridges, baseline importer)
 #   4   log protocol characterization, Release
 #   5   log protocol characterization, Dev (US_DEV)
-#   6   FerriteLib carrier payload present and Release-configured (measured, not assumed)
+#   6   selected carrier identity (clean Release by default; explicit Dev integration opt-in)
 #   7   main assembly Dev build (US_DEV, TreatWarningsAsErrors)
 #   8   main assembly Release build (TreatWarningsAsErrors)
 #   9   US payload is single-carrier (UniversalSqueaker.dll present, FerriteLib.UiKit.dll ABSENT)
 #  10   LICENSE present and un-truncated MPL-2.0, identical to the carrier's copy
 #  11   Schema=2 manifests (settings page + camera overlay): present, well-formed, correctly attributed
 #  12   UniversalSqueakerUiLogicTests Release (filters + attenuation math + layout math + mode-set drift guard + Schema2 source invariants + Keyed localization contract)
-#  13   UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
+#  13   UniversalSqueakerKernelHostTests (Release by default; Dev with -DevelopmentCarrier) (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit against both language tables)
 #  14   UI boundary audit (scripts/ui-boundary-audit.ps1): raw renderer-backend calls only inside the
 #       2-file exemption whitelist (豁免一 + 豁免二), and ZERO raw Mouse.IsOver since FL P1
 #  15   harness stub coverage: the carrier's reference-driven scan (read-only) over the US payload AND
 #       the KernelHostTests harness assembly, against US's own exemption ledger
 #       (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose - gate 13 builds both scanned
-#       assemblies and the carrier's stub surface in place.
-# GATE PROVENANCE: 1-5 and 10-15 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
+#       assemblies, and since the frozen-delivery round the scanned stub surface is US's own byte-pinned
+#       snapshot (gate 16), not the carrier tree.
+#  16   frozen stub snapshot integrity: all five tools/FerriteLib.Stubs source files must equal the
+#       sha256 values recorded in fl/frozen-handoff.json (ferritelib 0.7.x@d5af4d8). Runs after 15
+#       because 15 consumes the same snapshot; the pin is what lets the snapshot stand in for the
+#       carrier's canonical stubs without drift.
+# GATE PROVENANCE: 1-5 and 10-16 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
 # entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and both scanned
 # assemblies (the payload and the KernelHostTests harness) are US's; the scanner's own fixture controls
@@ -36,17 +44,18 @@ $ErrorActionPreference = "Stop"
 # the visual-core/page-model boundary) moved to that repository, which runs them from inside with a
 # positive control.
 # Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
-# next number (this one: 15) instead of shifting the checks below it.
+# next number (this one: 16) instead of shifting the checks below it.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
 # US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
-$carrierDll = Join-Path (Split-Path -Parent $root) 'ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll'
+$carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $uiLogicTestsProject = Join-Path $root 'tools\UniversalSqueakerUiLogicTests\UniversalSqueakerUiLogicTests.csproj'
 $kernelHostTestsProject = Join-Path $root 'tools\UniversalSqueakerKernelHostTests\UniversalSqueakerKernelHostTests.csproj'
 $tempLog = Join-Path ([System.IO.Path]::GetTempPath()) ("us-verify-" + [guid]::NewGuid().ToString('N') + '.log')
-$buildExtraArgs = @()
+$hostConfiguration = if ($DevelopmentCarrier) { 'Dev' } else { 'Release' }
+$buildExtraArgs = @("-p:FerriteLibArtifactPath=$carrierDll")
 if ($NoRestore) { $buildExtraArgs += '--no-restore' }
 
 function Invoke-Check {
@@ -68,7 +77,7 @@ function Invoke-Check {
         if (Test-Path -LiteralPath $tempLog) {
             Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
         }
-        Write-Host "  retry: $Retry"
+        Write-Host "  [hint] retry: $Retry"
         Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
         exit 1
     }
@@ -107,7 +116,7 @@ if (-not $NoRestore) {
         if (Test-Path -LiteralPath $tempLog) {
             Get-Content -LiteralPath $tempLog -Tail 12 | ForEach-Object { Write-Host "    $_" }
         }
-        Write-Host "  retry: dotnet restore $setupFailedProject"
+        Write-Host "  [hint] retry: dotnet restore $setupFailedProject"
         Remove-Item -LiteralPath $tempLog -Force -ErrorAction SilentlyContinue
         exit 1
     }
@@ -135,79 +144,47 @@ Invoke-Check 'UniversalSqueakerLogTests Dev (US_DEV)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerLogTests -c Dev' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerLogTests') -c Dev }
 
-Invoke-Check 'FerriteLib carrier payload present and Release-configured (sibling repo built)' `
-    'dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental' `
+Invoke-Check 'selected FerriteLib carrier configuration and source identity' `
+    'select the carrier this build linked with -FerriteLibArtifactPath (read-only; nothing in this repository rebuilds it). Rebuilding the FerriteLib payload is the CARRIER OWNER''S DELIVERY STEP: it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. A consumer selects the right carrier; it never builds one.' `
     {
-        # US compiles against the carrier mod's payload and never ships one, so the sibling build is a
-        # precondition, not a convenience. Say so plainly instead of failing inside csc.
-        if (-not (Test-Path -LiteralPath $carrierDll -PathType Leaf)) {
-            throw "Missing FerriteLib payload: $carrierDll. Build the ferritelib repo first (scripts/build-dev.ps1 does it in order)."
-        }
-        # Existence was the whole gate until FL→US round 2 S5, and existence is not enough: Dev and
-        # Release share one carrier OutputPath, so the bytes at that path belong to whichever
-        # configuration the sibling was last built as. US's Release gate must not silently link a
-        # dev-configured carrier - today FER_DEV gates no library source, and "today" is not a contract.
-        # The common cause is legitimate, not mysterious: FerriteLib's own pack-dev builds the carrier
-        # -c Dev and leaves those bytes at this path (its dev channel is a Dev package by design). This
-        # gate is about what US publishes against, so rebuilding it Release is the whole fix.
         $carrierStamp = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll) -join ''
-        if ($carrierStamp -ne 'Release') {
-            throw "The carrier payload at $carrierDll is '$carrierStamp'-configured; US builds and publishes against a Release carrier (a Dev one usually means ../ferritelib's own pack-dev ran last). Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        if ($carrierStamp -notin @('Dev', 'Release')) { throw "Unrecognized carrier configuration '$carrierStamp'." }
+        if ($DevelopmentCarrier) {
+            if ($carrierStamp -ne 'Dev') { throw '-DevelopmentCarrier requires a Dev carrier so the instrument is actually exercised.' }
+            Write-Host '[integration] development carrier: source may be dirty; this is not release evidence.'
+            return
         }
-
-        # Presence and configuration are not identity, and identity is what this gate was missing.
-        # Measured 2026-09-12: a payload built from 7402f12 stayed green here while the carrier checkout
-        # was at 572c40b, so US compiled against an older carrier API and the only symptom appeared one
-        # gate later as CS1503 in UsKernelSettingsHost. The carrier itself drew the same lesson in
-        # d0632ca, where an existence-only payload check became an evaluated TargetPath. The payload
-        # embeds its source commit in AssemblyInformationalVersion (carrier AGENTS.md), so attribute the
-        # bytes to a checkout. US never builds the carrier from here - that would write another
-        # repository - it only refuses to accept bytes nobody can attribute.
+        if ($carrierStamp -ne 'Release') { throw 'Release verification requires a Release carrier. Use -DevelopmentCarrier only for local integration.' }
         $carrierRoot = Join-Path (Split-Path -Parent $root) 'ferritelib'
         $carrierRepo = $null
         foreach ($candidate in @($carrierRoot, (Join-Path $root 'ci-ferritelib'))) {
-            if (Test-Path -LiteralPath (Join-Path $candidate '.git') -PathType Container) { $carrierRepo = $candidate; break }
+            if (Test-Path -LiteralPath (Join-Path $candidate '.git')) { $carrierRepo = $candidate; break }
         }
-        if ($null -eq $carrierRepo) {
-            throw "Cannot attribute the carrier payload: no carrier git checkout at $carrierRoot (nor at the CI layout $(Join-Path $root 'ci-ferritelib')), so its source commit cannot be proven."
-        }
-
+        if ($null -eq $carrierRepo) { throw 'No carrier checkout is available to verify the embedded source commit.' }
         $carrierInfo = (& (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $carrierDll -AttributeName 'AssemblyInformationalVersionAttribute') -join ''
         $plus = $carrierInfo.IndexOf('+')
         $payloadCommit = if ($plus -ge 0) { $carrierInfo.Substring($plus + 1).Trim() } else { '' }
-        if ([string]::IsNullOrWhiteSpace($payloadCommit)) {
-            throw "The carrier payload at $carrierDll reports AssemblyInformationalVersion '$carrierInfo', which carries no '+' commit suffix: the bytes cannot be attributed to a source commit. Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
-        }
-
         $carrierHead = ((& git -C $carrierRepo rev-parse HEAD) -join '').Trim()
-        if ([string]::IsNullOrWhiteSpace($carrierHead)) {
-            throw "Cannot read HEAD of the carrier checkout at $carrierRepo; the payload's source commit cannot be proven."
-        }
-
-        # A dirty carrier tree means the payload may contain source that is in no commit, so its SHA
-        # would be a half-truth: refuse instead of accepting an unattributable payload.
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($carrierHead)) { throw 'Cannot read carrier HEAD.' }
         $carrierChanges = @(& git -C $carrierRepo status --porcelain)
-        if ($carrierChanges.Count -gt 0) {
-            throw "The carrier checkout at $carrierRepo has uncommitted changes ($($carrierChanges.Count) path(s)), so the payload cannot be proven to come from $carrierHead. Commit or stash the carrier, rebuild it, then re-run."
-        }
-
-        if (-not [string]::Equals($payloadCommit, $carrierHead, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "The carrier payload at $carrierDll was built from commit $payloadCommit but the carrier checkout at $carrierRepo is at ${carrierHead}: the payload is a STALE build and US would compile against an older carrier API. Rebuild: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        if ($LASTEXITCODE -ne 0 -or $carrierChanges.Count -gt 0) { throw 'Release verification requires a clean carrier checkout and a build from that commit.' }
+        if ($payloadCommit -ne $carrierHead) {
+            throw "Carrier source mismatch: payload=$payloadCommit checkout=$carrierHead. Select a build from the current carrier commit."
         }
     }
 
 Invoke-Check 'main assembly Dev build (US_DEV, warnings as errors)' `
-    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev' `
+    "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Dev `"-p:FerriteLibArtifactPath=$carrierDll`"" `
     { dotnet build $projectFile -c Dev @buildExtraArgs }
 
 Invoke-Check 'main assembly Release build (warnings as errors)' `
-    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
+    "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release `"-p:FerriteLibArtifactPath=$carrierDll`"" `
     { dotnet build $projectFile -c Release @buildExtraArgs }
 
 Invoke-Check 'US payload carries exactly one assembly (no second FerriteLib copy)' `
-    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
+    "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release `"-p:FerriteLibArtifactPath=$carrierDll`"" `
     {
-        $assembliesDir = Join-Path $root '1.6\Assemblies'
+        $assembliesDir = Join-Path $root 'dist\build\Release'
         if (-not (Test-Path -LiteralPath (Join-Path $assembliesDir 'UniversalSqueaker.dll') -PathType Leaf)) {
             throw "Missing built assembly: $assembliesDir\UniversalSqueaker.dll"
         }
@@ -218,6 +195,7 @@ Invoke-Check 'US payload carries exactly one assembly (no second FerriteLib copy
         if (Test-Path -LiteralPath $stray -PathType Leaf) {
             throw "US must not ship the FerriteLib payload (coahuilite.ferritelib is the only carrier): $stray"
         }
+        & (Join-Path $PSScriptRoot 'verify-artifact-selection.ps1') -ProjectRoot $root -FerriteLibArtifactPath $carrierDll
     }
 
 Invoke-Check 'LICENSE present and un-truncated MPL-2.0' `
@@ -251,7 +229,7 @@ Invoke-Check 'LICENSE present and un-truncated MPL-2.0' `
     }
 
 Invoke-Check 'Schema=2 manifests present, well-formed and correctly attributed' `
-    'dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release' `
+    "dotnet build Source/UniversalSqueaker/UniversalSqueaker.csproj -c Release `"-p:FerriteLibArtifactPath=$carrierDll`"" `
     {
         # Schema=2 is the only shipped manifest schema since the legacy page chain was removed; a
         # manifest that parses but claims another schema or source would silently load the wrong page.
@@ -288,9 +266,9 @@ Invoke-Check 'UniversalSqueakerUiLogicTests Release (filters + attenuation math 
 
 # Real embedded Schema=2 Host creation regression: the production Host adapter runs against the
 # real resource, real US widget registrations and the real typed binding table (recording source).
-Invoke-Check 'UniversalSqueakerKernelHostTests Release (real Schema2 Host + typed bindings + 5 workspaces x 3 viewports + narrow Mood geometry + text-fit audit)' `
-    'dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c Release' `
-    { dotnet run --no-restore --project $kernelHostTestsProject -c Release }
+Invoke-Check "UniversalSqueakerKernelHostTests $hostConfiguration (real Schema2 Host + layout + diagnostic integration)" `
+    "dotnet run --no-restore --project tools/UniversalSqueakerKernelHostTests -c $hostConfiguration `"-p:FerriteLibArtifactPath=$carrierDll`"" `
+    { dotnet run --no-restore --project $kernelHostTestsProject -c $hostConfiguration "-p:FerriteLibArtifactPath=$carrierDll" }
 
 Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whitelist)' `
     'pwsh -NoProfile -File scripts/ui-boundary-audit.ps1' `
@@ -314,18 +292,18 @@ Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whit
 # parameter binding (measured 2026-09-12), which silently scans one assembly and looks clean. This gate
 # sits after 13 because gate 13 builds both of the assemblies it scans.
 Invoke-Check 'harness stub coverage (every game member the US payload or the harness references resolves on the carrier stubs, or is exempted with a reason)' `
-    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''1.6/Assemblies/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir ../ferritelib/tools/FerriteLib.UiKit.Tests/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
+    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir tools/FerriteLib.Stubs/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
     {
         $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
         if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
             throw "The carrier's stub-coverage scanner is missing at $stubCoverageScan. It ships with the sibling ferritelib checkout (scripts/stub-coverage-scan.ps1); a scan that cannot run is not a clean result."
         }
 
-        $stubDir = Join-Path (Split-Path -Parent $root) 'ferritelib\tools\FerriteLib.UiKit.Tests\bin\stubs'
+        $stubDir = Join-Path $root 'tools\FerriteLib.Stubs\bin\stubs'
         $stubExemptions = Join-Path $root 'scripts\stub-coverage-exemptions.txt'
         $stubTargets = @(
-            (Join-Path $root '1.6\Assemblies\UniversalSqueaker.dll'),
-            (Join-Path $root 'tools\UniversalSqueakerKernelHostTests\bin\Release\net472\UniversalSqueakerKernelHostTests.exe')
+            (Join-Path $root 'dist\build\Release\UniversalSqueaker.dll'),
+            (Join-Path $root "tools\UniversalSqueakerKernelHostTests\bin\$hostConfiguration\net472\UniversalSqueakerKernelHostTests.exe")
         )
 
         # Built through -Command and an array so the scanner receives both paths as separate values; every
@@ -349,11 +327,40 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
             throw ("stub-coverage-scan.ps1 exited $stubCode (0 = clean, 2 = unresolved/stale/unreasoned finding, 3 = not scanned; " + $stubFindings.Count + " finding line(s) quoted). Findings: " + ($stubFindings -join ' ; ') + " -- declare the member in the carrier's stubs, or add it to scripts/stub-coverage-exemptions.txt with a reason code from that file's legend; a STALE entry must be deleted instead.")
         }
     }
+# Gate 16 (US-UI1/ESC1 frozen-delivery round): the harness runs against the FROZEN stub snapshot under
+# tools/FerriteLib.Stubs instead of building in the carrier's canonical bin/stubs (FL released the slot;
+# the consumer verifies in its own outputs - INTERACTION-EXECUTION-20261008.md). What keeps that snapshot
+# honest is not trust: every recorded source hash from fl/frozen-handoff.json must match byte-for-byte,
+# so a drifted double reddens here before gate 15's scan or any lane can agree with itself.
+Invoke-Check 'frozen stub snapshot integrity (all five recorded stub sources equal the frozen handoff hashes)' `
+    'Get-FileHash -Algorithm SHA256 over tools/FerriteLib.Stubs/Stubs/{VerseStub,UnityEngineStub,UnityEngineImGuiStub,UnityEngineTextRenderingModuleStub}/*.cs against the fl/frozen-handoff.json values' `
+    {
+        $frozenStubs = @(
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.cs'; Sha = 'e36efa95fbbeea4ddd1c7b8a6df9d0e46c90049c2d8e5ac9d985be3c78905822' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\VerseStub\VerseStubs.RimWorld.cs'; Sha = 'ad8cee6e7bfec49af374d536fae1549ce0d102a8887c4031081ac941d1e95a42' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineStub\UnityStubs.cs'; Sha = '5a8d2ac4b4d83989b6e1bfb802ad652c56c6bffe2d32686bc3cf48d112b45086' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineImGuiStub\ImGuiStubs.cs'; Sha = '81def94dc748fc687f69181bca292eba9ef1e47a00d3603afcb35d5a97b6d75a' },
+            @{ Path = 'tools\FerriteLib.Stubs\Stubs\UnityEngineTextRenderingModuleStub\TextRenderingStubs.cs'; Sha = '2151e86613a4e6a14ccb42857f5ed25ef679b9dcbf250ce96cdfb0bef5e0934d' }
+        )
 
-Write-Host '[verify] all checks passed.'
+        foreach ($entry in $frozenStubs) {
+            $file = Join-Path $root $entry.Path
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+                throw "frozen stub snapshot file missing: $($entry.Path). Re-take the snapshot from the accepted carrier tree (d5af4d8), never edit it in place."
+            }
+
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
+            if ($actual -ne $entry.Sha) {
+                throw "frozen stub snapshot drift at $($entry.Path): sha256 $actual, the frozen handoff recorded $($entry.Sha). The snapshot must equal the carrier's bytes; refresh it only from a NEW accepted freeze."
+            }
+        }
+    }
+
+if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
+else { Write-Host '[verify] all checks passed.' }
 
 if ($PackDev) {
     Write-Host '[pack] dev package'
-    & (Join-Path $PSScriptRoot 'build-dev.ps1') -ProjectRoot $root
+    & (Join-Path $PSScriptRoot 'build-dev.ps1') -ProjectRoot $root -FerriteLibArtifactPath $carrierDll
     if ($LASTEXITCODE -ne 0) { exit 1 }
 }

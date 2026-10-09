@@ -428,8 +428,9 @@ public class CompSqueaker : ThingComp
     private bool IsActionAllowedByKey(string? actionKey)
     {
         if (string.IsNullOrEmpty(actionKey)) return false;
-        bool isBuiltIn = UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(actionKey);
-        return isBuiltIn || UniversalSqueakerMod.Settings?.allowExternalActions == true;
+        if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey!, out SqueakAction action))
+            return SqueakActionDefinitions.IsEligible(action, UniversalSqueakerMod.Settings?.BabyActionsEnabled == true);
+        return UniversalSqueakerMod.Settings?.allowExternalActions == true;
     }
 
     /// <summary>动作 plan 解析：先查静态 actionPlans（内置 17 键）；未命中且为非内置键时按需合成外部

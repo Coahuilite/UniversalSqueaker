@@ -53,12 +53,14 @@ internal sealed class HelpItem
 }
 
 /// <summary>
-/// US-side structured help catalog backing the right-hand panel (C+A model: the panel shows the
+/// US-side structured help catalog backing the bottom help panel (C+A model: the panel shows the
 /// hovered control's entry, falling back to the active section's overview). Every string here is a
 /// Keyed entry name - the ChineseSimplified table is the authoritative copy (说明书体, terminology
 /// rulings applied: 异种/强效/已失效/清除失效) and the English table translates it. The audit
-/// gate (gate 15) drives both tables through the real panel, so every body must fit the 232px
-/// help column in both languages.
+/// gate drives both tables through the real panel, so every body must fit the panel's own wrapped band
+/// at the shipped page box in both languages (BH1: the panel spans the page's inner width above the
+/// footer instead of the old 320px side column; HelpPanelLaneTests measures the band it hands the
+/// widget and keeps the audit attached while it does).
 /// Item keys are globally unique and embed their section prefix ("us/&lt;section&gt;/&lt;item&gt;");
 /// hover claims in the widget tree resolve through <see cref="TryFindItem"/> across the whole
 /// catalog, and the zero-Verse gate pins both the uniqueness and the claim↔entry equality.
@@ -69,7 +71,7 @@ internal static class UsHelpCatalog
     {
         // Window-level fallback section: the section-map guard keeps it reachable via
         // SectionHelpKeyOf's default branch; its three items are claimed live by the navigation
-        // rows, the footer save status and the page-title Help toggle.
+        // rows, the footer save status and the footer Help switch.
         ["us/page-title"] = new HelpSection(
             "us/page-title",
             "US.Help.PageTitle.Title",
@@ -84,9 +86,9 @@ internal static class UsHelpCatalog
                     "us/page-title/apply",
                     "US.Help.PageTitle.Apply.Label",
                     "US.Help.PageTitle.Apply.Text"),
-                // The page-title Help toggle: the control that shows/hides the help drawer. W1 wires the
-                // matching HelpHover claim on the toggle itself; without that literal this entry is
-                // unclaimed and the claim<->catalog gate flags it.
+                // The footer Help switch (BH1): the single control that shows/hides the bottom help panel.
+                // W1 wires the matching HelpHover claim through the declared element's HelpKey; without that
+                // literal this entry is unclaimed and the claim<->catalog gate flags it.
                 new HelpItem(
                     "us/page-title/help-drawer",
                     "US.Help.PageTitle.HelpDrawer.Label",
@@ -187,6 +189,10 @@ internal static class UsHelpCatalog
                 // (including the zero-nutrition boundary), and the child's entry explains the
                 // chewing/lighting authority plus its fallback to the whole eating job.
                 new HelpItem(
+                    "us/basic-tuning/baby-actions",
+                    "US.Help.BasicTuning.BabyActions.Label",
+                    "US.Help.BasicTuning.BabyActions.Text"),
+                new HelpItem(
                     "us/basic-tuning/eat-precision",
                     "US.Help.BasicTuning.EatPrecision.Label",
                     "US.Help.BasicTuning.EatPrecision.Text"),
@@ -243,6 +249,50 @@ internal static class UsHelpCatalog
                     "us/diagnostics/localize-debug",
                     "US.Diagnostics.LocalizeDebugMenu",
                     "US.Help.Diagnostics.LocalizeDebug.Text"),
+                // R3-B: the developer layout diagnosis controls. One entry per control, because the help
+                // gate is bidirectional - a manifest HelpKey with no catalog item is dead hover, and a
+                // catalog item no control claims is dead content.
+                new HelpItem(
+                    "us/diagnostics/layout-diagnosis",
+                    "US.Diagnostics.Geometry.Label",
+                    "US.Help.Diagnostics.LayoutDiagnosis.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-capture",
+                    "US.Diagnostics.Geometry.Capture",
+                    "US.Help.Diagnostics.LayoutCapture.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-outline",
+                    "US.Diagnostics.Geometry.Outline",
+                    "US.Help.Diagnostics.LayoutOutline.Text"),
+                new HelpItem(
+                    "us/diagnostics/layout-report",
+                    "US.Diagnostics.Geometry.Report",
+                    "US.Help.Diagnostics.LayoutReport.Text"),
+            }),
+        // US-RESET1: the restore-defaults help. One section for the global entry (the Overview
+        // restore card) and one for the per-area entries; the fallback tables' own restore entries
+        // stay in us/fallback - these never touch them and say so.
+        ["us/reset-center"] = new HelpSection(
+            "us/reset-center",
+            "US.Section.RestoreDefaults",
+            "US.Help.ResetCenter.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/reset-center/restore-all",
+                    "US.Reset.RestoreAll",
+                    "US.Help.ResetCenter.RestoreAll.Text"),
+            }),
+        ["us/reset-area"] = new HelpSection(
+            "us/reset-area",
+            "US.Reset.Area",
+            "US.Help.ResetArea.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/reset-area/button",
+                    "US.Reset.Area",
+                    "US.Help.ResetArea.Button.Text"),
             }),
         ["us/scope-tree"] = new HelpSection(
             "us/scope-tree",
@@ -320,39 +370,52 @@ internal static class UsHelpCatalog
             new[]
             {
                 new HelpItem(
+                    "us/filter-bar/keyword",
+                    "US.Help.FilterBar.Keyword.Label",
+                    "US.Help.FilterBar.Keyword.Text"),
+                new HelpItem(
                     "us/filter-bar/domain",
                     "US.Help.FilterBar.Domain.Label",
                     "US.Help.FilterBar.Domain.Text"),
                 new HelpItem(
-                    "us/filter-bar/race-xeno",
-                    "US.Help.FilterBar.RaceXeno.Label",
-                    "US.Help.FilterBar.RaceXeno.Text"),
-                new HelpItem(
                     "us/filter-bar/author",
                     "US.Packs.Filter.Author",
                     "US.Help.FilterBar.Author.Text"),
+                new HelpItem(
+                    "us/filter-bar/race",
+                    "US.Packs.Filter.Race",
+                    "US.Help.FilterBar.Race.Text"),
+                new HelpItem(
+                    "us/filter-bar/xenotype",
+                    "US.Packs.Filter.Xenotype",
+                    "US.Help.FilterBar.Xenotype.Text"),
+                new HelpItem(
+                    "us/filter-bar/summary",
+                    "US.Help.FilterBar.Summary.Label",
+                    "US.Help.FilterBar.Summary.Text"),
             }),
-        ["us/race-layer"] = new HelpSection(
-            "us/race-layer",
-            "US.Section.RaceDomain",
-            "US.Help.RaceLayer.Overview",
+        ["us/pack-cards"] = new HelpSection(
+            "us/pack-cards",
+            "US.Section.PackResults",
+            "US.Help.PackCards.Overview",
             new[]
             {
                 new HelpItem(
-                    "us/race-layer/row",
-                    "US.Help.RaceLayer.Row.Label",
-                    "US.Help.RaceLayer.Row.Text"),
-            }),
-        ["us/xenotype-layer"] = new HelpSection(
-            "us/xenotype-layer",
-            "US.Section.XenotypeDomain",
-            "US.Help.XenotypeLayer.Overview",
-            new[]
-            {
+                    "us/pack-cards/card",
+                    "US.Help.PackCards.Card.Label",
+                    "US.Help.PackCards.Card.Text"),
                 new HelpItem(
-                    "us/xenotype-layer/row",
-                    "US.Help.XenotypeLayer.Row.Label",
-                    "US.Help.XenotypeLayer.Row.Text"),
+                    "us/pack-cards/expand",
+                    "US.Packs.Card.Contents",
+                    "US.Help.PackCards.Expand.Text"),
+                new HelpItem(
+                    "us/pack-cards/row",
+                    "US.Help.PackCards.Row.Label",
+                    "US.Help.PackCards.Row.Text"),
+                new HelpItem(
+                    "us/pack-cards/enable",
+                    "US.Help.PackCards.Enable.Label",
+                    "US.Help.PackCards.Enable.Text"),
             }),
         ["us/voice-pack-checklist"] = new HelpSection(
             "us/voice-pack-checklist",
@@ -360,14 +423,6 @@ internal static class UsHelpCatalog
             "US.Help.Checklist.Overview",
             new[]
             {
-                new HelpItem(
-                    "us/voice-pack-checklist/search",
-                    "US.Help.Checklist.Search.Label",
-                    "US.Help.Checklist.Search.Text"),
-                new HelpItem(
-                    "us/voice-pack-checklist/row",
-                    "US.Help.Checklist.Row.Label",
-                    "US.Help.Checklist.Row.Text"),
                 new HelpItem(
                     "us/voice-pack-checklist/forget",
                     "US.Packs.Checklist.ForgetUnavailable",

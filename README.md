@@ -20,8 +20,8 @@ Universal Squeaker ships **no audio of its own**: it is a routing kernel that at
 ## Local verification and build
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit + harness stub coverage)
-pwsh -NoProfile -File scripts/build-dev.ps1      # Release carrier payload at ../ferritelib, then a Dev build staged as an installable FOLDER (dist/dev/UniversalSqueaker) - no archive; -Zip exists in pack-dev if you want one
+pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit + harness stub coverage). The carrier is SELECTED, never defaulted: see docs/build-and-debug.md, and add -DevelopmentCarrier to verify against the paired Dev package
+pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath '../ferritelib/dist/dev/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll'   # builds the US payload Dev and stages it as an installable FOLDER (dist/dev/UniversalSqueaker) - no archive; -Zip exists in pack-dev if you want one. It never builds the carrier
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
 ```
 

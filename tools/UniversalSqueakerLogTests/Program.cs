@@ -83,7 +83,7 @@ internal static class Program
             D("error", "daily", "voicepack.resolver.rebuild_failed", "VoicePack resolver rebuild failed.", trailing: " ex_type=System.Exception ex_msg=resolver%20failed"),
             D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected.", target: "target-1", trailing: " reason=reason-1"),
             D("error", "daily", "trigger.attempt.failed", "Squeak trigger attempt failed.", action: "Select", trailing: " ex_type=System.Exception ex_msg=trigger%20failed"),
-            D("warning", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "Move"),
+            D("info", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "Move"),
             D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=dispatch%20failed"),
             D("info", "dev_only", "audio.dispatch.ok", "Squeak audio dispatched.", action: "Select", target: "12345", trailing: " sound=US_OfficialExample_Race_Select suppressed_detail=0 pawn=Mousy pawn_id=Thing_Race12345"),
             D("info", "dev_only", "trigger.outcome.summary", "Squeak trigger outcome summary was recorded.", trailing: " dispatched=7 suppressed_detail=2"),
@@ -212,7 +212,7 @@ internal static class Program
             D("warning", "daily", "settings.open.failed", "Mod Settings could not be opened.", trailing: " ex_type=System.ApplicationException ex_inner=System.InvalidOperationException ex_site=UniversalSqueaker.LogCharacterization.Program.CreateNestedException ex_msg=boom%20at%20%3Cpath%3E%20Mods%5Cfile.c%3Cpath%3E%20second%20line"),
             D("error", "daily", "audio.dispatch.failed", "Squeak audio dispatch failed.", action: "Attack", trailing: " sound=US_Attack_1 ex_type=System.Exception ex_msg=" + new string('a', 256)),
             D("warning", "daily", "voicepack.target.rejected", "A Xenotype VoicePack target was rejected.", target: "t%201", trailing: " reason=-"),
-            D("warning", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "%E4%B8%AD%E6%96%87"),
+            D("info", "daily", "audio.dispatch.no_sound", "No fallback SoundDef was found.", action: "%E4%B8%AD%E6%96%87"),
             D("warning", "daily", "voicepack.pack.rejected", "A VoicePack was rejected.", pack: "p%20a+b%3Fc", trailing: " reason=duplicate_key count=1"));
 
         AssertEqual("-", SqueakLogText.PercentEncode(null), nameof(VerifyEncodingAndExceptionMetadata) + " null encoding");
@@ -257,7 +257,7 @@ internal static class Program
             V2("info", "dev_only", "audio.route.selected", "Audio route: coahuilite.universalsqueaker.external_action -> US_Baseliner_Select (xenotype_pack, nonplayer).", action: "coahuilite.universalsqueaker.external_action", target: "777", pack: "coahuilite.universalsqueaker:US_Baseliner", race: "RaceA", xenotype: "Baseliner", trailing: " sound=US_Baseliner_Select tier=xenotype_pack egg=false suppressed_detail=0 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("info", "dev_only", "audio.route.selected", "Audio route: Move -> US_Move_1 (vanilla).", action: "Move", target: "1", pack: "-", race: "RaceA", trailing: " sound=US_Move_1 tier=vanilla egg=false suppressed_detail=0 pawn_faction=PlayerColony pawn_ctrl=player"),
             V2("info", "dev_only", "audio.route.selected", "Audio route: Joy -> US_EggTest_Select_Joy (race_pack, egg, nonplayer).", action: "Joy", target: "888", pack: "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", race: "RaceA", trailing: " sound=US_EggTest_Select_Joy tier=race_pack egg=true suppressed_detail=3 pawn=Mousy pawn_id=Thing_Race888 pawn_faction=Pirate pawn_ctrl=nonplayer"),
-            V2("warning", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla, nonplayer).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99 pawn_faction=Pirate pawn_ctrl=nonplayer"),
+            V2("info", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla, nonplayer).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20write%20failed"),
             V2("error", "daily", "hook.mental_fit.unavailable", "Baby-fits squeak hook is unavailable."),
             V2("info", "daily", "audio.disabled", "Squeak audio is disabled (true bypass): Select not intercepted.", action: "Select"));

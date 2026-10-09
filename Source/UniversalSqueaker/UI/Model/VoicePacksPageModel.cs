@@ -1,8 +1,11 @@
 using System;
+using UniversalSqueaker.Kernel;
 using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using Verse;
+
+using UniversalSqueaker.Runtime;
 
 namespace UniversalSqueaker.UI;
 
@@ -42,6 +45,14 @@ public static class VoicePacksPageModel
         List<FilterOptionView> raceFilterOptions = BuildRaceFilterOptions(races);
         List<FilterOptionView> xenotypeFilterOptions = BuildXenotypeFilterOptions(xenotypes, state.RaceFilter);
 
+        // US-PACK1: the two domain lists are no longer drawn as browse cards, so their OWN search boxes
+        // retired with them - the unified keyword narrows the CARD result instead. The lists stay as the
+        // model's internal domain inventory: the state/dropdown narrowing still answers "which domain may
+        // the projection fall back to" and feeds the banner's counts, exactly as before. The xenotype
+        // inventory still FOLLOWS the browsed race: while a race is the operating domain, only that
+        // race's xenotypes (plus race-less global ones) stay in the fallback inventory.
+        bool followRace = state.SelectedScope == SqueakVoicePackScope.Race
+            && !string.IsNullOrEmpty(state.SelectedRaceDefName);
         List<RaceLayerRowView> filteredRaces = races
             .Where(race => VoicePacksFilters.DomainMatches(
                 false,
@@ -64,8 +75,19 @@ public static class VoicePacksPageModel
                     state.RaceFilter,
                     state.XenotypeFilter,
                     domain.RaceDefName,
-                    domain.TargetDefName))
+                    domain.TargetDefName)
+                && (!followRace
+                    || string.IsNullOrEmpty(domain.RaceDefName)
+                    || string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal)))
             .ToList();
+
+        // US-PACK1 (§4.2): the ONE result body. Every pack the catalog provides becomes a card whose rows
+        // are the (scope, race, xenotype) domains that pack serves; the composed filter (keyword, author,
+        // race, xenotype, state) narrows ROWS, and a card survives while at least one row does. The
+        // keyword's DOMAIN hit is what auto-expands - the manual expansion set is never touched by a query.
+        List<PackCardView> packCards = BuildPackCards(settings, catalog, state);
+        bool packNoPacks = CountCataloguedPacks(catalog) == 0;
+        bool packResultsEmpty = !packNoPacks && packCards.Count == 0;
 
         IReadOnlyList<string> authors = CollectAuthors(settings, catalog);
 
@@ -82,13 +104,32 @@ public static class VoicePacksPageModel
         IReadOnlyList<TuningDomainOptionView> tuningDomains = BuildTuningDomains(settings, catalog, state.TuningLayer, ref tuningRace, ref tuningXeno);
         state.TuningRaceDefName = tuningRace;
         state.TuningXenotypeDefName = tuningXeno;
-        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
+        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno, settings.BabyActionsEnabled);
         IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
         string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
         string saveStatus = UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
         bool isDirty = UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
-        return new VoicePacksViewState(mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed, settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation, settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks, settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor, settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces, filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains, moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter, state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled, settings.eatPrecisionIncludeDrugs);
+        // VF1定稿: the fallback editor's projection - supported races (maintainer tables ∪ player
+        // tables), the selected race's closed-17 entry rows, and the two query-filtered candidate
+        // lists. Computed here, from the live store, so the editor and the routing read ONE answer.
+        BuildFallbackProjection(state, out int tuningArea, out List<FallbackRaceView> fallbackRaces,
+            out string fallbackRace, out List<FallbackEntryView> fallbackEntries,
+            out List<FilterOptionView> fallbackSounds, out List<FilterOptionView> fallbackCandidates);
+
+        return new VoicePacksViewState(
+            mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed,
+            settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation,
+            settings.showCameraIndicator, settings.globalCooldownMultiplier, settings.globalMinIntervalTicks,
+            settings.devLoggingMode, settings.localizeDebugActions, settings.globalVolumeFactor,
+            settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces,
+            filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains,
+            moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter,
+            state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled,
+            settings.eatPrecisionIncludeDrugs, settings.allowBabyActions,
+            packCards, packResultsEmpty, packNoPacks,
+            tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
+            state.FallbackStatusKey);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -160,8 +201,8 @@ public static class VoicePacksPageModel
         if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
         if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
         if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "race-layer", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "xenotype-layer", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "packs-filter", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "packs-results", StringComparison.Ordinal)
             || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
         {
             return "Packs";
@@ -229,11 +270,12 @@ public static class VoicePacksPageModel
     /// <summary>Typed field-level mood write；层域身份取当前 state 的 (TuningRaceDefName, TuningXenotypeDefName)。</summary>
     private static void ApplyMoodTuning(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood, string factor, float? value)
     {
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        if (!MoodLayerHasIdentity(state)) return;
         settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
     }
 
+    /// <summary>Typed field-level mood write (enum factor form). The guard is shared with the string-factor
+    /// overload above so the two can never drift apart (they were duplicated line for line).</summary>
     private static void ApplyMoodTuning(
         UniversalSqueakerSettings settings,
         VoicePacksPageState state,
@@ -241,9 +283,16 @@ public static class VoicePacksPageModel
         SqueakMoodFactor factor,
         float? value)
     {
-        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
-        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        if (!MoodLayerHasIdentity(state)) return;
         settings.SetMoodTuning(mood, state.TuningRaceDefName, state.TuningXenotypeDefName, factor, value);
+    }
+
+    /// <summary>非 Global 层必须具有完整域身份，避免空 catalog/损坏状态把 Race/Xeno 编辑误写成 Global。</summary>
+    private static bool MoodLayerHasIdentity(VoicePacksPageState state)
+    {
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return false;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return false;
+        return true;
     }
 
     /// <summary>Typed VoicePack checkbox write inside one domain.</summary>
@@ -348,45 +397,83 @@ public static class VoicePacksPageModel
     /// <summary>S5 分层 scope 投影：17 内置动作 × 当前调音层。行携带本层记录（HasOwnScope/Scope）与
     /// 有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins，与运行时同规则）。
     /// 外部动作键不在编辑器范围内（与 BuildGlobalActions 的 YAGNI 契约一致）。</summary>
-    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno)
+    // The baby-eligibility flag arrives as a parameter (the caller reads settings.BabyActionsEnabled):
+    // the fold itself must not touch ModsConfig, so the real-writer/real-fold lane can run in the
+    // stub harness where Verse.ModsConfig is not loadable (the same reason BuildBannerText takes
+    // biotech as an argument).
+    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno, bool babyEnabled)
     {
         List<ActionScopeRowView> rows = new();
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             if (!SqueakActionDefinitions.IsKnown(action)) continue;
-            if (ActionScopeRules.IsHiddenByDefault(action)) continue;
+            if (!SqueakActionDefinitions.IsEligible(action, babyEnabled)) continue;
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
             SqueakActionDefinition definition = SqueakActionDefinitions.Get(action);
             SqueakActionScope effective = definition.DefaultScope;
-            ActionScopeGroup group = ActionScopeRules.GroupFor(definition);
+            ActionScopeGroup group = ActionScopeRules.GroupFor(action);
             bool hasOwn = false;
             SqueakActionScope own = effective;
-            // 按层优先级折叠（Default < Global < Race < Xeno）；同层多条按列表顺序后写胜出（与运行时 Merge 一致）。
-            int bestLayer = -1;
+            // PRE1/VF1定稿 A1: the three fields fold INDEPENDENTLY, exactly like the runtime merge
+            // (field-level last-wins over Default < Global < Race < Xenotype). One loop pass reads
+            // every matching record; each field keeps its own best layer and value, so a row can
+            // mix an inherited interval with a local probability and still tell the truth about
+            // both. The anchor (sourcePresetDefName) rides the CURRENT-layer identity like the
+            // mood rows: it proves what reset-to-preset may target, never where a value came from.
+            int bestScope = -1;
+            int bestInterval = -1;
+            int bestProbability = -1;
+            float effectiveInterval = 1f;
+            float effectiveProbability = 1f;
+            bool hasOwnInterval = false;
+            bool hasOwnProbability = false;
+            float ownInterval = 1f;
+            float ownProbability = 1f;
+            string anchor = "";
             foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
             {
-                if (record == null || record.IsValidLayer(out int recordLayer) == false || !record.hasScope) continue;
+                if (record == null || record.IsValidLayer(out int recordLayer) == false) continue;
                 if (!string.Equals(record.actionKey, key, StringComparison.Ordinal)) continue;
                 bool layer0 = recordLayer == 0;
                 bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
                 bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
                     && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal);
-                if ((layer0 || layer1 || layer2) && recordLayer >= bestLayer)
-                {
-                    bestLayer = recordLayer;
-                    effective = record.scope;
-                }
+                bool supplies = layer0 || layer1 || layer2;
                 bool isOwn = recordLayer == layer
                     && (layer == 0
                         || (layer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal))
                         || (layer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal) && string.Equals(record.xenotypeDefName, xeno, StringComparison.Ordinal)));
+
+                if (record.hasScope && supplies && recordLayer >= bestScope)
+                {
+                    bestScope = recordLayer;
+                    effective = record.scope;
+                }
+                if (record.hasIntervalMultiplier && supplies && recordLayer >= bestInterval)
+                {
+                    bestInterval = recordLayer;
+                    effectiveInterval = record.intervalMultiplier;
+                }
+                if (record.hasProbabilityMultiplier && supplies && recordLayer >= bestProbability)
+                {
+                    bestProbability = recordLayer;
+                    effectiveProbability = record.probabilityMultiplier;
+                }
                 if (isOwn)
                 {
-                    hasOwn = true;
-                    own = record.scope;
+                    if (record.hasScope) { hasOwn = true; own = record.scope; }
+                    if (record.hasIntervalMultiplier) { hasOwnInterval = true; ownInterval = record.intervalMultiplier; }
+                    if (record.hasProbabilityMultiplier) { hasOwnProbability = true; ownProbability = record.probabilityMultiplier; }
+                    if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
                 }
             }
-            rows.Add(new ActionScopeRowView(key, SqueakLabels.Action(action), group, own, action, hasOwn, effective));
+            Tuple<bool, bool, string> preset = ResolveActionPreset(anchor, key, race, xeno);
+            rows.Add(new ActionScopeRowView(
+                key, SqueakLabels.Action(action), group, own, action, hasOwn, effective,
+                hasOwnInterval, ownInterval, hasOwnProbability, ownProbability,
+                effectiveInterval, effectiveProbability,
+                bestInterval, bestProbability,
+                anchor.Length > 0, preset.Item1 && preset.Item2, preset.Item3));
         }
         return rows;
     }
@@ -394,6 +481,15 @@ public static class VoicePacksPageModel
     /// <summary>S5 分层心情编辑器投影：4 档心情 × 当前调音层。Own = 本层记录（null = 继承），
     /// Effective = 默认(1/1/One) &lt; Global &lt; Race &lt; Xeno 字段级 last-wins（与运行时同规则）。</summary>
     private static IReadOnlyList<MoodTuningRowView> BuildMoodTuningRows(UniversalSqueakerSettings settings, int layer, string race, string xeno)
+    {
+        return ProjectMoodTuningRows(settings.moodTuning ?? new List<MoodTuningRecord>(), layer, race, xeno, ResolveMoodPreset);
+    }
+
+    // The record fold and Ready-gated target projection are executed directly by the Host lane.
+    // Only Def lookup is supplied by the caller; settings and persistence remain outside this seam.
+    private static IReadOnlyList<MoodTuningRowView> ProjectMoodTuningRows(
+        IEnumerable<MoodTuningRecord> records, int layer, string race, string xeno,
+        Func<string, SqueakMood, string, string, Tuple<bool, bool, string>> resolvePreset)
     {
         List<MoodTuningRowView> rows = new();
         foreach (SqueakMood mood in Enum.GetValues(typeof(SqueakMood)))
@@ -406,7 +502,7 @@ public static class VoicePacksPageModel
             int bestPitchLayer = -1;
             int bestVolumeLayer = -1;
             int bestJitterLayer = -1;
-            foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
+            foreach (MoodTuningRecord record in records)
             {
                 if (record == null || record.mood != mood || record.IsValidLayer(out int recordLayer) == false) continue;
                 bool layer0 = recordLayer == 0;
@@ -434,23 +530,51 @@ public static class VoicePacksPageModel
             SqueakMoodResetDefaultState defaultReset = SqueakMoodResetActions.EvaluateDefault(
                 own?.hasPitchFactor == true, own?.hasVolumeFactor == true, own?.hasPitchJitter == true);
             string sourcePreset = own?.sourcePresetDefName ?? "";
-            UniversalSqueakerTuningBaselineDef? presetDef = sourcePreset.Length > 0
-                ? DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(sourcePreset)
-                : null;
-            bool presetHasEntry = presetDef != null
-                && UniversalSqueakerSettings.TryFindMoodBaseline(presetDef, mood, race, xeno, out _);
-            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, presetDef != null, presetHasEntry);
+            Tuple<bool, bool, string> preset = resolvePreset(sourcePreset, mood, race, xeno);
+            SqueakMoodResetPresetState presetReset = SqueakMoodResetActions.EvaluatePreset(sourcePreset, preset.Item1, preset.Item2);
 
-            rows.Add(new MoodTuningRowView(mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset));
+            // V3 P2 (corrected in task-18): provenance is the PER-FACTOR SUPPLYING LAYER the fold above
+            // already resolved (-1 = no layer supplies it, so the effective value is the default). The
+            // persisted anchor `sourcePreset` is NOT provenance: it survives a clear (F-P). It is projected
+            // ONLY as the reset-to-preset TARGET, via the resolved Def's own display label and only while
+            // that target is actually usable (Ready); a PresetMissing/NoEntry/NotFromPreset row carries no
+            // target at all so the readout cannot imply one.
+            string resetTarget = presetReset == SqueakMoodResetPresetState.Ready
+                ? preset.Item3
+                : "";
+            rows.Add(new MoodTuningRowView(
+                mood, mood.ToString(), own, pitch, volume, jitterHalf, defaultReset, presetReset,
+                bestPitchLayer, bestVolumeLayer, bestJitterLayer, resetTarget));
         }
         return rows;
+    }
+
+    private static Tuple<bool, bool, string> ResolveMoodPreset(string source, SqueakMood mood, string race, string xeno)
+    {
+        UniversalSqueakerTuningBaselineDef? preset = source.Length > 0
+            ? SqueakGameDefs.BaselineByName(source)
+            : null;
+        bool hasEntry = preset != null && UniversalSqueakerSettings.TryFindMoodBaseline(preset, mood, race, xeno, out _);
+        return Tuple.Create(preset != null, hasEntry, preset != null ? ResolvePresetLabel(preset) : "");
+    }
+
+    /// <summary>VF1定稿 A1: the action-side twin of <see cref="ResolveMoodPreset"/> - does the
+    /// anchor resolve to a Def, and does that Def carry an entry for THIS action at this identity.
+    /// The label is the reset TARGET's name, never a provenance claim.</summary>
+    private static Tuple<bool, bool, string> ResolveActionPreset(string source, string actionKey, string race, string xeno)
+    {
+        UniversalSqueakerTuningBaselineDef? preset = string.IsNullOrEmpty(source)
+            ? null
+            : SqueakGameDefs.BaselineByName(source);
+        bool hasEntry = preset != null && UniversalSqueakerSettings.TryFindActionBaseline(preset, actionKey, race, xeno, out _);
+        return Tuple.Create(preset != null, hasEntry, preset != null ? ResolvePresetLabel(preset) : "");
     }
 
     /// <summary>Project the tuning-baseline preset Defs into a selectable tree for the import widget.</summary>
     private static IReadOnlyList<BaselinePresetView> BuildBaselinePresets(VoicePacksPageState state)
     {
         List<BaselinePresetView> result = new();
-        foreach (UniversalSqueakerTuningBaselineDef preset in DefDatabase<UniversalSqueakerTuningBaselineDef>.AllDefs)
+        foreach (UniversalSqueakerTuningBaselineDef preset in SqueakGameDefs.AllBaselines())
         {
             if (preset == null) continue;
             BaselinePresetSelection selection = GetOrCreatePresetSelection(state, preset.defName);
@@ -475,7 +599,8 @@ public static class VoicePacksPageModel
                         xenotype.inheritFromRace,
                         xenoSelected,
                         (xenotype.actions ?? new List<BaselineActionTuning>()).Count(t => t != null && !string.IsNullOrWhiteSpace(t.actionKey)),
-                        (xenotype.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null)));
+                        (xenotype.moods ?? new List<BaselineMoodTuning>()).Count(t => t != null),
+                        ResolveXenotypeIcon(xenotype.xenotypeDefName)));
                 }
 
                 bool raceSelected = selection.SelectedRaceDefNames.Contains(race.raceDefName);
@@ -520,8 +645,28 @@ public static class VoicePacksPageModel
 
     private static string ResolveXenotypeDisplayName(string xenotypeDefName)
     {
-        XenotypeDef? def = DefDatabase<XenotypeDef>.GetNamedSilentFail(xenotypeDefName);
+        XenotypeDef? def = ResolveXenotypeDef(xenotypeDefName);
         return def != null && !string.IsNullOrEmpty(def.LabelCap) ? def.LabelCap : xenotypeDefName;
+    }
+
+    /// <summary>The live def for a xenotype key, or null: an unloaded/no-Biotech/unknown-def miss is normal.</summary>
+    private static XenotypeDef? ResolveXenotypeDef(string xenotypeDefName)
+    {
+        if (string.IsNullOrWhiteSpace(xenotypeDefName)) return null;
+        return DefDatabase<XenotypeDef>.GetNamedSilentFail(xenotypeDefName);
+    }
+
+    /// <summary>
+    /// R4-B adapter boundary: the ONE place this page turns a xenotype into its native icon. The resource
+    /// lookup (<see cref="XenotypeDef.Icon"/>, which reads the def's <c>iconPath</c> through the content
+    /// finder) happens here on the Verse side; the view carries the resulting value and the Kernel widget
+    /// only hands it to the library's own image outlet. Null is a valid answer and every miss returns it:
+    /// an absent definition, a game without Biotech (the DefDatabase has no such def), or a def whose
+    /// texture failed to load all give null rather than throwing or inventing a placeholder.
+    /// </summary>
+    private static UnityEngine.Texture2D? ResolveXenotypeIcon(string xenotypeDefName)
+    {
+        return ResolveXenotypeDef(xenotypeDefName)?.Icon;
     }
 
     private static void ToggleBaselinePreset(VoicePacksPageState state, string presetDefName)
@@ -551,7 +696,7 @@ public static class VoicePacksPageModel
     private static void ImportBaselinePreset(UniversalSqueakerSettings settings, string presetDefName, VoicePacksPageState state)
     {
         if (string.IsNullOrEmpty(presetDefName)) return;
-        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(presetDefName);
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(presetDefName);
         if (preset == null) return;
         BaselinePresetSelection selection = GetOrCreatePresetSelection(state, presetDefName);
         BaselinePresetImporter.Selection importSelection = new();
@@ -576,7 +721,7 @@ public static class VoicePacksPageModel
             string displayName = ResolveXenotypeLabel(catalog, key.TargetDefName);
             int orphanCount = CountOrphanKeys(status.EnabledKeys, packs);
             List<VoicePackRowView> rows = packs
-                .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
+                .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys, settings.BabyActionsEnabled))
                 .ToList();
             bool targetUnavailable = ModsConfig.BiotechActive && !catalog.XenotypeByDefName.ContainsKey(key.TargetDefName);
             bool hasConflict = catalog.AmbiguousCanonicalDefNames.Contains(key.TargetDefName);
@@ -683,6 +828,9 @@ public static class VoicePacksPageModel
     {
         races ??= Array.Empty<RaceLayerRowView>();
         xenotypes ??= Array.Empty<VoicePackDomainView>();
+        // US-ESC1: the user CANCELLED the operation domain this session - do not re-pick the first row.
+        // First entry (never cancelled, or re-selected, or a workspace switch) keeps the auto default.
+        if (state.DomainSelectionCanceled) return null;
 
         if (state.SelectedScope == SqueakVoicePackScope.Xenotype)
         {
@@ -730,7 +878,7 @@ public static class VoicePacksPageModel
             ?? Array.Empty<SqueakVoicePackDef>();
         SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, raceDefName);
         List<VoicePackRowView> rows = packs
-            .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
+            .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys, settings.BabyActionsEnabled))
             .ToList();
         return new VoicePackDomainView(
             SqueakVoicePackScope.Race,
@@ -749,19 +897,19 @@ public static class VoicePacksPageModel
             rows);
     }
 
-    private static VoicePackRowView CreateVoicePackRow(SqueakVoicePackDef pack, IReadOnlyList<string> enabledKeys)
+    private static VoicePackRowView CreateVoicePackRow(SqueakVoicePackDef pack, IReadOnlyList<string> enabledKeys, bool includeBabyActions)
     {
         string key = pack.TryGetPackKey(out string packKey) ? packKey : pack.defName;
         string label = string.IsNullOrEmpty(pack.LabelCap) ? pack.defName : pack.LabelCap;
         string modName = pack.modContentPack?.Name ?? pack.modContentPack?.PackageId ?? "—";
         string author = pack.modContentPack?.ModMetaData?.AuthorsString ?? "";
         if (string.IsNullOrEmpty(author)) author = modName;
-        int playable = CountPlayableActions(pack);
+        int playable = pack.CountPlayableActions(includeBabyActions);
         string coverage = string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
             "US.Packs.Checklist.PackActions".Translate(),
             playable,
-            SqueakActionDefinitions.Count);
+            SqueakActionDefinitions.EligibleCount(includeBabyActions));
         string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
         return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
@@ -777,7 +925,7 @@ public static class VoicePacksPageModel
                 ?? Array.Empty<SqueakVoicePackDef>();
             foreach (SqueakVoicePackDef pack in racePacks)
             {
-                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
+                string author = CreateVoicePackRow(pack, Array.Empty<string>(), settings.BabyActionsEnabled).Author;
                 if (!string.IsNullOrEmpty(author)) authors.Add(author);
             }
         }
@@ -786,7 +934,7 @@ public static class VoicePacksPageModel
         {
             foreach (SqueakVoicePackDef pack in pair.Value)
             {
-                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
+                string author = CreateVoicePackRow(pack, Array.Empty<string>(), settings.BabyActionsEnabled).Author;
                 if (!string.IsNullOrEmpty(author)) authors.Add(author);
             }
         }
@@ -834,6 +982,152 @@ public static class VoicePacksPageModel
         return orphan;
     }
 
+
+    /// <summary>
+    /// US-PACK1 (§4.2): the pack-card projection - the page's ONE result body. The scan visits every
+    /// domain the catalog and the player records produce (race domains in catalog order, then the sorted
+    /// xenotype inventory), and every pack that serves a domain contributes a ROW to that pack's CARD.
+    /// The composed filter narrows ROWS: the author/race/xenotype dropdowns and the state flags apply to
+    /// the row's domain exactly as the old browse lists applied them to their cards, and the keyword
+    /// accepts a row when it matches the PACK half (label/DefName/Mod/author/key - the same
+    /// <see cref="UsChecklistFilter.QueryMatches"/> substring rule, no second predicate) or the DOMAIN
+    /// half (domain display name and defNames). A card survives while one row does; a keyword hit on the
+    /// DOMAIN half is what auto-expands the card, while a pack-only hit lists the card collapsed - the
+    /// manual expansion set is never written by a query, so clearing the keyword provably restores it.
+    /// Enable answers are read per domain identity (the same double-keyed status lookup the settings
+    /// layer uses), which is what keeps two rows of one pack independent writes.
+    /// </summary>
+    private static List<PackCardView> BuildPackCards(
+        UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, VoicePacksPageState state)
+    {
+        // The Verse side COLLECTS, the pure side FILTERS (PackCardProjection): the same split
+        // UsChecklistFilter/VoicePacksFilters established, so the harness lane drives the real rule
+        // without a second copy of it. Scan order is the card order's first-appearance input: race
+        // domains in catalog order, then the sorted xenotype inventory.
+        var source = new List<PackCardSourceRow>();
+
+        foreach (string race in catalog.RaceDefNames)
+        {
+            if (string.IsNullOrEmpty(race)) continue;
+            IReadOnlyList<SqueakVoicePackDef> packs =
+                catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, race) ?? Array.Empty<SqueakVoicePackDef>();
+            if (packs.Count == 0) continue;
+            SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, race);
+            IReadOnlyList<string> enabledKeys = status.EnabledKeys ?? Array.Empty<string>();
+            string display = ResolveRaceLabel(race);
+            bool orphan = status.State == SqueakVoicePackDomainState.Orphan || CountOrphanKeys(enabledKeys, packs) > 0;
+            foreach (SqueakVoicePackDef pack in packs)
+            {
+                if (pack == null) continue;
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                if (string.IsNullOrEmpty(identity.Key)) continue;
+                source.Add(new PackCardSourceRow(
+                    identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,
+                    SqueakVoicePackScope.Race, race, "", display,
+                    identity.IsSelected, false, false, false, orphan));
+            }
+        }
+
+        foreach (XenotypeDomainKey domainKey in CollectXenotypeDomains(settings, catalog))
+        {
+            IReadOnlyList<SqueakVoicePackDef> targetPacks = catalog.GetVoicePackDomainPacks(
+                SqueakVoicePackScope.Xenotype, domainKey.TargetDefName) ?? Array.Empty<SqueakVoicePackDef>();
+            List<SqueakVoicePackDef> packs = new();
+            foreach (SqueakVoicePackDef pack in targetPacks)
+                if (pack != null && string.Equals(pack.raceDefName, domainKey.RaceDefName, StringComparison.Ordinal))
+                    packs.Add(pack);
+            if (packs.Count == 0) continue;
+            SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(
+                SqueakVoicePackScope.Xenotype, domainKey.RaceDefName, domainKey.TargetDefName);
+            IReadOnlyList<string> enabledKeys = status.EnabledKeys ?? Array.Empty<string>();
+            string display = ResolveXenotypeLabel(catalog, domainKey.TargetDefName);
+            bool dormant = !ModsConfig.BiotechActive;
+            bool targetUnavailable = ModsConfig.BiotechActive && !catalog.XenotypeByDefName.ContainsKey(domainKey.TargetDefName);
+            bool hasConflict = catalog.AmbiguousCanonicalDefNames.Contains(domainKey.TargetDefName);
+            bool orphan = status.State == SqueakVoicePackDomainState.Orphan || CountOrphanKeys(enabledKeys, packs) > 0;
+            foreach (SqueakVoicePackDef pack in packs)
+            {
+                if (pack == null) continue;
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                if (string.IsNullOrEmpty(identity.Key)) continue;
+                source.Add(new PackCardSourceRow(
+                    identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,
+                    SqueakVoicePackScope.Xenotype, domainKey.RaceDefName, domainKey.TargetDefName, display,
+                    identity.IsSelected, hasConflict, dormant, targetUnavailable, orphan));
+            }
+        }
+
+        return PackCardProjection.Build(
+            source, state.SearchText, in state.PackFilter, state.RaceFilter, state.XenotypeFilter,
+            in state.DomainFilter, state.PackCardsExpanded);
+    }
+
+    /// <summary>Distinct pack keys the catalog carries at all - the "no packs here" sentence's denominator.</summary>
+    private static int CountCataloguedPacks(SqueakXenotypeCatalogSnapshot catalog)
+    {
+        HashSet<string> keys = new(StringComparer.Ordinal);
+        foreach (SqueakVoicePackDef pack in catalog.RacePacks ?? Array.Empty<SqueakVoicePackDef>())
+            if (pack != null && pack.TryGetPackKey(out string k)) keys.Add(k);
+        foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+            foreach (SqueakVoicePackDef pack in pair.Value)
+                if (pack != null && pack.TryGetPackKey(out string k)) keys.Add(k);
+        return keys.Count;
+    }
+
+    /// <summary>US-PACK1: the player's expand/collapse gesture on a card header (manual set only - the
+    /// query's auto-expansion is derived and cannot be toggled into the user's state).</summary>
+    public static void TogglePackCard(VoicePacksPageState state, string packKey)
+    {
+        if (state == null || string.IsNullOrEmpty(packKey)) return;
+        if (!state.PackCardsExpanded.Remove(packKey)) state.PackCardsExpanded.Add(packKey);
+    }
+
+    /// <summary>US-ESC1 (PACK1 result layer, §4.1; review-1 correction 2): the result layer answers ONLY
+    /// while a MANUALLY opened card is VISIBLE in the current projection. A manual expansion the active
+    /// author/query conditions filter out is NOT an executable layer - it is the player's own state kept
+    /// for when the conditions return - so it can never become an invisible Esc that consumes the key with
+    /// nothing on screen changing. The decision reads the production view (including its empty result: zero
+    /// visible cards means zero visible manual expansions means the layer declines), never the raw set.</summary>
+    public static bool CanCancelPackResults(VoicePacksPageState state, VoicePacksViewState view)
+        => view != null && CanCancelPackResults(state, view.PackCards);
+
+    /// <summary>The cards-list form the host and the boundary witness call directly: the decision is a
+    /// function of the CURRENTLY VISIBLE cards (the projection already applied every condition), so a
+    /// caller that has the projected list need not rebuild the whole view.
+    /// ESC1 closure (pm-pack1-collapse probe run-e45eb2e, defect B): the manual expansion must also be
+    /// the REASON the card is open. A card that is manual AND auto-expanded (the keyword hits its rows)
+    /// stays open when the manual flag collapses - clearing that latent state has no visible effect and
+    /// would be an empty return; the manual state is retained so the query clear restores it visibly.</summary>
+    public static bool CanCancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
+    {
+        if (state == null || visibleCards == null) return false;
+        for (int i = 0; i < visibleCards.Count; i++)
+            if (visibleCards[i].ManualExpanded && !visibleCards[i].AutoExpanded) return true;
+        return false;
+    }
+
+    /// <summary>One press, one layer: collapse exactly the VISIBLE manual expansions (the cards the player
+    /// opened AND the current conditions still show). Hidden manual keys and the query's auto state are
+    /// retained, so changing or clearing a filter restores the player's view. Never touches filters,
+    /// selection or any persisted value.</summary>
+    public static void CancelPackResults(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (view != null) CancelPackResults(state, view.PackCards);
+    }
+
+    /// <summary>The cards-list form: removes from the manual set exactly the manual-only VISIBLE keys
+    /// (same predicate as the CanCancel above - a masked or hidden manual state is retained, never
+    /// half-collapsed).</summary>
+    public static void CancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
+    {
+        if (state == null || visibleCards == null) return;
+        for (int i = 0; i < visibleCards.Count; i++)
+        {
+            PackCardView card = visibleCards[i];
+            if (card.ManualExpanded && !card.AutoExpanded) state.PackCardsExpanded.Remove(card.Key);
+        }
+    }
+
     /// <summary>
     /// Page banner. Every line here is a Keyed string: the model has no kernel translation seam, so
     /// it resolves through the Verse Translator the same way the audio-pool notice does.
@@ -877,21 +1171,6 @@ public static class VoicePacksPageModel
         return ResolveXenotypeDisplayName(targetDefName);
     }
 
-    private static int CountPlayableActions(SqueakVoicePackDef pack)
-    {
-        if (pack.actions == null) return 0;
-        int count = 0;
-        foreach (SqueakVoicePackAction action in pack.actions)
-        {
-            if (action == null || action.sounds == null) continue;
-            foreach (SoundDef sound in action.sounds)
-            {
-                if (sound != null) { count++; break; }
-            }
-        }
-        return count;
-    }
-
     private static SqueakVoicePackMode NormalizeMode(SqueakVoicePackMode mode)
     {
         return mode == SqueakVoicePackMode.Fallback || mode == SqueakVoicePackMode.Remix || mode == SqueakVoicePackMode.Disabled
@@ -909,6 +1188,12 @@ public static class VoicePacksPageModel
     {
         if (state == null) return;
         ApplyActiveTab(state, tab);
+        // US-ESC1: switching workspace RE-ESTABLISHES the active branch (§4.1): the cancelled marks are
+        // last session's return, not this page's, so each page opens with its accepted initial default
+        // (projection auto-select ON) again - and the tuning branch is ACTIVE until a Cancel exits it.
+        state.DomainSelectionCanceled = false;
+        state.FallbackTableCanceled = false;
+        state.TuningContextActive = true;
     }
 
     public static void ScrollToSection(VoicePacksPageState state, string sectionKey)
@@ -935,8 +1220,8 @@ public static class VoicePacksPageModel
             "scope-tree" => "us/scope-tree",
             "preset-list" => "us/preset-list",
             "filter-bar" => "us/filter-bar",
-            "race-layer" => "us/race-layer",
-            "xenotype-layer" => "us/xenotype-layer",
+            "packs-filter" => "us/filter-bar",
+            "packs-results" => "us/pack-cards",
             "checklist" => "us/voice-pack-checklist",
             _ => "us/page-title",
         };
@@ -945,7 +1230,7 @@ public static class VoicePacksPageModel
     public static void SetTuningLayer(VoicePacksPageState state, int layer)
     {
         if (state == null) return;
-        if (layer >= 0 && layer <= 2) state.TuningLayer = layer;
+        if (layer >= 0 && layer <= 2) { state.TuningLayer = layer; state.TuningContextActive = true; }
     }
 
     public static void SetTuningDomain(VoicePacksPageState state, string raceDefName, string targetDefName)
@@ -955,6 +1240,7 @@ public static class VoicePacksPageModel
         {
             state.TuningRaceDefName = raceDefName;
             state.TuningXenotypeDefName = targetDefName ?? "";
+            state.TuningContextActive = true;
         }
     }
 
@@ -964,6 +1250,8 @@ public static class VoicePacksPageModel
         state.SelectedScope = scope;
         state.SelectedRaceDefName = raceDefName ?? "";
         state.SelectedTargetName = scope == SqueakVoicePackScope.Xenotype ? targetDefName ?? "" : "";
+        // US-ESC1: a fresh selection replaces the cancel - auto-selection is permitted again.
+        state.DomainSelectionCanceled = false;
     }
 
     public static void SetDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -996,6 +1284,7 @@ public static class VoicePacksPageModel
         state.SearchText = text ?? "";
     }
 
+
     // The hover-claim machine (D10 grace) moved to UiSession with FL 0.3.0 P3: widgets claim through
     // UsKernelDraw.HelpHover -> Session.ClaimHover, and the panel/border read Session.HoverClaim. The
     // pinned-selection channel stays retired with the index list (D2 ruling, 2026-09-05) - hover is
@@ -1004,8 +1293,43 @@ public static class VoicePacksPageModel
     public static void SetActionScope(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, SqueakActionScope? scope)
     {
         if (state == null || string.IsNullOrEmpty(actionKey)) return;
+        state.TuningContextActive = true;
         ApplyActionTuningScope(settings, state, actionKey, scope);
     }
+
+    /// <summary>VF1定稿 A2: multiplier write facade - the identity is the CURRENT tuning layer's
+    /// (race, xeno), guarded exactly like <see cref="SetActionScope"/>; value == null clears the
+    /// field (restore inheritance).</summary>
+    public static void SetActionTuningMultiplier(
+        UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, bool intervalField, float? value)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        if (state.TuningLayer == 1 && string.IsNullOrEmpty(state.TuningRaceDefName)) return;
+        state.TuningContextActive = true;
+        if (state.TuningLayer == 2 && (string.IsNullOrEmpty(state.TuningRaceDefName) || string.IsNullOrEmpty(state.TuningXenotypeDefName))) return;
+        settings.SetActionTuning(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName, intervalField, value);
+    }
+
+    /// <summary>VF1定稿 A4: action reset-to-preset facade, the mood side's shape: the current-layer
+    /// identity's last-wins anchor names the preset; no anchor or no resolvable entry = no-op.</summary>
+    public static void ResetActionTuningToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        state.TuningContextActive = true;
+        string anchor = "";
+        foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
+        {
+            if (record == null || !string.Equals(record.actionKey, actionKey, StringComparison.Ordinal)) continue;
+            if (record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
+            if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", state.TuningRaceDefName ?? "", StringComparison.Ordinal)) continue;
+            if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", state.TuningXenotypeDefName ?? "", StringComparison.Ordinal)) continue;
+            if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;
+        }
+        if (anchor.Length == 0) return;
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(anchor);
+        settings.ResetActionTuningToPreset(actionKey, state.TuningRaceDefName ?? "", state.TuningXenotypeDefName ?? "", preset);
+    }
+
 
     public static void SetMoodTuning(
         UniversalSqueakerSettings settings,
@@ -1015,15 +1339,33 @@ public static class VoicePacksPageModel
         float? value)
     {
         if (state == null) return;
+        state.TuningContextActive = true;
         ApplyMoodTuning(settings, state, mood, factor, value);
     }
 
     /// <summary>「重置为预设」：读本层末行的来源 → 解析预设 Def → 让 settings 把该 (mood,race,xeno) 的基线
     /// 因子值重新写回（来源保持）。不可用时（无来源 / Def 失效 / 无条目）什么都不做：可用性由
-    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。</summary>
+    /// <see cref="MoodTuningRowView.PresetReset"/> 在视图里表达，按钮只是禁用。
+    /// <para>
+    /// <b>XG1.2 - the identity boundary comes FIRST.</b> The (race, xenotype) pair is taken straight from the
+    /// state, and a layer-2 state with no target carries ("","") - which is exactly the GLOBAL row's identity.
+    /// Without this guard the scan below can match that row and rewrite a global baseline from an empty xenotype
+    /// domain; <c>settings.ResetMoodTuningToPreset</c> cannot catch it either (it only rejects xeno-without-race).
+    /// The guard is the SAME predicate the two mood writers use (<see cref="MoodLayerHasIdentity"/>), so the
+    /// three entries cannot drift apart, and layer 0 (Global) stays legitimately allowed.
+    /// </para>
+    /// </summary>
     public static void ResetMoodToPreset(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
     {
         if (state == null) return;
+        state.TuningContextActive = true;
+        if (!MoodLayerHasIdentity(state)) return;
+        ResetMoodToPresetForIdentity(settings, state, mood);
+    }
+
+    // Keep the identity refusal independent of the game-only Def lookup, including JIT type resolution.
+    private static void ResetMoodToPresetForIdentity(UniversalSqueakerSettings settings, VoicePacksPageState state, SqueakMood mood)
+    {
         string race = state.TuningRaceDefName ?? "";
         string xeno = state.TuningXenotypeDefName ?? "";
 
@@ -1038,7 +1380,7 @@ public static class VoicePacksPageModel
         }
         if (source.Length == 0) return;
 
-        UniversalSqueakerTuningBaselineDef? preset = DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(source);
+        UniversalSqueakerTuningBaselineDef? preset = SqueakGameDefs.BaselineByName(source);
         settings.ResetMoodTuningToPreset(mood, race, xeno, preset);
     }
 
@@ -1086,6 +1428,434 @@ public static class VoicePacksPageModel
     {
         if (string.IsNullOrEmpty(raceDefName)) return;
         ApplyForgetUnavailable(settings, scope, raceDefName, targetDefName);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // VF1 final-fallback editor: projection + commands (the store is the single authority)
+    // -----------------------------------------------------------------------------------------
+
+    /// <summary>The editor's projection over the LIVE store. Supported races = every table the
+    /// store resolved (maintainer data ∪ player files, per the VF1 support-set rule); entries are
+    /// the closed 17-key set; sound candidates are loaded SoundDefs filtered by the query and
+    /// labelled with the current production availability state - an unprobed sound says "unknown",
+    /// never "missing" (menu context has no map). Create candidates come from the loaded pawn
+    /// ThingDefs, so a race with no VoicePack at all (Monolyn) is a legal new table.</summary>
+    private static void BuildFallbackProjection(
+        VoicePacksPageState state,
+        out int tuningArea,
+        out List<FallbackRaceView> races,
+        out string selectedRace,
+        out List<FallbackEntryView> entries,
+        out List<FilterOptionView> soundOptions,
+        out List<FilterOptionView> candidateOptions)
+    {
+        tuningArea = state.TuningArea;
+        races = new List<FallbackRaceView>();
+        entries = new List<FallbackEntryView>();
+        soundOptions = new List<FilterOptionView>();
+        candidateOptions = new List<FilterOptionView>();
+
+        BuiltInFallbackTable? table = SqueakFallbackProfileStore.Current;
+        if (table != null)
+        {
+            foreach (FallbackProfile profile in table.Profiles)
+            {
+                int sounds = 0;
+                foreach (KeyValuePair<string, string> entry in profile.SoundKeys)
+                {
+                    if (!string.IsNullOrEmpty(entry.Value)) sounds++;
+                }
+
+                races.Add(new FallbackRaceView(
+                    profile.Race.DefName,
+                    ResolveRaceLabel(profile.Race.DefName),
+                    !SqueakFallbackProfileStore.HasMaintainerSource(profile.Race),
+                    sounds));
+            }
+        }
+
+        races.Sort((a, b) => string.CompareOrdinal(a.Label, b.Label));
+
+        string wanted = state.FallbackSelectedRace ?? "";
+        selectedRace = "";
+        // US-ESC1: a cancelled table stays cancelled - the projection must not answer the Esc a second
+        // time by re-picking the first race. The list itself (races) is untouched: cancellation is a
+        // selection state, never a data change.
+        if (races.Count > 0 && !state.FallbackTableCanceled)
+        {
+            selectedRace = wanted;
+            bool holds = false;
+            for (int i = 0; i < races.Count; i++)
+            {
+                if (string.Equals(races[i].DefName, selectedRace, StringComparison.Ordinal)) { holds = true; break; }
+            }
+
+            if (!holds) selectedRace = races[0].DefName;
+        }
+
+        if (selectedRace.Length > 0)
+        {
+            RaceKey raceKey = new(selectedRace);
+            FallbackProfile? resolved = table == null ? null : table.For(raceKey);
+            FallbackProfile? maintainer = SqueakFallbackProfileStore.MaintainerSourceFor(raceKey);
+            // PM review (2026-10-07): the OVERRIDE/INHERIT line is FIELD PRESENCE in the player's raw
+            // delta, never value equality with the source - an override whose value happens to equal
+            // the shipped default is still the player's and survives a future source update exactly
+            // like any other override (ConfigCopy H pins the same rule at the store boundary).
+            FallbackDelta? playerDelta = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
+            foreach (string key in UniversalSqueaker.Kernel.BuiltInActionKeys.All)
+            {
+                string sound = "";
+                if (resolved != null)
+                {
+                    resolved.SoundKeys.TryGetValue(key, out sound);
+                    sound ??= "";
+                }
+
+                string sourceValue = "";
+                bool fromMaintainer = false;
+                if (maintainer != null)
+                {
+                    fromMaintainer = maintainer.SoundKeys.TryGetValue(key, out sourceValue);
+                    sourceValue ??= "";
+                }
+
+                int viewState;
+                string soundLabel = "";
+                if (sound.Length == 0)
+                {
+                    viewState = FallbackEntryView.Unset;
+                }
+                else
+                {
+                    SoundDef? def = DefDatabase<SoundDef>.GetNamedSilentFail(sound);
+                    SqueakSoundAvailabilityState availability = SqueakSoundAvailabilityCache.PeekState(def);
+                    viewState = def == null
+                        || availability == SqueakSoundAvailabilityState.Empty
+                        || availability == SqueakSoundAvailabilityState.Failed
+                        ? FallbackEntryView.NoSound
+                        : playerDelta != null && playerDelta.Overrides.ContainsKey(key)
+                            ? FallbackEntryView.PlayerOverride
+                            : fromMaintainer
+                                ? FallbackEntryView.Maintainer
+                                : FallbackEntryView.PlayerOverride;
+                    soundLabel = def != null ? def.label ?? sound : sound;
+                }
+
+                string actionLabel = UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(key, out SqueakAction action)
+                    ? SqueakLabels.Action(action)
+                    : key;
+                entries.Add(new FallbackEntryView(key, actionLabel, sound, soundLabel, viewState));
+            }
+        }
+
+        string soundQuery = (state.FallbackSoundQuery ?? "").Trim();
+        // VF1定稿: candidates are the loaded CORE SoundDefs (Rimsage-confirmed: ModContentPack.IsCoreMod).
+        // The cap is a DISPLAY cap on the filtered answer, not a reachability limit: the query filters
+        // BEFORE the cap, so any legal candidate is reachable by typing its name or defName - no
+        // advanced search is added.
+        foreach (SoundDef def in DefDatabase<SoundDef>.AllDefs)
+        {
+            if (def == null || string.IsNullOrEmpty(def.defName)) continue;
+            if (def.modContentPack == null || !def.modContentPack.IsCoreMod) continue;
+            if (soundQuery.Length > 0
+                && !UsChecklistFilter.QueryMatches(soundQuery, def.defName, def.label ?? "")) continue;
+            SqueakSoundAvailabilityState availability = SqueakSoundAvailabilityCache.PeekState(def);
+            string suffix = availability switch
+            {
+                SqueakSoundAvailabilityState.Empty => " (!)",
+                SqueakSoundAvailabilityState.Failed => " (x)",
+                _ => "",
+            };
+            soundOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName + suffix, def.defName));
+            if (soundOptions.Count >= 40) break;
+        }
+
+        string raceQuery = (state.FallbackNewRaceQuery ?? "").Trim();
+        foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
+        {
+            if (def == null || def.race == null || def.category != ThingCategory.Pawn) continue;
+            bool supported = false;
+            for (int i = 0; i < races.Count; i++)
+            {
+                if (string.Equals(races[i].DefName, def.defName, StringComparison.Ordinal)) { supported = true; break; }
+            }
+
+            if (supported) continue;
+            if (raceQuery.Length > 0
+                && !UsChecklistFilter.QueryMatches(raceQuery, def.defName, def.label ?? "")) continue;
+            candidateOptions.Add(new FilterOptionView((def.label ?? def.defName) + "  " + def.defName, def.defName));
+            if (candidateOptions.Count >= 20) break;
+        }
+    }
+
+    /// <summary>VF1 selection/query writes (page state only; they move the layout clock through the
+    /// Host funnel like every other display write).</summary>
+    public static void SetFallbackSelection(VoicePacksPageState state, string? race, string? entryAction)
+    {
+        if (state == null) return;
+        state.TuningContextActive = true;
+        if (race != null)
+        {
+            state.FallbackSelectedRace = race;
+            // US-ESC1: naming a table again IS the selection; the cancelled mark only survives until one.
+            state.FallbackTableCanceled = false;
+        }
+        if (entryAction != null) state.FallbackSelectedEntryAction = entryAction;
+        state.FallbackStatusKey = "";
+    }
+
+    public static void SetFallbackQueries(VoicePacksPageState state, string? soundQuery, string? newRaceQuery)
+    {
+        if (state == null) return;
+        if (soundQuery != null) state.FallbackSoundQuery = soundQuery;
+        if (newRaceQuery != null) state.FallbackNewRaceQuery = newRaceQuery;
+        state.TuningContextActive = true;
+    }
+
+    public static void SetTuningArea(VoicePacksPageState state, int area)
+    {
+        if (state == null) return;
+        state.TuningArea = area is >= 0 and <= 2 ? area : 0;
+        state.TuningContextActive = true;
+    }
+
+    public static void SetTuningSelectedAction(VoicePacksPageState state, string actionKey)
+    {
+        if (state == null) return;
+        state.TuningSelectedAction = actionKey ?? "";
+        state.TuningContextActive = true;
+    }
+
+    /// <summary>VF1 entry write (r5): the starting point is the player's REAL field-presence delta
+    /// read from the copy - not a diff against the resolved table, which would silently drop other
+    /// actions' delete markers and any override whose value happens to equal the shipped default.
+    /// Three distinct answers: value = override, "" = explicit no-sound marker, null = restore
+    /// INHERITANCE (remove the key; the entry follows future shipped updates again). The save result
+    /// is observable; a failed write never reports Saved. The status distinguishes an already-ADMITTED
+    /// race (the loaded pawn ThingDef carries a CompProperties_Squeaker - mounted at startup from a
+    /// pack/table, or patched by the author - so the resolver refresh reaches it this session) from a
+    /// first-time mount (new race: comp attach waits for the next full game start, and the editor
+    /// says so). Checking the STORE for support instead would be self-referential: SaveProfile has
+    /// just rebuilt that very table, so "saved support" always reads true (PM review 2026-10-07).</summary>
+    public static void SetFallbackEntry(UniversalSqueakerSettings settings, VoicePacksPageState state, string actionKey, string? soundDefName)
+    {
+        if (settings == null || state == null || string.IsNullOrEmpty(actionKey)) return;
+        string race = state.FallbackSelectedRace;
+        if (race.Length == 0) return;
+        state.TuningContextActive = true;
+        if (soundDefName != null && soundDefName.Length > 0
+            && DefDatabase<SoundDef>.GetNamedSilentFail(soundDefName) == null) return;
+
+        RaceKey raceKey = new(race);
+        SqueakFallbackProfileStore.StoreOutcome outcome;
+        {
+            FallbackDelta? current = SqueakFallbackProfileStore.LoadPlayerDelta(raceKey);
+            Dictionary<string, string> overrides = current == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(current.Overrides, StringComparer.Ordinal);
+            if (soundDefName == null) overrides.Remove(actionKey);
+            else overrides[actionKey] = soundDefName;
+            outcome = SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(overrides));
+        }
+
+        if (outcome != SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+            return;
+        }
+
+        settings.NotifyDiscreteResolverRuntimeChanged();
+        ThingDef? raceDef = DefDatabase<ThingDef>.GetNamedSilentFail(race);
+        bool admitted = raceDef != null && raceDef.race != null
+            && raceDef.comps != null && raceDef.comps.Any(comp => comp is CompProperties_Squeaker);
+        state.FallbackStatusKey = admitted
+            ? "US.VF1.Status.Saved"
+            : "US.VF1.Status.SavedRestart";
+    }
+
+    /// <summary>VF1 create-table: an empty player table for a loaded pawn race. Support (and the
+    /// comp mount) begins at the NEXT full launch; the status line says exactly that - and a failed
+    /// write says failed.</summary>
+    public static void CreateFallbackTable(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
+    {
+        if (settings == null || state == null) return;
+        ThingDef? def = DefDatabase<ThingDef>.GetNamedSilentFail(raceDefName ?? "");
+        if (def == null || def.race == null) return;
+        RaceKey raceKey = new(raceDefName!);
+        if (SqueakFallbackProfileStore.Current?.For(raceKey) != null) return;
+        if (SqueakFallbackProfileStore.SaveProfile(raceKey, new FallbackDelta(new Dictionary<string, string>()))
+            != SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            state.FallbackStatusKey = "US.VF1.Status.SaveFailed";
+            return;
+        }
+
+        state.FallbackSelectedRace = raceDefName!;
+        state.FallbackTableCanceled = false; // US-ESC1: the created table is a fresh selection, not a cancelled one.
+        state.TuningContextActive = true;
+        state.FallbackStatusKey = "US.VF1.Status.CreatedRestart";
+    }
+
+    /// <summary>VF1 restore-default: clear the player overrides back to the maintainer data. A
+    /// player-only race is refused here (there is no maintainer data to restore to) - delete is
+    /// that race's honest path; a failed write is reported as failed.</summary>
+    public static void RestoreFallbackDefault(UniversalSqueakerSettings settings, VoicePacksPageState state)
+    {
+        if (settings == null || state == null) return;
+        RaceKey raceKey = new(state.FallbackSelectedRace ?? "");
+        if (raceKey.DefName.Length == 0) return;
+        SqueakFallbackProfileStore.StoreOutcome outcome = SqueakFallbackProfileStore.RestoreDefault(raceKey);
+        state.FallbackStatusKey = outcome switch
+        {
+            SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Restored",
+            SqueakFallbackProfileStore.StoreOutcome.RefusedNoSource => "US.VF1.Status.NoMaintainerData",
+            _ => "US.VF1.Status.SaveFailed",
+        };
+        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            settings.NotifyDiscreteResolverRuntimeChanged();
+        }
+    }
+
+    /// <summary>VF1 delete: removes ONLY the player table; if no pack or other table supports the
+    /// race the support is withdrawn symmetrically (mount removal at the next full launch). Races
+    /// with maintainer data cannot be deleted - the store refuses and the status says so; a failed
+    /// file removal is reported as failed, not as deleted. r5: the target is the race the caller
+    /// ASKED ABOUT when it opened the confirmation, read from the command payload - never the
+    /// mutable selection at the later answer time, so a confirm can not delete a different table.</summary>
+    public static void DeleteFallbackTable(UniversalSqueakerSettings settings, VoicePacksPageState state, string raceDefName)
+    {
+        if (settings == null || state == null) return;
+        RaceKey raceKey = new(raceDefName ?? "");
+        if (raceKey.DefName.Length == 0) return;
+        SqueakFallbackProfileStore.StoreOutcome outcome = SqueakFallbackProfileStore.DeletePlayerTable(raceKey);
+        state.FallbackStatusKey = outcome switch
+        {
+            SqueakFallbackProfileStore.StoreOutcome.Written => "US.VF1.Status.Deleted",
+            SqueakFallbackProfileStore.StoreOutcome.RefusedMaintainer => "US.VF1.Status.DeleteRefusedMaintainer",
+            _ => "US.VF1.Status.SaveFailed",
+        };
+        if (outcome == SqueakFallbackProfileStore.StoreOutcome.Written)
+        {
+            settings.NotifyDiscreteResolverRuntimeChanged();
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+    // US-ESC1: the tree cancel layers (FL-IC2 CancelBind). One press answers ONE layer; executability is
+    // the command's own CanExecute answer, so a layer that has nothing left to undo is CLIMBED PAST by
+    // the engine instead of consuming the key with an empty gesture, and the settings main layer closes
+    // only when every declared layer has declined. Filters, queries and expansion state are never a
+    // cancel target (the spec keeps them), and no write below touches settings/persistence at all.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Packs page: can Esc return from the currently shown operation domain? (Result layer:
+    /// the card already shows no domain, or the user already cancelled → the layer declines.)
+    /// ESC1 closure (pm-pack1-collapse probe, defect A): the selection must also be VISIBLE — a row
+    /// of the current filtered result inside an EXPANDED card. A selection kept latent while its card
+    /// is collapsed, or hidden by the active conditions, is not an executable layer: consuming the key
+    /// there is an invisible Esc with nothing on screen changing. Retaining the hidden selection for
+    /// when the conditions return stays allowed; answering the key with it is not.</summary>
+    public static bool CanCancelDomainSelection(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return false;
+        return !state.DomainSelectionCanceled
+            && view.SelectedDomain.HasValue
+            && IsSelectedDomainVisible(view);
+    }
+
+    /// <summary>True when the selected domain is drawn right now: an EXPANDED card of the projected
+    /// result emits a row with exactly this domain identity. The row set is already filtered, so this
+    /// reads the same answer the screen shows.</summary>
+    public static bool IsSelectedDomainVisible(VoicePacksViewState view)
+    {
+        if (view == null || !view.SelectedDomain.HasValue) return false;
+        VoicePackDomainView d = view.SelectedDomain.Value;
+        IReadOnlyList<PackCardView> cards = view.PackCards;
+        for (int i = 0; i < cards.Count; i++)
+        {
+            if (!cards[i].Expanded) continue;
+            IReadOnlyList<PackCardDomainRowView> rows = cards[i].Rows;
+            for (int r = 0; r < rows.Count; r++)
+            {
+                if (rows[r].Scope == d.Scope
+                    && rows[r].RaceDefName == d.RaceDefName
+                    && rows[r].TargetDefName == d.TargetDefName) return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Packs return layer: exit the operation domain. The filter conditions, the two domain
+    /// searches, the pack search and every enabled state are untouched; the page stays open.</summary>
+    public static void CancelDomainSelection(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.DomainSelectionCanceled = true;
+    }
+
+    /// <summary>The ROW layer of the tuning tree (FL-IC2 CancelBind on the scope-tree element): only the
+    /// branch the player can SEE answers here - fallback area: entry, then the race table (§4.1); action
+    /// area: the selected action's editor row. A row target selected in another area is invisible here and
+    /// is NOT a layer of this branch (PM observation 10); the context return above (observation 1) owns
+    /// repose. Declining sends the key one level up the real parent chain.</summary>
+    public static bool CanCancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return false;
+        if (view.TuningArea == 2)
+        {
+            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction)) return true;
+            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace)) return true;
+        }
+        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
+        return false;
+    }
+
+    /// <summary>One press, one step, visible branch only. State-only; never persists, never routes.</summary>
+    public static void CancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return;
+        if (view.TuningArea == 2)
+        {
+            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction))
+            {
+                state.FallbackSelectedEntryAction = "";
+                return;
+            }
+            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace))
+            {
+                state.FallbackTableCanceled = true;
+                state.FallbackSelectedRace = "";
+                return;
+            }
+        }
+        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction))
+        {
+            state.TuningSelectedAction = "";
+        }
+    }
+
+    /// <summary>The CONTEXT return layer above the row steps, declared on the container that wraps the
+    /// composite (PM observation 1, per §4.1 "当前层域/区域 → 设置主层"): the branch's activity is its own
+    /// business state, so even the untouched default Global/Actions page answers one press before the
+    /// settings main layer may close. The exit reposes the branch to its initial defaults - it changes NO
+    /// settings, selects no domain (the Global layer has none to auto-pick, the BuildTuningDomains
+    /// layer-0 branch), and any later tuning write re-arms the context.</summary>
+    public static bool CanCancelTuningContext(VoicePacksPageState state)
+        => state != null && state.TuningContextActive;
+
+    public static void CancelTuningContext(VoicePacksPageState state)
+    {
+        if (state == null) return;
+        state.TuningContextActive = false;
+        state.TuningLayer = 0;
+        state.TuningRaceDefName = "";
+        state.TuningXenotypeDefName = "";
+        state.TuningArea = 0;
+        state.TuningSelectedAction = "";
+        state.FallbackSelectedEntryAction = "";
+        state.FallbackSelectedRace = "";
+        state.FallbackTableCanceled = false;
     }
 
     private readonly struct XenotypeDomainKey

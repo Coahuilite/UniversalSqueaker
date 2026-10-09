@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,25 +34,71 @@ internal static class Program
         ("page-title", "us/page-title"),
         ("banner", "chrome/banner"),
         ("mode-row", "us/mode-row"),
-        ("global-volume", "us/global-volume"),
-        ("attenuation-editor", "us/attenuation-editor"),
-        ("basic-tuning", "us/basic-tuning"),
-        ("camera-indicator", "us/camera-indicator"),
         ("scope-tree", "us/scope-tree"),
         ("preset-list", "us/preset-list"),
         ("filter-bar", "us/filter-bar"),
-        ("race-layer", "us/race-layer"),
-        ("xenotype-layer", "us/xenotype-layer"),
         ("checklist", "us/voice-pack-checklist"),
         ("footer", "us/footer"),
         ("help-panel", "us/help-panel")
     };
 
-    private static int Main()
+    /// <summary>
+    /// Tooling only, and it changes NO lane semantics: when --lane &lt;substring&gt; is passed, Steps whose
+    /// name does not contain it are skipped; without the switch every Step runs exactly as before and the
+    /// output is unchanged (the filter prints nothing when it is inactive). It exists because this harness
+    /// stops at the first failing Step, so a red lane hides every lane after it - collecting a flip list or
+    /// re-cutting one lane used to require a full-tree run.
+    /// </summary>
+    private static string? laneFilter;
+
+    private static int ran;
+    private static int skipped;
+
+    private static int Main(string[] args)
     {
+        // The stub harness names [0Harmony] only through the mod singleton's static field type; the
+        // real library is not shipped with the test stubs, so the assembly probe answers with the
+        // stub assembly that declares the minimum HarmonyLib surface (VerseStubs.HarmonyLib.cs).
+        // Nothing patches methods here - the type just has to LOAD for a class initializer to run.
+        AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            args.Name != null && args.Name.StartsWith("0Harmony", StringComparison.Ordinal)
+                ? typeof(UniversalSqueakerMod).BaseType!.Assembly
+                : null;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], "--lane", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                laneFilter = args[i + 1];
+            }
+            else if (args[i].StartsWith("--lane=", StringComparison.OrdinalIgnoreCase))
+            {
+                laneFilter = args[i].Substring("--lane=".Length);
+            }
+        }
+
+        if (laneFilter != null)
+        {
+            Console.WriteLine("[lane-filter] --lane " + laneFilter + " (inactive by default; no lane semantics changed)");
+        }
+
         try
         {
             RunAll();
+
+            // A filter that matched nothing must not report success: zero lanes run is an empty-enumeration
+            // pass, and this project refuses that shape everywhere else.
+            if (laneFilter != null)
+            {
+                Console.WriteLine("[lane-filter] ran=" + ran + " skipped=" + skipped);
+                if (ran == 0)
+                {
+                    Console.Error.WriteLine("FAIL: --lane '" + laneFilter + "' matched no Step; refusing to"
+                        + " report success for a run that executed nothing.");
+                    return 1;
+                }
+            }
+
             Console.WriteLine("ALL PASS");
             return 0;
         }
@@ -74,8 +121,10 @@ internal static class Program
             // below the first InnerException and used to be invisible to whoever read the console.
             Exception? inner = ex.InnerException;
             int depth = 0;
+            Exception? deepest = ex;
             while (inner != null && depth < 8)
             {
+                deepest = inner;
                 string label = depth == 0 ? "INNER" : "INNER-" + (depth + 1);
                 Console.Error.WriteLine(label + ": " + inner.GetType().FullName);
                 try
@@ -91,12 +140,35 @@ internal static class Program
                 depth++;
             }
 
+            // The deepest cause's stack names the throwing frame - the type-load chains here hide the
+            // real caller behind two reflection wrappers.
+            try
+            {
+                Console.Error.WriteLine("DEEPEST-STACK: " + deepest?.StackTrace);
+            }
+            catch (Exception stackError)
+            {
+                Console.Error.WriteLine("DEEPEST-STACK-UNPRINTABLE: " + stackError.GetType().FullName);
+            }
+
             return 1;
         }
     }
 
     private static void Step(string name, Action action)
     {
+        if (laneFilter != null && name.IndexOf(laneFilter, StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            skipped++;
+            return;
+        }
+
+        if (laneFilter != null)
+        {
+            ran++;
+            Console.WriteLine("[lane] " + name);
+        }
+
         try
         {
             action();
@@ -116,12 +188,35 @@ internal static class Program
         Step("unknown attribute fails at creation", UnknownAttributeFailsAtCreation);
         Step("typed bindings route to business boundary", TypedBindingsRouteToBusinessBoundary);
         Step("full typed write coverage", FullTypedWriteCoverage);
+        Step("baby eligibility uses the production metadata denominator", () =>
+        {
+            Assert(SqueakActionDefinitions.EligibleCount(false) == 15 && SqueakActionDefinitions.EligibleCount(true) == 17,
+                "coverage denominator follows the same opt-in");
+            Assert(!SqueakActionDefinitions.IsEligible(SqueakAction.Crying, false)
+                && !SqueakActionDefinitions.IsEligible(SqueakAction.Giggling, false)
+                && SqueakActionDefinitions.IsEligible(SqueakAction.MentalBreak, false), "baby gate leaves true breaks alone");
+        });
+        Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
+        Step("the pack-card result: projection, identities, channels and empties (US-PACK1)", () => PackCardsLaneTests.RunAll());
+        Step("the dissolved trigger-timing composite is declarative and retired (S4-3)", () => DeclarativeTimingLaneTests.RunAll());
+        Step("the dissolved distance attenuation composite is declarative and retired (S4-3b)", () => DeclarativeAttenuationLaneTests.RunAll());
+        Step("the dissolved diagnostics composite is declarative and retired (T3-2)", () => DeclarativeDiagnosticsLaneTests.RunAll());
+        Step("flat (borderless) style scope (S6-2/S6-3)", () => FlatStyleLaneTests.RunAll());
+        Step("palette guard: flat pairs + ink contrast (S6-3)", () => PaletteLaneTests.RunAll());
+        Step("US section header: gold rail, no bottom rule (S6-3)", () => UsSectionHeaderLaneTests.RunAll());
+        Step("the selected domain row paints a fill and a 3px rail (T21)", () => UsSelectionSurfaceLaneTests.RunAll());
+        Step("US switch: the shared boolean kind's drawn relations (R2)", () => UsSquareToggleLaneTests.RunAll());
+        Step("US palette contract: colour-only, session-safe, missing vs transparent (R2)", () => UsPaletteLaneTests.RunAll());
         Step("three viewport measure + draw", ThreeViewportMeasureAndDraw);
         Step("five workspaces across viewports", FiveWorkspacesAcrossViewports);
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
         Step("rich dynamic data measure + draw", RichDynamicDataMeasureAndDraw);
-        Step("800px three-column mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
-        Step("retractable right-side help drawer", () => HelpDrawerLaneTests.RunAll());
+        Step("preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
+        Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
+        Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
+        Step("US-ESC1/US-UI1 tree cancel layers + F06/F07 on the live page (FL-IC2)", () => CancelLayerLaneTests.RunAll());
+        Step("equal-weight Remix double confirmation (SA1.3)", () => RemixConfirmationLaneTests.RunAll());
+        Step("VF1 r5 confirmation window: real shell, audit lifecycle, one answer", () => ConfirmWindowLaneTests.RunAll());
         Step("diagnostic row + navigation card geometry", () => SettingsGeometryLaneTests.RunAll());
         Step("session popup isolation + cleanup", SessionPopupIsolationAndCleanup);
         Step("disposed host cannot draw", DisposedHostCannotDraw);
@@ -132,17 +227,22 @@ internal static class Program
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
         Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
-        Step("wrapping Packs layer text grows both layer cards", WrappingDomainTextGrowsLayerRows);
+        Step("wrapping Packs domain text grows the card row that shows it", WrappingDomainTextGrowsTheCardRow);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
+        Step("a scope option commits its typed value, never its label (R4-A)", TypedScopeChoiceCommitsTheValue);
         Step("long author filter truncates the display and writes the raw token", LongAuthorFilterTruncatesTheDisplayOnly);
         Step("a popup overflow report carries the owner's element identity", PopupOverflowReportCarriesElementIdentity);
         Step("popup width follows the widest option then the viewport", PopupWidthFollowsWidestOptionThenViewport);
-        Step("inspector column width comes from the manifest", InspectorColumnWidthComesFromTheManifest);
+        Step("help panel height comes from the manifest", HelpPanelHeightComesFromTheManifest);
         Step("prerequisite range tracks the compiled FerriteLib Api", PrerequisiteRangeTracksCompiledApi);
         Step("live filter write lays out identical to a fresh filtered host", FilterWriteLaysOutIdenticalToFreshFilteredHost);
         Step("control hover claims help through real pointer passes", HoverClaimsHelpThroughRealPointerPasses);
         Step("distance card draws its bands filled and disjoint", DistanceCardBandsFillTheMeasuredCard);
-        Step("every display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
+        // The single-key lane runs FIRST on purpose: it is the mutation proof for the active-tab bump, and a
+        // mutation that removes that bump must redden a step NAMED for it rather than being absorbed by the
+        // enumeration lane below (which drives the same key as one of its 46).
+        Step("the engine tab binding is a display write (active-tab bump)", ActiveTabWriteAdvancesSharedRevision);
+        Step("every registered display write advances the shared revision clock", DisplayWriteAdvancesSharedRevision);
         Step("hover claims release to the overview only after the D10 grace window", HelpHoverClaimReleasesOnlyAfterGraceWindow);
         Step("overlay show/hide/dispose/reopen", OverlayShowHideDisposeReopen);
         Step("overlay no-map safe exit", OverlayNoMapSafeExit);
@@ -151,6 +251,18 @@ internal static class Program
         Step("width + language layout evidence sweep (1024/736/480/320, EN/ZH)", WidthAndLanguageEvidenceSweep);
         Step("diagnostics panel lane (round-9 contract)", () => DiagnosticsPanelLaneTests.RunAll());
         Step("US surface table + the two accent convergence points", () => UsSurfaceLaneTests.RunAll());
+        Step("per-host audit routing and ruler isolation (FL-20)", () => UsAuditRoutingLaneTests.RunAll());
+        Step("page frame geometry guard (5 viewports x EN/ZH x help open x workspace)", () => FrameGeometryLaneTests.RunAll());
+        Step("the global-volume caption band is measured (U1)", () => GlobalVolumeBandLaneTests.RunAll());
+        Step("V4 Distance/Presets/help/footer at the real boxes", () => V4RemainingLaneTests.RunAll());
+        Step("RPT1 report button feedback: real reason, generated pass, real page boxes",
+            () => ReportFeedbackLaneTests.RunAll());
+        Step("XG1 empty xenotype tuning target: reason, blocked submits, real boxes",
+            () => XenotypeEmptyTargetLaneTests.RunAll());
+        Step("PRE1/Tuning action multipliers: real writer to real fold round trip",
+            () => TuningMultiplierLaneTests.RunAll());
+        Step("US-RESET1 UI: ceremony, direct entries, scope naming, draft integration",
+            () => ResetUiLaneTests.RunAll());
     }
 
     /// <summary>
@@ -167,17 +279,16 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
         host.Bindings.Invoke("set-tab", "Tuning");
-        // The covered element this lane asserts against is the help panel, which only exists while the
-        // drawer is expanded (the shipped default is retracted).
+        // The covered element this lane asserts against is the help panel, which only exists while help
+        // is open (the shipped default is retracted).
         host.Bindings.Set("help-open", true);
         Rect viewport = new(0f, 0f, 800f, 600f);
         host.DrawChecked(viewport);
 
-        // Anchor low enough that two or more option rows cannot fit below it (the composite popup must
-        // flip above the trigger, the same branch the reported click loss exercised) and far enough
-        // right that the popup lands over a second widget: the yield rule below needs a node the popup
-        // really covers. The real page hands the trigger's own rect in; injecting the anchor is what
-        // lets this lane choose what sits underneath.
+        // Deliberately stale seed: the composite must replace it with its drawn trigger's live anchor.
+        // This lane no longer teleports the popup over another widget to force a flip. FL owns the
+        // independent below/flip/clamp geometry lanes; here we assert publication, live attachment and
+        // dispatch for a covered point through the actual production composite.
         Rect anchor = new(620f, 560f, 120f, 22f);
         string? publishedBy = null;
         Rect popup = default;
@@ -203,8 +314,12 @@ internal static class Program
             "composite popup height must be a whole number of option rows: " + popup.height);
         Assert(popup.y >= -0.01f && popup.yMax <= 600f + 0.01f,
             "composite popup must stay inside the host viewport: " + popup);
-        Assert(Math.Abs(popup.yMax - anchor.y) < 0.01f,
-            "a composite popup that cannot fit below its anchor must flip above it: " + popup);
+        Rect? liveAnchor = host.Session.OpenPopupAnchor;
+        Assert(liveAnchor.HasValue && Math.Abs(liveAnchor.Value.y - anchor.y) > 0.01f,
+            "the composite must replace the stale opening anchor with its actual trigger");
+        Assert(liveAnchor.HasValue && (Math.Abs(popup.y - liveAnchor.Value.yMax) < 0.01f
+            || Math.Abs(popup.yMax - liveAnchor.Value.y) < 0.01f),
+            "the composite popup must attach immediately below or above its live trigger");
 
         // 0.4.0 replaced the single published popup rect with the owned hit stack: UiPopup pushes a
         // popup layer and dispatch consults it topmost-first (UiSession.IsPointerOverHigherLayer).
@@ -226,8 +341,19 @@ internal static class Program
             "a popup layer must make a covered element yield the click (owned hit stack)");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, outside),
             "the yield predicate must not fire outside the popup");
-        Assert(!host.Session.IsPointerOverHigherLayer(owner!, inside),
-            "the popup's own trigger keeps the click, which is what preserves toggle-to-close");
+        // FL-IC1 (frozen d5af4d8) RETIRED the owner-id exemption: coverage is geometric for every
+        // caller, "the popup owner's identity is not a licence over the whole covering area"
+        // (INTERACTION-CONVERGENCE-TASKS §3.1). So a point INSIDE the covering menu now outranks even
+        // the owner's own trigger - the overlap the old exemption kept was the reported defect - and
+        // toggle-to-close lives on where the menu does NOT cover: an uncovered press still reaches the
+        // trigger, which the dropdown's own seam then routes to close. The 3-arg overload survives as
+        // public surface that ignores the id; the lane reads the two-arg truth instead of pinning the
+        // retired licence.
+        Assert(host.Session.IsPointerOverHigherLayer(owner!, inside),
+            "the covering menu wins the in-menu point over its own trigger - the retired exemption "
+            + "must not come back through a sibling of the composite");
+        Assert(!host.Session.IsPointerOverHigherLayer(owner!, outside),
+            "an uncovered point keeps reaching the owner - that is where toggle-to-close lives now");
 
         // The layer is per-frame state: a second frame must republish it, and closing must drop it so a
         // stale layer cannot shadow later clicks (the dispatch stack is read one pass after the close).
@@ -238,6 +364,126 @@ internal static class Program
         Assert(!TryGetPopupHitLayer(host.Session, out _), "a closed composite popup must leave no popup layer");
         Assert(!host.Session.IsPointerOverHigherLayer(covered!, inside),
             "a closed popup must stop shadowing the elements it covered");
+    }
+
+    /// <summary>
+    /// R4-A / A2: the action-scope dropdown commits the option's TYPED value through
+    /// <c>set-action-scope</c> / <see cref="UsScopeWrite"/>. Driven through the real composite: the real
+    /// popup, a real pointer press on a real option row.
+    /// <list type="bullet">
+    /// <item>a row that owns no scope commits <b>null</b> - the value is not "whatever parses", and a
+    /// default scope would be a silent change of the player's setting;</item>
+    /// <item>a chosen scope arrives as the enum instance, and the label that was displayed is a different
+    /// string, so a commit that took the displayed text would red here;</item>
+    /// <item>the label/identity pair itself carries the separation: the option's text is the US key while
+    /// its value is the scope, which is what "display label separate from typed value" means.</item>
+    /// </list>
+    /// </summary>
+    private static void TypedScopeChoiceCommitsTheValue()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        host.Bindings.Set("help-open", false);
+        Rect viewport = new(0f, 0f, 800f, 600f);
+        host.DrawChecked(viewport);
+
+        // The fixture's Eat row is AnyOccurrence, so the press below is a real change; if that ever moves,
+        // the lane must say so rather than pass on a no-op commit.
+        Assert(fake.LastActionScope == null, "the lane starts from a clean commit record");
+
+        SqueakActionScope? committed = ClickScopeOption(host, fake, viewport, "Eat", SqueakActionScope.Disabled);
+        Assert(committed == SqueakActionScope.Disabled,
+            "a chosen scope option must commit the real enum instance, got "
+            + (committed.HasValue ? committed.Value.ToString() : "null"));
+        Assert(fake.LastActionKey == "Eat" && fake.LastActionScope == SqueakActionScope.Disabled,
+            "and it must arrive at SetActionScope unchanged");
+
+        committed = ClickScopeOption(host, fake, viewport, "Draft", null);
+        Assert(committed == null,
+            "a row with no own scope must commit null (inherit), not a default scope - got "
+            + (committed.HasValue ? committed.Value.ToString() : "null"));
+        Assert(fake.LastActionKey == "Draft" && fake.LastActionScope == null,
+            "and the Draft setter must actually receive null");
+
+        // A press that misses the option list must not write anything: the typed path is not a wider target
+        // than the row hit rule was.
+        PressScopePopup(host, fake, viewport, "Draft", out Rect missed);
+        Assert(fake.LastActionKey == null && fake.LastActionScope == null,
+            "a press outside the option list must not commit any scope ("
+            + missed + " is outside the popup)");
+    }
+
+    /// <summary>
+    /// Opens one scope popup and presses a point just below its last row. Returns the popup rect for the
+    /// failure message, so "the press missed" is stated in geometry rather than assumed.
+    /// </summary>
+    private static void PressScopePopup(
+        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, out Rect popup)
+    {
+        fake.LastActionScope = null;
+        fake.LastActionKey = null;
+        host.Session.ClosePopup();
+        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport);
+        Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
+            "the " + actionKey + " scope dropdown must publish its popup layer");
+        popup = layer.Rect;
+
+        Vector2 missedPoint = new(popup.x + popup.width / 2f, popup.yMax + 8f);
+        DrawWithEvent(host, viewport, EventType.MouseDown, missedPoint);
+        DrawWithEvent(host, viewport, EventType.MouseUp, missedPoint);
+    }
+
+    /// <summary>
+    /// Presses the real scope dropdown for one action and reports what it committed. The current value of
+    /// the row is deliberately NOT the target, so the press is a real change under test.
+    /// </summary>
+    private static SqueakActionScope? ClickScopeOption(
+        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, SqueakActionScope? target)
+    {
+        // The option list the widget builds: Auto (null) first, then the action's supported states. Locating
+        // the target the same way the widget does keeps the ROW index honest without this lane re-deriving
+        // the filtering rule.
+        var states = new List<SqueakActionScope>();
+        foreach (SqueakActionScope scope in new[]
+                 { SqueakActionScope.Disabled, SqueakActionScope.AnyOccurrence, SqueakActionScope.ActiveCommand })
+        {
+            if (SqueakActionDefinitions.NormalizeScope(TestActionOf(actionKey), scope) == scope) states.Add(scope);
+        }
+
+        int row = 0;
+        if (target.HasValue)
+        {
+            row = states.IndexOf(target.Value) + 1;
+            Assert(row > 0, "the target scope must be an allowed option for " + actionKey);
+        }
+
+        fake.LastActionScope = null;
+        fake.LastActionKey = null;
+        host.Session.ClosePopup();
+        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        host.DrawChecked(viewport);
+
+        Assert(Program.TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
+            "the " + actionKey + " scope dropdown must publish its popup layer");
+        Assert(layer.Rect.height >= (row + 1) * UiPopup.OptionHeight - 0.01f,
+            "the popup must hold the row this press targets (row " + row + " of " + layer.Rect.height + "px)");
+
+        Vector2 press = new(layer.Rect.x + layer.Rect.width / 2f,
+            layer.Rect.y + row * UiPopup.OptionHeight + UiPopup.OptionHeight / 2f);
+        DrawWithEvent(host, viewport, EventType.MouseDown, press);
+        DrawWithEvent(host, viewport, EventType.MouseUp, press);
+
+        return fake.LastActionScope;
+    }
+
+    /// <summary>The fixture rows' actions, by key, for the supported-states lookup.</summary>
+    private static SqueakAction TestActionOf(string actionKey)
+    {
+        return actionKey == "Draft" ? SqueakAction.Draft : SqueakAction.Eat;
     }
 
     /// <summary>
@@ -444,9 +690,9 @@ internal static class Program
     /// ruling 2026-09-15) put a consumer-side cut in front of that loop: <see cref="UsFilterBarWidget"/>
     /// truncates every option DISPLAY at half the settings window, so the popup follows the truncated
     /// label rather than the raw one. Each clause turns this lane red on its own:
-    /// (1) floor - every option fits the 143px trigger column, so the popup keeps exactly that width;
-    /// (2) growth - two option texts that both survive the cut (20 vs 50 characters) differ by exactly the
-    ///     measured 240px, and the shorter popup is exactly its label plus 12px;
+    /// (1) floor - short options keep the actual drawn trigger width, not an injected opening width;
+    /// (2) growth - two texts wider than the measured trigger and below the cut differ by exactly their
+    ///     measured text-width delta, and the shorter popup is exactly its label plus 12px;
     /// (3) truncation - a 200-character author and the longest author that still fits the cap draw the
     ///     SAME popup width, which fits the cap; a popup that follows the raw label fails here;
     /// (4) viewport cap - driven by pinning the screen so half the settings window reaches the viewport.
@@ -454,7 +700,9 @@ internal static class Program
     ///     truncation is what removed this clause's natural trigger; the carrier's UI stub documents
     ///     itself as the pin a lane uses, and the clause stays armed through it rather than being deleted.
     /// The option text is not the interesting part: the pack-filter authors are display == value, so the
-    /// lane can state each width as an exact number instead of a lower bound.
+    /// lane can state each width as an exact number instead of a lower bound. After the live-anchor
+    /// fixture re-cut, retaining the trigger width instead of growing it was run and reddened clause (2).
+    /// The floor/truncation/cap clauses remain guards; their mutations were not rerun in this batch.
     /// </summary>
     private static void PopupWidthFollowsWidestOptionThenViewport()
     {
@@ -464,27 +712,26 @@ internal static class Program
         float perChar = stub.MeasureWidth("A", UiFont.Small);
         Assert(perChar > 0f, "the stub must measure a character, or every width clause below is vacuous");
         float cap = OptionDisplayCap();
-        Assert(cap > anchor.width,
-            "the truncation cap must leave the growth clause a range above the trigger floor: cap=" + cap);
-
-        float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, anchor, viewport);
+        float floorWidth = DrawnPopupWidth(new[] { "a" }, stub, ref anchor, viewport);
         Assert(Math.Abs(floorWidth - anchor.width) < 0.01f,
             "an option list that fits its trigger must keep the trigger width as the popup floor: "
             + floorWidth + " vs anchor " + anchor.width);
 
         // Both samples have to survive the F5 cut, or this clause silently re-tests the truncation clause.
-        string twenty = new('A', 20);
-        string fifty = new('A', 50);
-        Assert(20f * perChar <= cap && 50f * perChar <= cap,
+        int shortChars = Math.Max(20, (int)Math.Ceiling(anchor.width / perChar) + 1);
+        int longChars = Math.Max(50, shortChars + 1);
+        string twenty = new('A', shortChars);
+        string fifty = new('A', longChars);
+        Assert(shortChars * perChar <= cap && longChars * perChar <= cap,
             "the growth clause needs both option texts under the truncation cap (" + cap + "): the stub screen moved");
-        float twentyWidth = DrawnPopupWidth(new[] { twenty }, stub, anchor, viewport);
-        float fiftyWidth = DrawnPopupWidth(new[] { fifty }, stub, anchor, viewport);
-        Assert(Math.Abs(twentyWidth - (20f * perChar + 12f)) < 0.01f,
+        float twentyWidth = DrawnPopupWidth(new[] { twenty }, stub, ref anchor, viewport);
+        float fiftyWidth = DrawnPopupWidth(new[] { fifty }, stub, ref anchor, viewport);
+        Assert(Math.Abs(twentyWidth - (shortChars * perChar + 12f)) < 0.01f,
             "the popup must be exactly the widest label plus the 6px-per-side row padding: "
-            + twentyWidth + " vs " + (20f * perChar + 12f));
-        Assert(Math.Abs(fiftyWidth - twentyWidth - 30f * perChar) < 0.01f,
-            "30 more characters of option text must widen the popup by exactly 30 measured characters: "
-            + (fiftyWidth - twentyWidth) + " vs " + (30f * perChar));
+            + twentyWidth + " vs " + (shortChars * perChar + 12f));
+        Assert(Math.Abs(fiftyWidth - twentyWidth - (longChars - shortChars) * perChar) < 0.01f,
+            "extra option characters must widen the popup by exactly their measured width: "
+            + (fiftyWidth - twentyWidth) + " vs " + ((longChars - shortChars) * perChar));
 
         // The longest label that still fits the cap, and one far past it: both are cut to the same display,
         // so both popups are that display plus the row padding, and neither follows the raw label.
@@ -495,8 +742,8 @@ internal static class Program
             "the reference label must still fit the truncation cap");
         Assert(stub.MeasureWidth(overCap, UiFont.Small) > cap,
             "the truncation clause needs a label wider than the cap, or it asserts nothing");
-        float fitsWidth = DrawnPopupWidth(new[] { justFits }, stub, anchor, viewport);
-        float overCapWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+        float fitsWidth = DrawnPopupWidth(new[] { justFits }, stub, ref anchor, viewport);
+        float overCapWidth = DrawnPopupWidth(new[] { overCap }, stub, ref anchor, viewport);
         Assert(Math.Abs(overCapWidth - fitsWidth) < 0.01f,
             "an over-cap option must draw the same popup width as the longest option that fits the cap: "
             + overCapWidth + " vs " + fitsWidth);
@@ -520,7 +767,7 @@ internal static class Program
             float viewportCap = OptionDisplayCap();
             Assert(viewportCap >= viewport.width,
                 "the viewport clause needs the truncation cap at or above the viewport: " + viewportCap);
-            float cappedWidth = DrawnPopupWidth(new[] { overCap }, stub, anchor, viewport);
+            float cappedWidth = DrawnPopupWidth(new[] { overCap }, stub, ref anchor, viewport);
             Assert(Math.Abs(cappedWidth - viewport.width) < 0.01f,
                 "a popup wider than its viewport must be capped at the viewport width: "
                 + cappedWidth + " vs " + viewport.width);
@@ -541,7 +788,7 @@ internal static class Program
     {
         return Math.Max(
             UsFilterBarWidget.MinOptionDisplayWidth,
-            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
+            WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
     }
 
     /// <summary>
@@ -550,7 +797,7 @@ internal static class Program
     /// through the carrier's faithful stub (hot-control capture on down, activation on up), which is what
     /// makes "which value did the row actually write" observable.
     /// </summary>
-    private static void DrawWithEvent(UiHost host, Rect viewport, EventType type, Vector2 pointer)
+    internal static void DrawWithEvent(UiHost host, Rect viewport, EventType type, Vector2 pointer)
     {
         Event e = Event.KeyboardEvent("dummy");
         e.type = type;
@@ -573,7 +820,7 @@ internal static class Program
     /// <see cref="UiHitLayer.IsPopup" /> - the rule reads back the rect the popup was actually drawn with,
     /// not a width this lane recomputed).
     /// </summary>
-    private static float DrawnPopupWidth(string[] authors, StubMetrics stub, Rect anchor, Rect viewport)
+    private static float DrawnPopupWidth(string[] authors, StubMetrics stub, ref Rect anchor, Rect viewport)
     {
         var fake = new RecordingSettingsSource { RichData = true, Authors = authors };
         using UiHost host = UsKernelSettingsHost.Create(fake, stub);
@@ -585,57 +832,75 @@ internal static class Program
         host.DrawChecked(viewport);
         Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
             "an open pack-filter dropdown must publish its popup layer (authors: " + string.Join(",", authors) + ")");
+        Assert(host.Session.OpenPopupAnchor.HasValue, "the drawn popup must have a live owner anchor");
+        anchor = host.Session.OpenPopupAnchor!.Value;
         return layer.Rect.width;
     }
 
     /// <summary>
-    /// The inspector column is 176px as a manifest declaration, not as something the help widget reports
-    /// about itself (maintainer ruling on the lab window model: rail 148 / work flexible / inspector 176 /
-    /// footer 24). Three claims, because a declaration that nothing reads is not a width:
-    /// (1) the manifest declares Width 176 on the inspector column and declares no width on the help
-    ///     widget - the widget's vocabulary (Id/Kind/Tab/Hidden) refuses one at creation, and a widget that
-    ///     measured its own width would bury this responsive decision in the control;
-    /// (2) the arranged snapshot carries 176 at all three shipped viewports;
-    /// (3) the drawn node for the column carries 176 too, so the width a pass actually drew is the
-    ///     declared one rather than a number this lane recomputed from the manifest.
-    /// Re-declaring 232 (or 148/240) turns this step red at the declaration and again at the drawn rect;
-    /// the mutation this exists for is exactly a width that stops being a layout fact.
+    /// The bottom help panel's reserved HEIGHT (BH1) is a manifest declaration, not a number this lane
+    /// invents and not something the help widget reports about itself. Three claims, in the shape the
+    /// retired inspector-column lane used, because a declaration nothing reads is not a layout fact:
+    /// (1) the manifest declares Height 140 on the help-scroll Scroll, declares NO Height on the help
+    ///     WIDGET (the widget's vocabulary would refuse one anyway) and does not ask the band to Fill -
+    ///     UiLayoutEngine.IsFlexibleFill refuses a Fill child that also pins a Height, and that refusal is
+    ///     what keeps the footer inside the page;
+    /// (2) the arranged snapshot hands the band exactly the declared height at every shipped page box;
+    /// (3) the drawn node carries it too, so what a pass drew is what the page declared.
+    /// Re-declaring the number here (or moving it onto the widget, or turning the band into a Fill child)
+    /// reddens this step at the declaration and again at the drawn rect. The mutation it exists for is a
+    /// reservation that stops being a layout fact.
     /// </summary>
-    private static void InspectorColumnWidthComesFromTheManifest()
+    private static void HelpPanelHeightComesFromTheManifest()
     {
         string manifestPath = Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
         System.Xml.Linq.XDocument manifest = System.Xml.Linq.XDocument.Load(manifestPath);
-        System.Xml.Linq.XElement? column = manifest.Descendants()
+        System.Xml.Linq.XElement? band = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-scroll");
-        Assert(column != null, "the manifest must declare the inspector column (help-scroll)");
-        Assert((string?)column!.Attribute("Width") == "176",
-            "the inspector column width must stay a manifest declaration of 176, got '"
-            + ((string?)column.Attribute("Width") ?? "(none)") + "' in " + manifestPath);
+        Assert(band != null, "the manifest must declare the bottom help panel band (help-scroll)");
+        string declared = (string?)band!.Attribute("Height") ?? "(none)";
+        Assert(declared == "140",
+            "the help band's height must stay a manifest declaration of 140 (the 120-160 budget the BH1"
+            + " proposal allowed), got '" + declared + "' in " + manifestPath);
+        Assert((string?)band.Attribute("Fill") != "true",
+            "the reserved band must not also ask to Fill: the engine refuses a Fill child with a fixed"
+            + " Height, and the footer would then leave the page");
+        Assert((string?)band.Attribute("VisibleKey") == "help-open",
+            "the band must be toggled by the ONE player-intent key, got '"
+            + ((string?)band.Attribute("VisibleKey") ?? "(none)") + "'");
         System.Xml.Linq.XElement? panel = manifest.Descendants()
             .FirstOrDefault(e => (string?)e.Attribute("Id") == "help-panel");
         Assert(panel != null, "the manifest must declare the help panel widget");
-        Assert(panel!.Attribute("Width") == null,
-            "the help widget must not declare its own width: the column owns that layout fact");
+        Assert(panel!.Attribute("Height") == null,
+            "the help widget must not declare its own height: the band owns that layout fact");
 
+        float height = float.Parse(declared, System.Globalization.CultureInfo.InvariantCulture);
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
-        // The inspector column only exists while the drawer is expanded, and the shipped default is
-        // retracted, so the lane expands it explicitly before it measures the declared width.
+        // The band only exists while help is open, and the shipped default is retracted, so the lane
+        // expands it explicitly before it measures the declared reservation.
         host.Bindings.Set("help-open", true);
-        foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })
+        // The first two boxes are what the shell actually hands the page at the game's minimum (1024x768)
+        // and at 1920x1080 - BH1 makes the help state irrelevant to both. The third is a SYNTHETIC short
+        // box that proves the reservation is a declared height rather than a share of the page.
+        foreach (Vector2 pageBox in new[] { new Vector2(760f, 524f), new Vector2(920f, 644f), new Vector2(760f, 320f) })
         {
-            UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+            UiLayoutSnapshot snapshot = host.MeasureAndArrange(pageBox);
             Assert(snapshot.RectById.TryGetValue("help-scroll", out Rect arranged),
-                "no arranged inspector column at " + viewport);
-            Assert(Math.Abs(arranged.width - 176f) < 0.01f,
-                "the arranged inspector column must be the declared 176 at " + viewport + ": " + arranged.width);
+                "no arranged help band at the page box " + pageBox);
+            Assert(Math.Abs(arranged.height - height) < 0.01f,
+                "the arranged help band must be the declared " + height + " at " + pageBox + ": " + arranged.height);
+            Assert(snapshot.RectById.TryGetValue("footer-band", out Rect footer)
+                    && arranged.yMax <= footer.y + 0.01f && footer.yMax <= pageBox.y + 0.01f,
+                "the help band must sit above the footer band and the footer must stay inside the page at "
+                + pageBox + ": band=" + arranged + " footer=" + footer);
 
-            host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+            host.DrawChecked(new Rect(0f, 0f, pageBox.x, pageBox.y));
             UiNode? drawn = host.Session.GetNodeByElementId("help-scroll");
-            Assert(drawn != null, "the drawn pass must carry the inspector column node at " + viewport);
+            Assert(drawn != null, "the drawn pass must carry the help band node at " + pageBox);
             Rect drawnRect = drawn!.Rect ?? default;
-            Assert(Math.Abs(drawnRect.width - 176f) < 0.01f,
-                "the drawn inspector column must be the declared 176 at " + viewport + ": " + drawnRect.width);
+            Assert(Math.Abs(drawnRect.height - height) < 0.01f,
+                "the drawn help band must be the declared " + height + " at " + pageBox + ": " + drawnRect.height);
         }
     }
 
@@ -706,7 +971,7 @@ internal static class Program
             new Rect(0f, 0f, 1129f, 600f),
             new Rect(0f, 0f, 1280f, 720f),
         };
-        string[] ids = { "filter-bar", "race-layer", "xenotype-layer", "checklist", "footer" };
+        string[] ids = { "filter-bar", "packs-filter", "packs-results", "checklist", "footer" };
 
         foreach (Rect viewport in viewports)
         {
@@ -808,7 +1073,7 @@ internal static class Program
         using UiHost claimedHost = UsKernelSettingsHost.Create(claimedFake, new StubMetrics());
         claimedHost.Session.ClaimHover("us/page-title/apply");
         claimedHost.Bindings.Invoke("set-tab", "Overview");
-        // The help panel is the probe surface; the shipped drawer default is retracted, so both hosts
+        // The help panel is the probe surface; the shipped help default is retracted, so both hosts
         // must expand it before the panel exists to measure.
         claimedHost.Bindings.Set("help-open", true);
         float claimedHeight = claimedHost.MeasureAndArrange(new Vector2(1280f, 720f)).RectById["help-panel"].height;
@@ -879,21 +1144,31 @@ internal static class Program
     }
 
     /// <summary>
-    /// D1/D6 contract lane. The production view cache and the layout cache share ONE clock (the
-    /// session content revision, wired by AttachRevisionSource after 2026-09-04d); any write that
-    /// changes what the page displays must advance it, or the cache serves the pre-write
-    /// projection until some unrelated bumping write lands - exactly the "click does nothing until
-    /// a workspace switch" report from the 2026-09-05 acceptance round. The fake carries a
-    /// revision-gated cache (RecordingSettingsSource.RevisionSource) mirroring production; this
-    /// lane drives each display-write binding and asserts (1) the clock moved and (2) the very
-    /// next BuildView rebuilds instead of hitting the cache. Every key whose value flows back to
-    /// the screen belongs in this list. The visible read-back flip stays a production-only
-    /// property (the fake returns a constant view); FullTypedWriteCoverage pins write routing.
+    /// D1/D6 contract lane, REGISTRY-DRIVEN since 2026-09-24. The production view cache and the layout
+    /// cache share ONE clock (the session content revision, wired by AttachRevisionSource after
+    /// 2026-09-04d); any write that changes what the page displays must advance it, or the cache serves
+    /// the pre-write projection until some unrelated bumping write lands - exactly the "click does
+    /// nothing until a workspace switch" report from the 2026-09-05 acceptance round. The fake carries a
+    /// revision-gated cache (RecordingSettingsSource.RevisionSource) mirroring production; this lane
+    /// drives each display-write binding and asserts (1) the clock moved and (2) the very next BuildView
+    /// rebuilds instead of hitting the cache.
+    ///
+    /// The key set is NOT a list in this file any more. The host records every write registration in
+    /// UsWriteBindings, and this lane enumerates that registry. US-PACK1 re-cut the count: the page-level
+    /// toggle-pack, the two per-list searches and the two per-card Clears retired with the browse/checklist
+    /// lists, and cancel-pack-results joined the literals; the three item-scoped families are now the card's
+    /// toggle/enabled/select trio (measured on this tree: 42 distinct registry keys). The probe table below is
+    /// asserted EQUAL to the registry IN BOTH DIRECTIONS, so a new write binding with no probe, and a probe
+    /// for a key the host no longer registers, both fail here BY NAME instead of silently shrinking
+    /// coverage - which is the state the hand-list was in (it covered 21 of the 45 sites).
+    /// The visible read-back flip stays a production-only property (the fake returns a constant view);
+    /// FullTypedWriteCoverage pins write routing.
     /// </summary>
     private static void DisplayWriteAdvancesSharedRevision()
     {
         var fake = new RecordingSettingsSource { RichData = true };
-        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        UsWriteBindings writes;
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics(), out writes);
         fake.RevisionSource = () => host.Session.ContentRevision;
 
         void AssertBumped(string key, Action write)
@@ -911,26 +1186,224 @@ internal static class Program
                 key + ": the new revision must rebuild the view, not serve the cached projection");
         }
 
-        AssertBumped("mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled));
-        AssertBumped("global-volume", () => host.Bindings.Set("global-volume", 0.42f));
-        AssertBumped("allow-eggs", () => host.Bindings.Set("allow-eggs", false));
-        AssertBumped("scale-cooldown", () => host.Bindings.Set("scale-cooldown", false));
-        AssertBumped("scale-talking", () => host.Bindings.Set("scale-talking", false));
-        AssertBumped("scale-population", () => host.Bindings.Set("scale-population", true));
-        AssertBumped("camera-indicator", () => host.Bindings.Set("camera-indicator", false));
-        AssertBumped("toggle-egg", () => host.Bindings.Invoke("toggle-egg", false));
-        AssertBumped("toggle-scale-cooldown", () => host.Bindings.Invoke("toggle-scale-cooldown", false));
-        AssertBumped("toggle-scale-talking", () => host.Bindings.Invoke("toggle-scale-talking", false));
-        AssertBumped("toggle-scale-population", () => host.Bindings.Invoke("toggle-scale-population", true));
-        AssertBumped("toggle-camera-indicator", () => host.Bindings.Invoke("toggle-camera-indicator", false));
-        AssertBumped("set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative));
-        AssertBumped("attenuation-point", () => host.Bindings.Invoke("attenuation-point", new FerriteLib.UiKit.Kernel.UiChartPointChange(2, 0.7f, 0f)));
-        AssertBumped("min-interval", () => host.Bindings.Set("min-interval", 300));
-        AssertBumped("cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f));
-        AssertBumped("dev-logging", () => host.Bindings.Set("dev-logging", SqueakDevLoggingMode.Enabled));
-        AssertBumped("localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true));
-        AssertBumped("set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)));
-        AssertBumped("set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)));
+        // The three item-scoped families register while the Packs workspace is measured AND drawn (each
+        // projection registers exactly the rows its own Items binding names), so materialize that
+        // workspace first: a probe for a family that was never materialized would throw KeyNotFound, and
+        // that would be a failure of the INSTRUMENT rather than of the write. Same protocol the
+        // checklist-projection lane uses (set-tab, then a real draw pass).
+        host.Bindings.Invoke("set-tab", "Packs");
+        Rect packsViewport = new(0f, 0f, 1280f, 720f);
+        host.MeasureAndArrange(new Vector2(packsViewport.width, packsViewport.height));
+        host.DrawChecked(packsViewport);
+        // US-PACK1: a collapsed card materialises NO row - the domain hit and its switch exist only
+        // once the card is open, exactly like a player's gesture. The funnel write that opens it is
+        // itself one of the three item-scoped families, so the probe table's own setup registers it.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        host.MeasureAndArrange(new Vector2(packsViewport.width, packsViewport.height));
+        host.DrawChecked(packsViewport);
+        int itemScoped = 0;
+        foreach (UsWriteBinding entry in writes.Bound)
+        {
+            if (entry.ItemScoped) itemScoped++;
+        }
+
+        Assert(itemScoped == 3,
+            "arranging the expanded card must register the three item-scoped write families "
+            + "(pack-card-keys.<item>.toggle-pack-card, pack-card-keys.<item>.enabled, "
+            + "pack-card-keys.<item>.select-domain), got " + itemScoped
+            + " - the registry is the instrument this lane reads");
+
+        // Concrete item keys come from the LIVE view, never from a literal list in the lane: a literal would
+        // keep passing while the projection renamed its own rows (the S4-2 lesson).
+        var rich = fake.BuildView();
+        string raceRowKey = rich.Races[0].RaceDefName;
+        var xenotypeRow = rich.XenotypeDomains[0];
+        PackCardView sangCard = rich.PackCards[0];
+        string cardKey = sangCard.Key;
+        string cardRowKey = sangCard.Rows[0].RowKey(sangCard.Key);
+
+        var probes = new Dictionary<string, Action>(StringComparer.Ordinal)
+        {
+            // The engine's Tab gate key. It is a display write (the visible sections follow it); its own
+            // mutation proof is ActiveTabWriteAdvancesSharedRevision.
+            { UiBindings.ActiveTabKey, () => host.Bindings.Set(UiBindings.ActiveTabKey, "Packs") },
+            { "set-tab", () => host.Bindings.Invoke("set-tab", "Distance") },
+            { "scroll-to", () => host.Bindings.Invoke("scroll-to", "mode-row") },
+            { "mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled) },
+            { "global-volume", () => host.Bindings.Set("global-volume", 0.42f) },
+            { "global-volume-percent", () => host.Bindings.Set("global-volume-percent", 42f) },
+            { "set-distance-preset", () => host.Bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative)) },
+            { "attenuation-point", () => host.Bindings.Invoke("attenuation-point", new UiChartPointChange(2, 0.7f, 0f)) },
+            // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
+            // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole
+            // toggle and there is no second channel to keep in step.
+            { "allow-baby-actions", () => host.Bindings.Set("allow-baby-actions", true) },
+            { "allow-eggs", () => host.Bindings.Set("allow-eggs", false) },
+            { "scale-cooldown", () => host.Bindings.Set("scale-cooldown", false) },
+            { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
+            { "scale-population", () => host.Bindings.Set("scale-population", true) },
+            { "camera-indicator", () => host.Bindings.Set("camera-indicator", false) },
+            { "eat-precision", () => host.Bindings.Set("eat-precision", true) },
+            { "eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true) },
+            { "interval-ticks", () => host.Bindings.Set("interval-ticks", 300f) },
+            { "interval-seconds", () => host.Bindings.Set("interval-seconds", 5f) },
+            { "timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus") },
+            { "timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus") },
+            { "cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f) },
+            { "set-dev-logging", () => host.Bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Enabled)) },
+            { "localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true) },
+            // R3-B: the developer layout-diagnosis commands. Each is a display write - it changes what the
+            // card shows (the status sentence and the switches' own answers) - so each must advance the clock.
+            { "layout-capture", () => host.Bindings.Set("layout-capture", true) },
+            { "layout-outline", () => host.Bindings.Set("layout-outline", true) },
+            { "request-layout-report", () => host.Bindings.Invoke("request-layout-report") },
+            { "set-tuning-layer", () => host.Bindings.Invoke("set-tuning-layer", 1) },
+            { "set-tuning-domain", () => host.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection("human", "")) },
+            { "set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)) },
+            { "set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)) },
+            { "reset-mood-to-preset", () => host.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(SqueakMood.Good)) },
+            { "toggle-baseline-preset", () => host.Bindings.Invoke("toggle-baseline-preset", "us.preset1") },
+            { "toggle-baseline-race", () => host.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle("us.preset1", "human", false)) },
+            { "toggle-baseline-xenotype", () => host.Bindings.Invoke("toggle-baseline-xenotype", new UsBaselineXenoToggle("us.preset1", "human", "sanguophage", true)) },
+            { "import-baseline", () => host.Bindings.Invoke("import-baseline", "us.preset1") },
+            { "select-domain", () => host.Bindings.Invoke("select-domain", raceRowKey) },
+            { "forget-unavailable", () => host.Bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, xenotypeRow.RaceDefName, xenotypeRow.TargetDefName)) },
+            { "race-filter", () => host.Bindings.Set("race-filter", "sanguophage") },
+            { "xenotype-filter", () => host.Bindings.Set("xenotype-filter", "sanguophage") },
+            { "pack-filter", () => host.Bindings.Set("pack-filter", "AuthorA") },
+            { "set-pack-filter", () => host.Bindings.Invoke("set-pack-filter", "AuthorA") },
+            { "clear-pack-filters", () => host.Bindings.Invoke("clear-pack-filters", "") },
+            { "search-text", () => host.Bindings.Set("search-text", "sang") },
+            { "set-domain-filter", () => host.Bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.EnabledOnly, true)) },
+            { "help-open", () => host.Bindings.Set("help-open", true) },
+            { "toggle-help-drawer", () => host.Bindings.Invoke("toggle-help-drawer") },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "toggle-pack-card"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", cardKey, "toggle-pack-card"), cardKey) },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "enabled"), () => host.Bindings.Set(UsWriteBindings.ItemKey("pack-card-keys", cardRowKey, "enabled"), false) },
+            { UsWriteBindings.ItemTemplate("pack-card-keys", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", cardRowKey, "select-domain"), "human|sanguophage") },
+            // DT1: opening the panel changes the band button's SelectedKey - a display write.
+            { "open-dev-panel", () => host.Bindings.Invoke("open-dev-panel") },
+            // VF1 three-area tuning: the area switch, the selected action, the multiplier chain and
+            // the action preset reset.
+            { "tuning-area", () => host.Bindings.Set("tuning-area", 1) },
+            { "tuning-selected-action", () => host.Bindings.Set("tuning-selected-action", "Eat") },
+            { "set-action-tuning", () => host.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite("Eat", true, 1.2f)) },
+            { "reset-action-to-preset", () => host.Bindings.Invoke("reset-action-to-preset", "Eat") },
+            // VF1 fallback table editor: selection, queries, the entry write, and the three table
+            // commands. The fake mirrors the commands without touching any real Config file.
+            { "set-fallback-selection", () => host.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection("RaceA", "Call")) },
+            { "fallback-sound-query", () => host.Bindings.Set("fallback-sound-query", "walk") },
+            { "fallback-new-race-query", () => host.Bindings.Set("fallback-new-race-query", "thrum") },
+            { "set-fallback-entry", () => host.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite("Call", "US_Move_Vanilla")) },
+            { "create-fallback-table", () => host.Bindings.Invoke("create-fallback-table", "RaceZ") },
+            { "restore-fallback-default", () => host.Bindings.Invoke("restore-fallback-default") },
+            { "delete-fallback-table", () => host.Bindings.Invoke("delete-fallback-table", "RaceZ") },
+            // US-PACK1: the D4 per-card Clear and the two domain-list searches retired WITH the browse
+            // cards - the unified keyword and the single All gesture replaced them.
+            // US-ESC1: the tree cancel layers are display writes too - the card visibly follows
+            // the cancelled mark. The probes go through TryInvokeCommand - the SAME gated entry the
+            // engine's tree walk uses - so the clock may only move when CanExecute actually allowed the
+            // step; the CANCELLABLE state is pre-set directly on the fake's own page state (never
+            // through a bumping write).
+            { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
+            { "cancel-domain-selection", () => {
+                // ESC1 closure: the selection answers only while it is VISIBLE - a row of an expanded
+                // card in the current result. The probe opens the card that carries the row, selects
+                // that row's domain, and reprojects - the same reachability the real click lane drives.
+                VoicePacksPageState dst = fake.ViewState;
+                dst.SearchText = ""; dst.PackFilter = default; dst.RaceFilter = ""; dst.XenotypeFilter = "";
+                dst.PackCardsExpanded.Add(cardKey);
+                PackCardDomainRowView domainRow = sangCard.Rows[0];
+                VoicePacksPageModel.SelectDomain(dst, domainRow.Scope, domainRow.RaceDefName, domainRow.TargetDefName);
+                dst.DomainSelectionCanceled = false;
+                fake.ReprojectAtCurrentRevision();
+                host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
+            // review-1: the result layer answers only for a VISIBLE manual expansion, so the probe
+            // clears every condition first (the earlier filter probes would otherwise hide the card),
+            // opens the card through the manual set, and reprojects - a manual-set change is not a
+            // bumping write, and the eligibility reads the CURRENT projection exactly as the engine does.
+            { "cancel-pack-results", () => {
+                VoicePacksPageState st = fake.ViewState;
+                st.SearchText = ""; st.PackFilter = default; st.RaceFilter = ""; st.XenotypeFilter = "";
+                st.PackCardsExpanded.Add(cardKey);
+                fake.ReprojectAtCurrentRevision();
+                host.Bindings.TryInvokeCommand("cancel-pack-results"); } },
+            { "cancel-tuning-target", () => { fake.ViewState.TuningArea = 0; fake.ViewState.TuningSelectedAction = "Eat"; fake.ReprojectAtCurrentRevision(); host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
+            { "cancel-tuning-context", () => { fake.ViewState.TuningContextActive = true; host.Bindings.TryInvokeCommand("cancel-tuning-context"); } },
+            // US-RESET1: the restore EFFECT keys are display writes when the backend wrote (Applied is
+            // the fake's default outcome); the NoChange/Rejected silence has its own ResetUi lane. The
+            // confirm-* ceremonies are raw bindings (their first press writes nothing by contract) and
+            // are therefore NOT in writes.Bound - the effect keys above are what the clock must follow.
+            { "reset-all-settings", () => host.Bindings.Invoke("reset-all-settings") },
+            { "reset-distance-defaults", () => host.Bindings.Invoke("reset-distance-defaults") },
+            { "reset-normal-distance", () => host.Bindings.Invoke("reset-normal-distance") },
+            { "reset-normal-basics", () => host.Bindings.Invoke("reset-normal-basics") },
+            { "reset-normal-timing", () => host.Bindings.Invoke("reset-normal-timing") },
+            { "reset-normal-diagnostics", () => host.Bindings.Invoke("reset-normal-diagnostics") },
+            { "reset-action-row", () => { fake.ViewState.TuningSelectedAction = "Eat"; host.Bindings.Invoke("reset-action-row"); } },
+            { "reset-action-area", () => host.Bindings.Invoke("reset-action-area") },
+            { "reset-mood-area", () => host.Bindings.Invoke("reset-mood-area") },
+        };
+
+        var registered = new List<string>();
+        foreach (UsWriteBinding entry in writes.Bound)
+        {
+            if (!registered.Contains(entry.Key)) registered.Add(entry.Key);
+        }
+
+        var missingProbe = new List<string>();
+        foreach (string key in registered)
+        {
+            if (!probes.ContainsKey(key)) missingProbe.Add(key);
+        }
+
+        var staleProbe = new List<string>();
+        foreach (string key in probes.Keys)
+        {
+            if (!registered.Contains(key)) staleProbe.Add(key);
+        }
+
+        Assert(missingProbe.Count == 0,
+            "every registered write key needs a probe in this lane (missing=[" + string.Join(", ", missingProbe)
+            + "]) - a write binding with no display-write probe is the D1/D6 hole this lane exists to stop");
+        Assert(staleProbe.Count == 0,
+            "the probe table must not name keys the host does not register (stale=[" + string.Join(", ", staleProbe)
+            + "]) - a renamed or deleted write key must fail here rather than silently shrink coverage");
+
+        foreach (string key in registered)
+        {
+            AssertBumped(key, probes[key]);
+        }
+    }
+
+    /// <summary>
+    /// The engine's tab binding is a DISPLAY WRITE, and this lane is its mutation proof: it writes
+    /// ActiveTabKey through the binding and requires the shared content revision to advance (and the
+    /// revision-gated view to rebuild). Removing the bump from that registration turns THIS lane red by
+    /// name. Why it needs its own lane: measured 2026-09-24, NO current writer goes through that setter -
+    /// the carrier only READS ActiveTabKey (UiLayoutEngine.cs:2797, plus the RecordKey at :454), and the
+    /// nav's "set-tab" action is the writer that actually switches workspaces - so the missing bump is
+    /// invisible in game today and would surface as a stale view the first time anything else wrote the
+    /// tab. DisplayWriteAdvancesSharedRevision enumerates the whole write set; this lane keeps the one key
+    /// whose bump has no other evidence as its own attributable proof.
+    /// </summary>
+    private static void ActiveTabWriteAdvancesSharedRevision()
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+
+        fake.BuildView();
+        int primed = fake.BuildViewCount;
+        int rev0 = host.Session.ContentRevision;
+        host.Bindings.Set(UiBindings.ActiveTabKey, "Packs");
+        Assert(fake.LastActiveTab == "Packs",
+            "the tab binding must write through the business setter, got '" + (fake.LastActiveTab ?? "null") + "'");
+        Assert(host.Session.ContentRevision > rev0,
+            "writing the active tab through its binding must advance the shared revision clock: the visible "
+            + "sections follow this key, so a write with no bump serves the stale projection (D1/D6)");
+        fake.BuildView();
+        Assert(fake.BuildViewCount == primed + 1,
+            "the new revision must rebuild the view, not serve the cached projection");
     }
     /// <summary>
     /// One pass of the settings-window protocol: pump a Repaint pass with the pointer at
@@ -953,6 +1426,46 @@ internal static class Program
         {
             Event.current = null;
         }
+    }
+
+    /// <summary>
+    /// US-PACK1: presses ONE declarative (engine-drawn) control through the carrier's own hit seam.
+    /// The ButtonOverride seam is armed so the ONE draw whose active node carries
+    /// <paramref name="elementId"/> answers true - the engine's real Button(rect, ctx) then records
+    /// the interaction subject (NoteInteractionTarget) and the control's own action/value write runs
+    /// through the real funnel. This is the press form the retired DeclarativePacks lane established
+    /// for template rows: a declarative control is drawn inside its row's own native group, so its
+    /// captured rect carries no window position a coordinate event could aim at; the node identity,
+    /// not a guessed point, names the pressed control. Returns how many times it answered.
+    /// </summary>
+    internal static int PressDeclarativeButton(UiHost host, Rect viewport, string elementId)
+    {
+        int fired = 0;
+        System.Reflection.FieldInfo? seam = typeof(UiNative).GetField("ButtonOverride",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic);
+        if (seam == null) throw new Exception("the carrier's ButtonOverride seam moved - the press must fail, not fake");
+        try
+        {
+            seam.SetValue(null, new Func<Rect, bool>(_ =>
+            {
+                UiNode node = host.Session.ActiveNode;
+                if (node != null && string.Equals(node.ElementId, elementId, StringComparison.Ordinal))
+                {
+                    fired++;
+                    return true;
+                }
+
+                return false;
+            }));
+            host.DrawChecked(new Rect(0f, 0f, viewport.width, viewport.height));
+        }
+        finally
+        {
+            seam.SetValue(null, null);
+        }
+
+        return fired;
     }
 
     /// <summary>
@@ -1142,7 +1655,7 @@ internal static class Program
         Assert(xml.Contains("Schema=\"2\""), "resource root declares Schema=2");
         Assert(xml.Contains("Source=\"" + ExpectedSource + "\""), "resource root declares the US source scope");
         Assert(xml.Contains("<Scroll Id=\"content-scroll\""), "content scroll container present");
-        Assert(xml.Contains("<Scroll Id=\"help-scroll\""), "help scroll container present");
+        Assert(xml.Contains("<Scroll Id=\"help-scroll\""), "bottom help panel scroll declared (BH1)");
         // The footer is a body sibling OUTSIDE the scroll, and it must NOT carry a Height attribute: the
         // attribute overrides the widget's own wrap-aware measure, which is how the in-game log kept
         // reporting "footer needs 33px has 28px" while the attribute pinned 28 (2026-09-15).
@@ -1154,6 +1667,46 @@ internal static class Program
         {
             Assert(xml.Contains("<Widget Id=\"" + id + "\" Kind=\"" + kind + "\""),
                 "resource declares widget " + id + " (" + kind + ")");
+        }
+
+        // S4-1/S4-2/S4-3: the dissolved composites were retired. Their IDS survive the migration - the
+        // workspace gate and the geometry/evidence lanes read the cards by id - but the kind does not: each
+        // id now names a declarative Section container (S4-3 moved timing and attenuation-editor into this
+        // list, and the timing gate below is why "timing" already appeared as a widget id here before).
+        foreach ((string id, string tab) in new[]
+                 {
+                     ("global-volume", "Overview"), ("basic-tuning", "Overview"),
+                     ("camera-indicator", "Overview"), ("timing", "Overview"),
+                     ("attenuation-editor", "Distance")
+                 })
+        {
+            Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"" + tab + "\""),
+                "the dissolved composite's id must name a declarative Section container gated by its own"
+                + " workspace: " + id + " (" + tab + ")");
+        }
+
+        // US-PACK1 replaced the side-by-side browse pair and the per-domain checklist card with ONE
+        // filter Section and ONE card-result Section, both Tab-gated on the Packs workspace. The ids
+        // the geometry/evidence lanes read are now these two; the cancel chain's two new levels are
+        // declared right on them (result) and on the page-level Repeat (domain - a Cancel declared
+        // INSIDE a template is item-qualified by the engine and could never name the page command).
+        Assert(xml.Contains("<Section Id=\"packs-filter\" Tab=\"Packs\"")
+                && xml.Contains("Id=\"packs-results\" Tab=\"Packs\" Padding=\"12\" Gap=\"6\" Scheme=\"us-flat-panel\" CancelBind=\"cancel-pack-results\"")
+                && xml.Contains("<Repeat Id=\"packs-card-rows\" Items=\"pack-card-keys\" Template=\"pack-card-row\" Padding=\"0\" Gap=\"2\" CancelBind=\"cancel-domain-selection\" />"),
+            "the Packs page is one filter region plus the declarative card result, with the domain return "
+            + "declared on the page-level Repeat and the result return on the Section");
+
+        // A HelpKey may still NAME these strings (they are catalog section keys); what must be gone is
+        // the KIND. Asking for Kind="..." is the difference between "the page still explains this
+        // section" and "the retired composite is still wired".
+        foreach (string kind in new[]
+                 {
+                     "us/basic-tuning", "us/global-volume", "us/camera-indicator",
+                     "us/race-layer", "us/xenotype-layer", "us/timing", "us/attenuation-editor"
+                 })
+        {
+            Assert(!xml.Contains("Kind=\"" + kind + "\""),
+                "the retired composite kind must not survive as a manifest Kind: " + kind);
         }
     }
 
@@ -1169,24 +1722,86 @@ internal static class Program
         // Creation succeeded => every kind in the real resource resolved through the real US/core
         // registries and every widget's Validate passed against the real typed binding table.
         //
-        // The live root list is the variant matching the page state, and the shipped default is the
-        // RETRACTED drawer (task-10), so the closed tree carries every declared kind except the help
-        // panel. Both directions are asserted: expanding must install the full shipped kind set.
-        var closedKinds = new HashSet<string>(StringComparer.Ordinal);
-        CollectKinds(host.Manifest.Roots, closedKinds);
-        Assert(!closedKinds.Contains("us/help-panel"),
-            "the retracted default must omit the help panel from the live root list");
+        // The help panel is DECLARATIVE (BH1): the manifest ALWAYS declares us/help-panel, and the engine
+        // decides whether it is arranged. Both halves are asserted, because they are the two things the
+        // mechanism has to get right - the definition must keep the element (that is what lets its node
+        // and its scroll position survive a close/open), and the arrange must hide it while the page
+        // state is retracted. The old root-list variant asserted the opposite (element absent from the
+        // roots), which is what made the property that carried the panel's state disappear wholesale.
+        var declaredKinds = new HashSet<string>(StringComparer.Ordinal);
+        CollectKinds(host.Manifest.Roots, declaredKinds);
+        Assert(declaredKinds.Contains("us/help-panel"),
+            "the retracted default must still DECLARE the help panel: dropping it from the definition is what"
+            + " loses its node and scroll position (see SessionRevisionBumper)");
 
-        host.Bindings.Set("help-open", true);
-        var kinds = new HashSet<string>(StringComparer.Ordinal);
-        CollectKinds(host.Manifest.Roots, kinds);
-        foreach ((string id, string kind) in ExpectedWidgets)
+        // B3's production pair, re-cut for BH1: the page box is the shell's ContentRect at the game's
+        // minimum logical resolution (1024x768) - the window the policy opens (800x600) minus 2 x 20
+        // chrome, minus the 56px title bar and the 20px bottom inset, i.e. 760x524 - and BH1.2 makes that
+        // box THE SAME in both help states, because the panel reserves height inside the page instead of
+        // widening the window. page-root takes its declared Padding 12 out of it, leaving the body row
+        // 736, and the two columns take 200 + 524 + one 12 gap: the centre keeps 524, above the manifest's
+        // own Breakpoint 400, so the settings stay arranged while the panel is open. Feeding the page width
+        // alone (the pre-BH1 habit) measures 24px narrow and hides the whole question.
+        int pinnedScreenWidth = Verse.UI.screenWidth;
+        int pinnedScreenHeight = Verse.UI.screenHeight;
+        Verse.UI.screenWidth = 1024;
+        Verse.UI.screenHeight = 768;
+        float window = WindowChromeLayout.SettingsWindowWidth(1024f, 768f);
+        var page = new Vector2(
+            window - WindowChromeLayout.WindowChromeInset,
+            WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - WindowChromeLayout.WindowChromeInset
+                - WindowChromeLayout.TitleBarHeight);
+        try
         {
-            Assert(kinds.Contains(kind), "manifest contains kind " + kind + " (widget " + id + ")");
+            UiLayoutSnapshot retracted = host.MeasureAndArrange(page);
+            Assert(!retracted.Viewports.ContainsKey("help-scroll"),
+                "the retracted default must not arrange the help panel");
+            Assert(retracted.RectById.TryGetValue("body-row", out Rect bodyClosed)
+                    && retracted.Viewports.ContainsKey("content-scroll"),
+                "the retracted page must arrange the body row and its centre scroll");
+
+            host.Bindings.Set("help-open", true);
+            UiLayoutSnapshot expanded = host.MeasureAndArrange(page);
+            Assert(expanded.Viewports.TryGetValue("help-scroll", out Rect help),
+                "an explicit open at the minimum logical resolution must arrange the bottom help panel");
+            Assert(expanded.RectById.TryGetValue("body-row", out Rect bodyOpen)
+                    && expanded.RectById.ContainsKey("nav-column")
+                    && expanded.Viewports.ContainsKey("content-scroll"),
+                "the settings body, its navigation and its centre viewport must all stay arranged while the"
+                + " help panel is open (BH1.1 / B3.1)");
+            Assert(Math.Abs(bodyOpen.width - bodyClosed.width) < 0.01f
+                    && Math.Abs(help.width - bodyOpen.width) < 0.01f,
+                "opening help must not change the body row's width and the panel must share the page's inner"
+                + " width: closed=" + bodyClosed + " open=" + bodyOpen + " panel=" + help);
+        }
+        finally
+        {
+            Verse.UI.screenWidth = pinnedScreenWidth;
+            Verse.UI.screenHeight = pinnedScreenHeight;
         }
 
-        Assert(kinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
-        Assert(UiWidgetRegistry.KnownKinds(ExpectedSource).Count >= 15, "US scope registry holds the kernel composite kinds");
+        foreach ((string id, string kind) in ExpectedWidgets)
+        {
+            Assert(declaredKinds.Contains(kind), "manifest contains kind " + kind + " (widget " + id + ")");
+        }
+
+        Assert(declaredKinds.Contains("chrome/banner"), "core scope fallback resolved chrome/banner for the US scope");
+        // The Registrar's complete set must be resolvable in the US scope, and the seven kinds S4-1..S4-3
+        // retired must NOT be. The EXACT cardinality is UiSourceInvariantTests' pin (11 = 10 settings + the
+        // overlay readout); this one is a guard, and it is written as ">= 11" rather than "== 11" because the
+        // diagnostics panel registers its own seven kinds into the same scope lazily, so a count taken here
+        // depends on which lane ran first.
+        IReadOnlyCollection<string> usKinds = UiWidgetRegistry.KnownKinds(ExpectedSource);
+        Assert(usKinds.Count >= 11, "US scope registry holds the kernel composite kinds, got " + usKinds.Count);
+        foreach (string retired in new[]
+                 {
+                     "us/global-volume", "us/basic-tuning", "us/camera-indicator",
+                     "us/race-layer", "us/xenotype-layer", "us/timing", "us/attenuation-editor"
+                 })
+        {
+            Assert(!usKinds.Contains(retired),
+                "the retired composite kind '" + retired + "' must not be registered any more");
+        }
     }
 
     private static void CollectKinds(IReadOnlyList<FerriteLib.UiKit.Kernel.UiElementSpec> elements, HashSet<string> kinds)
@@ -1223,7 +1838,7 @@ internal static class Program
             + "</UiPage>");
 
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "unknown US kind must fail at Host creation");
     }
 
@@ -1237,7 +1852,7 @@ internal static class Program
             + "</UiPage>");
 
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "unknown widget attribute must fail at Host creation");
     }
 
@@ -1274,9 +1889,12 @@ internal static class Program
         bindings.ValidateAction<UsMoodWrite>("set-mood-tuning", "test");
         bindings.ValidateAction<UsBaselineRaceToggle>("toggle-baseline-race", "test");
         bindings.ValidateAction<UsBaselineXenoToggle>("toggle-baseline-xenotype", "test");
-        bindings.ValidateAction<UsDomainSelection>("select-domain", "test");
-        bindings.ValidateAction<UsPackToggle>("toggle-pack", "test");
-        bindings.ValidateAction<UsDomainIdentity>("forget-unavailable", "test");
+        // S4-2: the row's own key is the payload, so the action takes the string the button carries.
+        bindings.ValidateAction<string>("select-domain", "test");
+        // US-PACK1: the page-level "toggle-pack" ACTION retired with the checklist list - the card
+        // row's enable is the item-scoped VALUE (pack-card-keys.<row>.enabled), which exists only
+        // once the projection materialises rows and is therefore asserted through a real draw by
+        // PackCardsLaneTests, not against the creation-time table.
         bindings.ValidateAction<UiChartPointChange>("attenuation-point", "test");
 
         // Typed writes must reach the business boundary (the recording source) without any string
@@ -1300,12 +1918,9 @@ internal static class Program
             && fake.LastMoodValue == 1.25f,
             "set-mood-tuning typed action routes to the business surface");
 
-        bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Race, "human", "", "us.human", true));
-        Assert(fake.LastPackScope == SqueakVoicePackScope.Race
-            && fake.LastPackRace == "human"
-            && fake.LastPackKey == "us.human"
-            && fake.LastPackEnabled == true,
-            "toggle-pack typed action routes to the business surface");
+        // US-PACK1: the enable write's business-boundary routing is asserted where the key actually
+        // exists - on a materialised card row, in PackCardsLaneTests (the item-scoped enabled VALUE
+        // reaches source.ToggleVoicePack with the row's own (pack, domain) identity).
 
         bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
         Assert(fake.LastForgetScope == SqueakVoicePackScope.Xenotype && fake.LastForgetTarget == "sanguophage",
@@ -1342,20 +1957,49 @@ internal static class Program
 
     /// <summary>
     /// The brief's required width/localization evidence: the real production page is measured and
-    /// DRAWN at the four logical widths in both shipped language tables, with the help drawer open and
-    /// closed, and one text artifact records what the harness actually measured. It is an evidence and
-    /// sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal overflow,
-    /// a dead content viewport, or a closed drawer that still reserves help width.
+    /// DRAWN at real screen/page configurations in both shipped language tables, with the help panel
+    /// open and closed, and one text artifact records what the harness actually measured. It is an
+    /// evidence and sanity lane, not a substitute for the focused geometry lanes: it fails on a horizontal
+    /// overflow, a dead content viewport, a help panel that replaces the settings, or a toggle that moves
+    /// the page.
+    ///
+    /// <para>
+    /// RE-CUT for BH1 (2026-10-05). The pre-BH1 table carried a hand-written <c>ExpectBandWhenOpen</c> per
+    /// row because the product had TWO presentations and the question "which one does this box afford" was
+    /// itself the thing under test. There is now ONE presentation, so the pair-level claim is the one BH1.2
+    /// makes: for the same screen, help open and help closed hand the centre column the SAME width, and the
+    /// panel is an extra band above the footer rather than a replacement for the body. That comparison is
+    /// written per pair here and is never read out of the product predicate - a product change that hid the
+    /// body while help was open, or that let the toggle change the width, reddens it.
+    /// The 800x600 row stays as a SYNTHETIC PROBE on a screen below the game's 1024x768 minimum (B3.5): it
+    /// is UNREACHABLE and proves only that a small box still arranges both the body and the panel, never
+    /// product behaviour.
+    ///   screen 1024x768  -> window 800x600 (both states)  -> box 760x524
+    ///   screen  800x600  -> window 800x600 (UNREACHABLE)  -> box 760x524
+    ///   screen 1920x1080 -> window 960x720 (both states)  -> box 920x644
+    /// </para>
     /// </summary>
     private static void WidthAndLanguageEvidenceSweep()
     {
-        float[] widths = { 1024f, 736f, 480f, 320f };
+        var sweepCases = new (int ScreenW, int ScreenH, string State)[]
+        {
+            (1024, 768, "open"),
+            (1024, 768, "closed"),
+            (800, 600, "open"),
+            (800, 600, "closed"),
+            (1920, 1080, "open"),
+            (1920, 1080, "closed"),
+        };
+        // language|screen|state -> the measured shape, compared across the pair after the sweep.
+        var measured = new Dictionary<string, (float ContentW, bool HasPanel, float PanelH, bool HasBody)>();
+
         string[] languages = { "English", "ChineseSimplified" };
         string outDir = Path.Combine(EvidenceRoot(), "dist", "ui-evidence");
         Directory.CreateDirectory(outDir);
         var lines = new List<string>();
         lines.Add("# US settings layout sweep (harness-measured, StubMetrics; not real RimWorld pixels)");
-        lines.Add("viewport | lang | drawer | nav.w | content.w | help.w | contentArea.w | overflow | fitFindings");
+        lines.Add("# page = the box the shell hands the host (UiWindowHost.ContentRect); row = page - page-root padding 24");
+        lines.Add("screen | window | page | row | lang | help | nav.w | content.w | panel.h | body.h | contentArea.w | overflow | fitFindings");
         int violations = 0;
         foreach (string language in languages)
         {
@@ -1366,44 +2010,83 @@ internal static class Program
             UiFitAudit.Enabled = true;
             try
             {
-                foreach (float width in widths)
+                foreach ((int screenW, int screenH, string state) in sweepCases)
                 {
-                    foreach (bool open in new[] { true, false })
+                    bool open = state == "open";
+                    // BH1: the window has ONE width per screen; the help state cannot change it. The window
+                    // is centred on the screen and the page box is what the shell hands its UiHost: window
+                    // minus the horizontal chrome, and minus the title bar plus the bottom inset vertically.
+                    float windowW = WindowChromeLayout.SettingsWindowWidth(screenW, screenH);
+                    float windowX = (screenW - windowW) * 0.5f;
+                    float windowY = (screenH - WindowChromeLayout.SettingsWindowHeight(screenW, screenH)) * 0.5f;
+                    float pageWidth = windowW - WindowChromeLayout.WindowChromeInset;
+                    float pageHeight = WindowChromeLayout.SettingsWindowHeight(screenW, screenH)
+                        - WindowChromeLayout.TitleBarHeight - WindowChromeLayout.WindowChromeInset * 0.5f;
+
+                    Verse.UI.screenWidth = screenW;
+                    Verse.UI.screenHeight = screenH;
+
+                    var fake = new RecordingSettingsSource { RichData = true };
+                    using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+                    UiFitAudit.Reset();
+                    reports.Clear();
+                    host.Bindings.Invoke("set-tab", "Overview");
+                    host.Bindings.Set("help-open", open);
+                    // A scroll position can only be written for an element an arrange has already
+                    // created, so the sweep arranges once, pins the centre column to its top, and
+                    // then arranges the frame it records and draws (the same probe pattern the
+                    // focused lanes use).
+                    UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
+                    if (first.RectById.ContainsKey("body-row"))
                     {
-                        var fake = new RecordingSettingsSource { RichData = true };
-                        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
-                        UiFitAudit.Reset();
-                        reports.Clear();
-                        host.Bindings.Invoke("set-tab", "Overview");
-                        host.Bindings.Set("help-open", open);
-                        // A scroll position can only be written for an element an arrange has already
-                        // created, so the sweep arranges once, pins the centre column to its top, and
-                        // then arranges the frame it records and draws (the same probe pattern the
-                        // focused lanes use).
-                        host.MeasureAndArrange(new Vector2(width, 600f));
                         SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, 600f));
-                        host.DrawChecked(new Rect(0f, 0f, width, 600f));
-
-                        Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
-                        Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
-                        bool hasHelp = snapshot.Viewports.TryGetValue("help-scroll", out Rect hv);
-                        Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
-                        bool overflow = contentArea.width > content.width + 0.5f;
-
-                        lines.Add(width.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " | "
-                            + language + " | " + (open ? "open" : "closed")
-                            + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | help=" + (hasHelp ? hv.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
-                            + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " | overflow=" + overflow
-                            + " | fit=" + reports.Count);
-
-                        if (!open && hasHelp) violations++;
-                        if (overflow) violations++;
-                        if (content.width <= 1f) violations++;
                     }
+                    UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(pageWidth, pageHeight));
+                    host.DrawChecked(new Rect(windowX, windowY, windowW, WindowChromeLayout.SettingsWindowHeight(screenW, screenH)));
+
+                    Rect nav = snapshot.RectById.TryGetValue("nav", out Rect navRect) ? navRect : Rect.zero;
+                    Rect content = snapshot.Viewports.TryGetValue("content-scroll", out Rect cv) ? cv : Rect.zero;
+                    bool hasPanel = snapshot.Viewports.TryGetValue("help-scroll", out Rect panel);
+                    bool hasBody = snapshot.RectById.TryGetValue("body-row", out Rect body);
+                    Rect contentArea = snapshot.ScrollContents.TryGetValue("content-scroll", out Rect ca) ? ca : Rect.zero;
+                    bool overflow = contentArea.width > content.width + 0.5f;
+                    measured[language + "|" + screenW + "x" + screenH + "|" + state]
+                        = (content.width, hasPanel, hasPanel ? panel.height : 0f, hasBody);
+
+                    lines.Add(screenW + "x" + screenH
+                        + (screenW < 1024 ? " (UNREACHABLE stress probe)" : "")
+                        + " | " + windowW.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + WindowChromeLayout.SettingsWindowHeight(screenW, screenH).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + pageWidth.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + pageHeight.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + (pageWidth - 24f).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + "x" + (pageHeight - 24f).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | " + language + " | " + state
+                        + " | nav=" + nav.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | content=" + content.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | panel=" + (hasPanel ? panel.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | body=" + (hasBody ? body.height.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                        + " | contentArea=" + contentArea.width.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                        + " | overflow=" + overflow
+                        + " | fit=" + reports.Count);
+
+                    // BH1.1/BH1.3, per case: the body is ALWAYS arranged, and the panel is arranged exactly
+                    // while help is open. Reverting the panel's VisibleKey to a body-replacing shape (the
+                    // pre-BH1 band) reddens the first clause with the band present and the body absent;
+                    // re-pointing the panel at a derived key reddens the second.
+                    if (!hasBody) violations++;
+                    if (open != hasPanel) violations++;
+
+                    // A live reading surface in BOTH states: the centre column and the nav column must have
+                    // real viewports, and an open panel must have one too (a zero-height band would be the
+                    // reservation silently collapsing into the footer).
+                    if (content.width <= 1f || nav.width <= 1f) violations++;
+                    if (open && (panel.width <= 1f || panel.height <= 1f)) violations++;
+
+                    // GUARD: horizontal content overflow and any fit-audit finding are geometry failures in
+                    // either state; they report a broken frame, not which help state was chosen.
+                    if (overflow) violations++;
+                    if (reports.Count > 0) violations++;
                 }
             }
             finally
@@ -1415,13 +2098,43 @@ internal static class Program
         }
 
         SetTranslatorResolver(null);
+        Verse.UI.screenWidth = 1920;
+        Verse.UI.screenHeight = 1080;
+
+        // BH1.2, per language and screen: the toggle must not move the page. The two rows of a pair are
+        // compared against EACH OTHER's measured width, never against a constant this lane restates, so a
+        // policy that grew the window again for help (the pre-BH1 widening) reddens the pair.
+        foreach (string language in languages)
+        {
+            foreach ((int screenW, int screenH) in new[] { (1024, 768), (800, 600), (1920, 1080) })
+            {
+                string openKey = language + "|" + screenW + "x" + screenH + "|open";
+                string closedKey = language + "|" + screenW + "x" + screenH + "|closed";
+                Assert(measured.ContainsKey(openKey) && measured.ContainsKey(closedKey),
+                    "the sweep recorded no pair for " + language + " at " + screenW + "x" + screenH
+                    + " (both help states must be measured for every screen)");
+                (float ContentW, bool HasPanel, float PanelH, bool HasBody) open = measured[openKey];
+                (float ContentW, bool HasPanel, float PanelH, bool HasBody) closed = measured[closedKey];
+                Assert(Math.Abs(open.ContentW - closed.ContentW) < 0.01f && open.HasBody && closed.HasBody
+                        && open.HasPanel && !closed.HasPanel,
+                    language + " at " + screenW + "x" + screenH
+                    + ": opening help must not change the centre column's width, the body must stay arranged"
+                    + " in both states, and the panel must be the only thing that appears with help open"
+                    + " (open content=" + open.ContentW + " body=" + open.HasBody + " panel=" + open.HasPanel
+                    + ", closed content=" + closed.ContentW + " body=" + closed.HasBody
+                    + " panel=" + closed.HasPanel + ")");
+            }
+        }
+
         string artifact = Path.Combine(outDir, "layout-sweep.txt");
         File.WriteAllLines(artifact, lines);
         Console.WriteLine("[evidence] width/language sweep written to " + artifact);
         foreach (string line in lines) Console.WriteLine("  " + line);
         Assert(violations == 0,
             "the width/language evidence sweep found " + violations + " geometry violation(s) "
-            + "(closed drawer still reserving help width, horizontal content overflow, or a dead content viewport); see " + artifact);
+            + "(a help state that replaces the settings body, a panel that is arranged in the wrong state, a"
+            + " dead content or nav viewport, horizontal content overflow, or text overflow reported by the"
+            + " fit audit); see " + artifact);
     }
 
     /// <summary>Repository root for evidence artifacts, found the same way the UI-logic lane finds it.</summary>
@@ -1441,9 +2154,9 @@ internal static class Program
         var fake = new RecordingSettingsSource();
         using UiHost host = UsKernelSettingsHost.Create(fake);
 
-        // The shipped drawer default is RETRACTED (task-10: the window opens narrow). This lane is
-        // about the three-column page at the reference viewports, so it expands the drawer explicitly
-        // before asserting the help column is arranged.
+        // The shipped help default is RETRACTED (task-10: the window opens narrow). This lane is about the
+        // two-column page at the reference viewports, so it expands the panel explicitly before asserting
+        // the help band is arranged.
         host.Bindings.Set("help-open", true);
 
         // The maintainer-specified safe-area sizes (window ≈ 60-75% of the three reference
@@ -1453,7 +2166,7 @@ internal static class Program
         {
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
             Assert(snapshot.Viewports.ContainsKey("content-scroll"), "content scroll viewport present at " + viewport);
-            Assert(snapshot.Viewports.ContainsKey("help-scroll"), "help scroll viewport present at " + viewport);
+            Assert(snapshot.Viewports.ContainsKey("help-scroll"), "help panel band present at " + viewport);
             Assert(snapshot.RectById.ContainsKey("footer"), "footer rect present at " + viewport);
 
             Rect contentScroll = snapshot.Viewports["content-scroll"];
@@ -1461,7 +2174,7 @@ internal static class Program
                 "content scroll viewport is usable at " + viewport + " (got " + contentScroll + ")");
 
             Rect navColumn = snapshot.RectById["nav"];
-            Assert(Math.Abs(navColumn.width - 160f) < 0.5f, "nav column keeps its declared 160 width at " + viewport);
+            Assert(Math.Abs(navColumn.width - 200f) < 0.5f, "nav column keeps its declared 200 width at " + viewport);
             Assert(snapshot.ScrollContents.ContainsKey("content-scroll"), "content scroll content rect present at " + viewport);
 
             Rect footer = snapshot.RectById["footer"];
@@ -1514,24 +2227,65 @@ internal static class Program
         Assert(fake.LastBasicToggle == SqueakBasicToggle.ScalePopulation && fake.LastBasicToggleValue == false, "scale-population value write routes");
         bindings.Set("camera-indicator", true);
         Assert(fake.LastCameraIndicator == true, "camera-indicator value write routes");
-        bindings.Invoke("toggle-egg", false);
-        Assert(fake.LastEasterEggs == false, "toggle-egg action routes");
-        bindings.Invoke("toggle-scale-cooldown", true);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleCooldown, "toggle-scale-cooldown action routes");
-        bindings.Invoke("toggle-scale-talking", false);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleTalking, "toggle-scale-talking action routes");
-        bindings.Invoke("toggle-scale-population", true);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScalePopulation, "toggle-scale-population action routes");
-        bindings.Invoke("toggle-camera-indicator", false);
-        Assert(fake.LastCameraIndicator == false, "toggle-camera-indicator action routes");
-        bindings.Invoke("set-distance-preset", SqueakDistancePreset.Conservative);
-        Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative, "set-distance-preset action routes");
-        bindings.Set("min-interval", 300);
-        Assert(fake.LastMinIntervalTicks == 300, "min-interval value write routes");
+        bindings.Set("camera-indicator", false);
+        Assert(fake.LastCameraIndicator == false, "the checkbox's own write channel is the whole toggle");
+        // The percent projection is the number-field atom's binding: it must reach the SAME business setter
+        // the 0..1 slider binding uses, or the two controls on the card would show different volumes.
+        bindings.Set("global-volume-percent", 42f);
+        Assert(Math.Abs(fake.LastGlobalVolume.GetValueOrDefault() - 0.42f) < 0.001f,
+            "global-volume-percent writes the normalized volume through the business setter");
+        bindings.Set("allow-baby-actions", true);
+        // Mutation-proven: removing source.SetBabyActions from the registered write fails here.
+        Assert(fake.LastBabyActions == true, "baby-actions write routes to the business boundary");
+        bindings.Set("eat-precision", true);
+        Assert(fake.LastEatPrecision == true, "eat-precision value write routes (the declared checkbox's channel)");
+        bindings.Set("eat-precision-include-drugs", true);
+        Assert(fake.LastEatPrecisionIncludeDrugs == true, "eat-precision-include-drugs value write routes");
+        bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative));
+        Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative,
+            "set-distance-preset action routes the button's string payload into the enum boundary");
+        // The fail-soft half: a name no preset answers to must not drop the click into the wrong preset.
+        fake.LastDistancePreset = null;
+        bindings.Invoke("set-distance-preset", "not-a-preset");
+        Assert(fake.LastDistancePreset == SqueakDistancePreset.Custom,
+            "an unrecognised preset name must land on Custom rather than being ignored or mis-parsed, got "
+            + (fake.LastDistancePreset?.ToString() ?? "null"));
+        // S4-3: the interval is one value in two units, so both declared atoms must land in the SAME
+        // business field, and the seconds projection must convert back into machine ticks.
+        bindings.Set("interval-ticks", 300f);
+        Assert(fake.LastMinIntervalTicks == 300, "interval-ticks value write routes");
+        bindings.Set("interval-seconds", 5f);
+        Assert(fake.LastMinIntervalTicks == 300, "interval-seconds writes the same field in ticks (5 s = 300)");
         bindings.Set("cooldown-multiplier", 1.5f);
         Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.5f) < 0.001f, "cooldown-multiplier value write routes");
-        bindings.Set("dev-logging", SqueakDevLoggingMode.Disabled);
-        Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled, "dev-logging value write routes");
+        // The two declarative stepper commands: the step and its window live on the host side of the
+        // command, exactly where the retired composite applied them. The expected values are read from the
+        // INSTRUMENT: this fixture's views carry a constant globalCooldownMultiplier of 1.0 (see
+        // RecordingSettingsSource.BuildRichView/BuildEmptyView), so the command's own arithmetic is what the
+        // two writes below measure - and the pair proves they step in opposite directions instead of both
+        // landing on one value.
+        fake.LastCooldownMultiplier = null;
+        bindings.Invoke("timing-multiplier-minus");
+        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 0.9f) < 0.001f,
+            "timing-multiplier-minus steps the viewed 1.0 down by the composite's 0.1, got "
+            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
+        fake.LastCooldownMultiplier = null;
+        bindings.Invoke("timing-multiplier-plus");
+        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.1f) < 0.001f,
+            "timing-multiplier-plus steps it up by 0.1, got "
+            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
+        // Deliberately NOT asserted here: "an out-of-window write is clamped". This fixture's
+        // SetGlobalCooldownMultiplier is a recording stub with no clamp (RecordingSettingsSource), so in
+        // THIS lane the assertion would measure the fake, not the product - the clamp lives in
+        // UniversalSqueakerSettings.SetGlobalCooldownMultiplier and assert on a route the instrument does
+        // not carry is the green-for-the-wrong-reason shape this project bans. The manifest's declared
+        // 0..3 window is pinned by DeclarativeTimingLaneTests against the manifest itself.
+        // T3-2: the retired us/diagnostics card's three-way choice is three declarative buttons over ONE
+        // string action, so the routing assertion moves to the action. Which BUTTON names which mode is
+        // asserted by DeclarativeDiagnosticsLaneTests against the real drawn buttons.
+        bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Disabled));
+        Assert(fake.LastDevLoggingMode == SqueakDevLoggingMode.Disabled,
+            "set-dev-logging action routes the button payload into the enum boundary");
         bindings.Set("localize-debug-menu", true);
         Assert(fake.LastLocalizeDebugActions == true, "localize-debug-menu value write routes");
         bindings.Invoke("set-action-scope", new UsScopeWrite("Work", null));
@@ -1559,15 +2313,15 @@ internal static class Program
         (string Tab, string[] Visible, string[] Hidden)[] tabs =
         {
             ("Overview", new[] { "mode-row", "global-volume", "basic-tuning", "camera-indicator" },
-                new[] { "attenuation-editor", "scope-tree", "preset-list", "filter-bar", "checklist" }),
+                new[] { "attenuation-editor", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
             ("Distance", new[] { "attenuation-editor" },
-                new[] { "mode-row", "scope-tree", "preset-list", "filter-bar", "checklist" }),
-            ("Packs", new[] { "filter-bar", "race-layer", "xenotype-layer", "checklist" },
+                new[] { "mode-row", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
+            ("Packs", new[] { "filter-bar", "packs-filter", "packs-results", "checklist" },
                 new[] { "mode-row", "attenuation-editor", "scope-tree", "preset-list" }),
             ("Tuning", new[] { "scope-tree" },
-                new[] { "mode-row", "attenuation-editor", "preset-list", "checklist" }),
+                new[] { "mode-row", "attenuation-editor", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
             ("Presets", new[] { "preset-list" },
-                new[] { "mode-row", "attenuation-editor", "scope-tree", "checklist" })
+                new[] { "mode-row", "attenuation-editor", "scope-tree", "filter-bar", "packs-filter", "packs-results", "checklist" })
         };
 
         foreach ((string tab, string[] visible, string[] hidden) in tabs)
@@ -1580,7 +2334,9 @@ internal static class Program
 
             foreach (Vector2 viewport in viewports)
             {
-                UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
+                // The loop variable IS the viewport: this used to arrange a hardcoded 800x600 in every
+                // iteration, so the three-viewport matrix measured one viewport three times.
+                UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
                 foreach (string id in visible)
                 {
                     Assert(snapshot.RectById.ContainsKey(id), tab + " section " + id + " visible at " + viewport);
@@ -1628,7 +2384,7 @@ internal static class Program
             reports.Clear();
             UiFitAudit.BeginElement("probe/single-line");
             FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
             UiFitAudit.EndElement();
             Assert(reports.Count == 1, "positive control failed: the audit saw nothing for a label that cannot fit (" + Describe(reports) + ")");
@@ -1642,7 +2398,7 @@ internal static class Program
             UiFitAudit.Reset();
             reports.Clear();
             FerriteLib.UiKit.Kernel.UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, FerriteLib.UiKit.Kernel.UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
             Assert(reports.Count == 1 && reports[0].ElementPath == "(unscoped)",
                 "an unscoped draw must be reported under the fallback identity, got " + Describe(reports));
@@ -1687,11 +2443,14 @@ internal static class Program
 
             // Failure sensitivity for the sweeping checks: one Keyed string is replaced with a value no
             // fixed column can hold, then the real page is drawn again. If the audit stays silent here,
-            // every "no overflow" result above is meaningless — that is the exact failure this guards.
+            // every "no overflow" result above is meaningless - that is the exact failure this guards.
+            // D4 re-cut: the race/xenotype dropdowns moved OUT of the filter bar into their cards, and
+            // the chip row now GROWS to its wrapped labels (no fixed-width overflow to catch there);
+            // the Author dropdown's label column is the filter band's remaining fixed-width keyed text.
             string impossible = new string('\u6d4b', 30);
             var stretched = new Dictionary<string, string>(chinese, StringComparer.Ordinal)
             {
-                ["US.Packs.Filter.Race"] = impossible
+                ["US.Packs.Filter.Author"] = impossible
             };
 
             SetTranslatorResolver(stretched);
@@ -1724,14 +2483,15 @@ internal static class Program
     }
 
     /// <summary>
-    /// Failure sensitivity for the Packs layer row heights. The bilingual fit sweep compares one label
-    /// against its own band, so it cannot see a row that is too short for the content stacked inside it —
-    /// exactly the bug that made the race and xenotype layers overdraw the sections below them. This step
-    /// drives the real Host twice, once with text that fits one line and once with text that cannot, and
-    /// requires both cards to grow. Under the old height formulas (title only, measured from the bare
-    /// xenotype name) the two arrangements come out identical and this fails.
+    /// Failure sensitivity for the pack-card row heights. The bilingual fit sweep compares one label
+    /// against its own band, so it cannot see a row that is too short for the content stacked inside it -
+    /// exactly the class of bug the retired browse cards once overdrove the sections below them with.
+    /// US-PACK1 re-founded the claim on the card: the domain row's composed title (xenotype name plus
+    /// race context through the SAME keyed template) must grow the row - and the result card around it -
+    /// when it cannot fit one line. Under a fixed row band the two arrangements come out identical and
+    /// this fails; a card that measures short while its row draws the grown band fails the audit half.
     /// </summary>
-    private static void WrappingDomainTextGrowsLayerRows()
+    private static void WrappingDomainTextGrowsTheCardRow()
     {
         var metrics = new StubMetrics();
         var reports = new List<UiOverflowReport>();
@@ -1739,23 +2499,20 @@ internal static class Program
         UiFitAudit.Enabled = true;
         try
         {
-            // The detail and title templates are Keyed: without a loaded table Translate returns the key
+            // The title templates are Keyed: without a loaded table Translate returns the key
             // itself, the numeric arguments are dropped and nothing is long enough to wrap, which would
             // make this step pass without measuring anything.
             SetTranslatorResolver(ReadKeyedTable("English"));
             var narrow = new Vector2(800f, 600f);
-            (float raceShort, float xenotypeShort) = LayerCardHeights(narrow, wrapping: false, metrics);
-            (float raceLong, float xenotypeLong) = LayerCardHeights(narrow, wrapping: true, metrics);
+            float shortHeight = PackCardResultHeight(narrow, wrapping: false, metrics);
+            float longHeight = PackCardResultHeight(narrow, wrapping: true, metrics);
 
-            Assert(raceShort > 0f && xenotypeShort > 0f, "the rich fixture must place both layer cards");
-            Assert(raceLong > raceShort + 10f,
-                "a race row title that cannot fit one line must grow the race-layer card: one-line "
-                + raceShort + "px, wrapping " + raceLong + "px");
-            Assert(xenotypeLong > xenotypeShort + 10f,
-                "a composed xenotype title that cannot fit one line must grow the xenotype-layer card: one-line "
-                + xenotypeShort + "px, wrapping " + xenotypeLong + "px");
+            Assert(shortHeight > 0f, "the rich fixture must place the card result");
+            Assert(longHeight > shortHeight + 10f,
+                "a composed domain title that cannot fit one line must grow the card that shows it: "
+                + "one-line " + shortHeight + "px, wrapping " + longHeight + "px");
             Assert(reports.Count == 0,
-                "wrapping layer text must be measured into its band, not clipped: " + Describe(reports));
+                "wrapping card text must be measured into its band, not clipped: " + Describe(reports));
         }
         finally
         {
@@ -1768,8 +2525,9 @@ internal static class Program
     /// Failure sensitivity for the timing card's multiplier row (task-92). The bilingual sweep above is an
     /// absence - "no label overflowed its band" - and an absence cannot tell a band that grew to fit its
     /// text from a card that quietly kept drawing past its own bottom. This step drives the real Host
-    /// twice: the shipped English value, which does not fit one line in the narrow band, and a value short
-    /// enough to fit. The card must be one wrapped line TALLER in the first case, and both frames must
+    /// twice: a deliberately long translated value and a value short enough to fit. V1 gives the label
+    /// more room, so the shipped English value is no longer a wrapping probe. The card must grow in the
+    /// first case, and both frames must
     /// draw with the audit silent. Under the old fixed 20px band the two heights come out identical and
     /// this fails; so does a card that measures short while its row draws the grown band.
     /// </summary>
@@ -1786,15 +2544,19 @@ internal static class Program
             {
                 ["US.Tuning.CooldownMultiplier"] = "Cooldown"
             };
+            var wrapping = new Dictionary<string, string>(english, StringComparer.Ordinal)
+            {
+                ["US.Tuning.CooldownMultiplier"] = new string('W', 100)
+            };
 
             float fitsOneLine = TimingCardHeight(fits, metrics);
-            float wraps = TimingCardHeight(english, metrics);
+            float wraps = TimingCardHeight(wrapping, metrics);
 
             Assert(fitsOneLine > 0f && wraps > 0f,
                 "the rich fixture must place the timing card, got " + fitsOneLine + "px / " + wraps + "px");
             Assert(wraps > fitsOneLine + 10f,
-                "the shipped English multiplier label needs two lines in the narrow band, so the card must "
-                + "grow by that line: one-line " + fitsOneLine + "px, wrapping " + wraps + "px");
+                "the long translated multiplier label must grow the card instead of clipping: one-line "
+                + fitsOneLine + "px, wrapping " + wraps + "px");
             Assert(reports.Count == 0,
                 "and growing the band is the answer, not clipping the text: " + Describe(reports));
         }
@@ -1829,15 +2591,18 @@ internal static class Program
         return height;
     }
 
-    private static (float Race, float Xenotype) LayerCardHeights(Vector2 viewport, bool wrapping, StubMetrics metrics)
+    private static float PackCardResultHeight(Vector2 viewport, bool wrapping, StubMetrics metrics)
     {
         var fake = new RecordingSettingsSource { RichData = true, WrappingDomainText = wrapping };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Packs");
-        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new UnityEngine.Vector2(800f, 600f));
-        float Race = snapshot.RectById.TryGetValue("race-layer", out Rect raceRect) ? raceRect.height : 0f;
-        float Xenotype = snapshot.RectById.TryGetValue("xenotype-layer", out Rect xenoRect) ? xenoRect.height : 0f;
-        return (Race, Xenotype);
+        host.MeasureAndArrange(viewport);   // materialises the headers before the manual toggle
+        // The wrapped text lives on the DOMAIN ROW, so the card must be open to measure it.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        host.MeasureAndArrange(viewport);
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(viewport);
+        host.DrawChecked(new Rect(0f, 0f, viewport.x, viewport.y));
+        return snapshot.RectById.TryGetValue("packs-results", out Rect cardRect) ? cardRect.height : 0f;
     }
 
     private static void CheckLanguageTable(
@@ -1935,7 +2700,7 @@ internal static class Program
         return table;
     }
 
-    private static string RepoRoot()
+    internal static string RepoRoot()
     {
         System.IO.DirectoryInfo? dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
         for (int i = 0; i < 8 && dir != null; i++)
@@ -1974,8 +2739,8 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake);
 
-        // The shipped drawer default is retracted, so the lane expands it first: the reset contract
-        // covers BOTH page scrolls, and the help scroll only exists while the drawer is arranged.
+        // The shipped help default is retracted, so the lane expands it first: the reset contract covers
+        // BOTH page scrolls, and the help panel scroll only exists while the panel is arranged.
         host.Bindings.Set("help-open", true);
 
         // 0.4.0 keys scroll positions by element node, so arranging first is what makes the ids
@@ -1993,7 +2758,7 @@ internal static class Program
         Assert(content.x == 0f && content.y == 0f,
             "workspace switch resets the centre content scroll to top");
         Assert(help.x == 0f && help.y == 0f,
-            "workspace switch resets the right help scroll to top");
+            "workspace switch resets the bottom help panel scroll to top");
     }
 
     private static void RichDynamicDataMeasureAndDraw()
@@ -2044,10 +2809,14 @@ internal static class Program
         Assert(fake.LastPackFilter == "AuthorB", "set-pack-filter action routes");
 
         // Dynamic list interactions: domain selection + checklist toggle + forget + baseline.
-        bindings.Invoke("select-domain", new UsDomainSelection(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
-        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Xenotype && fake.LastSelectedTarget == "sanguophage", "select-domain routes");
-        bindings.Invoke("toggle-pack", new UsPackToggle(SqueakVoicePackScope.Xenotype, "human", "sanguophage", "us.sang2", true));
-        Assert(fake.LastPackKey == "us.sang2" && fake.LastPackEnabled == true, "toggle-pack routes");
+        bindings.Invoke("select-domain", "human|sanguophage");
+        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Xenotype && fake.LastSelectedRace == "human"
+            && fake.LastSelectedTarget == "sanguophage", "a composite row key decodes into a xenotype selection");
+        bindings.Invoke("select-domain", "testrace");
+        Assert(fake.LastSelectedScope == SqueakVoicePackScope.Race && fake.LastSelectedRace == "testrace"
+            && fake.LastSelectedTarget == "", "a bare row key decodes into a race selection");
+        // US-PACK1: "toggle-pack" retired with the checklist list; the card row's enable is the
+        // item-scoped VALUE asserted through a real materialised row in PackCardsLaneTests.
         bindings.Invoke("forget-unavailable", new UsDomainIdentity(SqueakVoicePackScope.Xenotype, "human", "sanguophage"));
         Assert(fake.LastForgetTarget == "sanguophage", "forget-unavailable routes");
         bindings.Invoke("toggle-baseline-preset", "us.preset1");
@@ -2064,9 +2833,208 @@ internal static class Program
         Assert(fake.LastTuningDomainRace == "human" && fake.LastTuningDomainTarget == "sanguophage", "set-tuning-domain routes");
     }
 
-    private static void SessionPopupIsolationAndCleanup()
+    /// <summary>
+    /// R4-B: the preset card's race/xenotype rows are composed through FL's shared row band, and the native
+    /// xenotype icon rides the row as data.
+    /// <list type="bullet">
+    /// <item>an icon grows the card (the band reserved the picture's own height from the shared
+    /// <c>UiRowBand.Measure</c>), and the same fixture with no icon draws without one - the null fallback;</item>
+    /// <item>the composition paints the card's own right-end checkbox, and a real press on THAT drawn box
+    /// writes only the row's own toggle - the box is a part target, not a row click;</item>
+    /// <item>an expanded preset reserves its descendants and a collapsed one reserves none;</item>
+    /// <item>the expanded answer is the host's own: two hosts over one model keep separate state.</item>
+    /// </list>
+    /// </summary>
+    private static void PresetRowsComposeThroughTheSharedBand()
     {
-        var fake = new RecordingSettingsSource();
+        var viewport = new Rect(0f, 0f, 1024f, 768f);
+
+        // --- (1) the icon path: the band reserves the picture's height, so the card grows.
+        // The picture is deliberately far taller than a text band, so the clause tests "the picture's own
+        // height was reserved" and not a coincidence of this viewport's wording.
+        var withIcon = new RecordingSettingsSource { RichData = true, XenotypeIcon = new Texture2D(64, 200) };
+        using (UiHost host = UsKernelSettingsHost.Create(withIcon, new Program.StubMetrics()))
+        {
+            host.Bindings.Invoke("set-tab", "Presets");
+            var drawnTextures = (IList)(typeof(GUI).GetField("DrawTextureRects")?.GetValue(null)
+                ?? throw new InvalidOperationException("the texture draw recorder is unavailable"));
+            drawnTextures.Clear();
+            host.DrawChecked(viewport);
+            float withIconHeight = PresetCardHeight(host, viewport);
+            Assert(drawnTextures.Count == 1 && drawnTextures[0] is Rect imageRect
+                && Math.Abs(imageRect.height - 200f) < 0.1f,
+                "the 200px fixture image must use its reserved draw height, not the old text-row height");
+
+            // The same model with no icon: the null fallback must draw, and must not reserve a picture.
+            withIcon.XenotypeIcon = null;
+            host.Bindings.NotifyChanged("baseline-presets");
+            // Direct fixture mutation bypasses the production write boundary's revision bump.
+            host.Session.BumpContentRevision();
+            host.DrawChecked(viewport);
+            float noIconHeight = PresetCardHeight(host, viewport);
+            Assert(noIconHeight < withIconHeight - 1f,
+                "a row carrying a picture must reserve the picture's own height through the shared band"
+                + " (with icon " + withIconHeight + ", without " + noIconHeight + "): a null icon is the"
+                + " band's documented fallback, not a smaller band");
+        }
+
+        // --- (2) the composition's checkbox is the card's own right-end slot, and it is a PART target.
+        var driven = new RecordingSettingsSource { RichData = true };
+        using (UiHost host = UsKernelSettingsHost.Create(driven, new Program.StubMetrics()))
+        {
+            host.Bindings.Invoke("set-tab", "Presets");
+            ClearDrawBoxSolidCalls();
+            host.DrawChecked(viewport);
+            Rect card = PresetCard(host, viewport);
+            Rect scroll = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height)).RectById["content-scroll"];
+
+            float boxX = card.xMax - scroll.x - UsCardLayout.Padding - (UsKernelDraw.ControlColumnRightInset + UsKernelDraw.CheckboxVisual);
+            Rect? box = DrawnBoxAtX(boxX);
+            Assert(box.HasValue,
+                "the composed row must paint its checkbox in the card's right-end control column (expected x "
+                + boxX + "); without it the migration lost the checkbox");
+
+            driven.LastBaselineRace = null;
+            Rect windowBox = box!.Value;
+            windowBox.x += scroll.x;
+            windowBox.y += scroll.y;
+            PressAt(host, viewport, windowBox);
+
+            Assert(driven.LastBaselineRace == "human" && driven.LastBaselineRaceSelected == false,
+                "a press on the drawn checkbox must write the row's own typed toggle (got race '"
+                + (driven.LastBaselineRace ?? "(none)") + "', selected " + driven.LastBaselineRaceSelected + ")");
+            Assert(driven.LastBaselinePresetToggle == null,
+                "and it must be the BOX part, not the row body: expansion must not move with selection");
+        }
+
+        // --- (3) expansion reserves descendants, and collapsing reserves none.
+        var expandable = new RecordingSettingsSource
+        {
+            RichData = true,
+            PresetToggleFlipsExpandedState = true
+        };
+        using (UiHost host = UsKernelSettingsHost.Create(expandable, new Program.StubMetrics()))
+        {
+            host.Bindings.Invoke("set-tab", "Presets");
+            host.DrawChecked(viewport);
+            float expandedHeight = PresetCardHeight(host, viewport);
+            Assert(expandable.PresetExpanded, "the fixture starts expanded");
+
+            host.Bindings.Invoke("toggle-baseline-preset", "us.preset1");
+            host.Bindings.NotifyChanged("baseline-presets");
+            host.DrawChecked(viewport);
+            float collapsedHeight = PresetCardHeight(host, viewport);
+            Assert(!expandable.PresetExpanded, "the toggle write flipped the model's expanded answer");
+            Assert(collapsedHeight < expandedHeight - 1f,
+                "hidden descendants must take NO layout: expanded " + expandedHeight + " vs collapsed "
+                + collapsedHeight);
+        }
+
+        // --- (4) per host: the expanded answer belongs to the host's own model instance.
+        var first = new RecordingSettingsSource { RichData = true, PresetToggleFlipsExpandedState = true };
+        var second = new RecordingSettingsSource { RichData = true, PresetToggleFlipsExpandedState = true };
+        using (UiHost hostA = UsKernelSettingsHost.Create(first, new Program.StubMetrics()))
+        using (UiHost hostB = UsKernelSettingsHost.Create(second, new Program.StubMetrics()))
+        {
+            hostA.Bindings.Invoke("set-tab", "Presets");
+            hostB.Bindings.Invoke("set-tab", "Presets");
+            hostA.DrawChecked(viewport);
+            hostB.DrawChecked(viewport);
+            float beforeA = PresetCardHeight(hostA, viewport);
+
+            hostA.Bindings.Invoke("toggle-baseline-preset", "us.preset1");
+            hostA.Bindings.NotifyChanged("baseline-presets");
+            hostA.DrawChecked(viewport);
+            hostB.DrawChecked(viewport);
+            float afterA = PresetCardHeight(hostA, viewport);
+            float afterB = PresetCardHeight(hostB, viewport);
+
+            Assert(!first.PresetExpanded && second.PresetExpanded,
+                "the collapse landed on host A's own model only");
+            Assert(afterA < beforeA - 1f && Math.Abs(afterB - beforeA) < 0.01f,
+                "host B must keep its expanded layout when host A collapses (A " + beforeA + " -> " + afterA
+                + ", B " + afterB + ")");
+        }
+    }
+
+    /// <summary>The preset card's arranged rect, or a failure: the lane cannot measure what the page did not place.</summary>
+    private static Rect PresetCard(UiHost host, Rect viewport)
+    {
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        Assert(snapshot.RectById.TryGetValue("preset-list", out Rect card),
+            "the Presets workspace must place the preset-list card");
+        return card;
+    }
+
+    private static float PresetCardHeight(UiHost host, Rect viewport)
+    {
+        return PresetCard(host, viewport).height;
+    }
+
+    /// <summary>The rightmost drawn solid at an expected x, which is where the composed box paints.</summary>
+    private static Rect? DrawnBoxAtX(float x)
+    {
+        IList rects = Recorded("DrawBoxSolidRects");
+        Rect? found = null;
+        foreach (object? entry in rects)
+        {
+            if (entry is not Rect rect) continue;
+            if (Math.Abs(rect.width - UsKernelDraw.CheckboxVisual) > 0.1f
+                || Math.Abs(rect.height - UsKernelDraw.CheckboxVisual) > 0.1f) continue;
+            if (Math.Abs(rect.x - x) > 0.5f) continue;
+            if (!found.HasValue || rect.y < found.Value.y) found = rect;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Clicks the window-space target through both pointer phases; the native button activates on release.
+    /// </summary>
+    private static void PressAt(UiHost host, Rect viewport, Rect target)
+    {
+        try
+        {
+            foreach (EventType phase in new[] { EventType.MouseDown, EventType.MouseUp })
+            {
+                Event raised = Event.KeyboardEvent("");
+                raised.type = phase;
+                raised.button = 0;
+                raised.mousePosition = new Vector2(target.x + target.width / 2f, target.y + target.height / 2f);
+                Event.current = raised;
+                host.DrawChecked(viewport);
+            }
+        }
+        finally
+        {
+            Event.current = null;
+        }
+    }
+
+    private static IList Recorded(string fieldName)
+    {
+        FieldInfo? field = typeof(Verse.Widgets).GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
+        if (field == null)
+        {
+            throw new InvalidOperationException("the runtime stub does not record '" + fieldName + "'");
+        }
+
+        return field.GetValue(null) as IList
+            ?? throw new InvalidOperationException("the stub's '" + fieldName + "' recorder is not a list");
+    }
+
+    private static void ClearDrawBoxSolidCalls()
+    {
+        MethodInfo? clear = typeof(Verse.Widgets).GetMethod(
+            "ClearDrawBoxSolidCalls", BindingFlags.Public | BindingFlags.Static);
+        if (clear == null) throw new InvalidOperationException("the runtime stub does not expose ClearDrawBoxSolidCalls");
+        clear.Invoke(null, null);
+    }
+
+    private static void SessionPopupIsolationAndCleanup()
+
+    {
+        var fake = new RecordingSettingsSource { RichData = true };
         using UiHost a = UsKernelSettingsHost.Create(fake);
         using UiHost b = UsKernelSettingsHost.Create(fake);
 
@@ -2079,10 +3047,17 @@ internal static class Program
 
         a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
         Assert(a.Session.PopupDrawActions.Count == 0, "popup draw actions are consumed at EndFrame");
-        Assert(a.Session.IsPopupOpen("a-popup"), "popup ownership survives the frame");
+        Assert(!a.Session.IsPopupOpen("a-popup"), "an undrawn owner releases its orphan popup in the same frame");
 
+        // A real dropdown continues to report its anchor; only ownerless popups are reconciled away.
+        a.Bindings.Invoke("set-tab", "Packs");
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        a.Session.OpenPopup("pack-filter", new Rect(0f, 0f, 10f, 10f));
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        Assert(a.Session.IsPopupOpen("pack-filter"), "a drawn owner's popup survives the frame");
+        Assert(!b.Session.IsPopupOpen("pack-filter"), "a real popup remains isolated to session A");
         a.Session.ClosePopup();
-        Assert(!a.Session.IsPopupOpen("a-popup"), "ClosePopup releases the popup");
+        Assert(!a.Session.IsPopupOpen("pack-filter"), "ClosePopup releases the popup");
 
         // Dispose clears popup + hot-control state for exactly this session.
         a.Session.OpenPopup("a-popup", new Rect(0f, 0f, 10f, 10f));
@@ -2141,7 +3116,7 @@ internal static class Program
         UiLayoutManifest manifest = UiLayoutManifest.Parse(xml);
         // Missing the required typed binding => the real widget's Validate must fail at creation.
         AssertThrows<UiContractException>(
-            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UiTheme.DarkGold, new StubMetrics(), new StubTranslation()),
+            () => new UiHost(ExpectedSource, manifest, new UiBindings(), UsTheme.Surface(), new StubMetrics(), new StubTranslation()),
             "missing camera-readout binding must fail at overlay Host creation");
     }
 
@@ -2360,6 +3335,23 @@ internal static class Program
         /// is how constant bands of 16/18/24/26/28 passed this sweep and still clipped in game. Line
         /// advance is a per-font constant (it does not depend on the glyph set), so one calibrated
         /// table serves both language tables; the width axis keeps its own half-width model.
+        ///
+        /// <para>
+        /// DEVIATION FROM THE TWO-REPO CONVENTION, deliberate and ruled (Lead, 2026-09-25): the shared
+        /// convention would say height = lines * em * 1.25, i.e. 15 / 20 / 22.5 for these fonts. This table
+        /// keeps the CALIBRATED values instead, because they were measured against the real font and the
+        /// convention's numbers are LOWER - converging would replace a measurement with a formula. The
+        /// calibration's two sources, both in this repository: MEMORY.md:685 and OBLIVIONIS.md:726, the
+        /// latter carrying the warning that "a constant stub turns every height assertion into theatre".
+        /// </para>
+        ///
+        /// <para>
+        /// Large is NOT MEASURED. No calibrated line advance exists for it and it is deliberately NOT filled
+        /// in from the formula: the default arm below is the Small/Medium-calibrated 21.33333 value, and any
+        /// caller that needs Large's real advance has to measure it in game first. This is recorded rather
+        /// than silently defaulted, because a formula-filled Large would look measured in every lane that
+        /// reads it.
+        /// </para>
         /// </summary>
         private static float LineHeight(FerriteLib.UiKit.Kernel.UiFont font) => font switch
         {
@@ -2401,7 +3393,7 @@ internal static class Program
         }
     }
 
-    private sealed class StubTranslation : FerriteLib.UiKit.Kernel.IUiTranslation
+    internal sealed class StubTranslation : FerriteLib.UiKit.Kernel.IUiTranslation
     {
         public string Translate(string key)
         {
@@ -2488,7 +3480,7 @@ internal static class Program
         public bool Prerequisite = true;
         public UiSession? BuiltSession;
 
-        protected override UiTheme Theme => UiTheme.DarkGold;
+        protected override UiTheme Theme => UsTheme.Surface();
         protected override string Title => "probe title";
         protected override string Subtitle => "probe subtitle";
         protected override string CloseText => "probe close";

@@ -4,6 +4,7 @@ param(
     # script used to produce was also the one a human was told to handle, and it was built from the
     # CONTENTS of the stage dir, so unzipping into Mods/ scattered a loose LoadFolders.xml. The engine can
     # still write a correctly shaped archive when someone asks for one; nothing on this path asks.
+    [string]$FerriteLibArtifactPath,
     [switch]$Zip
 )
 
@@ -17,6 +18,7 @@ function Resolve-NormalizedPath {
 }
 
 $root = Resolve-NormalizedPath -Path $ProjectRoot
+$carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $devDir = Join-Path $root 'dist\dev'
 $stageDir = Join-Path $devDir 'UniversalSqueaker'
@@ -32,18 +34,8 @@ if ($null -eq $versionNode -or [string]::IsNullOrWhiteSpace($versionNode.InnerTe
 # inside it cannot disagree.
 $versionLabel = $versionNode.InnerText.Trim()
 
-# Build the flavor this channel is named for, here, fresh. Two things are being forced, both measured
-# on 2026-09-07 rather than assumed:
-#
-# 1. Truth. This folder's version.txt says build=dev, and US_DEV gates live code - Auto dev-logging is
-#    on only under US_DEV, and the footer commit revision prints only under US_DEV. stage-package now
-#    reads the configuration stamp out of the DLL instead of taking this script's word for it, so a
-#    rehearsal can no longer be mislabeled by accident.
-# 2. Freshness. Dev and Release share one OutputPath and up-to-dateness is judged per configuration, so
-#    an incremental build can report itself current while the file at the payload path was written by the
-#    other configuration - which is exactly how the old flow shipped `build=dev` over Release bytes.
-#    --no-incremental removes the guess.
-& dotnet build $projectFile -c Dev --no-incremental --nologo -v minimal
+# Build Dev into its own directory, against precisely the selected read-only carrier.
+& dotnet build $projectFile -c Dev --no-incremental "-p:FerriteLibArtifactPath=$carrierDll" --nologo -v minimal
 if ($LASTEXITCODE -ne 0) { throw 'Dev build failed.' }
 
 try {
@@ -79,6 +71,7 @@ $stageArgs = @{
     StageDir     = $stageDir
     VersionLabel = $versionLabel
     BuildFlavor  = 'dev'
+    FerriteLibArtifactPath = $carrierDll
     CommitLabel  = "$shortCommit$dirtySuffix"
 }
 if ($Zip) { $stageArgs['CreateZip'] = $true }

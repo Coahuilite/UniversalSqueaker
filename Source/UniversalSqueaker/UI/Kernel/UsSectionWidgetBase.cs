@@ -40,8 +40,8 @@ public abstract class UsSectionWidgetBase : IUiWidget
             spec.Id,
             Kind,
             ctx.ElementPath,
-            CardHeight(FallbackHeight(ctx)),
-            () => CardHeight(MeasureBody(ctx)));
+            TitleHidden ? Math.Max(0f, FallbackHeight(ctx)) : CardHeight(FallbackHeight(ctx)),
+            () => TitleHidden ? Math.Max(0f, MeasureBody(ctx)) : CardHeight(MeasureBody(ctx)));
     }
 
     public void Draw(Rect rect, UiWidgetContext ctx)
@@ -59,6 +59,22 @@ public abstract class UsSectionWidgetBase : IUiWidget
             () => DrawBody(rect, ctx),
             fallback => DrawCard(fallback, ctx, body =>
                 UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny)));
+    }
+
+    /// <summary>
+    /// True when a declarative container already provides the card chrome (S3/S5 step A). The measure then
+    /// drops the card math and the body width stops subtracting the card's side padding, because the
+    /// container's own Padding already inset the rect this widget was arranged in.
+    /// </summary>
+    protected bool TitleHidden
+    {
+        get
+        {
+            if (!spec.TryGetAttribute("TitleHidden", out string raw)) return false;
+            string value = raw.Trim();
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "1", StringComparison.Ordinal);
+        }
     }
 
     /// <summary>True when the section's Tab attribute (if any) matches the active-tab binding.</summary>
@@ -108,7 +124,15 @@ public abstract class UsSectionWidgetBase : IUiWidget
     {
         if (!spec.TryGetAttribute("HelpKey", out string helpKey) || helpKey.Trim().Length == 0) return false;
         string hover = ctx.Session.HoverClaim ?? "";
-        return hover.Length > 0 && hover.StartsWith(helpKey.Trim() + "/", StringComparison.Ordinal);
+        string section = helpKey.Trim();
+        // Two accepted shapes, and the second one is new with the engine-wide HelpKey contract: a control
+        // inside the card claims a SUB-key ("us/pack-cards/row"), while the card's own widget can now be
+        // claimed by the engine with the BARE key when the pointer is over the card and no inner element
+        // claims first. StartsWith alone would leave the border dark for the bare case, which is the one the
+        // engine produces for the section itself.
+        return hover.Length > 0
+            && (hover.StartsWith(section + "/", StringComparison.Ordinal)
+                || string.Equals(hover, section, StringComparison.Ordinal));
     }
 
     /// <summary>Fallback body height used when Measure throws.</summary>
@@ -124,7 +148,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
     /// </summary>
     protected float BodyWidth(UiWidgetContext ctx)
     {
-        return Math.Max(1f, ctx.ViewWidth - UsCardLayout.Padding * 2f);
+        return TitleHidden ? Math.Max(1f, ctx.ViewWidth) : Math.Max(1f, ctx.ViewWidth - UsCardLayout.Padding * 2f);
     }
 
     /// <summary>Includes the same card chrome that DrawCard consumes.</summary>

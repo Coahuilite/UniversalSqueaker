@@ -1,6 +1,6 @@
 # Meowing Kiiro 原始音频格式化记录（2026-09-14）
 
-本机 ffmpeg 8.1.2（`D:\Program Files\FFmpeg\bin`）对 `dist/voicepacks/raw/Meowing Kiiro/`
+本机 ffmpeg 8.1.2（通过 `PATH` 查找可执行文件）对 `dist/voicepacks/raw/Meowing Kiiro/`
 就地格式化（直接覆盖）。**不含**正式版音频包制作计划——该计划待 skill 修订完成后再制定。
 
 ## 处理前状态
@@ -67,7 +67,7 @@ silenceremove(peak, -45 dBFS, 首尾各一遍, 中间 areverse)
 ## 种族身份核验（2026-09-14，维护者已裁定 Race 级、无 Xenotype）
 
 - `raceDefName` = **`Kiiro_Race`**（精确、区分大小写）。来源：Workshop 模组
-  `I:\SteamLibrary\steamapps\workshop\content\294100\2988200143`（`Ancot.KiiroRace`，
+  Steam 库中的相对目录 `steamapps/workshop/content/294100/2988200143`（`Ancot.KiiroRace`，
   display name “Kiiro Race”）`1.6/Defs/ThingDefs_Race/Race_Kiiro.xml` 中
   `AlienRace.ThingDef_AlienRace` 的 `<defName>`；该模组 `supportedVersions` 含 1.6。
 - 依赖：`erdelf.HumanoidAlienRaces`（HAR）与 `ancot.ancotlibrary`（同列表激活）；

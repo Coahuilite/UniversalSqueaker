@@ -57,18 +57,37 @@
   <US.Diagnostics.Logging.Enabled>开启</US.Diagnostics.Logging.Enabled>
   <US.Diagnostics.Logging.Disabled>关闭</US.Diagnostics.Logging.Disabled>
   <US.Diagnostics.LocalizeDebugMenu>本地化调试菜单</US.Diagnostics.LocalizeDebugMenu>
+  <US.Diagnostics.Geometry.Label>布局采集（开发者）</US.Diagnostics.Geometry.Label>
+  <US.Diagnostics.Geometry.Off>布局采集已关闭。</US.Diagnostics.Geometry.Off>
+  <US.Diagnostics.Geometry.Active>正在采集本窗口的布局。</US.Diagnostics.Geometry.Active>
+  <US.Diagnostics.Geometry.Overlay>正在采集，并显示矩形描边。</US.Diagnostics.Geometry.Overlay>
+  <US.Diagnostics.Geometry.OutlineOnly>描边开启、采集关闭：只绘制当前帧的矩形，不采样，也不会备好报告。</US.Diagnostics.Geometry.OutlineOnly>
+  <US.Diagnostics.Geometry.Unavailable>不可用：当前版本不含布局工具。请使用开发版的库包。</US.Diagnostics.Geometry.Unavailable>
+  <US.Diagnostics.Geometry.NoScope>不可用：本页面没有诊断作用域。</US.Diagnostics.Geometry.NoScope>
+  <US.Diagnostics.Geometry.Capture>采集</US.Diagnostics.Geometry.Capture>
+  <US.Diagnostics.Geometry.Outline>描边</US.Diagnostics.Geometry.Outline>
+  <US.Diagnostics.Geometry.Report>报告</US.Diagnostics.Geometry.Report>
+  <!-- RPT1: 报告按钮下方即时显示的结果。 -->
+  <US.Diagnostics.Geometry.Report.Ready>已就绪：点击「报告」把下一次绘制的结果写入布局日志。</US.Diagnostics.Geometry.Report.Ready>
+  <US.Diagnostics.Geometry.Report.CaptureOff>暂无报告：布局采集已关闭。</US.Diagnostics.Geometry.Report.CaptureOff>
+  <US.Diagnostics.Geometry.Report.RefusedCaptureOff>未生成报告：布局采集已关闭。请先开启「采集」，再点击「报告」。</US.Diagnostics.Geometry.Report.RefusedCaptureOff>
+  <US.Diagnostics.Geometry.Report.Unavailable>无法生成报告：当前版本不含布局工具。</US.Diagnostics.Geometry.Report.Unavailable>
+  <US.Diagnostics.Geometry.Report.NoScope>无法生成报告：本页面没有诊断作用域。</US.Diagnostics.Geometry.Report.NoScope>
+  <US.Diagnostics.Geometry.Report.Waiting>已请求报告：将在下一次绘制后写入。</US.Diagnostics.Geometry.Report.Waiting>
+  <US.Diagnostics.Geometry.Report.Written>报告已写入布局日志：pass {0}。</US.Diagnostics.Geometry.Report.Written>
+  <US.Diagnostics.Geometry.Report.NotProduced>未生成报告：采集内容为空。请在再次绘制后重试。</US.Diagnostics.Geometry.Report.NotProduced>
 
-  <US.Action.Call>呼叫</US.Action.Call>
+  <US.Action.Call>普通叫声</US.Action.Call>
   <US.Action.Eat>进食</US.Action.Eat>
   <US.Action.Sleep>睡眠</US.Action.Sleep>
-  <US.Action.Wounded>受伤</US.Action.Wounded>
+  <US.Action.Wounded>受击</US.Action.Wounded>
   <US.Action.Select>选中</US.Action.Select>
   <US.Action.Move>移动</US.Action.Move>
   <US.Action.Social>社交</US.Action.Social>
   <US.Action.Joy>娱乐</US.Action.Joy>
   <US.Action.Death>死亡</US.Action.Death>
   <US.Action.Draft>征召</US.Action.Draft>
-  <US.Action.Undraft>解除征召</US.Action.Undraft>
+  <US.Action.Undraft>取消征召</US.Action.Undraft>
   <US.Action.Attack>攻击</US.Action.Attack>
   <US.Action.Work>工作</US.Action.Work>
   <US.Action.Equip>装备</US.Action.Equip>
@@ -98,7 +117,7 @@
   <!-- Schema=2 设置页标题（UsPageTitleWidget / UsNavWidget）与卡片标题（清单 TitleKey）。
        中文串按净宽预算收紧：nav 描述 ≤25 半角单位，中间列 Tiny 文案 ≤47 半角单位。 -->
   <US.Page.Overview.Title>语音包路由</US.Page.Overview.Title>
-  <US.Page.Overview.Caption>选择本存档的路由与播放行为</US.Page.Overview.Caption>
+  <US.Page.Overview.Caption>选择本 Mod 的路由与播放行为</US.Page.Overview.Caption>
   <US.Page.Distance.Title>距离衰减</US.Page.Distance.Title>
   <US.Page.Distance.Caption>设定区间、比对曲线、再选快速预设</US.Page.Distance.Caption>
   <US.Page.Packs.Title>语音包选择</US.Page.Packs.Title>
@@ -119,14 +138,68 @@
   <US.Nav.Presets.Label>预设</US.Nav.Presets.Label>
   <US.Nav.Presets.Description>Def 提供的基线</US.Nav.Presets.Description>
 
+  <US.DevPanel.Title>US 开发面板</US.DevPanel.Title>
+  <US.DevPanel.Target>目标</US.DevPanel.Target>
+  <US.DevPanel.Target.Settings>设置页</US.DevPanel.Target.Settings>
+  <US.DevPanel.Target.Dialog>混音确认窗</US.DevPanel.Target.Dialog>
+  <US.DevPanel.Target.Diagnostics>诊断面板</US.DevPanel.Target.Diagnostics>
+  <US.DevPanel.Capture>采集</US.DevPanel.Capture>
+  <US.DevPanel.Outline>描边</US.DevPanel.Outline>
+  <US.DevPanel.Report>报告</US.DevPanel.Report>
+  <US.DevPanel.Status.Idle>就绪。</US.DevPanel.Status.Idle>
+  <US.DevPanel.Status.Capture>采集</US.DevPanel.Status.Capture>
+  <US.DevPanel.Status.Overlay>描边</US.DevPanel.Status.Overlay>
+  <US.DevPanel.Status.Page>已切到</US.DevPanel.Status.Page>
+  <US.DevPanel.Status.NoSettings>设置窗口未打开——页面按钮需要它打开。</US.DevPanel.Status.NoSettings>
+  <US.DevPanel.Status.ReportWritten>报告已写入</US.DevPanel.Status.ReportWritten>
+  <US.DevPanel.Status.ReportWaiting>报告已请求，等待下一个 pass</US.DevPanel.Status.ReportWaiting>
+  <US.DevPanel.Status.ReportUnavailable>该目标当前不可报告</US.DevPanel.Status.ReportUnavailable>
+  <US.Diagnostics.DevPanel.Label>开发面板：在任意设置页对设置页及其确认弹窗执行采集、描边与报告。</US.Diagnostics.DevPanel.Label>
+  <US.Diagnostics.DevPanel.Open>打开开发面板</US.Diagnostics.DevPanel.Open>
+  <US.Tuning.Area.Actions>动作规则</US.Tuning.Area.Actions>
+  <US.Tuning.Area.Mood>心情音色</US.Tuning.Area.Mood>
+  <US.Tuning.Area.Fallback>原生回退</US.Tuning.Area.Fallback>
+  <US.Tuning.Interval>间隔</US.Tuning.Interval>
+  <US.Tuning.Probability>概率</US.Tuning.Probability>
+  <US.Tuning.RestoreInherit>恢复继承</US.Tuning.RestoreInherit>
+  <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
+  <US.Tuning.ResetPresetUnavailable>预设无此条目</US.Tuning.ResetPresetUnavailable>
+  <US.Tuning.ResetPresetNoAnchor>无预设来源</US.Tuning.ResetPresetNoAnchor>
+  <US.VF1.Source.Global>全局</US.VF1.Source.Global>
+  <US.VF1.Source.Race>种族</US.VF1.Source.Race>
+  <US.VF1.Source.Xenotype>异种</US.VF1.Source.Xenotype>
+  <US.VF1.Source.Default>默认</US.VF1.Source.Default>
+  <US.VF1.Race>种族</US.VF1.Race>
+  <US.VF1.Create>新建表</US.VF1.Create>
+  <US.VF1.NoTable>尚无回退表。在上方选择种族即可新建；新种族从下次完整启动游戏时生效。</US.VF1.NoTable>
+  <US.VF1.Unset>未设置（无声）</US.VF1.Unset>
+  <US.VF1.SoundSearch>搜索声音</US.VF1.SoundSearch>
+  <US.VF1.RestoreInherit>恢复继承</US.VF1.RestoreInherit>
+  <US.VF1.RestoreDefault>恢复默认</US.VF1.RestoreDefault>
+  <US.VF1.Delete>删除表</US.VF1.Delete>
+  <US.VF1.DeleteQuestion>确定删除这张玩家表？删除后可重新创建；随包声音不受影响。</US.VF1.DeleteQuestion>
+  <US.VF1.DeleteConfirm>确认删除</US.VF1.DeleteConfirm>
+  <US.VF1.State.Unset>未设置</US.VF1.State.Unset>
+  <US.VF1.State.Override>玩家覆盖</US.VF1.State.Override>
+  <US.VF1.State.Maintainer>随包数据</US.VF1.State.Maintainer>
+  <US.VF1.State.NoSound>缺声</US.VF1.State.NoSound>
+  <US.VF1.Status.Saved>已保存；该种族的表立即生效。</US.VF1.Status.Saved>
+  <US.VF1.Status.SavedRestart>已保存；本表新支持的种族从下次完整启动游戏时开始路由。</US.VF1.Status.SavedRestart>
+  <US.VF1.Status.CreatedRestart>表已创建；从下次完整启动游戏时开始路由。</US.VF1.Status.CreatedRestart>
+  <US.VF1.Status.Restored>已清除玩家覆盖，恢复随包数据。</US.VF1.Status.Restored>
+  <US.VF1.Status.NoMaintainerData>这是玩家自建表——请删除而不是恢复。</US.VF1.Status.NoMaintainerData>
+  <US.VF1.Status.Deleted>玩家表已删除；其种族支持在下次完整启动时撤除。</US.VF1.Status.Deleted>
+  <US.VF1.Status.DeleteRefusedMaintainer>随包表不可删除；请使用恢复默认。</US.VF1.Status.DeleteRefusedMaintainer>
+  <US.VF1.Status.SaveFailed>保存失败——磁盘上的表未改动，原因见日志。</US.VF1.Status.SaveFailed>
+
+
   <US.Section.OutputLevel>输出音量</US.Section.OutputLevel>
-  <US.Section.PlaybackBehaviour>播放行为</US.Section.PlaybackBehaviour>
+  <US.Section.PlaybackBehaviour>发声规则</US.Section.PlaybackBehaviour>
   <US.Section.InWorldIndicator>世界内指示器</US.Section.InWorldIndicator>
-  <US.Section.DistanceAttenuation>距离衰减</US.Section.DistanceAttenuation>
-  <US.Section.FilterDomains>1. 筛选音域</US.Section.FilterDomains>
-  <US.Section.RaceDomain>2. 选择种族域</US.Section.RaceDomain>
-  <US.Section.XenotypeDomain>2. 或选择异种域</US.Section.XenotypeDomain>
-  <US.Section.ChooseVoicePacks>3. 选择语音包</US.Section.ChooseVoicePacks>
+  <US.Section.DistanceAttenuation>听取距离</US.Section.DistanceAttenuation>
+  <US.Section.FilterDomains>1. 筛选语音包</US.Section.FilterDomains>
+  <US.Section.PackResults>2. 语音包卡片</US.Section.PackResults>
+  <US.Section.ChooseVoicePacks>语音包域状态</US.Section.ChooseVoicePacks>
   <US.Section.LayeredTuning>分层调音</US.Section.LayeredTuning>
   <US.Section.DefBaselines>Def 基线预设</US.Section.DefBaselines>
   <US.Section.TriggerTiming>触发节奏</US.Section.TriggerTiming>
@@ -134,19 +207,30 @@
   <US.Tuning.EasterEggs>彩蛋音效</US.Tuning.EasterEggs>
   <US.Tuning.EasterEggs.On>开启：彩蛋加入音效池</US.Tuning.EasterEggs.On>
   <US.Tuning.EasterEggs.Off>关闭：仅普通语音条目</US.Tuning.EasterEggs.Off>
-  <US.Tuning.ScaleCooldown>按时间流速缩放冷却</US.Tuning.ScaleCooldown>
-  <US.Tuning.ScaleTalking>按交谈缩放频率</US.Tuning.ScaleTalking>
-  <US.Tuning.ScalePopulation>按可闻人口缩放周期</US.Tuning.ScalePopulation>
-  <US.Tuning.EatPrecision>仅在真正进食时发声</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>服用成瘾品也算作进食</US.Tuning.EatPrecision.IncludeDrugs>
+  <US.Tuning.ScaleCooldown>高倍速时保持叫声节奏稳定</US.Tuning.ScaleCooldown>
+  <US.Tuning.ScaleTalking>按语言能力（Talking）调整普通叫声尝试</US.Tuning.ScaleTalking>
+  <US.Tuning.ScalePopulation>可听区域内已接入 US 的 Pawn 较多时减少周期叫声</US.Tuning.ScalePopulation>
+  <US.Tuning.EatPrecision>仅在真正进食（正在摄入营养）时触发 Eat 叫声</US.Tuning.EatPrecision>
+  <US.Tuning.EatPrecision.IncludeDrugs>使用成瘾品</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
-  <US.Tuning.MinInterval>最小触发间隔：{0}</US.Tuning.MinInterval>
-  <US.Tuning.CooldownMultiplier>全局冷却倍率</US.Tuning.CooldownMultiplier>
+  <US.Tuning.MinInterval>叫声间隔总控：{0}  ·  1.0x 使用当前默认节奏</US.Tuning.MinInterval>
+  <US.Tuning.CooldownMultiplier>冷却倍率</US.Tuning.CooldownMultiplier>
+  <US.Tuning.CooldownMultiplier.Minus>−</US.Tuning.CooldownMultiplier.Minus>
+  <US.Tuning.CooldownMultiplier.Plus>+</US.Tuning.CooldownMultiplier.Plus>
   <US.Tuning.Mode.Vanilla>原版</US.Tuning.Mode.Vanilla>
   <US.Tuning.Mode.Fallback>回退</US.Tuning.Mode.Fallback>
   <US.Tuning.Mode.Remix>混音</US.Tuning.Mode.Remix>
   <US.Tuning.Mode.Disabled>禁用</US.Tuning.Mode.Disabled>
+  <!-- SA1.3：等权混合双确认（SR 参考文案正本转录；确认流程为 US 自有）。对话框关闭按钮即取消，共用 Cancel 键。 -->
+  <US.Common.Cancel>取消</US.Common.Cancel>
+  <US.Remix.Confirm.Title>启用等权混合？</US.Remix.Confirm.Title>
+  <US.Remix.Confirm1.Body>等权混合可能让相邻动作使用不同声音来源。当前可播放的异种、种族和原版层权重相同，不会优先使用某个语音包。</US.Remix.Confirm1.Body>
+  <US.Remix.Confirm.Continue>继续确认风险</US.Remix.Confirm.Continue>
+  <US.Remix.Confirm2.Body>启用后，播放可能在已安装语音包和原版声音之间明显切换。此操作只改变来源策略，不会清除已保存选择。</US.Remix.Confirm2.Body>
+  <US.Remix.Confirm.Enable>启用等权混合</US.Remix.Confirm.Enable>
+  <US.Remix.Notice.Prerequisite>该确认窗口当前无法打开。</US.Remix.Notice.Prerequisite>
+  <US.Remix.Notice.Unavailable>确认页加载失败；模式未改变。</US.Remix.Notice.Unavailable>
   <US.Packs.Filter.All>全部</US.Packs.Filter.All>
   <US.Packs.Filter.EnabledOnly>仅已启用</US.Packs.Filter.EnabledOnly>
   <US.Packs.Filter.Conflicts>仅冲突</US.Packs.Filter.Conflicts>
@@ -154,21 +238,20 @@
   <US.Packs.Filter.Race>种族</US.Packs.Filter.Race>
   <US.Packs.Filter.Xenotype>异种</US.Packs.Filter.Xenotype>
   <US.Packs.Filter.Author>作者</US.Packs.Filter.Author>
-  <US.Packs.Domain.EnabledSummary>已启用 {0} / {1}</US.Packs.Domain.EnabledSummary>
   <US.Packs.Domain.NameWithState>{0} {1}</US.Packs.Domain.NameWithState>
-  <US.Packs.Domain.State.Orphan>已失效</US.Packs.Domain.State.Orphan>
-  <US.Packs.Domain.State.TargetUnavailable>目标未加载</US.Packs.Domain.State.TargetUnavailable>
-  <US.Packs.Domain.State.Dormant>休眠</US.Packs.Domain.State.Dormant>
   <US.Packs.Domain.XenotypeRaceContext>{0} ({1})</US.Packs.Domain.XenotypeRaceContext>
-  <US.Packs.Checklist.NoDomains>尚无可用语音包域。请安装声明 raceDefName 的语音包。</US.Packs.Checklist.NoDomains>
   <US.Packs.Checklist.DormantBanner>Biotech 未启用；该异种域处于休眠。</US.Packs.Checklist.DormantBanner>
   <US.Packs.Checklist.TargetUnavailableBanner>选中的异种目标未加载。相关选择已保留，便于恢复。</US.Packs.Checklist.TargetUnavailableBanner>
   <US.Packs.Checklist.ConflictBanner>多个异种 Def 共用该目标；解决前路由保持关闭。</US.Packs.Checklist.ConflictBanner>
-  <US.Packs.Checklist.EmptyDomain>该域未安装任何语音包。</US.Packs.Checklist.EmptyDomain>
-  <US.Packs.Checklist.EmptySearch>没有语音包匹配当前搜索。</US.Packs.Checklist.EmptySearch>
   <US.Packs.Checklist.OrphanBanner>已选包键不再存在。请使用“清除失效”清理。</US.Packs.Checklist.OrphanBanner>
   <US.Packs.Checklist.ForgetUnavailable>清除失效</US.Packs.Checklist.ForgetUnavailable>
   <US.Packs.Checklist.SearchPlaceholder>搜索语音包…</US.Packs.Checklist.SearchPlaceholder>
+  <US.Packs.Filter.Keyword>关键词</US.Packs.Filter.Keyword>
+  <US.Packs.Filter.SummaryCondition>{0}：{1}</US.Packs.Filter.SummaryCondition>
+  <US.Packs.Filter.SummaryCount>{0} 张卡片</US.Packs.Filter.SummaryCount>
+  <US.Packs.Card.Contents>内容</US.Packs.Card.Contents>
+  <US.Packs.Results.Empty>没有符合当前筛选的语音包。</US.Packs.Results.Empty>
+  <US.Packs.Results.None>未安装任何语音包。请安装声明 raceDefName 的语音包。</US.Packs.Results.None>
   <US.Packs.Checklist.PackMeta>{0} · {1}</US.Packs.Checklist.PackMeta>
   <US.Packs.Checklist.PackActions>动作 {0}/{1}</US.Packs.Checklist.PackActions>
   <US.Packs.Banner.NoDomains>当前未安装任何语音包域。请添加声明 raceDefName 的语音包以配置音频。</US.Packs.Banner.NoDomains>
@@ -194,12 +277,31 @@
   <US.Tuning.Layer.Race>种族</US.Tuning.Layer.Race>
   <US.Tuning.Layer.Xenotype>异种</US.Tuning.Layer.Xenotype>
   <US.Tuning.ActionScope>动作范围</US.Tuning.ActionScope>
-  <US.Tuning.Group.Autonomous>自发行为</US.Tuning.Group.Autonomous>
-  <US.Tuning.Group.Operable>可操作 / 指令</US.Tuning.Group.Operable>
+  <US.Tuning.Group.PlayerTriggered>玩家可主动触发</US.Tuning.Group.PlayerTriggered>
+  <US.Tuning.Group.SystemOrEvent>系统或事件触发</US.Tuning.Group.SystemOrEvent>
   <US.Tuning.MoodTuning>心情调音</US.Tuning.MoodTuning>
   <US.Tuning.Scope.Off>关闭</US.Tuning.Scope.Off>
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
+  <!-- SA1.2 SR 正本同步：每动作 scope 文案。表内没有的动作（Crying/Giggling 为 US 独有）沿用上面的通用文案。 -->
+  <US.Action.DraftUndraft>征召 / 取消征召</US.Action.DraftUndraft>
+  <US.Tuning.Scope.Call.Any>周期派发的普通叫声</US.Tuning.Scope.Call.Any>
+  <US.Tuning.Scope.Eat.Any>进食时发生</US.Tuning.Scope.Eat.Any>
+  <US.Tuning.Scope.Sleep.Any>睡眠时发生</US.Tuning.Scope.Sleep.Any>
+  <US.Tuning.Scope.Wounded.Any>受伤事件</US.Tuning.Scope.Wounded.Any>
+  <US.Tuning.Scope.Select.Any>玩家选中</US.Tuning.Scope.Select.Any>
+  <US.Tuning.Scope.Move.Any>移动时发生</US.Tuning.Scope.Move.Any>
+  <US.Tuning.Scope.Social.Any>社交时发生</US.Tuning.Scope.Social.Any>
+  <US.Tuning.Scope.Joy.Any>娱乐时发生</US.Tuning.Scope.Joy.Any>
+  <US.Tuning.Scope.Death.Any>死亡事件</US.Tuning.Scope.Death.Any>
+  <US.Tuning.Scope.Attack.Any>任意符合资格的 Core 攻击</US.Tuning.Scope.Attack.Any>
+  <US.Tuning.Scope.Work.Any>任意工作任务</US.Tuning.Scope.Work.Any>
+  <US.Tuning.Scope.MentalBreak.Any>精神崩溃事件</US.Tuning.Scope.MentalBreak.Any>
+  <US.Tuning.Scope.Draft.Command>玩家征召指令</US.Tuning.Scope.Draft.Command>
+  <US.Tuning.Scope.Undraft.Command>玩家取消征召指令</US.Tuning.Scope.Undraft.Command>
+  <US.Tuning.Scope.Attack.Command>玩家强制攻击</US.Tuning.Scope.Attack.Command>
+  <US.Tuning.Scope.Work.Command>玩家强制工作</US.Tuning.Scope.Work.Command>
+  <US.Tuning.Scope.Equip.Command>玩家主动装备指令</US.Tuning.Scope.Equip.Command>
   <US.Tuning.Auto>自动</US.Tuning.Auto>
   <US.Tuning.ResetToDefault>重置为默认</US.Tuning.ResetToDefault>
   <US.Tuning.ResetToPreset>重置为预设</US.Tuning.ResetToPreset>
@@ -207,31 +309,33 @@
   <US.Tuning.ResetToPreset.Reason.NotFromPreset>此行不是预设导入的。</US.Tuning.ResetToPreset.Reason.NotFromPreset>
   <US.Tuning.ResetToPreset.Reason.PresetMissing>该预设已失效。</US.Tuning.ResetToPreset.Reason.PresetMissing>
   <US.Tuning.ResetToPreset.Reason.NoEntry>该预设没有此行设置。</US.Tuning.ResetToPreset.Reason.NoEntry>
+  <!-- XG1.1：异种层没有可调音目标时说明原因，下方控件因此无法提交。 -->
+  <US.Tuning.EmptyXenotypeTarget>此异种层没有可调音目标，调音操作暂不可用。请选择其他目标或切换调音层。</US.Tuning.EmptyXenotypeTarget>
   <US.Tuning.Factor.Pitch>音高</US.Tuning.Factor.Pitch>
   <US.Tuning.Factor.Volume>音量</US.Tuning.Factor.Volume>
   <US.Tuning.Factor.Jitter>抖动</US.Tuning.Factor.Jitter>
   <US.Distance.Preset.Conservative>保守</US.Distance.Preset.Conservative>
-  <US.Distance.Preset.Balanced>均衡</US.Distance.Preset.Balanced>
-  <US.Distance.Preset.Strong>强效</US.Distance.Preset.Strong>
+  <US.Distance.Preset.Balanced>适中</US.Distance.Preset.Balanced>
+  <US.Distance.Preset.Strong>激进</US.Distance.Preset.Strong>
   <US.Distance.Preset.Custom>自定义</US.Distance.Preset.Custom>
-  <US.Distance.Status>衰减 {0}  {1}</US.Distance.Status>
+  <US.Distance.Status>听取距离 {0}  {1}</US.Distance.Status>
   <US.Card.FallbackNote>{0} 绘制出错，本区块已跳过。其它区块不受影响。重新打开窗口即可重试。</US.Card.FallbackNote>
   <US.Help.Header>帮助  ·  {0}</US.Help.Header>
   <US.Help.EmptyTitle>帮助</US.Help.EmptyTitle>
-  <!-- 帮助抽屉：页头开关，用于收起/展开右侧帮助抽屉。 -->
+  <!-- 底部帮助面板（BH1）：移至页脚时保留既有机器标识。 -->
   <US.Help.Drawer.Toggle>帮助</US.Help.Drawer.Toggle>
-  <US.Help.Drawer.Toggle.Hint>显示或隐藏帮助抽屉</US.Help.Drawer.Toggle.Hint>
+  <US.Help.Drawer.Toggle.Hint>显示或隐藏底部帮助面板</US.Help.Drawer.Toggle.Hint>
   <US.Help.EmptyText>选择一个区块，即可在此查看对应说明。</US.Help.EmptyText>
   <US.Help.Overview>总览</US.Help.Overview>
   <!-- 帮助目录（C+A 面板）：中文为权威文本，英文由中文译出。术语裁决：异种/强效/已失效/清除失效。 -->
   <US.Help.PageTitle.Title>本窗口的用法</US.Help.PageTitle.Title>
   <US.Help.PageTitle.Overview>窗口按工作区组织：总览、距离、语音包、调音与预设，由左侧导航切换。所有修改即时生效，并自动保存到磁盘。</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>工作区导航</US.Help.PageTitle.Nav.Label>
-  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新右侧帮助面板的内容。</US.Help.PageTitle.Nav.Text>
+  <US.Help.PageTitle.Nav.Text>左侧导航在五个工作区之间切换：总览、距离、语音包、调音、预设。切换工作区会同时更新窗口底部帮助面板的内容。</US.Help.PageTitle.Nav.Text>
   <US.Help.PageTitle.Apply.Label>生效与保存</US.Help.PageTitle.Apply.Label>
   <US.Help.PageTitle.Apply.Text>所有修改即时生效。系统在每次修改后自动写入磁盘，窗口底部右侧显示"保存中 / 已保存"状态；关闭窗口时再强制补写一次。</US.Help.PageTitle.Apply.Text>
-  <US.Help.PageTitle.HelpDrawer.Label>帮助抽屉开关</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏右侧帮助抽屉。把指针停在任意控件上，抽屉即解释该控件；关闭后中间内容区获得完整宽度，已选主题在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Label>帮助面板开关</US.Help.PageTitle.HelpDrawer.Label>
+  <US.Help.PageTitle.HelpDrawer.Text>显示或隐藏本开关上方的帮助面板；它与构建标识、保存状态同处页脚一行。把指针停在任意控件上，面板即解释该控件；展开时设置区宽度不变、仍可继续操作，已选主题与各区域自身的滚动位置在开合之间保持。</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>路由模式</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>选择语音包音频的路由方式：原版仅保留内置兜底档；回退优先使用已启用语音包并逐级回落；混音将候选等权混合；禁用则完全旁路本 Mod。</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>不路由任何语音包音频，仅保留内置兜底档；该档当前没有随附内容，因此本 Mod 不发声。游戏自身的语音不受影响。</US.Help.ModeRow.Vanilla.Text>
@@ -243,31 +347,31 @@
   <US.Help.GlobalVolume.Slider.Text>拖动滑条即在 0% 至 100% 间连续缩放全部最终音频，即时生效。</US.Help.GlobalVolume.Slider.Text>
   <US.Help.GlobalVolume.Number.Label>百分比输入框</US.Help.GlobalVolume.Number.Label>
   <US.Help.GlobalVolume.Number.Text>键入 0 至 100 的百分数。能解析的输入即时生效；按回车或点击别处只是结束编辑。</US.Help.GlobalVolume.Number.Text>
-  <US.Help.Attenuation.Overview>以镜头高度对应可闻距离：横轴为 15 至 65 的距离带，起点恒为 100% 响度、终点恒为 0%，水平拖动两端设出线性淡出。快速预设：保守 15-65、均衡 15-50、强效 15-40。</US.Help.Attenuation.Overview>
+  <US.Help.Attenuation.Overview>以镜头高度对应可闻距离：横轴为 15 至 65 的距离带，起点恒为 100% 响度、终点恒为 0%，水平拖动两端设出线性淡出。这里用的是 RimWorld 的摄像机高度刻度，不是 Pawn 到镜头中心的地图格距离。快速预设：保守 15-65、适中 15-50、激进 15-40；手动编辑区间后预设名会变成「自定义」。</US.Help.Attenuation.Overview>
   <US.Help.Attenuation.Chart.Label>衰减曲线</US.Help.Attenuation.Chart.Label>
   <US.Help.Attenuation.Chart.Text>水平拖动两个控制点，设定淡出的起点与终点；左点恒处 100% 可闻、右点恒处 0%，两点间距不小于 5。</US.Help.Attenuation.Chart.Text>
   <US.Help.Attenuation.Presets.Label>快速预设</US.Help.Attenuation.Presets.Label>
-  <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、均衡 15-50、强效 15-40；套用后曲线与状态行同步更新。</US.Help.Attenuation.Presets.Text>
+  <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、适中 15-50、激进 15-40；套用后曲线与状态行同步更新。手动编辑区间后标签会变成「自定义」。</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
   <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>时间流速缩放</US.Help.BasicTuning.ScaleCooldown.Label>
-  <US.Help.BasicTuning.ScaleCooldown.Text>开启后，冷却按游戏时间流速折算：1 倍、2 倍、3 倍速下两次 squeak 的真实间隔保持一致。默认开启。</US.Help.BasicTuning.ScaleCooldown.Text>
-  <US.Help.BasicTuning.ScaleTalking.Label>交谈缩放</US.Help.BasicTuning.ScaleTalking.Label>
-  <US.Help.BasicTuning.ScaleTalking.Text>开启后，声明了交谈门控的动作需在殖民者正在交谈时才可能通过，让对话与交谈承载声音；关闭则这些动作不再看交谈状态。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
-  <US.Help.BasicTuning.ScalePopulation.Label>可闻人口缩放</US.Help.BasicTuning.ScalePopulation.Label>
-  <US.Help.BasicTuning.ScalePopulation.Text>开启后，周期语音的触发概率按可闻人口除算（每十名可闻殖民者一档），因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
+  <US.Help.BasicTuning.ScaleCooldown.Text>开启后，冷却按游戏时间流速折算：1 倍、2 倍、3 倍速下两次叫声的真实间隔保持一致。关闭则使用原始刻冷却，高倍速下会被压缩。默认开启。</US.Help.BasicTuning.ScaleCooldown.Text>
+  <US.Help.BasicTuning.ScaleTalking.Label>语言能力缩放</US.Help.BasicTuning.ScaleTalking.Label>
+  <US.Help.BasicTuning.ScaleTalking.Text>按发声者的语言能力（Talking）调整普通叫声：能力越低，普通叫声尝试通过的概率越低。自带交谈门控的动作不受影响。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
+  <US.Help.BasicTuning.ScalePopulation.Label>可听区域缩放</US.Help.BasicTuning.ScalePopulation.Label>
+  <US.Help.BasicTuning.ScalePopulation.Text>可听区域内已接入 US 的 Pawn 较多时，周期叫声减少：间隔随可闻 Pawn 数除以十的系数增大（不低于一倍），随机尝试的通过概率同比例下降，因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.BasicTuning.EatPrecision.Label>进食判定</US.Help.BasicTuning.EatPrecision.Label>
-  <US.Help.BasicTuning.EatPrecision.Text>关闭时整段进食工作都算（含走向食物的路程）。开启后只算真正摄入食物的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。默认关闭。</US.Help.BasicTuning.EatPrecision.Text>
+  <US.Help.BasicTuning.EatPrecision.Text>默认关：整段进食行程都算 Eat 叫声，含走向食物的路程。开启后只算真正摄入营养的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。</US.Help.BasicTuning.EatPrecision.Text>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>使用成瘾品</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
   <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>只在上方开关开启后出现。按咀嚼/点燃阶段判定，因此零营养成瘾品也会触发。若无法识别该阶段，则整段进食工作都算。</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
-  <US.Help.Timing.Interval.Label>最小间隔</US.Help.Timing.Interval.Label>
-  <US.Help.Timing.Interval.Text>两次 squeak 之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
+  <US.Help.Timing.Interval.Label>叫声间隔总控</US.Help.Timing.Interval.Label>
+  <US.Help.Timing.Interval.Text>两次叫声之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。1.0x 使用当前默认节奏，人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
   <US.Help.Timing.Multiplier.Text>一次性缩放所有动作冷却与全局间隔：0.5 减半等待（更吵），2.0 加倍。1.0 即作者设定的原始节奏。</US.Help.Timing.Multiplier.Text>
   <US.Help.Diagnostics.Overview>支持工具：开发者日志等级与原版调试菜单本地化。两者都不改变殖民者听到的声音，只影响日志文件与调试菜单。</US.Help.Diagnostics.Overview>
@@ -275,6 +379,10 @@
   <US.Help.Diagnostics.LoggingEnabled.Text>强制开启详细路由日志，正式版同样生效。反馈音频问题时使用；用完请调回，日志增长很快。</US.Help.Diagnostics.LoggingEnabled.Text>
   <US.Help.Diagnostics.LoggingDisabled.Text>强制关闭全部开发者日志，开发版同样生效。</US.Help.Diagnostics.LoggingDisabled.Text>
   <US.Help.Diagnostics.LocalizeDebug.Text>开启后，原版调试菜单中的 Universal Squeaker 调试项显示翻译后的名称与分类。仅在开发者模式打开时可见。</US.Help.Diagnostics.LocalizeDebug.Text>
+  <US.Help.Diagnostics.LayoutDiagnosis.Text>开发者工具。状态行说明本窗口的布局是否正在被采集；若没有，也会说明原因：正式版的库包不含布局工具，任何开关都无法开启它。</US.Help.Diagnostics.LayoutDiagnosis.Text>
+  <US.Help.Diagnostics.LayoutCapture.Text>记录本窗口每个已排布元素的各坐标空间矩形、高度模式与最终高度。开启时会拖慢帧率，默认关闭，且从不写入存档。</US.Help.Diagnostics.LayoutCapture.Text>
+  <US.Help.Diagnostics.LayoutOutline.Text>为本窗口绘制的矩形描出边框，让矩形可以被看到而不只是读到。它与采集互相独立（SA1.5）：采集开启时描出被保留的集合，采集关闭时描出每个绘制的矩形且不采样——本开关不会备好报告。</US.Help.Diagnostics.LayoutOutline.Text>
+  <US.Help.Diagnostics.LayoutReport.Text>把最近一次完成的采集写入日志一次，然后停止；再按一次才会再写一份。若某个矩形不响应点击，请看输入行：每行带有指针位置、被查询的矩形与判定结果（命中/未命中/被遮挡/不可用）。</US.Help.Diagnostics.LayoutReport.Text>
   <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
@@ -288,23 +396,25 @@
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
   <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
-  <US.Help.FilterBar.Overview>语音包工作区的收窄工具：仅已启用留下启用过语音包的域；仅冲突列出冲突、休眠、目标未加载或已失效的域；仅已失效只看含失效选择的域；作者下拉收窄包行；"全部"一键清空所有筛选。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Overview>语音包工作区的一组可组合条件，全部作用于下方的唯一卡片结果：关键词匹配包显示名、内部名、Mod、作者及其提供的种族/异种域名；仅已启用留下该域已启用此包的行；仅冲突留下冲突、休眠、目标未加载或已失效域的行；仅已失效只看含失效选择域的行；作者、种族、异种下拉收窄同一批行；“全部”一次清空所有条件。</US.Help.FilterBar.Overview>
+  <US.Help.FilterBar.Keyword.Label>关键词</US.Help.FilterBar.Keyword.Label>
+  <US.Help.FilterBar.Keyword.Text>忽略大小写的连续子串，命中包显示名、defName、Mod、作者、包键，也命中包所提供的域名。关键词命中异种名时，提供该异种的卡片自动展开；清空关键词后恢复的是你自己展开的状态。</US.Help.FilterBar.Keyword.Text>
   <US.Help.FilterBar.Domain.Label>域筛选芯片</US.Help.FilterBar.Domain.Label>
-  <US.Help.FilterBar.Domain.Text>四枚芯片可叠加：仅已启用、仅冲突、仅已失效各自收窄两张域列表与包清单的可见行；"全部"清除包括搜索在内的一切筛选。</US.Help.FilterBar.Domain.Text>
-  <US.Help.FilterBar.RaceXeno.Label>种族 / 异种筛选</US.Help.FilterBar.RaceXeno.Label>
-  <US.Help.FilterBar.RaceXeno.Text>两个并列下拉按种族与异种过滤第 2 步的域列表；选定种族后，异种选项自动收窄到该种族的域。下拉显示各自的已翻译名称。</US.Help.FilterBar.RaceXeno.Text>
-  <US.Help.FilterBar.Author.Text>按作者过滤语音包行；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
-  <US.Help.RaceLayer.Overview>按种族列出语音包域，每行显示"已启用 / 候选"数量与状态角标；选中一行即把下方包清单切到该域。</US.Help.RaceLayer.Overview>
-  <US.Help.RaceLayer.Row.Label>种族行</US.Help.RaceLayer.Row.Label>
-  <US.Help.RaceLayer.Row.Text>点击种族行选中该种族域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.RaceLayer.Row.Text>
-  <US.Help.XenotypeLayer.Overview>以（种族，异种）双键列出异种语音包域，行题为"异种（种族）"；同一异种在不同种族下各自独立配置。</US.Help.XenotypeLayer.Overview>
-  <US.Help.XenotypeLayer.Row.Label>异种行</US.Help.XenotypeLayer.Row.Label>
-  <US.Help.XenotypeLayer.Row.Text>点击异种行选中该（种族，异种）域；下方"3. 选择语音包"卡片随即切换为它的包清单。</US.Help.XenotypeLayer.Row.Text>
-  <US.Help.Checklist.Overview>为选中的域检索并勾选语音包。已保存但不再安装的包键属于失效选择，会以警示横幅列出，可用"清除失效"一次性移除。域状态横幅（休眠、目标未加载、冲突）同样显示在本卡顶部。</US.Help.Checklist.Overview>
-  <US.Help.Checklist.Search.Label>搜索框</US.Help.Checklist.Search.Label>
-  <US.Help.Checklist.Search.Text>对可见行做忽略大小写的子串过滤，命中范围：包名、defName、Mod 名、作者与包键。</US.Help.Checklist.Search.Text>
-  <US.Help.Checklist.Row.Label>语音包行</US.Help.Checklist.Row.Label>
-  <US.Help.Checklist.Row.Text>行内显示包名、Mod 与作者行以及动作覆盖数；点击整行即启用或停用该语音包。</US.Help.Checklist.Row.Text>
+  <US.Help.FilterBar.Domain.Text>仅已启用、仅冲突、仅已失效各自收窄卡片内的域行，可自由叠加；“全部”清除包括关键词在内的一切条件。</US.Help.FilterBar.Domain.Text>
+  <US.Help.FilterBar.Author.Text>按作者过滤卡片；未声明作者的包以其 Mod 名代行，匹配为忽略大小写的包含式。</US.Help.FilterBar.Author.Text>
+  <US.Help.FilterBar.Race.Text>把域行收窄到一个种族：该种族自身的域与它的异种域留下，其余退出；异种下拉的选项随之收窄。下拉显示已翻译名称。</US.Help.FilterBar.Race.Text>
+  <US.Help.FilterBar.Xenotype.Text>把域行收窄到一个异种域；设定期间种族域退出列表。下拉显示已翻译名称。</US.Help.FilterBar.Xenotype.Text>
+  <US.Help.FilterBar.Summary.Label>条件回显</US.Help.FilterBar.Summary.Label>
+  <US.Help.FilterBar.Summary.Text>逐一列出当前生效的条件并统计留下的卡片数。它只读，且永远与控件一致。</US.Help.FilterBar.Summary.Text>
+  <US.Help.PackCards.Overview>本页唯一结果区：每个语音包一张卡片，列出它提供的种族与异种域行；每行有各自的启用开关——同一个包可以在一个域启用、在另一个域停用。</US.Help.PackCards.Overview>
+  <US.Help.PackCards.Card.Label>语音包卡片</US.Help.PackCards.Card.Label>
+  <US.Help.PackCards.Card.Text>卡头显示包的显示名、内部 defName、Mod 与作者行以及动作覆盖数。</US.Help.PackCards.Card.Text>
+  <US.Help.PackCards.Expand.Text>展开或收起本卡的域行。你手动展开的状态正是清空关键词后恢复的内容；关键词代开的卡片随关键词一起关闭。按 Esc 一次收起你打开的卡片——筛选与启用状态保持不变。</US.Help.PackCards.Expand.Text>
+  <US.Help.PackCards.Row.Label>域行</US.Help.PackCards.Row.Label>
+  <US.Help.PackCards.Row.Text>点击一行即把该域设为操作域——上方的状态横幅以它为对象——高亮行标示当前是哪一个。</US.Help.PackCards.Row.Text>
+  <US.Help.PackCards.Enable.Label>启用开关</US.Help.PackCards.Enable.Label>
+  <US.Help.PackCards.Enable.Text>只对本行的域启用或停用这个包。同一包的两行是两个独立的选择；筛选与展开从不写入它们。</US.Help.PackCards.Enable.Text>
+  <US.Help.Checklist.Overview>操作域的状态横幅：休眠、目标未加载与冲突提示，以及带“清除失效”按钮的失效选择横幅。</US.Help.Checklist.Overview>
   <US.Help.Checklist.Forget.Text>一次性移除本域中包键不再安装的已存选择；该按钮只随失效横幅出现，作用域限于当前域。</US.Help.Checklist.Forget.Text>
   <US.Diagnostics.Section.Verdict>结论</US.Diagnostics.Section.Verdict>
   <US.Diagnostics.Section.Raw>原始值</US.Diagnostics.Section.Raw>
@@ -364,4 +474,32 @@
   <US.Diagnostics.Recency.JustNow>{0}，不到 1 分钟前</US.Diagnostics.Recency.JustNow>
   <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
+  <US.Tuning.BabyActions>路由婴幼儿哭泣与咯咯笑</US.Tuning.BabyActions>
+  <US.Help.BasicTuning.BabyActions.Label>路由婴幼儿哭泣与咯咯笑</US.Help.BasicTuning.BabyActions.Label>
+  <US.Help.BasicTuning.BabyActions.Text>默认关闭。启用 Biotech 时，开启后将 Crying（哭泣）和 Giggling（咯咯笑）纳入语音路由、动作调音和覆盖统计；关闭后，两者不路由，也不计入覆盖分子与总数。不改变原版精神状态或真正的精神崩溃。缺少音频的动作不会算作已覆盖；未启用 Biotech 时此选项不生效。</US.Help.BasicTuning.BabyActions.Text>
+  <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
+
+
+  <US.Distance.AxisCaption>相机高度 {0}–{1}（游戏数值） · 音量 100%→0%</US.Distance.AxisCaption>
+  <US.Preset.List.BaselineNote>此处是只读基线。应用会写入勾选的域；当前值可在调音页查看和修改。</US.Preset.List.BaselineNote>
+  <!-- US-RESET1: 恢复默认条目。确认文案列出各恢复写入的字段(展示文案;字段集合由后端拥有,
+       并由恢复 harness 钉住)。 -->
+  <US.Section.RestoreDefaults>恢复默认</US.Section.RestoreDefaults>
+  <US.Reset.RestoreAll>恢复所有 US 设置</US.Reset.RestoreAll>
+  <US.Reset.RestoreAll.Caption>把所有 Universal Squeaker 设置恢复为默认值。绝不触碰你的最终 fallback 玩家表及其声音映射。</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>这将把所有 Universal Squeaker 设置恢复为默认值:普通设置(输出音量、播放行为、触发时机、诊断)、全部动作与心情调音覆盖(全局及各层域)、包选择、已应用预设记录及其来源锚点。保留:全部最终 fallback 玩家表及其声音映射、全部作者/Def 内容、设置 schema 与迁移诊断。此操作无法在本窗口内撤销。</US.Reset.RestoreAll.Confirm>
+  <US.Reset.Area>恢复此区域默认</US.Reset.Area>
+  <US.Reset.Row>恢复此行默认</US.Reset.Row>
+  <US.Reset.DistanceDefaults>恢复听取距离默认</US.Reset.DistanceDefaults>
+  <US.Reset.Confirm>确认恢复</US.Reset.Confirm>
+  <US.Reset.Area.Distance.Confirm>这将把听取距离区域恢复为默认值:输出音量、距离预设与距离范围。动作/心情调音、包选择与 fallback 表保持不变。</US.Reset.Area.Distance.Confirm>
+  <US.Reset.Area.Basics.Confirm>这将把播放行为区域恢复为默认值:彩蛋音效、随时间速度缩放冷却、随说话缩放频率、随可见人口缩放周期、相机指示器、婴儿动作、进食精确度及其药物子开关。其它区域与 fallback 表保持不变。</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Timing.Confirm>这将把触发时机区域恢复为默认值:最小间隔与全局冷却乘数。其它区域与 fallback 表保持不变。</US.Reset.Area.Timing.Confirm>
+  <US.Reset.Area.Diagnostics.Confirm>这将把诊断区域恢复为默认值:开发者日志模式与本地化调试动作菜单。每窗口的布局诊断开关不是设置,不受影响。</US.Reset.Area.Diagnostics.Confirm>
+  <US.Reset.Area.Action.Confirm>这将把下方所示当前层域的每一条动作行恢复为默认值(范围、间隔与概率覆盖,以及该行的预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Mood.Confirm>这将把下方所示当前层域的每条心情行恢复为默认值(音高、音量与抖动及其预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Mood.Confirm>
+  <US.Help.ResetCenter.Overview>恢复默认集中了全局入口:一问一答,一次操作把所有 Universal Squeaker 设置回到默认。卡片同时写明保留项——首先是你的最终 fallback 玩家表及其声音映射,这里的任何恢复都不会触碰。</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>全局恢复覆盖普通设置、全部动作/心情调音覆盖(全局及各层域)、包选择,以及已应用预设记录与其来源锚点。它和任何普通改动走同一条发布与保存通道,且只走一次。取消不写入任何数据;fallback 表、作者/Def 内容与 schema/迁移诊断均保留。</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetArea.Overview>每个区域自带恢复入口:确认窗口逐条列出该区域将写入的字段,并说明哪些保持不变。简单恢复(距离预设与范围、单条动作行)直接执行,不再提问。</US.Help.ResetArea.Overview>
+  <US.Help.ResetArea.Button.Text>区域恢复只写当前可见区域的字段——不碰其它区域、其它层域的调音值,也不碰 fallback 表。动作/心情区域按钮在提问中写明当前层与域;目标为空或失效时不提供任何恢复。"恢复此区域默认"(含输出音量)与"恢复听取距离默认"(仅预设与范围)是两个入口,范围不同。</US.Help.ResetArea.Button.Text>
 </LanguageData>

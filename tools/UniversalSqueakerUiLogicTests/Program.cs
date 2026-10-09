@@ -34,7 +34,6 @@ internal static class Program
         TestRaceXenotypeFiltering();
         TestUsCardLayoutHeight();
         TestUsFilterBarLayout();
-        TestWindowChromeLayout();
         TestSettingsWindowSizePolicy();
         TestHelpCatalog();
         TestHelpPanelLogic();
@@ -140,114 +139,107 @@ internal static class Program
             "535 body stacks: a dropdown would fall below label(80) + field(96)");
     }
 
-    /// <summary>
-    /// The close affordance rule behind the first in-game overflow: the shell's fixed 110px box is the
-    /// floor, and a caption that needs more widens the box by the padding margin instead of being clipped.
-    /// The real-font need of the unresolved Keyed literal was 128px; that number is used here because the
-    /// rule is proportional and this lane has no font engine.
-    /// </summary>
-    private static void TestWindowChromeLayout()
-    {
-        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(0f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
-            "an empty caption keeps the shell's floor width");
-        Assert(Math.Abs(WindowChromeLayout.CloseButtonWidth(30f) - WindowChromeLayout.CloseWidthFloor) < 0.001f,
-            "a short caption ('Close' is 30px in the harness model) keeps the shell's floor width");
-
-        const float needed = 128f; // the in-game finding: has 110, needs 128
-        float width = WindowChromeLayout.CloseButtonWidth(needed);
-        Assert(width >= needed + 1.5f,
-            "a long caption must widen the affordance past the measured text plus the audit tolerance, got " + width);
-        Assert(Math.Abs(width - (needed + WindowChromeLayout.ClosePadding)) < 0.001f,
-            "the widened width is text + padding, got " + width);
-    }
+    // TestWindowChromeLayout is DELETED with the rule it pinned (TODO:15, closed 2026-09-20). It asserted
+    // US's own close-affordance formula - a 16px padding over a hardcoded VerseFerriteTextMetrics.Instance -
+    // which was the second definition of a rule the shell already derives as
+    // max(110, MeasureWidth(CloseText, CloseFont) + 2 x CloseButtonPadding) through its own Metrics seam.
+    // The consumer override is gone, so a US lane for it would now assert FL's arithmetic against a copy of
+    // itself; the shell's own harness owns that rule, and this repository asserting a second copy of it is
+    // exactly the seam defect the deletion closes.
 
     /// <summary>
-    /// Pure size policy of the settings window (task-10): it opens NARROW - 24% of the screen width
-    /// clamped into [600, 860] - and the retractable help drawer adds exactly the column it occupies
-    /// plus the body-row gap it introduces (176 + 12 = 188). Height keeps the shipped 0.66-of-screen
-    /// shape with a 600 floor. This file is compiled by the zero-Verse gate, so these are float
-    /// helpers; the window composes them into its UnityEngine.Vector2 at the Verse boundary.
-    /// The referenced declarations live in Layout.Schema2.xml (help-scroll Width 176, body-row Gap 12).
+    /// Pure size policy of the settings window (task-10, re-cut by BH1 2026-10-05): the window opens at
+    /// half the screen width, clamped into the [800, 1600] floor/ceiling, and the height is that width at
+    /// 4:3 with vanilla's own 600 as the floor. BH1 removed the drawer's SECOND width: the help panel
+    /// reserves HEIGHT inside the page above the footer, so there is exactly one width per screen and no
+    /// help-state argument that could disagree with it. The floor is derived, not written down: 800x600 is
+    /// the smallest whole-pixel 4:3 box covering Dialog_Options.InitialSize = 650x600, so a US settings
+    /// window is never smaller than the dialog the game itself opens in the same place. This file is
+    /// compiled by the zero-Verse gate, so these are float helpers; the window composes them into its
+    /// UnityEngine.Vector2 at the Verse boundary.
     /// </summary>
     private static void TestSettingsWindowSizePolicy()
     {
         const float tolerance = 0.001f;
 
-        Assert(Math.Abs(WindowChromeLayout.HelpDrawerWidth - 176f) < tolerance,
-            "the help column declaration the policy mirrors is 176");
-        Assert(Math.Abs(WindowChromeLayout.BodyRowGap - 12f) < tolerance,
-            "the body-row gap declaration the policy mirrors is 12");
-        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta
-                - (WindowChromeLayout.HelpDrawerWidth + WindowChromeLayout.BodyRowGap)) < tolerance,
-            "the drawer delta is derived from the two manifest declarations, not repeated");
-        Assert(Math.Abs(WindowChromeLayout.DrawerWidthDelta - 188f) < tolerance,
-            "expanding the drawer costs the window exactly 176 + 12 = 188px");
-
-        foreach ((float screen, float screenHeight) in new[]
-            { (1024f, 768f), (1280f, 800f), (1920f, 1080f), (2560f, 1440f), (3840f, 2160f) })
+        // Every case is the screen's OWN expected box, hand-written here rather than recomputed from the
+        // helpers: a gate that re-derives the answer from the code under test agrees with any change to it.
+        foreach ((float screen, float screenHeight, float expectedWidth, float expectedHeight) in new[]
+                 {
+                     (1024f, 768f, 800f, 600f),
+                     (1280f, 800f, 800f, 600f),
+                     (1920f, 1080f, 960f, 720f),
+                     (2560f, 1440f, 1280f, 960f),
+                     (3840f, 2160f, 1600f, 1200f),
+                     // A short, ultra-wide display: the 90%-of-screen-height rule shrinks the WIDTH (1080)
+                     // below half the screen (1280). This is the clause that keeps the old portrait shape
+                     // (614x950 at 2560x1440, which wrapped every long label) from coming back.
+                     (2560f, 900f, 1080f, 810f),
+                 })
         {
-            float closed = WindowChromeLayout.SettingsClosedWidth(screen, screenHeight);
-            float open = WindowChromeLayout.SettingsOpenWidth(screen, screenHeight);
+            float width = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
             float height = WindowChromeLayout.SettingsWindowHeight(screen, screenHeight);
-            Assert(closed >= WindowChromeLayout.SettingsWidthFloor - tolerance,
-                "the closed window is never below the " + WindowChromeLayout.SettingsWidthFloor + " floor at screen "
-                + screen + ": " + closed);
-            Assert(closed <= WindowChromeLayout.SettingsWidthCeiling + tolerance,
-                "the closed window is never above the " + WindowChromeLayout.SettingsWidthCeiling + " ceiling at screen "
-                + screen + ": " + closed);
-            Assert(open >= closed,
-                "the open window is never narrower than the closed one at screen " + screen);
-            Assert(Math.Abs(closed - Math.Round(closed)) < tolerance,
-                "the closed width is a whole pixel count at screen " + screen + ": " + closed);
+            Assert(Math.Abs(width - expectedWidth) < tolerance,
+                screen + "x" + screenHeight + " opens at the expected width " + expectedWidth + ", got " + width);
+            Assert(Math.Abs(height - expectedHeight) < tolerance,
+                screen + "x" + screenHeight + " opens at the expected height " + expectedHeight + ", got " + height);
+            Assert(width >= WindowChromeLayout.SettingsWidthFloor - tolerance,
+                "the window is never below the " + WindowChromeLayout.SettingsWidthFloor + " floor at screen "
+                + screen + ": " + width);
+            Assert(width <= WindowChromeLayout.SettingsWidthCeiling + tolerance,
+                "the window is never above the " + WindowChromeLayout.SettingsWidthCeiling + " ceiling at screen "
+                + screen + ": " + width);
+            Assert(Math.Abs(width - Math.Round(width)) < tolerance,
+                "the width is a whole pixel count at screen " + screen + ": " + width);
             Assert(Math.Abs(height - Math.Round(height)) < tolerance,
                 "the height is a whole pixel count at " + screen + "x" + screenHeight + ": " + height);
-            Assert(Math.Abs(height * 4f - closed * 3f) < tolerance,
-                "the window keeps 4:3 exactly at " + screen + "x" + screenHeight + ": " + closed + "x" + height);
-            // The drawer delta is what the window gains where the screen can hold it. Below that the open
-            // width is capped at the screen, so the gain is the screen's remaining room instead - the whole
-            // reason SettingsOpenWidth clamps rather than adding blindly.
-            float expectedDelta = Math.Min(WindowChromeLayout.DrawerWidthDelta, Math.Max(0f, screen - closed));
-            Assert(Math.Abs((open - closed) - expectedDelta) < tolerance,
-                "open - closed is the drawer delta where the screen holds it, the remaining room otherwise, at screen "
-                + screen + ": " + (open - closed) + " vs " + expectedDelta);
-            Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: false) - closed) < tolerance
-                && Math.Abs(WindowChromeLayout.SettingsWindowWidth(screen, screenHeight, drawerExpanded: true) - open) < tolerance,
-                "SettingsWindowWidth selects the closed/open branch at screen " + screen);
+            Assert(Math.Abs(height * 4f - width * 3f) < tolerance,
+                "the window keeps 4:3 exactly at " + screen + "x" + screenHeight + ": " + width + "x" + height);
         }
 
-        // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a
-        // fixed size), so the minimum canvas must land exactly on that footprint.
-        // The floor is the smallest whole-pixel 4:3 box that covers vanilla's own 650x600, and the minimum
-        // canvas opens exactly there; every larger screen is the same 4:3 box scaled.
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1024f, 768f) - 800f) < tolerance,
+        // BH1.2's policy half: one width per screen, with no state to vary. The helper is a pure function
+        // of the screen, so the same call twice is the same box - and the signature carries no
+        // drawer/help-expanded parameter that could answer with a second number.
+        foreach ((float screen, float screenHeight) in new[]
+                 { (1024f, 768f), (1280f, 800f), (1920f, 1080f), (2560f, 1440f), (3840f, 2160f) })
+        {
+            float first = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
+            float second = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
+            Assert(Math.Abs(first - second) < tolerance,
+                "the window width is a function of the screen alone at " + screen + "x" + screenHeight
+                + ": " + first + " vs " + second);
+            Assert(first <= Math.Max(screen, WindowChromeLayout.SettingsWidthFloor) + tolerance,
+                "the window is never wider than the screen it opens on (above the floor) at " + screen
+                + ": " + first);
+        }
+
+        // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a fixed
+        // size): 800x600 is the smallest whole-pixel 4:3 box covering it, and the minimum canvas opens
+        // exactly there.
+        Assert(Math.Abs(WindowChromeLayout.VanillaBaselineWidth - 650f) < tolerance
+                && Math.Abs(WindowChromeLayout.VanillaBaselineHeight - 600f) < tolerance,
+            "the vanilla baseline is the game's own 650x600 dialog");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWidthFloor - 800f) < tolerance
+                && Math.Abs(WindowChromeLayout.SettingsHeightFloor - 600f) < tolerance,
+            "the smallest allowed box is the whole-pixel 4:3 box that covers vanilla's 650x600: 800x600");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(1024f, 768f) - 800f) < tolerance,
             "1024x768 opens at the 800 floor (vanilla's 650x600 rounded up to whole-pixel 4:3)");
         Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 600f) < tolerance,
             "1024x768 is 800x600 - 4:3 at vanilla's own height, both whole numbers");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(1920f, 1080f) - 960f) < tolerance,
-            "1920x1080 opens at 960 = half the screen width");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1920f, 1080f) - 720f) < tolerance,
-            "1920x1080 keeps 4:3: 960x720");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(2560f, 1440f) - 1280f) < tolerance,
-            "2560x1440 opens at 1280 = half the screen width");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(2560f, 1440f) - 960f) < tolerance,
-            "2560x1440 keeps 4:3: 1280x960 (the old portrait 614x950 is what wrapped every long label)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsClosedWidth(3840f, 2160f) - 1600f) < tolerance,
-            "3840x2160 clamps to the 1600 ceiling (half = 1920)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(3840f, 2160f) - 1200f) < tolerance,
-            "3840x2160 keeps 4:3: 1600x1200");
 
-        // The expanded window may never be wider than the screen it lives in; below the drawer delta it is
-        // capped at the screen, and under the width floor at the closed width itself.
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(1920f, 1080f) - 1148f) < tolerance,
-            "1920 open = 960 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(2560f, 1440f) - 1468f) < tolerance,
-            "2560 open = 1280 + 188");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(800f, 600f) - 800f) < tolerance,
-            "an 800-wide screen cannot be widened past the floor, so open == closed");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(900f, 700f) - 900f) < tolerance,
-            "900 screen caps the expanded window at the screen (it would be 988)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsOpenWidth(988f, 800f) - 988f) < tolerance,
-            "988 screen still fits the full drawer delta on top of the floor");
+        // Below the game's minimum logical resolution the floor still bites: the window never shrinks under
+        // vanilla's footprint, and its width stays a whole multiple of the step.
+        foreach ((float screen, float screenHeight) in new[] { (800f, 600f), (900f, 700f), (640f, 480f) })
+        {
+            float width = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
+            Assert(Math.Abs(width - WindowChromeLayout.SettingsWidthFloor) < tolerance,
+                "a sub-minimum screen still opens at the floor (the game cannot select one, and the policy"
+                + " never shrinks below vanilla) at " + screen + "x" + screenHeight + ": " + width);
+            float step = width % WindowChromeLayout.SettingsWidthStep;
+            Assert(step < tolerance || Math.Abs(step - WindowChromeLayout.SettingsWidthStep) < tolerance,
+                "the width is a whole multiple of the " + WindowChromeLayout.SettingsWidthStep
+                + " step at " + screen + ": " + width);
+        }
     }
 
     private static void TestHelpCatalog()
@@ -262,7 +254,7 @@ internal static class Program
         {
             "us/page-title", "us/mode-row", "us/global-volume", "us/attenuation-editor",
             "us/basic-tuning", "us/timing", "us/camera-indicator", "us/diagnostics",
-            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/race-layer", "us/xenotype-layer", "us/voice-pack-checklist"
+            "us/scope-tree", "us/preset-list", "us/filter-bar", "us/pack-cards", "us/voice-pack-checklist"
         };
         foreach (string key in sectionKeys)
         {
@@ -299,11 +291,19 @@ internal static class Program
         // (no local setting / not from a preset / preset missing / preset has no entry).
         // Count pin, updated with the help-coverage pass: the catalog gained one entry per Playback
         // behaviour row (us/basic-tuning/scale-cooldown|scale-talking|scale-population), the attenuation
-        // status/range read-out (us/attenuation-editor/status) and the Help drawer toggle
-        // (us/page-title/help-drawer), and lost the single shared us/basic-tuning/scaling item. The
+        // status/range read-out (us/attenuation-editor/status) and the Help switch
+        // (us/page-title/help-drawer, kept its machine name when BH1 moved the control to the footer),
+        // and lost the single shared
         // eat-occurrence pair adds one entry per control: us/basic-tuning/eat-precision (parent) and
         // us/basic-tuning/eat-precision-include-drugs (the child row), 44 -> 46.
-        Assert(itemCount == 46, "catalog item count matches the shipped wiring table (46 items incl. the three per-row basic-tuning entries, the two eat-precision entries, us/attenuation-editor/status and us/page-title/help-drawer): " + itemCount);
+        // The baby-action opt-in adds its own help entry (46 -> 47).
+        // R3-B adds four: the diagnosis status line and its capture, outline
+        // and report controls (47 -> 51). The section overview is not an item. Each is claimed by a manifest
+        // HelpKey, which the bidirectional gate below checks in both directions.
+        // US-PACK1 re-cuts the Packs block: the two browse-layer sections retire (their row items leave),
+        // the checklist keeps only its forget entry, the filter region gains keyword/race/xenotype/summary
+        // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).
+        Assert(itemCount == 54, "catalog item count matches the shipped wiring table (54 items after US-PACK1's card re-cut): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).
@@ -418,34 +418,57 @@ internal static class Program
 
     private static void TestActionScopeRules()
     {
-        var draft = new SqueakActionDefinition(
-            SqueakAction.Draft,
-            "Draft",
-            "US_Draft",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.ActiveCommand,
-            SqueakActionScope.ActiveCommand);
-        var attack = new SqueakActionDefinition(
-            SqueakAction.Attack,
-            "Attack",
-            "US_Attack",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.AnyOccurrence | SqueakActionScopeSupport.ActiveCommand,
-            SqueakActionScope.AnyOccurrence);
-        var call = new SqueakActionDefinition(
-            SqueakAction.Call,
-            "Call",
-            "US_Call",
-            SqueakVocalGatePolicy.ApplyTalkingGate,
-            SqueakActionScopeSupport.AnyOccurrence,
-            SqueakActionScope.AnyOccurrence);
+        // SA1.2: the membership is SR's fixed semantic split, NOT derived from SupportedScopes. The two
+        // rows that prove the difference are pinned by name: Select joins the player group although it
+        // carries no command scope, Work joins the system group although it supports and defaults to one.
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Draft) == ActionScopeGroup.PlayerTriggered,
+            "Draft groups as player-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Attack) == ActionScopeGroup.PlayerTriggered,
+            "Attack groups as player-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Select) == ActionScopeGroup.PlayerTriggered,
+            "Select groups as player-triggered even with no command scope (SR membership, not derivation)");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Call) == ActionScopeGroup.SystemOrEvent,
+            "Call groups as system/event-triggered");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Work) == ActionScopeGroup.SystemOrEvent,
+            "Work groups as system/event-triggered even though it supports ActiveCommand (SR membership)");
+        Assert(ActionScopeRules.GroupFor(SqueakAction.Crying) == ActionScopeGroup.SystemOrEvent,
+            "the US-only Crying joins the system group tail (ruling: optional, later group only)");
 
-        Assert(ActionScopeRules.GroupFor(draft) == ActionScopeGroup.Operable,
-            "ActiveCommand-only actions group as Operable");
-        Assert(ActionScopeRules.GroupFor(attack) == ActionScopeGroup.Operable,
-            "actions supporting ActiveCommand group as Operable even when default is AnyOccurrence");
-        Assert(ActionScopeRules.GroupFor(call) == ActionScopeGroup.Autonomous,
-            "AnyOccurrence-only actions group as Autonomous");
+        // Two groups, no omission and no duplicate across the full built-in set (SA1.2 acceptance):
+        // every known action appears in exactly one order list, and the lists agree with GroupFor.
+        var seen = new HashSet<SqueakAction>();
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+        {
+            int inPlayer = ContainsAction(ActionScopeRules.PlayerGroupOrder, action) ? 1 : 0;
+            int inSystem = ContainsAction(ActionScopeRules.SystemGroupOrder, action) ? 1 : 0;
+            Assert(inPlayer + inSystem == 1,
+                "every built-in action sits in exactly one group order list: " + action);
+            Assert(inPlayer == 0
+                    || ActionScopeRules.GroupFor(action) == ActionScopeGroup.PlayerTriggered,
+                "the player order list agrees with GroupFor: " + action);
+            Assert(inSystem == 0
+                    || ActionScopeRules.GroupFor(action) == ActionScopeGroup.SystemOrEvent,
+                "the system order list agrees with GroupFor: " + action);
+            seen.Add(action);
+        }
+
+        // The SqueakAction enum IS the built-in set (all 17 are known); the two order lists must cover
+        // every one of them exactly once.
+        Assert(seen.Count == Enum.GetValues(typeof(SqueakAction)).Length,
+            "the classification scan covered all " + Enum.GetValues(typeof(SqueakAction)).Length
+            + " built-ins, got " + seen.Count);
+
+        // SA1.2 captions: per-action keys exist only where SR ships a caption; everything else falls
+        // back to the generic key, and Auto/Off never enter the per-action lookup.
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Work, SqueakActionScope.ActiveCommand)
+                == "US.Tuning.Scope.Work.Command",
+            "Work's command caption is the SR per-action key (玩家强制工作 / Player-forced work)");
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Crying, SqueakActionScope.AnyOccurrence)
+                == "US.Tuning.Scope.Any",
+            "Crying has no SR caption and keeps the generic Any key");
+        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Draft, SqueakActionScope.Disabled)
+                == "US.Tuning.Scope.Off",
+            "Off keeps the generic key whatever the action");
 
         Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Crying),
             "Crying is hidden from the Action Scope editor by default");
@@ -453,8 +476,18 @@ internal static class Program
             "Giggling is hidden from the Action Scope editor by default");
         Assert(!ActionScopeRules.IsHiddenByDefault(SqueakAction.Call),
             "regular actions remain visible in the Action Scope editor");
-        Assert(!ActionScopeRules.ShowBiotechDefensiveActions,
+        Assert(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, false),
             "the Biotech defensive action UI switch defaults to hidden");
+    }
+
+    private static bool ContainsAction(System.Collections.Generic.IReadOnlyList<SqueakAction> order, SqueakAction action)
+    {
+        for (int i = 0; i < order.Count; i++)
+        {
+            if (order[i] == action) return true;
+        }
+
+        return false;
     }
 
     private static void TestRaceXenotypeFiltering()

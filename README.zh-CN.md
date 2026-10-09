@@ -20,8 +20,8 @@ Universal Squeaker 本身**不含任何语音内容**：它是一个路由内核
 ## 本地验证与构建
 
 ```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1   # 15 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计 + harness stub 覆盖）
-pwsh -NoProfile -File scripts/build-dev.ps1      # 先在 ../ferritelib 建 Release 载主载荷，再 Dev 构建并 stage 成可直接安装的**目录**（dist/dev/UniversalSqueaker）——不打归档；需要 zip 时用 pack-dev -Zip
+pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'   # 15 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计 + harness stub 覆盖）。载体是**显式选择**、没有默认值：见 docs/build-and-debug.md；对配对 Dev 包验证时加 -DevelopmentCarrier
+pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath '../ferritelib/dist/dev/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll'   # 只构建 US 载荷（Dev）并 stage 成可直接安装的**目录**（dist/dev/UniversalSqueaker）——不打归档；需要 zip 时用 pack-dev -Zip。它绝不构建载体
 pwsh -NoProfile -File scripts/privacy-audit.ps1  # 隐私门禁（三向量 + 凭据 + PublishedFileId 值 + 身份唯一性；-FullHistory 为全历史模式）
 ```
 

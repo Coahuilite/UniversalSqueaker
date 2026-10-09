@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VF1 Ratkin shipped default data (user ruling 2026-10-07, per pm-vf1-native-review.md).
+  This is DATA, not a Kernel seed: the US code carries no race key and no product sound key;
+  the adapter discovers these Defs through the DefDatabase exactly like any third-party pack.
+  The defs are NEUTRAL-PURPOSE (US_Voice_*): the same grain/parameter combination is reused
+  across the actions that share it, per the review ("相同grain/参数组合复用少量用途SoundDef").
+  Every grain path references a VANILLA Core clip or folder - no asset is copied and no
+  SqueakyRatkin install is required; the combinations follow the SR reference mapping
+  (ratkin-native-mapping.json) in the PM evidence, not the SR defs themselves.
+  Named-clip existence and real playback remain honestly unverified until the in-game pass.
+-->
+<Defs>
+  <!-- Chatter: Boomrat_Call folder + three GuineaPig Pain clip paths taken from the SR reference
+       combination (Call/Move/Social/Joy/Undraft/Work). Path reference only - named-clip existence and
+       real loading stay unverified until the in-game pass. -->
+  <SoundDef>
+    <defName>US_Voice_Chatter</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Folder"><clipFolderPath>Pawn/Animal/Boomrat/Boomrat_Call</clipFolderPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_08</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_09</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_11</clipPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- Eat: the vanilla rodent eating folder. -->
+  <SoundDef>
+    <defName>US_Voice_Eat</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Folder"><clipFolderPath>Pawn/Animal/Eating/Rodent</clipFolderPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- Sleep: the Boomrat call folder alone (SR Sleep combination). -->
+  <SoundDef>
+    <defName>US_Voice_Sleep</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Folder"><clipFolderPath>Pawn/Animal/Boomrat/Boomrat_Call</clipFolderPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- Wounded: four GuineaPig Pain clip paths from the SR reference combination (path reference only). -->
+  <SoundDef>
+    <defName>US_Voice_Wounded</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_02</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_03</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_04</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_06</clipPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- Angry: three GuineaPig Angry clip paths from the SR reference combination (path reference only). -->
+  <SoundDef>
+    <defName>US_Voice_Angry</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Angry/Pawn_Guineapig_Angry_04</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Angry/Pawn_Guineapig_Angry_05</clipPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Angry/Pawn_Guineapig_Angry_07</clipPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- Death: the GuineaPig death folder plus one Pain clip, lower pitch (SR Death combination). -->
+  <SoundDef>
+    <defName>US_Voice_Death</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Folder"><clipFolderPath>Pawn/Animal/GuineaPig/Death</clipFolderPath></li>
+        <li Class="AudioGrain_Clip"><clipPath>Pawn/Animal/GuineaPig/Pain/Pawn_Guineapig_Pain_07</clipPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.8~0.9</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+
+  <!-- MentalBreak: the Boomrat death folder (SR MentalBreak combination). -->
+  <SoundDef>
+    <defName>US_Voice_MentalBreak</defName>
+    <context>MapOnly</context>
+    <subSounds><li>
+      <grains>
+        <li Class="AudioGrain_Folder"><clipFolderPath>Pawn/Animal/Boomrat/Boomrat_Death</clipFolderPath></li>
+      </grains>
+      <volumeRange>45~55</volumeRange>
+      <pitchRange>0.95~1.05</pitchRange>
+      <distRange>15~70</distRange>
+    </li></subSounds>
+  </SoundDef>
+</Defs>

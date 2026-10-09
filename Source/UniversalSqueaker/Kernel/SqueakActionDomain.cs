@@ -9,6 +9,13 @@ public enum SqueakMood { Good, Neutral, Bad, Break }
 // Keep the original nine serialized enum values stable. New built-ins are append-only.
 public enum SqueakAction { Call, Eat, Sleep, Wounded, Select, Move, Social, Joy, Death, Draft, Undraft, Attack, Work, Equip, MentalBreak, Crying, Giggling }
 
+/// <summary>Shared opt-in policy for runtime routing, editor exposure and pack coverage.</summary>
+public static class SqueakActionEligibility
+{
+    public static bool IsEligible(SqueakAction action, bool includeBabyActions) => includeBabyActions
+        || (action != SqueakAction.Crying && action != SqueakAction.Giggling);
+}
+
 public enum SqueakCooldownClock { GameTicks, Realtime }
 
 /// <summary>触发模式,由 XML 配置驱动,C# 通用适配。</summary>

@@ -55,6 +55,10 @@ public static class SqueakDiagnosticsOverlay
     private static readonly Dictionary<Pawn, SqueakDiagnosticsDetailWindow> detailWindows = new();
 
     private static SqueakDiagnosticsPanel? mainPanel;
+    /// <summary>DT1: the open main panel for the Debug Actions outline toggle (null when closed -
+    /// <see cref="NotifyPanelClosed"/> clears the field with the session).</summary>
+    internal static SqueakDiagnosticsPanel? ActivePanelOrNull => mainPanel;
+
     private static Map? cachedMap;
     private static bool sessionActive;
     private static float nextSweepRealtime;
@@ -260,6 +264,17 @@ public static class SqueakDiagnosticsOverlay
 
         results.Sort(static (a, b) => a.thingIDNumber.CompareTo(b.thingIDNumber));
         return results;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="map"/> is the map this session actually tracks. The session caches one map
+    /// when it opens, so a mark may only be drawn on that map: see
+    /// <see cref="Patch_MapInterface_DiagnosticsMarks"/>. Read-only, so a lane can assert the predicate
+    /// without a game.
+    /// </summary>
+    internal static bool IsTrackingCurrentMap(Map? map)
+    {
+        return sessionActive && map != null && ReferenceEquals(cachedMap, map);
     }
 
     /// <summary>Pure matcher (harness-testable): case-insensitive substring over the label OR the defName.</summary>

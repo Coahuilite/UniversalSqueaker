@@ -1,5 +1,6 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$FerriteLibArtifactPath,
     [switch]$SkipVerify,
     [switch]$RequireReleaseMetadata
 )
@@ -8,10 +9,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
+# resolve-carrier.ps1 has NO default carrier since 2026-09-24, so every caller must select one. This script
+# selects the SIBLING payload when none is given - the same path both workflows stage and the csproj HintPath
+# resolves - because "check the package this checkout built" is exactly what this script is for. The strict
+# refusal stays where it belongs (the resolver), so a caller that means a different artifact says so.
+if ([string]::IsNullOrWhiteSpace($FerriteLibArtifactPath)) {
+    $FerriteLibArtifactPath = Join-Path (Split-Path -Parent $root) 'ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
+}
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $aboutFile = Join-Path $root 'About\About.xml'
 $versionedDir = Join-Path $root '1.6'
-$assembliesDir = Join-Path $versionedDir 'Assemblies'
+$assembliesDir = Join-Path $root 'dist\build\Release'
 $failures = @()
 
 function Assert-Check {
@@ -108,7 +116,7 @@ Assert-Check 'no SqueakyRatkin type references in Source' (@($squeakyHits).Count
 # F. Optional full verify
 if (-not $SkipVerify) {
     Write-Host '[run] verify-local.ps1 ...'
-    & (Join-Path $PSScriptRoot 'verify-local.ps1') -ProjectRoot $root
+    & (Join-Path $PSScriptRoot 'verify-local.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
     if ($LASTEXITCODE -ne 0) { $failures += 'verify-local.ps1' }
 }
 

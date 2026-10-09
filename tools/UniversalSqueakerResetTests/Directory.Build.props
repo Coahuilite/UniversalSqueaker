@@ -1,0 +1,19 @@
+<Project>
+  <!-- RESET1 harness boundary (us/reset1-backend-contract.md): restore validation writes ONLY
+       inside tools/UniversalSqueakerResetTests/out/. obj/project-extension/restore outputs are
+       anchored here, BEFORE Microsoft.Common.props reads them (the sanctioned place per MSB3540),
+       so the build never creates Source/obj or dist in this tree. This file deliberately does NOT
+       import the worktree-root Directory.Build.props: this harness links production sources
+       against test stubs and takes no FerriteLib carrier reference. UI-integrated builds that DO
+       reference the frozen FL carrier live in the PACK1-owned harnesses and must keep passing
+       -p:FerriteLibArtifactPath explicitly at worktree depth (see herdr-reset1-identity.json). -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)out\obj\</BaseIntermediateOutputPath>
+    <!-- The out/ anchor lives INSIDE the project directory, so the SDK default **/*.cs glob
+     must exclude it explicitly: generated obj files must never re-enter the Compile set
+     (CS0579 duplicate-assembly-attributes otherwise). -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);out\**;logs\**;tmp\**</DefaultItemExcludes>
+    <MSBuildProjectExtensionsPath>$(MSBuildThisFileDirectory)out\obj\ext\</MSBuildProjectExtensionsPath>
+    <OutputPath>$(MSBuildThisFileDirectory)out\bin\</OutputPath>
+  </PropertyGroup>
+</Project>

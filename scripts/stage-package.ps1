@@ -5,21 +5,14 @@
 # An assertion that runs against a tree that is still about to be rewritten proves nothing about what
 # ships.
 #
-# Why the flavor is measured rather than accepted (FL→US round 2, S1): Dev and Release share one
-# OutputPath (UniversalSqueaker.csproj) and up-to-dateness is judged per configuration, so the bytes at
-# the payload path can belong to whichever configuration was built last - and `verify-local` ends on
-# Release. Before this engine read the stamp, `pack-dev` could stage those Release bytes under a
-# `build=dev` label. In US that is not cosmetic: US_DEV gates live code (`SqueakLog.Configure` turns
-# Auto dev-logging on only under US_DEV, and Mod.cs prints the commit revision in the footer only under
-# US_DEV), so a mislabeled rehearsal loses exactly the diagnostics the rehearsal exists to read, with
-# nothing on disk saying so. Measured here on 2026-09-07: `verify-local` followed by the old `pack-dev`
-# produced `build=dev` over a payload reporting `AssemblyConfiguration=Release`.
+# Measure configuration and compiler-reference identity even though build directories are isolated.
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
     [Parameter(Mandatory = $true)][string]$StageDir,
     [Parameter(Mandatory = $true)][string]$VersionLabel,
     [ValidateSet('dev', 'release')][string]$BuildFlavor = 'dev',
     [string]$CommitLabel = 'unknown',
+    [string]$FerriteLibArtifactPath,
     # The release channel publishes to strangers: its payload must not carry a dev suffix, its base
     # version must equal the label on the box, and it must have linked a Release carrier. The dev
     # rehearsal skips this - by definition it is an unnamed build.
@@ -41,8 +34,10 @@ function Resolve-NormalizedPath([string]$Path) { [System.IO.Path]::GetFullPath($
 
 $root = Resolve-NormalizedPath $ProjectRoot
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
-$payloadDll = Join-Path $root '1.6\Assemblies\UniversalSqueaker.dll'
-$carrierDll = Join-Path (Split-Path -Parent $root) 'ferritelib\1.6\Assemblies\FerriteLib.UiKit.dll'
+$configuration = if ($BuildFlavor -eq 'dev') { 'Dev' } else { 'Release' }
+$payloadDll = Join-Path $root "dist\build\$configuration\UniversalSqueaker.dll"
+$payloadHash = if (Test-Path -LiteralPath $payloadDll) { (Get-FileHash -LiteralPath $payloadDll).Hash } else { '' }
+$carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $aboutXml = Join-Path $root 'About\About.xml'
 $loadFolders = Join-Path $root 'LoadFolders.xml'
 $license = Join-Path $root 'LICENSE'
@@ -54,7 +49,12 @@ $contentRoot = Join-Path $root '1.6'
 # folder AND the archive outside the repository whenever the caller's cwd was not the root.
 # Measured 2026-09-15: invoking the release sequence from a clone wrote dist/ into the
 # session root instead of the clone. An absolute path is still honoured as given.
-$stageDir = if ([System.IO.Path]::IsPathRooted($StageDir)) { Resolve-NormalizedPath $StageDir } else { Resolve-NormalizedPath (Join-Path $root $StageDir) }
+$deliveryDir = if ([System.IO.Path]::IsPathRooted($StageDir)) { Resolve-NormalizedPath $StageDir } else { Resolve-NormalizedPath (Join-Path $root $StageDir) }
+# Candidate-then-commit (2026-09-22, adopted from the demo's packer, which has always worked this way):
+# every copy and every assertion below runs against a SCRATCH tree, and the delivered folder is replaced
+# only once they have all passed. A refused pack therefore leaves the previous package byte-identical
+# instead of a half-written one - the folder a player reads is always a validated package.
+$stageDir = Join-Path (Split-Path -Parent $deliveryDir) ('.staging-' + (Split-Path -Leaf $deliveryDir))
 
 # What a staged US package always contains, and what it must never contain anywhere. Named rather than
 # filtered: an empty filtered enumeration lets a check pass vacuously, which is the bug class both
@@ -124,6 +124,11 @@ if ($stamp -ne $expectedStamp) {
 # The carrier this package was compiled against is part of its identity, not an assumption: US pins its
 # prerequisite range to that API and a player installs the pair. Recorded on every channel; required to
 # be Release on the release channel (S5: the carrier gate used to check existence, not bytes).
+$carrierHash = (Get-FileHash -LiteralPath $carrierDll -Algorithm SHA256).Hash
+$compiledHash = & (Join-Path $PSScriptRoot 'read-assembly-stamp.ps1') -Path $payloadDll -MetadataKey 'FerriteLib.SHA256'
+if ($compiledHash -ne $carrierHash) {
+    throw "Selected carrier does not match the compiler reference: compiled=$compiledHash selected=$carrierHash. Rebuild against the selected artifact."
+}
 $carrierStamp = 'absent'
 $carrierInfo = 'absent'
 if (Test-Path -LiteralPath $carrierDll -PathType Leaf) {
@@ -135,7 +140,7 @@ if (Test-Path -LiteralPath $carrierDll -PathType Leaf) {
 
 if ($RequireReleaseIdentity) {
     if ($carrierStamp -ne 'Release') {
-        throw "The release channel links a '$carrierStamp' carrier at $carrierDll; a published US asset must be built against the Release FerriteLib payload: dotnet build ../ferritelib/Source/FerriteLib.UiKit/FerriteLib.UiKit.csproj -c Release --no-incremental"
+        throw "The release channel links a '$carrierStamp' carrier at $carrierDll; a published US asset must be built against the Release FerriteLib payload. Select one with -FerriteLibArtifactPath. Rebuilding the payload is NOT a packaging step: it is the CARRIER OWNER's DELIVERY STEP, it REPLACES the current freeze, and it is complete only when the owner re-issues a FREEZE NOTICE quoting the new hash AND mtime as a pair. This repository never builds ../ferritelib."
     }
     $informational = Get-AssemblyInformationalVersion -Path $payloadDll
     if ([string]::IsNullOrWhiteSpace($informational)) {
@@ -149,6 +154,11 @@ if ($RequireReleaseIdentity) {
     if ($infoBase -ne $releaseBase) {
         throw "Payload identity is '$informational' (base $infoBase) but this channel is packing '$VersionLabel' (base $releaseBase). The build is stale or the label is wrong."
     }
+}
+
+$distPrefix = [IO.Path]::GetFullPath((Join-Path $root 'dist')) + [IO.Path]::DirectorySeparatorChar
+if (-not $deliveryDir.StartsWith($distPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'StageDir must be a child of this repository''s dist directory.'
 }
 
 # --- stage from scratch ---------------------------------------------------------------------------
@@ -173,6 +183,9 @@ Copy-Item -LiteralPath $payloadDll -Destination (Join-Path $stageDir '1.6\Assemb
 # stage dir's own `1.6/`; skipping that second step spreads the content root over the package root, and
 # the closed set below is what catches it.
 foreach ($source in @(Get-ChildItem -LiteralPath $contentRoot -Recurse -File)) {
+    # Assemblies come only from the selected build. A legacy root DLL must not overwrite that copy.
+    $relativeContent = $source.FullName.Substring($contentRoot.Length + 1)
+    if ($relativeContent -match '^Assemblies[\\/]') { continue }
     $skip = $false
     foreach ($pattern in $copyExclude) {
         if ($source.Name -like $pattern) { $skip = $true; break }
@@ -192,9 +205,15 @@ foreach ($source in @(Get-ChildItem -LiteralPath $contentRoot -Recurse -File)) {
 $sourceUrl = if ($env:GITHUB_REPOSITORY) { "$($env:GITHUB_SERVER_URL)/$env:GITHUB_REPOSITORY" } else { 'https://github.com/Coahuilite/UniversalSqueaker' }
 [System.IO.File]::WriteAllText(
     (Join-Path $stageDir 'version.txt'),
-    "UniversalSqueaker $VersionLabel`r`nbuild=$BuildFlavor`r`ncommit=$CommitLabel`r`ncarrier=$carrierStamp $carrierInfo`r`nsource $sourceUrl`r`n")
+    "UniversalSqueaker $VersionLabel`r`nbuild=$BuildFlavor`r`ncommit=$CommitLabel`r`ncarrier=$carrierStamp $carrierInfo`r`ncarrier-sha256=$carrierHash`r`nsource $sourceUrl`r`n")
 
 # --- assertions on the finished tree --------------------------------------------------------------
+if ((Get-FileHash -LiteralPath (Join-Path $stageDir '1.6/Assemblies/UniversalSqueaker.dll')).Hash -ne $payloadHash) {
+    throw 'Staged payload differs from the selected build input.'
+}
+if ((Get-FileHash -LiteralPath $carrierDll).Hash -ne $carrierHash) {
+    throw 'Selected carrier changed while staging. Rebuild and pack against a stable artifact.'
+}
 foreach ($directory in $forbiddenDirs) {
     if (Test-Path -LiteralPath (Join-Path $stageDir $directory)) {
         throw "Staged package carries content US must never ship: $(Join-Path $stageDir $directory)"
@@ -232,6 +251,12 @@ $assemblyCount = @($stagedFiles | Where-Object { $_ -like '*.dll' }).Count
 if ($assemblyCount -ne 1) {
     throw "The payload must be exactly one assembly; found $assemblyCount."
 }
+
+# --- commit: every assertion above passed, so replace the delivered folder now ---------------------
+if (Test-Path -LiteralPath $deliveryDir) { Remove-Item -LiteralPath $deliveryDir -Recurse -Force }
+Move-Item -LiteralPath $stageDir -Destination $deliveryDir
+$stageDir = $deliveryDir
+Write-Host "[stage-package] delivered $deliveryDir"
 
 Write-Host "[stage-package] flavor=$BuildFlavor measured=$stamp label=$VersionLabel commit=$CommitLabel carrier=$carrierStamp $carrierInfo"
 Write-Host "[stage-package] staged $($stagedFiles.Count) files -> $stageDir"

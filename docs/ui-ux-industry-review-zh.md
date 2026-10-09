@@ -3,6 +3,8 @@
 > 任务：T0 —— UI/UX 行业最佳实践调研 + 当前 US 设置页面布局评估
 > 日期：2026-08-30（与现有 UI 反馈/任务书同步）
 > 范围：只读调研 + 报告；不修改代码、不运行构建。
+>
+> **[2026-10-04 已纠正，B3.5]** 本档多处把 800×600 当作游戏屏幕/硬下限；游戏最低屏幕是 **1024×768**（`RimWorld.ResolutionUtility`），800×600 只是 US 自己的初始**窗口**尺寸策略。其 800×600 布局测量按历史记录保留，不作为可达屏幕证据。
 > 依据源码：
 > - `Source/UniversalSqueaker/UI/FerriteVoicePacksPage.cs`
 > - `Source/UniversalSqueaker/UI/Layout.xml`

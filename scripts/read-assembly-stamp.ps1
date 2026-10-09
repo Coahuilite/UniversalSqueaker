@@ -14,7 +14,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$Path,
     # Attribute type name to read. Default keeps every existing caller's contract byte-for-byte.
-    [string]$AttributeName = 'AssemblyConfigurationAttribute'
+    [string]$AttributeName = 'AssemblyConfigurationAttribute',
+    [string]$MetadataKey
 )
 
 Set-StrictMode -Version Latest
@@ -24,13 +25,17 @@ $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue)
 if ($null -eq $resolved) { throw "Cannot read a stamp from a missing file: $Path" }
 
 $env:UNIVERSALSQUEAKER_STAMP_TARGET = $resolved.Path
+$env:UNIVERSALSQUEAKER_STAMP_ATTRIBUTE = $AttributeName
+$env:UNIVERSALSQUEAKER_STAMP_KEY = $MetadataKey
 try {
     $shell = Join-Path $PSHOME 'pwsh.exe'
     if (-not (Test-Path -LiteralPath $shell -PathType Leaf)) { $shell = 'pwsh' }
-    $probe = '$a=[System.Reflection.Assembly]::LoadFile($env:UNIVERSALSQUEAKER_STAMP_TARGET); foreach ($t in [System.Reflection.CustomAttributeData]::GetCustomAttributes($a)) { if ($t.AttributeType.Name -eq "' + $AttributeName + '") { $t.ConstructorArguments[0].Value; break } }'
+    $probe = '$a=[System.Reflection.Assembly]::LoadFile($env:UNIVERSALSQUEAKER_STAMP_TARGET); foreach ($t in [System.Reflection.CustomAttributeData]::GetCustomAttributes($a)) { if ($env:UNIVERSALSQUEAKER_STAMP_KEY) { if ($t.AttributeType.Name -eq "AssemblyMetadataAttribute" -and $t.ConstructorArguments[0].Value -eq $env:UNIVERSALSQUEAKER_STAMP_KEY) { $t.ConstructorArguments[1].Value; break } } elseif ($t.AttributeType.Name -eq $env:UNIVERSALSQUEAKER_STAMP_ATTRIBUTE) { $t.ConstructorArguments[0].Value; break } }'
     $out = @(& $shell -NoProfile -NonInteractive -Command $probe)
     if ($LASTEXITCODE -ne 0) { throw "Child probe failed (exit $LASTEXITCODE) reading the stamp of $Path." }
     (@($out | ForEach-Object { [string]$_ } | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -join '')
 } finally {
     Remove-Item Env:UNIVERSALSQUEAKER_STAMP_TARGET -ErrorAction SilentlyContinue
+    Remove-Item Env:UNIVERSALSQUEAKER_STAMP_ATTRIBUTE -ErrorAction SilentlyContinue
+    Remove-Item Env:UNIVERSALSQUEAKER_STAMP_KEY -ErrorAction SilentlyContinue
 }

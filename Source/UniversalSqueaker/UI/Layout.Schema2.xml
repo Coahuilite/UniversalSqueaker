@@ -11,41 +11,567 @@
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
+    <!-- S6-2/S6-3, the flat (borderless) scope. This lives HERE, in the layout manifest's own <Styles>
+         section, and not only in UsTheme.SchemeXml, because the ENGINE resolves an element's Scheme
+         against the document the Host was built with - the manifest's section - while UsTheme's document
+         is the in-code palette applied to the theme instance. A scheme declared only in the latter is
+         never resolved, and the scope silently keeps the page's bordered values. The scope declares ONLY
+         the tokens it flattens: everything else inherits the cloned baseline.
+
+         "No box" is spelled as a fill whose border token is the SAME colour, because the vocabulary has
+         no Border=none: UiThemeDraw.Surface paints a 1px frame in the border colour, so equal values make
+         that frame invisible. Hover and Selected keep their own fills, so the states stay visible.
+
+         V1 (2026-10-02): `PanelBorder` is transparent, which removes the NESTED FRAMES. An
+         engine `Section` container paints `UiThemeDraw.Panel(rect)` (`UiLayoutEngine.cs:2905`) - the Panel
+         fill plus a 1px `PanelBorder` frame - so every declarative card used to be a bordered box inside
+         the page plane, and the nav column wrapped the nav's already-bordered cards in a third edge. With a
+         transparent edge the large planes are calmer and the structure is carried by the
+         section title, the secondary text and the accent rail the US section header draws. Separation
+         survives because the FILLS stay different (`Panel #171512` against the plane `#0e0d0c`), so a card
+         still reads as a lift without a line drawn around it. Panel remains inherited from the page
+         palette so an explicit colour-only re-tint can still repaint the scoped card. -->
+    <Scheme Name="us-flat-panel">
+      <Color Token="WorkspacePlane" Value="#191612" />
+      <Color Token="PanelBorder" Value="#17151200" />
+      <Color Token="Raised" Value="#191612" />
+      <Color Token="RaisedBorder" Value="#191612" />
+      <Color Token="Hover" Value="#242019" />
+      <Color Token="HoverBorder" Value="#242019" />
+      <Color Token="Selected" Value="#3a311f" />
+      <Color Token="SelectedBorder" Value="#3a311f" />
+    </Scheme>
+    <!-- SA1.6 (user ruling 2026-10-05): command and grouped-option buttons must read as buttons at
+         REST. Inside `us-flat-panel` the neutral atom surface resolves Raised == RaisedBorder (the
+         scheme's own "no box" spelling, meant for CARDS and ROWS), so an `input/button` there painted a
+         borderless slab and the user could not tell it from text. This scope re-separates the pair for
+         the button elements only - the same colours US already ships at the root plane (Raised
+         #1d1b17 + Border #575247, Hover #242019 + BorderStrong #6b6459, Selected #3a311f + the AccentGold
+         edge) - and declares the selected edge on purpose: SelectedBorder is the one fallback this
+         scope claims rather than inherits (UsTheme.cs type comment), so the lane pinning the agreement
+         is the place a future edit must pass through. Hover/pressed come from the SAME scheme through
+         the carrier's own state ladder; no new kind, no C#. -->
+    <Scheme Name="us-command-button">
+      <Color Token="Raised" Value="#1d1b17" />
+      <Color Token="RaisedBorder" Value="#575247" />
+      <Color Token="Hover" Value="#242019" />
+      <Color Token="HoverBorder" Value="#6b6459" />
+      <Color Token="Selected" Value="#3a311f" />
+      <Color Token="SelectedBorder" Value="#d19a38" />
+    </Scheme>
+    <Scheme Name="us-preset-rows">
+      <Metric Token="Font" Value="Tiny" />
+    </Scheme>
   </Styles>
-  <Column Id="page-root" Gap="8" Padding="12">
-    <!-- Responsive footer for the drawer. The closed window is 600 wide (WindowChromeLayout), i.e.
-         536 inner here, and Breakpoint 500 keeps that a two-column Row in BOTH drawer states - the
-         same Row at 736/1024 and the shipped three columns once the drawer opens; only 480/320 fall
-         below it and the Row resolves to a Column, stacking nav/centre/help as full-width Fill
-         containers instead of three squeezed columns. The help column itself is toggled by a layout
-         VARIANT (UsLayoutVariants), never by Tab. -->
-    <Row Id="body-row" Gap="12" Breakpoint="500" Narrow="Column">
-      <Column Id="nav-column" Width="160" Fill="true">
+  <!-- R2 (2026-09-28): the eight ON/OFF controls are the CARRIER's boolean kind now, not a US kind.
+       `us/square-toggle` is retired with its registration and its file. The reason it existed is gone:
+       it was a kind because the SHAPE ("the knob sits left when false, right when true") depends on a bound
+       value, and no declarative element could express that. The carrier's `input/checkbox` gained the
+       additive `Appearance` attribute (`"switch"` is its default, `"checkbox"` the explicit alternative),
+       whose switch appearance draws exactly this control's proportions - 34x18 track, 14px knob, 2px inset,
+       6px label gap - over the SAME one boolean input path. One boolean BEHAVIOUR, two looks, so a second
+       kind would freeze vocabulary the attribute already carries.
+
+       What deliberately did NOT change: every band stays 36x30 (a 36-wide band is what lets the 34x18 track
+       render at its own size instead of being clamped), every control still names the same bool in `Bind` AND
+       `SelectedKey` (the engine's role resolution and the state the control paints must not be able to
+       disagree), and `Appearance="switch"` is written out rather than left to the default so the intent is
+       declared on the element. Height is the kind's own schema attribute; Width/AlignY/HelpKey/SelectedKey
+       are the engine-wide common vocabulary, so the migration is a kind swap and nothing else. -->
+  <!-- US-ESC1 (FL-IC2 CancelBind): the page root carries the help return layer - the bottom help panel
+       is an explicitly cancellable local layer (§4.1), and as an ancestor of EVERY band (nav, content,
+       footer) it is reachable from any interaction subject after the page's own deeper layers decline.
+       With it declined the key reaches Verse: the settings main layer closes - one press later, never
+       on the same press as a layer return. -->
+  <Column Id="page-root" Gap="8" Padding="12" CancelBind="cancel-help">
+    <Row Id="header-band" Padding="0" Gap="6">
+      <Widget Id="page-title" Kind="us/page-title" />
+    </Row>
+    <!-- Fixed page-header band (S3-2a added it, S3-2b moved the title in, BH1 moved the Help switch out
+         of it into the footer band). The title lives HERE, outside every scroll: the shell chrome has no
+         action slot (FL-18 will not come), and a header inside content-scroll scrolled away with the
+         workspace.
+         It stays a ROW with one child rather than a bare widget: the frame lane asserts the three declared
+         bands (header / body / footer) are bands of the same page, and the header's own geometry was
+         measured as a Row. The Help switch moved with its stable machine identity - the widget, the
+         command binding, the TextKey and the catalog HelpKey all kept their names, because "exactly ONE
+         element in this manifest may carry the help-toggle action binding" is asserted by counting the
+         footer's declaration, not by renaming the control (this comment deliberately does not spell the
+         literal: the help panel lane counts its occurrences in this file). -->
+    <!-- BH1 (2026-10-05): the help panel shares the BOTTOM of the page with the version and save-status
+         row instead of taking a column beside the settings, so expanding it never widens or moves the
+         window (the maintainer's walkthrough: a usable help text that costs the settings their width is not
+         a win). The page is therefore three stacked bands plus the panel: header, the flex body-row, the
+         help panel (only while open) and the footer.
+
+         Fill="true" on body-row is still what makes it the page's flex slot (it is what §2 always drew).
+         Without it no child of page-root yields, so ANY declared height would be ADDED to the page instead
+         of taken out of the body - measured at the minimum logical resolution: footer bottom 667 against a
+         530 page. With it, body-row absorbs exactly what the fixed header, the fixed-height help panel and
+         the footer leave, so the footer stays in by construction at BOTH help states.
+
+         The engine's own rule is why the panel declares a Height and no Fill: a Fill child that also
+         declares a fixed Height is refused the flex slot (UiLayoutEngine.IsFlexibleFill), and a filling
+         panel would then take the leftover the body needs. Non-Fill siblings are measured first and
+         subtracted from the inner height before the flex share is computed, so this panel's declared height
+         is a reservation the body pays for - which is exactly the trade the maintainer asked for. -->
+    <!-- The body is TWO columns at every real width now: the window never widens for help, so the inner
+         width is 736 at the game's minimum screen (800 window - 2x20 shell chrome) and the Breakpoint 500
+         keeps this a Row (nav 200 + centre). Only a synthetic 480/320 probe falls below it and resolves to a
+         stacked Column; that probe is exercised by FrameGeometryLaneTests and is not real-screen evidence.
+         Help visibility is still driven DECLARATIVELY by the engine-level VisibleKey bound to this page's own
+         help-open value binding, never by Tab: the panel stays in the definition while closed so its node and
+         scroll position survive a close/open (a root-list VARIANT was the pre-0.5 mechanism, and 0.6 releases
+         a removed element's node with its scroll position). -->
+    <Row Id="body-row" Fill="true" Gap="12" Padding="0" Breakpoint="500" Narrow="Column">
+      <!-- V1 (2026-10-02): the nav column keeps `us-flat-panel` (the column itself stays a calm plane,
+           with no panel frame), and the nav WIDGET now paints its own card enclosure with an edge the
+           scheme cannot alias away - `RaisedBorder == Raised` is that scheme's own "no box" spelling, and
+           it was what made an ordinary row read as text floating outside its surface. Selected / hovered /
+           ordinary are three visibly different cards inside this one column. -->
+      <!-- The nav owns a viewport: a short body clips and scrolls its natural five-card stack rather
+           than pushing it into the central column or footer. Width and node identity stay unchanged. -->
+      <Scroll Id="nav-column" Width="200" Fill="true" Gap="0" Padding="0" Scheme="us-flat-panel">
         <Widget Id="nav" Kind="us/nav" />
-      </Column>
-      <Scroll Id="content-scroll" Fill="true" Gap="8">
-        <Widget Id="page-title" Kind="us/page-title" />
+      </Scroll>
+      <Scroll Id="content-scroll" Fill="true" Gap="8" Padding="0">
         <Widget Id="banner" Kind="chrome/banner" Bind="banner-text" />
         <Widget Id="mode-row" Kind="us/mode-row" Bind="mode" Tab="Overview" />
-        <Widget Id="global-volume" Kind="us/global-volume" TitleKey="US.Section.OutputLevel" HelpKey="us/global-volume" Tab="Overview" />
-        <Widget Id="basic-tuning" Kind="us/basic-tuning" TitleKey="US.Section.PlaybackBehaviour" HelpKey="us/basic-tuning" Tab="Overview" />
-        <Widget Id="timing" Kind="us/timing" TitleKey="US.Section.TriggerTiming" HelpKey="us/timing" Tab="Overview" />
-        <Widget Id="camera-indicator" Kind="us/camera-indicator" TitleKey="US.Section.InWorldIndicator" HelpKey="us/camera-indicator" Tab="Overview" />
-        <Widget Id="diagnostics" Kind="us/diagnostics" TitleKey="US.Section.Diagnostics" HelpKey="us/diagnostics" Tab="Overview" />
-        <Widget Id="attenuation-editor" Kind="us/attenuation-editor" TitleKey="US.Section.DistanceAttenuation" HelpKey="us/attenuation-editor" Tab="Distance" />
-        <Widget Id="filter-bar" Kind="us/filter-bar" TitleKey="US.Section.FilterDomains" HelpKey="us/filter-bar" Tab="Packs" />
-        <Widget Id="race-layer" Kind="us/race-layer" TitleKey="US.Section.RaceDomain" HelpKey="us/race-layer" Tab="Packs" />
-        <Widget Id="xenotype-layer" Kind="us/xenotype-layer" TitleKey="US.Section.XenotypeDomain" HelpKey="us/xenotype-layer" Tab="Packs" />
-        <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleKey="US.Section.ChooseVoicePacks" HelpKey="us/voice-pack-checklist" Tab="Packs" />
-        <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" Tab="Tuning" />
-        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" />
-      </Scroll>
-      <Scroll Id="help-scroll" Width="176" Fill="true">
-        <Widget Id="help-panel" Kind="us/help-panel" />
+        <!-- S4-1: the first three Overview cards are DECLARATIVE. The three composites that used to
+             own them (us/global-volume, us/basic-tuning, us/camera-indicator) were dissolved here and
+             retired in the same change, so the Registrar's us/* kind set shrank 18 -> 15.
+
+             Card chrome is the engine's Section container with the same explicit geometry the checklist
+             card already declares (Padding 12 + header 26 + Gap 6 reproduces UsCardLayout.MeasureBody).
+             Section help sits on the us/section-header WIDGET, never on the container: HelpKey is refused
+             on a container because only a widget is a hit surface. It is a US kind rather than the
+             carrier's section/header because that one paints a bottom rule no attribute can move (S6-3).
+
+             Rows are [label | control] Rows. The label is text/wrapped, which measures its own wrapped
+             band; it deliberately carries no Width - a Row already hands a sized child's leftover to the
+             unsized one, exactly the arrangement the fixed header band uses - and no Fill, which the
+             attribute schema refuses on a widget. The checkbox is input/checkbox with Width 24 Height 30:
+             30 is not a row constant, it is what makes the atom's own box geometry
+             (side = max(8, height - theme.Geometry.Padding * 2), Padding 6) land on the shipped 18px
+             visual box the composite drew.
+
+             Each checkbox carries Bind only, never ActionBind: the atom writes the INVERSE of the bool it
+             read through the value binding's own setter, so the value binding IS the toggle and the seven
+             toggle-* action bindings the composites needed are retired with them. That is also why the row
+             hit band the composites drew no longer exists - the checkbox band is the row's only hit
+             surface (the same delta the checklist migration recorded).
+
+             The child of the eat-precision pair is gated by the engine's VisibleKey reading the parent's
+             own bool binding, which is the declarative form of the rule the composite enforced in C#. -->
+        <Section Id="global-volume" Tab="Overview" Padding="16" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="global-volume-header" Kind="us/section-header" TitleKey="US.Section.OutputLevel" Height="26" HelpKey="us/global-volume" />
+          <!-- Responsive parameter rows keep label/control columns when roomy and stack the same
+               elements when their own inner band is narrow, independently of the body breakpoint. -->
+          <Row Id="global-volume-top" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
+            <Column Id="global-volume-number-slot" Width="64" Padding="0" AlignY="Top">
+              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpKey="us/global-volume/number" AlignX="Left" />
+            </Column>
+          </Row>
+          <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
+        </Section>
+        <Section Id="basic-tuning" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="basic-tuning-header" Kind="us/section-header" TitleKey="US.Section.PlaybackBehaviour" Height="26" HelpKey="us/basic-tuning" />
+          <Column Id="basic-tuning-body" Gap="6" Padding="0">
+            <Row Id="basic-egg-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Column Id="basic-egg-text" Gap="1" Padding="0">
+                <Widget Id="basic-egg-label" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs" HelpKey="us/basic-tuning/egg" />
+                <Widget Id="basic-egg-state-on" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.On" Emphasis="Muted" VisibleKey="easter-egg-on" />
+                <Widget Id="basic-egg-state-off" Kind="text/wrapped" TextKey="US.Tuning.EasterEggs.Off" Emphasis="Muted" VisibleKey="easter-egg-off" />
+              </Column>
+              <Column Id="basic-egg-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" HelpKey="us/basic-tuning/egg" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-baby-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-baby-label" Kind="text/wrapped" TextKey="US.Tuning.BabyActions" HelpKey="us/basic-tuning/baby-actions" />
+              <Column Id="basic-baby-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" HelpKey="us/basic-tuning/baby-actions" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-cooldown-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
+              <Column Id="basic-cooldown-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" HelpKey="us/basic-tuning/scale-cooldown" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
+              <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" HelpKey="us/basic-tuning/scale-talking" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-population-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
+              <Column Id="basic-population-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" HelpKey="us/basic-tuning/scale-population" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
+              <Column Id="basic-eat-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-eat-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
+              <Column Id="basic-eat-child-check-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision-include-drugs" AlignX="Left" />
+              </Column>
+            </Row>
+            <!-- US-RESET1: the Basics-area restore, the body's eighth child (the card formula counts
+                 it inside the body). The question (US.Reset.Area.Basics.Confirm) lists the eight
+                 fields this card and the camera-indicator toggle own; the us/reset-entry widget opens
+                 the question and stages the effect key through the same UiBindings the writes use. -->
+            <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+          </Column>
+        </Section>
+        <!-- S4-3: the trigger-timing card is DECLARATIVE and its kind (us/timing) is retired in the same
+             change. Card chrome is the engine's Section with the checklist card's explicit geometry
+             (Padding 12 + header 26 + Section Gap 6 + body + Padding 12), which is what
+             UsCardLayout.MeasureBody drew.
+
+             The caption is the friction of this slice FIXED rather than routed around. The composite
+             reserved its caption band against a hand-written SAMPLE constant ("10.0 s") because measure and
+             draw had to agree; the declarative shape has no reserved-band vocabulary at all, so the caption
+             is a bound string instead: the host builds the ONE sentence the atom draws
+             (US.Tuning.MinInterval formatted with the live seconds value) and registers it as a read-only
+             string binding, and the atom measures exactly the string it paints. measure == draw now holds BY
+             CONSTRUCTION - the drift a sample constant could develop is gone, not moved.
+
+             What the declarative shape does NOT reproduce is the composite's reserved caption BAND. Its
+             floor came from that sample and the vocabulary has no MinHeight/reserved-band attribute, so
+             reserving one would have meant a fixed Height and a truncated band. The declaration takes the
+             other branch deliberately: the caption is a flex sibling that takes the row's leftover, exactly
+             like the global-volume card's caption, so nothing is reserved and nothing is clipped.
+             Consequence, measured: at the narrowest centre column the caption wraps to one extra line and
+             the card is taller there.
+
+             Both number fields are flex siblings for the same reason: a declared fixed width is what made
+             the engine place a child outside its own row when the drawer's degenerate arrangement shrank the
+             centre column below that width (FrameGeometryLaneTests measured it), while a flex field is
+             inside its row at every width by construction.
+
+             The multiplier row is the composite's stepper cluster declared directly: the label takes the
+             leftover (a translated label that needs two lines grows the row, which is what
+             WrappingTimingLabelGrowsTheCard measures), and the minus/plus buttons keep the composite's own
+             26px weight with the field flexing between them. The two buttons fire their own commands - a
+             declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
+             the host side of the command, exactly where the composite applied it. -->
+        <Section Id="timing" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
+          <Row Id="timing-interval-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
+            <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" />
+          </Row>
+          <Widget Id="timing-interval-slider" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
+          <Row Id="timing-multiplier-row" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
+            <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
+            <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" Scheme="us-command-button" />
+            <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" Scheme="us-command-button" />
+            </Row>
+          </Row>
+          <!-- US-RESET1: the Timing-area restore (interval floor + cooldown multiplier). -->
+          <Widget Id="timing-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Timing.Confirm" EffectKey="reset-normal-timing" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+        </Section>
+        <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
+          <Row Id="camera-indicator-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="camera-indicator-label" Kind="text/wrapped" TextKey="US.Tuning.CameraIndicator" HelpKey="us/camera-indicator/toggle" />
+            <Column Id="camera-indicator-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="camera-indicator-check" Kind="input/checkbox" Appearance="switch" Bind="camera-indicator" SelectedKey="camera-indicator" Width="36" Height="30" HelpKey="us/camera-indicator/toggle" AlignX="Left" />
+            </Column>
+          </Row>
+        </Section>
+        <!-- T3-2: the diagnostics card is DECLARATIVE and us/diagnostics is retired in the same change.
+             STRUCTURE, not appearance: the three-way choice is a typed SqueakDevLoggingMode written through a
+             VALUE binding, and no atom writes a typed N-way choice that way. input/mode-row reads and writes a
+             STRING value binding and takes its option values as manifest LITERALS (Value1..8), so adopting it
+             would push a machine-token parse into the host; us/mode-row is hard-typed to SqueakVoicePackMode
+             over a four-entry static table. The S4-3b shape is the one that exists: three input/button atoms,
+             each carrying its own PayloadKey (G2 string contract) and its own SelectedKey (B1 per-element
+             answer), over ONE string action whose enum parse stays on the host. The localize row is the page
+             own square toggle over the same bool the composite wrote. The four us/diagnostics/* item help
+             keys move from the retired widget C# onto these elements, because a catalog item claimed by
+             nothing is dead help content. -->
+        <Section Id="diagnostics" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="diagnostics-header" Kind="us/section-header" TitleKey="US.Section.Diagnostics" Height="26" HelpKey="us/diagnostics" />
+          <Widget Id="diagnostics-logging-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Logging.Label" Emphasis="Muted" HelpKey="us/diagnostics" />
+          <Row Id="diagnostics-logging-row" Gap="4" Padding="0">
+            <Widget Id="diagnostics-logging-auto" Kind="input/button" TextKey="US.Diagnostics.Logging.Auto" SelectedKey="dev-logging-auto" ActionBind="set-dev-logging" PayloadKey="dev-logging-auto-value" HelpKey="us/diagnostics/logging-auto" Scheme="us-command-button" />
+            <Widget Id="diagnostics-logging-enabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Enabled" SelectedKey="dev-logging-enabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-enabled-value" HelpKey="us/diagnostics/logging-enabled" Scheme="us-command-button" />
+            <Widget Id="diagnostics-logging-disabled" Kind="input/button" TextKey="US.Diagnostics.Logging.Disabled" SelectedKey="dev-logging-disabled" ActionBind="set-dev-logging" PayloadKey="dev-logging-disabled-value" HelpKey="us/diagnostics/logging-disabled" Scheme="us-command-button" />
+          </Row>
+          <Row Id="diagnostics-localize-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="diagnostics-localize-label" Kind="text/wrapped" TextKey="US.Diagnostics.LocalizeDebugMenu" HelpKey="us/diagnostics/localize-debug" />
+            <Column Id="diagnostics-localize-check-slot" Width="36" Padding="0" AlignY="Middle">
+              <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" HelpKey="us/diagnostics/localize-debug" AlignX="Left" />
+            </Column>
+          </Row>
+          <!-- US-RESET1: the Diagnostics-area restore (log mode + localized debug menu). It sits
+               right under the two persisted rows it restores, ABOVE the geometry heading: the
+               layout-capture switches are per-window session state, not settings, and this
+               restore never touches them. -->
+          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+          <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches, the capture status sentence and
+               the report answer, all bound to real commands the host dispatches:
+                 layout-capture        - start/stop capturing every arranged node of THIS window's host
+                 layout-outline        - paint the outline around each captured draw rect (needs capture)
+                 request-layout-report - ONE report: the next drawn pass writes the capture to the layout
+                                         trace and clears the request, so a second pass writes nothing new
+               The capture status sentence is a READ-ONLY bound string, and that is why it paints in the
+               disabled ink: a read-only leaf is state, and state beats the authored role (the atom's own
+               contract). It is the right read for a diagnosis readout, and it is asserted in the lane rather
+               than left to look like an accident. RPT1 added the report ANSWER below the button (see the
+               element comment there): the same read-only rule, carrying the click's own outcome.
+
+               Deliberately plain: no new widget kind, no second collector, no export service. The capture the
+               report prints is the SAME per-host subscription capture the fit audit already drains. -->
+          <Widget Id="diagnostics-geometry-heading" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Label" Emphasis="Muted" />
+          <Widget Id="diagnostics-geometry-status" Kind="text/wrapped" Bind="layout-diagnosis-status" HelpKey="us/diagnostics/layout-diagnosis" />
+          <Column Id="diagnostics-geometry-row" Gap="8" Padding="0">
+            <Row Id="diagnostics-geometry-capture-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-capture-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Capture" />
+              <Column Id="diagnostics-geometry-capture-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-capture" Kind="input/checkbox" Appearance="switch" Bind="layout-capture" SelectedKey="layout-capture" Width="36" Height="30" HelpKey="us/diagnostics/layout-capture" AlignX="Left" />
+              </Column>
+            </Row>
+            <Row Id="diagnostics-geometry-outline-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-geometry-outline-label" Kind="text/wrapped" TextKey="US.Diagnostics.Geometry.Outline" />
+              <Column Id="diagnostics-geometry-outline-slot" Width="36" Padding="0" AlignY="Middle">
+                <Widget Id="diagnostics-geometry-outline" Kind="input/checkbox" Appearance="switch" Bind="layout-outline" SelectedKey="layout-outline" Width="36" Height="30" HelpKey="us/diagnostics/layout-outline" AlignX="Left" />
+              </Column>
+            </Row>
+            <Widget Id="diagnostics-geometry-report" Kind="input/button" TextKey="US.Diagnostics.Geometry.Report" ActionBind="request-layout-report" Width="96" Height="24" AlignX="Left" HelpKey="us/diagnostics/layout-report" Scheme="us-command-button" />
+            <!-- RPT1.1: the Report click's ANSWER, as the sibling immediately below the button. It is a
+                 read-only bound sentence (like the capture sentence above) because the outcome is carrier
+                 state the manifest has no expression for: the real reason a request was refused, the pass an
+                 accepted request is waiting for, or the pass a report was written from. It shares the
+                 button's help item on purpose - it explains the same action. -->
+            <Widget Id="diagnostics-geometry-report-status" Kind="text/wrapped" Bind="layout-report-status" HelpKey="us/diagnostics/layout-report" />
+            <!-- DT1: the settings-window entry to the developer panel (the tool also answers from the
+                 Debug Actions menu, but never without this window open). It sits AFTER the RPT1 status
+                 sibling so the report button keeps its immediate answer line. -->
+            <Row Id="diagnostics-devpanel-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="diagnostics-devpanel-label" Kind="text/wrapped" TextKey="US.Diagnostics.DevPanel.Label" />
+              <Widget Id="diagnostics-devpanel-open" Kind="input/button" TextKey="US.Diagnostics.DevPanel.Open" ActionBind="open-dev-panel" SelectedKey="dev-panel-open" Width="172" Height="24" HelpKey="us/diagnostics/layout-diagnosis" Scheme="us-command-button" />
+            </Row>
+          </Column>
+        </Section>
+        <!-- US-RESET1 (§4.3): the GLOBAL restore's home. It sits last on the settings home page;
+             the question enumerates the impact (plain settings, tuning overrides, pack selection,
+             preset records and anchors) AND the retained items (every fallback player table and
+             sound mapping, author/Def content, schema/migration diagnostics). Cancel writes
+             nothing; the staged action runs the effect key exactly once. -->
+        <Section Id="restore-center" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="restore-center-header" Kind="us/section-header" TitleKey="US.Section.RestoreDefaults" Height="26" HelpKey="us/reset-center" />
+          <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpKey="us/reset-center" />
+          <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpKey="us/reset-center/restore-all" />
+        </Section>
+        <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
+             same change. Card chrome is the engine's Section with the checklist card's explicit geometry.
+             The chart is the engine's own chart/line declared directly - the composite used to build a
+             UiElementSpec by hand and drive the widget itself, which is exactly the wrapper this adoption
+             exists to remove; Editable + EditablePoints + Height are the same declarations that wrapper
+             wrote, and the drag still arrives as the typed attenuation-point action.
+
+             The status line is a read-only bound string for the same reason the timing caption is: the
+             assembly of the preset name and the printed range is presentation data the manifest has no
+             expression for, so the host builds ONE sentence and the atom paints it. The three presets are
+             input/button atoms whose selected state is a per-button read-only bool (SelectedKey), which is
+             how a data-driven button says "the model is on me" without a Tone binding.
+
+             NOT reproduced from the composite: its narrow branch (body < 200px, a one-line summary). The
+             window is never that narrow - the drawer REPLACES the body instead of squeezing it - so the
+             branch was only reachable in a degenerate frame that the frame-geometry lane already reports
+             as degenerate. Declaring it would need a Breakpoint plus a second subtree for an unreachable
+             state; DeclarativeAttenuationLaneTests measures the card's shape at every accepted width
+             instead, and its overflow assertions are what a genuinely too-narrow card would redden.
+
+             Each preset button declares PayloadKey, which opens input/button's STRING contract (G2: "with a
+             payload the consumer binds BindAction<string>"), so each button's payload lives in its own
+             read-only string binding rather than as a manifest literal. These three are static, so no item
+             scope is involved - the keys are plain page-level read-only strings. SelectedKey is what makes
+             the current preset visible: the engine resolves the Active role for the one button whose bool
+             answers true, so exactly one button is highlighted and the status sentence cannot disagree with
+             it. -->
+        <Section Id="attenuation-editor" Tab="Distance" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
+          <Column Id="attenuation-body" Gap="4" Padding="0">
+            <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpKey="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point"
+                    Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpKey="us/attenuation-editor/status" />
+            <!-- No Height on the preset buttons on purpose: at the narrowest accepted band a third of the
+               row is narrower than "Conservative"/"Balanced" need, and a declared 26px band would CLIP the
+               caption while a fit audit reported the overflow. Without it the atom measures its own caption,
+               so the label wraps and the button grows - the same rule WrappingTimingLabelGrowsTheCard pins
+               for the timing card. The three cells stay equal thirds at every width. -->
+          <Row Id="attenuation-presets" Gap="4" Padding="0">
+              <Widget Id="attenuation-preset-conservative" Kind="input/button" TextKey="US.Distance.Preset.Conservative" SelectedKey="distance-preset-conservative" ActionBind="set-distance-preset" PayloadKey="distance-preset-conservative-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
+              <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
+              <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
+            </Row>
+          <!-- US-RESET1: the two distance entries keep their distinct semantics (§4.3): the first
+               restores ONLY the preset and the range, directly (a simple restore); the second is
+               the Distance+volume AREA restore through the confirmation window - it names the
+               output level among its fields, which the simple restore explicitly keeps. -->
+          <Row Id="attenuation-restores" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpKey="us/reset-area/button" Scheme="us-command-button" />
+            <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" Height="24" HelpKey="us/reset-area/button" />
+          </Row>
+          </Column>
+        </Section>
+        <!-- US-PACK1 (§4.2): ONE filter region for the whole page. The composed conditions are the
+             unified keyword (search-text - the box the retired per-list searches folded into), the
+             author dropdown and the state chips (both still drawn by us/filter-bar, whose F5 display
+             cap and All=clear gesture are unchanged), and the race/xenotype dropdowns (declarative,
+             reading the same UiOption pairs the retired browse-card headers used). Every condition
+             acts on the SAME card result below it, and the echo line names each ACTIVE condition plus
+             the surviving-card count - "每一条件的作用在同一筛选区可见" is a drawn element, not a
+             promise. The band keeps the V2 P1 card rhythm (Section + us/section-header + TitleHidden
+             body widget). -->
+        <Section Id="packs-filter" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel">
+          <Widget Id="packs-filter-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
+          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpKey="us/filter-bar/keyword" />
+          <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
+          <Row Id="packs-domain-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
+            <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/race" />
+            <Widget Id="packs-xenotype-filter" Kind="input/dropdown" Bind="xenotype-filter" OptionsBind="xenotype-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/xenotype" />
+          </Row>
+          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleKey="pack-filter-active" HelpKey="us/filter-bar/summary" />
+        </Section>
+        <!-- US-PACK1 + US-ESC1 (§4.1/§4.2): the page's ONE result body - pack cards. The cancel chain
+             draws here as two REAL parent levels: the card's domain-row hit carries
+             cancel-domain-selection (the operation domain) and the result Section carries
+             cancel-pack-results (collapse exactly the manually opened cards); the page root above both
+             carries cancel-help; Verse closes only after every one of them declined. Clearing the
+             domain keeps filters and expansions ("筛选条件保留，退出选择不关闭包"); collapsing the
+             result keeps filters and the selection - neither layer writes what the other owns. The
+             status-band composite and its scope line stay the OPERATION DOMAIN's band (the G5 citation
+             is unchanged), gated by checklist-has-domain - the cards themselves need no domain at all.
+             The two empties are different sentences: an over-narrowed filter versus a catalog with no
+             packs behind it. The row rhythm (Overlay hit IS the row, selection carried by the FILL,
+             the SA1.7 gutter) is inherited from the retired templates unchanged - only the row KINDS
+             are new. -->
+        <Section Id="packs-results" Tab="Packs" Padding="12" Gap="6" Scheme="us-flat-panel" CancelBind="cancel-pack-results">
+          <Widget Id="packs-results-header" Kind="us/section-header" TitleKey="US.Section.PackResults" Height="26" HelpKey="us/pack-cards" />
+          <Widget Id="packs-scope" Kind="text/wrapped" Bind="checklist-scope" Emphasis="Muted" VisibleKey="checklist-has-domain" />
+          <Widget Id="checklist" Kind="us/voice-pack-checklist" TitleHidden="true" VisibleKey="checklist-has-domain" />
+          <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Padding="0" Gap="2" CancelBind="cancel-domain-selection" />
+          <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleKey="pack-results-empty" />
+          <Widget Id="packs-none" Kind="state/empty" TextKey="US.Packs.Results.None" VisibleKey="pack-no-packs" />
+        </Section>
+        <!-- US-ESC1 review1 (PM observation 1): §4.1 "当前层域/区域 → 设置主层" is its own layer of the
+             REAL parent chain. The composite keeps the visible-branch row steps (cancel-tuning-target); a
+             zero-extra-spacing container wraps it and declares the context return (cancel-tuning-context),
+             and the Tuning tab gate moves to the wrapper so the composite's node sits inside that
+             CancelBind's subtree - no new kind, no FL API, no visual delta. -->
+        <Column Id="tuning-context" Tab="Tuning" Gap="0" Padding="0" CancelBind="cancel-tuning-context">
+          <Widget Id="scope-tree" Kind="us/scope-tree" TitleKey="US.Section.LayeredTuning" HelpKey="us/scope-tree" CancelBind="cancel-tuning-target" />
+        </Column>
+        <Widget Id="preset-list" Kind="us/preset-list" TitleKey="US.Section.DefBaselines" HelpKey="us/preset-list" Tab="Presets" Scheme="us-preset-rows" />
       </Scroll>
     </Row>
-    <!-- No Height attribute: it would override the widget's own measure, which is wrap-aware (the
-         in-game log kept reporting "footer needs 33px has 28px" while the attribute was pinning 28). -->
-    <Widget Id="footer" Kind="us/footer" />
+    <!-- Bottom help panel (BH1). ONE declared presentation replaces the two the drawer had (the 320px
+         side column and the defensive full-width band); the Scroll keeps its stable machine id
+         `help-scroll` while only its POSITION moves: it now sits above the footer, spans the page's
+         inner width, and scrolls its own content. help-open is the ONLY key it reads, and the player's
+         single footer switch is the only writer - so there is no derived "which presentation" truth left
+         to keep in sync, and no page box the presentation can disagree with. The duplicate narrow
+         element (Id `help-band`, child `help-panel-narrow`) left with the second presentation.
+
+         Hidden through VisibleKey and never removed: the element stays in the definition, so its node, its
+         sub-tree and its scroll position survive a close/open, and the body row - which is now ALWAYS
+         arranged - keeps its own nav and content scroll positions across the toggle.
+
+         Height="140" is the reservation the panel makes out of the body's leftover, inside the
+         120-160 band the proposal allowed. It is a layout declaration, not a measurement claim: the actual
+         budget at the game's minimum screen (a 760x524 page box in BOTH help states) and the resulting body
+         viewport are measured by HelpPanelLaneTests, which reads this number out of the manifest instead of
+         re-declaring it, and the acceptance is printed there (help viewport, body viewport, fit findings,
+         both languages). -->
+    <Scroll Id="help-scroll" Height="140" Padding="0" VisibleKey="help-open">
+      <Widget Id="help-panel" Kind="us/help-panel" />
+    </Scroll>
+    <!-- BH1: the footer band is the page's action strip as well as its status strip. It carries the
+         single help switch - moved out of the header, machine identity unchanged - beside the build
+         identity and the save status, because the switch's job is now to open the space directly
+         above itself.
+
+         It carries NO Height, for the reason its child never did - a pinned band overrides a wrap-aware
+         measure (the in-game log kept reporting "footer needs 33px has 28px" while the attribute was
+         pinning 28). §2's fragment wrote Height="26"; that is the same pin and is NOT implemented. The Row
+         resolves its own height as the max of its children: us/footer measures both text halves at the
+         width it is actually handed (a Row gives an unsized child the leftover after the fixed 128px switch
+         and the gap), and the switch contributes its declared 26.
+
+         The switch is the carrier's own input/button, declared with the command binding the Host registers:
+         no US kind, no hand-drawn hit band, so the click routes through the typed binding table like every
+         other control on this page. -->
+    <!-- SA1.4 (user follow-up, PM r2): the band carries Padding 6 so the help switch and the status
+         text stop short of the band's own edges - at Padding 0 the switch's border merged with the
+         container edge the cards above end at. The band's rect is unchanged; only its children are
+         inset, so the footer stays in by construction at both help states. -->
+    <Row Id="footer-band" Padding="6" Gap="6">
+      <Widget Id="footer" Kind="us/footer" />
+      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
+              ActionBind="toggle-help-drawer" Width="128" Height="26"
+              AlignY="Middle" HelpKey="us/page-title/help-drawer" Scheme="us-command-button" />
+    </Row>
   </Column>
+  <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
+       ActionBind inside a template are qualified per item by the engine (<Items>.<itemKey>.<declaredKey>),
+       which is what lets one declared subtree draw every row; HelpKey is deliberately NOT qualified, so
+       every row claims the same catalog entry exactly as the hand-drawn row loop did. -->
+  <Templates>
+    <!-- US-PACK1: ONE template draws TWO row kinds over the flat pack-card-keys list. The kind is
+         decided by per-item VisibleKey bools the projection registers (is-header / is-domain): a header
+         row shows the pack identity and the Contents toggle; a domain row shows the owning card's
+         domain, the operation-domain highlight and that domain's own enable switch for that pack.
+         Hidden children are never materialized, so a header never resolves "enabled" and a domain row
+         never resolves "toggle-pack-card" - the item bindings registered per kind are exactly the keys
+         its visible children read (PackCardItemBindings).
+
+         The rhythm is inherited from the retired templates, not re-invented: an Overlay so the
+         selection/hover plate and the hit COVER the text (declared first, drawn under); the hit is ONE
+         MatchContent element so it IS its band; the SA1.7 gutter reserves the rail-to-text width only.
+         The domain row's hit lives in an inner Overlay BESIDE the switch, not across the whole row:
+         the switch stays the only writer of its value (V2 P2), so the hit stops where the switch
+         band begins. -->
+    <Overlay Id="pack-card-row" Padding="0">
+      <Widget Id="pack-card-row-surface" Kind="us/selection-surface" Bind="selected" Height="MatchContent" Hover="true" />
+      <Row Id="pack-card-row-header" Gap="4" Padding="0" VisibleKey="is-header">
+        <Column Id="pack-card-row-header-gutter" Width="6" Gap="0" Padding="0" />
+        <Column Id="pack-card-row-header-text" Gap="2" Padding="0">
+          <Widget Id="pack-card-row-title" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/card" />
+          <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/pack-cards/card" />
+          <Widget Id="pack-card-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/pack-cards/card" />
+        </Column>
+        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedKey="expanded"
+                ActionBind="toggle-pack-card" PayloadKey="payload" Width="116" Height="26" AlignY="Middle"
+                Emphasis="Muted" Scheme="us-command-button" HelpKey="us/pack-cards/expand" />
+      </Row>
+      <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleKey="is-domain">
+        <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
+        <Overlay Id="pack-card-row-domain-area" Padding="0">
+          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent"
+                  ActionBind="select-domain" PayloadKey="payload" HelpKey="us/pack-cards/row" />
+          <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
+            <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />
+            <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/row" />
+          </Row>
+        </Overlay>
+        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled"
+                Width="36" Height="30" AlignY="Middle" HelpKey="us/pack-cards/enable" />
+      </Row>
+    </Overlay>
+  </Templates>
 </UiPage>

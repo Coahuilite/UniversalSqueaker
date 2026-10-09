@@ -26,14 +26,21 @@ namespace UniversalSqueaker.KernelHostTests;
 /// height. A long synthetic label and subtitle must not change any of it.
 /// </para>
 /// <para>
-/// Rect spaces: controls drawn inside the centre scroll are recorded in scroll-content space, the nav is
-/// recorded in page space. Section controls are matched by shape and by containment in the card's
-/// content-local rect; nav cards are matched by containment in the nav element's page rect.
+/// Controls are recorded in their own scroll-content spaces. The recorder separates nav controls by
+/// the active native group origin; page snapshots are translated to the matching scroll-local space.
 /// </para>
 /// </summary>
 internal static class SettingsGeometryLaneTests
 {
     private static readonly float[] Widths = { 1024f, 736f, 480f, 320f };
+
+    /// <summary>
+    /// The declared width of the timing card's minus/number-field/plus cluster:
+    /// 26 + Gap 8 + 150 + Gap 8 + 26. It is the composite's own floor (ButtonWidth x 2 + StepperGap x 2 + 1
+    /// = 61) widened by the 150 field the declaration adds, and it is what makes the full-cluster assertion
+    /// below hostable-only rather than a blanket demand.
+    /// </summary>
+    private const float TimingStepperClusterWidth = 218f;
     private static readonly string[] Languages = { "English", "ChineseSimplified" };
 
     private const float Height = 720f;
@@ -48,17 +55,40 @@ internal static class SettingsGeometryLaneTests
 
     private static readonly string[] Sections = { "basic-tuning", "timing", "camera-indicator", "diagnostics" };
 
+    /// <summary>
+    /// The Overview cards that STILL draw their own [label | control column] row. S4-1 dissolved
+    /// us/global-volume, us/basic-tuning and us/camera-indicator into manifest subtrees and S4-3 dissolved
+    /// us/timing, so the shared control column is from now on us/diagnostics's contract alone. The four
+    /// declarative cards are covered by <c>DeclarativeOverviewLaneTests</c>/<c>DeclarativeTimingLaneTests</c>,
+    /// which measure the engine's own Row/atom geometry from the manifest rather than a US hand-rolled
+    /// column - the composite shape classifiers below deliberately do not match an atom's band, so no
+    /// composite assertion silently re-interprets a declared row. That exclusion is load-bearing, not
+    /// tidiness: a declarative stepper is a 26x20 input/button, which <see cref="IsSmallControl"/> DOES
+    /// match, and a declarative row's right edge is the card's content edge, not the composite column's
+    /// inset. Had timing stayed in this list, this lane would have demanded the retired contract from the
+    /// new atoms - the same classifier gap S4-1 recorded for the checkbox band.
+    /// </summary>
+    /// <summary>
+    /// The support sections this lane treats as COMPOSITES. T3-2 emptied it: us/diagnostics was the last one,
+    /// and its retirement took the composite control-column contract with it. The empty list is asserted in
+    /// UniformControlColumn on purpose - a composite that comes back must re-cut this lane rather than be
+    /// graded by the atom classifiers, which overlap the composite shapes by design.
+    /// </summary>
+    private static readonly string[] CompositeSections = Array.Empty<string>();
+
     private static FieldInfo ButtonOverrideField => RequireField("ButtonOverride", typeof(Func<Rect, bool>));
     private static FieldInfo SliderOverrideField => RequireField("SliderOverride", typeof(Func<Rect, float, float, float, float>));
     private static FieldInfo TextFieldOverrideField => RequireField("TextFieldOverride", typeof(Func<Rect, string, string>));
 
     public static int RunAll()
     {
+        Step("a short nav viewport scrolls to a clickable last destination", ShortNavigationReachesPresets);
+        Step("the real 760x524 box scrolls the nav to the last card with a clear bottom inset (SA1.4)", NavKeepsABottomInsetAtTheRealBox);
         Step("uniform support-row control column at 1024/736/480/320 in EN + ZH", UniformControlColumn);
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
-        Step("checkbox visible edge + support-row height growth evidence table", CheckboxEdgeAndRowHeightEvidence);
         Step("the eat-precision child row exists only while its parent switch is on", ChildRowFollowsTheParentSwitch);
+        Step("the declarative result card reproduces the card chrome (step A)", PacksResultSectionReproducesTheCardChrome);
         Console.WriteLine("SettingsGeometryLaneTests ALL PASS");
         return 0;
     }
@@ -111,24 +141,26 @@ internal static class SettingsGeometryLaneTests
                         // clauses below are the contract the row must satisfy; below it the layout cannot host
                         // the column and the width clause would be vacuous.
                         bool contractHostable = survey.MinBodyWidth >= ContractBodyFloor;
-                        float visualDeviation = float.NaN;
-                        if (survey.Slots.Count > 0 && survey.Cells.Count > 0)
-                        {
-                            float segmented = survey.Cells.Max(c => c.xMax);
-                            visualDeviation = survey.Slots.Max(s => Math.Abs(VisualBox(s).xMax - segmented));
-                        }
 
+                        // L1 (T17): the five composite fields this line used to print are RETIRED with the
+                        // composite control column. With an empty CompositeSections they printed
+                        // slots=0 cells=0 edges=0 rightEdge=0.0 visualVsSegmented=n/a at EVERY width and
+                        // language - not a false green (nothing asserted them), but the report was still
+                        // teaching a reader to watch a dead instrument. What is left is what the lane still
+                        // measures; the composite half is gone from ControlSurvey too, so it cannot come back
+                        // as a zero.
                         Console.WriteLine("[geometry] " + width + " " + language
                             + " body=" + survey.MinBodyWidth.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " slots=" + survey.Slots.Count
-                            + " cells=" + survey.Cells.Count
-                            + " edges=" + survey.Edges.Count
-                            + " rightEdge=" + survey.CommonRight.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                            + " visualVsSegmented=" + (float.IsNaN(visualDeviation)
-                                ? "n/a"
-                                : visualDeviation.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "px")
                             + " spansSections=" + survey.SpansEverySection
                             + " contract=" + (contractHostable ? "asserted" : "degenerate-narrow-layout"));
+
+                        // CompositeSections is EMPTY, and stating that is the point: the composite column
+                        // contract retired with us/diagnostics, the last composite support section. A composite
+                        // that came back would redden the kind-set pin and the Declarative* lanes first; this
+                        // assertion is what stops THIS lane from quietly grading nothing.
+                        Assert(CompositeSections.Length == 0,
+                            "no Overview support section may be a composite any more; a new one needs this lane"
+                            + " re-cut, not a silently empty survey");
 
                         Assert(survey.SpansEverySection,
                             "all four Overview support sections must be laid out with a content-local rect at " + width
@@ -142,83 +174,16 @@ internal static class SettingsGeometryLaneTests
                         }
 
                         measurable++;
-                        Assert(survey.Slots.Count >= 8,
-                            "expected the eight support checkboxes (6 basic-tuning + camera + diagnostics) at " + width
-                            + " (" + language + "), got " + survey.Slots.Count);
-                        Assert(survey.Cells.Count == 3,
-                            "the three-choice logging row must draw exactly one segmented control of three equal cells at "
-                            + width + " (" + language + "), got " + survey.Cells.Count);
 
-                        // One row group per drawn support row: its terminal control must land on the shared
-                        // column right edge, and no control of the row may cross it. Grouping by the row's
-                        // vertical centre is what makes this a row contract rather than a per-rect one (a
-                        // stepper cluster has interior controls that legitimately sit left of the edge).
-                        List<List<Rect>> rows = RowGroups(survey.Edges);
-                        float expectedRight = survey.BodyRight - UsKernelDraw.ControlColumnRightInset;
-                        var rowRights = new List<float>();
-                        foreach (List<Rect> row in rows)
-                        {
-                            float rowRight = row.Max(r => r.xMax);
-                            rowRights.Add(rowRight);
-                            Assert(Math.Abs(rowRight - expectedRight) <= RightEdgeTolerance,
-                                "every support row must terminate on the shared control-column right edge at "
-                                + width + " (" + language + "): row " + Describe(row[0]) + " ends at " + rowRight
-                                + ", expected " + expectedRight);
-                            foreach (Rect control in row)
-                            {
-                                Assert(control.xMax <= expectedRight + RightEdgeTolerance,
-                                    "a support control must not cross the shared column right edge at " + width
-                                    + " (" + language + "): " + Describe(control) + " expected " + expectedRight);
-                            }
-                        }
-
-                        float minRight = rowRights.Min();
-                        float maxRight = rowRights.Max();
-                        Assert(maxRight - minRight <= RightEdgeTolerance,
-                            "every support row's right edge must be identical at " + width + " (" + language
-                            + "): deviation " + (maxRight - minRight).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
-                            + " (min " + minRight + " max " + maxRight + ")");
-
-                        Rect first = survey.Cells.OrderBy(r => r.x).First();
-                        Rect last = survey.Cells.OrderBy(r => r.x).Last();
-                        float cellWidth = survey.Cells[0].width;
-                        foreach (Rect cell in survey.Cells)
-                        {
-                            Assert(Math.Abs(cell.width - cellWidth) <= 0.01f,
-                                "segmented cells must be equal width at " + width + " (" + language + "): "
-                                + cell.width + " vs " + cellWidth);
-                            Assert(Math.Abs(cell.y - first.y) <= 0.01f,
-                                "segmented cells must share one row at " + width + " (" + language + "): " + cell.y + " vs " + first.y);
-                        }
-
-                        Assert(Math.Abs((last.xMax - first.x) - UsKernelDraw.ControlColumnWidth) <= 0.5f,
-                            "the segmented control's total width must BE the one fixed control column at " + width
-                            + " (" + language + "): " + (last.xMax - first.x) + " vs " + UsKernelDraw.ControlColumnWidth);
-
-                        // The VISIBLE edge contract: the 18px box the player sees must terminate on the same
-                        // right edge as the segmented control's last cell, not 3px inside its 24px hit band.
-                        float segmentedRight = survey.Cells.Max(c => c.xMax);
-                        Assert(Math.Abs(segmentedRight - expectedRight) <= RightEdgeTolerance,
-                            "the segmented control must terminate on the shared column right edge at " + width
-                            + " (" + language + "): " + segmentedRight + " vs " + expectedRight);
-                        foreach (Rect slot in survey.Slots)
-                        {
-                            Rect visual = VisualBox(slot);
-                            Assert(Math.Abs(visual.xMax - segmentedRight) <= RightEdgeTolerance,
-                                "every checkbox VISUAL box must align with the segmented control's right edge at "
-                                + width + " (" + language + "): slot " + Describe(slot) + " visual "
-                                + Describe(visual) + " vs segmented " + segmentedRight);
-                            Assert(Math.Abs(visual.width - UsKernelDraw.CheckboxVisual) <= 0.01f
-                                && Math.Abs(visual.height - UsKernelDraw.CheckboxVisual) <= 0.01f,
-                                "the drawn checkbox box must be the 18px visual at " + width + " (" + language
-                                + "): " + Describe(visual));
-                            Assert(Math.Abs(visual.x - (slot.x + UsKernelDraw.CheckboxInset)) <= 0.01f,
-                                "the 24px hit box must stay centred on the visual at " + width + " (" + language
-                                + "): slot " + Describe(slot) + " visual " + Describe(visual));
-                            Assert(visual.xMax <= slot.xMax + 0.01f,
-                                "the hit box must contain the visual at " + width + " (" + language + "): "
-                                + Describe(slot) + " vs " + Describe(visual));
-                        }
+                        // T3-2: the composite [label | control column] contract retired with the LAST
+                        // composite support section (us/diagnostics). Every Overview support card is a
+                        // declared Section over atoms now, and their bands are asserted by the Declarative*
+                        // lanes against the manifest - a composite assertion here would demand the retired
+                        // contract from atoms whose shape classifiers overlap (a declarative stepper is a
+                        // 26x20 input/button, which IsSmallControl DOES match, and a declarative row ends on
+                        // the card content edge, not on ControlColumnRightInset). What stays here is the
+                        // sweep own half: the four support cards are laid out (SpansEverySection above) and
+                        // the page does not overflow at any of the required widths in either language.
                     }
                 }
                 finally
@@ -251,7 +216,7 @@ internal static class SettingsGeometryLaneTests
         try
         {
             UiThemeDraw.Label(
-                new Rect(0f, 0f, 20f, 16f), "probe text", UiTheme.DarkGold, null, UiFont.Tiny,
+                new Rect(0f, 0f, 20f, 16f), "probe text", UsTheme.Surface(), null, UiFont.Tiny,
                 TextAnchor.MiddleLeft, singleLine: true);
         }
         finally
@@ -265,9 +230,15 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>
-    /// A label long enough to overflow any fixed band is injected for three support rows. The rows may
-    /// grow (they are measured), but the control column is derived from the row width, so every drawn
-    /// control rectangle must be identical to the baseline.
+    /// A label long enough to overflow any fixed band is injected for three support rows. The rows may grow
+    /// (they are measured), but no control may move or resize HORIZONTALLY.
+    ///
+    /// RE-CUT IN THE T3-2 BATCH: the subject used to be <c>ControlEdges</c>, which collected the COMPOSITE
+    /// control column only - and after us/diagnostics retired there is no composite support section left, so
+    /// that collector would have returned an EMPTY list and the comparison below would have passed on two
+    /// empty lists (the empty-enumeration-passes shape this project bans). The subject is now every control
+    /// the four Overview support cards actually DRAW, collected from the same UiNative seams, plus an explicit
+    /// non-vacuity assertion so the lane can never go green on nothing again.
     /// </summary>
     private static void LongLabelKeepsTheColumn()
     {
@@ -285,7 +256,15 @@ internal static class SettingsGeometryLaneTests
                 reports.Clear();
                 UiFitAudit.Reset();
                 Rec rec = Record(host, 1024f, Height);
-                baseline = ControlEdges(rec);
+                baseline = DeclaredControlEdges(rec);
+                // GUARD (not a mutation-proven assertion in the T3-2 batch; the "collector returns empty"
+                // mutation is run separately in the T17 batch and its red is recorded under
+                // dist/t3-2-evidence/): the non-vacuity half of this re-cut. The audit classified it as a
+                // REAL assertion - the left side is a collected Count and the right side is the literal 0 -
+                // so it stays; what it needs is its own red record, not a stronger wording.
+                Assert(baseline.Count > 0,
+                    "the four Overview support cards must draw controls for this lane to have a subject:"
+                    + " an empty baseline would make every comparison below vacuously true");
             }
 
             // The injected string is far wider than any label band at any of the required widths.
@@ -304,7 +283,7 @@ internal static class SettingsGeometryLaneTests
                 reports.Clear();
                 UiFitAudit.Reset();
                 Rec rec = Record(host, 1024f, Height);
-                injected = ControlEdges(rec);
+                injected = DeclaredControlEdges(rec);
                 Assert(TouchedFindings(reports).Count == 0,
                     "a longer translation must grow the measured row band, never overflow it: " + Describe(reports));
             }
@@ -347,7 +326,7 @@ internal static class SettingsGeometryLaneTests
             Program.SetTranslatorResolver(english);
 
             // The stack must be geometrically stable at every required width: the nav column is the
-            // manifest's fixed 160 in the three-column regime (inner width >= the row's 700 breakpoint) and
+            // manifest's fixed 200 in the three-column regime (inner width >= the row's 500 breakpoint) and
             // a full-width Fill container in the stacked one, so the same five-equal-cards facts are checked
             // at all four, and the fixed column/card size is checked where the column regime applies.
             foreach (float width in Widths)
@@ -358,7 +337,7 @@ internal static class SettingsGeometryLaneTests
                 Rec overview = Record(perWidth, width, Height);
                 List<Rect> baseline = NavCards(overview);
                 AssertNavigation(baseline, overview, "Overview at " + width);
-                bool fixedColumn = width >= 736f; // 736 - 24 page padding = 712 >= the row's 700 breakpoint
+                bool fixedColumn = width >= 736f; // 736 - 24 page padding = 712 >= the row's 500 breakpoint
                 Console.WriteLine("[nav] width=" + width
                     + " column=" + (overview.Snapshot.RectById.TryGetValue("nav", out Rect navRect)
                         ? navRect.width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
@@ -367,7 +346,8 @@ internal static class SettingsGeometryLaneTests
                     + "x" + baseline[0].height.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " gap=" + (baseline[1].y - baseline[0].yMax).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " stack=" + (baseline[baseline.Count - 1].yMax
-                        - (overview.Snapshot.RectById.TryGetValue("nav", out Rect navForStack) ? navForStack.y : baseline[0].y))
+                        - (overview.Snapshot.RectById.TryGetValue("nav", out Rect navForStack)
+                            ? navForStack.y - overview.Snapshot.Viewports["nav-column"].y : baseline[0].y))
                         .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
                     + " regime=" + (fixedColumn ? "fixed-column" : "stacked"));
 
@@ -480,13 +460,17 @@ internal static class SettingsGeometryLaneTests
 
         Assert(firstGap > 0f, "the nav cards must not overlap (" + label + "): gap " + firstGap);
 
-        // Measure must return exactly the drawn stack height: the arranged nav rect is the measured
-        // height, and the last card's bottom is where the draw stopped.
+        // Measure must return exactly the drawn stack height PLUS the SA1.4 outer bottom inset: the
+        // arranged nav rect is the measured height, the last card's bottom is where the draw stopped,
+        // and the reserved StackBottomPadding is the space that keeps that bottom clear of the viewport
+        // edge at full scroll. The inset is read from the widget's own public constant, never restated.
         Assert(rec.Snapshot.RectById.TryGetValue("nav", out Rect navRect),
             "the snapshot must carry the nav element (" + label + ")");
-        Assert(Math.Abs(navRect.height - (cards[cards.Count - 1].yMax - navRect.y)) <= 0.01f,
-            "Measure must return exactly the drawn stack height (" + label + "): measured " + navRect.height
-            + ", drawn " + (cards[cards.Count - 1].yMax - navRect.y));
+        Rect localNav = ToContentLocal(navRect, rec.Snapshot.Viewports["nav-column"]);
+        float drawnStack = cards[cards.Count - 1].yMax - localNav.y;
+        Assert(Math.Abs(navRect.height - (drawnStack + UsNavWidget.StackBottomPadding)) <= 0.01f,
+            "Measure must return the drawn stack height plus the SA1.4 bottom inset (" + label + "): measured "
+            + navRect.height + ", drawn " + drawnStack + " + inset " + UsNavWidget.StackBottomPadding);
     }
 
     private static void AssertSameBounds(List<Rect> baseline, List<Rect> after, string because)
@@ -501,246 +485,6 @@ internal static class SettingsGeometryLaneTests
                 "nav card " + i + " must keep identical bounds " + because + ": was "
                 + Describe(baseline[i]) + ", now " + Describe(after[i]));
         }
-    }
-
-    // ---------------------------------------------------------------------------------------------
-    // Evidence table: the visible checkbox edge and the support-row height growth.
-    //
-    // The lane answers the two questions the contract assertions above leave implicit, one printed line
-    // per case, at 1024/736/480/320 x EN/ZH x drawer open/closed:
-    //
-    //  (a) EDGE - for every support row that carries a checkbox, the right edge of the 18px VISUAL box
-    //      the player sees and of its 24px hit slot, against the segmented control's last-cell right
-    //      edge. The visible deviation is a hard assertion (<= 1px); the hit slot deliberately overhangs
-    //      the shared edge by CheckboxInset, which is pinned instead.
-    //
-    //  (b) HEIGHT - for every support row, the height the widget actually drew against the density
-    //      token, so every row that grows is named with its px growth, its label band width and the
-    //      resolved (unwrapped) label width that forced the wrap. Row heights are READ BACK from the
-    //      drawn geometry - each row's centre comes from the 24px control the widget centred in it, and
-    //      each height is solved from the row below plus the published RowGap - rather than re-running
-    //      the measure rule the table is meant to be evidence for. The two are then asserted equal, so
-    //      a measure rule that stopped matching the drawn rows goes red here.
-    //
-    // The density token is observed, not assumed: it is the smallest drawn height in the sweep (the
-    // floor every fitting label lands on) and is asserted against the manifest's Styles/Density=regular
-    // Metric RowHeight, so a density change is measured rather than absorbed.
-    // ---------------------------------------------------------------------------------------------
-
-    /// <summary>Manifest <c>&lt;Styles Schema="1" Density="regular"&gt;&lt;Metric Token="RowHeight" Value="24"&gt;</c>
-    /// - the row-height floor this evidence table measures the drawn rows against.</summary>
-    private const float RowTokenPin = 24f;
-
-    /// <summary>Basic-tuning's egg row is a two-band stack with its own 52px floor (see
-    /// <c>UsBasicTuningWidget.EggRowHeight</c>); the packed row's own constants are repeated here because
-    /// the lane must predict the drawn height from the resolved label and then prove the prediction.</summary>
-    private const float EggStackFloor = 52f;
-
-    private static void CheckboxEdgeAndRowHeightEvidence()
-    {
-        var metrics = new Program.StubMetrics();
-        var reports = new List<UiOverflowReport>();
-        UiFitAudit.Attach(metrics, reports.Add);
-        UiFitAudit.Enabled = true;
-        var cases = new List<CaseEvidence>();
-        try
-        {
-            foreach (string language in Languages)
-            {
-                Dictionary<string, string> table = Program.ReadKeyedTable(language);
-                Program.SetTranslatorResolver(table);
-                try
-                {
-                    foreach (float width in Widths)
-                    {
-                        foreach (bool open in new[] { true, false })
-                        {
-                            reports.Clear();
-                            UiFitAudit.Reset();
-                            cases.Add(MeasureEvidenceCase(metrics, table, width, open, language));
-                        }
-                    }
-                }
-                finally
-                {
-                    Program.SetTranslatorResolver(null);
-                }
-            }
-        }
-        finally
-        {
-            UiFitAudit.Detach();
-            UiFitAudit.Enabled = false;
-            Program.SetTranslatorResolver(null);
-        }
-
-        Assert(cases.Count == Widths.Length * Languages.Length * 2,
-            "the evidence table must cover every width x language x drawer state; got " + cases.Count);
-
-        // The observed density floor: the smallest drawn support-row height in the whole sweep. A row
-        // whose label fits one line lands exactly on the token, so the minimum IS the token; if every
-        // label happened to wrap, this minimum would be a grown height and the assertion below says so.
-        float token = float.MaxValue;
-        foreach (CaseEvidence c in cases)
-        {
-            foreach (RowEvidence r in c.Rows)
-            {
-                if (r.SharedRule) token = Math.Min(token, r.ObservedHeight);
-            }
-        }
-
-        bool floorObserved = false;
-        foreach (CaseEvidence c in cases)
-        {
-            foreach (RowEvidence r in c.Rows)
-            {
-                if (r.SharedRule && r.WrappedHeight <= token + 0.01f) floorObserved = true;
-            }
-        }
-
-        Assert(floorObserved,
-            "no fitting label was observed at or below the smallest drawn row height (" + Num(token)
-            + "px), so that minimum is a grown row, not the density floor the table reports");
-        Assert(Math.Abs(token - RowTokenPin) <= 0.01f,
-            "the observed support-row density floor is " + Num(token) + "px but the manifest's "
-            + "Density=regular RowHeight token is " + Num(RowTokenPin) + "px; the drawn floor and the "
-            + "authored metric disagree");
-
-        Console.WriteLine("[height-token] observed RowVisualHeight floor = " + Num(token)
-            + "px (manifest Density=regular Metric RowHeight=" + Num(RowTokenPin) + "px)");
-
-        float maxVisibleDeviation = 0f;
-        int checkboxRows = 0;
-        int sharedRows = 0;
-        int grownRows = 0;
-        int grownCustomRows = 0;
-        int casesWithGrowth = 0;
-
-        foreach (CaseEvidence c in cases)
-        {
-            var edgeFields = new List<string>();
-            var heightFields = new List<string>();
-            int caseGrown = 0;
-            string drawer = c.Open ? "open" : "closed";
-
-            Assert(c.CellCount == 3,
-                "the logging row must draw one segmented control of three cells at " + c.Width + " ("
-                + c.Language + ", " + drawer + "), got " + c.CellCount);
-
-            foreach (RowEvidence r in c.Rows)
-            {
-                float rule = r.SharedRule ? Math.Max(token, r.WrappedHeight) : r.EggRuleHeight;
-                string ruleName = r.SharedRule
-                    ? "max(RowVisualHeight " + Num(token) + ", label " + Num(r.LabelWidth) + " at "
-                        + Num(r.BandWidth, "0.0") + " -> " + Num(r.WrappedHeight) + ")"
-                    : "egg-stack floor " + Num(EggStackFloor, "0.#");
-                Assert(Math.Abs(r.ObservedHeight - rule) <= 0.01f,
-                    "row " + r.Id + " at " + c.Width + " (" + c.Language + ", drawer " + drawer
-                    + ") was drawn " + Num(r.ObservedHeight) + "px tall but the rule says " + Num(rule)
-                    + "px [" + ruleName + "]");
-
-                if (r.SharedRule)
-                {
-                    sharedRows++;
-                }
-
-                float growth = r.ObservedHeight - token;
-                if (r.SharedRule)
-                {
-                    // The growth criterion itself, not just the heights: a support row may only grow
-                    // when its resolved label cannot fit its band on one line. That makes every grown
-                    // row in the printed table attributable to a measured label width, and says a row
-                    // that grew while its label still fit would be a defect rather than a deviation.
-                    Assert((growth > 0.5f) == (r.LabelWidth > r.BandWidth + 0.01f),
-                        "row " + r.Id + " at " + c.Width + " (" + c.Language + ", drawer " + drawer
-                        + ") drew " + Num(r.ObservedHeight) + "px (token " + Num(token) + ", growth "
-                        + Num(growth) + ") for a label " + Num(r.LabelWidth) + "px wide in a "
-                        + Num(r.BandWidth, "0.0") + "px band; growth and a label wider than its band "
-                        + "must coincide");
-                }
-
-                if (r.SharedRule && growth > 0.5f)
-                {
-                    grownRows++;
-                    caseGrown++;
-                }
-                // The custom rows (the two-band egg stack and the eat-precision child) have no single
-                // floor; this counter reports the ones materially taller than the egg stack's own 52px
-                // floor, so the printed log still names every row that grew for a reason.
-                else if (!r.SharedRule && r.ObservedHeight - EggStackFloor > 0.5f)
-                {
-                    grownCustomRows++;
-                }
-
-                if (r.IsCheckbox)
-                {
-                    checkboxRows++;
-                    float visibleDeviation = Math.Abs(r.VisibleRight - c.SegmentedRight);
-                    maxVisibleDeviation = Math.Max(maxVisibleDeviation, visibleDeviation);
-                    Assert(visibleDeviation <= RightEdgeTolerance,
-                        "the VISIBLE 18px checkbox box must end on the segmented control's right edge at "
-                        + c.Width + " (" + c.Language + ", drawer " + drawer + "): " + r.Id + " visual right "
-                        + Num(r.VisibleRight) + " vs segmented " + Num(c.SegmentedRight) + " (deviation "
-                        + Num(visibleDeviation, "0.###") + "px)");
-                    Assert(Math.Abs((r.HitRight - r.VisibleRight) - UsKernelDraw.CheckboxInset) <= 0.01f,
-                        "the 24px hit slot must stay centred on the visible box at " + c.Width + " ("
-                        + c.Language + ", drawer " + drawer + "): " + r.Id + " hit right " + Num(r.HitRight)
-                        + " vs visible right " + Num(r.VisibleRight));
-
-                    edgeFields.Add(r.Id + "=visual:" + Num(r.VisibleRight) + "/hit:" + Num(r.HitRight)
-                        + "/visibleDev:" + Num(visibleDeviation, "0.###") + "/hitDev:"
-                        + Num(r.HitRight - c.SegmentedRight, "0.###"));
-                }
-
-                // Growth is printed against the row's OWN floor where one exists: the density token for a
-                // shared-rule row. The two custom rows (the two-band egg stack and the eat-precision child,
-                // whose rule is label band + unconditionally reserved reason band) have no single floor, so
-                // they print the composite rule the assertion above used instead.
-                if (r.SharedRule)
-                {
-                    heightFields.Add(r.Id + "=drawn:" + Num(r.ObservedHeight) + "/floor:" + Num(token)
-                        + "/grow:" + Num(r.ObservedHeight - token)
-                        + "/band:" + Num(r.BandWidth, "0.0") + "/label:" + Num(r.LabelWidth, "0.0")
-                        + "/wrapped:" + Num(r.WrappedHeight, "0.0"));
-                }
-                else
-                {
-                    heightFields.Add(r.Id + "=drawn:" + Num(r.ObservedHeight) + "/rule:" + Num(r.EggRuleHeight)
-                        + "/band:" + Num(r.BandWidth, "0.0") + "/label:" + Num(r.LabelWidth, "0.0")
-                        + "/wrapped:" + Num(r.WrappedHeight, "0.0"));
-                }
-            }
-
-            if (caseGrown > 0)
-            {
-                casesWithGrowth++;
-            }
-
-            float caseMax = 0f;
-            foreach (RowEvidence r in c.Rows)
-            {
-                if (r.IsCheckbox) caseMax = Math.Max(caseMax, Math.Abs(r.VisibleRight - c.SegmentedRight));
-            }
-
-            Console.WriteLine("[edge] " + Num(c.Width, "0") + " " + c.Language + " " + drawer
-                + " segRight=" + Num(c.SegmentedRight) + " | " + string.Join(" | ", edgeFields)
-                + " | maxVisibleDev=" + Num(caseMax, "0.###"));
-            Console.WriteLine("[height] " + Num(c.Width, "0") + " " + c.Language + " " + drawer
-                + " token=" + Num(token) + " | " + string.Join(" | ", heightFields)
-                + " | grownRows=" + caseGrown);
-        }
-
-        Console.WriteLine("[edge-summary] cases=" + cases.Count + " checkboxRows=" + checkboxRows
-            + " maxVisibleDeviation=" + Num(maxVisibleDeviation, "0.###") + "px (asserted <= "
-            + Num(RightEdgeTolerance, "0.#") + "px); the 24px hit slot overhangs the shared edge by exactly "
-            + Num(UsKernelDraw.CheckboxInset, "0.#") + "px by design");
-        Console.WriteLine("[height-summary] observedToken=" + Num(token) + "px sharedRows=" + sharedRows
-            + " grownRows=" + grownRows + " grownCustomRows=" + grownCustomRows
-            + " casesWithGrowth=" + casesWithGrowth + "/" + cases.Count);
-
-        Assert(maxVisibleDeviation <= RightEdgeTolerance,
-            "the maximum visible checkbox-vs-segmented deviation over the whole sweep is "
-            + Num(maxVisibleDeviation, "0.###") + "px, above the " + Num(RightEdgeTolerance, "0.#") + "px contract");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -767,9 +511,13 @@ internal static class SettingsGeometryLaneTests
                 host.Bindings.Invoke("set-tab", "Overview");
                 Rec rec = Record(host, 1024f, Height);
                 (offCard, offSlots) = BasicTuningSlotGeometry(rec);
-                Assert(offSlots.Count == 5,
-                    "with the parent OFF the card draws five support checkboxes (egg + three scalings + the"
+                Assert(offSlots.Count == 6,
+                    "with the parent OFF the card draws six support checkboxes (egg + baby + three scalings + the"
                     + " parent) - the child row does not exist at all, got " + offSlots.Count);
+                Assert(!rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                    "and the child ROW must leave the arrangement entirely, not merely paint nothing:"
+                    + " VisibleKey is the engine's gate, and an arranged-but-invisible row would still"
+                    + " measure and still take the pointer");
                 Assert(offSource.LastEatPrecisionIncludeDrugs == null,
                     "and nothing may write the child value while it is off screen");
             }
@@ -784,8 +532,10 @@ internal static class SettingsGeometryLaneTests
                 (onCard, onSlots) = BasicTuningSlotGeometry(rec);
 
                 Assert(onSlots.Count == offSlots.Count + 1,
-                    "turning the parent on adds exactly one checkbox slot (the child), got "
+                    "turning the parent on adds exactly one checkbox band (the child), got "
                     + offSlots.Count + " -> " + onSlots.Count);
+                Assert(rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                    "and the child ROW is arranged once its parent bool answers true");
                 Assert(onCard > offCard + 20f,
                     "and the card grows by the child row, got off=" + Num(offCard) + " on=" + Num(onCard));
                 for (int index = 0; index < offSlots.Count; index++)
@@ -817,15 +567,33 @@ internal static class SettingsGeometryLaneTests
         }
     }
 
-    /// <summary>The basic-tuning card's drawn height and its six checkbox slots (content-local space, top
-    /// to bottom), read from what the draw actually registered.</summary>
+    /// <summary>Width of the declared input/checkbox band every Overview card's control row ends in
+    /// (the manifest's Width attribute; the atom paints its own 18px box inside it).</summary>
+    private const float DeclaredCheckboxWidth = 36f;
+
+    /// <summary>Height of that band: the manifest's Height, which is what makes the atom's own box
+    /// geometry (side = max(8, height - Padding*2), Padding 6) land on the shipped 18px visual box.</summary>
+    private const float DeclaredCheckboxHeight = 30f;
+
+    /// <summary>
+    /// The basic-tuning card's drawn height and its checkbox bands (content-local space, top to bottom),
+    /// read from what the draw actually registered. Since S4-1 the card is declarative, so the bands come
+    /// from the ATOM's own hit rect: 24 wide and the manifest's 30 tall. The composite 24x24 classifier
+    /// deliberately does not match them, which is why this reads its own declared shape instead of
+    /// widening a composite rule the atom never satisfied.
+    /// </summary>
     private static (float CardHeight, List<Rect> Slots) BasicTuningSlotGeometry(Rec rec)
     {
         Assert(rec.Snapshot.RectById.TryGetValue("basic-tuning", out Rect pageRect),
             "the Overview workspace must arrange the basic-tuning card");
         Rect card = ToContentLocal(pageRect, rec.ContentViewport);
-        SectionControls controls = SectionControlsFor(rec, card);
-        return (card.height, controls.Slots.OrderBy(r => r.y).ToList());
+        List<Rect> slots = rec.Buttons
+            .Where(r => Inside(r, card)
+                && Math.Abs(r.width - DeclaredCheckboxWidth) <= 0.5f
+                && Math.Abs(r.height - DeclaredCheckboxHeight) <= 0.5f)
+            .OrderBy(r => r.y)
+            .ToList();
+        return (card.height, slots);
     }
 
     /// <summary>One draw pass whose only reported button is the requested rect - the harness seam the
@@ -843,205 +611,6 @@ internal static class SettingsGeometryLaneTests
         {
             ClearOverrides();
         }
-    }
-
-    /// <summary>
-    /// One case: arrange + draw the real Overview page with the help drawer at the requested state, then
-    /// read the drawn geometry back into the two evidence groups of the table.
-    /// </summary>
-    private static CaseEvidence MeasureEvidenceCase(
-        Program.StubMetrics metrics,
-        Dictionary<string, string> table,
-        float width,
-        bool open,
-        string language)
-    {
-        // The eat-precision child row exists only while its parent switch is on (ruling 2026-09-15), so the
-        // geometry sweep runs with the parent ON and asserts the six-slot card; the parent-off shape (five
-        // slots, no child) is covered by ChildRowFollowsTheParentSwitch.
-        var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
-        using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
-        host.Bindings.Invoke("set-tab", "Overview");
-        host.Bindings.Set("help-open", open);
-        Rec rec = Record(host, width, Height);
-
-        var sections = new Dictionary<string, SectionControls>(StringComparer.Ordinal);
-        foreach (string id in Sections)
-        {
-            Assert(rec.Snapshot.RectById.TryGetValue(id, out Rect pageRect),
-                "the snapshot must carry the " + id + " card at " + width + " (" + language + ")");
-            sections[id] = SectionControlsFor(rec, ToContentLocal(pageRect, rec.ContentViewport));
-        }
-
-        var evidence = new CaseEvidence { Width = width, Open = open, Language = language };
-
-        // (a) the one segmented right edge every support control must agree with.
-        SectionControls diagnostics = sections["diagnostics"];
-        evidence.CellCount = diagnostics.Cells.Count;
-        Assert(diagnostics.Cells.Count == 3,
-            "the logging row must draw one segmented control of three cells at " + width + " (" + language
-            + "), got " + diagnostics.Cells.Count);
-        evidence.SegmentedRight = diagnostics.Cells.Max(cell => cell.xMax);
-        foreach (SectionControls section in sections.Values)
-        {
-            // The cells of one segmented row have three right edges BY DESIGN - only the LAST cell
-            // terminates on the shared column edge, and that edge is what the checkboxes must meet.
-            foreach (Rect cell in section.Cells)
-            {
-                Assert(cell.xMax <= evidence.SegmentedRight + RightEdgeTolerance,
-                    "a segmented cell must not cross the shared control-column right edge at " + width
-                    + " (" + language + "): " + Describe(cell) + " vs " + evidence.SegmentedRight);
-            }
-
-            if (section.Cells.Count > 0)
-            {
-                float lastCellRight = section.Cells.Max(cell => cell.xMax);
-                Assert(Math.Abs(lastCellRight - evidence.SegmentedRight) <= RightEdgeTolerance,
-                    "the segmented control's LAST cell must terminate on the shared right edge at " + width
-                    + " (" + language + "): " + Num(lastCellRight) + " vs " + Num(evidence.SegmentedRight));
-            }
-        }
-
-        // (b) basic-tuning: egg, then the three scaling toggles, then the eat-occurrence group (parent
-        // row, the grey hint band, and the child row whose disabled-reason band is reserved in both
-        // parent states), top to bottom. Each height is solved from the row BELOW it (last row anchored
-        // on the card body's bottom padding), so the drawn height is measured and the production measure
-        // rule is a separate, later check. The hint band carries no control, so its own rule supplies the
-        // gap between the parent row and the child row.
-        SectionControls basic = sections["basic-tuning"];
-        List<Rect> basicSlots = basic.Slots.OrderBy(r => r.y).ToList();
-        Assert(basicSlots.Count == 6,
-            "basic-tuning must draw six support checkboxes (egg + three scaling rows + the eat-precision"
-            + " parent and child rows) at " + width + " (" + language + "), got " + basicSlots.Count);
-        float basicBand = UsKernelDraw.RowLabelWidth(BodyWidthOf(basic.Card));
-        float basicBodyTop = BodyTopOf(basic.Card);
-        float basicBottom = BodyBottomOf(basic.Card);
-        float[] centres = basicSlots.Select(CentreY).ToArray();
-
-        // The child row is an ORDINARY support row now (its checkbox is centred on the row like every other
-        // row's, because the reserved reason band is gone), so its drawn height comes back from the row centre
-        // exactly like its neighbours' - and there is no hint band between the parent and the child any more.
-        float eatChild = 2f * (basicBottom - 2f - centres[5]);
-        float eatParentBottom = basicBottom - 2f - eatChild - 2f;
-        float eatParent = 2f * (eatParentBottom - centres[4]);
-        float eatParentTop = eatParentBottom - eatParent;
-        float population = 2f * (eatParentTop - 2f - centres[3]);
-        float populationTop = eatParentTop - 2f - population;
-        float talking = 2f * (populationTop - 2f - centres[2]);
-        float talkingTop = populationTop - 2f - talking;
-        float cooldown = 2f * (talkingTop - 2f - centres[1]);
-        float cooldownTop = talkingTop - 2f - cooldown;
-        float egg = cooldownTop - 2f - (basicBodyTop + 2f);
-
-        AddRow(evidence, "basic-tuning/egg", 0, KeyedLabel(table, "US.Tuning.EasterEggs"), basicBand, egg,
-            basicSlots[0], metrics, sharedRule: false, eggRule: EggRuleHeight(metrics, table, basicBand));
-        AddRow(evidence, "basic-tuning/scale-cooldown", 1, KeyedLabel(table, "US.Tuning.ScaleCooldown"),
-            basicBand, cooldown, basicSlots[1], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/scale-talking", 2, KeyedLabel(table, "US.Tuning.ScaleTalking"),
-            basicBand, talking, basicSlots[2], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/scale-population", 3, KeyedLabel(table, "US.Tuning.ScalePopulation"),
-            basicBand, population, basicSlots[3], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/eat-precision", 4, KeyedLabel(table, "US.Tuning.EatPrecision"),
-            basicBand, eatParent, basicSlots[4], metrics, true, 0f);
-        AddRow(evidence, "basic-tuning/eat-precision-include-drugs", 5,
-            KeyedLabel(table, "US.Tuning.EatPrecision.IncludeDrugs"), basicBand, eatChild, basicSlots[5],
-            metrics, sharedRule: true, eggRule: 0f);
-
-        // timing: the cooldown-multiplier row is the last one, so its height is anchored on the body's
-        // bottom padding and its centre comes from the minus/plus steppers the widget centres on it.
-        SectionControls timing = sections["timing"];
-        Assert(timing.Steppers.Count == 2,
-            "the cooldown-multiplier row must draw exactly its minus/plus steppers at " + width + " ("
-            + language + "), got " + timing.Steppers.Count);
-        AddRow(evidence, "timing/cooldown-multiplier", 6, KeyedLabel(table, "US.Tuning.CooldownMultiplier"),
-            UsKernelDraw.RowLabelWidth(BodyWidthOf(timing.Card)),
-            2f * (BodyBottomOf(timing.Card) - 2f - CentreY(timing.Steppers[0])), null, metrics, true, 0f);
-
-        // camera-indicator: one row that fills its whole measured body; the two derivations must agree.
-        SectionControls camera = sections["camera-indicator"];
-        Assert(camera.Slots.Count == 1,
-            "the camera-indicator section must draw its one checkbox at " + width + " (" + language
-            + "), got " + camera.Slots.Count);
-        float cameraHeight = 2f * (CentreY(camera.Slots[0]) - BodyTopOf(camera.Card));
-        Assert(Math.Abs(cameraHeight - BodyHeightOf(camera.Card)) <= 0.01f,
-            "the single camera row must fill its measured card body at " + width + " (" + language
-            + "): drawn " + Num(cameraHeight) + " vs body " + Num(BodyHeightOf(camera.Card)));
-        AddRow(evidence, "camera-indicator/toggle", 7, KeyedLabel(table, "US.Tuning.CameraIndicator"),
-            UsKernelDraw.RowLabelWidth(BodyWidthOf(camera.Card)), cameraHeight, camera.Slots[0], metrics, true, 0f);
-
-        // diagnostics: the localize row is the last row; the heading band above it is reported by the
-        // table as context but the localize row is the support row under contract.
-        Assert(diagnostics.Slots.Count == 1,
-            "the diagnostics section must draw the localize checkbox at " + width + " (" + language
-            + "), got " + diagnostics.Slots.Count);
-        AddRow(evidence, "diagnostics/localize-debug", 8, KeyedLabel(table, "US.Diagnostics.LocalizeDebugMenu"),
-            UsKernelDraw.RowLabelWidth(BodyWidthOf(diagnostics.Card)),
-            2f * (BodyBottomOf(diagnostics.Card) - 2f - CentreY(diagnostics.Slots[0])), diagnostics.Slots[0],
-            metrics, true, 0f);
-
-        // The height solver above walks the rows from the drawn geometry, so it depends on the rows
-        // arriving in the order the layout draws them (top to bottom per section). Pin that here rather
-        // than trusting the call order.
-        for (int index = 0; index < evidence.Rows.Count; index++)
-        {
-            Assert(evidence.Rows[index].Order == index,
-                "the support rows must be recorded in draw order at " + width + " (" + language + "): row "
-                + index + " carries order " + evidence.Rows[index].Order);
-        }
-
-        return evidence;
-    }
-
-    /// <summary>
-    /// The two-band egg row's own rule, repeated from <c>UsBasicTuningWidget.EggBands</c>: the title band
-    /// is measured at the row's label band, the On/Off state band at the LONGER of the two shipped state
-    /// strings, and the 52px floor wins while both fit. The table's drawn height is asserted against this
-    /// prediction, so the constants cannot drift unnoticed.
-    /// </summary>
-    private static float EggRuleHeight(Program.StubMetrics metrics, Dictionary<string, string> table, float band)
-    {
-        float title = Math.Max(22f, metrics.MeasureText(KeyedLabel(table, "US.Tuning.EasterEggs"), UiFont.Small, band));
-        float on = metrics.MeasureText(KeyedLabel(table, "US.Tuning.EasterEggs.On"), UiFont.Tiny, band);
-        float off = metrics.MeasureText(KeyedLabel(table, "US.Tuning.EasterEggs.Off"), UiFont.Tiny, band);
-        float state = Math.Max(18f, Math.Max(on, off));
-        return Math.Max(EggStackFloor, 4f + title + 1f + state + 7f);
-    }
-
-
-    private static void AddRow(
-        CaseEvidence evidence,
-        string id,
-        int order,
-        string label,
-        float bandWidth,
-        float observedHeight,
-        Rect? slot,
-        Program.StubMetrics metrics,
-        bool sharedRule,
-        float eggRule)
-    {
-        var row = new RowEvidence
-        {
-            Id = id,
-            Order = order,
-            Label = label,
-            SharedRule = sharedRule,
-            EggRuleHeight = eggRule,
-            BandWidth = bandWidth,
-            LabelWidth = metrics.MeasureWidth(label, UiFont.Small),
-            WrappedHeight = metrics.MeasureText(label, UiFont.Small, bandWidth),
-            ObservedHeight = observedHeight,
-        };
-
-        if (slot.HasValue)
-        {
-            Rect visual = VisualBox(slot.Value);
-            row.IsCheckbox = true;
-            row.VisibleRight = visual.xMax;
-            row.HitRight = slot.Value.xMax;
-        }
-
-        evidence.Rows.Add(row);
     }
 
     /// <summary>Buttons/fields inside one section card, classified by the shapes the widgets draw.
@@ -1087,33 +656,7 @@ internal static class SettingsGeometryLaneTests
         value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>One measured case of the evidence table.</summary>
-    private sealed class CaseEvidence
-    {
-        public float Width;
-        public bool Open;
-        public string Language = "";
-        public float SegmentedRight;
-        public int CellCount;
-        public readonly List<RowEvidence> Rows = new();
-    }
-
     /// <summary>One support row's drawn geometry and the measurements that explain it.</summary>
-    private sealed class RowEvidence
-    {
-        public string Id = "";
-        public int Order;
-        public string Label = "";
-        public bool SharedRule;
-        public float EggRuleHeight;
-        public float BandWidth;
-        public float LabelWidth;
-        public float WrappedHeight;
-        public float ObservedHeight;
-        public bool IsCheckbox;
-        public float VisibleRight;
-        public float HitRight;
-    }
-
     /// <summary>Controls drawn inside one section card, classified by shape.</summary>
     private sealed class SectionControls
     {
@@ -1132,27 +675,24 @@ internal static class SettingsGeometryLaneTests
         public UiLayoutSnapshot Snapshot = null!;
         public Rect ContentViewport;
         public readonly List<Rect> Buttons = new();
+        public readonly List<Rect> NavButtons = new();
         public readonly List<Rect> Fields = new();
         public readonly List<Rect> Sliders = new();
     }
 
-    /// <summary>The control rects of the four support sections plus the facts the assertions need.</summary>
+    /// <summary>The facts the sweep still asserts: how narrow the body gets and whether all four support
+    /// cards were laid out. The composite collections this used to carry (slots/cells/edges/rightEdge) were
+    /// RETIRED in T17 with their only consumer, the composite control-column contract.</summary>
     private sealed class ControlSurvey
     {
-        public readonly List<Rect> Slots = new();
-        public readonly List<Rect> Cells = new();
-        public readonly List<Rect> Edges = new();
-        public float BodyRight;
         public float MinBodyWidth = float.MaxValue;
         public bool SpansEverySection = true;
-        public float CommonRight;
     }
 
     private static UiHost NewHost(Program.StubMetrics metrics)
     {
-        // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15), and the
-        // shared-column survey wants the full six-slot basic-tuning card. The parent-off shape is covered by
-        // ChildRowFollowsTheParentSwitch.
+        // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15). The
+        // parent-off shape is covered by ChildRowFollowsTheParentSwitch.
         var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
         UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
@@ -1170,7 +710,17 @@ internal static class SettingsGeometryLaneTests
         var rec = new Rec { Snapshot = host.MeasureAndArrange(new Vector2(width, height)) };
         try
         {
-            SetField(ButtonOverrideField, new Func<Rect, bool>(rect => { rec.Buttons.Add(rect); return false; }));
+            SetField(ButtonOverrideField, new Func<Rect, bool>(rect =>
+            {
+                Rect navViewport = rec.Snapshot.Viewports["nav-column"];
+                Vector2 navScroll = Program.ScrollPositionById(host.Session, "nav-column");
+                // Stub-only observation of the actual native group, not a second hit algorithm.
+                Vector2 origin = (Vector2)typeof(GUI).GetProperty("GroupOrigin")!.GetValue(null)!;
+                bool inNav = Math.Abs(origin.x - (navViewport.x - navScroll.x)) < 0.01f
+                    && Math.Abs(origin.y - (navViewport.y - navScroll.y)) < 0.01f;
+                (inNav ? rec.NavButtons : rec.Buttons).Add(rect);
+                return false;
+            }));
             SetField(SliderOverrideField, new Func<Rect, float, float, float, float>((rect, value, min, max) =>
             {
                 rec.Sliders.Add(rect);
@@ -1206,56 +756,35 @@ internal static class SettingsGeometryLaneTests
             Rect card = ToContentLocal(cardPage, rec.ContentViewport);
             float bodyWidth = Math.Max(0f, card.width - UsCardLayout.Padding * 2f);
             survey.MinBodyWidth = Math.Min(survey.MinBodyWidth, bodyWidth);
-            survey.BodyRight = Math.Max(survey.BodyRight, card.x + UsCardLayout.Padding + bodyWidth);
-
-            foreach (Rect button in rec.Buttons.Where(r => Inside(r, card)))
-            {
-                if (IsCheckboxSlot(button))
-                {
-                    // The recorded rect is the 24px HIT box. The box under the alignment contract is the
-                    // 18px VISUAL drawn inset 3 inside it, so the visual - not the hit band - joins the
-                    // row edge comparisons and the hit/slot pair is pinned separately below.
-                    survey.Slots.Add(button);
-                    survey.Edges.Add(VisualBox(button));
-                }
-                else if (IsSegmentedCell(button))
-                {
-                    survey.Cells.Add(button);
-                    survey.Edges.Add(button);
-                }
-                else if (IsSmallControl(button))
-                {
-                    survey.Edges.Add(button);
-                }
-            }
-
-            foreach (Rect field in rec.Fields.Where(r => Inside(r, card))) survey.Edges.Add(field);
-            foreach (Rect slider in rec.Sliders.Where(r => Inside(r, card))) survey.Edges.Add(slider);
-        }
-
-        if (survey.Edges.Count > 0)
-        {
-            survey.CommonRight = survey.Edges.Max(r => r.xMax);
         }
 
         return survey;
     }
 
-    private static List<Rect> ControlEdges(Rec rec)
+    /// <summary>
+    /// Every control the four Overview support cards DRAW, in a stable order, collected from the same UiNative
+    /// seams the composite collector used. Since T3-2 the cards are declared Sections over atoms, so the
+    /// composite shape classifiers (which overlap atom shapes by design) are NOT applied here: this collector
+    /// answers "what did the page draw", and the stability comparison is about x/width/height only.
+    /// </summary>
+    private static List<Rect> DeclaredControlEdges(Rec rec)
     {
-        ControlSurvey survey = Survey(rec);
         var all = new List<Rect>();
-        all.AddRange(survey.Cells.OrderBy(r => r.x));
-        all.AddRange(survey.Slots.OrderBy(r => r.y).ThenBy(r => r.x));
-        all.AddRange(survey.Edges
-            .Where(r => !survey.Slots.Any(s => Math.Abs(s.x - r.x) < 0.01f && Math.Abs(s.y - r.y) < 0.01f && Math.Abs(s.width - r.width) < 0.01f)
-                && !survey.Cells.Any(s => Math.Abs(s.x - r.x) < 0.01f && Math.Abs(s.y - r.y) < 0.01f && Math.Abs(s.width - r.width) < 0.01f))
-            .OrderBy(r => r.y).ThenBy(r => r.x));
-        return all;
+        foreach (string id in Sections)
+        {
+            if (!rec.Snapshot.RectById.TryGetValue(id, out Rect cardPage)) continue;
+
+            Rect card = ToContentLocal(cardPage, rec.ContentViewport);
+            all.AddRange(rec.Buttons.Where(r => Inside(r, card)));
+            all.AddRange(rec.Fields.Where(r => Inside(r, card)));
+            all.AddRange(rec.Sliders.Where(r => Inside(r, card)));
+        }
+
+        return all.OrderBy(r => r.y).ThenBy(r => r.x).ToList();
     }
 
     /// <summary>The manifest's fixed nav-column width for the compact pass (was 192 before the ruling).</summary>
-    private const float NavColumnWidth = 160f;
+    private const float NavColumnWidth = 200f;
 
     /// <summary><c>UsNavWidget.SidePadding</c> of the same compact pass.</summary>
     private const float NavSidePadding = 8f;
@@ -1301,7 +830,7 @@ internal static class SettingsGeometryLaneTests
     }
 
     /// <summary>
-    /// The five nav cards: buttons contained in the nav element's page rect. The height floor is what keeps
+    /// The five nav cards: buttons contained in the nav element's scroll-local rect. The height floor keeps
     /// this honest at the stacked widths, where the nav column spans the page and the section rows (drawn in
     /// scroll-content space, but numerically overlapping the nav's page rect) are recorded in the same
     /// list - a nav card is a subtitle-band card (~49px at the stub metrics), a support row band is 24px.
@@ -1309,35 +838,113 @@ internal static class SettingsGeometryLaneTests
     private static List<Rect> NavCards(Rec rec)
     {
         Assert(rec.Snapshot.RectById.TryGetValue("nav", out Rect navRect), "the snapshot must carry the nav element");
-        return rec.Buttons
-            .Where(r => Inside(r, navRect) && r.width >= 100f && r.height >= 40f)
+        Rect localNav = ToContentLocal(navRect, rec.Snapshot.Viewports["nav-column"]);
+        return rec.NavButtons
+            .Where(r => Inside(r, localNav) && r.width >= 100f && r.height >= 40f)
             .OrderBy(r => r.y)
             .ToList();
     }
 
-    /// <summary>Groups control rects into the rows they belong to by vertical centre, so each group is one
-    /// drawn support row (the row's own y positions may shift when a label wraps - only its right edge is
-    /// under contract).</summary>
-    private static List<List<Rect>> RowGroups(List<Rect> edges)
+    // V1: a real Host and native MouseDown/MouseUp prove the last destination is reachable after
+    // scrolling. Restoring the old plain nav Column must fail NavOwnsViewport; game wheel feel remains
+    // an in-game observation. The content scroll's independent state is a regression guard.
+    private static void ShortNavigationReachesPresets()
     {
-        var groups = new List<List<Rect>>();
-        foreach (Rect edge in edges.OrderBy(r => r.y + r.height * 0.5f))
+        foreach (string language in Languages)
         {
-            float centre = edge.y + edge.height * 0.5f;
-            List<Rect>? current = groups.Count > 0 ? groups[groups.Count - 1] : null;
-            float currentCentre = current != null ? current[0].y + current[0].height * 0.5f : 0f;
-            if (current != null && Math.Abs(centre - currentCentre) <= 4f)
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
             {
-                current.Add(edge);
+                using UiHost host = NewHost(new Program.StubMetrics());
+                var window = new Rect(0f, 0f, 1024f, 240f);
+                UiLayoutSnapshot first = host.MeasureAndArrange(new Vector2(window.width, window.height));
+                Assert(first.Viewports.ContainsKey("nav-column"), "NavOwnsViewport: short navigation needs its own scroll");
+                Rect viewport = first.Viewports["nav-column"];
+                Rect content = first.ScrollContents["nav-column"];
+                Assert(content.height > viewport.height + 1f, "short nav case must actually need scrolling");
+                Rec rec = Record(host, window.width, window.height);
+                List<Rect> cards = NavCards(rec);
+                Assert(cards.Count == 5, "short nav must retain all five destination cards");
+                Rect last = cards[4];
+                Assert(last.y + last.height / 2f > viewport.height, "last destination must start outside the short viewport");
+                Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 40f));
+                Program.SetScrollPositionById(host.Session, "nav-column", new Vector2(0f, 10000f));
+                host.DrawChecked(window);
+                float offset = Program.ScrollPositionById(host.Session, "nav-column").y;
+                Assert(Math.Abs(offset - (content.height - viewport.height)) < ShapeTolerance,
+                    "nav scroll must clamp at its own content end");
+                Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 40f) < 0.01f,
+                    "moving the nav must not move the central content scroll");
+                Vector2 pointer = new(viewport.x + last.x + last.width / 2f,
+                    viewport.y + last.y + last.height / 2f - offset);
+                Assert(pointer.x >= viewport.x && pointer.x < viewport.xMax
+                       && pointer.y >= viewport.y && pointer.y < viewport.yMax,
+                    "the last destination's click must be inside the nav viewport");
+                Program.DrawWithEvent(host, window, EventType.MouseDown, pointer);
+                Program.DrawWithEvent(host, window, EventType.MouseUp, pointer);
+                Assert(host.Bindings.Get<string>(UiBindings.ActiveTabKey) == "Presets",
+                    "LastDestinationIsClickable: scrolling and clicking must select Presets through the real nav");
+                Console.WriteLine("[nav-scroll] " + language + " viewport=" + viewport.height
+                    + " content=" + content.height + " offset=" + offset + " selected=Presets");
             }
-            else
-            {
-                groups.Add(new List<Rect> { edge });
-            }
+            finally { Program.SetTranslatorResolver(null); }
         }
-
-        return groups;
     }
+
+    /// <summary>
+    /// SA1.4 (user screenshot: the Presets card sat flush against the container's lower edge while the
+    /// top kept its padding): at the SHIPPED page box in BOTH help states the nav must clamp at its own
+    /// content end AND the last card's bottom must clear the viewport's lower edge - the widget's
+    /// measured stack now ends with the same outer inset it starts with. Help-open is the state that
+    /// really needs the scroll (the 140px panel leaves the body 256), so the clause also proves the
+    /// scroll moved: a lane that clamped at offset 0 would pass the gap by accident, not by the inset.
+    /// </summary>
+    private static void NavKeepsABottomInsetAtTheRealBox()
+    {
+        foreach (string language in Languages)
+        {
+            Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+            try
+            {
+                foreach (bool helpOpen in new[] { true, false })
+                {
+                    string where = "SA1.4 nav at 760x524, " + language + ", help " + (helpOpen ? "open" : "closed");
+                    using UiHost host = NewHost(new Program.StubMetrics());
+                    host.Bindings.Set("help-open", helpOpen);
+                    Rec rec = Record(host, 760f, 524f);
+                    UiLayoutSnapshot snapshot = rec.Snapshot;
+                    Rect viewport = snapshot.Viewports["nav-column"];
+                    Rect content = snapshot.ScrollContents["nav-column"];
+                    List<Rect> cards = NavCards(rec);
+                    Assert(cards.Count == 5, where + ": all five destination cards must be recorded, got " + cards.Count);
+                    Rect last = cards[4];
+
+                    Program.SetScrollPositionById(host.Session, "nav-column", new Vector2(0f, 10000f));
+                    host.DrawChecked(new Rect(0f, 0f, 760f, 524f));
+                    float offset = Program.ScrollPositionById(host.Session, "nav-column").y;
+                    Assert(Math.Abs(offset - Math.Max(0f, content.height - viewport.height)) < ShapeTolerance,
+                        where + ": the nav must clamp at its own content end, offset=" + offset
+                        + " content=" + content.height + " viewport=" + viewport.height);
+                    if (helpOpen)
+                    {
+                        Assert(offset > 0f, where + ": the help-open body must REALLY need the scroll to reach the last card");
+                    }
+
+                    // Page-space bottom of the last card at full scroll: viewport.y + last.yMax - offset.
+                    float lastBottomInViewport = last.y + last.height - offset;
+                    Assert(lastBottomInViewport <= viewport.height - 1f && last.y - offset >= 0f,
+                        where + ": at full scroll the last card must sit FULLY inside the viewport and clear"
+                        + " of its lower edge: last bottom " + lastBottomInViewport + " vs viewport height "
+                        + viewport.height + " (the stack's outer bottom inset is the difference)");
+                    Console.WriteLine("[sa14-nav] " + where + " viewport=" + viewport.height
+                        + " content=" + content.height + " offset=" + offset
+                        + " lastBottom=" + lastBottomInViewport);
+                }
+            }
+            finally { Program.SetTranslatorResolver(null); }
+        }
+    }
+
 
     private static string Describe(Rect rect)
     {
@@ -1363,17 +970,6 @@ internal static class SettingsGeometryLaneTests
     private static List<UiOverflowReport> NavFindings(List<UiOverflowReport> reports)
     {
         return reports.Where(r => r.ElementPath.IndexOf("nav", StringComparison.Ordinal) >= 0).ToList();
-    }
-
-    /// <summary>The box the checkbox actually paints: the 18px visual inset <see cref="UsKernelDraw.CheckboxInset"/>
-    /// inside the 24px hit slot that <c>UsKernelDraw.Checkbox</c> receives.</summary>
-    private static Rect VisualBox(Rect slot)
-    {
-        return new Rect(
-            slot.x + UsKernelDraw.CheckboxInset,
-            slot.y + UsKernelDraw.CheckboxInset,
-            UsKernelDraw.CheckboxVisual,
-            UsKernelDraw.CheckboxVisual);
     }
 
     private static bool IsCheckboxSlot(Rect rect)
@@ -1450,6 +1046,79 @@ internal static class SettingsGeometryLaneTests
         }
 
         return field;
+    }
+
+    /// <summary>
+    /// The declarative packs-result Section's chrome as a MEASURED relation rather than an arithmetic
+    /// argument. Step A established it over the card's two children (Padding 12 + header 26 + Gap 6 + body
+    /// + 12); step B made the card's body declarative and US-PACK1 re-cut that body as pack cards, so the
+    /// same relation is now asserted over the children the manifest actually arranges (header, the scope
+    /// line, the status-band composite, the card-row Repeat, and the empty states when they show), with one
+    /// Gap between each. Every number comes from the same snapshot, so changing the manifest's Padding, the
+    /// Section Gap, the header Height or the card rows reddens this instead of silently moving the card.
+    /// <para>
+    /// LIMITATION, stated in the lane itself: the PRE-SWAP card height is not measured here because the old
+    /// element left the manifest in step A; the pre-swap side of the comparison is the UsCardLayout formula
+    /// (12 + 26 + 6 + body + 12) that this asserts against, which is a derived constant, not a second
+    /// measurement.
+    /// </para>
+    /// </summary>
+    private static void PacksResultSectionReproducesTheCardChrome()
+    {
+        static void Check(bool ok, string message)
+        {
+            if (!ok) throw new InvalidOperationException("packs result card chrome (step A/B): " + message);
+        }
+
+        var fake = new RecordingSettingsSource { RichData = true };
+        using UiHost host = UsKernelSettingsHost.Create(fake);
+        host.Bindings.Invoke("set-tab", "Packs");
+        // US-PACK1: the card keys register during the FIRST projection pass and the domain rows
+        // materialize only once a card is open - arrange, open the us.sang card through the very funnel
+        // write the header's expand button invokes, then take the measured snapshot with rows present.
+        host.MeasureAndArrange(new Vector2(800f, 600f));
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang", "toggle-pack-card"), "");
+        UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(800f, 600f));
+
+        Check(snapshot.RectById.TryGetValue("packs-results", out Rect card), "the declarative result element is arranged");
+        Check(snapshot.RectById.TryGetValue("checklist", out Rect bands), "the status-band composite is arranged inside it");
+        Check(snapshot.RectById.TryGetValue("packs-results-header", out Rect header), "the section header is arranged");
+        Check(Math.Abs(header.height - 26f) <= 0.5f, "the header band is UsCardLayout's 26px, got " + header.height);
+
+        string[] children = { "packs-results-header", "packs-scope", "checklist", "packs-card-rows", "packs-none" };
+        float sum = 0f;
+        int count = 0;
+        foreach (string id in children)
+        {
+            if (snapshot.RectById.TryGetValue(id, out Rect child))
+            {
+                sum += child.height;
+                count++;
+            }
+        }
+
+        Check(count >= 3, "the card must arrange its header, the band composite and the card rows, got " + count);
+        float expected = 12f + sum + 6f * (count - 1) + 12f;
+        Check(Math.Abs(card.height - expected) <= 0.5f,
+            "card height must equal Padding + its arranged children + the Section gaps + Padding: card "
+            + card.height + " vs " + expected);
+        Check(card.height > bands.height + 20f,
+            "the band composite does not itself carry the card chrome (card " + card.height + ", bands " + bands.height + ")");
+
+        // The row set, one level down. US-PACK1 retired the list column and its search band with the
+        // browse cards - the keyword now lives in the filter Section, outside this card - so what the old
+        // "list = search + Gap + rows" relation measured is now the Repeat itself: one element arranging
+        // the materialized template per projected key (<templateId>#<itemKey>, which is what the item-key
+        // lanes read back in layout order). With us.sang opened by the setup above the projection names
+        // exactly four keys, so all four row elements must carry arranged rects.
+        Check(snapshot.RectById.TryGetValue("packs-card-rows", out Rect rows), "the card-row repeat is arranged");
+        Check(rows.height > 0f, "the rich fixture must arrange at least one pack row, got " + rows.height);
+        Check(snapshot.RectById.ContainsKey("pack-card-row#us.sang")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang|human|sanguophage")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang|human")
+                && snapshot.RectById.ContainsKey("pack-card-row#us.sang2"),
+            "the Repeat must materialize one arranged row element per projected key - the two headers and"
+            + " the opened card's race and xenotype domain rows");
     }
 
     private static void Step(string name, Action action)

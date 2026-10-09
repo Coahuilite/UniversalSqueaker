@@ -24,20 +24,35 @@ namespace UniversalSqueaker;
 public static class VoicePackCompAttach
 {
     /// <summary>
-    /// Mounts the default squeak comp on every race in the catalog's admitted-race union.
-    /// Runs on the main thread during startup (LongEventHandler.ExecuteWhenFinished), i.e. after
-    /// Defs are fully loaded and XML patches applied, and before any pawn is generated.
+    /// Mounts the default squeak comp on the VF1 support set: the union of races declared by
+    /// admitted packs AND races carried by a final fallback table (maintainer data or a
+    /// player-created one). No pack and no table = no mount, no routing, no notice. Runs on the
+    /// main thread during startup (LongEventHandler.ExecuteWhenFinished), i.e. after Defs are
+    /// fully loaded and XML patches applied, and before any pawn is generated.
     /// </summary>
-    public static void Apply(SqueakXenotypeCatalogSnapshot catalog)
+    public static void Apply(SqueakXenotypeCatalogSnapshot catalog, IEnumerable<string>? tableRaceDefNames = null)
     {
         if (catalog == null) return;
         try
         {
-            // Mount set = the union of races declared by all admitted packs (both scopes declare
-            // raceDefName). Xenotype targetDefName never mounts: a XenotypeDef is not a component
-            // carrier; xenotypes enter at runtime as the identity's second dimension. Player pack
-            // selection is irrelevant — a mounted comp with an empty pool is silent, same as a patch.
+            // Mount set = pack declarations ∪ table races (both scopes declare raceDefName). A
+            // Xenotype targetDefName never mounts: a XenotypeDef is not a component carrier;
+            // xenotypes enter at runtime as the identity's second dimension. Player pack selection
+            // is irrelevant - a mounted comp with an empty pool is silent, same as a patch.
+            HashSet<string> mount = new(StringComparer.Ordinal);
             foreach (string raceDefName in catalog.RaceDefNames)
+            {
+                if (!string.IsNullOrWhiteSpace(raceDefName)) mount.Add(raceDefName);
+            }
+            if (tableRaceDefNames != null)
+            {
+                foreach (string raceDefName in tableRaceDefNames)
+                {
+                    if (!string.IsNullOrWhiteSpace(raceDefName)) mount.Add(raceDefName);
+                }
+            }
+
+            foreach (string raceDefName in mount)
             {
                 try
                 {

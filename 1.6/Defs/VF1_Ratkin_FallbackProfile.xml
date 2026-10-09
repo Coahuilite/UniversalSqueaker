@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VF1 Ratkin shipped default fallback profile: the 15 production actions mapped to the
+  neutral-purpose US_Voice_* defs in VF1_Ratkin_Voices.xml, following the SR reference
+  combination (ratkin-native-mapping.json). Crying/Giggling (easter-egg keys) stay absent -
+  absent means unset, which is the normal no-sound state, not an error.
+  This is pack data consumed by SqueakKernelAdapter.BuildBuiltInSource; the Kernel carries no
+  race seed. No other race ships default data here.
+  The root element names the FULLY QUALIFIED product type: the standard game Def loader
+  resolves XML names through GenTypes by assembly-qualified name (per
+  ckpt-20261007/pm-vf1-def-loader.md), so an unqualified custom-type root would not load.
+-->
+<Defs>
+  <UniversalSqueaker.UniversalSqueakerFallbackProfileDef Name="US_FallbackProfile_Ratkin">
+    <defName>US_FallbackProfile_Ratkin</defName>
+    <raceDefName>Ratkin</raceDefName>
+    <profileVersion>1</profileVersion>
+    <entries>
+      <li><actionKey>Call</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Eat</actionKey><soundKey>US_Voice_Eat</soundKey></li>
+      <li><actionKey>Sleep</actionKey><soundKey>US_Voice_Sleep</soundKey></li>
+      <li><actionKey>Wounded</actionKey><soundKey>US_Voice_Wounded</soundKey></li>
+      <li><actionKey>Select</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>Move</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Social</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Joy</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Death</actionKey><soundKey>US_Voice_Death</soundKey></li>
+      <li><actionKey>Draft</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>Undraft</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Attack</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>Work</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>Equip</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>MentalBreak</actionKey><soundKey>US_Voice_MentalBreak</soundKey></li>
+    </entries>
+  </UniversalSqueaker.UniversalSqueakerFallbackProfileDef>
+</Defs>

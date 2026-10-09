@@ -14,19 +14,32 @@ public class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
     /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against: the 0.4.0 contract
-    /// axis (the FL 0.4.0 migration; the previous 0.3.0 window carried the P1 hover seam, P2
-    /// <c>UiWindowHost</c> chrome, P3 session hover-claim machine, P4 <c>UiBindings.ActiveTabKey</c>
-    /// and P6 layout-event seam). Pre-1.0 any
-    /// public-surface change bumps the library's minor, so the accepted window is exactly one minor
+    /// The FerriteLib API range this build of US was compiled and verified against: the 0.7.0 contract
+    /// axis (0.5.0 carried <c>Visible</c>/<c>VisibleKey</c>, the invalidation classes and the common
+    /// controls; 0.6.0 carried the page lifecycle doors, the <c>INotifyPropertyChanged</c> adapter, the
+    /// reload scheduler's time seam and the widget catalog; 0.7.0 carried the two peer palettes, the
+    /// creation-time <c>Height</c> validation, the Row/<c>Auto</c> fallback fix, the dropdown value
+    /// precedence, and Batch 1's placement vocabulary (<c>AlignX</c>/<c>OffsetX</c>/<c>AlignY</c>/
+    /// <c>OffsetY</c>), the density fallback for container <c>Padding</c>/<c>Gap</c> and the tone/accent
+    /// vocabulary tightening in which <c>HoverPoint</c> became the derived <c>AccentHover</c>; the
+    /// accepted d5af4d8 freeze additionally carried the FL-IC1 interaction rules and the FL-IC2 ladder -
+    /// <c>UiWindowHost.TryHandleUnansweredCancel</c>, <c>UiHost.TryHandleCancel/TryHandleAccept</c>,
+    /// <c>IUiBindings.TryInvokeCommand</c> and the <c>CancelBind</c> manifest word).
+    /// This line is also a semantic precondition, not bookkeeping: the declarative help drawer uses
+    /// <c>VisibleKey</c>, which does not exist on the 0.4.0 carrier - so a 0.4.0 carrier fails at
+    /// CREATION (<c>UiContractException</c>: unknown attribute) rather than at first draw; the same now
+    /// holds twice over inside 0.7.0, because the settings manifest declares <c>CancelBind</c> and the
+    /// window subclasses call <c>TryHandleUnansweredCancel</c>, neither of which exists on an IC2-less
+    /// 0.7.0-dev carrier (creation refusal, not a draw-time surprise).
+    /// Pre-1.0 any public-surface change bumps the library's minor, so the accepted window is exactly one minor
     /// wide and a consumer newer than the loaded carrier fails Require with a readable report instead
     /// of exploding as a TypeLoadException at first draw. The kernel-host harness reads this pair out
     /// of this file (the pin stays private: US ships no InternalsVisibleTo and the Verse stub has no
     /// Verse.Mod to load), and asserts it against the Api of the carrier it linked, so a carrier
     /// advance reddens a gate instead of a window and the range cannot be restated wrong in a test.
     /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 4, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 5, 0);
+    private static readonly Version PrerequisiteApiMin = new Version(0, 7, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 8, 0);
 
     /// <summary>
     /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a
@@ -97,13 +110,17 @@ public class UniversalSqueakerMod : Mod
             SqueakRuntimeResolver.InitializeMainThread();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
-            // Route table: mount the default squeak comp on every race declared by an admitted pack,
-            // replacing the canonical author patch. Reads the refreshed snapshot; runs on the main
-            // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
-            VoicePackCompAttach.Apply(SqueakXenotypeCatalog.Current);
-            // Profile copies are independent Config artifacts; load/rebuild before the first resolver snapshot.
-            // BuildBuiltIn consumes the resolved table and remains outside the ModSettings debounce/write path.
+            // VF1 order: the final-table store loads BEFORE the mount decision, because the support
+            // set is the union of pack-declared races and table races (maintainer or player). The
+            // store rebuilds from the immutable data-driven source; copies are independent Config
+            // artifacts outside the ModSettings debounce/write path.
             SqueakFallbackProfileStore.LoadOrRebuild(SqueakKernelAdapter.BuildBuiltInSource());
+            // Route table: mount the default squeak comp on the support set, replacing the canonical
+            // author patch. Reads the refreshed snapshot and the loaded tables; runs on the main
+            // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
+            VoicePackCompAttach.Apply(
+                SqueakXenotypeCatalog.Current,
+                SqueakFallbackProfileStore.SupportedRaceDefNames());
             Settings.ApplyToRuntime();
             // The first and only startup consumption of a schema migration happens after main-thread binding.
             Settings.QueuePendingMigrationPersistence();

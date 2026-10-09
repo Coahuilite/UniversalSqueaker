@@ -41,13 +41,15 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     private readonly UniversalSqueakerMod mod;
 
-    // The page's per-window business boundary, kept so BeforeDraw can read the drawer state that
-    // decides the window width. CreateHost builds it once per window instance.
+    // The page's per-window business boundary, kept so BeforeDraw can read the layout-report request and
+    // tick the pending settings save. CreateHost builds it once per window instance.
     private UsKernelSettingsSource? source;
 
-    // The drawer state this window has already sized for. Starts retracted: that is the page state's
-    // default and the width InitialSizePolicy already opened with.
-    private bool appliedDrawerExpanded;
+    /// <summary>SA1.3: ONE Remix confirmation flow per parent window. Created with the host (the mode
+    /// write below is the only writer it gates) and released at PostClose: closing the parent can never
+    /// leave a live dialog or a staged commit behind. The business state lives on this object - never on
+    /// a library global.</summary>
+    private RemixConfirmationFlow? remixFlow;
 
     public UniversalSqueakerSettingsWindow(UniversalSqueakerMod mod)
     {
@@ -69,70 +71,33 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     protected override string CloseText => Translator.Translate("US.Settings.Window.Close");
 
-    /// <summary>
-    /// The shell's close affordance, sized from the text that will actually be drawn instead of the
-    /// shell's fixed 110x30. The in-game fit audit caught the fixed box on the first real run:
-    /// <c>ui.text.overflow (unscoped) width/tiny needs 128.0px, has 110.0px</c>. The chrome draws outside
-    /// the layout engine's element scope, so that finding named no element; the rect it names is exactly
-    /// this one (110f is the only such rect in the tree). Measuring through the same seam the audit uses
-    /// widens the button for any language - including the unresolved-Keyed-literal case, which is what a
-    /// 24-character string measuring 128px implies - and never shrinks the font. Floored at the shell's
-    /// own size so the English/Chinese ship shapes are unchanged.
-    /// </summary>
-    protected override Vector2 CloseButtonSize
-    {
-        get
-        {
-            string text = CloseText ?? "";
-            float needed = text.Length == 0
-                ? 0f
-                : VerseFerriteTextMetrics.Instance.MeasureWidth(text, CloseFont);
-            return new Vector2(WindowChromeLayout.CloseButtonWidth(needed), WindowChromeLayout.CloseHeight);
-        }
-    }
+    // NO CloseButtonSize override any more (TODO:15, closed 2026-09-20). It was added when the shell
+    // still drew a fixed 110x30 box; the shell now sizes that affordance itself, as
+    // max(110, MeasureWidth(CloseText, CloseFont) + 2 x CloseButtonPadding) through its own Metrics seam -
+    // one definition instead of two. This override was the second one, and it was wrong twice: it padded by
+    // 16 instead of the shell's 2 x 10, and it read VerseFerriteTextMetrics.Instance directly instead of
+    // the seam the shell and the audit both measure with (which is how a shell that had just made room for
+    // a label could still be reported as overflowing it). For the shipped captions both rules return the
+    // 110 floor, so removing the duplicate changes no pixel of the English or Chinese ship shape; for a
+    // longer caption the shell's rule now applies, which is also the case the in-game finding really
+    // belonged to (the 128px record was the DIAGNOSTICS panel's own long close text, not this one).
 
     /// <summary>
     /// The window opens NARROW like the vanilla ModSettings window: <see cref="WindowChromeLayout"/>
-    /// clamps 44% of the screen width into [vanilla's own 650, 1600] - never below the dialog vanilla
-    /// itself opens at the minimum canvas - and the retractable help drawer widens it by exactly the column
-    /// plus row gap it costs (188 = 176 + 12) once the player expands it (see
-    /// <see cref="ApplyDrawerWidth"/>). Height is derived from the width at 16:9 and floored at vanilla's
-    /// 600. The shell's default would be the game's own <see cref="Window.InitialSize"/>, so this policy is
+    /// clamps 50% of the screen width into [800, 1600] and the height is that width at 4:3 with a 600px
+    /// floor. BH1 removed the drawer-expanded branch: the help panel reserves height inside the page above
+    /// the footer, so this is the window's size in BOTH help states. At the 1024x768 game screen that is
+    /// 800x600, and the page box the shell hands the page is 760x524 open or closed. The shell's default
+    /// would be the game's own <see cref="Window.InitialSize"/>, so this policy is
     /// what makes the opening size a product decision instead of an accident.
     /// </summary>
     protected override Func<Vector2>? InitialSizePolicy => InitialSizeFromScreen;
 
     private static Vector2 InitialSizeFromScreen()
     {
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, drawerExpanded: false);
+        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight);
         float height = WindowChromeLayout.SettingsWindowHeight(Verse.UI.screenWidth, Verse.UI.screenHeight);
         return new Vector2(width, height);
-    }
-
-    /// <summary>
-    /// One-shot width change on the drawer STATE EDGE only: the page's header toggle is the only thing
-    /// that flips it, and the width is written the pass after the toggle (BeforeDraw runs before the
-    /// page draws), so this never fights the player's own drag or a per-frame relayout. The window
-    /// stays horizontally centred on its own centre and the result is clamped inside the screen.
-    /// </summary>
-    private void ApplyDrawerWidth()
-    {
-        UsKernelSettingsSource? current = source;
-        if (current == null) return;
-
-        bool expanded = current.ViewState.HelpDrawerOpen;
-        if (expanded == appliedDrawerExpanded) return;
-        appliedDrawerExpanded = expanded;
-
-        float width = WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight, expanded);
-        float delta = width - windowRect.width;
-        if (Mathf.Abs(delta) < 0.5f) return;
-
-        float x = Mathf.Clamp(
-            windowRect.x - delta * 0.5f,
-            0f,
-            Mathf.Max(0f, Verse.UI.screenWidth - width));
-        windowRect = new Rect(x, windowRect.y, width, windowRect.height);
     }
 
     /// <summary>
@@ -142,11 +107,46 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// </summary>
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
+    /// <summary>
+    /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope is opened in EVERY
+    /// logging mode (the developer geometry commands need a scope to target); only the text-fit audit inside it
+    /// follows the logging policy.
+    /// </summary>
+    private UsTextFitAudit? audit;
+
     protected override UiHost CreateHost()
     {
-        UsTextFitAudit.Begin();
         source = new UsKernelSettingsSource(UniversalSqueakerMod.Settings);
-        return UsKernelSettingsHost.Create(source);
+        // BH1: no page-width feed any more. The help panel's presentation does not depend on the box the
+        // shell hands the page - there is exactly one presentation, and the engine hides it declaratively -
+        // so the window has no width-shaped decision left to feed.
+        // SA1.3: the Remix confirmation flow is THIS window's - one per parent, built before the host so
+        // the mode write registers against it, released in PostClose so no dialog or staged commit can
+        // outlive the page that created it.
+        remixFlow = new RemixConfirmationFlow(Find.WindowStack);
+        UiHost host = UsKernelSettingsHost.Create(source, remixFlow);
+        // Per-HOST audit, not the process-wide legacy channel: this window's findings land in THIS host's
+        // subscription and are measured with THIS host's ruler.
+        //
+        // `SqueakLog.ShouldEmitDev` is still the policy, but it now selects the FIT AUDIT rather than whether
+        // a scope exists at all: with detailed logging off this window is a geometry-only handle (nothing is
+        // measured, the process-wide switch is untouched) and the layout-diagnosis controls still work.
+        audit = UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        // DT1: the dev panel's default target - registered with the host, cleared in PreClose.
+        UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = host;
+        return host;
+    }
+
+    /// <summary>SA1.3: the parent's close releases the confirmation flow. The dialog rides the same
+    /// WindowStack, so an un-aborted flow would strand an orphan dialog (and its staged commit) over the
+    /// next window. Close is idempotent: Abort answers the same way as the dialog's own Cancel.</summary>
+    public override void PostClose()
+    {
+        base.PostClose();
+        remixFlow?.Abort();
+        // DT1: closing the settings window releases the dev panel with it - the panel is a companion
+        // of the settings workspace, not a standalone tool that outlives its subject.
+        UniversalSqueaker.UI.Dev.UsDevPanelWindow.CloseIfOpen();
     }
 
     /// <summary>
@@ -154,11 +154,30 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
     /// the window is open must still flush on its own timer, or the footer status lies. The hover-claim
     /// frame boundary used to be called from here; since FL P3 <c>UiHost.DrawFrame</c> runs it on the
     /// session, so the window owns no frame protocol at all.
+    /// <para>
+    /// BH1 retired the rest of what this method used to own: feeding the shell's actual page-box width to
+    /// the host's presentation decision, bumping the layout clock when that width flipped the shape, and
+    /// resizing the window on the drawer edge. The help panel changes no width, so a toggle is a page write
+    /// like any other and the toggle's own bumper covers it.
+    /// </para>
     /// </summary>
     protected override void BeforeDraw(Rect contentRect)
     {
+        // The per-host channel is a BOUNDED RING, not a push sink: drain what the previous pass's chrome
+        // and page draw published before this pass adds to it, so a frame's findings cannot be pushed out
+        // of the ring unread (FL-20).
+        audit?.Publish();
+        // R3-B's one-shot report. It runs here, before the pass draws, so the capture it prints is the last
+        // pass that COMPLETED - the request is made during a draw, and this is the next one. One request is
+        // one report: the source clears its pending request in the same step that writes it, so the pass after
+        // that writes nothing, and a request whose pass has not completed yet simply waits.
+        //
+        // RPT1: the generated pass is no longer discarded - the source retains it as the outcome the status
+        // sentence beside the button prints. A produced report advances the same content clock every other
+        // display write uses, so the band re-measures to the new sentence on the next pass instead of keeping
+        // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
+        if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Session.BumpContentRevision();
         mod.TickSettingsSaveForWindow();
-        ApplyDrawerWidth();
     }
 
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>
@@ -200,7 +219,14 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 
     public override void PreClose()
     {
-        UsTextFitAudit.End();
+        // Final drain + release this window's hold on the process-wide detection switch, BEFORE the shell
+        // disposes the host and with it the subscription.
+        audit?.Dispose();
+        audit = null;
+        if (UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost == Host)
+        {
+            UniversalSqueaker.UI.Dev.UsDevPanelTargets.SettingsHost = null;
+        }
         // Disposing the page host and its session is the shell's job.
         base.PreClose();
     }

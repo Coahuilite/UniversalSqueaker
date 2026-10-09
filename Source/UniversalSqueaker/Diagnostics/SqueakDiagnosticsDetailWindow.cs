@@ -39,7 +39,12 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         absorbInputAroundWindow = false;
         preventCameraMotion = false;
         draggable = true;
-        closeOnCancel = false;
+        layer = WindowLayer.SubSuper; // F01 (US-UI1): dev-tool coexistence layering, see the panel.
+        closeOnCancel = false; // two-press arm below; Esc is not the native close.
+        // FL-IC2 native eligibility (frozen handoff §5): with closeOnCancel=false the window only hears the
+        // Cancel key if it opts into this public Verse field itself; it cannot take the key from a window
+        // above, because eligibility is ANDed with the stack's input test.
+        forceCatchAcceptAndCancelEventEvenIfUnfocused = true;
         closeOnAccept = false;
         closeOnClickedOutside = false;
         onlyOneOfTypeAllowed = false; // multiple locks are allowed by ruling.
@@ -48,7 +53,12 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
     }
 
     // 320 -> 340: the same 40/60 value column the main panel now gives its detail (defect D4).
-    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(340f, 480f);
+    // DX1.6: the same budget rule as the panel - the outer size is what is set, it is clamped to the
+    // REAL scaled screen, and the collapsed state below adds the shell's actual chrome (title 56 +
+    // bottom 20) to the 44px bar content instead of reverse-deriving chrome from a content rect.
+    protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
+        Mathf.Min(340f, Mathf.Max(320f, Verse.UI.screenWidth - 40f)),
+        Mathf.Min(480f, Math.Max(TitleBarHeight + SidePadding + BarContentHeight, Verse.UI.screenHeight - 40f)));
 
     protected override UiTheme Theme => WindowTheme;
 
@@ -58,10 +68,28 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
 
-    protected override UiHost CreateHost() => UsDiagnosticsHost.CreateDetail(source);
+    /// <summary>
+    /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope exists in every
+    /// logging mode, so the per-host developer commands always have a scope to target; only the text-fit audit
+    /// inside it follows the logging policy.
+    /// </summary>
+    private UniversalSqueaker.UI.UsTextFitAudit? audit;
+
+    protected override UiHost CreateHost()
+    {
+        UiHost host = UsDiagnosticsHost.CreateDetail(source);
+        // Per-HOST audit (FL-20). The detail windows are the multi-INSTANCE case, so the routing gain is at
+        // its clearest here: two open detail windows used to share one sink, and with one window per
+        // subscription their findings cannot overwrite each other.
+        audit = UniversalSqueaker.UI.UsTextFitAudit.Open(host, SqueakLog.ShouldEmitDev);
+        return host;
+    }
 
     protected override void BeforeDraw(Rect contentRect)
     {
+        // Drain this host's bounded diagnostic ring before this pass adds to it (FL-20).
+        audit?.Publish();
+
         // Self-close the moment the pinned pawn stopped being tracked (dead/despawned/map change/
         // session end). BeforeDraw is inside THIS window's own pass, so Close here is the same
         // mid-draw close a button click performs.
@@ -80,7 +108,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         if (collapsed)
         {
             expandedRect = windowRect;
-            float chrome = Math.Max(0f, windowRect.height - contentRect.height);
+            float chrome = TitleBarHeight + SidePadding;
             windowRect = new Rect(windowRect.x, windowRect.y, windowRect.width, chrome + BarContentHeight);
         }
         else if (expandedRect.height > 1f)
@@ -98,9 +126,13 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
         windowRect.y = Mathf.Clamp(windowRect.y, 0f, Mathf.Max(0f, Verse.UI.screenHeight - KeepGrabPx));
     }
 
-    public override void OnCancelKeyPressed()
+    /// <summary>
+    /// Same two-press arm as the main panel, migrated onto the shell's extension point per the frozen
+    /// FL-IC2 contract: the page ladder gets first refusal, this policy is asked only after it declined,
+    /// and answering true makes the shell consume the key (the pre-migration override consumed nothing).
+    /// </summary>
+    protected override bool TryHandleUnansweredCancel()
     {
-        // Same two-press arm and the same no-consumption contract as the main window.
         float now = Time.realtimeSinceStartup;
         if (now > escArmedUntil)
         {
@@ -111,6 +143,8 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
             escArmedUntil = -1f;
             Close();
         }
+
+        return true;
     }
 
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
@@ -136,6 +170,9 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     public override void PreClose()
     {
+        // Final drain and release, before the shell disposes the host and its subscription.
+        audit?.Dispose();
+        audit = null;
         base.PreClose();
         SqueakDiagnosticsOverlay.NotifyDetailWindowClosed(pinnedPawn);
     }

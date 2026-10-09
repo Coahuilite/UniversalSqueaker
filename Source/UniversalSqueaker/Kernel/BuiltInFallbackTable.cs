@@ -5,7 +5,10 @@ namespace UniversalSqueaker.Kernel;
 
 /// <summary>
 /// Field-presence fallback override. A listed action key is an explicit player override even when
-/// its value equals the source value; omitted keys continue to inherit the source profile.
+/// its value equals the source value; omitted keys continue to inherit the source profile. An
+/// EMPTY sound value is VF1's explicit delete marker: the key is present (the player touched it)
+/// but resolves to no sound - "unset" and "inherit" stay different states, and the kernel stays
+/// pure string data.
 /// </summary>
 public sealed class FallbackDelta
 {
@@ -22,8 +25,8 @@ public sealed class FallbackDelta
         {
             if (!BuiltInActionKeys.Contains(entry.Key))
                 throw new ArgumentException("Fallback delta contains a non-built-in action key: " + entry.Key, nameof(overrides));
-            if (string.IsNullOrWhiteSpace(entry.Value))
-                throw new ArgumentException("Fallback delta contains an empty sound key for action: " + entry.Key, nameof(overrides));
+            if (entry.Value == null)
+                throw new ArgumentException("Fallback delta contains a null sound key for action: " + entry.Key, nameof(overrides));
         }
     }
 
@@ -37,28 +40,44 @@ public enum CopyDisposition
     MergeDelta,
 }
 
-/// <summary>Pure Config-copy lifecycle decisions. File absence is normalized by the store to corrupt=true.</summary>
+/// <summary>Pure Config-copy lifecycle decisions. File absence is normalized by the store to corrupt=true.
+///
+/// <para><b>VF1 finalized ruling (2026-10-07): a shipped-data version bump does NOT drop the player's
+/// delta.</b> Only corruption rebuilds; any readable copy - old version included - keeps its
+/// field-presence overrides, because they name what the PLAYER touched, not what the maintainer
+/// shipped. The store re-stamps a version-skewed copy when it merges (or when such a copy carries
+/// no delta), so the version field stays informational, never a deletion trigger.</para></summary>
 public static class FallbackProfileOperations
 {
-    /// <summary>
-    /// Corrupt or older copies are replaced from the current source. A version-current copy with
-    /// a field-presence delta is merged; a version-current copy without one is already the source.
-    /// </summary>
     public static CopyDisposition DecideCopy(FallbackProfile source, FallbackDelta? delta, int copyVersion, bool copyCorrupt)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
-        if (copyCorrupt || copyVersion < source.Version) return CopyDisposition.RebuildFromSource;
+        if (copyCorrupt) return CopyDisposition.RebuildFromSource;
         return delta != null ? CopyDisposition.MergeDelta : CopyDisposition.KeepCopy;
     }
 
-    /// <summary>Returns a new profile with the source's race/version and source keys overridden per present delta key.</summary>
+    /// <summary>True when a readable copy's version stamp lags or differs from the source - the store
+    /// then re-stamps the file (content unchanged by itself) so the version field cannot silently rot.</summary>
+    public static bool NeedsRestamp(FallbackProfile source, int copyVersion)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        return copyVersion != source.Version;
+    }
+
+    /// <summary>Returns a new profile with the source's race/version and source keys overridden per
+    /// present delta key. VF1: a delta key whose value is the empty string DELETES the source entry
+    /// (the explicit unset marker); any other present key overrides or adds.</summary>
     public static FallbackProfile Merge(FallbackProfile source, FallbackDelta delta)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (delta == null) throw new ArgumentNullException(nameof(delta));
         Dictionary<string, string> merged = new(StringComparer.Ordinal);
         foreach (KeyValuePair<string, string> entry in source.SoundKeys) merged.Add(entry.Key, entry.Value);
-        foreach (KeyValuePair<string, string> entry in delta.Overrides) merged[entry.Key] = entry.Value;
+        foreach (KeyValuePair<string, string> entry in delta.Overrides)
+        {
+            if (entry.Value.Length == 0) merged.Remove(entry.Key);
+            else merged[entry.Key] = entry.Value;
+        }
         return new FallbackProfile(source.Race, source.Version, merged);
     }
 }

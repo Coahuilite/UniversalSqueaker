@@ -11,12 +11,22 @@ namespace UniversalSqueaker.UI;
 /// (it names exactly two shipped manifests). No Height attributes: every widget self-measures
 /// (the collapsed state drives real heights, and a fixed attribute would override the ruling).
 /// <para>
-/// Responsive shape (09 §3.5): the root Row declares ONE numeric <c>Breakpoint</c> against its own
-/// inner width with <c>Narrow="Column"</c>, so below it the two master/detail columns are
-/// <c>NarrowHidden</c> and the navigation column lays out in their place. The navigation column holds
-/// either the list or the detail - never both - and the switch belongs to the US-owned body widget,
-/// not to an attribute: the carrier allows <c>Tab</c> on widgets only, and the view is interaction
-/// state the widget owns. All views are the same US-owned widget kinds; only their arrangement differs.
+/// Responsive shape (09 §3.5): the page carries TWO mutually exclusive presentations, each behind its
+/// own <c>VisibleKey</c> (the host contract keys <see cref="UsDiagnosticsHost.KeyWide"/> /
+/// <see cref="UsDiagnosticsHost.KeyNarrow"/>, fed from the source's own narrow decision). Wide is the
+/// master list plus the independent detail column; narrow is ONE in-window navigation column. The
+/// root Row keeps its <c>Breakpoint</c>/<c>Narrow="Column"</c> for the narrow stack, but it is no
+/// longer what makes the two shapes exclusive: FL 0.7's A1 retired the "an unmeasurable
+/// <c>Width="Auto"</c> Row child collapses to a 1px stub" idiom this page used to rely on, and the
+/// supported replacement is the one FL documented (<c>consume-from-0.7.0.md</c> §3): a hidden
+/// presentation owns NO geometry rather than a pixel-wide remnant, so it can never share the wide
+/// Row's leftover space (which is exactly what A1 exposed).
+/// <see cref="UsDiagnosticsHost.ApplyContentWidth"/> is what makes the swap re-arrange: a read-only
+/// VisibleKey binding announces no revision of its own.
+/// The navigation column holds either the list or the detail - never both - and the switch belongs to
+/// the US-owned body widget, not to an attribute: the carrier allows <c>Tab</c> on widgets only, and
+/// the view is interaction state the widget owns. All views are the same US-owned widget kinds; only
+/// their arrangement differs.
 /// </para>
 /// </summary>
 public static class UsDiagnosticsSpec
@@ -47,21 +57,23 @@ public static class UsDiagnosticsSpec
         // inherited a 250px list row's width and painter, which is exactly the reported defect.
         "  <Widget Id=\"diag-bar\" Kind=\"us/diag/bar\" Scope=\"main\" />",
         "  <Row Id=\"diag-root\" Gap=\"" + Gap + "\" Padding=\"" + Padding + "\" Breakpoint=\"" + Breakpoint + "\" Narrow=\"Column\">",
-        // Wide presentation: master list + independent detail column, hidden whole when narrow.
-        "    <Column Id=\"diag-list-col\" Width=\"" + ListWidth + "\" Fill=\"true\" Gap=\"2\" NarrowHidden=\"true\">",
+        // Wide presentation: master list + independent detail column, BOTH behind one VisibleKey so the
+        // pair is absent - not zero-sized - whenever the narrow presentation is the arranged one.
+        "    <Column Id=\"diag-list-col\" Width=\"" + ListWidth + "\" Fill=\"true\" Gap=\"2\" VisibleKey=\"" + UsDiagnosticsHost.KeyWide + "\">",
         "      <Widget Id=\"diag-toolbar\" Kind=\"us/diag/toolbar\" Scope=\"main\" />",
         "      <Scroll Id=\"diag-list-scroll\" Fill=\"true\" Gap=\"2\">",
         "        <Widget Id=\"diag-list\" Kind=\"us/diag/list\" />",
         "      </Scroll>",
         "      <Widget Id=\"diag-pager\" Kind=\"us/diag/pager\" />",
         "    </Column>",
-        "    <Scroll Id=\"diag-detail-scroll\" Width=\"" + DetailWidth + "\" Fill=\"true\" Gap=\"4\" NarrowHidden=\"true\">",
+        "    <Scroll Id=\"diag-detail-scroll\" Width=\"" + DetailWidth + "\" Fill=\"true\" Gap=\"4\" VisibleKey=\"" + UsDiagnosticsHost.KeyWide + "\">",
         "      <Widget Id=\"diag-detail\" Kind=\"us/diag/detail\" Scope=\"main\" />",
         "    </Scroll>",
-        // Narrow presentation: ONE in-window navigation column. An Auto column so it costs the wide
-        // layout one pixel (a 1px rect is skipped by every widget's Draw); below the Breakpoint it takes
-        // the full width and the two wide columns are gone.
-        "    <Column Id=\"diag-nav-col\" Width=\"Auto\" Gap=\"4\">",
+        // Narrow presentation: ONE in-window navigation column, behind the complementary VisibleKey.
+        // It keeps Width="Auto" and is the only visible child in this shape, so the unsized
+        // distribution hands it the full width; in the wide shape it is not arranged at all, so it
+        // cannot take a share of the split. No fixed Width: that would pin the narrow state too.
+        "    <Column Id=\"diag-nav-col\" Width=\"Auto\" Gap=\"4\" VisibleKey=\"" + UsDiagnosticsHost.KeyNarrow + "\">",
         // Back sits ABOVE the body: it measures zero except in the narrow detail view, which is the only
         // state with an owning list to return to. The pinned detail window declares no nav widget at all.
         "      <Widget Id=\"diag-nav-back\" Kind=\"us/diag/nav\" Scope=\"main\" />",

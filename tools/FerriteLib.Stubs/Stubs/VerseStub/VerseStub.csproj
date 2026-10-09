@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <RootNamespace>Verse</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>..\..\bin\stubs\verse\</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UnityEngineStub\UnityEngineStub.csproj" />
+    <!-- The real Assembly-CSharp references UnityEngine.IMGUIModule; the faithful ButtonInvisible
+         model needs Event/GUIUtility from the IMGUI stub. -->
+    <ProjectReference Include="..\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj" />
+  </ItemGroup>
+
+</Project>

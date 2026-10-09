@@ -10,9 +10,14 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>
 /// Kernel-owned US filter bar: row 1 = All/Enabled/Conflicts/Orphan-only segment chips writing the
-/// typed "set-domain-filter" action; row 2 = Race / Xenotype / Author dropdowns (nested kernel
-/// dropdown widgets over typed OptionsBind lists) writing "race-filter", "xenotype-filter" and
-/// "set-pack-filter".
+/// typed "set-domain-filter" action; row 2 = the Author dropdown (nested kernel dropdown over the
+/// typed author-options list) writing the "pack-filter" VALUE binding (the "set-pack-filter" action
+/// is the older one-shot command and is not what this dropdown calls). Since US-PACK1 (2026-10-09) the
+/// race/xenotype dropdowns are declarative siblings of the SAME packs-filter Section (the browse cards
+/// they used to sit on retired with the card redesign), and the unified keyword field is that region's
+/// first row; this bar still READS "race-filter"/"xenotype-filter"/"search-text" because the "All"
+/// chip's active state is the honest answer over every narrowing the page knows, wherever its control
+/// sits - and pressing All remains the region's single reset gesture.
 /// </summary>
 public sealed class UsFilterBarWidget : UsSectionWidgetBase
 {
@@ -27,8 +32,6 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     private const string KeyChipEnabledOnly = "US.Packs.Filter.EnabledOnly";
     private const string KeyChipConflicts = "US.Packs.Filter.Conflicts";
     private const string KeyChipOrphanOnly = "US.Packs.Filter.OrphanOnly";
-    private const string KeyLabelRace = "US.Packs.Filter.Race";
-    private const string KeyLabelXenotype = "US.Packs.Filter.Xenotype";
     private const string KeyLabelAuthor = "US.Packs.Filter.Author";
 
     private const float RowHeight = UsFilterBarLayout.RowHeight;
@@ -58,8 +61,6 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         bindings.ValidateValue<string>("xenotype-filter", elementPath);
         bindings.ValidateValue<string>("pack-filter", elementPath);
         bindings.ValidateValue<string>("search-text", elementPath);
-        bindings.ValidateOptions<FilterOptionView>("race-filter-options", elementPath);
-        bindings.ValidateOptions<FilterOptionView>("xenotype-filter-options", elementPath);
         bindings.ValidateOptions<FilterOptionView>("author-options", elementPath);
         bindings.ValidateValue<UiDomainFilter>("domain-filter", elementPath);
         bindings.ValidateAction<UsDomainFilterWrite>("set-domain-filter", elementPath);
@@ -82,6 +83,14 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     protected override void DrawBody(Rect rect, UiWidgetContext ctx)
     {
+        if (TitleHidden)
+        {
+            // V2 P1: the manifest's Section container owns the card and the us/section-header child owns the
+            // title, so this widget draws its rows only - the same body-only path us/voice-pack-checklist uses.
+            DrawContent(rect, ctx);
+            return;
+        }
+
         DrawCard(rect, ctx, body => DrawContent(body, ctx));
     }
 
@@ -91,16 +100,8 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
         TraceLayout("draw", rect.width, rect.height, domainHeight);
         DrawDomainRow(new Rect(rect.x, rect.y, rect.width, domainHeight), ctx);
 
-        float dropdownAreaTop = rect.y + domainHeight;
-        float dropdownAreaHeight = rect.height - domainHeight;
-        if (UsFilterBarLayout.DropdownsStack(rect.width))
-        {
-            DrawFilterDropdownRows(new Rect(rect.x, dropdownAreaTop, rect.width, dropdownAreaHeight), ctx);
-        }
-        else
-        {
-            DrawFilterDropdownRow(new Rect(rect.x, dropdownAreaTop, rect.width, RowHeight), ctx);
-        }
+        // D4: one dropdown (Author) left in this bar - a single full-width row, no stack rule needed.
+        DrawFilterDropdownRow(new Rect(rect.x, rect.y + domainHeight, rect.width, RowHeight), ctx);
     }
 
     /// <summary>
@@ -167,40 +168,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
 
     private void DrawFilterDropdownRow(Rect rect, UiWidgetContext ctx)
     {
-        const int count = 3;
-        float dropdownWidth = Math.Max(1f, (rect.width - Gap * (count - 1)) / count);
-        float x = rect.x;
-
-        DrawNestedDropdown(
-            new Rect(x, rect.y, dropdownWidth, rect.height),
-            "race-filter",
-            KeyLabelRace,
-            ctx);
-        x += dropdownWidth + Gap;
-
-        DrawNestedDropdown(
-            new Rect(x, rect.y, dropdownWidth, rect.height),
-            "xenotype-filter",
-            KeyLabelXenotype,
-            ctx);
-        x += dropdownWidth + Gap;
-
-        DrawNestedDropdown(
-            new Rect(x, rect.y, dropdownWidth, rect.height),
-            "pack-filter",
-            KeyLabelAuthor,
-            ctx);
-    }
-
-    /// <summary>Narrow layout: three full-width dropdown rows so each keeps a usable hit area.</summary>
-    private void DrawFilterDropdownRows(Rect rect, UiWidgetContext ctx)
-    {
-        float y = rect.y;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "race-filter", KeyLabelRace, ctx);
-        y += RowHeight + Gap;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "xenotype-filter", KeyLabelXenotype, ctx);
-        y += RowHeight + Gap;
-        DrawNestedDropdown(new Rect(rect.x, y, rect.width, RowHeight), "pack-filter", KeyLabelAuthor, ctx);
+        DrawNestedDropdown(rect, "pack-filter", KeyLabelAuthor, ctx);
     }
 
     /// <summary>
@@ -212,29 +180,25 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
     /// </summary>
     private void DrawNestedDropdown(Rect rect, string elementId, string labelKey, UiWidgetContext ctx)
     {
-        string optionsKey = elementId switch
-        {
-            "race-filter" => "race-filter-options",
-            "xenotype-filter" => "xenotype-filter-options",
-            _ => "author-options"
-        };
+        string optionsKey = "author-options";
 
-        // The race and xenotype dropdowns share one help entry (they are one filter concept read
-        // left-to-right); the author dropdown has its own.
-        UsKernelDraw.HelpHover(rect, ctx, elementId == "pack-filter" ? "us/filter-bar/author" : "us/filter-bar/race-xeno");
+        // D4: only the author dropdown remains here, and it keeps its own help entry; the race/xenotype
+        // dropdowns moved to the domain cards (their help rides the card section keys).
+        UsKernelDraw.HelpHover(rect, ctx, "us/filter-bar/author");
 
         string current = ctx.Bindings.TryGet(elementId, out string value) ? value ?? "" : "";
         IReadOnlyList<FilterOptionView> options = ctx.Bindings.GetOptions<FilterOptionView>(optionsKey);
 
         // F5 (maintainer ruling 2026-09-15): an author credit is unbounded user data, and the popup
         // grows to the widest option, so one over-long name used to size the popup off the settings
-        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own closed
-        // width - the same policy number the window opens with - floored so a degenerate screen still
-        // shows a readable prefix. The pair's VALUE stays the machine token: only what the player reads
-        // is shortened, never what gets written back.
+        // window and wrap inside a 24px row. The DISPLAY is cut at half the settings window's own width -
+        // the same policy number the window opens with (BH1 made it the only width, so help state cannot
+        // change this cap) - floored so a degenerate screen still shows a readable prefix. The pair's
+        // VALUE stays the machine token: only what the player reads is shortened, never what gets written
+        // back.
         float displayCap = Math.Max(
             MinOptionDisplayWidth,
-            WindowChromeLayout.SettingsClosedWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
+            WindowChromeLayout.SettingsWindowWidth(Verse.UI.screenWidth, Verse.UI.screenHeight) * 0.5f);
         var pairs = new List<KeyValuePair<string, string>>(options.Count);
         foreach (FilterOptionView option in options)
         {

@@ -1,146 +1,182 @@
 # TODO
 
-> Action surface only. Landed history is in git log, `OBLIVIONIS.md` (cold archive) and the dated
-> pointer lines below; durable engineering rules are in `MEMORY.md`.
+> Action surface only. Landed history lives in git log, `OBLIVIONIS.md` (cold archive - including the
+> pre-2026-09-21c byte-copy and the 2026-10-02 substantive summary) and the pointer lines at the end;
+> durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
+> every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## Blocked on the lib session / maintainer (cloud publication chain)
+## NOW — interaction checkpoint accepted in game; next active discussion is UI/UX design and copy (2026-10-09)
 
-- **Cross-repo ledger**: rounds 1 (US→FL, P1-P6 + A-E) and 2 (FL→US, packaging S1-S6) are **CLOSED on both sides** - narratives byte-archived to `OBLIVIONIS.md` (2026-09-09 entry); durable facts live in `MEMORY.md` (gate 14 / packaging construction / carrier lockstep). Live (corrected by the FL session 2026-09-09): FL's merge is done — rounds 1 and 3 sit on its `main` (PR #1) — so the only remaining lib-side action is the `v0.3.0` tag/release, which is the maintainer's trial decision, and US's rc pairing follows that tag rather than the merge.
-- **Cross-repo round — US→FL round 3 (2026-09-08): declarative responsiveness. CLOSED by FL — implemented 2026-09-09 and merged to FL `main` (PR #1), so the surface is live on the carrier's default branch.** Filed as "round 2", **renumbered to 3 by FL under the global-counter rule** (one counter across directions, next-unused at filing, later filer yields — FL→US round 2 holds number 2 by filing order); US's own files said "round 2" until this line fixed it. Items N1-N3, raised while taking over the mood-tuning rows against maintainer requirement **R14** (`docs/us-ui-review-requirements-zh.md:26`, 复合控件避免一次性写死, still open). FL's verdicts (2026-09-08, at `996a6bc`): **N1+N2 ACCEPTED as one work package** (text-natural `Width="Auto"` via `MeasureWidth` plus width clamps; one container-level `Breakpoint`); **N3 verdict (b)** — layered editing stays consumer-side, `input/stepper-slider` enters the delete-or-reshape queue; US's threshold-free mood geometry is endorsed and unblocked. **Three claims in the previous version of this line went stale and were corrected by the FL session on 2026-09-09:** (i) the package was **refiled 0.4.0 → 0.3.0** before publication — 0.3.0 had never shipped, so additions before first publication cost no contract axis, US's pin `[0.3.0,0.4.0)` already covers it, and the threshold ban lifts now instead of at a later minor, which also retires the old "**0.3.0 stays frozen**, N ships on 0.4.0" clause; (ii) the clamps shipped as **`MinWidth`/`MaxWidth`, not `Min`/`Max`** — StepperSlider's own schema owns `Min`/`Max` as its slider value range, so the pair named in N1's provenance would have fed value-range numbers to the engine as width clamps; (iii) the buffer section `## US→FL round 3` has been **trimmed out of `../ferritelib/HANDOFF.md`** under that file's own lifecycle (CLOSED = body deleted), so its permanent records are FL's `MEMORY.md` round-3 entry and US's own `MEMORY.md` responsive-vocabulary line, not the buffer.
-- [ ] **`US_STEAM` is a code axis with no build axis (recorded per FL→US round 2 S6, not a bug)**: `#if US_STEAM` gates `SqueakLog.cs:34` and `Mod.cs:60`, and no csproj configuration, workflow or script in this repo defines the symbol, so the channel is unreachable except by hand-passing a define. US also has no steam packer. Do not debug the dead branch; if a Workshop channel is ever wired, it goes through the same staging engine (`-BuildFlavor` gains a value, `read-assembly-stamp.ps1` measures it), not a new packer.
-- [ ] **In-game smoke of BOTH 2026-09-07 rounds (maintainer, not runnable here)**: five workspaces, one dropdown, the camera readout, help-panel hover linkage (D10: no overview flash between adjacent controls, release after ~15 passes), close-button hover/click, real-screen window size, and one notice path if convenient. Both rounds are pass-through or shell-owned (gates 14/15 + 15 gates + both UI harnesses cover the static half), so the expectation is "no behaviour change" - with two deliberate deltas to look for: (1) the chrome's title/subtitle now carry `singleLine: true`, so a localized title that is too wide reports `ui.text.overflow` on the **width** axis (shell band, not a US regression); (2) switching workspace no longer clears the help-hover claim instantly (that write died with the state field) - the session's grace window releases it, so a `scroll-to` triggered away from the nav column can keep the previous explanation for up to ~0.25 s.
-- [ ] **The next tag is the release path's first live run.** The carrier-attribution defect is fixed and pushed (`67aa84c` on `main`, `41724d7` on `0.4.x`) and a rehearsal of that pushed tree is green through staging, so nothing is owed before the maintainer's release decision. If the release run does fail, suspect the rehearsal's uncovered ground first - the tag-shape/identity and upload steps - not the gates.
-- [ ] **Chrome semantics - open product decision, deferred to a dedicated session (raised 2026-09-14/15).** `UiWindowHost.DoWindowContents` is a `public sealed override`, so a consumer can set only `Title` / `Subtitle` / `CloseText` / `TitleBarHeight` / `SidePadding` / `CloseButtonSize` and cannot place anything in the chrome band. Consequence in this tree: an action that belongs in the chrome (the Help drawer toggle) sits in the in-page title band and scrolls away with the content. A bespoke virtual was drafted, tried and reverted on the maintainer's ruling that it is the wrong answer. The aligned shape is the chrome band as a **declared page region** (consumer header region plus today's body, shell keeps identity + close). Decide the shape once: any FL public addition bumps `Api.Minor` and moves US's pin in the same cross-repo round.
+The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
+status and paired package identities are authoritative in the PM checkpoint evidence and manifest:
+`../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/`.
+The candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
+The interaction round CLOSED to candidate: US-UI1/US-ESC1/US-PACK1/US-RESET1 are PM-accepted at the
+source/controlled-stub level (receipts `us/pm-ui1-esc1-technical-accepted.md`,
+`us/pm-pack1-review1-accepted.md`, `us/pm-reset1-backend-accepted.md`,
+`us/pm-integration-review1-accepted.md`), FL is frozen at `d5af4d8`, Demo-IC1 is accepted at `82664a11`
+(`demo/pm-demo-ic1-accepted.md`), and the paired Dev candidate `interaction-20261009-r1` is staged from
+source `562fc47` against the frozen Dev carrier (`us/candidate-staging.*`,
+`us/pm-candidate-staging-accepted.md`; directory and bytes preserved). **The maintainer accepted the
+combined native short pass on 2026-10-09** — all seven items of `human-pass-20261009.md`, plus the
+diagnostics layout and a quick kernel smoke in their scopes; the formal window-geometry report artifact
+was not captured (a supplementary evidence gap, not by itself a new publication blocker). Nothing here
+expands the product scope.
 
-- **Smoke pre-flight (packaging change)**: the dev package is a **folder** now (drop it in `Mods/`, no zip hunting); before entering the game read `version.txt`'s `carrier=` line and confirm `Release 0.3.x+…` - on mismatch rebuild the carrier per the stager's refusal message.
+- [x] **The ONE combined native short pass — ACCEPTED by the maintainer 2026-10-09.** Covered: pack
+  select/search/enable as revised by US-PACK1; compact US diagnostics and settings developer tools at
+  1024x768; per-race final native fallback edit and new-race admission after a full restart; multi-window
+  focus/key ownership and the confirm window's real-button clicks; native IME and real fonts; long menus
+  and scroll wheel; the restore operations (global/area/row) including window placement under long EN/ZH
+  copy. Do not re-run accepted matrices; no preset-B reopen.
+- **Already accepted:** BH1 help usability, same-window position, real-font footer/long-help appearance,
+  independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
+  fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest); Demo-IC1.
+  Observe regressions only. Unreported restore/restart branches are not a new PRE1 gate.
+- **Next:** the next active product discussion is UI/UX design and copy; the settled chain is archived in
+  `OBLIVIONIS.md` and the durable facts in `MEMORY.md`. The FL-owned broader backlog (task-11, FL-17,
+  FL-18/B6, FL-13/B10) stays excluded.
+- **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
+- Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
+  rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
 
-- [ ] **rc1 trial loop (collaborator testing, maintainer relays)**: bad rc = delete release + tag, re-cut same rc number from fixed head (carrier precedent); stable cut stays a deliberate decision. When the trial ends: tag `v0.2.0` stable, then main returns to `0.2.1-dev` for the next window.
-- [ ] Workshop display name and license (maintainer only; do not invent). First release prep: About icon/preview, final description, runbook US copy adaptation.
+## Open decisions / blocked on the maintainer or on FL
 
-## Docs compression and cleanup (next block, after session compaction)
+- [ ] **Retire the short-lived branch `feat/help-drawer-visiblekey`** (its work is already in the `0.5.x` line):
+  deletion needs **push authorization** - do not delete it locally either until then.
+- [ ] **`container/tree` inline children / Route A** (give the tree an optional per-row template) - re-price
+  before acting. The remaining blocker is hierarchy x inline composition; the maintainer leant this way but
+  wants the existing components used FIRST. Do not take it on one data point.
+- [ ] **Carried: the per-frame `GetComp` over every spawned pawn** (`Patch_MapInterface_DiagnosticsMarks`).
+  Reducing it means a cache with invalidation or reusing the overlay's viewport sweep - a P2/P3 shape decision.
+- [ ] **Carried: FL's chrome-key runtime self-check.** US attaches no `UiWindowKey`, so every multi-instance
+  window's chrome scope identity is type-only; implementing it means adopting `UiWindowCatalog` + key attachment
+  on the very windows P2 is retiring.
+- [ ] **Carried: the legacy audit channel boundary.** `UsTextFitAudit` is per-host, but the process-wide
+  `UiFitAudit.Enabled` is still shared and `Detach`/the legacy sink still exist. The misattribution was **never
+  reproduced** - keep it an open condition, never "pollution already happened".
+- [ ] **Hot reload: demand-driven first.** Decide which need is real - XML layout-document hot reload, or non-UI
+  writers of settings/model state - before adopting `UiDocumentService` + `HostAttached`.
+- [ ] **(甲) the global density (12/8/4/24/1)**: moves every control's INNER inset, so it needs its own slice
+  and its own in-game look. Spec §3 records why it was separated from S3.
+- [ ] **Row fill / row hover in the layer cards.** Two routes measured blocked (the hit painting itself moves the
+  band's geometry; an `input/button` sibling throws or becomes a second hit surface). The third - **a CONTAINER
+  state sibling with its own flat scope** - is a cited candidate that has NEVER been tried.
+- [ ] **The 3px selected rail.** Needs drawing code today. **WAITS ON FL's per-edge stroke**, then re-price;
+  when those land, `us/selection-surface` is the thing to retire.
+- [ ] **B8's vocabulary half**: the `Description1..8` LABEL-SET half was fixed FL-side; the schema half (removal
+  vs drawing) is the maintainer's call.
+- [ ] **Chrome semantics** (deferred to a dedicated session): `UiWindowHost.DoWindowContents` is a sealed
+  override, so a consumer cannot place anything in the chrome band; the consequence in this tree is that the
+  Help toggle sits in the in-page title band. Any FL addition bumps `Api.Minor` and moves US's pin in the same
+  cross-repo round.
+- [ ] **Knife 3 - optional capability re-port** (maintainer decision): sticky Tuning layer row; xenotype-row
+  dimming at zero candidate packs; minor `HideBodyLabel`; an explicit `All` row in the author dropdown - each
+  with a failure-sensitive geometry + interaction assertion driven by the real Host. Alternative: drop them as
+  legacy-anchored, deleting the matching help entries and backlog lines in the same commit.
+- [x] **Cross-repo release alignment - closed 2026-10-09.** Both CI workflows now acquire the pinned CI-built
+  release carrier (`v0.7.0-rc1`; explicit repo+tag, release flags + asset digest + closed payload set + commit
+  paired against the pinned checkout) instead of rebuilding FL's default branch; the compile payload is the
+  release asset and US ships no copy of it (`scripts/acquire-ferritelib-carrier.ps1`; pinning noted in `MEMORY.md`).
+- [ ] **rc trial loop**: a bad rc is fixed by deleting release + tag and re-cutting the SAME rc number;
+  `/releases/latest` 404ing is the correct rc-window state. The stable cut and the next product axis are
+  maintainer decisions.
+- [x] **The generated release body names the carrier release it was built against - closed 2026-10-09** in the
+  release-body step of `.github/workflows/release.yml` (carrier tag + commit + DLL SHA-256 from the acquisition
+  step's outputs).
+- [ ] **Workshop display name and license** (maintainer only; do not invent) + first-release prep: About
+  icon/preview, final description, runbook US copy adaptation.
+- [ ] **`US_STEAM` is a code axis with no build axis** (recorded, not a bug): `#if US_STEAM` gates code but no
+  csproj/workflow/script defines the symbol. Do not debug the dead branch.
+- [ ] **Cross-repo requests - Batch 2, non-blocking, do NOT file yet.** Classify (A) US's own job / (B) a
+  genuinely general FL gap **before** asking; the single ledger is the FL issues file under the workspace's
+  team-mode directory - reference it, never copy it into this file.
+- [ ] **Split ownership confirmations**: `us/preset-list` STAYS a US kind (FL declined inline tree children);
+  the orphan-name check is not a request - US is the consumer-side positive control.
 
-- [ ] Compaction style ruling for this repo's memory files: compress existing stale/verbose parts rather than appending more session-shaped prose (maintainer, 2026-09-07) - standing rule, applies to every future memory edit.
+## Deferred / backlog (durable detail in `MEMORY.md` or `OBLIVIONIS.md`; not this round)
 
-## Knife 3 - optional capability re-port (maintainer decision, OPEN)
+- [ ] **Mood follow-ups beyond the checkpoint:** re-evaluate asymmetric jitter representation and
+  author-baseline presentation against current production code before proposing another slice. Archive-era
+  claims do not establish a current defect or gate. The current multiplier editor, per-field inheritance,
+  resolved-label measurement and redesigned geometry belong to this checkpoint.
+- [ ] **Text fit / localization decisions**: review the proposed Chinese wordings before publication (routing
+  modes, distance presets, filter labels, card titles - product vocabulary, not mechanical translation); decide
+  the help-key naming tightening (it changes shipped bytes and forces a re-test).
+- [ ] **Further VoicePack author fixtures:** escape-hatch and author-side coverage remain deferred.
+  The checkpoint ships neutral Ratkin final-fallback data with Core audio references; PRE1 used a separate
+  work-copy fixture. A/B effectiveness is already accepted; do not reopen that as an absent-content decision.
+- [ ] **Diagnostics follow-ups beyond DX1:** re-price author-name dropdown overflow only on a current
+  reproduction. Collapsed/expanded/empty geometry and compact navigation are implemented in DX1 and rode
+  the checkpoint pass accepted 2026-10-09.
+- [ ] **0.5.x items A/B/C** (`MEMORY.md` "Release state and version scope"): (A) file-driven invocation + hot
+  reload; (B) appearance file-driven + tier-2 granularity actually used; (C) structural migration.
+- [ ] **Route A re-price** and **optional tail**: the runtime harness does not cover the adapter
+  fold/converters/`BuildFallback` pass-through; HAR reflective discovery is `TODO(HAR)` and assembled-only -
+  never claim reflection; the two 2px band floors (`checklist`, `diag-list`: 20 vs the calibrated 21.33 Small
+  line); a FL lane for the single-line RENDERING (the carrier stub records rect/text/colour but not wrap state);
+  drop the nav subtitle line entirely to reclaim ~100px of stack height if the compact cards still read tall.
+- [ ] **`ui.text.overflow` walk**: with detailed logging in both languages, walk all five workspaces and confirm
+  `usdiag evt=ui.text.overflow` stays silent (any new line is a fix target with an exact need/have pair).
+- [ ] **Remaining custom-page row shapes** belong to V2-V4. Overview already has local responsive parameter
+  rows; do not revive the old proposal to raise the shared body breakpoint just to fix Overview.
+- [ ] **MeowingKiiro skill-flow validation** (pack built, static green): the in-game pass - enable order,
+  Kiiro-Race-domain tick, Fallback, Call/Select + spot-check, four modes, dispatch log - and record any
+  skill-vs-implementation mismatch back into the production plan doc and the skill. Publication stays
+  maintainer-gated.
+- [ ] **PackFallback first in-game observation**: one VoicePack missing the tested action's sound set but
+  declaring fallbacks - the panel must show the pack-fallback attribution on dispatch.
+- [ ] **Eat-granularity manual acceptance matrix**: meal / smokeleaf / go-juice / beer / ambrosia / nutrient
+  paste / inventory / animal / corpse × (parent-off, parent-on+child-off, parent-on+child-on); parent-off must
+  feel byte-identical to today.
+- [ ] **Eat follow-ups filed by the independent passes** (all non-blocking): the disabled child checkbox still
+  paints in the enabled ink; with the parent on the reserved reason band is an empty strip (inherent to the
+  constant-sum rule); the migration test has no assertion for the two new fields; the child help states the
+  real fallback but the flag stays process-level and one-way; the eat child row's rule is mislabelled in
+  non-shared-row failure messages.
+- [ ] **Diagnostics live-walkthrough** for the rebuilt panel: master-detail + locked detach windows, the
+  collapsed bars, the 16-line chain, four-tier dispatch labels, and the two-press Esc ON THE REAL STACK -
+  consumption is now the shell's (FL-IC2), so the open observation is which window the real WindowStack
+  hands the key to with the panel, main settings window and a confirmation dialog open together.
+  A leak there is FL event-seam material, never a whitelist entry.
+- [ ] **Attention palette + diagnostics state/layout** (harness-verified only): attention cyan legibility at
+  real UIScale in both languages, grayscale distinctness of the states, the 592px split and the narrow Back
+  restoring the SAME search/page/scroll, group folding that does not move when values update, the
+  previous-evaluation band's recency wording, the pinned window's lifecycle plus its real-stack two-press
+  Esc, and the checklist's role-split banners against the settings canary.
 
-- [ ] Re-implement natively in `UI/Kernel/`, each with a failure-sensitive geometry + interaction assertion driven by the real Host: sticky Tuning layer row; xenotype-row dimming at zero candidate packs; minor `HideBodyLabel` in the global volume widget; explicit `All` row inside the author dropdown. (Reverse help linkage was closed 2026-09-05 by the C+A landing.)
-- [ ] Also decide: delete the remaining ~20-line pure-Verse camera-readout fallback (`Patch_GlobalControlsUtility_CameraIndicator.cs`) and make the overlay kernel-only.
-- [ ] Alternative: drop those behaviours as legacy-anchored - then delete the matching help entries and backlog lines in the same commit.
+## In-game acceptance — still open (maintainer steps)
 
-## VoicePack routing table - content and fixture gaps (open)
+- [ ] **Settings-window acceptance pass** (blocks a release claim, not the commit): remaining unaccepted
+  observations at a supported resolution, without repeating the accepted BH1 help-open geometry. 736/480
+  page widths are harness probes, not forced game-resolution instructions. BH1 already established one
+  width per screen and an independent 140px help band; observe regressions only. Still open from earlier
+  rounds: nav card compactness, Playback help entries, mood-card readability, and a session save/reopen.
+- [ ] **`ui.text.overflow` and tab-switch smoke** (F-05/F-07). The accepted quick smoke reported no
+  `ui.text.overflow` line; audit-enabled full-window coverage is not established by an absence, so this
+  stays a recorded observation rather than a PASS.
+- [ ] **Early-round remnants still unverified**: Packs/Presets linkage, Distance chart hover+drag, Tuning
+  cross-session file round-trip, the Chinese help tone skim, and the composite-dropdown check (picking Auto
+  selects and closes; a near-bottom dropdown flips upward).
 
-- [ ] **Escape-hatch fixture**: nothing proves an author's custom comp patch wins over the default mount (all three final-test packs were de-patched 2026-09-02). Add one fixture pack whose patch deliberately differs (e.g. longer `Work` interval or a `Sustained` action); assert `attach_skipped reason=author_patch` plus the custom timing.
-- [ ] **Author-side coverage fixture**: no pack declares `ageTag`, `isEgg` or `fallbacks`, so age-variant priority, egg gating, pack-fallback tier and the Remix four-tier branch (`HasPackFallback` in `SqueakPoolRegistry.Select`) are kernel-verified but never author-exercised. Add one fixture pack exercising all three and assert end to end.
-- [ ] **Built-in content decision** (cannot be inferred from code): no `UniversalSqueakerFallbackProfileDef` / `UniversalSqueakerTuningBaselineDef` ships anywhere, so `BuildBuiltInSource()` is always empty - `Vanilla` is silent for every pawn, `Fallback`'s last tier is empty, `Remix`'s built-in ticket is always None, Presets can only show its empty state. Author per-race built-in profiles, or de-scope the built-in tier and rename the mode. Do not explain the silence away as mode design.
-- [ ] **Brand-boundary ruling**: fixture `Ratkin-US-EXP` routes to race `Ratkin`; `Kiiro-US-EXP` keeps packageId/clip roots `coahuilite.squeakyratkin.*`. dist/ is gitignored test content, but AGENTS.md reserves those names - re-target to non-Ratkin third-party races or record the exception explicitly.
-- [ ] **D8/F6 preset fixture**: retool `dist/voicepacks/final-test/Nivarian-US-EXP` to ship a `UniversalSqueakerTuningBaselineDef` so Presets is exercisable in game; parameter choice pending maintainer (recommend Work `intervalMultiplier` 0.15 + second preset Joy scope Disabled). Importer pre-check already landed (`TwoPresetsImportIndependentlyAndIdempotently`).
-- [ ] **MeowingKiiro skill-flow validation (pack built 2026-09-14, static green)**: first production pack authored strictly per the revised skill (`dist/voicepacks/MeowingKiiro/`, `saryaki.meowingkiiro.voices` / `US_MeowingKiiro_Kiiro`, Race→`Kiiro_Race`, 15 actions/53 clips). Remaining: ① in-game pass per skill §9 (enable order, Kiiro-Race-domain tick, Fallback, Call/Select + spot-check, four modes, dispatch log) — record results and any skill-vs-implementation mismatch back into `docs/voicepack-meowingkiiro-production-plan-zh.md` and the skill; ② About `<description>` is TBD pending Saryaki's own text; ③ publication stays maintainer-gated.
+## Landed — pointer lines (detail in git log / `MEMORY.md` / `OBLIVIONIS.md`)
 
-## In-game acceptance - still open (maintainer steps)
-
-- [ ] Remaining from the 2026-09-06 rounds: Packs/Presets linkage, Distance chart hover+drag, Tuning cross-session file round-trip (explicit reload comparison), 58-entry Chinese help tone skim, composite-dropdown check (Tuning scope: picking Auto selects and closes, never opens the neighbour; near-bottom dropdown flips upward).
-- [ ] With detailed logging in both languages, walk all five workspaces and confirm `usdiag evt=ui.text.overflow` stays silent (D9 was found this way; any new line is a fix target with an exact need/have pair).
-- [ ] **D4 Packs domain-selection redesign** (maintainer six-point spec, 2026-09-05): race/xenotype domain lists side by side; xenotype list follows race selection; dropdowns move into their own cards; explicit clear option replaces the 全部 reset; independent search box per list (matching semantics need discussion first); visible list height = standing 4.5 rows. **F7**: search-matching discussion precedes implementation.
-- [ ] **Attention palette + diagnostics state/layout in game (2026-09-12, `89499b0`/`0254d85`/`f8316d3`; harness-verified only)**: at real UIScale in both languages - attention cyan legibility (2px rail, status word, filled badge with dark ink), grayscale distinctness of current-object / attention / pass / pending / N/A, the 592px split and the narrow Back restoring the SAME search, page and scroll, group folding that does not move when values update, the previous-evaluation band's recency wording, and the pinned window's lifecycle plus the two-press Esc leak. Also confirm the checklist's role-split banners (conflict/target-unavailable cyan, dormant hatch) against the settings canary.
-- [ ] **D7 mood-tuning rows** - moved out of the maintainer-acceptance list into its own work section below (dev session 2026-09-08).
-
-## D7 mood rows - work surface (development line `0.3.x`)
-
-Agreed with the maintainer 2026-09-08 (the three points below are rulings, not proposals); the region shape is the one open fork.
-
-- [ ] **No hand-written thresholds, no fixed bands.** New pixel branches are banned for this round; the label column width comes from `ITextMetrics.MeasureWidth` over the widest of the three factor names, the control run takes the rest, and the 110 px stacked switch + the 14 px factor band + the 64 px mood column get deleted rather than retuned. Declarative alternative filed upstream as US→FL round 3 (N1/N2) — **FL accepted both, the maintainer refiled the package 0.4.0 → 0.3.0, and FL shipped it to its `main` on 2026-09-09, so the declarative form (`Width="Auto"` + `MinWidth`/`MaxWidth` + a container `Breakpoint`) is already reachable from US's CI, which checks the carrier out without a `ref:`** (tail corrected by the FL session: both the "0.4.0" label and its "later turns declarative" framing were stale). This round's hand-measured geometry stays the interim implementation — measured, not hard-coded, so it satisfies R14 either way — and the declarative rewrite is now an adoption step US schedules for itself, not a blocked one.
-- [ ] **Help lands on the factor name itself**, so the pointer resting on 音高/音量/抖动 explains that factor: per-factor help ids (new `us/scope-tree/mood-pitch|mood-volume|mood-jitter` catalog entries), the row keeps `mood-tuning` as the un-claimed fallback, and the inherit control claims its own id (it must not keep sharing `us/scope-tree/auto` with the action-scope meaning).
-- [ ] **Auto semantics move to field level**, per the data contract (`docs/us-s0-data-model-zh.md:101-105`, `docs/us-ui-migration-plan-zh.md:94`: `hasX=false` = this layer does not decide, inherit). Needs a write channel for "clear this one factor" (`UniversalSqueakerSettings.cs:297` currently early-returns on a null value; `:281-291` is whole-row only), plus a per-factor inherited/own display - today `UsScopeTreeWidget.cs:397-399` silently mixes own and effective values so an override of one factor makes the other two look like overrides. Vocabulary split: 自动 stays the action-scope word, the mood side says 继承/恢复继承.
-- [ ] **The editor's value chain is missing its bottom layer (found 2026-09-08b; this is the actual Auto defect, not the button label).** The runtime folds mood from the mounted comp's author baseline: `CompSqueaker.cs:615-621` seeds `ResolveMoodMod` from `Props.moodMods`, and `CreateDefault()` `:1016-1022` is **not identity** - Good 1.2/1.3/±0.03, Bad 0.8/0.7, Break 1.1/1.5/±0.5. The view model seeds from 1/1/One instead (`VoicePacksPageModel.cs:401-403`, `:429`), so for every routing-table-mounted pack the editor shows numbers no pawn ever makes, and "Auto → inherit" lands on the author value while the row displayed 1.00 (`docs/us-s0-key-and-race-context-zh.md:105-109` §2.4 defines the chain as Default(作者 moodMods) < Global < Race < Xenotype - the UI implements it from layer 0 only). Worse than a wrong caption: a player nudging one step from the displayed 1.00 writes an explicit override (volume 1.30 → 1.05) - the editor converts an inherit into a wrong-value override. Fix needs the selected race domain's actually-mounted `moodMods` exposed as the view's bottom layer through the settings source/adapter (UI keeps reading typed bindings only).
-- [ ] **Jitter is a lossy projection.** The row edits one half-width (`VoicePacksPageModel.cs:428` = `jitter.max - 1`; write side `UniversalSqueakerSettings.cs:313` rebuilds a symmetric `FloatRange(1-half, 1+half)`), while the field is an independent min/max. Default and example author values are symmetric, so today it is invisible; an author patch with an asymmetric range gets silently symmetrised the moment the player touches that factor. Decide: edit (min,max) explicitly, or show a non-editable "作者非对称区间" state.
-- [ ] **Action-row Auto destroys fields the UI never shows.** `ActionTuningRecord` carries `hasIntervalMultiplier/intervalMultiplier` and `hasProbabilityMultiplier/probabilityMultiplier` (`Models/ActionTuningRecord.cs:21-24`), consumed by the Pure fold (`Pure/SqueakLayeredTuning.cs:15-18`) and pinned by the preset importer (`Settings/BaselinePresetImporter.cs:128-131`, always `true` even for default values - review-03's unclosed question, `docs/review/review-03-settings-migration.md:120`). There is **no UI consumer of either name anywhere** (`git grep intervalMultiplier -- Source/UniversalSqueaker/UI` = empty), yet Auto deletes the whole record (`Settings/UniversalSqueakerSettings.cs:209-254`): one press after a preset import discards two invisible multipliers. So Auto needs per-field granularity on the action side too, or the action row must display what it is about to clear.
-- [ ] **Wording of the change itself**: whole-row clear is not a regression - `OBLIVIONIS.md:98` specified "Auto clear / clear-all" from the first S5 editor commit, while the data contract always said field-level. This round is a **spec amendment**; record the supersede against `docs/us-s0-data-model-zh.md` §2.3 / `docs/us-ui-migration-plan-zh.md:94` in the same commit that lands the field-level clear.
-- [ ] **Open fork (maintainer):** region shape - one region per mood with three factor lines inside (4 regions always visible, cross-mood gradient readable, ~416 px), or a mood selector driving one editing region (~104 px, but only one mood visible at a time). Analysis and recommendation in the session record; both satisfy the three rulings above.
-- [ ] **Same-row defect to fix with it:** mood names are not localized - `VoicePacksPageModel.cs:429` passes `mood.ToString()` as `DisplayName` while `US.Mood.*` exists in both languages and `Labels/SqueakLabels.cs:9` `Mood()` has no caller (the action rows do go through `SqueakLabels.Action`, `:389`).
-- [ ] **Test surface that must move with it:** `tools/UniversalSqueakerKernelHostTests/MoodLayoutFocusedTests.cs` pins the current geometry (26 controls, 6 sliders / 6 fields / 12 steppers / 2 Auto, disjoint, three stacked sliders same x and width). Re-derive its expectations from the new geometry; do not relax the non-overlap or inside-card assertions.
-
-## Text fit / localization - open decisions
-
-- [ ] Review proposed Chinese wordings before any publication: routing modes (原版/回退/混音/禁用), distance presets (保守/均衡/强烈/自定义), filter labels (全部/仅启用/冲突/孤立/种族/异种/作者), card titles. Product vocabulary, not mechanical translation.
-- [ ] **Adoption pending; the library half is DONE (both premises below corrected by the FL session 2026-09-09).** "Container-level auto-width deliberately not done (`UiLayoutEngine.ResolveColumnWidths` = static `Width=`/equal split; nav 192 / help 232 fixed)" describes the carrier **before** round 3: `ResolveColumnWidths` now subtracts the fixed siblings and gives a `Width="Auto"` child its measured text-natural width, and a container may declare `Breakpoint` with `Narrow`/`Cols`/`NarrowCols`/`NarrowHidden`. **Reopen condition met in a different shape (2026-09-08)**: the too-narrow case is provable from the shipped arithmetic (a 4 px slider inside US's own mood-group threshold), not from in-game logs — so it was filed as US→FL round 3 N1, and **FL accepted N1+N2 into the 0.3.0 package**; the buffer's verdict section is trimmed (CLOSED = body deleted), the permanent record is FL's `MEMORY.md` round-3 entry. The old "until 0.4.0 lands, consumers may not add new pixel thresholds; measure with `MeasureWidth` instead" clause is superseded: R14's ban on hand-written thresholds stands, but the declarative exit exists, so the remaining work is converting nav/help and the mood rows to `Auto`/`Breakpoint`, and the honest caveat is FL's own — its harness measures widths against a linear character-count model, so a real fit check is an in-game question. Re-derive: `git -C ../ferritelib show origin/main:Source/FerriteLib.UiKit/Kernel/UiLayoutEngine.cs` then grep `IsAutoWidth` (4 hits at the time of writing).
-- [ ] **Help key naming tightening** (batch rename, zero behavior change): role suffixes (.Title/.Overview/.Label/.Text) are schema noise; key = concept, body on the bare name, all help keys ≤4 segments, every reference stays a source literal. Maintainer decision: rename now or after the acceptance round (renaming changes shipped bytes and forces a re-test of the walked build).
-
-## Diagnostics panel onto UiKit (maintainer ruling 2026-09-09; supersedes the 09-08 "independence" plan; handoff brief in `HANDOFF.md` §1)
-
-- [x] ~~Design discussion first~~ **Audit CLOSED 2026-09-10 (the nine ruling rounds are archived verbatim in `OBLIVIONIS.md` "Diagnostics round-9" section; the durable rules distilled to `MEMORY.md` "Diagnostics panel rules")**: interaction reworked to master-detail + lockable detach windows + collapsed summary bars (mode badge retired); US-owned widget family; programmatic spec (no new manifest); 16-line gate chain (G5 deleted) with white NA state, G4 failure breakdown, G10/G11 "remaining/effective-total", G16 pure tri-state; audio attribution single-pointed with four-tier labels; `lastDispatched` slot + `Tier` plumbing; no kernel `ChainResult` extension, no FL surface opened.
-- [ ] **Rebuild `SqueakDiagnosticsPanel` on UiKit** — **code COMPLETE and merged to `0.3.x` @ `e9e6a34` 2026-09-10 (feature branch `diagnostics` ff'd in and deleted both ends; 14/14 green, whitelist landed 2→1)**: master-detail shell windows, lockable detach windows, collapsed monitor bars, programmatic Schema=2 pages on the real parser, five US-owned widgets, 16-line chain (white NA, G4 breakdown, remaining/effective-total), four-tier dispatch labels, `lastDispatched`, off-screen lock tracking, search + 8/page paging. **Remaining gate: the maintainer live-walkthrough** (checklist in `HANDOFF.md` §1 - watch the UNconsumed two-press Esc: a leak means FL round-4 event-seam material, never a whitelist entry).
-- [ ] **First in-game observation of PackFallback (fold into the panel acceptance build)**: maintainer recalled it as untested; audit confirmed the whole path exists (kernel tiers pinned by `PackFallbackTier`/`PackFallbackExactDomainOnly`, adapter projection at `SqueakKernelAdapter.cs:187-195`) but it was never walked in a live game. Acceptance pack: one VoicePack missing the tested action's sound set but declaring `<fallbacks>` - the panel must show `[Pack fallback·<pack key>] : <sound>` on dispatch.
-
-## Crash-lineage risks (not layout; belongs with heap-corruption triage)
-- [x] ~~`SqueakDiagnosticsPanel.DrawVisible` scroll pairing / GUI-state restore~~ **CLOSED 2026-09-10**: the file was rewritten onto the UiKit shell; raw scroll/GUI-state code no longer exists (the engine's `Scroll` owns the `finally`). `UiSessionGuard` itself (library side: restores GUI state only in its `catch` then keeps drawing - group stack unbalanced after a throw) still belongs to FL's own closure, do not touch from US.
-
-## Optional tail
-
-- [ ] Runtime harness: adapter fold/converters/`BuildFallback` mode pass-through untested by the kernel gate (ReviewResolverFold P3 residual).
-- [ ] HAR reflective discovery generalization - `Catalog/SqueakXenotypeCatalog.cs` `TODO(HAR)`, assembled-only (durable fact in MEMORY; do not claim reflection).
-
-## Landed - pointer lines (detail in git log / MEMORY / OBLIVIONIS)
-
-- Rebuild plan (approved 2026-08-23) + UI migration S0-S5 + orphan features: completed; baseline in `OBLIVIONIS.md`.
-- 6-way review 2026-08-28: findings closed; reports in `docs/review/**` (era-faithful hashes).
-- Old-UI three knives: Knife 1 cutover + Knife 2 verification closure DONE 2026-09-02 (`38b1247`); durable rules in MEMORY "UI engineering rules"; Knife 3 OPEN above.
-- Text fit + localization landed 2026-09-02b (`4d80aad`); vacuous height axis closed 2026-09-03 (`8937044`+`bb6f0d3`); composite popup path closed 2026-09-04 (`ae4e77c` + lib `4dd97bf`); desync + band calibration 2026-09-04b (`e6b4f11` + lib `a05fddf`, ptrace half lib `72afa23`); filter clock fix 2026-09-04d (`3727e58`); filter labels localized 2026-09-04e (`d493989`). (Lib hashes re-pointed 2026-09-07: the carrier repo rewrote its own history after the split; the earlier citations `44b00c5`/`b2006a0`/`9a197a2` are unreachable there.)
-- FerriteLib extraction ruled + executed 2026-09-03 (sibling repo `8e32620`; NuGet dropped on measurement; single-carrier red line asserted in gate 9 + check-pack-readiness + stage-package).
-- Help presentation redesign CLOSED 2026-09-05 (`9ccdbe8`): C+A model + catalog fully keyed; D1-D3/D5/D6/D9/D10 fixed and in-game verified 2026-09-06 (`62c00cf`, `c067de1`; packages `c90d288`, `5206781`); help panel is a pure read surface (D2 ruling).
-- First cloud upload §1-§5: all PASS (privacy recheck, three targeted rewrites + mirror chain, HEAD neutralization, `privacy-audit.ps1`, workflows from zero); repo pushed 2026-09-06 @ `fb61298` (219 commits, 0 tags). Ledger evidence: `.git/filter-repo/commit-map` + mirrors; durable decisions in MEMORY "First cloud upload".
-- Cross-repo rounds 1 + 2, the seam round, and the 2026-09-07 publication chain (CI first green run, public flip + protection, `v0.2.0-rc1` cut with six-point reconciliation, hash duty closed) - all landed; full narratives byte-archived in `OBLIVIONIS.md` (2026-09-09 entry), durable rules in `MEMORY.md`.
-- Docs sweep 2026-09-07: Gate U constraint banners on `docs/uikit-rebuild/**` (`02f5f5e`) and the Nivarian pack README rewrite landed.
-- US -> FL 0.4 migration executed 2026-09-11 (task-20): `Mod.cs` pin `[0.4.0,0.5.0)`, csproj `<Version>` + `<VersionPrefix>` + `About.xml <modVersion>` = 0.4.0 (the `<VersionPrefix>` half was lifted by ruling 2026-09-11, commit `7c64d3a`); evidence = verify-local 14/14, kernel-host ALL PASS, check-pack-readiness `-RequireReleaseMetadata` all checks passed; `1.6/Defs/` still `.gitkeep`-only. Push is the lead's; independent verification is task-21.
-## Settings UI shape (2026-09-13; change set committed, runtime pass pending)
-
-- [ ] **In-game acceptance pass (blocks a release claim, not the commit).** Open/close Help at 1024/736/480/320 in EN + ZH; confirm the window opens narrow (~614 at 2560) and widens by ~188 when Help expands, stays centred/on-screen, and behaves when the logical screen is below the 788 open-width floor (now capped at the screen); confirm nav card compactness, the four Playback help entries, the mood cards' readability, and a session save/reopen.
-- [ ] **Decide the narrow support-row shape.** Rows grow for a wrapped translated label at 736-open / 736-closed-EN / 480-EN / 320 (up to +338.67px at 320; growth is machine-checked as `grown <=> label width > label band`). Options: raise `body-row` `Breakpoint` 700 -> ~760 so 736 stacks, or add a stacked narrow-row variant. Product call.
-- [ ] **Propose FL `VisibleBind`/`WidthBind`** (or a supported layout swap) so `UsLayoutVariants` can retire; until then it stays a documented consumer-side composition.
-- [ ] Optional: drop the nav subtitle line entirely (`SubtitleLines = 0`) to reclaim ~100px of stack height if the compact cards still read as tall.
-
-## Eat occurrence granularity — SR handoff port (ruled 2026-09-14; implementation OPEN)
-
-> **LANDED 2026-09-14 on `feat/eat-granularity` @ `e414b71`, fixed @ `712de50`** (carrier `ferritelib` @ `a0b716a`, Release payload rebuilt). Independently verified on an isolated archive: `verify-local` 15/15 EXIT 0, `KernelHostTests` ALL PASS, `UiLogicTests` ALL GREEN, and five mutations each turned their harness non-zero naming the assertion, with the 264-file tree byte-identical after restore. The pre-distribution review (`19-eat-review.md`) found one must-fix: the child row centred its checkbox and hit band on the FULL row, so at the default window width the label fell out of the 24px hit band (unclickable) and the box sat below its own label; fixed in `712de50`, re-verified SHIP-WITH-NOTES with the pre-fix anchoring mutation reddening the new lane assertion. Distribution pair and tester notes: `../modding_documents/team-mode/verify-us04/20-distribution-brief.md`. Report: `../modding_documents/team-mode/verify-us04/18-eat-granularity.md`; frozen contract: `../modding_documents/team-mode/eat-granularity-contract-zh.md`. Only the manual in-game matrix below stays open (maintainer).
-
-Durable decisions in `MEMORY.md` ("Eat-granularity port + UI granularity axes"); spec authority is `../squeaky_ratkin/docs/handoff-eat-occurrence-granularity-zh.md` §5.1 (parent nutrition-only + child include-drugs, toil-name fail-safe back to whole job, defaults false/false frozen as compatibility policy). Cut as a short-lived feature branch off the `0.4.x` line tip per the 09-10 discipline.
-
-- [x] Pure rule: `Pure/SqueakEatOccurrence.cs` (mode enum + `ResolveMode` + 4-arg `AllowsOccurrence` + `ChewingToilDebugName` + default constants), zero Verse; `tools/UniversalSqueakerKernelTests/UnitTests.cs` gains `EatOccurrenceRules` (four combos incl. parent-off+child-on = WholeJob, three modes, unconfirmed-toil fallback, constant + default assertions). Purity gate covers it by `Pure\*.cs` glob automatically.
-- [x] Adapter sampling: `PeriodicStateBinding.Probe` reads the two published statics; sample via public API only (`pawn.jobs?.curDriver is IEatingDriver` / `JobDriver.CurToilString`, no `JobDriver_Ingest` cast); `chewToilNameConfirmed` is process-static, never Scribed. Diagnostics needs no change (`GetDiagnosticSnapshot` shares the `CurrentAction` outlet); zero new log events.
-- [x] Settings + Scribe: two bool fields default false, published in `ApplyToRuntime` + `NotifyCheapRuntimeChanged`; add-only Scribe lines, `settingsSchemaVersion` stays 5, `PostLoadInit` normalises parent-off+child-on to false; setters force child false when the parent closes. No fixture-delta gate exists in US (verify-local header) — gate 3 green is the equivalent check.
-- [x] UI wiring in Overview `us/basic-tuning` below the four rows: source/interface/viewstate/host binding chain, two nested checkbox rows via the existing `DrawBasicRow` shape, child disabled-and-greyed (never hidden — the engine's `Hidden` is static) with a disabled-reason help entry; card height constant-sum, parent toggle must not move Measure vs Draw.
-- [x] Contracts that move with it: help catalog 44→46 items (pin in `tools/UniversalSqueakerUiLogicTests/Program.cs:282`, bidirectional claim check), geometry lane support-checkbox count 6→8 + row inventory (`SettingsGeometryLaneTests.cs:145,:786-813`), both Keyed tables (+~5 keys each, parity gate 12), gate-15 ledger entries for the new Assembly-CSharp references (`Pawn::jobs`, `curDriver`, `get_CurToilString`, `GainingNutritionNow`, reason `world`), and the `IsEating` line in `docs/us-action-wrapper-interface-zh.md:84`.
-> **Follow-ups filed by the independent passes (all non-blocking):** (S3) the disabled child checkbox still paints in the enabled ink, so it reads as clickable until the player tries it - give it a disabled treatment when the renderer next changes. (S4) with the parent on, the reserved reason band is an empty strip (18px at 1024, more when narrow) - inherent to the constant-sum rule, documented for testers. (N2) `tools/UniversalSqueakerSettingsMigrationTests` still has no assertion for the two new fields: "a default config writes no `eatPrecision*` node" and "parent-off + child-true normalises to false" are unproven. (S1) the child help now states the real fallback, but the flag stays process-level and one-way - keep it on the in-game checklist. Original test-diagnostic follow-up: (S1) `tools/UniversalSqueakerKernelHostTests/SettingsGeometryLaneTests.cs:637-641` labels the eat child row's rule as `[egg-stack floor 52]` in every non-shared-row failure message, so the real 42px rule reads wrong when that lane reddens; pass the rule name per row. (S2) `chewToilNameConfirmed` is process-level and one-way: once any vanilla `ChewIngestible` toil has been sampled, a modded Ingest driver that reports no nutrition and carries a different toil name resolves false in `ChewingToil` mode. That matches the frozen contract exactly (not a defect) - it is recorded for the in-game pass.
-
-- [ ] Manual acceptance matrix (handoff §6): meal / smokeleaf / go-juice / beer / ambrosia / nutrient paste / inventory / animal / corpse × (parent-off, parent-on+child-off, parent-on+child-on); parent-off must be byte-identical feel to today; beer/ambrosia still fire at parent-on+child-off (nutrition > 0 — accepted, same ruling as SR).
-
-## In-game feedback batch 2026-09-14 (dev pair 712de50; triage `../modding_documents/team-mode/ingame-feedback-2026-09-14-ui-zh.md`)
-
-- [x] **Settings window rebased on vanilla's own dialog** (`6538a6c`): floor = `Dialog_Options.InitialSize` 650x600, growth 16:9 above it. 2560x1440 goes 614x950 -> 1126.4x633.6, which removes the wrapping that produced the footer/global-volume/checklist overflows.
-- [x] **Collapsed diagnostics bar line bands** (`6538a6c`): 14px lines under 18px text -> `StripLineHeight` 18, `TitleLineHeight` 22, bar 32 -> 44.
-- [x] **FerriteLib dependency `<downloadUrl>`** in `About.xml`, which the game demands in the log.
-- [x] **Diagnostics panel redesigned** (`c-pending` commit): opens COLLAPSED (460x44 content), stays at 600 wide and 240 tall while nothing is selected (that width is below the page's 592 narrow breakpoint, so the page presents list-only and there is no empty detail column), and only takes the 680x560 master/detail shape once a row is selected. Collapsed width no longer keeps the expanded 680.
-- [x] **`ptrace` deduped** and the footer band measured: identical popup traces print once per session (bounded at 512 distinct), and `UsFooterWidget.Measure` now measures the wrapped build identity instead of returning a constant 28.
-- [ ] ~~Collapsed diagnostics panel is still as wide as the expanded one~~ (`SqueakDiagnosticsPanel.BeforeDraw` shrinks height only). Proposed: measure the bar (identity + switch + the two actions, applying the existing degradation ladder for scale/activity) and shrink the width to that, restoring on expand. Needs the maintainer's pick against "keep 680 and tighten the content instead".
-- [ ] **Expanded diagnostics detail column shows blank space** when nothing is selected. Needs a product decision on what the empty state should say.
-- [ ] **Over-long author names overlap in the dropdown popup**: option rows are a fixed 24px single-line band (`ferritelib UiPopup.OptionHeight`) while the row text wraps. Choose: single-line + ellipsis in the library (cross-repo), or rows that grow with their content (moves the pinned "popup height = options x 24" lane). The wider window above already removes most of the trigger.
-
-## Feedback round 2026-09-15 (F5 + F6; packages US `f50a462` / FL `aa0f9ab`)
-
-- [x] **F6**: the parent hint band and its Keyed key are gone; the child row now EXISTS ONLY while the parent is on (no disabled/grey state, no reason text) and is an ordinary support row. The parent state the MEASURE pass read is cached for the DRAW pass of the same frame, so the drawn rows and the arranged card height cannot disagree; the parent click bumps the revision and the next frame re-measures. Lane `ChildRowFollowsTheParentSwitch` pins 5 slots off / 6 on, the card growth, and that the press routes exactly one child write.
-- [x] **F5 (both halves)**: the consumer ellipsizes the DISPLAY handed to a popup at `max(120, SettingsClosedWidth * 0.5)` while the VALUE stays the machine token, and the library's `singleLine` now actually renders single-line (`UiThemeDraw.Label` turns `Text.WordWrap` off around the draw and restores it) - the real defect, since `UiPopup` already passed `singleLine: true` and the outlet only used it as the audit axis. Scope note: the cut is in the shared pairs loop, so race/xenotype displays are capped too; moving it inside `elementId == "pack-filter"` makes it author-only.
-- [x] **FL harness csproj**: the four nested stub builds now pass `-m:1`, the sandbox trap US documented; FL `verify-local` is 9/9 again.
-- [ ] Still open from this round: the two 2px band floors (`checklist`, `diag-list`: 20 vs the calibrated 21.33 Small line), and a FL lane for the single-line RENDERING (the carrier stub records rect/text/colour but not wrap state, so "the row no longer wraps" rests on the 1.6 source path plus the green suite).
-
-## UI granularity axes — standing reference (no open defect)
-
-- [ ] Layout stays card-level by construction (manifest = containers/workspaces/cards; rows are widget C#; FL has no checkbox atom — see MEMORY). If a future ask needs row-level declarative authoring, it is a US→FL round (atom vocabulary extension), not a US-side workaround; nothing to do today.
-- [ ] Style stays half-file-driven as ruled: the manifest's embedded `<Styles>` section carries the density axis only; the palette remains the `UsTheme.cs` C# factory (2026-09-12 surface-table ruling). Any "raise style granularity" proposal must cite which rung of the web-kit ladder (Bootstrap build-time vars / MUI runtime theme scopes / AntD per-component tokens) FL is asked to cover — the third rung today is US-side C# on purpose.
-
-## 版本范围收敛与文件驱动要求 (maintainer directive 2026-09-14)
-
-Cross-repo board (snapshot, read it before sequencing anything): `../modding_documents/team-mode/task-decomposition-us-fl-board-zh.md`.
-
-- [ ] **0.4.x scope, converged to ONE item (maintainer ruling 2026-09-14)**: eat occurrence granularity only (closes the Steam-review feedback item - work surface in the section above), then release prep. **0.4.x stays safe and takes no source changes**; the only exception is a change that holds without touching source, which in practice means docs/release metadata. The two items briefly drafted into 0.4.x - hot reload and appearance-file-driven + tier-2 adoption - both move to 0.5.x. **In-game verification and the MeowingKiiro voice-pack pass stay deferred until the eat port lands, then run as ONE batch before the release claim** - the deferral does not cancel them, and no release claim may be made without that batch.
-- [ ] **0.5.x item A - file-driven invocation + hot reload (moved here from 0.4.x on 2026-09-14).** Requirement as ruled: editing a layout or a style file and **reopening the window** shows the change in game - no game restart, no recompile. **Adding / removing / changing widget kinds is explicitly out of scope and needs no file-driven path** (kinds are compiled C#). Library half = FL wiring `ParseFile`; this side must read a file at host construction, keep the embedded manifest as the safe fallback, and let a parse failure keep the previous page plus one loud warning.
-- [ ] **0.5.x item B - appearance file-driven + tier-2 granularity actually used.** `UsTheme.cs` palette moves into the style document, geometry constants become tokens, and sites that pick colours row by row through `UsKernelDraw` move to `Tone`/`Emphasis` where the vocabulary reaches them. FL's machinery already shipped (resolved style table, per-surface and geometry tokens, standalone style document, region theme); nothing here waits on FL.
-- [ ] **0.5.x item C - structural migration (the "fully layout/style-file driven" half that 0.4.x deliberately does not promise).** Dissolve the **18 consumer-owned `us/*` widget kinds** into manifest subtrees. Prerequisite: FL 0.5.0 vocabulary expansion (checkbox atom, repeater/list template, tree kind), because a card's rows are widget C# today and the engine has no checkbox atom. Until then the honest claim is "appearance is file-driven; behaviour below the card stays C#", not "fully file-driven".
+- **2026-10-09 — interaction round (US-UI1/US-ESC1/US-PACK1/US-RESET1) closed to candidate**: the four
+  requirements and Demo-IC1 accepted, paired Dev candidate `interaction-20261009-r1` staged from `562fc47`
+  and accepted; receipts under `../modding_documents/relay_mod/evidence/interaction-development-20261008/
+  us/`; the chain narrative and removed enumerations are archived in `OBLIVIONIS.md`.
+- **2026-10-04 — HM1 memory/handoff round**: `MEMORY.md` and this file compacted; the final user feedback
+  recorded at its own altitude; no product, build or package change (the package stays `1a54e1f`).
+- **2026-10-04 — RPT1 / XG1**: report-button result sentence and the empty-xenotype tuning block (inert
+  controls, live layer selector, identity guard before Def lookup) - technical passes only; in-game clarity and
+  disabled feel stay open.
+- **2026-10-02 — DIAG-FIX**: repeated report requests wait for their own pass; the lane now drives the
+  production settings source; Demo logs the full retained report once per success under its own prefix.
+- **2026-10-02 — V1 implementation checkpoint**: nav surfaces, flatter Section edges, Overview spacing,
+  independent nav scrolling and responsive parameter rows.
+- **2026-09-30 — R4-A / R4-B**: typed action-scope choice (the `ToString`/`Enum.TryParse` round-trip is gone)
+  and the preset subtree composed on FL's shared row band with native xenotype icons.
+- **R3-B / R12-US**: the per-host geometry instrument and the complete owned DarkGold baseline; durable facts in
+  `MEMORY.md`.
+- **S3 / S4 / S6 and everything earlier (2026-08-23 → 2026-09-28)**: landed; the durable half is in `MEMORY.md`
+  and the finished narratives are archived in `OBLIVIONIS.md`.

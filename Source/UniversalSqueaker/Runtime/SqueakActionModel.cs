@@ -9,6 +9,9 @@ namespace UniversalSqueaker;
 public static class SqueakActionDefinitions
 {
     public const int Count = 17;
+    public static bool IsEligible(SqueakAction action, bool includeBabyActions) => IsKnown(action)
+        && SqueakActionEligibility.IsEligible(action, includeBabyActions);
+    public static int EligibleCount(bool includeBabyActions) => includeBabyActions ? Count : Count - 2;
     private static readonly SqueakActionDefinition[] definitions =
     {
         new(SqueakAction.Call, "US.Action.Call", "US_Call", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),

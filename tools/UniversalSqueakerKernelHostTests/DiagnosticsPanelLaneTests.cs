@@ -18,7 +18,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// projection failure landing in the session guard's recovery instead of escaping the frame.
 /// Off-screen lock tracking itself is pinned by the pure model lane (SqueakDiagnostics-
 /// SessionModel); the window-level teardown interlock (main close cascades, close = unlock) is
-/// the maintainer live-walkthrough item - WindowStack is not stubbable at this seam.
+/// the maintainer live-walkthrough item. The DX1 state-change guard below now drives the real
+/// panel shell over the canonical type-loading stubs; it does not simulate the live pawn world.
 /// </summary>
 internal static class DiagnosticsPanelLaneTests
 {
@@ -46,9 +47,178 @@ internal static class DiagnosticsPanelLaneTests
         Step("the pinned detail page can never grow a Back control", PinnedDetailHasNoBack);
         Step("the detail value column fits the measured Chinese value", ValueColumnFitsMeasuredChinese);
         Step("all 16 conditions show, and a group folds only when clicked", GroupFold);
+        Step("DX1.2: the real shell keeps the whole window on screen across state changes", WholeWindowStaysOnScreen);
         Step("throwing projection lands in guard recovery, frame survives", ThrowingSourceRecovers);
         Step("the trip guard fails a planted trip (positive control)", TripGuardFailsAPlantedTrip);
+#if US_DEV
+        Step("layout diagnosis is per host: settings capture leaves this panel's host alone", LayoutDiagnosisIsPerHost);
+        Step("the outline switch is independent of capture (SA1.5)", OutlineIsIndependentOfCapture);
+#endif
     }
+
+#if US_DEV
+    /// <summary>
+    /// R3-B / B4: the developer layout capture is PER HOST, and this panel is the second US host that proves
+    /// it. Five checks, each about a different way the separation or the lifecycle could be lost:
+    /// <list type="number">
+    /// <item><b>Reading status is non-mutating</b> (fix 3): a status read before any explicit enable leaves
+    /// <c>GeometryEnabled</c> false, and it still answers "off" rather than "unavailable" on a Dev carrier;</item>
+    /// <item>the settings page's OWN bound command enables the settings host and leaves THIS panel's host
+    /// off - one scope per host, resolved by host identity, never a cached default;</item>
+    /// <item>with both scopes open the two report identities DIFFER (host name and session id), so a report
+    /// cannot be attributed to the other window;</item>
+    /// <item>one host's switch does not move the other;</item>
+    /// <item>closing one scope releases only its own capture: the survivor is still captured AND still
+    /// resolvable by the developer commands - the "closing the wrong window kills the tool" failure.</item>
+    /// </list>
+    /// <para>
+    /// <b>Ordering is part of the contract, and it is what this lane got wrong before (fix 2).</b> The
+    /// per-host commands resolve a scope, so a window must have OPENED one before its command can do anything
+    /// - which is exactly the production fix: every US window now opens its scope in every logging mode. The
+    /// lane therefore opens both scopes first, exactly as two open windows would, and only then drives the
+    /// bound command. The instrument itself is still OFF until that command asks for it.
+    /// </para>
+    /// </summary>
+    private static void LayoutDiagnosisIsPerHost()
+    {
+        var settingsFake = new RecordingSettingsSource { RichData = true };
+        using UiHost settings = UsKernelSettingsHost.Create(settingsFake, new Program.StubMetrics());
+        settingsFake.AttachHost(settings);
+        var panelFake = new FakeDiagnosticsSource();
+        FillRows(panelFake, 4);
+        using UiHost diagnostics = UsDiagnosticsHost.CreateMain(panelFake);
+        var viewport = new Rect(0f, 0f, 680f, 560f);
+
+        // Both windows are open, so both have a scope - the production lifecycle (auditFit: true here because
+        // this lane is about the geometry commands, not about the logging policy).
+        using UsTextFitAudit settingsAudit = UsTextFitAudit.Open(settings, auditFit: true);
+        using UsTextFitAudit diagnosticsAudit = UsTextFitAudit.Open(diagnostics, auditFit: true);
+
+        // Both hosts must have drawn a real pass before anything can be reported.
+        settings.DrawFrame(viewport);
+        diagnostics.DrawFrame(viewport);
+
+        // ---- (0) FIX 3: reading the status must not start capture, and it must still answer truthfully.
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "a window open with detailed logging must not have sampling on: capture is opt-in");
+        Assert(UsTextFitAudit.GetDevGeometryStatus(settings) == UsTextFitAudit.DevGeometryStatus.Off,
+            "a status read on a Dev carrier must answer Off, got "
+            + UsTextFitAudit.GetDevGeometryStatus(settings));
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "and READING the status must not have switched sampling on (R3-B fix 3: observation is not"
+            + " mutation - before this fix the readout said Off while capture had already started)");
+
+        // ---- (1) the settings host's own developer command, through the REAL binding the manifest dispatches.
+        settings.Bindings.Set("layout-capture", true);
+        Assert(settingsFake.LayoutCaptureOn && settings.Diagnostics.GeometryEnabled,
+            "the settings page's layout-capture command must enable THAT host's instrument");
+        Assert(!diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the diagnostics panel's instrument OFF - the two windows are separate hosts"
+            + " (R3-B / B4)");
+
+        // The panel's own scope, enabled through the same per-host entry point: this is what the panel does.
+        Assert(UsTextFitAudit.SetGeometryCapture(diagnostics, true),
+            "the panel's host must be enableable on its own");
+        Assert(diagnostics.Diagnostics.GeometryEnabled && settings.Diagnostics.GeometryEnabled,
+            "both hosts must be capturable at the same time");
+
+        // ---- (2) the two report identities differ.
+        Assert(settings.Diagnostics.Host == settings.Source && diagnostics.Diagnostics.Host == diagnostics.Source,
+            "each subscription must name its own consumer source; two US windows may share that source");
+        Assert(settings.Diagnostics.SessionId == settings.Session.Identity
+            && diagnostics.Diagnostics.SessionId == diagnostics.Session.Identity,
+            "each subscription must carry its own window session identity");
+        Assert(settings.Session.Identity != diagnostics.Session.Identity,
+            "and under different session ids (" + settings.Session.Identity + " vs "
+            + diagnostics.Session.Identity + "): a report that cannot name its window is the misattribution"
+            + " the per-host scope ends");
+
+        // ---- (3) one host's switch does not move the other.
+        Assert(UsTextFitAudit.SetGeometryCapture(settings, false), "turning the settings capture off must work");
+        Assert(!settings.Diagnostics.GeometryEnabled && diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the panel's capture running");
+
+        // ---- (4) closing one scope releases only its own capture.
+        Assert(UsTextFitAudit.SetGeometryCapture(settings, true) && settings.Diagnostics.GeometryEnabled,
+            "re-enable the settings host, so the release below has something to release");
+        settingsAudit.Dispose();
+        Assert(!settings.Diagnostics.GeometryEnabled,
+            "closing the settings scope must release the SETTINGS host's capture");
+        Assert(diagnostics.Diagnostics.GeometryEnabled,
+            "and must leave the panel's capture untouched (the other window is still open)");
+        Assert(UsTextFitAudit.GetDevGeometryStatus(diagnostics) != UsTextFitAudit.DevGeometryStatus.ScopeMissing,
+            "and the panel must still be resolvable by the developer commands: closing one window must not"
+            + " make the other's controls dead");
+    }
+    /// <summary>
+    /// SA1.5: the outline and the capture are ORTHOGONAL developer switches. Four checks:
+    /// <list type="number">
+    /// <item>the page's own outline command is honoured with capture OFF, sets no capture, and the
+    /// status answers OutlineOnly (not Off, not the borrowed "Capturing, with..." word);</item>
+    /// <item>outline-only arms no report: the request is refused and the sentence names capture off;</item>
+    /// <item>capture on with the outline already on reads Overlay, and capture OFF again leaves the
+    /// outline exactly where the developer put it;</item>
+    /// <item>the outline switch off returns to Off.</item>
+    /// </list>
+    /// NAMED FAITHFUL-REVERT: restoring the pre-SA1.5 <c>geometryEnabled</c> gate in
+    /// SetGeometryOverlay/GeometryOverlayOn reddens checks 1 and 3 by name.
+    /// </summary>
+    private static void OutlineIsIndependentOfCapture()
+    {
+        var table = Program.ReadKeyedTable("English");
+        Program.SetTranslatorResolver(table);
+        try
+        {
+            var fake = new RecordingSettingsSource { RichData = true };
+            using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+            fake.AttachHost(host);
+            using UsTextFitAudit audit = UsTextFitAudit.Open(host, auditFit: true);
+            var viewport = new Rect(0f, 0f, 760f, 524f);
+            host.DrawFrame(viewport);
+
+            // (1) outline opens WITHOUT capture, through the page's own bound command.
+            host.Bindings.Set("layout-outline", true);
+            Assert(fake.LayoutOutlineOn,
+                "SA1.5: the outline command must be honoured while capture is off");
+            Assert(!host.Diagnostics.GeometryEnabled,
+                "and opening the outline must not switch capture on");
+            Assert(UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.OutlineOnly,
+                "the status must answer OutlineOnly, got " + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            // (2) outline-only arms no report - the refusal names the real reason.
+            host.Bindings.Invoke("request-layout-report");
+            Assert(!fake.LayoutReportPending,
+                "a report request made with capture off must be refused, not left pending");
+            Assert(fake.LayoutReportStatus == table["US.Diagnostics.Geometry.Report.RefusedCaptureOff"],
+                "the refusal sentence must name capture-off as the reason, got " + fake.LayoutReportStatus);
+
+            // (3) capture on joins the still-running outline; capture off leaves the outline alone.
+            host.Bindings.Set("layout-capture", true);
+            Assert(host.Diagnostics.GeometryEnabled
+                    && UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.Overlay,
+                "capture on with the outline already on must read Overlay");
+            host.Bindings.Set("layout-capture", false);
+            Assert(!host.Diagnostics.GeometryEnabled, "capture must be off again");
+            Assert(fake.LayoutOutlineOn
+                    && UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.OutlineOnly,
+                "turning capture off must NOT close the outline the developer left on, got "
+                + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            // (4) the outline switch itself still turns it off.
+            host.Bindings.Set("layout-outline", false);
+            Assert(UsTextFitAudit.GetDevGeometryStatus(host) == UsTextFitAudit.DevGeometryStatus.Off,
+                "outline off must answer Off, got " + UsTextFitAudit.GetDevGeometryStatus(host));
+
+            Console.WriteLine("[sa15-outline] outline opens without capture; report refused with the real"
+                + " reason; capture off keeps the outline");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
+#endif
 
     private static void Step(string name, Action action)
     {
@@ -624,6 +794,9 @@ internal static class DiagnosticsPanelLaneTests
     /// <summary>
     /// 09 §3.5: below the measured split threshold the page must switch to the in-window list/detail
     /// navigation, expose a working Back, and leave the search text and page exactly where they were.
+    /// The switch is the TWO mutually exclusive presentations of <see cref="UsDiagnosticsSpec.MainXml"/>
+    /// behind their VisibleKeys, not a column that collapses to a pixel (FL 0.7 A1 retired that idiom),
+    /// so each half of the boundary is asserted by the OTHER presentation owning no arranged geometry.
     /// </summary>
     private static void NarrowNavigation()
     {
@@ -631,14 +804,41 @@ internal static class DiagnosticsPanelLaneTests
         FillRows(fake, 12);
         using UiHost host = UsDiagnosticsHost.CreateMain(fake);
 
-        // The narrow decision and the engine's Breakpoint must agree: this width is half a pixel under
-        // the declared threshold, and the wide columns must be gone while the nav column owns the page.
+        // The spec must spell the host's own keys: an unresolvable VisibleKey stays VISIBLE, so a drift
+        // between the two would show both presentations at once. This is the positive control for it.
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyWide + "\"", StringComparison.Ordinal) >= 0
+                && UsDiagnosticsSpec.MainXml.IndexOf("VisibleKey=\"" + UsDiagnosticsHost.KeyNarrow + "\"", StringComparison.Ordinal) >= 0,
+            "the main spec binds both presentations to the host's contract keys");
+        Assert(UsDiagnosticsSpec.MainXml.IndexOf("NarrowHidden", StringComparison.Ordinal) < 0,
+            "the retired idiom is gone: a presentation is hidden whole, never left as a pixel-wide remnant");
+
+        // Warm the arrangement once at the shipped wide width. The FIRST arrange also folds the
+        // injected theme's layout revision into the clock (UiHost's own one-time cache invalidation),
+        // and that movement is not part of what this step measures; the repeated-regime control below
+        // then proves the clock is otherwise quiet, so the flip's delta is the flip's alone.
+        HostArrangeAt(680f);
+
+        // This width is half a pixel under the threshold. Crossing it must move the layout clock exactly
+        // once: the VisibleKey binding is read-only, so ApplyContentWidth is the ONLY thing that
+        // re-arranges the page when the width flips - the engine has no Breakpoint swap doing it for us.
         const float narrowWidth = UsDiagnosticsProjection.NarrowBreakpoint + UsDiagnosticsProjection.PagePadding * 2f - 0.5f;
-        fake.SetContentWidth(narrowWidth);
-        UiLayoutSnapshot narrow = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
-        Assert(fake.Narrow, "the source's presentation decision follows the same threshold the spec declares");
-        Assert(Height(narrow, "diag-list") <= 0f && Height(narrow, "diag-detail-scroll") <= 0f,
-            "narrow: the wide master and detail columns are hidden whole");
+        int revBeforeFlip = host.Session.ContentRevision;
+        UiLayoutSnapshot narrow = HostArrangeAt(narrowWidth);
+        Assert(fake.Narrow, "the source's presentation decision is taken from the fed content width");
+        Assert(host.Session.ContentRevision == revBeforeFlip + 1,
+            "crossing the presentation threshold moves the layout clock exactly once, got "
+            + (host.Session.ContentRevision - revBeforeFlip));
+        int revAfterFlip = host.Session.ContentRevision;
+        HostArrangeAt(narrowWidth);
+        Assert(host.Session.ContentRevision == revAfterFlip,
+            "re-feeding a width in the same regime moves nothing, got +"
+            + (host.Session.ContentRevision - revAfterFlip));
+        Assert(host.Bindings.TryGetBool(UsDiagnosticsHost.KeyWide, out bool wideKey) && !wideKey
+                && host.Bindings.TryGetBool(UsDiagnosticsHost.KeyNarrow, out bool narrowKey) && narrowKey,
+            "and the two keys answer the complement of each other in this shape");
+        Assert(!narrow.RectById.ContainsKey("diag-list") && !narrow.RectById.ContainsKey("diag-detail-scroll"),
+            "narrow: the wide master and detail subtrees are not arranged at all (diag-list height "
+            + Height(narrow, "diag-list") + ")");
         Assert(Height(narrow, "diag-nav-body") > 0f && Width(narrow, "diag-nav-col") > 200f,
             "narrow: the navigation column shows the list and owns the width");
 
@@ -651,7 +851,7 @@ internal static class DiagnosticsPanelLaneTests
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
         Assert(fake.NavigationView == UsDiagNavView.Detail, "the view switch routes");
         Assert(host.Session.ContentRevision == revBefore + 1, "and bumps the layout clock once");
-        UiLayoutSnapshot detailView = host.MeasureAndArrange(new Vector2(narrowWidth, 560f));
+        UiLayoutSnapshot detailView = Arrange(narrowWidth, 560f);
         Assert(Height(detailView, "diag-nav-body") > Height(narrow, "diag-nav-body"),
             "narrow detail: the same body element now measures the taller detail content, got "
             + Height(detailView, "diag-nav-body") + " vs " + Height(narrow, "diag-nav-body") + " for the list");
@@ -674,18 +874,17 @@ internal static class DiagnosticsPanelLaneTests
         // Back handler that also cleared the search or reset the page reddens this step.
         const float shortHeight = 160f;
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.List);
-        fake.SetContentWidth(narrowWidth);
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         UiNode? listScroll = host.Session.GetNodeByElementId("diag-nav-scroll");
         Assert(listScroll != null, "the narrow list scroll has a node to own its position");
         host.Session.SetScrollPosition(listScroll!, new Vector2(0f, 60f));
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         float before = host.Session.GetScrollPosition(listScroll!).y;
         Assert(before > 1f, "the fixture really scrolled (a clamped-to-zero offset would make the check vacuous), got " + before);
 
         // Show the detail view - the state whose Back control is under test - and click ITS drawn control.
         host.Bindings.Set(UsDiagnosticsHost.KeyNavView, UsDiagNavView.Detail);
-        host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        Arrange(narrowWidth, shortHeight);
         Rect shortViewport = new(0f, 0f, narrowWidth, shortHeight);
         int backStart = texts.Count;
         host.DrawChecked(shortViewport);
@@ -701,23 +900,39 @@ internal static class DiagnosticsPanelLaneTests
             + (host.Session.ContentRevision - revAtClick));
         Assert(fake.SearchQuery == "vi", "and the search text is exactly what it was, got '" + fake.SearchQuery + "'");
         Assert(fake.Page == 2, "and the page is exactly where it was, got " + fake.Page);
-        UiLayoutSnapshot back = host.MeasureAndArrange(new Vector2(narrowWidth, shortHeight));
+        UiLayoutSnapshot back = Arrange(narrowWidth, shortHeight);
         Assert(Height(back, "diag-nav-body") > 0f, "the list view is arranged again");
         Assert(Math.Abs(host.Session.GetScrollPosition(listScroll!).y - before) < 0.5f,
             "and the list position survived the round trip, got " + host.Session.GetScrollPosition(listScroll!).y + " vs " + before);
 
-        // The wide side of the same boundary keeps the master/detail split.
+        // The wide side of the same boundary: the master/detail split is the arranged shape, and the
+        // narrow presentation owns NO geometry there - not a 1px stub, and not a share of the wide
+        // Row's leftover space (the A1 defect: the unmeasurable Auto child joined the unsized
+        // distribution and took ~96px of the exactly-filled 680-wide Row).
+        int revBeforeWide = host.Session.ContentRevision;
         UiLayoutSnapshot wide = HostArrangeAt(680f);
-        Assert(Width(wide, "diag-nav-col") <= 1.5f && Height(wide, "diag-list") > 0f && Height(wide, "diag-detail-scroll") > 0f,
-            "at the shipped 680 width the master/detail split is used and the nav column costs a pixel");
-        Assert(Width(wide, "diag-nav-body") <= 1.5f && Width(wide, "diag-nav-scroll") <= 1.5f,
-            "and the narrow body is a 1px column every widget skips in Draw, so it cannot paint over the split");
+        Assert(host.Session.ContentRevision == revBeforeWide + 1,
+            "crossing back to the wide presentation moves the clock exactly once, got "
+            + (host.Session.ContentRevision - revBeforeWide));
+        Assert(Height(wide, "diag-list") > 0f && Height(wide, "diag-detail-scroll") > 0f,
+            "at the shipped 680 width the master/detail split is the arranged shape");
+        Assert(!wide.RectById.ContainsKey("diag-nav-col") && !wide.RectById.ContainsKey("diag-nav-body")
+                && !wide.RectById.ContainsKey("diag-nav-scroll") && !wide.RectById.ContainsKey("diag-nav-back"),
+            "and the narrow presentation is not arranged at all, so it costs the split no column (diag-nav-col width "
+            + Width(wide, "diag-nav-col") + ")");
+        Assert(host.Bindings.TryGetBool(UsDiagnosticsHost.KeyWide, out bool wideKeyAt680) && wideKeyAt680
+                && host.Bindings.TryGetBool(UsDiagnosticsHost.KeyNarrow, out bool narrowKeyAt680) && !narrowKeyAt680,
+            "the keys answer the complement of each other in this shape too");
 
-        UiLayoutSnapshot HostArrangeAt(float width)
+        // Production's own width feed, not a hand-written SetContentWidth: the lane must fail if the
+        // path the panel actually uses stops moving the layout clock.
+        UiLayoutSnapshot Arrange(float width, float height)
         {
-            fake.SetContentWidth(width);
-            return host.MeasureAndArrange(new Vector2(width, 560f));
+            UsDiagnosticsHost.ApplyContentWidth(fake, host, width);
+            return host.MeasureAndArrange(new Vector2(width, height));
         }
+
+        UiLayoutSnapshot HostArrangeAt(float width) => Arrange(width, 560f);
     }
 
     /// <summary>
@@ -749,6 +964,57 @@ internal static class DiagnosticsPanelLaneTests
         {
             Assert(((string)texts[i]!).IndexOf("US.Diagnostics.Nav.Back", StringComparison.Ordinal) < 0,
                 "the pinned detail frame never draws a Back control");
+        }
+    }
+
+    // DX1.2 (PM review 2026-10-07): the outer window's state transitions run through the REAL shell
+    // (windowRect + WindowOnGUI, the Remix lane's precedent), not a constructed page box. The scaled
+    // screen is 1024x768 - the PM's overflow scenario: a low dragged bar that expands must not leave
+    // the screen. The compact-SELECTED shape (600x456) additionally needs a live pawn detail and
+    // stays a game-walkthrough item; the position rule exercised here is the same code path.
+    private static void WholeWindowStaysOnScreen()
+    {
+        int savedW = Verse.UI.screenWidth;
+        int savedH = Verse.UI.screenHeight;
+        Verse.UI.screenWidth = 1024;
+        Verse.UI.screenHeight = 768;
+        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+        try
+        {
+            // The panel type is internal to the product assembly; the shell handle is the same
+            // production type, reached the way the harness reaches other internal product seams.
+            Type panelType = typeof(UsKernelSettingsHost).Assembly
+                .GetType("UniversalSqueaker.SqueakDiagnosticsPanel", throwOnError: true)!;
+            Verse.Window panel = (Verse.Window)Activator.CreateInstance(panelType)!;
+            panel.windowRect = new Rect(282f, 324f, 460f, 120f);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.xMax <= 1024.5f
+                    && panel.windowRect.y >= -0.5f,
+                "DX1.2 first open (collapsed bar, centred): the whole window stays on screen, got " + panel.windowRect);
+
+            var sourceField = panelType
+                .GetField("source", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            object source = sourceField.GetValue(panel)!;
+            source.GetType().GetProperty("Collapsed")!.SetValue(source, false);
+            panel.windowRect = new Rect(panel.windowRect.x, 744f, panel.windowRect.width, panel.windowRect.height);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.height > 200f,
+                "DX1.2 the expanded pass must have resized (empty state), got h=" + panel.windowRect.height);
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.y >= 0f,
+                "DX1.2 a low dragged bar that EXPANDS must be pulled fully on screen by the state-change"
+                + " correction, got " + panel.windowRect);
+
+            source.GetType().GetProperty("Collapsed")!.SetValue(source, true);
+            panel.WindowOnGUI();
+            Assert(panel.windowRect.yMax <= 768.5f && panel.windowRect.xMax <= 1024.5f,
+                "DX1.2 re-collapse keeps the whole window on screen too, got " + panel.windowRect);
+            Console.WriteLine("[dx1-shell] 1024x768: firstOpen centred, expand from y=744 pulled on screen, re-collapse on screen");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            Verse.UI.screenWidth = savedW;
+            Verse.UI.screenHeight = savedH;
         }
     }
 

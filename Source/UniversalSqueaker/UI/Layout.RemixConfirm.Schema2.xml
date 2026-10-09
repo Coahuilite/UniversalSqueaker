@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UiPage Schema="2" Source="coahuilite.universalsqueaker">
+  <!-- SA1.3 (user ruling 2026-10-05): the equal-weight-Remix double confirmation, as ONE declarative
+       page inside the carrier's own UiPageWindow shell - no Verse dialog class, no SR assembly, and the
+       flow state lives on the US per-parent-window RemixConfirmationFlow, never in a library global.
+
+       ONE window, TWO gated sections: the step visibility keys are the flow's only dialog state, and
+       the hidden half is never arranged. That is what makes the safety clause mechanical - the button
+       row keeps its two slots and SWAPS their occupants (step 1: continue left, cancel right; step 2:
+       cancel left, enable right), so a second click landing on the FIRST click's coordinates meets
+       Cancel or blank, never the enabling button. The Keyed captions, the Danger emphasis on the
+       enabling button and the shell's close-on-escape answer (cancel) are the rest of the contract;
+       Enter is refused by the window options, not by anything here. -->
+  <Styles Schema="1" Density="regular">
+    <Density Name="regular">
+      <Metric Token="RowHeight" Value="24" />
+    </Density>
+    <Density Name="dense">
+      <Metric Token="RowHeight" Value="20" />
+    </Density>
+    <!-- SA1.6: the engine resolves an element's Scheme against the document the Host was built with,
+         so the dialog page carries its own copy of the command-button scope (same six values as
+         Layout.Schema2.xml; the parity lane over both manifests is UiSourceInvariantTests). -->
+    <Scheme Name="us-command-button">
+      <Color Token="Raised" Value="#1d1b17" />
+      <Color Token="RaisedBorder" Value="#575247" />
+      <Color Token="Hover" Value="#242019" />
+      <Color Token="HoverBorder" Value="#6b6459" />
+      <Color Token="Selected" Value="#3a311f" />
+      <Color Token="SelectedBorder" Value="#d19a38" />
+    </Scheme>
+  </Styles>
+  <Column Id="confirm-root" Gap="10" Padding="12" Scheme="us-command-button">
+    <!-- The r4 shell measurement found the defect this fixes: with the bodies flowing freely, a step-two
+         body one line shorter than step one's moved the button row UP (measured 22px in the ZH table),
+         and the same-coordinate click met blank instead of Cancel. The swap's safety promise is only
+         mechanical while the row cannot move, so BOTH steps get the same fixed-height region. The
+         height is the page budget minus chrome: 164 - 12 padding - 10 gap - 24 row - 12 padding = 106,
+         and the SA1.3 shell lane fit-audits the resolved EN/ZH bodies inside it every run; the Scroll
+         is the fail-soft if a future table ever outgrows the region. -->
+    <Scroll Id="confirm-body-first-region" Height="106" Padding="0" VisibleKey="confirm-step1">
+      <Widget Id="confirm-body-first" Kind="text/wrapped" TextKey="US.Remix.Confirm1.Body" />
+    </Scroll>
+    <Scroll Id="confirm-body-second-region" Height="106" Padding="0" VisibleKey="confirm-step2">
+      <Widget Id="confirm-body-second" Kind="text/wrapped" TextKey="US.Remix.Confirm2.Body" />
+    </Scroll>
+    <!-- SA1.3 slot swap, and the r1 correction on the emphasis: step one's Cancel is the PROTECTIVE
+         default and must read prominent (SR's gold), so it carries Tone="Active" (the existing selected
+         rung - the same SelectedSurface + AccentGold edge the navigation uses), while Continue is the
+         muted secondary. Step two swaps the slots AND moves prominence to the enabling button, which
+         carries the Danger tone. The tones are the carrier's resolved ladder; the us-command-button
+         scope only supplies the resting plane the Neutral buttons sit on. -->
+    <Row Id="confirm-buttons" Gap="8" Padding="0">
+      <Widget Id="confirm-continue" Kind="input/button" TextKey="US.Remix.Confirm.Continue"
+              ActionBind="confirm-continue" VisibleKey="confirm-step1" Emphasis="Muted" />
+      <Widget Id="confirm-cancel-first" Kind="input/button" TextKey="US.Common.Cancel"
+              ActionBind="confirm-cancel" VisibleKey="confirm-step1" Tone="Active" />
+      <Widget Id="confirm-cancel-second" Kind="input/button" TextKey="US.Common.Cancel"
+              ActionBind="confirm-cancel" VisibleKey="confirm-step2" Emphasis="Muted" />
+      <Widget Id="confirm-enable" Kind="input/button" TextKey="US.Remix.Confirm.Enable"
+              ActionBind="confirm-enable" VisibleKey="confirm-step2" Tone="Danger" />
+    </Row>
+  </Column>
+</UiPage>

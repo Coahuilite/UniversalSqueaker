@@ -19,9 +19,9 @@ namespace UniversalSqueaker.UiLogicTests;
 ///      may return.
 ///   2. No file under UI/ (widgets included) revives the deleted second event authority or the
 ///      second palette/surface/text helper set.
-///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the two
+///   3. The widget kinds UsKernelWidgetRegistrar registers are exactly the us/* kinds the three
 ///      Schema2 manifests reference (both directions, parsed — not substring-guessed).
-///   4. The only embedded UI manifests are the two Schema2 files.
+///   4. The only embedded UI manifests are the three Schema2 files (settings, overlay, SA1.3 dialog).
 ///   5. The help catalog, the manifests' HelpKey attributes, the section help-key map and the
 ///      panel's item-count height formula agree with each other (no manifest/catalog drift in
 ///      either direction, no unreachable or empty catalog entries).
@@ -47,7 +47,9 @@ internal static class UiSourceInvariantTests
         VerifyLocalizationContract(root);
         VerifyPrerequisiteDesyncIsNamed(root);
         VerifyViewCacheSharesLayoutClock(root);
-        VerifyHelpDrawerIsIndependentState(root);
+        VerifyWriteBindingsGoThroughTheRegistry(root);
+        VerifyHelpPanelIsIndependentState(root);
+        VerifyDevPanelPreContentEligibility(root);
     }
 
     // 8. Prerequisite desync is named, not a draw-time TypeLoadException (the 2026-09-04 incident):
@@ -78,6 +80,140 @@ internal static class UiSourceInvariantTests
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"),
             new[] { "AttachRevisionSource(() => host.Session.ContentRevision)" },
             "the host must wire the view cache to the session revision");
+    }
+
+    // 10. Write registrations go through the ONE funnel (adoption plan section 9 item 6 / P3-2a).
+    //     IUiBindings exposes no full write-key enumeration, so the settings page registers every write key
+    //     through UsWriteBindings, which records them and lets the kernel-host revision-clock lane
+    //     enumerate the whole write set - as a hand-list that lane covered 21 of the 45 registration sites.
+    //     This guard is the other half: a RAW .BindValue/.BindAction/.BindCommand under UI/ is the bypass
+    //     that would register a write key no lane can see, so it fails here by file and count. The
+    //     exemption below is a NAME plus a REASON plus a pinned count, never a relaxed assertion, and both
+    //     directions are checked: a vanished funnel file and a vanished exemption file each fail the guard.
+    private static void VerifyWriteBindingsGoThroughTheRegistry(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        string funnel = Path.Combine(ui, "Kernel", "UsWriteBindings.cs");
+        string panelExemption = Path.Combine(ui, "Diagnostics", "UsDiagnosticsHost.cs");
+        string dialogExemption = Path.Combine(ui, "RemixConfirmationFlow.cs");
+        string confirmExemption = Path.Combine(ui, "UsConfirmWindow.cs");
+        string devPanelExemption = Path.Combine(ui, "Dev", "UsDevPanelWindow.cs");
+
+        Assert(File.Exists(funnel),
+            "the write-binding funnel UI/Kernel/UsWriteBindings.cs is missing: every settings-page write "
+            + "registration is supposed to go through it, and without it no lane can enumerate the write set");
+        Assert(File.Exists(panelExemption),
+            "the named write-registration exemption UI/Diagnostics/UsDiagnosticsHost.cs is missing; a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(dialogExemption),
+            "the named write-registration exemption UI/RemixConfirmationFlow.cs is missing (SA1.3); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(confirmExemption),
+            "the named write-registration exemption UI/UsConfirmWindow.cs is missing (VF1 r5); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+        Assert(File.Exists(devPanelExemption),
+            "the named write-registration exemption UI/Dev/UsDevPanelWindow.cs is missing (DT1); a vanished"
+            + " exemption file must fail this guard instead of silently widening it");
+
+        // EXEMPT, by name and with its reason: the diagnostics panel owns a SECOND host and its own
+        // DiagRevisionBumper clock, so its registrations are not settings-page write keys, and folding them
+        // into the settings funnel is the next adopter's work. The count is pinned so a new registration
+        // there is a deliberate act (re-cut this number in that batch) rather than an invisible write key.
+        int exempt = CountWriteRegistrations(File.ReadAllText(panelExemption));
+        Assert(exempt == 12,
+            "UI/Diagnostics/UsDiagnosticsHost.cs is expected to carry 12 write registrations (its own host and "
+            + "its own revision clock, exempt from the settings-page funnel), got " + exempt
+            + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
+
+        // EXEMPT, same rule (SA1.3): the Remix confirmation dialog is a THIRD host - its own UiBindings
+        // and its own session clock (the flow bumps the attached dialog host), and its three commands are
+        // dialog-local step transitions, not settings-page write keys. The count is pinned: a fourth
+        // registration here must be a deliberate act.
+        int dialogExempt = CountWriteRegistrations(File.ReadAllText(dialogExemption));
+        Assert(dialogExempt == 3,
+            "UI/RemixConfirmationFlow.cs is expected to carry 3 write registrations (confirm-continue /"
+            + " confirm-cancel / confirm-enable on its own host and clock), got " + dialogExempt
+            + " - re-cut this pin deliberately in the batch that changes the dialog's write surface");
+
+        // EXEMPT, same rule (VF1 r5): the single confirmation window is its OWN host with its OWN
+        // session clock (the catalog-opened UiPageWindow), and its two commands are dialog-local
+        // answers (confirm / cancel) - not settings-page write keys. The confirm callback writes
+        // through the SETTINGS host's captured binding table, which the funnel already enumerates.
+        int confirmExempt = CountWriteRegistrations(File.ReadAllText(confirmExemption));
+        Assert(confirmExempt == 2,
+            "UI/UsConfirmWindow.cs is expected to carry 2 write registrations (confirm-yes / confirm-no"
+            + " on its own host and clock), got " + confirmExempt
+            + " - re-cut this pin deliberately in the batch that changes the confirmation's write surface");
+
+        // EXEMPT, same rule (DT1): the developer geometry panel owns its own host and clock; its
+        // registrations are page-local tools (page tabs, capture/outline switches, report, target
+        // picks) on a window that exists only while the settings window is open, never settings-page
+        // write keys. The count is pinned so a new tool button is a deliberate act.
+        int devPanelExempt = CountWriteRegistrations(File.ReadAllText(devPanelExemption));
+        Assert(devPanelExempt == 9,
+            "UI/Dev/UsDevPanelWindow.cs is expected to carry 9 write registrations (its own host and"
+            + " clock, exempt from the settings-page funnel), got " + devPanelExempt
+            + " - re-cut this pin deliberately in the batch that changes the panel's write surface");
+
+        // This counts TEXT OCCURRENCES of the three raw write calls in the funnel file, not "operations":
+        // the funnel exposes six methods (Value, Action, Command, Command-with-veto, ItemValue, ItemAction)
+        // and the raw calls land six: Value + ItemValue both hit .BindValue, Action + ItemAction both hit
+        // .BindAction, and the two Command forms hit .BindCommand twice - the second one being the
+        // US-ESC1 cancel layer's CanExecute overload, re-cut deliberately in THIS batch. The pin keeps
+        // every later addition a deliberate act. The text-scan brittleness is recorded in MEMORY.md.
+        int funnelCallSites = CountWriteRegistrations(File.ReadAllText(funnel));
+        Assert(funnelCallSites == 6,
+            "the funnel file must contain exactly six raw IUiBindings write-registration CALL SITES (the "
+            + "plain and vetoed Command forms, the two value forms and the two action forms), got "
+            + funnelCallSites + " - re-cut this pin in the batch that changes the funnel's surface");
+
+        var offenders = new List<string>();
+        foreach (string file in Directory.EnumerateFiles(ui, "*.cs", SearchOption.AllDirectories))
+        {
+            if (string.Equals(file, funnel, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, panelExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, dialogExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, confirmExemption, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file, devPanelExemption, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            int hits = CountWriteRegistrations(File.ReadAllText(file));
+            if (hits > 0)
+            {
+                offenders.Add(file.Substring(ui.Length + 1).Replace('\\', '/') + " (" + hits + ")");
+            }
+        }
+
+        Assert(offenders.Count == 0,
+            "write registrations must go through UsWriteBindings: a raw IUiBindings write call is a write key "
+            + "no lane can enumerate, so the revision-clock contract would silently stop covering it. "
+            + "Offenders: " + string.Join(", ", offenders));
+    }
+
+    private static int CountWriteRegistrations(string text)
+    {
+        return CountOccurrences(text, ".BindValue")
+            + CountOccurrences(text, ".BindAction")
+            + CountOccurrences(text, ".BindCommand");
+    }
+
+    private static int CountOccurrences(string text, string fragment)
+    {
+        int count = 0;
+        int at = 0;
+        while (true)
+        {
+            int hit = text.IndexOf(fragment, at, StringComparison.Ordinal);
+            if (hit < 0)
+            {
+                return count;
+            }
+
+            count++;
+            at = hit + fragment.Length;
+        }
     }
 
     // 1. Settings window: since FL P2 the chrome and the whole-frame failure state machine belong to
@@ -143,11 +279,85 @@ internal static class UiSourceInvariantTests
             "the settings class must not regain a xenotype-tab clear API");
     }
 
+    // 2b. US-UI1 review1 (focus-timing observation): the dev panel's key eligibility must be computed at
+    //     the TOP of WindowOnGUI, before the base call that reaches Verse's pre-content dispatch - a
+    //     refresh living inside BeforeDraw was the named defect (one pass stale in both directions) and
+    //     must not creep back. The settings window keeps its stock, unmoved key conventions, and
+    //     forceCatch may be claimed by exactly the three tool windows - nowhere else.
+    private static void VerifyDevPanelPreContentEligibility(string root)
+    {
+        string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
+        string panel = File.ReadAllText(Path.Combine(ui, "Dev", "UsDevPanelWindow.cs"));
+        int onGui = panel.IndexOf("public override void WindowOnGUI()", StringComparison.Ordinal);
+        int assign = panel.IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused =", StringComparison.Ordinal);
+        int baseCall = panel.IndexOf("base.WindowOnGUI();", StringComparison.Ordinal);
+        if (onGui < 0 || assign < 0 || baseCall < 0 || assign > baseCall)
+        {
+            throw new InvalidOperationException(
+                "the dev panel must compute its key eligibility inside WindowOnGUI BEFORE base.WindowOnGUI() "
+                + "(Verse reads the field in the pre-content dispatch; a BeforeDraw refresh is one pass stale)");
+        }
+
+        int beforeDraw = panel.IndexOf("protected override void BeforeDraw", StringComparison.Ordinal);
+        int beforeDrawEnd = panel.IndexOf("\n    }", beforeDraw, StringComparison.Ordinal);
+        if (beforeDraw < 0 || beforeDrawEnd < 0
+                || panel.Substring(beforeDraw, beforeDrawEnd - beforeDraw)
+                        .IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+        {
+            throw new InvalidOperationException(
+                "BeforeDraw must not touch the eligibility field again - the recompute lives in WindowOnGUI only");
+        }
+
+        if (panel.IndexOf("closeOnCancel = false", StringComparison.Ordinal) < 0
+                || panel.IndexOf("layer = WindowLayer.SubSuper", StringComparison.Ordinal) < 0)
+        {
+            throw new InvalidOperationException(
+                "the panel keeps closeOnCancel=false (Verse never closes it) and the SubSuper layer "
+                + "(coexisting above the settings window)");
+        }
+
+        string settingsWindow = File.ReadAllText(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"));
+        if (settingsWindow.IndexOf("layer = WindowLayer.Dialog", StringComparison.Ordinal) < 0
+                || settingsWindow.IndexOf("absorbInputAroundWindow = true", StringComparison.Ordinal) < 0
+                || settingsWindow.IndexOf("closeOnCancel", StringComparison.Ordinal) >= 0
+                || settingsWindow.IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+        {
+            throw new InvalidOperationException(
+                "the settings window keeps its pinned modality block (Dialog + absorption, stock key "
+                + "conventions, no key claim of its own) - the keyboard-cooperation lane's stand-in mirrors THIS block");
+        }
+
+        string diagDir = Path.Combine(root, "Source", "UniversalSqueaker", "Diagnostics");
+        string[] claimers =
+        {
+            Path.Combine(ui, "Dev", "UsDevPanelWindow.cs"),
+            Path.Combine(diagDir, "SqueakDiagnosticsPanel.cs"),
+            Path.Combine(diagDir, "SqueakDiagnosticsDetailWindow.cs"),
+        };
+        foreach (string file in Directory.EnumerateFiles(Path.Combine(root, "Source"), "*.cs", SearchOption.AllDirectories))
+        {
+            bool allowed = false;
+            foreach (string c in claimers)
+            {
+                if (string.Equals(file, c, StringComparison.OrdinalIgnoreCase)) { allowed = true; break; }
+            }
+
+            if (!allowed && File.ReadAllText(file)
+                    .IndexOf("forceCatchAcceptAndCancelEventEvenIfUnfocused", StringComparison.Ordinal) >= 0)
+            {
+                throw new InvalidOperationException(
+                    "a fourth window claims the Verse key field: " + file + " - eligibility belongs to the "
+                    + "dev panel and the two diagnostic windows only (review1 scope)");
+            }
+        }
+    }
+
     // 2. Second event authority / second palette must not resurrect anywhere under UI/. The list is the
     // one MEMORY's "Naming/harness bans" claims: `UiPanel` was reported as prose-only in FL→US round 2
     // (it was a real deleted type in the old chain - `Widgets/UiPanel.cs` - but sat in no source list),
     // so the name joined the scan rather than leaving the rule. Over-banning a dead name is the safe
     // direction; a memory that promises a check the check does not make is not.
+
     private static void VerifyNoSecondEventAuthorityOrPalette(string root)
     {
         string uiDir = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
@@ -207,16 +417,51 @@ internal static class UiSourceInvariantTests
             if (kind.StartsWith("us/", StringComparison.Ordinal)) manifestKinds.Add(kind);
         }
 
+        // SA1.3: the Remix dialog manifest carries only core kinds today (text/wrapped, input/button),
+        // so it adds nothing to the us/* set - but it is enumerated so a future us/* kind there is
+        // counted by this gate instead of drifting past the "two manifests" blind spot.
+        foreach (string kind in EnumerateManifestKinds(
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.RemixConfirm.Schema2.xml")))
+        {
+            if (kind.StartsWith("us/", StringComparison.Ordinal)) manifestKinds.Add(kind);
+        }
+
         Assert(registeredKinds.Count == manifestKinds.Count && IsSameSet(registeredKinds, manifestKinds),
             "UsKernelWidgetRegistrar must register exactly the us/* kinds the Schema2 manifests use "
             + "(registered=" + registeredKinds.Count + ", manifest=" + manifestKinds.Count + "; "
             + "missing=[" + Join(registeredKinds, manifestKinds) + "], orphan=[" + Join(manifestKinds, registeredKinds) + "])");
 
-        // The 17 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
+        // The 10 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
         // the cardinality makes an accidental silent drop (registration removed AND manifest line
-        // deleted together) visible.
-        Assert(registeredKinds.Count == 18,
-            "the registered us/* kind set must have 18 members (17 settings + 1 overlay), got "
+        // deleted together) visible. S4-1 shrank it 18 -> 15 (us/global-volume, us/basic-tuning,
+        // us/camera-indicator); S4-2 shrank it 15 -> 13 (us/race-layer, us/xenotype-layer);
+        // S4-3a shrank it 13 -> 12 (us/timing); S4-3b shrank it 12 -> 11 (us/attenuation-editor);
+        // S6-3 grew it 11 -> 12 with us/section-header and 12 -> 13 with us/square-toggle. Those are the
+        // FIRST GROWTHS on this pin: neither is a dissolved composite returning, both are new US surfaces
+        // the declarative vocabulary cannot express (a vertical 3px rail - chrome/rule paints horizontal
+        // lines only - and a track+knob whose geometry follows a bound bool). T3-2 shrank it 13 -> 12
+        // (us/diagnostics): the Overview diagnostics card is a declared Section over three input/button
+        // options, one string action and the page's own square toggle, because no atom writes a typed
+        // three-way choice through a value binding. T21 grew it 12 -> 13 with us/selection-surface: the
+        // selected domain row's fill + vertical 3px rail, which no atom carries (text/wrapped paints no
+        // surface, and the row's only surface-capable element is its hit band, which must stay
+        // appearance-less or its geometry moves at 320px). R2 shrank it 13 -> 12 (us/square-toggle): the
+        // eight ON/OFF controls are the carrier's input/checkbox with Appearance="switch" now, so the kind
+        // that existed only because "the knob's end depends on a bound bool" is expressible in the shared
+        // vocabulary. US-RESET1 grew it 12 -> 13 with us/reset-entry: the confirmation-gated restore
+        // entry. input/button can only name a WRITE binding, and a ceremony that writes nothing until
+        // the answer arrives must not enter the write registry (the six-raw-sites gate above and the
+        // revision-clock contract both reserve it for writes), so the question window is a composite.
+        // The parity assertion above is what keeps the pin
+        // honest in both directions: a kind exists only because a manifest element uses it, and it
+        // disappears the day none does.
+        //
+        // This pin lives in the UI-LOGIC project, not in the kernel-host harness, and that is worth
+        // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
+        // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
+        // is expected red, run it AND run what follows it separately.
+        Assert(registeredKinds.Count == 13,
+            "the registered us/* kind set must have 13 members (12 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 
@@ -288,10 +533,11 @@ internal static class UiSourceInvariantTests
             search = end;
         }
 
-        Assert(embedded.Count == 2,
-            "exactly two UI manifests are embedded, found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
-        Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml"),
-            "the embedded manifests must be Layout.Schema2.xml and Layout.Overlay.Schema2.xml, got ["
+        Assert(embedded.Count == 3,
+            "exactly three UI manifests are embedded (SA1.3 re-cut), found " + embedded.Count + " [" + string.Join(",", embedded) + "]");
+        Assert(embedded.Contains("Layout.Schema2.xml") && embedded.Contains("Layout.Overlay.Schema2.xml")
+                && embedded.Contains("Layout.RemixConfirm.Schema2.xml"),
+            "the embedded manifests must be the settings page, the overlay and the SA1.3 Remix dialog, got ["
             + string.Join(",", embedded) + "]");
         Assert(!proj.Contains("\\Layout.xml") && !proj.Contains("/Layout.xml"),
             "the legacy UI/Layout.xml must not be embedded or referenced");
@@ -300,7 +546,8 @@ internal static class UiSourceInvariantTests
         foreach (string xml in Directory.EnumerateFiles(uiDir, "*.xml", SearchOption.AllDirectories))
         {
             string name = Path.GetFileName(xml);
-            Assert(name == "Layout.Schema2.xml" || name == "Layout.Overlay.Schema2.xml",
+            Assert(name == "Layout.Schema2.xml" || name == "Layout.Overlay.Schema2.xml"
+                    || name == "Layout.RemixConfirm.Schema2.xml",
                 "the UI tree may only carry Schema2 manifests, found " + xml);
         }
     }
@@ -323,8 +570,15 @@ internal static class UiSourceInvariantTests
 
         foreach (string key in manifestHelpKeys)
         {
-            Assert(UsHelpCatalog.TryGetSection(key, out _),
-                "manifest HelpKey '" + key + "' has no UsHelpCatalog section (hover would show an empty panel)");
+            // A manifest HelpKey is a hover CLAIM identity, and the panel resolves a claim against the whole
+            // catalog: the item key first, then the active section's overview (UsHelpPanelLogic.Resolve ->
+            // UsHelpCatalog.TryFindItem). Both shapes are therefore valid declarations - step B is the first
+            // manifest that carries ITEM keys, because the engine's element-level HelpKey is what let the
+            // checklist's search field and row template keep their entries without a line of C#. What must
+            // not happen is a key the catalog cannot answer at all, which is what would show an empty panel.
+            Assert(UsHelpCatalog.TryFindItem(key, out _, out _) || UsHelpCatalog.TryGetSection(key, out _),
+                "manifest HelpKey '" + key + "' is neither a catalog item nor a catalog section "
+                + "(hover would show an empty panel)");
         }
 
         foreach (string key in mapKeys)
@@ -335,9 +589,11 @@ internal static class UiSourceInvariantTests
 
         foreach (string key in catalogSections)
         {
-            Assert(manifestHelpKeys.Contains(key) || mapKeys.Contains(key),
-                "catalog section '" + key + "' is unreachable: neither a manifest HelpKey nor a "
-                + "SectionHelpKeyOf value (dead catalog content)");
+            Assert(manifestHelpKeys.Contains(key)
+                || manifestHelpKeys.Any(help => help.StartsWith(key + "/", StringComparison.Ordinal))
+                || mapKeys.Contains(key),
+                "catalog section '" + key + "' is unreachable: neither a manifest HelpKey (itself or one of "
+                + "its items) nor a SectionHelpKeyOf value (dead catalog content)");
         }
 
         Assert(mapKeys.Contains("us/page-title"),
@@ -409,10 +665,15 @@ internal static class UiSourceInvariantTests
 
         string host = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UsKernelSettingsHost.cs"));
+        // Re-cut 2026-09-24 (T3-1): this clause pinned the raw `BindAction<string>("scroll-to"` text, which
+        // the write-registration funnel renamed to `writes.Action<string>(...)`. Its INTENT is "the Host owns
+        // the scroll-to action wiring" - that is what is asserted now, receiver-agnostic - while the "a write
+        // registration must go through the funnel" half is owned by
+        // VerifyWriteBindingsGoThroughTheRegistry, so the receiver is deliberately not pinned here.
         Assert(host.Contains("BindReadOnly<string>(\"help-section-key\"")
                && host.Contains("host.Session.HoverGraceFrames = HelpHoverGracePasses")
                && !host.Contains("set-help-hover")
-               && host.Contains("BindAction<string>(\"scroll-to\""),
+               && host.Contains("Action<string>(\"scroll-to\""),
             "the Host owns help-section-key/scroll-to wiring, sets the grace length on the session, "
             + "and the retired hover/selection channels stay dead (single event authority)");
     }
@@ -445,6 +706,21 @@ internal static class UiSourceInvariantTests
                 }
 
                 at = close + 1;
+            }
+        }
+
+        // Step B widened the claim SOURCES, not the rule: since the engine claims a hovered element's
+        // HelpKey, a claim can be DECLARED in the manifest - that is the hook that let the checklist's
+        // search field and row template drop their imperative UsKernelDraw.HelpHover sites without losing
+        // help coverage. A manifest HelpKey that names an item is therefore a claim like any other, and the
+        // bidirectionality below (every claim resolves, every item is claimed) covers both sources.
+        foreach (string key in EnumerateManifestAttributes(
+                     Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml"), "HelpKey"))
+        {
+            string[] parts = key.Split('/');
+            if (parts.Length == 3 && parts[0] == "us" && parts[1].Length > 0 && parts[2].Length > 0)
+            {
+                claimed.Add(key);
             }
         }
 
@@ -637,50 +913,126 @@ internal static class UiSourceInvariantTests
             "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
-    // 10. The retractable help drawer is INDEPENDENT state (brief: "Help visibility is independent
-    //     state. Do not reuse active-tab"). The engine's only binding-driven visibility switch is the
-    //     Tab attribute, which it compares against UiBindings.ActiveTabKey - so a drawer that rode
-    //     active-tab would leak into workspace switching and leave a reserved column whenever the
-    //     workspace happened to match. This guard is two-sided: the manifest's drawer element declares
-    //     no Tab, and the consumer drives visibility through its own state/binding/revision names. A
-    //     regression that re-binds help visibility to the workspace fails here, at build-gate time.
-    private static void VerifyHelpDrawerIsIndependentState(string root)
+    // 10. The bottom help panel (BH1) is INDEPENDENT state (brief: "Help visibility is independent
+    //     state. Do not reuse active-tab"). The engine compares the Tab attribute against
+    //     UiBindings.ActiveTabKey - so a panel that rode active-tab would leak into workspace switching
+    //     and leave a reserved band whenever the workspace happened to match. The declarative switch for
+    //     this page is VisibleKey="help-open": a bool value binding that is this page's own state, gating
+    //     the ONE presentation. BH1 retired the two derived presentation keys (help-open-wide /
+    //     help-open-narrow) and body-visible together with the defensive band they selected, so the guard
+    //     now has a second half: the retired keys must stay absent, and the body row must be
+    //     unconditional again.
+    private static void VerifyHelpPanelIsIndependentState(string root)
     {
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
         string manifest = Path.Combine(ui, "Layout.Schema2.xml");
         var document = new XmlDocument();
         document.XmlResolver = null;
         document.Load(manifest);
-        XmlNode? drawerElement = document.SelectSingleNode("//*[@Id='help-scroll']");
-        Assert(drawerElement != null,
-            "Layout.Schema2.xml must keep the Id='help-scroll' drawer element; without it help has no home");
-        Assert(!((XmlElement)drawerElement!).HasAttribute("Tab"),
-            "the help drawer element must not carry a Tab attribute: Tab is the engine's active-tab switch, "
+        XmlElement? band = document.SelectSingleNode("//*[@Id='help-scroll']") as XmlElement;
+        Assert(band != null,
+            "Layout.Schema2.xml must keep the Id='help-scroll' band element; without it help has no home");
+        Assert(!band!.HasAttribute("Tab"),
+            "the help band must not carry a Tab attribute: Tab is the engine's active-tab switch, "
             + "and help visibility is independent state");
+        Assert(band.HasAttribute("VisibleKey")
+                && string.Equals(band.GetAttribute("VisibleKey"), "help-open", StringComparison.Ordinal),
+            "the help band must be hidden DECLARATIVELY through VisibleKey=\"help-open\" - the one key the"
+            + " player's footer switch writes");
+        Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal) == false,
+            "the band must not ask to Fill: a Fill child that also pins a Height is refused the flexible"
+            + " slot by the engine, and the footer would then leave the page");
+        Assert(band.HasAttribute("Height"),
+            "the band must declare its reservation as a Height (the number BH1.1 budgets and the panel lane"
+            + " reads back from this file)");
+
+        // The retired machinery must stay retired: a reappearing derived key means the drawer presentation
+        // came back in some form, and a body row gated by a key means a help state can eat the settings.
+        Assert(document.SelectSingleNode("//*[@Id='help-band']") == null,
+            "the defensive full-width band (help-band) must not come back: the single bottom element"
+            + " with the stable id 'help-scroll' owns the one declared presentation");
+        Assert(document.SelectSingleNode("//*[@Id='help-panel-narrow']") == null,
+            "the second help panel instance must not come back with the retired band");
+        XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='body-row']") as XmlElement;
+        Assert(bodyRow != null && !bodyRow!.HasAttribute("VisibleKey"),
+            "the body row must be unconditional again: BH1 removed the 'body-visible' swap so no help"
+            + " state can replace the settings");
+        Assert(document.SelectNodes("//*[@VisibleKey='help-open-wide']").Count == 0
+                && document.SelectNodes("//*[@VisibleKey='help-open-narrow']").Count == 0
+                && document.SelectNodes("//*[@VisibleKey='body-visible']").Count == 0,
+            "the derived presentation keys must be gone from the manifest: help-open is the only truth about"
+            + " whether the panel is showing");
+        Assert(document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count == 1,
+            "exactly ONE element may bind the panel command, found "
+            + document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count);
+        Assert(document.SelectNodes("//*[@ActionBind='toggle-help-panel']").Count == 0,
+            "the command the footer switch binds is the stable one: a renamed binding is a second token"
+            + " the persistence and retired scans would miss");
+        XmlElement? footer = document.SelectSingleNode("//*[@Id='footer-band']") as XmlElement;
+        Assert(footer != null && footer!.Name.Equals("Row", StringComparison.Ordinal)
+                && footer.SelectSingleNode("*[@Id='footer']") != null
+                && footer.SelectSingleNode("*[@Id='help-toggle']") != null,
+            "the footer band must be a Row holding the status widget and the page's single help switch");
+        XmlElement? header = document.SelectSingleNode("//*[@Id='header-band']") as XmlElement;
+        Assert(header != null && header!.SelectSingleNode("*[@Id='help-toggle']") == null,
+            "the header band must no longer hold the switch: BH1 moved it next to the band it opens");
 
         string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");
         CheckSourceContains(hostPath, new[]
         {
             "\"help-open\"",
-            "SetHelpDrawerOpen",
+            "SetHelpPanelOpen",
         },
-        "the Host must own help visibility as its own value binding and write the drawer state through the source boundary");
+        "the Host must own help visibility as its own value binding and write the panel state through the source boundary");
+        foreach (string retired in new[] { "\"help-open-wide\"", "\"help-open-narrow\"", "\"body-visible\"", "pageWidthFeed" })
+        {
+            CheckSourceDoesNotContain(hostPath, retired,
+                "the Host must not keep the retired presentation machinery: " + retired);
+        }
 
         string statePath = Path.Combine(ui, "Model", "VoicePacksPageState.cs");
-        CheckSourceContains(statePath, new[] { "HelpDrawerOpen" },
+        CheckSourceContains(statePath, new[] { "HelpPanelOpen" },
             "help visibility must live in the per-window page state");
-        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpDrawerOpen = false;", StringComparison.Ordinal) >= 0,
-            "HelpDrawerOpen must default to false: the shipped window opens narrow (vanilla-like) with the"
-            + " help drawer retracted, and only widens when the player expands it");
+        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpPanelOpen = false;", StringComparison.Ordinal) >= 0,
+            "HelpPanelOpen must default to false: the shipped window opens with the panel retracted above"
+            + " the footer, and expanding it never widens or moves the window");
 
-        string variantsPath = Path.Combine(ui, "Layout", "UsLayoutVariants.cs");
-        CheckSourceContains(variantsPath, new[] { "\"help-scroll\"", "Roots" },
-            "the drawer must be a layout variant applied through the host's manifest roots (the carrier ships "
-            + "no binding-driven column visibility; see UsLayoutVariants)");
+        // The settings window used to read the drawer state to resize itself. With one window width there is
+        // nothing left for it to read, so a window that names the panel state again is the widening coming
+        // back through the side door.
+        CheckSourceDoesNotContain(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"), "HelpPanelOpen",
+            "the settings window must not read or size for the help state any more: BH1 removed the second"
+            + " width, so the window owns no help decision");
 
-        CheckSourceContains(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"),
+        // The retired mechanism must not come back in any form - not as the file, and not inlined into the
+        // Host. Rebuilding the manifest root list removes the element from the definition, and the engine
+        // releases a removed element's node together with its scroll position (0.4 -> 0.6 semantics).
+        Assert(!File.Exists(Path.Combine(ui, "Layout", "UsLayoutVariants.cs")),
+            "UsLayoutVariants must not come back: a rebuilt root list omits the element, and the engine"
+            + " releases an omitted element's node and scroll position");
+        CheckSourceDoesNotContain(hostPath, "UsLayoutVariants",
+            "the Host must not reference the retired root-list variant");
+        CheckSourceDoesNotContain(hostPath, "TryReplaceRoots",
+            "the Host must not install a rebuilt root list by hand");
+        CheckSourceDoesNotContain(hostPath, "manifest.Roots",
+            "the Host must not mutate the manifest root list: that is the removed-element path, and"
+            + " visibility is declarative now");
+
+        // The Help switch's Keyed caption moved with the control and kept its stable machine key
+        // (S3-2a into the header, BH1 into the footer). It is the manifest's footer button that carries
+        // TextKey, and the page-title widget must own neither the caption nor a drawn switch. Both halves
+        // are asserted, because "the caption exists" is not "the page exposes it" and not "the widget
+        // lost it". A renamed caption key would be a second live token the persistence and retired
+        // scans miss, so the placeholder name the presentation round briefly tried must stay out.
+        CheckSourceContains(Path.Combine(ui, "Layout.Schema2.xml"),
             new[] { "\"US.Help.Drawer.Toggle\"" },
-            "the page header must expose the discoverable Help toggle through the Keyed table");
+            "the footer switch must expose its caption through the Keyed table: the caption belongs to the"
+            + " declared footer button");
+        CheckSourceDoesNotContain(Path.Combine(ui, "Layout.Schema2.xml"), "US.Help.Panel.Toggle",
+            "no second caption key in the manifest: the switch keeps its stable machine name");
+        CheckSourceDoesNotContain(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"), "US.Help.",
+            "the page-title widget must not carry the Help switch's caption any more: the switch is declared"
+            + " in the manifest, and a caption without a control is the drift this pair exists to catch");
     }
     private static Dictionary<string, string> ReadKeyedTable(string path)
     {
@@ -724,7 +1076,10 @@ internal static class UiSourceInvariantTests
 
         foreach (string manifest in ManifestPaths(root))
         {
-            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey" })
+            // PlaceholderKey joined the list with step B: the checklist's search hint moved from a C#
+            // literal into the input/text-field element, and a key the scanner does not collect is a
+            // reference that can never be asserted to exist.
+            foreach (string attribute in new[] { "TitleKey", "CaptionKey", "TextKey", "LabelKey", "HelpKey", "PlaceholderKey" })
             {
                 foreach (string value in EnumerateManifestAttributes(manifest, attribute))
                 {
@@ -741,6 +1096,7 @@ internal static class UiSourceInvariantTests
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
         yield return Path.Combine(ui, "Layout.Schema2.xml");
         yield return Path.Combine(ui, "Layout.Overlay.Schema2.xml");
+        yield return Path.Combine(ui, "Layout.RemixConfirm.Schema2.xml");
     }
 
     private static bool SamePlaceholders(string english, string chinese)

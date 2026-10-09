@@ -1,0 +1,6 @@
+# frozen FerriteLib carrier pin for the RESET1 backend verification runs.
+# Path is the RELATIVE payload identity inside the FerriteLib repository
+# (coahuilite.ferritelib); the machine-local absolute path of the reference
+# checkout is deliberately NOT stored here or in any tracked artifact - it is
+# kept only in the private PM evidence directory (review1-original-reset1/).
+648f5769fe9a31c13a645086e3e17a2482316ea20e1f0f27a4c8739f994a264a  ferritelib:1.6/Assemblies/FerriteLib.UiKit.dll

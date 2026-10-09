@@ -4,6 +4,7 @@ using System.IO;
 using UniversalSqueaker;
 using UniversalSqueaker.Kernel;
 using Verse;
+using Verse.Sound;
 
 namespace UniversalSqueaker.SettingsMigrationTests;
 
@@ -43,6 +44,7 @@ internal static class Program
             AudioDomainsRejectWhitespace();
             GlobalVolumeDefaultsAndClamps();
             GlobalVolumeScribeRoundTrip();
+            BabyActionsOptInAndCoverage();
             SetDistanceRangeClampsAndMarksCustom();
 
             if (failures == 0)
@@ -830,6 +832,63 @@ internal static class Program
         Check(Math.Abs(settings.distanceRange.min - beforeNoop.min) < 0.0001f
             && Math.Abs(settings.distanceRange.max - beforeNoop.max) < 0.0001f,
             "distance-range: same Custom range is no-op", ref failures);
+    }
+
+    // Mutation-proven: unconditional eligibility fails the OFF coverage assertion; removing the
+    // Scribe field fails the ON round-trip assertion. Remaining checks are guards. Coverage executes
+    // the production Def method; runtime sound playback is not simulated.
+    private static void BabyActionsOptInAndCoverage()
+    {
+        Scenario("baby-actions-opt-in-coverage-and-persistence");
+        UniversalSqueakerSettings settings = NewSettings();
+        bool wasBiotech = ModsConfig.BiotechActive;
+        string path = Path.Combine(Path.GetTempPath(), "us-baby-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            ModsConfig.BiotechActive = true;
+            Check(!settings.allowBabyActions && !settings.BabyActionsEnabled, "baby: default is OFF", ref failures);
+            Check((int)SqueakAction.Crying == 15 && (int)SqueakAction.Giggling == 16,
+                "baby: serialized action IDs stay append-only", ref failures);
+            var pack = new SqueakVoicePackDef();
+            for (int i = 0; i < 15; i++) pack.actions.Add(new SqueakVoicePackAction
+                { action = (SqueakAction)i, sounds = new List<SoundDef> { new SoundDef() } });
+            Check(pack.CountPlayableActions(false) == 15 && pack.CountPlayableActions(true) == 15,
+                "baby: absent resources remain uncovered with either setting", ref failures);
+            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Crying, sounds = new List<SoundDef> { new SoundDef() } });
+            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Giggling, sounds = new List<SoundDef> { new SoundDef() } });
+            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Call, sounds = new List<SoundDef> { new SoundDef() } });
+            pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)999, sounds = new List<SoundDef> { new SoundDef() } });
+            Check(pack.CountPlayableActions(false) == 15 && pack.CountPlayableActions(true) == 17,
+                "baby: OFF excludes both, ON includes both, duplicate/unknown entries never inflate coverage", ref failures);
+            Check(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, settings.BabyActionsEnabled)
+                && !SqueakActionEligibility.IsEligible(SqueakAction.Giggling, settings.BabyActionsEnabled)
+                && SqueakActionEligibility.IsEligible(SqueakAction.MentalBreak, settings.BabyActionsEnabled),
+                "baby: OFF gates only the two baby actions, not genuine mental breaks", ref failures);
+            SafeSaver.Save(path, "Settings", () => settings.ExposeData());
+            Check(!File.ReadAllText(path).Contains("allowBabyActions"), "baby: default field is omitted", ref failures);
+            var loaded = NewSettings();
+            loaded.allowBabyActions = true;
+            Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
+            Check(!loaded.allowBabyActions, "baby: old settings without the field load OFF", ref failures);
+            settings.SetAllowBabyActions(true);
+            Check(settings.BabyActionsEnabled && SqueakActionEligibility.IsEligible(SqueakAction.Crying, settings.BabyActionsEnabled)
+                && SqueakActionEligibility.IsEligible(SqueakAction.Giggling, settings.BabyActionsEnabled),
+                "baby: ON is effective immediately", ref failures);
+            SafeSaver.Save(path, "Settings", () => settings.ExposeData());
+            loaded = NewSettings();
+            Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
+            Check(loaded.allowBabyActions && loaded.BabyActionsEnabled, "baby: ON survives Scribe round-trip", ref failures);
+            ModsConfig.BiotechActive = false;
+            Check(!loaded.BabyActionsEnabled && pack.CountPlayableActions(loaded.BabyActionsEnabled) == 15,
+                "baby: no Biotech keeps routing/coverage ineligible without deleting the saved preference", ref failures);
+            settings.SetAllowBabyActions(false);
+            Check(!settings.allowBabyActions, "baby: switch can be closed again", ref failures);
+        }
+        finally
+        {
+            ModsConfig.BiotechActive = wasBiotech;
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
     // ---- helpers ----

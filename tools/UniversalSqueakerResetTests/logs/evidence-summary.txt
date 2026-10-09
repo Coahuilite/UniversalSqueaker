@@ -1,0 +1,32 @@
+US-RESET1 backend evidence summary (2026-10-09, worktree checkpoint/reset1-20261009; review1-corrected: carrier pin sanitized to relative payload identity)
+== carried inputs (byte-pinned) ==
+66c58ab55e0f987574d26f811b44ba99bf9e5414a7e6276f10b62fee0b5ba37a  Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.Reset.cs
+05a0acee8eac4c880148836831e0854ee4273aa918c85d015151b6393a8a4833  tools/UniversalSqueakerResetTests/Program.cs
+39326ad8bb824521ca2f6132f038e1a26beac4da925fa6e8a062893afdf49918  tools/UniversalSqueakerResetTests/UniversalSqueakerResetTests.csproj
+313d4fd949961ff66c06eb144beae373dc8468be03bea6132d9ad6896c99a6b7  tools/UniversalSqueakerResetTests/Directory.Build.props
+697919da98b745a1ea05858b7d12c34840e9d7f50563bb2a66530189bfdf5989  tools/UniversalSqueakerResetTests/Stubs/UnityEngineStubs.cs
+3927bb7d70d91b900b6293b3a08b864b6ecec3168b9c723bb3f6a3eab619e2ac  tools/UniversalSqueakerResetTests/Stubs/VerseStubs.cs
+bc881f1e6818fdedeea26e940a3dcc6a6f72442d5ee17dd7999a424f5959937e  tools/UniversalSqueakerResetTests/Stubs/UniversalSqueakerStubs.cs
+e443ee1f645f52f85b3bfb059d146afaf439552abd9a1426ac2475262de7fe4b  tools/UniversalSqueakerResetTests/logs/fl-carrier-pin.txt
+== stub snapshot provenance ==
+697919da98b745a1ea05858b7d12c34840e9d7f50563bb2a66530189bfdf5989  tools/UniversalSqueakerSettingsMigrationTests/Stubs/UnityEngineStubs.cs
+3927bb7d70d91b900b6293b3a08b864b6ecec3168b9c723bb3f6a3eab619e2ac  tools/UniversalSqueakerSettingsMigrationTests/Stubs/VerseStubs.cs
+== runs ==
+harness-build-4.log sha256=667d157b51cc440b4812a66d31ea231721909c2286f09f66d985666813e489ed lines=12
+product-build-1.log sha256=d1451e26b440c24f1edbbbcdca161bb2d82b34055061261edbc30f0df15b5be5 lines=9
+product-build-final.log sha256=205ebb97a0ef12da46b943a4dc85a2ab181057cb8591de6ce4034a8e60dc2b3f lines=9
+reset-run-1.log sha256=942d0bdc80e7fdc1891881e3e43425702d7372ca7a52e29366db631f4bf523d1 lines=151
+reset-run-2.log sha256=63913c2fe120a6447d3eadb0e6e862ed5a526b2a72624081265caeb266386a79 lines=151
+reset-run-final.log sha256=d6b62669ad564d2f0c4497ef9c9606ac569ccf25da4831bdc237ea776910b287 lines=151
+reset-revert-R1.log sha256=1fd7309ee3cde633785a612b42080816d6a25db7363f1b554080ebacf26c61de lines=151
+reset-revert-R2.log sha256=3d0b1f3299f0ca972f503cd935f4de8c790895489cd790024271fb2f4250f971 lines=151
+reset-revert-R3.log sha256=efcce08816ab6111d121df43c190ef9f178c58a3a18b1407de1443eaf8f6a176 lines=151
+== verification totals ==
+UniversalSqueaker RESET1 restore verification PASSED (120 checks).
+120
+tools/UniversalSqueakerResetTests/logs/reset-revert-R1.log:UniversalSqueaker RESET1 restore verification FAILED (27/120).
+tools/UniversalSqueakerResetTests/logs/reset-revert-R2.log:UniversalSqueaker RESET1 restore verification FAILED (2/120).
+tools/UniversalSqueakerResetTests/logs/reset-revert-R3.log:UniversalSqueaker RESET1 restore verification FAILED (2/120).
+== review1 hygiene (executed 2026-10-09) ==
+targeted current-tree privacy check: pwsh -NoProfile -File scripts/privacy-audit.ps1 -> PRIVACY AUDIT CLEAN (exit 0); log: tools/UniversalSqueakerResetTests/logs/privacy-current-tree-review1.log sha256=1885fa6fc37ff9b6609b54695d393ae93bfdb5046d8b6b0bda9c2351d998e341
+sanitized pin sha256=e443ee1f645f52f85b3bfb059d146afaf439552abd9a1426ac2475262de7fe4b; original machine-path pin retained ONLY in private PM evidence review1-original-reset1/
