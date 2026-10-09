@@ -269,6 +269,31 @@ internal static class UsHelpCatalog
                     "US.Diagnostics.Geometry.Report",
                     "US.Help.Diagnostics.LayoutReport.Text"),
             }),
+        // US-RESET1: the restore-defaults help. One section for the global entry (the Overview
+        // restore card) and one for the per-area entries; the fallback tables' own restore entries
+        // stay in us/fallback - these never touch them and say so.
+        ["us/reset-center"] = new HelpSection(
+            "us/reset-center",
+            "US.Section.RestoreDefaults",
+            "US.Help.ResetCenter.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/reset-center/restore-all",
+                    "US.Reset.RestoreAll",
+                    "US.Help.ResetCenter.RestoreAll.Text"),
+            }),
+        ["us/reset-area"] = new HelpSection(
+            "us/reset-area",
+            "US.Reset.Area",
+            "US.Help.ResetArea.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/reset-area/button",
+                    "US.Reset.Area",
+                    "US.Help.ResetArea.Button.Text"),
+            }),
         ["us/scope-tree"] = new HelpSection(
             "us/scope-tree",
             "US.Section.LayeredTuning",

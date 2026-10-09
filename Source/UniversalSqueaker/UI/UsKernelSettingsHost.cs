@@ -126,6 +126,19 @@ public static class UsKernelSettingsHost
 
         return host;
     }
+    /// <summary>US-RESET1: end this host's open draft when a restore is about to write, so a stale
+    /// field cannot overwrite the restored value on a later Enter or focus-out. The cleanup is exactly
+    /// ONE rung of the cancel ladder, entered only while an edit is open: with a live field edit the
+    /// ladder answers the EDIT itself (a popup or a held capture cannot coexist with it - the funnel's
+    /// own outside-click press ends the edit before either can open), so this never reaches a business
+    /// CancelBind, never loops the ladder, and never touches another window's native capture. The
+    /// marked discard applies at the field's own next draw - before any later Enter or focus-out -
+    /// and the temporary confirmation window covering the page never commits the draft either, which
+    /// is the existing outside-click contract (a real outside click still commits).</summary>
+    public static void EndOpenDraft(UiHost? host)
+    {
+        if (host != null && host.Session.ActiveEditNode != null) host.TryHandleCancel();
+    }
 
     /// <summary>
     /// Delayed session revision bump for the Host binding boundary. Bindings are built before the
@@ -773,6 +786,44 @@ public static class UsKernelSettingsHost
             "cancel-tuning-context",
             () => { VoicePacksPageModel.CancelTuningContext(state); bump(); },
             () => VoicePacksPageModel.CanCancelTuningContext(state));
+        // US-RESET1 (UI integration): the restore EFFECT commands. One invoke runs the backend restore
+        // exactly once through the source facade (the settings' own publish/persistence funnel is never
+        // re-called here); the revision advances only when the restore actually wrote (Applied), because
+        // NoChange/Rejected changed nothing on screen and the UI must not claim a save for them. The
+        // simple restores (distance defaults, one action row) execute directly from their buttons;
+        // the multi-field ones are reached through the us/reset-entry widget's confirmation window -
+        // a ceremony that writes nothing until the answer arrives is NOT a write key (the UiSource-
+        // Invariant gate and the revision-clock contract both reserve this registry for writes).
+        writes.Command(
+            "reset-all-settings",
+            () => { if (source.ResetAllSettings() == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-distance-defaults",
+            () => { if (source.ResetDistanceDefaults() == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-normal-distance",
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Distance) == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-normal-basics",
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Basics) == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-normal-timing",
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Timing) == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-normal-diagnostics",
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
+        writes.Command(
+            "reset-action-row",
+            () => { if (source.ResetActionTuningRow(state.TuningSelectedAction) == SqueakResetOutcome.Applied) bump(); },
+            () => state.TuningSelectedAction.Length > 0 && source.CanResetTuningArea());
+        writes.Command(
+            "reset-action-area",
+            () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) bump(); },
+            () => source.CanResetTuningArea());
+        writes.Command(
+            "reset-mood-area",
+            () => { if (source.ResetMoodTuningArea() == SqueakResetOutcome.Applied) bump(); },
+            () => source.CanResetTuningArea());
 
         return writes;
     }

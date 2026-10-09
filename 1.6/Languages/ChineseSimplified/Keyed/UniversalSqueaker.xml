@@ -482,4 +482,24 @@
 
   <US.Distance.AxisCaption>相机高度 {0}–{1}（游戏数值） · 音量 100%→0%</US.Distance.AxisCaption>
   <US.Preset.List.BaselineNote>此处是只读基线。应用会写入勾选的域；当前值可在调音页查看和修改。</US.Preset.List.BaselineNote>
+  <!-- US-RESET1: 恢复默认条目。确认文案列出各恢复写入的字段(展示文案;字段集合由后端拥有,
+       并由恢复 harness 钉住)。 -->
+  <US.Section.RestoreDefaults>恢复默认</US.Section.RestoreDefaults>
+  <US.Reset.RestoreAll>恢复所有 US 设置</US.Reset.RestoreAll>
+  <US.Reset.RestoreAll.Caption>把所有 Universal Squeaker 设置恢复为默认值。绝不触碰你的最终 fallback 玩家表及其声音映射。</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>这将把所有 Universal Squeaker 设置恢复为默认值:普通设置(输出音量、播放行为、触发时机、诊断)、全部动作与心情调音覆盖(全局及各层域)、包选择、已应用预设记录及其来源锚点。保留:全部最终 fallback 玩家表及其声音映射、全部作者/Def 内容、设置 schema 与迁移诊断。此操作无法在本窗口内撤销。</US.Reset.RestoreAll.Confirm>
+  <US.Reset.Area>恢复此区域默认</US.Reset.Area>
+  <US.Reset.Row>恢复此行默认</US.Reset.Row>
+  <US.Reset.DistanceDefaults>恢复听取距离默认</US.Reset.DistanceDefaults>
+  <US.Reset.Confirm>确认恢复</US.Reset.Confirm>
+  <US.Reset.Area.Distance.Confirm>这将把听取距离区域恢复为默认值:输出音量、距离预设与距离范围。动作/心情调音、包选择与 fallback 表保持不变。</US.Reset.Area.Distance.Confirm>
+  <US.Reset.Area.Basics.Confirm>这将把播放行为区域恢复为默认值:彩蛋音效、随时间速度缩放冷却、随说话缩放频率、随可见人口缩放周期、相机指示器、婴儿动作、进食精确度及其药物子开关。其它区域与 fallback 表保持不变。</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Timing.Confirm>这将把触发时机区域恢复为默认值:最小间隔与全局冷却乘数。其它区域与 fallback 表保持不变。</US.Reset.Area.Timing.Confirm>
+  <US.Reset.Area.Diagnostics.Confirm>这将把诊断区域恢复为默认值:开发者日志模式与本地化调试动作菜单。每窗口的布局诊断开关不是设置,不受影响。</US.Reset.Area.Diagnostics.Confirm>
+  <US.Reset.Area.Action.Confirm>这将把下方所示当前层域的每一条动作行恢复为默认值(范围、间隔与概率覆盖,以及该行的预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Mood.Confirm>这将把下方所示当前层域的每条心情行恢复为默认值(音高、音量与抖动及其预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Mood.Confirm>
+  <US.Help.ResetCenter.Overview>恢复默认集中了全局入口:一问一答,一次操作把所有 Universal Squeaker 设置回到默认。卡片同时写明保留项——首先是你的最终 fallback 玩家表及其声音映射,这里的任何恢复都不会触碰。</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>全局恢复覆盖普通设置、全部动作/心情调音覆盖(全局及各层域)、包选择,以及已应用预设记录与其来源锚点。它和任何普通改动走同一条发布与保存通道,且只走一次。取消不写入任何数据;fallback 表、作者/Def 内容与 schema/迁移诊断均保留。</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetArea.Overview>每个区域自带恢复入口:确认窗口逐条列出该区域将写入的字段,并说明哪些保持不变。简单恢复(距离预设与范围、单条动作行)直接执行,不再提问。</US.Help.ResetArea.Overview>
+  <US.Help.ResetArea.Button.Text>区域恢复只写当前可见区域的字段——不碰其它区域、其它层域的调音值,也不碰 fallback 表。动作/心情区域按钮在提问中写明当前层与域;目标为空或失效时不提供任何恢复。"恢复此区域默认"(含输出音量)与"恢复听取距离默认"(仅预设与范围)是两个入口,范围不同。</US.Help.ResetArea.Button.Text>
 </LanguageData>

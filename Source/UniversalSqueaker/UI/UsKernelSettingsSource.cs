@@ -492,6 +492,63 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 
     public void CancelPackResults()
         => VoicePacksPageModel.CancelPackResults(state, BuildView());
+    // ---------------------------------------------------------------------------------------------
+    // US-RESET1 (UI integration): the restore facades. Each method ends THIS host's open draft first
+    // (the cancel ladder's edit rung only - UsKernelSettingsHost.EndOpenDraft), then calls the backend
+    // restore exactly once; the backend's own publish/persistence funnel is never re-called here, and
+    // the returned outcome is the only save claim the UI may make. The area/row identity is the page's
+    // EXACT tuning layer - an empty or invalid target is Rejected, never a silent fall back to Global.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Layer-identity validity for the area/row restores: layer 0 is the (legitimately empty)
+    /// Global domain; layer 1 needs the race; layer 2 needs race AND xenotype (the XG1 empty target
+    /// must not restore as Global).</summary>
+    public bool CanResetTuningArea() => state.TuningLayer switch
+    {
+        0 => true,
+        1 => state.TuningRaceDefName.Length > 0,
+        2 => state.TuningRaceDefName.Length > 0 && state.TuningXenotypeDefName.Length > 0,
+        _ => false,
+    };
+
+    public SqueakResetOutcome ResetAllSettings()
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        return settings.ResetAllSettings();
+    }
+
+    public SqueakResetOutcome ResetDistanceDefaults()
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        return settings.ResetDistanceDefaults();
+    }
+
+    public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area)
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        return settings.ResetNormalArea(area);
+    }
+
+    public SqueakResetOutcome ResetActionTuningRow(string actionKey)
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
+        return settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
+    }
+
+    public SqueakResetOutcome ResetActionTuningArea()
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
+        return settings.ResetActionTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
+    }
+
+    public SqueakResetOutcome ResetMoodTuningArea()
+    {
+        UsKernelSettingsHost.EndOpenDraft(host);
+        if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
+        return settings.ResetMoodTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
+    }
 
     // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
     public void SetActionTuning(string actionKey, bool intervalField, float? value)

@@ -486,4 +486,24 @@
 
   <US.Distance.AxisCaption>Camera height {0}–{1} (game values) · Volume 100%→0%</US.Distance.AxisCaption>
   <US.Preset.List.BaselineNote>Read-only baselines. Apply writes to the checked domains; view and adjust current values on Tuning.</US.Preset.List.BaselineNote>
+  <!-- US-RESET1: restore-defaults entries. The confirm texts list the fields each restore writes
+       (display copy; the field SET is owned by the backend and pinned by the reset harness). -->
+  <US.Section.RestoreDefaults>Restore defaults</US.Section.RestoreDefaults>
+  <US.Reset.RestoreAll>Restore all US settings</US.Reset.RestoreAll>
+  <US.Reset.RestoreAll.Caption>Restores every Universal Squeaker setting to its default. Your final-fallback player tables and their sound mappings are never touched.</US.Reset.RestoreAll.Caption>
+  <US.Reset.RestoreAll.Confirm>This restores ALL Universal Squeaker settings to defaults: plain settings (output level, playback behaviour, trigger timing, diagnostics), every action and mood tuning override (global and per layer/domain), pack selections, and applied preset records with their source anchors. KEPT: every final-fallback player table and its sound mappings, all author/Def content, and the settings schema/migration diagnostics. This cannot be undone from this window.</US.Reset.RestoreAll.Confirm>
+  <US.Reset.Area>Restore this area</US.Reset.Area>
+  <US.Reset.Row>Restore row</US.Reset.Row>
+  <US.Reset.DistanceDefaults>Restore distance defaults</US.Reset.DistanceDefaults>
+  <US.Reset.Confirm>Restore</US.Reset.Confirm>
+  <US.Reset.Area.Distance.Confirm>This restores the distance area to defaults: output volume, distance preset and the distance range. Action/mood tuning, pack selection and fallback tables are kept.</US.Reset.Area.Distance.Confirm>
+  <US.Reset.Area.Basics.Confirm>This restores the playback-behaviour area to defaults: easter-egg sounds, scale cooldown with time speed, scale frequency with talking, scale periodic with audible population, camera indicator, baby actions, eat precision and its include-drugs child. Other areas and fallback tables are kept.</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Timing.Confirm>This restores the trigger-timing area to defaults: the minimum interval and the global cooldown multiplier. Other areas and fallback tables are kept.</US.Reset.Area.Timing.Confirm>
+  <US.Reset.Area.Diagnostics.Confirm>This restores the diagnostics area to defaults: the developer log mode and the localized debug-action menu. The per-window layout-diagnosis switches are not settings and are untouched.</US.Reset.Area.Diagnostics.Confirm>
+  <US.Reset.Area.Action.Confirm>This restores EVERY action row of the current layer/domain shown below to defaults (scope, interval and probability overrides plus the row's preset anchor). Other layers, domains and areas are kept.</US.Reset.Area.Action.Confirm>
+  <US.Reset.Area.Mood.Confirm>This restores EVERY mood row of the current layer/domain shown below to defaults (pitch, volume and jitter plus their preset anchors). Other layers, domains and areas are kept.</US.Reset.Area.Mood.Confirm>
+  <US.Help.ResetCenter.Overview>Restore defaults holds the global entry: one question, one answer, every Universal Squeaker setting back to its default in a single pass. The card states what is kept - above all your final-fallback player tables and their sound mappings, which no restore here ever touches.</US.Help.ResetCenter.Overview>
+  <US.Help.ResetCenter.RestoreAll.Text>The global restore covers the plain settings, every action/mood tuning override (global and per layer/domain), the pack selections and the applied preset records with their source anchors. It runs through the same publish and save path as any ordinary change, once. Cancel writes nothing; the fallback tables, author/Def content and the schema/migration diagnostics are kept.</US.Help.ResetCenter.RestoreAll.Text>
+  <US.Help.ResetArea.Overview>Each area carries its own restore: the question lists exactly the fields the area writes and names what stays untouched. Simple restores (the distance preset and range, a single action row) execute directly without a question.</US.Help.ResetArea.Overview>
+  <US.Help.ResetArea.Button.Text>The area restore writes defaults for the fields of the visible area only - never other areas, never the tuning values of other layers or domains, and never the fallback tables. The action/mood area buttons name the current layer and domain in the question; an empty or invalid target offers no restore at all. "Restore this area" (with the output level) and "Restore distance defaults" (preset and range only) are different entries with different scopes.</US.Help.ResetArea.Button.Text>
 </LanguageData>

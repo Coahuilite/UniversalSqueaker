@@ -224,6 +224,11 @@
                 <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision-include-drugs" AlignX="Left" />
               </Column>
             </Row>
+            <!-- US-RESET1: the Basics-area restore, the body's eighth child (the card formula counts
+                 it inside the body). The question (US.Reset.Area.Basics.Confirm) lists the eight
+                 fields this card and the camera-indicator toggle own; the us/reset-entry widget opens
+                 the question and stages the effect key through the same UiBindings the writes use. -->
+            <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
           </Column>
         </Section>
         <!-- S4-3: the trigger-timing card is DECLARATIVE and its kind (us/timing) is retired in the same
@@ -273,6 +278,8 @@
             <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" Scheme="us-command-button" />
             </Row>
           </Row>
+          <!-- US-RESET1: the Timing-area restore (interval floor + cooldown multiplier). -->
+          <Widget Id="timing-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Timing.Confirm" EffectKey="reset-normal-timing" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
@@ -308,6 +315,11 @@
               <Widget Id="diagnostics-localize-check" Kind="input/checkbox" Appearance="switch" Bind="localize-debug-menu" SelectedKey="localize-debug-menu" Width="36" Height="30" HelpKey="us/diagnostics/localize-debug" AlignX="Left" />
             </Column>
           </Row>
+          <!-- US-RESET1: the Diagnostics-area restore (log mode + localized debug menu). It sits
+               right under the two persisted rows it restores, ABOVE the geometry heading: the
+               layout-capture switches are per-window session state, not settings, and this
+               restore never touches them. -->
+          <Widget Id="diagnostics-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Diagnostics.Confirm" EffectKey="reset-normal-diagnostics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
           <!-- R3-B: the developer LAYOUT diagnosis controls. Two switches, the capture status sentence and
                the report answer, all bound to real commands the host dispatches:
                  layout-capture        - start/stop capturing every arranged node of THIS window's host
@@ -353,6 +365,16 @@
             </Row>
           </Column>
         </Section>
+        <!-- US-RESET1 (§4.3): the GLOBAL restore's home. It sits last on the settings home page;
+             the question enumerates the impact (plain settings, tuning overrides, pack selection,
+             preset records and anchors) AND the retained items (every fallback player table and
+             sound mapping, author/Def content, schema/migration diagnostics). Cancel writes
+             nothing; the staged action runs the effect key exactly once. -->
+        <Section Id="restore-center" Tab="Overview" Padding="12" Gap="8" Scheme="us-flat-panel">
+          <Widget Id="restore-center-header" Kind="us/section-header" TitleKey="US.Section.RestoreDefaults" Height="26" HelpKey="us/reset-center" />
+          <Widget Id="restore-center-caption" Kind="text/wrapped" TextKey="US.Reset.RestoreAll.Caption" Emphasis="Muted" HelpKey="us/reset-center" />
+          <Widget Id="restore-center-button" Kind="us/reset-entry" TextKey="US.Reset.RestoreAll" TitleKey="US.Reset.RestoreAll" MessageKey="US.Reset.RestoreAll.Confirm" EffectKey="reset-all-settings" Width="200" Height="24" AlignX="Left" HelpKey="us/reset-center/restore-all" />
+        </Section>
         <!-- S4-3b: the Distance card is DECLARATIVE and its kind (us/attenuation-editor) is retired in the
              same change. Card chrome is the engine's Section with the checklist card's explicit geometry.
              The chart is the engine's own chart/line declared directly - the composite used to build a
@@ -397,6 +419,14 @@
               <Widget Id="attenuation-preset-balanced" Kind="input/button" TextKey="US.Distance.Preset.Balanced" SelectedKey="distance-preset-balanced" ActionBind="set-distance-preset" PayloadKey="distance-preset-balanced-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
               <Widget Id="attenuation-preset-strong" Kind="input/button" TextKey="US.Distance.Preset.Strong" SelectedKey="distance-preset-strong" ActionBind="set-distance-preset" PayloadKey="distance-preset-strong-value" HelpKey="us/attenuation-editor/presets" Scheme="us-command-button" />
             </Row>
+          <!-- US-RESET1: the two distance entries keep their distinct semantics (§4.3): the first
+               restores ONLY the preset and the range, directly (a simple restore); the second is
+               the Distance+volume AREA restore through the confirmation window - it names the
+               output level among its fields, which the simple restore explicitly keeps. -->
+          <Row Id="attenuation-restores" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
+            <Widget Id="attenuation-reset-defaults" Kind="input/button" TextKey="US.Reset.DistanceDefaults" ActionBind="reset-distance-defaults" Height="24" HelpKey="us/reset-area/button" Scheme="us-command-button" />
+            <Widget Id="attenuation-reset-area" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Distance.Confirm" EffectKey="reset-normal-distance" Height="24" HelpKey="us/reset-area/button" />
+          </Row>
           </Column>
         </Section>
         <!-- US-PACK1 (§4.2): ONE filter region for the whole page. The composed conditions are the

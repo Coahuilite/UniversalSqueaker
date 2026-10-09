@@ -324,22 +324,32 @@ internal static class PackCardsLaneTests
         Assert(afterSang2.ManualExpanded && afterSang2.Expanded,
             "the player's own expansion survived the clear untouched");
 
-        // And the result layer collapses exactly the manual set (the auto half is the query's).
+        // US-ESC1 closure (pm-pack1-collapse probe run-e45eb2e, defect B): while the keyword is up,
+        // BOTH open cards are the query's answer - sang is pure auto, sang2 is manual+auto, and
+        // collapsing sang2's latent flag would change nothing on screen. The layer declines; the
+        // manual state is RETAINED for the query clear, which restores it visibly.
         host.Bindings.Set("search-text", "sanguophage");
         ArrangeAndDraw(host);
+        Assert(!host.Bindings.TryInvokeCommand("cancel-pack-results"),
+            "a masked manual expansion is not an executable layer: with every visible card still held "
+            + "open by the query, the result layer declines instead of answering with an empty return");
+        Assert(fake.ViewState.PackCardsExpanded.Contains("us.sang2"),
+            "the decline wrote nothing - the player's latent flag survives for the query clear");
+        host.Bindings.Set("search-text", "");
+        ArrangeAndDraw(host);
+        PackCardView restored = fake.BuildView().PackCards[1];
+        Assert(restored.ManualExpanded && !restored.AutoExpanded && restored.Expanded,
+            "the query clear restored exactly the manual expansion as the player's own visible layer");
         Assert(host.Bindings.TryInvokeCommand("cancel-pack-results"),
-            "with a manual card open the result layer answers");
+            "with a manual-only visible card the collapse has a visible effect, and the layer answers");
         ArrangeAndDraw(host);
         Assert(fake.ViewState.PackCardsExpanded.Count == 0,
             "the collapse cleared exactly the manual set");
-        PackCardView stillAuto = fake.BuildView().PackCards[0];
-        PackCardView manualNowAuto = fake.BuildView().PackCards[1];
-        Assert(stillAuto.AutoExpanded && stillAuto.Expanded
-                && manualNowAuto.AutoExpanded && !manualNowAuto.ManualExpanded,
-            "the query's auto-expansion is NOT something the cancel silently erased - it is the query's, "
-            + "and it leaves when the query does; the player's flag left with the player's layer");
-        host.Bindings.Set("search-text", "");
-        ArrangeAndDraw(host);
+        PackCardView sangGone = fake.BuildView().PackCards[0];
+        PackCardView sang2Gone = fake.BuildView().PackCards[1];
+        Assert(!sangGone.Expanded && !sang2Gone.Expanded,
+            "the manual card closed with the press; the auto card had already left with the query - "
+            + "the cancel never erases the query's own state behind its back");
     }
 
     // ---------------------------------------------------------------- real clicks (step 6)

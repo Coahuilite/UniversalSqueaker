@@ -92,6 +92,24 @@ public interface IUsKernelSettingsSource
     // keyword (SetSearchText) is the page's only text condition and it narrows the card rows.
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
     // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
+    // US-RESET1 (UI integration): the restore operations the settings page exposes. Each call goes
+    // through the backend's single publish/persistence funnel EXACTLY once (the UI never re-calls it);
+    // the returned outcome is the only save claim the UI may make - NoChange/Rejected wrote nothing.
+    // A restore also ends THIS host's open draft through the cancel ladder's edit rung only, so a
+    // stale field cannot overwrite the restored value on a later Enter or focus-out; nothing else on
+    // the ladder (business return layers, other windows) is touched.
+    SqueakResetOutcome ResetAllSettings();
+    SqueakResetOutcome ResetDistanceDefaults();
+    SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area);
+    SqueakResetOutcome ResetActionTuningRow(string actionKey);
+    /// <summary>True when the CURRENT tuning layer carries a valid domain identity for the area/row
+    /// restores: layer 0 is legitimately Global, layer 1 needs the race, layer 2 needs race AND
+    /// xenotype. An empty or invalid target must never fall back to a Global-area restore.</summary>
+    bool CanResetTuningArea();
+    /// <summary>Batch restore for the CURRENT layer+domain action area; the identity is the page's
+    /// exact tuning layer, never a fallback to Global for an empty or invalid target.</summary>
+    SqueakResetOutcome ResetActionTuningArea();
+    SqueakResetOutcome ResetMoodTuningArea();
 
     // Developer layout diagnosis (R3-B). These are per-WINDOW developer switches, not settings: they are
     // never persisted, never touch Config or a save, and they are deliberately NOT routed through

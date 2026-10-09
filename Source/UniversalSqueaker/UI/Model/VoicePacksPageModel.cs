@@ -1093,12 +1093,16 @@ public static class VoicePacksPageModel
 
     /// <summary>The cards-list form the host and the boundary witness call directly: the decision is a
     /// function of the CURRENTLY VISIBLE cards (the projection already applied every condition), so a
-    /// caller that has the projected list need not rebuild the whole view.</summary>
+    /// caller that has the projected list need not rebuild the whole view.
+    /// ESC1 closure (pm-pack1-collapse probe run-e45eb2e, defect B): the manual expansion must also be
+    /// the REASON the card is open. A card that is manual AND auto-expanded (the keyword hits its rows)
+    /// stays open when the manual flag collapses - clearing that latent state has no visible effect and
+    /// would be an empty return; the manual state is retained so the query clear restores it visibly.</summary>
     public static bool CanCancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
     {
         if (state == null || visibleCards == null) return false;
         for (int i = 0; i < visibleCards.Count; i++)
-            if (visibleCards[i].ManualExpanded) return true;
+            if (visibleCards[i].ManualExpanded && !visibleCards[i].AutoExpanded) return true;
         return false;
     }
 
@@ -1111,14 +1115,16 @@ public static class VoicePacksPageModel
         if (view != null) CancelPackResults(state, view.PackCards);
     }
 
-    /// <summary>The cards-list form: removes from the manual set exactly the VISIBLE manual keys.</summary>
+    /// <summary>The cards-list form: removes from the manual set exactly the manual-only VISIBLE keys
+    /// (same predicate as the CanCancel above - a masked or hidden manual state is retained, never
+    /// half-collapsed).</summary>
     public static void CancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
     {
         if (state == null || visibleCards == null) return;
         for (int i = 0; i < visibleCards.Count; i++)
         {
             PackCardView card = visibleCards[i];
-            if (card.ManualExpanded) state.PackCardsExpanded.Remove(card.Key);
+            if (card.ManualExpanded && !card.AutoExpanded) state.PackCardsExpanded.Remove(card.Key);
         }
     }
 
@@ -1744,11 +1750,40 @@ public static class VoicePacksPageModel
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>Packs page: can Esc return from the currently shown operation domain? (Result layer:
-    /// the card already shows no domain, or the user already cancelled → the layer declines.)</summary>
+    /// the card already shows no domain, or the user already cancelled → the layer declines.)
+    /// ESC1 closure (pm-pack1-collapse probe, defect A): the selection must also be VISIBLE — a row
+    /// of the current filtered result inside an EXPANDED card. A selection kept latent while its card
+    /// is collapsed, or hidden by the active conditions, is not an executable layer: consuming the key
+    /// there is an invisible Esc with nothing on screen changing. Retaining the hidden selection for
+    /// when the conditions return stays allowed; answering the key with it is not.</summary>
     public static bool CanCancelDomainSelection(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return false;
-        return !state.DomainSelectionCanceled && view.SelectedDomain.HasValue;
+        return !state.DomainSelectionCanceled
+            && view.SelectedDomain.HasValue
+            && IsSelectedDomainVisible(view);
+    }
+
+    /// <summary>True when the selected domain is drawn right now: an EXPANDED card of the projected
+    /// result emits a row with exactly this domain identity. The row set is already filtered, so this
+    /// reads the same answer the screen shows.</summary>
+    public static bool IsSelectedDomainVisible(VoicePacksViewState view)
+    {
+        if (view == null || !view.SelectedDomain.HasValue) return false;
+        VoicePackDomainView d = view.SelectedDomain.Value;
+        IReadOnlyList<PackCardView> cards = view.PackCards;
+        for (int i = 0; i < cards.Count; i++)
+        {
+            if (!cards[i].Expanded) continue;
+            IReadOnlyList<PackCardDomainRowView> rows = cards[i].Rows;
+            for (int r = 0; r < rows.Count; r++)
+            {
+                if (rows[r].Scope == d.Scope
+                    && rows[r].RaceDefName == d.RaceDefName
+                    && rows[r].TargetDefName == d.TargetDefName) return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>Packs return layer: exit the operation domain. The filter conditions, the two domain

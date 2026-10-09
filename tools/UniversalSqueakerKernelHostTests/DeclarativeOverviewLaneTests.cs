@@ -582,11 +582,13 @@ internal static class DeclarativeOverviewLaneTests
                             "the declarative rows must separate by whitespace: the card still declares a"
                             + " chrome/rule separator at " + width + " (" + language + ")");
 
-                        // MUTATION PROOF: the body is the declared stack - six rows and one declared Column Gap
-                        // between every neighbour - so changing a declared band, a row or the body's own Gap
+                        // MUTATION PROOF: the body is the declared stack - seven rows plus the
+                        // US-RESET1 area-restore row, one declared Column Gap between every neighbour -
+                        // so changing a declared band, a row, the restore row or the body's own Gap
                         // reddens here instead of silently moving the card.
                         float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height);
-                        float expectedBody = rowSum + BasicBodyGap * (BasicRows.Length - 1);
+                        float restoreHeight = RectOf(snapshot, "basic-tuning-restore").height;
+                        float expectedBody = rowSum + restoreHeight + BasicBodyGap * BasicRows.Length;
                         Assert(Math.Abs(bodyHeight - expectedBody) <= 0.5f,
                             "the declared body must be the rows + the Column's own Gap at " + width + " ("
                             + language + "): body " + bodyHeight + " vs " + expectedBody + " (rows " + rowSum

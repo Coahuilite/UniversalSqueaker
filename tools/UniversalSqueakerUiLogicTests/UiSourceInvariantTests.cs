@@ -448,7 +448,11 @@ internal static class UiSourceInvariantTests
         // appearance-less or its geometry moves at 320px). R2 shrank it 13 -> 12 (us/square-toggle): the
         // eight ON/OFF controls are the carrier's input/checkbox with Appearance="switch" now, so the kind
         // that existed only because "the knob's end depends on a bound bool" is expressible in the shared
-        // vocabulary. The parity assertion above is what keeps the pin
+        // vocabulary. US-RESET1 grew it 12 -> 13 with us/reset-entry: the confirmation-gated restore
+        // entry. input/button can only name a WRITE binding, and a ceremony that writes nothing until
+        // the answer arrives must not enter the write registry (the six-raw-sites gate above and the
+        // revision-clock contract both reserve it for writes), so the question window is a composite.
+        // The parity assertion above is what keeps the pin
         // honest in both directions: a kind exists only because a manifest element uses it, and it
         // disappears the day none does.
         //
@@ -456,8 +460,8 @@ internal static class UiSourceInvariantTests
         // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
         // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
         // is expected red, run it AND run what follows it separately.
-        Assert(registeredKinds.Count == 12,
-            "the registered us/* kind set must have 12 members (11 settings + 1 overlay), got "
+        Assert(registeredKinds.Count == 13,
+            "the registered us/* kind set must have 13 members (12 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 

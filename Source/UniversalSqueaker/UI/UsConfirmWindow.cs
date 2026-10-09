@@ -41,6 +41,11 @@ public sealed class UsConfirmWindow
     private readonly UiBindings bindings;
     private readonly ITextMetrics? dialogMetrics;
 
+    // The stack this slot's catalog opens on. Open re-creates the slot when a caller names a
+    // DIFFERENT stack (the harness injects a fresh one per lane); the same stack reuses the slot,
+    // which is what lets a superseded question be closed through the same catalog.
+    private readonly WindowStack stack;
+
     private string title = "";
     private string message = "";
     private string confirmLabel = "";
@@ -51,6 +56,7 @@ public sealed class UsConfirmWindow
 
     private UsConfirmWindow(WindowStack stack, ITextMetrics? dialogMetrics)
     {
+        this.stack = stack;
         this.dialogMetrics = dialogMetrics;
         UsKernelWidgetRegistrar.EnsureRegistered();
         bindings = new UiBindings();
@@ -81,8 +87,22 @@ public sealed class UsConfirmWindow
         WindowStack target = stack ?? Find.WindowStack;
         if (target == null) return null;
 
-        UsConfirmWindow flow = active ??= new UsConfirmWindow(target, null);
-        flow.CloseCurrent(); // one question at a time; the previous one is cancelled, never run
+        UsConfirmWindow? slot = active;
+        if (slot != null && !ReferenceEquals(slot.stack, target))
+        {
+            // A different stack (the harness's per-lane stack): the old slot belongs to the old
+            // stack, so start fresh rather than opening on a stack the caller no longer holds.
+            slot = null;
+        }
+        UsConfirmWindow flow = slot ?? new UsConfirmWindow(target, null);
+        active = flow;
+        // One question at a time: close the previous window through THIS slot's own catalog (its
+        // detach drops the staged action, so a superseded question is cancelled, never run). The
+        // slot itself stays live - the old CloseCurrent call also nulled `active` right after the
+        // ??= above, which made the field permanently null while a question was on screen AND let a
+        // second Open leak an unclosable first window (a fresh instance cannot close an old
+        // catalog's window). Found by the US-RESET1 ceremony lane driving the widget press.
+        flow.catalog.Close(WindowKey);
         flow.title = title ?? "";
         flow.message = message ?? "";
         flow.confirmLabel = confirmLabel ?? "";
@@ -94,6 +114,15 @@ public sealed class UsConfirmWindow
     /// <summary>The dialog page's own command table (the Remix flow's seam): lanes drive the exact
     /// commands the real buttons fire, on the SAME table the UiPageWindow draws against.</summary>
     public IUiBindings DialogBindings => bindings;
+    /// <summary>The live question slot while one is staged (set by Open, cleared when an answer or
+    /// CloseCurrent retires it; an ESC teardown leaves the slot for the next Open to reuse). A lane
+    /// that drives a CEREMONY through the real widget press (not through Open's own return value)
+    /// reaches the dialog's command table and its message text through this seam.</summary>
+    public static UsConfirmWindow? Active => active;
+
+    /// <summary>The question text currently staged - resolved display strings, so a lane can assert
+    /// that a scope-naming confirmation actually NAMES the scope (the §4.3 wording rule).</summary>
+    public string MessageText => message;
 
     /// <summary>The dialog page's audit scope while attached (null otherwise) - the DT1 developer
     /// panel targets it for outline/capture/report like any other US window.</summary>

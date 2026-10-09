@@ -273,12 +273,14 @@ internal static class DeclarativeTimingLaneTests
                         Rect minus = RectOf(snapshot, "timing-multiplier-minus");
                         Rect field = RectOf(snapshot, "timing-multiplier-field");
                         Rect plus = RectOf(snapshot, "timing-multiplier-plus");
+                        // US-RESET1: the area-restore row is the Section's fourth declared child.
+                        Rect restore = RectOf(snapshot, "timing-restore");
 
                         // The card chrome relation the checklist card already pins: Padding + header +
                         // Section Gap + the declared children + their gaps + Padding accounts for the card.
                         float expectedCard = CardPadding + header.height + SectionGap
                             + intervalRow.height + SectionGap + slider.height + SectionGap
-                            + multiplierRow.height + CardPadding;
+                            + multiplierRow.height + SectionGap + restore.height + CardPadding;
                         Assert(Math.Abs(card.height - expectedCard) <= 0.5f,
                             "the timing card must equal Padding + header + Section Gaps + the declared rows at "
                             + width + " (" + language + "): card " + Num(card.height) + " vs "

@@ -261,6 +261,8 @@ internal static class Program
             () => XenotypeEmptyTargetLaneTests.RunAll());
         Step("PRE1/Tuning action multipliers: real writer to real fold round trip",
             () => TuningMultiplierLaneTests.RunAll());
+        Step("US-RESET1 UI: ceremony, direct entries, scope naming, draft integration",
+            () => ResetUiLaneTests.RunAll());
     }
 
     /// <summary>
@@ -1303,7 +1305,18 @@ internal static class Program
             // step; the CANCELLABLE state is pre-set directly on the fake's own page state (never
             // through a bumping write).
             { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
-            { "cancel-domain-selection", () => { fake.ViewState.DomainSelectionCanceled = false; fake.ViewState.RaceFilter = ""; fake.ViewState.XenotypeFilter = ""; host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
+            { "cancel-domain-selection", () => {
+                // ESC1 closure: the selection answers only while it is VISIBLE - a row of an expanded
+                // card in the current result. The probe opens the card that carries the row, selects
+                // that row's domain, and reprojects - the same reachability the real click lane drives.
+                VoicePacksPageState dst = fake.ViewState;
+                dst.SearchText = ""; dst.PackFilter = default; dst.RaceFilter = ""; dst.XenotypeFilter = "";
+                dst.PackCardsExpanded.Add(cardKey);
+                PackCardDomainRowView domainRow = sangCard.Rows[0];
+                VoicePacksPageModel.SelectDomain(dst, domainRow.Scope, domainRow.RaceDefName, domainRow.TargetDefName);
+                dst.DomainSelectionCanceled = false;
+                fake.ReprojectAtCurrentRevision();
+                host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
             // review-1: the result layer answers only for a VISIBLE manual expansion, so the probe
             // clears every condition first (the earlier filter probes would otherwise hide the card),
             // opens the card through the manual set, and reprojects - a manual-set change is not a
@@ -1316,6 +1329,19 @@ internal static class Program
                 host.Bindings.TryInvokeCommand("cancel-pack-results"); } },
             { "cancel-tuning-target", () => { fake.ViewState.TuningArea = 0; fake.ViewState.TuningSelectedAction = "Eat"; fake.ReprojectAtCurrentRevision(); host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
             { "cancel-tuning-context", () => { fake.ViewState.TuningContextActive = true; host.Bindings.TryInvokeCommand("cancel-tuning-context"); } },
+            // US-RESET1: the restore EFFECT keys are display writes when the backend wrote (Applied is
+            // the fake's default outcome); the NoChange/Rejected silence has its own ResetUi lane. The
+            // confirm-* ceremonies are raw bindings (their first press writes nothing by contract) and
+            // are therefore NOT in writes.Bound - the effect keys above are what the clock must follow.
+            { "reset-all-settings", () => host.Bindings.Invoke("reset-all-settings") },
+            { "reset-distance-defaults", () => host.Bindings.Invoke("reset-distance-defaults") },
+            { "reset-normal-distance", () => host.Bindings.Invoke("reset-normal-distance") },
+            { "reset-normal-basics", () => host.Bindings.Invoke("reset-normal-basics") },
+            { "reset-normal-timing", () => host.Bindings.Invoke("reset-normal-timing") },
+            { "reset-normal-diagnostics", () => host.Bindings.Invoke("reset-normal-diagnostics") },
+            { "reset-action-row", () => { fake.ViewState.TuningSelectedAction = "Eat"; host.Bindings.Invoke("reset-action-row"); } },
+            { "reset-action-area", () => host.Bindings.Invoke("reset-action-area") },
+            { "reset-mood-area", () => host.Bindings.Invoke("reset-mood-area") },
         };
 
         var registered = new List<string>();

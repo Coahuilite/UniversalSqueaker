@@ -327,10 +327,12 @@ internal static class DeclarativeAttenuationLaneTests
                             + " (" + language + "): card " + Num(card.height) + " vs " + Num(expectedCard));
 
                         // V4 adds the live axis caption above the chart; retain the exact geometry guard.
+                        // US-RESET1: the two restore entries are the body's fifth child.
                         Rect axisCaption = snapshot.RectById["attenuation-axis-caption"];
-                        float expectedBody = axisCaption.height + BodyGap + chart.height + BodyGap + status.height + BodyGap + presets.height;
+                        Rect restoresRow = snapshot.RectById["attenuation-restores"];
+                        float expectedBody = axisCaption.height + BodyGap + chart.height + BodyGap + status.height + BodyGap + presets.height + BodyGap + restoresRow.height;
                         Assert(Math.Abs(body.height - expectedBody) <= 0.5f,
-                            "the body must be axis caption + Gap + chart + Gap + status + Gap + the preset row at " + width + " ("
+                            "the body must be axis caption + Gap + chart + Gap + status + Gap + the preset row + Gap + the restore row at " + width + " ("
                             + language + "): body " + Num(body.height) + " vs " + Num(expectedBody));
 
                         // The chart keeps its declared height and the body's width.

@@ -33,6 +33,7 @@ internal static class CancelLayerLaneTests
         PacksReturnLayerOnePressOneLayer();
         ReSelectAndWorkspaceSwitchRebuildTheBranch();
         HiddenManualIsNoLayerVisibleManualCollapsesOnce();
+        RootHandoffNeedsNoEmptyLayerAfterVisibleRelease();
         ExplicitTargetsExpireAndRealClicksClimb();
         TuningLadderIsScopedToTheVisibleBranch();
         DefaultGlobalContextReturnsOnceWithRealClick();
@@ -161,6 +162,96 @@ internal static class CancelLayerLaneTests
         Assert(!answered4 && fourth.type != EventType.Used,
             "press 4: every declared layer declined, so nothing consumed the key - only the root closes, "
             + "and that is Verse's job on this press");
+    }
+    /// <summary>
+    /// ESC1 aggregate closure (§4.1, integration contract line 7): after the active branch is cancelled,
+    /// the release of the selection/interaction is OBSERVABLE (the domain highlight leaves and no
+    /// consecutive projection re-picks it), and the NEXT press reaches Verse unconsumed - the handoff
+    /// press. Because the branch release already completed the root arrival, the root needs NO extra
+    /// layer that only raises the key count, and the help layer's own close must not masquerade as this
+    /// proof. Re-clicking rebuilds the branch, which then answers its own Esc again. The row highlight's
+    /// actual pixels are the human pass; the observable state answer here is the projection's own
+    /// SelectedDomain, which is exactly what the selection surface reads.
+    /// </summary>
+    private static void RootHandoffNeedsNoEmptyLayerAfterVisibleRelease()
+    {
+        BuildPacksView(out RecordingSettingsSource fake);
+        using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+        host.Bindings.Invoke("set-tab", "Packs");
+        Rect viewport = new(0f, 0f, PageWidth, PageHeight);
+        ArrangeAndDraw(host);
+
+        // (1) Real clicks establish the subject and the branch: open the card, then press its row.
+        Assert(Program.PressDeclarativeButton(host, viewport, "pack-card-row-expand#us.sang") == 1,
+            "the Contents press must open the card");
+        ArrangeAndDraw(host);
+        Assert(Program.PressDeclarativeButton(host, viewport, "pack-card-row-hit#us.sang|human|sanguophage") == 1,
+            "the row press must select the domain");
+        VoicePacksViewState armed = fake.BuildView();
+        Assert(armed.SelectedDomain.HasValue && VoicePacksPageModel.IsSelectedDomainVisible(armed),
+            "setup: the selection is on screen - the branch is real, not a latent state");
+        Assert(host.Session.LastInteractionNode != null,
+            "the row press recorded its subject - the walk starts from the interaction");
+
+        // (2) Press 1 answers the domain layer WITH the visible release, and the release survives
+        // consecutive projections (a full arrange pass plus two rebuilds) - nothing re-picks.
+        (bool domain, Event de) = PressEscape(host);
+        Assert(domain && de.type == EventType.Used, "press 1 answers the visible domain layer");
+        Assert(fake.ViewState.DomainSelectionCanceled, "the cancel is the explicit state, not a blanking");
+        host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        VoicePacksViewState released = fake.BuildView();
+        Assert(!released.SelectedDomain.HasValue && !VoicePacksPageModel.IsSelectedDomainVisible(released),
+            "the selection release is observable across consecutive projections - the return does not re-select");
+        Assert(fake.BuildView().SelectedDomain == null, "and a third rebuild still shows no domain");
+
+        // (3) Press 2 answers the result layer - the card visibly collapses.
+        (bool result, Event pe) = PressEscape(host);
+        Assert(result && pe.type == EventType.Used, "press 2 answers the result layer");
+        ArrangeAndDraw(host);
+        Assert(fake.ViewState.PackCardsExpanded.Count == 0 && !fake.BuildView().PackCards[0].Expanded,
+            "the manual card visibly collapsed - the branch is fully released");
+
+        // (4) Press 3: every layer declines, so the key reaches Verse UNCONSUMED. That press is the
+        // handoff; no empty root layer sits between the release and Verse's close.
+        (bool handoff, Event he) = PressEscape(host);
+        Assert(!handoff && he.type != EventType.Used,
+            "the next press reaches Verse unconsumed - only the root closes, and the root adds no layer");
+
+        // (5) Re-click rebuilds the branch and it answers again.
+        Assert(Program.PressDeclarativeButton(host, viewport, "pack-card-row-expand#us.sang") == 1,
+            "a fresh Contents press rebuilds the card");
+        ArrangeAndDraw(host);
+        Assert(Program.PressDeclarativeButton(host, viewport, "pack-card-row-hit#us.sang|human|sanguophage") == 1,
+            "the row is pressable again");
+        Assert(!fake.ViewState.DomainSelectionCanceled && fake.BuildView().SelectedDomain.HasValue,
+            "the re-selection cleared the mark - the branch is live");
+        (bool rebuilt, Event be) = PressEscape(host);
+        Assert(rebuilt && be.type == EventType.Used && fake.ViewState.DomainSelectionCanceled,
+            "and the rebuilt branch answers its own Esc");
+        PressEscape(host); // collapse the card again so only help can answer below
+        ArrangeAndDraw(host);
+
+        // (6) Help answers with its OWN visible effect and cannot masquerade as the root-release proof:
+        // that proof was already paid at press 1. Open help through the real footer switch, then show
+        // the ladder answers help and the NEXT press again reaches Verse.
+        UiLayoutSnapshot snap = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        Program.DrawWithPointer(host, viewport, new Vector2(PageWidth / 2f, 140f));
+        if (!snap.RectById.TryGetValue("help-toggle", out Rect toggle))
+        {
+            throw new Exception("CancelLayer lane: the footer help switch did not materialise a rect");
+        }
+        Vector2 press = new(toggle.x + toggle.width / 2f, toggle.y + toggle.height / 2f);
+        Program.DrawWithEvent(host, viewport, EventType.MouseDown, press);
+        Program.DrawWithEvent(host, viewport, EventType.MouseUp, press);
+        ArrangeAndDraw(host);
+        Assert(fake.ViewState.HelpPanelOpen, "setup: the real footer click opened the help panel");
+        (bool help, Event he2) = PressEscape(host);
+        Assert(help && !fake.ViewState.HelpPanelOpen,
+            "the help layer answers with its own visible close - a separate layer, not the root release");
+        (bool final, Event fe) = PressEscape(host);
+        Assert(!final && fe.type != EventType.Used,
+            "and only after every layer declined does the press reach Verse - no fabricated empty layer");
     }
 
     private static void ReSelectAndWorkspaceSwitchRebuildTheBranch()
@@ -423,17 +514,34 @@ internal static class CancelLayerLaneTests
     {
         BuildPacksView(out RecordingSettingsSource fake);
         VoicePacksPageState state = fake.ViewState; // the view and the state must be ONE pairing
+        // ESC1 closure (defect A): a selection is a layer only while its row is ON SCREEN. Open the
+        // card that carries the row and select through that row's own identity.
+        VoicePacksViewState v0 = fake.BuildView();
+        PackCardView firstCard = v0.PackCards[0];
+        PackCardDomainRowView domainRow = firstCard.Rows[0];
+        state.PackCardsExpanded.Add(firstCard.Key);
+        VoicePacksPageModel.SelectDomain(state, domainRow.Scope, domainRow.RaceDefName, domainRow.TargetDefName);
         VoicePacksViewState view = fake.BuildView();
 
         Assert(VoicePacksPageModel.CanCancelDomainSelection(state, view),
-            "with a shown domain and no mark, the packs layer can answer");
+            "with a VISIBLE domain row and no mark, the packs layer can answer");
         VoicePacksPageModel.CancelDomainSelection(state);
+        VoicePacksViewState cancelled = fake.BuildView();
         Assert(state.DomainSelectionCanceled
-                && !VoicePacksPageModel.CanCancelDomainSelection(state, view),
+                && !VoicePacksPageModel.CanCancelDomainSelection(state, cancelled),
             "after the return the veto is honest: TryInvokeCommand would climb past");
-        VoicePacksPageModel.SelectDomain(state, SqueakVoicePackScope.Race, "human", "");
-        Assert(!state.DomainSelectionCanceled && VoicePacksPageModel.CanCancelDomainSelection(state, view),
+        VoicePacksPageModel.SelectDomain(state, domainRow.Scope, domainRow.RaceDefName, domainRow.TargetDefName);
+        VoicePacksViewState rearmed = fake.BuildView();
+        Assert(!state.DomainSelectionCanceled && VoicePacksPageModel.CanCancelDomainSelection(state, rearmed),
             "a new selection re-arms the layer");
+        // The rejection clause: collapse the card. The selection stays retained as latent state, but
+        // the layer must decline while nothing on screen shows it - consuming the key there is the
+        // invisible Esc the probe witnessed.
+        state.PackCardsExpanded.Remove(firstCard.Key);
+        VoicePacksViewState hidden = fake.BuildView();
+        Assert(hidden.SelectedDomain.HasValue
+                && !VoicePacksPageModel.CanCancelDomainSelection(state, hidden),
+            "a selection whose row is collapsed away is retained, never an invisible Esc layer");
 
         BuildPacksView(out RecordingSettingsSource fake2);
         fake2.FallbackTableAutoRace = "RaceA";

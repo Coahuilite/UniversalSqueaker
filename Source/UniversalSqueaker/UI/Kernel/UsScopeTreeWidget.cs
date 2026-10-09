@@ -240,6 +240,12 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // exist at CREATION, or the tree layer would silently never answer (FL's walk skips unregistered
         // keys instead of throwing - which is why an unvalidated typo needs this guard, not luck).
         bindings.ValidateCommand("cancel-tuning-target", elementPath);
+        // US-RESET1: the three restore keys this composite invokes (row direct, the two area
+        // confirmations' staged actions). Same creation-time rule as the cancel keys above: an
+        // unregistered typo must fail at once, not half-draw a button whose press answers nothing.
+        bindings.ValidateCommand("reset-action-row", elementPath);
+        bindings.ValidateCommand("reset-action-area", elementPath);
+        bindings.ValidateCommand("reset-mood-area", elementPath);
 
     }
 
@@ -386,11 +392,30 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
         if (area == 0)
         {
+            // US-RESET1: the action-area batch restore sits on the area's own header line. The
+            // button is drawn only while the CURRENT layer identity is valid (the effect command's
+            // CanExecute is the single answer) - an XG1 empty target never offers a restore that
+            // could silently fall back to Global. The question names the exact layer/domain; the
+            // staged action runs the effect key through the same bindings.
+            bool canAreaReset = ctx.Bindings.CanExecute("reset-action-area");
+            float areaResetWidth = 132f; // distinct from the measured scope-trigger band widths
             UsKernelDraw.Label(
-                new Rect(x, y, innerWidth, RowHeight),
+                new Rect(x, y, Math.Max(1f, innerWidth - (canAreaReset ? areaResetWidth + RowGap : 0f)), RowHeight),
                 UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
                 ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
                 TextAnchor.MiddleLeft);
+            if (canAreaReset
+                && UsKernelDraw.SelectionButton(
+                    new Rect(x + innerWidth - areaResetWidth, y, areaResetWidth, RowHeight), ctx,
+                    UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false))
+            {
+                IUiBindings editorBindings = ctx.Bindings;
+                UsConfirmWindow.Open(
+                    UsKernelDraw.Keyed(ctx, "US.Reset.Area"),
+                    UsKernelDraw.Keyed(ctx, "US.Reset.Area.Action.Confirm") + " " + AreaResetScopeText(layer, ctx),
+                    UsKernelDraw.Keyed(ctx, "US.Reset.Confirm"),
+                    () => editorBindings.TryInvokeCommand("reset-action-area"));
+            }
             y += RowHeight + RowGap;
 
             bool hasScopeRows = scopeRows.Count > 0;
@@ -434,11 +459,27 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         {
             if (moodRows.Count > 0)
             {
+                // US-RESET1: same header-line rule as the action area - the button exists only
+                // while the current layer identity is valid, and the question names it.
+                bool canMoodReset = ctx.Bindings.CanExecute("reset-mood-area");
+                float moodResetWidth = 132f; // same distinct width as the action area's entry
                 UsKernelDraw.Label(
-                    new Rect(x, y, innerWidth, RowHeight),
+                    new Rect(x, y, Math.Max(1f, innerWidth - (canMoodReset ? moodResetWidth + RowGap : 0f)), RowHeight),
                     UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
                     ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
                     TextAnchor.MiddleLeft);
+                if (canMoodReset
+                    && UsKernelDraw.SelectionButton(
+                        new Rect(x + innerWidth - moodResetWidth, y, moodResetWidth, RowHeight), ctx,
+                        UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false))
+                {
+                    IUiBindings editorBindings = ctx.Bindings;
+                    UsConfirmWindow.Open(
+                        UsKernelDraw.Keyed(ctx, "US.Reset.Area"),
+                        UsKernelDraw.Keyed(ctx, "US.Reset.Area.Mood.Confirm") + " " + AreaResetScopeText(layer, ctx),
+                        UsKernelDraw.Keyed(ctx, "US.Reset.Confirm"),
+                        () => editorBindings.TryInvokeCommand("reset-mood-area"));
+                }
                 y += RowHeight + RowGap;
 
                 MoodRowsLayout moodLayout = MoodRowsLayoutFor(innerWidth, ctx, moodRows);
@@ -493,6 +534,29 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         return null;
+    }
+    /// <summary>US-RESET1: names the CURRENT layer/domain in the area-restore question (§4.3: the
+    /// wording must state the scope). Layer 0 is the legitimate Global; layers 1/2 resolve their
+    /// domain through the same option list the domain dropdown draws, falling back to the raw def
+    /// names when the list has no entry (a race-only layer, or a target the catalog lost).</summary>
+    private string AreaResetScopeText(int layer, UiWidgetContext ctx)
+    {
+        int index = layer < 0 ? 0 : layer >= LayerKeys.Length ? LayerKeys.Length - 1 : layer;
+        string scope = UsKernelDraw.Keyed(ctx, LayerKeys[index]);
+        if (layer == 0) return scope;
+        string race = ctx.Bindings.TryGet("tuning-race", out string r) ? r : "";
+        string xeno = ctx.Bindings.TryGet("tuning-xeno", out string x) ? x : "";
+        IReadOnlyList<TuningDomainOptionView> domains = ctx.Bindings.TryGet("tuning-domains",
+            out IReadOnlyList<TuningDomainOptionView> d) ? d : Array.Empty<TuningDomainOptionView>();
+        foreach (TuningDomainOptionView domain in domains)
+        {
+            if (string.Equals(domain.RaceDefName, race, StringComparison.Ordinal)
+                && string.Equals(domain.TargetDefName, xeno, StringComparison.Ordinal))
+            {
+                return scope + ": " + domain.DisplayName;
+            }
+        }
+        return scope + ": " + (race.Length > 0 && xeno.Length > 0 ? race + "/" + xeno : race + xeno);
     }
 
     private float ActionEditorHeight(UiWidgetContext ctx, float width)
@@ -565,9 +629,24 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         string current = ctx.Bindings.TryGet("tuning-selected-action", out string s) ? s ?? "" : "";
+        // US-RESET1: the row's own restore-to-DEFAULT (all three overrides + the preset anchor of this
+        // exact layer+domain row). It is a SIMPLE restore - executed directly, no confirmation - and it
+        // stays a THIRD entry beside the existing restore-inheritance and reset-to-preset semantics,
+        // never merged with them. The button only exists while the effect command can answer (a row
+        // is selected and the layer identity is valid); the dropdown keeps the full width otherwise.
+        bool canRowReset = submittable && ctx.Bindings.CanExecute("reset-action-row");
+        float rowResetWidth = 104f; // distinct from ButtonWidth (96) and the stepper/inherit bands
+        float dropdownWidth = canRowReset ? Math.Max(1f, width - rowResetWidth - RowGap) : width;
         UsKernelDraw.Dropdown(
-            new Rect(x, y, width, RowHeight), "scope-tree-action-select", ctx, current, pairs,
+            new Rect(x, y, dropdownWidth, RowHeight), "scope-tree-action-select", ctx, current, pairs,
             selected => ctx.Bindings.Set("tuning-selected-action", selected));
+        if (canRowReset
+            && UsKernelDraw.SelectionButton(
+                new Rect(x + dropdownWidth + RowGap, y, rowResetWidth, RowHeight), ctx,
+                UsKernelDraw.Keyed(ctx, "US.Reset.Row"), ctx.Theme, false))
+        {
+            ctx.Bindings.Invoke("reset-action-row");
+        }
         y += RowHeight + RowGap;
 
         ActionScopeRowView? rowView = SelectedAction(rows, ctx);

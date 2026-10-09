@@ -904,6 +904,72 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         CancelPackResultsCount++;
         VoicePacksPageModel.CancelPackResults(state, BuildView());
     }
+    // US-RESET1 UI integration: the fake mirrors the production facade's DECISIONS (layer-identity
+    // guard, draft cleanup through the attached host) and records the calls; the real publish/
+    // persistence funnel counts stay the dedicated reset backend harness's boundary (120 checks).
+    // Lanes inject the outcome (default Applied) so the Applied-only bump and the NoChange/Rejected
+    // silence are each drivable.
+    public int ResetAllCount;
+    public int ResetDistanceCount;
+    public int ResetNormalAreaCount;
+    public int ResetActionRowCount;
+    public int ResetActionAreaCount;
+    public int ResetMoodAreaCount;
+    public SqueakResetOutcome NextResetOutcome = SqueakResetOutcome.Applied;
+    public SqueakNormalResetArea? LastNormalResetArea;
+    public string? LastResetActionKey;
+
+    public bool CanResetTuningArea() => state.TuningLayer switch
+    {
+        0 => true,
+        1 => state.TuningRaceDefName.Length > 0,
+        2 => state.TuningRaceDefName.Length > 0 && state.TuningXenotypeDefName.Length > 0,
+        _ => false,
+    };
+
+    public SqueakResetOutcome ResetAllSettings()
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetAllCount++;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetDistanceDefaults()
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetDistanceCount++;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area)
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetNormalAreaCount++;
+        LastNormalResetArea = area;
+        return NextResetOutcome;
+    }
+
+    public SqueakResetOutcome ResetActionTuningRow(string actionKey)
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetActionRowCount++;
+        LastResetActionKey = actionKey;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
+
+    public SqueakResetOutcome ResetActionTuningArea()
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetActionAreaCount++;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
+
+    public SqueakResetOutcome ResetMoodTuningArea()
+    {
+        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
+        ResetMoodAreaCount++;
+        return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
+    }
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.

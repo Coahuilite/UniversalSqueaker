@@ -29,6 +29,11 @@ public static class UsKernelWidgetRegistrar
 
             UsNavWidget.Register();
             UsSectionHeaderWidget.Register();
+            // US-RESET1: the confirmation-gated restore entry. A ceremony the declarative vocabulary
+            // cannot express: a press that opens the ordinary UiKit question window and stages the
+            // effect key - input/button can only name a write binding, and a write-nothing ceremony
+            // must not enter the write registry (UiSourceInvariant gate).
+            UsResetEntryWidget.Register();
             // T21: the THIRD growth on the kind pin, and the same class of addition as the two below it - a
             // surface the declarative vocabulary cannot express. A selected domain row needs a FILL and a
             // vertical 3px rail; chrome/rule paints horizontal lines only, and the row's only
