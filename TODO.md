@@ -5,7 +5,7 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — paired candidate staged; one human short pass open (2026-10-09)
+## NOW — interaction checkpoint accepted in game; next active discussion is UI/UX design and copy (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
 status and paired package identities are authoritative in the PM checkpoint evidence and manifest:
@@ -17,23 +17,23 @@ source/controlled-stub level (receipts `us/pm-ui1-esc1-technical-accepted.md`,
 `us/pm-integration-review1-accepted.md`), FL is frozen at `d5af4d8`, Demo-IC1 is accepted at `82664a11`
 (`demo/pm-demo-ic1-accepted.md`), and the paired Dev candidate `interaction-20261009-r1` is staged from
 source `562fc47` against the frozen Dev carrier (`us/candidate-staging.*`,
-`us/pm-candidate-staging-accepted.md`; directory and bytes preserved). The PM's final paired-manifest
-check may still be pending; nothing here expands the product scope.
+`us/pm-candidate-staging-accepted.md`; directory and bytes preserved). **The maintainer accepted the
+combined native short pass on 2026-10-09** — all seven items of `human-pass-20261009.md`, plus the
+diagnostics layout and a quick kernel smoke in their scopes; the formal window-geometry report artifact
+was not captured (a supplementary evidence gap, not by itself a new publication blocker). Nothing here
+expands the product scope.
 
-- [ ] **The ONE combined native short pass** (do not re-run accepted matrices; no preset-B reopen):
-  pack select/search/enable as revised by US-PACK1; compact US diagnostics and settings developer tools
-  at 1024x768 (D4's VisibleRows4.5 viewport follows the actual measured rows, no fixed 189px floor; DX1's
-  real-shell state-change guard checks the whole window position); per-race final native fallback edit
-  and new-race admission after a full restart; real
-  multi-window focus/key ownership and the confirm window's real-button clicks; native IME and real
-  fonts; long menus and scroll wheel; the restore operations (global/area/row) including window
-  placement under long EN/ZH copy. Real fonts, native input, actual playback and game Scribe
-  persistence remain human evidence, distinct from local checks and stubs.
+- [x] **The ONE combined native short pass — ACCEPTED by the maintainer 2026-10-09.** Covered: pack
+  select/search/enable as revised by US-PACK1; compact US diagnostics and settings developer tools at
+  1024x768; per-race final native fallback edit and new-race admission after a full restart; multi-window
+  focus/key ownership and the confirm window's real-button clicks; native IME and real fonts; long menus
+  and scroll wheel; the restore operations (global/area/row) including window placement under long EN/ZH
+  copy. Do not re-run accepted matrices; no preset-B reopen.
 - **Already accepted:** BH1 help usability, same-window position, real-font footer/long-help appearance,
   independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
   fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest); Demo-IC1.
   Observe regressions only. Unreported restore/restart branches are not a new PRE1 gate.
-- **Next:** the PM's final paired check and the single human pass; the settled chain is archived in
+- **Next:** the next active product discussion is UI/UX design and copy; the settled chain is archived in
   `OBLIVIONIS.md` and the durable facts in `MEMORY.md`. The FL-owned broader backlog (task-11, FL-17,
   FL-18/B6, FL-13/B10) stays excluded.
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
@@ -105,8 +105,8 @@ check may still be pending; nothing here expands the product scope.
   The checkpoint ships neutral Ratkin final-fallback data with Core audio references; PRE1 used a separate
   work-copy fixture. A/B effectiveness is already accepted; do not reopen that as an absent-content decision.
 - [ ] **Diagnostics follow-ups beyond DX1:** re-price author-name dropdown overflow only on a current
-  reproduction. Collapsed/expanded/empty geometry and compact navigation are implemented in DX1 and
-  await the whole-checkpoint human task.
+  reproduction. Collapsed/expanded/empty geometry and compact navigation are implemented in DX1 and rode
+  the checkpoint pass accepted 2026-10-09.
 - [ ] **0.5.x items A/B/C** (`MEMORY.md` "Release state and version scope"): (A) file-driven invocation + hot
   reload; (B) appearance file-driven + tier-2 granularity actually used; (C) structural migration.
 - [ ] **Route A re-price** and **optional tail**: the runtime harness does not cover the adapter
@@ -150,7 +150,9 @@ check may still be pending; nothing here expands the product scope.
   page widths are harness probes, not forced game-resolution instructions. BH1 already established one
   width per screen and an independent 140px help band; observe regressions only. Still open from earlier
   rounds: nav card compactness, Playback help entries, mood-card readability, and a session save/reopen.
-- [ ] **`ui.text.overflow` and tab-switch smoke** (F-05/F-07) as part of the ONE collected pass above.
+- [ ] **`ui.text.overflow` and tab-switch smoke** (F-05/F-07). The accepted quick smoke reported no
+  `ui.text.overflow` line; audit-enabled full-window coverage is not established by an absence, so this
+  stays a recorded observation rather than a PASS.
 - [ ] **Early-round remnants still unverified**: Packs/Presets linkage, Distance chart hover+drag, Tuning
   cross-session file round-trip, the Chinese help tone skim, and the composite-dropdown check (picking Auto
   selects and closes; a near-bottom dropdown flips upward).

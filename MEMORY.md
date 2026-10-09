@@ -33,11 +33,12 @@
   minimum game screen. Player field-presence overrides survive maintainer version changes. The admission
   rule, Ratkin Core-sound data and restart semantics are standing product doctrine in `AGENTS.md`; the
   delivery narrative is archived in `OBLIVIONIS.md` (2026-10-09 section).
-- **Interaction checkpoint closed to candidate (2026-10-09).** FL frozen `d5af4d8`; the four US
+- **Interaction checkpoint closed and accepted in game (2026-10-09).** FL frozen `d5af4d8`; the four US
   requirements are PM-accepted at the source/controlled-stub level, Demo-IC1 is accepted, and the paired
   Dev candidate is staged from source `562fc47` and accepted - current state and receipt pointers live in
-  `TODO.md`, the settled commit chain and defect narratives in `OBLIVIONIS.md`. ONE native human short
-  pass stays open (`TODO.md` owns its surface). The durable engineering facts the round leaves behind:
+  `TODO.md`, the settled commit chain and defect narratives in `OBLIVIONIS.md`. The ONE native human short
+  pass was accepted by the maintainer on 2026-10-09 (all seven items; the diagnostics layout and a quick
+  kernel smoke in their scopes). The durable engineering facts the round leaves behind:
     - UI1/ESC1: the two diagnostic windows' two-press Esc rides the shell's `TryHandleUnansweredCancel`
       with a per-window native-eligibility opt-in (the DT1 panel recomputes its own eligibility at the
       TOP of `WindowOnGUI`; the two Diagnostics windows keep their constructor opt-in); Call wording
@@ -78,9 +79,9 @@
       IDENTITY checks, not write attribution). The FL owner restored byte-equality
       (`fl/post-consumer-restoration.md`); the current structure's before/after identity checks match;
       the unknown historical writer adds NO new development blocker.
-    Cross-window field freshness under the real stack and native focus/IME/fonts remain in the agreed
-    ONE human pass - no product failure is claimed from the simulation. FL-owned backlog (task-11,
-    FL-17, FL-18/B6, FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
+    Cross-window field freshness under the real stack and native focus/IME/fonts rode the accepted ONE
+    human pass (2026-10-09); no product failure was ever claimed from the simulation. FL-owned backlog
+    (task-11, FL-17, FL-18/B6, FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is
