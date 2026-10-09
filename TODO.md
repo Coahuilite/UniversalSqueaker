@@ -37,12 +37,15 @@ US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file doe
   domain→result→root→close ESC1 chain; the three old Packs lanes retired with named replacement
   scenarios); PM review 1's two boundary corrections landed next (dropdown-driven auto-expansion with an
   empty keyword; result-layer Esc answers/collapses only VISIBLE manual cards, hidden manual retained) -
-  full local gates green on both carriers, the PM boundary witness re-run green. **US-RESET1's backend is
-  PM-ACCEPTED** on its worktree branch (`d668c12` + `be737e8`, `us/pm-reset1-backend-accepted.md`; not
-  merged). **ESC1 aggregate/root selection-release observability stays unverified until integration.**
-  **Next:** US-PACK1 re-review, then the RESET1 main-tree UI integration dispatch (wiring the accepted
-  backend to Schema2/host/confirm dialogs - not a second backend), then Demo-IC1, then the ONE combined
-  short human pass. Exclude only the FL-owned broader backlog (task-11, FL-17, FL-18/B6, FL-13/B10).
+  full local gates green on both carriers, the PM boundary witness re-run green. **US-RESET1 backend
+  accepted and MERGED** (`8958072` + `69a4019`); **the RESET1 UI integration and the ESC1 aggregate
+  closure LANDED LOCALLY at `a7e75c2`** (visible-branch cancel rules, root-handoff lane with no empty
+  layer, restore entries + us/reset-entry ceremony + EN/ZH copy + help, EndOpenDraft draft integration
+  with mutation proof; collapse probe re-run green; verify-local green on both carriers; evidence
+  `us/integration.*`) - awaiting PM integration acceptance. **Next:** PM acceptance, then Demo-IC1,
+  then the ONE combined short human pass (native focus/IME, real multi-window Esc, row-highlight
+  pixels, 1024x768 compact tools). Exclude only the FL-owned broader backlog (task-11, FL-17, FL-18/B6,
+  FL-13/B10).
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.

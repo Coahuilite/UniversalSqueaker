@@ -82,9 +82,15 @@
   can never name a page-level command (declare it on a page-level ancestor - US uses the Repeat itself);
   and every row control records at its OWN group origin, so a census pairs rail↔FILL rects and checks the
   band against the DECLARED row - the domain-row hit band is deliberately narrower than the row (it stops
-  at the switch). US-RESET1's BACKEND is PM-ACCEPTED on its worktree branch (`d668c12` + `be737e8`,
-  `us/pm-reset1-backend-accepted.md`; not merged, main tree untouched); the next RESET1 step is main-tree
-  UI integration, dispatched separately - NOT a second backend. Consumer-slot rule
+  at the switch). US-RESET1's backend (`d668c12` + `be737e8`, PM-accepted) is MERGED into the main tree
+  (`8958072` + `69a4019`) and its UI integration LANDED LOCALLY at `a7e75c2` (with the ESC1 visible-branch
+  closure: domain return answers only for a VISIBLE expanded-card row, result return only for a manual-ONLY
+  visible card; the backend harness stays the funnel/identity/fallback-bytes boundary, the UI lane owns the
+  ceremony and the draft integration) - awaiting PM integration acceptance. A latent product defect the
+  widget-press lane exposed was fixed in the same commit: `UsConfirmWindow.Open` called `CloseCurrent`
+  right after claiming the static `active` slot, so the slot was null while a question was on screen and a
+  superseded second question could not close the first; Open now keeps one slot per stack. PACK1 review1
+  was accepted at `e45eb2e` (`us/pm-pack1-review1-accepted.md`). Consumer-slot rule
   learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
   the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
   hashes) and never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four
