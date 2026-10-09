@@ -12,6 +12,14 @@
 #
 # Rehearsal input: -AssetZipPath uses an already-downloaded zip instead of the network (the digest
 # checks stay active). Acquiring is read-only from the carrier repository's perspective.
+#
+# Filesystem ownership (2026-10-09 review): every run creates a FRESH exclusive child directory
+# (us-carrier-<guid>) under a work parent (the caller's -WorkDir, or the system temp directory).
+# Preexisting content is never the run directory and is never deleted or overwritten; the only
+# recursive cleanup allowed is the run directory this process created, verified immediately before
+# deletion as exactly that child (owned name, direct child of the resolved parent, inside the system
+# temp root, not a reparse point). Staging refuses a sibling target inside the pinned checkout,
+# inside this repository's own tree, or any directory that is itself a git checkout.
 
 [CmdletBinding()]
 param(
@@ -25,6 +33,9 @@ param(
     [string]$SiblingRoot,
     [string]$AssetZipPath,
     [string]$ExpectedDigest,
+    # Work PARENT for this run. A fresh exclusive child (us-carrier-<guid>) is created under it and
+    # nothing preexisting is ever used as the run directory; the child is auto-cleaned only when the
+    # parent lies inside the system temp root. Default: the system temp directory.
     [string]$WorkDir
 )
 
@@ -62,9 +73,33 @@ if ($null -ne $assetZip -and -not (Test-Path -LiteralPath $assetZip -PathType Le
     throw "Rehearsal asset not found: $assetZip"
 }
 
-$work = if ([string]::IsNullOrWhiteSpace($WorkDir)) { Join-Path ([IO.Path]::GetTempPath()) ('us-carrier-' + [guid]::NewGuid().ToString('N')) } else { Resolve-InputPath $WorkDir }
-$createdWork = $false
-if (-not (Test-Path -LiteralPath $work)) { $null = New-Item -ItemType Directory -Path $work -Force; $createdWork = $true }
+# Staging-target discipline (checked before any work is done): the carrier is staged only into a
+# plain, separate sibling directory. Refuse a target inside the pinned carrier checkout (writing
+# there would corrupt the source the pairing reads), inside this repository's own tree (which must
+# never receive a carrier copy - the single-carrier red line), or any directory that is itself a
+# git checkout (an accepted carrier/repository location, not a staging area).
+if ($SiblingRoot -eq $checkoutRoot -or $SiblingRoot.StartsWith($checkoutRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to stage: SiblingRoot is inside the pinned carrier source checkout ($SiblingRoot)."
+}
+if ($SiblingRoot -eq $root -or $SiblingRoot.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to stage into this repository's own tree ($SiblingRoot); the sibling must lie outside it."
+}
+if (Test-Path -LiteralPath (Join-Path $SiblingRoot '.git')) {
+    throw "Refusing to stage into a git checkout ($SiblingRoot); the sibling must be a plain staged directory."
+}
+
+# Work area: every run gets its OWN fresh child under a work parent - the caller's -WorkDir when
+# given, the system temp directory otherwise. A preexisting directory is only ever a parent, never
+# the run directory, so nothing preexisting can be deleted or overwritten by this script.
+$workParent = if ([string]::IsNullOrWhiteSpace($WorkDir)) { [IO.Path]::GetFullPath([IO.Path]::GetTempPath()) } else { Resolve-InputPath $WorkDir }
+if (-not (Test-Path -LiteralPath $workParent -PathType Container)) { $null = New-Item -ItemType Directory -Path $workParent -Force }
+$workParent = (Resolve-Path -LiteralPath $workParent).Path
+if ($workParent.Length -gt 3) { $workParent = $workParent.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) }
+$work = Join-Path $workParent ('us-carrier-' + [guid]::NewGuid().ToString('N'))
+if (Test-Path -LiteralPath $work) { throw "Refusing a non-exclusive work directory (already exists): $work" }
+$runDirCreated = $false
+$null = New-Item -ItemType Directory -Path $work
+$runDirCreated = $true
 
 try {
     # ---- 1. release lookup + asset identity (public API read; a token is used only if present) ----
@@ -107,7 +142,7 @@ try {
 
     # ---- 3. extract + closed payload identity -----------------------------------------------------
     $extract = Join-Path $work 'extract'
-    if (Test-Path -LiteralPath $extract) { Remove-Item -LiteralPath $extract -Recurse -Force }
+    if (Test-Path -LiteralPath $extract) { throw "Refusing to overwrite preexisting extract content: $extract" }
     Expand-Archive -LiteralPath $assetZip -DestinationPath $extract
     $topDirs = @(Get-ChildItem -LiteralPath $extract -Directory)
     if ($topDirs.Count -ne 1 -or $topDirs[0].Name -ne 'FerriteLib') {
@@ -192,5 +227,26 @@ try {
     }
 }
 finally {
-    if ($createdWork -and (Test-Path -LiteralPath $work)) { Remove-Item -LiteralPath $work -Recurse -Force }
+    # Recursive cleanup is bounded to the run directory THIS process created: it must still resolve
+    # to exactly the fresh us-carrier-<guid> child of the resolved work parent, the parent must lie
+    # inside the system temp root, and the target must not be a reparse point. Anything else is kept
+    # as-is; nothing outside the owned run directory is ever deleted.
+    $keepReason = $null
+    if (-not $runDirCreated) { $keepReason = 'not created by this run' }
+    elseif (-not (Test-Path -LiteralPath $work)) { $keepReason = 'already gone' }
+    elseif (-not (Test-Path -LiteralPath $work -PathType Container)) { $keepReason = 'not a directory' }
+    elseif ((Split-Path -Parent $work) -ne $workParent) { $keepReason = 'not a direct child of its resolved work parent' }
+    elseif ((Split-Path -Leaf $work) -notmatch '^us-carrier-[0-9a-f]{32}$') { $keepReason = 'unrecognized run-directory name' }
+    elseif (-not $work.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase)) { $keepReason = 'outside the system temp root' }
+    elseif (((Get-Item -LiteralPath $work -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { $keepReason = 'reparse point' }
+    if ($null -eq $keepReason) {
+        Remove-Item -LiteralPath $work -Recurse -Force
+        Write-Host "[carrier] work-dir cleaned: $work"
+    }
+    elseif ($keepReason -eq 'already gone') {
+        Write-Host "[carrier] work-dir already gone: $work"
+    }
+    else {
+        Write-Host "[carrier] work-dir kept ($keepReason): $work"
+    }
 }
