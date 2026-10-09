@@ -409,12 +409,25 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                     new Rect(x + innerWidth - areaResetWidth, y, areaResetWidth, RowHeight), ctx,
                     UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false))
             {
+                // review1 item 3: the question names the layer/domain read at OPEN time, so the
+                // answer must act on exactly that identity. The effect command reads the page state
+                // at run time; the staged action therefore compares the CURRENT identity token with
+                // the captured one and refuses on drift (a late read of a different valid layer/
+                // domain restoring it is the failure the contract names). The modal absorb is not
+                // treated as an identity guarantee.
                 IUiBindings editorBindings = ctx.Bindings;
+                string captured = TuningIdentityToken(editorBindings);
                 UsConfirmWindow.Open(
                     UsKernelDraw.Keyed(ctx, "US.Reset.Area"),
                     UsKernelDraw.Keyed(ctx, "US.Reset.Area.Action.Confirm") + " " + AreaResetScopeText(layer, ctx),
                     UsKernelDraw.Keyed(ctx, "US.Reset.Confirm"),
-                    () => editorBindings.TryInvokeCommand("reset-action-area"));
+                    () =>
+                    {
+                        if (string.Equals(TuningIdentityToken(editorBindings), captured, StringComparison.Ordinal))
+                        {
+                            editorBindings.TryInvokeCommand("reset-action-area");
+                        }
+                    });
             }
             y += RowHeight + RowGap;
 
@@ -473,12 +486,20 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                         new Rect(x + innerWidth - moodResetWidth, y, moodResetWidth, RowHeight), ctx,
                         UsKernelDraw.Keyed(ctx, "US.Reset.Area"), ctx.Theme, false))
                 {
+                    // review1 item 3: same captured-identity rule as the action area.
                     IUiBindings editorBindings = ctx.Bindings;
+                    string captured = TuningIdentityToken(editorBindings);
                     UsConfirmWindow.Open(
                         UsKernelDraw.Keyed(ctx, "US.Reset.Area"),
                         UsKernelDraw.Keyed(ctx, "US.Reset.Area.Mood.Confirm") + " " + AreaResetScopeText(layer, ctx),
                         UsKernelDraw.Keyed(ctx, "US.Reset.Confirm"),
-                        () => editorBindings.TryInvokeCommand("reset-mood-area"));
+                        () =>
+                        {
+                            if (string.Equals(TuningIdentityToken(editorBindings), captured, StringComparison.Ordinal))
+                            {
+                                editorBindings.TryInvokeCommand("reset-mood-area");
+                            }
+                        });
                 }
                 y += RowHeight + RowGap;
 
@@ -557,6 +578,17 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             }
         }
         return scope + ": " + (race.Length > 0 && xeno.Length > 0 ? race + "/" + xeno : race + xeno);
+    }
+
+    /// <summary>review1 item 3: the machine identity a staged area answer must still match at run
+    /// time - the same three page-state halves the question text was composed from, read through
+    /// the page's own value bindings so the comparison sees exactly what the effect command will.</summary>
+    private static string TuningIdentityToken(IUiBindings bindings)
+    {
+        int layer = bindings.TryGet("tuning-layer", out int l) ? l : 0;
+        string race = bindings.TryGet("tuning-race", out string r) ? r ?? "" : "";
+        string xeno = bindings.TryGet("tuning-xeno", out string x) ? x ?? "" : "";
+        return layer + "|" + race + "|" + xeno;
     }
 
     private float ActionEditorHeight(UiWidgetContext ctx, float width)

@@ -929,21 +929,18 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public SqueakResetOutcome ResetAllSettings()
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetAllCount++;
         return NextResetOutcome;
     }
 
     public SqueakResetOutcome ResetDistanceDefaults()
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetDistanceCount++;
         return NextResetOutcome;
     }
 
     public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area)
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetNormalAreaCount++;
         LastNormalResetArea = area;
         return NextResetOutcome;
@@ -951,7 +948,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public SqueakResetOutcome ResetActionTuningRow(string actionKey)
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetActionRowCount++;
         LastResetActionKey = actionKey;
         return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
@@ -959,17 +955,21 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public SqueakResetOutcome ResetActionTuningArea()
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetActionAreaCount++;
         return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
     }
 
     public SqueakResetOutcome ResetMoodTuningArea()
     {
-        UsKernelSettingsHost.EndOpenDraft(DiagnosisHost);
         ResetMoodAreaCount++;
         return CanResetTuningArea() ? NextResetOutcome : SqueakResetOutcome.Rejected;
     }
+
+    /// <summary>review1: the fake mirrors the production split - the restore call itself never
+    /// touches an edit; only the host command's scoped EndAffectedEdit (after Applied) can, and it
+    /// walks the SAME static the production facade calls, on the host this fake attached.</summary>
+    public void EndAffectedEdit(Func<string, bool> editIsAffected)
+        => UsKernelSettingsHost.EndAffectedEdit(DiagnosisHost, editIsAffected);
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.

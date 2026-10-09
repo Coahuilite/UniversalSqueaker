@@ -63,19 +63,45 @@ public sealed class UsConfirmWindow
         bindings.BindCommand("confirm-yes", Confirm);
         bindings.BindCommand("confirm-no", Cancel);
         catalog = new UiWindowCatalog(stack);
-        catalog.Register(
-            Consumer,
-            WindowKind,
-            new UiWindowOptions
-            {
-                // Enter must not answer the question; ESC closes, and a close IS a cancel - the
-                // staged action only ever runs from the explicit confirm button.
-                CloseOnAccept = false,
-                AbsorbInputAroundWindow = true,
-                InitialSize = new Vector2(420f, 180f),
-            },
-            CreateWindow);
+        // The registration is re-issued per Open (Register overwrites the key's entry): the window
+        // size is a property of the QUESTION, measured below, not a shipped constant. The PM
+        // boundary probe measured the old fixed 420x180 with the long restore copy and the
+        // confirm-buttons row landing BELOW the content body - unreachable controls. UiPageWindow is
+        // sealed, so the sizing rides the options, and the message additionally lives in a Scroll
+        // container so anything the screen clamp cannot fit still scrolls without crowding buttons.
     }
+
+    private UiWindowOptions OptionsFor(string message)
+    {
+        var options = new UiWindowOptions
+        {
+            // Enter must not answer the question; ESC closes, and a close IS a cancel - the
+            // staged action only ever runs from the explicit confirm button.
+            CloseOnAccept = false,
+            AbsorbInputAroundWindow = true,
+            InitialSize = new Vector2(BaseWidth, BaseHeight),
+        };
+        ITextMetrics metrics = dialogMetrics ?? VerseFerriteTextMetrics.Instance;
+        float innerWidth = Math.Max(80f, BaseWidth - 2f * ShellSidePadding - 2f * RootPadding);
+        float textHeight = metrics.MeasureText(message ?? "", WindowTheme.Styles.Font, innerWidth)
+            + 2f * WindowTheme.Geometry.Padding;
+        float desired = 2f * RootPadding + textHeight + RootGap + ButtonHeight
+            + ShellTitleHeight + ShellSidePadding;
+        float cap = Math.Max(BaseHeight, Verse.UI.screenHeight - 40f);
+        float height = desired > cap ? cap : (desired < BaseHeight ? BaseHeight : desired);
+        options.InitialSize = new Vector2(BaseWidth, height);
+        return options;
+    }
+
+    // Shell geometry constants: the UiWindowHost chrome (TitleBarHeight 56 / SidePadding 20) and the
+    // page's own root (Padding 10, Gap 8, button band 26) - the same numbers PageXmlFor writes.
+    private const float BaseWidth = 420f;
+    private const float BaseHeight = 180f;
+    private const float ShellTitleHeight = 56f;
+    private const float ShellSidePadding = 20f;
+    private const float RootPadding = 10f;
+    private const float RootGap = 8f;
+    private const float ButtonHeight = 26f;
 
     /// <summary>Ask once. Opening a second question cancels (drops the staged action of) the first.
     /// Strings arrive RESOLVED; the action must carry its own captured identity. Production passes no
@@ -107,6 +133,7 @@ public sealed class UsConfirmWindow
         flow.message = message ?? "";
         flow.confirmLabel = confirmLabel ?? "";
         flow.onConfirm = onConfirm;
+        flow.catalog.Register(Consumer, WindowKind, flow.OptionsFor(flow.message), flow.CreateWindow);
         flow.catalog.Open(WindowKey);
         return flow;
     }
@@ -123,6 +150,13 @@ public sealed class UsConfirmWindow
     /// <summary>The question text currently staged - resolved display strings, so a lane can assert
     /// that a scope-naming confirmation actually NAMES the scope (the §4.3 wording rule).</summary>
     public string MessageText => message;
+
+    /// <summary>The staged page xml (message + labels resolved into the shell's own manifest). The
+    /// reachability lane builds a host over the SAME manifest and the SAME DialogBindings - the
+    /// SA1.3 wiring precedent - so a real engine button press, not a bindings call, answers the
+    /// question.</summary>
+    public string PageXml => PageXmlFor(message, confirmLabel);
+
 
     /// <summary>The dialog page's audit scope while attached (null otherwise) - the DT1 developer
     /// panel targets it for outline/capture/report like any other US window.</summary>
@@ -207,14 +241,25 @@ public sealed class UsConfirmWindow
     private static string Escape(string value) => (value ?? "")
         .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
 
+    // The message lives in the shell's own Scroll container (the FL structural container, the same
+    // vocabulary the settings page uses for content-scroll): a long question body scrolls inside the
+    // window, and the button row below it is ALWAYS arranged - reachability is a layout property,
+    // not a size hope. The window additionally opens at the MEASURED height for the staged text
+    // (ConfirmPageWindow.InitialSizePolicy), clamped to the screen, so ordinary questions need no
+    // scrolling at all and only screen-exceeding ones do.
     private static string PageXmlFor(string message, string confirmLabel)
         => "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
         + "  <Column Id=\"confirm-root\" Gap=\"8\" Padding=\"10\">"
-        + "    <Widget Id=\"confirm-message\" Kind=\"text/wrapped\" Text=\"" + Escape(message) + "\" />"
+        + "    <Scroll Id=\"confirm-message-scroll\" Fill=\"true\" Gap=\"0\" Padding=\"0\">"
+        + "      <Widget Id=\"confirm-message\" Kind=\"text/wrapped\" Text=\"" + Escape(message) + "\" />"
+        + "    </Scroll>"
         + "    <Row Id=\"confirm-buttons\" Gap=\"8\" Padding=\"0\">"
         + "      <Widget Id=\"confirm-yes\" Kind=\"input/button\" Text=\"" + Escape(confirmLabel) + "\" ActionBind=\"confirm-yes\" Height=\"26\" />"
         + "      <Widget Id=\"confirm-no\" Kind=\"input/button\" TextKey=\"US.Common.Cancel\" ActionBind=\"confirm-no\" Height=\"26\" Emphasis=\"Muted\" />"
         + "    </Row>"
         + "  </Column>"
         + "</UiPage>";
+
+    // (The sizing lives in OptionsFor above: UiPageWindow is sealed, so the measured height rides
+    // the per-Open registration options rather than a subclass policy.)
 }

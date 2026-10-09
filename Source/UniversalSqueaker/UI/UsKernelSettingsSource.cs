@@ -493,11 +493,13 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void CancelPackResults()
         => VoicePacksPageModel.CancelPackResults(state, BuildView());
     // ---------------------------------------------------------------------------------------------
-    // US-RESET1 (UI integration): the restore facades. Each method ends THIS host's open draft first
-    // (the cancel ladder's edit rung only - UsKernelSettingsHost.EndOpenDraft), then calls the backend
+    // US-RESET1 (UI integration, review1-scoped): the restore facades. Each method calls the backend
     // restore exactly once; the backend's own publish/persistence funnel is never re-called here, and
     // the returned outcome is the only save claim the UI may make. The area/row identity is the page's
     // EXACT tuning layer - an empty or invalid target is Rejected, never a silent fall back to Global.
+    // NO draft handling lives here: a direct caller (the PM boundary probe, the backend harness) must
+    // not disturb an unrelated open edit; the host command ends an edit only after Applied and only
+    // for the fields the restore wrote (EndAffectedEdit below).
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>Layer-identity validity for the area/row restores: layer 0 is the (legitimately empty)
@@ -511,44 +513,35 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         _ => false,
     };
 
-    public SqueakResetOutcome ResetAllSettings()
-    {
-        UsKernelSettingsHost.EndOpenDraft(host);
-        return settings.ResetAllSettings();
-    }
+    public SqueakResetOutcome ResetAllSettings() => settings.ResetAllSettings();
 
-    public SqueakResetOutcome ResetDistanceDefaults()
-    {
-        UsKernelSettingsHost.EndOpenDraft(host);
-        return settings.ResetDistanceDefaults();
-    }
+    public SqueakResetOutcome ResetDistanceDefaults() => settings.ResetDistanceDefaults();
 
-    public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area)
-    {
-        UsKernelSettingsHost.EndOpenDraft(host);
-        return settings.ResetNormalArea(area);
-    }
+    public SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area) => settings.ResetNormalArea(area);
 
     public SqueakResetOutcome ResetActionTuningRow(string actionKey)
     {
-        UsKernelSettingsHost.EndOpenDraft(host);
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
         return settings.ResetActionTuningRow(actionKey, state.TuningRaceDefName, state.TuningXenotypeDefName);
     }
 
     public SqueakResetOutcome ResetActionTuningArea()
     {
-        UsKernelSettingsHost.EndOpenDraft(host);
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
         return settings.ResetActionTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
     }
 
     public SqueakResetOutcome ResetMoodTuningArea()
     {
-        UsKernelSettingsHost.EndOpenDraft(host);
         if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
         return settings.ResetMoodTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
     }
+
+    /// <summary>US-RESET1 review1: the mechanism half of the scoped draft end - the DECISION (which
+    /// element this operation affects, and whether the outcome was Applied) stays with the host
+    /// command that knows the target; this only walks ONE rung of the ladder on the attached host.</summary>
+    public void EndAffectedEdit(Func<string, bool> editIsAffected)
+        => UsKernelSettingsHost.EndAffectedEdit(host, editIsAffected);
 
     // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
     public void SetActionTuning(string actionKey, bool intervalField, float? value)

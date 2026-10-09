@@ -43,12 +43,18 @@ internal static class ResetUiLaneTests
         DirectDistanceRestore();
         TuningAreaCeremonyAndXg1Refusal();
         RowRestoreDirectAndGuarded();
+        WindowReachabilityRealButtons();
+        ScopedDraftBoundaries();
+        StagedIdentityDriftRefusal();
         DraftOcclusionCancelAndConfirm();
         Console.WriteLine("[us-reset] ceremony through the REAL question window (cancel zero writes; confirm one effect, one bump; "
             + "NoChange silent); distance defaults direct without a window; the area entry names the current layer/domain and the "
             + "XG1 target offers none / refuses the command; the row restore is direct and guarded; the live "
             + "field's commit contract stands, occlusion neither commits nor discards, cancel executes "
-            + "nothing, and the confirmed restore ends the affected edit");
+            + "nothing, and the confirmed restore ends the affected edit; review1: the long EN/ZH body "
+            + "GROWS the shell and the absurd body CAPS at the screen with the buttons answered by the "
+            + "REAL dialog button press, the draft end is scoped to Applied + own fields (unrelated and "
+            + "NoChange/Rejected edits survive), and a drifted staged identity restores nothing");
     }
 
     private static void Assert(bool condition, string message)
@@ -113,10 +119,22 @@ internal static class ResetUiLaneTests
             UiLayoutSnapshot snap = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
             Rect viewport = snap.Viewports["content-scroll"];
             Rect drawn = ProbeDrawnRect(host, id);
-            Assert(drawn.width > 0f, "ResetUi lane: '" + id + "' draws no button to press");
             Vector2 scroll = Program.ScrollPositionById(host.Session, "content-scroll");
-            float pageY = drawn.y + viewport.y - scroll.y;
-            float pageYMax = drawn.yMax + viewport.y - scroll.y;
+            float pageY, pageYMax;
+            if (drawn.width > 0f)
+            {
+                pageY = drawn.y + viewport.y - scroll.y;
+                pageYMax = drawn.yMax + viewport.y - scroll.y;
+            }
+            else
+            {
+                // Not a button (a number field, a caption): RectById already carries the viewport
+                // origin at scroll 0, so the page position is simply it minus the scroll.
+                Assert(snap.RectById.TryGetValue(id, out Rect band),
+                    "ResetUi lane: '" + id + "' materialises no rect at all");
+                pageY = band.y - scroll.y;
+                pageYMax = band.yMax - scroll.y;
+            }
             if (pageY >= viewport.y && pageYMax <= viewport.yMax)
             {
                 Program.DrawWithPointer(host, Viewport, new Vector2(PageWidth / 2f, 140f));
@@ -558,4 +576,207 @@ internal static class ResetUiLaneTests
         Assert(host.Session.ActiveEditNode == null,
             "the ordinary outside press ends the edit (the existing focus contract, undisturbed)");
     }
+
+    // ------------------------------------------------------- review1: reachability, scope, identity
+
+    /// <summary>PM review1 item 1: the long restore questions must be reviewable and their buttons
+    /// clickable at the REAL shell. The lane opens the production ceremony (widget press), reads the
+    /// shell's own measured InitialSize, then builds a host over the SAME page manifest and the SAME
+    /// DialogBindings (the SA1.3 wiring precedent), lays it out at the shell's content box, and
+    /// ANSWERS THROUGH THE REAL ENGINE BUTTON (the carrier's hit seam on the dialog page) - a
+    /// DialogBindings.Invoke is not what this clause proves. The screen clamp is exercised with an
+    /// absurd body: the window caps at the screen, the message scrolls, the buttons stay laid out.</summary>
+    private static void WindowReachabilityRealButtons()
+    {
+        FreshStack();
+        int savedScreen = Verse.UI.screenHeight;
+        Verse.UI.screenHeight = 768; // the named human-pass box
+        UiHost host;
+        RecordingSettingsSource fake = RichHost(out host, out _);
+        host.Bindings.Invoke("set-tab", "Overview");
+        ArrangeIntoView(host, "restore-center-button");
+        try
+        {
+            foreach (string language in new[] { "English", "ChineseSimplified" })
+            {
+                Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
+                Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+                    language + ": the entry asks");
+                UsConfirmWindow flow = UsConfirmWindow.Active!;
+                Assert(flow != null && flow.OpenedWindow != null, language + ": setup window");
+                Vector2 size = flow!.OpenedWindow!.InitialSize;
+                Assert(size.y > 180f && size.y <= 768f - 40f + 0.5f,
+                    language + ": the long question must GROW the shell from its measured body and stay "
+                    + "inside the screen, got " + size.y);
+                AssertButtonsReachable(flow, size, language + " global question");
+                // Answer through the REAL dialog button: the staged global restore runs once.
+                int before = fake.ResetAllCount;
+                PressDialogButton(flow, "confirm-yes");
+                Assert(fake.ResetAllCount == before + 1 && UsConfirmWindow.Active == null,
+                    language + ": the real confirm button ran the staged action and closed");
+
+                // And the real cancel button answers without running anything.
+                Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+                    language + ": re-ask");
+                before = fake.ResetAllCount;
+                PressDialogButton(UsConfirmWindow.Active!, "confirm-no");
+                Assert(fake.ResetAllCount == before && UsConfirmWindow.Active == null,
+                    language + ": the real cancel closed with zero writes");
+            }
+
+            // The screen clamp: a body taller than the screen caps the window, and the Scroll
+            // container keeps the buttons laid out anyway (reachability is structural, not lucky).
+            Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+            string absurd = string.Join(" ", System.Linq.Enumerable.Repeat(
+                "This restore touches every Universal Squeaker setting, every tuning override, every "
+                + "pack selection and every preset anchor while keeping all fallback tables, mappings "
+                + "and author content exactly as they are.", 12));
+            bool ran = false;
+            UsConfirmWindow big = UsConfirmWindow.Open("Restore", absurd, "Confirm", () => ran = true)!;
+            Vector2 capped = big.OpenedWindow!.InitialSize;
+            Assert(Math.Abs(capped.y - (768f - 40f)) < 0.5f,
+                "an over-tall body must cap at the screen's usable height, got " + capped.y);
+            AssertButtonsReachable(big, capped, "capped absurd body");
+            PressDialogButton(big, "confirm-yes");
+            Assert(ran, "the capped dialog's real confirm still answers");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+            Verse.UI.screenHeight = savedScreen;
+            if (UsConfirmWindow.Active != null)
+            {
+                UsConfirmWindow.Active.DialogBindings.Invoke("confirm-no");
+            }
+        }
+    }
+
+    private static void AssertButtonsReachable(UsConfirmWindow flow, Vector2 windowSize, string where)
+    {
+        Vector2 content = new(windowSize.x - 2f * 20f, windowSize.y - 56f - 20f);
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(flow.PageXml);
+        using UiHost dialog = new("coahuilite.universalsqueaker", manifest,
+            (UiBindings)flow.DialogBindings, UsTheme.Surface(), new Program.StubMetrics(),
+            DialogTranslation());
+        UiLayoutSnapshot snap = dialog.MeasureAndArrange(content);
+        Rect yes = snap.RectById["confirm-yes"];
+        Rect no = snap.RectById["confirm-no"];
+        Assert(yes.yMax <= content.y + 0.5f && no.yMax <= content.y + 0.5f && yes.y >= 0f,
+            where + ": confirm/cancel must be laid out INSIDE the shell's content box (yes "
+            + yes.y + ".." + yes.yMax + ", no " + no.y + ".." + no.yMax + ", content " + content.y + ")");
+    }
+
+    private static void PressDialogButton(UsConfirmWindow flow, string elementId)
+    {
+        Vector2 size = flow.OpenedWindow!.InitialSize;
+        Vector2 content = new(size.x - 2f * 20f, size.y - 56f - 20f);
+        UiLayoutManifest manifest = UiLayoutManifest.Parse(flow.PageXml);
+        using UiHost dialog = new("coahuilite.universalsqueaker", manifest,
+            (UiBindings)flow.DialogBindings, UsTheme.Surface(), new Program.StubMetrics(),
+            DialogTranslation());
+        dialog.MeasureAndArrange(content);
+        int fired = Program.PressDeclarativeButton(dialog, new Rect(0f, 0f, content.x, content.y), elementId);
+        Assert(fired == 1, "the dialog's real " + elementId + " button must answer exactly once, got " + fired);
+    }
+
+    /// <summary>PM review1 item 2: the draft end is scoped to the operation's own fields and to
+    /// Applied. A volume edit survives a diagnostics restore (Applied!), survives a NoChange timing
+    /// restore, and is ended by the distance-area restore that really writes its field.</summary>
+    private static void ScopedDraftBoundaries()
+    {
+        FreshStack();
+        UiHost host;
+        RecordingSettingsSource fake = RichHost(out host, out _);
+        fake.AttachHost(host);
+        host.Bindings.Invoke("set-tab", "Overview");
+        UiLayoutSnapshot snap = ArrangeIntoView(host, "global-volume-number");
+        Rect field = ToPage(host, snap, snap.RectById["global-volume-number"]);
+        Vector2 center = new(field.x + field.width / 2f, field.y + field.height / 2f);
+        GUIUtility.hotControl = 0;
+        Program.DrawWithPointer(host, Viewport, center);
+        Program.DrawWithEvent(host, Viewport, EventType.MouseDown, center);
+        Program.DrawWithEvent(host, Viewport, EventType.MouseUp, center);
+        Assert(host.Session.ActiveEditNode != null, "setup: the volume field's edit is open");
+
+        // Unrelated target, Applied: the diagnostics restore writes its own fields and must leave the
+        // volume edit exactly where it is (the PM probe's case, now through the real command).
+        host.Bindings.Invoke("reset-normal-diagnostics");
+        Assert(fake.ResetNormalAreaCount == 1 && host.Session.ActiveEditNode != null,
+            "an Applied restore of an UNRELATED area keeps the open edit (review1 item 2)");
+
+        // Same target, NoChange: the timing restore wrote nothing, so nothing is cleaned.
+        fake.NextResetOutcome = SqueakResetOutcome.NoChange;
+        host.Bindings.Invoke("reset-normal-timing");
+        Assert(fake.ResetNormalAreaCount == 2 && host.Session.ActiveEditNode != null,
+            "a NoChange restore never ends an edit - not even one whose fields it owns");
+        fake.NextResetOutcome = SqueakResetOutcome.Rejected;
+        host.Bindings.Invoke("reset-normal-timing");
+        Assert(host.Session.ActiveEditNode != null, "Rejected likewise leaves the edit untouched");
+        fake.NextResetOutcome = SqueakResetOutcome.Applied;
+
+        // Same target, Applied: the distance-area restore writes the volume field, so the edit ends.
+        host.Bindings.Invoke("reset-normal-distance");
+        // The fake counts every call: diagnostics Applied, timing NoChange, timing Rejected, distance.
+        Assert(fake.ResetNormalAreaCount == 4, "the distance-area restore ran");
+        Arrange(host);
+        Assert(host.Session.ActiveEditNode == null,
+            "the affected field's edit ended with the Applied restore that owns it");
+    }
+
+    /// <summary>PM review1 item 3: the staged area answer acts on the identity the question NAMED.
+    /// Open A (Global) -> page identity drifts to B (a different VALID layer/domain) -> confirm must
+    /// restore NEITHER (refuse), and B's records stay; re-asking at the captured identity restores
+    /// exactly that one. The modal absorb is not trusted as the guarantee.</summary>
+    private static void StagedIdentityDriftRefusal()
+    {
+        FreshStack();
+        UiHost host;
+        RecordingSettingsSource fake = RichHost(out host, out _);
+        fake.AttachHost(host);
+        host.Bindings.Invoke("set-tab", "Tuning");
+        UiLayoutSnapshot snapA = Arrange(host);
+        Rect tree = ToLocal(snapA, snapA.RectById["scope-tree"]);
+        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
+        try
+        {
+            List<Rect> cands = RecordScopeTreeButtons(host).FindAll(r => AreaButton(r, tree));
+            cands.Sort((a, b) => a.y.CompareTo(b.y));
+            Assert(cands.Count >= 1, "setup: the Global action entry is offered");
+            PressScopeTreeButton(host, cands[0]);
+            UsConfirmWindow flow = UsConfirmWindow.Active!;
+            Assert(flow != null && flow.MessageText.Contains("Global"), "setup: the question named Global");
+
+            // Drift: the page now sits on a DIFFERENT, perfectly valid identity (Race layer / Test Race).
+            fake.ViewState.TuningLayer = 1;
+            fake.ViewState.TuningRaceDefName = "testrace";
+            flow!.DialogBindings.Invoke("confirm-yes");
+            Assert(fake.ResetActionAreaCount == 0,
+                "confirm at a drifted identity restores NOTHING - not the asked target, not the new one");
+            Assert(UsConfirmWindow.Active == null, "the refused answer still closes the question");
+
+            // Back to the captured identity: the same ceremony now restores it.
+            fake.ViewState.TuningLayer = 0;
+            fake.ViewState.TuningRaceDefName = "";
+            Arrange(host);
+            cands = RecordScopeTreeButtons(host).FindAll(r => AreaButton(r, tree));
+            cands.Sort((a, b) => a.y.CompareTo(b.y));
+            PressScopeTreeButton(host, cands[0]);
+            flow = UsConfirmWindow.Active!;
+            Assert(flow != null, "setup: re-ask at the captured identity");
+            flow!.DialogBindings.Invoke("confirm-yes");
+            Assert(fake.ResetActionAreaCount == 1, "the identity that was asked is the identity restored");
+        }
+        finally
+        {
+            Program.SetTranslatorResolver(null);
+        }
+    }
+
+    /// <summary>US ships no InternalsVisibleTo (the Mod.cs pin); the dialog page's translation seam
+    /// is the internal UsKernelTranslation, reached exactly the way the PM boundary probe reaches
+    /// it - reflection on the product assembly.</summary>
+    private static IUiTranslation DialogTranslation()
+        => (IUiTranslation)Activator.CreateInstance(
+            typeof(UsConfirmWindow).Assembly.GetType("UniversalSqueaker.UI.UsKernelTranslation", true),
+            true)!;
 }

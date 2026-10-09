@@ -1,7 +1,8 @@
+using System;
+
 namespace UniversalSqueaker.UI;
 
-/// <summary>
-/// Business/view boundary of the kernel settings path. The Host adapter binds every typed widget
+/// <summary>Business/view boundary of the kernel settings path. The Host adapter binds every typed widget
 /// binding/action to this surface; the production implementation routes to
 /// <see cref="UniversalSqueakerSettings"/> and <see cref="VoicePacksPageModel"/>. The interface is
 /// deliberately narrow and typed so tests can substitute a recording fake without the RimWorld
@@ -92,12 +93,13 @@ public interface IUsKernelSettingsSource
     // keyword (SetSearchText) is the page's only text condition and it narrows the card rows.
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
     // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
-    // US-RESET1 (UI integration): the restore operations the settings page exposes. Each call goes
-    // through the backend's single publish/persistence funnel EXACTLY once (the UI never re-calls it);
-    // the returned outcome is the only save claim the UI may make - NoChange/Rejected wrote nothing.
-    // A restore also ends THIS host's open draft through the cancel ladder's edit rung only, so a
-    // stale field cannot overwrite the restored value on a later Enter or focus-out; nothing else on
-    // the ladder (business return layers, other windows) is touched.
+    // US-RESET1 (UI integration, review1-scoped): the restore operations the settings page exposes.
+    // Each call goes through the backend's single publish/persistence funnel EXACTLY once (the UI
+    // never re-calls it); the returned outcome is the only save claim the UI may make - NoChange/
+    // Rejected wrote nothing and must leave every open edit exactly as it was. Ending a draft is
+    // therefore NOT part of the restore call: the host command ends an edit only AFTER an Applied
+    // result and only when the edit belongs to the fields the restore actually wrote (see
+    // EndAffectedEdit below).
     SqueakResetOutcome ResetAllSettings();
     SqueakResetOutcome ResetDistanceDefaults();
     SqueakResetOutcome ResetNormalArea(SqueakNormalResetArea area);
@@ -110,6 +112,13 @@ public interface IUsKernelSettingsSource
     /// exact tuning layer, never a fallback to Global for an empty or invalid target.</summary>
     SqueakResetOutcome ResetActionTuningArea();
     SqueakResetOutcome ResetMoodTuningArea();
+    /// <summary>US-RESET1 review1: end THIS host's open edit when, and only when, the edit belongs
+    /// to the fields the just-Applied restore wrote. The decision (which element the operation
+    /// affects) is the host command's; the mechanism is exactly one rung of the cancel ladder on
+    /// this session - never a ladder loop, never a business return layer, never another window's
+    /// capture. NoChange/Rejected callers never reach this.</summary>
+    void EndAffectedEdit(Func<string, bool> editIsAffected);
+
 
     // Developer layout diagnosis (R3-B). These are per-WINDOW developer switches, not settings: they are
     // never persisted, never touch Config or a save, and they are deliberately NOT routed through

@@ -126,18 +126,23 @@ public static class UsKernelSettingsHost
 
         return host;
     }
-    /// <summary>US-RESET1: end this host's open draft when a restore is about to write, so a stale
-    /// field cannot overwrite the restored value on a later Enter or focus-out. The cleanup is exactly
-    /// ONE rung of the cancel ladder, entered only while an edit is open: with a live field edit the
-    /// ladder answers the EDIT itself (a popup or a held capture cannot coexist with it - the funnel's
-    /// own outside-click press ends the edit before either can open), so this never reaches a business
-    /// CancelBind, never loops the ladder, and never touches another window's native capture. The
-    /// marked discard applies at the field's own next draw - before any later Enter or focus-out -
-    /// and the temporary confirmation window covering the page never commits the draft either, which
-    /// is the existing outside-click contract (a real outside click still commits).</summary>
-    public static void EndOpenDraft(UiHost? host)
+    /// <summary>US-RESET1 review1: end this host's open edit ONLY when the caller's predicate says
+    /// the edit belongs to the fields a restore just WROTE. The review-1 boundary: an unrelated
+    /// open edit (a volume field while a diagnostics-area restore answers NoChange) must survive
+    /// untouched, and NoChange/Rejected must never clear anything - so the command runs the restore
+    /// FIRST, and reaches this only on Applied with a target-matching predicate. The mechanism is
+    /// exactly ONE rung of the cancel ladder, entered only while an edit is open: with a live field
+    /// edit the ladder answers the EDIT itself (a popup or a held capture cannot coexist with it -
+    /// the funnel's own outside-click press ends the edit before either can open), so this never
+    /// reaches a business CancelBind, never loops the ladder, and never touches another window's
+    /// native capture. The marked discard applies at the field's own next draw - before any later
+    /// Enter or focus-out - so a stale draft cannot overwrite the restored value, while the
+    /// existing outside-click commit contract for ordinary edits stays untouched.</summary>
+    public static void EndAffectedEdit(UiHost? host, Func<string, bool> editIsAffected)
     {
-        if (host != null && host.Session.ActiveEditNode != null) host.TryHandleCancel();
+        if (host == null) return;
+        FerriteLib.UiKit.Kernel.UiNode? edit = host.Session.ActiveEditNode;
+        if (edit != null && editIsAffected(edit.ElementId)) host.TryHandleCancel();
     }
 
     /// <summary>
@@ -794,21 +799,26 @@ public static class UsKernelSettingsHost
         // the multi-field ones are reached through the us/reset-entry widget's confirmation window -
         // a ceremony that writes nothing until the answer arrives is NOT a write key (the UiSource-
         // Invariant gate and the revision-clock contract both reserve this registry for writes).
+        // review1: the draft end is SCOPED here - only after Applied, and only when the open edit's
+        // element belongs to the fields this operation wrote. The element names are the manifest's
+        // own ids; operations whose fields are switches/buttons/steppers own no text edit at all and
+        // never end anything. The mood op shares the composite element with the fallback query field,
+        // so it additionally requires the page to still be in the mood area.
         writes.Command(
             "reset-all-settings",
-            () => { if (source.ResetAllSettings() == SqueakResetOutcome.Applied) bump(); });
+            () => { if (source.ResetAllSettings() == SqueakResetOutcome.Applied) { source.EndAffectedEdit(_ => true); bump(); } });
         writes.Command(
             "reset-distance-defaults",
             () => { if (source.ResetDistanceDefaults() == SqueakResetOutcome.Applied) bump(); });
         writes.Command(
             "reset-normal-distance",
-            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Distance) == SqueakResetOutcome.Applied) bump(); });
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Distance) == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "global-volume-number"); bump(); } });
         writes.Command(
             "reset-normal-basics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Basics) == SqueakResetOutcome.Applied) bump(); });
         writes.Command(
             "reset-normal-timing",
-            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Timing) == SqueakResetOutcome.Applied) bump(); });
+            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Timing) == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "timing-interval-seconds" || id == "timing-multiplier-field"); bump(); } });
         writes.Command(
             "reset-normal-diagnostics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
@@ -822,7 +832,7 @@ public static class UsKernelSettingsHost
             () => source.CanResetTuningArea());
         writes.Command(
             "reset-mood-area",
-            () => { if (source.ResetMoodTuningArea() == SqueakResetOutcome.Applied) bump(); },
+            () => { if (source.ResetMoodTuningArea() == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "scope-tree" && state.TuningArea == 1); bump(); } },
             () => source.CanResetTuningArea());
 
         return writes;
