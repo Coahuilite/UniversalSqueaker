@@ -193,6 +193,7 @@ jobs:
           - This is a testing RC for **RimWorld 1.6**: UI/UX design and copy work continues, and this page does not claim complete compatibility coverage.
           - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
           - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
+          - Testing status: the accepted native checks (seven interaction scenarios, the diagnostics checks and a quick kernel smoke) ran on the local paired Dev candidate; this archive is a fresh CI build of the Release configuration from the same accepted product source (plus release plumbing/docs) and has not been independently repeated in native gameplay.
 
           ## Changes
 
