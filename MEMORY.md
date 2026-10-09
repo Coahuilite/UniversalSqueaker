@@ -11,7 +11,7 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Current state (2026-10-08)
+## Current state (2026-10-09)
 
 - **Push privacy automation (2026-10-08).** The five-vector Mwah-derived scanner has automatic per-clone
   pre-push installation and all-branch GitHub CI. `docs/push-privacy-gate.md` defines its scope; current
@@ -22,36 +22,22 @@
   Current-tree text, names, messages, identities, credentials, metadata and runtime anonymity stay fully
   checked. History rewrite remains unauthorized. A clean current tree is not itself history success.
 - **BH1 bottom help is integrated and its real-game acceptance PASSED (2026-10-06).** The measured
-  3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX; it is
-  recorded, not an acceptance blocker. Read the current US package identity from its own stamp and the
-  PM paired manifest, never infer it from HEAD. The retained BH1 package uses FL `0181268` and Demo
-  `9d4b7e0`; the checkpoint candidate is separate and its identities belong to its paired manifest.
-- **Accepted playtests, distinct from open feedback.** BH1 help usability, same-window position, real-font
-  footer/long-help, independent scrolling and accurate clicks remain accepted. SA1 mixed-mode confirmation
-  and independent outline remain accepted. PRE1 fixture A is human-confirmed effective; B is accepted by
-  the user on the same mechanism, without a separate B retest. Unreported restore/restart branches are not
-  claimed as independently measured, and they are not a new retest gate. C1/C2 remain normal; their
-  original diagnostic IDs stay intact. Verbatim older feedback lives outside this repo in
-  `../modding_documents/relay_mod/PLAYTEST-FINAL-RESULTS-20261004.md`.
-- **Current checkpoint technical delivery:** D4 has three independent name-search fields, race-following
-  xenotypes and same-pass VisibleRows4.5 sizing. Tuning separates action rules, mood factors and per-race
-  final native fallback, with visible effective multipliers, suppliers and usable preset reset targets.
-  VoicePack OR final table admits a race; neither means no automatic comp/no routing. Shipped Ratkin data
-  references Core sounds; the Kernel carries no race seed. Player field-presence overrides survive
-  maintainer version changes; first table-only admission requires a full restart. The small settings
-  developer panel serves only its five pages/confirmation dialogs; in-game outline belongs only to US
-  diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks, named faithful
-  proofs and real-game limits are recorded separately in the PM checkpoint evidence. Composite splitting
-  and scroll-distance polish remain deferred.
-- **Interaction checkpoint closed to candidate (2026-10-09).** FL-IC1/IC2 accepted and FROZEN at
-    ferritelib `d5af4d8`; US-UI1/US-ESC1/US-PACK1/US-RESET1 PM-accepted at the source/controlled-stub
-    level (receipt chain `us/pm-ui1-esc1-technical-accepted.md` → `us/pm-pack1-review1-accepted.md` →
-    `us/pm-reset1-backend-accepted.md` → `us/pm-integration-review1-accepted.md`); Demo-IC1 accepted
-    (`demo/pm-demo-ic1-accepted.md`); the paired Dev candidate `interaction-20261009-r1` is staged from
-    source `562fc47` against the frozen Dev carrier and accepted (`us/candidate-staging.*`,
-    `us/pm-candidate-staging-accepted.md`; directory and bytes preserved). ONE native human short pass
-    stays open - `TODO.md` owns its surface. The settled commit chain lives in git log; the durable
-    facts it leaves behind:
+  3.04-screen enable-card scroll with the footer inset is DEFERRED by the user as nonblocking UX. Read a
+  package's identity from its own stamp and the PM paired manifest, never infer it from HEAD; the
+  retained BH1 package identity numbers are archived in `OBLIVIONIS.md` (2026-10-09 section).
+- **Current checkpoint technical delivery (2026-10-07):** D4 = three independent name-search fields,
+  race-following xenotypes and same-pass VisibleRows4.5 sizing; Tuning separates action rules, mood
+  factors and the per-race final native fallback, with visible effective multipliers, suppliers and
+  usable preset reset targets. The small settings developer panel serves ONLY its five pages /
+  confirmation dialogs; in-game outline belongs ONLY to US diagnostics. DX1 = compact navigation at the
+  minimum game screen. Player field-presence overrides survive maintainer version changes. The admission
+  rule, Ratkin Core-sound data and restart semantics are standing product doctrine in `AGENTS.md`; the
+  delivery narrative is archived in `OBLIVIONIS.md` (2026-10-09 section).
+- **Interaction checkpoint closed to candidate (2026-10-09).** FL frozen `d5af4d8`; the four US
+  requirements are PM-accepted at the source/controlled-stub level, Demo-IC1 is accepted, and the paired
+  Dev candidate is staged from source `562fc47` and accepted - current state and receipt pointers live in
+  `TODO.md`, the settled commit chain and defect narratives in `OBLIVIONIS.md`. ONE native human short
+  pass stays open (`TODO.md` owns its surface). The durable engineering facts the round leaves behind:
     - UI1/ESC1: the two diagnostic windows' two-press Esc rides the shell's `TryHandleUnansweredCancel`
       with a per-window native-eligibility opt-in (the DT1 panel recomputes its own eligibility at the
       TOP of `WindowOnGUI`; the two Diagnostics windows keep their constructor opt-in); Call wording
@@ -620,9 +606,10 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   selection narrative and the gate-count history - together with the
   fact that `Palette` / `UiText` / `UiPanel` /
   `SurfaceFrame` / `UiInteract` / `UiValueStore` / `UiGuard` / `VoicePacksLayout` / the Schema=1 `Layout.xml` and
-  the whole legacy page chain no longer exist. **The archive was not extended on 2026-10-04**: the prose the HM1
-  consolidation removed (the pre-compaction V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 round narrative) is in Git
-  history only, and a later round may archive it.
+  no longer exist. **The archive was extended on 2026-10-09**: the interaction round's commit chain,
+  review-1 defect narratives, candidate-staging facts, the BH1 retained-package identity and the
+  accepted-playtest enumeration moved into its `Memory compaction 2026-10-09` section; the HM1-removed
+  prose (the pre-compaction V1/B3/DIAG-FIX/R4/R3/V2-V4/RPT1/XG1 narrative) remains in Git history only.
 - **2026-10-02 product checkpoint identities**: FL `b31e2c3` / US `33a0aad` / Demo `d972dbc` - all three trees
   clean when packaged; a later docs-only commit moves HEAD without rebuilding it, so read a package's identity
   from its own stamp.

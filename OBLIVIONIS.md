@@ -1179,3 +1179,56 @@ calibration, the FerriteLib extraction, the first cloud upload and publication c
 cross-repo rounds 1-3, the seam round, the diagnostics round-9 migration, the eat-granularity port, `v0.4.0-rc1`
 on both repositories, the declarative help drawer, the P1 seam batch, and the 2026-09-19/20 rounds. Detail:
 git log and `docs/review/**`.
+
+## Memory compaction 2026-10-09 - interaction round closed to candidate (material moved out of `MEMORY.md` / `TODO.md`)
+
+### The settled commit chain (closed; detail in git log and the PM receipts)
+
+- UI1/ESC1 landed and survived review 1 at `1d40721` (two reachable defects corrected: the tuning-context
+  return and the DT1-only dev-panel eligibility); PACK1 went `cf59d89` -> `909f6f9` -> `8958072` -> `69a4019`
+  and was accepted at review 1 (`e45eb2e`); the RESET1 backend merged as `d668c12` + `be737e8` (120-check
+  harness green); integration `a7e75c2` passed review 1 at `c5f265c`. Memory commits `562fc47` (candidate
+  source) and `ad494a7` (docs-only close) followed. FL frozen at `d5af4d8`; Demo-IC1 accepted at `82664a11`.
+- The paired Dev candidate `dist/checkpoints/interaction-20261009-r1/UniversalSqueaker` was staged from
+  `562fc47` against the frozen Dev carrier (9 files, version label `0.5.0+562fc47...dev`, carrier
+  `5b33137905ff...`), accepted by the PM, and its directory and bytes are preserved; the retained BH1/SA1
+  and dist/dev + dist/candidates packages were re-hashed byte-identical (23/23 US-side protected inventory)
+  after every round. No install, push, tag or pack-dev was executed.
+
+### Review-1 defect narratives (the durable rules already live in `MEMORY.md`)
+
+- The tuning context is a NON-PERSISTED `TuningContextActive` flag - a nonzero layer/area inference once read
+  the DEFAULT Global/Actions branch as "no context", which made its cancel silently fall through; the fix
+  gives the default branch one context return that reposes the page without writing config.
+- Auto-expand's first cut keyed on a non-empty keyword; the accepted contract is the ACTIVE XENOTYPE
+  CONDITION (dropdown alone, empty keyword included).
+- `UiPageWindow` is sealed, so the confirm shell's fixed size became a per-Open option sized from the
+  MEASURED body inside a Scroll container capped to the screen; the draft end was scoped to Applied + the
+  operation's own fields after review 1 flagged facades touching unrelated edits; area ceremonies now
+  capture the layer/domain token and refuse on drift instead of writing at the ceremony site.
+- Latent product defect found while writing the native pass: `UsConfirmWindow.Open` nulled its `active`
+  slot via `CloseCurrent` immediately after claiming it, so a second question while one was on screen
+  exposed a null question lane; Open keeps one slot per stack since `a7e75c2`.
+- Consumer-slot incident: four ignored canonical `bin/stubs` outputs were OBSERVED with drifted identities
+  during the consumer window; the historical writer is UNPROVEN (save/copy can preserve mtimes; `git status`
+  is silent on ignored artifacts). The FL owner restored byte-equality; the lesson (integrate against the
+  frozen delivery in the consumer's OWN outputs; the harness stub snapshot lives under
+  `tools/FerriteLib.Stubs`, verify gate 16) is durable and stays in `MEMORY.md`.
+
+### Removed from the active files by this pass (recoverable here or in git history)
+
+- The BH1 retained-package identity numbers (FL `0181268`, Demo `9d4b7e0`) - read any package's identity
+  from its own stamp and paired manifest, never from HEAD.
+- The verbatim accepted-playtest enumeration (BH1 help usability / same-window position / real-font
+  footer+long-help / independent scrolling / accurate clicks; SA1 mixed-mode confirmation + independent
+  outline; PRE1 fixture A human-confirmed, B accepted by equivalence; C1/C2 normal with original
+  diagnostic IDs intact). Verbatim older feedback: `../modding_documents/relay_mod/
+  PLAYTEST-FINAL-RESULTS-20261004.md`.
+- The 2026-10-07 checkpoint's technical-delivery narrative (D4 three independent name-search fields,
+  race-following xenotypes, same-pass VisibleRows4.5 sizing; Tuning action/mood/final-fallback split with
+  visible effective multipliers, suppliers, usable preset reset targets) - the checkpoint evidence under
+  `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/` remains authoritative.
+- The interaction receipts chain (`us/pm-ui1-esc1-technical-accepted.md` -> `us/pm-pack1-review1-accepted.md`
+  -> `us/pm-reset1-backend-accepted.md` -> `us/pm-integration-review1-accepted.md` ->
+  `us/candidate-staging.*` -> `us/pm-candidate-staging-accepted.md` -> `us/memory-checkpoint-close.*`),
+  kept as a pointer line in `TODO.md`.

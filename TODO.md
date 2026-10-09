@@ -22,7 +22,9 @@ check may still be pending; nothing here expands the product scope.
 
 - [ ] **The ONE combined native short pass** (do not re-run accepted matrices; no preset-B reopen):
   pack select/search/enable as revised by US-PACK1; compact US diagnostics and settings developer tools
-  at 1024x768; per-race final native fallback edit and new-race admission after a full restart; real
+  at 1024x768 (D4's VisibleRows4.5 viewport follows the actual measured rows, no fixed 189px floor; DX1's
+  real-shell state-change guard checks the whole window position); per-race final native fallback edit
+  and new-race admission after a full restart; real
   multi-window focus/key ownership and the confirm window's real-button clicks; native IME and real
   fonts; long menus and scroll wheel; the restore operations (global/area/row) including window
   placement under long EN/ZH copy. Real fonts, native input, actual playback and game Scribe
@@ -31,9 +33,9 @@ check may still be pending; nothing here expands the product scope.
   independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
   fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest); Demo-IC1.
   Observe regressions only. Unreported restore/restart branches are not a new PRE1 gate.
-- **Interaction chain state:** the settled commit chain lives in git log and the PM evidence pointers
-  above; durable engineering facts are in `MEMORY.md`. **Next:** the PM's final paired check and the
-  single human pass. The FL-owned broader backlog (task-11, FL-17, FL-18/B6, FL-13/B10) stays excluded.
+- **Next:** the PM's final paired check and the single human pass; the settled chain is archived in
+  `OBLIVIONIS.md` and the durable facts in `MEMORY.md`. The FL-owned broader backlog (task-11, FL-17,
+  FL-18/B6, FL-13/B10) stays excluded.
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
@@ -116,9 +118,6 @@ check may still be pending; nothing here expands the product scope.
   `usdiag evt=ui.text.overflow` stays silent (any new line is a fix target with an exact need/have pair).
 - [ ] **Remaining custom-page row shapes** belong to V2-V4. Overview already has local responsive parameter
   rows; do not revive the old proposal to raise the shared body breakpoint just to fix Overview.
-- [ ] **D4/DX1 human acceptance:** part of NOW's whole-checkpoint tasks. D4's VisibleRows4.5 viewport
-  follows actual measured rows in the same pass, without a fixed 189px floor. DX1's real-shell state-change
-  guard checks the whole window position; live fonts, world data and pointer behavior remain human checks.
 - [ ] **MeowingKiiro skill-flow validation** (pack built, static green): the in-game pass - enable order,
   Kiiro-Race-domain tick, Fallback, Call/Select + spot-check, four modes, dispatch log - and record any
   skill-vs-implementation mismatch back into the production plan doc and the skill. Publication stays
@@ -158,6 +157,10 @@ check may still be pending; nothing here expands the product scope.
 
 ## Landed — pointer lines (detail in git log / `MEMORY.md` / `OBLIVIONIS.md`)
 
+- **2026-10-09 — interaction round (US-UI1/US-ESC1/US-PACK1/US-RESET1) closed to candidate**: the four
+  requirements and Demo-IC1 accepted, paired Dev candidate `interaction-20261009-r1` staged from `562fc47`
+  and accepted; receipts under `../modding_documents/relay_mod/evidence/interaction-development-20261008/
+  us/`; the chain narrative and removed enumerations are archived in `OBLIVIONIS.md`.
 - **2026-10-04 — HM1 memory/handoff round**: `MEMORY.md` and this file compacted; the final user feedback
   recorded at its own altitude; no product, build or package change (the package stays `1a54e1f`).
 - **2026-10-04 — RPT1 / XG1**: report-button result sentence and the empty-xenotype tuning block (inert
