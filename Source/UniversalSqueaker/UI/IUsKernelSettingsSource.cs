@@ -68,10 +68,11 @@ public interface IUsKernelSettingsSource
     /// operation domain while every filter, search and enabled state stays exactly where it was.</summary>
     bool CanCancelDomainSelection();
     void CancelDomainSelection();
-    /// <summary>US-PACK1 (result layer, §4.1): the pack-card expand/collapse gesture writes ONLY the
-    /// manual expansion set; the query's auto-expansion is derived and never enters it. Can is the
-    /// engine's CanExecute for cancel-pack-results - the layer answers exactly while the player has
-    /// opened cards themselves, and a veto climbs to the page root.</summary>
+    /// <summary>US-PACK1 (result layer, §4.1; review-1): the pack-card expand/collapse gesture writes
+    /// ONLY the manual expansion set; the query's/dropdown's auto-expansion is derived and never enters
+    /// it. Can is the engine's CanExecute for cancel-pack-results - the layer answers exactly while a
+    /// manually opened card is VISIBLE in the current projection; a manual key the conditions hide is
+    /// retained state, not an invisible layer, and a veto climbs to the page root.</summary>
     void TogglePackCard(string packKey);
     bool CanCancelPackResults();
     void CancelPackResults();

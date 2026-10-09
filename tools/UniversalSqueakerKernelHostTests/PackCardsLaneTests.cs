@@ -113,7 +113,7 @@ internal static class PackCardsLaneTests
             in noState, manual);
         Assert(byPack.Count == 1 && byPack[0].Key == "mod.a:rat" && !byPack[0].Expanded,
             "a pack-name hit lists the card but does not open it");
-        Assert(byPack[0].Rows.Count == 2 && !byPack[0].Rows[0].QueryHit && !byPack[0].Rows[1].QueryHit,
+        Assert(byPack[0].Rows.Count == 2 && !byPack[0].Rows[0].AutoTrigger && !byPack[0].Rows[1].AutoTrigger,
             "a pack-only hit marks NO domain row (the rows survive through the pack half)");
 
         // Xenotype-name hit: the providing card AUTO-EXPANDS and the hit row is marked.
@@ -122,7 +122,7 @@ internal static class PackCardsLaneTests
         Assert(byXeno.Count == 1 && byXeno[0].Key == "mod.a:rat" && byXeno[0].AutoExpanded && byXeno[0].Expanded,
             "the xenotype hit auto-expands the card that provides it");
         Assert(byXeno[0].Rows.Count == 1 && byXeno[0].Rows[0].TargetDefName == "squire"
-                && byXeno[0].Rows[0].QueryHit,
+                && byXeno[0].Rows[0].AutoTrigger,
             "the expanded card shows exactly the hit content row");
 
         // Author condition (pack half) composes with the keyword (pack-name half): AND across conditions.
@@ -130,20 +130,26 @@ internal static class PackCardsLaneTests
         List<PackCardView> authorAndKeyword = PackCardProjection.Build(source, "Voice", in bob, "", "",
             in noState, manual);
         Assert(authorAndKeyword.Count == 1 && authorAndKeyword[0].Key == "mod.b:sang",
-            "author=Bob AND keyword=sque leaves only Bob's card");
-
-        // Race dropdown: keeps that race's own domain AND its xenotype domains; drops other races.
+            "author=Bob AND keyword=Voice leaves only Bob's card");
         List<PackCardView> raceRatkin = PackCardProjection.Build(source, "", in noAuthor, "ratkin", "",
             in noState, manual);
         Assert(raceRatkin.Count == 1 && raceRatkin[0].Rows.Count == 2,
             "race=ratkin keeps the race domain plus its xenotype domain");
 
-        // Xenotype dropdown: only that (race, xenotype) domain row; race domains step out.
+        // Xenotype dropdown: only that (race, xenotype) domain row; race domains step out. And
+        // review-1 correction 1: the dropdown ALONE (empty keyword) auto-expands the card providing
+        // the selected domain - §4.2's "expose the corresponding content" - while clearing it restores
+        // the manual set (empty here, so the card is collapsed again; nothing sticks open).
         List<PackCardView> xenoSang = PackCardProjection.Build(source, "", in noAuthor, "", "sanguophage",
             in noState, manual);
         Assert(xenoSang.Count == 1 && xenoSang[0].Key == "mod.b:sang" && xenoSang[0].Rows.Count == 1
-                && xenoSang[0].Rows[0].Scope == SqueakVoicePackScope.Xenotype,
-            "xenotype=sanguophage selects exactly that domain row");
+                && xenoSang[0].Rows[0].Scope == SqueakVoicePackScope.Xenotype
+                && xenoSang[0].Rows[0].AutoTrigger && xenoSang[0].AutoExpanded && xenoSang[0].Expanded,
+            "xenotype=sanguophage selects that domain row AND auto-expands its card with no keyword up");
+        List<PackCardView> dropdownCleared = PackCardProjection.Build(source, "", in noAuthor, "", "",
+            in noState, manual);
+        Assert(dropdownCleared.Count == 2 && !dropdownCleared[1].Expanded && !dropdownCleared[1].ManualExpanded,
+            "clearing the dropdown leaves no stuck-open card - the manual set is what remains");
 
         // State flags act on the DOMAIN half: Enabled only keeps enabled pairs; Conflicts keeps the
         // conflicting domain's pairs.

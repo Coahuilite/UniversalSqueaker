@@ -32,6 +32,7 @@ internal static class CancelLayerLaneTests
     {
         PacksReturnLayerOnePressOneLayer();
         ReSelectAndWorkspaceSwitchRebuildTheBranch();
+        HiddenManualIsNoLayerVisibleManualCollapsesOnce();
         ExplicitTargetsExpireAndRealClicksClimb();
         TuningLadderIsScopedToTheVisibleBranch();
         DefaultGlobalContextReturnsOnceWithRealClick();
@@ -41,8 +42,9 @@ internal static class CancelLayerLaneTests
         WindowLayeringRelationships();
         KeyboardCooperationWitness();
         DiagnosticsTwoPressEscThroughTheNativeStackDouble();
-        Console.WriteLine("[us-cancel] packs return = one press then decline-unconsumed; help at page-root;"
-            + " tuning rows visible-branch-scoped over a context layer on the wrapper container;"
+        Console.WriteLine("[us-cancel] packs return = domain one press; the RESULT layer answers only for "
+            + "VISIBLE manual cards (hidden manual retained, the climb reaches help); tuning rows"
+            + " visible-branch-scoped over a context layer on the wrapper container;"
             + " default-Global page returns context ONCE (real-click subject); explicit targets expire"
             + " off-play; dev panel eligible only while its own page holds a layer - idle Esc goes to the"
             + " settings ladder; two-press Esc armed + close-branch through the stack double");
@@ -204,6 +206,77 @@ internal static class CancelLayerLaneTests
         Assert(fake.ViewState.PackCardsExpanded.Count == 0,
             "and the collapse is NOT silently re-opened by the rebuild - expansion is only ever the "
             + "player's own gesture or the query's");
+    }
+
+    /// <summary>
+    /// US-PACK1 review-1 correction 2, on the REAL host: a manual expansion that the active conditions
+    /// HIDE must never be an executable Esc layer. The subject is a row of a VISIBLE auto-expanded card;
+    /// press 1 clears the domain; press 2 must climb PAST the result layer (the only manual key, sang2,
+    /// is hidden by the author condition) and answer at the help layer while the hidden manual key is
+    /// RETAINED; press 3 then declines everything to the root. Clearing the conditions brings the
+    /// player's sang2 expansion back - and only then is the result layer real: it answers once and
+    /// collapses exactly that visible card. Reproduces the PM boundary witness (host-run.log case 3).
+    /// </summary>
+    private static void HiddenManualIsNoLayerVisibleManualCollapsesOnce()
+    {
+        BuildPacksView(out RecordingSettingsSource fake);
+        using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
+        fake.RevisionSource = () => host.Session.ContentRevision;
+        Rect viewport = new(0f, 0f, PageWidth, PageHeight);
+        host.Bindings.Invoke("set-tab", "Packs");
+        ArrangeAndDraw(host);
+        host.Bindings.Set("help-open", true);
+        ArrangeAndDraw(host);
+
+        // The player opens sang2; the author condition then hides it while the keyword auto-opens sang.
+        host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", "us.sang2", "toggle-pack-card"), "");
+        host.Bindings.Set("pack-filter", "AuthorA");
+        host.Bindings.Set("search-text", "sanguophage");
+        ArrangeAndDraw(host);
+        Assert(fake.ViewState.PackCardsExpanded.Contains("us.sang2"), "setup: sang2 is the manual key");
+        Assert(fake.BuildView().PackCards.Count == 1
+                && fake.BuildView().PackCards[0].Key == "us.sang"
+                && fake.BuildView().PackCards[0].AutoExpanded
+                && !fake.BuildView().PackCards[0].ManualExpanded,
+            "setup: the author condition hides sang2 and the keyword auto-opens sang (visible, not manual)");
+
+        int fired = Program.PressDeclarativeButton(host, viewport, "pack-card-row-hit#us.sang|human|sanguophage");
+        Assert(fired == 1, "the visible auto-expanded row must answer the press, got " + fired);
+
+        (bool answered1, Event first) = PressEscape(host);
+        Assert(answered1 && first.type == EventType.Used && fake.ViewState.DomainSelectionCanceled,
+            "press 1 clears the visible domain");
+
+        (bool answered2, Event second) = PressEscape(host);
+        Assert(answered2 && second.type == EventType.Used && !fake.ViewState.HelpPanelOpen,
+            "press 2 climbs to the HELP layer: the result layer declined because its only manual key is hidden");
+        Assert(fake.ViewState.PackCardsExpanded.Contains("us.sang2"),
+            "the hidden manual expansion is RETAINED, not silently consumed");
+        Assert(fake.BuildView().PackCards[0].Expanded,
+            "and the visible auto card stayed exactly as the query left it");
+
+        (bool answered3, Event third) = PressEscape(host);
+        Assert(!answered3 && third.type != EventType.Used,
+            "press 3: help closed, no visible manual card, domain declined - the key reaches the root unconsumed");
+
+        // The retained state returns with the condition - and only now is the result layer real.
+        host.Bindings.Set("pack-filter", "");
+        host.Bindings.Set("search-text", "");
+        ArrangeAndDraw(host);
+        PackCardView back = fake.BuildView().PackCards[1];
+        Assert(back.Key == "us.sang2" && back.ManualExpanded && back.Expanded,
+            "clearing the conditions restored the player's own sang2 expansion");
+        fired = Program.PressDeclarativeButton(host, viewport, "pack-card-row-hit#us.sang2|human|sanguophage");
+        Assert(fired == 1, "the restored card's row answers a press");
+        host.Bindings.Invoke("select-domain", "human|sanguophage");   // re-establish the domain layer
+        ArrangeAndDraw(host);
+        (bool answered4, _) = PressEscape(host);
+        Assert(answered4 && fake.ViewState.DomainSelectionCanceled,
+            "press 4: the domain layer answers first (one press, one layer)");
+        (bool answered5, Event fifth) = PressEscape(host);
+        Assert(answered5 && fifth.type == EventType.Used
+                && fake.ViewState.PackCardsExpanded.Count == 0,
+            "press 5: the VISIBLE manual card now IS the layer - one press, collapsed exactly once");
     }
 
     private static void TuningLadderIsScopedToTheVisibleBranch()

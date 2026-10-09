@@ -488,10 +488,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     }
 
     public bool CanCancelPackResults()
-        => VoicePacksPageModel.CanCancelPackResults(state);
+        => VoicePacksPageModel.CanCancelPackResults(state, BuildView());
 
     public void CancelPackResults()
-        => VoicePacksPageModel.CancelPackResults(state);
+        => VoicePacksPageModel.CancelPackResults(state, BuildView());
 
     // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
     public void SetActionTuning(string actionKey, bool intervalField, float? value)

@@ -414,8 +414,10 @@ public readonly struct VoicePackRowView
 /// with that identity's own enable answer for THIS pack. Two rows of one card are two domains of one pack;
 /// their switches write two independent domain selections, which is what keeps the cross-domain
 /// non-crosstalk contract visible on screen (§4.2: no cross-domain global pack switch is added).
-/// <c>QueryHit</c> marks the row whose DOMAIN half the keyword matched AND whose scope is Xenotype -
-/// that hit is what auto-expands the owning card without touching the manual expansion set (§1 ruling).
+/// <c>AutoTrigger</c> marks the row whose XENOTYPE domain the active conditions name - the keyword
+/// matched its DOMAIN half, or the xenotype dropdown is set and this row survived it (review-1: the
+/// dropdown alone must expose the matching content too). That mark is what auto-expands the owning
+/// card without touching the manual expansion set (§1/§4.2 ruling).
 /// </summary>
 public readonly struct PackCardDomainRowView
 {
@@ -426,19 +428,20 @@ public readonly struct PackCardDomainRowView
     public readonly string DisplayName;
     /// <summary>True when this row's domain currently has the pack enabled.</summary>
     public readonly bool IsEnabled;
-    /// <summary>True when the active keyword matched this row's DOMAIN half (drives the auto-expand).</summary>
-    public readonly bool QueryHit;
+    /// <summary>True when the active xenotype condition (keyword domain hit or the xenotype dropdown)
+    /// names this row's domain - the per-row auto-expand trigger, never a manual-set write.</summary>
+    public readonly bool AutoTrigger;
 
     public PackCardDomainRowView(
         SqueakVoicePackScope scope, string raceDefName, string targetDefName, string displayName,
-        bool isEnabled, bool queryHit)
+        bool isEnabled, bool autoTrigger)
     {
         Scope = scope;
         RaceDefName = raceDefName ?? "";
         TargetDefName = targetDefName ?? "";
         DisplayName = displayName ?? "";
         IsEnabled = isEnabled;
-        QueryHit = queryHit;
+        AutoTrigger = autoTrigger;
     }
 
     /// <summary>The row's Repeat identity: the same '|'-joined shape the browse rows used, extended with

@@ -72,10 +72,13 @@ public readonly struct PackCardSourceRow
 /// </para>
 /// <para>
 /// <b>Expansion.</b> The manual set is the player's own gesture and the ONLY thing a result-layer
-/// cancel collapses. Auto-expansion is derived: a NON-EMPTY keyword whose hit landed on a
-/// XENOTYPE domain's half opens the card that provides it (the user-confirmed §1 rule), while a
-/// pack-name hit lists the card collapsed. Clearing the keyword therefore restores exactly the manual
-/// set - and no query ever writes it, which is the same boundary the filter never writes enable.
+/// cancel collapses - and only the VISIBLE part of it (the host's cancel consults this projection, so
+/// a manual key the current conditions filter out stays retained and returns when the conditions do).
+/// Auto-expansion is derived from the active XENOTYPE condition: a keyword hit on a XENOTYPE domain's
+/// half, OR the xenotype dropdown naming the domain (review-1: the dropdown alone must expose the
+/// matching content), opens the card that provides it (the user-confirmed §1 rule); a pack-name hit
+/// lists the card collapsed. Clearing the condition restores exactly the manual set - and neither
+/// condition ever writes it, which is the same boundary the filter never writes enable.
 /// </para>
 /// <para>
 /// <b>Order.</b> Cards follow the FIRST appearance of each pack key across the input scan; rows follow
@@ -99,6 +102,7 @@ public static class PackCardProjection
 
         string trimmed = (query ?? "").Trim();
         bool keyword = trimmed.Length > 0;
+        bool xenoFilterActive = !string.IsNullOrEmpty(xenotypeFilter);
         var keys = new List<string>();
         var rowsByKey = new Dictionary<string, List<PackCardDomainRowView>>(StringComparer.Ordinal);
         var headByKey = new Dictionary<string, PackCardSourceRow>(StringComparer.Ordinal);
@@ -127,14 +131,19 @@ public static class PackCardProjection
             if (!VoicePacksFilters.DomainMatches(
                     pair.HasConflict, pair.IsDormant, pair.IsTargetUnavailable,
                     pair.DomainHasOrphan, pair.PackEnabledInDomain, in state)) continue;
-
-            // Keyword: pack half OR domain half; the xenotype-domain hit is the auto-expand trigger.
+            // Keyword: pack half OR domain half. The auto-expand trigger (review-1 correction 1) is a
+            // hit on the XENOTYPE domain's half from EITHER condition of the region that names a
+            // xenotype: the keyword matching the domain half, or the ACTIVE xenotype dropdown - a row
+            // that survived that dropdown IS the matching content §4.2 demands be exposed, even with an
+            // empty keyword. The trigger stays a per-row flag: it never enters the manual set and
+            // never writes enable, so clearing the dropdown restores exactly the player's own state.
             bool packHit = keyword && UsChecklistFilter.QueryMatches(
                 trimmed, pair.Label, pair.DefName, pair.ModName, pair.Author, pair.PackKey);
             bool domainHit = keyword && UsChecklistFilter.QueryMatches(
                 trimmed, pair.DomainDisplay, pair.TargetDefName, pair.RaceDefName);
             if (keyword && !packHit && !domainHit) continue;
-            bool autoTrigger = domainHit && pair.Scope == SqueakVoicePackScope.Xenotype;
+            bool autoTrigger = pair.Scope == SqueakVoicePackScope.Xenotype
+                && (domainHit || xenoFilterActive);
 
             if (!rowsByKey.TryGetValue(pair.PackKey, out List<PackCardDomainRowView> rows))
             {
@@ -156,7 +165,7 @@ public static class PackCardProjection
             List<PackCardDomainRowView> rows = rowsByKey[key];
             bool manual = ContainsOrdinal(manualExpanded, key);
             bool auto = false;
-            for (int r = 0; r < rows.Count; r++) if (rows[r].QueryHit) { auto = true; break; }
+            for (int r = 0; r < rows.Count; r++) if (rows[r].AutoTrigger) { auto = true; break; }
             cards.Add(new PackCardView(
                 key, head.Label, head.DefName, head.ModName, head.Author, head.Coverage,
                 manual, auto, rows));

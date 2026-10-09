@@ -1304,7 +1304,16 @@ internal static class Program
             // through a bumping write).
             { "cancel-help", () => { fake.ViewState.HelpPanelOpen = true; host.Bindings.TryInvokeCommand("cancel-help"); } },
             { "cancel-domain-selection", () => { fake.ViewState.DomainSelectionCanceled = false; fake.ViewState.RaceFilter = ""; fake.ViewState.XenotypeFilter = ""; host.Bindings.TryInvokeCommand("cancel-domain-selection"); } },
-            { "cancel-pack-results", () => { fake.ViewState.PackCardsExpanded.Add(cardKey); host.Bindings.TryInvokeCommand("cancel-pack-results"); } },
+            // review-1: the result layer answers only for a VISIBLE manual expansion, so the probe
+            // clears every condition first (the earlier filter probes would otherwise hide the card),
+            // opens the card through the manual set, and reprojects - a manual-set change is not a
+            // bumping write, and the eligibility reads the CURRENT projection exactly as the engine does.
+            { "cancel-pack-results", () => {
+                VoicePacksPageState st = fake.ViewState;
+                st.SearchText = ""; st.PackFilter = default; st.RaceFilter = ""; st.XenotypeFilter = "";
+                st.PackCardsExpanded.Add(cardKey);
+                fake.ReprojectAtCurrentRevision();
+                host.Bindings.TryInvokeCommand("cancel-pack-results"); } },
             { "cancel-tuning-target", () => { fake.ViewState.TuningArea = 0; fake.ViewState.TuningSelectedAction = "Eat"; fake.ReprojectAtCurrentRevision(); host.Bindings.TryInvokeCommand("cancel-tuning-target"); } },
             { "cancel-tuning-context", () => { fake.ViewState.TuningContextActive = true; host.Bindings.TryInvokeCommand("cancel-tuning-context"); } },
         };

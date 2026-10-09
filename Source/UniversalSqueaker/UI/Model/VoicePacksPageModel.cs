@@ -1082,18 +1082,44 @@ public static class VoicePacksPageModel
         if (!state.PackCardsExpanded.Remove(packKey)) state.PackCardsExpanded.Add(packKey);
     }
 
-    /// <summary>US-ESC1 (PACK1 result layer, §4.1): the result layer has an answer ONLY while the player
-    /// opened cards themselves; an auto-expanded-by-the-query card is the query's answer, not a layer.
-    /// Declining sends the key one level up (page-root help, then Verse) unchanged.</summary>
-    public static bool CanCancelPackResults(VoicePacksPageState state)
-        => state != null && state.PackCardsExpanded.Count > 0;
+    /// <summary>US-ESC1 (PACK1 result layer, §4.1; review-1 correction 2): the result layer answers ONLY
+    /// while a MANUALLY opened card is VISIBLE in the current projection. A manual expansion the active
+    /// author/query conditions filter out is NOT an executable layer - it is the player's own state kept
+    /// for when the conditions return - so it can never become an invisible Esc that consumes the key with
+    /// nothing on screen changing. The decision reads the production view (including its empty result: zero
+    /// visible cards means zero visible manual expansions means the layer declines), never the raw set.</summary>
+    public static bool CanCancelPackResults(VoicePacksPageState state, VoicePacksViewState view)
+        => view != null && CanCancelPackResults(state, view.PackCards);
 
-    /// <summary>One press, one layer: collapse exactly the manual expansions. Never touches filters,
-    /// selection or any persisted value.</summary>
-    public static void CancelPackResults(VoicePacksPageState state)
+    /// <summary>The cards-list form the host and the boundary witness call directly: the decision is a
+    /// function of the CURRENTLY VISIBLE cards (the projection already applied every condition), so a
+    /// caller that has the projected list need not rebuild the whole view.</summary>
+    public static bool CanCancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
     {
-        if (state == null) return;
-        state.PackCardsExpanded.Clear();
+        if (state == null || visibleCards == null) return false;
+        for (int i = 0; i < visibleCards.Count; i++)
+            if (visibleCards[i].ManualExpanded) return true;
+        return false;
+    }
+
+    /// <summary>One press, one layer: collapse exactly the VISIBLE manual expansions (the cards the player
+    /// opened AND the current conditions still show). Hidden manual keys and the query's auto state are
+    /// retained, so changing or clearing a filter restores the player's view. Never touches filters,
+    /// selection or any persisted value.</summary>
+    public static void CancelPackResults(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (view != null) CancelPackResults(state, view.PackCards);
+    }
+
+    /// <summary>The cards-list form: removes from the manual set exactly the VISIBLE manual keys.</summary>
+    public static void CancelPackResults(VoicePacksPageState state, IReadOnlyList<PackCardView> visibleCards)
+    {
+        if (state == null || visibleCards == null) return;
+        for (int i = 0; i < visibleCards.Count; i++)
+        {
+            PackCardView card = visibleCards[i];
+            if (card.ManualExpanded) state.PackCardsExpanded.Remove(card.Key);
+        }
     }
 
     /// <summary>

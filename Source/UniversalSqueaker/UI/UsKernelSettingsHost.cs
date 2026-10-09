@@ -754,11 +754,13 @@ public static class UsKernelSettingsHost
             "cancel-domain-selection",
             () => { source.CancelDomainSelection(); bump(); },
             () => source.CanCancelDomainSelection());
-        // US-PACK1 result layer (§4.1): the pack-card body is its own return layer BETWEEN the operation
-        // domain and the page root. It answers ONLY while the player has manually opened cards - a
-        // query-auto-expanded card is the query's answer, not a layer, and an all-collapsed result has
-        // nothing to release, so the veto climbs to cancel-help. Collapsing writes no settings and clears
-        // no filter or selection.
+        // US-PACK1 result layer (§4.1, review-1 correction 2): the pack-card body is its own return
+        // layer BETWEEN the operation domain and the page root. It answers ONLY while a MANUALLY opened
+        // card is VISIBLE in the current projection - a query-auto-expanded card is the query's answer,
+        // not a layer, and a manual expansion the conditions filter out is retained player state, never
+        // an invisible Esc that consumes the key while nothing on screen changes. The veto (no visible
+        // manual card - including an entirely filtered result) climbs to cancel-help. Collapsing removes
+        // exactly the visible manual keys and writes no settings, filter or selection.
         writes.Command(
             "cancel-pack-results",
             () => { source.CancelPackResults(); bump(); },

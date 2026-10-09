@@ -897,14 +897,13 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     }
 
     public bool CanCancelPackResults()
-        => VoicePacksPageModel.CanCancelPackResults(state);
+        => VoicePacksPageModel.CanCancelPackResults(state, BuildView());
 
     public void CancelPackResults()
     {
         CancelPackResultsCount++;
-        VoicePacksPageModel.CancelPackResults(state);
+        VoicePacksPageModel.CancelPackResults(state, BuildView());
     }
-
     // No SetHelpHover / BeginHelpHoverFrame on this fake: since FL P3 the hover claim is UiSession
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.

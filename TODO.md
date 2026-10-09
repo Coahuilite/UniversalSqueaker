@@ -35,11 +35,14 @@ US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file doe
   idle OMP were provisioned (evidence `us/herdr-reset1-provision.*`);
   **US-PACK1 implemented locally** at `909f6f9` (one filter region + pack-card results + the real
   domain→result→root→close ESC1 chain; the three old Packs lanes retired with named replacement
-  scenarios) - full local gates green on both carriers; **ESC1 aggregate closes with PACK1's acceptance**.
-  **Still to dispatch:** US-RESET1 backend in its provisioned worktree (global/local restore per the
-  accepted field-ownership table; keep every independent fallback store), then Demo-IC1, then the ONE
-  combined short human pass. Exclude only the FL-owned broader backlog
-  (task-11, FL-17, FL-18/B6, FL-13/B10), not FL-IC1/2.
+  scenarios); PM review 1's two boundary corrections landed next (dropdown-driven auto-expansion with an
+  empty keyword; result-layer Esc answers/collapses only VISIBLE manual cards, hidden manual retained) -
+  full local gates green on both carriers, the PM boundary witness re-run green. **US-RESET1's backend is
+  PM-ACCEPTED** on its worktree branch (`d668c12` + `be737e8`, `us/pm-reset1-backend-accepted.md`; not
+  merged). **ESC1 aggregate/root selection-release observability stays unverified until integration.**
+  **Next:** US-PACK1 re-review, then the RESET1 main-tree UI integration dispatch (wiring the accepted
+  backend to Schema2/host/confirm dialogs - not a second backend), then Demo-IC1, then the ONE combined
+  short human pass. Exclude only the FL-owned broader backlog (task-11, FL-17, FL-18/B6, FL-13/B10).
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
