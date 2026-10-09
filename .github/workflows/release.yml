@@ -194,6 +194,8 @@ jobs:
           - Uninstalling is save-safe: no permanent data is written into saves, and settings and profiles live in the RimWorld ``Config/`` folder.
           - The prerequisite pairing is exact: the rows above name the FerriteLib release, its commit and the carrier DLL's SHA-256 this build was compiled against.
 
+          ## Changes
+
           $delta
           "@
           $body | Out-File -FilePath release-body.md -Encoding utf8NoBOM
