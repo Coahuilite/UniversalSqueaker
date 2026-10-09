@@ -43,71 +43,58 @@
   diagnostics. DX1 uses compact navigation at the minimum game screen. Source checks, named faithful
   proofs and real-game limits are recorded separately in the PM checkpoint evidence. Composite splitting
   and scroll-distance polish remain deferred.
-- **Interaction checkpoint in progress (2026-10-08).** The archive round is complete and the work moved on:
-  FL-IC1/IC2 were accepted and FROZEN at ferritelib `d5af4d8` (PM-verified carrier/stub/payload identities in
-  the relay evidence), and US-UI1 plus US-ESC1 are now implemented on that freeze as local commits: the two
-  diagnostic windows' two-press Esc moved onto the shell's `TryHandleUnansweredCancel` with the window's own
-  native-eligibility opt-in, the Call wording is corrected (zh 普通叫声 / EN Periodic occurrence), F07 draws the
-  measured reset slot from STATE only (the click-return double-paint is gone), F06 gates the layer/domain and
-  empty-target context to the action/mood areas, F01's tool windows sit on SubSuper (main window stays Dialog,
-  confirmations on Super - the measured 1.6 layer order, so a main-window click can never absorb a tool's input),
-  and the ESC1 tree cancel layers ride FL-IC2 `CancelBind` with explicit cancelled marks; only the two
-  projections that can show a cancelled selection consult the marks (the domain browse and the fallback table) -
-  BuildTuningDomains never sees one because the ladder's context step always rests the page on the Global layer,
-  where no domain exists to auto-pick. Ladder steps are scoped to the VISIBLE branch: a row target left over
-  from another area folds into the context exit instead of acting as an invisible extra layer.
-  PM review 1 (2026-10-09, commit `1d40721`) corrected two reachable defects: the active tuning context is a
-  NON-PERSISTED `TuningContextActive` flag, never a nonzero layer/area inference, so the DEFAULT Global/Actions
-  branch also owns one context return that reposes the page without writing config or auto-reselecting (row
-  cancel stays visible-branch-scoped; the wrapper container carries the context `CancelBind`; the lane
-  establishes its subject with a REAL viewport-transformed click, never `SetCancelTarget`); and the DT1 dev
-  panel (`UsDevPanelWindow` ONLY - the two Diagnostics windows keep their constructor `forceCatch...=true`
-  and the unchanged two-press Esc policy) recomputes the eligibility field at the TOP of its own
-  `WindowOnGUI` before content, matching the native pre-contents dispatch. The witness proves the TOOL'S
-  OWN entry updates inside the pass; it cannot prove other windows' fields are fresh when the real stack
-  dispatches earlier (WindowStackOnGUI runs WindowOnGUI bottom-up, each InnerWindowOnGUI dispatching
-  pre-content) - that cross-window freshness stays in the agreed ONE human pass, with no new product
-  failure claimed from the simulation.
-  US-PACK1 LANDED locally (commit `909f6f9`; PM review-1's two boundary corrections in the next round):
-  one composable filter region (keyword/author/race/xenotype/state + condition echo) above ONE
-  pack-card result; a card's rows are the (scope, race, xenotype) domains
-  it serves, each with its own enable switch (no cross-domain global switch); the manual expansion set and
-  the query's xenotype-hit auto-expansion are SEPARATE flags, so clearing the keyword restores exactly the
-  player's own state - and review-1 fixed two reachable boundaries: the auto-expand trigger is the ACTIVE
-  XENOTYPE CONDITION (keyword domain hit OR the xenotype dropdown alone, empty keyword included), and the
-  result-layer Esc answers/collapses only the VISIBLE manual cards (a manual key the conditions hide is
-  retained state, never an invisible layer; the eligibility reads the current projection, empty result
-  included). The real ESC1 chain domain→result→root→close rides the parent chain. Two engine facts
-  measured this round: a `CancelBind` declared INSIDE a Repeat template is item-qualified by the engine and
-  can never name a page-level command (declare it on a page-level ancestor - US uses the Repeat itself);
-  and every row control records at its OWN group origin, so a census pairs rail↔FILL rects and checks the
-  band against the DECLARED row - the domain-row hit band is deliberately narrower than the row (it stops
-  at the switch). US-RESET1's backend (`d668c12` + `be737e8`, PM-accepted) is MERGED into the main tree
-  (`8958072` + `69a4019`) and its UI integration LANDED LOCALLY at `a7e75c2` (with the ESC1 visible-branch
-  closure: domain return answers only for a VISIBLE expanded-card row, result return only for a manual-ONLY
-  visible card; the backend harness stays the funnel/identity/fallback-bytes boundary, the UI lane owns the
-  ceremony and the draft integration) and its review1 at `c5f265c` (PM us/pm-integration-review1.md:
-  the confirm shell sizes from the MEASURED body - per-Open UiWindowOptions because UiPageWindow is
-  sealed - with the body in a Scroll container, answered in lanes through the REAL dialog button; the
-  draft end moved out of the facades into the host commands, scoped to Applied + the operation's own
-  fields; the area ceremonies capture the layer/domain token and refuse on drift) - PM-ACCEPTED
-  technically (`us/pm-integration-review1-accepted.md`; native short pass open). A latent product defect the widget-press lane exposed was fixed at `a7e75c2`:
-  `UsConfirmWindow.Open` called `CloseCurrent` right after claiming the static `active` slot, so the
-  slot was null while a question was on screen and a superseded second question could not close the
-  first; Open now keeps one slot per stack. PACK1 review1
-  was accepted at `e45eb2e` (`us/pm-pack1-review1-accepted.md`). Consumer-slot rule
-  learned this round: a consumer integrates against the frozen delivery in its OWN outputs - the harness builds
-  the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16 pins the five recorded source
-  hashes) and never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four
-  ignored canonical outputs were OBSERVED with drifted identities during the consumer window; the specific
-  historical writer is UNPROVEN - a directory mtime does not reliably reflect content overwrite of existing
-  files and save/copy can preserve mtimes, and the PM's read of the actual early US commands found no
-  one-to-one writer (the 15:04:46Z product Release build does not evidence a KernelHost canonical build).
-  The FL owner restored byte-equality (`fl/post-consumer-restoration.md`); the current US structure uses
-  the private snapshot with independent before/after identity checks matching. The unknown historical
-  writer adds NO new development blocker. hash/size/mtime are IDENTITY checks, not write attribution, and
-  `git status` says nothing about ignored artifacts. FL-owned backlog (task-11, FL-17, FL-18/B6,
-  FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
+- **Interaction checkpoint closed to candidate (2026-10-09).** FL-IC1/IC2 accepted and FROZEN at
+    ferritelib `d5af4d8`; US-UI1/US-ESC1/US-PACK1/US-RESET1 PM-accepted at the source/controlled-stub
+    level (receipt chain `us/pm-ui1-esc1-technical-accepted.md` → `us/pm-pack1-review1-accepted.md` →
+    `us/pm-reset1-backend-accepted.md` → `us/pm-integration-review1-accepted.md`); Demo-IC1 accepted
+    (`demo/pm-demo-ic1-accepted.md`); the paired Dev candidate `interaction-20261009-r1` is staged from
+    source `562fc47` against the frozen Dev carrier and accepted (`us/candidate-staging.*`,
+    `us/pm-candidate-staging-accepted.md`; directory and bytes preserved). ONE native human short pass
+    stays open - `TODO.md` owns its surface. The settled commit chain lives in git log; the durable
+    facts it leaves behind:
+    - UI1/ESC1: the two diagnostic windows' two-press Esc rides the shell's `TryHandleUnansweredCancel`
+      with a per-window native-eligibility opt-in (the DT1 panel recomputes its own eligibility at the
+      TOP of `WindowOnGUI`; the two Diagnostics windows keep their constructor opt-in); Call wording
+      zh 普通叫声 / EN Periodic occurrence; F07 draws the measured reset slot from STATE only; F06 gates
+      layer/domain and empty-target context to the action/mood areas; tool windows on SubSuper, main on
+      Dialog, confirmations on Super (measured 1.6 layer order - a main-window click cannot absorb a
+      tool's input).
+    - ESC1/PACK1: cancel layers ride FL-IC2 `CancelBind` with explicit cancelled marks, consulted only
+      by the two projections that can show a cancelled selection (domain browse, fallback table;
+      BuildTuningDomains never sees one because the context step rests the page on Global). A
+      `CancelBind` INSIDE a Repeat template is item-qualified and can never name a page command
+      (declare on an ancestor - US uses the Repeat itself); row controls record at their OWN group
+      origin and the domain-row hit band is deliberately narrower than the row. The active tuning
+      context is the NON-PERSISTED `TuningContextActive` flag, so the default Global/Actions branch also
+      owns one context return; subject lanes use REAL clicks, never `SetCancelTarget`. Auto-expand is
+      the ACTIVE XENOTYPE CONDITION (keyword domain hit OR the dropdown alone, empty keyword included).
+      VISIBLE-branch cancel rules: the domain return answers only for a row of an EXPANDED card in the
+      current projection; the result return only for a manual-ONLY visible card - masked/hidden manual
+      state is retained for the query clear, never an invisible or empty layer; the root arrival IS the
+      last branch layer's visible release (no fabricated empty layer; help answers as its own layer and
+      cannot masquerade as the proof).
+    - RESET1: the backend owns the single publish/persistence funnel and the field-set truth (its
+      120-check harness is the funnel/identity/fallback-bytes boundary); the UI bumps only on Applied;
+      confirm ceremonies are NOT write keys (raw-site gate + revision-clock contract) and live in the
+      `us/reset-entry` composite and the scope-tree headers; the confirm shell sizes from the MEASURED
+      body (per-Open `UiWindowOptions`, because `UiPageWindow` is sealed) with the body in a Scroll
+      container, capped to the screen; the draft end is scoped to Applied + the operation's own fields
+      (facades never touch edits); area ceremonies capture the layer/domain token and REFUSE on drift.
+      Latent defect fixed at `a7e75c2`: `UsConfirmWindow.Open` nulled its `active` slot via
+      `CloseCurrent` right after claiming it - Open now keeps one slot per stack, so a superseded
+      question closes through the same catalog.
+    - Consumer-slot rule: a consumer integrates against the frozen delivery in its OWN outputs - the
+      harness builds the byte-pinned stub snapshot under `tools/FerriteLib.Stubs` (verify gate 16) and
+      never writes the carrier's canonical `bin/stubs`. MEASURED LIMIT of that discipline: four ignored
+      canonical outputs were OBSERVED with drifted identities during the consumer window; the
+      historical writer is UNPROVEN - a directory mtime does not reflect content overwrite, save/copy
+      can preserve mtimes, and `git status` says nothing about ignored artifacts (hash/size/mtime are
+      IDENTITY checks, not write attribution). The FL owner restored byte-equality
+      (`fl/post-consumer-restoration.md`); the current structure's before/after identity checks match;
+      the unknown historical writer adds NO new development blocker.
+    Cross-window field freshness under the real stack and native focus/IME/fonts remain in the agreed
+    ONE human pass - no product failure is claimed from the simulation. FL-owned backlog (task-11,
+    FL-17, FL-18/B6, FL-13/B10) stays out. `TODO.md` owns the remaining action surface.
 - **Working direction:** specifications lead with purpose, ownership, main path and a few invariants. Validate
   at responsible boundaries, then use established internal contracts directly. Hashes identify payloads, not
   business correctness. Unexpected failures retain context and the original exception; isolation or recovery is

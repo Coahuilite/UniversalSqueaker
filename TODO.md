@@ -5,52 +5,35 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — checkpoint acceptance and archive follow-up (2026-10-08)
+## NOW — paired candidate staged; one human short pass open (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
 status and paired package identities are authoritative in the PM checkpoint evidence and manifest:
 `../modding_documents/relay_mod/evidence/bh1-bottom-help-20261005/ckpt-20261007/`.
 The candidate is separate from the retained BH1 and SA1 packages; no install or publication is implied.
-Product implementation in `../modding_documents/relay_mod/INTERACTION-CONVERGENCE-TASKS-20261008.md`
-is dispatched per the PM relay: the archive round and FL-IC1/IC2 are accepted (frozen at `d5af4d8`), and
-US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file does not expand that product scope.
+The interaction round CLOSED to candidate: US-UI1/US-ESC1/US-PACK1/US-RESET1 are PM-accepted at the
+source/controlled-stub level (receipts `us/pm-ui1-esc1-technical-accepted.md`,
+`us/pm-pack1-review1-accepted.md`, `us/pm-reset1-backend-accepted.md`,
+`us/pm-integration-review1-accepted.md`), FL is frozen at `d5af4d8`, Demo-IC1 is accepted at `82664a11`
+(`demo/pm-demo-ic1-accepted.md`), and the paired Dev candidate `interaction-20261009-r1` is staged from
+source `562fc47` against the frozen Dev carrier (`us/candidate-staging.*`,
+`us/pm-candidate-staging-accepted.md`; directory and bytes preserved). The PM's final paired-manifest
+check may still be pending; nothing here expands the product scope.
 
-- [ ] **Remaining whole-checkpoint human tasks** (do not re-run accepted matrices): pack select/search/enable
-  as later revised by US-PACK1; compact US diagnostics and settings developer tools at 1024x768; per-race
-  final native fallback edit and new-race admission after a full restart. Real fonts, native input, actual
-  playback and game Scribe persistence remain human evidence, distinct from local checks and stubs.
+- [ ] **The ONE combined native short pass** (do not re-run accepted matrices; no preset-B reopen):
+  pack select/search/enable as revised by US-PACK1; compact US diagnostics and settings developer tools
+  at 1024x768; per-race final native fallback edit and new-race admission after a full restart; real
+  multi-window focus/key ownership and the confirm window's real-button clicks; native IME and real
+  fonts; long menus and scroll wheel; the restore operations (global/area/row) including window
+  placement under long EN/ZH copy. Real fonts, native input, actual playback and game Scribe
+  persistence remain human evidence, distinct from local checks and stubs.
 - **Already accepted:** BH1 help usability, same-window position, real-font footer/long-help appearance,
   independent scrolling and accurate clicks; SA1 mixed-mode confirmation and independent outline; PRE1
-  fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest). Observe
-  regressions only. Unreported restore/restart branches are not a new PRE1 gate.
-- **Interaction chain state (2026-10-09):** FL-IC1/IC2 accepted and frozen; US preparation accepted;
-  **US-UI1 and US-ESC1 implemented locally** (diagnostic two-press Esc on `TryHandleUnansweredCancel` +
-  native eligibility, Call wording, F07 measured reset slot, F06 area-scoped context, ESC1 tree cancel
-  layers + cancelled marks); PM review 1's bounded corrections landed at `1d40721` (non-persisted
-  `TuningContextActive` return on every branch incl. default Global, real-click subject lane, and the DEV
-  PANEL's own pre-contents eligibility recompute with a tool-entry keyboard-cooperation witness - the two
-  Diagnostics windows keep their constructor opt-in unchanged, and real-stack cross-window field freshness
-  stays in the agreed human pass) - full local gates green
-  on both carriers; PM review 2's claim corrections landed at `cf59d89`, and the RESET1 Herdr worktree +
-  idle OMP were provisioned (evidence `us/herdr-reset1-provision.*`);
-  **US-PACK1 implemented locally** at `909f6f9` (one filter region + pack-card results + the real
-  domain→result→root→close ESC1 chain; the three old Packs lanes retired with named replacement
-  scenarios); PM review 1's two boundary corrections landed next (dropdown-driven auto-expansion with an
-  empty keyword; result-layer Esc answers/collapses only VISIBLE manual cards, hidden manual retained) -
-  full local gates green on both carriers, the PM boundary witness re-run green. **US-RESET1 backend
-  accepted and MERGED** (`8958072` + `69a4019`); **the RESET1 UI integration and the ESC1 aggregate
-  closure LANDED LOCALLY at `a7e75c2`** (visible-branch cancel rules, root-handoff lane with no empty
-  layer, restore entries + us/reset-entry ceremony + EN/ZH copy + help, EndOpenDraft draft integration
-  with mutation proof; collapse probe re-run green; verify-local green on both carriers; evidence
-  `us/integration.*`, originals in `us/review1-original-integration/`). **Integration review1 landed at
-  `c5f265c`** (measured+scrolling confirm shell answered through the REAL dialog button, PM boundary
-  probe green 5/5; draft end scoped to Applied+own fields; captured staged-identity refusal with
-  mutation proof; ESC1 closed cases and the accepted backend untouched) - **PM-ACCEPTED technically**
-  (`c5f265c` + `bb30fa5`, `us/pm-integration-review1-accepted.md`); the native short pass stays open.
-  **Next:** paired Dev candidate `interaction-20261009-r1` staging, then Demo-IC1,
-  then the ONE combined short human pass (native focus/IME, real multi-window Esc, row-highlight
-  pixels, 1024x768 compact tools). Exclude only the FL-owned broader backlog (task-11, FL-17, FL-18/B6,
-  FL-13/B10).
+  fixture A (human-confirmed effective) and B (accepted by equivalence, no separate B retest); Demo-IC1.
+  Observe regressions only. Unreported restore/restart branches are not a new PRE1 gate.
+- **Interaction chain state:** the settled commit chain lives in git log and the PM evidence pointers
+  above; durable engineering facts are in `MEMORY.md`. **Next:** the PM's final paired check and the
+  single human pass. The FL-owned broader backlog (task-11, FL-17, FL-18/B6, FL-13/B10) stays excluded.
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
