@@ -90,8 +90,8 @@
   the confirm shell sizes from the MEASURED body - per-Open UiWindowOptions because UiPageWindow is
   sealed - with the body in a Scroll container, answered in lanes through the REAL dialog button; the
   draft end moved out of the facades into the host commands, scoped to Applied + the operation's own
-  fields; the area ceremonies capture the layer/domain token and refuse on drift) - awaiting PM
-  acceptance. A latent product defect the widget-press lane exposed was fixed at `a7e75c2`:
+  fields; the area ceremonies capture the layer/domain token and refuse on drift) - PM-ACCEPTED
+  technically (`us/pm-integration-review1-accepted.md`; native short pass open). A latent product defect the widget-press lane exposed was fixed at `a7e75c2`:
   `UsConfirmWindow.Open` called `CloseCurrent` right after claiming the static `active` slot, so the
   slot was null while a question was on screen and a superseded second question could not close the
   first; Open now keeps one slot per stack. PACK1 review1
