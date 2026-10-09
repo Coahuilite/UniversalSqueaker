@@ -42,7 +42,11 @@ US-UI1/US-ESC1 have landed as local commits awaiting PM re-review; this file doe
   closure LANDED LOCALLY at `a7e75c2`** (visible-branch cancel rules, root-handoff lane with no empty
   layer, restore entries + us/reset-entry ceremony + EN/ZH copy + help, EndOpenDraft draft integration
   with mutation proof; collapse probe re-run green; verify-local green on both carriers; evidence
-  `us/integration.*`) - awaiting PM integration acceptance. **Next:** PM acceptance, then Demo-IC1,
+  `us/integration.*`, originals in `us/review1-original-integration/`). **Integration review1 landed at
+  `c5f265c`** (measured+scrolling confirm shell answered through the REAL dialog button, PM boundary
+  probe green 5/5; draft end scoped to Applied+own fields; captured staged-identity refusal with
+  mutation proof; ESC1 closed cases and the accepted backend untouched) - awaiting PM acceptance.
+  **Next:** PM acceptance, then Demo-IC1,
   then the ONE combined short human pass (native focus/IME, real multi-window Esc, row-highlight
   pixels, 1024x768 compact tools). Exclude only the FL-owned broader backlog (task-11, FL-17, FL-18/B6,
   FL-13/B10).
