@@ -140,7 +140,8 @@ jobs:
           # reproduce instead of a receipt only this run believes. The asset name stays
           # UniversalSqueaker-<tag>.zip because that name is a reconciliation target.
           ./scripts/stage-package.ps1 -StageDir $stageDir -VersionLabel $base -BuildFlavor release `
-            -CommitLabel $commit -RequireReleaseIdentity -CreateZip -ArchiveName "UniversalSqueaker-$tag"
+            -CommitLabel $commit -RequireReleaseIdentity -CreateZip -ArchiveName "UniversalSqueaker-$tag" `
+            -FerriteLibArtifactPath '../ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
           $zip = "dist/github/UniversalSqueaker-$tag.zip"
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Expected asset was not produced: $zip" }
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
