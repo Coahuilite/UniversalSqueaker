@@ -52,6 +52,8 @@ C00（已定，主规格§2）：纯合同、决策、选音和参数合成只�
 | T11 三态 V02/09 | All(true,unknown)、All(false,unknown)、Any(true,unknown)、Any(false,unknown)、Not(unknown) | 依次unknown/false/true/unknown/unknown；只第三个可使包装成立。缺失实现则初始化拒绝相应声明，不当作该unknown运行例 |
 | T12 对象隔离 V01/03 | p1 t1000Dispatched；p2也于1000合法到期 | p2不继承p1的名额/H/机会；不能因Race不同或同Race另一Pawn共享状态而拒绝 |
 
+**T06独立延迟变体（D2候选，V03/V04）：** 从T02后的快照独立开始，原状态机会1060不变；到t1050才收到Wounded并Dispatched，动作/共用硬门均已过。确认Wounded=1050，H_Wounded=1170，H_shared=1090；未消费的状态机会须从1060推迟至1090，不是1110。不得重新抽W、追加原W=20，或让1060绕过新共用截止；除了事件自身已规定的随机，不消费新的状态等待随机。
+
 T06中的Wounded间隔120仅为样本；旧入口是否有不同clock/门控按下方决策项裁定。概率资格拒绝、无成立动作、无候选或调制准备失败均必须有与T02相同的“未来重检、硬截止不更新”断言，但各自原因不同；不能全归成后端Rejected。
 
 ## 切片覆盖与放行

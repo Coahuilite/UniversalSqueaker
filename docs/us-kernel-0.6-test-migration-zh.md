@@ -77,7 +77,7 @@ S2/S5原生输出须记录实例创建/副作用边界、四结果、US归属的
 
 ## 6. FL0.8只以固定身份Dev产物联调
 
-FL基线为`6ef82d7`上的[0.8规格](../../ferritelib/docs/development/0.8/README.md)及[合同验收/测试迁移§4–6](../../ferritelib/docs/development/0.8/acceptance-and-test-migration.md)。能力、纯层证明、三路共用行为、1.6文本/宿主证据及迁移规则直接遵循FL文档，不在US再定义。FL文档本身尚不是实现产物。
+FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../ferritelib/docs/development/0.8/README.md)及[合同验收/测试迁移§4–6](../../ferritelib/docs/development/0.8/acceptance-and-test-migration.md)。能力、纯层证明、三路共用行为、1.6文本/宿主证据及迁移规则直接遵循FL文档，不在US再定义。FL文档本身尚不是实现产物。
 
 当前[Mod构造入口](../Source/UniversalSqueaker/Mod.cs)的`[0.7.0,0.8.0)`不包含0.8。[Directory.Build.props](../Directory.Build.props)仍有旧兼容默认路径；不能依默认值、移动HEAD或旧payload冒充0.8消费，也不在本文直接放宽pin。
 
