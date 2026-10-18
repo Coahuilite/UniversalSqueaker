@@ -119,13 +119,12 @@ public sealed class SqueakPoolRegistry
         if (!tier2.IsNone) count++;
         if (count == 0) return ChainResult.None;
         if (count == 1) return !tier0.IsNone ? tier0 : (!tier1.IsNone ? tier1 : tier2);
+        // 压缩索引按非空层依次递减（与 SelectRemixFour 的跳过逻辑一致）：
+        // 前置/中间层为空时索引仍落在 [xeno, race, builtin] 的**非空成员**上，绝不漏选末层或返回 None。
         int index = RollIndex(count, rolls);
-        return index switch
-        {
-            0 => tier0,
-            1 => tier1,
-            _ => tier2,
-        };
+        if (!tier0.IsNone && index-- == 0) return tier0;
+        if (!tier1.IsNone && index-- == 0) return tier1;
+        return tier2;
     }
 
 

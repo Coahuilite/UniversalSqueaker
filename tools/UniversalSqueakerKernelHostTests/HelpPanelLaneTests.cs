@@ -629,7 +629,9 @@ internal static class HelpPanelLaneTests
         // sit below the fold at top scroll. The operability claim needs a card the player can really
         // click WITHOUT scrolling: take the bottom-most FULLY visible card that is not the current tab
         // (the nav draws Workspaces top-to-bottom), and expect the tab it names.
-        string[] workspaceOrder = { "Overview", "Distance", "Packs", "Tuning", "Presets" };
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): the fifth workspace is Advanced and Distance is gone;
+        // the probe reads the CURRENT nav order so card index and expected tab cannot disagree.
+        string[] workspaceOrder = { "Overview", "Packs", "Tuning", "Presets", "Advanced" };
         int pick = -1;
         Rect card = default;
         for (int i = navCards.Count - 1; i >= 0; i--)

@@ -502,4 +502,95 @@
   <US.Help.ResetCenter.RestoreAll.Text>全局恢复覆盖普通设置、全部动作/心情调音覆盖(全局及各层域)、包选择,以及已应用预设记录与其来源锚点。它和任何普通改动走同一条发布与保存通道,且只走一次。取消不写入任何数据;fallback 表、作者/Def 内容与 schema/迁移诊断均保留。</US.Help.ResetCenter.RestoreAll.Text>
   <US.Help.ResetArea.Overview>每个区域自带恢复入口:确认窗口逐条列出该区域将写入的字段,并说明哪些保持不变。简单恢复(距离预设与范围、单条动作行)直接执行,不再提问。</US.Help.ResetArea.Overview>
   <US.Help.ResetArea.Button.Text>区域恢复只写当前可见区域的字段——不碰其它区域、其它层域的调音值,也不碰 fallback 表。动作/心情区域按钮在提问中写明当前层与域;目标为空或失效时不提供任何恢复。"恢复此区域默认"(含输出音量)与"恢复听取距离默认"(仅预设与范围)是两个入口,范围不同。</US.Help.ResetArea.Button.Text>
+  <!-- UIR-001/002/003/006(WO-US-UI-REFACTOR-20261014):五页导航、总览教学与全部已加载种族看板、
+       主题选择器与 fallback 编辑器独立分区。看板词组由 UsRaceBoardWidget 用这些条目拼装;
+       {0}/{1}/{2} 只是机器槽位。调色板名称是 US 消费者内容,不是库默认值。 -->
+  <US.Nav.Advanced.Label>高级</US.Nav.Advanced.Label>
+  <US.Nav.Advanced.Description>诊断、恢复默认、主题</US.Nav.Advanced.Description>
+  <US.Page.Advanced.Title>高级与诊断</US.Page.Advanced.Title>
+  <US.Page.Advanced.Caption>开发工具、全局恢复与界面主题,不再占据玩家页面。</US.Page.Advanced.Caption>
+  <US.Section.Intro>快速上手</US.Section.Intro>
+  <US.Intro.Body>先找到想听的种族,打开它的行进入音频包页并在那里开启声音包;若该种族只有一个可开启的包,也可以直接使用卡片上的"启用"。没有音源时不会有任何声音。</US.Intro.Body>
+  <US.Intro.Collapse>收起说明</US.Intro.Collapse>
+  <US.Intro.Reopen>显示说明</US.Intro.Reopen>
+  <US.Section.RaceBoard>全部已加载种族</US.Section.RaceBoard>
+  <US.Board.Summary>已加载种族 {0} · 有包 {1} · 已启用 {2}</US.Board.Summary>
+  <US.Board.Packs>已启用 {0}/{1}</US.Board.Packs>
+  <US.Board.Enabled>已启用</US.Board.Enabled>
+  <US.Board.Fallback>最终 fallback 就绪</US.Board.Fallback>
+  <US.Board.FallbackPlayer>最终 fallback(玩家表)</US.Board.FallbackPlayer>
+  <US.Board.NoFallback>无最终 fallback</US.Board.NoFallback>
+  <US.Board.NoSupply>无声音包供给</US.Board.NoSupply>
+  <US.Board.XenoOnly>仅有异种声音包</US.Board.XenoOnly>
+  <US.Board.SavedMissing>保存选择缺失：{0}</US.Board.SavedMissing>
+  <US.Board.ModeVanilla>US：仅最终回退</US.Board.ModeVanilla>
+  <US.Board.ModeOff>US 旁路（选择保留）</US.Board.ModeOff>
+  <US.Board.Open>打开</US.Board.Open>
+  <US.Board.AxisUses>US：包+回退</US.Board.AxisUses>
+  <US.Board.ChipXeno>异种包 {0}/{1}</US.Board.ChipXeno>
+  <US.Board.ChipFallback>回退 {0} 音</US.Board.ChipFallback>
+  <US.Board.StFallbackEmpty>回退尚未映射声音</US.Board.StFallbackEmpty>
+  <US.Board.StFallbackPlayer>玩家自建表</US.Board.StFallbackPlayer>
+  <US.Board.StNoFallback>无最终回退</US.Board.StNoFallback>
+  <US.Board.StDormant>休眠</US.Board.StDormant>
+  <US.Board.StTargetUnloaded>目标未加载</US.Board.StTargetUnloaded>
+  <US.Board.StSavedMissing>已保存的选择缺失</US.Board.StSavedMissing>
+  <US.Help.RaceBoard.Group.Text>"玩家种族"以HAR模组种族优先,其次原版智人与异种目录,再次其他第三方人形;"生物"覆盖动物、机械族与异常实体;"全部"为完整已加载目录。分组只改变显示,绝不改变任何声音设置。</US.Help.RaceBoard.Group.Text>
+  <US.Help.RaceBoard.Filters.Text>在当前分组内继续收窄:基于HAR框架的种族、原版(Core/DLC)种族、或原版生物。再次按下当前筛选即清除。来源与HAR是每行上彼此独立的两个事实。</US.Help.RaceBoard.Filters.Text>
+  <US.Help.RaceBoard.Search.Text>按目录行的显示名、def名或来源模组包匹配。仅显示层面——不改变任何选择,不改变任何声音。</US.Help.RaceBoard.Search.Text>
+  <US.Help.RaceBoard.Counts.Text>当前屏幕显示多少种族,对比完整已加载目录的数量,并附异种数。任何筛选都不会隐藏目录更大这一事实。</US.Help.RaceBoard.Counts.Text>
+  <US.Help.RaceBoard.XenoDir.Text>展开已加载XenotypeDef目录——游戏认识的全部异种,无论是否有语音包指向它。异种是独立目标轴;除非有真实包声明,看板绝不宣称某异种"属于"某种族。</US.Help.RaceBoard.XenoDir.Text>
+  <US.Help.RaceBoard.XenoRow.Text>一个已加载异种:来源,以及有多少语音包精确指向该目标。"打开"跳转到已按它筛选的音频包页——无包时给出诚实空结果。仅一个明确包时提供"启用",与包页为同一份准确写入。</US.Help.RaceBoard.XenoRow.Text>
+  <!-- OVT-002: 浏览带(分组、筛选、搜索、计数)与身份/来源标记。 -->
+  <US.Board.Group.Player>玩家种族</US.Board.Group.Player>
+  <US.Board.Group.Creatures>生物</US.Board.Group.Creatures>
+  <US.Board.Group.All>全部</US.Board.Group.All>
+  <US.Board.Filter.Har>HAR</US.Board.Filter.Har>
+  <US.Board.Filter.VanillaRaces>原版种族</US.Board.Filter.VanillaRaces>
+  <US.Board.Filter.VanillaCreatures>原版生物</US.Board.Filter.VanillaCreatures>
+  <US.Board.SearchPlaceholder>搜索名称或来源…</US.Board.SearchPlaceholder>
+  <US.Board.Counts>显示 {0} / 共 {1} 个种族 · 已加载 {2} 个异种</US.Board.Counts>
+  <US.Board.XenoDir>异种目录</US.Board.XenoDir>
+  <US.Board.XenoEmpty>尚无语音包</US.Board.XenoEmpty>
+  <US.Board.Src.Core>原版</US.Board.Src.Core>
+  <US.Board.Src.Dlc>官方DLC</US.Board.Src.Dlc>
+  <US.Board.Src.Mod>模组</US.Board.Src.Mod>
+  <US.Board.Src.Unknown>来源未知</US.Board.Src.Unknown>
+  <US.Board.EnablePack>启用 {0}</US.Board.EnablePack>
+  <US.Board.EnablePackTarget>启用 {0} · {1}</US.Board.EnablePackTarget>
+  <US.Board.JumpVolume>输出音量</US.Board.JumpVolume>
+  <US.Board.JumpAttenuation>听取距离与衰减</US.Board.JumpAttenuation>
+  <US.Intro.ReopenShort>显示说明</US.Intro.ReopenShort>
+  <US.Board.Enable>启用</US.Board.Enable>
+  <US.Board.Empty>当前没有可列出的已加载种族。</US.Board.Empty>
+  <US.Help.RaceBoard.Summary.Label>看板快捷入口</US.Help.RaceBoard.Summary.Label>
+  <US.Help.RaceBoard.Summary.Text>输出音量与听取距离跳转到本页自己的卡片,仅滚动视图,不改变任何设置。</US.Help.RaceBoard.Summary.Text>
+  <US.Section.Theme>界面主题</US.Section.Theme>
+  <US.Theme.Note>只改颜色。选择调色板仅重绘页面,不移动任何控件、不重置滚动、更不改变声音。</US.Theme.Note>
+  <US.Theme.Status>当前调色板:{0}</US.Theme.Status>
+  <US.Theme.Core.Label>核心</US.Theme.Core.Label>
+  <US.Theme.Royalty.Label>Royalty</US.Theme.Royalty.Label>
+  <US.Theme.Ideology.Label>Ideology</US.Theme.Ideology.Label>
+  <US.Theme.Biotech.Label>Biotech</US.Theme.Biotech.Label>
+  <US.Theme.Anomaly.Label>Anomaly</US.Theme.Anomaly.Label>
+  <US.Theme.Odyssey.Label>Odyssey</US.Theme.Odyssey.Label>
+  <US.Section.FallbackTable>最终原生 fallback</US.Section.FallbackTable>
+  <US.Theme.Core.Note>失散殖民船上仍在工作终端：灰色空间、旧铜交互、淡色墨水与羊皮纸点缀。小字不落在 Quiet Shade/Bronze Mist/Lark 上；必要状态由 Rutabaga 标记、开关位置与文字共同承担，强调色永不单独标记必要状态。</US.Theme.Core.Note>
+  <US.Theme.Royalty.Note>夜蓝空间承托金色动作与暗酒红选中面；系列的暖金识别保留，由冷蓝衬托。</US.Theme.Royalty.Note>
+  <US.Theme.Ideology.Note>炭色与陶土般的暗面,配骨白文字和克制的赭金。</US.Theme.Ideology.Note>
+  <US.Theme.Biotech.Note>靛蓝表面与柔和玫粉操作标记；高亮青色留给注意语义。</US.Theme.Biotech.Note>
+  <US.Theme.Anomaly.Note>冷灰与炭黑承托苍白文字,少量苔色带出异常感。</US.Theme.Anomaly.Note>
+  <US.Theme.Odyssey.Note>深色金属、冰蓝引擎光与荧光森林的蓝紫暗面。</US.Theme.Odyssey.Note>
+  <US.Help.Intro.Overview>一次性的入门说明。收起后不再打扰,一键即可回到。</US.Help.Intro.Overview>
+  <US.Help.Intro.Collapse.Text>收起只折叠本教学条,下方看板保持可见。该偏好随设置保存,不改变任何声音,全局恢复会将其还原为展开默认。</US.Help.Intro.Collapse.Text>
+  <US.Help.RaceBoard.Overview>全部已加载种族的只读看板——音源包供给、已启用选择、最终 fallback,以及每项缺失的准确原因。它绝不声称声音已经播放过。</US.Help.RaceBoard.Overview>
+  <US.Help.RaceBoard.Row.Label>种族卡片</US.Help.RaceBoard.Row.Label>
+  <US.Help.RaceBoard.Row.Text>"打开"会跳到音频包页,指定该种族并清掉可能遮挡它的筛选;不写入任何选择。只有一个明确包时,卡片提供"启用",与包页行开关走同一份逐域写入。</US.Help.RaceBoard.Row.Text>
+  <US.Help.RaceBoard.Enable.Text>只有一个"恰好一个尚未启用包"的种族会出现此按钮,按钮上写明那个明确的包(异种作用域时并写明异种目标)。按下与音频包页该行的开关是同一个动作、同一个域身份;绝不改变音源模式。其它情况只提供"打开"。</US.Help.RaceBoard.Enable.Text>
+  <US.Help.FallbackEditor.Overview>逐种族的最终 fallback 表:维护者行与你的覆盖、显式"无音"标记和恢复继承是三种不同状态,界面上分开展示。</US.Help.FallbackEditor.Overview>
+  <US.Help.FallbackEditor.States.Label>条目状态</US.Help.FallbackEditor.States.Label>
+  <US.Help.FallbackEditor.States.Text>覆盖=你设定的声音;维护者=随包出厂行;无音=你选择的静音;未设=跟随未来更新。Escape 先清除所选条目,再释放所选种族表——绝不写入设置。</US.Help.FallbackEditor.States.Text>
+  <US.Help.Theme.Overview>在官方核心与五个 DLC 调色板之间选择以验证颜色。出厂默认为核心。</US.Help.Theme.Overview>
+  <US.Help.Theme.Switch.Label>调色板</US.Help.Theme.Switch.Label>
+  <US.Help.Theme.Switch.Text>切换只改颜色,不改任何东西——页面保留布局、焦点与滚动位置。选择随设置保存,并会被"恢复默认"还原;作者自定义主题继续由库支持。</US.Help.Theme.Switch.Text>
 </LanguageData>

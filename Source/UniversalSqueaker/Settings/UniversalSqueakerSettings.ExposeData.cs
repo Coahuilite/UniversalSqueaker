@@ -76,6 +76,11 @@ public partial class UniversalSqueakerSettings
         // default config keeps a zero-byte delta and settingsSchemaVersion stays 5.
         Scribe_Values.Look(ref eatPrecisionEnabled, "eatPrecisionEnabled", false);
         Scribe_Values.Look(ref eatPrecisionIncludeDrugs, "eatPrecisionIncludeDrugs", false);
+        // UIR-006: add-only appearance setting; the default "core" is omitted at this boundary, so the
+        // shipped default config keeps its zero-byte delta. PostLoadInit repairs an unknown value.
+        Scribe_Values.Look(ref uiSwatchId, "uiSwatchId", "core");
+        // CORRECTIONS-R1 topic 3: the intro preference, same add-only discipline (default false omitted).
+        Scribe_Values.Look(ref uiIntroCollapsed, "uiIntroCollapsed", false);
 #if US_EXPERIMENTAL
         Scribe_Values.Look(ref experimentalKiiroCompat, "experimentalKiiroCompat", false);
 #endif
@@ -108,6 +113,9 @@ public partial class UniversalSqueakerSettings
 
         if (!Enum.IsDefined(typeof(SqueakVoicePackMode), voicePackMode)) voicePackMode = SqueakVoicePackMode.Vanilla;
         if (!Enum.IsDefined(typeof(SqueakDevLoggingMode), devLoggingMode)) devLoggingMode = SqueakDevLoggingMode.Auto;
+        // UIR-006: the swatch id is a closed set; a hand-edited or stale value repairs to the shipped
+        // default here (the read side also fails soft, so a repair is belt-and-braces, not the gate).
+        if (!UsSwatchIds.IsKnown(uiSwatchId)) uiSwatchId = UsSwatchIds.Default;
         SqueakLog.Configure(devLoggingMode);
 
         // Retain the older v2→v3 numeric repair without treating it as a record-schema commit.

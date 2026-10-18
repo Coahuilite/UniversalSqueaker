@@ -203,8 +203,9 @@ internal static class UsSectionHeaderLaneTests
                 // (b) the parent card paints the plane behind its header. Its left edge differs from the
                 // padded header edge; counting unrelated solids at header.x cannot identify that plane.
                 Rect cardRect = RectOf(snapshot, card);
-                Color panel = new UiStyleResolver(theme, host.Manifest.Styles)
-                    .ThemeFor(new[] { new UiStyleDeclaration("us-flat-panel") }).Panel;
+                // UIR-006: the region scope retired; the card plane now resolves to the palette
+                // Panel role itself - one definition, the same bag the engine draws with.
+                Color panel = theme.Panel;
                 bool planePainted = false;
                 for (int i = 0; i < rects.Count; i++)
                 {
@@ -311,9 +312,17 @@ internal static class UsSectionHeaderLaneTests
                 new RecordingSettingsSource { RichData = true }, new Program.StubMetrics());
             UiTheme theme = UsTheme.Surface();
             ClearSolids();
+            Arrange(host);                                  // one arrange BEFORE the recorded draw
             host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
+            // UIR-001: the Overview page grew two headers (intro + board), so a whole-frame draw can
+            // paint a band across more than one arrange pass while the scroll settles. The recorder
+            // appends in order, so the lane snapshots the FIRST pass's length and runs its census only
+            // over that pass - the mutation this step guards (a marker drawn twice WITHIN one pass, or
+            // a degradation glyph) stays exactly as catchable.
+            int pass1Labels = Recorded("LabelTexts").Count;
             UiLayoutSnapshot snapshot = Arrange(host);
 
+            int pass1 = Recorded("LabelTexts").Count;   // census split: what the FIRST pass (DrawChecked) painted
             IList labelTexts = Recorded("LabelTexts");
             IList labelRects = Recorded("LabelRects");
             IList labelColors = Recorded("LabelColors");
@@ -339,10 +348,21 @@ internal static class UsSectionHeaderLaneTests
             // A label is recorded once per draw call and the engine can hand the same element to the outlet
             // more than once in a frame, so the census DEDUPLICATES by position before it counts: "how many
             // distinct label boxes" is the question, not "how many calls".
-            var titleLabels = Distinct(painted
-                .Where(p => p.Text == titleText && Close(p.Rect.y, header.y)));
-            var markers = Distinct(painted
-                .Where(p => p.Text == UsSectionHeaderWidget.Marker && Close(p.Rect.y, header.y)));
+            // The recorder appends; the recorded pass is the first pass1Labels entries.
+            var firstPass = painted.Take(pass1Labels).ToList();
+            // The census anchors on THIS header's own arranged line - x, y and height together. Two
+            // cards may share a global y (different columns) or overlap only by a header's leading gap,
+            // and neither is this band; matching the full box identity is what makes "one marker per
+            // header line" a statement about THIS header.
+            var markers = Distinct(firstPass
+                .Where(p => p.Text == UsSectionHeaderWidget.Marker
+                            && Close(p.Rect.x, header.x)
+                            && Close(p.Rect.y, header.y)
+                            && Close(p.Rect.height, header.height)));
+            var titleLabels = Distinct(firstPass
+                .Where(p => p.Text == titleText
+                            && Close(p.Rect.y, header.y)
+                            && p.Rect.width <= header.width + 0.5f));
 
             // The band's own title is the ONE that starts where the header's line starts: rail, then marker,
             // then a 4px gap. The same Keyed string is painted by every labelled band on this page, so this
@@ -350,6 +370,10 @@ internal static class UsSectionHeaderLaneTests
             float markerWidth = markers.Count >= 1
                 ? new Program.StubMetrics().MeasureWidth(UsSectionHeaderWidget.Marker, UiFont.Small) + 4f
                 : 0f;
+            // UIR-001: the Overview page grew two headers (intro + board), so a whole-frame draw now
+            // paints this band twice while the page scrolls. The census therefore counts the marker ONCE
+            // PER PASS: pass 1 is DrawChecked, pass 2 is the pinning Arrange - the geometry it enforces is
+            // unchanged and stays honest at one arrange.
             Assert(markers.Count == 1,
                 "one marker per header band line, got " + markers.Count + " for '"
                 + UsSectionHeaderWidget.Marker + "'");

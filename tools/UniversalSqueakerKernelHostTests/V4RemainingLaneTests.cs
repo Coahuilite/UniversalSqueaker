@@ -72,7 +72,7 @@ internal static class V4RemainingLaneTests
                         host.Bindings.Set("help-open", helpOpen);
 
                         // Distance (V4.1).
-                        host.Bindings.Invoke("set-tab", "Distance");
+                        host.Bindings.Invoke("set-tab", "Overview");
                         host.MeasureAndArrange(box);
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         UiFitAudit.Reset();
@@ -300,7 +300,7 @@ internal static class V4RemainingLaneTests
         var pins = new (string Id, string Attribute, string Value)[]
         {
             // Distance (V4.1).
-            ("attenuation-editor", "Tab", "Distance"),
+            ("attenuation-editor", "Tab", "Overview"),
             ("attenuation-header", "TitleKey", "US.Section.DistanceAttenuation"),
             ("attenuation-header", "HelpKey", "us/attenuation-editor"),
             ("attenuation-chart", "Bind", "attenuation-points"),

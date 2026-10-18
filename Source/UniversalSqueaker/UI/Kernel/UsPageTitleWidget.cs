@@ -146,7 +146,9 @@ public sealed class UsPageTitleWidget : IUiWidget
     private static readonly (string TitleKey, string CaptionKey)[] HeadingKeys =
     {
         ("US.Page.Overview.Title", "US.Page.Overview.Caption"),
-        ("US.Page.Distance.Title", "US.Page.Distance.Caption"),
+        // UIR-001: the Distance heading retired with the workspace; Advanced is the fifth. The band is
+        // still measured over the WHOLE set, so a tab switch can never resize the title band.
+        ("US.Page.Advanced.Title", "US.Page.Advanced.Caption"),
         ("US.Page.Packs.Title", "US.Page.Packs.Caption"),
         ("US.Page.Tuning.Title", "US.Page.Tuning.Caption"),
         ("US.Page.Presets.Title", "US.Page.Presets.Caption"),
@@ -167,7 +169,7 @@ public sealed class UsPageTitleWidget : IUiWidget
     {
         return activeTab switch
         {
-            "Distance" => ("US.Page.Distance.Title", "US.Page.Distance.Caption"),
+            "Advanced" => ("US.Page.Advanced.Title", "US.Page.Advanced.Caption"),
             "Packs" => ("US.Page.Packs.Title", "US.Page.Packs.Caption"),
             "Tuning" => ("US.Page.Tuning.Title", "US.Page.Tuning.Caption"),
             "Presets" => ("US.Page.Presets.Title", "US.Page.Presets.Caption"),

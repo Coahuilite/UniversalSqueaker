@@ -84,6 +84,12 @@ public partial class UniversalSqueakerSettings
         if (localizeDebugActions != defaults.localizeDebugActions) { localizeDebugActions = defaults.localizeDebugActions; changed = true; }
         if (showCameraIndicator != defaults.showCameraIndicator) { showCameraIndicator = defaults.showCameraIndicator; changed = true; }
         if (devLoggingMode != defaults.devLoggingMode) { devLoggingMode = defaults.devLoggingMode; changed = true; }
+        // UIR-006: the swatch is a player-visible setting, so the global restore answers it too;
+        // no area-level restore claims it (it belongs to no reset AREA - the picker repaints live).
+        if (!string.Equals(uiSwatchId, defaults.uiSwatchId, StringComparison.Ordinal)) { uiSwatchId = defaults.uiSwatchId; changed = true; }
+        // CORRECTIONS-R1 topic 3: the intro preference restores with the same principle (UI setting, no
+        // audio semantics) - the field-initializer default is the single source (expanded).
+        if (uiIntroCollapsed != defaults.uiIntroCollapsed) { uiIntroCollapsed = defaults.uiIntroCollapsed; changed = true; }
         if (globalCooldownMultiplier != defaults.globalCooldownMultiplier) { globalCooldownMultiplier = defaults.globalCooldownMultiplier; changed = true; }
         if (globalVolumeFactor != defaults.globalVolumeFactor) { globalVolumeFactor = defaults.globalVolumeFactor; changed = true; }
         if (distancePreset != defaults.distancePreset) { distancePreset = defaults.distancePreset; changed = true; }

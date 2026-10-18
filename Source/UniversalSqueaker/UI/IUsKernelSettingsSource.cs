@@ -185,4 +185,24 @@ public interface IUsKernelSettingsSource
     // Packs
     void ToggleVoicePack(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey, bool enabled);
     void ForgetUnavailable(SqueakVoicePackScope scope, string raceDefName, string targetDefName);
+
+    // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board's exits and its teaching toggle.
+    // OpenRaceTarget writes NO settings - it is a navigation intent that returns the card key to
+    // scroll to ("" when the race has no supply and the filters stay wide). QuickEnableRacePack is
+    // the ONE-identity enable through the same toggle write the Packs row switch uses; neither
+    // touches the mode. The intro bool is page state like the help panel (never persisted).
+    void SetIntroOpen(bool open);
+    void ToggleIntro();
+    string OpenRaceTarget(string raceDefName);
+
+    // OVT-003: the xenotype directory row's open exit - same navigation-only contract,
+    // exact target identity, "" destination (the caller clears any pending scroll).
+    string OpenXenotypeTarget(string targetDefName);
+    void QuickEnableRacePack(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey);
+
+    // UIR-006: the active official swatch. Reading answers the persisted id; writing persists it and
+    // repaints the attached host's theme bag IN PLACE (colour-only invalidation: no host/session
+    // rebuild, no scroll or focus change). An unknown id is resolved fail-soft by the surface itself.
+    string UiSwatchId { get; }
+    void SetUiSwatch(string swatchId);
 }

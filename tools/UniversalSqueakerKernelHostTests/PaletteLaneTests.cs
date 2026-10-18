@@ -9,225 +9,189 @@ using UniversalSqueaker.UI;
 namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
-/// The palette guard (S6-3 step 3). Two properties, both of them about what a RE-TINT can silently break:
+/// The palette guard - UIR-006 (WO-US-UI-REFACTOR-20261014) rewrote its object. It used to assert the
+/// flat scope's (fill == edge) pairs; the region scheme is retired and the six official palettes now
+/// own the surface relationships through their role tables, so what a re-tint can still silently break
+/// is INK LEGIBILITY: every shipped palette must keep the required text readable on the surfaces it is
+/// drawn on, and attention must stay an independent hue that no palette accent collides with.
 ///
+/// <para>
+/// MUTATION LEDGER:
 /// <list type="number">
-/// <item><b>The flat scope stays flat.</b> "No box" is expressed by a surface's border token being the SAME
-/// colour as its fill, so a re-tint that updates one and forgets the other brings every card outline back -
-/// with nothing to report it. Every pair is asserted explicitly, on the resolved scoped theme, and a
-/// one-sided change reddens.</item>
-/// <item><b>Ink stays legible on its own surface.</b> A warm dark palette is exactly the case where a
-/// secondary note turns to mud on a raised surface, so the two inks are checked against the surfaces they
-/// are actually drawn on with a WCAG relative-luminance ratio. This is a regression GUARD with a number -
-/// it does not claim the colours are tasteful.</item>
+/// <item><b>InkStaysLegible</b> - a palette that turns body/secondary/disabled ink to mud on any of the
+/// three surfaces it is painted on reddens with the measured WCAG ratio. The PM's Core note says small
+/// text is never laid on Quiet Shade/Bronze Mist/Lark - this is that ruling made checkable.</item>
+/// <item><b>AttentionStaysIndependent</b> - a palette whose accent equals the attention brush reddens:
+/// the "condition worth investigating" hue answers to UsAttention alone, not to a theme identity.</item>
+/// <item><b>SwitchHasItsOwnInk</b> - a palette whose OFF thumb equals its own resting surface or its
+/// primary ink reddens: the switch position is a required mark and the thumb must be seen.</item>
 /// </list>
+/// </para>
 ///
-/// <para>NOT CLAIMED: the real screen. The stub renders no pixels, so the deltas live in the S6 report as
-/// real-screen items.</para>
+/// <para>NOT CLAIMED: taste, and the real screen. Ratios are a regression floor (3.0 for ink, 1.5 for
+/// the thumb against its track), not a design target; the shipped Core values sit above them.</para>
 /// </summary>
 internal static class PaletteLaneTests
 {
-    private const string FlatScheme = "us-flat-panel";
-
-    /// <summary>Every (fill, edge) pair the flat scope must keep equal. A re-tint that moves one side of any
-    /// of these re-draws a box.</summary>
-    private static readonly (string Name, Func<UiTheme, Color> Fill, Func<UiTheme, Color> Edge)[] FlatPairs =
-    {
-        ("Raised/RaisedBorder", t => t.Raised, t => t.RaisedSurface.Border),
-        ("Hover/HoverBorder", t => t.Hover, t => t.HoverSurface.Border),
-        ("Selected/SelectedBorder", t => t.Selected, t => t.SelectedSurface.Border),
-        ("WorkspacePlane/Raised", t => t.WorkspacePlane, t => t.Raised),
-    };
-
-    /// <summary>Minimum contrast for body ink on the surface it is painted on. 3.0 is a floor for a
-    /// distinguishable ink, not a target: the shipped values sit far above it, so this reddens on a palette
-    /// that turns a note to mud rather than on one that is merely unfashionable.</summary>
     private const double MinInkContrast = 3.0;
+    private const double MinThumbSeparation = 1.5;
+
+    /// <summary>(ink selector, surface selector, why) - each pair is a place US actually paints.</summary>
+    private static readonly (string Name, Func<UiTheme, Color> Ink, Func<UiTheme, Color> On)[] InkPairs =
+    {
+        ("TextPrimary/Raised", t => t.TextPrimary, t => t.Raised),
+        ("TextPrimary/Panel", t => t.TextPrimary, t => t.Panel),
+        ("TextPrimary/Base", t => t.TextPrimary, t => t.Base),
+        ("TextSecondary/Raised", t => t.TextSecondary, t => t.Raised),
+        ("TextSecondary/Panel", t => t.TextSecondary, t => t.Panel),
+        ("TextOnGold/Selected", t => t.TextOnGold, t => t.Selected),
+        ("TextOnGold/NavSelected", t => t.TextOnGold, t => t.Selected), // the nav paints ink on the selected plate
+        ("TextOnDanger/Danger", t => t.TextOnDanger, t => t.Danger),
+    };
 
     public static int RunAll()
     {
-        Step("the flat pairs are still equal after a re-tint", TheFlatPairsSurviveARetint);
-        Step("ink stays legible on its own surface", InkStaysLegible);
-        Step("the contrast instrument composites alpha before it compares (task-32)", TheCompositorIsHonest);
-        Step("the selection is legible on the plane it sits on (task-32)", TheSelectionIsLegible);
+        Step("ink stays legible on its own surface, in every palette", InkStaysLegible);
+        Step("the attention brush stays outside every palette", AttentionStaysIndependent);
+        Step("the switch thumb keeps its own ink, in every palette", SwitchHasItsOwnInk);
+        Step("the contrast instrument composites alpha before it compares (task-32, restored)", TheCompositorIsHonest);
+        Step("the selection is legible on the plane it sits on (CORRECTIONS-R1 re-anchored)", TheSelectionIsLegible);
         Console.WriteLine("PaletteLaneTests ALL PASS");
         return 0;
     }
 
-    private static void TheFlatPairsSurviveARetint()
-    {
-        UiTheme page = UsTheme.Surface();
-        using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
-        UiTheme flat = new UiStyleResolver(page, host.Manifest.Styles)
-            .ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
-
-        foreach ((string name, Func<UiTheme, Color> fill, Func<UiTheme, Color> edge) in FlatPairs)
-        {
-            Assert(SameColor(fill(flat), edge(flat)),
-                "the flat scope must keep '" + name + "' equal, or that surface paints a 1px box again: fill "
-                + Hex(fill(flat)) + " vs edge " + Hex(edge(flat)) + ". A re-tint must move BOTH sides.");
-        }
-
-        // Control: on the page level the same pair is deliberately NOT equal (cards are boxed there), so the
-        // assertion above is measuring the scope rather than the palette's accidental sameness.
-        Assert(!SameColor(page.Raised, page.RaisedSurface.Border),
-            "control: the page level must stay boxed, got raised " + Hex(page.Raised) + " == border "
-            + Hex(page.RaisedSurface.Border));
-
-        Console.WriteLine("[palette-flat] raised=" + Hex(flat.Raised) + " hover=" + Hex(flat.Hover)
-            + " selected=" + Hex(flat.Selected) + " plane=" + Hex(flat.WorkspacePlane));
-    }
-
     private static void InkStaysLegible()
     {
-        UiTheme theme = UsTheme.Surface();
-        // The four inks against the surfaces they are actually painted on.
-        (string Name, Color Ink, Color Surface)[] cases =
+        foreach (UsSwatch swatch in UsSwatches.All)
         {
-            ("primary on panel", theme.TextPrimary, theme.Panel),
-            ("primary on raised", theme.TextPrimary, theme.Raised),
-            ("secondary on panel", theme.TextSecondary, theme.Panel),
-            ("secondary on raised", theme.TextSecondary, theme.Raised),
-            ("active ink on selected", theme.TextOnGold, theme.Selected),
-        };
+            UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
+            foreach ((string name, Func<UiTheme, Color> ink, Func<UiTheme, Color> on) in InkPairs)
+            {
+                double ratio = Contrast(ink(bag), on(bag));
+                Assert(ratio >= MinInkContrast,
+                    swatch.Id + ": '" + name + "' reads " + ratio.ToString("0.00")
+                    + ":1, under the " + MinInkContrast.ToString("0.0")
+                    + ":1 floor - the ink turns to mud on that surface");
+            }
+        }
+    }
 
-        foreach ((string name, Color ink, Color surface) in cases)
+    private static void AttentionStaysIndependent()
+    {
+        foreach (UsSwatch swatch in UsSwatches.All)
         {
-            double ratio = Contrast(ink, surface);
-            Console.WriteLine("[palette-ink] " + name + " ink=" + Hex(ink) + " surface=" + Hex(surface)
-                + " contrast=" + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
-            Assert(ratio >= MinInkContrast,
-                name + ": the ink must stay distinguishable from its own surface - contrast "
-                + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " is below the "
-                + MinInkContrast.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-                + " floor (ink " + Hex(ink) + " on " + Hex(surface) + ")");
+            UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
+            Assert(!Same(UsAttention.Brush, bag.AccentGold),
+                swatch.Id + ": the accent equals the attention brush - [!] would stop meaning \"investigate\"");
+            Assert(!Same(UsAttention.InkOnBrush, bag.TextPrimary),
+                swatch.Id + ": primary ink equals the attention badge's ink - the two marks collapse");
+        }
+
+        // The attention duo itself is fixed by the ruling, not by any palette.
+        Assert(Contrast(UsAttention.InkOnBrush, UsAttention.Brush) >= 4.5,
+            "the attention badge's own ink must hold 4.5:1 on the cyan");
+    }
+
+    private static void SwitchHasItsOwnInk()
+    {
+        foreach (UsSwatch swatch in UsSwatches.All)
+        {
+            UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
+            Assert(!Same(bag.SwitchThumbOff, bag.Raised),
+                swatch.Id + ": the OFF thumb equals the resting surface - the switch reads as an empty track");
+            Assert(!Same(bag.SwitchThumbOff, bag.AccentGold),
+                swatch.Id + ": the OFF thumb equals the ON colour - position stops being the answer");
+            double separation = Contrast(bag.SwitchThumbOff, bag.Raised);
+            Assert(separation >= MinThumbSeparation,
+                swatch.Id + ": OFF thumb vs track reads " + separation.ToString("0.00")
+                + ":1, under the " + MinThumbSeparation.ToString("0.0") + ":1 separation floor");
         }
     }
 
     /// <summary>
-    /// Source-over alpha compositing: what DRAWING does, and what a contrast comparison must do first.
-    /// MEASURED (task-32): the selection fill is AccentWith(0.25f) = #D1993840, and comparing it to the card
-    /// plane WITHOUT compositing reported 7.15 - that is the contrast of the PURE accent against the plane,
-    /// a number about a colour nobody paints. The drawn fill is the accent at 25% over the plane, a mid
-    /// brown, and every contrast reading taken before this step is a false reading in one direction or the
-    /// other. Contrast is only about painted pixels after compositing.
+    /// RESTORED (CORRECTIONS-R1 topic 4): the r1 rewrite of this lane dropped the task-32 compositor
+    /// and selection steps. The arithmetic guard comes back unchanged - it protects the SHARED
+    /// Composite() every reader and lane uses - and the selection step comes back RE-ANCHORED. The
+    /// palette ruling (PM 2026-10-14) keeps the Selected raw value as an ASSIST fill and carries the
+    /// required selection signal on the high-contrast rail/edge plus text, so the old fill-vs-plane
+    /// floor is not kept as a pass/fail gate; the re-anchor is stated, not hidden: the fill-vs-plane
+    /// number is still MEASURED and printed every run, and the enforceable floors became (a) the
+    /// rail against BOTH real neighbouring surfaces at 3.0, (b) body ink on its real grounds at 4.5,
+    /// and (c) the compositor's own identity facts via the positive/negative controls.
     /// </summary>
-    /// <summary>The compositor now lives on the PRODUCT side (UsSelectionSurfaceWidget.Composite), and this
-    /// lane only CALLS it. The duplicate that used to sit here was line-for-line equivalent, and the identity
-    /// controls below were testing the COPY while the shipped one had no identity test at all - the exact
-    /// shape this session already paid for twice (one convention, two implementations).</summary>
-    private static Color Composited(Color fg, Color bg)
-    {
-        return UsSelectionSurfaceWidget.Composite(fg, bg);
-    }
-
-    /// <summary>The compositor's own positive and negative controls: an opaque foreground passes through, a
-    /// fully transparent one leaves the background, and 50% white over black is mid grey. Without these the
-    /// helper could be wrong in the direction that flatters a colour and nothing would notice.</summary>
     private static void TheCompositorIsHonest()
     {
-        Color bg = new Color(0.1f, 0.2f, 0.3f, 1f);
-        Assert(SameColor(Composited(new Color(0.5f, 0.25f, 0.75f, 1f), bg), new Color(0.5f, 0.25f, 0.75f, 1f)),
-            "an OPAQUE foreground must pass through compositing unchanged");
-        Assert(SameColor(Composited(new Color(0.9f, 0.9f, 0.9f, 0f), bg), bg),
-            "a FULLY TRANSPARENT foreground must leave the background exactly as it was");
-        Color half = Composited(new Color(1f, 1f, 1f, 0.5f), new Color(0f, 0f, 0f, 1f));
-        Assert(Math.Abs(half.r - 0.5f) <= 0.002f && Math.Abs(half.g - 0.5f) <= 0.002f,
-            "50% white over black must be mid grey, got " + Hex(half));
-        Console.WriteLine("[palette-composite] controls ok; opaque=" + Hex(new Color(0.5f, 0.25f, 0.75f, 1f))
-            + " transparent=" + Hex(bg) + " half=" + Hex(half));
+        Color white = new Color(1f, 1f, 1f, 1f);
+        Color black = new Color(0f, 0f, 0f, 1f);
+        Color half = new Color(1f, 1f, 1f, 0.5f);
+        Color mid = UsSelectionSurfaceWidget.Composite(half, black);
+        Assert(Mathf.Abs(mid.r - 0.5f) < 1e-4f && Mathf.Abs(mid.g - 0.5f) < 1e-4f
+                && Mathf.Abs(mid.b - 0.5f) < 1e-4f,
+            "source-over with alpha 0.5 over black must land at the midpoint, got " + mid);
+        Color full = UsSelectionSurfaceWidget.Composite(white, black);
+        Assert(Mathf.Abs(full.r - 1f) < 1e-4f,
+            "alpha 1 must fully replace the plane (positive control), got " + full);
+        Color zero = UsSelectionSurfaceWidget.Composite(new Color(1f, 0f, 0f, 0f), black);
+        Assert(Mathf.Abs(zero.r) < 1e-4f,
+            "alpha 0 must leave the plane untouched (negative control), got " + zero);
     }
-
-    /// <summary>
-    /// task-32's PRIMARY NEW CRITERION, and why this lane could not see the defect it answers: the lane had
-    /// MinInkContrast (ink against the surface it is painted on) but NOTHING comparing a selection fill
-    /// against the card plane it sits on - which is how "the text and the background are almost the same,
-    /// there is no highlight, the player cannot tell what they picked" stayed green for so long.
-    ///
-    /// Thresholds, written BEFORE the colours (14.16), each with its clause:
-    ///   fill vs plane &gt;= 3.0 - WCAG 2.1 SC 1.4.11 Non-text Contrast (the selection state is non-text),
-    ///     also the floor MinInkContrast uses;
-    ///   rail vs fill and vs plane &gt;= 3.0 - same clause; the rail is the anchor that does not depend on text;
-    ///   title ink vs fill &gt;= 4.5 - WCAG 2.2 SC 1.4.3 AA, because that one IS text.
-    /// Every reading is taken on the COMPOSITED colour: an alpha-tinted fill compared raw is a number about a
-    /// colour nobody paints (measured: it reported 7.15 where the drawn fill was far darker).
-    ///
-    /// The gold-ink path is why the title had to change: gold ink needs L_fill &lt;= 0.119 for 4.5 while
-    /// fill-vs-plane needs L_fill &gt;= 0.124, so the two are mutually exclusive with a gold title ink. The
-    /// title now takes plain ink and the FILL carries the state.
-    /// </summary>
-    private const double MinSelectionFillContrast = 3.0;
-    private const double MinSelectionRailContrast = 3.0;
-    private const double MinSelectionTitleContrast = 4.5;
 
     private static void TheSelectionIsLegible()
     {
-        UiTheme page = UsTheme.Surface();
-        using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
-        UiTheme flat = new UiStyleResolver(page, host.Manifest.Styles)
-            .ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        foreach (UsSwatch swatch in UsSwatches.All)
+        {
+            UiTheme theme = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
+            Color fill = UsSelectionSurfaceWidget.PaintedFill(theme);   // composite over the resting plane
+            Color rail = UsSelectionSurfaceWidget.PaintedRail(theme);   // opaque
+            Color plane = theme.Raised;
 
-        Color plane = flat.Raised;
-        // The PERCEIVED fill, from the widget's single source of truth - the lane does NOT composite a second
-        // time (one convention, one implementation).
-        Color fill = UsSelectionSurfaceWidget.PaintedFill(flat);
-        Color rail = UsSelectionSurfaceWidget.SelectedRail(flat);
-        Color title = flat.TextPrimary;
-
-        AssertSelectionContrast("selection fill vs card plane", fill, plane, MinSelectionFillContrast);
-        AssertSelectionContrast("selection rail vs fill", rail, fill, MinSelectionRailContrast);
-        AssertSelectionContrast("selection rail vs card plane", rail, plane, MinSelectionRailContrast);
-        AssertSelectionContrast("selection title vs fill", title, fill, MinSelectionTitleContrast);
+            // (a) the rail separates from BOTH real neighbouring surfaces (required selection mark).
+            Require("rail-vs-fill " + swatch.Id, Contrast(rail, fill), 3.0);
+            Require("rail-vs-plane " + swatch.Id, Contrast(rail, plane), 3.0);
+            // (b) body ink on its real grounds keeps the full readability floor.
+            Require("body-on-raised " + swatch.Id, Contrast(theme.TextPrimary, plane), 4.5);
+            Require("body-on-panel " + swatch.Id, Contrast(theme.TextPrimary, theme.Panel), 4.5);
+            Require("body-on-base " + swatch.Id, Contrast(theme.TextPrimary, theme.Base), 4.5);
+            Require("body-on-selected-plate " + swatch.Id, Contrast(theme.TextOnGold, theme.Selected), 4.5);
+            // (c) the assist fill: measured, printed, and named - never a silent green.
+            Console.WriteLine("[selection-legibility] " + swatch.Id
+                + " rail-vs-fill=" + Contrast(rail, fill).ToString("0.000")
+                + " rail-vs-plane=" + Contrast(rail, plane).ToString("0.000")
+                + " fill-vs-plane=" + Contrast(fill, plane).ToString("0.000") + " (assist, not gated)");
+        }
     }
 
-    private static void AssertSelectionContrast(string name, Color a, Color b, double floor)
+    private static void Require(string name, double ratio, double floor)
     {
-        double ratio = Contrast(a, b);
-        Console.WriteLine("[palette-selection] " + name + " a=" + Hex(a) + " b=" + Hex(b) + " contrast="
-            + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " floor="
-            + floor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " margin="
-            + (ratio - floor).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
         Assert(ratio >= floor,
-            name + ": contrast " + ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
-            + " is below the " + floor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
-            + " floor (a " + Hex(a) + " vs b " + Hex(b) + ")");
+            name + " reads " + ratio.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)
+            + ":1, under the " + floor.ToString("0.0") + ":1 floor");
     }
 
-    /// <summary>WCAG relative-luminance contrast ratio. Plain arithmetic on the channel values - the wheel
-    /// is not reinvented, it is quoted.</summary>
+    // ---- helpers (WCAG relative luminance, source-over assumed opaque pairs) ----
+
+    private static bool Same(Color a, Color b)
+    {
+        const float eps = 1f / 512f;
+        return Mathf.Abs(a.r - b.r) < eps && Mathf.Abs(a.g - b.g) < eps && Mathf.Abs(a.b - b.b) < eps;
+    }
+
     private static double Contrast(Color a, Color b)
     {
-        double la = Luminance(a);
-        double lb = Luminance(b);
-        double high = Math.Max(la, lb);
-        double low = Math.Min(la, lb);
-        return (high + 0.05) / (low + 0.05);
+        double la = Luminance(a), lb = Luminance(b);
+        double hi = Math.Max(la, lb), lo = Math.Min(la, lb);
+        return (hi + 0.05) / (lo + 0.05);
     }
 
-    private static double Luminance(Color color)
+    private static double Luminance(Color c)
     {
-        return 0.2126 * Channel(color.r) + 0.7152 * Channel(color.g) + 0.0722 * Channel(color.b);
+        return 0.2126 * Chan(c.r) + 0.7152 * Chan(c.g) + 0.0722 * Chan(c.b);
     }
 
-    private static double Channel(float value)
+    private static double Chan(float v)
     {
-        double c = Mathf.Clamp01(value);
-        return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
-    }
-
-    private static bool SameColor(Color a, Color b)
-    {
-        return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
-    }
-
-    private static string Hex(Color color)
-    {
-        return "#" + Ch(color.r) + Ch(color.g) + Ch(color.b) + Ch(color.a);
-    }
-
-    private static string Ch(float value)
-    {
-        return Mathf.RoundToInt(Mathf.Clamp01(value) * 255f).ToString("X2");
+        double s = v;
+        return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
     }
 
     private static void Step(string name, Action action)
@@ -236,9 +200,10 @@ internal static class PaletteLaneTests
         {
             action();
         }
-        catch (Exception ex)
+        catch (Exception error)
         {
-            throw new InvalidOperationException("PaletteLaneTests step failed: " + name, ex);
+            throw new InvalidOperationException("PaletteLaneTests step failed: " + name
+                + "\n  INNER-2-MESSAGE: " + error.Message, error);
         }
     }
 

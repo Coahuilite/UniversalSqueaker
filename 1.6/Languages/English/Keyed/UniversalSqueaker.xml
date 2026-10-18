@@ -506,4 +506,97 @@
   <US.Help.ResetCenter.RestoreAll.Text>The global restore covers the plain settings, every action/mood tuning override (global and per layer/domain), the pack selections and the applied preset records with their source anchors. It runs through the same publish and save path as any ordinary change, once. Cancel writes nothing; the fallback tables, author/Def content and the schema/migration diagnostics are kept.</US.Help.ResetCenter.RestoreAll.Text>
   <US.Help.ResetArea.Overview>Each area carries its own restore: the question lists exactly the fields the area writes and names what stays untouched. Simple restores (the distance preset and range, a single action row) execute directly without a question.</US.Help.ResetArea.Overview>
   <US.Help.ResetArea.Button.Text>The area restore writes defaults for the fields of the visible area only - never other areas, never the tuning values of other layers or domains, and never the fallback tables. The action/mood area buttons name the current layer and domain in the question; an empty or invalid target offers no restore at all. "Restore this area" (with the output level) and "Restore distance defaults" (preset and range only) are different entries with different scopes.</US.Help.ResetArea.Button.Text>
+  <!-- UIR-001/002/003/006 (WO-US-UI-REFACTOR-20261014): the five-page navigation, the Overview
+       teaching and all-loaded-race board, the theme picker and the fallback editor's own section.
+       The board words are composed in UsRaceBoardWidget from these entries; {0}/{1}/{2} are machine
+       slots only. The theme palette names are US consumer content, never library defaults. -->
+  <US.Nav.Advanced.Label>Advanced</US.Nav.Advanced.Label>
+  <US.Nav.Advanced.Description>Diagnostics, restore, theme</US.Nav.Advanced.Description>
+  <US.Page.Advanced.Title>Advanced and diagnostics</US.Page.Advanced.Title>
+  <US.Page.Advanced.Caption>Developer tools, the global restore and the surface theme, kept off the player pages.</US.Page.Advanced.Caption>
+  <US.Section.Intro>Getting started</US.Section.Intro>
+  <US.Intro.Body>Find the race you want to hear, open its row to the packs page, and switch a pack on there; or use a card's Enable button when a race has exactly one pack to turn on. Nothing plays until a source exists.</US.Intro.Body>
+  <US.Intro.Collapse>Hide this</US.Intro.Collapse>
+  <US.Intro.Reopen>Show the intro</US.Intro.Reopen>
+  <US.Section.RaceBoard>All loaded races</US.Section.RaceBoard>
+  <US.Board.Summary>{0} races · {1} with packs · {2} enabled</US.Board.Summary>
+  <US.Board.Packs>{0}/{1} enabled</US.Board.Packs>
+  <US.Board.Enabled>enabled</US.Board.Enabled>
+  <US.Board.Fallback>fallback ready</US.Board.Fallback>
+  <US.Board.FallbackPlayer>fallback (yours)</US.Board.FallbackPlayer>
+  <US.Board.NoFallback>no fallback</US.Board.NoFallback>
+  <US.Board.NoSupply>no packs for this race</US.Board.NoSupply>
+  <US.Board.XenoOnly>xenotype packs only</US.Board.XenoOnly>
+  <US.Board.SavedMissing>saved choice missing: {0}</US.Board.SavedMissing>
+  <US.Board.ModeVanilla>US: final fallback only</US.Board.ModeVanilla>
+  <US.Board.ModeOff>US bypassed (selections kept)</US.Board.ModeOff>
+  <US.Board.Open>Open</US.Board.Open>
+  <US.Board.AxisUses>US: packs + fallback</US.Board.AxisUses>
+  <US.Board.ChipXeno>xeno packs {0}/{1}</US.Board.ChipXeno>
+  <US.Board.ChipFallback>fallback {0}</US.Board.ChipFallback>
+  <US.Board.StFallbackEmpty>fallback maps no sounds yet</US.Board.StFallbackEmpty>
+  <US.Board.StFallbackPlayer>player table</US.Board.StFallbackPlayer>
+  <US.Board.StNoFallback>no fallback</US.Board.StNoFallback>
+  <US.Board.StDormant>dormant</US.Board.StDormant>
+  <US.Board.StTargetUnloaded>target not loaded</US.Board.StTargetUnloaded>
+  <US.Board.StSavedMissing>saved choice missing</US.Board.StSavedMissing>
+  <US.Help.RaceBoard.Group.Text>Player races leads with HAR mod races, then vanilla humanlike and the xenotype directory, then other third-party humanlike. Creatures covers animals, mechanoids and Anomaly entities; All is the whole loaded directory. The group changes only what is shown - never a sound setting.</US.Help.RaceBoard.Group.Text>
+  <US.Help.RaceBoard.Filters.Text>Narrow the current group: races built on the HAR framework, vanilla (Core/DLC) races, or vanilla creatures. Press the active chip again to clear it. Source and HAR are separate facts shown on every row.</US.Help.RaceBoard.Filters.Text>
+  <US.Help.RaceBoard.Search.Text>Matches the display name, the def name or the source package of the directory rows. Display only - it changes no selection and no sound.</US.Help.RaceBoard.Search.Text>
+  <US.Help.RaceBoard.Counts.Text>How many races are on screen now versus the FULL loaded directory, plus the xenotype count. A filter never hides that the directory is larger.</US.Help.RaceBoard.Counts.Text>
+  <US.Help.RaceBoard.XenoDir.Text>Opens the loaded XenotypeDef directory - every xenotype the game knows, whether or not a voice pack names it. Xenotypes are their own target axis; the board never claims a xenotype "belongs" to a race unless a real pack declares it.</US.Help.RaceBoard.XenoDir.Text>
+  <US.Help.RaceBoard.XenoRow.Text>One loaded xenotype: its source and how many packs name exactly this target. Open jumps to the audio-packs page filtered to it - with an honest empty result when no pack exists. A single unambiguous pack offers Enable, the same exact write as the packs page.</US.Help.RaceBoard.XenoRow.Text>
+  <!-- OVT-002: the browse band (groups, chips, search, counts) and the identity/source chips. -->
+  <US.Board.Group.Player>Player races</US.Board.Group.Player>
+  <US.Board.Group.Creatures>Creatures</US.Board.Group.Creatures>
+  <US.Board.Group.All>All</US.Board.Group.All>
+  <US.Board.Filter.Har>HAR</US.Board.Filter.Har>
+  <US.Board.Filter.VanillaRaces>Vanilla races</US.Board.Filter.VanillaRaces>
+  <US.Board.Filter.VanillaCreatures>Vanilla creatures</US.Board.Filter.VanillaCreatures>
+  <US.Board.SearchPlaceholder>Search name or source…</US.Board.SearchPlaceholder>
+  <US.Board.Counts>Showing {0} of {1} races · {2} xenotypes loaded</US.Board.Counts>
+  <US.Board.XenoDir>Xenotype directory</US.Board.XenoDir>
+  <US.Board.XenoEmpty>no packs yet</US.Board.XenoEmpty>
+  <US.Board.Src.Core>Core</US.Board.Src.Core>
+  <US.Board.Src.Dlc>DLC</US.Board.Src.Dlc>
+  <US.Board.Src.Mod>MOD</US.Board.Src.Mod>
+  <US.Board.Src.Unknown>source?</US.Board.Src.Unknown>
+  <US.Board.EnablePack>enable {0}</US.Board.EnablePack>
+  <US.Board.EnablePackTarget>enable {0} · {1}</US.Board.EnablePackTarget>
+  <US.Board.JumpVolume>Output level</US.Board.JumpVolume>
+  <US.Board.JumpAttenuation>Distance &amp; attenuation</US.Board.JumpAttenuation>
+  <US.Intro.ReopenShort>Show intro</US.Intro.ReopenShort>
+  <US.Board.Enable>Enable</US.Board.Enable>
+  <US.Board.Empty>No loaded races to list.</US.Board.Empty>
+  <US.Section.Theme>Surface theme</US.Section.Theme>
+  <US.Theme.Note>Colours only. Choosing a palette repaints the page and never moves a control, resets the scroll or changes the sound.</US.Theme.Note>
+  <US.Theme.Status>Active palette: {0}</US.Theme.Status>
+  <US.Theme.Core.Label>Core</US.Theme.Core.Label>
+  <US.Theme.Royalty.Label>Royalty</US.Theme.Royalty.Label>
+  <US.Theme.Ideology.Label>Ideology</US.Theme.Ideology.Label>
+  <US.Theme.Biotech.Label>Biotech</US.Theme.Biotech.Label>
+  <US.Theme.Anomaly.Label>Anomaly</US.Theme.Anomaly.Label>
+  <US.Theme.Odyssey.Label>Odyssey</US.Theme.Odyssey.Label>
+  <US.Section.FallbackTable>Final native fallback</US.Section.FallbackTable>
+  <US.Theme.Core.Note>A still-working terminal on a lost colony ship: muted grey space, old bronze interaction, pale ink, parchment accents. Small text never sits on Quiet Shade / Bronze Mist / Lark; required states ride Rutabaga markers, switch position and text, and the accent never carries a required mark alone.</US.Theme.Core.Note>
+  <US.Theme.Royalty.Note>Night-blue space carrying gold actions and a dark wine-red selected plate; the series keeps its warm-gold identity, set off by cool blue.</US.Theme.Royalty.Note>
+  <US.Theme.Ideology.Note>Charcoal and earthen surfaces, bone-white text and restrained ochre.</US.Theme.Ideology.Note>
+  <US.Theme.Biotech.Note>Indigo surfaces with soft rose action marks; bright cyan is reserved for the attention role.</US.Theme.Biotech.Note>
+  <US.Theme.Anomaly.Note>Cold grey and charcoal carry pale text with a restrained lichen accent.</US.Theme.Anomaly.Note>
+  <US.Theme.Odyssey.Note>Dark metal, ice-blue engine light and muted blue-violet glowforest surfaces.</US.Theme.Odyssey.Note>
+  <US.Help.Intro.Overview>The one-time teaching. It stays out of the way once collapsed and is a single press from returning.</US.Help.Intro.Overview>
+  <US.Help.Intro.Collapse.Text>Collapsing hides only this teaching band - the board below stays. The preference is saved with the settings, changes no sound, and the global restore returns it to the open default.</US.Help.Intro.Collapse.Text>
+  <US.Help.RaceBoard.Overview>A read-only board of every loaded race - pack supply, what is selected, the final fallback and why anything is absent. It never claims a sound already played.</US.Help.RaceBoard.Overview>
+  <US.Help.RaceBoard.Row.Label>Race card</US.Help.RaceBoard.Row.Label>
+  <US.Help.RaceBoard.Row.Text>Open jumps to the audio-packs page with the race named and any filter that would hide it cleared; it writes no selection. A card with one exact pack offers Enable, which is the same per-domain write as that page's own switch.</US.Help.RaceBoard.Row.Text>
+  <US.Help.RaceBoard.Summary.Label>Board shortcuts</US.Help.RaceBoard.Summary.Label>
+  <US.Help.RaceBoard.Summary.Text>The output-volume and listen-distance cards jump to this page's own
+    controls - scroll only, they change no setting.</US.Help.RaceBoard.Summary.Text>
+  <US.Help.RaceBoard.Enable.Text>Only a race with exactly ONE not-yet-enabled pack offers this button, and the button names that exact pack - plus its xenotype target when the scope is Xenotype. The press is the same action as the audio-packs row's own switch, on that exact domain identity; it never changes the sound-source mode. Anything wider shows only Open.</US.Help.RaceBoard.Enable.Text>
+  <US.Help.FallbackEditor.Overview>The per-race final fallback table: maintainer rows with your overrides, an explicit no-sound marker and restore-inheritance are three different states, shown apart.</US.Help.FallbackEditor.Overview>
+  <US.Help.FallbackEditor.States.Label>Entry states</US.Help.FallbackEditor.States.Label>
+  <US.Help.FallbackEditor.States.Text>Override marks a sound you set; Maintainer is the shipped row; NoSound is the silence you chose and Unset follows future updates. Escape clears the selected entry, then the selected race - it never writes a setting.</US.Help.FallbackEditor.States.Text>
+  <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
+  <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
+  <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
 </LanguageData>

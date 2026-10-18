@@ -49,6 +49,31 @@ public partial class UniversalSqueakerSettings : ModSettings
     // S4 diagnostics foundation: player-facing camera indicator readout (no DevMode gating).
     public bool showCameraIndicator = false;
     public SqueakDevLoggingMode devLoggingMode = SqueakDevLoggingMode.Auto;
+    // UIR-006 (WO-US-UI-REFACTOR-20261014): the selected official surface swatch. Add-only and
+    // default "core", which is omitted at the Scribe boundary (a default config keeps a zero-byte
+    // delta and settingsSchemaVersion stays 5). It is a pure appearance setting: nothing on the
+    // audio path reads it, so it publishes no runtime notification — persistence only. An unknown
+    // hand-edited value is repaired at PostLoadInit and also fails soft on the read side.
+    public string uiSwatchId = "core";
+    public void SetUiSwatchId(string value)
+    {
+        string normalized = UsSwatchIds.IsKnown(value) ? value : UsSwatchIds.Default;
+        if (string.Equals(uiSwatchId, normalized, StringComparison.Ordinal)) return;
+        uiSwatchId = normalized;
+        QueuePersistence();
+    }
+    // CORRECTIONS-R1 topic 3 (WO-US-UI-REFACTOR-20261014): the overview teaching's collapse state,
+    // persisted as an explicit UI preference (default false = expanded, matching the first-open
+    // doctrine). Like the swatch it is PURE APPEARANCE: add-only, default omitted at the Scribe
+    // boundary, no audio-runtime notification anywhere - the setter queues persistence only - and the
+    // global restore returns it through the same field table as every other setting.
+    public bool uiIntroCollapsed = false;
+    public void SetUiIntroCollapsed(bool value)
+    {
+        if (uiIntroCollapsed == value) return;
+        uiIntroCollapsed = value;
+        QueuePersistence();
+    }
     public float globalCooldownMultiplier = 1f;
     public float globalVolumeFactor = 1f;
     public SqueakDistancePreset distancePreset = SqueakDistancePreset.Balanced;

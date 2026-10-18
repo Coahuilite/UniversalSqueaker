@@ -46,6 +46,8 @@ internal static class Program
             GlobalVolumeScribeRoundTrip();
             BabyActionsOptInAndCoverage();
             SetDistanceRangeClampsAndMarksCustom();
+            UiSwatchRoundTripRepairAndOmission();
+            IntroCollapsedScribeRoundTrip();
 
             if (failures == 0)
             {
@@ -795,6 +797,45 @@ internal static class Program
         }
     }
 
+// CORRECTIONS-R1 topic 5: the teaching collapse is a persisted UI preference (uiIntroCollapsed)
+    // and NOTHING else - the same Scribe file, the same default-on-omission repair path the swatch
+    // round-trip established. A missing key must restore OPEN (default false), never a stuck collapse.
+    private static void IntroCollapsedScribeRoundTrip()
+    {
+        Scenario("10-intro-collapsed-scribe-round-trip");
+        UniversalSqueakerSettings source = NewSettings();
+        source.SetUiIntroCollapsed(true);
+        string path = Path.Combine(Path.GetTempPath(), "us-settings-intro-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            SafeSaver.Save(path, "Settings", () => source.ExposeData());
+            UniversalSqueakerSettings loaded = NewSettings();
+            Scribe.loader.InitLoading(path);
+            loaded.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(loaded.uiIntroCollapsed,
+                "intro: the collapsed preference survives the Scribe round-trip", ref failures);
+
+            // Omission repair: a file without the key re-reads to OPEN (default false), not garbage.
+            UniversalSqueakerSettings fresh = NewSettings();
+            string bare = Path.Combine(Path.GetTempPath(), "us-settings-intro-bare-" + Guid.NewGuid().ToString("N") + ".xml");
+            File.WriteAllText(bare, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Settings />");
+            UniversalSqueakerSettings omitted = NewSettings();
+            omitted.uiIntroCollapsed = true; // dirty pre-state must be repaired by the default
+            Scribe.loader.InitLoading(bare);
+            omitted.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(!omitted.uiIntroCollapsed,
+                "intro: an omitted key restores the OPEN default (Look default false)", ref failures);
+            if (File.Exists(bare)) File.Delete(bare);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+
     private static void SetDistanceRangeClampsAndMarksCustom()
     {
         Scenario("10-distance-range-clamp-custom");
@@ -892,6 +933,61 @@ internal static class Program
     }
 
     // ---- helpers ----
+
+    /// <summary>
+    /// UIR-006 (WO-US-UI-REFACTOR-20261014): the selected palette persists through the real Scribe
+    /// boundary. Three failure classes: the value lost in round-trip; a hand-edited unknown id surviving
+    /// into the UI; and the default WRITING a node (the add-only zero-byte-delta rule).
+    /// </summary>
+    private static void UiSwatchRoundTripRepairAndOmission()
+    {
+        Scenario("16-ui-swatch-round-trip-repair-omission");
+        UniversalSqueakerSettings source = NewSettings();
+        source.SetUiSwatchId("biotech");
+        Check(source.uiSwatchId == "biotech", "ui-swatch: setter accepts a known id", ref failures);
+        string path = Path.Combine(Path.GetTempPath(), "us-settings-swatch-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            SafeSaver.Save(path, "Settings", () => source.ExposeData());
+            string xml = File.ReadAllText(path);
+            Check(xml.Contains("uiSwatchId"), "ui-swatch: a non-default value writes its node", ref failures);
+            UniversalSqueakerSettings loaded = NewSettings();
+            Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
+            Check(loaded.uiSwatchId == "biotech", "ui-swatch: Scribe round-trip preserves the value", ref failures);
+
+            // Unknown hand-edited id -> PostLoadInit repairs to the shipped default.
+            string bad = path + "-bad.xml";
+            File.WriteAllText(bad, xml.Replace(">biotech<", ">neon<"));
+            UniversalSqueakerSettings repaired = NewSettings();
+            Scribe.loader.InitLoading(bad);
+            repaired.ExposeData();
+            // The normalisation block is the PostLoadInit pass - run it exactly as the
+            // game runs it after a settings load.
+            Scribe.mode = LoadSaveMode.PostLoadInit;
+            repaired.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(repaired.uiSwatchId == "core", "ui-swatch: unknown id repairs to core", ref failures);
+            File.Delete(bad);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+
+        // Default omits the node entirely (add-only zero-byte-delta rule).
+        UniversalSqueakerSettings clean = NewSettings();
+        string cleanPath = Path.Combine(Path.GetTempPath(), "us-settings-swatch-clean-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            SafeSaver.Save(cleanPath, "Settings", () => clean.ExposeData());
+            Check(!File.ReadAllText(cleanPath).Contains("uiSwatchId"),
+                "ui-swatch: the default writes no node", ref failures);
+        }
+        finally
+        {
+            if (File.Exists(cleanPath)) File.Delete(cleanPath);
+        }
+    }
 
     private static UniversalSqueakerSettings NewSettings(int settingsSchemaVersion = 5, int voicePackSchemaVersion = 2)
     {

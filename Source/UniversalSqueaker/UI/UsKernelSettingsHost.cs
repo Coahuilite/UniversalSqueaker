@@ -138,6 +138,33 @@ public static class UsKernelSettingsHost
     /// native capture. The marked discard applies at the field's own next draw - before any later
     /// Enter or focus-out - so a stale draft cannot overwrite the restored value, while the
     /// existing outside-click commit contract for ordinary edits stays untouched.</summary>
+    /// <summary>
+    /// UIR-006 (WO-US-UI-REFACTOR-20261014): the live palette switch, the one colour-only seam the
+    /// settings page exposes. The write goes through the settings funnel (validated, persisted, one
+    /// QueuePersistence); the repaint lands on the GIVEN theme bags (the page host's own baseline plus
+    /// the shared chrome bag) through the carrier's colour clock, so the arranged page, the band cache,
+    /// the scroll positions, the focus and the open edits are not touched. A null host (a page not yet
+    /// attached) still persists and still repaints the chrome. Returns whether the write changed the
+    /// persisted value - a same-value re-apply stays silent, like every other value binding.
+    /// </summary>
+    public static bool ApplySwatchLive(UniversalSqueakerSettings? settings, UiHost? host, UiTheme chrome, string swatchId)
+    {
+        if (chrome == null) throw new ArgumentNullException(nameof(chrome));
+        string resolved = UsSwatches.Resolve(swatchId).Id;
+        if (settings != null && string.Equals(settings.uiSwatchId, resolved, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        settings?.SetUiSwatchId(resolved);
+        if (host != null)
+        {
+            UsTheme.ApplyToLive(host.StyleResolver.Baseline, resolved);
+        }
+        UsTheme.ApplyToLive(chrome, resolved);
+        return true;
+    }
+
     public static void EndAffectedEdit(UiHost? host, Func<string, bool> editIsAffected)
     {
         if (host == null) return;
@@ -207,6 +234,24 @@ public static class UsKernelSettingsHost
         public void SetScrollTarget(string elementId)
         {
             session?.SetScrollTarget(elementId);
+        }
+
+        /// <summary>
+        /// CORRECTIONS-R1 topic 2: the navigation arrival's scroll arming, in one place. Reset the
+        /// page scrolls first (the arrival must not inherit the PREVIOUS workspace's offset - the
+        /// same behavior a plain set-tab gives), CLEAR any pending target request left by an
+        /// earlier open (a stale request could be consumed by the wrong arrange later), then arm
+        /// the new destination: an FL-materialized "pack-card-row#<key>" identity or a static
+        /// section id. An empty destination arms nothing and leaves the cleared state. No manual
+        /// offsets, no copied scroll policy - the engine resolves declared ids its own way
+        /// (UiSession.SetScrollTarget); parallel scroll containers are the engine's own
+        /// content-local containment decision, observed by the real-host lane below.
+        /// </summary>
+        public void ArmScrollTarget(string destination)
+        {
+            ResetScroll();
+            session?.ClearScrollTarget();
+            if (!string.IsNullOrEmpty(destination)) session?.SetScrollTarget(destination);
         }
     }
 
@@ -326,6 +371,42 @@ public static class UsKernelSettingsHost
         string seconds = (source.BuildView().GlobalMinIntervalTicks / SecondsPerTick)
             .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
         return string.Format(translation.Translate("US.Tuning.MinInterval"), seconds);
+    }
+
+    // UIR-002: the board's mode echo and summary line. Both read the SAME view the mode row and the
+    // cards paint (one authority), and both are READ-ONLY strings because the manifest has no format
+    // expression - the same split the interval caption and the filter summary already use.
+    private static string BoardModeWord(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        SqueakVoicePackMode mode = source.BuildView().Mode;
+        return mode switch
+        {
+            SqueakVoicePackMode.Vanilla => translation.Translate("US.Board.ModeVanilla"),
+            SqueakVoicePackMode.Disabled => translation.Translate("US.Board.ModeOff"),
+            _ => "",
+        };
+    }
+
+    private static string BoardCounts(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        // OVT-002: the honest two-part count line - what is ON SCREEN now vs the FULL directory.
+        UsRaceBoardView view = source.BuildView().RaceBoard;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return string.Format(translation.Translate("US.Board.Counts"),
+            view.DisplayedRaces.ToString(inv),
+            view.TotalRaces.ToString(inv),
+            view.TotalXenotypes.ToString(inv));
+    }
+
+    private static string BoardSummary(IUsKernelSettingsSource source, IUiTranslation translation)
+    {
+        // The COUNTS are the pure projection's (one rule for the board and its summary); the host
+        // only composes the keyed sentence.
+        UsRaceBoardView view = source.BuildView().RaceBoard;
+        int total = view.SummaryTotal, withPacks = view.SummaryWithPacks, enabled = view.SummaryEnabled;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return string.Format(translation.Translate("US.Board.Summary"),
+            total.ToString(inv), withPacks.ToString(inv), enabled.ToString(inv));
     }
 
 
@@ -835,6 +916,136 @@ public static class UsKernelSettingsHost
             () => { if (source.ResetMoodTuningArea() == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "scope-tree" && state.TuningArea == 1); bump(); } },
             () => source.CanResetTuningArea());
 
+        // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
+        // The intro is a page-state bool like help-open, with the two complementary VisibleKeys the
+        // manifest's collapse/reopen buttons read. The board is READ-ONLY projection; its two exits
+        // are display writes (both bump): open = navigation intent only (NO settings write), enable =
+        // the exact-identity row-switch write through the SAME source method the Packs switch uses.
+        // The open command additionally arms the scroll target the host's own set-scroll seam needs -
+        // the card key the model just expanded and surfaced.
+        // UIR-002 (CORRECTIONS-R1 topic 3): the teaching is a PERSISTED UI preference - the page
+        // state mirrors the setting; collapsing writes the setting through the standard save
+        // funnel and notifies NO audio runtime (the state lives nowhere on the routing side).
+        // The board's shortcut row names its two same-page destinations through the EXISTING
+        // scroll-to action with declared string payloads - no new action vocabulary.
+        bindings.BindReadOnly<bool>("intro-open", () => state.IntroOpen);
+        bindings.BindReadOnly<bool>("intro-collapsed", () => !state.IntroOpen);
+        writes.Command("toggle-intro", () => { source.ToggleIntro(); bump(); });
+        bindings.BindReadOnly<UsRaceBoardView>("race-board-view", () => source.BuildView().RaceBoard);
+        // OVT-002: the browse controls ride plain int/string writes on the SESSION state - group,
+        // chip, search and the xenotype band toggle change what is DISPLAYED, never a setting, a
+        // selection or the admission set. The bump only refreshes the projection.
+        bindings.BindReadOnly<int>("board-group", () => (int)state.BoardGroup);
+        bindings.BindReadOnly<int>("board-filter", () => (int)state.BoardFilter);
+        bindings.BindReadOnly<bool>("board-xeno-expanded", () => state.BoardXenoExpanded);
+        writes.Value<string>("board-search", () => state.BoardSearch, value =>
+        {
+            state.BoardSearch = value ?? "";
+            bump();
+        });
+        writes.Action<string>("board-group", g =>
+        {
+            // Machine payload tokens (the declarative button payload is a string); an unknown
+            // token answers nothing - the display state can never be corrupted by a typo.
+            UsBoardBrowsePolicy.BoardGroup? group = g switch
+            {
+                "player" => UsBoardBrowsePolicy.BoardGroup.PlayerRaces,
+                "creatures" => UsBoardBrowsePolicy.BoardGroup.Creatures,
+                "all" => UsBoardBrowsePolicy.BoardGroup.All,
+                _ => null,
+            };
+            if (group == null) return;
+            state.BoardGroup = group.Value;
+            bump();
+        });
+        writes.Action<string>("board-filter", f =>
+        {
+            UsBoardBrowsePolicy.BoardFilter? filter = f switch
+            {
+                "har" => UsBoardBrowsePolicy.BoardFilter.Har,
+                "vanilla-races" => UsBoardBrowsePolicy.BoardFilter.VanillaRaces,
+                "vanilla-creatures" => UsBoardBrowsePolicy.BoardFilter.VanillaCreatures,
+                _ => null,
+            };
+            if (filter == null) return;
+            // Re-pressing the active chip clears it (the compact band has no separate "off" button).
+            state.BoardFilter = state.BoardFilter == filter.Value
+                ? UsBoardBrowsePolicy.BoardFilter.None
+                : filter.Value;
+            bump();
+        });
+        writes.Command("board-xeno-toggle", () => { state.BoardXenoExpanded = !state.BoardXenoExpanded; bump(); });
+
+        // Declarative payloads / selected answers for the browse band (the manifest wires the
+        // buttons to these; the widget never hand-codes state reads).
+        bindings.BindReadOnly<string>("board-group-player", () => "player");
+        bindings.BindReadOnly<string>("board-group-creatures", () => "creatures");
+        bindings.BindReadOnly<string>("board-group-all", () => "all");
+        bindings.BindReadOnly<bool>("board-group-is-player", () => state.BoardGroup == UsBoardBrowsePolicy.BoardGroup.PlayerRaces);
+        bindings.BindReadOnly<bool>("board-group-is-creatures", () => state.BoardGroup == UsBoardBrowsePolicy.BoardGroup.Creatures);
+        bindings.BindReadOnly<bool>("board-group-is-all", () => state.BoardGroup == UsBoardBrowsePolicy.BoardGroup.All);
+        bindings.BindReadOnly<string>("board-filter-har", () => "har");
+        bindings.BindReadOnly<string>("board-filter-vanilla-races", () => "vanilla-races");
+        bindings.BindReadOnly<string>("board-filter-vanilla-creatures", () => "vanilla-creatures");
+        bindings.BindReadOnly<bool>("board-filter-is-har", () => state.BoardFilter == UsBoardBrowsePolicy.BoardFilter.Har);
+        bindings.BindReadOnly<bool>("board-filter-is-vanilla-races", () => state.BoardFilter == UsBoardBrowsePolicy.BoardFilter.VanillaRaces);
+        bindings.BindReadOnly<bool>("board-filter-is-vanilla-creatures", () => state.BoardFilter == UsBoardBrowsePolicy.BoardFilter.VanillaCreatures);
+        bindings.BindReadOnly<string>("race-board-counts", () => BoardCounts(source, translation));
+        bindings.BindReadOnly<string>("race-board-mode-word", () => BoardModeWord(source, translation));
+        bindings.BindReadOnly<string>("race-board-summary", () => BoardSummary(source, translation));
+        bindings.BindReadOnly<string>("scroll-target-volume", () => "global-volume");
+        bindings.BindReadOnly<string>("scroll-target-attenuation", () => "attenuation-editor");
+        writes.Action<string>(
+            "race-board-open",
+            race =>
+            {
+                // The destination is pure data (FL-materialized row id / static section id / "").
+                string destination = source.OpenRaceTarget(race);
+                bumper.ArmScrollTarget(destination);
+                bump();
+            });
+        writes.Action<string>(
+            "race-board-xeno-open",
+            target =>
+            {
+                // OVT-003: the directory row's arrival - exact target identity, real empty
+                // state, "" destination clears any pending scroll. Zero persisted writes.
+                string destination = source.OpenXenotypeTarget(target);
+                bumper.ArmScrollTarget(destination);
+                bump();
+            });
+        writes.Action<UsPackToggle>(
+            "race-board-enable",
+            write =>
+            {
+                source.QuickEnableRacePack(write.Scope, write.RaceDefName, write.TargetDefName, write.PackKey);
+                bump();
+            });
+        // UIR-004: the fallback editor's own return layer on the Packs page (CancelBind on its
+        // Section): entry first, then the table - the two visible-branch steps the tuning tree used
+        // to own for its third area, state-only, never settings/routing/persistence.
+        writes.Command(
+            "cancel-fallback-table",
+            () => { VoicePacksPageModel.CancelFallbackTable(state, source.BuildView()); bump(); },
+            () => VoicePacksPageModel.CanCancelFallbackTable(state, source.BuildView()));
+        // UIR-006: the theme validation picker (Advanced page). Six declarative buttons over ONE
+        // string action, the same shape set-dev-logging uses: each button's payload and its selected
+        // answer are READ-ONLY bindings named by the manifest, and the enum-side resolution (an
+        // unknown id resolving fail-soft to Core) lives on the source, not in the page.
+        writes.Action<string>("set-ui-swatch", id => { source.SetUiSwatch(id); bump(); });
+        bindings.BindReadOnly<string>("ui-swatch-status", () => string.Format(
+            translation.Translate("US.Theme.Status"),
+            translation.Translate(UsSwatches.Resolve(source.UiSwatchId).LabelKey)));
+        // UIR-006 correction r1 (CO): the visible author note is the Keyed entry (zh authoritative, en
+        // translated) so the picker never paints an untranslated English sentence to a Chinese client.
+        bindings.BindReadOnly<string>("ui-swatch-author-note", () => translation.Translate(UsSwatches.Resolve(source.UiSwatchId).NoteKey));
+        for (int swatchIndex = 0; swatchIndex < UsSwatches.All.Count; swatchIndex++)
+        {
+            UsSwatch swatch = UsSwatches.All[swatchIndex];
+            string swatchId = swatch.Id;
+            bindings.BindReadOnly<string>("ui-swatch-" + swatchId + "-value", () => swatchId);
+            bindings.BindReadOnly<bool>("ui-swatch-" + swatchId, () => source.UiSwatchId == swatchId);
+        }
         return writes;
     }
 

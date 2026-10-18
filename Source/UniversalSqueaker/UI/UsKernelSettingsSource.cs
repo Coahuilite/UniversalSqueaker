@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FerriteLib.UiKit.Kernel;
 using UnityEngine;
 using Verse;
@@ -24,6 +25,10 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     {
         this.settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
         state = new VoicePacksPageState();
+        // CORRECTIONS-R1 topic 3: the teaching opens/collapses as a PERSISTED UI preference.
+        // The page state mirrors the setting on construction; audio runtime is never notified - the
+        // setting lives nowhere on the routing side, and the setter path only queues persistence.
+        state.IntroOpen = !settings.uiIntroCollapsed;
     }
 
     public VoicePacksPageState ViewState => state;
@@ -608,5 +613,83 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void ForgetUnavailable(SqueakVoicePackScope scope, string raceDefName, string targetDefName)
     {
         VoicePacksPageModel.ForgetUnavailable(settings, scope, raceDefName, targetDefName);
+    }
+
+    // UIR-002/003 (WO-US-UI-REFACTOR-20261014 + CORRECTIONS-R1 topic 3): the board exits and the
+    // teaching toggle. The intro is a PERSISTED UI preference (unlike the help panel, which stays
+    // per-window): the setter writes the setting through the standard save funnel - which queues
+    // persistence only; no audio-runtime notification exists on this field anywhere - and mirrors
+    // the page state so the same-pass drawing follows immediately.
+    public void SetIntroOpen(bool open)
+    {
+        state.IntroOpen = open;
+        settings.SetUiIntroCollapsed(!open);
+    }
+
+    public void ToggleIntro()
+    {
+        SetIntroOpen(!state.IntroOpen);
+    }
+
+    /// <summary>
+    /// UIR-003 / CORRECTIONS-R1 topic 2: the card's atomic navigation intent. The row (plain facts
+    /// already projected for this pass) is looked up read-only; the model applies the derived intent
+    /// and returns the destination to arm - an FL-materialized "pack-card-row#<key>" identity, the
+    /// static "packs-fallback" section, or "". Writes NO settings: no selection, no mode, nothing
+    /// persisted.
+    /// </summary>
+    public string OpenRaceTarget(string raceDefName)
+    {
+        IReadOnlyList<RaceBoardRow> rows = BuildView().RaceBoard.Rows;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (string.Equals(rows[i].RaceDefName, raceDefName, StringComparison.Ordinal))
+            {
+                return VoicePacksPageModel.ApplyOpenRaceTarget(state, rows[i]);
+            }
+        }
+
+        return "";
+    }
+
+    /// <summary>The board's explicit single-target enable (UIR-003): the SAME per-domain
+    /// whole-selection write chain the Packs row switch uses; never the mode.</summary>
+    /// <summary>OVT-003: the xenotype directory row's open exit (see the model method): exact
+    /// target identity, no race claim without a real declaration, zero persisted writes.</summary>
+    public string OpenXenotypeTarget(string targetDefName)
+    {
+        IReadOnlyList<XenotypeBoardRow> rows = BuildView().RaceBoard.Xenotypes;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (string.Equals(rows[i].DefName, targetDefName, StringComparison.Ordinal))
+            {
+                return VoicePacksPageModel.ApplyOpenXenotypeTarget(state, rows[i]);
+            }
+        }
+
+        return "";
+    }
+
+    public void QuickEnableRacePack(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
+    {
+        VoicePacksPageModel.QuickEnableRacePack(settings, scope, raceDefName, targetDefName, packKey);
+    }
+
+    // UIR-006: the active swatch. The settings layer owns persistence (SetUiSwatchId -> the page's
+    // standard QueuePersistence funnel); this facade adds the ONE colour-only live invalidation: the
+    // attached host's own theme bag is re-tinted in place through the carrier resolver, which advances
+    // ColourRevision (dropping the cached region clones) and leaves LayoutRevision, the session, the
+    // scroll positions and the focus untouched. No host rebuild, no second swatch state. The window
+    // chrome's own bag follows on the window's next pass (its poll).
+    public string UiSwatchId => settings != null && UsSwatches.IsKnown(settings.uiSwatchId)
+        ? settings.uiSwatchId
+        : UsSwatches.DefaultId;
+
+    public void SetUiSwatch(string swatchId)
+    {
+        // UIR-006: ONE seam for the live switch - the page host's own bag and the shared chrome bag
+        // are repainted inside UsKernelSettingsHost.ApplySwatchLive (colour clock only; persistence
+        // stays in the settings funnel this call goes through, and a same-value press stays silent).
+        UsKernelSettingsHost.ApplySwatchLive(settings, host, UsTheme.ChromeTheme, swatchId);
     }
 }

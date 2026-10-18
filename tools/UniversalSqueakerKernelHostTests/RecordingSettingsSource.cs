@@ -23,6 +23,25 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// harness exercises the real dynamic-list widget draw paths instead of the empty projections.
     /// </summary>
     public bool RichData;
+    /// <summary>UIR-002: board rows the fake projection returns (the harness cannot build a real
+    /// catalog snapshot - its constructor is internal by design; the rows themselves are the
+    /// production value types the real projection emits).</summary>
+    public System.Collections.Generic.IReadOnlyList<RaceBoardRow> SeedRaceBoard = System.Array.Empty<RaceBoardRow>();
+    public System.Collections.Generic.IReadOnlyList<XenotypeBoardRow> SeedXenoBoard = System.Array.Empty<XenotypeBoardRow>();
+
+    private int CountSeededWithPacks()
+    {
+        int n = 0;
+        foreach (var r in SeedRaceBoard) if (r.RacePackCount + r.XenoPackCount > 0) n++;
+        return n;
+    }
+
+    private int CountSeededEnabled()
+    {
+        int n = 0;
+        foreach (var r in SeedRaceBoard) if (r.EnabledCount + r.XenoEnabledCount > 0) n++;
+        return n;
+    }
 
     /// <summary>
     /// When true the two Packs layer rows carry text that cannot fit a single line at 800px: a race row
@@ -319,7 +338,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
             eatPrecisionEnabled: EatPrecisionEnabled,
             eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
-            packNoPacks: true);
+            packNoPacks: true,
+            raceBoard: UsRaceBoardView.Empty);
     }
 
     private VoicePacksViewState BuildRichView()
@@ -492,7 +512,12 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             // filters and manual expansion set, so a lane drives the real rule end to end.
             packCards: PackCardsForView(sang),
             packResultsEmpty: PackCardsForView(sang).Count == 0,
-            packNoPacks: false);
+            packNoPacks: false,
+            raceBoard: new UsRaceBoardView(
+                SeedRaceBoard, SeedXenoBoard, ViewState.BoardXenoExpanded,
+                SeedRaceBoard.Count, SeedXenoBoard.Count,
+                ViewState.BoardGroup, ViewState.BoardFilter,
+                SeedRaceBoard.Count, CountSeededWithPacks(), CountSeededEnabled()));
     }
 
     /// <summary>
@@ -756,8 +781,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         string normalized;
         if (string.Equals(tab, "Overview", StringComparison.OrdinalIgnoreCase))
             normalized = "Overview";
-        else if (string.Equals(tab, "Distance", StringComparison.OrdinalIgnoreCase))
-            normalized = "Distance";
+        else if (string.Equals(tab, "Advanced", StringComparison.OrdinalIgnoreCase))
+            normalized = "Advanced";
         else if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase))
             normalized = "Packs";
         else if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase))
@@ -780,7 +805,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             state.ActiveTab = normalized;
             state.ActiveSectionKey = normalized switch
             {
-                "Distance" => "attenuation-editor",
+                "Advanced" => "theme-picker",
                 "Packs" => "filter-bar",
                 "Tuning" => "scope-tree",
                 "Presets" => "preset-list",
@@ -1129,5 +1154,109 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastForgetScope = scope;
         LastForgetRace = raceDefName;
         LastForgetTarget = targetDefName;
+    }
+
+    // UIR-002/003/006: the board's exits, the intro and the swatch, mirrored like every other
+    // facade member here - the fakes answer the read-back exactly as production does.
+    public bool LastIntroOpen = true;
+    public string LastRaceBoardOpenRace = "";
+    public string LastRaceBoardScrollKey = "";
+    public string RaceBoardOpenCardKeyToReturn = "";
+
+    public SqueakVoicePackScope LastQuickScope = SqueakVoicePackScope.Race;
+    public string LastQuickRace = "", LastQuickTarget = "", LastQuickPackKey = "";
+    public int QuickEnableCount;
+    public string LastUiSwatch = "core";
+    public int SwatchWriteCount;
+
+    /// <summary>What the intro setter persisted (CORRECTIONS-R1 topic 3: the preference persists;
+    /// a lane asserts the persisted value, the state mirror, and that NO audio write happened).</summary>
+    public bool? LastIntroPersistedCollapsed;
+    public void SetIntroOpen(bool open)
+    {
+        LastIntroOpen = open;
+        LastIntroPersistedCollapsed = !open;
+        state.IntroOpen = open;
+    }
+
+    public void ToggleIntro()
+    {
+        SetIntroOpen(!state.IntroOpen);
+    }
+
+    public string OpenXenotypeTarget(string targetDefName)
+    {
+        IReadOnlyList<XenotypeBoardRow> rows = SeedXenoBoard;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (string.Equals(rows[i].DefName, targetDefName, System.StringComparison.Ordinal))
+            {
+                return VoicePacksPageModel.ApplyOpenXenotypeTarget(ViewState, rows[i]);
+            }
+        }
+
+        return "";
+    }
+
+    public string OpenRaceTarget(string raceDefName)
+    {
+        LastRaceBoardOpenRace = raceDefName ?? "";
+        // CORRECTIONS-R1 topic 2: the fake no longer MIRRORS the intent - it runs the PRODUCTION
+        // statics over the seeded plain row, so the lane exercises the real pure derivation
+        // (DeriveIntent + ApplyOpenRaceTarget). No settings write happens on this path.
+        IReadOnlyList<RaceBoardRow> rows = SeedRaceBoard;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (string.Equals(rows[i].RaceDefName, LastRaceBoardOpenRace, StringComparison.Ordinal))
+            {
+                string destination = VoicePacksPageModel.ApplyOpenRaceTarget(state, rows[i]);
+                LastRaceBoardScrollKey = destination;
+                return destination;
+            }
+        }
+
+        LastRaceBoardScrollKey = "";
+        return "";
+    }
+    /// <summary>Lanes seed board rows through this one factory so the plain 22-field struct is
+    /// constructed in exactly one place (production's own constructor - no fake row type).</summary>
+    public static RaceBoardRow SeedRow(
+        string defName, string label = "",
+        int racePacks = 0, int enabled = 0, int orphan = 0,
+        SqueakVoicePackDomainState domainState = SqueakVoicePackDomainState.Available,
+        bool xenoOnly = false, int xenoPacks = 0, int xenoEnabled = 0, int xenoOrphan = 0,
+        bool xenoTargetMissing = false, string firstXenoTarget = "",
+        bool hasFallback = false, bool fallbackPlayer = false, int fallbackSounds = 0,
+        bool modeUsesPacks = true, IReadOnlyList<string>? supplyKeys = null,
+        string quickScope = "", string quickTarget = "", string quickKey = "",
+        string quickLabel = "", string quickTargetLabel = "", bool har = false)
+        => new RaceBoardRow(
+            defName, label.Length > 0 ? label : defName,
+            racePacks, enabled, orphan, domainState, xenoOnly, xenoPacks, xenoEnabled, xenoOrphan,
+            xenoTargetMissing, firstXenoTarget, hasFallback, fallbackPlayer, fallbackSounds,
+            modeUsesPacks, supplyKeys ?? Array.Empty<string>(),
+            quickScope, quickTarget, quickKey, quickLabel, quickTargetLabel,
+            // OVT-001 cutover: the row identity is required plain data; the seeded fixtures
+            // answer the ordinary collector values unless they declare HAR.
+            new UsRaceIdentity(defName, label, har ? UsRaceSourceKind.ThirdParty : UsRaceSourceKind.Unknown,
+                "", "", har, UsRaceLifeKind.Other));
+
+    public void QuickEnableRacePack(SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
+    {
+        QuickEnableCount++;
+        LastQuickScope = scope;
+        LastQuickRace = raceDefName ?? "";
+        LastQuickTarget = targetDefName ?? "";
+        LastQuickPackKey = packKey ?? "";
+        // The SAME write the row switch uses; it must never touch the mode.
+        ToggleVoicePack(scope, raceDefName ?? "", targetDefName ?? "", packKey ?? "", true);
+    }
+
+    public string UiSwatchId => LastUiSwatch;
+
+    public void SetUiSwatch(string swatchId)
+    {
+        SwatchWriteCount++;
+        LastUiSwatch = swatchId;
     }
 }

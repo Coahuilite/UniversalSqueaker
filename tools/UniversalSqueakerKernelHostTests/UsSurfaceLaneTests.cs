@@ -91,39 +91,39 @@ internal static class UsSurfaceLaneTests
         // The identity accent, pinned twice on purpose: the constant the document is authored with, and the
         // colour the resolver actually produced from it. A document edit that disagrees with the constant
         // reddens on the second, and a constant edited alone reddens on the first.
-        Assert(UsTheme.AccentGoldHex == "#d19a38",
-            "the identity accent constant must stay the series gold #d19a38, got '" + UsTheme.AccentGoldHex + "'");
-        Assert(Same(theme.AccentGold, Rgb(0xd1, 0x9a, 0x38)),
-            "the identity accent must resolve to the series gold #d19a38 - the value the retired carrier"
-            + " template carried, so the accent did not move with the ownership (RULING 2026-09-24)");
+        // UIR-006 (WO-US-UI-REFACTOR-20261014): the shipped default is the OFFICIAL Core palette -
+        // the table, not a remembered literal, is the authority. The accent is pinned twice against
+        // it (the constant and the resolved colour) exactly as before; only the value moved.
+        string coreAccent = UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[
+            System.Array.IndexOf(UsTheme.ColorTokens as string[], "AccentGold")];
+        Assert(string.Equals(UsTheme.AccentGoldHex, coreAccent, StringComparison.OrdinalIgnoreCase),
+            "the identity accent constant must equal the core role table's AccentGold " + coreAccent
+            + ", got '" + UsTheme.AccentGoldHex + "'");
+        Assert(Same(theme.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
+            "the identity accent must resolve to the Core Bronze #B49C73 from the PM role table");
 
-        Assert(Same(theme.Base, Rgb(0x0e, 0x0d, 0x0c)) && Same(theme.WorkspacePlane, Rgb(0x0e, 0x0d, 0x0c)),
-            "s0 is the window and work plane (S6-3: the warm dark base)");
-        Assert(Same(theme.Panel, Rgb(0x17, 0x15, 0x12)) && Same(theme.SectionBand, Rgb(0x17, 0x15, 0x12)),
-            "s1 is the panel and band plane (S6-3: SR's Panel)");
-        Assert(Same(theme.Raised, Rgb(0x1d, 0x1b, 0x17)),
-            "s2 is the control base (S6-3: SR's Raised)");
-        Assert(Same(theme.Hover, Rgb(0x24, 0x20, 0x19)),
-            "the hover plane is one step above the raised plane (S6-3)");
-        Assert(Same(theme.Selected, Rgb(0x3a, 0x31, 0x1f)),
-            "the selected row keeps its own plane (S6-3: SR's Selected)");
-        Assert(Same(theme.Border, Rgb(0x57, 0x52, 0x47)) && Same(theme.Divider, Rgb(0x2a, 0x26, 0x20)),
-            "structure and the row divider are the two line strengths (S6-3: SR's Border, warm divider)");
-        Assert(Same(theme.BorderStrong, Rgb(0x6b, 0x64, 0x59)),
-            "the window edge is one step brighter than the content rule");
-        Assert(Same(theme.TextPrimary, Rgb(0xea, 0xe6, 0xde))
-            && Same(theme.TextSecondary, Rgb(0xb0, 0xad, 0xa3))
-            && Same(theme.TextDisabled, Rgb(0x8a, 0x87, 0x80)),
-            "ink, dim, and a FURTHER dim for unavailable text (S6-3: the disabled ink is no longer the"
-            + " same value as the secondary one, since on a warm plane they read alike)");
-        Assert(Same(theme.Danger, Rgb(0x3f, 0x1c, 0x1a))
-            && theme.DangerBorder.HasValue
-            && Same(theme.DangerBorder.Value, Rgb(0xc9, 0x60, 0x57))
-            && Same(theme.TextOnDanger, Rgb(0xff, 0xdc, 0xd6)),
-            "destructive action: dark plane, saturated edge, light text (S6-3: warmed to sit beside gold)");
+        // The FULL 24-role table: every resolved token equals the Core role table's hex (the single
+        // source the product ships), compared token by token so a drifted entry names itself.
+        UsSwatch core = UsSwatches.Resolve(UsSwatches.DefaultId);
+        for (int slot = 0; slot < UsTheme.ColorTokens.Count; slot++)
+        {
+            string token = UsTheme.ColorTokens[slot];
+            Assert(Same(ResolvedToken(theme, token), ParseHex(core.RoleHexes[slot])),
+                "core token '" + token + "' must resolve to " + core.RoleHexes[slot]);
+        }
 
-        Assert(!Same(theme.Base, theme.Panel) && !Same(theme.Panel, theme.Raised),
-            "the three surface layers must stay distinguishable from each other");
+        // The structural promises that SURVIVE the palette change, restated as relationships, not
+        // hexes: the interactive states must separate from the resting plane, and with Core's flat
+        // fills (Base == WorkspacePlane == Raised by authorial design) the separation lives on the
+        // EDGES - exactly what the region-scope retirement left to the palette.
+        Assert(!Same(theme.Hover, theme.Raised), "hover must separate from the resting plane");
+        Assert(!Same(theme.HoverSurface.Border, theme.RaisedSurface.Border),
+            "the hover EDGE is what carries the state on Core - it must differ from the resting edge");
+        Assert(!Same(theme.SelectedSurface.Border, theme.RaisedSurface.Border),
+            "the selected EDGE (the accent fallback) must separate from the resting edge");
+        Assert(!Same(theme.Panel, theme.Raised), "the panel plane must differ from the raised plane");
+        Assert(theme.TextOnGold.a > 0f && !Same(theme.TextOnGold, theme.TextSecondary),
+            "the ink on the selected plate is its own role value");
 
         UiTheme second = UsTheme.Surface();
         Assert(!ReferenceEquals(theme, second),
@@ -292,14 +292,14 @@ internal static class UsSurfaceLaneTests
 
         // Negative controls: without them an exact-value check could be a checker that accepts anything.
         // Each of these is a colour the ruling explicitly rejects for attention.
-        Assert(!Same(Rgb(0xD1, 0x99, 0x38), cyan), "negative control: series gold is not attention");
+        Assert(!Same(Rgb(0xB4, 0x9C, 0x73), cyan), "negative control: the Core accent is not attention");
         Assert(!Same(Rgb(0xC8, 0x5A, 0x5A), cyan), "negative control: the danger edge is not attention");
 
-        // The surface table's own promises, restated here because this is the lane that would notice a
-        // palette change: the accent is US's own pinned identity value now (R2 moved the ownership, not the
-        // colour), and the table did not move the alarm tokens.
-        Assert(Same(theme.AccentGold, Rgb(0xd1, 0x9a, 0x38)),
-            "the identity accent must stay the series gold #d19a38, not a new colour");
+        // The alarm roles did NOT move with the palette: the official tables carry the same Success /
+        // Danger / TextOnDanger / DangerBorder family the S6 ruling fixed (see the token loop above -
+        // these two clauses name the promise in words).
+        Assert(Same(theme.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
+            "the identity accent is the Core Bronze from the role table, not a new colour");
         Assert(Same(theme.Warning, theme.Danger),
             "theme.Warning must stay the compatibility alias of theme.Danger, not a second attention token");
         // The redirect is live, not a coincidentally equal value: assigning Warning writes Danger. That
@@ -592,6 +592,50 @@ internal static class UsSurfaceLaneTests
     {
         if (recorded is Color colour) return colour;
         throw new InvalidOperationException("the recorded solid was not a Color: " + (recorded?.GetType().FullName ?? "(null)"));
+    }
+
+    /// <summary>Resolved value of one declared token on a configured bag (edges through their
+    /// surface styles, matching how the drawing reads them).</summary>
+    private static Color ResolvedToken(UiTheme theme, string token)
+    {
+        return token switch
+        {
+            "Base" => theme.Base,
+            "WorkspacePlane" => theme.WorkspacePlane,
+            "Panel" => theme.Panel,
+            "SectionBand" => theme.SectionBand,
+            "Raised" => theme.Raised,
+            "Hover" => theme.Hover,
+            "Selected" => theme.Selected,
+            "Success" => theme.Success,
+            "Danger" => theme.Danger,
+            "Border" => theme.Border,
+            "BorderStrong" => theme.BorderStrong,
+            "Divider" => theme.Divider,
+            "BaseBorder" => theme.BaseSurface.Border,
+            "PanelBorder" => theme.PanelSurface.Border,
+            "RaisedBorder" => theme.RaisedSurface.Border,
+            "HoverBorder" => theme.HoverSurface.Border,
+            "TextPrimary" => theme.TextPrimary,
+            "TextSecondary" => theme.TextSecondary,
+            "TextDisabled" => theme.TextDisabled,
+            "TextOnGold" => theme.TextOnGold,
+            "TextOnDanger" => theme.TextOnDanger,
+            "DangerBorder" => theme.DangerSurface.Border,
+            "AccentGold" => theme.AccentGold,
+            "SwitchThumbOff" => theme.SwitchThumbOff,
+            _ => throw new InvalidOperationException("unknown token " + token),
+        };
+    }
+
+    private static Color ParseHex(string hex)
+    {
+        string s = hex.Trim();
+        if (s.StartsWith("#", StringComparison.Ordinal)) s = s.Substring(1);
+        return new Color(
+            Convert.ToByte(s.Substring(0, 2), 16) / 255f,
+            Convert.ToByte(s.Substring(2, 2), 16) / 255f,
+            Convert.ToByte(s.Substring(4, 2), 16) / 255f, 1f);
     }
 
     private static bool Same(Color left, Color right)

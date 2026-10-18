@@ -18,19 +18,8 @@
     <Density Name="dense">
       <Metric Token="RowHeight" Value="20" />
     </Density>
-    <!-- SA1.6: the engine resolves an element's Scheme against the document the Host was built with,
-         so the dialog page carries its own copy of the command-button scope (same six values as
-         Layout.Schema2.xml; the parity lane over both manifests is UiSourceInvariantTests). -->
-    <Scheme Name="us-command-button">
-      <Color Token="Raised" Value="#1d1b17" />
-      <Color Token="RaisedBorder" Value="#575247" />
-      <Color Token="Hover" Value="#242019" />
-      <Color Token="HoverBorder" Value="#6b6459" />
-      <Color Token="Selected" Value="#3a311f" />
-      <Color Token="SelectedBorder" Value="#d19a38" />
-    </Scheme>
   </Styles>
-  <Column Id="confirm-root" Gap="10" Padding="12" Scheme="us-command-button">
+  <Column Id="confirm-root" Gap="10" Padding="12">
     <!-- The r4 shell measurement found the defect this fixes: with the bodies flowing freely, a step-two
          body one line shorter than step one's moved the button row UP (measured 22px in the ZH table),
          and the same-coordinate click met blank instead of Cancel. The swap's safety promise is only

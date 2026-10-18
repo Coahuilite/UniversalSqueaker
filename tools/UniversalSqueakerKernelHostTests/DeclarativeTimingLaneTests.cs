@@ -83,8 +83,10 @@ internal static class DeclarativeTimingLaneTests
         Assert(card!.Kind == "Section",
             "the timing card must be the engine's Section container - the composite kind that used to own it"
             + " is retired - got " + card.Kind);
-        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Overview",
-            "the timing card must stay gated by the Overview workspace");
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): the trigger-timing card is a RULE band now -
+        // it is gated by the Tuning workspace, and the lane arranges it there.
+        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Tuning",
+            "the timing card must stay gated by the Tuning workspace");
         Assert(card.TryGetAttribute("Padding", out string padding) && padding == "12",
             "the card must declare the checklist card's Padding 12, got '" + padding + "'");
 
@@ -401,7 +403,7 @@ internal static class DeclarativeTimingLaneTests
 
     private static UiLayoutSnapshot Arrange(UiHost host, float width = PageWidth)
     {
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Tuning"); // UIR-001: the timing card lives on the rules workspace
         host.MeasureAndArrange(new Vector2(width, PageHeight));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
         return host.MeasureAndArrange(new Vector2(width, PageHeight));

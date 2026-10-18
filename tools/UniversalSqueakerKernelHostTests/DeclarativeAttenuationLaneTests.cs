@@ -99,8 +99,10 @@ internal static class DeclarativeAttenuationLaneTests
         Assert(card!.Kind == "Section",
             "the card must be the engine's Section container - the composite kind that used to own it is"
             + " retired - got " + card.Kind);
-        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Distance",
-            "the card must stay gated by the Distance workspace");
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): the Distance workspace retired; the attenuation card
+        // is the Overview secondary quick area now, gated by Overview.
+        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Overview",
+            "the card must stay gated by the Overview workspace");
 
         UiElementSpec? chart = FindById(card.Children, "attenuation-chart");
         Assert(chart?.Kind == "chart/line",
@@ -296,7 +298,7 @@ internal static class DeclarativeAttenuationLaneTests
                     {
                         var source = new RecordingSettingsSource { RichData = true };
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
-                        host.Bindings.Invoke("set-tab", "Distance");
+                        host.Bindings.Invoke("set-tab", "Overview");
                         host.MeasureAndArrange(new Vector2(width, PageHeight));
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, PageHeight));
@@ -397,7 +399,7 @@ internal static class DeclarativeAttenuationLaneTests
 
     private static UiLayoutSnapshot Arrange(UiHost host)
     {
-        host.Bindings.Invoke("set-tab", "Distance");
+        host.Bindings.Invoke("set-tab", "Overview");
         host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
         return host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));

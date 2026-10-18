@@ -1,71 +1,47 @@
-# Selecting FerriteLib and validating the settings redesign
+# Build and debug
 
-US builds into `dist/build/<Configuration>`. Existing packers still produce installable mod folders under
-`dist/dev` or `dist/release`, with `1.6/Assemblies/UniversalSqueaker.dll` inside. No FL DLL is shipped by US.
-`build-dev.ps1` now reads a selected FL artifact and calls the existing packer; it never rebuilds FL.
+Select the FerriteLib artifact you intend to test with, then build US against that exact DLL. US does not build or ship FerriteLib.
 
-`FerriteLibArtifactPath` is the common MSBuild/script input. Relative values are resolved against the US
-repository root. **There is no default carrier**: `resolve-carrier.ps1` refuses an empty path, because the old
-default silently selected the repository-root Release payload - the wrong artifact for a Dev rehearsal, and one
-that ordinary FL builds no longer refresh. Select the DLL from the paired FL dev package or from an explicit FL
-build output. (A bare `dotnet build` still falls back to `Directory.Build.props`' root-carrier default for
-compatibility; every script and the paired workflow pass an explicit path.)
-The actual compiler reference hash is embedded as `AssemblyMetadata("FerriteLib.SHA256", ...)`.
-Staging rejects a different selected DLL and writes `carrier-sha256` into `version.txt`.
+## Local Dev workflow
 
-Gate 9 stages a disposable matching package, supplies a changed carrier as a negative control, and checks
-that rejection preserves the previous package and the original carrier. The Dev Host lane checks repeated
-native events and repeated publisher calls. Reverting its pass-based deduplication to text-based deduplication
-was measured to fail that lane. Neither check substitutes for the game acceptance below.
-
-## Paired Dev workflow
-
-Run the first command from the FL repository, then the remaining commands from US:
+From the US repository root:
 
 ```powershell
-# FL repository: build and stage its development package.
-pwsh -NoProfile -File scripts/pack-dev.ps1
-
-# US repository: select the DLL from that exact FL package.
 $carrier = '../ferritelib/dist/dev/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll'
 pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath $carrier -DevelopmentCarrier
 pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath $carrier
 ```
 
-`-DevelopmentCarrier` requires a Dev DLL and runs the Host harness in Dev, including repeated-click
-diagnostic integration. Dirty FL work is allowed in this explicitly labeled integration mode. This is not
-release evidence. Without that switch, verification requires a Release DLL attributed to the current clean
-FL checkout and runs the Host harness in Release. An explicit Release build can be selected with:
+The carrier must already exist. Obtain it from its owner or the agreed paired delivery; do not replace a frozen carrier while another build or test uses it. These commands build/test and stage files; run them only within an authorized development task.
+
+- `FerriteLibArtifactPath` is shared by scripts and MSBuild. Relative paths resolve against the US root.
+- Scripts reject an omitted carrier. Direct MSBuild retains a compatibility fallback in `Directory.Build.props`; pass `-p:FerriteLibArtifactPath=...` explicitly.
+- `-DevelopmentCarrier` selects Dev integration and the Dev Host lane. Without it, verification checks the selected Release carrier and its required source attribution.
+- US builds into `dist/build/<Configuration>`. `build-dev.ps1` stages `dist/dev/UniversalSqueaker`; `pack-dev.ps1 -Zip` additionally creates an archive.
+- The compiler records the carrier identity. Staging rejects a different selected DLL and records the pairing in `version.txt`; failed staging preserves the previous delivered folder.
+
+Explicit Release verification:
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'
 ```
 
-For direct `dotnet build` or `dotnet run`, pass `-p:FerriteLibArtifactPath=...`. The Host harness forwards
-that input to its nested production build. It still uses the sibling FL source tree for test stubs.
-Serialize FL and US harness builds because those canonical stubs are shared. Do not rebuild or replace the
-selected FL artifact while a consumer build/pack is using it.
+CI/release workflows select a pinned FerriteLib release asset through `scripts/acquire-ferritelib-carrier.ps1`; they do not rebuild the carrier's moving default branch.
 
-## Actual game acceptance
+## What verification covers
 
-The validation surface remains `docs/ui-redesign-0.7-zh.md`: implement a vertical settings-page slice,
-separate US composition from generic library defects, and use the real page to validate the library.
-The existing Packs race-row click defect is **not closed by a stub harness pass**.
+The current `scripts/verify-local.ps1` defines 16 gates. Keep its commands authoritative instead of copying them into every guide. Coverage includes pure Kernel/corpus, Config-copy lifecycle, settings migration, log protocol, selected-carrier identity, Dev/Release builds, package boundary, license, manifests, UI logic, production Host on stubs, UI boundary, referenced game-member stub coverage and frozen stub integrity.
 
-Install the paired `dist/dev/FerriteLib` and `dist/dev/UniversalSqueaker` folders through the usual manual
-workflow, ensuring exactly one FL carrier is active. Restart the game after replacing loaded DLLs. Record
-the installed FL DLL hash and compare it with US `version.txt`'s `carrier-sha256`. Enable detailed logging
-in the existing Diagnostics workspace, then:
+Gate 15 scans the US payload and Host harness together against their exemption ledger. Tests use US's frozen `tools/FerriteLib.Stubs` snapshot; Gate 16 checks that snapshot against its recorded delivery. This is not rebuilding the carrier's current stubs.
 
-1. Reproduce the failed race-row selection and compare it with the working filter.
-2. Repeat the same click, click another row, scroll and retry, then repeat with a popup open/closed.
-3. Record window dimensions, UI scale, language, expected/actual selection and the matching `ltrace: geometry`
-   block. Each event pass has its own number; identical later clicks must not disappear from the log.
-4. After a targeted fix, repeat the original failing scenario and the adjacent interactions.
+Pure logic, runtime doubles and native game behavior are different evidence. A live Host does not prove a widget executed rather than entered recovery; assert the actual affected output and write chain.
 
-`event-before` / `event-after` expose native consumption. `MouseDown -> Used` can be normal capture;
-`Used -> Used` means an earlier element already consumed the event. The dump is evidence about the
-instrumented queries, not a full command trace or a complete explanation by itself.
+## Focused game verification
 
-Report automated contracts, package identity, and real-game E2E separately. Until step 4 is observed in
-RimWorld, the game defect remains pending, even if all 15 automated gates pass.
+Install the paired candidate only when game testing is authorized. Restart after replacing loaded DLLs; keep exactly one FerriteLib carrier active.
+
+Choose scenarios for the changed behavior: accurate Race/Xenotype selection and enablement, the original failing interaction, adjacent popup/scroll/cancel paths, settings save/reopen, or the affected sound action. Record candidate identity, game build, dependencies, language, screen/UI scale and expected/observed result without publishing personal paths or raw logs.
+
+For UI, inspect the real page and native input. For audio, test production dispatch and hearing separately from preview. For a new domain, check admission after restart. Do not rerun accepted historical matrices without a changed premise.
+
+Current UI limits are in [the UI contract](ui-contract-0.5-zh.md); dated evidence is scoped in [history](history/README.md).

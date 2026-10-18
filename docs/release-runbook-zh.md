@@ -1,82 +1,44 @@
-# Release Runbook（版本无关）
+# Universal Squeaker 发布流程
 
-> 唯一发布流程入口。版本相关事实以当次 `docs/release_review/release-<version>-review-zh.md`（Claim Pack）为准；本文只描述流程与门禁。
-> 本流程**继承自 Squeaky Ratkin 的 runbook**，并按 US 红线适配：无 `Extras/`、无内置音频/OGG 镜像、无 `codemap.md`；`version.txt` 首行产品名为 `UniversalSqueaker`；本地脚本已迁入 `scripts/`（`build-dev.ps1`/`pack-dev.ps1`/`stage-package.ps1`/`verify-local.ps1`）。
-> 每一步的 git/外部影响操作都需要维护者明确授权（见 `AGENTS.md`）。
+以当次源码、打包脚本和 CI 为执行依据；本文不保存某次发布的临时任务表。提交、远端操作、打标签、发布和 Workshop 更新按当次维护者授权执行，不能从这份流程取得授权。
 
-## 阶段 0 · dev 发布前准备
+## 1. 准备版本与候选
 
-1. **版本**：csproj `<Version>` bump（唯一主源；`About.xml <modVersion>` 跟随，发布前查两处一致）。
-2. **文档同步**（与代码同批 commit）：
-   - changelog（EN/SC）加 `Unreleased — X.Y.Z` 条目：开发者功能解锁细节模糊化、不写 change note、中英同步；
-   - README / MEMORY / 根 codemap 的版本引用同步；
-   - Workshop 页面文案（如页面内容有变）：中英对称、英文以中文版为准、页面专注模组本身（无音频统计/开发者排障/迁移说明/制作步骤，作者内容只留指南链接）、俏皮句不加解释、字符数刷新。
-3. **隐私审查**：跑 `scripts/privacy-audit.ps1`（规格自含于脚本头注释）；日常发版扫「工作树 + 提交信息 + 身份」，push 前追加 `-FullHistory` 全历史模式。
-4. **构建 + 打包核验**：
-   - Dev / Release 构建 0 errors；
-   - pack 后**包内容逐项核验**：文件数（含 `version.txt`）、排除项（`*.pdb`/`*.gitkeep`；US 无 `codemap.md`、无 OGG 镜像、无 `Extras/`）、关键文件内容（`LoadFolders.xml` 无门控、DLL 版本/flavor/身份、`About.xml <modVersion>` == csproj `<Version>`）、**包内 `version.txt` 三行与预期一致**（`UniversalSqueaker <版本>`/`build=<flavor>`/`commit=<sha>`）。
+1. 同步 csproj 的 `Version` / `VersionPrefix` 与 About 的 `modVersion`。身份轴使用纯数字版本；rc 后缀属于标签和工件名。
+2. 更新中英文变更说明、README 与受影响文档。保持 [当前行为](current-behavior-0.5-zh.md) 和 [0.6.x 目标规格](us-kernel-0.6-spec-zh.md) 的状态区别，不因规划完成就宣称实现。
+3. 按 [构建指南](build-and-debug.md) 选择准确 FerriteLib 载体并执行相关验证。纯逻辑、Host stub 和实机结果分别记录。
+4. 检查候选安装包而不只检查源码：产品/载体配对、版本、内容、资源、许可和排除项。包结构以 [结构参考](mod-structure-reference-zh.md) 与 `stage-package.ps1` 为准。
 
-## 阶段 1 · PR 与 merge
+当前没有独立 `pack-release.ps1` 或 `pack-steam.ps1`，也没有定义 `US_STEAM` 的构建轴。不要执行旧 runbook 中不存在的 Steam flavor 步骤。
 
-5. 原子 commit → push dev → dev CI 通过。
-6. PR dev→main。
-7. **main/dev 分叉处理**：
-   - 若 main 的 squash tree 与 dev 的 merge tree 相同 → `git merge -s ours origin/main`（dev 纯增量，避免重复三方冲突）；
-   - 否则三方 merge → 注意 **auto-merged 文件不受 `git checkout --ours` 控制**（base 与 ours 相同时三方合并会采纳 theirs）；
-   - merge 后必须 **`git diff <修复commit> <mergecommit>` 全面核验**（重点关键行为文件：`LoadFolders.xml`/csproj/`About.xml`）→ 重新隐私审计 + build → push。
-8. PR CI 通过 → squash merge。
+## 2. 发布前隐私与集成
 
-## 阶段 2 · GitHub 发布
+- 按 [隐私门禁](push-privacy-gate.md) 审查准备传输的完整可达范围；当前树通过不等于历史通过。
+- 对新增/修改图片和不透明二进制做人审；不把个人路径、日志摘录、凭据或 Workshop 标识值放进文档。
+- 合并方式服从实际历史与维护者流程，不把一次历史上的特殊合并当通用处方。集成后检查实际 diff 与包，必要时验证受影响路径。
+- 只把完成验收的候选作为发布输入；保留上一可用候选和准确恢复路径。
 
-9. main 树 == dev 树核验（diff 0 行）+ main 树隐私审计。
-10. tag `vX.Y.Z`（严格 SemVer，基版本 = csproj `<Version>`）→ push → release CI → Release 资产核验（文件数/排除项/DLL 身份/哈希）。
-11. changelog 时间替换：`Unreleased` → 最终发布时间（UTC+8；**tag 重发后必须再更新**）。
+## 3. GitHub 发布
 
-## 阶段 3 · Steam 发布（人工 + 页面核验）
+`.github/workflows/release.yml` 由版本标签触发，接受 `vX.Y.Z` 或 `vX.Y.Z-rcN`，并检查标签、源码版本与 main 归属。它获取固定 FerriteLib release 载体、构建 US、stage 包并上传资产。
 
-12. Steam flavor 构建 + pack-steam → 包内容核验（同阶段 0 清单）。
-13. 维护者：复制 stage 到本地上传副本 → 把既有 item ID **只写入副本** `About/PublishedFileId.txt` → 以同一作者 Update（后续版本绝不用 `Initial Workshop Upload`）。
-14. 维护者：粘贴中英文案 → Steam 编辑器 + 实际页面双预览。
-15. **页面核对（可自动化，玩家视角只读）**：`read` filedetails 页面 URL 观察——同一 item URL/ID、描述版本、Updated、visibility、preview、文件大小、change notes 数，写入观察记录。**绝不尝试登录态或编辑界面**（Steam 编辑 = 维护者人工操作；自动化只读 filedetails 玩家可见视图）。
+获得发布授权后按当前 workflow 执行。核对实际资产、版本、前置载体和源码可获取性；不能只凭 CI 绿色宣布玩家下载内容正确。没有发布动作时不补写远端状态。
 
-## 阶段 4 · 收尾
+## 4. Workshop
 
-16. Release Claim Pack（模板见下）写入 `docs/release-<version>-review-zh.md`。
-17. dev 对账：merge main 回 dev，验证无意外树变化。
-18. MEMORY / TODO 更新。
+Workshop 操作由维护者在授权的上传副本执行，不往仓库写标识值。更新既有条目时使用原身份；新条目、显示名、说明和可见性由维护者确认。
 
-## 隐私审查门禁（每次 push 前，含临时暂存）
+发布观察区分页面可见性/说明与实际下载包。页面级核验不能冒充下载级验证；不把修改 Config、Steam 安装或存档作为文档整理步骤。
 
-- 审查**完整可达范围**，不只 HEAD。
-- **三个向量独立扫，结论不得互推**：工作树 / 提交信息 / 历史 blob——工作树干净不蕴含历史干净（首上云实测：前两向量 0 命中、历史 7 文件命中）。分诊方法见 `modding_documents/privacy-debt-vector-triage-zh.md`。
-- 扫描模式：凭据（`sk-…`/API key/token）、私钥、本地绝对路径、诊断日志摘录、`PublishedFileId.txt` 值。
-- 文档按**无隐私写法**编写：写作时不写入个人本地状态、展开路径、日志摘录、凭据或 ID 值，而非写后清理。
-- 一次性首上云事务已于 2026-09-06 执行完毕（历史重写、兄弟引用中性化、CI 依赖链、推送顺序）：持久决策见 `MEMORY.md`「First cloud upload: durable decisions」，PASS 台账见 `TODO.md`；指南文档本身按维护者裁决在 push 前删除，不再维护。
+## 5. 保留精简发布结论
 
-## Release Claim Pack 固定模板
+正式 Claim Pack 放在 `docs/release_review/release-<version>-review-zh.md`，只记录该发布的事实：
 
-```text
-## GitHub Release Claim Pack
-| 项 | 值 |
-|---|---|
-| 版本 | X.Y.Z |
-| 标签 | vX.Y.Z（严格 SemVer，基版本 = csproj <Version>） |
-| 源码提交 | <main squash 完整 SHA> |
-| 发布时间 | <UTC 时间>（UTC+8 <时间>） |
-| 构建 flavor | GitHub（CI tag 触发） |
-| DLL 身份 | FileVersion <V>；Informational v<V>+<sha12> |
-| CI | Release workflow run <id> success |
-| 资产 | <zip 名>（<字节数> B） |
-| DLL SHA256 | <hash> |
-| 包内容 | 文件数；0 PDB；0 PublishedFileId.txt；无 codemap/OGG 镜像（US 不含内置音频）；关键文件内容核验；包内 version.txt（版本/flavor/commit） |
-| 隐私审计 | 完整树扫描 0 命中；dev↔main 树一致 |
+- 产品版本、标签、源码提交、发布日期和渠道。
+- 构建 flavor、载体版本及配对证据、CI 运行和具体资产。
+- 包内容与关键行为的实际检查、实机覆盖范围。
+- 隐私审查范围和结论。
+- 未验证项、已知限制与回退办法。
+- GitHub / Workshop 各自的发布确认范围。
 
-## Steam staging / 发布观察
-- staging 包：文件数、排除项、DLL FileVersion、PublishedFileId=0、包内 version.txt（版本/flavor/commit 与预期一致）。
-- 页面观察：同一 item URL/ID、描述版本、Updated、visibility、preview、文件大小、change notes。
-- 二进制下载级验证边界如实记录（页面级核验 ≠ 玩家下载内容已验证）。
-
-## 渠道状态
-- GitHub：完整 / 待补。
-- Workshop：unverified / 页面级已核验 / 完整。
-```
+没有真实发布时不创建空 Claim Pack；过程日志、代理调度和未完成矩阵不进入结论。

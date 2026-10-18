@@ -38,6 +38,7 @@ internal static class Program
         TestHelpCatalog();
         TestHelpPanelLogic();
         UiSourceInvariantTests.RunAll();
+        RaceBoardProjectionTests.RunAll();
         UsKernelContractInvariantTests.RunAll();
         UsDiagnosticsLogicTests.RunAll();
     }

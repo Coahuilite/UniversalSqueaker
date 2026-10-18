@@ -27,6 +27,19 @@ public sealed class VoicePacksPageState
     public bool TuningContextActive = true;
     public bool FallbackTableCanceled;
     public string SearchText = "";
+    // UIR-002: the first-open teaching is ONE bool of page state. Default true (the teaching shows on
+    // arrival), collapse/re-open is a single press, and it is NEVER persisted - a familiarised player is
+    // not held hostage by a wizard, and a collapsed player can always find the explanation again.
+    public bool IntroOpen = true;
+
+    // OVT-002: the board browse state (session-only view state - never persisted, never a
+    // sound/selection write). Default: the PLAYER RACES group, no chip, no search, xenotype
+    // directory collapsed. A default with no HAR loaded still shows vanilla humanlike + xenotypes;
+    // it never degrades to an animal-first screen.
+    public UsBoardBrowsePolicy.BoardGroup BoardGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+    public UsBoardBrowsePolicy.BoardFilter BoardFilter = UsBoardBrowsePolicy.BoardFilter.None;
+    public string BoardSearch = "";
+    public bool BoardXenoExpanded = false;
     // US-PACK1 (§4.2): the MANUAL card-expansion set (pack key = card identity). It is the user's own
     // browsing state and the ONLY thing cancel-pack-results collapses. The query's xenotype-hit
     // auto-expansion is never stored here - it is derived from SearchText per projection, so clearing
@@ -98,6 +111,11 @@ public sealed class VoicePacksPageState
         FallbackSoundQuery = "";
         FallbackNewRaceQuery = "";
         FallbackStatusKey = "";
+        IntroOpen = true;
+        BoardGroup = UsBoardBrowsePolicy.BoardGroup.PlayerRaces;
+        BoardFilter = UsBoardBrowsePolicy.BoardFilter.None;
+        BoardSearch = "";
+        BoardXenoExpanded = false;
         FallbackStatusArg = "";
         DomainSelectionCanceled = false;
         FallbackTableCanceled = false;

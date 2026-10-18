@@ -11,6 +11,10 @@ public enum SqueakVoicePackScope
 }
 
 /// <summary>Audio selection policy. It is intentionally versioned separately from retired remix settings.</summary>
+/// <summary>Domain scan state (PURE enum - the whole UI and the kernel speak it).
+/// (Moved next to the other routing vocabulary so zero-game harnesses can compile it.)</summary>
+public enum SqueakVoicePackDomainState { Available, Dormant, TargetUnavailable, Orphan }
+
 public enum SqueakVoicePackMode
 {
     Vanilla,

@@ -263,6 +263,11 @@ internal static class Program
             () => TuningMultiplierLaneTests.RunAll());
         Step("US-RESET1 UI: ceremony, direct entries, scope naming, draft integration",
             () => ResetUiLaneTests.RunAll());
+        // UIR-002/003/006 (WO-US-UI-REFACTOR-20261014): the race board and the live theme switch.
+        Step("UIR-002/003 race board: projection, atomic navigation, exact enable, one authority",
+            () => RaceBoardLaneTests.RunAll());
+        Step("UIR-006 live palette switch: colour-only invalidation on the real host",
+            () => ThemeSwitchLaneTests.RunAll());
     }
 
     /// <summary>
@@ -283,6 +288,13 @@ internal static class Program
         // is open (the shipped default is retracted).
         host.Bindings.Set("help-open", true);
         Rect viewport = new(0f, 0f, 800f, 600f);
+        // UIR-001: the rule bands joined the Tuning tab, so the scope-tree composite sits below the
+        // fold at scroll 0 and the dropdown never draws - scroll it into view first (the player can).
+        host.MeasureAndArrange(new Vector2(800f, 600f));
+        UiNode? foldNode = host.Session.GetNodeByElementId("content-scroll");
+        Assert(foldNode != null, "the content scroll must exist to reach the scope tree");
+        host.Session.SetScrollPosition(foldNode!, new Vector2(0f, 700f));
+        host.MeasureAndArrange(new Vector2(800f, 600f));
         host.DrawChecked(viewport);
 
         // Deliberately stale seed: the composite must replace it with its drawn trigger's live anchor.
@@ -386,6 +398,13 @@ internal static class Program
         host.Bindings.Invoke("set-tab", "Tuning");
         host.Bindings.Set("help-open", false);
         Rect viewport = new(0f, 0f, 800f, 600f);
+        // UIR-001: the rule bands joined the Tuning tab, so the scope rows sit below the fold at top
+        // scroll; reveal them once, and every popup helper below draws against live rows.
+        host.MeasureAndArrange(new Vector2(800f, 600f));
+        UiNode? revealNode = host.Session.GetNodeByElementId("content-scroll");
+        Assert(revealNode != null, "the content scroll node must exist to reach the scope rows");
+        host.Session.SetScrollPosition(revealNode!, new Vector2(0f, 700f));
+        host.MeasureAndArrange(new Vector2(800f, 600f));
         host.DrawChecked(viewport);
 
         // The fixture's Eat row is AnyOccurrence, so the press below is a real change; if that ever moves,
@@ -1109,18 +1128,40 @@ internal static class Program
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, new StubMetrics());
         Rect viewport = new(0f, 0f, 1280f, 720f);
-        host.Bindings.Invoke("set-tab", "Distance");
+        host.Bindings.Invoke("set-tab", "Overview"); // UIR-001: the attenuation card moved to the Overview secondary area
         // 0.4.0 keys scroll positions by node, so the containers must be arranged before they can hold
         // one; this write pins the probe to the top of the card in the arranged frame below.
-        host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
-        SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        // UIR-001: the secondary band sits below the fold on Overview now; scroll the page until the
+        // card is genuinely inside the content viewport, then walk its claim lines. The held scroll is
+        // RE-READ each round, so the loop terminates at the engine clamp with the card on screen.
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
-        Assert(snapshot.RectById.TryGetValue("attenuation-editor", out Rect card), "Distance snapshot must contain attenuation-editor");
+        UiNode? bandScrollNode = host.Session.GetNodeByElementId("content-scroll");
+        Assert(bandScrollNode != null, "the content scroll node must exist to reveal the attenuation card");
+        host.Session.SetScrollPosition(bandScrollNode!, Vector2.zero);
+        snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+        for (int revealRound = 0; revealRound < 16; revealRound++)
+        {
+            if (!snapshot.RectById.TryGetValue("attenuation-editor", out Rect probeCard)) break;
+            snapshot.Viewports.TryGetValue("content-scroll", out Rect probeViewport);
+            if (probeCard.yMax <= probeViewport.yMax - 4f) break;
+            float held = host.Session.GetScrollPosition(bandScrollNode!).y;
+            host.Session.SetScrollPosition(bandScrollNode!, new Vector2(0f, held + 200f));
+            snapshot = host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
+            float now = host.Session.GetScrollPosition(bandScrollNode!).y;
+            if (Math.Abs(now - held) < 0.01f) break;   // clamped at the content end
+        }
+        Assert(snapshot.RectById.TryGetValue("attenuation-editor", out Rect card), "Overview snapshot must contain attenuation-editor");
 
         float probeX = card.x + card.width / 2f;
+        // The snapshot rects are content-local; the pointer the stub feeds is PAGE space. Convert the
+        // card through the HELD scroll (UIR-001: the reveal above moved it), and walk only the part of
+        // the card the viewport can actually show - claims cannot exist off screen.
+        float heldY = host.Session.GetScrollPosition(bandScrollNode!).y;
+        float walkTop = Math.Max(card.y + 2f - heldY, viewport.y + 2f);
+        float walkBottom = Math.Min(card.yMax - 2f - heldY, viewport.yMax - 2f);
         List<float> chartRows = new();
         List<float> presetRows = new();
-        for (float y = card.y + 2f; y < card.yMax - 2f; y += 4f)
+        for (float y = walkTop; y < walkBottom; y += 4f)
         {
             // Same per-pass protocol the settings window runs.
             DrawWithPointer(host, viewport, new Vector2(probeX, y));
@@ -1227,7 +1268,7 @@ internal static class Program
             // The engine's Tab gate key. It is a display write (the visible sections follow it); its own
             // mutation proof is ActiveTabWriteAdvancesSharedRevision.
             { UiBindings.ActiveTabKey, () => host.Bindings.Set(UiBindings.ActiveTabKey, "Packs") },
-            { "set-tab", () => host.Bindings.Invoke("set-tab", "Distance") },
+            { "set-tab", () => host.Bindings.Invoke("set-tab", "Advanced") },
             { "scroll-to", () => host.Bindings.Invoke("scroll-to", "mode-row") },
             { "mode", () => host.Bindings.Set("mode", SqueakVoicePackMode.Disabled) },
             { "global-volume", () => host.Bindings.Set("global-volume", 0.42f) },
@@ -1282,6 +1323,22 @@ internal static class Program
             { UsWriteBindings.ItemTemplate("pack-card-keys", "select-domain"), () => host.Bindings.Invoke(UsWriteBindings.ItemKey("pack-card-keys", cardRowKey, "select-domain"), "human|sanguophage") },
             // DT1: opening the panel changes the band button's SelectedKey - a display write.
             { "open-dev-panel", () => host.Bindings.Invoke("open-dev-panel") },
+            // UIR-002/003/004/006 (WO-US-UI-REFACTOR-20261014): the five new display writes. The intro
+            // toggle and the palette switch move a VisibleKey / the picker answers; the board's open is a
+            // navigation intent (it re-gates the WHOLE page via the tab), the enable is a row-switch
+            // echo, and the fallback return layer clears visible selection state - all re-arrange.
+            { "toggle-intro", () => host.Bindings.Invoke("toggle-intro") },
+            // OVT-002/003: the browse band + xenotype directory writes display state and must bump
+            // the shared clock like every other write (the D1/D6 contract enumerates them all).
+            { "board-search", () => host.Bindings.Set("board-search", "probe") },
+            { "board-group", () => host.Bindings.Invoke("board-group", "all") },
+            { "board-filter", () => host.Bindings.Invoke("board-filter", "har") },
+            { "board-xeno-toggle", () => host.Bindings.Invoke("board-xeno-toggle") },
+            { "race-board-xeno-open", () => host.Bindings.Invoke("race-board-xeno-open", "x_probe") },
+            { "race-board-open", () => host.Bindings.Invoke("race-board-open", "human") },
+            { "race-board-enable", () => host.Bindings.Invoke("race-board-enable", new UsPackToggle(SqueakVoicePackScope.Race, "human", "", "us.kiiro", true)) },
+            { "cancel-fallback-table", () => host.Bindings.Invoke("cancel-fallback-table") },
+            { "set-ui-swatch", () => host.Bindings.Invoke("set-ui-swatch", "royalty") },
             // VF1 three-area tuning: the area switch, the selected action, the multiplier chain and
             // the action preset reset.
             { "tuning-area", () => host.Bindings.Set("tuning-area", 1) },
@@ -1675,9 +1732,15 @@ internal static class Program
         // list, and the timing gate below is why "timing" already appeared as a widget id here before).
         foreach ((string id, string tab) in new[]
                  {
-                     ("global-volume", "Overview"), ("basic-tuning", "Overview"),
-                     ("camera-indicator", "Overview"), ("timing", "Overview"),
-                     ("attenuation-editor", "Distance")
+                     // UIR-001 (WO-US-UI-REFACTOR-20261014): the five workspaces regrouped the
+                     // dissolved composites - rules bands moved to Tuning, attenuation followed the
+                     // Overview secondary area, and Distance retired as a workspace.
+                     ("global-volume", "Overview"), ("basic-tuning", "Tuning"),
+                     ("camera-indicator", "Overview"), ("timing", "Tuning"),
+                     ("attenuation-editor", "Overview"), ("overview-intro", "Overview"),
+                     ("race-board", "Overview"), ("theme-picker", "Advanced"),
+                     ("diagnostics", "Advanced"), ("restore-center", "Advanced"),
+                     ("packs-fallback", "Packs")
                  })
         {
             Assert(xml.Contains("<Section Id=\"" + id + "\" Tab=\"" + tab + "\""),
@@ -1691,7 +1754,7 @@ internal static class Program
         // declared right on them (result) and on the page-level Repeat (domain - a Cancel declared
         // INSIDE a template is item-qualified by the engine and could never name the page command).
         Assert(xml.Contains("<Section Id=\"packs-filter\" Tab=\"Packs\"")
-                && xml.Contains("Id=\"packs-results\" Tab=\"Packs\" Padding=\"12\" Gap=\"6\" Scheme=\"us-flat-panel\" CancelBind=\"cancel-pack-results\"")
+                && xml.Contains("Id=\"packs-results\" Tab=\"Packs\" Padding=\"12\" Gap=\"6\" CancelBind=\"cancel-pack-results\"")
                 && xml.Contains("<Repeat Id=\"packs-card-rows\" Items=\"pack-card-keys\" Template=\"pack-card-row\" Padding=\"0\" Gap=\"2\" CancelBind=\"cancel-domain-selection\" />"),
             "the Packs page is one filter region plus the declarative card result, with the domain return "
             + "declared on the page-level Repeat and the result return on the Section");
@@ -2183,12 +2246,12 @@ internal static class Program
 
             // Overview is the default workspace: behavior controls are visible while every other
             // player task is gated out.
-            foreach (string overviewId in new[] { "mode-row", "global-volume", "basic-tuning", "camera-indicator" })
+            foreach (string overviewId in new[] { "mode-row", "global-volume", "camera-indicator", "attenuation-editor", "overview-intro", "race-board" })
             {
                 Assert(snapshot.RectById.ContainsKey(overviewId), "Overview section " + overviewId + " visible at " + viewport);
             }
 
-            Assert(!snapshot.RectById.ContainsKey("attenuation-editor"), "Distance workspace hidden by default at " + viewport);
+            Assert(!snapshot.RectById.ContainsKey("scope-tree"), "Tuning rule bands hidden by default at " + viewport);
             Assert(!snapshot.RectById.ContainsKey("scope-tree"), "Tuning workspace hidden by default at " + viewport);
             Assert(!snapshot.RectById.ContainsKey("checklist"), "Packs workspace hidden by default at " + viewport);
             Assert(!snapshot.RectById.ContainsKey("preset-list"), "Presets workspace hidden by default at " + viewport);
@@ -2312,16 +2375,19 @@ internal static class Program
         var viewports = new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) };
         (string Tab, string[] Visible, string[] Hidden)[] tabs =
         {
-            ("Overview", new[] { "mode-row", "global-volume", "basic-tuning", "camera-indicator" },
-                new[] { "attenuation-editor", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
-            ("Distance", new[] { "attenuation-editor" },
-                new[] { "mode-row", "scope-tree", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
-            ("Packs", new[] { "filter-bar", "packs-filter", "packs-results", "checklist" },
-                new[] { "mode-row", "attenuation-editor", "scope-tree", "preset-list" }),
-            ("Tuning", new[] { "scope-tree" },
-                new[] { "mode-row", "attenuation-editor", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist" }),
+            // UIR-001/005: the five workspaces with their full visible/hidden truth. The old
+            // Distance row retired; the rows moved with their sections (rules to Tuning,
+            // diagnostics/restore/theme to Advanced, the fallback editor to Packs).
+            ("Overview", new[] { "mode-row", "global-volume", "camera-indicator", "attenuation-editor", "overview-intro", "race-board" },
+                new[] { "scope-tree", "basic-tuning", "timing", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist", "packs-fallback", "fallback-editor", "diagnostics", "restore-center", "theme-picker" }),
+            ("Packs", new[] { "filter-bar", "packs-filter", "packs-results", "checklist", "packs-fallback", "fallback-editor" },
+                new[] { "mode-row", "attenuation-editor", "scope-tree", "basic-tuning", "timing", "preset-list", "diagnostics", "restore-center", "theme-picker" }),
+            ("Tuning", new[] { "scope-tree", "basic-tuning", "timing" },
+                new[] { "mode-row", "attenuation-editor", "preset-list", "filter-bar", "packs-filter", "packs-results", "checklist", "packs-fallback", "fallback-editor", "diagnostics", "restore-center", "theme-picker" }),
             ("Presets", new[] { "preset-list" },
-                new[] { "mode-row", "attenuation-editor", "scope-tree", "filter-bar", "packs-filter", "packs-results", "checklist" })
+                new[] { "mode-row", "attenuation-editor", "scope-tree", "filter-bar", "packs-filter", "packs-results", "checklist", "packs-fallback", "theme-picker", "diagnostics", "restore-center" }),
+            ("Advanced", new[] { "theme-picker", "diagnostics", "restore-center" },
+                new[] { "mode-row", "attenuation-editor", "scope-tree", "basic-tuning", "timing", "preset-list", "filter-bar", "packs-results", "checklist", "packs-fallback", "fallback-editor" })
         };
 
         foreach ((string tab, string[] visible, string[] hidden) in tabs)
@@ -2368,7 +2434,7 @@ internal static class Program
         Dictionary<string, string> english = ReadKeyedTable("English");
         Dictionary<string, string> chinese = ReadKeyedTable("ChineseSimplified");
         Assert(english.Count >= 100, "the shipped English Keyed table should be populated, got " + english.Count);
-        string[] tabs = { "Overview", "Distance", "Packs", "Tuning", "Presets" };
+        string[] tabs = { "Overview", "Packs", "Tuning", "Presets", "Advanced" };
         var viewports = new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) };
         var reports = new List<UiOverflowReport>();
 
@@ -2583,6 +2649,8 @@ internal static class Program
         SetTranslatorResolver(table);
         var fake = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
+        // UIR-001: the timing card is gated by the Tuning workspace now.
+        host.Bindings.Invoke("set-tab", "Tuning");
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(NarrowTimingPageWidth, 600f));
         float height = snapshot.RectById.TryGetValue("timing", out Rect rect) ? rect.height : 0f;
         // Draw it too: a band that only measures tall enough is not the fix, and a tripped element would
@@ -2717,6 +2785,16 @@ internal static class Program
     /// because the field exists only on the stub: call sites compile against the Krafs reference
     /// assembly, which has no such member.
     /// </summary>
+    /// <summary>The current keyed lookup (the resolver the harness installed, or the raw key).</summary>
+    internal static string TranslateKey(string key)
+    {
+        System.Reflection.FieldInfo? field = typeof(Translator).GetField(
+            "Resolve", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        var resolver = field?.GetValue(null) as Func<string, string>;
+        string hit = resolver?.Invoke(key) ?? "";
+        return hit.Length > 0 ? hit : key;
+    }
+
     internal static void SetTranslatorResolver(Dictionary<string, string>? table)
     {
         System.Reflection.FieldInfo? field = typeof(Translator).GetField(
@@ -2783,7 +2861,7 @@ internal static class Program
         Assert(bindings.Get<IReadOnlyList<TuningDomainOptionView>>("tuning-domains").Count == 2, "tuning-domains reads the rich list");
 
         // Full dynamic draw: every workspace with non-empty lists at the reference viewports.
-        foreach (string tab in new[] { "Overview", "Distance", "Packs", "Tuning", "Presets" })
+        foreach (string tab in new[] { "Overview", "Packs", "Tuning", "Presets", "Advanced" })
         {
             host.Bindings.Invoke("set-tab", tab);
             foreach (Vector2 viewport in new[] { new Vector2(800f, 600f), new Vector2(1280f, 720f), new Vector2(1920f, 1080f) })

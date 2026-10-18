@@ -171,8 +171,6 @@ public class VoicePackSelectionRecord : IExposable
            && string.Equals(record.xenotypeDefName, xenotypeDefName, StringComparison.Ordinal);
 }
 
-public enum SqueakVoicePackDomainState { Available, Dormant, TargetUnavailable, Orphan }
-
 public readonly struct SqueakVoicePackDomainStatus
 {
     public readonly SqueakVoicePackDomainState State;

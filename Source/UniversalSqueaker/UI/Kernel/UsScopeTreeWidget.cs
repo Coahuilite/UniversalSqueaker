@@ -212,25 +212,14 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         bindings.ValidateAction<UsTuningDomainSelection>("set-tuning-domain", elementPath);
         bindings.ValidateAction<UsScopeWrite>("set-action-scope", elementPath);
         bindings.ValidateAction<UsMoodWrite>("set-mood-tuning", elementPath);
-        // VF1定稿: the area switch, the selected-action editor and the fallback table editor all
-        // bind through this widget - a missing key must fail at creation, not half-draw a tab.
+        // VF1定稿: the area switch and the selected-action editor bind through this widget - a
+        // missing key must fail at creation, not half-draw a tab. UIR-004 (WO-US-UI-REFACTOR-20261014):
+        // the fallback table editor's keys moved to us/fallback-editor with the editor itself (the
+        // Packs page); they stay validated - just by their new owner.
         bindings.ValidateValue<int>("tuning-area", elementPath);
         bindings.ValidateValue<string>("tuning-selected-action", elementPath);
-        bindings.ValidateValue<IReadOnlyList<FallbackRaceView>>("fallback-races", elementPath);
-        bindings.ValidateValue<string>("fallback-selected-race", elementPath);
-        bindings.ValidateValue<IReadOnlyList<FallbackEntryView>>("fallback-entries", elementPath);
-        bindings.ValidateValue<string>("fallback-selected-entry", elementPath);
-        bindings.ValidateValue<string>("fallback-new-race-query", elementPath);
-        bindings.ValidateValue<string>("fallback-sound-query", elementPath);
-        bindings.ValidateOptions<FilterOptionView>("fallback-sound-options", elementPath);
-        bindings.ValidateOptions<FilterOptionView>("fallback-candidate-options", elementPath);
         bindings.ValidateAction<UsActionTuningWrite>("set-action-tuning", elementPath);
         bindings.ValidateAction<string>("reset-action-to-preset", elementPath);
-        bindings.ValidateAction<UsFallbackSelection>("set-fallback-selection", elementPath);
-        bindings.ValidateAction<UsFallbackEntryWrite>("set-fallback-entry", elementPath);
-        bindings.ValidateAction<string>("create-fallback-table", elementPath);
-        bindings.ValidateCommand("restore-fallback-default", elementPath);
-        bindings.ValidateAction<string>("delete-fallback-table", elementPath);
         // US-ESC1: the manifest names BOTH tuning keys - cancel-tuning-target on this element and
         // cancel-tuning-context on the container that wraps it (review1 observation 1). Validating both
         // here keeps a typo of either layer a creation-time failure (FL's walk skips unregistered keys
@@ -266,27 +255,20 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
 
         float width = BodyWidth(ctx);
-        // F06 (US-UI1): the area decides what is PRESENTED. The layer/domain context rows and the
-        // empty-target reason band belong to the ACTION and MOOD areas alone - the fallback area answers
-        // to its own single race target (the editor's own dropdown) and must not be topped by the
-        // tuning layer's context or its empty-xenotype notice (the XG1-accepted row order stays exactly
-        // where it was in the two areas that own it). DrawContent walks the same sequence over the same
-        // bindings, so Measure never reserves rows Draw will not paint.
+        // UIR-004 (WO-US-UI-REFACTOR-20261014): the tuning tree is now TWO areas only (actions, moods).
+        // The fallback table editor moved to the Packs page as its own composite (us/fallback-editor),
+        // so the third area and its F06 "area decides presentation" gate retire: the layer/domain
+        // context rows and the empty-target reason band are always presented, exactly as they were in
+        // the two areas that own it. The XG1-accepted row order is unchanged. DrawContent walks this
+        // same sequence over the same bindings, so Measure never reserves rows Draw will not paint.
         float bodyHeight = TopPadding;
-        if (area != 2)
-        {
-            bodyHeight += LayerRowHeightFor(width) + RowGap;
-            if (layer > 0) bodyHeight += DomainRowHeight + RowGap;
-            // XG1.1: the empty-target reason band. Measure and Draw both derive it from the SAME predicate
-            // and the same metrics seam, so the card can never reserve a band it does not paint (or paint
-            // one it did not reserve) - the failure that would move every control below it.
-            if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
-        }
+        bodyHeight += LayerRowHeightFor(width) + RowGap;
+        if (layer > 0) bodyHeight += DomainRowHeight + RowGap;
+        // XG1.1: the empty-target reason band. Measure and Draw both derive it from the SAME predicate
+        // and the same metrics seam, so the card can never reserve a band it does not paint (or paint
+        // one it did not reserve) - the failure that would move every control below it.
+        if (XenotypeTargetIsEmpty(layer, ctx)) bodyHeight += EmptyTargetBandHeight(ctx, width) + RowGap;
         bodyHeight += AreaTabsHeight + RowGap;
-        // VF1定稿: the page switches THREE internal areas and the body handles exactly ONE task type at a
-        // time. This replaces the old long page that stacked actions AND moods together; the
-        // "just add two steppers per row" shape was explicitly rejected, so the multipliers live
-        // in the selected action's editor band below the list instead.
         if (area == 0)
         {
             bodyHeight += RowHeight + RowGap; // "Action rules" header
@@ -315,7 +297,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
             bodyHeight += ActionEditorHeight(ctx, width) + RowGap;
         }
-        else if (area == 1)
+        else
         {
             // V3 P1 deliberate rule survives the re-layout: the MOOD area is gated on the mood rows
             // ALONE, never on the scope list - Measure and Draw share this predicate.
@@ -325,10 +307,6 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 MoodRowsLayout moodLayout = MoodRowsLayoutFor(width, ctx, moodRows);
                 bodyHeight += moodRows.Count * (moodLayout.TotalHeight + RowGap);
             }
-        }
-        else
-        {
-            bodyHeight += FallbackEditorHeight(ctx, width) + RowGap;
         }
 
         return bodyHeight + BottomPadding;
@@ -363,29 +341,30 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         // layer segment stays live on purpose: switching layer (or picking a target when one exists) is
         // the ONLY way out of this state, so blocking it would trap the player.
         bool submittable = !XenotypeTargetIsEmpty(layer, ctx);
-        if (area != 2)
+        // UIR-004: the area gate retired - with the fallback editor moved to the Packs page the
+        // layer/domain rows and the empty-target band are presented for BOTH remaining areas.
+        float layerRowHeight = LayerRowHeightFor(innerWidth);
+        DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, ctx);
+        y += layerRowHeight + RowGap;
+
+        if (layer > 0)
         {
-            float layerRowHeight = LayerRowHeightFor(innerWidth);
-            DrawLayerRow(new Rect(x, y, innerWidth, layerRowHeight), layer, ctx);
-            y += layerRowHeight + RowGap;
-
-            if (layer > 0)
-            {
-                DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), ctx);
-                y += DomainRowHeight + RowGap;
-            }
-
-            if (!submittable)
-            {
-                float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
-                UsKernelDraw.Label(
-                    new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
-                    EmptyTargetText(ctx),
-                    ctx.Theme, ctx.Theme.TextSecondary,
-                    UiFont.Tiny, TextAnchor.MiddleLeft);
-                y += reasonBand + RowGap;
-            }
+            DrawDomainRow(new Rect(x, y, innerWidth, DomainRowHeight), ctx);
+            y += DomainRowHeight + RowGap;
         }
+
+        if (!submittable)
+        {
+            float reasonBand = EmptyTargetBandHeight(ctx, innerWidth);
+            UsKernelDraw.Label(
+                new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
+                EmptyTargetText(ctx),
+                ctx.Theme, ctx.Theme.TextSecondary,
+                UiFont.Tiny, TextAnchor.MiddleLeft);
+            y += reasonBand + RowGap;
+        }
+
+
 
         DrawAreaTabs(new Rect(x, y, innerWidth, AreaTabsHeight), area, ctx);
         y += AreaTabsHeight + RowGap;
@@ -468,7 +447,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
             y = DrawActionEditor(y, x, innerWidth, scopeRows, ctx, submittable);
         }
-        else if (area == 1)
+        else
         {
             if (moodRows.Count > 0)
             {
@@ -511,10 +490,6 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
         }
-        else
-        {
-            DrawFallbackEditor(y, x, innerWidth, ctx);
-        }
     }
 
     // -----------------------------------------------------------------------------------------
@@ -523,19 +498,18 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
 
     private const float AreaTabsHeight = 26f;
     private const float MultiplierStep = 0.05f;
-    // A value no SoundDef can have: the display-only pair that lets an UNSET entry read as
-    // "unset" instead of masquerading as the explicit no-sound marker.
-    private const string DisplayOnlyCurrentValue = "\u0000vf1-display-only";
 
     private static readonly string[] AreaTabKeys =
     {
-        "US.Tuning.Area.Actions", "US.Tuning.Area.Mood", "US.Tuning.Area.Fallback",
+        // UIR-004 (WO-US-UI-REFACTOR-20261014): the Fallback tab retired with the editor's move
+        // to the Packs page; the tuning tree owns exactly the two rule areas it was named for.
+        "US.Tuning.Area.Actions", "US.Tuning.Area.Mood",
     };
 
     private void DrawAreaTabs(Rect rect, int area, UiWidgetContext ctx)
     {
-        float tabWidth = Math.Max(1f, (rect.width - RowGap * 2f) / 3f);
-        for (int i = 0; i < 3; i++)
+        float tabWidth = Math.Max(1f, (rect.width - RowGap * 1f) / 2f);
+        for (int i = 0; i < 2; i++)
         {
             var tab = new Rect(rect.x + i * (tabWidth + RowGap), rect.y, tabWidth, AreaTabsHeight);
             if (UsKernelDraw.SelectionButton(tab, ctx, UsKernelDraw.Keyed(ctx, AreaTabKeys[i]), ctx.Theme, area == i))
@@ -759,182 +733,6 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
 
         return wraps ? y + 2f * (RowHeight + RowGap) : y + RowHeight + RowGap;
-    }
-
-    private float FallbackEditorHeight(UiWidgetContext ctx, float width)
-    {
-        // Mirrors DrawFallbackEditor line for line (r5): race line + status line + create line are
-        // drawn for every shape; the entry list, the SOUND QUERY field, the picker row and the
-        // button row only when a race is selected. A measure that forgets a drawn row clips it.
-        float height = 3 * (RowHeight + RowGap);
-        string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
-        if (selectedRace.Length > 0)
-        {
-            height += UniversalSqueaker.Kernel.BuiltInActionKeys.All.Count * RowHeight + RowGap;
-            height += 2 * (RowHeight + RowGap) + RowHeight + RowGap; // query + picker + buttons
-        }
-
-        return height;
-    }
-
-    /// <summary>The VF1 editor: race picker over the supported tables (maintainer ∪ player), the
-    /// closed 17-key entry list with per-row state, a query-filtered sound picker labelled with the
-    /// current production availability, create-from-loaded-pawn-races, restore-default and deletion
-    /// through ONE ordinary UiKit confirmation window.</summary>
-    private void DrawFallbackEditor(float y, float x, float width, UiWidgetContext ctx)
-    {
-        IReadOnlyList<FallbackRaceView> races = ctx.Bindings.TryGet("fallback-races", out IReadOnlyList<FallbackRaceView> rs)
-            ? rs : Array.Empty<FallbackRaceView>();
-        string selectedRace = ctx.Bindings.TryGet("fallback-selected-race", out string sr) ? sr ?? "" : "";
-
-        var racePairs = new List<KeyValuePair<string, string>>();
-        foreach (FallbackRaceView race in races)
-        {
-            racePairs.Add(new KeyValuePair<string, string>(
-                race.Label + "  " + race.DefName + (race.IsPlayerTable ? "  (*)" : ""), race.DefName));
-        }
-
-        UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Race"),
-            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
-        UsKernelDraw.Dropdown(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), "vf1-race", ctx, selectedRace, racePairs,
-            selected => ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(selected, null)));
-        y += RowHeight + RowGap;
-
-        string status = ctx.Bindings.TryGet("fallback-status", out string st) ? st ?? "" : "";
-        UsKernelDraw.Label(new Rect(x, y, width, RowHeight),
-            status.Length > 0 ? UsKernelDraw.Keyed(ctx, status)
-            : races.Count == 0 ? UsKernelDraw.Keyed(ctx, "US.VF1.NoTable") : "",
-            ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
-        y += RowHeight + RowGap;
-
-        // Create row: query + candidate dropdown (candidates = loaded pawn races, so a race with no
-        // VoicePack at all is a legal new table).
-        UiValueState queryState = ctx.Session.GetOrCreateValueState("vf1-new-race-query");
-        string query = ctx.Bindings.TryGet("fallback-new-race-query", out string q) ? q ?? "" : "";
-        if (!queryState.Focused) queryState.EditText = query;
-        UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Create"),
-            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
-        string typed = UiNative.TextField(new Rect(x + 64f, y, 120f, RowHeight), queryState.EditText);
-        if (typed != queryState.EditText)
-        {
-            queryState.EditText = typed;
-            ctx.Bindings.Set("fallback-new-race-query", typed);
-        }
-
-        IReadOnlyList<FilterOptionView> candidates = ctx.Bindings.GetOptions<FilterOptionView>("fallback-candidate-options");
-        var candidatePairs = new List<KeyValuePair<string, string>>();
-        foreach (FilterOptionView option in candidates) candidatePairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
-        UsKernelDraw.Dropdown(new Rect(x + 190f, y, Math.Max(1f, width - 190f), RowHeight), "vf1-candidate", ctx, "", candidatePairs,
-            selected => ctx.Bindings.Invoke("create-fallback-table", selected));
-        y += RowHeight + RowGap;
-
-        if (races.Count == 0 || selectedRace.Length == 0) return;
-
-        IReadOnlyList<FallbackEntryView> entries = ctx.Bindings.TryGet("fallback-entries", out IReadOnlyList<FallbackEntryView> en)
-            ? en : Array.Empty<FallbackEntryView>();
-        string selectedEntry = ctx.Bindings.TryGet("fallback-selected-entry", out string fs) ? fs ?? "" : "";
-        foreach (FallbackEntryView entry in entries)
-        {
-            var rowRect = new Rect(x, y, width, RowHeight - 2f);
-            bool isSel = string.Equals(entry.ActionKey, selectedEntry, StringComparison.Ordinal);
-            string stateWord = UsKernelDraw.Keyed(ctx, entry.State switch
-            {
-                FallbackEntryView.PlayerOverride => "US.VF1.State.Override",
-                FallbackEntryView.Maintainer => "US.VF1.State.Maintainer",
-                FallbackEntryView.NoSound => "US.VF1.State.NoSound",
-                _ => "US.VF1.State.Unset",
-            });
-            string text = entry.ActionLabel + "   " + (entry.SoundLabel.Length > 0 ? entry.SoundLabel : "-") + "   " + stateWord;
-            if (UsKernelDraw.SelectionButton(rowRect, ctx, text, ctx.Theme, isSel))
-            {
-                ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(null, entry.ActionKey));
-            }
-
-            y += RowHeight;
-        }
-
-        y += RowGap;
-
-        if (selectedEntry.Length > 0)
-        {
-            // The sound query is the user's REAL search input (r5 wiring gap): the candidate list is
-            // display-capped at 40 AFTER filtering, so typing a name or defName is how any legal Core
-            // sound becomes reachable. The value binding already existed on the Host; this is the
-            // control, with the same focus seam as the race-query field.
-            UiValueState soundQueryState = ctx.Session.GetOrCreateValueState("vf1-sound-query");
-            string soundQuery = ctx.Bindings.TryGet("fallback-sound-query", out string sq) ? sq ?? "" : "";
-            if (!soundQueryState.Focused) soundQueryState.EditText = soundQuery;
-            UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.SoundSearch"),
-                ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
-            string typedSoundQuery = UiNative.TextField(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), soundQueryState.EditText);
-            if (typedSoundQuery != soundQueryState.EditText)
-            {
-                soundQueryState.EditText = typedSoundQuery;
-                ctx.Bindings.Set("fallback-sound-query", typedSoundQuery);
-            }
-
-            y += RowHeight + RowGap;
-
-            // Three distinct answers (r5): pick a sound = override; "Unset (no sound)" = the EXPLICIT
-            // silent marker (the key stays present with the delete value); "Restore inheritance"
-            // removes the key so the entry follows future shipped updates again. Explicit silence
-            // and inheritance are different states and get different controls.
-            FallbackEntryView selectedRow = default;
-            foreach (FallbackEntryView entry in entries)
-            {
-                if (string.Equals(entry.ActionKey, selectedEntry, StringComparison.Ordinal)) { selectedRow = entry; break; }
-            }
-
-            IReadOnlyList<FilterOptionView> sounds = ctx.Bindings.GetOptions<FilterOptionView>("fallback-sound-options");
-            var soundPairs = new List<KeyValuePair<string, string>>();
-            foreach (FilterOptionView option in sounds) soundPairs.Add(new KeyValuePair<string, string>(option.DisplayName, option.Value));
-            soundPairs.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, "US.VF1.Unset"), ""));
-            // The CURRENT reading is unambiguous per state: an override/shipped sound shows its own
-            // defName (so the label resolves), the explicit marker shows "Unset (no sound)", and an
-            // unset entry gets a display-only pair so it never masquerades as the marker.
-            string currentSound = selectedRow.State switch
-            {
-                FallbackEntryView.Unset => DisplayOnlyCurrentValue,
-                FallbackEntryView.NoSound => "",
-                _ => selectedRow.SoundDefName ?? "",
-            };
-            if (selectedRow.State == FallbackEntryView.Unset)
-                soundPairs.Add(new KeyValuePair<string, string>(UsKernelDraw.Keyed(ctx, "US.VF1.State.Unset"), DisplayOnlyCurrentValue));
-            UsKernelDraw.Dropdown(new Rect(x, y, Math.Max(1f, width - 150f - RowGap), RowHeight), "vf1-sound", ctx, currentSound, soundPairs,
-                selected =>
-                {
-                    if (selected == DisplayOnlyCurrentValue) return; // re-picking the display-only unset row writes nothing
-                    ctx.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite(selectedEntry, selected));
-                });
-            if (UsKernelDraw.SelectionButton(new Rect(x + Math.Max(1f, width - 146f), y, 146f, RowHeight), ctx,
-                    UsKernelDraw.Keyed(ctx, "US.VF1.RestoreInherit"), ctx.Theme, false))
-            {
-                ctx.Bindings.Invoke("set-fallback-entry", new UsFallbackEntryWrite(selectedEntry, null));
-            }
-
-            y += RowHeight + RowGap;
-        }
-
-        float half = Math.Max(1f, (width - RowGap) / 2f);
-        if (UsKernelDraw.SelectionButton(new Rect(x, y, half, RowHeight), ctx, UsKernelDraw.Keyed(ctx, "US.VF1.RestoreDefault"), ctx.Theme, false))
-        {
-            ctx.Bindings.Invoke("restore-fallback-default");
-        }
-
-        // VF1 (r5): deletion asks ONCE through the ordinary UiKit confirmation window - not the
-        // inline two-click arm, and not the Remix double-swap (that ceremony belongs to a mode
-        // change across pages, not to deleting one's own table).
-        if (UsKernelDraw.SelectionButton(new Rect(x + half + RowGap, y, half, RowHeight), ctx,
-                UsKernelDraw.Keyed(ctx, "US.VF1.Delete"), ctx.Theme, false))
-        {
-            IUiBindings editorBindings = ctx.Bindings;
-            string requestedRace = selectedRace;
-            UsConfirmWindow.Open(
-                UsKernelDraw.Keyed(ctx, "US.VF1.Delete"),
-                UsKernelDraw.Keyed(ctx, "US.VF1.DeleteQuestion") + " " + selectedRace,
-                UsKernelDraw.Keyed(ctx, "US.VF1.DeleteConfirm"),
-                () => editorBindings.Invoke("delete-fallback-table", requestedRace));
-        }
     }
 
     private void DrawLayerRow(Rect rect, int layer, UiWidgetContext ctx)

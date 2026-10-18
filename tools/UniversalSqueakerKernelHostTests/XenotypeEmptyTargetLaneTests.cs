@@ -246,16 +246,18 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the inert controls must really exist (production-shaped rows)");
 
                         // (1) AREA 0 (action rules): the scope bands go inert here. The card keeps the
-                        // three layer buttons, the three area tabs (PM final ruling: the player must
+                        // three layer buttons, the two area tabs (PM final ruling + UIR-004: the player must
                         // always be able to LEAVE the area/state) and the action SELECTOR - navigation
                         // that writes only which action's editor is shown, never tuning data - and
                         // reaches no slider or field.
                         host.Bindings.Set("tuning-area", 0);
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         CaseObservation blockedActions = Observe(host, box, metrics, reports, table, where, expectReason: true);
-                        Assert(blockedActions.Buttons.Count == 7 && blockedActions.Sliders.Count == 0 && blockedActions.Fields.Count == 0,
+                        // UIR-004: the tuning tree keeps TWO area tabs now (the fallback tab retired
+                        // with the editor), so the inert action branch is 3 layer + 2 tabs + selector = 6.
+                        Assert(blockedActions.Buttons.Count == 6 && blockedActions.Sliders.Count == 0 && blockedActions.Fields.Count == 0,
                             where + ": with no target the action area keeps ONLY the three layer buttons, the"
-                            + " three area tabs and the action selector interactive and reaches no slider/field,"
+                            + " two area tabs and the action selector interactive and reaches no slider/field,"
                             + " got " + blockedActions.Buttons.Count + " buttons: " + DescribeAll(blockedActions.Buttons)
                             + ", " + blockedActions.Sliders.Count + " sliders, " + blockedActions.Fields.Count + " fields");
 
@@ -293,7 +295,7 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the blocked fixture must really enter the mood area");
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         CaseObservation blockedMoods = Observe(host, box, metrics, reports, table, where, expectReason: true);
-                        Assert(blockedMoods.Buttons.Count == 6 && blockedMoods.Sliders.Count == 0 && blockedMoods.Fields.Count == 0,
+                        Assert(blockedMoods.Buttons.Count == 5 && blockedMoods.Sliders.Count == 0 && blockedMoods.Fields.Count == 0,
                             where + ": the blocked mood area keeps only the layer buttons and the area tabs and"
                             + " reaches no slider/field, got " + blockedMoods.Buttons.Count + " buttons, "
                             + blockedMoods.Sliders.Count + " sliders, " + blockedMoods.Fields.Count + " fields");
@@ -369,7 +371,8 @@ internal static class XenotypeEmptyTargetLaneTests
                         // and mood areas keep the XG1-accepted order - layer row first, tabs second.)
                         ResetRecorders(source);
                         List<List<Rect>> blockedRows = WideRows(blockedMoods.Buttons);
-                        Assert(blockedRows.Count == 2 && blockedRows[0].Count == 3 && blockedRows[1].Count == 3,
+                        // UIR-004: two tabs now, so the tab row is 2 wide.
+                        Assert(blockedRows.Count == 2 && blockedRows[0].Count == 3 && blockedRows[1].Count == 2,
                             where + ": the blocked mood card keeps exactly the layer row and the tab row, got ["
                             + string.Join("/", blockedRows.Select(r => r.Count.ToString())) + "]");
                         RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, blockedRows[0][1]));
@@ -377,8 +380,9 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the layer segment must still submit so the player can leave the state, got "
                             + (source.LastTuningLayer?.ToString(CultureInfo.InvariantCulture) ?? "no write"));
                         ResetRecorders(source);
-                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, blockedRows[1][2]));
-                        Assert(source.LastTuningArea == 2,
+                        // UIR-004: two tabs; the last one is index 1 and it submits area MOOD (1).
+                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, blockedRows[1][1]));
+                        Assert(source.LastTuningArea == 1,
                             where + ": the area tabs must still submit with an empty target - the player must be"
                             + " able to LEAVE the area, got area="
                             + source.LastTuningArea.ToString(CultureInfo.InvariantCulture));
@@ -491,8 +495,8 @@ internal static class XenotypeEmptyTargetLaneTests
                             where + ": the action area draws no mood slider - the areas really split, got "
                             + observedActions.Sliders.Count);
                         List<List<Rect>> wideRows = WideRows(observedActions.Buttons);
-                        Assert(wideRows.Count >= 2 && wideRows[0].Count == 3 && wideRows[1].Count == 3,
-                            where + ": the card must draw the layer row and the area-tab row (three wide buttons"
+                        Assert(wideRows.Count >= 2 && wideRows[0].Count == 3 && wideRows[1].Count == 2,
+                            where + ": the card must draw the layer row and the area-tab row (three layer, two tab"
                             + " each), got rows [" + string.Join("/", wideRows.Select(r => r.Count.ToString())) + "]");
                         List<Rect> layerButtons = wideRows[0];
                         List<Rect> tabButtons = wideRows[1];
@@ -547,7 +551,7 @@ internal static class XenotypeEmptyTargetLaneTests
                         // domain trigger are excluded: clicking them answers the AREA/popup channel, which
                         // clauses (1)/(4) already prove.
                         List<List<Rect>> moodWideRows = WideRows(observedMoods.Buttons);
-                        Assert(moodWideRows.Count >= 2 && moodWideRows[0].Count == 3 && moodWideRows[1].Count == 3,
+                        Assert(moodWideRows.Count >= 2 && moodWideRows[0].Count == 3 && moodWideRows[1].Count == 2,
                             where + ": the current mood area must publish its own layer and task-tab rows");
                         var excluded = new List<Rect>(moodWideRows[0]);
                         excluded.AddRange(moodWideRows[1]);
@@ -569,12 +573,12 @@ internal static class XenotypeEmptyTargetLaneTests
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         CaseObservation globalMoods = Observe(host, box, metrics, reports, table, where, expectReason: false);
                         List<List<Rect>> globalWideRows = WideRows(globalMoods.Buttons);
-                        Assert(globalWideRows.Count >= 2 && globalWideRows[1].Count == 3,
-                            where + ": Global must publish the current three task tabs before a click");
+                        Assert(globalWideRows.Count >= 2 && globalWideRows[1].Count == 2,
+                            where + ": Global must publish the current two task tabs before a click");
                         ResetRecorders(source);
-                        ClickOneControl(host, box, globalWideRows[1][2]);
-                        Assert(source.LastTuningArea == 2,
-                            where + ": the area tab must submit - the three-area page is only safe while every"
+                        ClickOneControl(host, box, globalWideRows[1][1]);
+                        Assert(source.LastTuningArea == 1,
+                            where + ": the area tab must submit - the two-area page is only safe while every"
                             + " tab stays reachable, got area=" + source.LastTuningArea);
 
                         Console.WriteLine("[xg1-control] " + where + " triggers=" + triggerRects.Count

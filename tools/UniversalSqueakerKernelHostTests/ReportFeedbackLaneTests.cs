@@ -421,7 +421,7 @@ internal static class ReportFeedbackLaneTests
                         // closed one - and BH1 makes it the same box either way, because the toggle no longer
                         // changes the window's width.
                         host.Bindings.Set("help-open", helpOpen);
-                        host.Bindings.Invoke("set-tab", "Overview");
+                        host.Bindings.Invoke("set-tab", "Advanced"); // UIR-005: diagnostics is an ADVANCED-workspace card now
                         host.MeasureAndArrange(box);
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
                         host.DrawChecked(page);

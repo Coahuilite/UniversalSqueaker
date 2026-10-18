@@ -126,7 +126,8 @@ public sealed class VoicePacksViewState
         IReadOnlyList<FallbackEntryView>? fallbackEntries = null,
         IReadOnlyList<FilterOptionView>? fallbackSoundOptions = null,
         IReadOnlyList<FilterOptionView>? fallbackCandidateOptions = null,
-        string fallbackStatusKey = "")
+        string fallbackStatusKey = "",
+        UsRaceBoardView? raceBoard = null)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
@@ -175,7 +176,13 @@ public sealed class VoicePacksViewState
         FallbackSoundOptions = fallbackSoundOptions ?? Array.Empty<FilterOptionView>();
         FallbackCandidateOptions = fallbackCandidateOptions ?? Array.Empty<FilterOptionView>();
         FallbackStatusKey = fallbackStatusKey ?? "";
+        RaceBoard = raceBoard ?? UsRaceBoardView.Empty;
     }
+
+    /// <summary>UIR-002: the ALL-loaded-race board rows (read-only facts; the board never writes).
+    /// Ordered by the def adapter (ordinal on defName); deliberately wider than the pack-declared
+    /// race subset the filter dropdowns enumerate.</summary>
+    public UsRaceBoardView RaceBoard { get; private set; } = UsRaceBoardView.Empty;
 }
 
 /// <summary>Simple display/value pair used by the pack-page filter dropdowns.</summary>

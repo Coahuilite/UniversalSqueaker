@@ -18,6 +18,15 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class VoicePacksPageModel
 {
+    /// <summary>
+    /// UIR-007 / CORRECTIONS-R1 topic 1: the board-facts seam. The thin Verse adapter collects the
+    /// PLAIN facts (def enumeration cached, statuses read fresh per call); every row fact, summary
+    /// number and navigation intent is then derived by the ordinary-data RaceBoardProjection - no
+    /// Verse inside the projection, which is what lets the full state matrix be tested in the
+    /// zero-game UiLogic harness with real plain inputs. One static seam, one owner (this model),
+    /// the same precedent the text-metrics seam established; harnesses replace the seam wholesale.
+    /// </summary>
+    public static IUsRaceBoardFactsSource RaceBoardSource = VerseRaceBoardSource.Instance;
     public static VoicePacksViewState BuildView(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, VoicePacksPageState state)
     {
         if (settings == null) settings = UniversalSqueakerMod.Settings ?? new UniversalSqueakerSettings();
@@ -117,6 +126,12 @@ public static class VoicePacksPageModel
             out string fallbackRace, out List<FallbackEntryView> fallbackEntries,
             out List<FilterOptionView> fallbackSounds, out List<FilterOptionView> fallbackCandidates);
 
+        // UIR-002: the ALL-loaded-race board, computed AFTER the fallback projection so the board reads
+        // the SAME fallback answer the editor and the routing use — one fact, one place. Read-only.
+        UsRaceBoardView raceBoard = RaceBoardProjection.Build(
+            RaceBoardSource.Collect(settings, fallbackRaces, biotech), mode,
+            state.BoardGroup, state.BoardFilter, state.BoardSearch, state.BoardXenoExpanded);
+
         return new VoicePacksViewState(
             mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed,
             settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation,
@@ -129,7 +144,8 @@ public static class VoicePacksPageModel
             settings.eatPrecisionIncludeDrugs, settings.allowBabyActions,
             packCards, packResultsEmpty, packNoPacks,
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
-            state.FallbackStatusKey);
+            state.FallbackStatusKey,
+            raceBoard);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -197,13 +213,28 @@ public static class VoicePacksPageModel
 
     private static string SectionGroup(string sectionKey)
     {
-        if (string.Equals(sectionKey, "attenuation-editor", StringComparison.Ordinal)) return "Distance";
-        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)) return "Tuning";
+        // UIR-001/005 (WO-US-UI-REFACTOR-20261014): the five workspaces are now Overview / Packs /
+        // Tuning / Presets / Advanced. The attenuation editor is the Overview's secondary quick area;
+        // the basics+timing bands belong to the rules page; diagnostics, the global restore and the
+        // theme picker belong to Advanced. Distance is retired as a workspace (a legacy set-tab
+        // payload names nothing and is ignored below, exactly as before for an unknown name).
+        if (string.Equals(sectionKey, "diagnostics", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "restore-center", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "theme-picker", StringComparison.Ordinal))
+        {
+            return "Advanced";
+        }
+
+        if (string.Equals(sectionKey, "scope-tree", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "basic-tuning", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "timing", StringComparison.Ordinal)) return "Tuning";
         if (string.Equals(sectionKey, "preset-list", StringComparison.Ordinal)) return "Presets";
         if (string.Equals(sectionKey, "filter-bar", StringComparison.Ordinal)
             || string.Equals(sectionKey, "packs-filter", StringComparison.Ordinal)
             || string.Equals(sectionKey, "packs-results", StringComparison.Ordinal)
-            || string.Equals(sectionKey, "checklist", StringComparison.Ordinal))
+            || string.Equals(sectionKey, "packs-fallback", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "checklist", StringComparison.Ordinal)
+            || string.Equals(sectionKey, "fallback-editor", StringComparison.Ordinal))
         {
             return "Packs";
         }
@@ -217,16 +248,18 @@ public static class VoicePacksPageModel
     private static void ApplyActiveTab(VoicePacksPageState state, string tab)
     {
         string normalized;
+        // UIR-001: the five workspaces. "Distance" is gone; a payload naming it normalises nowhere and
+        // the switch declines (a stale writer can no longer land on a page that does not exist).
         if (string.Equals(tab, "Overview", StringComparison.OrdinalIgnoreCase))
             normalized = "Overview";
-        else if (string.Equals(tab, "Distance", StringComparison.OrdinalIgnoreCase))
-            normalized = "Distance";
         else if (string.Equals(tab, "Packs", StringComparison.OrdinalIgnoreCase))
             normalized = "Packs";
         else if (string.Equals(tab, "Tuning", StringComparison.OrdinalIgnoreCase))
             normalized = "Tuning";
         else if (string.Equals(tab, "Presets", StringComparison.OrdinalIgnoreCase))
             normalized = "Presets";
+        else if (string.Equals(tab, "Advanced", StringComparison.OrdinalIgnoreCase))
+            normalized = "Advanced";
         else
             return;
 
@@ -242,7 +275,8 @@ public static class VoicePacksPageModel
     {
         return workspace switch
         {
-            "Distance" => "attenuation-editor",
+            // Advanced opens on the picker: it is the player-facing half of the page (UIR-005/006).
+            "Advanced" => "theme-picker",
             "Packs" => "filter-bar",
             "Tuning" => "scope-tree",
             "Presets" => "preset-list",
@@ -748,13 +782,34 @@ public static class VoicePacksPageModel
     private static List<FilterOptionView> BuildRaceFilterOptions(IReadOnlyList<RaceLayerRowView> races)
     {
         races ??= Array.Empty<RaceLayerRowView>();
-        var result = new List<FilterOptionView>();
+        // OVT-003: the race filter answers the FULL directory, not just pack-owning races - a
+        // no-pack HAR race must be selectable and readable in the filter. Pack display names win
+        // where a domain exists (unchanged wording); directory-only races join by identity.
+        var byDef = new Dictionary<string, string>(StringComparer.Ordinal);
+        IReadOnlyList<UsRaceIdentity> directory = RaceDefinitionCatalog.Current.Races;
+        foreach (UsRaceIdentity id in directory)
+        {
+            if (string.IsNullOrEmpty(id.DefName)) continue;
+            byDef[id.DefName] = string.IsNullOrEmpty(id.Label) ? id.DefName : id.Label;
+        }
+
         foreach (RaceLayerRowView race in races)
         {
             if (string.IsNullOrEmpty(race.RaceDefName)) continue;
-            result.Add(new FilterOptionView(race.DisplayName, race.RaceDefName));
+            byDef[race.RaceDefName] = race.DisplayName;
         }
 
+        var result = new List<FilterOptionView>(byDef.Count);
+        foreach (KeyValuePair<string, string> pair in byDef)
+        {
+            result.Add(new FilterOptionView(pair.Value, pair.Key));
+        }
+
+        result.Sort((left, right) =>
+        {
+            int byLabel = StringComparer.Ordinal.Compare(left.DisplayName, right.DisplayName);
+            return byLabel != 0 ? byLabel : StringComparer.Ordinal.Compare(left.Value, right.Value);
+        });
         return result;
     }
 
@@ -775,6 +830,25 @@ public static class VoicePacksPageModel
                 ? domain.DisplayName + " (" + domain.RaceDisplay + ")"
                 : domain.DisplayName;
             result.Add(new FilterOptionView(display, domain.TargetDefName));
+        }
+
+        // OVT-003: directory xenotypes with NO pack domain are filter options too (a no-pack xeno
+        // must read back in the filter after arrival). They carry no race context, so a race filter
+        // narrows them out - the same honest rule as the pack domains above.
+        if (string.IsNullOrEmpty(raceFilter))
+        {
+            HashSet<string> seenTargets = new(StringComparer.Ordinal);
+            foreach (VoicePackDomainView domain in xenotypes)
+            {
+                if (!string.IsNullOrEmpty(domain.TargetDefName)) seenTargets.Add(domain.TargetDefName);
+            }
+
+            foreach (UsXenotypeIdentity xeno in RaceDefinitionCatalog.Current.Xenotypes)
+            {
+                if (string.IsNullOrEmpty(xeno.DefName) || !seenTargets.Add(xeno.DefName)) continue;
+                result.Add(new FilterOptionView(
+                    string.IsNullOrEmpty(xeno.Label) ? xeno.DefName : xeno.Label, xeno.DefName));
+            }
         }
 
         result.Sort((left, right) => StringComparer.Ordinal.Compare(left.DisplayName, right.DisplayName));
@@ -832,33 +906,62 @@ public static class VoicePacksPageModel
         // First entry (never cancelled, or re-selected, or a workspace switch) keeps the auto default.
         if (state.DomainSelectionCanceled) return null;
 
-        if (state.SelectedScope == SqueakVoicePackScope.Xenotype)
+        // OVT-003 (PM navigation supplement): an EXPLICIT identity - one the overview board or a
+        // filter arrival just named - is honoured EXACTLY. It may never fall back to the first
+        // domain, and a domain with no packs answers its own honest empty state. The readonly-struct
+        // trap is closed by explicit loops: FirstOrDefault over a struct list yields default(...)
+        // for "no match", which is NOT null, and the old code then wrote that empty default back
+        // onto the state (identity erased).
+        if (state.SelectedScope == SqueakVoicePackScope.Xenotype && !string.IsNullOrEmpty(state.SelectedTargetName))
         {
-            VoicePackDomainView? match = xenotypes.FirstOrDefault(domain =>
-                string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal)
-                && string.Equals(domain.TargetDefName, state.SelectedTargetName, StringComparison.Ordinal));
-            if (match == null && xenotypes.Count > 0) match = xenotypes[0];
-            if (match != null)
+            for (int i = 0; i < xenotypes.Count; i++)
             {
-                state.SelectedScope = SqueakVoicePackScope.Xenotype;
-                state.SelectedRaceDefName = match.Value.RaceDefName;
-                state.SelectedTargetName = match.Value.TargetDefName;
-                return match;
+                VoicePackDomainView domain = xenotypes[i];
+                if (string.Equals(domain.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal)
+                    && string.Equals(domain.TargetDefName, state.SelectedTargetName, StringComparison.Ordinal))
+                {
+                    return domain;
+                }
             }
+
+            return BuildEmptyXenotypeDomain(settings, state.SelectedRaceDefName, state.SelectedTargetName);
         }
 
-        if (state.SelectedScope == SqueakVoicePackScope.Race || races.Count > 0)
+        if (!string.IsNullOrEmpty(state.SelectedRaceDefName))
         {
-            RaceLayerRowView race = races.FirstOrDefault(row =>
-                string.Equals(row.RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal));
-            if (race.RaceDefName == null) race = races.FirstOrDefault();
-            if (race.RaceDefName != null)
+            for (int i = 0; i < races.Count; i++)
             {
-                state.SelectedScope = SqueakVoicePackScope.Race;
-                state.SelectedRaceDefName = race.RaceDefName;
-                state.SelectedTargetName = "";
-                return BuildRaceDomain(settings, catalog, race.RaceDefName);
+                if (string.Equals(races[i].RaceDefName, state.SelectedRaceDefName, StringComparison.Ordinal))
+                {
+                    state.SelectedScope = SqueakVoicePackScope.Race;
+                    state.SelectedTargetName = "";
+                    return BuildRaceDomain(settings, catalog, races[i].RaceDefName);
+                }
             }
+
+            // A directory race with no pack domain (no-pack HAR arrival): the SAME builder the
+            // pack races use answers zero candidates + the recorded status - an empty state that
+            // still names exactly this race. Identity stays put; nothing is rewritten.
+            state.SelectedScope = SqueakVoicePackScope.Race;
+            state.SelectedTargetName = "";
+            return BuildRaceDomain(settings, catalog, state.SelectedRaceDefName);
+        }
+
+        if (state.SelectedScope == SqueakVoicePackScope.Xenotype && xenotypes.Count > 0)
+        {
+            state.SelectedScope = SqueakVoicePackScope.Xenotype;
+            state.SelectedRaceDefName = xenotypes[0].RaceDefName;
+            state.SelectedTargetName = xenotypes[0].TargetDefName;
+            return xenotypes[0];
+        }
+
+        // Nothing explicit yet (first entry / re-selection): the legacy auto default chain.
+        if (races.Count > 0)
+        {
+            state.SelectedScope = SqueakVoicePackScope.Race;
+            state.SelectedRaceDefName = races[0].RaceDefName;
+            state.SelectedTargetName = "";
+            return BuildRaceDomain(settings, catalog, races[0].RaceDefName);
         }
 
         if (xenotypes.Count > 0)
@@ -870,6 +973,70 @@ public static class VoicePacksPageModel
         }
 
         return null;
+    }
+
+    /// <summary>OVT-003: the honest empty state for an explicitly-named xenotype target that owns
+    /// no pack domain right now (a directory xenotype with no packs, or a race context whose packs
+    /// were removed). Display comes from the published directory label when present; the recorded
+    /// selection status still answers, so a saved choice never silently disappears.</summary>
+    /// <summary>PM state addendum: the FOUR honest answers for a directory xenotype the settings
+    /// layer could not see (its TargetUnavailable fires BEFORE the orphan scan, so saved keys may
+    /// ride under it): loaded + saved keys -> SAVED-CHOICE-MISSING (Orphan, the old meaning kept);
+    /// loaded + zero keys -> no supply (Available empty); not loaded -> target not loaded
+    /// (TargetUnavailable); Biotech off -> Dormant (the settings layer already answers that first,
+    /// untouched). The sound canonical set and the records are NOT widened or deleted to prettify
+    /// a state - the browse side reads the same records and states the truth.</summary>
+    private static SqueakVoicePackDomainState ShownXenoState(
+        SqueakVoicePackDomainStatus status, bool loadedInDirectory)
+    {
+        if (status.State == SqueakVoicePackDomainState.TargetUnavailable && loadedInDirectory)
+        {
+            return status.EnabledKeys != null && status.EnabledKeys.Count > 0
+                ? SqueakVoicePackDomainState.Orphan
+                : SqueakVoicePackDomainState.Available;
+        }
+
+        return status.State;
+    }
+
+    private static VoicePackDomainView BuildEmptyXenotypeDomain(
+        UniversalSqueakerSettings settings, string raceDefName, string targetDefName)
+    {
+        SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(
+            SqueakVoicePackScope.Xenotype, raceDefName ?? "", targetDefName);
+        string display = targetDefName;
+        // CO review r1 item 6: the settings layer answers TargetUnavailable from the SOUND catalog
+        // (assembled pack targets only). A xenotype that IS in the browse directory but has no
+        // packs is "loaded, no supply" - an Available empty, never "target not loaded". Saved-
+        // missing (Orphan) and Biotech-off (Dormant) keep their old meanings; the sound canonical
+        // set and admission are NOT touched to make a UI answer prettier.
+        bool loadedInDirectory = false;
+        IReadOnlyList<UsXenotypeIdentity> directory = RaceDefinitionCatalog.Current.Xenotypes;
+        for (int i = 0; i < directory.Count; i++)
+        {
+            if (string.Equals(directory[i].DefName, targetDefName, StringComparison.Ordinal))
+            {
+                display = directory[i].Label;
+                loadedInDirectory = true;
+                break;
+            }
+        }
+
+        return new VoicePackDomainView(
+            SqueakVoicePackScope.Xenotype,
+            raceDefName ?? "",
+            targetDefName,
+            display,
+            "",
+            ShownXenoState(status, loadedInDirectory),
+            !ModsConfig.BiotechActive,
+            ShownXenoState(status, loadedInDirectory) == SqueakVoicePackDomainState.TargetUnavailable,
+            false,
+            status.EnabledKeys?.Count ?? 0,
+            0,
+            status.EnabledKeys?.Count ?? 0,
+            status.EnabledKeys ?? Array.Empty<string>(),
+            Array.Empty<VoicePackRowView>());
     }
 
     private static VoicePackDomainView BuildRaceDomain(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog, string raceDefName)
@@ -1223,6 +1390,13 @@ public static class VoicePacksPageModel
             "packs-filter" => "us/filter-bar",
             "packs-results" => "us/pack-cards",
             "checklist" => "us/voice-pack-checklist",
+            // UIR-002/003/004/006: the new workspaces' own help sections.
+            "overview-intro" => "us/overview-intro",
+            "race-board" => "us/race-board",
+            "theme-picker" => "us/theme-picker",
+            "packs-fallback" => "us/fallback-editor",
+            "fallback-editor" => "us/fallback-editor",
+            "restore-center" => "us/reset-center",
             _ => "us/page-title",
         };
     }
@@ -1616,7 +1790,10 @@ public static class VoicePacksPageModel
     public static void SetTuningArea(VoicePacksPageState state, int area)
     {
         if (state == null) return;
-        state.TuningArea = area is >= 0 and <= 2 ? area : 0;
+        // UIR-004: the third area retired with the fallback editor's move to the Packs page - an area
+        // write naming it (a stale caller, a hand-set value) reposes to the action branch, so the
+        // tuning tree can never render an area it no longer owns.
+        state.TuningArea = area is >= 0 and <= 1 ? area : 0;
         state.TuningContextActive = true;
     }
 
@@ -1795,43 +1972,60 @@ public static class VoicePacksPageModel
     }
 
     /// <summary>The ROW layer of the tuning tree (FL-IC2 CancelBind on the scope-tree element): only the
-    /// branch the player can SEE answers here - fallback area: entry, then the race table (§4.1); action
-    /// area: the selected action's editor row. A row target selected in another area is invisible here and
-    /// is NOT a layer of this branch (PM observation 10); the context return above (observation 1) owns
-    /// repose. Declining sends the key one level up the real parent chain.</summary>
+    /// branch the player can SEE answers here - action area: the selected action's editor row. A row
+    /// target selected in another area is invisible here and is NOT a layer of this branch (PM
+    /// observation 10); the context return above (observation 1) owns repose. Declining sends the key
+    /// one level up the real parent chain.
+    /// <para>
+    /// UIR-004 (WO-US-UI-REFACTOR-20261014): the fallback editor is no longer a third tuning AREA -
+    /// it migrated to the Packs page as its own composite with its own return layer (see
+    /// <see cref="CanCancelFallbackTable"/>), so this ladder only ever answers the action branch.
+    /// A persisted-in-session area value of 2 can no longer be produced (the tabs write 0/1 only),
+    /// and the source's SetTuningArea clamps anything else back to 0.</para>
+    /// </summary>
     public static bool CanCancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return false;
-        if (view.TuningArea == 2)
-        {
-            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction)) return true;
-            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace)) return true;
-        }
-        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction)) return true;
-        return false;
+        return view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction);
     }
 
     /// <summary>One press, one step, visible branch only. State-only; never persists, never routes.</summary>
     public static void CancelTuningTarget(VoicePacksPageState state, VoicePacksViewState view)
     {
         if (state == null || view == null) return;
-        if (view.TuningArea == 2)
-        {
-            if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction))
-            {
-                state.FallbackSelectedEntryAction = "";
-                return;
-            }
-            if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace))
-            {
-                state.FallbackTableCanceled = true;
-                state.FallbackSelectedRace = "";
-                return;
-            }
-        }
-        else if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction))
+        if (view.TuningArea == 0 && !string.IsNullOrEmpty(state.TuningSelectedAction))
         {
             state.TuningSelectedAction = "";
+        }
+    }
+
+    /// <summary>UIR-004: the fallback editor's OWN return layer on the Packs page (CancelBind on its
+    /// Section). It carries the two visible-branch steps the tuning tree used to own for area 2, in the
+    /// same order: one press answers the selected ENTRY, the next releases the selected TABLE; a
+    /// cancelled table stays cancelled (the projection must not answer the Esc a second time by
+    /// re-picking a race), and a table state the filter masked is retained, never an invisible press.
+    /// Declining climbs to the page root like any other layer.</summary>
+    public static bool CanCancelFallbackTable(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return false;
+        if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction)) return true;
+        return !state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace);
+    }
+
+    /// <summary>One press, one step; state only.</summary>
+    public static void CancelFallbackTable(VoicePacksPageState state, VoicePacksViewState view)
+    {
+        if (state == null || view == null) return;
+        if (!string.IsNullOrEmpty(state.FallbackSelectedEntryAction))
+        {
+            state.FallbackSelectedEntryAction = "";
+            return;
+        }
+
+        if (!state.FallbackTableCanceled && !string.IsNullOrEmpty(view.FallbackSelectedRace))
+        {
+            state.FallbackTableCanceled = true;
+            state.FallbackSelectedRace = "";
         }
     }
 
@@ -1853,11 +2047,89 @@ public static class VoicePacksPageModel
         state.TuningXenotypeDefName = "";
         state.TuningArea = 0;
         state.TuningSelectedAction = "";
-        state.FallbackSelectedEntryAction = "";
-        state.FallbackSelectedRace = "";
-        state.FallbackTableCanceled = false;
+        // UIR-004: the fallback selection state is NOT reposed here any more - the editor lives on the
+        // Packs page and owns its state through its own return layer. Clearing it from a tuning-context
+        // return would be one page silently rewriting another page's browse state.
     }
 
+    // -----------------------------------------------------------------------------------------
+    // UIR-002/003 (WO-US-UI-REFACTOR-20261014 + CORRECTIONS-R1): the board's two exits, now pure.
+    // The row facts arrive from RaceBoardProjection (plain inputs only); this region applies the
+    // derived navigation intent to the page state and routes the exact quick-enable identity.
+    // No def database, no catalog, no settings-status reading happens here any more - the adapter
+    // did all of that when the projection was built.
+    // -----------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// UIR-003 / CORRECTIONS-R1 topic 2: apply the card's atomic navigation intent to the page
+    /// state. The standing workspace-switch contract runs first (SetActiveTab re-establishes the
+    /// branch); then the masking conditions clear, the race condition STAYS as the arrival context
+    /// (a narrowed result naming this row's race is a truthful context, not a lie about filters),
+    /// the precise domain goes where the projection found the supply (race domain, or the first xeno
+    /// target for a xeno-only race), and every supplying card expands so the FL-materialized row
+    /// identity can be scrolled into view. Returns the destination for the host to arm - a
+    /// "pack-card-row#<key>" identity, the static "packs-fallback" section, or "" (arm nothing;
+    /// the caller clears any old pending request); it writes NO settings.
+    /// </summary>
+    public static string ApplyOpenRaceTarget(VoicePacksPageState state, RaceBoardRow row)
+    {
+        if (state == null || string.IsNullOrEmpty(row.RaceDefName)) return "";
+        UsRaceNavigationIntent intent = RaceBoardProjection.DeriveIntent(row);
+
+        SetActiveTab(state, "Packs");
+        state.SearchText = "";
+        state.PackFilter = default;
+        state.XenotypeFilter = "";
+        state.DomainFilter = default;
+        state.RaceFilter = row.RaceDefName;
+        state.SelectedScope = string.Equals(intent.DomainScope, "Xenotype", StringComparison.Ordinal)
+            ? SqueakVoicePackScope.Xenotype
+            : SqueakVoicePackScope.Race;
+        state.SelectedRaceDefName = row.RaceDefName;
+        state.SelectedTargetName = intent.DomainTarget;
+        for (int i = 0; i < intent.ExpandCardKeys.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(intent.ExpandCardKeys[i])) state.PackCardsExpanded.Add(intent.ExpandCardKeys[i]);
+        }
+
+        return intent.ScrollDestination;
+    }
+
+    /// <summary>OVT-003: the xenotype directory row's open exit - the SAME atomic shape as the race
+    /// card's (tab + clear what would mask the target + name the target), on the xenotype axis.
+    /// The race context is set ONLY when the directory fact carries one (a single race's packs
+    /// name this target); a directory-only xenotype arrives with no race claim at all - the game
+    /// data model has no XenotypeDef.race and none is invented. Destination is "" (no pack card is
+    /// guaranteed): the caller clears any pending scroll, and the narrowed checklist - or its
+    /// honest empty with the target named - IS the answer. Writes nothing persisted.</summary>
+    public static string ApplyOpenXenotypeTarget(VoicePacksPageState state, XenotypeBoardRow row)
+    {
+        if (state == null || string.IsNullOrEmpty(row.DefName)) return "";
+        SetActiveTab(state, "Packs");
+        state.SearchText = "";
+        state.PackFilter = default;
+        state.DomainFilter = default;
+        state.RaceFilter = row.RaceContextDefName;
+        state.XenotypeFilter = row.DefName;
+        state.SelectedScope = SqueakVoicePackScope.Xenotype;
+        state.SelectedRaceDefName = row.RaceContextDefName;
+        state.SelectedTargetName = row.DefName;
+        return "";
+    }
+
+    /// <summary>UIR-003: the quick enable's exact identity - the same per-domain whole-selection
+    /// write the Packs row switch uses (<see cref="ToggleVoicePack"/>), never the mode and never a
+    /// second write chain. The board offers it only for the single unambiguous target the pure
+    /// projection found (TryQuickEnable), and its button names that exact pack (and xeno target).</summary>
+    public static void QuickEnableRacePack(
+        UniversalSqueakerSettings settings,
+        SqueakVoicePackScope scope,
+        string raceDefName,
+        string targetDefName,
+        string packKey)
+    {
+        ToggleVoicePack(settings, scope, raceDefName, targetDefName, packKey, true);
+    }
     private readonly struct XenotypeDomainKey
     {
         public readonly string RaceDefName;

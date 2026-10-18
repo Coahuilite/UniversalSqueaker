@@ -2,40 +2,28 @@
 
 **English** | [中文](./README.zh-CN.md)
 
-A voice-pack routing kernel for RimWorld 1.6. This repository is the **Universal Squeaker local fork** of Squeaky Ratkin (MPL-2.0; the provenance notice is kept as the license requires for derivatives), preparing for its first cloud release.
+A voice-pack routing kernel for RimWorld 1.6, derived from Squeaky Ratkin under MPL-2.0.
 
-Universal Squeaker ships **no audio of its own**: it is a routing kernel that attaches third-party voice packs to pawns by race/xenotype domain, with layered tuning (global/race/xenotype overrides), distance attenuation curves, mood modulation, easter-egg gating, and a camera indicator. Settings live in a dedicated window — five workspaces (Overview / Distance / Packs / Tuning / Presets) plus a hover-driven help panel — and the built-in `usdiag` protocol writes leveled diagnostics to the player log for troubleshooting.
+US attaches third-party voices to accurate race/xenotype domains, with layered tuning, mood modulation, easter-egg eligibility, camera-height attenuation and diagnostics. It ships no audio files of its own; the current tree includes a Ratkin final-fallback mapping that references vanilla Core audio.
 
-## Requirements
+The settings window has five workspaces: **Overview / Packs / Tuning / Presets / Advanced**, plus an expandable bottom help panel.
 
-- RimWorld 1.6
-- **FerriteLib** (`coahuilite.ferritelib`) as a hard prerequisite: it carries the UI kernel `FerriteLib.UiKit.dll`. US compiles against it by relative path and never ships a copy; the API-range check lives in code (`FerriteLibVersion.Require`), not in `About.xml` (RimWorld's modDependencies cannot express versions).
+## Requirements and identity
 
-## Identity
+- RimWorld 1.6.
+- **FerriteLib** (`coahuilite.ferritelib`) is a required prerequisite. US references its DLL and never ships a second copy; the supported API range is checked in code.
+- packageId: `coahuilite.universalsqueaker`.
+- Namespace / Def prefix / diagnostic prefix: `UniversalSqueaker` / `US_` / `usdiag`.
+- License: [MPL-2.0](LICENSE).
 
-- packageId: `coahuilite.universalsqueaker`
-- namespace / Def prefix / log prefix: `UniversalSqueaker` / `US_` / `usdiag`
-- license: MPL-2.0 (Workshop display name pending maintainer confirmation)
+## Documentation
 
-## Local verification and build
+Start with the [documentation index](docs/README.md). It separates current **0.5.x behavior** from the **0.6.x target specification**.
 
-```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'   # 15 gates (6 harnesses + main assembly Dev/Release + carrier boundary and single-carrier red line + MPL-2.0 licence parity + Schema=2 manifests + UI boundary audit + harness stub coverage). The carrier is SELECTED, never defaulted: see docs/build-and-debug.md, and add -DevelopmentCarrier to verify against the paired Dev package
-pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath '../ferritelib/dist/dev/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll'   # builds the US payload Dev and stages it as an installable FOLDER (dist/dev/UniversalSqueaker) - no archive; -Zip exists in pack-dev if you want one. It never builds the carrier
-pwsh -NoProfile -File scripts/privacy-audit.ps1  # privacy gate (three vectors + credential patterns + PublishedFileId values + identity uniqueness; -FullHistory for the full-history mode)
-```
+- [Current behavior and settings](docs/current-behavior-0.5-zh.md)
+- [VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)
+- [Kernel 0.6.x first-edition specification](docs/us-kernel-0.6-spec-zh.md)
+- [Build and debug](docs/build-and-debug.md)
+- [Release flow](docs/release-runbook-zh.md) and [privacy gate](docs/push-privacy-gate.md)
 
-The UI library was split into its own prerequisite-mod repository `../ferritelib` (`coahuilite.ferritelib`), which runs its own gate suite. Gate 15 runs the carrier's reference-driven harness-stub scan (`../ferritelib/scripts/stub-coverage-scan.ps1`) over the US payload and the KernelHostTests harness assembly, one scan each, with US's own exemption ledger (`scripts/stub-coverage-exemptions.txt`): every game member either assembly references must be declared by the carrier's stubs or exempted with a reason, or the run fails. That is the class a lane cannot see — a member only the reference assemblies advertise compiles green and dies at run time inside the harness, where the session guard turns it into a recovery band and a lane asserting a live session stays green.
-
-Gate 14 (`scripts/ui-boundary-audit.ps1`) is the consumer half of the same containment metric: a raw Unity IMGUI / Verse Widgets call outside the two ruled exemptions (the dev diagnostics panel and the frozen camera-indicator fallback) fails the build, and a raw `Mouse.IsOver` anywhere at all fails it — hover, layout-event gating and window chrome all read the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiWindowHost`).
-
-## Documentation index
-
-- Handoff and acceptance checklist: `HANDOFF.md` (maintainer-local, not published)
-- Memory protocol / durable facts / action surface / cold archive: `AGENTS.md`, `MEMORY.md`, `TODO.md`, `OBLIVIONIS.md`
-- Release flow (every release): `docs/release-runbook-zh.md`
-- First cloud upload: executed 2026-09-06; durable decisions and push order live in `MEMORY.md` ("First cloud upload"), the PASS ledger in `TODO.md`.
-- Mod structure reference: `docs/mod-structure-reference-zh.md`
-- Voice-pack authoring guide: `.github/skills/us-voicepack-authoring/SKILL.md`
-
-Historical material (describes the old UI implementation deleted on 2026-09-02): `docs/ui-componentization-evaluation-zh.md`, `docs/ui-phase3-implementation-notes-zh.md`.
+The current product declaration is 0.5.0. Documentation describes this source tree, which may include changes not present in an older download. Developer working instructions remain in `AGENTS.md`; durable state and open actions remain in `MEMORY.md` and `TODO.md`.

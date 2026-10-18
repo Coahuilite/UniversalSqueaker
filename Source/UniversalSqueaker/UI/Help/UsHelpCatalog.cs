@@ -428,6 +428,86 @@ internal static class UsHelpCatalog
                     "US.Packs.Checklist.ForgetUnavailable",
                     "US.Help.Checklist.Forget.Text"),
             }),
+        // UIR-001/002/003/006 (WO-US-UI-REFACTOR-20261014): the four workspaces' new sections. Copy
+        // lives in the Keyed tables (zh authoritative, en translated); the fit audit drives both.
+        ["us/overview-intro"] = new HelpSection(
+            "us/overview-intro",
+            "US.Section.Intro",
+            "US.Help.Intro.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/overview-intro/collapse",
+                    "US.Intro.Collapse",
+                    "US.Help.Intro.Collapse.Text"),
+            }),
+        ["us/race-board"] = new HelpSection(
+            "us/race-board",
+            "US.Section.RaceBoard",
+            "US.Help.RaceBoard.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/race-board/row",
+                    "US.Help.RaceBoard.Row.Label",
+                    "US.Help.RaceBoard.Row.Text"),
+                new HelpItem(
+                    "us/race-board/enable",
+                    "US.Board.Enable",
+                    "US.Help.RaceBoard.Enable.Text"),
+                new HelpItem(
+                    "us/race-board/summary",
+                    "US.Help.RaceBoard.Summary.Label",
+                    "US.Help.RaceBoard.Summary.Text"),
+                // OVT-002: the browse band items (claims ride the manifest HelpKey attributes and
+                // the xenotype rows' hover; the bidirectional gate keeps both sides honest).
+                new HelpItem(
+                    "us/race-board/group",
+                    "US.Board.Group.Player",
+                    "US.Help.RaceBoard.Group.Text"),
+                new HelpItem(
+                    "us/race-board/filters",
+                    "US.Board.Filter.Har",
+                    "US.Help.RaceBoard.Filters.Text"),
+                new HelpItem(
+                    "us/race-board/search",
+                    "US.Board.SearchPlaceholder",
+                    "US.Help.RaceBoard.Search.Text"),
+                new HelpItem(
+                    "us/race-board/counts",
+                    "US.Board.Counts",
+                    "US.Help.RaceBoard.Counts.Text"),
+                new HelpItem(
+                    "us/race-board/xenodir",
+                    "US.Board.XenoDir",
+                    "US.Help.RaceBoard.XenoDir.Text"),
+                new HelpItem(
+                    "us/race-board/xenorow",
+                    "US.Board.XenoDir",
+                    "US.Help.RaceBoard.XenoRow.Text"),
+            }),
+        ["us/fallback-editor"] = new HelpSection(
+            "us/fallback-editor",
+            "US.Section.FallbackTable",
+            "US.Help.FallbackEditor.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/fallback-editor/states",
+                    "US.Help.FallbackEditor.States.Label",
+                    "US.Help.FallbackEditor.States.Text"),
+            }),
+        ["us/theme-picker"] = new HelpSection(
+            "us/theme-picker",
+            "US.Section.Theme",
+            "US.Help.Theme.Overview",
+            new[]
+            {
+                new HelpItem(
+                    "us/theme-picker/switch",
+                    "US.Help.Theme.Switch.Label",
+                    "US.Help.Theme.Switch.Text"),
+            }),
     };
 
     internal static bool TryGetSection(string key, out HelpSection section)

@@ -133,22 +133,25 @@ internal static class DeclarativeOverviewLaneTests
     // below retain gap, text measurement, card height and exact checkbox dimensions in both shapes.
     private static void ResponsiveOverviewRows()
     {
-        var rows = new (string Row, string Text, string Input)[]
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): each row is tagged with the workspace that gates it
+        // now (Overview keeps output/indicator rows; rules rows are Tuning; diagnostics is Advanced).
+        // The lane sweeps each row under ITS tab - one host per tab, three tabs.
+        var rows = new (string Row, string Text, string Input, string Tab)[]
         {
-            ("global-volume-top", "global-volume-caption", "global-volume-number"),
-            ("basic-egg-row", "basic-egg-text", "basic-egg-check"),
-            ("basic-baby-row", "basic-baby-label", "basic-baby-check"),
-            ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check"),
-            ("basic-talking-row", "basic-talking-label", "basic-talking-check"),
-            ("basic-population-row", "basic-population-label", "basic-population-check"),
-            ("basic-eat-row", "basic-eat-label", "basic-eat-check"),
-            ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check"),
-            ("timing-interval-row", "timing-interval-caption", "timing-interval-seconds"),
-            ("timing-multiplier-row", "timing-multiplier-label", "timing-multiplier-minus"),
-            ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check"),
-            ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check"),
-            ("diagnostics-geometry-capture-row", "diagnostics-geometry-capture-label", "diagnostics-geometry-capture"),
-            ("diagnostics-geometry-outline-row", "diagnostics-geometry-outline-label", "diagnostics-geometry-outline")
+            ("global-volume-top", "global-volume-caption", "global-volume-number", "Overview"),
+            ("basic-egg-row", "basic-egg-text", "basic-egg-check", "Tuning"),
+            ("basic-baby-row", "basic-baby-label", "basic-baby-check", "Tuning"),
+            ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check", "Tuning"),
+            ("basic-talking-row", "basic-talking-label", "basic-talking-check", "Tuning"),
+            ("basic-population-row", "basic-population-label", "basic-population-check", "Tuning"),
+            ("basic-eat-row", "basic-eat-label", "basic-eat-check", "Tuning"),
+            ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "Tuning"),
+            ("timing-interval-row", "timing-interval-caption", "timing-interval-seconds", "Tuning"),
+            ("timing-multiplier-row", "timing-multiplier-label", "timing-multiplier-minus", "Tuning"),
+            ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check", "Overview"),
+            ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check", "Advanced"),
+            ("diagnostics-geometry-capture-row", "diagnostics-geometry-capture-label", "diagnostics-geometry-capture", "Advanced"),
+            ("diagnostics-geometry-outline-row", "diagnostics-geometry-outline-label", "diagnostics-geometry-outline", "Advanced")
         };
         foreach (string language in new[] { "English", "ChineseSimplified" })
         {
@@ -171,25 +174,31 @@ internal static class DeclarativeOverviewLaneTests
                     {
                         string where = language + ", " + (narrow ? "narrow" : "wide")
                             + " at page box " + width + " (help " + (helpOpen ? "open" : "closed") + ")";
+                        // One host, swept tab by tab: the Tab gate hides a non-active workspace, so the
+                        // lane arranges per tab and asserts only that tab's rows in each pass.
                         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource
                             { RichData = true, EatPrecisionEnabled = true }, new Program.StubMetrics());
                         host.Bindings.Set("help-open", helpOpen);
-                        UiLayoutSnapshot snapshot = Arrange(host, width);
-                        host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
-                        foreach (var ids in rows)
+                        foreach (string tab in new[] { "Overview", "Tuning", "Advanced" })
                         {
-                            Rect row = RectOf(snapshot, ids.Row);
-                            Rect text = RectOf(snapshot, ids.Text);
-                            Rect input = RectOf(snapshot, ids.Input);
-                            Assert(narrow ? input.y >= text.yMax + 3.5f : input.x >= text.xMax + 3.5f,
-                                (narrow ? "NarrowLabelAboveInput" : "WideLabelBesideInput") + ": " + where
-                                + " " + ids.Row + " text=" + Describe(text) + " input=" + Describe(input));
-                            Assert(input.x >= row.x - 0.5f && input.xMax <= row.xMax + 0.5f
-                                   && input.y >= row.y - 0.5f && input.yMax <= row.yMax + 0.5f,
-                                ids.Row + ": input must remain inside its row in both presentations: " + where);
+                            host.Bindings.Invoke("set-tab", tab);
+                            UiLayoutSnapshot snapshot = Arrange(host, width);
+                            host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
+                            foreach (var ids in rows)
+                            {
+                                if (ids.Tab != tab) continue;
+                                Rect row = RectOf(snapshot, ids.Row);
+                                Rect text = RectOf(snapshot, ids.Text);
+                                Rect input = RectOf(snapshot, ids.Input);
+                                Assert(narrow ? input.y >= text.yMax + 3.5f : input.x >= text.xMax + 3.5f,
+                                    (narrow ? "NarrowLabelAboveInput" : "WideLabelBesideInput") + ": " + where
+                                    + " " + ids.Row + " text=" + Describe(text) + " input=" + Describe(input));
+                                Assert(input.x >= row.x - 0.5f && input.xMax <= row.xMax + 0.5f
+                                       && input.y >= row.y - 0.5f && input.yMax <= row.yMax + 0.5f,
+                                    ids.Row + ": input must remain inside its row in both presentations: " + where);
+                            }
+                            Console.WriteLine("[overview-responsive] " + where + " tab=" + tab + " rows=" + rows.Length);
                         }
-
-                        Console.WriteLine("[overview-responsive] " + where + " rows=" + rows.Length);
                     }
                 }
             }
@@ -234,15 +243,24 @@ internal static class DeclarativeOverviewLaneTests
     {
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
 
-        foreach (string id in new[] { "global-volume", "basic-tuning", "camera-indicator" })
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): the dissolved cards keep their declarative-Section
+        // shape; only their WORKSPACE moved with the regroup (basic-tuning is a rule band now, on
+        // Tuning). The lane still proves each is a Section gated by its own tab - the retired
+        // composite kind is the mutation this catches, not the tab assignment.
+        foreach ((string id, string tab) in new[]
+                 {
+                     ("global-volume", "Overview"),
+                     ("basic-tuning", "Tuning"),
+                     ("camera-indicator", "Overview")
+                 })
         {
             UiElementSpec? card = FindById(host.Manifest.Roots, id);
             Assert(card != null, "the shipped manifest must carry the card '" + id + "'");
             Assert(card!.Kind == "Section",
                 "'" + id + "' must be the engine's Section container - the composite kind that used to own"
                 + " this card is retired - got " + card.Kind);
-            Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Overview",
-                "'" + id + "' must stay gated by the Overview workspace");
+            Assert(card.TryGetAttribute("Tab", out string gated) && gated == tab,
+                "'" + id + "' must stay gated by the " + tab + " workspace");
         }
 
         var kinds = new HashSet<string>(StringComparer.Ordinal);
@@ -367,9 +385,15 @@ internal static class DeclarativeOverviewLaneTests
             + host.Session.ContentRevision + ")");
 
         // (b) every basic-tuning row: one press, one write, and no second surface behind it. The parent is
-        // ON, so the child row exists and is pressed too.
+        // ON, so the child row exists and is pressed too. UIR-001: the card is gated by the TUNING
+        // workspace now, so the lane re-arranges and re-records there; the hit-surface proof is per-tab
+        // because the Tab gate hides a non-active workspace's elements from the draw pass entirely.
+        host.Bindings.Invoke("set-tab", "Tuning");
+        UiLayoutSnapshot tuningSnapshot = Arrange(host);
+        recorded.Clear();
+        DrawWithButtons(host, rect => { recorded.Add(rect); return false; });
         var basic = new List<Rect>();
-        foreach (Rect band in recorded.Where(r => Inside(r, CardLocal(snapshot, "basic-tuning"))))
+        foreach (Rect band in recorded.Where(r => Inside(r, CardLocal(tuningSnapshot, "basic-tuning"))))
         {
             if (Math.Abs(band.width - DeclaredCheckboxWidth) <= 0.5f
                 && Math.Abs(band.height - DeclaredCheckboxHeight) <= 0.5f) basic.Add(band);
@@ -422,6 +446,9 @@ internal static class DeclarativeOverviewLaneTests
 
         // (c) the global-volume card: the slider atom's drag and the number-field atom's binding must land
         // in the SAME business field, or the two controls on one card would show different volumes.
+        // (back on the Overview workspace, where the volume card is gated).
+        host.Bindings.Invoke("set-tab", "Overview");
+        snapshot = Arrange(host);
         var sliders = new List<Rect>();
         DrawWithSliders(host, (rect, value, min, max) => { sliders.Add(rect); return value; });
         Rect? volumeSlider = sliders
@@ -480,7 +507,15 @@ internal static class DeclarativeOverviewLaneTests
                     {
                         var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
+                        // UIR-001: basic-tuning is a TUNING-workspace card now; the Overview cards are
+                        // arranged on their own gate, then the tab flips and the SAME host arranges the
+                        // rules card. The overflow filter below is unchanged: it selects by card id in
+                        // the element path, which is tab-independent.
                         host.Bindings.Invoke("set-tab", "Overview");
+                        host.MeasureAndArrange(new Vector2(width, PageHeight));
+                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                        host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
+                        host.Bindings.Invoke("set-tab", "Tuning");
                         UiLayoutSnapshot snapshot = Arrange(host, width);
                         host.DrawChecked(new Rect(0f, 0f, width, PageHeight));
 
@@ -662,7 +697,7 @@ internal static class DeclarativeOverviewLaneTests
     {
         var source = new RecordingSettingsSource { RichData = allowEggs };
         using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Tuning"); // UIR-001: the egg row is a rules-band control now
         UiLayoutSnapshot snapshot = Arrange(host, width);
         return RectOf(snapshot, "basic-egg-row").height;
     }

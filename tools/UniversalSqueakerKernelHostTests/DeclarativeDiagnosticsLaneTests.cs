@@ -114,8 +114,9 @@ internal static class DeclarativeDiagnosticsLaneTests
         Assert(card!.Kind == "Section",
             "diagnostics must be the engine Section container - the composite kind that used to own this"
             + " card is retired - got " + card.Kind);
-        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Overview",
-            "diagnostics must stay gated by the Overview workspace, got '" + tab + "'");
+        // UIR-001/005: diagnostics is an ADVANCED-workspace card now; the lane arranges it there.
+        Assert(card.TryGetAttribute("Tab", out string tab) && tab == "Advanced",
+            "diagnostics must stay gated by the Advanced workspace, got '" + tab + "'");
 
         UiElementSpec? header = FindById(card.Children, "diagnostics-header");
         Assert(header != null && header.Kind == "us/section-header",
@@ -182,7 +183,7 @@ internal static class DeclarativeDiagnosticsLaneTests
     {
         var source = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Advanced");
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try
         {
@@ -255,7 +256,7 @@ internal static class DeclarativeDiagnosticsLaneTests
     {
         var source = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Advanced");
 
         // The declared binding is the write channel (the atom writes the inverse of the bool it read), and
         // the fixture rich view holds true, so the write below must land as false.

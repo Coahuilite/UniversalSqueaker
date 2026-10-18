@@ -391,32 +391,32 @@ internal static class CancelLayerLaneTests
                 && string.Equals(subject.Parent.CancelBindingKey, "cancel-tuning-context", StringComparison.Ordinal),
             "the container wrapping the composite must publish the context CancelBind on the parent chain");
 
-        // PATH A (PM observation 10): the fallback branch WITH a row target left over from another area.
-        // The stale selection is INVISIBLE here, so it must NOT be a return layer of its own - the ladder
-        // is entry -> table -> context, and the context exit folds the stale state in as ONE step.
-        host.Bindings.Set("tuning-area", 2);
-        fake.ViewState.FallbackSelectedEntryAction = "Call";
+        // PATH A - RE-CUT by UIR-004 (WO-US-UI-REFACTOR-20261014): the fallback editor is no longer
+        // a tuning AREA, so the tuning ladder never answers for it. A stale area write reposes to
+        // the action branch (the SetTuningArea clamp), and the ladder is exactly row -> context.
+        host.Bindings.Set("tuning-area", 2);            // stale value straight through the binding
         host.Bindings.Set("tuning-selected-action", "Eat");
         host.Bindings.Invoke("set-tuning-layer", 2);
         ArrangeAndDraw(host);
-
+        Assert(fake.ViewState.TuningArea == 0 || host.Bindings.Get<int>("tuning-area") == 0,
+            "the retired third area reposes: no tuning press can enter an area the tree no longer owns");
         (bool p1, _) = PressEscape(host);
-        Assert(p1 && fake.ViewState.FallbackSelectedEntryAction.Length == 0
-                && fake.ViewState.TuningSelectedAction == "Eat" && !fake.ViewState.FallbackTableCanceled,
-            "press 1 = the fallback entry only; the invisible stale action is not a step here");
+        Assert(p1 && fake.ViewState.TuningSelectedAction.Length == 0 && fake.ViewState.TuningLayer == 2,
+            "press 1: the visible action-row editor is the only row step; the layer stays");
         (bool p2, _) = PressEscape(host);
-        Assert(p2 && fake.ViewState.FallbackTableCanceled && fake.BuildView().FallbackSelectedRace.Length == 0,
-            "press 2 = return the race table; the projection must not re-pick the first race");
-        Assert(fake.BuildView().FallbackRaces.Count > 0,
-            "the table LIST is untouched: cancellation is a selection state, never a data change");
-        (bool p3, _) = PressEscape(host);
-        Assert(p3 && fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0
-                && fake.ViewState.TuningSelectedAction.Length == 0 && !fake.ViewState.TuningContextActive,
-            "press 3: the ROW layer declines and the climb answers at the parent CONTEXT layer - the "
-            + "branch rests at the page default, folding the stale row target in as one context exit");
-        (bool p4, Event fourth) = PressEscape(host);
-        Assert(!p4 && fourth.type != EventType.Used,
-            "press 4: every step declined, the key is left for the layers above (root)");
+        Assert(p2 && fake.ViewState.TuningLayer == 0 && fake.ViewState.TuningArea == 0
+                && !fake.ViewState.TuningContextActive,
+            "press 2 = the parent context layer reposes the branch");
+        (bool p3, Event thirdPress) = PressEscape(host);
+        Assert(!p3 && thirdPress.type != EventType.Used,
+            "press 3: every step declined, the key is left for the layers above (root)");
+        // The context exit must NOT touch the fallback page's browse state any more (UIR-004):
+        // that state belongs to its own return layer on the Packs page (asserted in PATH C below).
+        fake.ViewState.FallbackSelectedEntryAction = "Call";
+        VoicePacksPageModel.CancelTuningContext(fake.ViewState);
+        Assert(fake.ViewState.FallbackSelectedEntryAction == "Call",
+            "the tuning context repose leaves the OTHER page's fallback selection alone");
+        fake.ViewState.FallbackSelectedEntryAction = "";
         // The context exit rests on the Global layer with an EMPTY domain identity, at the STATE level
         // the real BuildTuningDomains reads. The fake's view hard-codes the identity column, so this is
         // asserted on the shared state, not the projected view - and it is what makes PM observation 6
@@ -549,36 +549,45 @@ internal static class CancelLayerLaneTests
         // area/race/layer steps come from the view, the entry/action steps from the state, exactly as
         // in production. A detached VoicePacksPageState here would test a pairing that cannot exist.
         VoicePacksPageState s2 = fake2.ViewState;
-        s2.TuningArea = 2;
+        // UIR-004: the fallback steps are the Packs page's OWN layer now; they run against the
+        // fallback statics with the table visible, and they never reach into the tuning tree.
         s2.FallbackSelectedEntryAction = "Call";
-        s2.TuningSelectedAction = "Eat";   // invisible here - must NOT act as its own step (PM 10)
-        s2.TuningLayer = 1;
         VoicePacksViewState v2 = fake2.BuildView();
-        Assert(VoicePacksPageModel.CanCancelTuningTarget(s2, v2), "the tuning layer can answer");
-        VoicePacksPageModel.CancelTuningTarget(s2, v2);
-        Assert(s2.FallbackSelectedEntryAction.Length == 0 && s2.FallbackTableCanceled == false
-                && s2.TuningSelectedAction == "Eat" && s2.TuningLayer == 1,
-            "step 1 = entry only");
+        Assert(VoicePacksPageModel.CanCancelFallbackTable(s2, v2), "the fallback layer can answer");
+        VoicePacksPageModel.CancelFallbackTable(s2, v2);
+        // The SELECTION lives in the view while the state field stays empty (the projection auto-picks
+        // the first table - the same distinction the tuning rows use), so the view answers "selected".
+        Assert(s2.FallbackSelectedEntryAction.Length == 0 && !s2.FallbackTableCanceled
+                && v2.FallbackSelectedRace.Length > 0,
+            "step 1 = entry only; the table stays selected (via the projection auto-pick)");
         v2 = fake2.BuildView();
-        VoicePacksPageModel.CancelTuningTarget(s2, v2);
+        VoicePacksPageModel.CancelFallbackTable(s2, v2);
         Assert(s2.FallbackTableCanceled && s2.FallbackSelectedRace.Length == 0, "step 2 = table");
-        // The row layer's steps are done; a THIRD row press changes nothing and vetoes (the stale action
-        // is NOT an invisible step, PM 10) - the context is a SEPARATE parent layer with its own gate.
+        v2 = fake2.BuildView();
+        Assert(!VoicePacksPageModel.CanCancelFallbackTable(s2, v2),
+            "the cancelled table stays cancelled - a third press vetoes instead of re-picking");
+        // The tuning ladder, meanwhile, must NOT answer for fallback state any more: a stale
+        // area-2 selection cannot re-enter (SetTuningArea clamps), and the row layer ignores the
+        // invisible action target exactly as before (PM 10 kept for the two real areas).
+        s2.TuningSelectedAction = "Eat";
+        s2.TuningArea = 1;   // MOOD area: the action row is not drawn there
         v2 = fake2.BuildView();
         Assert(!VoicePacksPageModel.CanCancelTuningTarget(s2, v2),
-            "the row layer has nothing visible left - it vetoes rather than swallowing the press");
-        VoicePacksPageModel.CancelTuningTarget(s2, v2);   // must be a no-op
-        Assert(s2.TuningLayer == 1 && s2.TuningArea == 2 && s2.TuningSelectedAction == "Eat",
-            "a vetoed row layer changes no state - repose belongs to the context layer");
+            "the action row target is invisible in the mood area - not a step (PM 10 unchanged)");
+        VoicePacksPageModel.SetTuningArea(s2, 2);   // the retired third area
+        Assert(s2.TuningArea == 0,
+            "a write naming the retired area reposes to the action branch at the setter, not in the tree");
         Assert(VoicePacksPageModel.CanCancelTuningContext(s2),
-            "the context layer is active (business state), independent of the non-zero layer/area");
+            "the context layer is active (business state), independent of the non-zero layer");
         VoicePacksPageModel.CancelTuningContext(s2);
         Assert(s2.TuningLayer == 0 && s2.TuningArea == 0 && s2.TuningSelectedAction.Length == 0
                 && !s2.TuningContextActive,
             "the context exit reposes the branch and folds the stale action - the single parent press");
+        Assert(s2.FallbackTableCanceled && s2.FallbackSelectedRace.Length == 0,
+            "and it LEAVES the fallback page's own state exactly as the fallback layer left it");
         v2 = fake2.BuildView();
         Assert(!VoicePacksPageModel.CanCancelTuningTarget(s2, v2) && !VoicePacksPageModel.CanCancelTuningContext(s2),
-            "then both layers veto - the root keeps the next press");
+            "then both tuning layers veto - the root keeps the next press");
 
         // The same statics on the ACTION area: the row target IS visible and IS its own step.
         BuildPacksView(out RecordingSettingsSource fake3);
@@ -610,24 +619,17 @@ internal static class CancelLayerLaneTests
         return height;
     }
 
+    /// <summary>
+    /// F06 RE-CUT by UIR-004 (WO-US-UI-REFACTOR-20261014): the fallback area left the tuning tree, so
+    /// the "fallback shows no context" clause has no area to test any more. What stays checkable is
+    /// the gate F06 actually protects - the empty-xenotype reason band grows the ACTION and MOOD areas
+    /// and nothing else - now over the two areas the tree really owns.
+    /// </summary>
     private static void F06FallbackAreaDropsTheTuningContext()
     {
-        // With the pre-fix shape the fallback area was topped by the shared layer/domain rows and the
-        // empty-xenotype reason band (F06). The fix gates that context to the action/mood areas, so the
-        // empty-target state must change NOTHING about the fallback area's height, while the mood area
-        // keeps its taller context; within the action/mood areas the XG1 row order is unchanged.
         var metrics = new Program.StubMetrics();
         var normal = new RecordingSettingsSource { RichData = true };
-        normal.ViewState.TuningArea = 2;
-        float fallbackNormal = ScopeTreeHeight(normal, metrics);
-
         var emptyXeno = new RecordingSettingsSource { RichData = true, EmptyXenotypeTarget = true };
-        emptyXeno.ViewState.TuningArea = 2;
-        float fallbackEmpty = ScopeTreeHeight(emptyXeno, metrics);
-        Assert(Math.Abs(fallbackEmpty - fallbackNormal) < 0.01f,
-            "the fallback area answers to its own single race target only: the layer/domain rows and the "
-            + "empty-xenotype reason belong to the action/mood areas, so the two fallback heights must be "
-            + "identical, got " + fallbackNormal + " vs " + fallbackEmpty);
 
         normal.ViewState.TuningArea = 1; // mood
         float moodNormal = ScopeTreeHeight(normal, metrics);
@@ -636,11 +638,21 @@ internal static class CancelLayerLaneTests
         Assert(moodEmpty > moodNormal + 30f,
             "the action/mood areas DO present their layer/domain context (the reason band plus the layer "
             + "rows grow the mood card), got " + moodNormal + " vs " + moodEmpty);
-        Console.WriteLine("[f06-gate] fallbackArea empty-vs-normal height " + fallbackEmpty + "/" + fallbackNormal
-            + " (identical: layer/domain/reason gated out), mood " + moodEmpty + "/" + moodNormal
-            + " (context kept)");
-    }
 
+        // The context is IDENTICAL across the two remaining areas (both draw layer/domain/reason), and
+        // an unknown stale area (2, pre-UIR-004) is clamped by SetTuningArea before the tree sees it -
+        // so a clamped page measures exactly the action-area height, not a hidden third shape.
+        var clamped = new RecordingSettingsSource { RichData = true };
+        VoicePacksPageModel.SetTuningArea(clamped.ViewState, 2);
+        float clampedHeight = ScopeTreeHeight(clamped, metrics);
+        clamped.ViewState.TuningArea = 0;
+        float actionHeight = ScopeTreeHeight(clamped, metrics);
+        Assert(Math.Abs(clampedHeight - actionHeight) < 0.01f,
+            "the clamped retired area measures exactly the action branch - no third shape survives in "
+            + "the tree, got " + clampedHeight + " vs " + actionHeight);
+        Console.WriteLine("[f06-gate] mood empty-vs-normal " + moodEmpty + "/" + moodNormal
+            + ", clampedArea==action " + clampedHeight + "/" + actionHeight);
+    }
     private static void F07MeasuredResetLineGrowsInsteadOfOverdrawing()
     {
         Dictionary<string, string> english = Program.ReadKeyedTable("English");
@@ -742,12 +754,22 @@ internal static class CancelLayerLaneTests
         // the column: pin scroll zero, then transform - and assert the point is genuinely inside the
         // viewport, so "a real press recorded the subject" cannot pass on an off-screen event.
         Rect globalButton = row[0];
+        // UIR-001: the Tuning column grew (the rule bands joined it), so the composite no longer sits at
+        // the column top. Scroll the row into view with a measured request - the session holds what the
+        // engine clamps, and the press point is computed from THAT held scroll, so the in-viewport
+        // assert below still means the real player can reach the button.
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+        host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
+        Assert(host.Session.GetNodeByElementId("content-scroll") != null,
+            "the content scroll node must exist to drive a real pointer event");
+        UiNode? scrollNode = host.Session.GetNodeByElementId("content-scroll");
+        host.Session.SetScrollPosition(scrollNode!, new Vector2(0f, Mathf.Max(0f, globalButton.y - 160f)));
         UiLayoutSnapshot pressSnap = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
         Assert(pressSnap.Viewports.TryGetValue("content-scroll", out Rect scrollViewport),
             "the tuning column must publish its scroll viewport for a real pointer event");
-        Vector2 press = new(globalButton.x + globalButton.width / 2f + scrollViewport.x,
-            globalButton.y + globalButton.height / 2f + scrollViewport.y);
+        Vector2 heldScroll = host.Session.GetScrollPosition(scrollNode!);
+        Vector2 press = new(globalButton.x + globalButton.width / 2f + scrollViewport.x - heldScroll.x,
+            globalButton.y + globalButton.height / 2f + scrollViewport.y - heldScroll.y);
         Assert(press.x > scrollViewport.x && press.x < scrollViewport.xMax
                 && press.y > scrollViewport.y && press.y < scrollViewport.yMax,
             "the layer button must be inside the viewport for the honest real press, got " + press);

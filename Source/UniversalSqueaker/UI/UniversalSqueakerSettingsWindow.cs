@@ -37,7 +37,11 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
 {
-    private static readonly UiTheme WindowTheme = UsTheme.Surface();
+    // UIR-006: the shell chrome draws from the process's shared chrome bag, which the palette write
+    // path repaints live (colour-only). A palette chosen before this window opened is already in it;
+    // a switch while it is open lands on the next pass. The PAGE bag is the host's own and follows
+    // through the source's ApplyToLive invalidation - two bags, one decision, no rebuild.
+    private static readonly UiTheme WindowTheme = UsTheme.ChromeTheme;
 
     private readonly UniversalSqueakerMod mod;
 

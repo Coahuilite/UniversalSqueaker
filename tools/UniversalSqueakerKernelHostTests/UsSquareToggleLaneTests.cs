@@ -7,6 +7,7 @@ using UnityEngine;
 
 using FerriteLib.UiKit.Kernel;
 using UniversalSqueaker.UI;
+using UniversalSqueaker;
 
 namespace UniversalSqueaker.KernelHostTests;
 
@@ -299,7 +300,7 @@ internal static class UsSquareToggleLaneTests
             // waiting to fire; the gate is now part of the fixture state the lane declares.
             var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
             using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
-            host.Bindings.Invoke("set-tab", "Overview");
+            host.Bindings.Invoke("set-tab", "Tuning");
             host.MeasureAndArrange(new Vector2(PageWidth, TallHeight));
             UiLayoutSnapshot snapshot = Arrange(host);
 
@@ -394,11 +395,17 @@ internal static class UsSquareToggleLaneTests
                 // SwitchThumbOff declaration from UsTheme makes theme.SwitchThumbOff fall back to
                 // TextPrimary and reddens BOTH clauses below; greying the thumb must never darken a
                 // label, so the second clause pins the exact reference colour.
+                // UIR-006 (WO-US-UI-REFACTOR-20261014): the exact grey is now a PALETTE fact, not a
+                // product constant - Core declares its own SwitchThumbOff role value. The clauses kept
+                // are the behavior this pin exists for: the OFF thumb answers the DECLARED token (never
+                // the label ink it used to borrow), and the declared token equals the core role table, so
+                // deleting the declaration falls back to TextPrimary and reddens here anyway.
                 Assert(!SameColor(knobs[0].Colour, theme.TextPrimary),
                     bind + ": the OFF thumb must not answer the label ink (SA1.1 declaration)");
-                Assert(SameColor(knobs[0].Colour, new Color(138f / 255f, 133f / 255f, 122f / 255f, 1f)),
-                    bind + ": the OFF thumb must be the SR-reference grey #8a857a, got "
-                    + Hex(knobs[0].Colour));
+                Color declaredThumb = HexToColor(UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[System.Array.IndexOf(UsTheme.ColorTokens as string[], "SwitchThumbOff")]);
+                Assert(SameColor(knobs[0].Colour, declaredThumb),
+                    bind + ": the OFF thumb must be the core palette SwitchThumbOff role (" + Hex(declaredThumb)
+                    + "), got " + Hex(knobs[0].Colour));
             }
 
             // VISIBILITY, the criterion the retired kind's own ruling left behind: the control must be
@@ -477,7 +484,7 @@ internal static class UsSquareToggleLaneTests
             // part of the fixture state this step declares rather than a count the lane narrows to fit.
             using UiHost host = UsKernelSettingsHost.Create(
                 new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true });
-            host.Bindings.Invoke("set-tab", "Overview");
+            host.Bindings.Invoke("set-tab", "Tuning");
             UiLayoutSnapshot snapshot = Arrange(host);
             Rect band = RectOf(snapshot, checkId);
             Assert(Close(band.width, DeclaredBandWidth) && Close(band.height, DeclaredBandHeight),
@@ -563,9 +570,9 @@ internal static class UsSquareToggleLaneTests
         // ONE CLUSTER PER DECLARED SWITCH ROW on the page, and the row under test is the index the caller
         // names. The count is read from the manifest so it is tied to the page rather than to a literal here:
         // a page that stopped drawing one of them reddens instead of letting the lane read the wrong row.
-        int declaredSwitches = CountDeclaredSwitchRows();
+        int declaredSwitches = CountDeclaredSwitchRows(activeTabOf(host));
         Assert(fills.Count == declaredSwitches,
-            "every declared switch row must draw exactly one track (" + declaredSwitches + " rows), got "
+            "every declared switch row on the drawn tab must draw exactly one track (" + declaredSwitches + " rows), got "
             + fills.Count + " tracks: " + Describe(signature));
         (Rect Rect, Color Colour) selected = ordered[rowIndex];
         trackFillRect = selected.Rect;
@@ -608,26 +615,66 @@ internal static class UsSquareToggleLaneTests
     /// The basic-tuning card's rows plus the camera card's single control are the ones this lane's page draws;
     /// both are gated to the Overview tab, so the declaration count and the drawn count are the same set.
     /// </summary>
-    private static int CountDeclaredSwitchRows()
+    /// <summary>The tab this host currently draws (the same value the engine Tab gate uses).</summary>
+    private static string activeTabOf(UiHost host)
+    {
+        host.Bindings.TryGet(UiBindings.ActiveTabKey, out string tab);
+        return tab ?? "Overview";
+    }
+
+    // UIR-001 (WO-US-UI-REFACTOR-20261014): the census is TAB-SCOPED. The switch rows moved with
+    // their cards (basics/timing to Tuning, localize to Advanced), so counting the whole manifest
+    // against a single-tab draw was the stale half. A switch declared inside a Tab-gated Section
+    // belongs to that tab; a switch outside any gated Section would belong to every tab.
+    private static int CountDeclaredSwitchRows(string tab)
     {
         string manifest = ReadShippedManifest();
-        // Counted by the DECLARED APPEARANCE on an ELEMENT, not by the bare attribute text: the manifest's own
-        // migration note quotes the attribute while explaining it, and a textual match counted that note as a
-        // tenth control - a count that disagreed with every drawn frame for a reason that had nothing to do
-        // with the page.
-        //
-        // V2 P2 RE-CUT of the measurement channel: the checklist's per-row enable control is ALSO a declared
-        // switch now (36x30, Appearance="switch"), but it lives on the Packs tab and this lane draws Overview,
-        // so it is excluded by id. Counting it here would make the drawn-track count and the declared count
-        // disagree for a reason that is not the page.
+        // Parse the shipped manifest and WALK it: every Tab-gated Section contributes its subtree
+        // only when it names the tab this lane draws. The checklist row switch stays excluded by id
+        // (V2 P2: it is a Repeat template row, materialized per pack, not a static page control).
+        UiLayoutManifest parsed = UiLayoutManifest.Parse(manifest);
         int count = 0;
-        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(
-                     manifest, "<Widget[^>]*Appearance=\"switch\"[^>]*>"))
+        foreach (UiElementSpec root in parsed.Roots)
         {
-            if (match.Value.IndexOf("pack-card-row-check", StringComparison.Ordinal) < 0) count++;
+            count += CountSwitchesInTree(root, gated: false, tab);
         }
 
         return count;
+    }
+
+    private static int CountSwitchesInTree(UiElementSpec node, bool gated, string tab)
+    {
+        if (node.Kind == "Section" && node.TryGetAttribute("Tab", out string sectionTab)
+            && !string.Equals(sectionTab, tab, StringComparison.Ordinal))
+        {
+            return 0;   // a gated Section paints only on its own workspace; its subtree follows
+        }
+
+        bool underGate = gated || node.Kind == "Section";
+        int count = 0;
+        if (node.Kind == "input/checkbox" && node.TryGetAttribute("Appearance", out string appearance)
+            && appearance == "switch"
+            && !string.Equals(node.Id, "pack-card-row-check", StringComparison.Ordinal))
+        {
+            if (!underGate)
+            {
+                throw new InvalidOperationException("ungated switch " + node.Id + " belongs to every tab; the census has no answer for it");
+            }
+
+            count++;
+        }
+
+        foreach (UiElementSpec child in node.Children) count += CountSwitchesInTree(child, underGate, tab);
+        return count;
+    }
+
+    private static Color HexToColor(string hex)
+    {
+        string s = hex.Trim().StartsWith("#", StringComparison.Ordinal) ? hex.Trim().Substring(1) : hex.Trim();
+        return new Color(
+            Convert.ToByte(s.Substring(0, 2), 16) / 255f,
+            Convert.ToByte(s.Substring(2, 2), 16) / 255f,
+            Convert.ToByte(s.Substring(4, 2), 16) / 255f, 1f);
     }
 
     private static bool Close(float a, float b)

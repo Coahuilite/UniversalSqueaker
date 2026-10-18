@@ -163,12 +163,12 @@ internal static class MoodLayoutFocusedTests
         UiHost host = UsKernelSettingsHost.Create(source);
         try
         {
-            host.Bindings.Invoke("set-tab", "Overview");
+            host.Bindings.Invoke("set-tab", "Tuning"); // UIR-001: the basic-tuning card is a rules-band control now
             host.MeasureAndArrange(new Vector2(Width, Height));
             Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(Width, Height));
             Assert(snapshot.RectById.TryGetValue("basic-tuning", out Rect card),
-                "the Overview workspace must hold the basic-tuning card");
+                "the Tuning workspace must hold the basic-tuning card");
 
             var raw = new CapturedRects();
             try
@@ -990,23 +990,29 @@ internal static class MoodLayoutFocusedTests
     private static void AssertMoodGeometry(CaptureContext ctx, float viewportWidth)
     {
         string at = " at " + viewportWidth + "px";
+        // UIR-001: the page-level census counts the WHOLE Tuning draw, and the timing card now shares
+        // that workspace - its one interval slider and two number fields are page extras. The card-local
+        // assertions below (ctx.Mood.*) keep checking the mood tree alone, which is what the step proves.
+        const int TimingSliders = 1, TimingNumberFields = 2;
         int sliders = MoodCount * ParameterCount;    // four moods x three parameters = 12
         int small = MoodCount * ParameterCount * 2;  // minus + plus per parameter = 24
         Assert(ctx.CardPageRect.width > 100f && ctx.CardPageRect.width <= viewportWidth,
             "scope-tree card must be a real, non-collapsed card" + at + " (got width " + ctx.CardPageRect.width + ")");
 
-        Assert(ctx.CapturedSliderCount == sliders, "captured slider count must be " + sliders + " in Tuning" + at + " (got " + ctx.CapturedSliderCount + ")");
-        Assert(ctx.CapturedTextFieldCount == sliders, "captured number-field count must be " + sliders + " in Tuning" + at + " (got " + ctx.CapturedTextFieldCount + ")");
+        Assert(ctx.CapturedSliderCount == sliders + TimingSliders, "captured slider count must be " + sliders + " mood + " + TimingSliders + " timing in Tuning" + at + " (got " + ctx.CapturedSliderCount + ")");
+        Assert(ctx.CapturedTextFieldCount == sliders + TimingNumberFields, "captured number-field count must be " + sliders + " mood + " + TimingNumberFields + " timing in Tuning" + at + " (got " + ctx.CapturedTextFieldCount + ")");
         Assert(ctx.Mood.Sliders.Count == sliders, "each of the " + MoodCount + " rich mood rows must have " + ParameterCount + " sliders (got " + ctx.Mood.Sliders.Count + " total)");
         Assert(ctx.Mood.Fields.Count == sliders, "each of the " + MoodCount + " rich mood rows must have " + ParameterCount + " number fields (got " + ctx.Mood.Fields.Count + " total)");
         Assert(ctx.Mood.SmallButtons.Count == small, "each rich mood row must have 6 minus/plus buttons (got " + ctx.Mood.SmallButtons.Count + " total)");
         Assert(ctx.Mood.AutoButtons.Count == MoodCount, "each rich mood row must have 1 \"reset to default\" control (got " + ctx.Mood.AutoButtons.Count + " total)");
         Assert(ctx.Mood.PresetButtons.Count == MoodCount, "each rich mood row must have 1 \"reset to preset\" control (got " + ctx.Mood.PresetButtons.Count + " total)");
 
-        Assert(ctx.CapturedSliderCount == ctx.Mood.Sliders.Count,
-            "all captured sliders must be inside the scope-tree card (no slider outside the card)" + at);
-        Assert(ctx.CapturedTextFieldCount == ctx.Mood.Fields.Count,
-            "all captured number fields must be inside the scope-tree card (no field outside the card)" + at);
+        // UIR-001: the timing card shares the workspace now, so the page census legitimately carries its
+        // controls too - exactly the page extras asserted above, no more, no fewer.
+        Assert(ctx.CapturedSliderCount == ctx.Mood.Sliders.Count + TimingSliders,
+            "captured sliders must be the mood card's plus the timing extras (no third source)" + at);
+        Assert(ctx.CapturedTextFieldCount == ctx.Mood.Fields.Count + TimingNumberFields,
+            "captured number fields must be the mood card's plus the timing extras" + at);
 
         // Per card, not just as a total: three complete parameter blocks and both reset controls on each
         // of the four product moods.
@@ -1722,9 +1728,22 @@ internal static class MoodLayoutFocusedTests
                         IReadOnlyList<ActionScopeRowView> scopeRows =
                             host.Bindings.Get<IReadOnlyList<ActionScopeRowView>>("action-scopes");
                         string firstScopeKey = DrawnScopeOrder(scopeRows)[0];
-                        Vector2 noScroll = Vector2.zero;
-                        Rect triggerPage = ToPageLocal(triggers[1], viewport, noScroll);
-                        Rect coveredPage = ToPageLocal(triggers[2], viewport, noScroll);
+                        // UIR-001: the page grew (intro + board share the layout math), so the two scope
+                        // triggers now sit BELOW the 244px content viewport at scroll 0. The popup probe
+                        // therefore scrolls its own trigger pair into view first (the page can; this is
+                        // what the player does), and converts page rects with THAT scroll - the popup
+                        // containment and click-through claims are unchanged, only honest about offset.
+                        UiNode? scrollNode = host.Session.GetNodeByElementId("content-scroll");
+                        Assert(scrollNode != null, "the content scroll node must exist to drive the popup probe");
+                        Vector2 reveal = new(0f, Mathf.Max(0f, triggers[2].y + 24f + 72f
+                            - (viewport.height - viewport.y) - viewport.y));
+                        host.Session.SetScrollPosition(scrollNode!, reveal);
+                        host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        UiLayoutSnapshot popupFrame = host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
+                        viewport = popupFrame.Viewports["content-scroll"];
+                        Program.SetScrollPositionById(host.Session, "content-scroll", reveal);
+                        Rect triggerPage = ToPageLocal(triggers[1], viewport, reveal);
+                        Rect coveredPage = ToPageLocal(triggers[2], viewport, reveal);
                         host.Session.OpenPopup("scope-tree-scope-" + firstScopeKey, triggerPage);
                         host.MeasureAndArrange(new Vector2(box, V3PageBoxHeight));
                         host.DrawChecked(new Rect(0f, 0f, box, V3PageBoxHeight));

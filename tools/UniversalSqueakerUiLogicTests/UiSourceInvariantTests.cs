@@ -460,8 +460,12 @@ internal static class UiSourceInvariantTests
         // remembering: while gate 6 fails (an expected red), verify-local stops there and EVERY gate
         // after it is unrun - which is how the literals below stayed at 13 through S4-3a. When a gate
         // is expected red, run it AND run what follows it separately.
-        Assert(registeredKinds.Count == 13,
-            "the registered us/* kind set must have 13 members (12 settings + 1 overlay), got "
+        // UIR-002/004 (WO-US-UI-REFACTOR-20261014): 13 -> 15. The two new SETTINGS kinds are the
+        // all-loaded-race board (us/race-board) and the final-fallback editor migrated out of the
+        // tuning composite (us/fallback-editor); each is used by exactly one manifest element, so the
+        // parity assertion above keeps the new number honest in both directions.
+        Assert(registeredKinds.Count == 15,
+            "the registered us/* kind set must have 15 members (14 settings + 1 overlay), got "
             + registeredKinds.Count);
     }
 

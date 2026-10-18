@@ -164,8 +164,12 @@ internal static class UsSelectionSurfaceLaneTests
             // channel (PaintedFill) is asserted in PaletteLaneTests, which owns the contrast criteria.
             Color accent = UsSelectionSurfaceWidget.PaintedRail(theme);
             Color activeFill = UsSelectionSurfaceWidget.SelectedFill(theme);
-            Assert(Math.Abs(activeFill.a - 0.57f) <= 0.002f,
-                "the written fill parameter must carry alpha 0.57 (the tinted accent), got a=" + activeFill.a);
+            // OVT-004 (PM selection-surface rule): the fill is the DECLARED Selected role now -
+            // opaque, the same token the row plane paints. The retired 0.57-accent-alpha contract
+            // is gone; the written channel must equal theme.Selected exactly, alpha included.
+            Assert(Math.Abs(activeFill.a - 1f) <= 0.002f
+                    && SameColor(activeFill, theme.Selected),
+                "the written fill parameter must BE the declared Selected surface (opaque), got " + activeFill);
             Assert(Math.Abs(accent.a - 1f) <= 0.002f,
                 "the written rail parameter must be OPAQUE, got a=" + accent.a);
 
@@ -300,8 +304,12 @@ internal static class UsSelectionSurfaceLaneTests
             // channel (PaintedFill) is asserted in PaletteLaneTests, which owns the contrast criteria.
             Color accent = UsSelectionSurfaceWidget.PaintedRail(theme);
             Color activeFill = UsSelectionSurfaceWidget.SelectedFill(theme);
-            Assert(Math.Abs(activeFill.a - 0.57f) <= 0.002f,
-                "the written fill parameter must carry alpha 0.57 (the tinted accent), got a=" + activeFill.a);
+            // OVT-004 (PM selection-surface rule): the fill is the DECLARED Selected role now -
+            // opaque, the same token the row plane paints. The retired 0.57-accent-alpha contract
+            // is gone; the written channel must equal theme.Selected exactly, alpha included.
+            Assert(Math.Abs(activeFill.a - 1f) <= 0.002f
+                    && SameColor(activeFill, theme.Selected),
+                "the written fill parameter must BE the declared Selected surface (opaque), got " + activeFill);
             Assert(Math.Abs(accent.a - 1f) <= 0.002f,
                 "the written rail parameter must be OPAQUE, got a=" + accent.a);
 

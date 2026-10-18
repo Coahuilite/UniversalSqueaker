@@ -211,7 +211,7 @@ internal static class ResetUiLaneTests
         FreshStack();
         UiHost host;
         RecordingSettingsSource fake = RichHost(out host, out _);
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Advanced"); // UIR-005: the restore centre is an ADVANCED-workspace card
         // Press the GLOBAL entry's button - the us/reset-entry composite, through the carrier's own
         // hit seam. The card sits at the bottom of the settings home, so it is brought into the
         // viewport first: a below-fold Button call is clip-refused (the XG1 rule). The press may
@@ -269,7 +269,7 @@ internal static class ResetUiLaneTests
         FreshStack();
         UiHost host;
         RecordingSettingsSource fake = RichHost(out host, out _);
-        host.Bindings.Invoke("set-tab", "Distance");
+        host.Bindings.Invoke("set-tab", "Overview"); // UIR-001: the distance band is the Overview secondary area now
         ArrangeIntoView(host, "attenuation-reset-defaults");
 
         // The simple restore executes on the press - no window at all (§4.3: 距离等简单恢复直接执行).
@@ -480,7 +480,8 @@ internal static class ResetUiLaneTests
         UiHost host;
         RecordingSettingsSource fake = RichHost(out host, out _);
         fake.AttachHost(host);
-        host.Bindings.Invoke("set-tab", "Overview");
+        // UIR-001: the timing band is a rules card on the Tuning workspace now.
+        host.Bindings.Invoke("set-tab", "Tuning");
         UiLayoutSnapshot snap = ArrangeIntoView(host, "timing-restore");
         // Spaces: the pointer events aim at the PAGE position (RectById at scroll 0, shifted by the
         // scroll), the seam predicates compare against the CONTENT-LOCAL rect the atom draws with.
@@ -593,7 +594,7 @@ internal static class ResetUiLaneTests
         Verse.UI.screenHeight = 768; // the named human-pass box
         UiHost host;
         RecordingSettingsSource fake = RichHost(out host, out _);
-        host.Bindings.Invoke("set-tab", "Overview");
+        host.Bindings.Invoke("set-tab", "Advanced"); // UIR-005
         ArrangeIntoView(host, "restore-center-button");
         try
         {

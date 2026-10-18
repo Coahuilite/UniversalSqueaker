@@ -37,6 +37,37 @@ expands the product scope.
   `OBLIVIONIS.md` and the durable facts in `MEMORY.md`. The FL-owned broader backlog (task-11, FL-17,
   FL-18/B6, FL-13/B10) stays excluded.
 - **Deferred:** composite splitting, scroll-distance polish and unrelated backlog below.
+- **Kernel lane (2026-10-13).** The three-tier Remix empty-layer fix is in `SelectRemixThree` (uncommitted); the
+  test entry is `RemixEmptyTierRegression`, mounted in `UnitTests.RunAll`. Next stays UI/UX design and copy.
+- **UI-refactor lane (2026-10-14, WO-US-UI-REFACTOR-20261014 r1, uncommitted).** Five workspaces
+  Overview/Packs/Tuning/Presets/Advanced (Distance retired into the Overview secondary band; diagnostics,
+  the global restore and the theme picker are Advanced); all-loaded-race overview board with atomic
+  navigation and single-pack quick enable (mode never moves); the final-fallback editor migrated to Packs
+  with its own cancel layer; six official swatches with Core default (region colour scopes retired - the
+  palette's own role table carries the surfaces; live switch is colour-only). CORRECTIONS-R1 followed the CO
+  review: plain-facts board projection with separate axes + zero-game matrix tests, materialized-row scroll
+  identity, persisted `uiIntroCollapsed`, policy-box teaching/shortcut real presses, six-table value pins
+  with the eight FHI references as data. CORRECTIONS-R3 (final): About five-page copy, truthful collapse-help text,
+  Reset pollution for `uiIntroCollapsed`, the real-source `set-ui-swatch` action chain (which caught the
+  composed note-key bug), full key-set/hit-count/edit-survival protections. Verify-run-r3 16/16 gates green
+  on the paired FL Dev carrier (`5b331379…`; final US Dev dll `ccb3af4b…`, 9 files byte-identical in repo
+  `dist/dev` AND PM area `TASK-USUI-01/A001/dev-payload`; FL pairing = existing same-hash package
+  `ferritelib/dist/checkpoints/interaction-20261009-r1/FerriteLib`, read-only; CO owns the final paired staging). No real-game pass has run (no 1.6 E2E environment): AWAITING_HUMAN for
+  the board / five-page navigation / theme switch / fallback-on-Packs screens; PM acceptance pending. Details: `MEMORY.md` UI-refactor bullet.
+- **Overview-directory + three-theme lane (2026-10-15, WO-US-OVERVIEW-THEMES-20261015 r1,
+  TASK-USOVT-01/A001, uncommitted).** Browse definition directory (collector + published snapshot,
+  corpses excluded by real facts, HAR via type chain, full xenotype directory; sound admission
+  untouched); board groups/chips/search/counts with the mech-HAR leading its tier; explicit-arrival
+  identity honoured with the four honest xeno states; Ideology/Anomaly/Odyssey replaced by the PM
+  candidate tables (Core/Royalty/Biotech pinned unchanged) and the declared Selected surface on
+  every selection paint. Isolated DefinitionDirectoryTests (rawDef fixtures + real source/Host) ALL
+  PASS; the FINAL serial round (uilogic/reset/migration/defdir/host/verify/pack all exit 0, logs
+  *-final-r1.log; verify-final 16/16 gates) closed on final US Dev dll `2273634f…` (9 files
+  byte-identical in repo `dist/dev` AND PM area `TASK-USOVT-01/A001/dev-payload`; identity revision
+  FINAL-IDENTITIES-r1.json; the mid-round PAYLOAD-MANIFEST-r1.json `cc11fb74…` stays as the
+  superseded observation it is; CO/PM independently smoke-ran the final DefDir+Host exes, exit 0);
+  FL pairing CO-side, frozen checkpoint read-only. AWAITING_HUMAN: the real-game directory (user's mod list), corpse-free
+  screen, xenotype navigation and the three trial palettes on screen. Details: `MEMORY.md` OVT bullet.
 - Untriggered runtime cases stay untested. A Release carrier refusal control is not the current Dev
   rehearsal. Each lane states which named assertions have executed faithful proof and which are guards.
 
@@ -161,6 +192,9 @@ expands the product scope.
 
 ## Landed — pointer lines (detail in git log / `MEMORY.md` / `OBLIVIONIS.md`)
 
+- **2026-10-13 — Remix empty-layer kernel fix**: `SelectRemixThree` folds the tier index over the non-empty layers
+  the way `SelectRemixFour` always did; guarded by `RemixEmptyTierRegression` in the kernel harness. Durable rule
+  and corpus coverage boundary in `MEMORY.md`.
 - **2026-10-09 — interaction round (US-UI1/US-ESC1/US-PACK1/US-RESET1) closed to candidate**: the four
   requirements and Demo-IC1 accepted, paired Dev candidate `interaction-20261009-r1` staged from `562fc47`
   and accepted; receipts under `../modding_documents/relay_mod/evidence/interaction-development-20261008/

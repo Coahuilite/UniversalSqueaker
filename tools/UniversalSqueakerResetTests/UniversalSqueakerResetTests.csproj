@@ -28,6 +28,8 @@
     <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Settings\*.cs" Link="Settings\%(Filename)%(Extension)" />
+    <!-- UIR-006: the settings slice validates the persisted swatch id against the pure set. -->
+    <Compile Include="..\..\Source\UniversalSqueaker\Themes\UsSwatchIds.cs" Link="Themes\UsSwatchIds.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerTuningBaselineDef.cs" Link="Runtime\UniversalSqueakerTuningBaselineDef.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerFallbackProfileDef.cs" Link="Runtime\UniversalSqueakerFallbackProfileDef.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Fallback\SqueakFallbackProfileStore.cs" Link="Fallback\SqueakFallbackProfileStore.cs" />

@@ -21,6 +21,7 @@ public static class UnitTests
         SelectOff(ref failures);
         SelectFallbackChain(ref failures);
         SelectRemix(ref failures);
+        RemixEmptyTierRegression.RunAll(ref failures);
         DistributionBounds(ref failures);
         Determinism(ref failures);
         FallbackCopyLifecycle(ref failures);

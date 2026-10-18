@@ -108,6 +108,11 @@ public class UniversalSqueakerMod : Mod
             // ExecuteWhenFinished is the first Unity-main-thread operation in this startup path.
             // Bind before catalog/settings code can call any resolver mutator.
             SqueakRuntimeResolver.InitializeMainThread();
+            // OVT-001 (WO-US-OVERVIEW-THEMES-20261015): the BROWSE definition directory is collected
+            // and published ONCE here - the definition-ready main-thread entry - never at window
+            // creation or first GUI pass. It is independent of the sound catalog below: it answers
+            // "what did the game load" and feeds NO admission, NO comp mount, NO routing authority.
+            RaceDefinitionCatalog.CollectAndPublish();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
             // VF1 order: the final-table store loads BEFORE the mount decision, because the support

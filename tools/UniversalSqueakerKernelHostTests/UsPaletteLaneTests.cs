@@ -46,7 +46,9 @@ namespace UniversalSqueaker.KernelHostTests;
 /// </summary>
 internal static class UsPaletteLaneTests
 {
-    private const string FlatScheme = "us-flat-panel";
+    // UIR-006: the region colour scopes this lane used to reach through (us-flat-panel) are retired;
+    // the scoped-clone mechanics below now run on the unscoped region theme (the baseline clone the
+    // resolver builds for every element of the flat page).
 
     /// <summary>
     /// The colour-only palette this lane switches to. Every slot it declares is a DIFFERENT colour from the
@@ -122,14 +124,18 @@ internal static class UsPaletteLaneTests
         Assert(!UsTheme.SchemeXml.Contains("Token='SelectedBorder'"),
             "and the document must not declare it either, or the accent fallback is gone");
 
-        // The identity accent, pinned twice: the constant the document is authored with, and the colour the
-        // resolver actually produced from it.
-        Assert(UsTheme.AccentGoldHex == "#d19a38",
-            "the identity accent constant must stay the series gold #d19a38, got '" + UsTheme.AccentGoldHex + "'");
+        // The identity accent, pinned twice: the constant and the colour the resolver produced. UIR-006
+        // (WO-US-UI-REFACTOR-20261014) moved the value: the shipped default is now the official Core
+        // palette, whose accent is the Bronze/Lark-family #B49C73 taken from the PM role table - the
+        // pin therefore checks BOTH readings against the table itself, not against a remembered literal.
+        string coreAccentHex = UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[
+            System.Array.IndexOf(UsTheme.ColorTokens as string[], "AccentGold")];
+        Assert(UsTheme.AccentGoldHex == coreAccentHex,
+            "the identity accent constant must equal the core role table's AccentGold '" + coreAccentHex
+            + "', got '" + UsTheme.AccentGoldHex + "'");
         UiTheme us = UsTheme.Surface();
-        Assert(SameColor(us.AccentGold, Rgb(0xd1, 0x9a, 0x38)),
-            "the identity accent must resolve to #d19a38 - the value the retired carrier template carried, so"
-            + " the accent did not move with the ownership (RULING 2026-09-24)");
+        Assert(SameColor(us.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
+            "and the accent must resolve to the Core Bronze #B49C73 (got " + Hex(us.AccentGold) + ")");
 
         // NO VANILLA VALUE SURVIVES on a US surface, checked against UiTheme.Vanilla rather than against a list
         // of literals: the property is "nothing is inherited", not "these hexes are right".
@@ -311,17 +317,21 @@ internal static class UsPaletteLaneTests
         int colourBefore = live.ColourRevision;
 
         UiStyleResolver resolver = host.StyleResolver;
-        UiTheme flat = resolver.ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        UiTheme flat = resolver.ThemeFor(null);
         Assert(!ReferenceEquals(flat, live),
             "a scoped region must get a CLONE, never the injected bag itself - two regions painting each other"
             + " is the defect the clone exists to prevent");
-        Assert(SameColor(flat.RaisedSurface.Border, flat.Raised),
-            "the flat scope's own declaration (RaisedBorder == Raised) must reach the clone: fill "
-            + Hex(flat.Raised) + " vs edge " + Hex(flat.RaisedSurface.Border));
+        // UIR-006: with no region scheme left, the page theme's OWN role pair answers the clone - the
+        // control that matters is "the clone carries the palette, edge and fill both".
+        Assert(SameColor(flat.RaisedSurface.Border, flat.RaisedBorder ?? flat.Border),
+            "the clone's raised edge must answer the palette's RaisedBorder role, got "
+            + Hex(flat.RaisedSurface.Border));
         Color scopeRaised = flat.Raised;
         Assert(SameColor(flat.Panel, live.Panel),
             "control: the clone inherits the page's panel fill, so the panel is the token this step re-tints ("
             + Hex(flat.Panel) + " vs page " + Hex(live.Panel) + ")");
+        Assert(!SameColor(scopeRaised, live.AccentGold),
+            "the tinting token must differ from the accent so the override check below cannot pass by coincidence");
 
         // The re-tint, on the bag the host was injected with.
         Color tint = Rgb(0x12, 0x34, 0x56);
@@ -330,18 +340,18 @@ internal static class UsPaletteLaneTests
         Assert(live.LayoutRevision == layoutBefore,
             "and must not move the layout clock (" + layoutBefore + " -> " + live.LayoutRevision + ")");
 
-        UiTheme rebuilt = resolver.ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        UiTheme rebuilt = resolver.ThemeFor(null);
         Assert(!ReferenceEquals(rebuilt, flat),
             "the cached region clone must be DROPPED once the colour clock has moved - that is the stale-colour"
             + " fix, and the old instance is exactly what used to keep painting the old palette");
         Assert(SameColor(rebuilt.Panel, tint),
             "and the rebuilt clone must carry the new page palette (panel " + Hex(rebuilt.Panel) + " vs tint "
             + Hex(tint) + ")");
-        Assert(SameColor(rebuilt.Raised, scopeRaised),
-            "while the scope's OWN declaration still wins for the token it overrides (raised "
-            + Hex(rebuilt.Raised) + " vs " + Hex(scopeRaised) + ")");
+        Assert(SameColor(rebuilt.Raised, live.Raised),
+            "and with no region scheme left, every token of the rebuilt clone follows the page palette ("
+            + Hex(rebuilt.Raised) + " vs " + Hex(live.Raised) + ")");
 
-        UiTheme flatAgain = resolver.ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        UiTheme flatAgain = resolver.ThemeFor(null);
         Assert(ReferenceEquals(flatAgain, rebuilt),
             "and the rebuilt clone is cached again: a region must cost one theme, not one per frame");
         Assert(live.LayoutRevision == layoutBefore,
@@ -446,7 +456,7 @@ internal static class UsPaletteLaneTests
         UiStyleResolver resolver = host.StyleResolver;
         int layoutBefore = live.LayoutRevision;
         int contentBefore = host.Session.ContentRevision;
-        UiTheme flatBefore = resolver.ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        UiTheme flatBefore = resolver.ThemeFor(null);
         Color scopeRaised = flatBefore.Raised;
         Color oldPanel = live.Panel;
 
@@ -463,13 +473,13 @@ internal static class UsPaletteLaneTests
         Assert(!SameColor(tint, oldPanel),
             "control: the re-tint must actually change the panel (" + Hex(oldPanel) + " -> " + Hex(tint) + ")");
 
-        UiTheme flatAfter = resolver.ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
+        UiTheme flatAfter = resolver.ThemeFor(null);
         Assert(SameColor(flatAfter.Panel, tint),
             "the scoped region must be rebuilt on the new palette, not painted from the old one (panel "
             + Hex(flatAfter.Panel) + " vs tint " + Hex(tint) + ")");
-        Assert(SameColor(flatAfter.Raised, scopeRaised),
-            "while the scope's own declaration still wins for the token it overrides (raised "
-            + Hex(flatAfter.Raised) + " vs " + Hex(scopeRaised) + ")");
+        Assert(SameColor(flatAfter.Raised, live.Raised),
+            "and every unoverridden token keeps following the page (raised "
+            + Hex(flatAfter.Raised) + " vs " + Hex(live.Raised) + ")");
 
         UiLayoutSnapshot after = Arrange(host);
         Assert(host.Session.ContentRevision == contentBefore,
@@ -519,7 +529,8 @@ internal static class UsPaletteLaneTests
     private static void APaletteChangeLeavesSessionStateAlone()
     {
         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true });
-        host.Bindings.Invoke("set-tab", "Overview");
+        // UIR-001: this step reads a basic-tuning row, which now lives on the Tuning workspace.
+        host.Bindings.Invoke("set-tab", "Tuning");
         Arrange(host);
 
         UiTheme live = host.StyleResolver.Baseline;

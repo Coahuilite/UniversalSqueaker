@@ -12,7 +12,8 @@ namespace UniversalSqueaker.KernelTests;
 /// 1) 单测：语义规范逐条断言（UnitTests）。
 /// 2) 正常运行：设置全项矩阵（场景 × mode × 域 × 17 action × 彩蛋开关 × 多种子 × gate 面）生成确定性
 ///    输入→期望 ChainResult 字节，并在写入前与提交的 US 0.1.0 冻结基线比较。
-///    只有显式 <c>--update-corpus</c> 维护模式可以重建该基线。
+///    重建该基线只有显式 <c>--update-corpus</c> 维护模式；<c>--emit-corpus &lt;path&gt;</c> 写调用方显式给定的那个路径，
+///    不隐式选择默认基线，两写法互斥（把默认基线路径显式交给 emit 时，该路径同样会被写入）。
 /// 3) 确定性重放：生成两遍必须字节相同。
 /// 基线是 US 自己的语料（S1-S7 构造场景），不依赖任何历史内容快照。
 /// </summary>
@@ -20,19 +21,36 @@ internal static class Program
 {
     private const string CorpusFileName = "us-corpus-0.1.0.txt";
     private const string UpdateCorpusArgument = "--update-corpus";
+    private const string EmitCorpusArgument = "--emit-corpus";
     private static readonly long[] Seeds = { 1, 2, 3 };
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
 
     private static int Main(string[] args)
     {
-        if (args.Length > 1 || (args.Length == 1 && !string.Equals(args[0], UpdateCorpusArgument, StringComparison.Ordinal)))
+        bool updateCorpus = false;
+        string? emitCorpusPath = null;
+        if (args.Length == 0)
         {
-            Console.Error.WriteLine("Usage: UniversalSqueakerKernelTests [--update-corpus]");
+            // 默认：只比较，不写任何语料（包括不写仓库内的默认基线）。
+        }
+        else if (args.Length == 1 && string.Equals(args[0], UpdateCorpusArgument, StringComparison.Ordinal))
+        {
+            updateCorpus = true;
+        }
+        else if (args.Length == 2 && string.Equals(args[0], EmitCorpusArgument, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(args[1]))
+        {
+            // 取证出口：只写调用方显式给定的那个路径（对路径本身无额外限制）；本分支不隐式选择默认基线，且与 --update-corpus 互斥。
+            emitCorpusPath = args[1];
+        }
+        else
+        {
+            Console.Error.WriteLine("Usage: UniversalSqueakerKernelTests [--update-corpus | --emit-corpus <path>]");
             return 2;
         }
         try
         {
-            return Run(args.Length == 1);
+            return Run(updateCorpus, emitCorpusPath);
         }
         catch (Exception ex)
         {
@@ -41,7 +59,7 @@ internal static class Program
         }
     }
 
-    private static int Run(bool updateCorpus)
+    private static int Run(bool updateCorpus, string? emitCorpusPath = null)
     {
         int failures = 0;
         Console.WriteLine("Unit tests...");
@@ -62,6 +80,17 @@ internal static class Program
             return 1;
         }
         byte[] generated = Utf8WithoutBom.GetBytes(corpus);
+
+        if (emitCorpusPath != null)
+        {
+            // 只写调用方显式指定的那个路径；本分支不隐式选择默认基线（fixtures/corpus），改写默认基线的入口是 --update-corpus。
+            string fullPath = Path.GetFullPath(emitCorpusPath);
+            string? parentDir = Path.GetDirectoryName(fullPath);
+            if (parentDir != null) Directory.CreateDirectory(parentDir);
+            File.WriteAllBytes(fullPath, generated);
+            Console.WriteLine("  ok: candidate corpus emitted to explicit path: " + fullPath
+                + " (" + CountLines(corpus) + " cases, " + generated.Length + " bytes)");
+        }
 
         Console.WriteLine(updateCorpus ? "Golden corpus update..." : "Golden corpus replay...");
         if (updateCorpus)

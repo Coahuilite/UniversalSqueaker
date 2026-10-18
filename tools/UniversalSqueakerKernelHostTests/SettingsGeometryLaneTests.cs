@@ -508,13 +508,13 @@ internal static class SettingsGeometryLaneTests
             List<Rect> offSlots;
             using (UiHost host = UsKernelSettingsHost.Create(offSource, metrics))
             {
-                host.Bindings.Invoke("set-tab", "Overview");
+                // UIR-001: Record sweeps the workspaces; the tuning tab is included there.
                 Rec rec = Record(host, 1024f, Height);
                 (offCard, offSlots) = BasicTuningSlotGeometry(rec);
                 Assert(offSlots.Count == 6,
                     "with the parent OFF the card draws six support checkboxes (egg + baby + three scalings + the"
                     + " parent) - the child row does not exist at all, got " + offSlots.Count);
-                Assert(!rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                Assert(!rec.TabSnapshots["Tuning"].RectById.ContainsKey("basic-eat-child-row"),
                     "and the child ROW must leave the arrangement entirely, not merely paint nothing:"
                     + " VisibleKey is the engine's gate, and an arranged-but-invisible row would still"
                     + " measure and still take the pointer");
@@ -527,14 +527,13 @@ internal static class SettingsGeometryLaneTests
             List<Rect> onSlots;
             using (UiHost host = UsKernelSettingsHost.Create(onSource, metrics))
             {
-                host.Bindings.Invoke("set-tab", "Overview");
                 Rec rec = Record(host, 1024f, Height);
                 (onCard, onSlots) = BasicTuningSlotGeometry(rec);
 
                 Assert(onSlots.Count == offSlots.Count + 1,
                     "turning the parent on adds exactly one checkbox band (the child), got "
                     + offSlots.Count + " -> " + onSlots.Count);
-                Assert(rec.Snapshot.RectById.ContainsKey("basic-eat-child-row"),
+                Assert(rec.TabSnapshots["Tuning"].RectById.ContainsKey("basic-eat-child-row"),
                     "and the child ROW is arranged once its parent bool answers true");
                 Assert(onCard > offCard + 20f,
                     "and the card grows by the child row, got off=" + Num(offCard) + " on=" + Num(onCard));
@@ -549,6 +548,12 @@ internal static class SettingsGeometryLaneTests
                         + Describe(before) + " -> " + Describe(after));
                 }
 
+                // UIR-001: Record leaves the host on the default workspace; the child row lives on the
+                // Tuning tab, so the press switches there and re-arranges before aiming.
+                host.Bindings.Invoke("set-tab", "Tuning");
+                host.MeasureAndArrange(new Vector2(1024f, Height));
+                Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                host.MeasureAndArrange(new Vector2(1024f, Height));
                 PressRect(host, 1024f, onSlots[onSlots.Count - 1]);
                 Assert(onSource.LastEatPrecisionIncludeDrugs == true,
                     "with the parent on the same press must route exactly one child write, got "
@@ -584,8 +589,9 @@ internal static class SettingsGeometryLaneTests
     /// </summary>
     private static (float CardHeight, List<Rect> Slots) BasicTuningSlotGeometry(Rec rec)
     {
-        Assert(rec.Snapshot.RectById.TryGetValue("basic-tuning", out Rect pageRect),
-            "the Overview workspace must arrange the basic-tuning card");
+        // UIR-001: basic-tuning is gated by the Tuning workspace now - read the swept pass that has it.
+        Assert(SnapshotForSection(rec, "basic-tuning").RectById.TryGetValue("basic-tuning", out Rect pageRect),
+            "the Tuning workspace must arrange the basic-tuning card");
         Rect card = ToContentLocal(pageRect, rec.ContentViewport);
         List<Rect> slots = rec.Buttons
             .Where(r => Inside(r, card)
@@ -673,6 +679,8 @@ internal static class SettingsGeometryLaneTests
     private sealed class Rec
     {
         public UiLayoutSnapshot Snapshot = null!;
+        /// <summary>UIR-001: one arranged snapshot per swept workspace.</summary>
+        public readonly Dictionary<string, UiLayoutSnapshot> TabSnapshots = new(StringComparer.Ordinal);
         public Rect ContentViewport;
         public readonly List<Rect> Buttons = new();
         public readonly List<Rect> NavButtons = new();
@@ -703,11 +711,27 @@ internal static class SettingsGeometryLaneTests
     /// Arranges twice (the first arrange creates the element nodes the scroll write needs, the second is
     /// the measured snapshot) and then draws one pass with every native control recorded.
     /// </summary>
+    /// <summary>
+    /// UIR-001 (WO-US-UI-REFACTOR-20261014): the support cards live on three workspaces now, and the
+    /// Tab gate hides a non-active workspace's sections from arrange AND draw. One Record therefore
+    /// sweeps every gating tab: it flips the tab, re-pins the scroll to the top, records that tab's
+    /// draw into ONE shared recorder set, and keeps each tab's snapshot. RectById questions route
+    /// through SnapshotForSection, which returns the snapshot that actually gates the section.
+    /// </summary>
+    private static readonly (string Tab, string[] Sections)[] TabSweeps =
+    {
+        ("Overview", new[] { "global-volume", "camera-indicator", "attenuation-editor", "mode-row", "race-board", "overview-intro" }),
+        ("Tuning", new[] { "basic-tuning", "timing", "scope-tree" }),
+        ("Advanced", new[] { "diagnostics", "restore-center", "theme-picker" }),
+        ("Packs", new[] { "packs-filter", "packs-results", "packs-fallback" }),
+    };
+
     private static Rec Record(UiHost host, float width, float height)
     {
         host.MeasureAndArrange(new Vector2(width, height));
         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
         var rec = new Rec { Snapshot = host.MeasureAndArrange(new Vector2(width, height)) };
+        bool captureNav = true;   // UIR-001: the nav is the SAME column in every swept pass; record it once
         try
         {
             SetField(ButtonOverrideField, new Func<Rect, bool>(rect =>
@@ -718,7 +742,7 @@ internal static class SettingsGeometryLaneTests
                 Vector2 origin = (Vector2)typeof(GUI).GetProperty("GroupOrigin")!.GetValue(null)!;
                 bool inNav = Math.Abs(origin.x - (navViewport.x - navScroll.x)) < 0.01f
                     && Math.Abs(origin.y - (navViewport.y - navScroll.y)) < 0.01f;
-                (inNav ? rec.NavButtons : rec.Buttons).Add(rect);
+                if (inNav) { if (captureNav) rec.NavButtons.Add(rect); } else { rec.Buttons.Add(rect); }
                 return false;
             }));
             SetField(SliderOverrideField, new Func<Rect, float, float, float, float>((rect, value, min, max) =>
@@ -732,6 +756,25 @@ internal static class SettingsGeometryLaneTests
                 return text;
             }));
             host.DrawChecked(new Rect(0f, 0f, width, height));
+            captureNav = false;
+            rec.TabSnapshots["Overview"] = rec.Snapshot;
+            // UIR-001: sweep the other workspaces with the SAME overrides installed, so controls
+            // drawn on any tab land in the same recorder lists the census reads.
+            foreach ((string tab, string[] _) in TabSweeps)
+            {
+                if (tab == "Overview") continue;
+                host.Bindings.Invoke("set-tab", tab);
+                host.MeasureAndArrange(new Vector2(width, height));
+                Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+                UiLayoutSnapshot tabSnapshot = host.MeasureAndArrange(new Vector2(width, height));
+                rec.TabSnapshots[tab] = tabSnapshot;
+                host.DrawChecked(new Rect(0f, 0f, width, height));
+            }
+            host.Bindings.Invoke("set-tab", "Overview");
+            host.MeasureAndArrange(new Vector2(width, height));
+            Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
+            rec.Snapshot = host.MeasureAndArrange(new Vector2(width, height));
+            rec.TabSnapshots["Overview"] = rec.Snapshot;
         }
         finally
         {
@@ -742,12 +785,30 @@ internal static class SettingsGeometryLaneTests
         return rec;
     }
 
+    /// <summary>The snapshot that gates a section for this rec (UIR-001 workspace sweep).</summary>
+    private static UiLayoutSnapshot SnapshotForSection(Rec rec, string id)
+    {
+        foreach ((string tab, string[] sections) in TabSweeps)
+        {
+            foreach (string section in sections)
+            {
+                if (string.Equals(section, id, StringComparison.Ordinal)
+                    && rec.TabSnapshots.TryGetValue(tab, out UiLayoutSnapshot snapshot))
+                {
+                    return snapshot;
+                }
+            }
+        }
+
+        return rec.Snapshot;
+    }
+
     private static ControlSurvey Survey(Rec rec)
     {
         var survey = new ControlSurvey();
         foreach (string id in Sections)
         {
-            if (!rec.Snapshot.RectById.TryGetValue(id, out Rect cardPage))
+            if (!SnapshotForSection(rec, id).RectById.TryGetValue(id, out Rect cardPage))
             {
                 survey.SpansEverySection = false;
                 continue;
@@ -772,7 +833,7 @@ internal static class SettingsGeometryLaneTests
         var all = new List<Rect>();
         foreach (string id in Sections)
         {
-            if (!rec.Snapshot.RectById.TryGetValue(id, out Rect cardPage)) continue;
+            if (!SnapshotForSection(rec, id).RectById.TryGetValue(id, out Rect cardPage)) continue;
 
             Rect card = ToContentLocal(cardPage, rec.ContentViewport);
             all.AddRange(rec.Buttons.Where(r => Inside(r, card)));
@@ -882,10 +943,12 @@ internal static class SettingsGeometryLaneTests
                     "the last destination's click must be inside the nav viewport");
                 Program.DrawWithEvent(host, window, EventType.MouseDown, pointer);
                 Program.DrawWithEvent(host, window, EventType.MouseUp, pointer);
-                Assert(host.Bindings.Get<string>(UiBindings.ActiveTabKey) == "Presets",
-                    "LastDestinationIsClickable: scrolling and clicking must select Presets through the real nav");
+                // UIR-001: the LAST destination card is Advanced now (Presets moved up the stack); the
+                // scroll-to-end click proves the bottom card is reachable, whoever it names.
+                Assert(host.Bindings.Get<string>(UiBindings.ActiveTabKey) == "Advanced",
+                    "LastDestinationIsClickable: scrolling and clicking must select Advanced through the real nav");
                 Console.WriteLine("[nav-scroll] " + language + " viewport=" + viewport.height
-                    + " content=" + content.height + " offset=" + offset + " selected=Presets");
+                    + " content=" + content.height + " offset=" + offset + " selected=Advanced");
             }
             finally { Program.SetTranslatorResolver(null); }
         }

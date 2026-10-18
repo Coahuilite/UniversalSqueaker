@@ -2,40 +2,28 @@
 
 [English](./README.md) | **中文**
 
-RimWorld 1.6 通用语音包路由内核。本仓库是 Squeaky Ratkin 的 **Universal Squeaker 本地分叉**（MPL-2.0，来源声明按许可证要求保留），正在准备首次云端发布。
+RimWorld 1.6 通用语音包路由内核，源自 Squeaky Ratkin，采用 MPL-2.0 许可。
 
-Universal Squeaker 本身**不含任何语音内容**：它是一个路由内核，把第三方语音包按种族/异种域挂到 pawn 上，并提供分层调音（全局/种族/异种三级覆盖）、距离衰减曲线、心情调制、彩蛋门与相机指示器。设置界面为独立窗口，五个工作区（总览/距离/语音包/调音/预设）配右侧悬停帮助面板；内置 `usdiag` 诊断协议，排障时按等级输出到玩家日志。
+US 把第三方语音接入准确的种族/异种域，提供分层调音、心情调制、彩蛋资格、摄像机高度衰减与诊断。US 不分发自己的音频文件；当前仓库包含 Ratkin 的最终回退映射，引用原版 Core 音频。
 
-## 运行要求
+独立设置窗口有五个工作区：**总览 / 音频包 / 规则与调制 / 预设导入 / 高级与诊断**，并有可展开的底部帮助面板。
 
-- RimWorld 1.6
-- 前置模组 **FerriteLib**（`coahuilite.ferritelib`）：承载 UI 内核 `FerriteLib.UiKit.dll`。US 只按相对路径引用其编译产物，**不随包携带**；API 区间校验在代码内（`FerriteLibVersion.Require`），不在 `About.xml`（RimWorld 的 modDependencies 无法表达版本）。
+## 运行要求与身份
 
-## 身份
+- RimWorld 1.6。
+- 前置模组 **FerriteLib**（`coahuilite.ferritelib`）。US 引用其 DLL，不随包复制；支持的 API 区间在代码中检查。
+- packageId：`coahuilite.universalsqueaker`。
+- 命名空间 / Def 前缀 / 诊断前缀：`UniversalSqueaker` / `US_` / `usdiag`。
+- 许可：[MPL-2.0](LICENSE)。
 
-- packageId：`coahuilite.universalsqueaker`
-- 命名空间 / Def 前缀 / 日志前缀：`UniversalSqueaker` / `US_` / `usdiag`
-- 许可：MPL-2.0（Workshop 显示名待维护者确认）
+## 文档
 
-## 本地验证与构建
+从 [文档总入口](docs/README.md) 开始。这里区分 **0.5.x 当前行为**与 **0.6.x 目标规格**。
 
-```powershell
-pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'   # 15 道门禁（6 个 harness + 主程序集 Dev/Release + 载体边界与单载体红线 + MPL-2.0 许可一致 + Schema=2 清单校验 + UI 边界审计 + harness stub 覆盖）。载体是**显式选择**、没有默认值：见 docs/build-and-debug.md；对配对 Dev 包验证时加 -DevelopmentCarrier
-pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath '../ferritelib/dist/dev/FerriteLib/1.6/Assemblies/FerriteLib.UiKit.dll'   # 只构建 US 载荷（Dev）并 stage 成可直接安装的**目录**（dist/dev/UniversalSqueaker）——不打归档；需要 zip 时用 pack-dev -Zip。它绝不构建载体
-pwsh -NoProfile -File scripts/privacy-audit.ps1  # 隐私门禁（三向量 + 凭据 + PublishedFileId 值 + 身份唯一性；-FullHistory 为全历史模式）
-```
+- [当前功能与设置](docs/current-behavior-0.5-zh.md)
+- [VoicePack 作者指南](docs/voicepack-authoring-0.5-zh.md)
+- [Kernel 0.6.x 首版规格](docs/us-kernel-0.6-spec-zh.md)
+- [构建与验证](docs/build-and-debug.md)
+- [发布流程](docs/release-runbook-zh.md)与[隐私门禁](docs/push-privacy-gate.md)
 
-第 15 门把载体的引用驱动 stub 扫描（`../ferritelib/scripts/stub-coverage-scan.ps1`）只读地跑在 US 载荷**和 KernelHostTests harness 程序集**上（各扫一次），配 US 自己的豁免账 `scripts/stub-coverage-exemptions.txt`：两者引用的每个游戏成员，要么被载体 stub 声明，要么带理由被豁免，否则判红。这一类的可见性车道给不了——只在参考程序集里存在的成员编译全绿、运行时才死，而 harness 里会话守卫会把它换成一个恢复带，只断言「会话还活着」的车道照样绿。
-
-UI 库已拆为独立前置模组仓库 `../ferritelib`（`coahuilite.ferritelib`），有自己的门禁体系。第 14 门 `scripts/ui-boundary-audit.ps1` 是同一 containment 指标的消费侧：白名单只剩两条裁定豁免（dev 诊断面板、冻结的相机指示器 fallback），其外的裸 Unity IMGUI / Verse Widgets 调用一律判红；裸 `Mouse.IsOver` 更是任何位置都不允许——悬停、帧门、窗口 chrome 全部走库缝（`UiNative.IsMouseOver` / `UiNative.IsLayoutEvent` / `UiWindowHost`）。
-
-## 文档索引
-
-- 交接与验收清单：`HANDOFF.md`（维护者本地文档，不入库）
-- 记忆协定 / 持久事实 / 行动面 / 冷档案：`AGENTS.md`、`MEMORY.md`、`TODO.md`、`OBLIVIONIS.md`
-- 发布流程（每次发版）：`docs/release-runbook-zh.md`
-- 首次上云：2026-09-06 已执行完毕；持久决策与推送顺序见 `MEMORY.md`（"First cloud upload"节），PASS 台账见 `TODO.md`。
-- 模组结构参考：`docs/mod-structure-reference-zh.md`
-- 语音包作者指南：`.github/skills/us-voicepack-authoring/SKILL.md`
-
-历史资料（描述已于 2026-09-02 删除的旧 UI 实现）：`docs/ui-componentization-evaluation-zh.md`、`docs/ui-phase3-implementation-notes-zh.md`。
+当前产品声明为 0.5.0。文档描述本仓库源码，可能包含尚未进入旧下载版本的修改。开发工作约束仍在 `AGENTS.md`，持久状态与待办分别在 `MEMORY.md` 和 `TODO.md`。

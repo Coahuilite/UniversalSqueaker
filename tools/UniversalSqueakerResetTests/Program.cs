@@ -124,6 +124,8 @@ internal static class Program
         s.allowBabyActions = true;
         s.eatPrecisionEnabled = true;
         s.eatPrecisionIncludeDrugs = true;
+        s.uiSwatchId = "biotech"; // UIR-006: the palette is a persisted appearance setting
+        s.uiIntroCollapsed = true; // CORRECTIONS-R3: the persisted teaching preference must be in the pollution set
 
         s.moodOverrides[SqueakMood.Good] = new SqueakMoodMod
         {
@@ -212,6 +214,8 @@ internal static class Program
         Check("global: interval back to 216", s.globalMinIntervalTicks == 216);
         Check("global: localize/camera back to false", !s.localizeDebugActions && !s.showCameraIndicator);
         Check("global: devLogging back to Auto", s.devLoggingMode == SqueakDevLoggingMode.Auto);
+        Check("global: uiSwatchId back to core", s.uiSwatchId == "core");
+        Check("global: uiIntroCollapsed back to false", !s.uiIntroCollapsed);
         Check("global: multipliers back to 1f", s.globalCooldownMultiplier == 1f && s.globalVolumeFactor == 1f);
         Check("global: distance back to Balanced 15-50",
             s.distancePreset == SqueakDistancePreset.Balanced && s.distanceRange.min == 15f && s.distanceRange.max == 50f);
@@ -445,6 +449,7 @@ internal static class Program
         Check("area-Distance: volume+preset+range restored", Math.Abs(s.globalVolumeFactor - 1f) < 0.0001f
             && s.distancePreset == SqueakDistancePreset.Balanced && s.distanceRange.min == 15f && s.distanceRange.max == 50f);
         Check("area-Distance: other areas polluted still", s.globalMinIntervalTicks == 999 && s.devLoggingMode == SqueakDevLoggingMode.Enabled);
+        Check("area-Distance: the palette survives an area restore (no area owns it)", s.uiSwatchId == "biotech");
         Check("area-Distance: publish shape (volume static + one distance channel + one persistence)",
             Probe.DistanceApplyCount == 1 && Probe.SaveQueuedCount == 1 && Probe.DiscreteNotifyCount == 0);
 

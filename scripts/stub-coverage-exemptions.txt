@@ -243,3 +243,19 @@ Assembly-CSharp!LudeonTK.Dialog_Debug::rootNode:c:LudeonTK.DebugActionNode | deb
 Assembly-CSharp!RimWorld.MessageTypeDefOf::NeutralEvent:c:Verse.MessageTypeDef | defs
 Assembly-CSharp!Verse.ModContentPack::get_IsCoreMod() | defs
 Assembly-CSharp!Verse.ThingDef::category:v:Verse.ThingCategory | defs
+
+# OVT-001 (WO-US-OVERVIEW-THEMES-20261015, TASK-USOVT-01/A001 TEST-BOUNDARY-20261015): the six
+# members the definition-directory collector newly reads from the loaded def graph. Each is a REAL
+# 1.6 member (OVT-REF16-MEMBERS-20261015.json, reference b7eb69e7...): ThingDef.thingClass is a
+# public field, the four RaceProperties flags are public bool properties, ThingCategory::Pawn is
+# the enum literal the living-pawn boundary compares against. None is drivable on the frozen
+# stubs (they declare no def graph at all - the 'defs' reason's own text); each is covered IN
+# THIS round by the isolated production-collector smoke in
+# tools/UniversalSqueakerDefinitionDirectoryTests (rawDef fixtures over the product DLL
+# VerseDefinitionCollector + the real source/Host lanes), not by any new stub.
+Assembly-CSharp!Verse.ThingDef::thingClass:c:System.Type | defs
+# (no ThingCategory entry: the C# compiler constant-folds the enum comparison to its numeric value - no
+Assembly-CSharp!Verse.RaceProperties::get_Humanlike() | defs
+Assembly-CSharp!Verse.RaceProperties::get_Animal() | defs
+Assembly-CSharp!Verse.RaceProperties::get_IsMechanoid() | defs
+Assembly-CSharp!Verse.RaceProperties::get_IsAnomalyEntity() | defs

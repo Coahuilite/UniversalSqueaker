@@ -38,7 +38,9 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 {
     private const string Consumer = "coahuilite.universalsqueaker";
 
-    private static readonly UiTheme PanelTheme = UsTheme.Surface();
+    // UIR-006: the shared chrome bag (repainted on a live palette switch), like the settings window's
+    // own chrome. The panel is a companion of the settings workspace, so it wears the page's palette.
+    private static readonly UiTheme PanelTheme = UsTheme.ChromeTheme;
 
     /// <summary>The one open panel (band button / Debug Action open it; settings PostClose closes it).</summary>
     internal static UsDevPanelWindow? Active { get; private set; }
@@ -100,7 +102,8 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         bindings.BindCommand("dev-page-overview", () => Page("Overview"));
         bindings.BindCommand("dev-page-packs", () => Page("Packs"));
         bindings.BindCommand("dev-page-tuning", () => Page("Tuning"));
-        bindings.BindCommand("dev-page-distance", () => Page("Distance"));
+        // UIR-001: the Distance workspace retired with the navigation; the panel pages the five real ones.
+        bindings.BindCommand("dev-page-advanced", () => Page("Advanced"));
         bindings.BindCommand("dev-page-presets", () => Page("Presets"));
         bindings.BindCommand("dev-report", Report);
     }
@@ -283,7 +286,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
         + "      <Widget Id=\"dev-page-overview\" Kind=\"input/button\" TextKey=\"US.Nav.Overview.Label\" ActionBind=\"dev-page-overview\" Emphasis=\"Muted\" Height=\"26\" />"
         + "      <Widget Id=\"dev-page-packs\" Kind=\"input/button\" TextKey=\"US.Nav.Packs.Label\" ActionBind=\"dev-page-packs\" Emphasis=\"Muted\" Height=\"26\" />"
         + "      <Widget Id=\"dev-page-tuning\" Kind=\"input/button\" TextKey=\"US.Nav.Tuning.Label\" ActionBind=\"dev-page-tuning\" Emphasis=\"Muted\" Height=\"26\" />"
-        + "      <Widget Id=\"dev-page-distance\" Kind=\"input/button\" TextKey=\"US.Nav.Distance.Label\" ActionBind=\"dev-page-distance\" Emphasis=\"Muted\" Height=\"26\" />"
+        + "      <Widget Id=\"dev-page-advanced\" Kind=\"input/button\" TextKey=\"US.Nav.Advanced.Label\" ActionBind=\"dev-page-advanced\" Emphasis=\"Muted\" Height=\"26\" />"
         + "      <Widget Id=\"dev-page-presets\" Kind=\"input/button\" TextKey=\"US.Nav.Presets.Label\" ActionBind=\"dev-page-presets\" Emphasis=\"Muted\" Height=\"26\" />"
         + "    </Row>"
         + "    <Widget Id=\"dev-target\" Kind=\"input/dropdown\" Bind=\"dev-target\" OptionsBind=\"dev-target-options\" LabelKey=\"US.DevPanel.Target\" Height=\"26\" />"

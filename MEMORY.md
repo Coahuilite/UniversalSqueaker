@@ -13,6 +13,90 @@
 
 ## Current state (2026-10-09)
 
+- **UI refactor round (2026-10-14, WO-US-UI-REFACTOR-20261014 r1; uncommitted on top of the inherited
+  Remix seven paths).** The settings page has FIVE workspaces: Overview / Packs / Tuning / Presets /
+  Advanced. Distance retired as a workspace (the attenuation card is the Overview's secondary quick area
+  with the volume card and camera indicator); diagnostics, the global restore and the theme picker are
+  Advanced; the basics/timing rule bands are Tuning; the final-fallback editor migrated from the tuning
+  tree's third AREA to the Packs page under its OWN `cancel-fallback-table` layer (the tree keeps two
+  areas; `SetTuningArea` clamps the retired value to 0, and the tuning context exit no longer touches the
+  fallback page's browse state). The Overview carries a first-open teaching (page state, one-press
+  collapse) and the ALL-LOADED-RACE BOARD. (HISTORICAL FIRST VERSION: at this round rows came from
+  `race != null` through the LoadedRaceSource/VerseLoadedRaceSource adapter; the OVT-001 round below
+  SUPERSEDED that discovery - the collector is now the only def-database reader, the
+  RaceDefinitionCatalog publishes the plain snapshot at the definition-ready entry, the adapter only
+  merges facts, and the board's default view is the PLAYER RACES group (HAR first, chips/search/counts).
+  Comp admission and routing authority remain untouched in both.) The card's open exit is a navigation intent (tab + clear masking filters +
+  name the race + expand and scroll to the card; ZERO settings writes); its enable exit fires only for
+  ONE unambiguous pack identity and rides the SAME `ToggleVoicePack` chain as the Packs row switch;
+  neither can touch the sound-source mode. THEME: six official swatches (Core default + five DLC trial
+  schemes, 24 role tokens each) live in `Themes/UsSwatches.cs` over the pure `UsSwatchIds` set - the PM
+  palette input was `modding_documents/us-fl-development/ProjectManager/palettes/US-OFFICIAL-PALETTES-20261014.json`
+  r1 - the OVT-004 round (below) replaced the Ideology/Anomaly/Odyssey tables with the PM candidate
+  input US-THEME-CANDIDATES-20261015.json r1 (Core/Royalty/Biotech values kept). The manifest REGION COLOUR SCOPES (`us-flat-panel`, `us-command-button`) are RETIRED: a palette's
+  own role values spell surface relationships, and the live switch (`UsKernelSettingsHost.ApplySwatchLive`)
+  re-tints the page host's bag plus the ONE shared chrome bag (`UsTheme.ChromeTheme`) through the carrier
+  ColourRevision clock - colours move, LayoutRevision/scroll/focus/popups do not. The persisted
+  `uiSwatchId` is add-only (`core` omitted at Scribe), repaired by PostLoadInit and returned by the
+  global restore; attention stays outside every palette (`UsAttention` alone spells the hue - the
+  UiSourceInvariant gate forbids the retired FL type substring `Palette` anywhere in `UI/*.cs`, which is
+  why the consumer vocabulary is named SWATCH). Game E2E was NOT run (no 1.6 environment) - every
+  real-screen aspect of this round is awaiting_human.
+  CORRECTIONS-R1 (same day) landed on top: the board reads ONE plain-facts projection
+  (`RaceBoardProjection` + `UsRaceBoardFacts`, seam `IUsRaceBoardSource` beside its Verse adapter) with the
+  supply/mode AXES kept separate (Disabled keeps every selection fact); the full state matrix runs in the
+  zero-game UiLogic harness. Card navigation targets the FL-materialized `pack-card-row#<itemKey>` identity,
+  keeps the race filter, clears masking filters, and falls back to the static `packs-fallback` destination
+  without supply; the quick-enable button carries the exact pack + target labels and claims
+  `us/race-board/enable`. The teaching collapse is the persisted UI preference `uiIntroCollapsed` (Scribe
+  round-trip + omission-to-OPEN repair tested; never an audio write) and the collapsed band keeps a
+  right-pinned re-open. The two board shortcuts ride the existing `scroll-to` action (attenuation button
+  200px - the text-fit audit owns that width). All SIX tables are value-pinned per token with
+  `document.Issues==0`, the eight FHI TPG references ship as data (`UsSwatches.CoreReferenceColors`, Bronze
+  Mist #A0824D reserved IdentityMinor in NO role slot), and the theme-switch lane proves colour-only switching
+  with real draws at the 760x524 policy box (identical hit bands, retained scroll/focus/popups).
+  CORRECTIONS-R3 (final round) closed the review gaps: About.xml describes the FIVE PAGES in both
+  languages; the intro-collapse help text states the persisted truth (saved with settings, no sound,
+  global restore returns OPEN - and the Reset harness pollutes and verifies exactly that); the swatch
+  NOTE KEY is declared, not composed (the old `labelKey + ".Note"` spelled a key no table ships - the
+  REAL-SOURCE action-chain lane caught it); the theme lane now proves the full claim it always made:
+  hit-band COUNT equality, five-page rect sweeps with FULL key-set equality (no silent skips), a real
+  field edit opened by a real press surviving the switch on the SAME session node, and the production
+  `UsKernelSettingsSource` chain (settings facade, picker bindings, status, note, both bags, layout
+  clock) driven through the declarative `set-ui-swatch` action.
+
+- **Overview-directory + three-theme round (2026-10-15, WO-US-OVERVIEW-THEMES-20261015 r1; same
+  uncommitted tree).** The BROWSE definition directory is its own kernel capability: pure identity
+  types (`Pure/UsDefinitionIdentity.cs` - source kind + package ID + package NAME + HAR flag +
+  life-kind, snapshot COPIES its inputs), one Verse reader (`Catalog/VerseDefinitionCollector.cs`:
+  living boundary = category Pawn AND thingClass Pawn-assignable AND race != null - the corpse
+  generator copies `race` onto Item-category defs, so race!=null alone admits corpses (user-confirmed
+  in-game failure); HAR identity walks the loaded def's OWN type chain to
+  `AlienRace.ThingDef_AlienRace`, cached per Type, no HAR reference), published ONCE from Mod's
+  ExecuteWhenFinished via `Catalog/RaceDefinitionCatalog` (Verse-free volatile slot; window reopen
+  reuses the snapshot; NEVER merged into the sound `RaceDefNames`/admission). The board's browse
+  policy (groups/chips/tier order/search) is UI/Model (`UsBoardBrowsePolicy`): HAR tier leads for
+  EVERY life kind (mech-HAR keeps both axes), default Player races = HAR -> vanilla humanlike ->
+  other humanlike, Creatures = animal/mech/entity, displayed/total counts always visible; the
+  xenotype DIRECTORY comes from loaded XenotypeDefs (own axis, no invented race link) and its band
+  rides the humanlike segment (measure == draw). `ResolveSelectedDomain` honours EXPLICIT identity
+  (no first-domain fallback; readonly-struct FirstOrDefault default-vs-null trap closed) and answers
+  the four honest xeno states (loaded+keys=Orphan, loaded+none=Available, unloaded=TargetUnavailable,
+  Biotech off=Dormant) without touching the sound canonical. Filter options read the full directory.
+  `LoadedRaceSource` is now a facts MERGER over the snapshot, not a discovery authority. Ideology/
+  Anomaly/Odyssey tables were REPLACED by the PM candidate input (US-THEME-CANDIDATES-20261015 r1;
+  Core/Royalty/Biotech byte-identical, pinned independently in FlatStyle); the selected-row fill is
+  the DECLARED Selected role everywhere (the 0.57 accent-alpha fill is retired; picker = Selected
+  fill + TextOnGold ink; the theme lane measures every identity mark against the ground actually drawn
+  under it - body >=4.5, marks >=3, Selected-vs-Raised deliberately not gated). `UsRaceBoardFacts` carries
+  a REQUIRED plain identity (no compatibility synthesis); the xeno directory quick-enable respects the
+  Biotech dormant gate at the adapter (off = no candidate, data intact). The isolated
+  `tools/UniversalSqueakerDefinitionDirectoryTests` runs the PRODUCTION collector over rawDef
+  fixtures on an EXTENDED stub assembly (own output, hash recorded; frozen stubs untouched) and the
+  real source+Host over the published directory. Five new `defs` exemptions (thingClass + four
+  RaceProperties getters) carry per-member evidence; ThingCategory needs none (enum compare is
+  constant-folded). Game E2E NOT run: awaiting_human.
+
 - **Push privacy automation (2026-10-08).** The five-vector Mwah-derived scanner has automatic per-clone
   pre-push installation and all-branch GitHub CI. `docs/push-privacy-gate.md` defines its scope; current
   documentation uses portable installation/runner references. 2026-10-08 maintainer decision: preserve
@@ -99,7 +183,7 @@
 The preset subtree composes through FL's shared `UiRowBand` with typed callbacks, and the native xenotype icon
 arrives as consumer-supplied data from the Verse-side adapter (`VoicePacksPageModel.ResolveXenotypeIcon` is the
 single resource lookup; `UI/Kernel` performs none). Native Def texture loading remains game-only. Detail:
-`docs/r4b-preset-subtree-row-composition.md`.
+`docs/archive/r4b-preset-subtree-row-composition.md`.
 
 ### R4-A: a typed choice carries its value, and the row index is the bridge
 
@@ -181,7 +265,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   clones when EITHER moved, so a re-tint repaints a scoped region while arrangement, node identity, focus, hover
   claim, scroll and open popups are untouched. Evidence splits in two - a recorded DRAW for "the palette reached
   the paint" and the session's own bookkeeping for "a colour is not a structural event" - and the lane explicitly
-  does NOT claim all-state redraw proof. Contract page: `docs/r12-us-theme-contract-zh.md`.
+  does NOT claim all-state redraw proof. Contract page: `docs/archive/r12-us-theme-contract-zh.md`.
 - **The nine ON/OFF controls are the carrier's `input/checkbox` with `Appearance="switch"`**; the US-only
   `us/square-toggle` is retired (its file, registration and lane subject - the lane was re-cut onto the shared
   kind, not deleted). Every band stays 36x30 and every control names the same bool in `Bind` and `SelectedKey`.
@@ -305,7 +389,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `UIElementsModule` all ship in `Data/Managed`). The accurate constraint is that the game creates no Canvas and
   no EventSystem, and **IMGUI composites above every Canvas**, so uGUI is reachable but cannot go over the game's
   own UI except through a RenderTexture blit. The "no public access path" claims in
-  `docs/ui-componentization-evaluation-zh.md` and `docs/ui-shared-library-design-zh.md` are wrong as written.
+  `docs/archive/ui-componentization-evaluation-zh.md` and `docs/archive/ui-shared-library-design-zh.md` are wrong as written.
 - The game's widget palette is `Verse.Widgets`' 18 Color fields with **no accent slot**, and vanilla chrome is
   `ButtonBGAtlas*` plus nine `AtlasUV_*` 9-slice rects, not flat fills. DarkGold matches the game's *content*
   palette, not its *widget* palette; never use "matches RimWorld's design language" to reject another consumer's
@@ -328,6 +412,19 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   mod's name stay as-is.
 - **`HANDOFF.md` is maintainer-local**, gitignored, never one of the three active memory files, and never gates a
   session.
+- **Remix three-tier empty-layer rule.** `SelectRemixThree` folds the compressed `RollIndex(count)` over the
+  NON-EMPTY members of `[xeno, race, builtin]` by decrementing — the rule `SelectRemixFour` already used. The
+  superseded version re-mapped that index onto the FIXED three slots, so with an empty leading or middle slot the
+  index named either an empty slot (silent result) or a playable but wrong layer, and with two playable layers and a
+  leading or middle gap the built-in layer was unreachable. Zero/single-layer branches, one draw per selection, layer
+  order, in-layer filtering and weighted draws, `HasPackFallback` and the three-/four-layer entry split are
+  unchanged.
+- **Corpus coverage boundary for that rule.** `Scenarios.cs` declares no `PackFallback`, so every Remix row of the
+  golden corpus takes the three-tier path and the corpus does guard the leading-empty shape (`xeno` empty, exactly
+  two playable layers). The middle-empty shape (`race` empty) and the four-tier path have no corpus rows and are
+  guarded only by `tools/UniversalSqueakerKernelTests/RemixEmptyTierRegression.cs`, mounted in `UnitTests.RunAll`
+  right after `SelectRemix` and driving the public `Select` alone. Equal-weight folding over the playable layers is
+  the Remix contract, not an open product question.
 
 ## UI engineering rules (durable)
 
@@ -590,7 +687,7 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 ## Pointers (authoritative sources; read these, not this file)
 
 - Mod structure: `docs/mod-structure-reference-zh.md`. Release flow: `docs/release-runbook-zh.md`.
-- Scripts: `verify-local.ps1` (**15 gates**; numbering is append-only and the script's own `Invoke-Check` count
+- Scripts: `verify-local.ps1` (**16 [run] gates** - the harness-stub-coverage gate joined; `[setup]` lines are not gates; numbering is append-only and the script's own `Invoke-Check` count
   is the authority - gate 14 is the UI boundary audit, gate 15 is harness stub coverage with the exemption
   ledger; the library gates and the neutrality guard live in the sibling FL repo), `build-dev.ps1`,
   `pack-dev.ps1`, `stage-package.ps1`, `check-pack-readiness.ps1`, `privacy-audit.ps1`, `ui-boundary-audit.ps1`,
@@ -600,11 +697,11 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   `tools/UniversalSqueakerConfigCopyTests/`, `tools/UniversalSqueakerLogTests/`.
 - Kernel compile set (zero-Verse): `Source/UniversalSqueaker/Kernel/`; pure funnel logic (also zero-Verse):
   `Source/UniversalSqueaker/Pure/`.
-- UI design and slice ladder: `docs/ui-redesign-0.7-zh.md` (section 0 carrier re-verification, section 2 frame
-  XML, section 5 migration pricing, section 6 slices). Migration plan: `docs/us-ui-migration-plan-zh.md`.
+- UI design and slice ladder: `docs/archive/ui-redesign-0.7-zh.md` (section 0 carrier re-verification, section 2 frame
+  XML, section 5 migration pricing, section 6 slices). Migration plan: `docs/archive/us-ui-migration-plan-zh.md`.
   Historical conflict only: `OBLIVIONIS.md`.
-- Consumer-side contract pages: `docs/r12-us-theme-contract-zh.md`, `docs/r4a-action-scope-typed-choice-prep.md`,
-  `docs/r4b-preset-subtree-row-composition.md`.
+- Consumer-side contract pages: `docs/archive/r12-us-theme-contract-zh.md`, `docs/archive/r4a-action-scope-typed-choice-prep.md`,
+  `docs/archive/r4b-preset-subtree-row-composition.md`.
 
 ## Archived history (pointer)
 
@@ -628,5 +725,5 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
   demonstrated shared-library gap; **superseded by the 2026-10-04 HM1 handoff** (development moves to a new
   Harness), so it assigns no roles now and binds no future round.
 - The docs sweep still carries the OLD Gate-U constraint ("fallback must be retained / no clean cutover") in
-  `docs/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
-- `dist/ui-evidence/**` and the per-revision matrices are cold artifacts; the reviews live in `docs/review/**`.
+  `docs/archive/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
+- `dist/ui-evidence/**` and the per-revision matrices are cold artifacts; the reviews live in `docs/archive/review/**`.

@@ -59,6 +59,14 @@ public static class UsKernelWidgetRegistrar
             UsKernelFooterWidget.Register();
             UsHelpPanelWidget.Register();
             UsCameraReadoutWidget.Register();
+            // UIR-002/003: the Overview's all-loaded-race board - conditional status sentences over a
+            // runtime-variable row set with two distinct write exits (navigation + exact enable). One
+            // consumer kind, and both exits are the page's typed bindings; no raw IMGUI, no second engine.
+            UsRaceBoardWidget.Register();
+            // UIR-004: the final-fallback table editor, migrated from the tuning tree's third area to
+            // the Packs page. Its bindings/commands are the page's pre-existing ones - this is the SAME
+            // editor under its own return layer, not a second authority.
+            UsFallbackEditorWidget.Register();
 
             registered = true;
         }

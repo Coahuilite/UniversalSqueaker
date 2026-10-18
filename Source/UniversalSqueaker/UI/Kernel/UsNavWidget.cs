@@ -77,11 +77,16 @@ public sealed class UsNavWidget : IUiWidget
     /// </summary>
     private static readonly (string Tab, string LabelKey, string DescriptionKey)[] Workspaces =
     {
+        // UIR-001 (WO-US-UI-REFACTOR-20261014): the five player tasks are Overview / Audio packs /
+        // Rules & tuning / Preset import / Advanced & debug. The Distance workspace retired into the
+        // Overview's secondary quick area; Advanced took the diagnostics + global-restore half that
+        // used to clutter the Overview. Tab tokens stay machine values; only Label/Description ride
+        // Keyed entries, and the five-card geometry contract below is unchanged.
         ("Overview", "US.Nav.Overview.Label", "US.Nav.Overview.Description"),
-        ("Distance", "US.Nav.Distance.Label", "US.Nav.Distance.Description"),
         ("Packs", "US.Nav.Packs.Label", "US.Nav.Packs.Description"),
         ("Tuning", "US.Nav.Tuning.Label", "US.Nav.Tuning.Description"),
-        ("Presets", "US.Nav.Presets.Label", "US.Nav.Presets.Description")
+        ("Presets", "US.Nav.Presets.Label", "US.Nav.Presets.Description"),
+        ("Advanced", "US.Nav.Advanced.Label", "US.Nav.Advanced.Description")
     };
 
     private UiElementSpec spec = UiElementSpec.Empty;

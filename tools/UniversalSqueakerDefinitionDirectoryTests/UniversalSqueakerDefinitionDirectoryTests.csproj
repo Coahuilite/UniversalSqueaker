@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- OVT-005 (WO-US-OVERVIEW-THEMES-20261015, CO TEST-BOUNDARY-20261015): the ISOLATED
+       definition-directory harness. Two jobs:
+       (A) run the PRODUCTION collector (VerseDefinitionCollector, product DLL) over rawDef
+           fixtures built on an EXTENDED stub assembly (frozen VerseStub sources + the game-
+           definition model this task's collector reads - ThingDef/DefDatabase/RaceProperties/
+           ModContentPack/ModsConfig). The extended stub is THIS project's own output; the frozen
+           snapshot's five canonical sources and its bin/stubs/verse bytes are never written.
+       (B) run the REAL production pair (UsKernelSettingsSource + UsKernelSettingsHost + UiHost
+           from the product DLL and the read-only FL carrier) on that same extended runtime:
+           no-pack HAR/xenotype arrivals, the four xeno states, the mech-HAR order, band
+           geometry, zero persisted writes.
+       Deliberately NO Krafs reference: the fixture code sets stub-backed def fields; the product
+       DLL (compiled against the real 1.6.4871 reference) binds the same names at runtime - the
+       exact mechanism the frozen host harness already uses. -->
+  <ItemGroup>
+    <!-- the extended VERSE stub builds in its OWN project (Stubs\VerseStub); keep it out of
+         this assembly or every Verse type would be defined twice. -->
+    <Compile Remove="Stubs\\**\\*.cs" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniversalSqueakerDefinitionDirectoryTests</AssemblyName>
+    <RootNamespace>UniversalSqueaker.DefinitionDirectoryTests</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion>0.0.0+us-defdir</InformationalVersion>
+    <NuGetAudit>false</NuGetAudit>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <FerriteLibArtifactPath Condition="'$(FerriteLibArtifactPath)' == ''">$(MSBuildProjectDirectory)\..\..\..\ferritelib\dist\build\Dev\FerriteLib.UiKit.dll</FerriteLibArtifactPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
+    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+  </PropertyGroup>
+
+  <!-- NO source linking: job A runs the PRODUCTION collector from the product DLL itself
+       (public VerseDefinitionCollector) over fixtures seeded through the extended stub databases -
+       one RaceDefinitionCatalog, no shadowed copies, the product IL is the code under test. -->
+
+  <ItemGroup>
+    <!-- the same checked-frame guard the frozen host lanes draw behind (linked source, no fork) -->
+    <Compile Include="..\UniversalSqueakerKernelHostTests\UsTripGuard.cs" Link="UsTripGuard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UniversalSqueaker">
+      <HintPath>..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FerriteLib.UiKit">
+      <HintPath>$(FerriteLibArtifactPath)</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <ProjectReference Include="Stubs\VerseStub\VerseStub.Extension.csproj" ReferenceOutputAssembly="true" />
+  </ItemGroup>
+
+  <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences">
+    <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactPath)&quot; --nologo -v quiet"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <!-- runtime doubles: the three frozen RENDERER stubs (unity/imgui/textrendering) are copied
+       UNCHANGED from the snapshot's own build slot; the VERSE half is this project's extended
+       build - recorded separately in the report (path + hash), never claimed as frozen bytes. -->
+  <Target Name="BuildAndCopyRuntimeStubs" AfterTargets="Build">
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
+    <ItemGroup>
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\bin\stubs\unityengine\UnityEngine.CoreModule.dll" />
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\bin\stubs\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\FerriteLib.Stubs\bin\stubs\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

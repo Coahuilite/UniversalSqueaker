@@ -48,21 +48,24 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     public const float RailWidth = 3f;
 
     /// <summary>
-    /// The selected row's fill: the accent tinted toward the surface, named ONCE so the widget and the palette
-    /// lane cannot disagree about what is painted. 0.57f is chosen against the COMPOSITED colour (the lane
-    /// composites before it compares, cf2e0a8): it lands the drawn fill so that title-vs-fill and
-    /// fill-vs-plane BOTH clear their floors with margin, which no value on the old gold-ink path could do.
+    /// The selected row's fill: the palette's DECLARED Selected role (OVT-004, PM selection-surface
+    /// rule). The old bright-accent alpha fill behind body text is RETIRED - its arithmetic could
+    /// not carry 4.5:1 body contrast on the authored grounds - and every table answers with its own
+    /// authored Selected surface, the same role UsKernelDraw.RowSurface already paints for selected
+    /// rows: one declared answer, no second derived fill, no threshold moved. Named ONCE so the
+    /// widget and the palette lanes cannot disagree about what is painted.
     /// </summary>
     public static Color SelectedFill(UiTheme theme)
     {
-        return theme.AccentWith(0.57f);
+        return theme.Selected;
     }
 
     /// <summary>
-    /// The anchor's ink. NOT the accent, and the reason is MEASURED: a fill and a rail from the same colour
-    /// source share their RGB (only alpha differs), so rail-vs-fill contrast is exactly 1.00 by construction -
-    /// a gold rail on a gold fill is invisible whatever its width. The anchor's job is to be visible, not to be
-    /// gold (Lead's ruling 2026-09-25); gold is present as the fill.
+    /// The anchor's ink. NOT the accent, and the reason is MEASURED: a rail drawn from the same colour
+    /// source as its ground reads at contrast 1.00 by construction and is invisible whatever its width.
+    /// Since OVT-004 the fill is the declared Selected surface (not a gold alpha tint), and the anchor
+    /// rides the palette's own primary ink - the two are different tokens by design, and the theme lane
+    /// measures the pair on the real draw.
     /// </summary>
     public static Color SelectedRail(UiTheme theme)
     {
@@ -83,17 +86,13 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     }
 
     /// <summary>
-    /// The PERCEIVED fill - a DERIVED value: the written parameter composited over the card plane. The
-    /// recorder stores what the widget WROTE (RGBA); the player sees what IMGUI blends, and contrast is a
-    /// property of the second one. Real pixels are not directly observed here; this model rests on two
-    /// supports - UiThemeDraw.Solid forwards RGBA to DrawBoxSolid unchanged (code), and IMGUI alpha blending
-    /// is standard semantics. Corroboration to request from the maintainer: the selected row should read as
-    /// this composited colour (a dark olive/brown gold), NOT as the bright gold of the raw token.
-    ///
-    /// The margins are a STRUCTURAL ceiling, not a tuned number: a bright title ink (TextPrimary, L ~= 0.794)
-    /// and a very dark card plane pin the workable fill luminance to L_fill in [0.124, 0.138] - 0.014 wide -
-    /// because the title needs L_fill low enough for 4.5 while the fill must stay clear of the plane for 3.0.
-    /// A larger margin needs a different signal carrier, not a different alpha.
+    /// The PERCEIVED fill. The declared Selected role is OPAQUE, so the source-over composite is
+    /// the identity - the formula stays (the recorder stores what the widget WROTE, the player
+    /// sees what IMGUI blends, and contrast is a property of the second one; keeping the ONE
+    /// composite implementation honest is what lets the lane compare against the real draw).
+    /// Under the retired accent-alpha fill this composite had to thread a 0.014-wide luminance
+    /// window; under the authored surface the contrast is a property of the table itself, verified
+    /// per table by the palette-contrast lane over these exact perceived colours.
     /// </summary>
     public static Color PaintedFill(UiTheme theme)
     {
@@ -162,14 +161,13 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
         bool selected = ctx.Bindings.TryGetBool(BindingKey(), out bool bound) && bound;
         if (selected)
         {
-            // The SHIPPED selected-row treatment, reused rather than re-invented: plane FIRST, rails
-            // LAST (the order the helper documented), with the thresholds written before the colours
-            // (14.16): fill vs plane >= 3.0 (WCAG 2.1 SC 1.4.11 non-text), rail vs fill and vs plane
-            // >= 3.0 (same clause), title ink vs fill >= 4.5 (WCAG 2.2 SC 1.4.3 AA, text). All four are
-            // measured on the COMPOSITED colours by the colour lane's contrast criteria. The rail is
-            // RowRail.Selected's ink (theme.TextSecondary), not the accent: the accent rail means "the
-            // current object" - the navigation card's active tab - and the two facts stay deliberately
-            // apart (UsKernelDraw.RowSurface's own contract).
+            // The SHIPPED selected-row treatment (OVT-004 re-cut): plane FIRST, rails LAST. The fill
+            // is the palette's DECLARED Selected surface (the old gold alpha tint is retired); the
+            // anchor rail rides SelectedRail (the palette's primary ink). The thresholds are unchanged
+            // and measured on the REAL recorded draw by the theme lane: body ink vs the ground under
+            // it >= 4.5, the drawn identity marks vs their adjacent ground >= 3.0. The Selected-vs-
+            // Raised plane difference is deliberately NOT gated (PM ruling: <3 there is legal - the
+            // identity rides the marks, not the background delta).
             UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
             UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
             return;

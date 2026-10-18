@@ -33,7 +33,9 @@ public sealed class UsConfirmWindow
     private const string WindowKind = "us/confirm";
 
     private static readonly UiWindowKey WindowKey = new(Consumer, WindowKind, "");
-    private static readonly UiTheme WindowTheme = UsTheme.Surface();
+    // UIR-006: the shared chrome bag (repainted on a live palette switch); the dialog is born on the
+    // answer, so it also gets whatever palette the settings page already wears.
+    private static readonly UiTheme WindowTheme = UsTheme.ChromeTheme;
 
     private static UsConfirmWindow? active;
 
