@@ -14,9 +14,9 @@
 
 [AudioOnly.xml](examples/0.6/AudioOnly.xml)只需普通声音包，不需要C#提供者。根为真实`UsVoicePackDef : Verse.Def`，`declaration`字段的`LoadDataFromXmlCustom`由原版Def加载器调用；US没有另建XML/程序集加载器。`declaration/formatVersion`省略永久表示1，显式1同义；未知版本拒绝。样例仅在docs，不默认安装为内容。
 
-[Extensions.xml](examples/0.6/Extensions.xml)展示显式`UsProviderDef`→`IUsDefinitionProvider`批次、`UsActionDef`条件组合和音频引用。示范提供者`ControlledExampleProvider`总是返回True，仅用于受控装配验证，不冒充游戏值班事实。真实扩展实现`IUsFactSource.Capture(subject)`并自行在适配中查对象，核心接口没有Pawn/Def类型。提供者在临时批次完整收集、重复检查后发布；失败不发布半批。
+[Extensions.xml](examples/0.6/Extensions.xml)展示显式`UsProviderDef`→`IUsDefinitionProvider`批次、`UsActionDef`条件组合和音频引用。示范提供者`ControlledExampleProvider`总是返回True，仅用于受控装配验证，不冒充游戏值班事实。真实扩展实现`IUsFactSource.Capture(subject)`并自行在适配中查对象，核心接口没有Pawn/Def类型。提供者在临时批次完整收集、重复检查后发布；失败不发布半批。注册时只读取一次事实Key，之后采样沿用该注册身份。S1组合的baseAction只接受内置us.core/Work、us.core/Wounded、us.core/Call；不接受组合动作作为base，与Def枚举顺序无关。
 
-字段：精确Race、稳定entry key、动作ID、SoundDef名及可选weight/volume/enabled。省略与显式false/0通过存在位区分；volume=0合法，weight必须有限正数。未知/重复字段、重复身份和缺必需条件不会通过删条件被放行。音源归属取实际SoundDef提供者，不接受作者owner字符串；完整重名/patch前来源取证仍待S2，不能称首版资源系统已闭环。
+字段：精确Race、稳定entry key、动作ID、SoundDef名及可选weight/volume/enabled。省略与显式false/0通过存在位区分；volume=0合法，weight必须有限正数。未知/重复字段、重复身份和缺必需条件不会通过删条件被放行。condition必须恰有一个根表达式；ref是无属性文本叶，all/any/not只能含合法表达式，not恰有一项；entries只能含li。音源归属取实际SoundDef提供者，不接受作者owner字符串；完整重名/patch前来源取证仍待S2，不能称首版资源系统已闭环。
 
 ## 手动目标1.6观察（待验收）
 
@@ -28,6 +28,6 @@
 
 ## 同步测试与兼容
 
-`tools/UniversalSqueakerOneShotTests`接verify-local追加gate17：T01–T12适用路径、T06延迟变体、D1真值表、四结果及诊断故障、准确域、作者批次/格式/缺失处理。旧Kernel corpus继续普通重放，不全量重录。原配置/Realtime等既有characterization继续执行；纯测试、平台fixture与实机证据分开记录。
+`tools/UniversalSqueakerOneShotTests`接verify-local追加gate17：T01–T12适用路径、T06延迟变体、D1真值表、缺失事实键/提供者异常原因快照（不重新采样）、四结果及诊断故障、准确域、作者批次/格式/缺失处理。旧Kernel corpus继续普通重放，不全量重录。原配置/Realtime等既有characterization继续执行；纯测试、平台fixture与实机证据分开记录。
 
 完整构建目前显式选择已固定的FL0.7 Dev；范围仍`[0.7.0,0.8.0)`，不表示FL0.8已消费。所有bin/obj/dist与Dev载荷均来自本开发工作副本，旧checkpoint及游戏目录不写入。
