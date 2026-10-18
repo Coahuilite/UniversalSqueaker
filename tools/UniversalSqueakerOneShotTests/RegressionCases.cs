@@ -165,6 +165,82 @@ internal static partial class Program
         Check(failed.Reads == 1 && failed.Captures == 1 && driver.Rolls == 0 && driver.Calls == 0, "D1 diagnostics never reread provider key, resample or draw");
     }
 
+    private static void DiagnosticsSurviveChosenAction()
+    {
+        var catalog = new AuthorCatalog(120, 120);
+        var failed = new SampleFact("example/HighPriority") { FailCapture = true };
+        Check(catalog.AddProvider(new FactProvider(failed)), "chosen-path diagnostic provider registered");
+        var snapshot = catalog.Capture("p1", new Dictionary<string, Truth>
+        {
+            ["us.core/WorkState"] = Truth.True
+        });
+        foreach (string scenario in new[]
+        {
+            "Dispatched", "Rejected", "Scope", "HardDeadline", "NoVocal",
+            "Talking", "Eligibility", "NoAudio", "PreparationFault", "BackendFault"
+        })
+        {
+            var input = Input();
+            input.Facts = snapshot;
+            input.Actions = new[]
+            {
+                new ActionPlan("example/Higher", 30, new Condition("ref", "example/HighPriority"), 120),
+                new ActionPlan("us.core/Work", 20, new Condition("ref", "us.core/WorkState"), 120,
+                    chance: scenario == "Eligibility" ? 0 : 1)
+            };
+            var state = new DecisionState(1000);
+            var driver = new Driver
+            {
+                Result = scenario == "Rejected" ? PlaybackResult.Rejected : PlaybackResult.Dispatched,
+                FailRandom = scenario == "PreparationFault",
+                FailDispatch = scenario == "BackendFault"
+            };
+            switch (scenario)
+            {
+                case "Scope":
+                    input.BlockedActions.Add("us.core/Work");
+                    break;
+                case "HardDeadline":
+                    state.SharedDeadline = 1050;
+                    break;
+                case "NoVocal":
+                    input.HasVocalOrgans = false;
+                    break;
+                case "Talking":
+                    input.TalkingChance = 0;
+                    break;
+                case "PreparationFault":
+                    input.TalkingChance = .5;
+                    break;
+                case "NoAudio":
+                    input.Audio = Array.Empty<AudioCandidate>();
+                    break;
+            }
+            var outcome = new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
+            Check(outcome.Action == "us.core/Work", scenario + ": lower independent True action remains selected");
+            Check(outcome.Diagnostics.Count == 1
+                && outcome.Diagnostics[0].Key == "example/HighPriority"
+                && outcome.Diagnostics[0].Provider.Contains("FactProvider")
+                && outcome.Diagnostics[0].Reason.Contains("capture failure"),
+                scenario + ": selected result retains higher Unknown cause");
+            bool entersBackend = scenario == "Dispatched" || scenario == "Rejected" || scenario == "BackendFault";
+            Check(driver.Calls == (entersBackend ? 1 : 0), scenario + ": dispatch boundary unchanged");
+            Check(driver.Rolls == (scenario == "PreparationFault" ? 1 : 0),
+                scenario + ": diagnostic forwarding adds no random draw");
+            if (scenario == "Dispatched")
+            {
+                Check(outcome.Receipt?.Result == PlaybackResult.Dispatched && state.ConfirmedTick == 1000,
+                    "higher Unknown does not prevent legitimate lower dispatch");
+            }
+            if (scenario == "Rejected")
+            {
+                Check(outcome.Receipt?.Result == PlaybackResult.Rejected && state.ConfirmedTick == null,
+                    "lower backend rejection still carries original Unknown diagnosis");
+            }
+        }
+        Check(failed.Reads == 1 && failed.Captures == 1,
+            "all selected return paths use captured diagnostics without resampling");
+    }
     private static void AuthorShapeAndRegistration()
     {
         string header = "<declaration><key>example/A</key><baseAction>us.core/Work</baseAction>";

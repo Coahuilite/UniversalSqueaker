@@ -358,20 +358,19 @@ public sealed class OneShotDecision
         ActionPlan? action = ChooseAction(input, out string selectionReason, out var diagnostics);
         if (action == null)
         {
-            var stopped = Stop(state, policy, input, "", selectionReason);
-            return new DecisionOutcome(stopped.Action, stopped.Reason, diagnostics: diagnostics);
+            return Stop(state, policy, input, "", selectionReason, diagnostics);
         }
 
         // Selection reserves this tick even when a later scope or hard gate rejects it.
         state.AttemptTick = input.Tick;
         if (input.BlockedActions.Contains(action.Key))
         {
-            return Stop(state, policy, input, action.Key, "ActionOrScopeRejected");
+            return Stop(state, policy, input, action.Key, "ActionOrScopeRejected", diagnostics);
         }
 
         if (input.Tick < state.ActionDeadline(action.Key) || (action.CheckShared && input.Tick < state.SharedDeadline))
         {
-            return Stop(state, policy, input, action.Key, "HardDeadline");
+            return Stop(state, policy, input, action.Key, "HardDeadline", diagnostics);
         }
 
         bool enteredBackend = false;
@@ -379,36 +378,36 @@ public sealed class OneShotDecision
         {
             if (!input.HasVocalOrgans)
             {
-                return Stop(state, policy, input, action.Key, "NoVocalOrgans");
+                return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
             }
 
             if (!Pass(input.TalkingChance, RandomPurpose.Talking, random))
             {
-                return Stop(state, policy, input, action.Key, "TalkingRejected");
+                return Stop(state, policy, input, action.Key, "TalkingRejected", diagnostics);
             }
 
             if (!Pass(action.Chance, RandomPurpose.Eligibility, random))
             {
-                return Stop(state, policy, input, action.Key, "ChanceRejected");
+                return Stop(state, policy, input, action.Key, "ChanceRejected", diagnostics);
             }
 
             var audio = Select(input, action.Key, random);
             if (audio == null)
             {
-                return Stop(state, policy, input, action.Key, "NoBoundAudio");
+                return Stop(state, policy, input, action.Key, "NoBoundAudio", diagnostics);
             }
 
             enteredBackend = true;
             var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick));
             Settle(state, policy, input, action, receipt);
-            return new DecisionOutcome(action.Key, receipt.Reason, receipt);
+            return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
         }
         catch (Exception error)
         {
             // Backends must translate side-effect uncertainty; an escaping backend fault is conservative.
             var receipt = new PlaybackReceipt(enteredBackend ? PlaybackResult.Indeterminate : PlaybackResult.Rejected, error.GetType().Name);
             Settle(state, policy, input, action, receipt);
-            return new DecisionOutcome(action.Key, "UnhandledDispatchFault", receipt);
+            return new DecisionOutcome(action.Key, "UnhandledDispatchFault", receipt, diagnostics);
         }
     }
 
@@ -523,14 +522,14 @@ public sealed class OneShotDecision
         return value;
     }
 
-    private static DecisionOutcome Stop(DecisionState state, StatePolicy policy, DecisionInput input, string action, string reason)
+    private static DecisionOutcome Stop(DecisionState state, StatePolicy policy, DecisionInput input, string action, string reason, IReadOnlyList<FactDiagnostic>? diagnostics = null)
     {
         if (input.StateOpportunity)
         {
             state.NextStateTick = Math.Max(input.Tick + StatePolicy.Retry, state.SharedDeadline);
         }
 
-        return new DecisionOutcome(action, reason);
+        return new DecisionOutcome(action, reason, diagnostics: diagnostics);
     }
 
     private static void Settle(DecisionState state, StatePolicy policy, DecisionInput input, ActionPlan action, PlaybackReceipt receipt)

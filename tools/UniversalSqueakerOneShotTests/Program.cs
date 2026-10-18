@@ -24,9 +24,14 @@ internal static partial class Program
         public double Value = .1;
         public readonly List<RandomPurpose> Purposes = new();
         public bool FailRandom;
+        public bool FailDispatch;
         public PlaybackReceipt Dispatch(PlaybackRequest request)
         {
             Calls++;
+            if (FailDispatch)
+            {
+                throw new InvalidOperationException("backend fault");
+            }
             return new PlaybackReceipt(Result, request.Audio.AudioId);
         }
 
@@ -81,6 +86,7 @@ internal static partial class Program
         ExactTimingFixtures();
         SameTickGateFailures();
         AuthorDiagnostics();
+        DiagnosticsSurviveChosenAction();
         AuthorShapeAndRegistration();
         AuthorCases();
         FileExamples();
