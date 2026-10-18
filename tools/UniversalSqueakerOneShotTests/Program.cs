@@ -13,9 +13,11 @@ internal static class Program
     {
         public PlaybackResult Result = PlaybackResult.Dispatched;
         public int Calls, Rolls;
+        public double Value = .1;
+        public readonly List<RandomPurpose> Purposes = new();
         public bool FailRandom;
         public PlaybackReceipt Dispatch(PlaybackRequest request) { Calls++; return new PlaybackReceipt(Result, request.Audio.AudioId); }
-        public double Next(RandomPurpose purpose) { Rolls++; if (FailRandom) throw new Exception("random"); return 0.1; }
+        public double Next(RandomPurpose purpose) { Rolls++; Purposes.Add(purpose); if (FailRandom) throw new Exception("random"); return Value; }
     }
     private static DecisionInput Input(long tick = 1000, bool state = true, bool work = true, bool wounded = false, bool call = true)
     {
@@ -83,6 +85,14 @@ internal static class Program
         Check(selected.RequiresResponsivePawn&&selected.IsPlayerInitiated&&selected.SkipsRandomOneShotProbability,"legacy source metadata retained for controlled event bridge");
         var nativeEvent=new UniversalSqueaker.SqueakTriggerInvocation(UniversalSqueaker.SqueakTriggerOrigin.Wounded,UniversalSqueaker.SqueakInvocationSource.StateEvent);
         Check(!nativeEvent.RequiresResponsivePawn&&!nativeEvent.IsPlayerInitiated,"native wounded event gains no selection/survival gate");
+                var randomInput=Input();randomInput.TalkingChance=.5;
+        randomInput.Actions=randomInput.Actions.Select(x=>x.Key=="us.core/Work"?new ActionPlan(x.Key,x.Priority,x.Condition,x.Interval,chance:.5):x).ToArray();
+        randomInput.Audio=new[]{new AudioCandidate("a","pack/first","us.core/Work","Ratkin",1),new AudioCandidate("b","pack/second","us.core/Work","Ratkin",3)};
+        var transcript=new Driver();engine.Run(new DecisionState(1000),policy,randomInput,transcript,transcript);
+        Check(transcript.Purposes.SequenceEqual(new[]{RandomPurpose.Talking,RandomPurpose.Eligibility,RandomPurpose.Sound}),"ordered purpose transcript has no missing/extra draw");
+        randomInput.TalkingChance=1;randomInput.Actions=Input().Actions;var high=new Driver{Value=.9};
+        var weighted=engine.Run(new DecisionState(1000),policy,randomInput,high,high);
+        Check(weighted.Receipt?.Reason=="pack/second"&&high.Rolls==1,"fixed .9 selects weight-three entry using retained selector");
         AuthorCases(); FileExamples();
         Console.WriteLine("OneShot/author production source checks PASS: "+checks);
     }
