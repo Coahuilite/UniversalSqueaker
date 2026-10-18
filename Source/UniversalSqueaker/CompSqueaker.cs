@@ -371,7 +371,7 @@ public class CompSqueaker : ThingComp
     /// <summary>外部动作（string 键）的触发入口：与内置动作走同一 NotifyExternal 通路。</summary>
     public void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
     {
-        if (UsOneShotRuntime.TryEvent(Pawn, actionKey)) return;
+        if (UsOneShotRuntime.TryEvent(Pawn, actionKey, origin, source)) return;
         SynchronizePeriodicMembership();
         if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
         {
@@ -897,15 +897,16 @@ public class CompSqueaker : ThingComp
         return delta.Enabled && (delta.Scope != SqueakActionScope.ActiveCommand || invocation.IsActiveCommand);
     }
 
-    internal bool ControlledOneShotAllowed(string key)
+    internal bool ControlledOneShotAllowed(string key, bool activeCommand = false)
     {
         if (!IsActionAllowedByKey(key) || !TryGetPlan(key, out var plan) || !plan.Configured) return false;
         var context = GetRuntimeContext(out _);
         var delta = context.GetActionByKey(key);
         if (!delta.Enabled) return false;
         if (delta.Scope != SqueakActionScope.ActiveCommand) return true;
-        return key == "Work" && IsCurrentJobPlayerCommand() && Pawn.IsPlayerControlled;
+        return ((key == "Work" && IsCurrentJobPlayerCommand()) || activeCommand) && Pawn.IsPlayerControlled;
     }
+    internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal bool ControlledWorkActive() => CurrentAction == SqueakAction.Work;
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
     internal bool HasActiveSustainer => activeSustainer != null && !activeSustainer.Ended;

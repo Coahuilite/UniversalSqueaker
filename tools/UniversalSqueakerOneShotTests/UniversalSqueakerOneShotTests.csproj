@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><NuGetAudit>false</NuGetAudit></PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../Source/UniversalSqueaker/Pure/*.cs" Link="Pure/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Kernel/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Authoring/*.cs" Link="Authoring/%(Filename)%(Extension)" />

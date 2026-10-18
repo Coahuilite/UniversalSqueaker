@@ -30,7 +30,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     public DecisionState State => state;
     internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, IReadOnlyDictionary<string, SoundDef> bindings, StatePolicy policy, long workTicks, long woundedTicks)
     { this.pawn = pawn; this.catalog = catalog; this.bindings = bindings; this.policy = policy; state = new DecisionState(Find.TickManager.TicksGame); actions = catalog.Actions.Select(a => new ActionPlan(a.Key, a.Priority, a.Condition, a.BaseAction == "us.core/Wounded" ? woundedTicks : workTicks, a.CheckShared, a.WriteShared, a.Chance, a.BaseAction)).ToArray(); }
-    public void Tick(bool wounded)
+    public void Tick(bool wounded, bool activeCommand = false)
     {
         long now = Find.TickManager.TicksGame;
         if (!wounded && now < Math.Max(state.NextStateTick, state.SharedDeadline)) return;
@@ -50,7 +50,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = CompSqueaker.ScaleFrequencyWithTalking && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
             Facts = catalog.Capture(pawn.ThingID, values), Actions = actions, Audio = catalog.Audio,
-            BlockedActions = new HashSet<string>(actions.Where(a => !comp.ControlledOneShotAllowed(a.BaseAction.Substring(a.BaseAction.LastIndexOf('/') + 1))).Select(a => a.Key), StringComparer.Ordinal)
+            BlockedActions = new HashSet<string>(actions.Where(a => !comp.ControlledOneShotAllowed(a.BaseAction.Substring(a.BaseAction.LastIndexOf('/') + 1), activeCommand)).Select(a => a.Key), StringComparer.Ordinal)
         };
         draws.Clear();
         LastOutcome = decision.Run(state, policy, input, this, this);
@@ -110,10 +110,11 @@ public static class UsOneShotRuntime
         if (!pawn.Spawned || pawn.Destroyed) { sessions.Remove(pawn); return true; }
         if (SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.MapHeld == Find.CurrentMap) session.Tick(false); return true;
     }
-    public static bool TryEvent(Pawn pawn, string key)
+    public static bool TryEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source)
     {
         if (!sessions.TryGetValue(pawn, out var session)) return false;
-        if (key == "Wounded" && SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled) session.Tick(true);
+        var invocation = new SqueakTriggerInvocation(origin, source);
+        if (key == "Wounded" && SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.GetComp<CompSqueaker>().ControlledInvocationAllowed(invocation)) session.Tick(true, invocation.IsActiveCommand);
         // Controlled session is exclusively the S1 action set; no parallel legacy cooldown owner.
         return true;
     }

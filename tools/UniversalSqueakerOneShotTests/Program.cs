@@ -79,6 +79,10 @@ internal static class Program
         bool oversized=false;try{new AudioCandidate("x","p/a","Work","Ratkin",1,1e300);}catch(ArgumentException){oversized=true;}Check(oversized,"finite native local gain required");
                 var qualified=Input();qualified.BlockedActions.Add("us.core/Work");var scoped=new Driver();var scopeResult=engine.Run(new DecisionState(1000),policy,qualified,scoped,scoped);
         Check(scopeResult.Action=="us.core/Work"&&scopeResult.Reason=="ActionOrScopeRejected"&&scoped.Calls==0,"scope rejection does not falsify facts or choose Call");
+                var selected=new UniversalSqueaker.SqueakTriggerInvocation(UniversalSqueaker.SqueakTriggerOrigin.Wounded,UniversalSqueaker.SqueakInvocationSource.PlayerSelection);
+        Check(selected.RequiresResponsivePawn&&selected.IsPlayerInitiated&&selected.SkipsRandomOneShotProbability,"legacy source metadata retained for controlled event bridge");
+        var nativeEvent=new UniversalSqueaker.SqueakTriggerInvocation(UniversalSqueaker.SqueakTriggerOrigin.Wounded,UniversalSqueaker.SqueakInvocationSource.StateEvent);
+        Check(!nativeEvent.RequiresResponsivePawn&&!nativeEvent.IsPlayerInitiated,"native wounded event gains no selection/survival gate");
         AuthorCases(); FileExamples();
         Console.WriteLine("OneShot/author production source checks PASS: "+checks);
     }
