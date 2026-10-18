@@ -11,6 +11,7 @@
 | 维护当前运行时与服务对象边界 | [当前架构与源码入口](architecture-0.5-zh.md) |
 | 修改设置界面、主题或诊断交互 | [当前 UI 契约](ui-contract-0.5-zh.md) |
 | 规划下一版 Kernel、实现新接缝 | [US Kernel 0.6.x 首版目标规格·审阅版，尚未实现](us-kernel-0.6-spec-zh.md) |
+| 为0.6实现准备合同用例、测试迁移及FL联调 | [合同与固定输入](us-kernel-0.6-acceptance-zh.md)、[测试迁移与显式Dev消费](us-kernel-0.6-test-migration-zh.md) |
 | 本地构建、选择 FerriteLib、验证改动 | [Build and debug](build-and-debug.md) |
 | 核对仓库和安装包目录 | [模组结构](mod-structure-reference-zh.md) |
 | 准备发布 | [发布流程](release-runbook-zh.md)、[隐私门禁](push-privacy-gate.md) |
