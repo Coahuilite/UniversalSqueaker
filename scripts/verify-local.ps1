@@ -356,6 +356,10 @@ Invoke-Check 'frozen stub snapshot integrity (all five recorded stub sources equ
         }
     }
 
+# Gate 17: production-source OneShot decision and real author field-loader/assembly contracts.
+Invoke-Check 'OneShot S1 + author declarations (zero platform references)' `
+    'dotnet run --project tools/UniversalSqueakerOneShotTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerOneShotTests') -c Release }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

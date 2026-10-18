@@ -1,0 +1,12 @@
+<Defs>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_Ratkin_WorkSlice</defName>
+    <declaration>
+      <race>Ratkin</race>
+      <entries>
+        <li><key>work-main</key><action>us.core/Work</action><sound>US_RatkinExp_Work</sound></li>
+        <li><key>wounded-main</key><action>us.core/Wounded</action><sound>US_RatkinExp_Wounded</sound></li>
+      </entries>
+    </declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

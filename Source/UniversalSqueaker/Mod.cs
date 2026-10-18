@@ -113,6 +113,7 @@ public class UniversalSqueakerMod : Mod
             // creation or first GUI pass. It is independent of the sound catalog below: it answers
             // "what did the game load" and feeds NO admission, NO comp mount, NO routing authority.
             RaceDefinitionCatalog.CollectAndPublish();
+            UsOneShotRuntime.Initialize();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
             // VF1 order: the final-table store loads BEFORE the mount decision, because the support
@@ -125,7 +126,7 @@ public class UniversalSqueakerMod : Mod
             // thread (ExecuteWhenFinished) before any pawn is generated. Author patches still win.
             VoicePackCompAttach.Apply(
                 SqueakXenotypeCatalog.Current,
-                SqueakFallbackProfileStore.SupportedRaceDefNames());
+                SqueakFallbackProfileStore.SupportedRaceDefNames().Concat(UsOneShotRuntime.DeclaredRaces));
             Settings.ApplyToRuntime();
             // The first and only startup consumption of a schema migration happens after main-thread binding.
             Settings.QueuePendingMigrationPersistence();

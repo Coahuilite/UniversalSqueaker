@@ -1,0 +1,20 @@
+<Defs>
+  <UniversalSqueaker.UsProviderDef>
+    <defName>US_ControlledExampleProvider</defName>
+    <providerClass>UniversalSqueaker.Authoring.ControlledExampleProvider</providerClass>
+  </UniversalSqueaker.UsProviderDef>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ControlledOnDutyWork</defName>
+    <declaration>
+      <formatVersion>1</formatVersion>
+      <key>example/OnDutyWork</key><baseAction>us.core/Work</baseAction>
+      <condition><all><ref>us.core/WorkState</ref><ref>example/OnDuty</ref></all></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ControlledExampleAudio</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>on-duty</key><action>example/OnDutyWork</action><sound>US_RatkinExp_Work</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

@@ -259,3 +259,9 @@ Assembly-CSharp!Verse.RaceProperties::get_Humanlike() | defs
 Assembly-CSharp!Verse.RaceProperties::get_Animal() | defs
 Assembly-CSharp!Verse.RaceProperties::get_IsMechanoid() | defs
 Assembly-CSharp!Verse.RaceProperties::get_IsAnomalyEntity() | defs
+
+# OneShot S1: these paths are outside the page Host fixture. Production compiles against real
+# 1.6.4871 refs; game-session construction/reset and the explicit developer-mode gate require
+# target-game observation. No same-named stubs are added to the pure OneShot source test.
+Assembly-CSharp!Verse.GameComponent::.ctor() | world
+Assembly-CSharp!Verse.Prefs::get_DevMode() | debug

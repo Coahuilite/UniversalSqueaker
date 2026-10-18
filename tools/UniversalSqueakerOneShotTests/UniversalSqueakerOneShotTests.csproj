@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><NuGetAudit>false</NuGetAudit></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Kernel/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Authoring/*.cs" Link="Authoring/%(Filename)%(Extension)" />
+    <None Include="../../docs/examples/0.6/*.xml" Link="examples/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

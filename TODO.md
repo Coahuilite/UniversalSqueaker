@@ -5,7 +5,13 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — interaction checkpoint accepted in game; next active discussion is UI/UX design and copy (2026-10-09)
+## NOW — 0.6.0 controlled OneShot S1 native validation pending
+
+- Run the approved 1.6 controlled author-load and Work/Wounded OneShot observation using the isolated Dev candidate; do not install it automatically.
+- Keep D3 daily-frequency defaults, D4 modulation and new Sustained start/replacement outside this slice. W20 remains a labelled fixture, not a player default.
+- See docs/us-kernel-0.6-s1-zh.md; native resource provenance/output/subject isolation and listening evidence remain separate.
+
+## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical
 status and paired package identities are authoritative in the PM checkpoint evidence and manifest:

@@ -221,6 +221,7 @@ public class CompSqueaker : ThingComp
     public override void CompTick()
     {
         SynchronizePeriodicMembership();
+        if (UsOneShotRuntime.TryTick(Pawn)) return;
         SqueakAction? action = CurrentAction;
         // Disabled = 真旁路：gate 置于任何发声状态维护之前（与 NotifyExternalByKey 头部 gate 对仗，
         // 治本而非在分支补 End）。已激活的 Sustainer 不再被 Maintain，由原版未维护生命周期自动 End
@@ -336,6 +337,7 @@ public class CompSqueaker : ThingComp
     public override void PostDestroy(DestroyMode mode, Map previousMap)
     {
         EndActiveSustainer();
+        UsOneShotRuntime.DisableControlled(Pawn);
         SqueakPeriodicPopulation.Unregister(this, previousMap);
         registeredMap = null;
         base.PostDestroy(mode, previousMap);
@@ -352,6 +354,7 @@ public class CompSqueaker : ThingComp
     }
     internal void NotifyPeriodicDespawn(Map map)
     {
+        UsOneShotRuntime.DisableControlled(Pawn);
         SqueakPeriodicPopulation.Unregister(this, map);
         if (ReferenceEquals(registeredMap, map)) registeredMap = null;
     }
@@ -368,6 +371,7 @@ public class CompSqueaker : ThingComp
     /// <summary>外部动作（string 键）的触发入口：与内置动作走同一 NotifyExternal 通路。</summary>
     public void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
     {
+        if (UsOneShotRuntime.TryEvent(Pawn, actionKey)) return;
         SynchronizePeriodicMembership();
         if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
         {
@@ -892,6 +896,19 @@ public class CompSqueaker : ThingComp
         // H1 fix: scope comes only from the layered context delta, not a separate global policy early-return.
         return delta.Enabled && (delta.Scope != SqueakActionScope.ActiveCommand || invocation.IsActiveCommand);
     }
+
+    internal bool ControlledOneShotAllowed(string key)
+    {
+        if (!IsActionAllowedByKey(key) || !TryGetPlan(key, out var plan) || !plan.Configured) return false;
+        var context = GetRuntimeContext(out _);
+        var delta = context.GetActionByKey(key);
+        if (!delta.Enabled) return false;
+        if (delta.Scope != SqueakActionScope.ActiveCommand) return true;
+        return key == "Work" && IsCurrentJobPlayerCommand() && Pawn.IsPlayerControlled;
+    }
+    internal bool ControlledWorkActive() => CurrentAction == SqueakAction.Work;
+    internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
+    internal bool HasActiveSustainer => activeSustainer != null && !activeSustainer.Ended;
 
     private SqueakVocalCapability SampleVocalCapability() => new(GetVocalOrganEfficiency(),
         Pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Talking) ?? 1f);

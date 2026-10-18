@@ -18,7 +18,7 @@ The settings window has five workspaces: **Overview / Packs / Tuning / Presets /
 
 ## Documentation
 
-Start with the [documentation index](docs/README.md). It separates current **0.5.x behavior** from the **0.6.x target specification**.
+This branch is **0.6.0 Dev**: the [controlled OneShot S1 and real author examples](docs/us-kernel-0.6-s1-zh.md) are implemented; ordinary daily defaults remain on the retained path. The [documentation index](docs/README.md) separates retained 0.5 behavior, implemented S1 and later 0.6 targets.
 
 - [Current behavior and settings](docs/current-behavior-0.5-zh.md)
 - [VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)

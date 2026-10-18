@@ -11,7 +11,11 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Current state (2026-10-09)
+## Development state (0.6.0, 2026-10-18)
+
+OneShot S1 is implemented behind explicit controlled developer input; normal daily scheduling and legacy realtime entry conditions remain on the retained path until D3 is frozen. Author fields are loaded by the normal Def custom-field hook; production-source tests assemble ordinary XML, conditions and an explicit provider. See docs/us-kernel-0.6-s1-zh.md for the actual scope and pending native-game evidence. The FL range remains [0.7.0,0.8.0); this branch uses an explicitly selected frozen 0.7 Dev carrier, not FL 0.8 integration.
+
+## Retained 0.5 baseline (2026-10-09)
 
 - **UI refactor round (2026-10-14, WO-US-UI-REFACTOR-20261014 r1; uncommitted on top of the inherited
   Remix seven paths).** The settings page has FIVE workspaces: Overview / Packs / Tuning / Presets /
