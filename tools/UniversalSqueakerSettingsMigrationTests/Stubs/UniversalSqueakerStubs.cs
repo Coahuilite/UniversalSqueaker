@@ -39,16 +39,17 @@ namespace UniversalSqueaker
     }
 
     /// <summary>Characterization stub: the store reads the permanent packageId from the mod class.</summary>
-    public class UniversalSqueakerMod
+    public partial class UniversalSqueakerMod : Verse.Mod
     {
         public const string PackageId = "coahuilite.universalsqueaker";
-        public static UniversalSqueakerMod Instance = null;
-
-        public void QueueSettingsSave()
-        {
-        }
+        public static UniversalSqueakerMod Instance;
+        public static UniversalSqueakerSettings Settings;
+        public UniversalSqueakerMod(Verse.ModContentPack content) : base(content) { Instance = this; }
     }
-
+    public static class UsOneShotRuntime
+    {
+        public static BehaviorSourceDirectory BehaviorSources = new(Array.Empty<BehaviorSource>());
+    }
     /// <summary>
     /// SqueakActionDefinitions lives in the production Runtime adapter but is not part of this harness's
     /// link set; this stub supplies the two members the linked Models/Settings files call.
@@ -110,8 +111,10 @@ namespace UniversalSqueaker
 
     public static class SqueakRuntimeResolver
     {
+        public static bool FailDiscrete;
         public static void NotifyDiscreteResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
         {
+            if (FailDiscrete) throw new InvalidOperationException("injected runtime publication failure");
         }
 
         public static void NotifyContinuousResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)

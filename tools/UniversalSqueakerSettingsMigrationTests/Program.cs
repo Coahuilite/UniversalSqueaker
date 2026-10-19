@@ -49,6 +49,7 @@ internal static partial class Program
             UiSwatchRoundTripRepairAndOmission();
             IntroCollapsedScribeRoundTrip();
             BehaviorSourceConfigTransaction();
+            SourceSaveUsesOriginalModGeneration();
 
             if (failures == 0)
             {
@@ -1013,4 +1014,3 @@ internal static partial class Program
         else { Console.Error.WriteLine("  FAIL: " + name); failures++; }
     }
 }
-

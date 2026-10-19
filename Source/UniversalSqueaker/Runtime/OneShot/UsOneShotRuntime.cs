@@ -186,20 +186,29 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 rejection = "DynamicPlayability:" + playability;
                 return false;
             }
-            if (request.UseLegacyModulation) legacyModulation = pawn.GetComp<CompSqueaker>().ControlledLegacyModulation();
+            double localVolume = request.Audio.Volume;
+            double localPitch = request.Pitch;
+            double globalVolume = CompSqueaker.GlobalVolumeFactor;
+            if (request.UseLegacyModulation)
+            {
+                legacyModulation = pawn.GetComp<CompSqueaker>().ControlledLegacyModulation();
+                var jitter = legacyModulation.pitchJitter;
+                localPitch = legacyModulation.pitchFactor * (jitter.min + (jitter.max - jitter.min) * Next(RandomPurpose.LegacyJitter));
+                localVolume = legacyModulation.volumeFactor;
+                globalVolume = 1; // The retained modulation resolver has already applied this global factor once.
+            }
+            if (!OneShotOutput.TryPrepare(localVolume, localPitch, globalVolume, out float volume, out float pitch))
+            {
+                rejection = "InvalidFinalParameters";
+                return false;
+            }
+            info.volumeFactor = volume;
+            info.pitchFactor = pitch;
             return true;
         }
 
         void Play()
         {
-            info.volumeFactor = (float)request.Audio.Volume * CompSqueaker.GlobalVolumeFactor;
-            info.pitchFactor = (float)request.Pitch;
-            if (legacyModulation != null)
-            {
-                var jitter = legacyModulation.pitchJitter;
-                info.pitchFactor = legacyModulation.pitchFactor * (jitter.min + (jitter.max - jitter.min) * (float)Next(RandomPurpose.LegacyJitter));
-                info.volumeFactor = legacyModulation.volumeFactor;
-            }
             sound!.PlayOneShot(info);
         }
 
@@ -358,6 +367,3 @@ public sealed class UsOneShotSessionLifecycle : GameComponent
     public override void StartedNewGame() => UsOneShotRuntime.ResetSession();
     public override void LoadedGame() => UsOneShotRuntime.ResetSession();
 }
-
-
-

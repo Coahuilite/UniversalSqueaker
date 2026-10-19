@@ -470,8 +470,11 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "NoBoundAudio", diagnostics);
             }
 
+            double localVolume = audio.Volume * action.Volume;
+            if (!OneShotOutput.TryPrepare(localVolume, action.Pitch, 1, out _, out _))
+                return Stop(state, policy, input, action.Key, "InvalidLocalParameters", diagnostics);
             audio = new AudioCandidate(audio.EntryKey, audio.AudioId, audio.Action, audio.Domain, audio.Weight,
-                audio.Volume * action.Volume, audio.Family, audio.TargetNamespace);
+                localVolume, audio.Family, audio.TargetNamespace);
             enteredBackend = true;
             var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, action.Pitch, input.UseLegacyModulation));
             Settle(state, policy, input, action, receipt);
@@ -648,6 +651,27 @@ public sealed class OneShotDecision
     }
 }
 
+/// <summary>Native float boundary, not a new modulation range or a clamp.</summary>
+public static class OneShotOutput
+{
+    public static bool TryPrepare(double localVolume, double localPitch, double globalVolume, out float volume, out float pitch)
+    {
+        double finalVolume = localVolume * globalVolume;
+        volume = 0;
+        pitch = 0;
+        if (double.IsNaN(localVolume) || double.IsInfinity(localVolume) || localVolume < 0
+            || double.IsNaN(globalVolume) || double.IsInfinity(globalVolume) || globalVolume < 0
+            || double.IsNaN(finalVolume) || double.IsInfinity(finalVolume) || finalVolume < 0 || finalVolume > float.MaxValue
+            || double.IsNaN(localPitch) || double.IsInfinity(localPitch) || localPitch <= 0 || localPitch > float.MaxValue)
+        {
+            return false;
+        }
+        volume = (float)finalVolume;
+        pitch = (float)localPitch;
+        return !float.IsInfinity(volume) && !float.IsInfinity(pitch) && pitch > 0 && (finalVolume == 0 || volume > 0);
+    }
+}
+
 /// <summary>Translates platform evidence without letting diagnostic errors rewrite a receipt.</summary>
 public static class OneShotDispatch
 {
@@ -686,4 +710,3 @@ public static class OneShotDispatch
         return new PlaybackReceipt(PlaybackResult.Dispatched, "NativeCallReturned");
     }
 }
-

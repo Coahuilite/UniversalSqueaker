@@ -22,6 +22,7 @@
     <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Settings\*.cs" Link="Settings\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Mod.Persistence.cs" Link="Production\Mod.Persistence.cs" />
     <!-- UIR-006: the settings slice validates the persisted swatch id against the pure set. -->
     <Compile Include="..\..\Source\UniversalSqueaker\Themes\UsSwatchIds.cs" Link="Themes\UsSwatchIds.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerTuningBaselineDef.cs" Link="Runtime\UniversalSqueakerTuningBaselineDef.cs" />

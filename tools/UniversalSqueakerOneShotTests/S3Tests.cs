@@ -16,6 +16,7 @@ internal static partial class Program
         SparseSourceAuthorityAndRecovery();
         SourceDeletionAndStrictShape();
         IncompatibleSnapshotAndTickOverflow();
+        FinalNativeParametersRejectUnrepresentableProducts();
         S3FileExampleIsConsumed();
         string first = S3Replay();
         string second = S3Replay();
@@ -236,6 +237,33 @@ internal static partial class Program
         var noAudio = new Driver();
         new OneShotDecision().Run(retryState, new StatePolicy(40, 20), retryInput, noAudio, noAudio);
         Check(retryState.NextStateTick == long.MaxValue, "retry advancement saturates near maximum tick too");
+    }
+    private static void FinalNativeParametersRejectUnrepresentableProducts()
+    {
+        var domain = new BehaviorDomain("Pawn", "", "Ratkin");
+        var source = Source("a/Def", domain, "Work", new BehaviorValues { Volume = float.MaxValue });
+        var directory = new BehaviorSourceDirectory(new[] { source });
+        var binding = new BehaviorSourceState();
+        binding.Bind(domain, source.Id, directory);
+        var values = binding.Resolve(domain, "Work", directory, Array.Empty<BehaviorValues>(), _ => true, out _);
+        var input = Input();
+        input.Actions = new[] { new ActionPlan("us.core/Work", 20, new Condition("ref", "us.core/WorkState"), 120, volume: values.Volume!.Value) };
+        input.Audio = new[] { new AudioCandidate("entry", "audio/Work", "us.core/Work", "Ratkin", 1, 2) };
+        var driver = new Driver();
+        var state = new DecisionState(1000);
+        var outcome = new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
+        Check(outcome.Reason == "InvalidLocalParameters" && driver.Calls == 0 && state.SharedDeadline == 0,
+            "legal source float.MaxValue times legal entry 2 rejects before backend/native without changing configuration");
+        int nativeCalls = 0;
+        var rejected = OneShotDispatch.Execute(() => OneShotOutput.TryPrepare(float.MaxValue, 1, 2, out _, out _), () => nativeCalls++);
+        Check(rejected.Result == PlaybackResult.Rejected && nativeCalls == 0,
+            "legal local maximum times global factor 2 rejects before native side effects, not native clamping");
+        Check(OneShotOutput.TryPrepare(float.MaxValue, 1, 1, out float volume, out float pitch) && volume == float.MaxValue && pitch == 1,
+            "exact float boundary remains valid, no speculative smaller S4 range");
+        Check(OneShotOutput.TryPrepare(0, 1, 0, out volume, out pitch) && volume == 0,
+            "explicit zero volume remains valid and is not confused with missing value");
+        Check(!OneShotOutput.TryPrepare(1, double.NaN, 1, out _, out _) && !OneShotOutput.TryPrepare(1, double.Epsilon, 1, out _, out _),
+            "invalid or positive-but-unrepresentable final pitch is rejected before native dispatch");
     }
     private static string S3Replay()
     {

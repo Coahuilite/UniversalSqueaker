@@ -53,6 +53,7 @@ namespace Verse
     public class ModContentPack
     {
         public ModMetaData ModMetaData = new();
+        public string FolderName = "US-Fixture";
     }
 
     public class ModMetaData
@@ -204,9 +205,13 @@ namespace Verse
 
         private Utf8StringWriter stream = null;
         private XmlWriter writer = null;
+        private string targetPath;
+        public static Action BeforeFinalize;
+        public void InitSaving(string path, string root) { InitSaving(root); targetPath = path; }
 
         public void InitSaving(string documentElementName)
         {
+            targetPath = null;
             Scribe.mode = LoadSaveMode.Saving;
             stream = new Utf8StringWriter();
             XmlWriterSettings settings = new()
@@ -228,6 +233,10 @@ namespace Verse
             Scribe.mode = LoadSaveMode.Inactive;
             string text = stream.ToString();
             stream.Dispose();
+            var callback = BeforeFinalize;
+            BeforeFinalize = null;
+            callback?.Invoke();
+            if (targetPath != null) File.WriteAllText(targetPath, text);
             return text;
         }
 
@@ -513,3 +522,31 @@ namespace Verse
     }
 }
 
+
+namespace Verse
+{
+    public class Mod
+    {
+        public static bool FailWrite;
+        public static int BaseWrites;
+        public ModContentPack Content { get; }
+        public Mod(ModContentPack content) { Content = content; }
+        public virtual void WriteSettings()
+        {
+            if (FailWrite) throw new System.IO.IOException("injected original writer failure");
+            BaseWrites++;
+            var path = System.IO.Path.Combine(GenFilePaths.ConfigFolderPath, GenText.SanitizeFilename("Mod_" + Content.FolderName + "_" + GetType().Name + ".xml"));
+            SafeSaver.Save(path, "SettingsBlock", () =>
+            {
+                var settings = UniversalSqueaker.UniversalSqueakerMod.Settings;
+                Scribe_Deep.Look(ref settings, "ModSettings");
+            });
+        }
+    }
+    public static class Messages { public static void Message(string text, object kind, bool historical) { } }
+    public static class FixtureTranslation { public static string Translate(this string key) => key; }
+}
+namespace RimWorld
+{
+    public static class MessageTypeDefOf { public static readonly object RejectInput = new(); }
+}

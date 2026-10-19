@@ -59,14 +59,16 @@ Dev明确选择 `S3 CANDIDATE order: 17 actions W20 H40 actions120`，或调用 
 
 原版ModSettings写盘会直接截断最终文件，不能用其成功后提交内存来声称磁盘原子性。新来源操作沿原Config文件名（Content.FolderName + Mod类型名，经原GenText.SanitizeFilename）、同 `SettingsBlock/ModSettings` 形状及Scribe序列化全部旧字段，先写同目录唯一临时候选，关闭并flush后File.Replace（已有目标）/Move（首次）成功才提交内存。序列化/提交失败不改原文件与原记录，失败候选保留供诊断；不作为配置加载。真实Config没有被本轮测试触碰。
 
+来源原子保存与普通保存仍由同一个Mod代次队列结算：仅确认开始序列化时捕获的代次，覆盖已排队普通编辑后不会被debounce/framework再写一次；序列化期间重入的新代次保留待写，失败不误确认。提交后ApplyToRuntime若异常，返回committed=true并给Committed:RuntimePublishFailed原因，不谎称来源未改变或自动重复写盘。Mod.Persistence.cs是原Mod同类型的保存职责拆分，不是第二owner/队列。
+
 旧普通设置队列未另造UI或存档状态。新来源操作不会清旧字段；既有Global/行/区域Reset继续原范围，**不等于忘记新行为来源**。独立ConfigCopy、SettingsMigration和Reset仍走原测试；来源新操作实际覆盖序列化部分写失败、完整候选后失败、Windows目标文件锁导致Replace失败、成功重读与连续恢复。
 
 受控对象的合法未注册字符串经原NotifyExternalByKey→TryEvent进入同一DecisionState，不退出Dev、不要求新注册，也不退Comp私有冷却结算。保allowExternal、scope、玩家响应/主动来源、精确域音源、原Realtime实际采样及SqueakTimingModel倍率/时钟公式；初始旧最后记录投影给同一owner。原registry选音及旧年龄/心情覆盖/jitter含义保留，不切D4乘算。
 
-受控变化按已批D2：硬门先于roll；选中即占同tick；只有Dispatched/Indeterminate推进保护，AlreadyActive/Rejected不伪记派发；所有17和兼容调用共享名额/已立保护。原普通非受控路径不变。兼容轨迹覆盖两个方向同tick混用、拒绝不退名额、跨入口保护、tick大跳但真实秒不足、暂停同tick与Realtime精确端点；不固定估算tick与秒关系。新动作/共用/等待/重检截止用饱和long加法：合法long.MaxValue不修改配置，截止保持最大值而不溢出成负数。
+受控变化按已批D2：硬门先于roll；选中即占同tick；只有Dispatched/Indeterminate推进保护，AlreadyActive/Rejected不伪记派发；所有17和兼容调用共享名额/已立保护。原普通非受控路径不变。兼容轨迹覆盖两个方向同tick混用、拒绝不退名额、跨入口保护、tick大跳但真实秒不足、暂停同tick与Realtime精确端点；不固定估算tick与秒关系。来源×条目与当前全局因子的最终float音量/音高在原生副作用前验证，超出可表示范围明确拒绝，不clamp、不改配置或捏造S4范围。新动作/共用/等待/重检截止用饱和long加法：合法long.MaxValue不修改配置，截止保持最大值而不溢出成负数。
 
 ## 自动证据与未决
 
-`UniversalSqueakerOneShotTests`独立编译真实Authoring/Kernel/Pure，无游戏引用/同名stub；保旧golden，追加17事实、用途roll/次数、四回执、来源/权限/恢复、兼容时钟固定轨迹双重放。AudioBindingTests另以可控平台形状运行真实事实适配、AutoAttach、CreateDefault和资格函数；SettingsMigration另运行真实Settings/Scribe边界与原子文件事务。Host为真实产品/FL消费，原生与听感分别pending。
+`UniversalSqueakerOneShotTests`独立编译真实Authoring/Kernel/Pure，无游戏引用/同名stub；保旧golden，追加17事实、用途roll/次数、四回执、来源/权限/恢复、兼容时钟固定轨迹双重放。AudioBindingTests另以可控平台形状运行真实事实适配、AutoAttach、CreateDefault和资格函数；SettingsMigration另链接真实Mod.Persistence.cs，执行Mod→Settings→Scribe/stage→framework flush混用、失败与重入代次、提交后发布异常；替身仅提供平台构造/序列化边界，未运行完整游戏Mod构造。真实产品Host另按既有入口验证。Host为真实产品/FL消费，原生与听感分别pending。
 
 最终日志和RPT位于 `dist/evidence/s3/`，Dev为 `dist/dev/UniversalSqueaker/`。固定FL仍0.7.0-dev+d5af4d8、[0.7.0,0.8.0)，未消费0.8。候选不是一般安装/发布建议。S5继承Settings→ApplyDistanceRange→共享SubSoundDef.distRange仍强制阻断C11/V14/整版接受；本轮不删、临时改写恢复或clone共享定义。
