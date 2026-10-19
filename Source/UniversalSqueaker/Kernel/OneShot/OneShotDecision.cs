@@ -271,6 +271,7 @@ public sealed class AudioCandidate
 {
     public readonly string EntryKey;
     public readonly string PackKey;
+    public readonly double PackWeight;
     public readonly string AudioId;
     public Kernel.AudioId? Resource => Kernel.AudioId.TryParse(AudioId, out var id) ? id : null;
     public readonly string Action;
@@ -282,17 +283,19 @@ public sealed class AudioCandidate
     public readonly double Pitch;
     public readonly IReadOnlyDictionary<string, bool> Participation;
     public AudioCandidate(string entryKey, string audioId, string action, string domain, double weight, double volume = 1, SubjectFamily family = SubjectFamily.PawnRace, string targetNamespace = "", double pitch = 1,
-        IReadOnlyDictionary<string, bool>? participation = null, string packKey = "")
+        IReadOnlyDictionary<string, bool>? participation = null, string packKey = "", double packWeight = 1)
     {
         if (string.IsNullOrEmpty(audioId)
             || double.IsNaN(weight) || double.IsInfinity(weight) || weight <= 0 || weight > float.MaxValue
-            || double.IsNaN(volume) || double.IsInfinity(volume) || volume < 0 || volume > float.MaxValue)
+            || double.IsNaN(volume) || double.IsInfinity(volume) || volume < 0 || volume > float.MaxValue
+            || double.IsNaN(packWeight) || double.IsInfinity(packWeight) || packWeight <= 0 || packWeight > float.MaxValue)
         {
             throw new ArgumentException("Invalid audio candidate");
         }
 
         EntryKey = entryKey;
         PackKey = packKey;
+        PackWeight = packWeight;
         AudioId = audioId;
         Action = action;
         Domain = domain;
@@ -545,17 +548,22 @@ public sealed class OneShotDecision
         var domain = input.Family == SubjectFamily.NonPawn
             ? Kernel.AudioDomain.NonPawn(input.TargetNamespace, input.Domain)
             : new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), null);
-        var entries = candidates.Select(candidate => new Kernel.VoicePackEntry(
-            candidate.EntryKey,
-            domain,
-            (float)candidate.Weight,
-            new Dictionary<string, IReadOnlyList<Kernel.ActionSoundSet>>
+        var metadata = new Dictionary<Kernel.ActionSoundSet, AudioCandidate>();
+        var entries = new List<Kernel.VoicePackEntry>();
+        foreach (var pack in candidates.GroupBy(x => x.PackKey.Length == 0 ? x.EntryKey : x.PackKey, StringComparer.Ordinal))
+        {
+            var variants = new List<Kernel.ActionSoundSet>();
+            foreach (var candidate in pack)
             {
-                [routeKey] = new[]
-                {
-                    new Kernel.ActionSoundSet(new[] { candidate.AudioId }, null, 1)
-                }
-            })).ToArray();
+                var variant = new Kernel.ActionSoundSet(new[] { candidate.AudioId }, null, (float)candidate.Weight);
+                variants.Add(variant);
+                metadata.Add(variant, candidate);
+            }
+            var first = pack.First();
+            entries.Add(new Kernel.VoicePackEntry(pack.Key, domain,
+                (float)(first.PackKey.Length == 0 ? first.Weight : first.PackWeight),
+                new Dictionary<string, IReadOnlyList<Kernel.ActionSoundSet>> { [routeKey] = variants }));
+        }
         var pool = input.AudioPool;
         if (pool == null || input.MergeAudioPool)
         {
@@ -589,8 +597,8 @@ public sealed class OneShotDecision
         {
             return null;
         }
-        return candidates.FirstOrDefault(x => x.EntryKey == chosen.PoolStableKey)
-            ?? new AudioCandidate("fallback/" + action, chosen.SoundKey!, action, input.Domain, 1);
+        return chosen.SelectedVariant != null && metadata.TryGetValue(chosen.SelectedVariant, out var selectedCandidate)
+            ? selectedCandidate : new AudioCandidate("fallback/" + action, chosen.SoundKey!, action, input.Domain, 1);
     }
 
     private sealed class BoundAudioGate : Kernel.ISoundGate

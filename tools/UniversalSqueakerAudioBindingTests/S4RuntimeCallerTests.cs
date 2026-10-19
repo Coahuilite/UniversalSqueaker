@@ -162,6 +162,28 @@ internal static partial class Program
         comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
         Check(SoundStarter.Played.Count == afterSustained + 1, "S4 explicitly Disabled new ordinary audio pack cannot fall back");
         SqueakRuntimeResolver.Current.VoicePackMode = SqueakVoicePackMode.Fallback;
+        var material = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!;
+        material.sustain = true;
+        comp.FixtureSustained = true;
+        Find.TickManager.TicksGame = 3500;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        var mapHandle = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
+        var oldMap = pawn.MapHeld;
+        pawn.MapHeld = new Map();
+        Find.TickManager.TicksGame = 3501;
+        comp.CompTick();
+        Check(mapHandle.EndCalls == 1, "S5 actual CompTick releases its sustained slot immediately on current-map loss");
+        pawn.MapHeld = oldMap;
+        Find.TickManager.TicksGame = 3640;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        var destroyedHandle = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
+        pawn.Destroyed = true;
+        comp.CompTick();
+        Check(destroyedHandle.EndCalls == 1 && !UsOneShotRuntime.IsControlled(pawn),
+            "S5 actual destroyed-subject caller releases the owned handle and its sole session");
+        pawn.Destroyed = false;
+        comp.FixtureSustained = false;
+        material.sustain = false;
 
         UniversalSqueakerMod.Settings.activity = 1;
         UniversalSqueakerMod.Settings.Values = new BehaviorValues();

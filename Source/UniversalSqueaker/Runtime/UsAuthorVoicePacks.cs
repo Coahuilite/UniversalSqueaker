@@ -25,6 +25,7 @@ internal static class UsAuthorVoicePacks
                 description = declaration.description,
                 modContentPack = declaration.modContentPack,
                 IsKernelDeclaration = true,
+                weight = (float)declaration.declaration.Weight,
                 scope = SqueakVoicePackScope.Race,
                 raceDefName = declaration.declaration.Race
             };

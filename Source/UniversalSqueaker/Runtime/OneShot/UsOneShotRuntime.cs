@@ -43,13 +43,18 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     private readonly SustainedPlayback sustained = new();
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
     private SoundDef? preparedSound;
+    private PlaybackRequest? lastRequest;
     private long lastObservation;
     private bool diagnosticFaultReported;
     internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
         + " actionUntil=" + state.ActionDeadline(LastOutcome.Action) + " nextState=" + state.NextStateTick
-        + " active=" + sustained.ActiveKey + " ended=" + sustained.LastEndReason;
+        + " active=" + sustained.ActiveKey + " ended=" + sustained.LastEndReason
+        + " requestedEntry=" + lastRequest?.Audio.EntryKey + " requestedAudio=" + lastRequest?.Audio.AudioId
+        + " localPitch=" + lastRequest?.Pitch + " localVolume=" + lastRequest?.Audio.Volume
+        + " rolls=" + string.Join(",", draws.Select(x => x.Key + ":" + x.Value))
+        + " missing=" + string.Join(",", (LastOutcome.Diagnostics ?? Array.Empty<FactDiagnostic>()).Select(x => x.Key + ":" + x.Reason));
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
@@ -170,6 +175,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         };
         draws.Clear();
         preparedSound = null;
+        lastRequest = null;
         LastOutcome = decision.Run(state, policy, input, this, this);
         lastObservation = now;
         try
@@ -248,6 +254,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
 
     public PlaybackReceipt Dispatch(PlaybackRequest request)
     {
+        lastRequest = request;
         SoundDef? sound = null;
         SoundInfo info = default;
         string rejection = "DynamicPreflightRejected";

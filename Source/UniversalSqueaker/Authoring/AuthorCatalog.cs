@@ -22,6 +22,7 @@ public sealed class VoiceEntry
 /// <summary>RimWorld calls this same custom field loader during normal Def deserialization.</summary>
 public sealed class VoicePackDeclaration
 {
+    public double Weight = 1;
     public int FormatVersion = 1;
     public string Race = "";
     public readonly List<VoiceEntry> Entries = new();
@@ -29,7 +30,8 @@ public sealed class VoicePackDeclaration
     public Dictionary<string, Dictionary<string, bool>> ActionParticipation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "race", "entries", "participation", "actionParticipation");
+        AuthorXml.Fields(node, "formatVersion", "race", "weight", "entries", "participation", "actionParticipation");
+        Weight = double.Parse(node.SelectSingleNode("weight")?.InnerText ?? "1", CultureInfo.InvariantCulture);
         Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
         ActionParticipation.Clear();
         if (node.SelectSingleNode("actionParticipation")?.Attributes?.Count > 0)
@@ -416,6 +418,11 @@ public sealed class AuthorCatalog
             {
                 throw new ArgumentException("Invalid/duplicate pack identity");
             }
+            if (double.IsNaN(declaration.Weight) || double.IsInfinity(declaration.Weight)
+                || declaration.Weight <= 0 || declaration.Weight > float.MaxValue)
+            {
+                throw new ArgumentException("Invalid pack weight");
+            }
             if (declaration.ActionParticipation.Keys.Any(x => !AuthorXml.ExactKey(x)))
             {
                 throw new ArgumentException("Invalid pack-local action participation identity");
@@ -466,7 +473,7 @@ public sealed class AuthorCatalog
                 }
                 batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race,
                     entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation,
-                    packKey: selectionKey ?? packageId + ":" + defName));
+                    packKey: selectionKey ?? packageId + ":" + defName, packWeight: declaration.Weight));
             }
 
             audio.AddRange(batch);

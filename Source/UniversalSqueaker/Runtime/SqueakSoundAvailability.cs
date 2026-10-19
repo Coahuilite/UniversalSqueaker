@@ -124,7 +124,7 @@ public static class SqueakSoundAvailabilityCache
             return SqueakSoundPlayability.UnsafeSoundContext;
         }
         // S3：sustained SoundDef 的生产可播判定与一次性一致（pawn 存活、已生成、当前地图、Playing、MapOnly）；
-        // 具体播放形态（Sustainer vs PlayOneShot）由触发模式的 TryPlaySustained 决定。
+        // 具体播放形态由唯一播放session的已准备请求决定；这里只确认原生素材可用性。
         return pawn != null && !pawn.Dead && pawn.Spawned && pawn.MapHeld != null
             && pawn.MapHeld == Find.CurrentMap && Current.ProgramState == ProgramState.Playing && Find.CurrentMap != null
             ? SqueakSoundPlayability.Playable

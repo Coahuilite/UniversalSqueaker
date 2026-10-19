@@ -602,4 +602,5 @@
   <US.Kernel.PolicyRequired>No development policy selected: playback is paused. The old timing controls are retired; a policy must be injected explicitly for this development build.</US.Kernel.PolicyRequired>
   <US.Kernel.CandidateActive>An explicit development candidate is active. Activity A and response parameters use the new Config/author contract; old timing controls are retired.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
+  <US.Kernel.LastObservedDecision>Kernel: last observed decision</US.Kernel.LastObservedDecision>
 </LanguageData>

@@ -385,7 +385,7 @@ internal static class UsDiagnosticsRowFactory
             return new UsDiagDetail(LabelOf(pawn), false, SqueakDiagnosticsOverlay.IsLocked(pawn),
                 s.LastEvaluation?.Action ?? UsDiagnosticsProjection.Dash, DispatchText(s.LastDispatched),
                 Array.Empty<UsDiagGateLine>(),
-                new UsDiagCurrentSummary("Kernel: last observed decision", s.KernelText, false, true, Array.Empty<string>()),
+                new UsDiagCurrentSummary("US.Kernel.LastObservedDecision".Translate(), s.KernelText, false, true, Array.Empty<string>()),
                 new UsDiagPreviousBand("", "", DispatchText(s.LastDispatched)));
         }
         UsDiagGateFacts f = new()
@@ -506,7 +506,7 @@ internal static class UsDiagnosticsRowFactory
         return string.Equals(outcome.Value.Action, key, StringComparison.Ordinal) ? outcome : null;
     }
 
-    /// <summary>Mirrors CompSqueaker.PeriodicInvocationFor plus the external sources used by
+    /// <summary>Projects the legacy diagnostic source labels plus the external sources used by
     /// Notify_Draft/Notify_Attack/Notify_Equip, so the diagnostic scope gate reads the same
     /// IsActiveCommand semantics as production.</summary>
     private static SqueakTriggerInvocation DiagnosticInvocationFor(SqueakAction action, Pawn pawn)

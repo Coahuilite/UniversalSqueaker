@@ -126,9 +126,6 @@ public partial class CompSqueaker : ThingComp
     public static bool EatPrecisionIncludeDrugs = SqueakEatOccurrence.EatPrecisionIncludeDrugsDefault;
     public static bool DiagnosticsEnabled;
 
-    private static readonly Dictionary<string, SoundDef?> SoundCacheMixed = new(StringComparer.Ordinal);
-    private static readonly HashSet<string> MissingSoundWarnings = new(StringComparer.Ordinal);
-    private static bool soundCacheInitialized;
     private static FloatRange activeDistanceRange = new(15f, 50f);
 
     private readonly Dictionary<string, SqueakActionPlan> actionPlans = new(StringComparer.Ordinal);
@@ -138,7 +135,7 @@ public partial class CompSqueaker : ThingComp
     private SqueakRecentOutcome? lastEvaluation;
     private SqueakRecentOutcome? lastSignificantOutcome;
     private SqueakRecentOutcome? lastDispatched;
-    // Runtime-only, non-Scribe anchor. Every Periodic action phase remains rooted at this spawn tick.
+    // Runtime-only membership in the audible-population diagnostic projection.
     private Map? registeredMap;
 
 
@@ -165,8 +162,6 @@ public partial class CompSqueaker : ThingComp
             if (key != null) actionPlans[key] = SqueakActionPlanFactory.FromLegacy(cfg);
         }
     }
-
-    private SqueakAction? CurrentAction => PeriodicStateBinding.Probe(Pawn);
 
     public void Notify_Wounded() => NotifyExternal(SqueakAction.Wounded, VerseEventBinding.OriginFor(SqueakAction.Wounded), SqueakInvocationSource.StateEvent);
     public void Notify_Select() => NotifyExternal(SqueakAction.Select, VerseEventBinding.OriginFor(SqueakAction.Select), SqueakInvocationSource.PlayerSelection);
@@ -259,17 +254,6 @@ public partial class CompSqueaker : ThingComp
         if (invocation.RequiresResponsivePawn && (Pawn.Downed || Pawn.health == null || !Pawn.Awake())) return false;
         if (invocation.IsPlayerInitiated && !Pawn.IsPlayerControlled) return false;
         return true;
-    }
-
-    private SqueakTriggerInvocation PeriodicInvocationFor(SqueakAction action)
-    {
-        // Work is sampled during CompTick like the other periodic actions, but its source is the
-        // player's active forced work order when applicable. This lets ActiveCommand narrow only
-        // that source while AnyOccurrence retains autonomous work occurrences.
-        SqueakInvocationSource source = action == SqueakAction.Work && IsCurrentJobPlayerCommand()
-            ? SqueakInvocationSource.ActiveCommand
-            : SqueakInvocationSource.Periodic;
-        return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic, source);
     }
 
     private void SynchronizePeriodicMembership()
@@ -375,13 +359,6 @@ public partial class CompSqueaker : ThingComp
             outcome.Receipt?.Result == OneShot.PlaybackResult.Dispatched || outcome.Receipt?.Result == OneShot.PlaybackResult.Indeterminate,
             sound, SqueakSoundSource.None, Time.realtimeSinceStartup);
     }
-    /// <summary>Mirrors production's global and runtime scope gates without resolving audio or mutating trigger state.</summary>
-    private static bool IsScopeEligible(SqueakAction action, RuntimeActionDelta delta, SqueakTriggerInvocation invocation)
-    {
-        // H1 fix: scope comes only from the layered context delta, not a separate global policy early-return.
-        return delta.Enabled && (delta.Scope != SqueakActionScope.ActiveCommand || invocation.IsActiveCommand);
-    }
-
     internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
     {
         if (!TryGetPlan(key, out var plan)) return false;
@@ -397,7 +374,6 @@ public partial class CompSqueaker : ThingComp
         return TryGetPlan(key, out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
     }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
-    internal bool ControlledWorkActive() => CurrentAction == SqueakAction.Work;
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
     private SqueakVocalCapability SampleVocalCapability() => new(GetVocalOrganEfficiency(),
         Pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Talking) ?? 1f);
@@ -439,22 +415,6 @@ public partial class CompSqueaker : ThingComp
         }
 
         return false;
-    }
-
-    private static void EnsureSoundCache()
-    {
-        if (soundCacheInitialized)
-        {
-            return;
-        }
-
-        foreach (SqueakAction a in Enum.GetValues(typeof(SqueakAction)))
-        {
-            string key = UniversalSqueaker.Kernel.ActionKey.For(a) ?? a.ToString();
-            SoundCacheMixed[key] = DefDatabase<SoundDef>.GetNamedSilentFail(SqueakActionDefinitions.Get(a).AudioKey);
-        }
-
-        soundCacheInitialized = true;
     }
 
     public static void ApplyDistanceRange(FloatRange range)

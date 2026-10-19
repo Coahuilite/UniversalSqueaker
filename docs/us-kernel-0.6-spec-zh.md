@@ -552,3 +552,5 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 自动证据分为纯生产源重放、实际调用／Harmony替身、Config与Host。诊断从该owner已存结果读取action／原因／四结果／确认tick／硬截止／下一机会和持续槽，不再显示旧私有时钟伪结果；旧Timing／概率／心情编辑控件在原FL0.7页面显示退役原因，保有效scope、单动作恢复、Eat／Baby及声音供给控件。原生1.6音频、听感及产品数值默认仍分别由维护者／PM接收。**本轮停在FL0.8消费迁移之前**，固定FL0.7与范围`[0.7.0,0.8.0)`不变。
 
 新`UsVoicePackDef`不是永久启用：验证后的声明投影进既有Packs目录，沿`packageId:DefName`选择身份及准确Race域启停；未显式选择沿原目录规则为未选入，不自动采用。当前声明格式仅Race域，子域选择不代替主域选择；旧Xenotype包规则保持。Runtime只合入当前已选声明的条目，保其局部校准和参与元数据。关闭音频包不卸载独立行为来源，也不改变其绑定意图；Fallback/Remix/Vanilla/Disabled仍按原模式合同。
+
+声音包根`weight`为包权重（省略1），entry的`weight`仅在已选包内作变体权重。多个entry不增加包份额；A含10条、B含1条且包等权时仍先A:B=1:1，再选本包entry。保留Kernel返回的SelectedVariant准确映射到entry校准与参与，不用AudioId猜来源。

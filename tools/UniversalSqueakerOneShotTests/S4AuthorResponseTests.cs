@@ -36,6 +36,7 @@ internal static partial class Program
 
     private static void S4AuthorResponses()
     {
+        S4PackWeightHierarchy();
         var catalog = new AuthorCatalog(720, 216, true);
         Check(!catalog.AddProvider(new ResponseProvider { Duplicate = true }) && !catalog.HasFact("example/Ready")
             && catalog.Responses.Length == 2, "S4 provider response conflict rejects its complete fact-and-response batch");
@@ -139,6 +140,56 @@ internal static partial class Program
         Check(!ResponseModulation.Compose(1, 1, plan, new Dictionary<string, bool>(), new Driver()).Valid,
             "S4 missing enabled response implementation rejects, never replaces its contribution with identity");
         S4ResponseFileExample();
+    }
+
+    private static void S4PackWeightHierarchy()
+    {
+        var catalog = new AuthorCatalog(120, 120);
+        foreach (string key in new[] { "A", "B" })
+        {
+            var declaration = new VoicePackDeclaration { Race = "Ratkin" };
+            for (int index = 0; index < (key == "A" ? 10 : 1); index++)
+            {
+                declaration.Entries.Add(new VoiceEntry
+                {
+                    Key = "entry" + index, Action = "us.core/Work", Sound = key + index,
+                    Pitch = key == "A" ? 2 : 3, Volume = key == "A" ? .4 : .6
+                });
+            }
+            Check(catalog.AddPack("weights", key, declaration, sound => "audio/" + sound), "S4 weighted ordinary declaration accepted");
+        }
+        foreach (var mode in new[] { UniversalSqueaker.Kernel.SelectionMode.Fallback, UniversalSqueaker.Kernel.SelectionMode.Remix })
+        {
+            int selectedA = 0;
+            int selectedB = 0;
+            for (int index = 0; index < 20; index++)
+            {
+                var input = Input(call: false);
+                input.SourceMode = mode;
+                input.Audio = catalog.Audio;
+                var driver = new Driver { Value = (index + .5) / 20 };
+                var result = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
+                var request = driver.LastRequest!;
+                bool a = request.Audio.EntryKey.StartsWith("weights/A/", StringComparison.Ordinal);
+                selectedA += a ? 1 : 0;
+                selectedB += a ? 0 : 1;
+                Check(result.Receipt?.Result == PlaybackResult.Dispatched
+                    && request.Pitch == (a ? 2 : 3) && request.Audio.Volume == (a ? .4 : .6),
+                    "S4 pack-then-variant choice preserves selected entry identity and calibration");
+            }
+            Console.WriteLine("S4 pack hierarchy " + mode + " equal weights A(entries=10):B(entries=1) selected=" + selectedA + ":" + selectedB);
+            Check(selectedA == 10 && selectedB == 10, "S4 ten entries cannot multiply equal pack share to ten-to-one");
+        }
+        var xml = new XmlDocument();
+        xml.LoadXml("<declaration><race>Ratkin</race><weight>3</weight><entries><li><key>weighted</key>"
+            + "<action>us.core/Work</action><sound>W</sound><weight>7</weight></li></entries></declaration>");
+        var weighted = new VoicePackDeclaration();
+        weighted.LoadDataFromXmlCustom(xml.DocumentElement!);
+        Check(catalog.AddPack("weights", "C", weighted, _ => "audio/C")
+            && catalog.Audio.Last().PackWeight == 3 && catalog.Audio.Last().Weight == 7,
+            "S4 ordinary XML keeps package weight separate from its entry variant weight");
+        Check(!catalog.AddPack("weights", "Invalid", new VoicePackDeclaration { Race = "Ratkin", Weight = double.NaN }, _ => "audio/W"),
+            "S4 invalid package weight is rejected even when no enabled entries remain");
     }
 
     private static void S4ResponseFileExample()
