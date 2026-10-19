@@ -6,6 +6,9 @@ internal static partial class Program
 {
     private static void S4RhythmAndResponses()
     {
+        string firstReplay = S4S5Replay();
+        Check(firstReplay == S4S5Replay(), "S4/S5 independent fixed facts/ticks/tagged-rolls/receipts/parameters/state double replay");
+        Console.Write(firstReplay);
         try
         {
             S4AuthorResponses();
@@ -22,7 +25,7 @@ internal static partial class Program
         Check(state.SharedDeadline == 1040 && state.ActionDeadline("us.core/Work") == 1120 && state.NextStateTick == 1050,
             "S4 A2 divides W20 once, never hard40/action120");
         var ratio = Input();
-        ratio.Activity = ratio.SoftRhythmFactor = 1e308;
+        ratio.Activity = ratio.StateWaitFactor = 1e308;
         var ratioState = new DecisionState(1000);
         var ratioDriver = new Driver();
         new OneShotDecision().Run(ratioState, new StatePolicy(40, 100), ratio, ratioDriver, ratioDriver);
@@ -33,9 +36,10 @@ internal static partial class Program
         var eventInput = Input(1000, false);
         eventInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, chance: .25) };
         eventInput.Activity = 4;
+        eventInput.StateWaitFactor = 100;
         var saturated = new Driver();
         Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, saturated, saturated).Receipt?.Result == PlaybackResult.Dispatched
-            && !saturated.Purposes.Contains(RandomPurpose.Eligibility), "S4 ordinary event p_base*A saturates once, no invented event/extra roll");
+            && !saturated.Purposes.Contains(RandomPurpose.Eligibility), "S4 ordinary event p_base*A saturates once; state-wait factor cannot add another event probability scaling");
         eventInput.Activity = .1;
         var low = new Driver();
         Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, low, low).Reason == "ChanceRejected" && low.Calls == 0,

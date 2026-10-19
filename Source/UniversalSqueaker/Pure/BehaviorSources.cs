@@ -78,6 +78,14 @@ public sealed class BehaviorValues
         foreach (var response in value.ResponseEnabled)
         {
             ResponseEnabled[response.Key] = response.Value;
+            if (response.Key == "us.core/Age")
+            {
+                AgeEnabled = response.Value;
+            }
+            if (response.Key == "us.core/Mood")
+            {
+                MoodEnabled = response.Value;
+            }
         }
         foreach (var response in value.Participation)
         {
@@ -91,7 +99,9 @@ public sealed class BehaviorValues
         && (!Volume.HasValue || Finite(Volume.Value) && Volume.Value >= 0 && Volume.Value <= float.MaxValue)
         && (!Pitch.HasValue || Finite(Pitch.Value) && Pitch.Value > 0 && Pitch.Value <= float.MaxValue)
         && ResponseParameters.All(x => Exact(x.Key) && Finite(x.Value))
-        && ResponseEnabled.Keys.All(Exact) && Participation.Keys.All(Exact);
+        && ResponseEnabled.Keys.All(Exact) && Participation.Keys.All(Exact)
+        && (!AgeEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Age"))
+        && (!MoodEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Mood"));
     private static bool Exact(string key) => !string.IsNullOrWhiteSpace(key) && key == key.Trim();
     private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
 }
@@ -204,7 +214,8 @@ public sealed class BehaviorSourceState
     }
 
     private static bool Valid(BehaviorContribution value) => !string.IsNullOrWhiteSpace(value.Action)
-        && value.Values.Valid && value.RequiredFacts.All(x => !string.IsNullOrWhiteSpace(x));
+        && value.Values.Valid && value.Values.Participation.Count == 0
+        && value.RequiredFacts.All(x => !string.IsNullOrWhiteSpace(x));
 
     public BehaviorValues Resolve(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
         IEnumerable<BehaviorValues> playerLayers, Func<string, bool> implementationAvailable, out bool paused,
@@ -455,18 +466,14 @@ public sealed class BehaviorSourceState
                 }
                 else if (setting.Name == "response")
                 {
-                    CheckAttributes(setting, "key", "enabled", "participation");
-                    if (!setting.HasAttribute("enabled") && !setting.HasAttribute("participation"))
+                    CheckAttributes(setting, "key", "enabled");
+                    if (!setting.HasAttribute("enabled"))
                     {
                         throw new ArgumentException("Empty response setting");
                     }
                     if (setting.HasAttribute("enabled"))
                     {
                         values.ResponseEnabled.Add(identity, bool.Parse(setting.GetAttribute("enabled")));
-                    }
-                    if (setting.HasAttribute("participation"))
-                    {
-                        values.Participation.Add(identity, ReadParticipation(setting.GetAttribute("participation")));
                     }
                 }
                 else
@@ -504,17 +511,13 @@ public sealed class BehaviorSourceState
                 element.SetAttribute("value", parameter.Value.ToString("R", CultureInfo.InvariantCulture));
                 action.AppendChild(element);
             }
-            foreach (string identity in v.ResponseEnabled.Keys.Concat(v.Participation.Keys).Distinct().OrderBy(x => x, StringComparer.Ordinal))
+            foreach (string identity in v.ResponseEnabled.Keys.OrderBy(x => x, StringComparer.Ordinal))
             {
                 var element = document.CreateElement("response");
                 element.SetAttribute("key", identity);
                 if (v.ResponseEnabled.TryGetValue(identity, out bool enabled))
                 {
                     element.SetAttribute("enabled", enabled.ToString());
-                }
-                if (v.Participation.TryGetValue(identity, out bool apply))
-                {
-                    element.SetAttribute("participation", apply ? "Apply" : "Skip");
                 }
                 action.AppendChild(element);
             }

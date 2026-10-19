@@ -13,7 +13,11 @@ public readonly struct SustainedStart
 {
     public readonly PlaybackReceipt Receipt;
     public readonly ISustainedHandle? Handle;
-    public SustainedStart(PlaybackReceipt receipt, ISustainedHandle? handle = null) { Receipt = receipt; Handle = handle; }
+    public SustainedStart(PlaybackReceipt receipt, ISustainedHandle? handle = null)
+    {
+        Receipt = receipt;
+        Handle = handle;
+    }
 }
 
 /// <summary>One owned slot. Preparation belongs before Dispatch; this owner never selects or retries audio.</summary>
@@ -38,16 +42,31 @@ public sealed class SustainedPlayback
                 handle!.Maintain();
                 return new PlaybackReceipt(PlaybackResult.AlreadyActive, "SameOwnedSustainer");
             }
-            if (request.Priority <= priority) return new PlaybackReceipt(PlaybackResult.Rejected, "ExistingHigherOrEqualSustainer");
+            if (request.Priority <= priority)
+            {
+                return new PlaybackReceipt(PlaybackResult.Rejected, "ExistingHigherOrEqualSustainer");
+            }
             Stop("HigherPriorityReplacement");
         }
         SustainedStart result;
-        try { result = startPrepared(); }
-        catch (Exception error) { return new PlaybackReceipt(PlaybackResult.Indeterminate, "StartFault:" + error.GetType().Name); }
+        try
+        {
+            result = startPrepared();
+        }
+        catch (Exception error)
+        {
+            return new PlaybackReceipt(PlaybackResult.Indeterminate, "StartFault:" + error.GetType().Name);
+        }
         if (sustainedMaterial)
         {
-            if (result.Receipt.Result != PlaybackResult.Dispatched) return result.Receipt;
-            if (result.Handle?.Active != true) return new PlaybackReceipt(PlaybackResult.Indeterminate, "NoEffectiveSustainerAfterCall");
+            if (result.Receipt.Result != PlaybackResult.Dispatched)
+            {
+                return result.Receipt;
+            }
+            if (result.Handle?.Active != true)
+            {
+                return new PlaybackReceipt(PlaybackResult.Indeterminate, "NoEffectiveSustainerAfterCall");
+            }
             handle = result.Handle;
             key = request.Action;
             priority = request.Priority;
@@ -59,11 +78,20 @@ public sealed class SustainedPlayback
 
     public string Review(long tick, FactSnapshot facts)
     {
-        if (!ReviewDue(tick)) return "NotDue";
+        if (!ReviewDue(tick))
+        {
+            return "NotDue";
+        }
         nextReview = TickDeadline.Add(tick, 60);
         Truth truth;
-        try { truth = condition?.Evaluate(facts) ?? Truth.Unknown; }
-        catch (Exception) { truth = Truth.Unknown; }
+        try
+        {
+            truth = condition?.Evaluate(facts) ?? Truth.Unknown;
+        }
+        catch (Exception)
+        {
+            truth = Truth.Unknown;
+        }
         if (truth != Truth.True)
         {
             Stop(truth == Truth.False ? "StateBecameFalse" : "StateReviewUnknown");
@@ -73,8 +101,14 @@ public sealed class SustainedPlayback
     }
     public void Maintain()
     {
-        if (Active) handle!.Maintain();
-        else handle = null;
+        if (Active)
+        {
+            handle!.Maintain();
+        }
+        else
+        {
+            handle = null;
+        }
     }
     public void Stop(string reason)
     {
@@ -82,7 +116,10 @@ public sealed class SustainedPlayback
         handle = null;
         key = "";
         condition = null;
-        if (old?.Active == true) old.End();
+        if (old?.Active == true)
+        {
+            old.End();
+        }
         LastEndReason = reason;
     }
 }

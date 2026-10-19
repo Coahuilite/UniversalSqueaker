@@ -30,8 +30,8 @@ public sealed class UsProviderDef : Def
     public Type providerClass = null!;
 }
 
-/// <summary>Explicit developer session, not the unapproved replacement of the player's daily schedule.</summary>
-public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
+/// <summary>The single per-Pawn production decision, settlement and owned playback lifecycle. Policy selection is a separate temporary process gate.</summary>
+public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
 {
     private readonly Pawn pawn;
     private readonly AuthorCatalog catalog;
@@ -54,7 +54,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
 
-    internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
+    internal UsPawnPlaybackSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
     {
         this.pawn = pawn;
         this.catalog = catalog;
@@ -108,7 +108,10 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             string legacyKey = action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused,
                 reason => blockedReasons[action.Key] = reason);
-            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: true)) blocked.Add(action.Key);
+            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: true))
+            {
+                blocked.Add(action.Key);
+            }
             plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
                 behavior.HardIntervalTicks ?? (legacyKey == "Wounded" ? woundedTicks : workTicks),
                 action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : candidate.EventProbability, action.BaseAction,
@@ -144,7 +147,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             Tick = now,
             ActiveSustainedKey = sustained.ActiveKey,
             Activity = UniversalSqueakerMod.Settings.activity,
-            SoftRhythmFactor = candidate.SoftRhythmFactor,
+            StateWaitFactor = candidate.StateWaitFactor,
             ActionModulation = modulation,
             AudioPool = snapshot.Registry,
             MergeAudioPool = true,
@@ -159,7 +162,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             TalkingChance = CompSqueaker.ScaleFrequencyWithTalking && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
             Facts = catalog.Capture(pawn.ThingID, values),
             Actions = plans.ToArray(),
-            Audio = catalog.Audio,
+            Audio = UsAuthorVoicePacks.Selected(catalog.Audio, snapshot.Registry, audioDomain),
             SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
             Fallback = SqueakKernelAdapter.BuildBuiltIn(),
             BlockedActions = blocked,
@@ -216,10 +219,25 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     private sealed class NativeSustainedHandle : ISustainedHandle
     {
         private readonly Sustainer native;
-        public NativeSustainedHandle(Sustainer native) { this.native = native; }
+        public NativeSustainedHandle(Sustainer native)
+        {
+            this.native = native;
+        }
         public bool Active => !native.Ended;
-        public void Maintain() { if (Active) native.Maintain(); }
-        public void End() { if (Active) native.End(); }
+        public void Maintain()
+        {
+            if (Active)
+            {
+                native.Maintain();
+            }
+        }
+        public void End()
+        {
+            if (Active)
+            {
+                native.End();
+            }
+        }
     }
     public double Next(RandomPurpose purpose)
     {
@@ -280,7 +298,10 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 rejection = UsInstanceOutput.Failure;
                 return false;
             }
-            if (request.Sustained && sound.sustain) info = SoundInfo.InMap(new TargetInfo(pawn), MaintenanceType.PerTick);
+            if (request.Sustained && sound.sustain)
+            {
+                info = SoundInfo.InMap(new TargetInfo(pawn), MaintenanceType.PerTick);
+            }
             info.volumeFactor = 1;
             info.pitchFactor = pitch;
             preparedSound = sound;
@@ -290,17 +311,29 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         void Play()
         {
             int token = UsInstanceOutput.Mark(ref info, new UsOutputContribution(request.Audio.Volume));
-            try { sound!.PlayOneShot(info); }
-            finally { UsInstanceOutput.ReleaseRequest(token); }
+            try
+            {
+                sound!.PlayOneShot(info);
+            }
+            finally
+            {
+                UsInstanceOutput.ReleaseRequest(token);
+            }
         }
 
         if (request.Sustained)
         {
             try
             {
-                if (!Preflight()) return new PlaybackReceipt(PlaybackResult.Rejected, rejection);
+                if (!Preflight())
+                {
+                    return new PlaybackReceipt(PlaybackResult.Rejected, rejection);
+                }
             }
-            catch (Exception error) { return new PlaybackReceipt(PlaybackResult.Rejected, "Preparation:" + error.GetType().Name); }
+            catch (Exception error)
+            {
+                return new PlaybackReceipt(PlaybackResult.Rejected, "Preparation:" + error.GetType().Name);
+            }
             return sustained.Dispatch(request, sound!.sustain, () =>
             {
                 if (!sound.sustain)
@@ -313,10 +346,15 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 {
                     Sustainer? native = sound!.TrySpawnSustainer(info);
                     if (native == null || native.Ended)
+                    {
                         return new SustainedStart(new PlaybackReceipt(PlaybackResult.Indeterminate, "NoEffectiveSustainerAfterCall"));
+                    }
                     return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched, "NativeSustainerEstablished"), new NativeSustainedHandle(native));
                 }
-                finally { UsInstanceOutput.ReleaseRequest(token); }
+                finally
+                {
+                    UsInstanceOutput.ReleaseRequest(token);
+                }
             });
         }
         var receipt = OneShotDispatch.Execute(
@@ -331,7 +369,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
 
 public static class UsOneShotRuntime
 {
-    private static readonly Dictionary<Pawn, UsControlledOneShotSession> sessions = new();
+    private static readonly Dictionary<Pawn, UsPawnPlaybackSession> sessions = new();
     private static AuthorCatalog catalog = new(720, 216, fullDevCandidate: true);
     private static UsDevelopmentPolicy? selectedPolicy;
     public static string PolicyStatus => selectedPolicy == null ? "PolicySelectionRequired" : "ExplicitDevelopmentCandidate";
@@ -354,7 +392,7 @@ public static class UsOneShotRuntime
         selectedPolicy = policy;
     }
 
-    private static UsControlledOneShotSession? SessionFor(Pawn pawn)
+    private static UsPawnPlaybackSession? SessionFor(Pawn pawn)
     {
         if (selectedPolicy == null)
         {
@@ -370,7 +408,7 @@ public static class UsOneShotRuntime
         }
         if (session == null)
         {
-            session = new UsControlledOneShotSession(pawn, catalog, selectedPolicy);
+            session = new UsPawnPlaybackSession(pawn, catalog, selectedPolicy);
             sessions.Add(pawn, session);
         }
         return session;
@@ -415,7 +453,15 @@ public static class UsOneShotRuntime
         {
             if (DefDatabase<ThingDef>.GetNamedSilentFail(pack.declaration.Race)?.race != null)
             {
-                catalog.AddPack(pack.modContentPack?.PackageId ?? "", pack.defName, pack.declaration, Bind);
+                var identity = new SqueakVoicePackDef { defName = pack.defName, modContentPack = pack.modContentPack };
+                if (identity.TryGetPackKey(out string selectionKey))
+                {
+                    catalog.AddPack(pack.modContentPack?.PackageId ?? "", pack.defName, pack.declaration, Bind, selectionKey);
+                }
+                else
+                {
+                    catalog.Issues.Add(pack.defName + ":SelectionIdentityUnavailable");
+                }
             }
             else
             {
@@ -423,6 +469,7 @@ public static class UsOneShotRuntime
             }
         }
 
+        UsAuthorVoicePacks.Refresh(catalog);
         foreach (string issue in catalog.Issues)
         {
             Log.Warning("usdiag authoring " + issue);
@@ -446,7 +493,10 @@ public static class UsOneShotRuntime
 
     internal static void ReleasePawn(Pawn pawn)
     {
-        if (sessions.TryGetValue(pawn, out var session)) session.Stop();
+        if (sessions.TryGetValue(pawn, out var session))
+        {
+            session.Stop();
+        }
         sessions.Remove(pawn);
     }
     public static bool IsControlled(Pawn pawn) => sessions.ContainsKey(pawn);
@@ -497,7 +547,10 @@ public static class UsOneShotRuntime
 
     public static void ResetSession()
     {
-        foreach (var session in sessions.Values) session.Stop();
+        foreach (var session in sessions.Values)
+        {
+            session.Stop();
+        }
         sessions.Clear();
     }
 }

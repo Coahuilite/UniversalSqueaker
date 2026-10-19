@@ -102,39 +102,12 @@ internal static class MoodLayoutFocusedTests
 
     public static int RunAll()
     {
-        Step("two-line mood template geometry at 800px", () => TwoLineMoodTemplateGeometry(ViewportWidth, ViewportHeight));
-        Step("every parameter of every mood registers slider/field/minus/plus", EveryParameterRegistersEveryControl);
-        Step("parameter labels fit their bands (EN and ZH, resolved labels)", ParameterLabelBandsCoverResolvedLabels);
-        Step("parameter labels do not overflow the drawn bands (EN and ZH)", ParameterLabelsFitTheirBands);
-        Step("all four product mood cards are present and route their own mood", AllFourProductMoodCardsArePresent);
-        Step("all four mood cards share one row width and control geometry", AllFourCardsShareOneRowGeometry);
-        Step("every mood header resolves through its own US.Mood key (EN and ZH)", MoodHeadersResolveThroughKeyedEntries);
-        Step("the label column follows a longer resolved label", LabelColumnFollowsTheResolvedLabelWidth);
-        Step("slider track widths are equal across parameters and moods", SliderTrackWidthsAreEqual);
-        Step("narrow viewport keeps the template and every control", () => TwoLineMoodTemplateGeometry(NarrowViewportWidth, 720f));
-        Step("narrowest two-column card keeps every control", () => TwoLineMoodTemplateGeometry(NarrowestRowRegimeWidth, 720f));
-        Step("736px two-column card keeps the template", () => TwoLineMoodTemplateGeometry(736f, 720f));
-        Step("mood value round-trip clamps to the factor ranges", MoodValueRoundTripClampsToFactorRanges);
-        Step("minus click routes typed set-mood-tuning", MinusClickRoutesTypedMoodTuning);
-        Step("plus click routes typed set-mood-tuning", PlusClickRoutesTypedMoodTuning);
-        Step("slider change routes typed set-mood-tuning", SliderChangeRoutesTypedMoodTuning);
-        Step("number commit routes typed set-mood-tuning", NumberCommitRoutesTypedMoodTuning);
-        Step("auto button routes typed set-mood-tuning", AutoButtonRoutesTypedMoodTuning);
-        Step("preset reset routes typed reset-mood-to-preset", PresetResetRoutesTypedMoodTuning);
-        Step("reset controls route at every card width", ResetRoutingAcrossCardWidths);
+        // S4 retires the old mood/probability editor policies, not navigation or action permissions.
+        // Current retired-editor geometry is covered once in S4RetiredPolicyUiTests.
         Step("a popup-covered nav control yields the click", CoveredControlYieldsTheClick);
         Step("every nav card paints its own enclosure (V1)", EveryNavCardPaintsItsOwnEnclosure);
         Step("a checkbox-row press is decided by one control and flips the value once", CheckboxRowPressDecidesOnce);
-        Step("V3: the Tuning areas are ordered layer/domain -> scope -> mood at the real boxes", TuningAreasAtTheRealBoxes);
-        Step("V3: the inherited hint and the mood source readout are laid out at every real body", TuningInheritanceReadoutsAtRealBodies);
-        Step("V3: the mood area survives an empty scope list (defensive degenerate input)", MoodAreaSurvivesMissingScopeRows);
-        Step("V3: layer/domain and mood writes stay on their own channels (increments)", TuningChannelsDoNotCrossOnIncrements);
-        Step("V3/task-18: the mood readout is truthful about provenance vs the reset TARGET", MoodSourceReadoutMatrix);
-        Step("V3/PM: production record fold projects the real per-factor sources and reset target", ProductionMoodSourceProjection);
-        Step("V3/PM: action rows measure the resolved long label", ResolvedActionLabelGrowsTheRow);
-        Step("V3/PM: reset target remains inside the inline mood header", ResetTargetStaysInTheHeader);
-
-        Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
+        Step("resolved action labels grow their live permission rows", ResolvedActionLabelGrowsTheRow);        Console.WriteLine("MoodLayoutFocusedTests ALL PASS");
         return 0;
     }
 
@@ -199,8 +172,8 @@ internal static class MoodLayoutFocusedTests
                 .Where(r => IsInside(r, cardLocal) && IsDeclaredCheckbox(r))
                 .OrderBy(r => r.y)
                 .ToList();
-            Assert(slots.Count == 7,
-                "the declared card draws seven control rows with the parent ON (egg + baby + three scalings + the"
+            Assert(slots.Count == 5,
+                "the current card draws five effective rows with the parent ON (egg + baby + talking + the"
                 + " eat-precision parent and child), got " + slots.Count);
 
             // THE DRAW FACT, stated as the property itself: for every declared checkbox band, that band is

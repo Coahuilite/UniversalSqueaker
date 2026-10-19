@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-19 · r3 · **测试迁移总图；S1/S2及S3纯层/适配已接自动入口，原生及S4/S5未验收。**
+2026-10-19 · r4 · **S4-A/B与S5技术链已接真实入口；原生1.6、听感及产品默认另待接收。**
 
 S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层见[S3实施页](us-kernel-0.6-s3-zh.md)。gate17覆盖新增纯S3轨迹，gate18覆盖真实事实适配及自动Comp/新作者资格，gate3追加来源保存故障与Scribe重读；Reset继续单独执行。
 
@@ -32,7 +32,7 @@ S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.
 | [SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)：`MigrationFailureBlocksAndRetries`、`VoiceSchemaStaleDoesNotOverwriteMoodTuning`、字段clear及provenance案例 | 稳定合同：保留失败可重试、旧schema不偷进版本、字段级clear不丢来源；适配新域/来源三态；新增缺字段与显式false/0、Inherit与来源选择分离 | C08/C09；V11/12/15；S3。不以新来源要求阻断原来合法的旧配置读取 |
 | [Reset](../tools/UniversalSqueakerResetTests/Program.cs)：`ActionRowRestoreExactIdentity`、`ActionAreaLayerZeroIsNotGlobal`、全局污染/NoChange/round-trip | 稳定合同：保留准确范围、身份、一次publish/持久化、迁移阻塞保留和fallback不误删；新增单域遗忘来源、不清其他域与重新自动采用禁令 | C09/C08；V12/15；S3；“恢复默认”不等于“遗忘作者来源” |
 | [UiLogic源码不变量](../tools/UniversalSqueakerUiLogicTests/UiSourceInvariantTests.cs)、[Kernel合同探针](../tools/UniversalSqueakerUiLogicTests/UsKernelContractInvariantTests.cs) | 实现探针：保留有效边界/词表检查；随生产接缝定向适配源码字面匹配，新增运行转换与引用检查 | C00；S1–S5。文字匹配不能替代真实隔离 |
-| [Host/Program](../tools/UniversalSqueakerKernelHostTests/Program.cs)、[ResetUiLane](../tools/UniversalSqueakerKernelHostTests/ResetUiLaneTests.cs)、[ThemeSwitchLane](../tools/UniversalSqueakerKernelHostTests/ThemeSwitchLaneTests.cs)、[DefinitionDirectory](../tools/UniversalSqueakerDefinitionDirectoryTests/Program.cs) | 消费/平台证据：保留生产Source→Host动作链、身份、无多余写入、目录不扩大声音准入；按FL0.8迁移实际调用，不重写页面/复制行为核心 | C00/C05/C08/C09；S3/S4。旧UI短测不关闭新Kernel V项 |
+| [Host/Program](../tools/UniversalSqueakerKernelHostTests/Program.cs)、[ResetUiLane](../tools/UniversalSqueakerKernelHostTests/ResetUiLaneTests.cs)、[ThemeSwitchLane](../tools/UniversalSqueakerKernelHostTests/ThemeSwitchLaneTests.cs)、[DefinitionDirectory](../tools/UniversalSqueakerDefinitionDirectoryTests/Program.cs) | 消费/平台证据：保留生产Source→Host动作链、身份、无多余写入、目录不扩大声音准入；本轮保持固定FL0.7实际调用，只移除退役政策探针，不重写页面/复制行为核心 | C00/C05/C08/C09；S3/S4。旧UI短测不关闭新Kernel V项 |
 | [LogTests](../tools/UniversalSqueakerLogTests/Program.cs) Release/Dev；[运行适配](../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs) | 日志合同保留，诊断投影适配新原因/结果；新增诊断异常不撤销已派发、读取不重抽roll、历史请求与实例证据分离 | C04/C11；V05/14；S1/S5 |
 | [Kernel corpus入口](../tools/UniversalSqueakerKernelTests/Program.cs)与[Scenarios](../tools/UniversalSqueakerKernelTests/Scenarios.cs) | 稳定确定性＋旧政策语料：保留默认只比较、两次字节重放；逐条登记有意变化，分离0.6固定轨迹 | C00/C03/C04/C07/C10；S1–S4。现有17动作、多种子、多域语料不是新机会/原生播放覆盖 |
 
@@ -95,6 +95,17 @@ FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../fer
 
 当前CI取得的固定0.7 release路线继续服务旧线；新Dev验证需后续任务书授权源码/pin/脚本与工作副本改动，复用同一CI/门禁体系而不是建立第二验证平台。D项裁定、FL真实Dev交付和1.6运行环境分别由对应所有者提供；本次文档工作不等待它们，也不据此关闭V项。
 
-## S2交付后仍阻断C11/V14的继承路径
+## S5已替代共享距离路径，原生证据仍待完成
 
-`Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍活动并写共享定义；借用Core/他方同Def时旧距离设置可能影响非US声音。按PM裁定，它不阻断S2身份/来源/路由/绑定技术接收，但必须由S5实例级替代后才能接受C11/V14/S5和整个0.6产品。现有纯层、适配、Host绿色均不覆盖该原生输出保证。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
+原活动`CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`写入已移除。Settings现在发布实例距离，`UsInstanceOutput`沿原生Sample更新只改准确归属的AudioSource；L固定、G实时，非US对照不变。首帧/后续Sample/起止辅助音/池复用及End后延迟grain已有生产适配反例，真实1.6与听感仍未运行，C11/V14不能凭fixture关闭。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
+
+## 本轮S4AB/S5实际迁移范围
+
+- `CompSqueaker.EntryPoints`的常规tick与公共通知进入唯一`UsPawnPlaybackSession`，17动作及已注册作者组合共用决策；真正未注册字符串保留合法调用能力，不要求新注册。临时全局开发候选选前零派发，选后实际调用消费，不保旧决策链。
+- 独立A只映射状态W与普通真实事件p；显式候选StateWaitFactor只进入W_base。新`S4S5ReplayTests`连续两次记录固定事实、tick、roll用途和值、四结果、硬截止及未来机会并比较；稳定旧golden未更新。
+- `S4AuthorResponseTests`用普通`Responses.xml`和生产loader验证响应启用、逐轴年龄覆盖、参数、包→本包动作→条目→玩家参与、跨包不泄漏及严格形状。行为来源不拥有参与权威；缺依赖/非法贡献明确拒绝。Config fixture重读真实Scribe字段，验证A、独立响应和准确域层级；Reset清新玩家字段而不遗忘作者来源。
+- gate18链接实际Runtime/Comp入口和实例输出，原生平台为明确替身，Harmony patch与辅助音transpiler为真实执行。覆盖构造时首Sample、实时G、同Def非US、aux重建info、池复用、End/Cleanup后延迟grain、缺patch owner拒绝，以及持续同键/高低替换/未知启动保护。它不证明真实Unity混音。
+- Host仅定向迁移退役概率/时钟/覆盖式心情编辑探针；仍检验五工作区、许可/scope/Baby/Eat、当前说明、动作行恢复、真实确认窗及身份漂移。移除的旧numeric timing draft不再声称已执行；没有批量重生golden或改冻结FL stub。
+- 完整结果和每门适用性由`dist/evidence/s4ab-s5/REPORT.md`记录。S1–S3实施页是其历史交付，不回填为本轮成果。
+
+FL0.8一节仅保留未来迁移前提。本包停在消费迁移之前：pin、范围、Host、主题及Manifest仍为固定0.7；恢复需要用户新步骤。

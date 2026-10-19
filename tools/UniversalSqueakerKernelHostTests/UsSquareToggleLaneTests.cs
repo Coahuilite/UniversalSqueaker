@@ -122,7 +122,7 @@ internal static class UsSquareToggleLaneTests
         // second and it is OFF. The written contract is asserted, so a fixture or manifest reorder reddens
         // rather than silently measuring the other control.
         ("basic-egg-row", "basic-egg-check", "allow-eggs", true),
-        ("basic-cooldown-row", "basic-cooldown-check", "scale-cooldown", false),
+        ("basic-baby-row", "basic-baby-check", "allow-baby-actions", false),
     };
 
     /// <summary>Every declared switch on the shipped Overview page, by element id, so the retiral's own
@@ -644,6 +644,11 @@ internal static class UsSquareToggleLaneTests
 
     private static int CountSwitchesInTree(UiElementSpec node, bool gated, string tab)
     {
+        if (node.TryGetAttribute("VisibleKey", out string visibility) && visibility == "legacy-policy-controls")
+        {
+            return 0;
+        }
+
         if (node.Kind == "Section" && node.TryGetAttribute("Tab", out string sectionTab)
             && !string.Equals(sectionTab, tab, StringComparison.Ordinal))
         {

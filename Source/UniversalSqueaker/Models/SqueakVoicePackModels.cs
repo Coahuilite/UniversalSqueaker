@@ -9,6 +9,8 @@ namespace UniversalSqueaker;
 /// <summary>One Def is one selectable pack in one domain. It never carries behavior or mood data.</summary>
 public class SqueakVoicePackDef : Def
 {
+    // Directory-only projection of a validated 0.6 declaration. Its audio metadata remains in AuthorCatalog.
+    internal bool IsKernelDeclaration;
     public int CountPlayableActions(bool includeBabyActions)
     {
         if (actions == null) return 0;

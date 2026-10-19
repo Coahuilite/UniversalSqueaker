@@ -46,12 +46,11 @@ internal static class ResetUiLaneTests
         WindowReachabilityRealButtons();
         ScopedDraftBoundaries();
         StagedIdentityDriftRefusal();
-        DraftOcclusionCancelAndConfirm();
+        // S4 removes the numeric timing editor and its same-card restore; no visible numeric draft owns that retired ceremony.
         Console.WriteLine("[us-reset] ceremony through the REAL question window (cancel zero writes; confirm one effect, one bump; "
             + "NoChange silent); distance defaults direct without a window; the area entry names the current layer/domain and the "
-            + "XG1 target offers none / refuses the command; the row restore is direct and guarded; the live "
-            + "field's commit contract stands, occlusion neither commits nor discards, cancel executes "
-            + "nothing, and the confirmed restore ends the affected edit; review1: the long EN/ZH body "
+            + "XG1 target offers none / refuses the command; the row restore is direct and guarded; the retired "
+            + "numeric timing draft is not exercised; the long EN/ZH body "
             + "GROWS the shell and the absurd body CAPS at the screen with the buttons answered by the "
             + "REAL dialog button press, the draft end is scoped to Applied + own fields (unrelated and "
             + "NoChange/Rejected edits survive), and a drifted staged identity restores nothing");
@@ -372,19 +371,12 @@ internal static class ResetUiLaneTests
             Assert(fake.ResetActionAreaCount == 1 && fake.ResetMoodAreaCount == 0,
                 "the action-area ceremony stages ONLY the action-area restore");
 
-            // The mood area carries its own entry and its own key.
+            // S4: the retired mood editor exposes navigation/notice, not a misleading restore button.
             host.Bindings.Set("tuning-area", 1);
             Arrange(host);
             List<Rect> moodButtons = RecordScopeTreeButtons(host).FindAll(r => AreaButton(r, tree));
-            moodButtons.Sort((a, b) => a.y.CompareTo(b.y));
-            Assert(moodButtons.Count >= 1, "the mood header draws its own area entry, got " + moodButtons.Count);
-            PressScopeTreeButton(host, moodButtons[0]);
-            Assert(UsConfirmWindow.Active != null, "setup: the mood press asked");
-            Assert(UsConfirmWindow.Active!.MessageText.Contains("Global"), "the mood question names the layer too");
-            UsConfirmWindow.Active!.DialogBindings.Invoke("confirm-yes");
-            Assert(fake.ResetMoodAreaCount == 1 && fake.ResetActionAreaCount == 1,
-                "one press, one area: the mood restore never runs the action area's key");
-
+            Assert(moodButtons.Count == 0 && fake.ResetMoodAreaCount == 0,
+                "the retired mood editor cannot claim an active style restore");
             // XG1: the empty xenotype target must offer NO area entry and refuse the command outright -
             // never a silent fall back to a Global-area restore.
             fake.ViewState.TuningArea = 0;
@@ -399,7 +391,7 @@ internal static class ResetUiLaneTests
             Assert(!host.Bindings.TryInvokeCommand("reset-action-area")
                     && !host.Bindings.TryInvokeCommand("reset-mood-area"),
                 "and both area commands refuse - CanExecute is the single answer");
-            Assert(fake.ResetActionAreaCount == 1 && fake.ResetMoodAreaCount == 1,
+            Assert(fake.ResetActionAreaCount == 1 && fake.ResetMoodAreaCount == 0,
                 "the refusal wrote nothing");
             Assert(!fake.CanResetTuningArea(), "the facade agrees with the guards");
 

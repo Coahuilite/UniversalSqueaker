@@ -87,9 +87,7 @@ internal static class DeclarativeOverviewLaneTests
     {
         ("basic-egg-row", "basic-egg-label", "basic-egg-check", "US.Tuning.EasterEggs"),
         ("basic-baby-row", "basic-baby-label", "basic-baby-check", "US.Tuning.BabyActions"),
-        ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check", "US.Tuning.ScaleCooldown"),
         ("basic-talking-row", "basic-talking-label", "basic-talking-check", "US.Tuning.ScaleTalking"),
-        ("basic-population-row", "basic-population-label", "basic-population-check", "US.Tuning.ScalePopulation"),
         ("basic-eat-row", "basic-eat-label", "basic-eat-check", "US.Tuning.EatPrecision"),
         ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "US.Tuning.EatPrecision.IncludeDrugs"),
     };
@@ -141,13 +139,9 @@ internal static class DeclarativeOverviewLaneTests
             ("global-volume-top", "global-volume-caption", "global-volume-number", "Overview"),
             ("basic-egg-row", "basic-egg-text", "basic-egg-check", "Tuning"),
             ("basic-baby-row", "basic-baby-label", "basic-baby-check", "Tuning"),
-            ("basic-cooldown-row", "basic-cooldown-label", "basic-cooldown-check", "Tuning"),
             ("basic-talking-row", "basic-talking-label", "basic-talking-check", "Tuning"),
-            ("basic-population-row", "basic-population-label", "basic-population-check", "Tuning"),
             ("basic-eat-row", "basic-eat-label", "basic-eat-check", "Tuning"),
             ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "Tuning"),
-            ("timing-interval-row", "timing-interval-caption", "timing-interval-seconds", "Tuning"),
-            ("timing-multiplier-row", "timing-multiplier-label", "timing-multiplier-minus", "Tuning"),
             ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check", "Overview"),
             ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check", "Advanced"),
             ("diagnostics-geometry-capture-row", "diagnostics-geometry-capture-label", "diagnostics-geometry-capture", "Advanced"),
@@ -402,8 +396,8 @@ internal static class DeclarativeOverviewLaneTests
         basic = basic.OrderBy(r => r.y).ToList();
         Console.WriteLine("[declared-bands] card bands=" + basic.Count
             + " all=" + string.Join(" ", basic.Select(Describe)));
-        Assert(basic.Count == 7,
-            "the basic-tuning card must draw seven declared toggle bands with the parent ON, got "
+        Assert(basic.Count == BasicRows.Length,
+            "the basic-tuning card must draw its current declared toggle bands with the parent ON, got "
             + basic.Count + " [" + string.Join(" ", basic.Select(Describe)) + "]");
 
         for (int index = 0; index < basic.Count; index++)
@@ -631,7 +625,7 @@ internal static class DeclarativeOverviewLaneTests
 
                         Console.WriteLine("[declared] " + width + " " + language + " card=" + Num(cardHeight)
                             + " header=" + Num(HeaderHeight) + " rows=[" + evidence + "]"
-                            + " visualRight=" + Num(VisualRight(RectOf(snapshot, "basic-cooldown-check")))
+                            + " visualRight=" + Num(VisualRight(RectOf(snapshot, "basic-talking-check")))
                             + " contentRight=" + Num(RectOf(snapshot, "basic-tuning").xMax - CardPadding));
                     }
                     finally

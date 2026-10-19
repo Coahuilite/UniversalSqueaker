@@ -26,10 +26,25 @@ public sealed class VoicePackDeclaration
     public string Race = "";
     public readonly List<VoiceEntry> Entries = new();
     public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
+    public Dictionary<string, Dictionary<string, bool>> ActionParticipation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "race", "entries", "participation");
+        AuthorXml.Fields(node, "formatVersion", "race", "entries", "participation", "actionParticipation");
         Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
+        ActionParticipation.Clear();
+        if (node.SelectSingleNode("actionParticipation")?.Attributes?.Count > 0)
+        {
+            throw new ArgumentException("Unexpected actionParticipation container attributes");
+        }
+        foreach (XmlNode action in AuthorXml.Elements(node.SelectSingleNode("actionParticipation")))
+        {
+            string key = action.Attributes?["action"]?.Value ?? "";
+            if (action.Name != "li" || action.Attributes?.Count != 1 || !AuthorXml.ExactKey(key))
+            {
+                throw new ArgumentException("Expected pack-local action participation li with exact action");
+            }
+            ActionParticipation.Add(key, AuthorXml.Participation(action, actionContainer: true));
+        }
         FormatVersion = AuthorXml.Version(node);
         Race = AuthorXml.Required(node, "race");
         Entries.Clear();
@@ -66,17 +81,15 @@ public sealed class ActionDeclaration
     public string BaseAction = "";
     public Condition Condition = new("all");
     public bool Sustained;
-    public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback", "participation");
+        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback");
         string playback = node.SelectSingleNode("playback")?.InnerText ?? "OneShot";
         if (playback != "OneShot" && playback != "Sustained")
         {
             throw new ArgumentException("Expected OneShot or Sustained playback");
         }
         Sustained = playback == "Sustained";
-        Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
         FormatVersion = AuthorXml.Version(node);
         Key = AuthorXml.Required(node, "key");
         BaseAction = AuthorXml.Required(node, "baseAction");
@@ -93,9 +106,13 @@ public sealed class ActionDeclaration
 
 public static class AuthorXml
 {
-    public static Dictionary<string, bool> Participation(XmlNode? node)
+    public static Dictionary<string, bool> Participation(XmlNode? node, bool actionContainer = false)
     {
         var result = new Dictionary<string, bool>(StringComparer.Ordinal);
+        if (node?.Attributes?.Count > (actionContainer ? 1 : 0))
+        {
+            throw new ArgumentException("Unexpected participation container attributes");
+        }
         foreach (XmlNode entry in Elements(node))
         {
             if (entry.Name != "li" || entry.Attributes?.Count != 1 || entry.Attributes["key"] == null
@@ -248,7 +265,6 @@ public sealed class AuthorCatalog
 {
     private readonly Dictionary<string, RegisteredFact> facts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ActionPlan> actions = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Dictionary<string, bool>> actionParticipation = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IUsResponseRule> responses = new(StringComparer.Ordinal)
     {
         ["us.core/Age"] = new NativeAgeResponse(),
@@ -367,11 +383,6 @@ public sealed class AuthorCatalog
                 }
             }
 
-            var participation = new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal);
-            if (participation.Keys.Any(x => !AuthorXml.ExactKey(x)))
-            {
-                throw new ArgumentException("Invalid action participation identity");
-            }
             // Composition can narrow a base condition, never bypass its qualification.
             actions.Add(declaration.Key, new ActionPlan(
                 declaration.Key,
@@ -386,7 +397,6 @@ public sealed class AuthorCatalog
                 parent.Volume,
                 parent.Pitch,
                 declaration.Sustained));
-            actionParticipation.Add(declaration.Key, participation);
             return true;
         }
         catch (Exception error)
@@ -396,7 +406,8 @@ public sealed class AuthorCatalog
         }
     }
 
-    public bool AddPack(string packageId, string defName, VoicePackDeclaration declaration, Func<string, string?> bindSound)
+    public bool AddPack(string packageId, string defName, VoicePackDeclaration declaration, Func<string, string?> bindSound,
+        string? selectionKey = null)
     {
         string key = packageId + "/" + defName;
         try
@@ -404,6 +415,10 @@ public sealed class AuthorCatalog
             if (!AuthorXml.ExactKey(packageId) || !AuthorXml.ExactKey(defName) || declaration.FormatVersion != 1 || !AuthorXml.ExactKey(declaration.Race) || packKeys.Contains(key))
             {
                 throw new ArgumentException("Invalid/duplicate pack identity");
+            }
+            if (declaration.ActionParticipation.Keys.Any(x => !AuthorXml.ExactKey(x)))
+            {
+                throw new ArgumentException("Invalid pack-local action participation identity");
             }
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -434,7 +449,7 @@ public sealed class AuthorCatalog
                 }
 
                 var participation = new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal);
-                if (actionParticipation.TryGetValue(entry.Action, out var actionDefaults))
+                if (declaration.ActionParticipation.TryGetValue(entry.Action, out var actionDefaults))
                 {
                     foreach (var setting in actionDefaults)
                     {
@@ -450,7 +465,8 @@ public sealed class AuthorCatalog
                     throw new ArgumentException("Invalid entry participation identity");
                 }
                 batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race,
-                    entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation));
+                    entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation,
+                    packKey: selectionKey ?? packageId + ":" + defName));
             }
 
             audio.AddRange(batch);

@@ -5,13 +5,12 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 S1/S2/S3 native validation pending
+## NOW — 0.6.0 S4AB/S5 technical delivery; migration stop
 
-- Run the approved 1.6 controlled author-load and Work/Wounded OneShot observation using the isolated Dev candidate; do not install it automatically.
-- Keep D3 daily-frequency defaults, D4 modulation and new Sustained start/replacement outside this slice. W20 remains a labelled fixture, not a player default.
-- Replace the inherited shared-Def distance mutation in S5 before C11/V14 or full 0.6 product acceptance. Keep the S2 candidate isolated for technical validation; it is not a general-install recommendation.
-- See docs/us-kernel-0.6-s1-zh.md and docs/us-kernel-0.6-s2-zh.md. Next native observation covers actual provenance/final objects/resource pools; output ownership and listening remain separate. S3 technical implementation is recorded in docs/us-kernel-0.6-s3-zh.md; expanded Dev ordering and first-unique adoption remain product candidates. S4/S5 scope/default and native evidence remain open.
-
+- Finish the authorized S4AB/S5 fixed-source and matching Dev handoff. Current requirements and evidence live in the dispatch/work order and `dist/evidence/s4ab-s5/REPORT.md`; do not substitute older S3 results for changed paths.
+- Await explicit authorization for target 1.6 native loading, instance output and listening validation. Do not install or launch automatically; technical fixtures do not close native V08/V12/V14/V15 evidence.
+- Keep numerical daily policy, full 17-action ordering and first-unique behavior-source adoption as explicit candidates. The temporary one-process Dev injection is not a permanent player mode.
+- Stop before FL0.8 consumer migration. Continue only after the user's new step; retain the fixed 0.7 carrier and range.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical

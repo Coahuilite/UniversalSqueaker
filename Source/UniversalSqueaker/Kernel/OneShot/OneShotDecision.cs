@@ -270,6 +270,7 @@ public sealed class DecisionState
 public sealed class AudioCandidate
 {
     public readonly string EntryKey;
+    public readonly string PackKey;
     public readonly string AudioId;
     public Kernel.AudioId? Resource => Kernel.AudioId.TryParse(AudioId, out var id) ? id : null;
     public readonly string Action;
@@ -281,7 +282,7 @@ public sealed class AudioCandidate
     public readonly double Pitch;
     public readonly IReadOnlyDictionary<string, bool> Participation;
     public AudioCandidate(string entryKey, string audioId, string action, string domain, double weight, double volume = 1, SubjectFamily family = SubjectFamily.PawnRace, string targetNamespace = "", double pitch = 1,
-        IReadOnlyDictionary<string, bool>? participation = null)
+        IReadOnlyDictionary<string, bool>? participation = null, string packKey = "")
     {
         if (string.IsNullOrEmpty(audioId)
             || double.IsNaN(weight) || double.IsInfinity(weight) || weight <= 0 || weight > float.MaxValue
@@ -291,6 +292,7 @@ public sealed class AudioCandidate
         }
 
         EntryKey = entryKey;
+        PackKey = packKey;
         AudioId = audioId;
         Action = action;
         Domain = domain;
@@ -357,7 +359,7 @@ public sealed class DecisionInput
     public Kernel.SelectionContext? AudioContext;
     public Kernel.ISoundGate? SoundGate;
     public double Activity = 1;
-    public double SoftRhythmFactor = 1;
+    public double StateWaitFactor = 1;
     public ModulationPlan Modulation = new();
     public IReadOnlyDictionary<string, ModulationPlan> ActionModulation = new Dictionary<string, ModulationPlan>();
     public string ActiveSustainedKey = "";
@@ -401,7 +403,7 @@ public sealed class OneShotDecision
             return Stop(state, policy, input, "", "Ineligible");
         }
         if (double.IsNaN(input.Activity) || double.IsInfinity(input.Activity) || input.Activity <= 0
-            || double.IsNaN(input.SoftRhythmFactor) || double.IsInfinity(input.SoftRhythmFactor) || input.SoftRhythmFactor <= 0)
+            || double.IsNaN(input.StateWaitFactor) || double.IsInfinity(input.StateWaitFactor) || input.StateWaitFactor <= 0)
         {
             return Stop(state, policy, input, "", "InvalidSoftRhythm");
         }
@@ -450,7 +452,7 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "TalkingRejected", diagnostics);
             }
 
-            double chance = input.StateOpportunity ? action.Chance : Math.Min(1, action.Chance * input.Activity / input.SoftRhythmFactor);
+            double chance = input.StateOpportunity ? action.Chance : Math.Min(1, action.Chance * input.Activity);
             if (!Pass(chance, RandomPurpose.Eligibility, random))
             {
                 return Stop(state, policy, input, action.Key, "ChanceRejected", diagnostics);
@@ -656,7 +658,7 @@ public sealed class OneShotDecision
             long applicableShared = action.CheckShared ? state.SharedDeadline : input.Tick;
             if (receipt.Result == PlaybackResult.Dispatched)
             {
-                double softWait = Math.Ceiling(policy.Wait * (input.SoftRhythmFactor / input.Activity));
+                double softWait = Math.Ceiling(policy.Wait * (input.StateWaitFactor / input.Activity));
                 long wait = softWait >= long.MaxValue ? long.MaxValue : Math.Max(1, (long)softWait);
                 state.NextStateTick = TickDeadline.Add(Math.Max(input.Tick, applicableShared), wait);
             }

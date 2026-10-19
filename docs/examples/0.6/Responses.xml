@@ -1,0 +1,41 @@
+<Defs>
+  <!-- Explicit author fixture, not installed content or a product default. Bind this source by exact domain. -->
+  <UniversalSqueaker.UsBehaviorSourceDef>
+    <defName>US_ExampleResponses</defName>
+    <declaration family="Pawn" namespace="" target="Ratkin" child="">
+      <action key="Work" ageEnabled="true" moodEnabled="true">
+        <parameter key="mood.low" value="0.3" />
+        <parameter key="mood.high" value="0.7" />
+        <parameter key="mood.low.pitch" value="0.9" />
+        <parameter key="mood.high.pitch" value="1.1" />
+        <parameter key="jitter.min" value="0.97" />
+        <parameter key="jitter.max" value="1.03" />
+      </action>
+    </declaration>
+  </UniversalSqueaker.UsBehaviorSourceDef>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleSustainedWork</defName>
+    <declaration>
+      <key>example/SustainedWork</key><baseAction>us.core/Work</baseAction>
+      <condition><ref>us.core/WorkState</ref></condition>
+      <playback>Sustained</playback>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleResponseAudio</defName>
+    <declaration>
+      <race>Ratkin</race>
+      <participation><li key="us.core/Age">Skip</li></participation>
+      <actionParticipation>
+        <li action="example/SustainedWork"><li key="us.core/Age">Apply</li></li>
+      </actionParticipation>
+      <entries>
+        <li><key>neutral</key><action>example/SustainedWork</action><sound>US_RatkinExp_Work</sound><pitch>1</pitch></li>
+        <li>
+          <key>already-pitched</key><action>example/SustainedWork</action><sound>US_RatkinExp_Work</sound>
+          <participation><li key="us.core/Age">Skip</li></participation>
+        </li>
+      </entries>
+    </declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

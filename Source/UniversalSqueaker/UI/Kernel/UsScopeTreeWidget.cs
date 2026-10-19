@@ -299,7 +299,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
 
-            bodyHeight += RetiredEditorHeight(ctx, width) + RowGap;
+            bodyHeight += RowHeight + RowGap + RetiredEditorHeight(ctx, width) + RowGap;
         }
         else
         {
@@ -457,7 +457,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
 
-            DrawRetiredEditor(new Rect(x, y, innerWidth, RetiredEditorHeight(ctx, innerWidth)), ctx);
+            DrawActionRestore(y, x, innerWidth, scopeRows, ctx, submittable);
         }
         else
         {
@@ -648,7 +648,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
     /// layer's own multiplier with a stepper, single-field Clear (restore inheritance) and the
     /// reset-to-preset with its Ready/Unavailable answer. The probability line states the runtime
     /// rule instead of hiding it: the multiplier is open-ended, the FINAL probability still clamps.</summary>
-    private float DrawActionEditor(float y, float x, float width, IReadOnlyList<ActionScopeRowView> rows, UiWidgetContext ctx, bool submittable)
+    private float DrawActionRestore(float y, float x, float width, IReadOnlyList<ActionScopeRowView> rows, UiWidgetContext ctx, bool submittable)
     {
         var pairs = new List<KeyValuePair<string, string>>();
         foreach (ActionScopeRowView row in rows)
@@ -677,15 +677,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         }
         y += RowHeight + RowGap;
 
-        ActionScopeRowView? rowView = SelectedAction(rows, ctx);
-        if (!rowView.HasValue) return y - RowGap;
-        ActionScopeRowView selected = rowView.Value;
-
-        y = DrawMultiplierLine(y, x, width, selected.ActionKey, intervalField: true, selected, ctx, submittable);
-        y = DrawMultiplierLine(y, x, width, selected.ActionKey, intervalField: false, selected, ctx, submittable);
-        return y - RowGap;
+        float noteHeight = RetiredEditorHeight(ctx, width);
+        DrawRetiredEditor(new Rect(x, y, width, noteHeight), ctx);
+        return y + noteHeight;
     }
-
     private float DrawMultiplierLine(
         float y, float x, float width, string actionKey, bool intervalField, ActionScopeRowView row,
         UiWidgetContext ctx, bool submittable)

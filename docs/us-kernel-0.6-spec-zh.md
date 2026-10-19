@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-19，r5（S3实际状态；已定合同不变）。状态：**首版目标规格；受控S1/S2及S3动作/Config技术链已实现，原生验收与S4–S5责任仍保留**。目标游戏版本仍为 RimWorld 1.6。
+修订：2026-10-19，r6（S4-A/B与S5实施；明示候选、原生与听感分层）。状态：**单一生产owner与S4/S5技术链已实现；产品数值默认、真实1.6和听感仍待接受**。目标游戏版本仍为 RimWorld 1.6。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。制作现有版本声音包，请使用[0.5.x 作者指南](voicepack-authoring-0.5-zh.md)。
 
@@ -177,7 +177,7 @@ Kiiro 与 Ratkin 不互借池；工作台不借 Pawn 死亡音。准确域约束
 
 ## 6. 发声机会、门控、选择与冷却
 
-以下D2在OneShot首切片范围已采用；Sustained新启动/替换等未批准部分仍为候选。Call的自身成立与最低优先级是已定约束。
+D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换；Call自身成立与最低优先级是已定约束。具体17动作总排序仍是明示候选，不等于发行默认。
 
 ### 6.1 一份状态机会，真实事件另行唤醒
 
@@ -205,7 +205,7 @@ Kiiro 与 Ratkin 不互借池；工作台不借 Pawn 死亡音。准确域约束
 
 ### 6.3 计时状态与结算
 
-新规则硬限制使用游戏 tick，附加等待非负。旧入口已有实时时钟／倍率含义由兼容适配明确解释，不能改字段名后声称行为未变。
+新规则硬限制使用游戏 tick，附加等待非负。发布前裁定已退役旧概率、Realtime及倍率乘硬截止政策；合法字符串能力、身份、许可和scope保留并接同一owner，不再接第二旧时钟。旧字段没有被改名冒充A，新A独立保存。
 
 | 状态 | 归属／起算 |
 | --- | --- |
@@ -233,7 +233,7 @@ Kiiro 与 Ratkin 不互借池；工作台不借 Pawn 死亡音。准确域约束
 
 **已定：** 全局活跃度是独立输入，局部倾向不能覆盖它；不靠负等待抵消硬冷却，不改变音量、合同真假或包启用。
 
-**设计基线 D3 的首选映射：** 活跃度 `A > 0`，`A = 1` 为不缩放；系统禁用仍有自己的明确语义。
+**已定 D3 核心映射：** 活跃度 `A > 0`，`A = 1` 为不缩放；系统禁用仍有自己的明确语义。
 
 - 状态：对局部策略给出的非负基础等待样本 `W_base`，使用 `W = ceil(W_base / A)`，只应用一次。有效等待仍满足内部最小唤醒间隔。
 - 事件：对允许节奏抽样的回应，以 `p = min(1, p_base × A)` 决定接纳；不再为同一全局活跃度叠加另一项事件等待。仅真实事件到来时求值，不创造事件或补播。
@@ -243,7 +243,7 @@ Kiiro 与 Ratkin 不互借池；工作台不借 Pawn 死亡音。准确域约束
 
 采用两种映射是为了尊重输入差别：状态机会可以安排到未来，瞬时事件只能决定是否回应当次事实。它们共用一个玩家总控，不为事件额外维护软等待状态。
 
-更多声音受真实事件数量、合同成立、供给、硬限制和概率上限约束。A 加倍不是实际发声数必然加倍。待裁定的 UI 范围、初始等待分布、事件基准接纳率及旧倍率解释集中在 D3，不由实现者把旧逐 tick 概率直接搬成“每次新机会的同一概率”。
+更多声音受真实事件数量、合同成立、供给、硬限制和概率上限约束。A 加倍不是实际发声数必然加倍。待裁定的 UI 范围、初始等待分布、事件基准接纳率、关键例外及人口／速度数值集中在 D3，不由实现者把旧逐 tick 概率直接搬成“每次新机会的同一概率”。
 
 ## 8. 声音来源、候选与抽样
 
@@ -268,7 +268,7 @@ Xenotype 请求可按明确路径使用 Race 常规声音，但不会因此借�
 | Vanilla（界面“原版”） | 适配为 Kernel `Off`，只使用最终 Race 后备表；不承诺恢复全部原版发声行为 |
 | Disabled | 不派发；保留选择记录，不偷偷启用后备 |
 
-这是产品设置模式，不是 VoicePack XML 字段。现有适配也把 Disabled 投影为 Kernel `Off`，但生产入口提前旁路；不能据此把“禁用”和“原版”合成一个公开语义。
+这是产品设置模式，不是 VoicePack XML 字段。现有适配把 Disabled 投影为 Kernel `Disabled`，生产入口也提前旁路；不能据此把“禁用”和“原版”合成一个公开语义。
 
 ### 8.2 层内筛选
 
@@ -334,7 +334,7 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 
 设计基线：参与声明逐字段解析 `包默认 → 包内动作默认 → 单条例外`，再应用玩家对同一参与参数的覆盖；只得到一份结果，不加工三次。最终省略视为参与已经启用且适用的响应，不会自行启用它。
 
-### 10.2 倍率合成（设计基线 D4）
+### 10.2 倍率合成（已定 D4）
 
 ```text
 局部 pitch = 来源校准 × 各启用且参与的响应贡献 × 一次抖动样本
@@ -346,7 +346,7 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 
 音量允许合法 0；音高与抖动为有限正值，输入与最终输出需符合公开范围。必需规则异常或输出非法值时终止准备并定位原因，不静默当作 1。按稳定规则 ID 固定归并／诊断次序，不开放 priority、before／after、任意中途 clamp 或 DSP 排序图。
 
-若选择原生 LifeStage 音高规则，值来自真实 `voxPitch`；显式年龄覆盖替代该规则对应值，不再额外乘一次原生值。独立响应乘算不同于旧生产路径的心情覆盖年龄，须按 D4 确认。
+启用年龄响应时，原生对应轴分别来自真实 `voxPitch`／`voxVolume`；显式年龄覆盖只替代对应轴，不双乘，未覆盖轴仍取原生值。年龄后心情为固定合成阶段，每项读取同一原始上下文；旧心情覆盖年龄政策已退役。
 
 **A／B 示例：** 同一 Race 启用年龄响应 1.2。A 已录好儿童音色并 Skip 年龄，其贡献为 1；B 的中性素材 Apply，贡献为 1.2。A 仍可参与心情等其他响应。玩家关闭域年龄响应后，两包年龄贡献都为 1；总音量始终应用，不能被 Skip 绕过。
 
@@ -369,7 +369,7 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 
 ## 11. 播放结果与已有持续音
 
-### 11.1 请求与结果（OneShot首切片已采用；Sustained新派发政策仍待裁定）
+### 11.1 请求与结果（OneShot与Sustained新派发均已采用）
 
 请求只含准确对象／定位、已选 AudioId 与绑定元数据、局部参数、播放形态及允许的实例操作、动作／条目归因与尝试 tick；当前全局输出从已发布状态读取。无需持久请求队列，K16 不重新建池或抽取。
 
@@ -401,7 +401,7 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 
 ## 12. 兼容、保存与生命周期
 
-**已定：** 当前不开发现有旧包转换器；首版公开格式应可识别并保留兼容读取边界。发布后遇到真实变化，优先按原义读取或做唯一等价转换，能保留旧语义则保留，确实无法兼容才定位到受影响声明要求作者修订。
+**已定：** 本轮未发行Config和测试包允许直接采用新语义，不保旧概率／Realtime／心情覆盖年龄双轨；稳定的音频路由、身份、许可、scope、字段存在性及保存恢复合同仍保持。US不自动读取、重写或清空真实旧Config。发布后的真实变化再按原义读取或唯一等价转换处理，不开发通用旧包转换平台。
 
 - 不把模组发行版本当作每个参数的语义版本。普通作者改值、增添声音或合法可选参数不维护恢复版本表。
 - 若公开格式允许省略格式标记，省略必须永久表示首版格式，而非“当前最新版”；未来由 US 的读取边界识别和兼容，不要求普通作者随每次发行改标记。
@@ -453,14 +453,14 @@ S3实际入口、字段、17动作对账和保存故障边界见[S3实施页](us
 
 ## 15. 需要裁定的有限清单
 
-D1、D2的OneShot首切片、D5最小四结果以及D6单提供者/省略格式1已采用；以下仍列完整首版的剩余影响，不能把切片采用扩大成全部D项冻结。
+D1、D2单机会/四结果、D3独立A机制、D4固定独立合成、D5持续音最小政策及D6单提供者/省略格式1已采用。剩余数值默认和来源自动采用只阻对应产品默认，不阻明示输入的技术链。
 
 | 编号 | 首选方案及影响 | 应在何时确认 |
 | --- | --- | --- |
 | D1 合同结果（已采用） | 三态与 All／Any／Not 的第 4.1 节语义；未知不放行，初始化缺依赖另隔离 | 合同／XML 求值切片前 |
-| D2 发声决策（OneShot已采用） | 每 Pawn 一份状态机会、稳定优先、选后失败不跨动作补位、同 tick 一次尝试；明确未派发不收硬冷却、不明保留保护；逐动作门控／豁免表及旧时钟解释 | 第一个状态＋事件切片前 |
-| D3 全局活跃度 | 状态等待反比缩放，事件接纳率缩放；硬限制不缩放；只在下一排程／事件用新值；人口／速度进入单一软节奏计算点 | 节奏与设置接线前；需定初始分布、数值范围及旧倍率含义 |
-| D4 局部调制 | 独立响应乘算、来源参与逐字段覆盖、固定阶段、一次抖动；明确区别于旧心情覆盖年龄 | 调制公开参数与实现前；需定合法范围及内置规则参数 |
+| D2 发声决策（已采用） | 每 Pawn 一份状态机会、稳定优先、选后失败不跨动作补位、同 tick 一次尝试；明确未派发不收硬冷却、不明保留保护；逐动作资格保持，数值排序／关键豁免仍须明示 | 第一个状态＋事件切片前 |
+| D3 全局活跃度（机制已采用） | 状态等待反比缩放，事件接纳率缩放；硬限制不缩放；只在下一排程／事件用新值；人口／速度进入单一软节奏计算点 | 发行默认前冻结等待分布、A界面范围、事件基准、人口／速度和关键例外 |
+| D4 局部调制（已采用） | 独立响应乘算、来源参与逐字段覆盖、固定阶段、一次抖动；明确区别于旧心情覆盖年龄 | 现用中性缺省、显式阈值和公开数值校验；不内置隐藏风格 |
 | D5 后端执行 | 四类结果、实例归属与原版更新实时应用总控；不回退共享 Def 写入 | 原生适配实现／验收前；目标 1.6 技术验证不可由文档代替 |
 | D6 公共数据与准入 | 一个显式提供者入口、最小声明／参数合同、完整内置 Pawn 覆盖、按语义单位隔离及来源自动采用表 | 对应作者入口／目录／配置切片前；同时冻结可加载样例与公开签名 |
 
@@ -473,17 +473,17 @@ K20 封存、K21 完整实现首版外、种族／服务对象边界、K13／K17
 - [现有池与路由](../Source/UniversalSqueaker/Kernel/SqueakPoolRegistry.cs)、[池数据](../Source/UniversalSqueaker/Kernel/Pool.cs)。
 - [现有声明](../Source/UniversalSqueaker/Models/SqueakVoicePackModels.cs)、[当前资源投影](../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs)。
 - [现有 Comp 入口／生命周期](../Source/UniversalSqueaker/CompSqueaker.cs)、[动作元数据](../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs)。
-- [当前时序](../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs)、[分层参数](../Source/UniversalSqueaker/Pure/SqueakLayeredTuning.cs)、[当前调制](../Source/UniversalSqueaker/Kernel/Modulation.cs)。
+- [唯一决策与结算](../Source/UniversalSqueaker/Kernel/OneShot/OneShotDecision.cs)、[独立响应](../Source/UniversalSqueaker/Kernel/OneShot/ResponseModulation.cs)、[持续槽](../Source/UniversalSqueaker/Kernel/OneShot/SustainedPlayback.cs)、[实例输出](../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs)。旧时序／调制纯函数只保历史政策语料，不是活动生产决策。
 
 S2已核对远端1.6.4850及本机目标1.6.4871/Unity2022.3.35f1的关键方法体，见[S2实施页](us-kernel-0.6-s2-zh.md)；方法体依据和目标引用编译不是原生运行验收。本文没有把旧 UI 接受、历史工具测试或正常派发回执扩大成新 Kernel 的产品验收。
 
-## 17. r2 变更与迁移入口
+## 17. r2 历史阶段与迁移入口
 
-r2新增合同与固定输入附页，强化纯核心／平台适配边界；V01–V15和首版范围不缩减。D1/D2/D6及D5最小协议仍待相关切片前裁定。本轮只改产品docs，没有新架构源码、测试实现、版本或API/ABI变更；既有0.5 checkpoint与旧载荷继续是独立输入。真实测试分类、V01–V15责任证据、旧政策差异及固定FL Dev消费条件见[测试迁移附页](us-kernel-0.6-test-migration-zh.md)。
+r2阶段新增合同与固定输入附页，强化纯核心／平台适配边界；V01–V15和首版范围不缩减。D1/D2/D6及D5最小协议仍待相关切片前裁定。本轮只改产品docs，没有新架构源码、测试实现、版本或API/ABI变更；既有0.5 checkpoint与旧载荷继续是独立输入。真实测试分类、V01–V15责任证据、旧政策差异及固定FL Dev消费条件见[测试迁移附页](us-kernel-0.6-test-migration-zh.md)。
 
 ## 18. 已采用的首批范围
 
-D1三态、D2的OneShot单机会/同tick名额与四结果/R60、Work与Wounded同批优先且无新增共用豁免、D6单提供者入口与格式号省略永久为1已获批准。本次不据此批准Sustained新启动/替换、D3完整日常频率或D4调制。实际接口、普通包/扩展示例、受控入口及证据边界见[OneShot S1](us-kernel-0.6-s1-zh.md)。
+D1三态、D2的OneShot单机会/同tick名额与四结果/R60、Work与Wounded同批优先且无新增共用豁免、D6单提供者入口与格式号省略永久为1已获批准。该S1阶段没有批准Sustained新启动/替换、D3完整日常频率或D4调制；当前已批机制与技术实现按第20节，数值发行默认仍未冻结。实际接口、普通包/扩展示例、受控入口及证据边界见[OneShot S1](us-kernel-0.6-s1-zh.md)。
 
 ## 19. S2实现状态与后续责任
 
@@ -491,4 +491,64 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 作者入口、生产路径、四模式/年龄/egg/权重保留、独立双重放与适配fixture、V01/V08/V09/V10责任和V14接缝盲区统一见[S2实施页](us-kernel-0.6-s2-zh.md)。本轮没有引入owner字段或普通音频注册Def，没有批准D3/D4、新Sustained或完整D6默认。旧黄金语料不重录；纯层、适配、目标1.6源码依据及原生观察/听感分别记证据。S3–S5和S1原生缺口不随此状态自动关闭。
 
-**S5交付阻断：** 继承的`Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍写共享定义，借用Core/他方SoundDef时可能影响非US声音。PM允许S2技术链单独接收，但C11/V14/S5及整个0.6产品接受必须等待实例级替代；本轮不禁用旧距离、不新增共享写入、不用Def克隆绕过。详见S2实施页。
+**S5当前状态：** 上述历史共享距离写入已由实例级适配替代，活动路径只发布全局端点，再在已归属US的Sample更新实例AudioSource；无共享Def写入或克隆。首帧、首个／后续持续采样、起止辅助音、晚到回调与池复用已有真实Harmony替身反例；真实1.6输出及听感仍待维护者授权观察，不能由自动绿直接关闭C11/V14或完整0.6。
+
+## 20. S4-A/B 与 S5 当前使用方式
+
+### 唯一生产 owner 与临时激活门
+
+`CompSqueaker.CompTick`、17通知和`NotifyExternalByKey`均进入`UsOneShotRuntime`，每Pawn只有一份`UsPawnPlaybackSession`。普通作者的注册组合保留base条件、附加条件、优先级与形态；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。真正未注册字符串无需补注册，但仍受外部许可、scope、身份、同tick名额与同一硬截止约束。
+
+产品数值默认尚未冻结。本开发版本未选择整体策略时返回可读状态`PolicySelectionRequired`，零派发、零每Pawn候选初始化，不回旧链。开发模式菜单`S4AB-S5 GLOBAL candidate: W20 H40 I120 spread120 p1 N/speed1`一次性注入全局隔离候选；重复点同一工具不会清保护。也可显式调用：
+
+```csharp
+UsOneShotRuntime.SelectDevelopmentPolicy(
+    new UsDevelopmentPolicy(20, 40, 120, 120, 120, 1, 1));
+UniversalSqueakerMod.Settings.SetActivity(1.5);
+```
+
+这些数值是高频验证输入，不是日常推荐值。参数顺序为基础W、共用硬间隔、普通动作硬间隔、Wounded硬间隔、初始错峰宽度、事件基准p、状态基础等待因子。固定W是本候选的分布；初始错峰只设下一机会，不虚构派发。人口／速度因子由本候选显式提供为1，未暗读旧滑块；将来若启用，该状态等待因子只进入W_base一次，不改事件p_base或硬截止。活动A独立以`activity`保存，有限正数，1中性；`SetActivity`沿原保存队列排队，实际机会采新值，不重建session或重抽已安排等待。临时开发策略不写公开Config，无每Pawn模式开关；数值默认冻结后移除该门。
+
+### 普通作者：校准、参与、形态与行为来源
+
+[Responses.xml](examples/0.6/Responses.xml)由正常Def字段加载器读取，示例不默认安装。`UsVoicePackDef.declaration`新增可选`pitch`条目校准、`participation`包默认、`actionParticipation`本包动作默认及entry自己的`participation`。参与li只接受准确响应key与`Apply`／`Skip`；包内动作li只接受准确`action`属性。它们先折叠一次：
+
+```xml
+<participation><li key="us.core/Age">Skip</li></participation>
+<actionParticipation>
+  <li action="example/SustainedWork"><li key="us.core/Age">Apply</li></li>
+</actionParticipation>
+```
+
+同一action在另一包中不继承这里的动作默认。entry声明最后覆盖；全部省略表示参与已启用的响应，不启用响应。`UsActionDef.declaration/playback`接受`OneShot`（省略缺省）或`Sustained`，ActionDef只定义合同和形态，不持跨包参与权威。Sustained请求选到非sustain素材仍用已选声音降级一次，不重选或补播。
+
+准确域的`UsBehaviorSourceDef`提供动作启用／scope／硬间隔及稀疏响应启用、参数。新增`moodEnabled`与既有`ageEnabled`同为可缺省bool；扩展响应用`<response key="example/Response" enabled="true"/>`，参数用`<parameter key="..." value="..."/>`。同一动作不可同时用`ageEnabled`和同名通用response重复定义年龄启用（心情同理）。行为来源不能写`participation`冒充玩家覆盖；该字段明确拒绝，来源快照仍只保存作者贡献。
+
+| 数值key | 实际消费与缺省 |
+| --- | --- |
+| `age.override`／`age.overrideVolume` | 可分别替代原生`voxPitch`／`voxVolume`；未覆盖的轴仍须有真实原生事实，不双乘 |
+| `mood.low`／`mood.high` | 启用心情后必填，有限且0≤low＜high≤1；事实`mood.level`由本次真实Pawn需要读取 |
+| `mood.low.pitch/volume`、`mood.neutral.pitch/volume`、`mood.high.pitch/volume` | 对应区间未写为1；边界等于阈值属于neutral，不暗补旧风格阈值 |
+| `jitter.min`／`jitter.max` | 缺省均1，有限正数且min≤max；范围非恒定时只抽一次，非法范围抽样前拒绝 |
+
+音量贡献允许0，音高为有限正值；合成及L×当前G必须能表示为原生float，否则在原生副作用前拒绝。原生自身映射、音量、位置和淡出保留。参数存在或Apply均不等于启用；本次固定局部L，后续更新只读取当前全局G，不重算年龄／心情或抖动。
+
+真正新增响应与事实共用一个`IUsDefinitionProvider.Collect(ProviderBatch)`批次。调用`batch.AddResponse(IUsResponseRule)`，实现只暴露稳定`Key`、固定`ResponseStage.Age/Mood`和`Evaluate(ResponseContext)`；返回`ResponseContribution(pitch, volume)`。它读取本次不可变数值context及subject，不接触前项累计结果；与该批事实一起完整验证后发布。缺实现／异常／非法贡献有具体原因，不删规则后放行，不开放任意排序图。
+
+### 玩家精确层覆盖与保存
+
+玩家仍使用`actionTuning`的Global（race/xeno均空）、Race、Xenotype准确身份。每行的`responses`保存`key`、`hasEnabled/enabled`、`hasParticipation/apply`；`responseParameters`保存数值`key/value`。`has=false`为不贡献，显式false／0保留。来源先折叠，玩家Global→Race→Xeno再逐字段覆盖；只有玩家参与覆盖能压过选中entry的Skip。
+
+公开`Settings.ReplaceResponseTuning(actionKey, race, xeno, responses, parameters)`只替换该准确身份的响应字段；先验证／深拷贝，再交原保存队列，不清scope、导入来源或作者绑定。空集合清本层响应覆盖以恢复继承。`ResetActionTuningRow`／动作区域恢复也清自身响应覆盖，全局恢复另外把A还原1；都不遗忘行为来源或好快照。来源切换继续走S3原子stage→replace保存并接原generation，不建立第二队列。普通参数编辑失败沿原dirty/retry反馈；来源事务提交后的运行发布故障不能冒称未提交。
+
+### 实例输出、持续槽与证据
+
+US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer用弱键表关联本次局部贡献，不以Pawn、SoundDef或音源名称推断。首个持续Sample可在父构造返回前创建，从真实info捕获；后续样本沿显式父关系。起止辅助音仅在原生两个实际调用点标记，新建info不借环境栈认领，因此嵌套非US请求不被误归属。
+
+基础Sample音量postfix应用L×当前G，派生Sustainer淡出仍由原版完成；Update在首次Play前及正常更新写自身AudioSource距离，结束和池复用释放Sample归属。End非幂等，US只结束仍活跃的自有句柄。父Cleanup完成、停止辅助音创建之后撤活动归属，保弱键关闭负身份以拒晚到grain；End后的新grain也拒绝，已有淡出Sample仍消费当前G／距离至实际Cleanup，不补播。必要Harmony目标或辅助调用布局不符，依赖的新派发明确拒绝。
+
+持续槽只接受有效新句柄确认Dispatched；同键维护先过当前来源／许可／发声资格，不抽随机、不刷新保护；低优先拒绝，高优先先准备再结束旧音。未知新句柄保Indeterminate硬保护；旧音结束／新启动分别记录，失败不恢复。活跃槽独立60tick复检，当前资格／状态失效或Unknown结束；无槽不复检，离图／销毁／服务关闭释放自有槽。
+
+自动证据分为纯生产源重放、实际调用／Harmony替身、Config与Host。诊断从该owner已存结果读取action／原因／四结果／确认tick／硬截止／下一机会和持续槽，不再显示旧私有时钟伪结果；旧Timing／概率／心情编辑控件在原FL0.7页面显示退役原因，保有效scope、单动作恢复、Eat／Baby及声音供给控件。原生1.6音频、听感及产品数值默认仍分别由维护者／PM接收。**本轮停在FL0.8消费迁移之前**，固定FL0.7与范围`[0.7.0,0.8.0)`不变。
+
+新`UsVoicePackDef`不是永久启用：验证后的声明投影进既有Packs目录，沿`packageId:DefName`选择身份及准确Race域启停；未显式选择沿原目录规则为未选入，不自动采用。当前声明格式仅Race域，子域选择不代替主域选择；旧Xenotype包规则保持。Runtime只合入当前已选声明的条目，保其局部校准和参与元数据。关闭音频包不卸载独立行为来源，也不改变其绑定意图；Fallback/Remix/Vanilla/Disabled仍按原模式合同。

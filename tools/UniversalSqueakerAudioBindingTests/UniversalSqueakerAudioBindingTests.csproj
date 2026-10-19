@@ -14,6 +14,7 @@
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsAudioBindings.cs" Link="Production/UsAudioBindings.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsNativeAudioPool.cs" Link="Production/UsNativeAudioPool.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs" Link="Production/UsInstanceOutput.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/UsAuthorVoicePacks.cs" Link="Production/UsAuthorVoicePacks.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Production/OneShot/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Authoring/BuiltInPawnContracts.cs" Link="Production/BuiltInPawnContracts.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Authoring/AuthorCatalog.cs" Link="Production/AuthorCatalog.cs" />

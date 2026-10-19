@@ -62,11 +62,7 @@ internal static class DeclarativeTimingLaneTests
 
     public static int RunAll()
     {
-        Step("the timing card is a declared Section over atoms, not the retired composite", TheCardIsDeclaredOverAtoms);
-        Step("the caption is the one string the host builds (EN + ZH)", TheCaptionIsTheOneStringTheHostBuilds);
-        Step("the caption band does not follow the value", TheCaptionBandDoesNotFollowTheValue);
-        Step("every timing control terminates on its declared edges", EveryControlTerminatesOnTheDeclaredEdges);
-        Step("one interval value in two units writes one business field", OneValueInTwoUnitsWritesOneField);
+        Step("S4 retired timing controls cannot claim effect; explicit gate notice is visible", S4RetiredPolicyUiTests.Run);
         Console.WriteLine("DeclarativeTimingLaneTests ALL PASS");
         return 0;
     }

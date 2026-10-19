@@ -212,7 +212,7 @@ internal static class Program
         Step("workspace switch resets session scroll", WorkspaceSwitchResetsSessionScroll);
         Step("rich dynamic data measure + draw", RichDynamicDataMeasureAndDraw);
         Step("preset rows compose through the shared row band (R4-B)", PresetRowsComposeThroughTheSharedBand);
-        Step("760x524 page-box mood layout focused geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
+        Step("current navigation and action-permission geometry/interaction", () => MoodLayoutFocusedTests.RunAll());
         Step("retractable bottom help panel (BH1)", () => HelpPanelLaneTests.RunAll());
         Step("US-ESC1/US-UI1 tree cancel layers + F06/F07 on the live page (FL-IC2)", () => CancelLayerLaneTests.RunAll());
         Step("equal-weight Remix double confirmation (SA1.3)", () => RemixConfirmationLaneTests.RunAll());
@@ -226,7 +226,7 @@ internal static class Program
         Step("overlay widget contract fails at creation", OverlayWidgetContractFailsAtCreation);
         Step("overlay dual-host session isolation", OverlayDualHostSessionIsolation);
         Step("text-fit audit against both shipped language tables", TextFitAuditAcrossLanguages);
-        Step("wrapping timing label grows the timing card", WrappingTimingLabelGrowsTheCard);
+        Step("wrapping current policy notice grows its existing card", WrappingPolicyNoticeGrowsTheCard);
         Step("wrapping Packs domain text grows the card row that shows it", WrappingDomainTextGrowsTheCardRow);
         Step("composite dropdown popup publishes its covering rect", CompositeDropdownPublishesCoveringRect);
         Step("a scope option commits its typed value, never its label (R4-A)", TypedScopeChoiceCommitsTheValue);
@@ -259,8 +259,7 @@ internal static class Program
             () => ReportFeedbackLaneTests.RunAll());
         Step("XG1 empty xenotype tuning target: reason, blocked submits, real boxes",
             () => XenotypeEmptyTargetLaneTests.RunAll());
-        Step("PRE1/Tuning action multipliers: real writer to real fold round trip",
-            () => TuningMultiplierLaneTests.RunAll());
+        // S4 retires old interval/probability policy controls; new Config composition is checked by SettingsMigrationTests.
         Step("US-RESET1 UI: ceremony, direct entries, scope naming, draft integration",
             () => ResetUiLaneTests.RunAll());
         // UIR-002/003/006 (WO-US-UI-REFACTOR-20261014): the race board and the live theme switch.
@@ -2597,7 +2596,7 @@ internal static class Program
     /// draw with the audit silent. Under the old fixed 20px band the two heights come out identical and
     /// this fails; so does a card that measures short while its row draws the grown band.
     /// </summary>
-    private static void WrappingTimingLabelGrowsTheCard()
+    private static void WrappingPolicyNoticeGrowsTheCard()
     {
         var metrics = new StubMetrics();
         var reports = new List<UiOverflowReport>();
@@ -2608,11 +2607,11 @@ internal static class Program
             Dictionary<string, string> english = ReadKeyedTable("English");
             var fits = new Dictionary<string, string>(english, StringComparer.Ordinal)
             {
-                ["US.Tuning.CooldownMultiplier"] = "Cooldown"
+                ["US.Kernel.PolicyRequired"] = "Cooldown"
             };
             var wrapping = new Dictionary<string, string>(english, StringComparer.Ordinal)
             {
-                ["US.Tuning.CooldownMultiplier"] = new string('W', 100)
+                ["US.Kernel.PolicyRequired"] = new string('W', 100)
             };
 
             float fitsOneLine = TimingCardHeight(fits, metrics);
@@ -2621,7 +2620,7 @@ internal static class Program
             Assert(fitsOneLine > 0f && wraps > 0f,
                 "the rich fixture must place the timing card, got " + fitsOneLine + "px / " + wraps + "px");
             Assert(wraps > fitsOneLine + 10f,
-                "the long translated multiplier label must grow the card instead of clipping: one-line "
+                "the long translated policy notice must grow the card instead of clipping: one-line "
                 + fitsOneLine + "px, wrapping " + wraps + "px");
             Assert(reports.Count == 0,
                 "and growing the band is the answer, not clipping the text: " + Describe(reports));

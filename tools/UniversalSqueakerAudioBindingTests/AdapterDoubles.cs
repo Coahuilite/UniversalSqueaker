@@ -64,6 +64,8 @@ namespace Verse
     public class Def
     {
         public string defName = "";
+        public string label = "";
+        public string description = "";
         public ModContentPack? modContentPack;
     }
     public sealed class SoundDef : Def
@@ -227,6 +229,8 @@ namespace UniversalSqueaker
     }
     public sealed class SqueakVoicePackDef : Verse.Def
     {
+        internal bool IsKernelDeclaration;
+        public SqueakVoicePackScope scope;
         public string raceDefName = "";
         public float weight = 1;
         public string FixturePackKey = "";
@@ -234,10 +238,11 @@ namespace UniversalSqueaker
         public List<SqueakVoicePackFallback> fallbacks = new();
         public bool TryGetPackKey(out string key)
         {
-            key = FixturePackKey;
+            key = FixturePackKey.Length == 0 ? modContentPack!.PackageId + ":" + defName : FixturePackKey;
             return true;
         }
     }
+    public enum SqueakVoicePackScope { Unspecified, Race, Xenotype }
     public sealed class SqueakVoicePackAction
     {
         public SqueakAction action;

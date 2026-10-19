@@ -203,17 +203,6 @@ internal static class XenotypeEmptyTargetLaneTests
                         Assert(referenceActions.Sliders.Count == 0,
                             where + ": the action area must draw NO mood slider - the areas really split, got "
                             + referenceActions.Sliders.Count);
-                        referenceHost.Bindings.Set("tuning-area", 1);
-                        Assert(referenceHost.Bindings.Get<int>("tuning-area") == 1,
-                            where + ": the fixture must REALLY enter the mood area (PM entry review)");
-                        Program.SetScrollPositionById(referenceHost.Session, "content-scroll", Vector2.zero);
-                        CaseObservation referenceMoods = Observe(
-                            referenceHost, box, metrics, reports, table, where, expectReason: false);
-                        Assert(referenceMoods.Sliders.Count == 4 * 3 && referenceMoods.Fields.Count == 4 * 3,
-                            where + ": the mood area of the valid reference must draw every parameter's slider"
-                            + " and field, got " + referenceMoods.Sliders.Count + " sliders and "
-                            + referenceMoods.Fields.Count + " fields");
-
                         // The blocked case.
                         var source = new RecordingSettingsSource { RichData = true, EmptyXenotypeTarget = true };
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
@@ -288,111 +277,14 @@ internal static class XenotypeEmptyTargetLaneTests
                         Assert(source.LastActionScope == null && source.LastActionKey == null,
                             where + ": the inert scope band must not commit anything either");
 
-                        // (2) AREA 1 (mood tones): the same inertness on the slider/field/stepper/reset
-                        // atoms, with the fixture REALLY inside the area that draws them.
-                        host.Bindings.Set("tuning-area", 1);
-                        Assert(host.Bindings.Get<int>("tuning-area") == 1,
-                            where + ": the blocked fixture must really enter the mood area");
-                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                        CaseObservation blockedMoods = Observe(host, box, metrics, reports, table, where, expectReason: true);
-                        Assert(blockedMoods.Buttons.Count == 5 && blockedMoods.Sliders.Count == 0 && blockedMoods.Fields.Count == 0,
-                            where + ": the blocked mood area keeps only the layer buttons and the area tabs and"
-                            + " reaches no slider/field, got " + blockedMoods.Buttons.Count + " buttons, "
-                            + blockedMoods.Sliders.Count + " sliders, " + blockedMoods.Fields.Count + " fields");
-
-                        // Every static substitute band that carries text was really DRAWN, so a
-                        // "shape kept" claim cannot hide a band that stopped being painted.
-                        Assert(metrics.Measured("−") && metrics.Measured("+"),
-                            where + ": the inert stepper must show its minus and plus bands");
-                        Assert(metrics.Measured("1"),
-                            where + ": the inert number band must show the row's own value (Good/Pitch = 1)");
-                        Assert(metrics.Measured(table["US.Tuning.ResetToDefault"])
-                            && metrics.Measured(table["US.Tuning.ResetToPreset"]),
-                            where + ": the inert reset bands must still name their actions");
-
-                        // SHAPES: the blocked mood card differs from the valid reference by EXACTLY the
-                        // reason band plus the widget's row gap - every row and band keeps its geometry.
-                        float deltaMoods = blockedMoods.Card.height - referenceMoods.Card.height;
-                        Assert(Math.Abs(deltaMoods - (expectedBand + WidgetRowGap)) <= 0.01f,
-                            where + ": the blocked MOOD card may differ from the valid one only by the reason"
-                            + " band; got delta " + Num(deltaMoods) + " (blocked " + Num(blockedMoods.Card.height)
-                            + ", valid " + Num(referenceMoods.Card.height) + ")");
-                        // BH1: the centre column is the same whether or not help is arranged, and a blocked
-                        // card loses nothing of it either - both widths are recorded and compared below.
-                        referenceCardByState[state] = referenceMoods.Card.width;
-                        blockedCardByState[state] = blockedMoods.Card.width;
-
-                        // The carrier's own draft/focus seam: the atoms never ran, so the value state is
-                        // still untouched - no draft text and no model value.
-                        UiValueState valueState = FirstStepperState(host);
-                        Assert(!valueState.Focused && valueState.EditText.Length == 0 && valueState.FloatValue == 0f,
-                            where + ": the inert number band must leave no draft, focus or value in the carrier's"
-                            + " own value state, got focused=" + valueState.Focused + " edit='" + valueState.EditText
-                            + "' value=" + Num(valueState.FloatValue));
-
-                        // (3) REAL POINTER EVENTS on the number band: no focus, no draft text.
-                        host.Session.ClosePopup();
-                        Vector2 fieldPoint = BringIntoViewAndGetPagePoint(host, box, Translate(referenceMoods.Fields[0], deltaMoods));
-                        RealMouseDown(host, box, fieldPoint);
-                        Assert(!valueState.Focused,
-                            where + ": the inert number band must not take focus");
-                        Assert(valueState.EditText.Length == 0,
-                            where + ": and it must leave no draft text, got '" + valueState.EditText + "'");
-                        RealMouseUp(host, box, fieldPoint);
-                        Assert(!valueState.Focused,
-                            where + ": no edit session may appear across the release either");
-
-                        // (4) REAL POINTER EVENTS on the slider, stepper and reset bands: nothing responds.
-                        ResetRecorders(source);
-                        host.Session.ClosePopup();
-                        Vector2 sliderPoint = BringIntoViewAndGetPagePoint(host, box, Translate(referenceMoods.Sliders[0], deltaMoods));
-                        RealMouseDown(host, box, sliderPoint);
-                        RealMouseDrag(host, box, sliderPoint);
-                        RealMouseUp(host, box, sliderPoint);
-                        Assert(!valueState.Dragging && valueState.FloatValue == 0f,
-                            where + ": the inert slider band must not drag or write a value, got "
-                            + Num(valueState.FloatValue) + "/" + valueState.Dragging);
-
-                        Rect stepperBand = Translate(SmallButtons(referenceMoods.Buttons)[0], deltaMoods);
-                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, stepperBand));
-                        Rect resetBand = Translate(ResetButtons(referenceMoods.Buttons)[0], deltaMoods);
-                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, resetBand));
-                        Assert(source.LastMood == null && source.LastMoodFactor == null && source.LastMoodValue == null,
-                            where + ": a real click on the inert stepper/reset bands must not submit a value");
-                        Assert(source.LastMoodPresetReset == null && source.LastMoodPresetResetCount == 0,
-                            where + ": and it must not submit the reset action either");
-                        Assert(source.LastActionScope == null && source.LastTuningLayer == null,
-                            where + ": the inert pass must not touch the scope or layer channels");
-
-                        // (5) the LAYER and the AREA TABS stay live - a real click on the Race segment and
-                        // on a tab must reach the boundary, so an empty target can never trap the player.
-                        // Both rows sit ABOVE the reason band, so their rects are NOT translated by delta.
-                        // (F06 US-UI1: the fallback area no longer draws this context at all; the action
-                        // and mood areas keep the XG1-accepted order - layer row first, tabs second.)
-                        ResetRecorders(source);
-                        List<List<Rect>> blockedRows = WideRows(blockedMoods.Buttons);
-                        // UIR-004: two tabs now, so the tab row is 2 wide.
-                        Assert(blockedRows.Count == 2 && blockedRows[0].Count == 3 && blockedRows[1].Count == 2,
-                            where + ": the blocked mood card keeps exactly the layer row and the tab row, got ["
-                            + string.Join("/", blockedRows.Select(r => r.Count.ToString())) + "]");
-                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, blockedRows[0][1]));
-                        Assert(source.LastTuningLayer == 1,
-                            where + ": the layer segment must still submit so the player can leave the state, got "
-                            + (source.LastTuningLayer?.ToString(CultureInfo.InvariantCulture) ?? "no write"));
-                        ResetRecorders(source);
-                        // UIR-004: two tabs; the last one is index 1 and it submits area MOOD (1).
-                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, blockedRows[1][1]));
-                        Assert(source.LastTuningArea == 1,
-                            where + ": the area tabs must still submit with an empty target - the player must be"
-                            + " able to LEAVE the area, got area="
-                            + source.LastTuningArea.ToString(CultureInfo.InvariantCulture));
-
+                        // S4 retires the mood policy controls; its notice is tested independently.
+                        referenceCardByState[state] = referenceActions.Card.width;
+                        blockedCardByState[state] = blockedActions.Card.width;
+                        RealClick(host, box, scopePoint);
+                        Assert(!host.Session.IsPopupOpen(EatScopeElementId) && source.LastActionScope == null,
+                            where + ": an actual pointer click cannot submit an empty-target scope");
                         Console.WriteLine("[xg1-empty] " + where + " actionCard=" + Num(blockedActions.Card.height)
-                            + "/" + Num(referenceActions.Card.height) + " moodCard=" + Num(blockedMoods.Card.height)
-                            + "/" + Num(referenceMoods.Card.height) + " delta=" + Num(deltaMoods)
-                            + " expectedBand=" + Num(expectedBand)
-                            + " buttons=" + blockedMoods.Buttons.Count + " sliders=" + blockedMoods.Sliders.Count
-                            + " fields=" + blockedMoods.Fields.Count + " popup=false focus=false layer=live tabs=live");
+                            + "/" + Num(referenceActions.Card.height) + " reason=" + Num(expectedBand) + " popup=false");
                     }
                     finally
                     {
@@ -526,65 +418,18 @@ internal static class XenotypeEmptyTargetLaneTests
                             + " got '" + (source.LastActionKey ?? "(none)") + "' / "
                             + (source.LastActionScope?.ToString() ?? "(none)"));
 
-                        // (2) AREA 1: the mood atoms register and the SAME real press takes field focus.
+                        // The retired editor keeps only navigation and an honest measured notice.
                         host.Bindings.Set("tuning-area", 1);
                         host.Session.ClosePopup();
                         Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                        CaseObservation observedMoods = Observe(host, box, metrics, reports, table, where, expectReason: false);
-                        Assert(observedMoods.Sliders.Count == 4 * 3 && observedMoods.Fields.Count == 4 * 3,
-                            where + ": the MOOD area must register every parameter's slider and field, got "
-                            + observedMoods.Sliders.Count + " sliders and " + observedMoods.Fields.Count + " fields");
+                        CaseObservation retired = Observe(host, box, metrics, reports, table, where, expectReason: false);
+                        Assert(retired.Sliders.Count == 0 && retired.Fields.Count == 0 && retired.Buttons.Count == 2,
+                            where + ": a retired editor cannot expose style controls; its two task tabs stay live");
                         ResetRecorders(source);
-                        host.Session.ClosePopup();
-                        Vector2 fieldPoint = BringIntoViewAndGetPagePoint(host, box, observedMoods.Fields[0]);
-                        RealMouseDown(host, box, fieldPoint);
-                        UiValueState fieldState = FirstStepperState(host);
-                        Assert(fieldState.Focused,
-                            where + ": a real press on the number band must take focus when the layer has a target");
-                        Assert(fieldState.EditText.Length > 0,
-                            where + ": and the field must hold the row's value as its draft, got '"
-                            + fieldState.EditText + "'");
-                        RealMouseUp(host, box, fieldPoint);
-
-                        // (3) the value and reset controls still submit (clicked through the override seam,
-                        // the same instrument the assertions above use). The layer row, the tab row and the
-                        // domain trigger are excluded: clicking them answers the AREA/popup channel, which
-                        // clauses (1)/(4) already prove.
-                        List<List<Rect>> moodWideRows = WideRows(observedMoods.Buttons);
-                        Assert(moodWideRows.Count >= 2 && moodWideRows[0].Count == 3 && moodWideRows[1].Count == 2,
-                            where + ": the current mood area must publish its own layer and task-tab rows");
-                        var excluded = new List<Rect>(moodWideRows[0]);
-                        excluded.AddRange(moodWideRows[1]);
-                        excluded.AddRange(TriggerRects(observedMoods.Buttons));
-                        ResetRecorders(source);
-                        ClickEveryControl(host, box, excluded);
-                        Assert(source.LastMood != null && source.LastMoodValue != null,
-                            where + ": a value control must submit when the layer has a target");
-                        Assert(source.LastMoodPresetReset != null && source.LastMoodPresetResetCount > 0,
-                            where + ": the reset-to-preset control must submit when the layer has a target");
-
-                        // (4) and the layer segment AND the area tabs stay live.
-                        ResetRecorders(source);
-                        ClickOneControl(host, box, moodWideRows[0][0]);
-                        Assert(source.LastTuningLayer == 0,
-                            where + ": the Global layer button must submit");
-                        // Selecting Global removes the race/xenotype header and moves the tabs. Sample
-                        // the CURRENT geometry instead of reusing the preceding layer's coordinates.
-                        Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                        CaseObservation globalMoods = Observe(host, box, metrics, reports, table, where, expectReason: false);
-                        List<List<Rect>> globalWideRows = WideRows(globalMoods.Buttons);
-                        Assert(globalWideRows.Count >= 2 && globalWideRows[1].Count == 2,
-                            where + ": Global must publish the current two task tabs before a click");
-                        ResetRecorders(source);
-                        ClickOneControl(host, box, globalWideRows[1][1]);
-                        Assert(source.LastTuningArea == 1,
-                            where + ": the area tab must submit - the two-area page is only safe while every"
-                            + " tab stays reachable, got area=" + source.LastTuningArea);
-
+                        RealClick(host, box, BringIntoViewAndGetPagePoint(host, box, retired.Buttons[0]));
+                        Assert(source.LastTuningArea == 0, where + ": the real tab click leaves the retired editor");
                         Console.WriteLine("[xg1-control] " + where + " triggers=" + triggerRects.Count
-                            + " layerButtons=" + layerButtons.Count + " tabs=" + tabButtons.Count
-                            + " moodSliders=" + observedMoods.Sliders.Count
-                            + " moodFields=" + observedMoods.Fields.Count + " popup=opened focus=taken");
+                            + " layerButtons=" + layerButtons.Count + " tabs=" + tabButtons.Count + " popup=opened retired-editor=notice-only");
                     }
                     finally
                     {
@@ -744,8 +589,11 @@ internal static class XenotypeEmptyTargetLaneTests
             ClearOverrides();
         }
 
-        Assert(metrics.Measured(table["US.Tuning.Layer.Xenotype"]),
-            where + ": the layer segment must be drawn (the lane's own positive control)");
+        if (host.Bindings.Get<int>("tuning-area") == 0)
+        {
+            Assert(metrics.Measured(table["US.Tuning.Layer.Xenotype"]),
+                where + ": the active permission editor must draw its layer segment");
+        }
         Assert(metrics.Measured(table[EmptyReasonKey]) == expectReason,
             where + ": the empty-target reason must be drawn exactly when the target is empty");
         Assert(reports.Count == 0,

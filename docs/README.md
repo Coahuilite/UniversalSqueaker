@@ -13,7 +13,7 @@
 | 使用0.6受控S1、作者示例与验证边界 | [OneShot S1](us-kernel-0.6-s1-zh.md) |
 | 核对0.6资源来源、绑定、作者入口与S2证据边界 | [来源与资源S2](us-kernel-0.6-s2-zh.md) |
 | 使用0.6受控17动作、作者行为源、Config恢复与兼容入口 | [动作与配置恢复S3](us-kernel-0.6-s3-zh.md) |
-| 规划下一版 Kernel、实现新接缝 | [US Kernel 0.6.x 首版目标规格·按切片实现](us-kernel-0.6-spec-zh.md) |
+| 使用当前0.6统一owner、响应作者格式与实例输出；核对未决默认 | [US Kernel 0.6.x 首版目标规格·按切片实现](us-kernel-0.6-spec-zh.md) |
 | 为0.6实现准备合同用例、测试迁移及FL联调 | [合同与固定输入](us-kernel-0.6-acceptance-zh.md)、[测试迁移与显式Dev消费](us-kernel-0.6-test-migration-zh.md) |
 | 本地构建、选择 FerriteLib、验证改动 | [Build and debug](build-and-debug.md) |
 | 核对仓库和安装包目录 | [模组结构](mod-structure-reference-zh.md) |

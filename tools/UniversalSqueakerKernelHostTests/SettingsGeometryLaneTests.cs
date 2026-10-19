@@ -511,8 +511,8 @@ internal static class SettingsGeometryLaneTests
                 // UIR-001: Record sweeps the workspaces; the tuning tab is included there.
                 Rec rec = Record(host, 1024f, Height);
                 (offCard, offSlots) = BasicTuningSlotGeometry(rec);
-                Assert(offSlots.Count == 6,
-                    "with the parent OFF the card draws six support checkboxes (egg + baby + three scalings + the"
+                Assert(offSlots.Count == 4,
+                    "with the parent OFF the card draws four effective checkboxes (egg + baby + talking + the"
                     + " parent) - the child row does not exist at all, got " + offSlots.Count);
                 Assert(!rec.TabSnapshots["Tuning"].RectById.ContainsKey("basic-eat-child-row"),
                     "and the child ROW must leave the arrangement entirely, not merely paint nothing:"

@@ -4,13 +4,21 @@ using System.Linq;
 
 namespace UniversalSqueaker.OneShot;
 
-public enum ResponseStage { Age, Mood }
+public enum ResponseStage
+{
+    Age,
+    Mood
+}
 
 public readonly struct ResponseContribution
 {
     public readonly double Pitch;
     public readonly double Volume;
-    public ResponseContribution(double pitch, double volume) { Pitch = pitch; Volume = volume; }
+    public ResponseContribution(double pitch, double volume)
+    {
+        Pitch = pitch;
+        Volume = volume;
+    }
 }
 
 /// <summary>One immutable numerical context shared by all rules; no cumulative output is exposed.</summary>
@@ -26,7 +34,10 @@ public sealed class ResponseContext
     public bool TryRead(string key, out double value) => values.TryGetValue(key, out value);
     public double Require(string key)
     {
-        if (!values.TryGetValue(key, out double value)) throw new InvalidOperationException("MissingResponseInput:" + key);
+        if (!values.TryGetValue(key, out double value))
+        {
+            throw new InvalidOperationException("MissingResponseInput:" + key);
+        }
         return value;
     }
     public double Optional(string key, double identity) => values.TryGetValue(key, out double value) ? value : identity;
@@ -136,12 +147,20 @@ public static class ResponseModulation
         var selected = new List<IUsResponseRule>();
         foreach (string key in plan.EnabledRules)
         {
-            if (!seen.Add(key)) continue;
+            if (!seen.Add(key))
+            {
+                continue;
+            }
             bool participates = plan.PlayerParticipation.TryGetValue(key, out bool player) ? player
                 : !entryParticipation.TryGetValue(key, out bool entry) || entry;
-            if (!participates) continue;
+            if (!participates)
+            {
+                continue;
+            }
             if (!rules.TryGetValue(key, out var implementations) || implementations.Length != 1)
+            {
                 return new LocalParameters(false, 0, 0, "MissingOrDuplicateResponse:" + key);
+            }
             selected.Add(implementations[0]);
         }
         foreach (var rule in selected.OrderBy(x => x.Stage).ThenBy(x => x.Key, StringComparer.Ordinal))
@@ -150,7 +169,9 @@ public static class ResponseModulation
             {
                 var contribution = rule.Evaluate(plan.Context);
                 if (!OneShotOutput.TryPrepare(contribution.Volume, contribution.Pitch, 1, out _, out _))
+                {
                     return new LocalParameters(false, 0, 0, "InvalidResponse:" + rule.Key);
+                }
                 pitch *= contribution.Pitch;
                 volume *= contribution.Volume;
             }
@@ -162,12 +183,17 @@ public static class ResponseModulation
         if (double.IsNaN(plan.JitterMin) || double.IsNaN(plan.JitterMax)
             || double.IsInfinity(plan.JitterMin) || double.IsInfinity(plan.JitterMax)
             || plan.JitterMin <= 0 || plan.JitterMax < plan.JitterMin)
+        {
             return new LocalParameters(false, 0, 0, "InvalidJitter");
+        }
         double jitter = plan.JitterMin;
         if (plan.JitterMin != plan.JitterMax)
         {
             double roll = random.Next(RandomPurpose.ModulationJitter);
-            if (double.IsNaN(roll) || roll < 0 || roll >= 1) return new LocalParameters(false, 0, 0, "InvalidJitterRoll");
+            if (double.IsNaN(roll) || roll < 0 || roll >= 1)
+            {
+                return new LocalParameters(false, 0, 0, "InvalidJitterRoll");
+            }
             jitter += (plan.JitterMax - plan.JitterMin) * roll;
         }
         pitch *= jitter;

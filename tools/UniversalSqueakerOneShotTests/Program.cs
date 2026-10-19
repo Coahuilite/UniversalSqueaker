@@ -23,10 +23,12 @@ internal static partial class Program
         public int Calls, Rolls;
         public double Value = .1;
         public readonly List<RandomPurpose> Purposes = new();
+        public PlaybackRequest? LastRequest;
         public bool FailRandom;
         public bool FailDispatch;
         public PlaybackReceipt Dispatch(PlaybackRequest request)
         {
+            LastRequest = request;
             Calls++;
             if (FailDispatch)
             {

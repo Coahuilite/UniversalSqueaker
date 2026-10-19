@@ -38,6 +38,7 @@ internal static class UsInstanceOutput
 
     internal static void Initialize(Harmony harmony)
     {
+        Available = false;
         var targets = new MethodBase?[]
         {
             AccessTools.PropertyGetter(typeof(Sample), "Volume"),
@@ -152,7 +153,9 @@ internal static class UsInstanceOutput
             return owner;
         }
         if (sample is SampleSustainer sustained && sustained.subSustainer?.parent != null)
+        {
             owner = OwnerOf(sustained.subSustainer.parent);
+        }
         owner ??= FromInfo(sample.Info); // Includes constructor-time first samples before parent constructor postfix.
         if (owner != null)
         {
@@ -196,6 +199,11 @@ internal static class UsInstanceOutput
     internal static void ReleaseSample(Sample sample) => samples.Remove(sample);
     internal static bool IsClosedOwned(Sustainer sustainer) => closedOwnedParents.TryGetValue(sustainer, out _);
 
+    internal static bool RejectNewSample(Sustainer sustainer)
+    {
+        return IsClosedOwned(sustainer) || sustainer.Ended && OwnerOf(sustainer) != null;
+    }
+
     internal static void ReleaseSustainer(Sustainer sustainer)
     {
         if (OwnerOf(sustainer) != null)
@@ -211,7 +219,7 @@ internal static class UsLateSustainedSamplePatch
 {
     private static bool Prefix(SubSustainer subSus, ref SampleSustainer __result)
     {
-        if (!UsInstanceOutput.IsClosedOwned(subSus.parent))
+        if (!UsInstanceOutput.RejectNewSample(subSus.parent))
         {
             return true;
         }

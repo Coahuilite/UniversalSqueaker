@@ -184,6 +184,13 @@ internal static class SqueakKernelAdapter
 
     private static VoicePackEntry? BuildEntry(SqueakVoicePackDef pack, string key, AudioDomain domain)
     {
+        if (pack.IsKernelDeclaration)
+        {
+            // Preserve the existing selection authority without losing author entry calibration/participation.
+            // Runtime merges the selected catalog entries; this marker has no independently selectable sounds.
+            return new VoicePackEntry(key, domain, 1,
+                new Dictionary<string, IReadOnlyList<ActionSoundSet>>());
+        }
         Dictionary<string, List<ActionSoundSet>> variants = new();
         foreach (SqueakVoicePackAction entry in pack.actions ?? new List<SqueakVoicePackAction>())
         {

@@ -39,7 +39,7 @@ internal static class CancelLayerLaneTests
         DefaultGlobalContextReturnsOnceWithRealClick();
         PureLadderStaticsRoundTrip();
         F06FallbackAreaDropsTheTuningContext();
-        F07MeasuredResetLineGrowsInsteadOfOverdrawing();
+        // S4 retires mood reset controls; current notice geometry is checked in S4RetiredPolicyUiTests.
         WindowLayeringRelationships();
         KeyboardCooperationWitness();
         DiagnosticsTwoPressEscThroughTheNativeStackDouble();
@@ -635,9 +635,9 @@ internal static class CancelLayerLaneTests
         float moodNormal = ScopeTreeHeight(normal, metrics);
         emptyXeno.ViewState.TuningArea = 1;
         float moodEmpty = ScopeTreeHeight(emptyXeno, metrics);
-        Assert(moodEmpty > moodNormal + 30f,
-            "the action/mood areas DO present their layer/domain context (the reason band plus the layer "
-            + "rows grow the mood card), got " + moodNormal + " vs " + moodEmpty);
+        Assert(Math.Abs(moodEmpty - moodNormal) <= .5f,
+            "the retired mood editor presents the same navigation/notice regardless of domain; old layer "
+            + "rows cannot imply an active editor, got " + moodNormal + " vs " + moodEmpty);
 
         // The context is IDENTICAL across the two remaining areas (both draw layer/domain/reason), and
         // an unknown stale area (2, pre-UIR-004) is clamped by SetTuningArea before the tree sees it -

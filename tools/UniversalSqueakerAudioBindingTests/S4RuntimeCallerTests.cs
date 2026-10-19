@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HarmonyLib;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
@@ -21,10 +22,10 @@ internal static partial class Program
         public string Key => "fixture/Allowed";
         public Truth Capture(string subject) => Ready ? Truth.True : Truth.False;
     }
-    private static UsControlledOneShotSession RuntimeSession(Pawn pawn)
+    private static UsPawnPlaybackSession RuntimeSession(Pawn pawn)
     {
         var field = typeof(UsOneShotRuntime).GetField("sessions", BindingFlags.NonPublic | BindingFlags.Static)!;
-        return ((Dictionary<Pawn, UsControlledOneShotSession>)field.GetValue(null)!)[pawn];
+        return ((Dictionary<Pawn, UsPawnPlaybackSession>)field.GetValue(null)!)[pawn];
     }
 
     private static void S4ActualRuntimeCallers()
@@ -57,7 +58,21 @@ internal static partial class Program
             }
         });
         pack.declaration.Entries.Add(new VoiceEntry { Key = "registered", Action = "vendor/Working", Sound = "Ratkin1" });
+        var behaviorDomain = new BehaviorDomain("Pawn", "", pawn.def.defName);
+        var behaviorDef = new UsBehaviorSourceDef { defName = "Source", modContentPack = pack.modContentPack };
+        behaviorDef.declaration.Sources.Add(new BehaviorSource { Domain = behaviorDomain });
+        DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading.Add(behaviorDef);
         UsOneShotRuntime.Initialize();
+        var directoryPack = UsAuthorVoicePacks.Directory[0];
+        Check(directoryPack.TryGetPackKey(out string selectionKey) && selectionKey == "fixture.author:RuntimePack"
+            && directoryPack.scope == SqueakVoicePackScope.Race && directoryPack.raceDefName == pawn.def.defName,
+            "S4 new ordinary author pack projects the existing package:Def selection identity and exact Race directory");
+        var domain = AudioDomains.RaceOnly(pawn.def.defName);
+        var selections = new Dictionary<AudioDomain, HashSet<string>> { [domain] = new HashSet<string> { selectionKey } };
+        var directory = new SqueakXenotypeCatalogSnapshot();
+        directory.RacePacks.Add(directoryPack);
+        var selectedRegistry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
+        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
         int before = SoundStarter.Played.Count;
         comp.CompTick();
         comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
@@ -128,7 +143,25 @@ internal static partial class Program
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
             "S4 actual registered public author call retains inherited Work qualification even when its extra fact becomes true");
 
+        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
         S5ActualRuntimeSustained(pawn, comp, session);
+        int afterSustained = SoundStarter.Played.Count;
+        SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
+        Find.TickManager.TicksGame = 3000;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == afterSustained
+            && UsOneShotRuntime.BehaviorSources.Find(behaviorDomain, "fixture.author/Source") != null,
+            "S4 new ordinary pack off removes candidates on actual caller without unloading independent behavior sources");
+        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
+        Find.TickManager.TicksGame = 3120;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == afterSustained + 1,
+            "S4 new ordinary pack on resumes through the same owner and selected-entry response pipeline");
+        SqueakRuntimeResolver.Current.VoicePackMode = SqueakVoicePackMode.Disabled;
+        Find.TickManager.TicksGame = 3300;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        Check(SoundStarter.Played.Count == afterSustained + 1, "S4 explicitly Disabled new ordinary audio pack cannot fall back");
+        SqueakRuntimeResolver.Current.VoicePackMode = SqueakVoicePackMode.Fallback;
 
         UniversalSqueakerMod.Settings.activity = 1;
         UniversalSqueakerMod.Settings.Values = new BehaviorValues();
@@ -136,7 +169,7 @@ internal static partial class Program
         SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
     }
 
-    private static void S5ActualRuntimeSustained(Pawn pawn, CompSqueaker comp, UsControlledOneShotSession session)
+    private static void S5ActualRuntimeSustained(Pawn pawn, CompSqueaker comp, UsPawnPlaybackSession session)
     {
         var sound = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!;
         sound.sustain = true;
@@ -189,5 +222,14 @@ internal static partial class Program
         SoundStarter.SpawnFailure = "";
         sound.sustain = false;
         comp.FixtureSustained = false;
+        UsInstanceOutput.Initialize(new Harmony("fixture.required-output-owner-missing"));
+        int dispatched = SoundStarter.Played.Count;
+        long protectedUntil = session.State.SharedDeadline;
+        Find.TickManager.TicksGame = 2800;
+        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+        Check(!UsInstanceOutput.Available && session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected
+            && SoundStarter.Played.Count == dispatched && session.State.SharedDeadline == protectedUntil,
+            "S5 actual caller rejects unavailable required patch owner before native side effects or new hard protection");
+        UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
     }
 }

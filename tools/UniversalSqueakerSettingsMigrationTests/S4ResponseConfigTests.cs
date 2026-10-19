@@ -12,7 +12,7 @@ internal static partial class Program
     {
         Scenario("S4-response-Config-effective-layers-and-precise-Reset");
         var settings = NewSettings();
-        settings.activity = 2.5;
+        settings.SetActivity(2.5);
         settings.actionTuning.Add(new ActionTuningRecord
         {
             actionKey = "Work",
@@ -34,6 +34,26 @@ internal static partial class Program
             actionKey = "Work", raceDefName = "FixtureRace", xenotypeDefName = "FixtureXeno",
             responses = new List<ResponseTuningValue> { new() { key = "us.core/Mood", hasEnabled = true, enabled = false } }
         });
+        var participation = new ResponseTuningValue { key = "us.core/Age", hasParticipation = true, apply = false };
+        var calibration = new ResponseParameterValue { key = "age.override", value = 1.3 };
+        settings.ReplaceResponseTuning("Work", "FixtureRace", "", new[] { participation }, new[] { calibration });
+        calibration.value = 99;
+        participation.apply = true;
+        Check(settings.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "FixtureRace"), "Work",
+                new BehaviorSourceDirectory(Array.Empty<BehaviorSource>()), _ => true, out _).ResponseParameters["age.override"] == 1.3,
+            "S4 actual public response setter validates then deep-copies into the original persistence queue", ref failures);
+        bool rejected = false;
+        try
+        {
+            settings.ReplaceResponseTuning("Work", "FixtureRace", "", Array.Empty<ResponseTuningValue>(),
+                new[] { new ResponseParameterValue { key = "mood.low", value = double.NaN } });
+        }
+        catch (ArgumentException)
+        {
+            rejected = true;
+        }
+        Check(rejected && settings.actionTuning[1].responseParameters[0].value == 1.3,
+            "S4 invalid response setter input leaves original exact player record unchanged", ref failures);
         string folder = Path.Combine(Path.GetTempPath(), "us-s4-config-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         try

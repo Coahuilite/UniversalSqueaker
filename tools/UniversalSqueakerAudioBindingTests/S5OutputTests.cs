@@ -51,6 +51,10 @@ internal static partial class Program
         Check(SoundStarter.Played.Count == beforeAux + 2 && Math.Abs(SoundStarter.Played[beforeAux].source.volume - .8f) < .0001
             && Math.Abs(SoundStarter.Played[beforeAux + 1].source.volume - 1.2f) < .0001,
             "S5 precise native auxiliary call-site marking leaves nested independent non-US request unowned");
+        var afterEnd = SampleSustainer.TryMakeAndPlay(new SubSustainer(parent, definition), new AudioClip(), 10);
+        parent.Initial.Update();
+        Check(afterEnd == null && Math.Abs(parent.Initial.source.volume - .3f) < .0001,
+            "S5 End rejects a delayed fresh grain while existing native fade sample keeps current owned contribution until Cleanup");
         parent.FixtureCleanup();
         Check(UsInstanceOutput.OwnerOf(parent) == null && Math.Abs(SoundStarter.Played[SoundStarter.Played.Count - 1].source.volume - 1.2f) < .0001,
             "S5 cleanup retains parent through stop auxiliary creation then releases parent ownership");

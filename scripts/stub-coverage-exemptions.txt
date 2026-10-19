@@ -95,7 +95,6 @@ Assembly-CSharp!Verse.Pawn::get_CurJob() | world
 Assembly-CSharp!Verse.Pawn::get_Dead() | world
 Assembly-CSharp!Verse.Pawn::get_Downed() | world
 Assembly-CSharp!Verse.Pawn::get_Drafted() | world
-Assembly-CSharp!Verse.Pawn::get_InMentalState() | world
 Assembly-CSharp!Verse.Pawn::get_IsPlayerControlled() | world
 Assembly-CSharp!Verse.Pawn::get_RaceProps() | world
 Assembly-CSharp!Verse.Pawn::health:c:Verse.Pawn_HealthTracker | world
@@ -130,7 +129,6 @@ Assembly-CSharp!Verse.ThingComp::props:c:Verse.CompProperties | world
 Assembly-CSharp!Verse.ThingCompUtility::TryGetComp(c:Verse.Thing)^1 | world
 Assembly-CSharp!Verse.ThingWithComps::GetComp()^1 | world
 Assembly-CSharp!Verse.TickManager::get_Paused() | world
-Assembly-CSharp!Verse.TickManager::get_TickRateMultiplier() | world
 Assembly-CSharp!Verse.TickManager::get_TicksGame() | world
 Assembly-CSharp!Verse.Verb::caster:c:Verse.Thing | world
 
@@ -196,7 +194,6 @@ Assembly-CSharp!Verse.Sound.SoundInfo::pitchFactor:Single | audio
 Assembly-CSharp!Verse.Sound.SoundInfo::volumeFactor:Single | audio
 Assembly-CSharp!Verse.Sound.SoundStarter::PlayOneShot(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
 Assembly-CSharp!Verse.Sound.SoundStarter::TrySpawnSustainer(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
-Assembly-CSharp!Verse.Sound.SubSoundDef::distRange:v:Verse.FloatRange | audio
 Assembly-CSharp!Verse.Sound.SubSoundDef::grains:c:System.Collections.Generic.List`1<c:Verse.Sound.AudioGrain> | audio
 Assembly-CSharp!Verse.Sound.SubSoundDef::onCamera:Boolean | audio
 Assembly-CSharp!Verse.Sound.Sustainer::End() | audio
@@ -227,7 +224,6 @@ Assembly-CSharp!Verse.Find::get_CameraDriver() | utility
 Assembly-CSharp!Verse.Find::get_CurrentMap() | utility
 Assembly-CSharp!Verse.Find::get_Selector() | utility
 Assembly-CSharp!Verse.Find::get_TickManager() | utility
-Assembly-CSharp!Verse.FloatRange::get_RandomInRange() | utility
 Assembly-CSharp!Verse.LongEventHandler::ExecuteWhenFinished(c:System.Action) | utility
 Assembly-CSharp!Verse.Messages::Message(String,c:Verse.MessageTypeDef,Boolean) | utility
 
@@ -291,3 +287,16 @@ Assembly-CSharp!Verse.ModContentPack::get_FolderName() | defs
 Assembly-CSharp!Verse.Scribe::saver:c:Verse.ScribeSaver | scribe
 Assembly-CSharp!Verse.ScribeSaver::FinalizeSaving() | scribe
 Assembly-CSharp!Verse.ScribeSaver::InitSaving(String,String) | scribe
+# S4AB/S5 native instance adapter: production target 1.6 fields/methods are checked in SEAMS16-DELTA;
+# the frozen FL Host snapshot has no native audio backend. Real Harmony + explicit audio doubles run in gate18.
+Assembly-CSharp!Verse.Def::description:String | defs
+Assembly-CSharp!Verse.FloatRange::get_TrueMax() | utility
+Assembly-CSharp!Verse.FloatRange::get_TrueMin() | utility
+Assembly-CSharp!Verse.Sound.Sample::get_Info() | audio
+Assembly-CSharp!Verse.Sound.Sample::source:c:UnityEngine.AudioSource | audio
+Assembly-CSharp!Verse.Sound.Sample::subDef:c:Verse.Sound.SubSoundDef | audio
+Assembly-CSharp!Verse.Sound.SampleSustainer::subSustainer:c:Verse.Sound.SubSustainer | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::get_DefinedParameters() | audio
+Assembly-CSharp!Verse.Sound.SoundInfo::SetParameter(String,Single) | audio
+Assembly-CSharp!Verse.Sound.SubSustainer::parent:c:Verse.Sound.Sustainer | audio
+Assembly-CSharp!Verse.Sound.Sustainer::info:v:Verse.Sound.SoundInfo | audio

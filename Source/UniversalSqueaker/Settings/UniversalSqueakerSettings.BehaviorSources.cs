@@ -143,14 +143,17 @@ public partial class UniversalSqueakerSettings
                     {
                         if (response.hasEnabled)
                         {
-                            player.ResponseEnabled.Add(response.key, response.enabled);
                             if (response.key == "us.core/Age")
                             {
                                 player.AgeEnabled = response.enabled;
                             }
-                            if (response.key == "us.core/Mood")
+                            else if (response.key == "us.core/Mood")
                             {
                                 player.MoodEnabled = response.enabled;
+                            }
+                            else
+                            {
+                                player.ResponseEnabled.Add(response.key, response.enabled);
                             }
                         }
                         if (response.hasParticipation)

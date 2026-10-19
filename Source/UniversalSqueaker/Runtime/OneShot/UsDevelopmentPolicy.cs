@@ -11,14 +11,14 @@ public sealed class UsDevelopmentPolicy
     internal readonly long WoundedInterval;
     internal readonly long InitialSpread;
     internal readonly double EventProbability;
-    internal readonly double SoftRhythmFactor;
+    internal readonly double StateWaitFactor;
 
     public UsDevelopmentPolicy(long waitTicks, long sharedTicks, long intervalTicks, long woundedTicks,
-        long initialSpreadTicks, double eventProbability, double softRhythmFactor)
+        long initialSpreadTicks, double eventProbability, double stateWaitFactor)
     {
         if (intervalTicks < 0 || woundedTicks < 0 || initialSpreadTicks < 0
             || double.IsNaN(eventProbability) || eventProbability < 0 || eventProbability > 1
-            || double.IsNaN(softRhythmFactor) || double.IsInfinity(softRhythmFactor) || softRhythmFactor <= 0)
+            || double.IsNaN(stateWaitFactor) || double.IsInfinity(stateWaitFactor) || stateWaitFactor <= 0)
         {
             throw new ArgumentException("Invalid explicit development policy");
         }
@@ -27,6 +27,6 @@ public sealed class UsDevelopmentPolicy
         WoundedInterval = woundedTicks;
         InitialSpread = initialSpreadTicks;
         EventProbability = eventProbability;
-        SoftRhythmFactor = softRhythmFactor;
+        StateWaitFactor = stateWaitFactor;
     }
 }
