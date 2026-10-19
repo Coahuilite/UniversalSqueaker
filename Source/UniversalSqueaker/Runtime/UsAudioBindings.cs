@@ -26,9 +26,9 @@ internal static class UsAudioBindings
 
     private sealed class OriginalNode
     {
-        internal readonly string Name;
+        internal readonly string? Name;
         internal readonly ModContentPack Owner;
-        internal OriginalNode(string name, ModContentPack owner)
+        internal OriginalNode(string? name, ModContentPack owner)
         {
             Name = name;
             Owner = owner;
@@ -59,10 +59,13 @@ internal static class UsAudioBindings
                 continue;
             }
             string? name = node.SelectSingleNode("defName")?.InnerText;
-            if (!string.IsNullOrWhiteSpace(name) && assets.TryGetValue(node, out var asset) && asset.mod != null)
+            if (assets.TryGetValue(node, out var asset) && asset.mod != null)
             {
-                pendingSources.ObserveOriginal(name!, asset.mod.PackageId);
-                pendingNodes.Add(node, new OriginalNode(name!, asset.mod));
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    pendingSources.ObserveOriginal(name!, asset.mod.PackageId);
+                }
+                pendingNodes.Add(node, new OriginalNode(name, asset.mod));
             }
         }
         sources = pendingSources;
@@ -114,11 +117,13 @@ internal static class UsAudioBindings
             return;
         }
         string? originalName = null;
+        bool sourceNodeVerified = false;
         if (originalNodes.TryGetValue(node, out var original) && ReferenceEquals(asset?.mod, original.Owner))
         {
             originalName = original.Name;
+            sourceNodeVerified = true;
         }
-        sources.ObserveFinal(name!, asset?.mod?.PackageId, originalName);
+        sources.ObserveFinal(name!, asset?.mod?.PackageId, originalName, sourceNodeVerified);
     }
 
     internal static void ObserveConstructed(Def? result)

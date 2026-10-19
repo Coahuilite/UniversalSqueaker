@@ -111,6 +111,20 @@ internal static class Program
         }
         assets.Add(Add(document, "Z_Audio"), new LoadableXmlAsset { mod = new ModContentPack { PackageId = "aaa.audio" } });
         assets.Add(Add(document, "A_Audio"), new LoadableXmlAsset { mod = new ModContentPack { PackageId = "zzz.audio" } });
+        var duplicate = Add(document, "Ratkin0");
+        assets[duplicate] = new LoadableXmlAsset { mod = foreign };
+        var failedDuplicate = Add(document, "FailedDuplicate", "Fail='true'");
+        assets[failedDuplicate] = new LoadableXmlAsset { mod = foreign };
+        // These declarations exist BEFORE the real production pre-patch observer runs.
+        var dormant = Add(document, "Ratkin2", "MayRequire='unloaded.biotech.fixture'");
+        assets[dormant] = new LoadableXmlAsset { mod = foreign };
+        var inherited = Add(document, "temporary", "ParentName='FixtureAbstract'");
+        inherited.RemoveChild(inherited.SelectSingleNode("defName")!);
+        assets[inherited] = new LoadableXmlAsset { mod = owner };
+        var ambiguousFirst = Add(document, "AmbiguousReplace");
+        var ambiguousSecond = Add(document, "AmbiguousReplace");
+        assets[ambiguousFirst] = new LoadableXmlAsset { mod = owner };
+        assets[ambiguousSecond] = new LoadableXmlAsset { mod = foreign };
         LoadedModManager.FixtureDocument = document;
         LoadedModManager.CombineIntoUnifiedXML(new List<LoadableXmlAsset>(), assets);
 
@@ -121,13 +135,13 @@ internal static class Program
         Add(document, "RootReplace").SelectSingleNode("value")!.InnerText = "after-root-patch";
         Add(document, "PatchedNew");
         assets[wrongSource] = new LoadableXmlAsset { mod = foreign };
-        var duplicate = Add(document, "Ratkin0");
-        assets[duplicate] = new LoadableXmlAsset { mod = foreign };
-        var failedDuplicate = Add(document, "FailedDuplicate", "Fail='true'");
-        assets[failedDuplicate] = new LoadableXmlAsset { mod = foreign };
-        // The native MayRequire filter skips this before either loader. It cannot become a duplicate.
-        var dormant = Add(document, "Ratkin2", "MayRequire='unloaded.biotech.fixture'");
-        assets[dormant] = new LoadableXmlAsset { mod = foreign };
+        // Simulate the node returned by native inheritance, without implementing an inheritance loader.
+        var inheritedResolved = new XmlDocument();
+        inheritedResolved.LoadXml("<SoundDef><defName>InheritedName</defName><value>inherited-final</value></SoundDef>");
+        XmlInheritance.ResolvedNodes[inherited] = inheritedResolved.DocumentElement!;
+        document.DocumentElement.RemoveChild(ambiguousFirst);
+        document.DocumentElement.RemoveChild(ambiguousSecond);
+        Add(document, "AmbiguousReplace");
 
         int loader = 0;
         foreach (XmlNode node in document.DocumentElement.ChildNodes)
@@ -156,6 +170,14 @@ internal static class Program
                 "consumer receives same final object " + i);
         }
         Check(UsAudioBindings.Resolve("actual.provider/Ratkin1")!.FixtureValue == "after-field-patch", "field patch uses final content");
+        Check(UsAudioBindings.KeyForName("Ratkin2") == "actual.provider/Ratkin2",
+            "pre-observed inactive same-name original does not reject the unique verified final node");
+        Check(UsAudioBindings.KeyForName("InheritedName") == "actual.provider/InheritedName",
+            "same-node matching asset proves owner when final defName is supplied by native inheritance");
+        Check(UsAudioBindings.Resolve("actual.provider/InheritedName")!.FixtureValue == "inherited-final",
+            "native inherited final content is the consumed object");
+        Check(UsAudioBindings.KeyForName("AmbiguousReplace") == null,
+            "missing-asset root replacement still rejects multiple original sources");
         Check(UsAudioBindings.KeyForName("AfterRename") == "actual.provider/AfterRename", "same-node final-name patch preserves proven owner");
         Check(UsAudioBindings.Resolve("actual.provider/BeforeRename") == null, "old resource name not resurrected after rename");
         Check(UsAudioBindings.Resolve("actual.provider/RootReplace")!.FixtureValue == "after-root-patch", "unique whole-root replacement uses final object/content");

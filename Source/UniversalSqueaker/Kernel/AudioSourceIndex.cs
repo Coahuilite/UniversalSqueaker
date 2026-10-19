@@ -60,10 +60,12 @@ public sealed class AudioSourceIndex
     {
         internal readonly string? Owner;
         internal readonly string OriginalName;
-        internal FinalDeclaration(string? owner, string originalName)
+        internal readonly bool SourceNodeVerified;
+        internal FinalDeclaration(string? owner, string originalName, bool sourceNodeVerified)
         {
             Owner = string.IsNullOrWhiteSpace(owner) ? null : owner!.ToLowerInvariant();
             OriginalName = originalName;
+            SourceNodeVerified = sourceNodeVerified;
         }
     }
 
@@ -77,15 +79,15 @@ public sealed class AudioSourceIndex
         sources.Add(owner.ToLowerInvariant());
     }
 
-    /// <summary>The adapter supplies originalName only for the same observed node and matching asset.</summary>
-    public void ObserveFinal(string name, string? owner, string? originalName = null)
+    /// <summary>Only the adapter may assert sourceNodeVerified, from the same pre-patch node and matching asset.</summary>
+    public void ObserveFinal(string name, string? owner, string? originalName = null, bool sourceNodeVerified = false)
     {
         if (!finals.TryGetValue(name, out var declarations))
         {
             declarations = new List<FinalDeclaration>();
             finals.Add(name, declarations);
         }
-        declarations.Add(new FinalDeclaration(owner, originalName ?? name));
+        declarations.Add(new FinalDeclaration(owner, originalName ?? name, sourceNodeVerified));
     }
 
     public bool TryBind(string name, bool ready, out AudioId id, out string reason)
@@ -102,16 +104,28 @@ public sealed class AudioSourceIndex
             return false;
         }
         var declaration = declarations[0];
-        if (!originals.TryGetValue(declaration.OriginalName, out var sources) || sources.Count != 1)
+        string owner;
+        if (declaration.SourceNodeVerified && declaration.Owner != null)
         {
-            reason = sources == null ? "UnobservedSource" : "DuplicateOriginalDeclaration";
-            return false;
+            // Native dependency filtering determines final uniqueness. A matching observed node/asset
+            // proves this owner even when an inactive original declaration shared its name.
+            owner = declaration.Owner;
         }
-        string owner = sources[0];
-        if (declaration.Owner != null && declaration.Owner != owner)
+        else
         {
-            reason = "ConflictingFinalSource";
-            return false;
+            // A replacement root without its original asset has no direct provenance. Recovery needs
+            // one unambiguous pre-patch declaration, and any contrary final asset remains a rejection.
+            if (!originals.TryGetValue(declaration.OriginalName, out var sources) || sources.Count != 1)
+            {
+                reason = sources == null ? "UnobservedSource" : "DuplicateOriginalDeclaration";
+                return false;
+            }
+            owner = sources[0];
+            if (declaration.Owner != null && declaration.Owner != owner)
+            {
+                reason = "ConflictingFinalSource";
+                return false;
+            }
         }
         if (!ready)
         {

@@ -96,7 +96,9 @@ namespace Verse
     }
     public static class XmlInheritance
     {
-        public static XmlNode GetResolvedNodeFor(XmlNode node) => node;
+        public static readonly Dictionary<XmlNode, XmlNode> ResolvedNodes = new();
+        public static XmlNode GetResolvedNodeFor(XmlNode node)
+            => ResolvedNodes.TryGetValue(node, out var resolved) ? resolved : node;
     }
     public static class LoadedModManager
     {
@@ -121,6 +123,7 @@ namespace Verse
     {
         internal static SoundDef? Create(XmlNode node)
         {
+            node = XmlInheritance.GetResolvedNodeFor(node);
             if (node.Attributes?["Fail"] != null)
             {
                 return null;

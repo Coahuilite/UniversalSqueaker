@@ -48,6 +48,19 @@ internal static partial class Program
         Check(!sources.TryBind("Foreign", true, out _, out _), "S2 contradictory replacement source rejected");
         Check(new AudioId("Actual.Provider", "Work").ToString() == "actual.provider/Work", "S2 canonical owner is distinct from author entry");
         Check(AudioId.TryParse("actual.provider/Work", out _) && !AudioId.TryParse("Work", out _), "S2 missing binding cannot use bare name");
+        sources.ObserveOriginal("Conditional", "a");
+        sources.ObserveOriginal("Conditional", "b");
+        sources.ObserveFinal("Conditional", "a", "Conditional", true);
+        Check(sources.TryBind("Conditional", true, out var conditionalId, out _) && conditionalId.PackageId == "a",
+            "S2 verified unique final source survives inactive same-name original");
+        sources.ObserveOriginal("AmbiguousReplace", "a");
+        sources.ObserveOriginal("AmbiguousReplace", "b");
+        sources.ObserveFinal("AmbiguousReplace", null);
+        Check(!sources.TryBind("AmbiguousReplace", true, out _, out var ambiguousReason) && ambiguousReason == "DuplicateOriginalDeclaration",
+            "S2 missing-asset replacement still requires unique original source");
+        sources.ObserveFinal("InheritedName", "a", null, true);
+        Check(sources.TryBind("InheritedName", true, out var inheritedId, out _) && inheritedId.DefName == "InheritedName",
+            "S2 native inherited name uses verified original node owner without fabricated original name");
         string first = S2RouteTrace();
         string second = S2RouteTrace();
         Check(first == second, "S2 two deterministic route replays");

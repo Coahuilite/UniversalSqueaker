@@ -14,7 +14,7 @@ S2已接入实际启动和正常播放选择路径。普通音频作者继续声
 
 1. Mod构造时安装窄Harmony观察。`CombineIntoUnifiedXML`的postfix只读SoundDef类型、节点、原名和真实`asset.mod`。原始观察先完成临时批次，成功后才发布；中途异常保留原因，整次缺证批次不能当成唯一来源。
 2. 两个实际loader的prefix在原版MayRequire筛选后读取`XmlInheritance.GetResolvedNodeFor`的最终声明；即使随后构造失败也计入重复。postfix另记录成功对象。观察不跳过原版、不改XML、Def或assetlookup。
-3. 同节点且实际asset仍匹配时，字段patch可改变最终defName，资源身份使用新名。整根替换的新节点没有来源时，只在原名来源唯一、最终声明唯一且无反证时沿原身份绑定。删除不复活；patch新建但无法证明来源的资源不绑定。
+3. 同节点且实际asset仍匹配时，真实来源已经确证；只按原版依赖过滤后的最终声明唯一性决定冲突，不因MayRequire前有同名休眠原声明而拒绝。字段patch可改变最终defName，原名省略而由原版合法继承得到最终defName也沿同节点/asset证明归属，资源身份使用最终名。整根替换的新节点没有来源时，只在原名来源唯一、最终声明唯一且无反证时沿原身份绑定。删除不复活；patch新建但无法证明来源的资源不绑定。
 4. Mod最初排入的回调只把真正初始化追加到LongEventHandler队尾。目标1.6会继续消费增长的队列，原版ResolveReferences音频回调先完成；不是固定延时或逐帧重试。
 5. 读取原版`SubSoundDef.resolvedGrains`，核对`distinctResolvedGrainsCount`与实际Distinct数。空池、半池、未知粒型、空clip和未Loaded数据均拒绝；合法Silence允许共存。US不重新枚举AudioGrain找一个好clip，也不修原版池。
 6. `AudioId → 最终SoundDef`发布一次。正常`SqueakKernelAdapter.BuildEntries/BuildBuiltIn → SqueakPoolRegistry.Select → ToChoice`和受控S1后端消费同一绑定。缺绑定不退裸名；已选上下文和变体随结果保留，诊断不重抽。
@@ -34,7 +34,7 @@ S2已接入实际启动和正常播放选择路径。普通音频作者继续声
 `verify-local.ps1`沿原17门追加gate18正常适配及gate19独立失败批次场景，未修改冻结stub。完整原始运行日志及最终包身份由本轮交付记录保存。
 
 - **纯生产源（无游戏引用、无同名stub）：** `UniversalSqueakerOneShotTests`保留S1原173检查，另测完整身份、15资源只撞一条、NonPawn隔离、四模式、权重、年龄/egg及用途标签roll。路由golden只记录Selected/NoCandidate；独立请求golden调用真实OneShotDecision，注入四种后端结果，记录事实tick、完整条目/AudioId、真实调用数和结算。两条轨迹各运行两遍且与各自独立golden比较。旧Kernel corpus保持字节零差异，不批量更新。
-- **适配fixture：** `UniversalSqueakerAudioBindingTests`编译真实观察/资源池/正常调用投影源码，使用明确标注的控制double，并让真实Harmony执行两条loader观察。覆盖字段及defName patch、整根替换、删除、最终重复且其中一项构造失败、MayRequire跳过、半池/坏clip、实际对象相等和启停不重载。独立子进程`--partial-observation`证明半原始索引不能因后续删除冲突节点而猜出owner。该工程不是纯层或原版加载执行。
+- **适配fixture：** `UniversalSqueakerAudioBindingTests`编译真实观察/资源池/正常调用投影源码，使用明确标注的控制double，并让真实Harmony执行两条loader观察。覆盖字段及defName patch、原版供给的继承后名称、整根替换、删除、最终重复且其中一项构造失败、在patch前观察已存在的MayRequire同名跳过声明、半池/坏clip、实际对象相等和启停不重载。独立子进程`--partial-observation`证明半原始索引不能因后续删除冲突节点而猜出owner。该工程不是纯层或原版加载执行。
 - **1.6方法体依据：** CO的`Coordinator/us/evidence/S2-20261019/SEAMS16.md`及同目录原始回执，核对远端1.6.4850和本机目标1.6.4871/Unity2022.3.35f1。产品编译引用固定Krafs.Rimworld.Ref 1.6.4871。
 - **原生运行/听感：** 未启动游戏，真实15个Ratkin SoundDef/41 OGG完整加载、实际音频解码/首次播放和玩家听感仍待维护者观察。fixture不关闭这些验收。
 
