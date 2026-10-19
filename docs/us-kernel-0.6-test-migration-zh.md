@@ -98,5 +98,3 @@ FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../fer
 ## S2交付后仍阻断C11/V14的继承路径
 
 `Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍活动并写共享定义；借用Core/他方同Def时旧距离设置可能影响非US声音。按PM裁定，它不阻断S2身份/来源/路由/绑定技术接收，但必须由S5实例级替代后才能接受C11/V14/S5和整个0.6产品。现有纯层、适配、Host绿色均不覆盖该原生输出保证。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
-
-

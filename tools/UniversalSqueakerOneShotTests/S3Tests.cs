@@ -261,6 +261,3 @@ internal static partial class Program
         return result.ToString();
     }
 }
-
-
-

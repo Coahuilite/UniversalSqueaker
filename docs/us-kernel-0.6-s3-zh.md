@@ -70,4 +70,3 @@ Dev明确选择 `S3 CANDIDATE order: 17 actions W20 H40 actions120`，或调用 
 `UniversalSqueakerOneShotTests`独立编译真实Authoring/Kernel/Pure，无游戏引用/同名stub；保旧golden，追加17事实、用途roll/次数、四回执、来源/权限/恢复、兼容时钟固定轨迹双重放。AudioBindingTests另以可控平台形状运行真实事实适配、AutoAttach、CreateDefault和资格函数；SettingsMigration另运行真实Settings/Scribe边界与原子文件事务。Host为真实产品/FL消费，原生与听感分别pending。
 
 最终日志和RPT位于 `dist/evidence/s3/`，Dev为 `dist/dev/UniversalSqueaker/`。固定FL仍0.7.0-dev+d5af4d8、[0.7.0,0.8.0)，未消费0.8。候选不是一般安装/发布建议。S5继承Settings→ApplyDistanceRange→共享SubSoundDef.distRange仍强制阻断C11/V14/整版接受；本轮不删、临时改写恢复或clone共享定义。
-
