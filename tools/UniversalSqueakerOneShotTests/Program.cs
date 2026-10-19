@@ -91,6 +91,8 @@ internal static partial class Program
         AuthorCases();
         FileExamples();
         Console.WriteLine("OneShot/author production source checks PASS: " + checks);
+        S2Resources();
+        Console.WriteLine("OneShot + S2 production source checks PASS: " + checks);
     }
 
     private static void ResultSettlement()

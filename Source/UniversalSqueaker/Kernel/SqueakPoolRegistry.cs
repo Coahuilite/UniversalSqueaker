@@ -62,13 +62,13 @@ public sealed class SqueakPoolRegistry
         if (string.IsNullOrWhiteSpace(ctx.ActionKey)) return ChainResult.None;
         if (mode != SelectionMode.Off && mode != SelectionMode.Fallback && mode != SelectionMode.Remix)
             return ChainResult.None;
-        ChainResult vanilla = SelectBuiltIn(ctx, gate);
+        ChainResult vanilla = ctx.Domain.IsNonPawn ? ChainResult.None : SelectBuiltIn(ctx, gate);
         if (mode == SelectionMode.Off) return vanilla;
 
         ChainResult x = ctx.Domain.Xenotype != null
             ? SelectTier(PoolFor(ctx.Domain), ChainTier.XenotypePack, ctx, gate, rolls)
             : ChainResult.None;
-        ChainResult r = SelectTier(PoolFor(new AudioDomain(ctx.Domain.Race, null)), ChainTier.RacePack, ctx, gate, rolls);
+        ChainResult r = SelectTier(PoolFor(ctx.Domain.Parent), ChainTier.RacePack, ctx, gate, rolls);
 
         if (mode == SelectionMode.Fallback)
         {
@@ -101,7 +101,7 @@ public sealed class SqueakPoolRegistry
             if (!tier1.IsNone) return tier1;
             return !tier2.IsNone ? tier2 : tier3;
         }
-        int index = RollIndex(count, rolls);
+        int index = RollIndex(count, rolls, SelectionRollPurpose.Tier);
         if (!tier0.IsNone && index-- == 0) return tier0;
         if (!tier1.IsNone && index-- == 0) return tier1;
         if (!tier2.IsNone && index-- == 0) return tier2;
@@ -121,7 +121,7 @@ public sealed class SqueakPoolRegistry
         if (count == 1) return !tier0.IsNone ? tier0 : (!tier1.IsNone ? tier1 : tier2);
         // 压缩索引按非空层依次递减（与 SelectRemixFour 的跳过逻辑一致）：
         // 前置/中间层为空时索引仍落在 [xeno, race, builtin] 的**非空成员**上，绝不漏选末层或返回 None。
-        int index = RollIndex(count, rolls);
+        int index = RollIndex(count, rolls, SelectionRollPurpose.Tier);
         if (!tier0.IsNone && index-- == 0) return tier0;
         if (!tier1.IsNone && index-- == 0) return tier1;
         return tier2;
@@ -147,7 +147,7 @@ public sealed class SqueakPoolRegistry
     private ChainResult SelectBuiltIn(SelectionContext ctx, ISoundGate gate)
     {
         if (!builtIn.TryGetSoundKey(ctx.Domain.Race, ctx.ActionKey, out string? key) || key == null) return ChainResult.None;
-        return gate.Playable(key, ctx) ? new ChainResult(key, ChainTier.BuiltInFallback, null) : ChainResult.None;
+        return gate.Playable(key, ctx) ? new ChainResult(key, ChainTier.BuiltInFallback, null, false, ctx) : ChainResult.None;
     }
 
     private static ChainResult SelectTier(DomainPool? pool, ChainTier tier, SelectionContext ctx, ISoundGate gate, IRollSource rolls)
@@ -179,7 +179,7 @@ public sealed class SqueakPoolRegistry
         VoicePackEntry chosen = DrawEntry(valid, rolls);
         ActionSoundSet chosenSet = DrawVariant(selectedVariants[chosen], rolls);
         string? key = DrawSoundKey(chosenSet, ctx, gate, rolls);
-        return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg);
+        return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg, ctx, chosenSet);
     }
 
     /// <summary>PackFallback 始终求 ctx.Domain 的精确池；xeno ctx 不越域读取 race fallback。</summary>
@@ -195,7 +195,7 @@ public sealed class SqueakPoolRegistry
         if (valid.Count == 0) return ChainResult.None;
         VoicePackEntry chosen = DrawEntry(valid, rolls);
         string? fallbackKey = chosen.PackFallback![ctx.ActionKey];
-        return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey);
+        return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey, false, ctx);
     }
 
     /// <summary>exact age 优先；exact 存在即使 egg 关闭或全 mute 也不退回 all-age。
@@ -219,7 +219,7 @@ public sealed class SqueakPoolRegistry
         if (variants.Count == 1) return variants[0];
         double total = 0;
         foreach (ActionSoundSet set in variants) total += EffectiveVariantWeight(set.Weight);
-        double roll = rolls.Next01() * total;
+        double roll = Roll(rolls, SelectionRollPurpose.Variant) * total;
         double cumulative = 0;
         foreach (ActionSoundSet set in variants)
         {
@@ -246,7 +246,7 @@ public sealed class SqueakPoolRegistry
         // 构造期已过滤无效 Weight，此处权重恒为有限正数。
         double total = 0;
         foreach (VoicePackEntry entry in valid) total += entry.Weight;
-        double roll = rolls.Next01() * total;
+        double roll = Roll(rolls, SelectionRollPurpose.Pack) * total;
         double cumulative = 0;
         foreach (VoicePackEntry entry in valid)
         {
@@ -266,17 +266,20 @@ public sealed class SqueakPoolRegistry
             if (soundKey != null && gate.Playable(soundKey, ctx)) playable.Add(soundKey);
         }
         if (playable.Count == 0) return null;
-        return playable.Count == 1 ? playable[0] : playable[RollIndex(playable.Count, rolls)];
+        return playable.Count == 1 ? playable[0] : playable[RollIndex(playable.Count, rolls, SelectionRollPurpose.Sound)];
     }
 
     /// <summary>等权索引：floor(Next01() * count)，clamp 到 count-1。</summary>
-    private static int RollIndex(int count, IRollSource rolls)
+    private static int RollIndex(int count, IRollSource rolls, SelectionRollPurpose purpose)
     {
-        int index = (int)(rolls.Next01() * count);
+        int index = (int)(Roll(rolls, purpose) * count);
         if (index < 0) index = 0;
         if (index >= count) index = count - 1;
         return index;
     }
+
+    private static double Roll(IRollSource source, SelectionRollPurpose purpose)
+        => source is ISelectionRollSource tagged ? tagged.Next01(purpose) : source.Next01();
 
     private static bool IsPositiveFinite(float value) => value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
 }

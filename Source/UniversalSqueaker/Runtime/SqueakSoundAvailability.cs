@@ -66,42 +66,30 @@ public static class SqueakSoundAvailabilityCache
         if (cache.TryGetValue(sound, out SqueakSoundAvailability? cached)) return cached;
 
         List<SqueakResolvedClip> clips = new();
-        bool failed = false, unsupported = false;
+        bool failed = false;
         string failure = "";
         int subSoundIndex = -1;
         foreach (SubSoundDef? subSound in sound.subSounds ?? new List<SubSoundDef>())
         {
             subSoundIndex++;
-            if (subSound == null) continue;
-            int grainIndex = -1;
-            foreach (AudioGrain? grain in subSound.grains ?? new List<AudioGrain>())
+            try
             {
-                grainIndex++;
-                if (grain == null) continue;
-                try
+                var pool = UsNativeAudioPool.Read(subSound);
+                if (pool == null) { failed = true; failure = "native-pool-incomplete-or-unsafe"; continue; }
+                for (int index = 0; index < pool.Count; index++)
                 {
-                    string grainType = grain.GetType().Name;
-                    string clipPath = ReadStringMember(grain, "clipPath");
-                    string folderPath = ReadStringMember(grain, "clipFolderPath");
-                    bool yielded = false;
-                    foreach (object resolved in grain.GetResolvedGrains())
-                    {
-                        if (resolved is ResolvedGrain_Clip clip && clip.clip != null)
-                        {
-                            yielded = true;
-                            clips.Add(new SqueakResolvedClip(subSound, clip, subSoundIndex, grainIndex, grainType, clipPath, folderPath));
-                        }
-                    }
-                    if (!yielded && grainType.IndexOf("Clip", StringComparison.OrdinalIgnoreCase) < 0) unsupported = true;
+                    var grain = pool[index];
+                    if (grain is ResolvedGrain_Clip clip && clip.clip != null)
+                        clips.Add(new SqueakResolvedClip(subSound!, clip, subSoundIndex, index, grain.GetType().Name, "", ""));
+                    else if (grain == null || grain.GetType().Name != "ResolvedGrain_Silence")
+                    { failed = true; failure = "native-pool-invalid-or-unknown-grain"; }
                 }
-                catch (Exception ex) { failed = true; if (failure.Length == 0) failure = ex.GetType().Name; }
             }
+            catch (Exception error) { failed = true; failure = error.GetType().Name; }
         }
-
-        SqueakSoundAvailabilityState state = clips.Count > 0 ? SqueakSoundAvailabilityState.Available
-            : failed ? SqueakSoundAvailabilityState.Failed : SqueakSoundAvailabilityState.Empty;
-        string diagnostic = clips.Count > 0 ? "available"
-            : failed ? "exception:" + failure : unsupported ? "unsupported-or-no-result" : "silence-or-no-result";
+        SqueakSoundAvailabilityState state = failed ? SqueakSoundAvailabilityState.Failed
+            : clips.Count > 0 ? SqueakSoundAvailabilityState.Available : SqueakSoundAvailabilityState.Empty;
+        string diagnostic = failed ? "unsafe:" + failure : clips.Count > 0 ? "native-pool-ready" : "silence-or-no-result";
         SqueakSoundAvailability result = new(state, GetContext(sound), clips.AsReadOnly(), diagnostic);
         cache[sound] = result;
         return result;

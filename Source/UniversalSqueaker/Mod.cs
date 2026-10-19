@@ -103,7 +103,9 @@ public class UniversalSqueakerMod : Mod
         SqueakLog.StartupIdentity();
         Harmony.PatchAll();
 
-        LongEventHandler.ExecuteWhenFinished(() =>
+        // The first callback appends initialization after native ResolveReferences audio callbacks.
+        // Executing LongEventHandler consumes its growing queue; no time delay or polling is involved.
+        LongEventHandler.ExecuteWhenFinished(() => LongEventHandler.ExecuteWhenFinished(() =>
         {
             // ExecuteWhenFinished is the first Unity-main-thread operation in this startup path.
             // Bind before catalog/settings code can call any resolver mutator.
@@ -113,6 +115,7 @@ public class UniversalSqueakerMod : Mod
             // creation or first GUI pass. It is independent of the sound catalog below: it answers
             // "what did the game load" and feeds NO admission, NO comp mount, NO routing authority.
             RaceDefinitionCatalog.CollectAndPublish();
+            UsAudioBindings.Publish();
             UsOneShotRuntime.Initialize();
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
@@ -135,7 +138,7 @@ public class UniversalSqueakerMod : Mod
             Settings.ApplySettingsRuntimeSideEffects(false);
             SqueakAudioPoolNotificationService.EvaluateAndMaybeShow(Settings, SqueakXenotypeCatalog.Current);
             SqueakLog.StartupReady(Harmony.GetPatchedMethods().Count());
-        });
+        }));
     }
 
     internal static string BuildIdentity()

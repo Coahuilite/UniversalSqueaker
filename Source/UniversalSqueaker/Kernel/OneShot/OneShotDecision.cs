@@ -249,6 +249,7 @@ public sealed class AudioCandidate
 {
     public readonly string EntryKey;
     public readonly string AudioId;
+    public Kernel.AudioId? Resource => Kernel.AudioId.TryParse(AudioId, out var id) ? id : null;
     public readonly string Action;
     public readonly string Domain;
     public readonly SubjectFamily Family;
@@ -311,6 +312,8 @@ public sealed class DecisionInput
     public FactSnapshot Facts = new(Array.Empty<KeyValuePair<string, Truth>>());
     public ActionPlan[] Actions = Array.Empty<ActionPlan>();
     public AudioCandidate[] Audio = Array.Empty<AudioCandidate>();
+    public Kernel.SelectionMode SourceMode = Kernel.SelectionMode.Fallback;
+    public Kernel.BuiltInFallbackTable Fallback = Kernel.BuiltInFallbackTable.Empty;
 }
 
 public readonly struct DecisionOutcome
@@ -391,7 +394,7 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "ChanceRejected", diagnostics);
             }
 
-            var audio = Select(input, action.Key, random);
+            var audio = Select(input, action, random);
             if (audio == null)
             {
                 return Stop(state, policy, input, action.Key, "NoBoundAudio", diagnostics);
@@ -455,8 +458,10 @@ public sealed class OneShotDecision
         return null;
     }
 
-    private static AudioCandidate? Select(DecisionInput input, string action, IOneShotRandom random)
+    private static AudioCandidate? Select(DecisionInput input, ActionPlan plan, IOneShotRandom random)
     {
+        string action = plan.Key;
+        string routeKey = plan.BaseAction.Substring(plan.BaseAction.LastIndexOf('/') + 1);
         var candidates = input.Audio
             .Where(candidate => candidate.Action == action
                 && candidate.Domain == input.Domain
@@ -471,18 +476,20 @@ public sealed class OneShotDecision
             (float)candidate.Weight,
             new Dictionary<string, IReadOnlyList<Kernel.ActionSoundSet>>
             {
-                [action] = new[]
+                [routeKey] = new[]
                 {
                     new Kernel.ActionSoundSet(new[] { candidate.AudioId }, null, 1)
                 }
             })).ToArray();
-        var pool = new Kernel.SqueakPoolRegistry(entries, Kernel.BuiltInFallbackTable.Empty);
+        var pool = new Kernel.SqueakPoolRegistry(entries, input.Fallback);
         var chosen = pool.Select(
-            new Kernel.SelectionContext(domain, action, Kernel.AgeBucket.Adult, true),
-            Kernel.SelectionMode.Fallback,
+            new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true),
+            input.SourceMode,
             new BoundAudioGate(),
             new SelectionRandom(random));
-        return candidates.FirstOrDefault(x => x.EntryKey == chosen.PoolStableKey);
+        if (chosen.IsNone) return null;
+        return candidates.FirstOrDefault(x => x.EntryKey == chosen.PoolStableKey)
+            ?? new AudioCandidate("fallback/" + action, chosen.SoundKey!, action, input.Domain, 1);
     }
 
     private sealed class BoundAudioGate : Kernel.ISoundGate

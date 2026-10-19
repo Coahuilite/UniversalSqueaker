@@ -23,7 +23,7 @@ public static class SqueakXenotypeCatalog
             Dictionary<string, List<SqueakVoicePackDef>> groups = new(StringComparer.Ordinal);
             foreach (SqueakVoicePackDef pack in EnumerateAllPackDefs())
             {
-                if (!SqueakVoicePackValidator.IsValid(pack))
+                if (!SqueakVoicePackValidator.IsAdmissible(pack))
                 {
                     string packKey = pack.TryGetPackKey(out string validKey) ? validKey : pack.defName;
                     string? firstError = SqueakVoicePackValidator.GetErrors(pack).FirstOrDefault();

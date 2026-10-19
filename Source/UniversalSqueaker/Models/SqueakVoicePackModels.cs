@@ -74,7 +74,11 @@ internal static class SqueakVoicePackValidator
         return true;
     }
 
-    internal static IEnumerable<string> GetErrors(SqueakVoicePackDef? pack)
+    internal static bool IsAdmissible(SqueakVoicePackDef? pack) => !System.Linq.Enumerable.Any(EnumerateErrors(pack, false));
+
+    internal static IEnumerable<string> GetErrors(SqueakVoicePackDef? pack) => EnumerateErrors(pack, true);
+
+    private static IEnumerable<string> EnumerateErrors(SqueakVoicePackDef? pack, bool resources)
     {
         if (pack == null) { yield return "SqueakVoicePackDef is null."; yield break; }
         string name = string.IsNullOrWhiteSpace(pack.defName) ? "SqueakVoicePackDef" : pack.defName;
@@ -92,6 +96,7 @@ internal static class SqueakVoicePackValidator
             if (fallback == null) { yield return name + " contains a null fallback entry."; continue; }
             if (!SqueakActionDefinitions.IsKnown(fallback.action)) yield return name + " fallback contains unknown action " + fallback.action + ".";
             if (!fallbackActions.Add(fallback.action)) yield return name + " contains duplicate fallback action " + fallback.action + ".";
+            if (!resources) continue;
             if (fallback.sound == null) { yield return name + " fallback " + fallback.action + " has a null SoundDef."; continue; }
             if (string.IsNullOrWhiteSpace(fallback.sound.defName) || !fallback.sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " fallback " + fallback.action + " references a SoundDef without " + prefix + " prefix.";
         }
@@ -114,6 +119,7 @@ internal static class SqueakVoicePackValidator
                 string ageName = entry.ageTag.HasValue ? entry.ageTag.Value.ToString() : "all-age";
                 yield return name + " contains duplicate action " + entry.action + " for ageTag " + ageName + ".";
             }
+            if (!resources) continue;
             if (entry.sounds == null || entry.sounds.Count == 0) { yield return name + " action " + entry.action + " has no sounds."; continue; }
             foreach (SoundDef sound in entry.sounds)
             {

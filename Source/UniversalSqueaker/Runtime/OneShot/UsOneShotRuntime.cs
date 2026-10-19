@@ -30,7 +30,6 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
 {
     private readonly Pawn pawn;
     private readonly AuthorCatalog catalog;
-    private readonly IReadOnlyDictionary<string, SoundDef> bindings;
     private readonly DecisionState state;
     private readonly StatePolicy policy;
     private readonly ActionPlan[] actions;
@@ -40,11 +39,10 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
 
-    internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, IReadOnlyDictionary<string, SoundDef> bindings, StatePolicy policy, long workTicks, long woundedTicks)
+    internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, StatePolicy policy, long workTicks, long woundedTicks)
     {
         this.pawn = pawn;
         this.catalog = catalog;
-        this.bindings = bindings;
         this.policy = policy;
         state = new DecisionState(Find.TickManager.TicksGame);
         actions = catalog.Actions.Select(action => new ActionPlan(
@@ -92,6 +90,8 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             Facts = catalog.Capture(pawn.ThingID, values),
             Actions = actions,
             Audio = catalog.Audio,
+            SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
+            Fallback = SqueakKernelAdapter.BuildBuiltIn(),
             BlockedActions = CaptureBlockedActions(comp, activeCommand)
         };
         draws.Clear();
@@ -130,7 +130,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 && pawn.Spawned
                 && pawn.MapHeld == Find.CurrentMap
                 && Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position)
-                && bindings.TryGetValue(request.Audio.AudioId, out sound)
+                && (sound = UsAudioBindings.Resolve(request.Audio.AudioId)) != null
                 && sound != null
                 && !sound.sustain
                 && SqueakSoundAvailabilityCache.TryCreateProductionInfo(sound, pawn, out info, out _);
@@ -153,14 +153,12 @@ public static class UsOneShotRuntime
 {
     private static readonly Dictionary<Pawn, UsControlledOneShotSession> sessions = new();
     private static AuthorCatalog catalog = new(720, 216);
-    private static readonly Dictionary<string, SoundDef> bindings = new(StringComparer.Ordinal);
     public static IReadOnlyList<string> Issues => catalog.Issues;
     public static IEnumerable<string> DeclaredRaces => catalog.Audio.Select(x => x.Domain).Distinct(StringComparer.Ordinal);
 
     public static void Initialize()
     {
         sessions.Clear();
-        bindings.Clear();
         catalog = new AuthorCatalog(720, 216);
         foreach (var provider in DefDatabase<UsProviderDef>.AllDefsListForReading)
         {
@@ -199,15 +197,10 @@ public static class UsOneShotRuntime
 
     private static string? Bind(string name)
     {
-        var sound = DefDatabase<SoundDef>.GetNamedSilentFail(name);
-        string? owner = sound?.modContentPack?.PackageId;
-        if (sound == null || string.IsNullOrWhiteSpace(owner))
-        {
-            return null;
-        }
-
-        string key = owner + "/" + name;
-        bindings[key] = sound;
+        string? key = UsAudioBindings.KeyForName(name);
+        if (key == null) return null;
+        var sound = UsAudioBindings.Resolve(key);
+        if (sound == null) return null;
         return key;
     }
 
@@ -228,7 +221,7 @@ public static class UsOneShotRuntime
             throw new InvalidOperationException("End existing sustained playback before opting into OneShot control");
         }
 
-        sessions[pawn] = new UsControlledOneShotSession(pawn, catalog, bindings, new StatePolicy(sharedTicks, waitTicks), workTicks, woundedTicks);
+        sessions[pawn] = new UsControlledOneShotSession(pawn, catalog, new StatePolicy(sharedTicks, waitTicks), workTicks, woundedTicks);
     }
 
     public static void DisableControlled(Pawn pawn) => sessions.Remove(pawn);

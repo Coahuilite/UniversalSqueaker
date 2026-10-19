@@ -9,4 +9,5 @@ public enum SelectionMode
     Off,
     Fallback,
     Remix,
+    Disabled,
 }

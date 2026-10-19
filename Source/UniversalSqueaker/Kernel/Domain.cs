@@ -41,28 +41,43 @@ public readonly struct AudioDomain : IEquatable<AudioDomain>
 {
     public readonly RaceKey Race;
     public readonly XenotypeKey? Xenotype;
+    public readonly string? ObjectNamespace;
+    public bool IsNonPawn => ObjectNamespace != null;
 
     public AudioDomain(RaceKey race, XenotypeKey? xenotype)
     {
         Race = race;
         Xenotype = xenotype;
+        ObjectNamespace = null;
     }
+
+    private AudioDomain(string objectNamespace, string target)
+    {
+        if (string.IsNullOrWhiteSpace(objectNamespace) || string.IsNullOrWhiteSpace(target))
+            throw new ArgumentException("NonPawn requires a namespace and exact target");
+        ObjectNamespace = objectNamespace;
+        Race = new RaceKey(target);
+        Xenotype = null;
+    }
+
+    public static AudioDomain NonPawn(string objectNamespace, string target) => new(objectNamespace, target);
+    public AudioDomain Parent => IsNonPawn ? this : new AudioDomain(Race, null);
 
     public bool IsRaceOnly => Xenotype == null;
 
-    public bool Equals(AudioDomain other) => Race.Equals(other.Race) && Xenotype.Equals(other.Xenotype);
+    public bool Equals(AudioDomain other) => Race.Equals(other.Race) && Xenotype.Equals(other.Xenotype) && ObjectNamespace == other.ObjectNamespace;
     public override bool Equals(object? obj) => obj is AudioDomain other && Equals(other);
     public override int GetHashCode()
     {
         unchecked
         {
-            return (Race.GetHashCode() * 397) ^ (Xenotype?.GetHashCode() ?? 0);
+            return (Race.GetHashCode() * 397) ^ (Xenotype?.GetHashCode() ?? 0) ^ (ObjectNamespace?.GetHashCode() ?? 0);
         }
     }
     public static bool operator ==(AudioDomain a, AudioDomain b) => a.Equals(b);
     public static bool operator !=(AudioDomain a, AudioDomain b) => !a.Equals(b);
 
-    public override string ToString() => Xenotype == null ? Race.DefName : Race.DefName + "+" + Xenotype.Value.DefName;
+    public override string ToString() => IsNonPawn ? "NonPawn:" + ObjectNamespace + "/" + Race.DefName : Xenotype == null ? Race.DefName : Race.DefName + "+" + Xenotype.Value.DefName;
 }
 
 public enum AudioDomainStatus { Available, Dormant, TargetUnavailable, Orphan }

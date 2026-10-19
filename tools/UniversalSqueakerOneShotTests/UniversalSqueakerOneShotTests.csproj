@@ -6,5 +6,6 @@
     <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Authoring/*.cs" Link="Authoring/%(Filename)%(Extension)" />
     <None Include="../../docs/examples/0.6/*.xml" Link="examples/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="fixtures/us-s2-golden.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

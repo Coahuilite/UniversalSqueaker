@@ -30,7 +30,7 @@ internal static class SqueakKernelAdapter
         public bool Playable(string soundKey, SelectionContext ctx)
         {
             if (soundKey == null) return false;
-            SoundDef? sound = DefDatabase<SoundDef>.GetNamedSilentFail(soundKey);
+            SoundDef? sound = UsAudioBindings.Resolve(soundKey);
             if (sound == null) return false;
             return (ctx.Production ? SqueakSoundAvailabilityCache.GetProductionPlayability(sound, pawn) : SqueakSoundAvailabilityCache.GetNativePlayability(sound, map, target)) == SqueakSoundPlayability.Playable;
         }
@@ -51,7 +51,7 @@ internal static class SqueakKernelAdapter
         SqueakVoicePackMode.Fallback => SelectionMode.Fallback,
         SqueakVoicePackMode.Remix => SelectionMode.Remix,
         SqueakVoicePackMode.Vanilla => SelectionMode.Off,
-        SqueakVoicePackMode.Disabled => SelectionMode.Off,
+        SqueakVoicePackMode.Disabled => SelectionMode.Disabled,
         _ => SelectionMode.Off,
     };
 
@@ -101,7 +101,19 @@ internal static class SqueakKernelAdapter
     /// <summary>Returns the store-resolved table after startup initialization, or the data source as a safe fallback.</summary>
     public static BuiltInFallbackTable BuildBuiltIn()
     {
-        return SqueakFallbackProfileStore.Current ?? BuildBuiltInSource();
+        var source = SqueakFallbackProfileStore.Current ?? BuildBuiltInSource();
+        var profiles = new List<FallbackProfile>();
+        foreach (var profile in source.Profiles)
+        {
+            var keys = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var entry in profile.SoundKeys)
+            {
+                string? id = UsAudioBindings.KeyForName(entry.Value);
+                if (id != null) keys.Add(entry.Key, id);
+            }
+            profiles.Add(new FallbackProfile(profile.Race, profile.Version, keys));
+        }
+        return new BuiltInFallbackTable(profiles);
     }
 
     /// <summary>选择集按记录自身 (raceDefName, xenotypeDefName) 域键组织；候选 pack 按声明的
@@ -138,7 +150,7 @@ internal static class SqueakKernelAdapter
     public static SqueakSoundChoice ToChoice(ChainResult result, AudioDomain domain)
     {
         if (result.SoundKey == null) return SqueakSoundChoice.None;
-        SoundDef? sound = DefDatabase<SoundDef>.GetNamedSilentFail(result.SoundKey);
+        SoundDef? sound = UsAudioBindings.Resolve(result.SoundKey);
         if (sound == null) return SqueakSoundChoice.None;
         SqueakSoundSource source = result.Tier switch
         {
@@ -189,9 +201,9 @@ internal static class SqueakKernelAdapter
         {
             if (entry == null || entry.sound == null) continue;
             string? actionKey = ActionKey.For(entry.action);
-            string? soundKey = entry.sound.defName;
+            string? soundKey = UsAudioBindings.KeyFor(entry.sound);
             if (actionKey == null || string.IsNullOrWhiteSpace(soundKey) || fallback.ContainsKey(actionKey)) continue;
-            fallback.Add(actionKey, soundKey);
+            fallback.Add(actionKey, soundKey!);
         }
         return new VoicePackEntry(key, domain, pack.weight, actions, fallback.Count == 0 ? null : fallback);
     }
@@ -200,7 +212,9 @@ internal static class SqueakKernelAdapter
     {
         return (entry.sounds ?? new List<SoundDef>())
             .Where(s => s != null && !s.defName.EndsWith("_Preview", StringComparison.Ordinal))
-            .Select(s => s!.defName)
+            .Select(s => UsAudioBindings.KeyFor(s))
+            .Where(s => s != null)
+            .Select(s => s!)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToList();

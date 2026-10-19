@@ -61,9 +61,14 @@ public readonly struct ChainResult
     public readonly bool IsEgg;
 
     public bool IsNone => SoundKey == null;
+    public readonly ActionSoundSet? SelectedVariant;
+    public readonly SelectionContext? SelectedContext;
+    public AudioId? Resource => AudioId.TryParse(SoundKey, out var id) ? id : null;
 
-    public ChainResult(string? soundKey, ChainTier? tier, string? poolStableKey, bool isEgg = false)
+    public ChainResult(string? soundKey, ChainTier? tier, string? poolStableKey, bool isEgg = false, SelectionContext? context = null, ActionSoundSet? variant = null)
     {
+        SelectedContext = context;
+        SelectedVariant = variant;
         SoundKey = soundKey;
         Tier = tier;
         PoolStableKey = poolStableKey;
@@ -100,4 +105,11 @@ public interface IRollSource
 public interface ISoundGate
 {
     bool Playable(string soundKey, SelectionContext ctx);
+}
+
+public enum SelectionRollPurpose { Pack, Variant, Sound, Tier }
+
+public interface ISelectionRollSource : IRollSource
+{
+    double Next01(SelectionRollPurpose purpose);
 }

@@ -482,7 +482,7 @@ public sealed class SqueakRuntimeSnapshot
 
     private SqueakSoundChoice ChooseByKey(ResolvedSqueakContext context, string actionKey, Pawn? pawn, Map? map, TargetInfo? target, bool production)
     {
-        if (string.IsNullOrEmpty(actionKey)) return SqueakSoundChoice.None;
+        if (VoicePackMode == SqueakVoicePackMode.Disabled || string.IsNullOrEmpty(actionKey)) return SqueakSoundChoice.None;
         // 中性路由：域身份 = pawn 真实 raceDefName。不可得时为空域，池空/无内置 profile = 无声，绝不跨种族。
         string raceDefName = pawn?.def?.defName ?? "";
         AudioDomain domain = context.Xenotype != null
