@@ -46,6 +46,25 @@ internal static partial class Program
         plan.EnabledRules = new[] { "us.core/Mood" }; plan.Context = new ResponseContext("p1", new Dictionary<string, double> { ["mood.level"] = .9 });
         Check(!ResponseModulation.Compose(1, 1, plan, new Dictionary<string, bool>(), new Driver()).Valid,
             "S4 enabled mood without explicit thresholds is rejected, not styled by hidden defaults");
+        foreach (string key in new[] { "mood.level", "mood.low", "mood.high" })
+        {
+            var invalid = new Dictionary<string, double>(values) { [key] = double.NaN };
+            plan.Context = new ResponseContext("p1", invalid);
+            Check(!ResponseModulation.Compose(1, 1, plan, new Dictionary<string, bool>(), new Driver()).Valid,
+                "S4 enabled mood rejects nonfinite fact " + key);
+        }
+        var activeInput = Input();
+        activeInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, sustained: true) };
+        activeInput.ActiveSustainedKey = "us.core/Work";
+        activeInput.BlockedActions.Add("us.core/Work");
+        var activeDriver = new Driver();
+        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "ActionOrScopeRejected",
+            "S5 same-key active slot cannot bypass revoked source or permission");
+        activeInput.BlockedActions.Clear();
+        activeInput.HasVocalOrgans = false;
+        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "NoVocalOrgans"
+            && activeDriver.Calls == 0 && activeDriver.Purposes.Count == 0,
+            "S5 same-key active slot requires current vocal qualification without redrawing maintenance");
     }
 
     private sealed class Handle : ISustainedHandle

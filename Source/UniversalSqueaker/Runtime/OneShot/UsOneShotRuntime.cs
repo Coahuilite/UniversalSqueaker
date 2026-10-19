@@ -280,7 +280,7 @@ public static class UsOneShotRuntime
 
     public static void Initialize()
     {
-        sessions.Clear();
+        ResetSession();
         catalog = new AuthorCatalog(720, 216, fullDevCandidate: true);
         foreach (var provider in DefDatabase<UsProviderDef>.AllDefsListForReading)
         {
@@ -359,6 +359,7 @@ public static class UsOneShotRuntime
             throw new InvalidOperationException("End existing sustained playback before opting into OneShot control");
         }
 
+        DisableControlled(pawn);
         sessions[pawn] = new UsControlledOneShotSession(pawn, catalog, new StatePolicy(sharedTicks, waitTicks), workTicks, woundedTicks, fullDevCandidate);
     }
 
@@ -377,13 +378,14 @@ public static class UsOneShotRuntime
 
         if (!pawn.Spawned || pawn.Destroyed)
         {
+            session.Stop();
             sessions.Remove(pawn);
             return true;
         }
 
+        session.Maintain();
         if (SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.MapHeld == Find.CurrentMap)
         {
-            session.Maintain();
             session.Tick();
         }
 

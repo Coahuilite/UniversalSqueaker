@@ -17,7 +17,10 @@ internal sealed class UsOutputContribution
 {
     internal readonly double Volume;
     internal bool FaultReported;
-    internal UsOutputContribution(double volume) { Volume = volume; }
+    internal UsOutputContribution(double volume)
+    {
+        Volume = volume;
+    }
 }
 
 internal static class UsInstanceOutput
@@ -26,6 +29,8 @@ internal static class UsInstanceOutput
     private static readonly Dictionary<int, UsOutputContribution> requests = new();
     private static readonly ConditionalWeakTable<Sample, UsOutputContribution> samples = new();
     private static readonly ConditionalWeakTable<Sustainer, UsOutputContribution> sustainers = new();
+    // Negative identity survives delayed grain callbacks without retaining a live parent or request.
+    private static readonly ConditionalWeakTable<Sustainer, object> closedOwnedParents = new();
     private static int nextToken;
     internal static bool Available { get; private set; }
     internal static string Failure { get; private set; } = "OutputAdapterNotInitialized";
@@ -38,6 +43,7 @@ internal static class UsInstanceOutput
             AccessTools.PropertyGetter(typeof(Sample), "Volume"),
             AccessTools.Method(typeof(Sample), nameof(Sample.Update)),
             AccessTools.Method(typeof(Sample), nameof(Sample.SampleCleanup)),
+            AccessTools.Method(typeof(SampleSustainer), "TryMakeAndPlay", new[] { typeof(SubSustainer), typeof(AudioClip), typeof(float), typeof(float) }),
             AccessTools.Constructor(typeof(Sustainer), new[] { typeof(SoundDef), typeof(SoundInfo) }),
             AccessTools.Method(typeof(Sustainer), "PlaySoundOnMapOrCamera", new[] { typeof(SoundDef) }),
             AccessTools.Method(typeof(Sustainer), "Cleanup")
@@ -63,7 +69,10 @@ internal static class UsInstanceOutput
     internal static int Mark(ref SoundInfo info, UsOutputContribution owner)
     {
         // Floats represent every integer in this bounded token space exactly; only live requests occupy it.
-        do { nextToken = nextToken == 16777215 ? 1 : nextToken + 1; } while (requests.ContainsKey(nextToken));
+        do
+        {
+            nextToken = nextToken == 16777215 ? 1 : nextToken + 1;
+        } while (requests.ContainsKey(nextToken));
         requests.Add(nextToken, owner);
         info.SetParameter(RequestParameter, nextToken);
         return nextToken;
@@ -74,27 +83,51 @@ internal static class UsInstanceOutput
     {
         foreach (var parameter in info.DefinedParameters)
         {
-            if (parameter.Key == RequestParameter && requests.TryGetValue((int)parameter.Value, out var owner)) return owner;
+            if (parameter.Key == RequestParameter && requests.TryGetValue((int)parameter.Value, out var owner))
+            {
+                return owner;
+            }
         }
         return null;
     }
 
     internal static void CaptureSustainer(Sustainer sustainer, SoundInfo info)
     {
+        if (IsClosedOwned(sustainer))
+        {
+            return;
+        }
         var owner = FromInfo(info);
-        if (owner != null) sustainers.GetValue(sustainer, _ => owner);
+        if (owner != null)
+        {
+            sustainers.GetValue(sustainer, _ => owner);
+        }
     }
 
     internal static UsOutputContribution? OwnerOf(Sustainer sustainer)
     {
-        if (sustainers.TryGetValue(sustainer, out var owner)) return owner;
+        if (IsClosedOwned(sustainer))
+        {
+            return null;
+        }
+        if (sustainers.TryGetValue(sustainer, out var owner))
+        {
+            return owner;
+        }
         owner = FromInfo(sustainer.info);
-        if (owner != null) sustainers.GetValue(sustainer, _ => owner);
+        if (owner != null)
+        {
+            sustainers.GetValue(sustainer, _ => owner);
+        }
         return owner;
     }
 
     internal static void PlayAuxiliary(SoundDef sound, SoundInfo info, Sustainer parent)
     {
+        if (IsClosedOwned(parent))
+        {
+            return;
+        }
         var owner = OwnerOf(parent);
         if (owner == null)
         {
@@ -102,24 +135,39 @@ internal static class UsInstanceOutput
             return;
         }
         int token = Mark(ref info, owner);
-        try { sound.PlayOneShot(info); }
-        finally { ReleaseRequest(token); }
+        try
+        {
+            sound.PlayOneShot(info);
+        }
+        finally
+        {
+            ReleaseRequest(token);
+        }
     }
 
     private static UsOutputContribution? OwnerOf(Sample sample)
     {
-        if (samples.TryGetValue(sample, out var owner)) return owner;
+        if (samples.TryGetValue(sample, out var owner))
+        {
+            return owner;
+        }
         if (sample is SampleSustainer sustained && sustained.subSustainer?.parent != null)
             owner = OwnerOf(sustained.subSustainer.parent);
         owner ??= FromInfo(sample.Info); // Includes constructor-time first samples before parent constructor postfix.
-        if (owner != null) samples.GetValue(sample, _ => owner);
+        if (owner != null)
+        {
+            samples.GetValue(sample, _ => owner);
+        }
         return owner;
     }
 
     internal static void ApplyVolume(Sample sample, ref float originalNativeVolume)
     {
         var owner = OwnerOf(sample);
-        if (owner == null) return;
+        if (owner == null)
+        {
+            return;
+        }
         double factor = owner.Volume * CompSqueaker.GlobalVolumeFactor;
         double result = originalNativeVolume * factor;
         if (!OneShotOutput.TryPrepare(result, 1, 1, out float volume, out _))
@@ -137,13 +185,39 @@ internal static class UsInstanceOutput
 
     internal static void ApplyDistance(Sample sample)
     {
-        if (OwnerOf(sample) == null || sample.source == null || sample.subDef.onCamera) return;
+        if (OwnerOf(sample) == null || sample.source == null || sample.subDef.onCamera)
+        {
+            return;
+        }
         sample.source.minDistance = Distance.TrueMin;
         sample.source.maxDistance = Distance.TrueMax;
     }
 
     internal static void ReleaseSample(Sample sample) => samples.Remove(sample);
-    internal static void ReleaseSustainer(Sustainer sustainer) => sustainers.Remove(sustainer);
+    internal static bool IsClosedOwned(Sustainer sustainer) => closedOwnedParents.TryGetValue(sustainer, out _);
+
+    internal static void ReleaseSustainer(Sustainer sustainer)
+    {
+        if (OwnerOf(sustainer) != null)
+        {
+            closedOwnedParents.GetValue(sustainer, _ => new object());
+        }
+        sustainers.Remove(sustainer);
+    }
+}
+
+[HarmonyPatch(typeof(SampleSustainer), "TryMakeAndPlay", new[] { typeof(SubSustainer), typeof(AudioClip), typeof(float), typeof(float) })]
+internal static class UsLateSustainedSamplePatch
+{
+    private static bool Prefix(SubSustainer subSus, ref SampleSustainer __result)
+    {
+        if (!UsInstanceOutput.IsClosedOwned(subSus.parent))
+        {
+            return true;
+        }
+        __result = null!;
+        return false;
+    }
 }
 
 [HarmonyPatch(typeof(Sample), "get_Volume")]
@@ -176,7 +250,10 @@ internal static class UsSustainerAuxiliaryPatch
         var play = AccessTools.Method(typeof(SoundStarter), "PlayOneShot", new[] { typeof(SoundDef), typeof(SoundInfo) });
         var replacement = AccessTools.Method(typeof(UsInstanceOutput), nameof(UsInstanceOutput.PlayAuxiliary));
         Validated = code.Count(x => x.Calls(play)) == 2;
-        if (!Validated) return code;
+        if (!Validated)
+        {
+            return code;
+        }
         var result = new List<CodeInstruction>();
         foreach (var instruction in code)
         {

@@ -54,6 +54,13 @@ internal static partial class Program
         parent.FixtureCleanup();
         Check(UsInstanceOutput.OwnerOf(parent) == null && Math.Abs(SoundStarter.Played[SoundStarter.Played.Count - 1].source.volume - 1.2f) < .0001,
             "S5 cleanup retains parent through stop auxiliary creation then releases parent ownership");
+        var delayed = SampleSustainer.TryMakeAndPlay(new SubSustainer(parent, definition), new AudioClip(), 10);
+        var nativeParent = new Sustainer(sound, SoundInfo.OnCamera());
+        nativeParent.End();
+        nativeParent.FixtureCleanup();
+        var nativeDelayed = SampleSustainer.TryMakeAndPlay(new SubSustainer(nativeParent, definition), new AudioClip(), 10);
+        Check(delayed == null && nativeDelayed != null && nativeDelayed.source.Playing,
+            "S5 delayed grain callback after owned Cleanup cannot emit an unowned tail; unrelated native parent unchanged");
         CompSqueaker.GlobalVolumeFactor = 1;
         UsInstanceOutput.Distance = new FloatRange(15, 50);
     }

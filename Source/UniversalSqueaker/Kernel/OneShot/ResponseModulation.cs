@@ -59,7 +59,11 @@ public sealed class MoodResponse : IUsResponseRule
         double level = context.Require("mood.level");
         double low = context.Require("mood.low");
         double high = context.Require("mood.high");
-        if (low < 0 || high > 1 || low >= high || level < 0 || level > 1) throw new InvalidOperationException("InvalidMoodThresholds");
+        if (double.IsNaN(level) || double.IsNaN(low) || double.IsNaN(high)
+            || low < 0 || high > 1 || low >= high || level < 0 || level > 1)
+        {
+            throw new InvalidOperationException("InvalidMoodThresholds");
+        }
         string band = level < low ? "low" : level > high ? "high" : "neutral";
         return new ResponseContribution(context.Optional("mood." + band + ".pitch", 1), context.Optional("mood." + band + ".volume", 1));
     }

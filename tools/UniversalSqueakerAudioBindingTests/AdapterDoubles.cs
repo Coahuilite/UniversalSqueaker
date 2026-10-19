@@ -363,6 +363,13 @@ namespace Verse.Sound
         public override SoundInfo Info => subSustainer.Info;
         protected override float Volume => base.Volume * .25f;
         public SampleSustainer(SubSustainer parent) : base(parent.subDef) { subSustainer = parent; }
+        public static SampleSustainer TryMakeAndPlay(SubSustainer subSus, UnityEngine.AudioClip clip, float scheduledEndTime, float startTime = 0f)
+        {
+            var sample = new SampleSustainer(subSus) { source = new UnityEngine.AudioSource() };
+            sample.Update();
+            sample.source.Play();
+            return sample;
+        }
     }
     public sealed class Sustainer
     {

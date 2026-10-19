@@ -454,6 +454,17 @@ public sealed class OneShotDecision
         {
             return Stop(state, policy, input, "", selectionReason, diagnostics);
         }
+        if (input.BlockedActions.Contains(action.Key))
+        {
+            state.AttemptTick = input.Tick;
+            string reason = input.BlockedActionReasons.TryGetValue(action.Key, out var detail) ? detail : "ActionOrScopeRejected";
+            return Stop(state, policy, input, action.Key, reason, diagnostics);
+        }
+        if (!input.HasVocalOrgans)
+        {
+            state.AttemptTick = input.Tick;
+            return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
+        }
         if (action.Sustained && action.Key == input.ActiveSustainedKey)
         {
             var existing = new PlaybackReceipt(PlaybackResult.AlreadyActive, "SameOwnedSustainer");
@@ -461,13 +472,8 @@ public sealed class OneShotDecision
             return new DecisionOutcome(action.Key, existing.Reason, existing, diagnostics);
         }
 
-        // Selection reserves this tick even when a later scope or hard gate rejects it.
+        // Only a new attempt reserves this tick; maintenance still requires current authorization.
         state.AttemptTick = input.Tick;
-        if (input.BlockedActions.Contains(action.Key))
-        {
-            string reason = input.BlockedActionReasons.TryGetValue(action.Key, out var detail) ? detail : "ActionOrScopeRejected";
-            return Stop(state, policy, input, action.Key, reason, diagnostics);
-        }
 
         if (input.Tick < state.ActionDeadline(action.Key) || (action.CheckShared && input.Tick < state.SharedDeadline))
         {
@@ -479,11 +485,6 @@ public sealed class OneShotDecision
         bool enteredBackend = false;
         try
         {
-            if (!input.HasVocalOrgans)
-            {
-                return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
-            }
-
             if (!action.SkipTalking && !Pass(input.TalkingChance, RandomPurpose.Talking, random))
             {
                 return Stop(state, policy, input, action.Key, "TalkingRejected", diagnostics);
