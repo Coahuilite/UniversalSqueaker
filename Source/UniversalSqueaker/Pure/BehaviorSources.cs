@@ -180,7 +180,8 @@ public sealed class BehaviorSourceState
         && value.Values.Valid && value.RequiredFacts.All(x => !string.IsNullOrWhiteSpace(x));
 
     public BehaviorValues Resolve(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
-        IEnumerable<BehaviorValues> playerLayers, Func<string, bool> implementationAvailable, out bool paused)
+        IEnumerable<BehaviorValues> playerLayers, Func<string, bool> implementationAvailable, out bool paused,
+        Action<string>? reportPause = null)
     {
         var result = new BehaviorValues();
         paused = false;
@@ -192,6 +193,20 @@ public sealed class BehaviorSourceState
                 continue;
             }
             var current = directory.Find(layer, binding.SourceId);
+            bool hasCompatibleSnapshot = binding.Snapshot?.Semantics == 1;
+            if (current?.Semantics != 1 && !hasCompatibleSnapshot)
+            {
+                // Unknown semantics is not an empty contribution. Preserve the record and suspend
+                // the actions known to depend on that source until a compatible identity returns.
+                bool depends = binding.Snapshot?.Contributions.Any(x => x.Action == action) == true
+                    || current?.Contributions.Any(x => x.Action == action) == true;
+                paused |= depends;
+                if (depends)
+                {
+                    reportPause?.Invoke("IncompatibleAuthorSnapshot:" + binding.SourceId + ":" + action);
+                }
+                continue;
+            }
             BehaviorContribution? contribution = null;
             if (current?.Semantics == 1)
             {
@@ -214,12 +229,14 @@ public sealed class BehaviorSourceState
                 if (current?.Contributions.Any(x => x.Action == action) == true)
                 {
                     paused = true;
+                    reportPause?.Invoke("InvalidAuthorContribution:" + binding.SourceId + ":" + action);
                 }
                 continue;
             }
             if (contribution.RequiredFacts.Any(x => !implementationAvailable(x)))
             {
                 paused = true;
+                reportPause?.Invoke("MissingRequiredImplementation:" + binding.SourceId + ":" + action);
             }
             result.Overlay(contribution.Values);
         }
@@ -236,15 +253,18 @@ public sealed class BehaviorSourceState
         var root = document.CreateElement("behaviorSources");
         root.SetAttribute("format", "1");
         document.AppendChild(root);
-        foreach (var binding in Bindings.OrderBy(x => x.Domain.Family).ThenBy(x => x.Domain.Namespace)
-            .ThenBy(x => x.Domain.Target).ThenBy(x => x.Domain.Child))
+        foreach (var binding in Bindings.OrderBy(x => x.Domain.Family, StringComparer.Ordinal).ThenBy(x => x.Domain.Namespace, StringComparer.Ordinal)
+            .ThenBy(x => x.Domain.Target, StringComparer.Ordinal).ThenBy(x => x.Domain.Child, StringComparer.Ordinal))
         {
             var node = document.CreateElement("binding");
             WriteDomain(node, binding.Domain);
             node.SetAttribute("intent", binding.Intent.ToString());
             node.SetAttribute("source", binding.SourceId);
             root.AppendChild(node);
-            if (binding.Snapshot != null) WriteSource(document, node, binding.Snapshot);
+            if (binding.Snapshot != null)
+            {
+                WriteSource(document, node, binding.Snapshot);
+            }
         }
         return root.OuterXml;
     }
@@ -272,7 +292,9 @@ public sealed class BehaviorSourceState
             }
             CheckAttributes(node, "family", "namespace", "target", "child", "intent", "source");
             if (node.ChildNodes.OfType<XmlElement>().Any(x => x.Name != "snapshot") || node.ChildNodes.OfType<XmlElement>().Count() > 1)
+            {
                 throw new ArgumentException("Binding requires at most one snapshot");
+            }
             var domain = ReadDomain(node);
             if (result.Bindings.Any(x => x.Domain.Equals(domain)))
             {
@@ -285,8 +307,11 @@ public sealed class BehaviorSourceState
             }
             var binding = new BehaviorBinding { Domain = domain, Intent = intent, SourceId = node.GetAttribute("source") };
             var snapshot = node["snapshot"];
-            if (snapshot != null) binding.Snapshot = ReadSource(snapshot, domain, binding.SourceId);
-            if (binding.Snapshot?.Contributions.Any(x => !Valid(x)) == true)
+            if (snapshot != null)
+            {
+                binding.Snapshot = ReadSource(snapshot, domain, binding.SourceId);
+            }
+            if (binding.Snapshot?.Semantics == 1 && binding.Snapshot.Contributions.Any(x => !Valid(x)))
             {
                 throw new ArgumentException("Invalid author snapshot");
             }
@@ -329,6 +354,7 @@ public sealed class BehaviorSourceState
         };
         foreach (XmlElement action in node.ChildNodes.OfType<XmlElement>())
         {
+            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "volume", "pitch", "requires");
             if (action.Name != "action" || action.ChildNodes.OfType<XmlElement>().Any())
             {
                 throw new ArgumentException("Invalid behavior action shape");

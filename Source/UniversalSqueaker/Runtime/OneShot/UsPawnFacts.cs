@@ -15,7 +15,9 @@ internal static class UsPawnFacts
     {
         var result = new Dictionary<string, Truth>(StringComparer.Ordinal);
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
+        {
             result[BuiltInPawnContracts.FactKey(key)] = BuiltInPawnContracts.IsEvent(key) ? Yes(key == eventKey) : Truth.Unknown;
+        }
         var job = pawn.CurJob;
         var driver = pawn.jobs?.curDriver;
         result["us.core/SleepState"] = driver == null ? Truth.Unknown : Yes(driver.asleep);
@@ -30,12 +32,21 @@ internal static class UsPawnFacts
             : Yes(pawn.mindState.IsIdle && !pawn.pather.Moving && (name == "Wait" || name == "Wait_Wander"));
         bool ingest = job?.def == JobDefOf.Ingest;
         bool nutrition = driver is IEatingDriver eating && eating.GainingNutritionNow;
-        Truth chewing = !ingest ? Truth.False : driver != null
-            && string.Equals(driver.CurToilString, SqueakEatOccurrence.ChewingToilDebugName, StringComparison.Ordinal) ? Truth.True : Truth.Unknown;
+        Truth chewing = Truth.False;
+        Truth drug = Truth.False;
+        if (ingest)
+        {
+            chewing = Truth.Unknown;
+            if (driver != null && string.Equals(driver.CurToilString, SqueakEatOccurrence.ChewingToilDebugName, StringComparison.Ordinal))
+            {
+                chewing = Truth.True;
+            }
+            drug = job?.targetA.Thing == null ? Truth.Unknown : Yes(job.targetA.Thing.def.IsDrug);
+        }
         result["us.core/EatWholeJob"] = Yes(ingest);
         result["us.core/EatNutrition"] = Yes(ingest && nutrition);
         result["us.core/EatChewing"] = chewing;
-        result["us.core/EatDrug"] = !ingest ? Truth.False : job?.targetA.Thing == null ? Truth.Unknown : Yes(job.targetA.Thing.def.IsDrug);
+        result["us.core/EatDrug"] = drug;
         // Retained player mode (including its explicit legacy fallback) is not the precise chewing fact.
         result["us.core/EatState"] = Yes(PeriodicStateBinding.CaptureEatingOccurrence(pawn));
         result["us.core/ActiveCommand"] = Yes(job?.playerForced == true && pawn.IsPlayerControlled);

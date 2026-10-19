@@ -908,14 +908,21 @@ public class CompSqueaker : ThingComp
                 new OneShot.LegacyClockRecord(record.Value, lastTriggerRealTime.GetValueOrDefault(record.Key))));
         state.SeedLegacy(lastAnyTriggerTick, records);
     }
-    internal OneShot.LegacyTimingParameters ControlledLegacyTiming(string key)
+    internal OneShot.LegacyTimingParameters ControlledLegacyTiming(string key, SqueakTriggerInvocation invocation)
     {
         TryGetPlan(key, out var plan);
         var context = GetRuntimeContext(out _);
+        var population = invocation.Origin == SqueakTriggerOrigin.Periodic
+            ? SqueakPeriodicPopulation.Maintain(activeDistanceRange)
+            : SqueakPeriodicPopulation.GetSnapshot();
+        float populationScale = invocation.Origin == SqueakTriggerOrigin.Periodic && ScalePeriodicWithAudiblePopulation
+            ? SanitizePeriodicPopulationScale(population.Scale)
+            : 1f;
         return new OneShot.LegacyTimingParameters { Plan = plan, OverallMultiplier = context.OverallIntervalMultiplier,
             ActionMultiplier = context.GetActionByKey(key).IntervalMultiplier, MasterMultiplier = GlobalCooldownMultiplier,
             SpeedMultiplier = Find.TickManager.TickRateMultiplier, GlobalBaseTicks = GlobalMinIntervalTicks,
-            ScaleWithTimeSpeed = ScaleCooldownWithTimeSpeed };
+            ScaleWithTimeSpeed = ScaleCooldownWithTimeSpeed, PopulationScale = populationScale,
+            ProbabilityMultiplier = context.GetActionByKey(key).ProbabilityMultiplier };
     }
     internal bool HasActiveSustainer => activeSustainer != null && !activeSustainer.Ended;
 

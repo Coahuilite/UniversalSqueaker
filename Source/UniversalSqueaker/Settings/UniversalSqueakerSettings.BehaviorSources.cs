@@ -17,28 +17,50 @@ public partial class UniversalSqueakerSettings
             behaviorSourcesXml = candidate;
             return UsAtomicConfigFile.TryWrite(path, serialize, out failure, beforeCommit);
         }
-        finally { behaviorSourcesXml = previous; }
+        finally
+        {
+            behaviorSourcesXml = previous;
+        }
     }
 
     public bool TryChangeBehaviorSource(BehaviorDomain domain, string? sourceId, BehaviorSourceDirectory directory,
         Func<string, bool> persistCandidate, out string failure)
     {
         failure = "";
-        if (IsPersistenceBlockedByMigrationFailure) { failure = "SettingsMigrationBlocked"; return false; }
+        if (IsPersistenceBlockedByMigrationFailure)
+        {
+            failure = "SettingsMigrationBlocked";
+            return false;
+        }
         try
         {
             var candidate = BehaviorSourceState.FromXml(behaviorSourcesXml);
-            if (sourceId == null) candidate.Forget(domain);
-            else if (!candidate.Bind(domain, sourceId, directory)) { failure = "InvalidBehaviorSource"; return false; }
+            if (sourceId == null)
+            {
+                candidate.Forget(domain);
+            }
+            else if (!candidate.Bind(domain, sourceId, directory))
+            {
+                failure = "InvalidBehaviorSource";
+                return false;
+            }
             return CommitBehaviorState(candidate, persistCandidate, out failure);
         }
-        catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; return false; }
+        catch (Exception error)
+        {
+            failure = error.GetType().Name + ":" + error.Message;
+            return false;
+        }
     }
 
     public bool TryRefreshBehaviorSources(BehaviorSourceDirectory directory, Func<string, bool> persistCandidate, out string failure)
     {
         failure = "";
-        if (IsPersistenceBlockedByMigrationFailure) { failure = "SettingsMigrationBlocked"; return false; }
+        if (IsPersistenceBlockedByMigrationFailure)
+        {
+            failure = "SettingsMigrationBlocked";
+            return false;
+        }
         try
         {
             var candidate = BehaviorSourceState.FromXml(behaviorSourcesXml);
@@ -49,7 +71,11 @@ public partial class UniversalSqueakerSettings
             }
             return CommitBehaviorState(candidate, persistCandidate, out failure);
         }
-        catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; return false; }
+        catch (Exception error)
+        {
+            failure = error.GetType().Name + ":" + error.Message;
+            return false;
+        }
     }
 
     private bool CommitBehaviorState(BehaviorSourceState candidate, Func<string, bool> persistCandidate, out string failure)
@@ -60,13 +86,17 @@ public partial class UniversalSqueakerSettings
         {
             throw new InvalidOperationException("Unstable source serialization");
         }
-        if (!persistCandidate(xml)) { failure = "BehaviorSourceSaveFailed"; return false; }
+        if (!persistCandidate(xml))
+        {
+            failure = "BehaviorSourceSaveFailed";
+            return false;
+        }
         behaviorSourcesXml = xml;
         return true;
     }
 
     public BehaviorValues ResolveBehaviorSource(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
-        Func<string, bool> implementationAvailable, out bool paused)
+        Func<string, bool> implementationAvailable, out bool paused, Action<string>? reportPause = null)
     {
         var players = new List<BehaviorValues>();
         foreach (int layer in new[] { 0, 1, 2 })
@@ -92,14 +122,16 @@ public partial class UniversalSqueakerSettings
         }
         try
         {
-            return BehaviorSourceState.FromXml(behaviorSourcesXml).Resolve(domain, action, directory, players, implementationAvailable, out paused);
+            return BehaviorSourceState.FromXml(behaviorSourcesXml).Resolve(domain, action, directory, players, implementationAvailable, out paused, reportPause);
         }
         catch (Exception)
         {
             // Preserve unreadable Config bytes for recovery, and pause only the new behavior path.
             paused = true;
+            reportPause?.Invoke("UnreadableBehaviorConfig");
             return new BehaviorValues();
         }
     }
 }
+
 

@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-19，r4。状态：**首版目标规格；受控S1/S2及S3动作/Config技术链已实现，原生验收与S4–S5责任仍保留**。目标游戏版本仍为 RimWorld 1.6。
+修订：2026-10-19，r5（S3实际状态；已定合同不变）。状态：**首版目标规格；受控S1/S2及S3动作/Config技术链已实现，原生验收与S4–S5责任仍保留**。目标游戏版本仍为 RimWorld 1.6。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。制作现有版本声音包，请使用[0.5.x 作者指南](voicepack-authoring-0.5-zh.md)。
 
@@ -492,4 +492,5 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 作者入口、生产路径、四模式/年龄/egg/权重保留、独立双重放与适配fixture、V01/V08/V09/V10责任和V14接缝盲区统一见[S2实施页](us-kernel-0.6-s2-zh.md)。本轮没有引入owner字段或普通音频注册Def，没有批准D3/D4、新Sustained或完整D6默认。旧黄金语料不重录；纯层、适配、目标1.6源码依据及原生观察/听感分别记证据。S3–S5和S1原生缺口不随此状态自动关闭。
 
 **S5交付阻断：** 继承的`Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍写共享定义，借用Core/他方SoundDef时可能影响非US声音。PM允许S2技术链单独接收，但C11/V14/S5及整个0.6产品接受必须等待实例级替代；本轮不禁用旧距离、不新增共享写入、不用Def克隆绕过。详见S2实施页。
+
 

@@ -15,6 +15,7 @@ internal static partial class Program
         CompatibilityUsesSameOwnerAndOriginalClock();
         SparseSourceAuthorityAndRecovery();
         SourceDeletionAndStrictShape();
+        IncompatibleSnapshotAndTickOverflow();
         S3FileExampleIsConsumed();
         string first = S3Replay();
         string second = S3Replay();
@@ -194,6 +195,48 @@ internal static partial class Program
             Check(rejected, "source identities reject alternate Pawn namespace and whitespace spellings");
         }
     }
+    private static void IncompatibleSnapshotAndTickOverflow()
+    {
+        var domain = new BehaviorDomain("Pawn", "", "Ratkin");
+        var a = Source("a/Def", domain, "Work", new BehaviorValues { Enabled = false });
+        var b = Source("b/Def", domain, "Work", new BehaviorValues { Enabled = true });
+        var state = new BehaviorSourceState();
+        state.Bind(domain, a.Id, new BehaviorSourceDirectory(new[] { a }));
+        string incompatible = state.ToXml().Replace("semantics=\"1\"", "semantics=\"2\"");
+        state = BehaviorSourceState.FromXml(incompatible);
+        var missing = new BehaviorSourceDirectory(new[] { b });
+        var reasons = new List<string>();
+        state.Resolve(domain, "Work", missing, Array.Empty<BehaviorValues>(), _ => true, out bool paused, reasons.Add);
+        Check(paused && state.Read(domain).SourceId == a.Id && state.ToXml() == incompatible,
+            "Bound A absent with incompatible snapshot suspends dependent Work, preserves original and never adopts B");
+        Check(reasons.Single() == "IncompatibleAuthorSnapshot:a/Def:Work", "incompatible snapshot records an actionable source/action reason");
+        state.Resolve(domain, "Select", missing, Array.Empty<BehaviorValues>(), _ => true, out paused);
+        Check(!paused, "incompatible Work snapshot does not suspend unrelated Select");
+        var returned = new BehaviorSourceDirectory(new[] { a, b });
+        state.Resolve(domain, "Work", returned, Array.Empty<BehaviorValues>(), _ => true, out paused);
+        Check(!paused, "same valid A identity resumes live contribution despite old incompatible snapshot");
+        state.Refresh(returned);
+        Check(state.Read(domain).Snapshot!.Semantics == 1, "successful refresh replaces incompatible snapshot with current valid author record");
+        foreach (var receipt in new[] { PlaybackResult.Dispatched, PlaybackResult.Indeterminate })
+        {
+            var input = Input(1000);
+            input.Actions = new[] { new ActionPlan("us.core/Work", 20, new Condition("ref", "us.core/WorkState"), long.MaxValue) };
+            var driver = new Driver { Result = receipt };
+            var decisionState = new DecisionState(1000);
+            new OneShotDecision().Run(decisionState, new StatePolicy(long.MaxValue, long.MaxValue), input, driver, driver);
+            Check(decisionState.ActionDeadline("us.core/Work") == long.MaxValue && decisionState.SharedDeadline == long.MaxValue
+                && decisionState.NextStateTick == long.MaxValue,
+                "legal long.MaxValue intervals/shared/wait saturate deadlines rather than wrapping on " + receipt);
+            input.Tick = 1001;
+            Check(new OneShotDecision().Run(decisionState, new StatePolicy(40, 20), input, driver, driver).Reason == "NotDue" && driver.Calls == 1,
+                "overflow-safe protection cannot be bypassed at next tick");
+        }
+        var retryInput = Input(long.MaxValue - 1, true, false, false, false);
+        var retryState = new DecisionState(long.MaxValue - 1);
+        var noAudio = new Driver();
+        new OneShotDecision().Run(retryState, new StatePolicy(40, 20), retryInput, noAudio, noAudio);
+        Check(retryState.NextStateTick == long.MaxValue, "retry advancement saturates near maximum tick too");
+    }
     private static string S3Replay()
     {
         var result = new StringBuilder();
@@ -218,5 +261,6 @@ internal static partial class Program
         return result.ToString();
     }
 }
+
 
 

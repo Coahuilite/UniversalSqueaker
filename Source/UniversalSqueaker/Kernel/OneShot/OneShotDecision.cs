@@ -4,6 +4,14 @@ using System.Linq;
 
 namespace UniversalSqueaker.OneShot;
 
+internal static class TickDeadline
+{
+    internal static long Add(long tick, long nonnegativeInterval)
+    {
+        return tick > long.MaxValue - nonnegativeInterval ? long.MaxValue : tick + nonnegativeInterval;
+    }
+}
+
 public enum SubjectFamily
 {
     PawnRace,
@@ -252,14 +260,14 @@ public sealed class DecisionState
     internal void Protect(ActionPlan action, DecisionInput input, StatePolicy policy)
     {
         long now = input.Tick;
-        deadlines[action.Key] = now + action.Interval;
+        deadlines[action.Key] = TickDeadline.Add(now, action.Interval);
         LastProtectedTick = (int)now;
         legacyRecords[action.Key] = new LegacyClockRecord((int)now, input.Realtime);
         if (action.WriteShared)
         {
-            SharedDeadline = Math.Max(SharedDeadline, now + policy.SharedInterval);
+            SharedDeadline = Math.Max(SharedDeadline, TickDeadline.Add(now, policy.SharedInterval));
             if (input.CompatibilityTiming != null)
-                SharedDeadline = Math.Max(SharedDeadline, now + input.CompatibilityTiming.Evaluate(this, input).GlobalCooldownTicks);
+                SharedDeadline = Math.Max(SharedDeadline, TickDeadline.Add(now, input.CompatibilityTiming.Evaluate(this, input).GlobalCooldownTicks));
         }
     }
 
@@ -281,6 +289,7 @@ public sealed class LegacyTimingParameters
 {
     public SqueakActionPlan Plan;
     public float OverallMultiplier = 1, ActionMultiplier = 1, MasterMultiplier = 1, SpeedMultiplier = 1, PopulationScale = 1;
+    public float ProbabilityMultiplier = 1;
     public int GlobalBaseTicks;
     public bool ScaleWithTimeSpeed;
     public SqueakTimingEvaluation Evaluate(DecisionState state, DecisionInput input)
@@ -359,6 +368,7 @@ public sealed class DecisionInput
     public bool StateOpportunity;
     public bool Eligible = true;
     public ISet<string> BlockedActions = new HashSet<string>(StringComparer.Ordinal);
+    public IDictionary<string, string> BlockedActionReasons = new Dictionary<string, string>(StringComparer.Ordinal);
     public bool HasVocalOrgans = true;
     public double TalkingChance = 1;
     public FactSnapshot Facts = new(Array.Empty<KeyValuePair<string, Truth>>());
@@ -425,7 +435,8 @@ public sealed class OneShotDecision
         state.AttemptTick = input.Tick;
         if (input.BlockedActions.Contains(action.Key))
         {
-            return Stop(state, policy, input, action.Key, "ActionOrScopeRejected", diagnostics);
+            string reason = input.BlockedActionReasons.TryGetValue(action.Key, out var detail) ? detail : "ActionOrScopeRejected";
+            return Stop(state, policy, input, action.Key, reason, diagnostics);
         }
 
         if (input.Tick < state.ActionDeadline(action.Key) || (action.CheckShared && input.Tick < state.SharedDeadline))
@@ -599,7 +610,7 @@ public sealed class OneShotDecision
     {
         if (input.StateOpportunity)
         {
-            state.NextStateTick = Math.Max(input.Tick + StatePolicy.Retry, state.SharedDeadline);
+            state.NextStateTick = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), state.SharedDeadline);
         }
 
         return new DecisionOutcome(action, reason, diagnostics: diagnostics);
@@ -623,11 +634,11 @@ public sealed class OneShotDecision
             long applicableShared = action.CheckShared ? state.SharedDeadline : input.Tick;
             if (receipt.Result == PlaybackResult.Dispatched)
             {
-                state.NextStateTick = Math.Max(input.Tick, applicableShared) + Math.Max(1, policy.Wait);
+                state.NextStateTick = TickDeadline.Add(Math.Max(input.Tick, applicableShared), Math.Max(1, policy.Wait));
             }
             else
             {
-                state.NextStateTick = Math.Max(input.Tick + StatePolicy.Retry, applicableShared);
+                state.NextStateTick = Math.Max(TickDeadline.Add(input.Tick, StatePolicy.Retry), applicableShared);
             }
         }
         else

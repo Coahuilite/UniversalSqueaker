@@ -69,6 +69,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         var vocal = comp.ControlledOneShotVocal();
         var values = UsPawnFacts.Capture(pawn, eventKey);
         var blocked = new HashSet<string>(StringComparer.Ordinal);
+        var blockedReasons = new Dictionary<string, string>(StringComparer.Ordinal);
         var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
             ModsConfig.BiotechActive ? pawn.genes?.Xenotype?.defName ?? "" : "");
         var plans = new List<ActionPlan>();
@@ -79,7 +80,8 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             {
                 continue;
             }
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused);
+            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused,
+                reason => blockedReasons[action.Key] = reason);
             if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: fullDevCandidate)) blocked.Add(action.Key);
             plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
                 behavior.HardIntervalTicks ?? (legacyKey == "Wounded" ? woundedTicks : workTicks),
@@ -90,12 +92,12 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         if (compatibilityInvocation.HasValue)
         {
             string key = eventKey!;
-            legacy = comp.ControlledLegacyTiming(key);
             var invocation = compatibilityInvocation.Value;
+            legacy = comp.ControlledLegacyTiming(key, invocation);
             values["us.compat/Event"] = Truth.True;
             plans.Clear();
             double chance = invocation.SkipsRandomOneShotProbability || legacy.Plan.Mode != SqueakTriggerMode.RandomOneShot
-                ? 1 : Math.Max(0, Math.Min(1, legacy.Plan.ProbabilityPerCheck));
+                ? 1 : Math.Max(0, Math.Min(1, legacy.Plan.ProbabilityPerCheck * legacy.ProbabilityMultiplier)) / legacy.PopulationScale;
             plans.Add(new ActionPlan(key, 0, new Condition("ref", "us.compat/Event"), 0,
                 !legacy.Plan.IgnoreGlobalCooldown, true, chance, key));
             if (!comp.ControlledOneShotAllowed(key, activeCommand)) blocked.Add(key);
@@ -118,7 +120,8 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             Audio = catalog.Audio,
             SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
             Fallback = SqueakKernelAdapter.BuildBuiltIn(),
-            BlockedActions = blocked
+            BlockedActions = blocked,
+            BlockedActionReasons = blockedReasons
         };
         if (legacy != null)
         {

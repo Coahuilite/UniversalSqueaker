@@ -51,7 +51,7 @@ Dev明确选择 `S3 CANDIDATE order: 17 actions W20 H40 actions120`，或调用 
 |ageEnabled|bool存在位|读取、折叠、恢复；响应实际乘算留S4，不偷偷启用新D4|
 |requires|空格分隔已注册事实身份|无额外依赖；缺实现仅暂停使用它的动作，不删条件|
 
-快照仅保存最后有效作者贡献、必要语义和依赖身份，不存父最终结果/player/总控/事实真假/随机/截止/句柄。A缺失且有B时仍用A好快照；同身份A归来用其当前有效数据并刷新快照；局部坏更新保该项旧好值，其他有效项继续。A当前有效且主动删某动作意味着不再贡献，不从旧快照复活。
+快照仅保存最后有效作者贡献、必要语义和依赖身份，不存父最终结果/player/总控/事实真假/随机/截止/句柄。A缺失且有B时仍用A好快照；同身份A归来用其当前有效数据并刷新快照；局部坏更新保该项旧好值，其他有效项继续。A当前有效且主动删某动作意味着不再贡献，不从旧快照复活。A缺失且快照语义无法解释时，保记录并以IncompatibleAuthorSnapshot暂停实际依赖动作；不退默认放行、不由B接管；合法同身份A可重连。
 
 启动刷新/选择/忘记均在副本验证后通过生产Config事务保存再提交。刷新保存失败时原持久绑定、好快照及文件不变；当前有效作者Def仍是运行只读事实，尚未成功保存的新值不能宣称已可缺源恢复。故障fixture明确比较当前运行值与重启后缺源时的上次持久好值。
 
@@ -63,10 +63,11 @@ Dev明确选择 `S3 CANDIDATE order: 17 actions W20 H40 actions120`，或调用 
 
 受控对象的合法未注册字符串经原NotifyExternalByKey→TryEvent进入同一DecisionState，不退出Dev、不要求新注册，也不退Comp私有冷却结算。保allowExternal、scope、玩家响应/主动来源、精确域音源、原Realtime实际采样及SqueakTimingModel倍率/时钟公式；初始旧最后记录投影给同一owner。原registry选音及旧年龄/心情覆盖/jitter含义保留，不切D4乘算。
 
-受控变化按已批D2：硬门先于roll；选中即占同tick；只有Dispatched/Indeterminate推进保护，AlreadyActive/Rejected不伪记派发；所有17和兼容调用共享名额/已立保护。原普通非受控路径不变。兼容轨迹覆盖两个方向同tick混用、拒绝不退名额、跨入口保护、tick大跳但真实秒不足、暂停同tick与Realtime精确端点；不固定估算tick与秒关系。
+受控变化按已批D2：硬门先于roll；选中即占同tick；只有Dispatched/Indeterminate推进保护，AlreadyActive/Rejected不伪记派发；所有17和兼容调用共享名额/已立保护。原普通非受控路径不变。兼容轨迹覆盖两个方向同tick混用、拒绝不退名额、跨入口保护、tick大跳但真实秒不足、暂停同tick与Realtime精确端点；不固定估算tick与秒关系。新动作/共用/等待/重检截止用饱和long加法：合法long.MaxValue不修改配置，截止保持最大值而不溢出成负数。
 
 ## 自动证据与未决
 
 `UniversalSqueakerOneShotTests`独立编译真实Authoring/Kernel/Pure，无游戏引用/同名stub；保旧golden，追加17事实、用途roll/次数、四回执、来源/权限/恢复、兼容时钟固定轨迹双重放。AudioBindingTests另以可控平台形状运行真实事实适配、AutoAttach、CreateDefault和资格函数；SettingsMigration另运行真实Settings/Scribe边界与原子文件事务。Host为真实产品/FL消费，原生与听感分别pending。
 
 最终日志和RPT位于 `dist/evidence/s3/`，Dev为 `dist/dev/UniversalSqueaker/`。固定FL仍0.7.0-dev+d5af4d8、[0.7.0,0.8.0)，未消费0.8。候选不是一般安装/发布建议。S5继承Settings→ApplyDistanceRange→共享SubSoundDef.distRange仍强制阻断C11/V14/整版接受；本轮不删、临时改写恢复或clone共享定义。
+
