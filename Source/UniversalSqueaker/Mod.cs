@@ -84,6 +84,7 @@ public partial class UniversalSqueakerMod : Mod
         SqueakLog.SettingsOrigin(Settings.SettingsLoadedFromFile ? SqueakSettingsOrigin.LoadedFromFile : SqueakSettingsOrigin.FreshCreated);
         SqueakLog.StartupIdentity();
         Harmony.PatchAll();
+        UsInstanceOutput.Initialize(Harmony);
 
         // The first callback appends initialization after native ResolveReferences audio callbacks.
         // Executing LongEventHandler consumes its growing queue; no time delay or polling is involved.
@@ -264,3 +265,4 @@ public partial class UniversalSqueakerMod : Mod
     }
 
 }
+

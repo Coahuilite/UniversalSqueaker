@@ -93,6 +93,8 @@ internal static partial class Program
         Console.WriteLine("OneShot/author production source checks PASS: " + checks);
         S2Resources();
         S3ContractsAndSources();
+        S4RhythmAndResponses();
+        S5SustainedOwner();
         Console.WriteLine("OneShot + S2 production source checks PASS: " + checks);
     }
 
@@ -410,4 +412,5 @@ internal static partial class Program
         Check(rejected, "unknown format rejected");
     }
 }
+
 

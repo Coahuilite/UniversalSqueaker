@@ -40,6 +40,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     private readonly long workTicks, woundedTicks;
     private readonly bool fullDevCandidate;
     private readonly OneShotDecision decision = new();
+    private readonly SustainedPlayback sustained = new();
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
     public DecisionOutcome LastOutcome { get; private set; }
@@ -108,6 +109,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             Domain = pawn.def.defName,
             Tick = now,
             Realtime = Time.realtimeSinceStartup,
+            ActiveSustainedKey = sustained.ActiveKey,
             StateOpportunity = eventKey == null,
             Eligible = pawn.Spawned
                 && pawn.MapHeld == Find.CurrentMap
@@ -139,6 +141,28 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         LastOutcome = decision.Run(state, policy, input, this, this);
     }
 
+    public void Maintain()
+    {
+        if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap
+            || SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
+        {
+            sustained.Stop("SubjectOrServiceUnavailable");
+            return;
+        }
+        long now = Find.TickManager.TicksGame;
+        if (sustained.ReviewDue(now))
+            sustained.Review(now, catalog.Capture(pawn.ThingID, UsPawnFacts.Capture(pawn, null)));
+        sustained.Maintain();
+    }
+    public void Stop() => sustained.Stop("SessionReleased");
+    private sealed class NativeSustainedHandle : ISustainedHandle
+    {
+        private readonly Sustainer native;
+        public NativeSustainedHandle(Sustainer native) { this.native = native; }
+        public bool Active => !native.Ended;
+        public void Maintain() { if (Active) native.Maintain(); }
+        public void End() { if (Active) native.End(); }
+    }
     public double Next(RandomPurpose purpose)
     {
         double value = Rand.Value;
@@ -150,7 +174,6 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     {
         SoundDef? sound = null;
         SoundInfo info = default;
-        SqueakMoodMod? legacyModulation = null;
         string rejection = "DynamicPreflightRejected";
         bool Preflight()
         {
@@ -176,7 +199,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 rejection = "MissingFinalBinding";
                 return false;
             }
-            if (sound.sustain)
+            if (sound.sustain && !request.Sustained)
             {
                 rejection = "OneShotShapeRequired";
                 return false;
@@ -189,29 +212,54 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             double localVolume = request.Audio.Volume;
             double localPitch = request.Pitch;
             double globalVolume = CompSqueaker.GlobalVolumeFactor;
-            if (request.UseLegacyModulation)
-            {
-                legacyModulation = pawn.GetComp<CompSqueaker>().ControlledLegacyModulation();
-                var jitter = legacyModulation.pitchJitter;
-                localPitch = legacyModulation.pitchFactor * (jitter.min + (jitter.max - jitter.min) * Next(RandomPurpose.LegacyJitter));
-                localVolume = legacyModulation.volumeFactor;
-                globalVolume = 1; // The retained modulation resolver has already applied this global factor once.
-            }
             if (!OneShotOutput.TryPrepare(localVolume, localPitch, globalVolume, out float volume, out float pitch))
             {
                 rejection = "InvalidFinalParameters";
                 return false;
             }
-            info.volumeFactor = volume;
+            if (!UsInstanceOutput.Available)
+            {
+                rejection = UsInstanceOutput.Failure;
+                return false;
+            }
+            if (request.Sustained && sound.sustain) info = SoundInfo.InMap(new TargetInfo(pawn), MaintenanceType.PerTick);
+            info.volumeFactor = 1;
             info.pitchFactor = pitch;
             return true;
         }
 
         void Play()
         {
-            sound!.PlayOneShot(info);
+            int token = UsInstanceOutput.Mark(ref info, new UsOutputContribution(request.Audio.Volume));
+            try { sound!.PlayOneShot(info); }
+            finally { UsInstanceOutput.ReleaseRequest(token); }
         }
 
+        if (request.Sustained)
+        {
+            try
+            {
+                if (!Preflight()) return new PlaybackReceipt(PlaybackResult.Rejected, rejection);
+            }
+            catch (Exception error) { return new PlaybackReceipt(PlaybackResult.Rejected, "Preparation:" + error.GetType().Name); }
+            return sustained.Dispatch(request, sound!.sustain, () =>
+            {
+                if (!sound.sustain)
+                {
+                    Play();
+                    return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched, "NonSustainOneShotFallback"));
+                }
+                int token = UsInstanceOutput.Mark(ref info, new UsOutputContribution(request.Audio.Volume));
+                try
+                {
+                    Sustainer? native = sound.TrySpawnSustainer(info);
+                    if (native == null || native.Ended)
+                        return new SustainedStart(new PlaybackReceipt(PlaybackResult.Indeterminate, "NoEffectiveSustainerAfterCall"));
+                    return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched, "NativeSustainerEstablished"), new NativeSustainedHandle(native));
+                }
+                finally { UsInstanceOutput.ReleaseRequest(token); }
+            });
+        }
         var receipt = OneShotDispatch.Execute(
             Preflight,
             Play,
@@ -314,7 +362,11 @@ public static class UsOneShotRuntime
         sessions[pawn] = new UsControlledOneShotSession(pawn, catalog, new StatePolicy(sharedTicks, waitTicks), workTicks, woundedTicks, fullDevCandidate);
     }
 
-    public static void DisableControlled(Pawn pawn) => sessions.Remove(pawn);
+    public static void DisableControlled(Pawn pawn)
+    {
+        if (sessions.TryGetValue(pawn, out var session)) session.Stop();
+        sessions.Remove(pawn);
+    }
     public static bool IsControlled(Pawn pawn) => sessions.ContainsKey(pawn);
     public static bool TryTick(Pawn pawn)
     {
@@ -331,6 +383,7 @@ public static class UsOneShotRuntime
 
         if (SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.MapHeld == Find.CurrentMap)
         {
+            session.Maintain();
             session.Tick();
         }
 
@@ -354,7 +407,11 @@ public static class UsOneShotRuntime
         return true;
     }
 
-    public static void ResetSession() => sessions.Clear();
+    public static void ResetSession()
+    {
+        foreach (var session in sessions.Values) session.Stop();
+        sessions.Clear();
+    }
 }
 
 public sealed class UsOneShotSessionLifecycle : GameComponent
@@ -367,3 +424,4 @@ public sealed class UsOneShotSessionLifecycle : GameComponent
     public override void StartedNewGame() => UsOneShotRuntime.ResetSession();
     public override void LoadedGame() => UsOneShotRuntime.ResetSession();
 }
+

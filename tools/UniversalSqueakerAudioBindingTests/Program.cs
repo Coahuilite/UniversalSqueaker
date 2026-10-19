@@ -45,6 +45,7 @@ internal static partial class Program
             CallerConsumption();
             S3PawnFactAdapter();
             S3NewAuthorDoesNotNeedLegacyTable();
+            S5InstanceOutputWithRealPatches();
         }
         Console.WriteLine("S2 controlled adapter fixture PASS: " + checks + " (not native game evidence)");
     }
@@ -305,5 +306,6 @@ internal static partial class Program
     }
 
 }
+
 
 

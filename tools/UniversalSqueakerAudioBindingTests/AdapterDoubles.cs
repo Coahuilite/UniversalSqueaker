@@ -23,6 +23,8 @@ namespace Verse.Sound
     public sealed class ResolvedGrain_Silence : ResolvedGrain { }
     public sealed class SubSoundDef
     {
+        public bool onCamera;
+        public Verse.FloatRange distRange = new(5, 20);
         private readonly List<ResolvedGrain> resolvedGrains;
         private readonly int distinctResolvedGrainsCount;
         public SubSoundDef(List<ResolvedGrain> grains, int count)
@@ -53,7 +55,7 @@ namespace Verse
     public sealed class Thing { public ThingDef def = new(); }
     public sealed class ThingDef : Def { public bool IsDrug; public object? race; public List<CompProperties> comps = new(); }
     public class CompProperties { public Type? compClass; }
-    public struct FloatRange { public float min, max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
+    public struct FloatRange { public float min, max; public float TrueMin => min; public float TrueMax => max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
     public sealed class Map { }
     public struct TargetInfo { }
     public static class Rand { public static float Value => .5f; }
@@ -281,6 +283,7 @@ namespace UniversalSqueaker
     public static class CompSqueaker
     {
         public static bool EatPrecisionEnabled, EatPrecisionIncludeDrugs;
+        public static float GlobalVolumeFactor = 1;
     }
 }
 
@@ -291,5 +294,111 @@ namespace UniversalSqueaker
         public SqueakMood mood;
         public float pitchFactor, volumeFactor;
         public Verse.FloatRange pitchJitter;
+    }
+}
+
+// Native-shape fixtures below exercise REAL Harmony patches, not an alternative output implementation.
+namespace UnityEngine
+{
+    public sealed class AudioSource
+    {
+        public float volume, pitch, minDistance, maxDistance;
+        public bool Playing;
+        public void Play() { Playing = true; }
+    }
+}
+namespace Verse.Sound
+{
+    public struct SoundInfo
+    {
+        private Dictionary<string, float>? parameters;
+        public float volumeFactor, pitchFactor;
+        public IEnumerable<KeyValuePair<string, float>> DefinedParameters => parameters ?? (IEnumerable<KeyValuePair<string, float>>)Array.Empty<KeyValuePair<string, float>>();
+        public void SetParameter(string key, float value)
+        {
+            parameters ??= new Dictionary<string, float>();
+            parameters[key] = value;
+        }
+        public static SoundInfo OnCamera() => new() { volumeFactor = 1, pitchFactor = 1 };
+    }
+    public abstract class Sample
+    {
+        public SubSoundDef subDef;
+        public UnityEngine.AudioSource source = null!;
+        public abstract SoundInfo Info { get; }
+        public float FixtureMapping = .5f;
+        public float FixtureContext = .8f;
+        protected virtual float Volume => 2 * Info.volumeFactor * FixtureMapping * FixtureContext;
+        public float SanitizedVolume => Volume;
+        public Sample(SubSoundDef definition) { subDef = definition; }
+        public virtual void Update() { source.volume = SanitizedVolume; source.pitch = Info.pitchFactor; }
+        public virtual void SampleCleanup() { }
+    }
+    public sealed class SampleOneShot : Sample
+    {
+        public SoundInfo info;
+        public override SoundInfo Info => info;
+        public SampleOneShot(SubSoundDef definition, SoundInfo info) : base(definition) { this.info = info; }
+        public static SampleOneShot TryMakeAndPlay(SubSoundDef definition, SoundInfo info, UnityEngine.AudioSource source)
+        {
+            var sample = new SampleOneShot(definition, info) { source = source };
+            source.volume = sample.SanitizedVolume;
+            source.minDistance = definition.distRange.TrueMin;
+            source.maxDistance = definition.distRange.TrueMax;
+            sample.Update();
+            source.Play();
+            return sample;
+        }
+    }
+    public sealed class SubSustainer
+    {
+        public readonly Sustainer parent;
+        public readonly SubSoundDef subDef;
+        public SoundInfo Info => parent.info;
+        public SubSustainer(Sustainer parent, SubSoundDef subDef) { this.parent = parent; this.subDef = subDef; }
+    }
+    public sealed class SampleSustainer : Sample
+    {
+        public SubSustainer subSustainer;
+        public override SoundInfo Info => subSustainer.Info;
+        protected override float Volume => base.Volume * .25f;
+        public SampleSustainer(SubSustainer parent) : base(parent.subDef) { subSustainer = parent; }
+    }
+    public sealed class Sustainer
+    {
+        public SoundInfo info;
+        public SampleSustainer Initial;
+        public bool Ended;
+        public bool FixtureCamera;
+        public Sustainer(Verse.SoundDef definition, SoundInfo info)
+        {
+            this.info = info;
+            Initial = new SampleSustainer(new SubSustainer(this, definition.subSounds[0])) { source = new UnityEngine.AudioSource() };
+            Initial.source.volume = Initial.SanitizedVolume; // The constructor-time sample precedes parent capture postfix.
+            Initial.source.minDistance = Initial.subDef.distRange.TrueMin;
+            Initial.source.maxDistance = Initial.subDef.distRange.TrueMax;
+            Initial.Update();
+            Initial.source.Play();
+        }
+        public void End() { Ended = true; PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
+        private void Cleanup() { Initial.SampleCleanup(); PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
+        public void FixtureCleanup() => Cleanup();
+        private void PlaySoundOnMapOrCamera(Verse.SoundDef sound)
+        {
+            if (FixtureCamera) sound.PlayOneShot(SoundInfo.OnCamera());
+            else sound.PlayOneShot(SoundInfo.OnCamera());
+        }
+    }
+    public static class SoundStarter
+    {
+        public static readonly List<SampleOneShot> Played = new();
+        public static Action? NestedCall;
+        public static void PlayOneShot(this Verse.SoundDef definition, SoundInfo info)
+        {
+            var nested = NestedCall;
+            NestedCall = null;
+            nested?.Invoke();
+            Played.Add(SampleOneShot.TryMakeAndPlay(definition.subSounds[0], info, new UnityEngine.AudioSource()));
+        }
     }
 }

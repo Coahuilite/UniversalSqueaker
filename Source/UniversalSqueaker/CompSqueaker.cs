@@ -988,41 +988,16 @@ public class CompSqueaker : ThingComp
     {
         activeDistanceRange = range;
         SqueakPeriodicPopulation.NotifyDistanceChanged();
-        EnsureSoundCache();
-        HashSet<SoundDef> defs = new(SqueakRuntimeResolver.Current.KnownMapSoundDefs);
-        foreach (SoundDef? def in SoundCacheMixed.Values)
-        {
-            if (def != null) defs.Add(def);
-        }
-
-        foreach (SoundDef def in defs)
-        {
-            ApplyDistanceRange(def, activeDistanceRange);
-        }
+        UsInstanceOutput.Distance = range;
     }
 
     /// <summary>Explicit overlay/diagnostic maintenance; snapshot readers remain side-effect free.</summary>
     internal static void MaintainPeriodicPopulationDiagnostics() => SqueakPeriodicPopulation.Maintain(activeDistanceRange);
 
-    private static void ApplyDistanceRange(SoundDef? def, FloatRange range)
-    {
-        if (def?.subSounds == null)
-        {
-            return;
-        }
-
-        foreach (SubSoundDef subSound in def.subSounds)
-        {
-            if (!subSound.onCamera)
-            {
-                subSound.distRange = range;
-            }
-        }
-    }
-
     private bool IsCurrentJobPlayerCommand() => Pawn.CurJob?.playerForced == true;
     private bool IsCurrentEquipJobPlayerCommand() => Pawn.CurJob?.playerForced == true && Pawn.CurJob.def == JobDefOf.Equip;
 
 }
+
 
 
