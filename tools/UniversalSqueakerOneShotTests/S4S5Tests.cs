@@ -101,8 +101,15 @@ internal static partial class Program
     {
         public bool Active { get; private set; } = true;
         public int Maintains, Ends;
+        public string EndFault = "";
         public void Maintain() { Maintains++; }
-        public void End() { Ends++; Active = false; }
+        public void End()
+        {
+            Ends++;
+            if (EndFault == "before") throw new InvalidOperationException("before native end");
+            Active = false;
+            if (EndFault == "after") throw new InvalidOperationException("after native end");
+        }
     }
     private static PlaybackRequest SustainedRequest(string key, int priority, long tick = 1000)
         => new("p1", "Ratkin", key, new AudioCandidate("entry", "audio/Work", key, "Ratkin", 1), tick,
@@ -110,6 +117,24 @@ internal static partial class Program
 
     private static void S5SustainedOwner()
     {
+        foreach (string phase in new[] { "before", "after" })
+        {
+            var failedSlot = new SustainedPlayback();
+            var failedHandle = new Handle { EndFault = phase };
+            failedSlot.Dispatch(SustainedRequest("Work", 10), true,
+                () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), failedHandle));
+            int replacementCalls = 0;
+            var result = failedSlot.Dispatch(SustainedRequest("Wounded", 20), true, () =>
+            {
+                replacementCalls++;
+                return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), new Handle());
+            });
+            Check(result.Result == PlaybackResult.Rejected && replacementCalls == 0 && failedHandle.Ends == 1
+                && failedSlot.LastEndReason.Contains(":EndFault:") && !failedSlot.Active,
+                "S5 old End fault " + phase + " is separately recorded; new callback was not entered");
+            failedSlot.Stop("lifecycle release");
+            Check(failedHandle.Ends == 1, "S5 old End fault cannot be retried by later lifecycle release");
+        }
         var slot = new SustainedPlayback();
         var handle = new Handle();
         Check(slot.Dispatch(SustainedRequest("Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), handle)).Result == PlaybackResult.Dispatched,

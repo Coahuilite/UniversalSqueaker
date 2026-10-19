@@ -554,3 +554,5 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 新`UsVoicePackDef`不是永久启用：验证后的声明投影进既有Packs目录，沿`packageId:DefName`选择身份及准确Race域启停；未显式选择沿原目录规则为未选入，不自动采用。当前声明格式仅Race域，子域选择不代替主域选择；旧Xenotype包规则保持。Runtime只合入当前已选声明的条目，保其局部校准和参与元数据。关闭音频包不卸载独立行为来源，也不改变其绑定意图；Fallback/Remix/Vanilla/Disabled仍按原模式合同。
 
 声音包根`weight`为包权重（省略1），entry的`weight`仅在已选包内作变体权重。多个entry不增加包份额；A含10条、B含1条且包等权时仍先A:B=1:1，再选本包entry。保留Kernel返回的SelectedVariant准确映射到entry校准与参与，不用AudioId猜来源。
+
+高优先替换时，旧`End`故障单独记录为`EndFault`；若新启动回调尚未进入，新请求为Rejected，不写新动作/共用硬保护或确认tick。槽先解除持有，避免重复非幂等End，不恢复旧音或补播；生命周期释放记录一次警告并继续释放其他自有session。只有进入新启动边界后不能确认的新请求才是Indeterminate。

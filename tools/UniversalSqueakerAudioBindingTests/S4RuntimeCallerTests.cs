@@ -182,6 +182,7 @@ internal static partial class Program
         Check(destroyedHandle.EndCalls == 1 && !UsOneShotRuntime.IsControlled(pawn),
             "S5 actual destroyed-subject caller releases the owned handle and its sole session");
         pawn.Destroyed = false;
+        S5ActualEndFaults(pawn, comp);
         comp.FixtureSustained = false;
         material.sustain = false;
 
@@ -189,6 +190,44 @@ internal static partial class Program
         UniversalSqueakerMod.Settings.Values = new BehaviorValues();
         UsOneShotRuntime.ResetSession();
         SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
+    }
+
+    private static void S5ActualEndFaults(Pawn pawn, CompSqueaker comp)
+    {
+        foreach (string phase in new[] { "before", "after" })
+        {
+            UsOneShotRuntime.ResetSession();
+            Find.TickManager.TicksGame = 4000;
+            comp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+            var session = RuntimeSession(pawn);
+            var old = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
+            old.EndFailure = phase;
+            int starts = SoundStarter.Spawned.Count;
+            long shared = session.State.SharedDeadline;
+            Find.TickManager.TicksGame = 4140;
+            comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
+            Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected
+                && session.LastOutcome.Reason.Contains("NewStartNotEntered:")
+                && session.DiagnosticText.Contains(":EndFault:") && SoundStarter.Spawned.Count == starts
+                && old.EndCalls == 1 && session.State.SharedDeadline == shared
+                && session.State.ActionDeadline("us.core/Wounded") == long.MinValue && session.State.ConfirmedTick == 4000,
+                "S5 actual old End fault " + phase + " records old uncertainty, zero new native starts and no new hard protection");
+            UsOneShotRuntime.ResetSession();
+            Check(old.EndCalls == 1, "S5 actual failed old End is not repeated by lifecycle cleanup");
+        }
+        Find.TickManager.TicksGame = 5000;
+        comp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        var failing = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
+        failing.EndFailure = "before";
+        var other = new Pawn { ThingID = "Pawn-EndCleanupControl", IsPlayerControlled = true, needs = pawn.needs };
+        var otherComp = new CompSqueaker { Pawn = other, FixtureSustained = true };
+        other.Comp = otherComp;
+        otherComp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        var healthy = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
+        UsOneShotRuntime.ResetSession();
+        Check(failing.EndCalls == 1 && healthy.EndCalls == 1 && !UsOneShotRuntime.IsControlled(pawn)
+            && !UsOneShotRuntime.IsControlled(other) && Log.Lines.Exists(x => x.Contains("owned sustained end uncertain")),
+            "S5 lifecycle End fault is reported and cannot prevent another owned session from releasing");
     }
 
     private static void S5ActualRuntimeSustained(Pawn pawn, CompSqueaker comp, UsPawnPlaybackSession session)

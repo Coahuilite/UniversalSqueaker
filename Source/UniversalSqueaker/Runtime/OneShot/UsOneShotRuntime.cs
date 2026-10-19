@@ -46,6 +46,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     private PlaybackRequest? lastRequest;
     private long lastObservation;
     private bool diagnosticFaultReported;
+    private bool endFaultReported;
     internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
@@ -197,7 +198,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap
             || SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
         {
-            sustained.Stop("SubjectOrServiceUnavailable");
+            EndSustained("SubjectOrServiceUnavailable");
             return;
         }
         long now = Find.TickManager.TicksGame;
@@ -214,14 +215,30 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             if (paused || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
                 || comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
             {
-                sustained.Stop("CurrentAuthorizationUnavailable");
+                EndSustained("CurrentAuthorizationUnavailable");
                 return;
             }
             sustained.Review(now, catalog.Capture(pawn.ThingID, UsPawnFacts.Capture(pawn, null)));
+            ReportEndFault();
         }
         sustained.Maintain();
     }
-    public void Stop() => sustained.Stop("SessionReleased");
+    public void Stop() => EndSustained("SessionReleased");
+
+    private void EndSustained(string reason)
+    {
+        sustained.Stop(reason);
+        ReportEndFault();
+    }
+
+    private void ReportEndFault()
+    {
+        if (!endFaultReported && sustained.LastEndReason.Contains(":EndFault:"))
+        {
+            endFaultReported = true;
+            Log.Warning("usdiag owned sustained end uncertain; slot detached, no repeated End: " + sustained.LastEndReason);
+        }
+    }
     private sealed class NativeSustainedHandle : ISustainedHandle
     {
         private readonly Sustainer native;
@@ -341,7 +358,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             {
                 return new PlaybackReceipt(PlaybackResult.Rejected, "Preparation:" + error.GetType().Name);
             }
-            return sustained.Dispatch(request, sound!.sustain, () =>
+            var result = sustained.Dispatch(request, sound!.sustain, () =>
             {
                 if (!sound.sustain)
                 {
@@ -363,6 +380,8 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                     UsInstanceOutput.ReleaseRequest(token);
                 }
             });
+            ReportEndFault();
+            return result;
         }
         var receipt = OneShotDispatch.Execute(
             Preflight,

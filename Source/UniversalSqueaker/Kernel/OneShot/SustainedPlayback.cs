@@ -46,7 +46,10 @@ public sealed class SustainedPlayback
             {
                 return new PlaybackReceipt(PlaybackResult.Rejected, "ExistingHigherOrEqualSustainer");
             }
-            Stop("HigherPriorityReplacement");
+            if (!Stop("HigherPriorityReplacement"))
+            {
+                return new PlaybackReceipt(PlaybackResult.Rejected, "NewStartNotEntered:" + LastEndReason);
+            }
         }
         SustainedStart result;
         try
@@ -110,16 +113,27 @@ public sealed class SustainedPlayback
             handle = null;
         }
     }
-    public void Stop(string reason)
+    public bool Stop(string reason)
     {
         var old = handle;
         handle = null;
         key = "";
         condition = null;
-        if (old?.Active == true)
-        {
-            old.End();
-        }
         LastEndReason = reason;
+        try
+        {
+            if (old?.Active == true)
+            {
+                old.End();
+            }
+            return true;
+        }
+        catch (Exception error)
+        {
+            // The old end is uncertain, but the replacement callback has not been entered.
+            // Detach first so lifecycle cleanup cannot repeat a non-idempotent End.
+            LastEndReason = reason + ":EndFault:" + error.GetType().Name;
+            return false;
+        }
     }
 }

@@ -121,51 +121,10 @@ public partial class UniversalSqueakerSettings
             {
                 foreach (var record in actionTuning)
                 {
-                    if (record.actionKey != action || !record.IsValidLayer(out int actual) || actual != layer)
+                    if (AppliesToBehaviorDomain(record, domain, action, layer))
                     {
-                        continue;
+                        players.Add(ProjectBehaviorPlayerValues(record));
                     }
-                    if (layer > 0 && (domain.Family != "Pawn" || record.raceDefName != domain.Target))
-                    {
-                        continue;
-                    }
-                    if (layer == 2 && (domain.Child == "" || record.xenotypeDefName != domain.Child))
-                    {
-                        continue;
-                    }
-                    // No conversion of old probability/interval multipliers into chance or hard ticks.
-                    var player = new BehaviorValues
-                    {
-                        Scope = record.hasScope ? record.scope : null,
-                        Enabled = record.hasScope ? record.scope != SqueakActionScope.Disabled : null
-                    };
-                    foreach (var response in record.responses)
-                    {
-                        if (response.hasEnabled)
-                        {
-                            if (response.key == "us.core/Age")
-                            {
-                                player.AgeEnabled = response.enabled;
-                            }
-                            else if (response.key == "us.core/Mood")
-                            {
-                                player.MoodEnabled = response.enabled;
-                            }
-                            else
-                            {
-                                player.ResponseEnabled.Add(response.key, response.enabled);
-                            }
-                        }
-                        if (response.hasParticipation)
-                        {
-                            player.Participation.Add(response.key, response.apply);
-                        }
-                    }
-                    foreach (var parameter in record.responseParameters)
-                    {
-                        player.ResponseParameters.Add(parameter.key, parameter.value);
-                    }
-                    players.Add(player);
                 }
             }
             return BehaviorSourceState.FromXml(behaviorSourcesXml).Resolve(domain, action, directory, players, implementationAvailable, out paused, reportPause);
@@ -177,5 +136,58 @@ public partial class UniversalSqueakerSettings
             reportPause?.Invoke("UnreadableBehaviorConfig");
             return new BehaviorValues();
         }
+    }
+    private static bool AppliesToBehaviorDomain(ActionTuningRecord record, BehaviorDomain domain, string action, int layer)
+    {
+        if (record.actionKey != action || !record.IsValidLayer(out int actual) || actual != layer)
+        {
+            return false;
+        }
+        if (layer == 0)
+        {
+            return true;
+        }
+        if (domain.Family != "Pawn" || record.raceDefName != domain.Target)
+        {
+            return false;
+        }
+        return layer != 2 || domain.Child != "" && record.xenotypeDefName == domain.Child;
+    }
+
+    private static BehaviorValues ProjectBehaviorPlayerValues(ActionTuningRecord record)
+    {
+        // Old probability/interval multipliers are not converted into new chance or hard ticks.
+        var player = new BehaviorValues
+        {
+            Scope = record.hasScope ? record.scope : null,
+            Enabled = record.hasScope ? record.scope != SqueakActionScope.Disabled : null
+        };
+        foreach (var response in record.responses)
+        {
+            if (response.hasEnabled)
+            {
+                switch (response.key)
+                {
+                    case "us.core/Age":
+                        player.AgeEnabled = response.enabled;
+                        break;
+                    case "us.core/Mood":
+                        player.MoodEnabled = response.enabled;
+                        break;
+                    default:
+                        player.ResponseEnabled.Add(response.key, response.enabled);
+                        break;
+                }
+            }
+            if (response.hasParticipation)
+            {
+                player.Participation.Add(response.key, response.apply);
+            }
+        }
+        foreach (var parameter in record.responseParameters)
+        {
+            player.ResponseParameters.Add(parameter.key, parameter.value);
+        }
+        return player;
     }
 }

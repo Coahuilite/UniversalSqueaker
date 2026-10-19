@@ -395,6 +395,7 @@ namespace Verse.Sound
         public SampleSustainer Initial;
         public bool Ended;
         public int EndCalls;
+          public string EndFailure = "";
         public bool FixtureCamera;
         public Sustainer(Verse.SoundDef definition, SoundInfo info)
         {
@@ -406,7 +407,14 @@ namespace Verse.Sound
             Initial.Update();
             Initial.source.Play();
         }
-        public void End() { EndCalls++; Ended = true; PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
+          public void End()
+          {
+              EndCalls++;
+              if (EndFailure == "before") throw new InvalidOperationException("before End");
+              Ended = true;
+              PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } });
+              if (EndFailure == "after") throw new InvalidOperationException("after auxiliary");
+          }
         public void Maintain() { }
         private void Cleanup() { Initial.SampleCleanup(); PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
         public void FixtureCleanup() => Cleanup();
