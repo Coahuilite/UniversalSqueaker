@@ -15,6 +15,8 @@ public sealed class VoiceEntry
     public double Weight = 1;
     public bool? Enabled;
     public double? Volume;
+    public double Pitch = 1;
+    public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
 }
 
 /// <summary>RimWorld calls this same custom field loader during normal Def deserialization.</summary>
@@ -23,9 +25,11 @@ public sealed class VoicePackDeclaration
     public int FormatVersion = 1;
     public string Race = "";
     public readonly List<VoiceEntry> Entries = new();
+    public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "race", "entries");
+        AuthorXml.Fields(node, "formatVersion", "race", "entries", "participation");
+        Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
         FormatVersion = AuthorXml.Version(node);
         Race = AuthorXml.Required(node, "race");
         Entries.Clear();
@@ -36,7 +40,7 @@ public sealed class VoicePackDeclaration
                 throw new ArgumentException("Unknown entries element " + entry.Name);
             }
 
-            AuthorXml.Fields(entry, "key", "action", "sound", "weight", "enabled", "volume");
+            AuthorXml.Fields(entry, "key", "action", "sound", "weight", "enabled", "volume", "pitch", "participation");
             var weightText = entry.SelectSingleNode("weight")?.InnerText;
             var enabledText = entry.SelectSingleNode("enabled")?.InnerText;
             var volumeText = entry.SelectSingleNode("volume")?.InnerText;
@@ -47,7 +51,9 @@ public sealed class VoicePackDeclaration
                 Sound = AuthorXml.Required(entry, "sound"),
                 Weight = weightText == null ? 1 : double.Parse(weightText, CultureInfo.InvariantCulture),
                 Enabled = enabledText == null ? null : bool.Parse(enabledText),
-                Volume = volumeText == null ? null : double.Parse(volumeText, CultureInfo.InvariantCulture)
+                Volume = volumeText == null ? null : double.Parse(volumeText, CultureInfo.InvariantCulture),
+                Pitch = double.Parse(entry.SelectSingleNode("pitch")?.InnerText ?? "1", CultureInfo.InvariantCulture),
+                Participation = AuthorXml.Participation(entry.SelectSingleNode("participation"))
             });
         }
     }
@@ -59,9 +65,18 @@ public sealed class ActionDeclaration
     public string Key = "";
     public string BaseAction = "";
     public Condition Condition = new("all");
+    public bool Sustained;
+    public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition");
+        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback", "participation");
+        string playback = node.SelectSingleNode("playback")?.InnerText ?? "OneShot";
+        if (playback != "OneShot" && playback != "Sustained")
+        {
+            throw new ArgumentException("Expected OneShot or Sustained playback");
+        }
+        Sustained = playback == "Sustained";
+        Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
         FormatVersion = AuthorXml.Version(node);
         Key = AuthorXml.Required(node, "key");
         BaseAction = AuthorXml.Required(node, "baseAction");
@@ -78,6 +93,25 @@ public sealed class ActionDeclaration
 
 public static class AuthorXml
 {
+    public static Dictionary<string, bool> Participation(XmlNode? node)
+    {
+        var result = new Dictionary<string, bool>(StringComparer.Ordinal);
+        foreach (XmlNode entry in Elements(node))
+        {
+            if (entry.Name != "li" || entry.Attributes?.Count != 1 || entry.Attributes["key"] == null
+                || entry.ChildNodes.OfType<XmlElement>().Any())
+            {
+                throw new ArgumentException("Expected participation li with key and Apply or Skip text");
+            }
+            string key = entry.Attributes["key"]!.Value;
+            if (!ExactKey(key))
+            {
+                throw new ArgumentException("Invalid participation identity");
+            }
+            result.Add(key, BehaviorSourceState.ReadParticipation(entry.InnerText));
+        }
+        return result;
+    }
     public static void Fields(XmlNode node, params string[] allowed)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -186,7 +220,18 @@ public interface IUsFactSource
 public sealed class ProviderBatch
 {
     private readonly List<IUsFactSource> facts = new();
+    private readonly List<IUsResponseRule> responses = new();
     public IReadOnlyList<IUsFactSource> Facts => facts;
+    public IReadOnlyList<IUsResponseRule> Responses => responses;
+
+    public void AddResponse(IUsResponseRule response)
+    {
+        if (response == null)
+        {
+            throw new ArgumentNullException(nameof(response));
+        }
+        responses.Add(response);
+    }
 
     public void AddFactSource(IUsFactSource fact)
     {
@@ -203,6 +248,13 @@ public sealed class AuthorCatalog
 {
     private readonly Dictionary<string, RegisteredFact> facts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ActionPlan> actions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Dictionary<string, bool>> actionParticipation = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IUsResponseRule> responses = new(StringComparer.Ordinal)
+    {
+        ["us.core/Age"] = new NativeAgeResponse(),
+        ["us.core/Mood"] = new MoodResponse()
+    };
+    public IUsResponseRule[] Responses => responses.Values.ToArray();
     private readonly List<AudioCandidate> audio = new();
     private readonly HashSet<string> packKeys = new(StringComparer.Ordinal);
     public readonly List<string> Issues = new();
@@ -249,6 +301,7 @@ public sealed class AuthorCatalog
             var batch = new ProviderBatch();
             provider.Collect(batch);
             var pending = new Dictionary<string, RegisteredFact>(StringComparer.Ordinal);
+            var pendingResponses = new Dictionary<string, IUsResponseRule>(StringComparer.Ordinal);
             string providerId = provider.GetType().FullName ?? provider.GetType().Name;
             foreach (var fact in batch.Facts)
             {
@@ -262,9 +315,24 @@ public sealed class AuthorCatalog
                 pending.Add(key, new RegisteredFact(fact, providerId));
             }
 
+            foreach (var response in batch.Responses)
+            {
+                string key = response.Key;
+                var stage = response.Stage;
+                if (!AuthorXml.ExactKey(key) || responses.ContainsKey(key) || pendingResponses.ContainsKey(key)
+                    || !Enum.IsDefined(typeof(ResponseStage), stage))
+                {
+                    throw new ArgumentException("Duplicate/invalid response " + key);
+                }
+                pendingResponses.Add(key, new RegisteredResponse(key, stage, response));
+            }
             foreach (var entry in pending)
             {
                 facts.Add(entry.Key, entry.Value);
+            }
+            foreach (var entry in pendingResponses)
+            {
+                responses.Add(entry.Key, entry.Value);
             }
 
             return true;
@@ -311,7 +379,9 @@ public sealed class AuthorCatalog
                 parent.BaseAction,
                 parent.SkipTalking,
                 parent.Volume,
-                parent.Pitch));
+                parent.Pitch,
+                declaration.Sustained));
+            actionParticipation.Add(declaration.Key, new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal));
             return true;
         }
         catch (Exception error)
@@ -358,7 +428,20 @@ public sealed class AuthorCatalog
                     continue;
                 }
 
-                batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race, entry.Weight, entry.Volume ?? 1));
+                var participation = new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal);
+                if (actionParticipation.TryGetValue(entry.Action, out var actionDefaults))
+                {
+                    foreach (var setting in actionDefaults)
+                    {
+                        participation[setting.Key] = setting.Value;
+                    }
+                }
+                foreach (var setting in entry.Participation)
+                {
+                    participation[setting.Key] = setting.Value;
+                }
+                batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race,
+                    entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation));
             }
 
             audio.AddRange(batch);
@@ -413,6 +496,20 @@ public sealed class AuthorCatalog
             Source = source;
             Provider = provider;
         }
+    }
+
+    private sealed class RegisteredResponse : IUsResponseRule
+    {
+        public string Key { get; }
+        public ResponseStage Stage { get; }
+        private readonly IUsResponseRule source;
+        internal RegisteredResponse(string key, ResponseStage stage, IUsResponseRule source)
+        {
+            Key = key;
+            Stage = stage;
+            this.source = source;
+        }
+        public ResponseContribution Evaluate(ResponseContext context) => source.Evaluate(context);
     }
 
     private sealed class BuiltInFact : IUsFactSource

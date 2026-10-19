@@ -37,7 +37,7 @@ namespace Verse.Sound
 }
 namespace Verse
 {
-    public sealed class Pawn
+    public sealed partial class Pawn
     {
         public Verse.AI.Job? CurJob;
         public Verse.AI.Pawn_JobTracker? jobs;
@@ -51,21 +51,24 @@ namespace Verse
         public PawnPosture GetPosture() => PawnPosture.LayingInBed;
     }
     public enum PawnPosture { LayingInBed }
-    public sealed class Pawn_NeedsTracker { public object? rest; }
+    public sealed class Pawn_NeedsTracker { public object? rest; public FixtureMood? mood; }
+    public sealed class FixtureMood { public float CurLevelPercentage = .5f; }
     public sealed class Thing { public ThingDef def = new(); }
     public sealed class ThingDef : Def { public bool IsDrug; public object? race; public List<CompProperties> comps = new(); }
     public class CompProperties { public Type? compClass; }
     public struct FloatRange { public float min, max; public float TrueMin => min; public float TrueMax => max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
     public sealed class Map { }
-    public struct TargetInfo { }
+    public struct TargetInfo { public TargetInfo(Pawn pawn) { } }
     public static class Rand { public static float Value => .5f; }
     public static class ModsConfig { public static bool BiotechActive = true; }
     public class Def
     {
         public string defName = "";
+        public ModContentPack? modContentPack;
     }
     public sealed class SoundDef : Def
     {
+        public bool sustain;
         public readonly List<Verse.Sound.SubSoundDef> subSounds = new();
         public string FixtureValue = "";
     }
@@ -88,6 +91,7 @@ namespace Verse
         public static readonly List<string> Lines = new();
         public static void Warning(string line) => Lines.Add(line);
         public static void Error(string line) => Lines.Add(line);
+        public static void Message(string line) => Lines.Add(line);
     }
     public static class GenTypes
     {
@@ -173,6 +177,13 @@ namespace UniversalSqueaker
     }
     public static class SqueakSoundAvailabilityCache
     {
+        public static bool RejectProductionInfo;
+        public static bool TryCreateProductionInfo(Verse.SoundDef sound, Verse.Pawn pawn, out Verse.Sound.SoundInfo info, out SqueakSoundPlayability result)
+        {
+            info = Verse.Sound.SoundInfo.OnCamera();
+            result = SqueakSoundPlayability.Playable;
+            return !RejectProductionInfo;
+        }
         public static SqueakSoundPlayability GetProductionPlayability(Verse.SoundDef sound, Verse.Pawn? pawn) => SqueakSoundPlayability.Playable;
         public static SqueakSoundPlayability GetNativePlayability(Verse.SoundDef sound, Verse.Map? map, Verse.TargetInfo? target) => SqueakSoundPlayability.Playable;
         public static int ResolveCalls;
@@ -280,7 +291,7 @@ namespace RimWorld
 }
 namespace UniversalSqueaker
 {
-    public static class CompSqueaker
+    public partial class CompSqueaker : Verse.ThingComp
     {
         public static bool EatPrecisionEnabled, EatPrecisionIncludeDrugs;
         public static float GlobalVolumeFactor = 1;
@@ -320,7 +331,9 @@ namespace Verse.Sound
             parameters[key] = value;
         }
         public static SoundInfo OnCamera() => new() { volumeFactor = 1, pitchFactor = 1 };
+        public static SoundInfo InMap(Verse.TargetInfo target, MaintenanceType maintenance) => OnCamera();
     }
+    public enum MaintenanceType { PerTick }
     public abstract class Sample
     {
         public SubSoundDef subDef;
@@ -376,6 +389,7 @@ namespace Verse.Sound
         public SoundInfo info;
         public SampleSustainer Initial;
         public bool Ended;
+        public int EndCalls;
         public bool FixtureCamera;
         public Sustainer(Verse.SoundDef definition, SoundInfo info)
         {
@@ -387,7 +401,8 @@ namespace Verse.Sound
             Initial.Update();
             Initial.source.Play();
         }
-        public void End() { Ended = true; PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
+        public void End() { EndCalls++; Ended = true; PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
+        public void Maintain() { }
         private void Cleanup() { Initial.SampleCleanup(); PlaySoundOnMapOrCamera(new Verse.SoundDef { subSounds = { Initial.subDef } }); }
         public void FixtureCleanup() => Cleanup();
         private void PlaySoundOnMapOrCamera(Verse.SoundDef sound)
@@ -398,6 +413,22 @@ namespace Verse.Sound
     }
     public static class SoundStarter
     {
+        public static readonly List<Sustainer> Spawned = new();
+        public static string SpawnFailure = "";
+        public static Sustainer? TrySpawnSustainer(this Verse.SoundDef definition, SoundInfo info)
+        {
+            if (SpawnFailure == "null")
+            {
+                return null;
+            }
+            var parent = new Sustainer(definition, info);
+            Spawned.Add(parent);
+            if (SpawnFailure == "ended")
+            {
+                parent.End();
+            }
+            return parent;
+        }
         public static readonly List<SampleOneShot> Played = new();
         public static Action? NestedCall;
         public static void PlayOneShot(this Verse.SoundDef definition, SoundInfo info)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Verse;
 
 namespace UniversalSqueaker;
@@ -22,6 +23,8 @@ public class ActionTuningRecord : IExposable
     public float intervalMultiplier = 1f;
     public bool hasProbabilityMultiplier;
     public float probabilityMultiplier = 1f;
+    public List<ResponseTuningValue> responses = new();
+    public List<ResponseParameterValue> responseParameters = new();
 
     public void ExposeData()
     {
@@ -35,6 +38,10 @@ public class ActionTuningRecord : IExposable
         Scribe_Values.Look(ref intervalMultiplier, "intervalMultiplier", 1f);
         Scribe_Values.Look(ref hasProbabilityMultiplier, "hasProbabilityMultiplier", false);
         Scribe_Values.Look(ref probabilityMultiplier, "probabilityMultiplier", 1f);
+        Scribe_Collections.Look(ref responses, "responses", LookMode.Deep);
+        Scribe_Collections.Look(ref responseParameters, "responseParameters", LookMode.Deep);
+        responses ??= new List<ResponseTuningValue>();
+        responseParameters ??= new List<ResponseParameterValue>();
     }
 
     /// <summary>分层判定：全空=Global，仅 race=Race，race+xeno=Xenotype。非法（race 空但 xeno 非空）返回 false。</summary>
@@ -60,5 +67,37 @@ public class ActionTuningRecord : IExposable
         intervalMultiplier = value.intervalMultiplier,
         hasProbabilityMultiplier = value.hasProbabilityMultiplier,
         probabilityMultiplier = value.probabilityMultiplier,
+        responses = value.responses.Select(x => x.Copy()).ToList(),
+        responseParameters = value.responseParameters.Select(x => x.Copy()).ToList(),
     };
+}
+
+public sealed class ResponseTuningValue : IExposable
+{
+    public string key = "";
+    public bool hasEnabled;
+    public bool enabled;
+    public bool hasParticipation;
+    public bool apply = true;
+    public void ExposeData()
+    {
+        Scribe_Values.Look(ref key, "key", "");
+        Scribe_Values.Look(ref hasEnabled, "hasEnabled", false);
+        Scribe_Values.Look(ref enabled, "enabled", false);
+        Scribe_Values.Look(ref hasParticipation, "hasParticipation", false);
+        Scribe_Values.Look(ref apply, "apply", true);
+    }
+    internal ResponseTuningValue Copy() => (ResponseTuningValue)MemberwiseClone();
+}
+
+public sealed class ResponseParameterValue : IExposable
+{
+    public string key = "";
+    public double value;
+    public void ExposeData()
+    {
+        Scribe_Values.Look(ref key, "key", "");
+        Scribe_Values.Look(ref value, "value", 0d);
+    }
+    internal ResponseParameterValue Copy() => (ResponseParameterValue)MemberwiseClone();
 }

@@ -38,7 +38,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     private readonly DecisionState state;
     private readonly StatePolicy policy;
     private readonly long workTicks, woundedTicks;
-    private readonly bool fullDevCandidate;
+    private readonly UsDevelopmentPolicy candidate;
     private readonly OneShotDecision decision = new();
     private readonly SustainedPlayback sustained = new();
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
@@ -46,16 +46,17 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
 
-    internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, StatePolicy policy, long workTicks, long woundedTicks, bool fullDevCandidate)
+    internal UsControlledOneShotSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
     {
         this.pawn = pawn;
         this.catalog = catalog;
-        this.policy = policy;
-        state = new DecisionState(Find.TickManager.TicksGame);
-        pawn.GetComp<CompSqueaker>().SeedControlledLegacyClock(state);
-        this.workTicks = workTicks;
-        this.woundedTicks = woundedTicks;
-        this.fullDevCandidate = fullDevCandidate;
+        policy = candidate.State;
+        long now = Find.TickManager.TicksGame;
+        long offset = candidate.InitialSpread == 0 ? 0 : (long)((uint)pawn.thingIDNumber % (ulong)candidate.InitialSpread);
+        state = new DecisionState(now > long.MaxValue - offset ? long.MaxValue : now + offset);
+        workTicks = candidate.Interval;
+        woundedTicks = candidate.WoundedInterval;
+        this.candidate = candidate;
     }
 
     public void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null)
@@ -74,42 +75,66 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
             ModsConfig.BiotechActive ? pawn.genes?.Xenotype?.defName ?? "" : "");
         var plans = new List<ActionPlan>();
+        var modulation = new Dictionary<string, ModulationPlan>(StringComparer.Ordinal);
+        var numericalFacts = new Dictionary<string, double>(StringComparer.Ordinal);
+        var stage = pawn.ageTracker?.CurLifeStage;
+        if (stage != null)
+        {
+            numericalFacts["age.native"] = stage.voxPitch;
+            numericalFacts["age.nativeVolume"] = stage.voxVolume;
+        }
+        var mood = pawn.needs?.mood;
+        if (mood != null)
+        {
+            numericalFacts["mood.level"] = mood.CurLevelPercentage;
+        }
         foreach (var action in catalog.Actions)
         {
             string legacyKey = action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
-            if (!fullDevCandidate && legacyKey != "Work" && legacyKey != "Wounded" && legacyKey != "Call")
-            {
-                continue;
-            }
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused,
                 reason => blockedReasons[action.Key] = reason);
-            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: fullDevCandidate)) blocked.Add(action.Key);
+            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: true)) blocked.Add(action.Key);
             plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
                 behavior.HardIntervalTicks ?? (legacyKey == "Wounded" ? woundedTicks : workTicks),
-                action.CheckShared, action.WriteShared, action.Chance, action.BaseAction,
-                legacyKey == "Death" || behavior.TalkingEnabled == false, behavior.Volume ?? 1, behavior.Pitch ?? 1));
+                action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : candidate.EventProbability, action.BaseAction,
+                legacyKey == "Death" || behavior.TalkingEnabled == false, behavior.Volume ?? 1, behavior.Pitch ?? 1,
+                action.Sustained || comp.ControlledPlaybackSustained(legacyKey)));
+            modulation[action.Key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses);
         }
-        LegacyTimingParameters? legacy = null;
         if (compatibilityInvocation.HasValue)
         {
             string key = eventKey!;
-            var invocation = compatibilityInvocation.Value;
-            legacy = comp.ControlledLegacyTiming(key, invocation);
             values["us.compat/Event"] = Truth.True;
             plans.Clear();
-            double chance = invocation.SkipsRandomOneShotProbability || legacy.Plan.Mode != SqueakTriggerMode.RandomOneShot
-                ? 1 : Math.Max(0, Math.Min(1, legacy.Plan.ProbabilityPerCheck * legacy.ProbabilityMultiplier)) / legacy.PopulationScale;
-            plans.Add(new ActionPlan(key, 0, new Condition("ref", "us.compat/Event"), 0,
-                !legacy.Plan.IgnoreGlobalCooldown, true, chance, key));
-            if (!comp.ControlledOneShotAllowed(key, activeCommand)) blocked.Add(key);
+            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
+                catalog.HasFact, out bool paused);
+            plans.Add(new ActionPlan(key, 0, new Condition("ref", "us.compat/Event"),
+                behavior.HardIntervalTicks ?? workTicks, chance: candidate.EventProbability,
+                skipTalking: behavior.TalkingEnabled == false, volume: behavior.Volume ?? 1, pitch: behavior.Pitch ?? 1,
+                sustained: comp.ControlledPlaybackSustained(key)));
+            if (paused || !comp.ControlledOneShotAllowed(key, activeCommand, behavior, authorAction: true))
+            {
+                blocked.Add(key);
+            }
+            modulation[key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses);
         }
+        var snapshot = SqueakRuntimeResolver.Current;
+        var context = snapshot.ResolveContext(pawn);
+        var audioDomain = new Kernel.AudioDomain(new Kernel.RaceKey(pawn.def.defName),
+            context.Xenotype == null ? null : new Kernel.XenotypeKey(context.Xenotype.defName));
         var input = new DecisionInput
         {
             Subject = pawn.ThingID,
             Domain = pawn.def.defName,
             Tick = now,
-            Realtime = Time.realtimeSinceStartup,
             ActiveSustainedKey = sustained.ActiveKey,
+            Activity = UniversalSqueakerMod.Settings.activity,
+            SoftRhythmFactor = candidate.SoftRhythmFactor,
+            ActionModulation = modulation,
+            AudioPool = snapshot.Registry,
+            MergeAudioPool = true,
+            AudioContext = new Kernel.SelectionContext(audioDomain, "", SqueakLifeStageResolver.Resolve(pawn), true, snapshot.AllowEggs),
+            SoundGate = SqueakKernelAdapter.GateFor(pawn, pawn.MapHeld, null),
             StateOpportunity = eventKey == null,
             Eligible = pawn.Spawned
                 && pawn.MapHeld == Find.CurrentMap
@@ -125,18 +150,6 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             BlockedActions = blocked,
             BlockedActionReasons = blockedReasons
         };
-        if (legacy != null)
-        {
-            var snapshot = SqueakRuntimeResolver.Current;
-            var context = snapshot.ResolveContext(pawn);
-            var audioDomain = new Kernel.AudioDomain(new Kernel.RaceKey(pawn.def.defName),
-                context.Xenotype == null ? null : new Kernel.XenotypeKey(context.Xenotype.defName));
-            input.CompatibilityTiming = legacy;
-            input.UseLegacyModulation = true;
-            input.AudioPool = snapshot.Registry;
-            input.AudioContext = new Kernel.SelectionContext(audioDomain, eventKey!, SqueakLifeStageResolver.Resolve(pawn), true, snapshot.AllowEggs);
-            input.SoundGate = SqueakKernelAdapter.GateFor(pawn, pawn.MapHeld, null);
-        }
         draws.Clear();
         LastOutcome = decision.Run(state, policy, input, this, this);
     }
@@ -151,7 +164,23 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         }
         long now = Find.TickManager.TicksGame;
         if (sustained.ReviewDue(now))
+        {
+            string active = sustained.ActiveKey;
+            var action = catalog.Actions.FirstOrDefault(x => x.Key == active);
+            string key = action == null ? active : action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
+            var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
+                ModsConfig.BiotechActive ? pawn.genes?.Xenotype?.defName ?? "" : "");
+            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
+                catalog.HasFact, out bool paused);
+            var comp = pawn.GetComp<CompSqueaker>();
+            if (paused || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
+                || comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
+            {
+                sustained.Stop("CurrentAuthorizationUnavailable");
+                return;
+            }
             sustained.Review(now, catalog.Capture(pawn.ThingID, UsPawnFacts.Capture(pawn, null)));
+        }
         sustained.Maintain();
     }
     public void Stop() => sustained.Stop("SessionReleased");
@@ -252,7 +281,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
                 int token = UsInstanceOutput.Mark(ref info, new UsOutputContribution(request.Audio.Volume));
                 try
                 {
-                    Sustainer? native = sound.TrySpawnSustainer(info);
+                    Sustainer? native = sound!.TrySpawnSustainer(info);
                     if (native == null || native.Ended)
                         return new SustainedStart(new PlaybackReceipt(PlaybackResult.Indeterminate, "NoEffectiveSustainerAfterCall"));
                     return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched, "NativeSustainerEstablished"), new NativeSustainedHandle(native));
@@ -274,7 +303,48 @@ public static class UsOneShotRuntime
 {
     private static readonly Dictionary<Pawn, UsControlledOneShotSession> sessions = new();
     private static AuthorCatalog catalog = new(720, 216, fullDevCandidate: true);
+    private static UsDevelopmentPolicy? selectedPolicy;
+    public static string PolicyStatus => selectedPolicy == null ? "PolicySelectionRequired" : "ExplicitDevelopmentCandidate";
     public static IReadOnlyList<string> Issues => catalog.Issues;
+
+    public static void SelectDevelopmentPolicy(UsDevelopmentPolicy policy)
+    {
+        if (!Prefs.DevMode)
+        {
+            throw new InvalidOperationException("Explicit development selection requires developer mode");
+        }
+        if (policy == null)
+        {
+            throw new ArgumentNullException(nameof(policy));
+        }
+        if (selectedPolicy != null && !ReferenceEquals(selectedPolicy, policy))
+        {
+            throw new InvalidOperationException("A development policy is already selected for this process");
+        }
+        selectedPolicy = policy;
+    }
+
+    private static UsControlledOneShotSession? SessionFor(Pawn pawn)
+    {
+        if (selectedPolicy == null)
+        {
+            return null;
+        }
+        if (sessions.TryGetValue(pawn, out var session))
+        {
+            return session;
+        }
+        if (pawn.GetComp<CompSqueaker>() == null || !pawn.Spawned || pawn.Destroyed)
+        {
+            return null;
+        }
+        if (session == null)
+        {
+            session = new UsControlledOneShotSession(pawn, catalog, selectedPolicy);
+            sessions.Add(pawn, session);
+        }
+        return session;
+    }
     public static IEnumerable<string> DeclaredRaces => catalog.Audio.Select(x => x.Domain).Distinct(StringComparer.Ordinal);
     public static BehaviorSourceDirectory BehaviorSources => catalog.BehaviorSources;
 
@@ -349,20 +419,10 @@ public static class UsOneShotRuntime
             throw new InvalidOperationException("Controlled OneShot requires developer mode and explicit policy");
         }
 
-        if (pawn.GetComp<CompSqueaker>() == null)
-        {
-            throw new InvalidOperationException("Pawn needs an existing CompSqueaker");
-        }
-
-        if (pawn.GetComp<CompSqueaker>().HasActiveSustainer)
-        {
-            throw new InvalidOperationException("End existing sustained playback before opting into OneShot control");
-        }
-
-        DisableControlled(pawn);
-        sessions[pawn] = new UsControlledOneShotSession(pawn, catalog, new StatePolicy(sharedTicks, waitTicks), workTicks, woundedTicks, fullDevCandidate);
+        SelectDevelopmentPolicy(new UsDevelopmentPolicy(waitTicks, sharedTicks, workTicks, woundedTicks,
+            initialSpreadTicks: 0, eventProbability: 1, softRhythmFactor: 1));
+        SessionFor(pawn);
     }
-
     public static void DisableControlled(Pawn pawn)
     {
         if (sessions.TryGetValue(pawn, out var session)) session.Stop();
@@ -371,9 +431,10 @@ public static class UsOneShotRuntime
     public static bool IsControlled(Pawn pawn) => sessions.ContainsKey(pawn);
     public static bool TryTick(Pawn pawn)
     {
-        if (!sessions.TryGetValue(pawn, out var session))
+        var session = SessionFor(pawn);
+        if (session == null)
         {
-            return false;
+            return true;
         }
 
         if (!pawn.Spawned || pawn.Destroyed)
@@ -394,9 +455,10 @@ public static class UsOneShotRuntime
 
     public static bool TryEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source)
     {
-        if (!sessions.TryGetValue(pawn, out var session))
+        var session = SessionFor(pawn);
+        if (session == null)
         {
-            return false;
+            return true;
         }
 
         var invocation = new SqueakTriggerInvocation(origin, source);

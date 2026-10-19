@@ -16,7 +16,13 @@
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs" Link="Production/UsInstanceOutput.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Production/OneShot/%(Filename)%(Extension)" />
     <Compile Include="../../Source/UniversalSqueaker/Authoring/BuiltInPawnContracts.cs" Link="Production/BuiltInPawnContracts.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Authoring/AuthorCatalog.cs" Link="Production/AuthorCatalog.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Authoring/BehaviorSourceDeclaration.cs" Link="Production/BehaviorSourceDeclaration.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsOneShotRuntime.cs" Link="Production/UsOneShotRuntime.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsDevelopmentPolicy.cs" Link="Production/UsDevelopmentPolicy.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/CompSqueaker.EntryPoints.cs" Link="Production/CompSqueaker.EntryPoints.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakActionPlan.cs" Link="Production/SqueakActionPlan.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/BehaviorSources.cs" Link="Production/BehaviorSources.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs" Link="Production/SqueakTimingModel.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakEatOccurrence.cs" Link="Production/SqueakEatOccurrence.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/PeriodicStateBinding.cs" Link="Production/PeriodicStateBinding.cs" />

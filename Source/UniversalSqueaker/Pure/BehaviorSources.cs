@@ -47,11 +47,22 @@ public sealed class BehaviorValues
     public bool? Enabled;
     public bool? TalkingEnabled;
     public bool? AgeEnabled;
+    public bool? MoodEnabled;
+    public Dictionary<string, double> ResponseParameters = new(StringComparer.Ordinal);
+    public Dictionary<string, bool> ResponseEnabled = new(StringComparer.Ordinal);
+    public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public SqueakActionScope? Scope;
     public long? HardIntervalTicks;
     public double? Volume;
     public double? Pitch;
-    public BehaviorValues Copy() => (BehaviorValues)MemberwiseClone();
+    public BehaviorValues Copy()
+    {
+        var copy = (BehaviorValues)MemberwiseClone();
+        copy.ResponseParameters = new Dictionary<string, double>(ResponseParameters, StringComparer.Ordinal);
+        copy.ResponseEnabled = new Dictionary<string, bool>(ResponseEnabled, StringComparer.Ordinal);
+        copy.Participation = new Dictionary<string, bool>(Participation, StringComparer.Ordinal);
+        return copy;
+    }
     public void Overlay(BehaviorValues value)
     {
         Enabled = value.Enabled ?? Enabled;
@@ -59,13 +70,29 @@ public sealed class BehaviorValues
         HardIntervalTicks = value.HardIntervalTicks ?? HardIntervalTicks;
         TalkingEnabled = value.TalkingEnabled ?? TalkingEnabled;
         AgeEnabled = value.AgeEnabled ?? AgeEnabled;
+        MoodEnabled = value.MoodEnabled ?? MoodEnabled;
+        foreach (var parameter in value.ResponseParameters)
+        {
+            ResponseParameters[parameter.Key] = parameter.Value;
+        }
+        foreach (var response in value.ResponseEnabled)
+        {
+            ResponseEnabled[response.Key] = response.Value;
+        }
+        foreach (var response in value.Participation)
+        {
+            Participation[response.Key] = response.Value;
+        }
         Volume = value.Volume ?? Volume;
         Pitch = value.Pitch ?? Pitch;
     }
     public bool Valid => (!Scope.HasValue || Enum.IsDefined(typeof(SqueakActionScope), Scope.Value))
         && (!HardIntervalTicks.HasValue || HardIntervalTicks.Value >= 0)
         && (!Volume.HasValue || Finite(Volume.Value) && Volume.Value >= 0 && Volume.Value <= float.MaxValue)
-        && (!Pitch.HasValue || Finite(Pitch.Value) && Pitch.Value > 0 && Pitch.Value <= float.MaxValue);
+        && (!Pitch.HasValue || Finite(Pitch.Value) && Pitch.Value > 0 && Pitch.Value <= float.MaxValue)
+        && ResponseParameters.All(x => Exact(x.Key) && Finite(x.Value))
+        && ResponseEnabled.Keys.All(Exact) && Participation.Keys.All(Exact);
+    private static bool Exact(string key) => !string.IsNullOrWhiteSpace(key) && key == key.Trim();
     private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
 }
 
@@ -242,6 +269,10 @@ public sealed class BehaviorSourceState
         }
         foreach (var player in playerLayers)
         {
+            if (!player.Valid)
+            {
+                throw new ArgumentException("InvalidPlayerBehaviorContribution");
+            }
             result.Overlay(player);
         }
         return result;
@@ -354,8 +385,8 @@ public sealed class BehaviorSourceState
         };
         foreach (XmlElement action in node.ChildNodes.OfType<XmlElement>())
         {
-            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "volume", "pitch", "requires");
-            if (action.Name != "action" || action.ChildNodes.OfType<XmlElement>().Any())
+            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "requires");
+            if (action.Name != "action")
             {
                 throw new ArgumentException("Invalid behavior action shape");
             }
@@ -388,6 +419,9 @@ public sealed class BehaviorSourceState
                     case "ageEnabled":
                         values.AgeEnabled = bool.Parse(text);
                         break;
+                    case "moodEnabled":
+                        values.MoodEnabled = bool.Parse(text);
+                        break;
                     case "volume":
                         values.Volume = double.Parse(text, CultureInfo.InvariantCulture);
                         break;
@@ -396,6 +430,43 @@ public sealed class BehaviorSourceState
                         break;
                     default:
                         throw new ArgumentException("Unknown behavior parameter " + field.Name);
+                }
+            }
+            foreach (XmlElement setting in action.ChildNodes.OfType<XmlElement>())
+            {
+                if (setting.ChildNodes.OfType<XmlElement>().Any())
+                {
+                    throw new ArgumentException("Response setting must be a leaf");
+                }
+                string identity = setting.GetAttribute("key");
+                if (string.IsNullOrWhiteSpace(identity) || identity != identity.Trim())
+                {
+                    throw new ArgumentException("Invalid response setting identity");
+                }
+                if (setting.Name == "parameter")
+                {
+                    CheckAttributes(setting, "key", "value");
+                    values.ResponseParameters.Add(identity, double.Parse(setting.GetAttribute("value"), CultureInfo.InvariantCulture));
+                }
+                else if (setting.Name == "response")
+                {
+                    CheckAttributes(setting, "key", "enabled", "participation");
+                    if (!setting.HasAttribute("enabled") && !setting.HasAttribute("participation"))
+                    {
+                        throw new ArgumentException("Empty response setting");
+                    }
+                    if (setting.HasAttribute("enabled"))
+                    {
+                        values.ResponseEnabled.Add(identity, bool.Parse(setting.GetAttribute("enabled")));
+                    }
+                    if (setting.HasAttribute("participation"))
+                    {
+                        values.Participation.Add(identity, ReadParticipation(setting.GetAttribute("participation")));
+                    }
+                }
+                else
+                {
+                    throw new ArgumentException("Unknown response setting " + setting.Name);
                 }
             }
             source.Contributions.Add(new BehaviorContribution { Action = key, Values = values,
@@ -418,8 +489,30 @@ public sealed class BehaviorSourceState
             Field(action, "hardIntervalTicks", v.HardIntervalTicks);
             Field(action, "talkingEnabled", v.TalkingEnabled);
             Field(action, "ageEnabled", v.AgeEnabled);
+            Field(action, "moodEnabled", v.MoodEnabled);
             Field(action, "volume", v.Volume);
             Field(action, "pitch", v.Pitch);
+            foreach (var parameter in v.ResponseParameters.OrderBy(x => x.Key, StringComparer.Ordinal))
+            {
+                var element = document.CreateElement("parameter");
+                element.SetAttribute("key", parameter.Key);
+                element.SetAttribute("value", parameter.Value.ToString("R", CultureInfo.InvariantCulture));
+                action.AppendChild(element);
+            }
+            foreach (string identity in v.ResponseEnabled.Keys.Concat(v.Participation.Keys).Distinct().OrderBy(x => x, StringComparer.Ordinal))
+            {
+                var element = document.CreateElement("response");
+                element.SetAttribute("key", identity);
+                if (v.ResponseEnabled.TryGetValue(identity, out bool enabled))
+                {
+                    element.SetAttribute("enabled", enabled.ToString());
+                }
+                if (v.Participation.TryGetValue(identity, out bool apply))
+                {
+                    element.SetAttribute("participation", apply ? "Apply" : "Skip");
+                }
+                action.AppendChild(element);
+            }
             if (contribution.RequiredFacts.Length > 0) action.SetAttribute("requires", string.Join(" ", contribution.RequiredFacts));
             node.AppendChild(action);
         }
@@ -427,6 +520,19 @@ public sealed class BehaviorSourceState
     private static void Field<T>(XmlElement node, string key, T? value) where T : struct
     {
         if (value.HasValue) node.SetAttribute(key, Convert.ToString(value.Value, CultureInfo.InvariantCulture)!);
+    }
+
+    public static bool ReadParticipation(string text)
+    {
+        if (text == "Apply")
+        {
+            return true;
+        }
+        if (text == "Skip")
+        {
+            return false;
+        }
+        throw new ArgumentException("Expected Apply or Skip participation");
     }
 
     private static void CheckAttributes(XmlElement node, params string[] allowed)

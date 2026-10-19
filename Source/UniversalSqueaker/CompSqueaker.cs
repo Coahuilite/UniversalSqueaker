@@ -109,7 +109,7 @@ public readonly struct SqueakPlaybackAttempt
 /// 配置三层:CompProperties(XML默认) ← ModSettings(玩家override) ← 运行时。
 /// 心情靠运行时 pitchFactor/volumeFactor 调制,每动作只需 1 个 SoundDef + 1 套中性音频。
 /// </summary>
-public class CompSqueaker : ThingComp
+public partial class CompSqueaker : ThingComp
 {
     public static bool ScaleCooldownWithTimeSpeed = true;
     public static bool ScaleFrequencyWithTalking = true;
@@ -131,7 +131,6 @@ public class CompSqueaker : ThingComp
     private readonly Dictionary<string, SqueakActionPlan> actionPlans = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> lastTriggerTick = new(StringComparer.Ordinal);
     private readonly Dictionary<string, float> lastTriggerRealTime = new(StringComparer.Ordinal);
-    private readonly Dictionary<SqueakMood, SqueakMoodMod> moodModMap = new();
     private int lastAnyTriggerTick = int.MinValue / 2;
     private SqueakRuntimeSnapshot? cachedRuntimeSnapshot;
     private XenotypeDef? cachedXenotype;
@@ -146,8 +145,7 @@ public class CompSqueaker : ThingComp
     private readonly Dictionary<string, int> periodicStartupReadyTicks = new(StringComparer.Ordinal);
     private Map? registeredMap;
     // S3：当前激活的 Sustainer 及其动作键（运行期状态，永远不 Scribe）。
-    private Sustainer? activeSustainer;
-    private string activeSustainerKey = "";
+
 
     private Pawn Pawn => (Pawn)parent;
     internal Pawn RegisteredPawn => Pawn;
@@ -173,93 +171,9 @@ public class CompSqueaker : ThingComp
             string? key = UniversalSqueaker.Kernel.ActionKey.For(cfg.action);
             if (key != null) actionPlans[key] = SqueakActionPlanFactory.FromLegacy(cfg);
         }
-
-        foreach (SqueakMoodMod mod in Props.moodMods)
-        {
-            moodModMap[mod.mood] = mod;
-        }
-    }
-
-    private SqueakMood CurrentMood
-    {
-        get
-        {
-            if (Pawn.InMentalState)
-            {
-                return SqueakMood.Break;
-            }
-
-            Need_Mood? mood = Pawn.needs?.mood;
-            if (mood == null)
-            {
-                return SqueakMood.Neutral;
-            }
-
-            float p = mood.CurLevelPercentage;
-            if (p > 0.65f)
-            {
-                return SqueakMood.Good;
-            }
-
-            return p < 0.35f ? SqueakMood.Bad : SqueakMood.Neutral;
-        }
     }
 
     private SqueakAction? CurrentAction => PeriodicStateBinding.Probe(Pawn);
-
-    public override void CompTick()
-    {
-        SynchronizePeriodicMembership();
-        if (UsOneShotRuntime.TryTick(Pawn)) return;
-        SqueakAction? action = CurrentAction;
-        // Disabled = 真旁路：gate 置于任何发声状态维护之前（与 NotifyExternalByKey 头部 gate 对仗，
-        // 治本而非在分支补 End）。已激活的 Sustainer 不再被 Maintain，由原版未维护生命周期自动 End
-        // （约 1–2 秒尾音）；activeSustainer 字段持有已结束引用，重新启用后首个 MaintainSustainer 自清。
-        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
-        {
-            if (action != null)
-            {
-                SqueakLog.AudioDisabled(UniversalSqueaker.Kernel.ActionKey.For(action.Value) ?? action.Value.ToString());
-            }
-            return;
-        }
-        // S3 每帧维护：先于任何早退执行，确保 pawn 离开地图/离屏/持续状态消失时 sustainer 被 End。
-        MaintainSustainer(action);
-
-        if (!Pawn.Spawned || Pawn.MapHeld == null || Pawn.MapHeld != Find.CurrentMap)
-        {
-            return;
-        }
-
-        if (!Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(Pawn.Position))
-        {
-            return;
-        }
-
-        if (action == null) return;
-        string? actionKey = ActionKeyOf(action.Value);
-        if (actionKey == null || !TryGetPlan(actionKey, out SqueakActionPlan plan)) return;
-        if (!plan.Configured) return;
-
-        switch (plan.Mode)
-        {
-            case SqueakTriggerMode.EachTime:
-                TryTrigger(plan, PeriodicInvocationFor(action.Value));
-                break;
-            case SqueakTriggerMode.RandomOneShot:
-                TryTrigger(plan, PeriodicInvocationFor(action.Value));
-                break;
-            case SqueakTriggerMode.External:
-                break;
-            // S3：Sustained 模式在周期状态下持续发声；状态消失（Probe 不再返回该动作）→ End。
-            // Blocker 修复：首次/缺失时走 TryTrigger（完整 gate/cooldown/outcome），已有 sustainer 时只由
-            // MaintainSustainer 维持，不再每 tick 直接 TryPlaySustained 绕过触发门。
-            case SqueakTriggerMode.Sustained:
-                if (activeSustainer != null && !activeSustainer.Ended && activeSustainerKey == actionKey) break;
-                TryTrigger(plan, PeriodicInvocationFor(action.Value));
-                break;
-        }
-    }
 
     public void Notify_Wounded() => NotifyExternal(SqueakAction.Wounded, VerseEventBinding.OriginFor(SqueakAction.Wounded), SqueakInvocationSource.StateEvent);
     public void Notify_Select() => NotifyExternal(SqueakAction.Select, VerseEventBinding.OriginFor(SqueakAction.Select), SqueakInvocationSource.PlayerSelection);
@@ -325,22 +239,13 @@ public class CompSqueaker : ThingComp
 
     public override void PostDestroy(DestroyMode mode, Map previousMap)
     {
-        EndActiveSustainer();
+
         UsOneShotRuntime.DisableControlled(Pawn);
         SqueakPeriodicPopulation.Unregister(this, previousMap);
         registeredMap = null;
         base.PostDestroy(mode, previousMap);
     }
 
-    private void EndActiveSustainer()
-    {
-        if (activeSustainer != null)
-        {
-            if (!activeSustainer.Ended) activeSustainer.End();
-            activeSustainer = null;
-            activeSustainerKey = "";
-        }
-    }
     internal void NotifyPeriodicDespawn(Map map)
     {
         UsOneShotRuntime.DisableControlled(Pawn);
@@ -358,35 +263,7 @@ public class CompSqueaker : ThingComp
         => NotifyExternalByKey(UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(), origin, source);
 
     /// <summary>外部动作（string 键）的触发入口：与内置动作走同一 NotifyExternal 通路。</summary>
-    public void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
-    {
-        if (UsOneShotRuntime.TryEvent(Pawn, actionKey, origin, source)) return;
-        SynchronizePeriodicMembership();
-        if (SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
-        {
-            SqueakLog.AudioDisabled(actionKey);
-            return;
-        }
-        if (!Pawn.Spawned || Pawn.MapHeld != Find.CurrentMap)
-        {
-            return;
-        }
-
-        if (!Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(Pawn.Position))
-        {
-            return;
-        }
-
-        if (!TryGetPlan(actionKey, out SqueakActionPlan plan)) return;
-        if (!plan.Configured) return;
-
-        SqueakTriggerInvocation invocation = new(origin, source);
-        if (!IdentityGateAllows(invocation)) return; // fail-closed silent: no cooldowns, no outcome, no log.
-
-        TryTrigger(plan, invocation);
-    }
-
-    /// <summary>0.3.2 身份门控（Verse 采样，harness out-of-scope）：玩家发起来源（点选/主动指令）要求
+/// <summary>0.3.2 身份门控（Verse 采样，harness out-of-scope）：玩家发起来源（点选/主动指令）要求
     /// 玩家可控 pawn（IsPlayerControlled 已含 Spawned、玩家派系、无精神崩溃、可控机甲/亚人语义）；
     /// 点选另要求可响应 = !Downed && Awake()。任何不满足都静默丢弃，不进入 TryTrigger。</summary>
     private bool IdentityGateAllows(SqueakTriggerInvocation invocation)
@@ -438,113 +315,6 @@ public class CompSqueaker : ThingComp
         }
         plan = default;
         return false;
-    }
-
-    private void TryTrigger(SqueakActionPlan plan, SqueakTriggerInvocation invocation)
-    {
-        string actionKey = plan.ActionKey;
-        // Action gate (Goal A): a non-built-in action requires allowExternalActions before it can fire.
-        if (!IsActionAllowedByKey(actionKey)) return;
-        // H1 fix: the global early-return is gone. Action scope now resolves from the layered context
-        // (Xeno > Race > Global > Default), so a global disable no longer suppresses a xenotype enable.
-        int now = 0;
-        float nowRealtime = 0f;
-        bool hasAttemptRealtime = false;
-        bool hasAttemptTick = false;
-        try
-        {
-            nowRealtime = Time.realtimeSinceStartup;
-            hasAttemptRealtime = true;
-            ResolvedSqueakContext context = GetRuntimeContext(out SqueakRuntimeSnapshot snapshot);
-            RuntimeActionDelta actionDelta = context.GetActionByKey(actionKey);
-            if (!actionDelta.Enabled)
-            {
-                RecordOutcome(SqueakTriggerOutcome.Disabled, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
-                return;
-            }
-            if (actionDelta.Scope == SqueakActionScope.ActiveCommand && !invocation.IsActiveCommand) return;
-
-            now = Find.TickManager.TicksGame;
-            hasAttemptTick = true;
-            // The first Periodic production caller refreshes one shared snapshot for this tick,
-            // including when player-facing scaling is off: startup materialization still uses the
-            // same bounded shared maintenance path.
-            SqueakPeriodicPopulation.Snapshot periodicPopulation = invocation.Origin == SqueakTriggerOrigin.Periodic
-                ? SqueakPeriodicPopulation.Maintain(activeDistanceRange) : SqueakPeriodicPopulation.GetSnapshot();
-            float periodicScale = invocation.Origin == SqueakTriggerOrigin.Periodic && ScalePeriodicWithAudiblePopulation
-                ? SanitizePeriodicPopulationScale(periodicPopulation.Scale) : 1f;
-            SqueakTimingEvaluation timing = EvaluateTiming(plan, context, actionDelta, now, nowRealtime,
-                Find.TickManager.TickRateMultiplier, periodicScale);
-            if (invocation.Origin == SqueakTriggerOrigin.Periodic && IsPeriodicStartupPending(actionKey, timing, now))
-            {
-                RecordOutcome(SqueakTriggerOutcome.PeriodicStartupPending, actionKey, false, false, null, SqueakSoundSource.None, nowRealtime);
-                return;
-            }
-
-            if (!invocation.SkipsRandomOneShotProbability && plan.Mode == SqueakTriggerMode.RandomOneShot)
-            {
-                float probability = Mathf.Clamp01(plan.ProbabilityPerCheck * actionDelta.ProbabilityMultiplier) / periodicScale;
-                bool passed = Rand.Value < probability;
-                if (!passed)
-                {
-                    RecordOutcome(SqueakTriggerOutcome.ProbabilityRejected, actionKey, false, false, null, SqueakSoundSource.None, nowRealtime);
-                    return;
-                }
-            }
-
-            if (!timing.ActionReady)
-            {
-                RecordOutcome(SqueakTriggerOutcome.ActionCooldown, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
-                return;
-            }
-
-            if (timing.GlobalApplicable && !timing.GlobalReady)
-            {
-                RecordOutcome(SqueakTriggerOutcome.GlobalCooldown, actionKey, invocation.IsExternal, false, null, SqueakSoundSource.None, nowRealtime);
-                return;
-            }
-
-            SqueakVocalCapability capability = SampleVocalCapability();
-            bool applyTalkingGate = ScaleFrequencyWithTalking && plan.Definition.VocalGatePolicy == SqueakVocalGatePolicy.ApplyTalkingGate;
-            float roll = capability.RequiresTalkingRoll(applyTalkingGate) ? Rand.Value : 0f;
-            SqueakVocalGateDecision vocalDecision = capability.Decide(applyTalkingGate, roll);
-            if (vocalDecision != SqueakVocalGateDecision.Allowed)
-            {
-                ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
-                RecordOutcome(vocalDecision == SqueakVocalGateDecision.VocalOrgansSilent
-                    ? SqueakTriggerOutcome.VocalOrgansSilent : SqueakTriggerOutcome.TalkingRejected,
-                    actionKey, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
-                return;
-            }
-
-            SqueakPlaybackAttempt attempt = plan.Mode == SqueakTriggerMode.Sustained
-                ? TryPlaySustained(actionKey, CurrentMood, context, snapshot)
-                : PlayOneShot(actionKey, CurrentMood, context, snapshot);
-            ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
-            SqueakTriggerOutcome outcome = attempt.Result switch
-            {
-                SqueakPlaybackAttemptResult.NoEligibleSound => SqueakTriggerOutcome.NoSoundFallback,
-                SqueakPlaybackAttemptResult.EligibilityRejected => SqueakTriggerOutcome.EligibilityRejected,
-                SqueakPlaybackAttemptResult.Dispatched => SqueakTriggerOutcome.Dispatched,
-                _ => SqueakTriggerOutcome.PlaybackFailed,
-            };
-            RecordOutcome(outcome, actionKey, invocation.IsExternal, true, attempt.Choice.Sound, attempt.Choice.Source, nowRealtime, attempt.Choice.PoolStableKey, attempt.Choice.Tier);
-        }
-        catch (Exception ex)
-        {
-            SqueakLog.TriggerAttemptFailed(actionKey, ex);
-            try
-            {
-                if (!hasAttemptRealtime)
-                {
-                    nowRealtime = Time.realtimeSinceStartup;
-                }
-                if (!hasAttemptTick) now = Find.TickManager.TicksGame;
-                ConsumeAttemptCooldowns(actionKey, now, nowRealtime);
-                RecordOutcome(SqueakTriggerOutcome.PlaybackFailed, actionKey, invocation.IsExternal, true, null, SqueakSoundSource.None, nowRealtime);
-            }
-            catch { }
-        }
     }
 
     private SqueakTimingEvaluation EvaluateTiming(SqueakActionPlan plan, ResolvedSqueakContext context,
@@ -602,173 +372,6 @@ public class CompSqueaker : ThingComp
         }
     }
     /// <summary>Projects the current LifeStageDef's data-owned voice axis; missing stage is identity.</summary>
-    private UniversalSqueaker.Kernel.ModulationAxis ResolveAgeModulation()
-    {
-        LifeStageDef? stage = Pawn.ageTracker?.CurLifeStage;
-        return stage == null
-            ? UniversalSqueaker.Kernel.ModulationAxis.Identity
-            : new UniversalSqueaker.Kernel.ModulationAxis(true, stage.voxPitch, true, stage.voxVolume, false, (1f, 1f));
-    }
-
-    /// <summary>心情调制合并:CompProperties 默认 → 分层 context delta（Global < Race < Xenotype，
-    /// 快照层已合并——S5 起不再实时读 settings.moodOverrides，H3 完成），最后合成年龄调制。</summary>
-    private SqueakMoodMod ResolveMoodMod(SqueakMood mood, ResolvedSqueakContext context)
-    {
-        SqueakMoodMod mod = new() { mood = mood };
-        if (moodModMap.TryGetValue(mood, out SqueakMoodMod? def))
-        {
-            mod = def.Clone();
-        }
-
-        RuntimeMoodDelta? delta = context.GetMoodDelta(mood);
-        if (delta != null)
-        {
-            if (delta.HasPitchFactor) mod.pitchFactor = delta.PitchFactor;
-            if (delta.HasVolumeFactor) mod.volumeFactor = delta.VolumeFactor;
-            if (delta.HasPitchJitter) mod.pitchJitter = delta.PitchJitter;
-        }
-
-        UniversalSqueaker.Kernel.ModulationAxis moodAxis = new(true, mod.pitchFactor, true, mod.volumeFactor, true,
-            (mod.pitchJitter.min, mod.pitchJitter.max));
-        UniversalSqueaker.Kernel.ModulationAxis composed = UniversalSqueaker.Kernel.Modulation.ComposeModulation(moodAxis, ResolveAgeModulation());
-        mod.pitchFactor = composed.Pitch;
-        mod.volumeFactor = composed.Volume;
-        mod.pitchJitter = new FloatRange(composed.Jitter.Min, composed.Jitter.Max);
-        mod.volumeFactor *= GlobalVolumeFactor;
-        return mod;
-    }
-
-    private SqueakPlaybackAttempt PlayOneShot(string actionKey, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
-    {
-        SqueakSoundChoice choice = SqueakSoundChoice.None;
-        SoundDef? def = null;
-        try
-        {
-            choice = snapshot.ChooseProductionSoundByKey(context, actionKey, Pawn);
-            def = choice.Sound;
-        if (def == null)
-        {
-            if (MissingSoundWarnings.Add(actionKey))
-            {
-                SqueakLog.AudioNoSound(actionKey);
-            }
-            return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.NoEligibleSound, choice);
-        }
-
-            SqueakMoodMod mod = ResolveMoodMod(mood, context);
-            if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(def, Pawn, out SoundInfo info, out _))
-            {
-                return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
-            }
-            info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
-            info.volumeFactor = mod.volumeFactor;
-            def.PlayOneShot(info);
-            SqueakDebug.NotifySqueakByKey(Pawn, actionKey, mood, choice);
-            return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
-        }
-        catch (Exception ex)
-        {
-            string soundKey = def?.defName ?? actionKey;
-            SqueakLog.AudioDispatchFailed(actionKey, soundKey, ex);
-            return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Exception, choice);
-        }
-    }
-
-    /// <summary>CompTick 每帧维护当前 Sustainer：持续状态仍在（当前 probe 动作键与 sustainer 键一致）
-    /// 且 pawn 在当前地图、未摧毁、可视范围内则 Maintain()，否则 End() 并置空。
-    /// Sustainer 生命周期完全收敛在本组件（不强制走 TriggerBinding）。
-    /// 原版自身会结束长期未 Maintain 的 sustainer，此处同步清理自终结的残留状态。</summary>
-    private void MaintainSustainer(SqueakAction? currentAction)
-    {
-        Sustainer? sustainer = activeSustainer;
-        if (sustainer == null) return;
-        if (sustainer.Ended)
-        {
-            activeSustainer = null;
-            activeSustainerKey = "";
-            return;
-        }
-        string? currentKey = currentAction == null ? null : ActionKeyOf(currentAction.Value);
-        bool modeSustained = currentKey != null && TryGetPlan(currentKey, out SqueakActionPlan currentPlan)
-            && currentPlan.Mode == SqueakTriggerMode.Sustained;
-        bool valid = modeSustained && currentKey == activeSustainerKey
-            && Pawn.Spawned && !Pawn.Destroyed && Pawn.MapHeld != null
-            && Pawn.MapHeld == Find.CurrentMap
-            && Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(Pawn.Position);
-        if (valid)
-        {
-            sustainer.Maintain();
-        }
-        else
-        {
-            sustainer.End();
-            activeSustainer = null;
-            activeSustainerKey = "";
-        }
-    }
-
-    /// <summary>Sustained 模式的发声入口：选中音为 sustained SoundDef → TrySpawnSustainer 存入
-    /// activeSustainer（按 pawn 位置、PerTick 维护）；非 sustain → 优雅降级为一次性 PlayOneShot。</summary>
-    private SqueakPlaybackAttempt TryPlaySustained(string actionKey, SqueakMood mood, ResolvedSqueakContext context, SqueakRuntimeSnapshot snapshot)
-    {
-        SqueakSoundChoice choice = SqueakSoundChoice.None;
-        SoundDef? def = null;
-        try
-        {
-            // 外部/周期重复触发保护：同键已激活则直接视为已派发；异键旧 sustainer 先 End，避免重叠发声。
-            if (activeSustainer != null && !activeSustainer.Ended)
-            {
-                if (activeSustainerKey == actionKey)
-                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, SqueakSoundChoice.None);
-                activeSustainer.End();
-                activeSustainer = null;
-                activeSustainerKey = "";
-            }
-
-            choice = snapshot.ChooseProductionSoundByKey(context, actionKey, Pawn);
-            def = choice.Sound;
-            if (def == null)
-            {
-                if (MissingSoundWarnings.Add(actionKey))
-                {
-                    SqueakLog.AudioNoSound(actionKey);
-                }
-                return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.NoEligibleSound, choice);
-            }
-
-            SqueakMoodMod mod = ResolveMoodMod(mood, context);
-            if (def.sustain)
-            {
-                if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(def, Pawn, out _, out _))
-                {
-                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
-                }
-                SoundInfo info = SoundInfo.InMap(new TargetInfo(Pawn), MaintenanceType.PerTick);
-                info.pitchFactor = mod.pitchFactor * mod.pitchJitter.RandomInRange;
-                info.volumeFactor = mod.volumeFactor;
-                Sustainer? sustainer = def.TrySpawnSustainer(info);
-                if (sustainer == null)
-                {
-                    return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.EligibilityRejected, choice);
-                }
-                activeSustainer = sustainer;
-                activeSustainerKey = actionKey;
-                SqueakDebug.NotifySqueakByKey(Pawn, actionKey, mood, choice);
-                return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Dispatched, choice);
-            }
-
-            // 非 sustain 音在 Sustained 模式下优雅降级为一次性播放；仍由 TryTrigger 的冷却/概率门控，
-            // 不会在无 activeSustainer 时每 tick 无界重放。
-            return PlayOneShot(actionKey, mood, context, snapshot);
-        }
-        catch (Exception ex)
-        {
-            string soundKey = def?.defName ?? actionKey;
-            SqueakLog.AudioDispatchFailed(actionKey, soundKey, ex);
-            return new SqueakPlaybackAttempt(SqueakPlaybackAttemptResult.Exception, choice);
-        }
-    }
-
     private ResolvedSqueakContext GetRuntimeContext(out SqueakRuntimeSnapshot snapshot)
     {
         snapshot = SqueakRuntimeResolver.Current;
@@ -896,36 +499,13 @@ public class CompSqueaker : ThingComp
         return UsControlledActionEligibility.Allows(plan.Configured, authorAction, IsActionAllowedByKey(key),
             behavior?.Enabled ?? delta.Enabled, scope, command, Pawn.IsPlayerControlled);
     }
+    internal bool ControlledPlaybackSustained(string key)
+    {
+        return TryGetPlan(key, out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
+    }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal bool ControlledWorkActive() => CurrentAction == SqueakAction.Work;
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
-    internal SqueakMoodMod ControlledLegacyModulation() => ResolveMoodMod(CurrentMood, GetRuntimeContext(out _));
-    internal void SeedControlledLegacyClock(OneShot.DecisionState state)
-    {
-        var records = new List<KeyValuePair<string, OneShot.LegacyClockRecord>>();
-        foreach (var record in lastTriggerTick)
-            records.Add(new KeyValuePair<string, OneShot.LegacyClockRecord>(record.Key,
-                new OneShot.LegacyClockRecord(record.Value, lastTriggerRealTime.GetValueOrDefault(record.Key))));
-        state.SeedLegacy(lastAnyTriggerTick, records);
-    }
-    internal OneShot.LegacyTimingParameters ControlledLegacyTiming(string key, SqueakTriggerInvocation invocation)
-    {
-        TryGetPlan(key, out var plan);
-        var context = GetRuntimeContext(out _);
-        var population = invocation.Origin == SqueakTriggerOrigin.Periodic
-            ? SqueakPeriodicPopulation.Maintain(activeDistanceRange)
-            : SqueakPeriodicPopulation.GetSnapshot();
-        float populationScale = invocation.Origin == SqueakTriggerOrigin.Periodic && ScalePeriodicWithAudiblePopulation
-            ? SanitizePeriodicPopulationScale(population.Scale)
-            : 1f;
-        return new OneShot.LegacyTimingParameters { Plan = plan, OverallMultiplier = context.OverallIntervalMultiplier,
-            ActionMultiplier = context.GetActionByKey(key).IntervalMultiplier, MasterMultiplier = GlobalCooldownMultiplier,
-            SpeedMultiplier = Find.TickManager.TickRateMultiplier, GlobalBaseTicks = GlobalMinIntervalTicks,
-            ScaleWithTimeSpeed = ScaleCooldownWithTimeSpeed, PopulationScale = populationScale,
-            ProbabilityMultiplier = context.GetActionByKey(key).ProbabilityMultiplier };
-    }
-    internal bool HasActiveSustainer => activeSustainer != null && !activeSustainer.Ended;
-
     private SqueakVocalCapability SampleVocalCapability() => new(GetVocalOrganEfficiency(),
         Pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Talking) ?? 1f);
 

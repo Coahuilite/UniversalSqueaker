@@ -91,6 +91,7 @@ public partial class UniversalSqueakerSettings
         // audio semantics) - the field-initializer default is the single source (expanded).
         if (uiIntroCollapsed != defaults.uiIntroCollapsed) { uiIntroCollapsed = defaults.uiIntroCollapsed; changed = true; }
         if (globalCooldownMultiplier != defaults.globalCooldownMultiplier) { globalCooldownMultiplier = defaults.globalCooldownMultiplier; changed = true; }
+        if (activity != defaults.activity) { activity = defaults.activity; changed = true; }
         if (globalVolumeFactor != defaults.globalVolumeFactor) { globalVolumeFactor = defaults.globalVolumeFactor; changed = true; }
         if (distancePreset != defaults.distancePreset) { distancePreset = defaults.distancePreset; changed = true; }
         if (!DistanceRangesEqual(distanceRange, defaults.distanceRange)) { distanceRange = defaults.distanceRange; changed = true; }
@@ -166,11 +167,14 @@ public partial class UniversalSqueakerSettings
         {
             if (!SameActionTuningIdentity(row, actionKey, race, xeno)) continue;
             if (row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
+                || row.responses.Count > 0 || row.responseParameters.Count > 0
                 || !string.IsNullOrEmpty(row.sourcePresetDefName)) changed = true;
             row.hasScope = false;
             row.hasIntervalMultiplier = false;
             row.hasProbabilityMultiplier = false;
             row.sourcePresetDefName = "";
+            row.responses.Clear();
+            row.responseParameters.Clear();
         }
 
         // 清空后不再承载任何字段的行删除（含本就全默认的残行——结构性归一，同样计入变更）。
@@ -358,11 +362,14 @@ public partial class UniversalSqueakerSettings
         {
             if (!SameActionTuningDomain(row, race, xeno)) continue;
             if (row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
+                || row.responses.Count > 0 || row.responseParameters.Count > 0
                 || !string.IsNullOrEmpty(row.sourcePresetDefName)) changed = true;
             row.hasScope = false;
             row.hasIntervalMultiplier = false;
             row.hasProbabilityMultiplier = false;
             row.sourcePresetDefName = "";
+            row.responses.Clear();
+            row.responseParameters.Clear();
         }
 
         if (actionTuning.RemoveAll(r => SameActionTuningDomain(r, race, xeno)

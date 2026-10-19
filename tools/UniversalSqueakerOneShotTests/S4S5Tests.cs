@@ -6,6 +6,15 @@ internal static partial class Program
 {
     private static void S4RhythmAndResponses()
     {
+        try
+        {
+            S4AuthorResponses();
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("S4 author response fixture failure: " + error.GetType().Name + ":" + error.Message);
+            throw;
+        }
         var state = new DecisionState(1000);
         var input = Input(); input.Activity = 2;
         var driver = new Driver();

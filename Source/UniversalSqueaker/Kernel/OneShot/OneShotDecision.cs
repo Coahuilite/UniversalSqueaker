@@ -39,7 +39,6 @@ public enum RandomPurpose
     Eligibility,
     Sound,
     StateWait,
-    LegacyJitter,
     ModulationJitter
 }
 
@@ -245,14 +244,6 @@ public sealed class StatePolicy
 public sealed class DecisionState
 {
     private readonly Dictionary<string, long> deadlines = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, LegacyClockRecord> legacyRecords = new(StringComparer.Ordinal);
-    public int LastProtectedTick { get; private set; } = int.MinValue / 2;
-    public LegacyClockRecord LegacyRecord(string key) => legacyRecords.TryGetValue(key, out var value) ? value : new LegacyClockRecord(int.MinValue / 2, -1000000f);
-    public void SeedLegacy(int lastGlobalTick, IEnumerable<KeyValuePair<string, LegacyClockRecord>> records)
-    {
-        LastProtectedTick = lastGlobalTick;
-        foreach (var record in records) legacyRecords[record.Key] = record.Value;
-    }
     public long SharedDeadline { get; internal set; }
     public long NextStateTick { get; internal set; }
     public long AttemptTick { get; internal set; } = long.MinValue;
@@ -264,43 +255,15 @@ public sealed class DecisionState
     {
         long now = input.Tick;
         deadlines[action.Key] = TickDeadline.Add(now, action.Interval);
-        LastProtectedTick = (int)now;
-        legacyRecords[action.Key] = new LegacyClockRecord((int)now, input.Realtime);
         if (action.WriteShared)
         {
             SharedDeadline = Math.Max(SharedDeadline, TickDeadline.Add(now, policy.SharedInterval));
-            if (input.CompatibilityTiming != null)
-                SharedDeadline = Math.Max(SharedDeadline, TickDeadline.Add(now, input.CompatibilityTiming.Evaluate(this, input).GlobalCooldownTicks));
         }
     }
 
     public DecisionState(long firstOpportunity)
     {
         NextStateTick = firstOpportunity;
-    }
-}
-
-public readonly struct LegacyClockRecord
-{
-    public readonly int Tick;
-    public readonly float Realtime;
-    public LegacyClockRecord(int tick, float realtime) { Tick = tick; Realtime = realtime; }
-}
-
-/// <summary>Old clock inputs sampled by the adapter; last records and settlement belong to DecisionState.</summary>
-public sealed class LegacyTimingParameters
-{
-    public SqueakActionPlan Plan;
-    public float OverallMultiplier = 1, ActionMultiplier = 1, MasterMultiplier = 1, SpeedMultiplier = 1, PopulationScale = 1;
-    public float ProbabilityMultiplier = 1;
-    public int GlobalBaseTicks;
-    public bool ScaleWithTimeSpeed;
-    public SqueakTimingEvaluation Evaluate(DecisionState state, DecisionInput input)
-    {
-        var previous = state.LegacyRecord(Plan.ActionKey);
-        return SqueakTimingModel.Evaluate(new SqueakTimingInput((int)input.Tick, input.Realtime, SpeedMultiplier, Plan,
-            OverallMultiplier, ActionMultiplier, previous.Tick, previous.Realtime, state.LastProtectedTick,
-            GlobalBaseTicks, MasterMultiplier, ScaleWithTimeSpeed, PopulationScale));
     }
 }
 
@@ -350,11 +313,10 @@ public sealed class PlaybackRequest
     public readonly AudioCandidate Audio;
     public readonly long Tick;
     public readonly double Pitch;
-    public readonly bool UseLegacyModulation;
     public readonly bool Sustained;
     public readonly int Priority;
     public readonly Condition? Condition;
-    public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick, double pitch = 1, bool useLegacyModulation = false,
+    public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick, double pitch = 1,
         bool sustained = false, int priority = 0, Condition? condition = null)
     {
         Subject = subject;
@@ -363,7 +325,7 @@ public sealed class PlaybackRequest
         Audio = audio;
         Tick = tick;
         Pitch = pitch;
-        UseLegacyModulation = useLegacyModulation;
+
         Sustained = sustained;
         Priority = priority;
         Condition = condition;
@@ -379,7 +341,6 @@ public sealed class DecisionInput
     public SubjectFamily Family;
     public string TargetNamespace = "";
     public long Tick;
-    public float Realtime;
     public bool StateOpportunity;
     public bool Eligible = true;
     public ISet<string> BlockedActions = new HashSet<string>(StringComparer.Ordinal);
@@ -391,15 +352,15 @@ public sealed class DecisionInput
     public AudioCandidate[] Audio = Array.Empty<AudioCandidate>();
     public Kernel.SelectionMode SourceMode = Kernel.SelectionMode.Fallback;
     public Kernel.BuiltInFallbackTable Fallback = Kernel.BuiltInFallbackTable.Empty;
-    public LegacyTimingParameters? CompatibilityTiming;
-    public bool UseLegacyModulation;
     public Kernel.SqueakPoolRegistry? AudioPool;
     public Kernel.SelectionContext? AudioContext;
     public Kernel.ISoundGate? SoundGate;
     public double Activity = 1;
     public double SoftRhythmFactor = 1;
     public ModulationPlan Modulation = new();
+    public IReadOnlyDictionary<string, ModulationPlan> ActionModulation = new Dictionary<string, ModulationPlan>();
     public string ActiveSustainedKey = "";
+    public bool MergeAudioPool;
 }
 
 public readonly struct DecisionOutcome
@@ -479,8 +440,6 @@ public sealed class OneShotDecision
         {
             return Stop(state, policy, input, action.Key, "HardDeadline", diagnostics);
         }
-        if (input.CompatibilityTiming != null && !input.CompatibilityTiming.Evaluate(state, input).TimingReady)
-            return Stop(state, policy, input, action.Key, "LegacyClockDeadline", diagnostics);
 
         bool enteredBackend = false;
         try
@@ -502,13 +461,14 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "NoBoundAudio", diagnostics);
             }
 
-            var local = ResponseModulation.Compose(audio.Pitch * action.Pitch, audio.Volume * action.Volume, input.Modulation, audio.Participation, random);
+            var modulation = input.ActionModulation.TryGetValue(action.Key, out var configured) ? configured : input.Modulation;
+            var local = ResponseModulation.Compose(audio.Pitch * action.Pitch, audio.Volume * action.Volume, modulation, audio.Participation, random);
             if (!local.Valid)
                 return Stop(state, policy, input, action.Key, local.Reason, diagnostics);
             audio = new AudioCandidate(audio.EntryKey, audio.AudioId, audio.Action, audio.Domain, audio.Weight,
                 local.Volume, audio.Family, audio.TargetNamespace);
             enteredBackend = true;
-            var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, local.Pitch, input.UseLegacyModulation,
+            var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, local.Pitch,
                 action.Sustained, action.Priority, action.Condition));
             Settle(state, policy, input, action, receipt);
             return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
@@ -569,7 +529,9 @@ public sealed class OneShotDecision
     private static AudioCandidate? Select(DecisionInput input, ActionPlan plan, IOneShotRandom random)
     {
         string action = plan.Key;
-        string routeKey = plan.BaseAction.Substring(plan.BaseAction.LastIndexOf('/') + 1);
+        string routeKey = plan.BaseAction.StartsWith("us.core/", StringComparison.Ordinal)
+            ? plan.BaseAction.Substring("us.core/".Length)
+            : plan.BaseAction;
         var candidates = input.Audio
             .Where(candidate => candidate.Action == action
                 && candidate.Domain == input.Domain
@@ -591,9 +553,32 @@ public sealed class OneShotDecision
                     new Kernel.ActionSoundSet(new[] { candidate.AudioId }, null, 1)
                 }
             })).ToArray();
-        var pool = input.AudioPool ?? new Kernel.SqueakPoolRegistry(entries, input.Fallback);
+        var pool = input.AudioPool;
+        if (pool == null || input.MergeAudioPool)
+        {
+            var combined = new List<Kernel.VoicePackEntry>(entries);
+            if (pool != null)
+            {
+                var selectedDomain = input.AudioContext?.Domain ?? domain;
+                var domains = new[] { selectedDomain, domain }.Distinct();
+                foreach (var selected in domains)
+                {
+                    var existing = pool.PoolFor(selected);
+                    if (existing != null)
+                    {
+                        combined.AddRange(existing.Entries);
+                    }
+                }
+            }
+            pool = new Kernel.SqueakPoolRegistry(combined, input.Fallback);
+        }
+        var context = input.AudioContext ?? new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true);
+        if (input.MergeAudioPool)
+        {
+            context = new Kernel.SelectionContext(context.Domain, routeKey, context.Age, context.Production, context.AllowEggs);
+        }
         var chosen = pool.Select(
-            input.AudioContext ?? new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true),
+            context,
             input.SourceMode,
             input.SoundGate ?? new BoundAudioGate(),
             new SelectionRandom(random));

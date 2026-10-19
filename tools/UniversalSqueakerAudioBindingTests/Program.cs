@@ -16,6 +16,7 @@ internal static partial class Program
         checks++;
         if (!value)
         {
+            Console.Error.WriteLine("FAIL " + label);
             throw new Exception(label);
         }
         Console.WriteLine("  PASS " + label);
@@ -46,6 +47,7 @@ internal static partial class Program
             S3PawnFactAdapter();
             S3NewAuthorDoesNotNeedLegacyTable();
             S5InstanceOutputWithRealPatches();
+            S4ActualRuntimeCallers();
         }
         Console.WriteLine("S2 controlled adapter fixture PASS: " + checks + " (not native game evidence)");
     }

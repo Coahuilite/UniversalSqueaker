@@ -423,6 +423,7 @@ public partial class UniversalSqueakerSettings : ModSettings
     private static bool CarriesAnyActionTuningField(ActionTuningRecord? record)
     {
         return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier
+            || record.responses.Count > 0 || record.responseParameters.Count > 0
             || !string.IsNullOrEmpty(record.sourcePresetDefName));
     }
 

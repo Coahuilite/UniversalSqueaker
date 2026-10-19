@@ -45,8 +45,13 @@ public sealed class NativeAgeResponse : IUsResponseRule
     public ResponseStage Stage => ResponseStage.Age;
     public ResponseContribution Evaluate(ResponseContext context)
     {
-        double pitch = context.TryRead("age.override", out double explicitPitch) ? explicitPitch : context.Require("age.native");
-        return new ResponseContribution(pitch, 1);
+        bool explicitPitch = context.TryRead("age.override", out double pitch);
+        bool explicitVolume = context.TryRead("age.overrideVolume", out double volume);
+        if (explicitPitch || explicitVolume)
+        {
+            return new ResponseContribution(explicitPitch ? pitch : 1, explicitVolume ? volume : 1);
+        }
+        return new ResponseContribution(context.Require("age.native"), context.Optional("age.nativeVolume", 1));
     }
 }
 
@@ -96,6 +101,33 @@ public readonly struct LocalParameters
 
 public static class ResponseModulation
 {
+    public static ModulationPlan Resolve(string subject, BehaviorValues values,
+        IEnumerable<KeyValuePair<string, double>> facts, IUsResponseRule[] rules)
+    {
+        var parameters = new Dictionary<string, double>(values.ResponseParameters, StringComparer.Ordinal);
+        foreach (var fact in facts)
+        {
+            parameters[fact.Key] = fact.Value;
+        }
+        var enabled = new Dictionary<string, bool>(values.ResponseEnabled, StringComparer.Ordinal);
+        if (values.AgeEnabled.HasValue)
+        {
+            enabled["us.core/Age"] = values.AgeEnabled.Value;
+        }
+        if (values.MoodEnabled.HasValue)
+        {
+            enabled["us.core/Mood"] = values.MoodEnabled.Value;
+        }
+        return new ModulationPlan
+        {
+            Context = new ResponseContext(subject, parameters),
+            Rules = rules,
+            EnabledRules = enabled.Where(x => x.Value).Select(x => x.Key).ToArray(),
+            PlayerParticipation = new Dictionary<string, bool>(values.Participation, StringComparer.Ordinal),
+            JitterMin = parameters.TryGetValue("jitter.min", out double min) ? min : 1,
+            JitterMax = parameters.TryGetValue("jitter.max", out double max) ? max : 1
+        };
+    }
     public static LocalParameters Compose(double calibrationPitch, double calibrationVolume, ModulationPlan plan,
         IReadOnlyDictionary<string, bool> entryParticipation, IOneShotRandom random)
     {
