@@ -5,7 +5,7 @@
 ## 运行边界
 
 - 纯生产源：`Kernel/OneShot/`和`Authoring/`；独立OneShotTests编译这些源及原选音Kernel，无游戏引用或同名stub。
-- 唯一新决策状态持有机会、动作/共用截止、同tick名额和确认记录。选音复用原`SqueakPoolRegistry`，本切片只装配准确Race的一层新格式供给；既有四模式/年龄/Remix路径保持，完整新资源来源/域扩展仍属S2。
+- 唯一新决策状态持有机会、动作/共用截止、同tick名额和确认记录。选音复用原`SqueakPoolRegistry`，本切片只装配准确Race的一层新格式供给；既有四模式/年龄/Remix路径保持，完整资源来源/域扩展的后续实现见[S2](us-kernel-0.6-s2-zh.md)。
 - 受控session通过CompTick／真实Wounded通知进入生产核心；后端使用已绑定SoundDef和原可用性/位置预检，然后原生PlayOneShot。正常void返回表示已调用，不承诺听见；异常按副作用阶段区分。
 - R=60游戏tick是批准的明确未派发状态重检默认。W、共用间隔必须显式提供；W20/H40仅Dev菜单中明确标记的fixture，不是玩家缺省。受控入口的动作硬间隔也必须显式提供；Dev fixture两动作120，不是玩家缺省。后续完整配置迁移另按S3/S4实施。
 - 受控session独占该Pawn的S1动作集，不并行执行旧冷却持有者。关闭受控session后回原路径。已有持续句柄活跃时拒绝启用；不改变Sustained启动/替换政策。销毁/离图与新游戏/读档清理受控状态，不写存档。
@@ -16,7 +16,7 @@
 
 [Extensions.xml](examples/0.6/Extensions.xml)展示显式`UsProviderDef`→`IUsDefinitionProvider`批次、`UsActionDef`条件组合和音频引用。示范提供者`ControlledExampleProvider`总是返回True，仅用于受控装配验证，不冒充游戏值班事实。真实扩展实现`IUsFactSource.Capture(subject)`并自行在适配中查对象，核心接口没有Pawn/Def类型。提供者在临时批次完整收集、重复检查后发布；失败不发布半批。注册时只读取一次事实Key，之后采样沿用该注册身份。S1组合的baseAction只接受内置us.core/Work、us.core/Wounded、us.core/Call；不接受组合动作作为base，与Def枚举顺序无关。
 
-字段：精确Race、稳定entry key、动作ID、SoundDef名及可选weight/volume/enabled。省略与显式false/0通过存在位区分；volume=0合法，weight必须有限正数。未知/重复字段、重复身份和缺必需条件不会通过删条件被放行。condition必须恰有一个根表达式；ref是无属性文本叶，all/any/not只能含合法表达式，not恰有一项；entries只能含li。音源归属取实际SoundDef提供者，不接受作者owner字符串；完整重名/patch前来源取证仍待S2，不能称首版资源系统已闭环。
+字段：精确Race、稳定entry key、动作ID、SoundDef名及可选weight/volume/enabled。省略与显式false/0通过存在位区分；volume=0合法，weight必须有限正数。未知/重复字段、重复身份和缺必需条件不会通过删条件被放行。condition必须恰有一个根表达式；ref是无属性文本叶，all/any/not只能含合法表达式，not恰有一项；entries只能含li。音源归属取实际SoundDef提供者，不接受作者owner字符串；完整重名/patch前来源、最终对象与内部池验证已接[S2](us-kernel-0.6-s2-zh.md)；原生加载/听感仍待观察。
 
 ## 手动目标1.6观察（待验收）
 

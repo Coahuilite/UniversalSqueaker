@@ -1,0 +1,4 @@
+tick=1000 entry=entry.author/VoicePack/recorded audio=actual.audio/US_RatkinExp_Work calls=1 rolls= receipt=Dispatched confirmed=1000 shared=1040 next=1060
+tick=1000 entry=entry.author/VoicePack/recorded audio=actual.audio/US_RatkinExp_Work calls=1 rolls= receipt=Rejected confirmed=- shared=0 next=1060
+tick=1000 entry=entry.author/VoicePack/recorded audio=actual.audio/US_RatkinExp_Work calls=1 rolls= receipt=Indeterminate confirmed=- shared=1040 next=1060
+tick=1000 entry=entry.author/VoicePack/recorded audio=actual.audio/US_RatkinExp_Work calls=1 rolls= receipt=AlreadyActive confirmed=- shared=0 next=1060

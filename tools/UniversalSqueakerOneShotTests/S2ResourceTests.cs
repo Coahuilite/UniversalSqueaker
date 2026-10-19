@@ -54,6 +54,8 @@ internal static partial class Program
         string expected = System.IO.File.ReadAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fixtures", "us-s2-golden.txt")).Replace("\r", "");
         Check(first == expected, "S2 independent fixed route golden (not old corpus replacement)");
         Console.Write(first);
+        S2BoundRequests();
+        S2WeightedAgeAndEgg();
     }
     private static VoicePackEntry S2Entry(string pack, AudioDomain domain, string sound, string? fallback = null)
     {
@@ -85,10 +87,10 @@ internal static partial class Program
             random.Complete();
             Check(result.IsNone || result.Resource.HasValue, "S2 selected resource has complete identity");
             if (!result.IsNone) Check(result.SelectedContext?.Domain == domain, "S2 selected context retained");
-            text.Append("tick=1000 ").Append(label).Append(" ").Append(result.SoundKey ?? "None").Append(" ")
+            text.Append(label).Append(" ").Append(result.SoundKey ?? "None").Append(" ")
                 .Append(result.PoolStableKey ?? "-").Append(" ").Append(result.Tier?.ToString() ?? "-")
-                .Append(" rolls=").Append(string.Join(",", random.Purposes)).Append(" receipt=")
-                .Append(result.IsNone ? "NotSubmitted" : "Dispatched").Append('\n');
+                .Append(" rolls=").Append(string.Join(",", random.Purposes)).Append(" state=")
+                .Append(result.IsNone ? "NoCandidate" : "Selected").Append('\n');
         }
         Case("Fallback", xeno, SelectionMode.Fallback, new S2Gate());
         Case("Off", xeno, SelectionMode.Off, new S2Gate());

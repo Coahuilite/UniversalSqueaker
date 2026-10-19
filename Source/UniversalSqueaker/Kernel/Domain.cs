@@ -37,47 +37,67 @@ public readonly struct XenotypeKey : IEquatable<XenotypeKey>
     public override string ToString() => DefName ?? "";
 }
 
+public enum AudioDomainFamily { Pawn, NonPawn }
+
 public readonly struct AudioDomain : IEquatable<AudioDomain>
 {
     public readonly RaceKey Race;
     public readonly XenotypeKey? Xenotype;
+    public readonly AudioDomainFamily Family;
     public readonly string? ObjectNamespace;
-    public bool IsNonPawn => ObjectNamespace != null;
+    public readonly string? ObjectTarget;
+    public bool IsNonPawn => Family == AudioDomainFamily.NonPawn;
 
     public AudioDomain(RaceKey race, XenotypeKey? xenotype)
     {
         Race = race;
         Xenotype = xenotype;
+        Family = AudioDomainFamily.Pawn;
         ObjectNamespace = null;
+        ObjectTarget = null;
     }
 
     private AudioDomain(string objectNamespace, string target)
     {
-        if (string.IsNullOrWhiteSpace(objectNamespace) || string.IsNullOrWhiteSpace(target))
+        if (string.IsNullOrWhiteSpace(objectNamespace) || objectNamespace != objectNamespace.Trim()
+            || string.IsNullOrWhiteSpace(target) || target != target.Trim())
+        {
             throw new ArgumentException("NonPawn requires a namespace and exact target");
+        }
+        Family = AudioDomainFamily.NonPawn;
         ObjectNamespace = objectNamespace;
-        Race = new RaceKey(target);
+        ObjectTarget = target;
+        Race = default;
         Xenotype = null;
     }
 
     public static AudioDomain NonPawn(string objectNamespace, string target) => new(objectNamespace, target);
     public AudioDomain Parent => IsNonPawn ? this : new AudioDomain(Race, null);
 
-    public bool IsRaceOnly => Xenotype == null;
+    public bool IsRaceOnly => Family == AudioDomainFamily.Pawn && Xenotype == null;
 
-    public bool Equals(AudioDomain other) => Race.Equals(other.Race) && Xenotype.Equals(other.Xenotype) && ObjectNamespace == other.ObjectNamespace;
+    public bool Equals(AudioDomain other)
+        => Family == other.Family && Race.Equals(other.Race) && Xenotype.Equals(other.Xenotype)
+            && ObjectNamespace == other.ObjectNamespace && ObjectTarget == other.ObjectTarget;
     public override bool Equals(object? obj) => obj is AudioDomain other && Equals(other);
     public override int GetHashCode()
     {
         unchecked
         {
-            return (Race.GetHashCode() * 397) ^ (Xenotype?.GetHashCode() ?? 0) ^ (ObjectNamespace?.GetHashCode() ?? 0);
+            return (Race.GetHashCode() * 397) ^ (Xenotype?.GetHashCode() ?? 0) ^ (ObjectNamespace?.GetHashCode() ?? 0) ^ (ObjectTarget?.GetHashCode() ?? 0) ^ (int)Family;
         }
     }
     public static bool operator ==(AudioDomain a, AudioDomain b) => a.Equals(b);
     public static bool operator !=(AudioDomain a, AudioDomain b) => !a.Equals(b);
 
-    public override string ToString() => IsNonPawn ? "NonPawn:" + ObjectNamespace + "/" + Race.DefName : Xenotype == null ? Race.DefName : Race.DefName + "+" + Xenotype.Value.DefName;
+    public override string ToString()
+    {
+        if (IsNonPawn)
+        {
+            return "NonPawn:" + Uri.EscapeDataString(ObjectNamespace!) + "/" + Uri.EscapeDataString(ObjectTarget!);
+        }
+        return Xenotype == null ? Race.DefName : Race.DefName + "+" + Xenotype.Value.DefName;
+    }
 }
 
 public enum AudioDomainStatus { Available, Dormant, TargetUnavailable, Orphan }
@@ -118,6 +138,52 @@ public static class AudioDomains
         if (string.IsNullOrWhiteSpace(raceDefName))
             throw new ArgumentException("Race defName must not be null or whitespace.", nameof(raceDefName));
         return new AudioDomain(new RaceKey(raceDefName), null);
+    }
+
+    public static bool TryParseNonPawn(string value, out AudioDomain domain)
+    {
+        domain = default;
+        const string prefix = "NonPawn:";
+        if (value == null || !value.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+        int separator = value.IndexOf('/', prefix.Length);
+        if (separator < 0)
+        {
+            return false;
+        }
+        string scope = Uri.UnescapeDataString(value.Substring(prefix.Length, separator - prefix.Length));
+        string target = Uri.UnescapeDataString(value.Substring(separator + 1));
+        if (string.IsNullOrWhiteSpace(scope) || scope != scope.Trim() || string.IsNullOrWhiteSpace(target) || target != target.Trim())
+        {
+            return false;
+        }
+        domain = AudioDomain.NonPawn(scope, target);
+        return domain.ToString() == value;
+    }
+
+    public static IReadOnlyList<AudioDomain> CollectDomains(IEnumerable<AudioDomain> domains)
+    {
+        var result = new List<AudioDomain>(new HashSet<AudioDomain>(domains));
+        result.Sort(Compare);
+        return result;
+    }
+
+    public static int Compare(AudioDomain left, AudioDomain right)
+    {
+        int family = left.Family.CompareTo(right.Family);
+        if (family != 0)
+        {
+            return family;
+        }
+        if (left.IsNonPawn)
+        {
+            int scope = StringComparer.Ordinal.Compare(left.ObjectNamespace, right.ObjectNamespace);
+            return scope != 0 ? scope : StringComparer.Ordinal.Compare(left.ObjectTarget, right.ObjectTarget);
+        }
+        int race = StringComparer.Ordinal.Compare(left.Race.DefName, right.Race.DefName);
+        return race != 0 ? race : StringComparer.Ordinal.Compare(left.Xenotype?.DefName, right.Xenotype?.DefName);
     }
 
     public static IReadOnlyList<AudioDomain> Collect(IEnumerable<(string race, string? xeno)> sources)

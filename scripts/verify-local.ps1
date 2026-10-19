@@ -360,6 +360,14 @@ Invoke-Check 'frozen stub snapshot integrity (all five recorded stub sources equ
 Invoke-Check 'OneShot S1 + author declarations (zero platform references)' `
     'dotnet run --project tools/UniversalSqueakerOneShotTests -c Release' `
     { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerOneShotTests') -c Release }
+# Gate 18: controlled adapters are explicitly separate from the pure gate 17.
+Invoke-Check 'S2 real binding/pool adapter sources over controlled doubles' `
+    'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release }
+# Gate 19: a separate process owns the failed-startup batch fixture.
+Invoke-Check 'S2 incomplete original-observation batch fails closed' `
+    'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release -- --partial-observation' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --partial-observation }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

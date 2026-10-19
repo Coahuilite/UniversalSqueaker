@@ -68,7 +68,7 @@ public sealed class SqueakPoolRegistry
         ChainResult x = ctx.Domain.Xenotype != null
             ? SelectTier(PoolFor(ctx.Domain), ChainTier.XenotypePack, ctx, gate, rolls)
             : ChainResult.None;
-        ChainResult r = SelectTier(PoolFor(ctx.Domain.Parent), ChainTier.RacePack, ctx, gate, rolls);
+        ChainResult r = SelectTier(PoolFor(ctx.Domain.Parent), ctx.Domain.IsNonPawn ? ChainTier.ObjectPack : ChainTier.RacePack, ctx, gate, rolls);
 
         if (mode == SelectionMode.Fallback)
         {

@@ -15,11 +15,20 @@ internal static class UsNativeAudioPool
     {
         if (subSound == null || Pool?.GetValue(subSound) is not List<ResolvedGrain> grains
             || Completed?.GetValue(subSound) is not int count || count <= 0
-            || grains.Count == 0 || grains.Distinct().Count() != count) return null;
+            || grains.Count == 0 || grains.Distinct().Count() != count)
+        {
+            return null;
+        }
         foreach (var grain in grains)
         {
-            if (grain is ResolvedGrain_Clip clip && clip.clip != null && clip.clip.loadState == UnityEngine.AudioDataLoadState.Loaded) continue;
-            if (grain != null && grain.GetType().FullName == "Verse.Sound.ResolvedGrain_Silence") continue;
+            if (grain is ResolvedGrain_Clip clip && clip.clip != null && clip.clip.loadState == UnityEngine.AudioDataLoadState.Loaded)
+            {
+                continue;
+            }
+            if (grain != null && grain.GetType().FullName == "Verse.Sound.ResolvedGrain_Silence")
+            {
+                continue;
+            }
             return null;
         }
         return grains;

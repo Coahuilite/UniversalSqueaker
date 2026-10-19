@@ -1,6 +1,6 @@
 # 0.5.x VoicePack 作者指南
 
-适用：当前 0.5.0 工作树，2026-10-18 按源码复核；旧发行版可能不同。普通作者从第 2–3 节最小包开始。第 12 节提供维护用源码入口。下一版接缝见 [0.6.x 规格](us-kernel-0.6-spec-zh.md)，其中的新字段不能直接用于本版。
+适用：保留的0.5.x作者格式；0.6 S2工作树继续读取，资源来源/完整绑定变化见[S2实施页](us-kernel-0.6-s2-zh.md)。旧发行版可能不同。普通作者从第 2–3 节最小包开始。第 12 节提供维护用源码入口。下一版接缝见 [0.6.x 规格](us-kernel-0.6-spec-zh.md)，其中的新字段不能直接用于本版。
 
 一个 `SqueakVoicePackDef` 是一个可选音频包，服务一个精确域。独立内容模组可包含多个 PackDef，只需 XML 与音频，不需要 C#。依赖 Universal Squeaker（`coahuilite.universalsqueaker`）及实际使用的种族模组；原版 `Human` 不需要第三方种族依赖。安装时也须满足 US 自身依赖。不要把内容安装进 US 主模组目录。
 
@@ -149,7 +149,7 @@ MyStudioVoices/
 | `actions` | 是 | 至少一条 `action` + 非空 `sounds`；可附 `ageTag`、`IsEgg` |
 | `fallbacks` | 否 | 每条 `action` + 单个 `sound`；同动作只能一条 |
 
-`defName` 不承载任何路由语义：包服务哪个种族只由 `raceDefName`（Xenotype 再加 `scope` + `targetDefName`）精确决定，comp 挂载与玩家勾选域同样只读这些字段。`US_` 前缀之后可自由命名，但两个属性使它实际不可更改：它是稳定键 `packageId:defName` 的一半，玩家勾选按该键持久化在设置中，发布后改名只会使旧勾选失配；它同时是全局 Def 名，须避开与其他模组的撞名（`duplicate_key` 整组拒绝，RimWorld 层同名 Def 也会冲突或互相覆盖）。SoundDef 名同理只查 `US_` 前缀——引用它的 `actions`/`fallbacks` 按 Def 名解析，改名必须同步全部引用。音频目录里的 `<PackDef.defName>` 段是防串音约定，校验器不核对（第 2 节）。
+`defName` 不承载任何路由语义：包服务哪个种族只由 `raceDefName`（Xenotype 再加 `scope` + `targetDefName`）精确决定，comp 挂载与玩家勾选域同样只读这些字段。`US_` 前缀之后可自由命名，但两个属性使它实际不可更改：它是稳定键 `packageId:defName` 的一半，玩家勾选按该键持久化在设置中，发布后改名只会使旧勾选失配；它同时是全局 Def 名，须避开与其他模组的撞名（`duplicate_key` 整组拒绝，RimWorld 层同名 Def 也会冲突或互相覆盖）。SoundDef必须全局唯一；0.6 S2允许按真实defName引用Core或其他已加载提供者，不要求被引用资源也有`US_`前缀。引用它的`actions`/`fallbacks`仍按Def名解析，改名必须同步全部引用。音频目录里的 `<PackDef.defName>` 段是防串音约定，校验器不核对（第 2 节）。
 
 同一个 PackDef 内，`action + ageTag`（含省略的全年龄）不得重复；`IsEgg` 不参与去重。因此不能为同动作同年龄各写一条普通项和彩蛋项。多个声音写进同一条 `sounds`；如需可独立开关的普通包和彩蛋包，可使用两个不同 PackDef。
 
@@ -169,7 +169,7 @@ MyStudioVoices/
 
 违反 PackDef 字段规则或上述结构规则时，整个 PackDef 不进入 catalog。US 静态校验**不检测**文件内容、响度、静音或目录命名格式。
 
-`fallbacks` 当前只静态检查动作合法且不重复、sound 非空及 `US_` 前缀，未复用 actions 的完整声音结构检查。这是实现差异，不是制作捷径：作者仍应让 fallback SoundDef 满足相同的地图音频规范。
+`fallbacks`静态检查动作合法且不重复、sound非空及有效defName，未复用actions的完整声音结构诊断；0.6 S2对两种引用都要求同一实际来源/最终对象/安全内部池绑定。这是实现差异，不是制作捷径：作者仍应让 fallback SoundDef 满足相同的地图音频规范。
 
 运行时会解析 grain，至少取得一个非空 `ResolvedGrain_Clip`/AudioClip 才有音频候选；无 clip 或解析失败的声音被过滤，其他候选与回退层仍可继续。生产播放还要求 MapOnly、纯地图 SubSound，以及存活、已生成且位于当前地图的 pawn 和 Playing 状态。预览的可播放判定与生产不同，试听成功不能替代生产验证。缓存不分析波形，全静音但可解码的 clip 仍可能被判为 Available。
 
@@ -268,7 +268,7 @@ Xenotype 包必须同时指定种族和 Xenotype，不能只按同名 Xenotype �
 
 ## 11. 交付检查
 
-- [ ] 自有且稳定的 packageId、名称、作者；所有 PackDef 与引用 SoundDef 使用唯一 `US_` 名称。
+- [ ] 自有且稳定的 packageId、名称、作者；PackDef使用唯一`US_`名称；自有SoundDef建议同样使用唯一前缀，外部引用使用提供者的真实defName。
 - [ ] 声明精确种族/目标与必要依赖；加载目录门控正确。
 - [ ] 音频实际存在，路径与 XML 一致；无空文件、静音占位或意外素材。
 - [ ] 完整 XML 可解析，actions/fallbacks 满足第 4–5 节，引用目标均可加载。

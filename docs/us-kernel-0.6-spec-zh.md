@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-18，r3。状态：**首版目标规格，OneShot受控S1已实现，其余按切片待实现／验收**。目标游戏版本仍为 RimWorld 1.6。
+修订：2026-10-19，r4。状态：**首版目标规格；受控S1及S2来源/资源技术链已实现，原生验收与S3–S5责任仍保留**。目标游戏版本仍为 RimWorld 1.6。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。制作现有版本声音包，请使用[0.5.x 作者指南](voicepack-authoring-0.5-zh.md)。
 
@@ -363,7 +363,7 @@ Xenotype 请求可按明确路径使用 Race 常规声音，但不会因此借�
 - 总音量 `1→0→0.5` 不靠除以旧值，仍存活实例可恢复；已结束实例不补播。首帧、持续音起止辅助音和池化复用均需正确传播／释放归属。
 - 适配不可用时明确报告并阻止依赖它的新派发，不回退共享定义写入或绕过玩家静音。已有无句柄声音控制失败必须如实说明。
 
-本机 1.7 源码中的 Sample 更新／实例音量映射是可行性依据，目标 1.6 的具体 API、顺序与资源就绪仍须验证。纯 Kernel 不暴露这些原版类型；游戏升级主要修复对应适配，不要求普通声音包跟随内部 API 修改。
+目标1.6的加载、内部资源池及Sample首帧/更新方法体已经定点核对；实际实现与证据边界见[S2](us-kernel-0.6-s2-zh.md)。原生播放、在播更新和听感仍须验证。纯 Kernel 不暴露这些原版类型；游戏升级主要修复对应适配，不要求普通声音包跟随内部 API 修改。
 
 ## 11. 播放结果与已有持续音
 
@@ -473,7 +473,7 @@ K20 封存、K21 完整实现首版外、种族／服务对象边界、K13／K17
 - [现有 Comp 入口／生命周期](../Source/UniversalSqueaker/CompSqueaker.cs)、[动作元数据](../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs)。
 - [当前时序](../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs)、[分层参数](../Source/UniversalSqueaker/Pure/SqueakLayeredTuning.cs)、[当前调制](../Source/UniversalSqueaker/Kernel/Modulation.cs)。
 
-原版接缝的研究参考为 RimWorld 1.7.4981 rev136；当前 US 目标引用为 1.6，研究参考不是目标版本运行验收。本文没有把旧 UI 接受、历史工具测试或正常派发回执扩大成新 Kernel 的产品验收。
+S2已核对远端1.6.4850及本机目标1.6.4871/Unity2022.3.35f1的关键方法体，见[S2实施页](us-kernel-0.6-s2-zh.md)；方法体依据和目标引用编译不是原生运行验收。本文没有把旧 UI 接受、历史工具测试或正常派发回执扩大成新 Kernel 的产品验收。
 
 ## 17. r2 变更与迁移入口
 
@@ -482,3 +482,11 @@ r2新增合同与固定输入附页，强化纯核心／平台适配边界；V01
 ## 18. 已采用的首批范围
 
 D1三态、D2的OneShot单机会/同tick名额与四结果/R60、Work与Wounded同批优先且无新增共用豁免、D6单提供者入口与格式号省略永久为1已获批准。本次不据此批准Sustained新启动/替换、D3完整日常频率或D4调制。实际接口、普通包/扩展示例、受控入口及证据边界见[OneShot S1](us-kernel-0.6-s1-zh.md)。
+
+## 19. S2实现状态与后续责任
+
+S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的最终解析声明（含构造失败）、内部池完成事实及最终对象发布接到正常调用和S1。条目归因与实际AudioId分离；合法字段/更名及唯一整根替换使用最终内容，删除/冲突/缺证不猜owner。NonPawn以独立Family/Namespace/Target表示，Pawn Race/Xeno保留原API和合法父路径。来源观察原子发布，异常批次不形成半索引唯一性结论。
+
+作者入口、生产路径、四模式/年龄/egg/权重保留、独立双重放与适配fixture、V01/V08/V09/V10责任和V14接缝盲区统一见[S2实施页](us-kernel-0.6-s2-zh.md)。本轮没有引入owner字段或普通音频注册Def，没有批准D3/D4、新Sustained或完整D6默认。旧黄金语料不重录；纯层、适配、目标1.6源码依据及原生观察/听感分别记证据。S3–S5和S1原生缺口不随此状态自动关闭。
+
+**S5交付阻断：** 继承的`Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍写共享定义，借用Core/他方SoundDef时可能影响非US声音。PM允许S2技术链单独接收，但C11/V14/S5及整个0.6产品接受必须等待实例级替代；本轮不禁用旧距离、不新增共享写入、不用Def克隆绕过。详见S2实施页。

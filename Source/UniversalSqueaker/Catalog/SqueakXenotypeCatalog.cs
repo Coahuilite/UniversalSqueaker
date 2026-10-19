@@ -26,7 +26,7 @@ public static class SqueakXenotypeCatalog
                 if (!SqueakVoicePackValidator.IsAdmissible(pack))
                 {
                     string packKey = pack.TryGetPackKey(out string validKey) ? validKey : pack.defName;
-                    string? firstError = SqueakVoicePackValidator.GetErrors(pack).FirstOrDefault();
+                    string? firstError = SqueakVoicePackValidator.GetAdmissionErrors(pack).FirstOrDefault();
                     SqueakLog.PackRejected(packKey, 1, "invalid:" + (firstError ?? "unknown"));
                     continue;
                 }

@@ -122,18 +122,42 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     {
         SoundDef? sound = null;
         SoundInfo info = default;
+        string rejection = "DynamicPreflightRejected";
         bool Preflight()
         {
-            return UnityData.IsInMainThread
-                && request.Subject == pawn.ThingID
-                && request.Domain == pawn.def.defName
-                && pawn.Spawned
-                && pawn.MapHeld == Find.CurrentMap
-                && Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position)
-                && (sound = UsAudioBindings.Resolve(request.Audio.AudioId)) != null
-                && sound != null
-                && !sound.sustain
-                && SqueakSoundAvailabilityCache.TryCreateProductionInfo(sound, pawn, out info, out _);
+            if (!UnityData.IsInMainThread)
+            {
+                rejection = "MainThreadRequired";
+                return false;
+            }
+            if (request.Subject != pawn.ThingID || request.Domain != pawn.def.defName)
+            {
+                rejection = "SubjectIdentityChanged";
+                return false;
+            }
+            if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap
+                || !Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position))
+            {
+                rejection = "SubjectOrLocationUnavailable";
+                return false;
+            }
+            sound = UsAudioBindings.Resolve(request.Audio.AudioId);
+            if (sound == null)
+            {
+                rejection = "MissingFinalBinding";
+                return false;
+            }
+            if (sound.sustain)
+            {
+                rejection = "OneShotShapeRequired";
+                return false;
+            }
+            if (!SqueakSoundAvailabilityCache.TryCreateProductionInfo(sound, pawn, out info, out var playability))
+            {
+                rejection = "DynamicPlayability:" + playability;
+                return false;
+            }
+            return true;
         }
 
         void Play()
@@ -142,10 +166,13 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             sound!.PlayOneShot(info);
         }
 
-        return OneShotDispatch.Execute(
+        var receipt = OneShotDispatch.Execute(
             Preflight,
             Play,
             () => Log.Message("usdiag OneShot " + request.Action + " " + request.Audio.AudioId + " NativeCallReturned"));
+        return receipt.Result == PlaybackResult.Rejected && receipt.Reason == "PreflightRejected"
+            ? new PlaybackReceipt(PlaybackResult.Rejected, rejection)
+            : receipt;
     }
 }
 
@@ -198,9 +225,15 @@ public static class UsOneShotRuntime
     private static string? Bind(string name)
     {
         string? key = UsAudioBindings.KeyForName(name);
-        if (key == null) return null;
+        if (key == null)
+        {
+            return null;
+        }
         var sound = UsAudioBindings.Resolve(key);
-        if (sound == null) return null;
+        if (sound == null)
+        {
+            return null;
+        }
         return key;
     }
 

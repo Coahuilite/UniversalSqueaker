@@ -1,8 +1,8 @@
-tick=1000 Fallback other.provider/Xeno author.b/Pack XenotypePack rolls= receipt=Dispatched
-tick=1000 Off core/Work - BuiltInFallback rolls= receipt=Dispatched
-tick=1000 Disabled None - - rolls= receipt=NotSubmitted
-tick=1000 Remix core/XenoFallback author.b/Pack PackFallback rolls=Tier receipt=Dispatched
-tick=1000 ExactFallback core/XenoFallback author.b/Pack PackFallback rolls= receipt=Dispatched
-tick=1000 NoRaceFallbackLeak core/Work - BuiltInFallback rolls= receipt=Dispatched
-tick=1000 Bench bench.audio/Work bench.author/Pack RacePack rolls= receipt=Dispatched
-tick=1000 Armor armor.audio/Work armor.author/Pack RacePack rolls= receipt=Dispatched
+Fallback other.provider/Xeno author.b/Pack XenotypePack rolls= state=Selected
+Off core/Work - BuiltInFallback rolls= state=Selected
+Disabled None - - rolls= state=NoCandidate
+Remix core/XenoFallback author.b/Pack PackFallback rolls=Tier state=Selected
+ExactFallback core/XenoFallback author.b/Pack PackFallback rolls= state=Selected
+NoRaceFallbackLeak core/Work - BuiltInFallback rolls= state=Selected
+Bench bench.audio/Work bench.author/Pack ObjectPack rolls= state=Selected
+Armor armor.audio/Work armor.author/Pack ObjectPack rolls= state=Selected

@@ -189,7 +189,6 @@ Assembly-CSharp!Verse.Scribe_Values::Look(!!0&,String,!!0,Boolean)^1 | scribe
 # ------------------------------------------------------------------------------------------------
 # audio (17) - audio - the game's audio backend and the Defs that feed it
 # ------------------------------------------------------------------------------------------------
-Assembly-CSharp!Verse.Sound.AudioGrain::GetResolvedGrains() | audio
 Assembly-CSharp!Verse.Sound.ResolvedGrain_Clip::clip:c:UnityEngine.AudioClip | audio
 Assembly-CSharp!Verse.Sound.SoundInfo::InMap(v:Verse.TargetInfo,v:Verse.Sound.MaintenanceType) | audio
 Assembly-CSharp!Verse.Sound.SoundInfo::OnCamera(v:Verse.Sound.MaintenanceType) | audio
@@ -265,3 +264,10 @@ Assembly-CSharp!Verse.RaceProperties::get_IsAnomalyEntity() | defs
 # target-game observation. No same-named stubs are added to the pure OneShot source test.
 Assembly-CSharp!Verse.GameComponent::.ctor() | world
 Assembly-CSharp!Verse.Prefs::get_DevMode() | debug
+
+# S2 startup observation: target 1.6.4871 methods/field are checked in the CO SEAMS16 record.
+# Gate 18 exercises the production observer/binding code over isolated controlled doubles;
+# the frozen page Host stub does not implement the native XML load process.
+Assembly-CSharp!Verse.GenTypes::GetTypeInAnyAssembly(String,String) | defs
+Assembly-CSharp!Verse.LoadableXmlAsset::mod:c:Verse.ModContentPack | defs
+Assembly-CSharp!Verse.XmlInheritance::GetResolvedNodeFor(c:System.Xml.XmlNode) | defs

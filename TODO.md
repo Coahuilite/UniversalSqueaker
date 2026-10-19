@@ -5,11 +5,12 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 controlled OneShot S1 native validation pending
+## NOW — 0.6.0 S1/S2 native validation pending
 
 - Run the approved 1.6 controlled author-load and Work/Wounded OneShot observation using the isolated Dev candidate; do not install it automatically.
 - Keep D3 daily-frequency defaults, D4 modulation and new Sustained start/replacement outside this slice. W20 remains a labelled fixture, not a player default.
-- See docs/us-kernel-0.6-s1-zh.md; native resource provenance/output/subject isolation and listening evidence remain separate.
+- Replace the inherited shared-Def distance mutation in S5 before C11/V14 or full 0.6 product acceptance. Keep the S2 candidate isolated for technical validation; it is not a general-install recommendation.
+- See docs/us-kernel-0.6-s1-zh.md and docs/us-kernel-0.6-s2-zh.md. Next native observation covers actual provenance/final objects/resource pools; output ownership and listening remain separate. S3–S5 scope/default decisions remain open.
 
 ## Retained interaction checkpoint (2026-10-09)
 

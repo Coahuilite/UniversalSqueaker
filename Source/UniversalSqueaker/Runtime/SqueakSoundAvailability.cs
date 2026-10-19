@@ -97,22 +97,6 @@ public static class SqueakSoundAvailabilityCache
 
     public static void Clear() => cache.Clear();
 
-    private static string ReadStringMember(object owner, string name)
-    {
-        try
-        {
-            Type? type = owner.GetType();
-            while (type != null)
-            {
-                System.Reflection.FieldInfo? field = type.GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (field != null) return field.GetValue(owner) as string ?? "";
-                type = type.BaseType;
-            }
-        }
-        catch { }
-        return "";
-    }
-
     public static SqueakSoundPlayability GetNativePlayability(SoundDef? sound, Map? sourceMap, TargetInfo? sourceTarget)
     {
         SqueakSoundAvailability availability = Resolve(sound);

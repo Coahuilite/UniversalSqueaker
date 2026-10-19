@@ -47,7 +47,7 @@ public sealed class VoicePackEntry
     public bool TryGetAction(string actionKey, out IReadOnlyList<ActionSoundSet> sets) => Actions.TryGetValue(actionKey, out sets!);
 }
 
-public enum ChainTier { XenotypePack, RacePack, PackFallback, BuiltInFallback }
+public enum ChainTier { XenotypePack, RacePack, PackFallback, BuiltInFallback, ObjectPack }
 
 /// <summary>选择结果；SoundKey/Tier/PoolStableKey 全 null = 无声。IsEgg 标记所选条目的彩蛋身份
 /// （日志装配适配；BuiltIn/PackFallback 恒 false，普通条目 false）。</summary>

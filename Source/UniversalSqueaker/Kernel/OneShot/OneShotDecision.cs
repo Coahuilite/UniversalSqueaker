@@ -469,7 +469,9 @@ public sealed class OneShotDecision
                 && candidate.TargetNamespace == input.TargetNamespace)
             .OrderBy(candidate => candidate.EntryKey, StringComparer.Ordinal)
             .ToArray();
-        var domain = new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), null);
+        var domain = input.Family == SubjectFamily.NonPawn
+            ? Kernel.AudioDomain.NonPawn(input.TargetNamespace, input.Domain)
+            : new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), null);
         var entries = candidates.Select(candidate => new Kernel.VoicePackEntry(
             candidate.EntryKey,
             domain,
@@ -487,7 +489,10 @@ public sealed class OneShotDecision
             input.SourceMode,
             new BoundAudioGate(),
             new SelectionRandom(random));
-        if (chosen.IsNone) return null;
+        if (chosen.IsNone)
+        {
+            return null;
+        }
         return candidates.FirstOrDefault(x => x.EntryKey == chosen.PoolStableKey)
             ?? new AudioCandidate("fallback/" + action, chosen.SoundKey!, action, input.Domain, 1);
     }

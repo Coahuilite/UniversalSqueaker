@@ -8,7 +8,8 @@ using UniversalSqueaker.Kernel;
 namespace UniversalSqueaker;
 
 /// <summary>
-/// 内核↔适配层接缝：SoundDef 收敛为 string key + ISoundGate 函子；Verse.Rand 收敛为 IRollSource；
+/// 内核↔适配层接缝：完整AudioId编码键进入原选择器，SoundDef仅从已验证最终对象绑定解析；
+/// ISoundGate核对动态资格，Verse.Rand收敛为IRollSource；
 /// catalog 域包投影为 VoicePackEntry[]。域身份端到端 = AudioDomain（记录自身 raceDefName/xenotypeDefName），
 /// 无内置种族特判。Race 候选按 pack 声明的 raceDefName 精确匹配域，跨 race 池隔离。
 /// </summary>
@@ -109,7 +110,10 @@ internal static class SqueakKernelAdapter
             foreach (var entry in profile.SoundKeys)
             {
                 string? id = UsAudioBindings.KeyForName(entry.Value);
-                if (id != null) keys.Add(entry.Key, id);
+                if (id != null)
+                {
+                    keys.Add(entry.Key, id);
+                }
             }
             profiles.Add(new FallbackProfile(profile.Race, profile.Version, keys));
         }
@@ -124,6 +128,10 @@ internal static class SqueakKernelAdapter
         foreach (KeyValuePair<AudioDomain, HashSet<string>> pair in selections)
         {
             AudioDomain domain = pair.Key;
+            if (domain.IsNonPawn)
+            {
+                continue; // Pawn adapter has no NonPawn host.
+            }
             if (pair.Value == null || pair.Value.Count == 0) continue;
             IReadOnlyList<SqueakVoicePackDef>? candidates = null;
             if (domain.Xenotype == null)
@@ -149,7 +157,7 @@ internal static class SqueakKernelAdapter
     /// <summary>ChainResult → SqueakSoundChoice（tier → source 映射；key 查表缺失 → None 防御）。</summary>
     public static SqueakSoundChoice ToChoice(ChainResult result, AudioDomain domain)
     {
-        if (result.SoundKey == null) return SqueakSoundChoice.None;
+        if (domain.IsNonPawn || result.SoundKey == null) return SqueakSoundChoice.None;
         SoundDef? sound = UsAudioBindings.Resolve(result.SoundKey);
         if (sound == null) return SqueakSoundChoice.None;
         SqueakSoundSource source = result.Tier switch
@@ -159,7 +167,7 @@ internal static class SqueakKernelAdapter
             ChainTier.PackFallback => domain.Xenotype != null ? SqueakSoundSource.XenotypePack : SqueakSoundSource.RacePack,
             _ => SqueakSoundSource.Vanilla,
         };
-        return new SqueakSoundChoice(sound, source, result.PoolStableKey, result.IsEgg, result.Tier);
+        return new SqueakSoundChoice(sound, source, result.PoolStableKey, result.IsEgg, result.Tier, result);
     }
 
     private static void AddDomain(List<VoicePackEntry> entries, IReadOnlyList<SqueakVoicePackDef>? candidates, HashSet<string> keys, AudioDomain domain)
@@ -183,7 +191,7 @@ internal static class SqueakKernelAdapter
             string? actionKey = ActionKey.For(entry.action);
             if (actionKey == null) continue;
             List<string> sounds = ProjectSounds(entry);
-            if (sounds.Count == 0) continue;
+            // Keep an empty exact-age declaration: resource rejection must not unlock all-age sounds.
             if (!variants.TryGetValue(actionKey, out List<ActionSoundSet>? sets))
             {
                 sets = new List<ActionSoundSet>();
@@ -212,11 +220,11 @@ internal static class SqueakKernelAdapter
     {
         return (entry.sounds ?? new List<SoundDef>())
             .Where(s => s != null && !s.defName.EndsWith("_Preview", StringComparison.Ordinal))
+            .OrderBy(s => s.defName, StringComparer.Ordinal)
             .Select(s => UsAudioBindings.KeyFor(s))
             .Where(s => s != null)
             .Select(s => s!)
             .Distinct(StringComparer.Ordinal)
-            .OrderBy(n => n, StringComparer.Ordinal)
             .ToList();
     }
 

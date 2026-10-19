@@ -74,7 +74,9 @@ internal static class SqueakVoicePackValidator
         return true;
     }
 
-    internal static bool IsAdmissible(SqueakVoicePackDef? pack) => !System.Linq.Enumerable.Any(EnumerateErrors(pack, false));
+    internal static IEnumerable<string> GetAdmissionErrors(SqueakVoicePackDef? pack) => EnumerateErrors(pack, false);
+
+    internal static bool IsAdmissible(SqueakVoicePackDef? pack) => !System.Linq.Enumerable.Any(GetAdmissionErrors(pack));
 
     internal static IEnumerable<string> GetErrors(SqueakVoicePackDef? pack) => EnumerateErrors(pack, true);
 
@@ -96,9 +98,12 @@ internal static class SqueakVoicePackValidator
             if (fallback == null) { yield return name + " contains a null fallback entry."; continue; }
             if (!SqueakActionDefinitions.IsKnown(fallback.action)) yield return name + " fallback contains unknown action " + fallback.action + ".";
             if (!fallbackActions.Add(fallback.action)) yield return name + " contains duplicate fallback action " + fallback.action + ".";
-            if (!resources) continue;
+            if (!resources)
+            {
+                continue;
+            }
             if (fallback.sound == null) { yield return name + " fallback " + fallback.action + " has a null SoundDef."; continue; }
-            if (string.IsNullOrWhiteSpace(fallback.sound.defName) || !fallback.sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " fallback " + fallback.action + " references a SoundDef without " + prefix + " prefix.";
+            if (string.IsNullOrWhiteSpace(fallback.sound.defName)) yield return name + " fallback " + fallback.action + " references a SoundDef without an exact defName.";
         }
 
         if (pack.actions == null || pack.actions.Count == 0) { yield return name + " has no action sounds."; yield break; }
@@ -119,14 +124,17 @@ internal static class SqueakVoicePackValidator
                 string ageName = entry.ageTag.HasValue ? entry.ageTag.Value.ToString() : "all-age";
                 yield return name + " contains duplicate action " + entry.action + " for ageTag " + ageName + ".";
             }
-            if (!resources) continue;
+            if (!resources)
+            {
+                continue;
+            }
             if (entry.sounds == null || entry.sounds.Count == 0) { yield return name + " action " + entry.action + " has no sounds."; continue; }
             foreach (SoundDef sound in entry.sounds)
             {
                 if (sound == null) { yield return name + " action " + entry.action + " contains a null SoundDef."; continue; }
-                if (string.IsNullOrWhiteSpace(sound.defName) || !sound.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " action " + entry.action + " references a SoundDef without " + prefix + " prefix.";
+                if (string.IsNullOrWhiteSpace(sound.defName)) yield return name + " action " + entry.action + " references a SoundDef without an exact defName.";
                 // S3：sustained SoundDef 允许进生产池（Sustained 模式经 Sustainer 播放，一次性模式在
-                // 运行时优雅降级为 PlayOneShot）；prefix/context/SubSounds 校验保持原样。
+                // 运行时优雅降级为 PlayOneShot）；context/SubSounds诊断保持。
                 if (sound.context != SoundContext.MapOnly) yield return name + " action " + entry.action + " references SoundDef " + sound.defName + " with context other than MapOnly.";
                 if (sound.subSounds == null || sound.subSounds.Count == 0) { yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has no SubSounds."; continue; }
                 foreach (SubSoundDef subSound in sound.subSounds)

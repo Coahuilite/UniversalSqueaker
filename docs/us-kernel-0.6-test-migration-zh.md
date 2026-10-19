@@ -1,15 +1,17 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-18 · r1 · **测试迁移总图；OneShot S1已运行纯层/作者装配测试，完整平台/后续切片未验收。**
+2026-10-19 · r2 · **测试迁移总图；S1及S2纯层/适配已接自动入口，原生与后续切片未验收。**
 
-本页配合[首版规格 r2](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
+S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
+
+本页配合[首版规格 r4](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是16门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是19门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
-- [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前16门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。
+- [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前19门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。
 - [Host工程](../tools/UniversalSqueakerKernelHostTests/UniversalSqueakerKernelHostTests.csproj)加载产品和FL载体并复制runtime stubs；[DefinitionDirectory工程](../tools/UniversalSqueakerDefinitionDirectoryTests/UniversalSqueakerDefinitionDirectoryTests.csproj)用独立扩展stub执行生产collector及真实Source/Host，当前也不是独立门禁。二者证明适配/消费轨迹，不证明C00纯层或真实游戏方法体。
 
 ## 2. 按合同决定保留什么
@@ -90,3 +92,7 @@ FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../fer
 5. **实际1.6配对观察**：用该US/FL固定候选验证FL要求的输入归属、IME/字体、宿主布局与US设置保存/重开；Kernel音频仍按本页V表单独验收。列明未完成证据与消费者接收结果，不能只凭FL测试绿或US编译绿称消费完成。
 
 当前CI取得的固定0.7 release路线继续服务旧线；新Dev验证需后续任务书授权源码/pin/脚本与工作副本改动，复用同一CI/门禁体系而不是建立第二验证平台。D项裁定、FL真实Dev交付和1.6运行环境分别由对应所有者提供；本次文档工作不等待它们，也不据此关闭V项。
+
+## S2交付后仍阻断C11/V14的继承路径
+
+`Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍活动并写共享定义；借用Core/他方同Def时旧距离设置可能影响非US声音。按PM裁定，它不阻断S2身份/来源/路由/绑定技术接收，但必须由S5实例级替代后才能接受C11/V14/S5和整个0.6产品。现有纯层、适配、Host绿色均不覆盖该原生输出保证。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
