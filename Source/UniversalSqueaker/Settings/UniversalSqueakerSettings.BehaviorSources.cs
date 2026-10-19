@@ -10,6 +10,20 @@ public partial class UniversalSqueakerSettings
     // Independent positive activity. Invalid external/Config input is rejected by the opportunity owner.
     public double activity = 1;
 
+    public void SetActivity(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Activity must be positive and finite");
+        }
+        if (activity == value)
+        {
+            return;
+        }
+        activity = value;
+        QueuePersistence();
+    }
+
     internal bool TryWriteBehaviorCandidate(string path, string candidate, Action<string> serialize,
         out string failure, Action? beforeCommit = null)
     {

@@ -432,6 +432,7 @@ public sealed class BehaviorSourceState
                         throw new ArgumentException("Unknown behavior parameter " + field.Name);
                 }
             }
+            var seenSettings = new HashSet<string>(StringComparer.Ordinal);
             foreach (XmlElement setting in action.ChildNodes.OfType<XmlElement>())
             {
                 if (setting.ChildNodes.OfType<XmlElement>().Any())
@@ -439,6 +440,10 @@ public sealed class BehaviorSourceState
                     throw new ArgumentException("Response setting must be a leaf");
                 }
                 string identity = setting.GetAttribute("key");
+                if (!seenSettings.Add(setting.Name + ":" + identity))
+                {
+                    throw new ArgumentException("Duplicate response setting");
+                }
                 if (string.IsNullOrWhiteSpace(identity) || identity != identity.Trim())
                 {
                     throw new ArgumentException("Invalid response setting identity");

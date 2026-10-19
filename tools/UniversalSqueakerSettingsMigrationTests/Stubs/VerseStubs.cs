@@ -490,6 +490,7 @@ namespace Verse
             if (type == typeof(bool)) return (T)(object)bool.Parse(str);
             if (type == typeof(string)) return (T)(object)str;
             if (type == typeof(float)) return (T)(object)float.Parse(str, System.Globalization.CultureInfo.InvariantCulture);
+            if (type == typeof(double)) return (T)(object)double.Parse(str, System.Globalization.CultureInfo.InvariantCulture);
             if (type == typeof(FloatRange))
             {
                 // Minimal support for the two-number Scribe form used by settings fixtures.

@@ -45,13 +45,11 @@ public sealed class NativeAgeResponse : IUsResponseRule
     public ResponseStage Stage => ResponseStage.Age;
     public ResponseContribution Evaluate(ResponseContext context)
     {
-        bool explicitPitch = context.TryRead("age.override", out double pitch);
-        bool explicitVolume = context.TryRead("age.overrideVolume", out double volume);
-        if (explicitPitch || explicitVolume)
-        {
-            return new ResponseContribution(explicitPitch ? pitch : 1, explicitVolume ? volume : 1);
-        }
-        return new ResponseContribution(context.Require("age.native"), context.Optional("age.nativeVolume", 1));
+        double pitch = context.TryRead("age.override", out double explicitPitch)
+            ? explicitPitch : context.Require("age.native");
+        double volume = context.TryRead("age.overrideVolume", out double explicitVolume)
+            ? explicitVolume : context.Require("age.nativeVolume");
+        return new ResponseContribution(pitch, volume);
     }
 }
 
@@ -161,7 +159,9 @@ public static class ResponseModulation
                 return new LocalParameters(false, 0, 0, "ResponseFault:" + rule.Key + ":" + error.Message);
             }
         }
-        if (double.IsNaN(plan.JitterMin) || double.IsNaN(plan.JitterMax) || plan.JitterMin <= 0 || plan.JitterMax < plan.JitterMin)
+        if (double.IsNaN(plan.JitterMin) || double.IsNaN(plan.JitterMax)
+            || double.IsInfinity(plan.JitterMin) || double.IsInfinity(plan.JitterMax)
+            || plan.JitterMin <= 0 || plan.JitterMax < plan.JitterMin)
             return new LocalParameters(false, 0, 0, "InvalidJitter");
         double jitter = plan.JitterMin;
         if (plan.JitterMin != plan.JitterMax)

@@ -367,6 +367,11 @@ public sealed class AuthorCatalog
                 }
             }
 
+            var participation = new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal);
+            if (participation.Keys.Any(x => !AuthorXml.ExactKey(x)))
+            {
+                throw new ArgumentException("Invalid action participation identity");
+            }
             // Composition can narrow a base condition, never bypass its qualification.
             actions.Add(declaration.Key, new ActionPlan(
                 declaration.Key,
@@ -381,7 +386,7 @@ public sealed class AuthorCatalog
                 parent.Volume,
                 parent.Pitch,
                 declaration.Sustained));
-            actionParticipation.Add(declaration.Key, new Dictionary<string, bool>(declaration.Participation, StringComparer.Ordinal));
+            actionParticipation.Add(declaration.Key, participation);
             return true;
         }
         catch (Exception error)
@@ -439,6 +444,10 @@ public sealed class AuthorCatalog
                 foreach (var setting in entry.Participation)
                 {
                     participation[setting.Key] = setting.Value;
+                }
+                if (participation.Keys.Any(x => !AuthorXml.ExactKey(x)))
+                {
+                    throw new ArgumentException("Invalid entry participation identity");
                 }
                 batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race,
                     entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation));

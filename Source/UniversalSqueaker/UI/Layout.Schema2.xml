@@ -207,7 +207,7 @@
                 <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" HelpKey="us/basic-tuning/baby-actions" AlignX="Left" />
               </Column>
             </Row>
-            <Row Id="basic-cooldown-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Row Id="basic-cooldown-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
               <Column Id="basic-cooldown-check-slot" Width="36" Padding="0" AlignY="Middle">
                 <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" HelpKey="us/basic-tuning/scale-cooldown" AlignX="Left" />
@@ -219,7 +219,7 @@
                 <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" HelpKey="us/basic-tuning/scale-talking" AlignX="Left" />
               </Column>
             </Row>
-            <Row Id="basic-population-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+            <Row Id="basic-population-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
               <Column Id="basic-population-check-slot" Width="36" Padding="0" AlignY="Middle">
                 <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" HelpKey="us/basic-tuning/scale-population" AlignX="Left" />
@@ -277,13 +277,14 @@
              declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
              the host side of the command, exactly where the composite applied it. -->
         <Section Id="timing" Tab="Tuning" Padding="12" Gap="8">
+          <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" />
           <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
-          <Row Id="timing-interval-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+          <Row Id="timing-interval-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
             <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" />
           </Row>
-          <Widget Id="timing-interval-slider" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
-          <Row Id="timing-multiplier-row" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
+          <Widget Id="timing-interval-slider" VisibleKey="legacy-policy-controls" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
+          <Row Id="timing-multiplier-row" VisibleKey="legacy-policy-controls" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
             <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
             <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
@@ -292,7 +293,7 @@
             </Row>
           </Row>
           <!-- US-RESET1: the Timing-area restore (interval floor + cooldown multiplier). -->
-          <Widget Id="timing-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Timing.Confirm" EffectKey="reset-normal-timing" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+          <Widget Id="timing-restore" VisibleKey="legacy-policy-controls" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Timing.Confirm" EffectKey="reset-normal-timing" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8">
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />

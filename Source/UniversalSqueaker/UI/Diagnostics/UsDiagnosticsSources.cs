@@ -380,6 +380,14 @@ internal static class UsDiagnosticsRowFactory
         Pawn pawn = entry.Pawn;
         SqueakDiagnosticSnapshot s = entry.Snapshot;
         int nowTick = Find.TickManager.TicksGame;
+        if (!string.IsNullOrEmpty(s.KernelText))
+        {
+            return new UsDiagDetail(LabelOf(pawn), false, SqueakDiagnosticsOverlay.IsLocked(pawn),
+                s.LastEvaluation?.Action ?? UsDiagnosticsProjection.Dash, DispatchText(s.LastDispatched),
+                Array.Empty<UsDiagGateLine>(),
+                new UsDiagCurrentSummary("Kernel: last observed decision", s.KernelText, false, true, Array.Empty<string>()),
+                new UsDiagPreviousBand("", "", DispatchText(s.LastDispatched)));
+        }
         UsDiagGateFacts f = new()
         {
             ModeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled,
@@ -455,7 +463,8 @@ internal static class UsDiagnosticsRowFactory
     private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";
 
     private static string CurrentActionText(SqueakDiagnosticSnapshot s)
-        => s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : UsDiagnosticsProjection.Dash;
+        => !string.IsNullOrEmpty(s.KernelText) ? s.LastEvaluation?.Action ?? UsDiagnosticsProjection.Dash
+            : s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : UsDiagnosticsProjection.Dash;
 
     private static string CooldownText(SqueakDiagnosticSnapshot s, bool showSeconds)
     {

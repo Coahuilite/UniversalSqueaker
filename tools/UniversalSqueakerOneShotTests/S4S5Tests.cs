@@ -21,6 +21,12 @@ internal static partial class Program
         new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
         Check(state.SharedDeadline == 1040 && state.ActionDeadline("us.core/Work") == 1120 && state.NextStateTick == 1050,
             "S4 A2 divides W20 once, never hard40/action120");
+        var ratio = Input();
+        ratio.Activity = ratio.SoftRhythmFactor = 1e308;
+        var ratioState = new DecisionState(1000);
+        var ratioDriver = new Driver();
+        new OneShotDecision().Run(ratioState, new StatePolicy(40, 100), ratio, ratioDriver, ratioDriver);
+        Check(ratioState.NextStateTick == 1140, "S4 finite neutral factor ratio does not overflow intermediate wait multiplication");
         input.Tick = 1041; input.Activity = .5;
         Check(new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver).Reason == "NotDue" && state.NextStateTick == 1050,
             "S4 changing A does not redraw or rescale an already arranged wait");
@@ -35,7 +41,7 @@ internal static partial class Program
         Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, low, low).Reason == "ChanceRejected" && low.Calls == 0,
             "S4 event activity is probability, not a queued wait");
 
-        var values = new Dictionary<string, double> { ["age.native"] = 1.2, ["age.override"] = 1.5,
+        var values = new Dictionary<string, double> { ["age.native"] = 1.2, ["age.nativeVolume"] = 1, ["age.override"] = 1.5,
             ["mood.level"] = .9, ["mood.low"] = .3, ["mood.high"] = .7,
             ["mood.high.pitch"] = .8, ["mood.high.volume"] = .5 };
         var plan = new ModulationPlan { Context = new ResponseContext("p1", values), EnabledRules = new[] { "us.core/Age", "us.core/Mood", "us.core/Age" }, JitterMin = .9, JitterMax = 1.1 };
@@ -49,6 +55,17 @@ internal static partial class Program
         plan.PlayerParticipation = new Dictionary<string, bool> { ["us.core/Age"] = true };
         var player = ResponseModulation.Compose(2, 3, plan, new Dictionary<string, bool> { ["us.core/Age"] = false }, new Driver());
         Check(player.Valid && player.Pitch == composed.Pitch, "S4 explicit player participation overrides entry Skip once");
+        var age = new NativeAgeResponse();
+        var pitchOnly = age.Evaluate(new ResponseContext("p1", new Dictionary<string, double>
+            { ["age.native"] = 1.2, ["age.nativeVolume"] = .7, ["age.override"] = 1.5 }));
+        var volumeOnly = age.Evaluate(new ResponseContext("p1", new Dictionary<string, double>
+            { ["age.native"] = 1.2, ["age.nativeVolume"] = .7, ["age.overrideVolume"] = .5 }));
+        Check(pitchOnly.Pitch == 1.5 && pitchOnly.Volume == .7 && volumeOnly.Pitch == 1.2 && volumeOnly.Volume == .5,
+            "S4 explicit age override substitutes only corresponding axis, preserving other native axis");
+        var infinite = new ModulationPlan { JitterMax = double.PositiveInfinity };
+        var noRoll = new Driver();
+        Check(!ResponseModulation.Compose(1, 1, infinite, new Dictionary<string, bool>(), noRoll).Valid && noRoll.Rolls == 0,
+            "S4 nonfinite jitter boundary is rejected before consuming jitter roll");
         plan.EnabledRules = Array.Empty<string>(); plan.JitterMin = plan.JitterMax = 1;
         var disabled = ResponseModulation.Compose(2, 3, plan, new Dictionary<string, bool>(), new Driver());
         Check(disabled.Valid && disabled.Pitch == 2 && disabled.Volume == 3, "S4 present parameters/registered rules/Apply never enable a response");

@@ -42,6 +42,14 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
     private readonly OneShotDecision decision = new();
     private readonly SustainedPlayback sustained = new();
     private readonly List<KeyValuePair<RandomPurpose, double>> draws = new();
+    private SoundDef? preparedSound;
+    private long lastObservation;
+    private bool diagnosticFaultReported;
+    internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
+        + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
+        + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
+        + " actionUntil=" + state.ActionDeadline(LastOutcome.Action) + " nextState=" + state.NextStateTick
+        + " active=" + sustained.ActiveKey + " ended=" + sustained.LastEndReason;
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
@@ -59,7 +67,8 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         this.candidate = candidate;
     }
 
-    public void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null)
+    public void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null,
+        string? registeredAction = null)
     {
         long now = Find.TickManager.TicksGame;
         if (eventKey == null && now < state.NextStateTick)
@@ -69,7 +78,9 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
 
         var comp = pawn.GetComp<CompSqueaker>();
         var vocal = comp.ControlledOneShotVocal();
-        var values = UsPawnFacts.Capture(pawn, eventKey);
+        var requested = registeredAction == null ? null : catalog.Actions.Single(x => x.Key == registeredAction);
+        string? factEvent = requested == null ? eventKey : requested.BaseAction.Substring(requested.BaseAction.LastIndexOf('/') + 1);
+        var values = UsPawnFacts.Capture(pawn, factEvent);
         var blocked = new HashSet<string>(StringComparer.Ordinal);
         var blockedReasons = new Dictionary<string, string>(StringComparer.Ordinal);
         var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
@@ -90,6 +101,10 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         }
         foreach (var action in catalog.Actions)
         {
+            if (registeredAction != null && action.Key != registeredAction)
+            {
+                continue;
+            }
             string legacyKey = action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused,
                 reason => blockedReasons[action.Key] = reason);
@@ -151,7 +166,21 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             BlockedActionReasons = blockedReasons
         };
         draws.Clear();
+        preparedSound = null;
         LastOutcome = decision.Run(state, policy, input, this, this);
+        lastObservation = now;
+        try
+        {
+            comp.RecordKernelOutcome(LastOutcome, preparedSound);
+        }
+        catch (Exception error)
+        {
+            if (!diagnosticFaultReported)
+            {
+                diagnosticFaultReported = true;
+                Log.Warning("usdiag committed kernel result; diagnostic publication failed: " + error.GetType().Name);
+            }
+        }
     }
 
     public void Maintain()
@@ -254,6 +283,7 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
             if (request.Sustained && sound.sustain) info = SoundInfo.InMap(new TargetInfo(pawn), MaintenanceType.PerTick);
             info.volumeFactor = 1;
             info.pitchFactor = pitch;
+            preparedSound = sound;
             return true;
         }
 
@@ -347,6 +377,8 @@ public static class UsOneShotRuntime
     }
     public static IEnumerable<string> DeclaredRaces => catalog.Audio.Select(x => x.Domain).Distinct(StringComparer.Ordinal);
     public static BehaviorSourceDirectory BehaviorSources => catalog.BehaviorSources;
+    internal static string DiagnosticText(Pawn pawn) => sessions.TryGetValue(pawn, out var session)
+        ? session.DiagnosticText : PolicyStatus;
 
     public static void Initialize()
     {
@@ -412,18 +444,7 @@ public static class UsOneShotRuntime
         return key;
     }
 
-    public static void EnableControlled(Pawn pawn, long waitTicks, long sharedTicks, long workTicks, long woundedTicks, bool fullDevCandidate = false)
-    {
-        if (!Prefs.DevMode)
-        {
-            throw new InvalidOperationException("Controlled OneShot requires developer mode and explicit policy");
-        }
-
-        SelectDevelopmentPolicy(new UsDevelopmentPolicy(waitTicks, sharedTicks, workTicks, woundedTicks,
-            initialSpreadTicks: 0, eventProbability: 1, softRhythmFactor: 1));
-        SessionFor(pawn);
-    }
-    public static void DisableControlled(Pawn pawn)
+    internal static void ReleasePawn(Pawn pawn)
     {
         if (sessions.TryGetValue(pawn, out var session)) session.Stop();
         sessions.Remove(pawn);
@@ -464,7 +485,10 @@ public static class UsOneShotRuntime
         var invocation = new SqueakTriggerInvocation(origin, source);
         if (SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.GetComp<CompSqueaker>().ControlledInvocationAllowed(invocation))
         {
-            session.Tick(key, invocation.IsActiveCommand, BuiltInPawnContracts.CandidateOrder.Contains(key) ? null : invocation);
+            bool registered = catalog.Actions.Any(x => x.Key == key);
+            session.Tick(key, invocation.IsActiveCommand,
+                registered || BuiltInPawnContracts.CandidateOrder.Contains(key) ? null : invocation,
+                registered ? key : null);
         }
 
         // Registered and unregistered keys share this owner; Comp's old cooldown writer is never called.

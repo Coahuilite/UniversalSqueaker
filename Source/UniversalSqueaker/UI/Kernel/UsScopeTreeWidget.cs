@@ -255,6 +255,10 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
 
         float width = BodyWidth(ctx);
+        if (area != 0)
+        {
+            return TopPadding + AreaTabsHeight + RowGap + RetiredEditorHeight(ctx, width) + BottomPadding;
+        }
         // UIR-004 (WO-US-UI-REFACTOR-20261014): the tuning tree is now TWO areas only (actions, moods).
         // The fallback table editor moved to the Packs page as its own composite (us/fallback-editor),
         // so the third area and its F06 "area decides presentation" gate retire: the layer/domain
@@ -295,7 +299,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
 
-            bodyHeight += ActionEditorHeight(ctx, width) + RowGap;
+            bodyHeight += RetiredEditorHeight(ctx, width) + RowGap;
         }
         else
         {
@@ -332,6 +336,14 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         float y = rect.y + TopPadding;
 
         int area = ctx.Bindings.TryGet("tuning-area", out int a) ? a : 0;
+
+        if (area != 0)
+        {
+            DrawAreaTabs(new Rect(x, y, innerWidth, AreaTabsHeight), area, ctx);
+            y += AreaTabsHeight + RowGap;
+            DrawRetiredEditor(new Rect(x, y, innerWidth, RetiredEditorHeight(ctx, innerWidth)), ctx);
+            return;
+        }
 
         // F06 (US-UI1): only the ACTION and MOOD areas present their layer/domain context (MeasureBody
         // walks the identical sequence); the fallback area shows its own single race target through the
@@ -445,7 +457,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
 
-            y = DrawActionEditor(y, x, innerWidth, scopeRows, ctx, submittable);
+            DrawRetiredEditor(new Rect(x, y, innerWidth, RetiredEditorHeight(ctx, innerWidth)), ctx);
         }
         else
         {
@@ -490,6 +502,16 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 }
             }
         }
+    }
+
+    private static float RetiredEditorHeight(UiWidgetContext ctx, float width)
+    {
+        return ctx.Metrics.MeasureText(UsKernelDraw.Keyed(ctx, "US.Kernel.ResponseEditorRetired"), UiFont.Small, Math.Max(1, width));
+    }
+
+    private static void DrawRetiredEditor(Rect rect, UiWidgetContext ctx)
+    {
+        UsKernelDraw.Label(rect, UsKernelDraw.Keyed(ctx, "US.Kernel.ResponseEditorRetired"), ctx, UiFont.Small);
     }
 
     // -----------------------------------------------------------------------------------------

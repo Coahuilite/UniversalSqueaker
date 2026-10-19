@@ -50,6 +50,7 @@ internal static partial class Program
             IntroCollapsedScribeRoundTrip();
             BehaviorSourceConfigTransaction();
             SourceSaveUsesOriginalModGeneration();
+            S4ResponseConfigAndReset();
 
             if (failures == 0)
             {

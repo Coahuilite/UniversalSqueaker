@@ -11,6 +11,16 @@ using Verse.Sound;
 
 internal static partial class Program
 {
+    public sealed class RuntimeContractProvider : IUsDefinitionProvider
+    {
+        public void Collect(ProviderBatch batch) => batch.AddFactSource(new RuntimeContractFact());
+    }
+    private sealed class RuntimeContractFact : IUsFactSource
+    {
+        internal static bool Ready;
+        public string Key => "fixture/Allowed";
+        public Truth Capture(string subject) => Ready ? Truth.True : Truth.False;
+    }
     private static UsControlledOneShotSession RuntimeSession(Pawn pawn)
     {
         var field = typeof(UsOneShotRuntime).GetField("sessions", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -38,6 +48,15 @@ internal static partial class Program
             pack.declaration.Entries.Add(new VoiceEntry { Key = key, Action = "us.core/" + key, Sound = "Ratkin1", Volume = 2, Pitch = 2 });
         }
         DefDatabase<UsVoicePackDef>.AllDefsListForReading.Add(pack);
+        DefDatabase<UsProviderDef>.AllDefsListForReading.Add(new UsProviderDef { providerClass = typeof(RuntimeContractProvider) });
+        DefDatabase<UsActionDef>.AllDefsListForReading.Add(new UsActionDef
+        {
+            declaration = new ActionDeclaration
+            {
+                Key = "vendor/Working", BaseAction = "us.core/Work", Condition = new Condition("ref", "fixture/Allowed")
+            }
+        });
+        pack.declaration.Entries.Add(new VoiceEntry { Key = "registered", Action = "vendor/Working", Sound = "Ratkin1" });
         UsOneShotRuntime.Initialize();
         int before = SoundStarter.Played.Count;
         comp.CompTick();
@@ -96,6 +115,18 @@ internal static partial class Program
         comp.NotifyExternalByKey("vendor/Unregistered", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
             "S4 unregistered public string retains external permission under unified owner");
+        comp.ExternalAllowed = true;
+        Find.TickManager.TicksGame = 1400;
+        pawn.CurJob!.workGiverDef = new object();
+        comp.NotifyExternalByKey("vendor/Working", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
+            "S4 actual registered public author call cannot bypass its false composed fact through bare-string adaptation");
+        RuntimeContractFact.Ready = true;
+        pawn.CurJob.workGiverDef = null;
+        Find.TickManager.TicksGame = 1460;
+        comp.NotifyExternalByKey("vendor/Working", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
+            "S4 actual registered public author call retains inherited Work qualification even when its extra fact becomes true");
 
         S5ActualRuntimeSustained(pawn, comp, session);
 

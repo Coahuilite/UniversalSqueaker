@@ -529,6 +529,9 @@ public static class UsKernelSettingsHost
         // sentence can never name two different presets.
         bindings.BindReadOnly<bool>(PresetConservativeKey, () => IsDistancePreset(source, SqueakDistancePreset.Conservative));
         bindings.BindReadOnly<bool>(PresetBalancedKey, () => IsDistancePreset(source, SqueakDistancePreset.Balanced));
+        bindings.BindReadOnly<bool>("legacy-policy-controls", () => false);
+        bindings.BindReadOnly<string>("kernel-policy-note", () => translation.Translate(
+            UsOneShotRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive"));
         bindings.BindReadOnly<bool>(PresetStrongKey, () => IsDistancePreset(source, SqueakDistancePreset.Strong));
         // Each button's own payload. A declarative input/button with a PayloadKey opens the STRING contract
         // (G2), so each datum lives in a value binding rather than as a manifest literal - the same shape

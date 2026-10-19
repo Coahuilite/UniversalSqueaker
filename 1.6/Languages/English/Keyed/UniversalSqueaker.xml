@@ -599,4 +599,7 @@
   <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
+  <US.Kernel.PolicyRequired>No development policy selected: playback is paused. The old timing controls are retired; a policy must be injected explicitly for this development build.</US.Kernel.PolicyRequired>
+  <US.Kernel.CandidateActive>An explicit development candidate is active. Activity A and response parameters use the new Config/author contract; old timing controls are retired.</US.Kernel.CandidateActive>
+  <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
 </LanguageData>

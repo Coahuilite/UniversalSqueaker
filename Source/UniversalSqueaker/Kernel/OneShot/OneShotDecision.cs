@@ -297,7 +297,8 @@ public sealed class AudioCandidate
         Weight = weight;
         Volume = volume;
         Pitch = pitch;
-        Participation = participation ?? new Dictionary<string, bool>();
+        Participation = participation == null ? new Dictionary<string, bool>()
+            : participation.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
         Family = family;
         TargetNamespace = targetNamespace;
     }
@@ -655,7 +656,7 @@ public sealed class OneShotDecision
             long applicableShared = action.CheckShared ? state.SharedDeadline : input.Tick;
             if (receipt.Result == PlaybackResult.Dispatched)
             {
-                double softWait = Math.Ceiling(policy.Wait * input.SoftRhythmFactor / input.Activity);
+                double softWait = Math.Ceiling(policy.Wait * (input.SoftRhythmFactor / input.Activity));
                 long wait = softWait >= long.MaxValue ? long.MaxValue : Math.Max(1, (long)softWait);
                 state.NextStateTick = TickDeadline.Add(Math.Max(input.Tick, applicableShared), wait);
             }

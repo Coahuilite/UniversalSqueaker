@@ -63,6 +63,7 @@ namespace UniversalSqueaker
         public bool FixtureSustained;
         public int MembershipUpdates;
         private void SynchronizePeriodicMembership() => MembershipUpdates++;
+        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound) { }
         internal SqueakVocalCapability ControlledOneShotVocal() => new(Vocal ? 1 : 0, 1);
         internal bool ControlledPlaybackSustained(string key) => FixtureSustained;
         internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => true;

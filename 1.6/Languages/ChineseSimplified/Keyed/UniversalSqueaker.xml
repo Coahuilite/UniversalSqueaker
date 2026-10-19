@@ -593,4 +593,7 @@
   <US.Help.Theme.Overview>在官方核心与五个 DLC 调色板之间选择以验证颜色。出厂默认为核心。</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>调色板</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>切换只改颜色,不改任何东西——页面保留布局、焦点与滚动位置。选择随设置保存,并会被"恢复默认"还原;作者自定义主题继续由库支持。</US.Help.Theme.Switch.Text>
+  <US.Kernel.PolicyRequired>尚未注入开发策略：当前不派发声音。旧节奏控件已退役；本开发版本须经明确开发入口注入候选策略。</US.Kernel.PolicyRequired>
+  <US.Kernel.CandidateActive>当前运行明示注入的开发候选。活跃度 A 与响应参数采用新 Config／作者合同；旧节奏控件已退役。</US.Kernel.CandidateActive>
+  <US.Kernel.ResponseEditorRetired>旧概率与心情因子编辑器已退役。上方动作许可仍有效；独立响应启用、参数及 Apply／Skip 参与请使用当前作者／Config 合同。</US.Kernel.ResponseEditorRetired>
 </LanguageData>
