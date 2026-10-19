@@ -17,6 +17,8 @@ OneShot S1 is implemented behind explicit controlled developer input; normal dai
 
 S2 now observes original XML and dependency-filtered final declarations, validates completed native resource pools, and publishes full AudioId-to-final-object bindings consumed by normal selection and controlled S1. NonPawn identities have separate family/namespace/target fields. Resource observations publish atomically; incomplete batches cannot infer unique ownership. See docs/us-kernel-0.6-s2-zh.md for implementation, test boundaries and S5 seams. Native load/play/listening remains pending. The inherited settings-to-CompSqueaker.ApplyDistanceRange shared SubSoundDef.distRange mutation is an S5 delivery blocker for C11/V14/full 0.6 acceptance; PM permits S2 technical acceptance independently, not general installation/release.
 
+S3 now adds explicit expanded Dev wrappers for all 17 actions, exact-domain author-source intent/sparse snapshots, atomic Config source operations and same-owner legacy string/Realtime compatibility. Ordinary daily defaults and first-unique-source adoption remain unapproved. Existing reset operations preserve the new behavior bindings; only the explicit domain forget operation clears that domain snapshot. See docs/us-kernel-0.6-s3-zh.md for actual entry points, native-pending evidence and S4/S5 boundaries.
+
 ## Retained 0.5 baseline (2026-10-09)
 
 - **UI refactor round (2026-10-14, WO-US-UI-REFACTOR-20261014 r1; uncommitted on top of the inherited
@@ -733,3 +735,4 @@ single resource lookup; `UI/Kernel` performs none). Native Def texture loading r
 - The docs sweep still carries the OLD Gate-U constraint ("fallback must be retained / no clean cutover") in
   `docs/archive/uikit-rebuild/**`; the old-UI removal is executed and supersedes it.
 - `dist/ui-evidence/**` and the per-revision matrices are cold artifacts; the reviews live in `docs/archive/review/**`.
+

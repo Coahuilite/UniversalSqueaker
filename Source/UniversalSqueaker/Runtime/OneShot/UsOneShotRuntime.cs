@@ -75,9 +75,12 @@ public sealed class UsControlledOneShotSession : IOneShotBackend, IOneShotRandom
         foreach (var action in catalog.Actions)
         {
             string legacyKey = action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
-            if (!fullDevCandidate && legacyKey != "Work" && legacyKey != "Wounded" && legacyKey != "Call") continue;
+            if (!fullDevCandidate && legacyKey != "Work" && legacyKey != "Wounded" && legacyKey != "Call")
+            {
+                continue;
+            }
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused);
-            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior)) blocked.Add(action.Key);
+            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: fullDevCandidate)) blocked.Add(action.Key);
             plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
                 behavior.HardIntervalTicks ?? (legacyKey == "Wounded" ? woundedTicks : workTicks),
                 action.CheckShared, action.WriteShared, action.Chance, action.BaseAction,
@@ -238,9 +241,12 @@ public static class UsOneShotRuntime
 
         foreach (var source in DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading)
         {
-            var declaration = source.declaration.Source.Copy();
-            declaration.Id = (source.modContentPack?.PackageId ?? "") + "/" + source.defName;
-            catalog.AddBehaviorSource(declaration);
+            foreach (var target in source.declaration.Sources)
+            {
+                var declaration = target.Copy();
+                declaration.Id = (source.modContentPack?.PackageId ?? "") + "/" + source.defName;
+                catalog.AddBehaviorSource(declaration);
+            }
         }
 
         foreach (var pack in DefDatabase<UsVoicePackDef>.AllDefsListForReading)
@@ -349,4 +355,6 @@ public sealed class UsOneShotSessionLifecycle : GameComponent
     public override void StartedNewGame() => UsOneShotRuntime.ResetSession();
     public override void LoadedGame() => UsOneShotRuntime.ResetSession();
 }
+
+
 

@@ -75,6 +75,15 @@ internal static partial class Program
                 "S3 runtime settings parser consumes last author false/zero without B takeover", ref failures);
             a.Contributions[0].Values.Volume = 2;
             var returned = new BehaviorSourceDirectory(new[] { a, b, n });
+            string beforeRefresh = settings.behaviorSourcesXml;
+            string beforeRefreshFile = File.ReadAllText(path);
+            Check(!settings.TryRefreshBehaviorSources(returned, FailedReplace, out _)
+                && settings.behaviorSourcesXml == beforeRefresh && File.ReadAllText(path) == beforeRefreshFile,
+                "S3 refresh failure retains original durable record and file, not merely switch failure", ref failures);
+            resolved = settings.ResolveBehaviorSource(domain, "Work", returned, _ => true, out paused);
+            var recoveredAfterFailure = Read().ResolveBehaviorSource(domain, "Work", missing, _ => true, out _);
+            Check(resolved.Volume == 2 && recoveredAfterFailure.Volume == 0,
+                "S3 current valid definition is a live view; failed refresh cannot claim its new value is durably recoverable", ref failures);
             Check(settings.TryRefreshBehaviorSources(returned, Persist, out _), "S3 same identity refresh commits last good snapshot", ref failures);
             resolved = Read().ResolveBehaviorSource(domain, "Work", missing, _ => false, out paused);
             Check(resolved.Volume == 2 && paused, "S3 committed fresh author parameters restore after reread but missing implementation still pauses only dependency", ref failures);

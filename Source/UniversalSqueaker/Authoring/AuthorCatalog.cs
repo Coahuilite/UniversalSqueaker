@@ -308,7 +308,10 @@ public sealed class AuthorCatalog
                 parent.CheckShared,
                 parent.WriteShared,
                 parent.Chance,
-                parent.BaseAction));
+                parent.BaseAction,
+                parent.SkipTalking,
+                parent.Volume,
+                parent.Pitch));
             return true;
         }
         catch (Exception error)

@@ -35,7 +35,25 @@ namespace Verse.Sound
 }
 namespace Verse
 {
-    public sealed class Pawn { }
+    public sealed class Pawn
+    {
+        public Verse.AI.Job? CurJob;
+        public Verse.AI.Pawn_JobTracker? jobs;
+        public Verse.AI.Pawn_PathFollower? pather;
+        public Verse.AI.Pawn_MindState? mindState;
+        public bool IsPlayerControlled, Downed;
+        public object? health;
+        public bool FixtureAwake = true;
+        public bool Awake() => FixtureAwake;
+        public Pawn_NeedsTracker? needs;
+        public PawnPosture GetPosture() => PawnPosture.LayingInBed;
+    }
+    public enum PawnPosture { LayingInBed }
+    public sealed class Pawn_NeedsTracker { public object? rest; }
+    public sealed class Thing { public ThingDef def = new(); }
+    public sealed class ThingDef : Def { public bool IsDrug; public object? race; public List<CompProperties> comps = new(); }
+    public class CompProperties { public Type? compClass; }
+    public struct FloatRange { public float min, max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
     public sealed class Map { }
     public struct TargetInfo { }
     public static class Rand { public static float Value => .5f; }
@@ -185,6 +203,9 @@ namespace UniversalSqueaker
     public static class SqueakLog
     {
         public static void TargetRejected(string target, string reason) { }
+        public static void CompAttachSkipped(string target, string reason) { }
+        public static void CompAttachFailed(Exception error) { }
+        public static void CompAutoAttached(string target) { }
         public static void ResolverRebuildFailed(Exception error) { }
     }
     public static class SqueakFallbackProfileStore
@@ -218,6 +239,7 @@ namespace UniversalSqueaker
     }
     public sealed class SqueakXenotypeCatalogSnapshot
     {
+        public List<string> RaceDefNames = new();
         public List<SqueakVoicePackDef> RacePacks = new();
         public Dictionary<string, IReadOnlyList<SqueakVoicePackDef>> XenotypePacksByDefName = new();
         public Dictionary<string, SqueakVoicePackDef> PackByKey = new();
@@ -234,5 +256,40 @@ namespace UniversalSqueaker
             Sound = sound;
             Selection = selection;
         }
+    }
+}
+
+namespace Verse.AI
+{
+    public sealed class JobDef : Verse.Def { public RimWorld.JoyKindDef? joyKind; }
+    public sealed class Job { public JobDef? def; public object? workGiverDef; public bool playerForced; public LocalTargetInfo targetA; }
+    public struct LocalTargetInfo { public Verse.Thing? Thing; }
+    public sealed class Pawn_JobTracker { public JobDriver? curDriver; }
+    public sealed class Pawn_PathFollower { public bool Moving; }
+    public sealed class Pawn_MindState { public bool IsIdle; }
+    public class JobDriver { public bool asleep; public string CurToilString = ""; }
+}
+namespace RimWorld
+{
+    public sealed class JoyKindDef { }
+    public static class JoyKindDefOf { public static readonly JoyKindDef Social = new(); }
+    public static class JobDefOf { public static readonly Verse.AI.JobDef Ingest = new() { defName = "Ingest" }; }
+    public interface IEatingDriver { bool GainingNutritionNow { get; } }
+}
+namespace UniversalSqueaker
+{
+    public static class CompSqueaker
+    {
+        public static bool EatPrecisionEnabled, EatPrecisionIncludeDrugs;
+    }
+}
+
+namespace UniversalSqueaker
+{
+    public sealed class SqueakMoodMod
+    {
+        public SqueakMood mood;
+        public float pitchFactor, volumeFactor;
+        public Verse.FloatRange pitchJitter;
     }
 }

@@ -1,6 +1,8 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-19 · r2 · **测试迁移总图；S1及S2纯层/适配已接自动入口，原生与后续切片未验收。**
+2026-10-19 · r2 · **测试迁移总图；S1/S2及S3纯层/适配已接自动入口，原生及S4/S5未验收。**
+
+S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层见[S3实施页](us-kernel-0.6-s3-zh.md)。gate17覆盖新增纯S3轨迹，gate18覆盖真实事实适配及自动Comp/新作者资格，gate3追加来源保存故障与Scribe重读；Reset继续单独执行。
 
 S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
 
@@ -96,3 +98,4 @@ FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../fer
 ## S2交付后仍阻断C11/V14的继承路径
 
 `Settings.ApplySettingsRuntimeSideEffects → CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`仍活动并写共享定义；借用Core/他方同Def时旧距离设置可能影响非US声音。按PM裁定，它不阻断S2身份/来源/路由/绑定技术接收，但必须由S5实例级替代后才能接受C11/V14/S5和整个0.6产品。现有纯层、适配、Host绿色均不覆盖该原生输出保证。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
+

@@ -14,6 +14,7 @@ internal static partial class Program
         AllBuiltInContractsUseSameDecision();
         CompatibilityUsesSameOwnerAndOriginalClock();
         SparseSourceAuthorityAndRecovery();
+        SourceDeletionAndStrictShape();
         S3FileExampleIsConsumed();
         string first = S3Replay();
         string second = S3Replay();
@@ -135,8 +136,64 @@ internal static partial class Program
         var driver = new Driver();
         Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver).Action == "example/DrugChewing"
             && driver.Calls == 1, "real expanded XML fact composition dispatches same production core");
+        var multi = new BehaviorSourceDeclaration();
+        multi.LoadDataFromXmlCustom(Node("<declaration><target family='Pawn' target='Ratkin'><action key='Work' volume='0'/></target><target family='Pawn' target='Ratkin' child='Xeno'><action key='Work' enabled='false'/></target></declaration>"));
+        foreach (var target in multi.Sources)
+        {
+            target.Id = "example/OneDef";
+            catalog.AddBehaviorSource(target);
+        }
+        Check(multi.Sources.Count == 2 && catalog.BehaviorSources.Candidates(new BehaviorDomain("Pawn", "", "Ratkin", "Xeno")).Single().Id == "example/OneDef",
+            "one real source Def can declare separate exact targets without merging their identity or contributions");
     }
 
+    private static void SourceDeletionAndStrictShape()
+    {
+        var domain = new BehaviorDomain("Pawn", "", "Ratkin");
+        var a = Source("a/Def", domain, "Work", new BehaviorValues { Volume = 0 });
+        var state = new BehaviorSourceState();
+        state.Bind(domain, a.Id, new BehaviorSourceDirectory(new[] { a }));
+        var removed = a.Copy();
+        removed.Contributions.Clear();
+        var current = new BehaviorSourceDirectory(new[] { removed });
+        var value = state.Resolve(domain, "Work", current, Array.Empty<BehaviorValues>(), _ => true, out bool paused);
+        Check(value.Volume == null && !paused, "valid author update deliberately removing Work does not resurrect old snapshot before refresh");
+        state.Refresh(current);
+        Check(state.Read(domain).Snapshot!.Contributions.Count == 0, "committed refresh removes old contribution rather than retaining effective parent value");
+        foreach (string xml in new[]
+        {
+            "<behaviorSources format='1' typo='x' />",
+            "<behaviorSources format='1'><wrong family='Pawn' target='Ratkin' intent='Inherit' /></behaviorSources>",
+            "<behaviorSources format='1'><binding family='Pawn' target='Ratkin' intent='Bound' source='a/Def'><snapshot/><snapshot/></binding></behaviorSources>",
+            "<behaviorSources format='1'><binding family='Pawn' target='Ratkin' intent='Inherit' typo='x'/></behaviorSources>"
+        })
+        {
+            bool rejected = false;
+            try { BehaviorSourceState.FromXml(xml); }
+            catch (ArgumentException) { rejected = true; }
+            Check(rejected, "source Config parser rejects unknown/duplicate shape without silently deleting meaning");
+        }
+        foreach (string xml in new[]
+        {
+            "<declaration family='Pawn' target='Ratkin' typo='x'/>",
+            "<declaration family='Pawn' target='Ratkin'><wrong key='Work'/></declaration>",
+            "<declaration family='Pawn' target='Ratkin'><action key='Work' typo='false'/></declaration>",
+            "<declaration family='Pawn' target='Ratkin'><action key='Work'><enabled>false</enabled></action></declaration>"
+        })
+        {
+            bool rejected = false;
+            try { new BehaviorSourceDeclaration().LoadDataFromXmlCustom(Node(xml)); }
+            catch (ArgumentException) { rejected = true; }
+            Check(rejected, "author parser rejects misspelled field or extra element");
+        }
+        foreach (var args in new[] { new[] { "Pawn", "alias", "Ratkin", "" }, new[] { "Pawn", "", "Ratkin", " Xeno" }, new[] { "NonPawn", " ns", "A", "" } })
+        {
+            bool rejected = false;
+            try { new BehaviorDomain(args[0], args[1], args[2], args[3]); }
+            catch (ArgumentException) { rejected = true; }
+            Check(rejected, "source identities reject alternate Pawn namespace and whitespace spellings");
+        }
+    }
     private static string S3Replay()
     {
         var result = new StringBuilder();
@@ -161,4 +218,5 @@ internal static partial class Program
         return result.ToString();
     }
 }
+
 

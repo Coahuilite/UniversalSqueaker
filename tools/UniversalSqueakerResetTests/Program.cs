@@ -126,6 +126,7 @@ internal static class Program
         s.eatPrecisionIncludeDrugs = true;
         s.uiSwatchId = "biotech"; // UIR-006: the palette is a persisted appearance setting
         s.uiIntroCollapsed = true; // CORRECTIONS-R3: the persisted teaching preference must be in the pollution set
+        s.behaviorSourcesXml = "<behaviorSources format=\"1\"><binding family=\"Pawn\" namespace=\"\" target=\"RaceA\" child=\"\" intent=\"Inherit\" source=\"\" /></behaviorSources>";
 
         s.moodOverrides[SqueakMood.Good] = new SqueakMoodMod
         {
@@ -216,6 +217,7 @@ internal static class Program
         Check("global: devLogging back to Auto", s.devLoggingMode == SqueakDevLoggingMode.Auto);
         Check("global: uiSwatchId back to core", s.uiSwatchId == "core");
         Check("global: uiIntroCollapsed back to false", !s.uiIntroCollapsed);
+        Check("global: existing restore does not forget new behavior source intent/snapshot", s.behaviorSourcesXml.Contains("intent=\"Inherit\""));
         Check("global: multipliers back to 1f", s.globalCooldownMultiplier == 1f && s.globalVolumeFactor == 1f);
         Check("global: distance back to Balanced 15-50",
             s.distancePreset == SqueakDistancePreset.Balanced && s.distanceRange.min == 15f && s.distanceRange.max == 50f);

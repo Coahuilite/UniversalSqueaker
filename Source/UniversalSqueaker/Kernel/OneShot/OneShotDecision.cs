@@ -191,6 +191,9 @@ public sealed class ActionPlan
         {
             throw new ArgumentOutOfRangeException(nameof(chance));
         }
+        if (double.IsNaN(volume) || double.IsInfinity(volume) || volume < 0 || volume > float.MaxValue
+            || double.IsNaN(pitch) || double.IsInfinity(pitch) || pitch <= 0 || pitch > float.MaxValue)
+            throw new ArgumentException("Invalid local parameters");
 
         Key = key;
         BaseAction = baseAction ?? key;
@@ -672,3 +675,4 @@ public static class OneShotDispatch
         return new PlaybackReceipt(PlaybackResult.Dispatched, "NativeCallReturned");
     }
 }
+

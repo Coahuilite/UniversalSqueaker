@@ -271,3 +271,23 @@ Assembly-CSharp!Verse.Prefs::get_DevMode() | debug
 Assembly-CSharp!Verse.GenTypes::GetTypeInAnyAssembly(String,String) | defs
 Assembly-CSharp!Verse.LoadableXmlAsset::mod:c:Verse.ModContentPack | defs
 Assembly-CSharp!Verse.XmlInheritance::GetResolvedNodeFor(c:System.Xml.XmlNode) | defs
+
+# S3 facts: real 1.6.4871 members verified by CO FACTS16 + focused local method bodies.
+# Production UsPawnFacts and PeriodicStateBinding run in AudioBindingTests' isolated controlled
+# adapter lane (not frozen page stubs and not pure-kernel/native evidence).
+Assembly-CSharp!RimWorld.JoyKindDefOf::Social:c:RimWorld.JoyKindDef | defs
+Assembly-CSharp!Verse.AI.Job::targetA:v:Verse.LocalTargetInfo | world
+Assembly-CSharp!Verse.AI.JobDriver::asleep:Boolean | world
+Assembly-CSharp!Verse.AI.Pawn_MindState::get_IsIdle() | world
+Assembly-CSharp!Verse.LocalTargetInfo::get_Thing() | world
+Assembly-CSharp!Verse.Pawn::mindState:c:Verse.AI.Pawn_MindState | world
+Assembly-CSharp!Verse.ThingDef::get_IsDrug() | defs
+# S3 source transaction: real Mod/ModSettings/LoadedModManager/ScribeSaver method bodies
+# establish folder-name filename and SettingsBlock/ModSettings shape. MigrationTests runs
+# production candidate/atomic file/Scribe round-trip with serializer, precommit and OS-lock
+# faults in isolated Config fixtures. The actual game's Scribe writer remains native-pending.
+Assembly-CSharp!Verse.Mod::get_Content() | defs
+Assembly-CSharp!Verse.ModContentPack::get_FolderName() | defs
+Assembly-CSharp!Verse.Scribe::saver:c:Verse.ScribeSaver | scribe
+Assembly-CSharp!Verse.ScribeSaver::FinalizeSaving() | scribe
+Assembly-CSharp!Verse.ScribeSaver::InitSaving(String,String) | scribe

@@ -8,7 +8,7 @@ using UniversalSqueaker;
 using Verse;
 using Verse.Sound;
 
-internal static class Program
+internal static partial class Program
 {
     private static int checks;
     private static void Check(bool value, string label)
@@ -43,6 +43,8 @@ internal static class Program
             NativePools();
             CompleteBinding();
             CallerConsumption();
+            S3PawnFactAdapter();
+            S3NewAuthorDoesNotNeedLegacyTable();
         }
         Console.WriteLine("S2 controlled adapter fixture PASS: " + checks + " (not native game evidence)");
     }
@@ -303,3 +305,5 @@ internal static class Program
     }
 
 }
+
+

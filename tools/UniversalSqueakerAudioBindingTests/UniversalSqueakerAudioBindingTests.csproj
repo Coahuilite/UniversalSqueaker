@@ -13,5 +13,15 @@
     <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs" Link="Production/SqueakKernelAdapter.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsAudioBindings.cs" Link="Production/UsAudioBindings.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsNativeAudioPool.cs" Link="Production/UsNativeAudioPool.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Production/OneShot/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Authoring/BuiltInPawnContracts.cs" Link="Production/BuiltInPawnContracts.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakActionPlan.cs" Link="Production/SqueakActionPlan.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs" Link="Production/SqueakTimingModel.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakEatOccurrence.cs" Link="Production/SqueakEatOccurrence.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/PeriodicStateBinding.cs" Link="Production/PeriodicStateBinding.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsPawnFacts.cs" Link="Production/UsPawnFacts.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsControlledActionEligibility.cs" Link="Production/UsControlledActionEligibility.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/CompProperties_Squeaker.cs" Link="Production/CompProperties_Squeaker.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Catalog/VoicePackCompAttach.cs" Link="Production/VoicePackCompAttach.cs" />
   </ItemGroup>
 </Project>

@@ -43,7 +43,10 @@ public partial class UniversalSqueakerSettings
         {
             var candidate = BehaviorSourceState.FromXml(behaviorSourcesXml);
             candidate.Refresh(directory);
-            if (candidate.ToXml() == BehaviorSourceState.FromXml(behaviorSourcesXml).ToXml()) return true;
+            if (candidate.ToXml() == BehaviorSourceState.FromXml(behaviorSourcesXml).ToXml())
+            {
+                return true;
+            }
             return CommitBehaviorState(candidate, persistCandidate, out failure);
         }
         catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; return false; }
@@ -53,7 +56,10 @@ public partial class UniversalSqueakerSettings
     {
         failure = "";
         string xml = candidate.ToXml();
-        if (BehaviorSourceState.FromXml(xml).ToXml() != xml) throw new InvalidOperationException("Unstable source serialization");
+        if (BehaviorSourceState.FromXml(xml).ToXml() != xml)
+        {
+            throw new InvalidOperationException("Unstable source serialization");
+        }
         if (!persistCandidate(xml)) { failure = "BehaviorSourceSaveFailed"; return false; }
         behaviorSourcesXml = xml;
         return true;
@@ -67,9 +73,18 @@ public partial class UniversalSqueakerSettings
         {
             foreach (var record in actionTuning)
             {
-                if (record.actionKey != action || !record.IsValidLayer(out int actual) || actual != layer) continue;
-                if (layer > 0 && (domain.Family != "Pawn" || record.raceDefName != domain.Target)) continue;
-                if (layer == 2 && (domain.Child == "" || record.xenotypeDefName != domain.Child)) continue;
+                if (record.actionKey != action || !record.IsValidLayer(out int actual) || actual != layer)
+                {
+                    continue;
+                }
+                if (layer > 0 && (domain.Family != "Pawn" || record.raceDefName != domain.Target))
+                {
+                    continue;
+                }
+                if (layer == 2 && (domain.Child == "" || record.xenotypeDefName != domain.Child))
+                {
+                    continue;
+                }
                 // No conversion of old probability/interval multipliers into chance or hard ticks.
                 players.Add(new BehaviorValues { Scope = record.hasScope ? record.scope : null,
                     Enabled = record.hasScope ? record.scope != SqueakActionScope.Disabled : null });
@@ -87,3 +102,4 @@ public partial class UniversalSqueakerSettings
         }
     }
 }
+
