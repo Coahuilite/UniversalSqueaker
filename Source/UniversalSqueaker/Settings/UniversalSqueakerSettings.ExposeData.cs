@@ -81,6 +81,7 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref uiSwatchId, "uiSwatchId", "core");
         // CORRECTIONS-R1 topic 3: the intro preference, same add-only discipline (default false omitted).
         Scribe_Values.Look(ref uiIntroCollapsed, "uiIntroCollapsed", false);
+        Scribe_Values.Look(ref behaviorSourcesXml, "behaviorSourcesXml", "");
 #if US_EXPERIMENTAL
         Scribe_Values.Look(ref experimentalKiiroCompat, "experimentalKiiroCompat", false);
 #endif

@@ -16,7 +16,7 @@ namespace Verse
 
     public enum LookMode { Undefined, Value, Deep, Reference, Def }
 
-    public abstract class ModSettings
+    public abstract class ModSettings : IExposable
     {
         public virtual void ExposeData()
         {
@@ -512,3 +512,4 @@ namespace Verse
         public static void Reset() => Captured.Clear();
     }
 }
+

@@ -897,18 +897,38 @@ public class CompSqueaker : ThingComp
         return delta.Enabled && (delta.Scope != SqueakActionScope.ActiveCommand || invocation.IsActiveCommand);
     }
 
-    internal bool ControlledOneShotAllowed(string key, bool activeCommand = false)
+    internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null)
     {
         if (!IsActionAllowedByKey(key) || !TryGetPlan(key, out var plan) || !plan.Configured) return false;
         var context = GetRuntimeContext(out _);
         var delta = context.GetActionByKey(key);
-        if (!delta.Enabled) return false;
-        if (delta.Scope != SqueakActionScope.ActiveCommand) return true;
-        return ((key == "Work" && IsCurrentJobPlayerCommand()) || activeCommand) && Pawn.IsPlayerControlled;
+        if (!(behavior?.Enabled ?? delta.Enabled)) return false;
+        var scope = behavior?.Scope ?? delta.Scope;
+        if (scope == SqueakActionScope.Disabled) return false;
+        if (scope != SqueakActionScope.ActiveCommand) return true;
+        return (((key == "Work" || key == "Move") && IsCurrentJobPlayerCommand()) || activeCommand) && Pawn.IsPlayerControlled;
     }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal bool ControlledWorkActive() => CurrentAction == SqueakAction.Work;
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
+    internal SqueakMoodMod ControlledLegacyModulation() => ResolveMoodMod(CurrentMood, GetRuntimeContext(out _));
+    internal void SeedControlledLegacyClock(OneShot.DecisionState state)
+    {
+        var records = new List<KeyValuePair<string, OneShot.LegacyClockRecord>>();
+        foreach (var record in lastTriggerTick)
+            records.Add(new KeyValuePair<string, OneShot.LegacyClockRecord>(record.Key,
+                new OneShot.LegacyClockRecord(record.Value, lastTriggerRealTime.GetValueOrDefault(record.Key))));
+        state.SeedLegacy(lastAnyTriggerTick, records);
+    }
+    internal OneShot.LegacyTimingParameters ControlledLegacyTiming(string key)
+    {
+        TryGetPlan(key, out var plan);
+        var context = GetRuntimeContext(out _);
+        return new OneShot.LegacyTimingParameters { Plan = plan, OverallMultiplier = context.OverallIntervalMultiplier,
+            ActionMultiplier = context.GetActionByKey(key).IntervalMultiplier, MasterMultiplier = GlobalCooldownMultiplier,
+            SpeedMultiplier = Find.TickManager.TickRateMultiplier, GlobalBaseTicks = GlobalMinIntervalTicks,
+            ScaleWithTimeSpeed = ScaleCooldownWithTimeSpeed };
+    }
     internal bool HasActiveSustainer => activeSustainer != null && !activeSustainer.Ended;
 
     private SqueakVocalCapability SampleVocalCapability() => new(GetVocalOrganEfficiency(),

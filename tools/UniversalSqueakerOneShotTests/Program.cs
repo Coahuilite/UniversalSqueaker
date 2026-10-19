@@ -92,6 +92,7 @@ internal static partial class Program
         FileExamples();
         Console.WriteLine("OneShot/author production source checks PASS: " + checks);
         S2Resources();
+        S3ContractsAndSources();
         Console.WriteLine("OneShot + S2 production source checks PASS: " + checks);
     }
 
@@ -409,3 +410,4 @@ internal static partial class Program
         Check(rejected, "unknown format rejected");
     }
 }
+

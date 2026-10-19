@@ -22,7 +22,7 @@ namespace UniversalSqueaker.SettingsMigrationTests;
 ///   6. BaselinePresetImporter last-wins upsert and (race,xeno) composite xenotype selection keys.
 ///   7. AudioDomains.TryCreate rejects whitespace-only race/xeno.
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     private static int failures;
 
@@ -48,6 +48,7 @@ internal static class Program
             SetDistanceRangeClampsAndMarksCustom();
             UiSwatchRoundTripRepairAndOmission();
             IntroCollapsedScribeRoundTrip();
+            BehaviorSourceConfigTransaction();
 
             if (failures == 0)
             {
@@ -1012,3 +1013,4 @@ internal static class Program
         else { Console.Error.WriteLine("  FAIL: " + name); failures++; }
     }
 }
+

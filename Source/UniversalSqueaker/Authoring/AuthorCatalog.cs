@@ -206,18 +206,41 @@ public sealed class AuthorCatalog
     private readonly List<AudioCandidate> audio = new();
     private readonly HashSet<string> packKeys = new(StringComparer.Ordinal);
     public readonly List<string> Issues = new();
-    public AuthorCatalog(long workInterval, long woundedInterval)
+    public AuthorCatalog(long workInterval, long woundedInterval, bool fullDevCandidate = false)
     {
-        facts.Add("us.core/WorkState", new RegisteredFact(new BuiltInFact("us.core/WorkState"), "us.core"));
-        facts.Add("us.core/WoundedEvent", new RegisteredFact(new BuiltInFact("us.core/WoundedEvent"), "us.core"));
-        facts.Add("us.core/CallState", new RegisteredFact(new BuiltInFact("us.core/CallState"), "us.core"));
-        actions.Add("us.core/Work", new ActionPlan("us.core/Work", 20, new Condition("ref", "us.core/WorkState"), workInterval));
-        actions.Add("us.core/Wounded", new ActionPlan("us.core/Wounded", 30, new Condition("ref", "us.core/WoundedEvent"), woundedInterval));
-        actions.Add("us.core/Call", new ActionPlan("us.core/Call", 0, new Condition("ref", "us.core/CallState"), workInterval));
+        foreach (var builtIn in BuiltInPawnContracts.Create(workInterval, woundedInterval, fullDevCandidate))
+        {
+            foreach (string fact in builtIn.Condition.RequiredFacts())
+            {
+                if (!facts.ContainsKey(fact))
+                {
+                    facts.Add(fact, new RegisteredFact(new BuiltInFact(fact), "us.core"));
+                }
+            }
+            actions.Add(builtIn.Key, builtIn);
+        }
+        if (fullDevCandidate)
+        {
+            foreach (string key in new[] { "EatWholeJob", "EatNutrition", "EatChewing", "EatDrug", "ActiveCommand", "PlayerControlled", "Responsive", "BiotechAvailable" })
+            {
+                string identity = "us.core/" + key;
+                facts.Add(identity, new RegisteredFact(new BuiltInFact(identity), "us.core"));
+            }
+        }
     }
 
     public ActionPlan[] Actions => actions.Values.ToArray();
     public AudioCandidate[] Audio => audio.ToArray();
+    private readonly List<BehaviorSource> behaviorSources = new();
+    public BehaviorSourceDirectory BehaviorSources => new(behaviorSources);
+    public bool HasFact(string key) => facts.ContainsKey(key);
+    public void AddBehaviorSource(BehaviorSource source)
+    {
+        behaviorSources.Add(source.Copy());
+        foreach (var contribution in source.Contributions)
+            foreach (string required in contribution.RequiredFacts.Where(x => !HasFact(x)))
+                Issues.Add(source.Id + ":" + contribution.Action + ":Missing required fact " + required);
+    }
 
     public bool AddProvider(IUsDefinitionProvider provider)
     {
@@ -262,9 +285,9 @@ public sealed class AuthorCatalog
                 throw new ArgumentException("Duplicate/invalid action");
             }
 
-            if (declaration.BaseAction != "us.core/Work" && declaration.BaseAction != "us.core/Wounded" && declaration.BaseAction != "us.core/Call")
+            if (!actions.ContainsKey(declaration.BaseAction) || !declaration.BaseAction.StartsWith("us.core/", StringComparison.Ordinal))
             {
-                throw new ArgumentException("S1 baseAction must be a built-in action");
+                throw new ArgumentException("baseAction must be a built-in action");
             }
 
             var parent = actions[declaration.BaseAction];

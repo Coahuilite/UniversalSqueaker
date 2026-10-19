@@ -57,7 +57,7 @@ internal static partial class Program
         var later = engine.Run(scopeState, policy, Input(1000, false, false, true), driver, driver);
         Check(later.Reason == "TickOccupied" && driver.Calls == 0 && driver.Rolls == 0, "scope failure after selection does not refund same-tick event");
         var hardState = new DecisionState(1000);
-        hardState.Protect(Input().Actions.Single(x => x.Key == "us.core/Work"), 990, policy);
+        hardState.Protect(Input().Actions.Single(x => x.Key == "us.core/Work"), new DecisionInput { Tick = 990 }, policy);
         // Isolate the Work hard gate: Wounded has no action deadline and shared is already elapsed.
         hardState.SharedDeadline = 0;
         var hard = engine.Run(hardState, policy, Input(), driver, driver);

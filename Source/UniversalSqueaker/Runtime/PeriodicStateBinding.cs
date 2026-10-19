@@ -45,6 +45,7 @@ public static class PeriodicStateBinding
                 IsGainingNutritionNow(pawn), SampleChewingToil(pawn), chewToilNameConfirmed),
         };
     }
+    internal static bool CaptureEatingOccurrence(Pawn pawn) => IsEating(pawn);
 
     /// <summary>vanilla nutrition authority: the public IEatingDriver interface exposes GainingNutritionNow.</summary>
     private static bool IsGainingNutritionNow(Pawn pawn)

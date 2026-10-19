@@ -30,7 +30,8 @@ public enum RandomPurpose
     Talking,
     Eligibility,
     Sound,
-    StateWait
+    StateWait,
+    LegacyJitter
 }
 
 public interface IOneShotRandom
@@ -175,7 +176,11 @@ public sealed class ActionPlan
     public readonly bool CheckShared;
     public readonly bool WriteShared;
     public readonly double Chance;
-    public ActionPlan(string key, int priority, Condition condition, long interval, bool checkShared = true, bool writeShared = true, double chance = 1, string? baseAction = null)
+    public readonly bool SkipTalking;
+    public readonly double Volume;
+    public readonly double Pitch;
+    public ActionPlan(string key, int priority, Condition condition, long interval, bool checkShared = true, bool writeShared = true, double chance = 1, string? baseAction = null,
+        bool skipTalking = false, double volume = 1, double pitch = 1)
     {
         if (interval < 0)
         {
@@ -195,6 +200,9 @@ public sealed class ActionPlan
         CheckShared = checkShared;
         WriteShared = writeShared;
         Chance = chance;
+        SkipTalking = skipTalking;
+        Volume = volume;
+        Pitch = pitch;
     }
 }
 
@@ -223,6 +231,14 @@ public sealed class StatePolicy
 public sealed class DecisionState
 {
     private readonly Dictionary<string, long> deadlines = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, LegacyClockRecord> legacyRecords = new(StringComparer.Ordinal);
+    public int LastProtectedTick { get; private set; } = int.MinValue / 2;
+    public LegacyClockRecord LegacyRecord(string key) => legacyRecords.TryGetValue(key, out var value) ? value : new LegacyClockRecord(int.MinValue / 2, -1000000f);
+    public void SeedLegacy(int lastGlobalTick, IEnumerable<KeyValuePair<string, LegacyClockRecord>> records)
+    {
+        LastProtectedTick = lastGlobalTick;
+        foreach (var record in records) legacyRecords[record.Key] = record.Value;
+    }
     public long SharedDeadline { get; internal set; }
     public long NextStateTick { get; internal set; }
     public long AttemptTick { get; internal set; } = long.MinValue;
@@ -230,18 +246,46 @@ public sealed class DecisionState
     public string ConfirmedAction { get; internal set; } = "";
 
     public long ActionDeadline(string key) => deadlines.TryGetValue(key, out var value) ? value : long.MinValue;
-    internal void Protect(ActionPlan action, long now, StatePolicy policy)
+    internal void Protect(ActionPlan action, DecisionInput input, StatePolicy policy)
     {
+        long now = input.Tick;
         deadlines[action.Key] = now + action.Interval;
+        LastProtectedTick = (int)now;
+        legacyRecords[action.Key] = new LegacyClockRecord((int)now, input.Realtime);
         if (action.WriteShared)
         {
             SharedDeadline = Math.Max(SharedDeadline, now + policy.SharedInterval);
+            if (input.CompatibilityTiming != null)
+                SharedDeadline = Math.Max(SharedDeadline, now + input.CompatibilityTiming.Evaluate(this, input).GlobalCooldownTicks);
         }
     }
 
     public DecisionState(long firstOpportunity)
     {
         NextStateTick = firstOpportunity;
+    }
+}
+
+public readonly struct LegacyClockRecord
+{
+    public readonly int Tick;
+    public readonly float Realtime;
+    public LegacyClockRecord(int tick, float realtime) { Tick = tick; Realtime = realtime; }
+}
+
+/// <summary>Old clock inputs sampled by the adapter; last records and settlement belong to DecisionState.</summary>
+public sealed class LegacyTimingParameters
+{
+    public SqueakActionPlan Plan;
+    public float OverallMultiplier = 1, ActionMultiplier = 1, MasterMultiplier = 1, SpeedMultiplier = 1, PopulationScale = 1;
+    public int GlobalBaseTicks;
+    public bool ScaleWithTimeSpeed;
+    public SqueakTimingEvaluation Evaluate(DecisionState state, DecisionInput input)
+    {
+        var previous = state.LegacyRecord(Plan.ActionKey);
+        return SqueakTimingModel.Evaluate(new SqueakTimingInput((int)input.Tick, input.Realtime, SpeedMultiplier, Plan,
+            OverallMultiplier, ActionMultiplier, previous.Tick, previous.Realtime, state.LastProtectedTick,
+            GlobalBaseTicks, MasterMultiplier, ScaleWithTimeSpeed, PopulationScale));
     }
 }
 
@@ -285,13 +329,17 @@ public sealed class PlaybackRequest
     public readonly string Action;
     public readonly AudioCandidate Audio;
     public readonly long Tick;
-    public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick)
+    public readonly double Pitch;
+    public readonly bool UseLegacyModulation;
+    public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick, double pitch = 1, bool useLegacyModulation = false)
     {
         Subject = subject;
         Domain = domain;
         Action = action;
         Audio = audio;
         Tick = tick;
+        Pitch = pitch;
+        UseLegacyModulation = useLegacyModulation;
         Family = audio.Family;
         TargetNamespace = audio.TargetNamespace;
     }
@@ -304,6 +352,7 @@ public sealed class DecisionInput
     public SubjectFamily Family;
     public string TargetNamespace = "";
     public long Tick;
+    public float Realtime;
     public bool StateOpportunity;
     public bool Eligible = true;
     public ISet<string> BlockedActions = new HashSet<string>(StringComparer.Ordinal);
@@ -314,6 +363,11 @@ public sealed class DecisionInput
     public AudioCandidate[] Audio = Array.Empty<AudioCandidate>();
     public Kernel.SelectionMode SourceMode = Kernel.SelectionMode.Fallback;
     public Kernel.BuiltInFallbackTable Fallback = Kernel.BuiltInFallbackTable.Empty;
+    public LegacyTimingParameters? CompatibilityTiming;
+    public bool UseLegacyModulation;
+    public Kernel.SqueakPoolRegistry? AudioPool;
+    public Kernel.SelectionContext? AudioContext;
+    public Kernel.ISoundGate? SoundGate;
 }
 
 public readonly struct DecisionOutcome
@@ -375,6 +429,8 @@ public sealed class OneShotDecision
         {
             return Stop(state, policy, input, action.Key, "HardDeadline", diagnostics);
         }
+        if (input.CompatibilityTiming != null && !input.CompatibilityTiming.Evaluate(state, input).TimingReady)
+            return Stop(state, policy, input, action.Key, "LegacyClockDeadline", diagnostics);
 
         bool enteredBackend = false;
         try
@@ -384,7 +440,7 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
             }
 
-            if (!Pass(input.TalkingChance, RandomPurpose.Talking, random))
+            if (!action.SkipTalking && !Pass(input.TalkingChance, RandomPurpose.Talking, random))
             {
                 return Stop(state, policy, input, action.Key, "TalkingRejected", diagnostics);
             }
@@ -400,8 +456,10 @@ public sealed class OneShotDecision
                 return Stop(state, policy, input, action.Key, "NoBoundAudio", diagnostics);
             }
 
+            audio = new AudioCandidate(audio.EntryKey, audio.AudioId, audio.Action, audio.Domain, audio.Weight,
+                audio.Volume * action.Volume, audio.Family, audio.TargetNamespace);
             enteredBackend = true;
-            var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick));
+            var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, action.Pitch, input.UseLegacyModulation));
             Settle(state, policy, input, action, receipt);
             return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
         }
@@ -483,11 +541,11 @@ public sealed class OneShotDecision
                     new Kernel.ActionSoundSet(new[] { candidate.AudioId }, null, 1)
                 }
             })).ToArray();
-        var pool = new Kernel.SqueakPoolRegistry(entries, input.Fallback);
+        var pool = input.AudioPool ?? new Kernel.SqueakPoolRegistry(entries, input.Fallback);
         var chosen = pool.Select(
-            new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true),
+            input.AudioContext ?? new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true),
             input.SourceMode,
-            new BoundAudioGate(),
+            input.SoundGate ?? new BoundAudioGate(),
             new SelectionRandom(random));
         if (chosen.IsNone)
         {
@@ -548,7 +606,7 @@ public sealed class OneShotDecision
     {
         if (receipt.Result == PlaybackResult.Dispatched || receipt.Result == PlaybackResult.Indeterminate)
         {
-            state.Protect(action, input.Tick, policy);
+            state.Protect(action, input, policy);
         }
 
         if (receipt.Result == PlaybackResult.Dispatched)

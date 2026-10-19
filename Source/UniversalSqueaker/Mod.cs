@@ -117,6 +117,8 @@ public class UniversalSqueakerMod : Mod
             RaceDefinitionCatalog.CollectAndPublish();
             UsAudioBindings.Publish();
             UsOneShotRuntime.Initialize();
+            if (!Settings.TryRefreshBehaviorSources(UsOneShotRuntime.BehaviorSources, PersistBehaviorCandidate, out string sourceFailure))
+                Log.Warning("usdiag behavior snapshot refresh paused: " + sourceFailure);
             // Catalog and resolver share the same published snapshot source.
             SqueakXenotypeCatalog.Refresh(Settings);
             // VF1 order: the final-table store loads BEFORE the mount decision, because the support
@@ -250,6 +252,54 @@ public class UniversalSqueakerMod : Mod
         if (Settings.IsPersistenceBlockedByMigrationFailure) return;
         SqueakRuntimeResolver.FlushPendingRuntimeChanges(true);
         FlushQueuedSettingsSave(true);
+    }
+
+    /// <summary>Explicit domain operation. Null source means forget this behavior binding, not audio selection.</summary>
+    public bool ChangeBehaviorSource(BehaviorDomain domain, string? sourceId, out string failure)
+    {
+        bool changed = Settings.TryChangeBehaviorSource(domain, sourceId, UsOneShotRuntime.BehaviorSources,
+            PersistBehaviorCandidate, out failure);
+        if (changed) Settings.ApplyToRuntime();
+        return changed;
+    }
+
+    private bool PersistBehaviorCandidate(string candidate)
+    {
+        if (writeInProgress || Settings.IsPersistenceBlockedByMigrationFailure) return false;
+        try
+        {
+            writeInProgress = true;
+            // Vanilla WriteModSettings truncates its final path. Stage the SAME SettingsBlock shape
+            // with the same Scribe serializer, then atomically replace only this mod's Config file.
+            string target = System.IO.Path.Combine(GenFilePaths.ConfigFolderPath,
+                GenText.SanitizeFilename("Mod_" + Content.FolderName + "_" + GetType().Name + ".xml"));
+            bool committed = Settings.TryWriteBehaviorCandidate(target, candidate, staging =>
+            {
+                try
+                {
+                    Scribe.saver.InitSaving(staging, "SettingsBlock");
+                    var settings = Settings;
+                    Scribe_Deep.Look(ref settings, "ModSettings");
+                }
+                finally { Scribe.saver.FinalizeSaving(); }
+            }, out string failure);
+            if (!committed)
+            {
+                Log.Warning("usdiag behavior source save failed: " + failure);
+                return false;
+            }
+            PhysicalSaveCount++;
+            return true;
+        }
+        catch (Exception error)
+        {
+            Log.Warning("usdiag behavior source save failed: " + error.GetType().Name);
+            return false;
+        }
+        finally
+        {
+            writeInProgress = false;
+        }
     }
 
     internal void QueueSettingsSave()
