@@ -208,7 +208,7 @@ internal static partial class Program
         var input = Input();
         input.Actions = catalog.Actions;
         input.Audio = catalog.Audio;
-        var effective = behavior.Source.Contributions.Single(x => x.Action == "Work").Values;
+        var effective = behavior.Source.Contributions.Single(x => x.Action == "us.core/Work").Values;
         input.ActionModulation = new Dictionary<string, ModulationPlan>
         {
             [action.Key] = ResponseModulation.Resolve("p1", effective, new Dictionary<string, double>

@@ -31,5 +31,9 @@
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsControlledActionEligibility.cs" Link="Production/UsControlledActionEligibility.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/CompProperties_Squeaker.cs" Link="Production/CompProperties_Squeaker.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Catalog/VoicePackCompAttach.cs" Link="Production/VoicePackCompAttach.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_Selector_Select.cs" Link="Production/Patch_Selector_Select.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.BehaviorSources.cs" Link="Production/UniversalSqueakerSettings.BehaviorSources.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Settings/UsAtomicConfigFile.cs" Link="Production/UsAtomicConfigFile.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Models/ActionTuningRecord.cs" Link="Production/ActionTuningRecord.cs" />
   </ItemGroup>
 </Project>

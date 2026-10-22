@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -16,7 +17,7 @@ internal static class UsPawnFacts
         var result = new Dictionary<string, Truth>(StringComparer.Ordinal);
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
         {
-            result[BuiltInPawnContracts.FactKey(key)] = BuiltInPawnContracts.IsEvent(key) ? Yes(key == eventKey) : Truth.Unknown;
+            result[BuiltInPawnContracts.FactKey(key)] = BuiltInPawnContracts.IsEvent(key) ? Yes("us.core/" + key == eventKey) : Truth.Unknown;
         }
         var job = pawn.CurJob;
         var driver = pawn.jobs?.curDriver;
@@ -52,6 +53,8 @@ internal static class UsPawnFacts
         result["us.core/ActiveCommand"] = Yes(job?.playerForced == true && pawn.IsPlayerControlled);
         result["us.core/PlayerControlled"] = Yes(pawn.IsPlayerControlled);
         result["us.core/Responsive"] = pawn.health == null ? Truth.Unknown : Yes(!pawn.Downed && pawn.Awake());
+        result["us.core/HasCurrentInjury"] = pawn.health?.hediffSet == null ? Truth.Unknown
+            : Yes(pawn.health.hediffSet.hediffs.OfType<Hediff_Injury>().Any(x => x.Severity > 0));
         result["us.core/BiotechAvailable"] = Yes(ModsConfig.BiotechActive);
         return result;
     }

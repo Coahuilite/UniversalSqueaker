@@ -53,7 +53,7 @@ internal static partial class Program
             "S3 actual capture: exact chewing/lighting phase includes zero-nutrition drug");
         pawn.CurJob.playerForced = true; pawn.IsPlayerControlled = true;
         Check(Capture()["us.core/ActiveCommand"] == Truth.True, "S3 actual capture: work/move command provenance preserved independently of state");
-        Check(Capture("Death")["us.core/DeathEvent"] == Truth.True && Capture()["us.core/DeathEvent"] == Truth.False,
+        Check(Capture("us.core/Death")["us.core/DeathEvent"] == Truth.True && Capture()["us.core/DeathEvent"] == Truth.False,
             "S3 actual capture: notification is ephemeral and not replayed on later opportunities");
         ModsConfig.BiotechActive = false;
         Check(Capture()["us.core/BiotechAvailable"] == Truth.False, "S3 actual capture: no DLC fact stays false without deleting configuration");

@@ -62,12 +62,15 @@ public readonly struct ChainResult
 
     public bool IsNone => SoundKey == null;
     public readonly ActionSoundSet? SelectedVariant;
+    // Supplying domain, not the original subject domain (e.g. Race fallback for a Xeno subject).
     public readonly SelectionContext? SelectedContext;
+    public readonly string? SelectedEntryKey;
     public AudioId? Resource => AudioId.TryParse(SoundKey, out var id) ? id : null;
 
-    public ChainResult(string? soundKey, ChainTier? tier, string? poolStableKey, bool isEgg = false, SelectionContext? context = null, ActionSoundSet? variant = null)
+    public ChainResult(string? soundKey, ChainTier? tier, string? poolStableKey, bool isEgg = false, SelectionContext? context = null, ActionSoundSet? variant = null, string? entryKey = null)
     {
         SelectedContext = context;
+        SelectedEntryKey = entryKey;
         SelectedVariant = variant;
         SoundKey = soundKey;
         Tier = tier;

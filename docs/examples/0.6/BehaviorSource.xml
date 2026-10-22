@@ -3,14 +3,14 @@
   <UniversalSqueaker.UsBehaviorSourceDef>
     <defName>US_ExampleBehavior</defName>
     <declaration family="Pawn" namespace="" target="Ratkin" child="" semantics="1">
-      <action key="Work" enabled="false" hardIntervalTicks="0" talkingEnabled="false" volume="0" />
-      <action key="Select" enabled="true" scope="AnyOccurrence" requires="us.core/Responsive" />
+      <action key="us.core/Work" enabled="false" hardIntervalTicks="0" talkingEnabled="false" volume="0" />
+      <action key="us.core/Select" enabled="true" scope="AnyOccurrence" requires="us.core/Responsive" />
     </declaration>
   </UniversalSqueaker.UsBehaviorSourceDef>
   <UniversalSqueaker.UsActionDef>
     <defName>US_ExampleDrugChewing</defName>
     <declaration>
-      <key>example/DrugChewing</key><baseAction>us.core/Eat</baseAction>
+      <key>example/DrugChewing</key><priority>40</priority><baseAction>us.core/Eat</baseAction>
       <condition><all><ref>us.core/EatChewing</ref><ref>us.core/EatDrug</ref></all></condition>
     </declaration>
   </UniversalSqueaker.UsActionDef>

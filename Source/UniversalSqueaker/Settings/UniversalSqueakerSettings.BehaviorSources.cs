@@ -139,13 +139,13 @@ public partial class UniversalSqueakerSettings
     }
     private static bool AppliesToBehaviorDomain(ActionTuningRecord record, BehaviorDomain domain, string action, int layer)
     {
-        if (record.actionKey != action || !record.IsValidLayer(out int actual) || actual != layer)
+        if (Kernel.ActionKey.DefinitionId(record.actionKey) != action || !record.IsValidLayer(out int actual) || actual != layer)
         {
             return false;
         }
         if (layer == 0)
         {
-            return true;
+            return domain.Family == "Pawn";
         }
         if (domain.Family != "Pawn" || record.raceDefName != domain.Target)
         {

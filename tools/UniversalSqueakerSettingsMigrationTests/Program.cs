@@ -51,6 +51,7 @@ internal static partial class Program
             BehaviorSourceConfigTransaction();
             SourceSaveUsesOriginalModGeneration();
             S4ResponseConfigAndReset();
+            DaCompleteActionConfig();
 
             if (failures == 0)
             {

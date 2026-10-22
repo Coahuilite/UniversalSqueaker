@@ -186,7 +186,7 @@ internal static partial class Program
             {
                 new ActionPlan("example/Higher", 30, new Condition("ref", "example/HighPriority"), 120),
                 new ActionPlan("us.core/Work", 20, new Condition("ref", "us.core/WorkState"), 120,
-                    chance: scenario == "Eligibility" ? 0 : 1)
+                    chance: scenario == "Eligibility" ? 0 : 1, skipTalking: false, requiresVocal: true)
             };
             var state = new DecisionState(1000);
             var driver = new Driver
@@ -294,7 +294,7 @@ internal static partial class Program
             Condition = baseCondition
         };
         Check(!catalog.AddAction(child), "S1 custom base rejected before parent");
-        Check(catalog.AddAction(parent) && !catalog.AddAction(child), "S1 custom base rejected identically after parent");
+        Check(catalog.AddAction(parent) && catalog.AddAction(child), "DA legal custom parent accepted after its dependency is registered");
     }
 
     private static void ExpectInvalidXml(Action load, string label)

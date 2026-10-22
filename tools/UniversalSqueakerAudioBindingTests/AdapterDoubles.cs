@@ -44,17 +44,22 @@ namespace Verse
         public Verse.AI.Pawn_PathFollower? pather;
         public Verse.AI.Pawn_MindState? mindState;
         public bool IsPlayerControlled, Downed;
-        public object? health;
+        public FixtureHealth? health = new();
         public bool FixtureAwake = true;
         public bool Awake() => FixtureAwake;
         public Pawn_NeedsTracker? needs;
         public PawnPosture GetPosture() => PawnPosture.LayingInBed;
     }
+    public sealed class FixtureHealth { public FixtureHediffSet? hediffSet = new(); }
+    public sealed class FixtureHediffSet { public readonly List<Hediff> hediffs = new(); }
+    public class Hediff { public float Severity; }
+    public sealed class Hediff_Injury : Hediff { }
     public enum PawnPosture { LayingInBed }
     public sealed class Pawn_NeedsTracker { public object? rest; public FixtureMood? mood; }
     public sealed class FixtureMood { public float CurLevelPercentage = .5f; }
-    public sealed class Thing { public ThingDef def = new(); }
-    public sealed class ThingDef : Def { public bool IsDrug; public object? race; public List<CompProperties> comps = new(); }
+    public class Thing { public ThingDef def = new(); }
+    public enum ThingCategory { Pawn, Item }
+    public sealed class ThingDef : Def { public bool IsDrug; public object? race; public ThingCategory category = ThingCategory.Pawn; public Type? thingClass = typeof(Pawn); public List<CompProperties> comps = new(); }
     public class CompProperties { public Type? compClass; }
     public struct FloatRange { public float min, max; public float TrueMin => min; public float TrueMax => max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
     public sealed class Map { }
@@ -230,8 +235,10 @@ namespace UniversalSqueaker
     public sealed class SqueakVoicePackDef : Verse.Def
     {
         internal bool IsKernelDeclaration;
+        internal IReadOnlyList<string> KernelActionKeys = Array.Empty<string>();
         public SqueakVoicePackScope scope;
         public string raceDefName = "";
+        public string targetDefName = "";
         public float weight = 1;
         public string FixturePackKey = "";
         public List<SqueakVoicePackAction> actions = new();
@@ -289,6 +296,7 @@ namespace Verse.AI
 }
 namespace RimWorld
 {
+    public sealed class XenotypeDef : Verse.Def { }
     public sealed class JoyKindDef { }
     public static class JoyKindDefOf { public static readonly JoyKindDef Social = new(); }
     public static class JobDefOf { public static readonly Verse.AI.JobDef Ingest = new() { defName = "Ingest" }; }

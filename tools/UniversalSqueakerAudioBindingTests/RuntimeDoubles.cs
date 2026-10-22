@@ -61,14 +61,15 @@ namespace UniversalSqueaker
         public bool ExternalAllowed = true;
         public bool Vocal = true;
         public bool FixtureSustained;
+        public void Notify_Select() => NotifyExternalByKey("Select", SqueakTriggerOrigin.External, SqueakInvocationSource.PlayerSelection);
         public int MembershipUpdates;
         private void SynchronizePeriodicMembership() => MembershipUpdates++;
-        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound) { }
+        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound, UniversalSqueaker.OneShot.PlaybackRequest? request) { }
         internal SqueakVocalCapability ControlledOneShotVocal() => new(Vocal ? 1 : 0, 1);
         internal bool ControlledPlaybackSustained(string key) => FixtureSustained;
         internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => true;
         internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
-            => UsControlledActionEligibility.Allows(false, authorAction, Allowed && (BuiltInActionKeys.Contains(key) || ExternalAllowed),
+            => UsControlledActionEligibility.Allows(false, authorAction, Allowed && (BuiltInActionKeys.Contains(ActionKey.SchemaKey(key)) || ExternalAllowed),
                 behavior?.Enabled ?? true, behavior?.Scope ?? SqueakActionScope.AnyOccurrence, activeCommand, Pawn.IsPlayerControlled);
     }
     public readonly struct SqueakVocalCapability
@@ -77,17 +78,13 @@ namespace UniversalSqueaker
         public readonly float VocalOrganEfficiency, TalkingChance;
         public SqueakVocalCapability(float vocal, float talking) { VocalOrganEfficiency = vocal; TalkingChance = talking; }
     }
-    public static class UniversalSqueakerMod { public static readonly RuntimeSettings Settings = new(); }
-    public sealed class RuntimeSettings
+    public static class UniversalSqueakerMod { public static readonly UniversalSqueakerSettings Settings = new(); }
+    // Only native persistence scheduling is doubled; source transactions and effective settings resolution are production.
+    public partial class UniversalSqueakerSettings
     {
-        public double activity = 1;
-        public BehaviorValues Values = new();
-        public BehaviorValues ResolveBehaviorSource(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
-            Func<string, bool> available, out bool paused, Action<string>? reportPause = null)
-        {
-            paused = false;
-            return Values.Copy();
-        }
+        public List<ActionTuningRecord> actionTuning = new();
+        internal bool IsPersistenceBlockedByMigrationFailure => false;
+        internal void QueuePersistence() { }
     }
     public static class SqueakRuntimeResolver { public static readonly RuntimeSnapshot Current = new(); }
     public sealed class RuntimeSnapshot
@@ -95,7 +92,8 @@ namespace UniversalSqueaker
         public SqueakVoicePackMode VoicePackMode = SqueakVoicePackMode.Fallback;
         public SqueakPoolRegistry Registry = SqueakPoolRegistry.Empty;
         public bool AllowEggs;
-        public RuntimeContext ResolveContext(Pawn pawn) => new();
+        public bool RejectChildContext;
+        public RuntimeContext ResolveContext(Pawn pawn) => new() { Xenotype = ModsConfig.BiotechActive && !RejectChildContext ? pawn.genes?.Xenotype : null };
     }
     public sealed class RuntimeContext { public Def? Xenotype; }
     public static class SqueakLifeStageResolver { public static AgeBucket Resolve(Pawn pawn) => AgeBucket.Adult; }

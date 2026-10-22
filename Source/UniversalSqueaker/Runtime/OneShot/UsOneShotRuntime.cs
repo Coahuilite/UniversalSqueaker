@@ -52,6 +52,9 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
         + " actionUntil=" + state.ActionDeadline(LastOutcome.Action) + " nextState=" + state.NextStateTick
         + " active=" + sustained.ActiveKey + " ended=" + sustained.LastEndReason
+        + " subject=" + pawn.ThingID + " role=" + lastRequest?.SubjectRole
+        + " family=" + lastRequest?.Family + " domain=" + lastRequest?.Domain + " child=" + lastRequest?.ChildDomain
+        + " sourceDomain=" + lastRequest?.Audio.SourceDomain + " tier=" + lastRequest?.Audio.SourceTier + " pack=" + lastRequest?.Audio.PackKey
         + " requestedEntry=" + lastRequest?.Audio.EntryKey + " requestedAudio=" + lastRequest?.Audio.AudioId
         + " localPitch=" + lastRequest?.Pitch + " localVolume=" + lastRequest?.Audio.Volume
         + " rolls=" + string.Join(",", draws.Select(x => x.Key + ":" + x.Value))
@@ -84,13 +87,15 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
 
         var comp = pawn.GetComp<CompSqueaker>();
         var vocal = comp.ControlledOneShotVocal();
-        var requested = registeredAction == null ? null : catalog.Actions.Single(x => x.Key == registeredAction);
-        string? factEvent = requested == null ? eventKey : requested.BaseAction.Substring(requested.BaseAction.LastIndexOf('/') + 1);
-        var values = UsPawnFacts.Capture(pawn, factEvent);
+        var values = UsPawnFacts.Capture(pawn, eventKey);
         var blocked = new HashSet<string>(StringComparer.Ordinal);
         var blockedReasons = new Dictionary<string, string>(StringComparer.Ordinal);
+        var snapshot = SqueakRuntimeResolver.Current;
+        var context = snapshot.ResolveContext(pawn);
+        var audioDomain = new Kernel.AudioDomain(new Kernel.RaceKey(pawn.def.defName),
+            context.Xenotype == null ? null : new Kernel.XenotypeKey(context.Xenotype.defName));
         var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
-            ModsConfig.BiotechActive ? pawn.genes?.Xenotype?.defName ?? "" : "");
+            context.Xenotype?.defName ?? "");
         var plans = new List<ActionPlan>();
         var modulation = new Dictionary<string, ModulationPlan>(StringComparer.Ordinal);
         var numericalFacts = new Dictionary<string, double>(StringComparer.Ordinal);
@@ -111,18 +116,33 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             {
                 continue;
             }
-            string legacyKey = action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, legacyKey, catalog.BehaviorSources, catalog.HasFact, out bool paused,
+            string actionId = action.Key;
+            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, actionId, catalog.BehaviorSources, catalog.HasFact, out bool paused,
                 reason => blockedReasons[action.Key] = reason);
-            if (paused || !comp.ControlledOneShotAllowed(legacyKey, activeCommand, behavior, authorAction: true))
+            if (paused || !comp.ControlledOneShotAllowed(actionId, activeCommand, behavior, authorAction: true))
             {
                 blocked.Add(action.Key);
             }
+            if (actionId == "us.core/Select")
+            {
+                if (candidate.SelectQualification == UsSelectPawnQualification.Unselected)
+                {
+                    blocked.Add(actionId);
+                    blockedReasons[actionId] = "SelectPawnQualificationRequired";
+                }
+                else if (candidate.SelectQualification == UsSelectPawnQualification.ResponsivePlayerControlled
+                    && (values["us.core/Responsive"] != Truth.True || !pawn.IsPlayerControlled))
+                {
+                    blocked.Add(actionId);
+                    blockedReasons[actionId] = "ExplicitPawnSelectionQualification";
+                }
+            }
+            bool builtIn = Kernel.ActionKey.SchemaKey(actionId) != actionId;
             plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
-                behavior.HardIntervalTicks ?? (legacyKey == "Wounded" ? woundedTicks : workTicks),
-                action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : candidate.EventProbability, action.BaseAction,
-                legacyKey == "Death" || behavior.TalkingEnabled == false, behavior.Volume ?? 1, behavior.Pitch ?? 1,
-                action.Sustained || comp.ControlledPlaybackSustained(legacyKey)));
+                behavior.HardIntervalTicks ?? (builtIn ? actionId == "us.core/Wounded" ? woundedTicks : workTicks : action.Interval),
+                action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : action.Chance * candidate.EventProbability, action.BaseAction,
+                behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking, behavior.Volume ?? 1, behavior.Pitch ?? 1,
+                action.Sustained || comp.ControlledPlaybackSustained(actionId), action.RequiresVocal));
             modulation[action.Key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses);
         }
         if (compatibilityInvocation.HasValue)
@@ -142,14 +162,13 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             }
             modulation[key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses);
         }
-        var snapshot = SqueakRuntimeResolver.Current;
-        var context = snapshot.ResolveContext(pawn);
-        var audioDomain = new Kernel.AudioDomain(new Kernel.RaceKey(pawn.def.defName),
-            context.Xenotype == null ? null : new Kernel.XenotypeKey(context.Xenotype.defName));
         var input = new DecisionInput
         {
             Subject = pawn.ThingID,
+            SubjectRole = eventKey == "us.core/Select" ? "SelectedSubject" : eventKey == "us.core/Attack" ? "Attacker"
+                : eventKey == "us.core/Wounded" ? "DamageRecipient" : "Subject",
             Domain = pawn.def.defName,
+            ChildDomain = audioDomain.Xenotype?.DefName ?? "",
             Tick = now,
             ActiveSustainedKey = sustained.ActiveKey,
             Activity = UniversalSqueakerMod.Settings.activity,
@@ -181,7 +200,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         lastObservation = now;
         try
         {
-            comp.RecordKernelOutcome(LastOutcome, preparedSound);
+            comp.RecordKernelOutcome(LastOutcome, preparedSound, lastRequest);
         }
         catch (Exception error)
         {
@@ -206,14 +225,14 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         {
             string active = sustained.ActiveKey;
             var action = catalog.Actions.FirstOrDefault(x => x.Key == active);
-            string key = action == null ? active : action.BaseAction.Substring(action.BaseAction.LastIndexOf('/') + 1);
+            string key = active;
             var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
-                ModsConfig.BiotechActive ? pawn.genes?.Xenotype?.defName ?? "" : "");
+                SqueakRuntimeResolver.Current.ResolveContext(pawn).Xenotype?.defName ?? "");
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
                 catalog.HasFact, out bool paused);
             var comp = pawn.GetComp<CompSqueaker>();
             if (paused || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
-                || comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
+                || action?.RequiresVocal == true && comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
             {
                 EndSustained("CurrentAuthorizationUnavailable");
                 return;
@@ -282,7 +301,12 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 rejection = "MainThreadRequired";
                 return false;
             }
-            if (request.Subject != pawn.ThingID || request.Domain != pawn.def.defName)
+            if (request.Subject != pawn.ThingID || request.Domain != pawn.def.defName
+                || request.Family != SubjectFamily.PawnRace || request.TargetNamespace != ""
+                || request.Audio.Domain != request.Domain || request.Audio.SourceDomain.IsNonPawn
+                || request.Audio.SourceDomain.Race.DefName != pawn.def.defName
+                || request.Audio.SourceDomain.Xenotype.HasValue && request.Audio.SourceDomain.Xenotype.Value.DefName != request.ChildDomain
+                || request.ChildDomain != (SqueakRuntimeResolver.Current.ResolveContext(pawn).Xenotype?.defName ?? ""))
             {
                 rejection = "SubjectIdentityChanged";
                 return false;
@@ -439,7 +463,7 @@ public static class UsOneShotRuntime
         }
         return session;
     }
-    public static IEnumerable<string> DeclaredRaces => catalog.Audio.Select(x => x.Domain).Distinct(StringComparer.Ordinal);
+    public static IEnumerable<string> DeclaredRaces => catalog.Audio.Where(x => x.Family == SubjectFamily.PawnRace).Select(x => x.Domain).Distinct(StringComparer.Ordinal);
     public static BehaviorSourceDirectory BehaviorSources => catalog.BehaviorSources;
     internal static string DiagnosticText(Pawn pawn) => sessions.TryGetValue(pawn, out var session)
         ? session.DiagnosticText : PolicyStatus;
@@ -460,10 +484,7 @@ public static class UsOneShotRuntime
             }
         }
 
-        foreach (var action in DefDatabase<UsActionDef>.AllDefsListForReading)
-        {
-            catalog.AddAction(action.declaration);
-        }
+        catalog.AddActions(DefDatabase<UsActionDef>.AllDefsListForReading.Select(x => x.declaration));
 
         foreach (var source in DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading)
         {
@@ -477,8 +498,22 @@ public static class UsOneShotRuntime
 
         foreach (var pack in DefDatabase<UsVoicePackDef>.AllDefsListForReading)
         {
-            if (DefDatabase<ThingDef>.GetNamedSilentFail(pack.declaration.Race)?.race != null)
+            try
             {
+                var domain = pack.declaration.Domain;
+                if (domain.Family != "Pawn")
+                {
+                    catalog.Issues.Add(pack.defName + ":NonPawnHostUnavailable");
+                    continue;
+                }
+                var target = DefDatabase<ThingDef>.GetNamedSilentFail(domain.Target);
+                if (target?.race == null || target.category != ThingCategory.Pawn || target.thingClass == null
+                    || !typeof(Pawn).IsAssignableFrom(target.thingClass)
+                    || domain.Child != "" && (!ModsConfig.BiotechActive || DefDatabase<XenotypeDef>.GetNamedSilentFail(domain.Child) == null))
+                {
+                    catalog.Issues.Add(pack.defName + ":TargetDomainUnavailable");
+                    continue;
+                }
                 var identity = new SqueakVoicePackDef { defName = pack.defName, modContentPack = pack.modContentPack };
                 if (identity.TryGetPackKey(out string selectionKey))
                 {
@@ -489,9 +524,9 @@ public static class UsOneShotRuntime
                     catalog.Issues.Add(pack.defName + ":SelectionIdentityUnavailable");
                 }
             }
-            else
+            catch (Exception error)
             {
-                catalog.Issues.Add(pack.defName + ":TargetRaceUnavailable");
+                catalog.Issues.Add(pack.defName + ":InvalidTarget:" + error.Message);
             }
         }
 
@@ -558,13 +593,17 @@ public static class UsOneShotRuntime
             return true;
         }
 
+        key = Kernel.ActionKey.DefinitionId(key);
         var invocation = new SqueakTriggerInvocation(origin, source);
         if (SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled && pawn.GetComp<CompSqueaker>().ControlledInvocationAllowed(invocation))
         {
             bool registered = catalog.Actions.Any(x => x.Key == key);
             session.Tick(key, invocation.IsActiveCommand,
-                registered || BuiltInPawnContracts.CandidateOrder.Contains(key) ? null : invocation,
-                registered ? key : null);
+                registered ? null : invocation,
+                // A native notification publishes facts, not a forced wrapper identity.
+                // Independent roots and narrowed children using that fact enter the same arbitration.
+                // An explicit public call naming an author action still targets that definition.
+                registered && Kernel.ActionKey.SchemaKey(key) == key ? key : null);
         }
 
         // Registered and unregistered keys share this owner; Comp's old cooldown writer is never called.

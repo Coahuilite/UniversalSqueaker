@@ -39,7 +39,7 @@ internal static partial class Program
         settings.ReplaceResponseTuning("Work", "FixtureRace", "", new[] { participation }, new[] { calibration });
         calibration.value = 99;
         participation.apply = true;
-        Check(settings.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "FixtureRace"), "Work",
+        Check(settings.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "FixtureRace"), "us.core/Work",
                 new BehaviorSourceDirectory(Array.Empty<BehaviorSource>()), _ => true, out _).ResponseParameters["age.override"] == 1.3,
             "S4 actual public response setter validates then deep-copies into the original persistence queue", ref failures);
         bool rejected = false;
@@ -66,27 +66,27 @@ internal static partial class Program
             Scribe.loader.FinalizeLoading();
             var domain = new BehaviorDomain("Pawn", "", "FixtureRace", "FixtureXeno");
             var empty = new BehaviorSourceDirectory(Array.Empty<BehaviorSource>());
-            var effective = loaded.ResolveBehaviorSource(domain, "Work", empty, _ => true, out bool paused);
+            var effective = loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out bool paused);
             Console.WriteLine("S4 config A=" + loaded.activity + " paused=" + paused + " age=" + effective.AgeEnabled
                 + " mood=" + effective.MoodEnabled + " participation=" + effective.Participation.Count + " parameters=" + effective.ResponseParameters.Count);
             Check(loaded.activity == 2.5 && !paused && effective.AgeEnabled == true && effective.MoodEnabled == false
                 && effective.Participation["us.core/Age"] == false && effective.ResponseParameters["age.override"] == 1.3
                 && effective.ResponseParameters["mood.low"] == .2,
                 "S4 actual Scribe reload and Settings resolver preserve positive A, separate enablement/participation and Global->Race->Xeno parameters", ref failures);
-            var neighbor = loaded.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "Neighbor", "FixtureXeno"), "Work", empty, _ => true, out _);
+            var neighbor = loaded.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "Neighbor", "FixtureXeno"), "us.core/Work", empty, _ => true, out _);
             Check(neighbor.AgeEnabled == true && neighbor.MoodEnabled == true && neighbor.Participation.Count == 0
                 && !neighbor.ResponseParameters.ContainsKey("age.override"), "S4 response player records do not cross exact race or xenotype domain", ref failures);
             loaded.SetActionTuningScope("Work", "FixtureRace", "", null);
-            effective = loaded.ResolveBehaviorSource(domain, "Work", empty, _ => true, out _);
+            effective = loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out _);
             Console.WriteLine("S4 reset participation=" + effective.Participation.Count + " mood=" + effective.MoodEnabled);
             Check(effective.Participation["us.core/Age"] == false, "S4 clearing unrelated scope cannot delete a response-only record", ref failures);
             loaded.ResetActionTuningRow("Work", "FixtureRace", "");
-            effective = loaded.ResolveBehaviorSource(domain, "Work", empty, _ => true, out _);
+            effective = loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out _);
             Check(effective.Participation.Count == 0 && !effective.ResponseParameters.ContainsKey("age.override")
                 && effective.MoodEnabled == false && effective.ResponseParameters["mood.high"] == .8,
                 "S4 exact action Reset clears local response fields, preserves parent/child player layers", ref failures);
             loaded.actionTuning[0].responseParameters.Add(new ResponseParameterValue { key = "mood.low", value = .1 });
-            loaded.ResolveBehaviorSource(domain, "Work", empty, _ => true, out paused);
+            loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out paused);
             Check(paused, "S4 duplicate response parameters are an explicit unreadable contribution, not last-wins style", ref failures);
         }
         finally

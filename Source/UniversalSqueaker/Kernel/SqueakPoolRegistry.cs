@@ -135,6 +135,29 @@ public sealed class SqueakPoolRegistry
         return pool == null ? Array.Empty<DomainPool>() : new[] { pool };
     }
 
+    private static int VariantIndex(IReadOnlyList<ActionSoundSet> sets, ActionSoundSet selected)
+    {
+        for (int i = 0; i < sets.Count; i++) if (ReferenceEquals(sets[i], selected)) return i;
+        throw new InvalidOperationException("Selected variant was not in its declared action");
+    }
+
+    /// <summary>Boundary projection for declarations expressed in the older enum schema.</summary>
+    public SqueakPoolRegistry WithDefinitionIds(AudioDomain selectedDomain)
+    {
+        var entries = new List<VoicePackEntry>();
+        foreach (var domain in new HashSet<AudioDomain> { selectedDomain, selectedDomain.Parent })
+            foreach (var entry in PoolFor(domain)?.Entries ?? Array.Empty<VoicePackEntry>())
+            {
+                var actions = new Dictionary<string, IReadOnlyList<ActionSoundSet>>(StringComparer.Ordinal);
+                foreach (var action in entry.Actions) actions.Add(ActionKey.DefinitionId(action.Key), action.Value);
+                var fallback = new Dictionary<string, string>(StringComparer.Ordinal);
+                if (entry.PackFallback != null)
+                    foreach (var action in entry.PackFallback) fallback.Add(ActionKey.DefinitionId(action.Key), action.Value);
+                entries.Add(new VoicePackEntry(entry.PackKey, entry.Domain, entry.Weight, actions, fallback));
+            }
+        return new SqueakPoolRegistry(entries, builtIn);
+    }
+
     private static bool HasPackFallback(DomainPool? pool, string actionKey)
     {
         if (pool == null) return false;
@@ -146,8 +169,10 @@ public sealed class SqueakPoolRegistry
     /// <summary>内置表 tier：TryParseBuiltIn（内置键 ↔ 枚举名一致性由 validator 双向锁）+ profile 键 + gate。</summary>
     private ChainResult SelectBuiltIn(SelectionContext ctx, ISoundGate gate)
     {
-        if (!builtIn.TryGetSoundKey(ctx.Domain.Race, ctx.ActionKey, out string? key) || key == null) return ChainResult.None;
-        return gate.Playable(key, ctx) ? new ChainResult(key, ChainTier.BuiltInFallback, null, false, ctx) : ChainResult.None;
+        if (!builtIn.TryGetSoundKey(ctx.Domain.Race, ActionKey.SchemaKey(ctx.ActionKey), out string? key) || key == null) return ChainResult.None;
+        return gate.Playable(key, ctx) ? new ChainResult(key, ChainTier.BuiltInFallback, null, false,
+            new SelectionContext(ctx.Domain.Parent, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs),
+            entryKey: "final/" + ctx.Domain.Parent + "/" + ctx.ActionKey) : ChainResult.None;
     }
 
     private static ChainResult SelectTier(DomainPool? pool, ChainTier tier, SelectionContext ctx, ISoundGate gate, IRollSource rolls)
@@ -179,7 +204,9 @@ public sealed class SqueakPoolRegistry
         VoicePackEntry chosen = DrawEntry(valid, rolls);
         ActionSoundSet chosenSet = DrawVariant(selectedVariants[chosen], rolls);
         string? key = DrawSoundKey(chosenSet, ctx, gate, rolls);
-        return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg, ctx, chosenSet);
+        return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg,
+            new SelectionContext(chosen.Domain, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs), chosenSet,
+            chosen.PackKey + "/" + ctx.ActionKey + "/variant/" + VariantIndex(chosen.Actions[ctx.ActionKey], chosenSet));
     }
 
     /// <summary>PackFallback 始终求 ctx.Domain 的精确池；xeno ctx 不越域读取 race fallback。</summary>
@@ -195,7 +222,9 @@ public sealed class SqueakPoolRegistry
         if (valid.Count == 0) return ChainResult.None;
         VoicePackEntry chosen = DrawEntry(valid, rolls);
         string? fallbackKey = chosen.PackFallback![ctx.ActionKey];
-        return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey, false, ctx);
+        return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey, false,
+            new SelectionContext(chosen.Domain, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs),
+            entryKey: chosen.PackKey + "/fallback/" + ctx.ActionKey);
     }
 
     /// <summary>exact age 优先；exact 存在即使 egg 关闭或全 mute 也不退回 all-age。

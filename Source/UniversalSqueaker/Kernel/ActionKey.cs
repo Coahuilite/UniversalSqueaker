@@ -9,6 +9,11 @@ namespace UniversalSqueaker.Kernel;
 /// </summary>
 public static class ActionKey
 {
+    /// <summary>Translate only the closed legacy schema at its boundary; never strip an extension's tail.</summary>
+    public static string DefinitionId(string key) => BuiltInActionKeys.Contains(key) ? "us.core/" + key : key;
+    public static string SchemaKey(string key) => key.StartsWith("us.core/", StringComparison.Ordinal)
+        && BuiltInActionKeys.Contains(key.Substring(8)) ? key.Substring(8) : key;
+
     private static readonly int SerializedActionCount = Enum.GetNames(typeof(SqueakAction)).Length;
 
     /// <summary>枚举 → 规范内置键。未知或尚未定义的枚举值返回 null。</summary>

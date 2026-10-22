@@ -46,9 +46,10 @@ internal static partial class Program
                 Check(driver.Purposes.Count == 0 && state.AttemptTick == 1000, key + " one candidate consumes no unnecessary roll");
                 Check((state.ConfirmedTick == 1000) == (result == PlaybackResult.Dispatched), key + " confirmed receipt separation");
                 input.HasVocalOrgans = false;
-                var noOrgans = new Driver();
-                Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, noOrgans, noOrgans).Reason == "NoVocalOrgans"
-                    && noOrgans.Calls == 0, key + " no organ bypass");
+                var noOrgans = new Driver { Result = result };
+                var qualification = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, noOrgans, noOrgans);
+                Check(key == "Select" ? qualification.Receipt?.Result == result && noOrgans.Calls == 1
+                    : qualification.Reason == "NoVocalOrgans" && noOrgans.Calls == 0, key + " explicit applicable vocal qualification");
             }
         }
         var unknown = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000, StateOpportunity = true,
@@ -125,7 +126,7 @@ internal static partial class Program
         catalog.AddBehaviorSource(source.Source);
         var binding = new BehaviorSourceState();
         Check(binding.Bind(source.Source.Domain, source.Source.Id, catalog.BehaviorSources), "real source XML parser publishes into same author catalog");
-        var resolved = binding.Resolve(source.Source.Domain, "Work", catalog.BehaviorSources, Array.Empty<BehaviorValues>(), catalog.HasFact, out bool paused);
+        var resolved = binding.Resolve(source.Source.Domain, "us.core/Work", catalog.BehaviorSources, Array.Empty<BehaviorValues>(), catalog.HasFact, out bool paused);
         Check(resolved.Enabled == false && resolved.Volume == 0 && !paused, "loaded source XML is actually resolved with presence and catalog requirements");
         var action = new ActionDeclaration();
         action.LoadDataFromXmlCustom(document.SelectSingleNode("Defs/UniversalSqueaker.UsActionDef/declaration")!);
@@ -280,7 +281,7 @@ internal static partial class Program
                     Audio = new[] { new AudioCandidate("a", "audio/first", "us.core/" + key, "Ratkin", 1), new AudioCandidate("b", "audio/second", "us.core/" + key, "Ratkin", 3) } };
                 var state = new DecisionState(1000);
                 var outcome = new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
-                var expected = key == "Death" ? new[] { RandomPurpose.Sound } : new[] { RandomPurpose.Talking, RandomPurpose.Sound };
+                var expected = key == "Death" || key == "Select" ? new[] { RandomPurpose.Sound } : new[] { RandomPurpose.Talking, RandomPurpose.Sound };
                 Check(driver.Purposes.SequenceEqual(expected), "S3 labelled roll sequence " + key + " " + receipt);
                 result.AppendLine("S3 tick=1000 facts=" + key + " chosen=" + outcome.Action + " receipt=" + receipt + " roll=" + string.Join(",", driver.Purposes)
                     + " calls=" + driver.Calls + " confirmed=" + state.ConfirmedTick + " shared=" + state.SharedDeadline + " next=" + state.NextStateTick);

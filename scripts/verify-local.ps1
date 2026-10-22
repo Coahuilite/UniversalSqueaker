@@ -368,6 +368,13 @@ Invoke-Check 'S2 real binding/pool adapter sources over controlled doubles' `
 Invoke-Check 'S2 incomplete original-observation batch fails closed' `
     'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release -- --partial-observation' `
     { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --partial-observation }
+# Gates 20/21: separate processes isolate the explicit Select qualification inputs.
+Invoke-Check 'D-A actual Select/extension production chain over platform doubles' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select }
+Invoke-Check 'D-A unresolved official Pawn Select qualification refuses explicitly' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select --unselected-qualification' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select --unselected-qualification }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

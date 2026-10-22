@@ -34,7 +34,13 @@ internal static partial class Program
     private static void Main(string[] args)
     {
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
-        if (args.Contains("--partial-observation"))
+        if (args.Contains("--da-select"))
+        {
+            InitializationOrder();
+            CompleteBinding();
+            DaActualSelect(!args.Contains("--unselected-qualification"));
+        }
+        else if (args.Contains("--partial-observation"))
         {
             PartialObservation();
         }

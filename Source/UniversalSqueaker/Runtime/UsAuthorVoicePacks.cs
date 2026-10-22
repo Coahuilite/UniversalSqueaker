@@ -18,6 +18,11 @@ internal static class UsAuthorVoicePacks
         var result = new List<SqueakVoicePackDef>();
         foreach (var declaration in DefDatabase<UsVoicePackDef>.AllDefsListForReading)
         {
+            var identity = new SqueakVoicePackDef { defName = declaration.defName, modContentPack = declaration.modContentPack };
+            if (!identity.TryGetPackKey(out string key)) continue;
+            var audio = catalog.Audio.Where(x => x.PackKey == key).ToArray();
+            if (audio.Length == 0 || audio[0].Family != SubjectFamily.PawnRace) continue;
+            var first = audio[0]; // Only validated, captured declarations may enter the live directory.
             var pack = new SqueakVoicePackDef
             {
                 defName = declaration.defName,
@@ -25,23 +30,15 @@ internal static class UsAuthorVoicePacks
                 description = declaration.description,
                 modContentPack = declaration.modContentPack,
                 IsKernelDeclaration = true,
-                weight = (float)declaration.declaration.Weight,
-                scope = SqueakVoicePackScope.Race,
-                raceDefName = declaration.declaration.Race
+                weight = (float)first.PackWeight,
+                scope = first.ChildDomain == "" ? SqueakVoicePackScope.Race : SqueakVoicePackScope.Xenotype,
+                raceDefName = first.Domain,
+                targetDefName = first.ChildDomain
             };
-            if (!pack.TryGetPackKey(out string key))
-            {
-                continue;
-            }
-            var audio = catalog.Audio.Where(x => x.PackKey == key).ToArray();
-            if (audio.Length == 0)
-            {
-                continue;
-            }
+            pack.KernelActionKeys = Array.AsReadOnly(audio.Select(x => x.Action).Distinct(StringComparer.Ordinal).ToArray());
             foreach (var entry in audio)
             {
-                var action = catalog.Actions.Single(x => x.Key == entry.Action);
-                string baseKey = action.BaseAction.Substring("us.core/".Length);
+                string baseKey = ActionKey.SchemaKey(entry.Action);
                 if (Enum.TryParse(baseKey, out SqueakAction builtIn))
                 {
                     var sound = UsAudioBindings.Resolve(entry.AudioId);
@@ -58,16 +55,8 @@ internal static class UsAuthorVoicePacks
 
     internal static AudioCandidate[] Selected(AudioCandidate[] audio, SqueakPoolRegistry registry, AudioDomain domain)
     {
-        var selected = new HashSet<string>(StringComparer.Ordinal);
-        var pool = registry.PoolFor(domain.Parent);
-        if (pool != null)
-        {
-            foreach (var entry in pool.Entries)
-            {
-                selected.Add(entry.PackKey);
-            }
-        }
-        // Current new declaration format is Race-only; a child selection never substitutes for its parent.
-        return audio.Where(x => selected.Contains(x.PackKey)).ToArray();
+        return audio.Where(x => x.Family == SubjectFamily.PawnRace && x.Domain == domain.Race.DefName
+            && (x.ChildDomain == "" || x.ChildDomain == domain.Xenotype?.DefName)
+            && registry.PoolFor(x.SourceDomain)?.Entries.Any(e => e.PackKey == x.PackKey) == true).ToArray();
     }
 }

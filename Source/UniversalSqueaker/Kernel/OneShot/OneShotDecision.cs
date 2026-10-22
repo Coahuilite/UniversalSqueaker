@@ -103,12 +103,18 @@ public sealed class Condition
 {
     public readonly string Operation;
     public readonly string Fact;
-    public readonly Condition[] Children;
+    public IReadOnlyList<Condition> Children { get; }
     public Condition(string operation, string fact = "", params Condition[] children)
     {
         Operation = operation;
         Fact = fact;
-        Children = children;
+        if (operation != "ref" && operation != "all" && operation != "any" && operation != "not")
+            throw new ArgumentException("Unknown condition operation");
+        if (children == null || children.Any(x => x == null)
+            || operation == "not" && children.Length != 1
+            || operation == "ref" && (string.IsNullOrWhiteSpace(fact) || children.Length != 0))
+            throw new ArgumentException("Invalid condition shape");
+        Children = Array.AsReadOnly((Condition[])children.Clone());
     }
 
     public Truth Evaluate(FactSnapshot facts)
@@ -185,11 +191,12 @@ public sealed class ActionPlan
     public readonly bool WriteShared;
     public readonly double Chance;
     public readonly bool SkipTalking;
+    public readonly bool RequiresVocal;
     public readonly double Volume;
     public readonly double Pitch;
     public readonly bool Sustained;
     public ActionPlan(string key, int priority, Condition condition, long interval, bool checkShared = true, bool writeShared = true, double chance = 1, string? baseAction = null,
-        bool skipTalking = false, double volume = 1, double pitch = 1, bool sustained = false)
+        bool skipTalking = true, double volume = 1, double pitch = 1, bool sustained = false, bool requiresVocal = false)
     {
         if (interval < 0)
         {
@@ -213,6 +220,7 @@ public sealed class ActionPlan
         WriteShared = writeShared;
         Chance = chance;
         SkipTalking = skipTalking;
+        RequiresVocal = requiresVocal;
         Volume = volume;
         Pitch = pitch;
         Sustained = sustained;
@@ -278,12 +286,16 @@ public sealed class AudioCandidate
     public readonly string Domain;
     public readonly SubjectFamily Family;
     public readonly string TargetNamespace;
+    public readonly string ChildDomain;
+    public readonly Kernel.AudioDomain SourceDomain;
+    public readonly Kernel.ChainTier? SourceTier;
     public readonly double Weight;
     public readonly double Volume;
     public readonly double Pitch;
     public readonly IReadOnlyDictionary<string, bool> Participation;
     public AudioCandidate(string entryKey, string audioId, string action, string domain, double weight, double volume = 1, SubjectFamily family = SubjectFamily.PawnRace, string targetNamespace = "", double pitch = 1,
-        IReadOnlyDictionary<string, bool>? participation = null, string packKey = "", double packWeight = 1)
+        IReadOnlyDictionary<string, bool>? participation = null, string packKey = "", double packWeight = 1, string childDomain = "",
+        Kernel.AudioDomain? sourceDomain = null, Kernel.ChainTier? sourceTier = null)
     {
         if (string.IsNullOrEmpty(audioId)
             || double.IsNaN(weight) || double.IsInfinity(weight) || weight <= 0 || weight > float.MaxValue
@@ -302,10 +314,15 @@ public sealed class AudioCandidate
         Weight = weight;
         Volume = volume;
         Pitch = pitch;
-        Participation = participation == null ? new Dictionary<string, bool>()
-            : participation.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+        Participation = new System.Collections.ObjectModel.ReadOnlyDictionary<string, bool>(participation == null
+            ? new Dictionary<string, bool>() : participation.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal));
         Family = family;
         TargetNamespace = targetNamespace;
+        ChildDomain = childDomain;
+        SourceDomain = sourceDomain ?? (family == SubjectFamily.NonPawn
+            ? Kernel.AudioDomain.NonPawn(targetNamespace, domain)
+            : new Kernel.AudioDomain(new Kernel.RaceKey(domain), childDomain == "" ? null : new Kernel.XenotypeKey(childDomain)));
+        SourceTier = sourceTier;
     }
 }
 
@@ -316,6 +333,8 @@ public sealed class PlaybackRequest
     public readonly SubjectFamily Family;
     public readonly string TargetNamespace;
     public readonly string Action;
+    public readonly string SubjectRole;
+    public readonly string ChildDomain;
     public readonly AudioCandidate Audio;
     public readonly long Tick;
     public readonly double Pitch;
@@ -323,9 +342,11 @@ public sealed class PlaybackRequest
     public readonly int Priority;
     public readonly Condition? Condition;
     public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick, double pitch = 1,
-        bool sustained = false, int priority = 0, Condition? condition = null)
+        bool sustained = false, int priority = 0, Condition? condition = null, string subjectRole = "Subject", string childDomain = "")
     {
         Subject = subject;
+        SubjectRole = subjectRole;
+        ChildDomain = childDomain;
         Domain = domain;
         Action = action;
         Audio = audio;
@@ -346,6 +367,8 @@ public sealed class DecisionInput
     public string Domain = "";
     public SubjectFamily Family;
     public string TargetNamespace = "";
+    public string ChildDomain = "";
+    public string SubjectRole = "Subject";
     public long Tick;
     public bool StateOpportunity;
     public bool Eligible = true;
@@ -396,7 +419,11 @@ public sealed class OneShotDecision
 
         if (string.IsNullOrWhiteSpace(input.Subject)
             || string.IsNullOrWhiteSpace(input.Domain)
-            || (input.Family == SubjectFamily.NonPawn && string.IsNullOrWhiteSpace(input.TargetNamespace)))
+            || !Enum.IsDefined(typeof(SubjectFamily), input.Family)
+            || string.IsNullOrWhiteSpace(input.SubjectRole)
+            || (input.Family == SubjectFamily.PawnRace && input.TargetNamespace != "")
+            || (input.Family == SubjectFamily.NonPawn && (string.IsNullOrWhiteSpace(input.TargetNamespace) || input.ChildDomain != ""))
+            || (input.AudioContext.HasValue && !MatchesSubject(input, input.AudioContext.Value.Domain)))
         {
             return Stop(state, policy, input, "", "InvalidIdentity");
         }
@@ -427,7 +454,7 @@ public sealed class OneShotDecision
             string reason = input.BlockedActionReasons.TryGetValue(action.Key, out var detail) ? detail : "ActionOrScopeRejected";
             return Stop(state, policy, input, action.Key, reason, diagnostics);
         }
-        if (!input.HasVocalOrgans)
+        if (action.RequiresVocal && !input.HasVocalOrgans)
         {
             state.AttemptTick = input.Tick;
             return Stop(state, policy, input, action.Key, "NoVocalOrgans", diagnostics);
@@ -472,10 +499,12 @@ public sealed class OneShotDecision
             if (!local.Valid)
                 return Stop(state, policy, input, action.Key, local.Reason, diagnostics);
             audio = new AudioCandidate(audio.EntryKey, audio.AudioId, audio.Action, audio.Domain, audio.Weight,
-                local.Volume, audio.Family, audio.TargetNamespace);
+                local.Volume, audio.Family, audio.TargetNamespace, pitch: local.Pitch,
+                participation: audio.Participation, packKey: audio.PackKey, packWeight: audio.PackWeight,
+                childDomain: audio.ChildDomain, sourceDomain: audio.SourceDomain, sourceTier: audio.SourceTier);
             enteredBackend = true;
             var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, local.Pitch,
-                action.Sustained, action.Priority, action.Condition));
+                action.Sustained, action.Priority, action.Condition, input.SubjectRole, input.ChildDomain));
             Settle(state, policy, input, action, receipt);
             return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
         }
@@ -535,14 +564,13 @@ public sealed class OneShotDecision
     private static AudioCandidate? Select(DecisionInput input, ActionPlan plan, IOneShotRandom random)
     {
         string action = plan.Key;
-        string routeKey = plan.BaseAction.StartsWith("us.core/", StringComparison.Ordinal)
-            ? plan.BaseAction.Substring("us.core/".Length)
-            : plan.BaseAction;
+        string routeKey = plan.Key;
         var candidates = input.Audio
             .Where(candidate => candidate.Action == action
                 && candidate.Domain == input.Domain
                 && candidate.Family == input.Family
-                && candidate.TargetNamespace == input.TargetNamespace)
+                && candidate.TargetNamespace == input.TargetNamespace
+                && (candidate.ChildDomain == "" || candidate.ChildDomain == input.ChildDomain))
             .OrderBy(candidate => candidate.EntryKey, StringComparer.Ordinal)
             .ToArray();
         var domain = input.Family == SubjectFamily.NonPawn
@@ -550,7 +578,7 @@ public sealed class OneShotDecision
             : new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), null);
         var metadata = new Dictionary<Kernel.ActionSoundSet, AudioCandidate>();
         var entries = new List<Kernel.VoicePackEntry>();
-        foreach (var pack in candidates.GroupBy(x => x.PackKey.Length == 0 ? x.EntryKey : x.PackKey, StringComparer.Ordinal))
+        foreach (var pack in candidates.GroupBy(x => (Domain: x.SourceDomain, Pack: x.PackKey.Length == 0 ? x.EntryKey : x.PackKey)))
         {
             var variants = new List<Kernel.ActionSoundSet>();
             foreach (var candidate in pack)
@@ -560,17 +588,19 @@ public sealed class OneShotDecision
                 metadata.Add(variant, candidate);
             }
             var first = pack.First();
-            entries.Add(new Kernel.VoicePackEntry(pack.Key, domain,
+            entries.Add(new Kernel.VoicePackEntry(pack.Key.Pack, pack.Key.Domain,
                 (float)(first.PackKey.Length == 0 ? first.Weight : first.PackWeight),
                 new Dictionary<string, IReadOnlyList<Kernel.ActionSoundSet>> { [routeKey] = variants }));
         }
-        var pool = input.AudioPool;
+        var contextDomain = input.AudioContext?.Domain ?? (input.Family == SubjectFamily.PawnRace && input.ChildDomain != ""
+            ? new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), new Kernel.XenotypeKey(input.ChildDomain)) : domain);
+        var pool = input.AudioPool?.WithDefinitionIds(contextDomain);
         if (pool == null || input.MergeAudioPool)
         {
             var combined = new List<Kernel.VoicePackEntry>(entries);
             if (pool != null)
             {
-                var selectedDomain = input.AudioContext?.Domain ?? domain;
+                var selectedDomain = contextDomain;
                 var domains = new[] { selectedDomain, domain }.Distinct();
                 foreach (var selected in domains)
                 {
@@ -583,8 +613,10 @@ public sealed class OneShotDecision
             }
             pool = new Kernel.SqueakPoolRegistry(combined, input.Fallback);
         }
-        var context = input.AudioContext ?? new Kernel.SelectionContext(domain, routeKey, Kernel.AgeBucket.Adult, true);
-        if (input.MergeAudioPool)
+        var context = input.AudioContext ?? new Kernel.SelectionContext(input.Family == SubjectFamily.PawnRace && input.ChildDomain != ""
+            ? new Kernel.AudioDomain(new Kernel.RaceKey(input.Domain), new Kernel.XenotypeKey(input.ChildDomain)) : domain,
+            routeKey, Kernel.AgeBucket.Adult, true);
+        if (context.ActionKey != routeKey)
         {
             context = new Kernel.SelectionContext(context.Domain, routeKey, context.Age, context.Production, context.AllowEggs);
         }
@@ -597,9 +629,18 @@ public sealed class OneShotDecision
         {
             return null;
         }
-        return chosen.SelectedVariant != null && metadata.TryGetValue(chosen.SelectedVariant, out var selectedCandidate)
-            ? selectedCandidate : new AudioCandidate("fallback/" + action, chosen.SoundKey!, action, input.Domain, 1);
+        var selectedCandidate = chosen.SelectedVariant != null && metadata.TryGetValue(chosen.SelectedVariant, out var mapped) ? mapped : null;
+        return new AudioCandidate(selectedCandidate?.EntryKey ?? chosen.SelectedEntryKey!, chosen.SoundKey!, action,
+            input.Domain, selectedCandidate?.Weight ?? chosen.SelectedVariant?.Weight ?? 1,
+            selectedCandidate?.Volume ?? 1, input.Family, input.TargetNamespace, selectedCandidate?.Pitch ?? 1,
+            selectedCandidate?.Participation, selectedCandidate?.PackKey ?? chosen.PoolStableKey ?? "",
+            selectedCandidate?.PackWeight ?? 1, input.ChildDomain,
+            chosen.SelectedContext!.Value.Domain, chosen.Tier);
     }
+
+    private static bool MatchesSubject(DecisionInput input, Kernel.AudioDomain domain) => input.Family == SubjectFamily.NonPawn
+        ? domain.IsNonPawn && domain.ObjectNamespace == input.TargetNamespace && domain.ObjectTarget == input.Domain
+        : !domain.IsNonPawn && domain.Race.DefName == input.Domain && (domain.Xenotype?.DefName ?? "") == input.ChildDomain;
 
     private sealed class BoundAudioGate : Kernel.ISoundGate
     {

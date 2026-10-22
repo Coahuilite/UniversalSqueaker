@@ -3,7 +3,7 @@
   <UniversalSqueaker.UsBehaviorSourceDef>
     <defName>US_ExampleResponses</defName>
     <declaration family="Pawn" namespace="" target="Ratkin" child="">
-      <action key="Work" ageEnabled="true" moodEnabled="true">
+      <action key="us.core/Work" ageEnabled="true" moodEnabled="true">
         <parameter key="mood.low" value="0.3" />
         <parameter key="mood.high" value="0.7" />
         <parameter key="mood.low.pitch" value="0.9" />
@@ -16,7 +16,7 @@
   <UniversalSqueaker.UsActionDef>
     <defName>US_ExampleSustainedWork</defName>
     <declaration>
-      <key>example/SustainedWork</key><baseAction>us.core/Work</baseAction>
+      <key>example/SustainedWork</key><priority>40</priority><baseAction>us.core/Work</baseAction>
       <condition><ref>us.core/WorkState</ref></condition>
       <playback>Sustained</playback>
     </declaration>

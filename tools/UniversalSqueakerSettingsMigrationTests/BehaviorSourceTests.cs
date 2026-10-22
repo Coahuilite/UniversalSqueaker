@@ -13,13 +13,13 @@ internal static partial class Program
     {
         Scenario("S3-source-config-transaction-and-recovery");
         var settings = NewSettings();
-        settings.actionTuning.Add(new ActionTuningRecord { actionKey = "Work", raceDefName = "Ratkin", sourcePresetDefName = "ImportedPlayer", hasProbabilityMultiplier = true, probabilityMultiplier = 0 });
+        settings.actionTuning.Add(new ActionTuningRecord { actionKey = "us.core/Work", raceDefName = "Ratkin", sourcePresetDefName = "ImportedPlayer", hasProbabilityMultiplier = true, probabilityMultiplier = 0 });
         settings.globalCooldownMultiplier = .42f;
         settings.scaleCooldownWithTimeSpeed = false;
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var neighbor = new BehaviorDomain("Pawn", "", "Kiiro");
         var a = new BehaviorSource { Id = "author.a/Def", Domain = domain, Contributions = new List<BehaviorContribution>
-            { new() { Action = "Work", Values = new BehaviorValues { Enabled = false, TalkingEnabled = false, HardIntervalTicks = 0, Volume = 0 }, RequiredFacts = new[] { "missing/Implementation" } } } };
+            { new() { Action = "us.core/Work", Values = new BehaviorValues { Enabled = false, TalkingEnabled = false, HardIntervalTicks = 0, Volume = 0 }, RequiredFacts = new[] { "missing/Implementation" } } } };
         var b = a.Copy(); b.Id = "author.b/Def"; b.Contributions[0].Values.Enabled = true;
         var n = a.Copy(); n.Id = "author.n/Def"; n.Domain = neighbor;
         var directory = new BehaviorSourceDirectory(new[] { a, b, n });
@@ -31,7 +31,12 @@ internal static partial class Program
             var value = settings;
             Scribe_Deep.Look(ref value, "ModSettings");
         });
-        bool Persist(string candidate) => settings.TryWriteBehaviorCandidate(path, candidate, Serialize, out _);
+        bool Persist(string candidate)
+        {
+            bool saved = settings.TryWriteBehaviorCandidate(path, candidate, Serialize, out string failure);
+            if (!saved) Console.Error.WriteLine("S3 persist failure: " + failure);
+            return saved;
+        }
         UniversalSqueakerSettings Read()
         {
             UniversalSqueakerSettings result = null!;
@@ -42,7 +47,7 @@ internal static partial class Program
         }
         try
         {
-            Check(settings.TryChangeBehaviorSource(domain, a.Id, directory, Persist, out _), "S3 actual settings operation adopts A and commits isolated Config", ref failures);
+            Check(settings.TryChangeBehaviorSource(domain, a.Id, directory, Persist, out string bindFailure), "S3 actual settings operation adopts A and commits isolated Config: " + bindFailure, ref failures);
             Check(settings.TryChangeBehaviorSource(neighbor, n.Id, directory, Persist, out _), "S3 neighbor binding persists independently", ref failures);
             var reloaded = Read();
             Check(reloaded.behaviorSourcesXml == settings.behaviorSourcesXml && reloaded.actionTuning.Single().sourcePresetDefName == "ImportedPlayer"
@@ -70,7 +75,7 @@ internal static partial class Program
             Check(File.ReadAllText(path) == beforeFile, "S3 actual replace denial preserves original file", ref failures);
             var missing = new BehaviorSourceDirectory(new[] { b, n });
             Check(settings.TryRefreshBehaviorSources(missing, Persist, out _), "S3 missing A keeps binding while B exists", ref failures);
-            var resolved = settings.ResolveBehaviorSource(domain, "Work", missing, _ => true, out bool paused);
+            var resolved = settings.ResolveBehaviorSource(domain, "us.core/Work", missing, _ => true, out bool paused);
             Check(resolved.Enabled == false && resolved.TalkingEnabled == false && resolved.HardIntervalTicks == 0 && resolved.Volume == 0 && !paused,
                 "S3 runtime settings parser consumes last author false/zero without B takeover", ref failures);
             a.Contributions[0].Values.Volume = 2;
@@ -80,16 +85,16 @@ internal static partial class Program
             Check(!settings.TryRefreshBehaviorSources(returned, FailedReplace, out _)
                 && settings.behaviorSourcesXml == beforeRefresh && File.ReadAllText(path) == beforeRefreshFile,
                 "S3 refresh failure retains original durable record and file, not merely switch failure", ref failures);
-            resolved = settings.ResolveBehaviorSource(domain, "Work", returned, _ => true, out paused);
-            var recoveredAfterFailure = Read().ResolveBehaviorSource(domain, "Work", missing, _ => true, out _);
+            resolved = settings.ResolveBehaviorSource(domain, "us.core/Work", returned, _ => true, out paused);
+            var recoveredAfterFailure = Read().ResolveBehaviorSource(domain, "us.core/Work", missing, _ => true, out _);
             Check(resolved.Volume == 2 && recoveredAfterFailure.Volume == 0,
                 "S3 current valid definition is a live view; failed refresh cannot claim its new value is durably recoverable", ref failures);
             Check(settings.TryRefreshBehaviorSources(returned, Persist, out _), "S3 same identity refresh commits last good snapshot", ref failures);
-            resolved = Read().ResolveBehaviorSource(domain, "Work", missing, _ => false, out paused);
+            resolved = Read().ResolveBehaviorSource(domain, "us.core/Work", missing, _ => false, out paused);
             Check(resolved.Volume == 2 && paused, "S3 committed fresh author parameters restore after reread but missing implementation still pauses only dependency", ref failures);
             a.Contributions[0].Values.Volume = double.NaN;
             Check(settings.TryRefreshBehaviorSources(returned = new BehaviorSourceDirectory(new[] { a, b, n }), Persist, out _), "S3 invalid update processed without destroying prior good record", ref failures);
-            resolved = Read().ResolveBehaviorSource(domain, "Work", missing, _ => true, out paused);
+            resolved = Read().ResolveBehaviorSource(domain, "us.core/Work", missing, _ => true, out paused);
             Check(resolved.Volume == 2 && !paused, "S3 bad update cannot overwrite durable good snapshot", ref failures);
             Check(settings.TryChangeBehaviorSource(domain, null, returned, Persist, out _), "S3 actual public forget operation commits precise domain", ref failures);
             reloaded = Read();

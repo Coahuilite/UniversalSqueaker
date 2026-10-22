@@ -214,12 +214,17 @@ internal static class Program
 
     internal static string FindRepositoryRoot()
     {
-        DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
+        foreach (string start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
         {
-            if (File.Exists(Path.Combine(dir.FullName, "AGENTS.md"))) return dir.FullName;
-            dir = dir.Parent;
+            DirectoryInfo? dir = new DirectoryInfo(start);
+            while (dir != null)
+            {
+                // A relocated test may have an unrelated management AGENTS.md above it.
+                if (File.Exists(Path.Combine(dir.FullName, "tools", "UniversalSqueakerKernelTests", "UniversalSqueakerKernelTests.csproj")))
+                    return dir.FullName;
+                dir = dir.Parent;
+            }
         }
-        throw new InvalidOperationException("Repository root (AGENTS.md) not found from " + AppContext.BaseDirectory);
+        throw new InvalidOperationException("Kernel test project root not found from cwd or " + AppContext.BaseDirectory);
     }
 }

@@ -99,7 +99,17 @@ internal static partial class Program
             var result = pool.Select(new SelectionContext(domain, "Work", AgeBucket.Adult, true), mode, gate, random);
             random.Complete();
             Check(result.IsNone || result.Resource.HasValue, "S2 selected resource has complete identity");
-            if (!result.IsNone) Check(result.SelectedContext?.Domain == domain, "S2 selected context retained");
+            if (!result.IsNone)
+            {
+                // D-A separates the requesting subject from the supplying audio domain.
+                // A final Race fallback for a Xeno request must not claim a Xeno supplier.
+                var supplyingDomain = result.Tier == ChainTier.BuiltInFallback
+                    ? domain.Parent
+                    : entries.Single(entry => entry.PackKey == result.PoolStableKey).Domain;
+                Check(result.SelectedContext?.Domain == supplyingDomain, "S2 actual supplying domain retained");
+                Check(result.SelectedContext?.ActionKey == "Work", "S2 requested action retained across source tiers");
+                Check(!string.IsNullOrEmpty(result.SelectedEntryKey), "S2 actual source entry retained");
+            }
             text.Append(label).Append(" ").Append(result.SoundKey ?? "None").Append(" ")
                 .Append(result.PoolStableKey ?? "-").Append(" ").Append(result.Tier?.ToString() ?? "-")
                 .Append(" rolls=").Append(string.Join(",", random.Purposes)).Append(" state=")

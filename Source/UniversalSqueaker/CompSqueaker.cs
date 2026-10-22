@@ -245,16 +245,9 @@ public partial class CompSqueaker : ThingComp
     private void NotifyExternal(SqueakAction action, SqueakTriggerOrigin origin, SqueakInvocationSource source)
         => NotifyExternalByKey(UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(), origin, source);
 
-    /// <summary>外部动作（string 键）的触发入口：与内置动作走同一 NotifyExternal 通路。</summary>
-/// <summary>0.3.2 身份门控（Verse 采样，harness out-of-scope）：玩家发起来源（点选/主动指令）要求
-    /// 玩家可控 pawn（IsPlayerControlled 已含 Spawned、玩家派系、无精神崩溃、可控机甲/亚人语义）；
-    /// 点选另要求可响应 = !Downed && Awake()。任何不满足都静默丢弃，不进入 TryTrigger。</summary>
+    /// <summary>主动命令保持玩家控制权来源门；选择事实与官方Pawn回应资格在各自明确合同处处理。</summary>
     private bool IdentityGateAllows(SqueakTriggerInvocation invocation)
-    {
-        if (invocation.RequiresResponsivePawn && (Pawn.Downed || Pawn.health == null || !Pawn.Awake())) return false;
-        if (invocation.IsPlayerInitiated && !Pawn.IsPlayerControlled) return false;
-        return true;
-    }
+        => !invocation.IsActiveCommand || Pawn.IsPlayerControlled; // Explicit player-command provenance, not a Select qualification.
 
     private void SynchronizePeriodicMembership()
     {
@@ -351,27 +344,38 @@ public partial class CompSqueaker : ThingComp
             lastEvaluation, lastSignificantOutcome, lastDispatched, UsOneShotRuntime.DiagnosticText(Pawn));
     }
 
-    internal void RecordKernelOutcome(OneShot.DecisionOutcome outcome, SoundDef? sound)
+    internal void RecordKernelOutcome(OneShot.DecisionOutcome outcome, SoundDef? sound, OneShot.PlaybackRequest? request)
     {
         var mapped = outcome.Receipt?.Result == OneShot.PlaybackResult.Dispatched
             ? SqueakTriggerOutcome.Dispatched : SqueakTriggerOutcome.EligibilityRejected;
+        var source = request?.Audio.SourceTier switch
+        {
+            UniversalSqueaker.Kernel.ChainTier.XenotypePack => SqueakSoundSource.XenotypePack,
+            UniversalSqueaker.Kernel.ChainTier.RacePack => SqueakSoundSource.RacePack,
+            UniversalSqueaker.Kernel.ChainTier.PackFallback => request!.Audio.SourceDomain.Xenotype.HasValue
+                ? SqueakSoundSource.XenotypePack : SqueakSoundSource.RacePack,
+            UniversalSqueaker.Kernel.ChainTier.BuiltInFallback => SqueakSoundSource.Vanilla,
+            _ => SqueakSoundSource.None
+        };
         RecordOutcome(mapped, outcome.Action, false,
             outcome.Receipt?.Result == OneShot.PlaybackResult.Dispatched || outcome.Receipt?.Result == OneShot.PlaybackResult.Indeterminate,
-            sound, SqueakSoundSource.None, Time.realtimeSinceStartup);
+            sound, source, Time.realtimeSinceStartup, request?.Audio.PackKey, request?.Audio.SourceTier);
     }
     internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
     {
+        key = UniversalSqueaker.Kernel.ActionKey.SchemaKey(key);
         if (!TryGetPlan(key, out var plan)) return false;
         var context = GetRuntimeContext(out _);
         var delta = context.GetActionByKey(key);
         var scope = behavior?.Scope ?? delta.Scope;
         bool command = ((key == "Work" || key == "Move") && IsCurrentJobPlayerCommand()) || activeCommand;
-        return UsControlledActionEligibility.Allows(plan.Configured, authorAction, IsActionAllowedByKey(key),
+        return UsControlledActionEligibility.Allows(plan.Configured, authorAction,
+            UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(key) ? IsActionAllowedByKey(key) : authorAction || IsActionAllowedByKey(key),
             behavior?.Enabled ?? delta.Enabled, scope, command, Pawn.IsPlayerControlled);
     }
     internal bool ControlledPlaybackSustained(string key)
     {
-        return TryGetPlan(key, out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
+        return TryGetPlan(UniversalSqueaker.Kernel.ActionKey.SchemaKey(key), out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
     }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();

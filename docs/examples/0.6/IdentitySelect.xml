@@ -1,0 +1,23 @@
+<Defs>
+  <!-- Opt-in example. Positive current Hediff_Injury severity (including a present scar) is the explicit injury criterion. -->
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleInjuredSelect</defName>
+    <declaration><key>example/InjuredSelect</key><baseAction>us.core/Select</baseAction><priority>40</priority>
+      <condition><ref>us.core/HasCurrentInjury</ref></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleIdentitySelectAudio</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>ordinary</key><action>us.core/Select</action><sound>US_RatkinExp_Select</sound></li>
+      <li><key>injured</key><action>example/InjuredSelect</action><sound>US_RatkinExp_Select</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+  <UniversalSqueaker.UsBehaviorSourceDef>
+    <defName>US_ExampleIdentitySelectBehavior</defName>
+    <declaration family="Pawn" target="Ratkin">
+      <action key="us.core/Select" enabled="true" hardIntervalTicks="0"/>
+      <action key="example/InjuredSelect" enabled="true" hardIntervalTicks="50" volume="0.25"/>
+    </declaration>
+  </UniversalSqueaker.UsBehaviorSourceDef>
+</Defs>

@@ -25,12 +25,14 @@ public sealed class VoicePackDeclaration
     public double Weight = 1;
     public int FormatVersion = 1;
     public string Race = "";
+    public string Family = "Pawn", Namespace = "", Target = "", Child = "";
+    public BehaviorDomain Domain => new(Family, Namespace, Target == "" ? Race : Target, Child);
     public readonly List<VoiceEntry> Entries = new();
     public Dictionary<string, bool> Participation = new(StringComparer.Ordinal);
     public Dictionary<string, Dictionary<string, bool>> ActionParticipation = new(StringComparer.Ordinal);
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "race", "weight", "entries", "participation", "actionParticipation");
+        AuthorXml.Fields(node, "formatVersion", "race", "family", "namespace", "target", "child", "weight", "entries", "participation", "actionParticipation");
         Weight = double.Parse(node.SelectSingleNode("weight")?.InnerText ?? "1", CultureInfo.InvariantCulture);
         Participation = AuthorXml.Participation(node.SelectSingleNode("participation"));
         ActionParticipation.Clear();
@@ -48,7 +50,13 @@ public sealed class VoicePackDeclaration
             ActionParticipation.Add(key, AuthorXml.Participation(action, actionContainer: true));
         }
         FormatVersion = AuthorXml.Version(node);
-        Race = AuthorXml.Required(node, "race");
+        Race = node.SelectSingleNode("race") == null ? "" : AuthorXml.Required(node, "race");
+        Family = node.SelectSingleNode("family")?.InnerText ?? "Pawn";
+        Namespace = node.SelectSingleNode("namespace")?.InnerText ?? "";
+        Target = node.SelectSingleNode("target")?.InnerText ?? "";
+        Child = node.SelectSingleNode("child")?.InnerText ?? "";
+        if (Race != "" && (Family != "Pawn" || Target != "")) throw new ArgumentException("Use one exact target declaration");
+        _ = Domain;
         Entries.Clear();
         foreach (XmlNode entry in AuthorXml.Elements(node.SelectSingleNode("entries")))
         {
@@ -83,9 +91,14 @@ public sealed class ActionDeclaration
     public string BaseAction = "";
     public Condition Condition = new("all");
     public bool Sustained;
+    public int Priority;
+    public long Interval;
+    public double Chance = 1;
+    public bool CheckShared = true, WriteShared = true;
+    public bool RequiresVocal, TalkingEnabled;
     public void LoadDataFromXmlCustom(XmlNode node)
     {
-        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback");
+        AuthorXml.Fields(node, "formatVersion", "key", "baseAction", "condition", "playback", "priority", "intervalTicks", "chance", "checkShared", "writeShared", "requiresVocal", "talkingEnabled");
         string playback = node.SelectSingleNode("playback")?.InnerText ?? "OneShot";
         if (playback != "OneShot" && playback != "Sustained")
         {
@@ -94,7 +107,14 @@ public sealed class ActionDeclaration
         Sustained = playback == "Sustained";
         FormatVersion = AuthorXml.Version(node);
         Key = AuthorXml.Required(node, "key");
-        BaseAction = AuthorXml.Required(node, "baseAction");
+        BaseAction = node.SelectSingleNode("baseAction") == null ? "" : AuthorXml.Required(node, "baseAction");
+        Priority = int.Parse(node.SelectSingleNode("priority")?.InnerText ?? "0", CultureInfo.InvariantCulture);
+        Interval = long.Parse(node.SelectSingleNode("intervalTicks")?.InnerText ?? "0", CultureInfo.InvariantCulture);
+        Chance = double.Parse(node.SelectSingleNode("chance")?.InnerText ?? "1", CultureInfo.InvariantCulture);
+        CheckShared = bool.Parse(node.SelectSingleNode("checkShared")?.InnerText ?? "true");
+        WriteShared = bool.Parse(node.SelectSingleNode("writeShared")?.InnerText ?? "true");
+        RequiresVocal = bool.Parse(node.SelectSingleNode("requiresVocal")?.InnerText ?? "false");
+        TalkingEnabled = bool.Parse(node.SelectSingleNode("talkingEnabled")?.InnerText ?? "false");
         var roots = AuthorXml.Elements(node.SelectSingleNode("condition")).ToArray();
         if (roots.Length != 1)
         {
@@ -168,6 +188,7 @@ public static class AuthorXml
         }
     }
 
+    public static bool ActionId(string value) => ExactKey(value) && value.IndexOf('/') > 0 && !value.EndsWith("/", StringComparison.Ordinal);
     public static bool ExactKey(string value) => !string.IsNullOrWhiteSpace(value) && value == value.Trim();
     public static int Version(XmlNode node)
     {
@@ -291,7 +312,7 @@ public sealed class AuthorCatalog
         }
         if (fullDevCandidate)
         {
-            foreach (string key in new[] { "EatWholeJob", "EatNutrition", "EatChewing", "EatDrug", "ActiveCommand", "PlayerControlled", "Responsive", "BiotechAvailable" })
+            foreach (string key in new[] { "EatWholeJob", "EatNutrition", "EatChewing", "EatDrug", "ActiveCommand", "PlayerControlled", "Responsive", "HasCurrentInjury", "BiotechAvailable" })
             {
                 string identity = "us.core/" + key;
                 facts.Add(identity, new RegisteredFact(new BuiltInFact(identity), "us.core"));
@@ -362,50 +383,65 @@ public sealed class AuthorCatalog
         }
     }
 
-    public bool AddAction(ActionDeclaration declaration)
+    public bool AddAction(ActionDeclaration declaration) => AddActions(new[] { declaration }) == 1;
+
+    /// <summary>Resolve the complete declaration graph, independent of Def enumeration order.</summary>
+    public int AddActions(IEnumerable<ActionDeclaration> declarations)
     {
-        try
+        var groups = declarations.GroupBy(x => x.Key, StringComparer.Ordinal).ToArray();
+        var pending = new Dictionary<string, ActionDeclaration>(StringComparer.Ordinal);
+        foreach (var group in groups)
         {
-            if (declaration.FormatVersion != 1 || !AuthorXml.ExactKey(declaration.Key) || actions.ContainsKey(declaration.Key))
+            if (!AuthorXml.ActionId(group.Key) || group.Count() != 1 || actions.ContainsKey(group.Key))
             {
-                throw new ArgumentException("Duplicate/invalid action");
+                Issues.Add("Action:" + group.Key + ":Duplicate/invalid identity");
+                continue;
             }
-
-            if (!actions.ContainsKey(declaration.BaseAction) || !declaration.BaseAction.StartsWith("us.core/", StringComparison.Ordinal))
+            pending.Add(group.Key, group.Single());
+        }
+        var visiting = new HashSet<string>(StringComparer.Ordinal);
+        var failed = new HashSet<string>(StringComparer.Ordinal);
+        bool Resolve(string key)
+        {
+            if (actions.ContainsKey(key)) return true;
+            if (failed.Contains(key) || !pending.TryGetValue(key, out var declaration)) return false;
+            if (!visiting.Add(key))
             {
-                throw new ArgumentException("baseAction must be a built-in action");
+                Issues.Add("Action:" + key + ":Inheritance cycle");
+                failed.Add(key);
+                return false;
             }
-
-            var parent = actions[declaration.BaseAction];
-            foreach (string fact in declaration.Condition.RequiredFacts())
+            try
             {
-                if (!facts.ContainsKey(fact))
+                if (declaration.FormatVersion != 1) throw new ArgumentException("Unsupported formatVersion");
+                ActionPlan? parent = null;
+                if (declaration.BaseAction != "")
                 {
-                    throw new ArgumentException("Missing required fact " + fact);
+                    if (!Resolve(declaration.BaseAction)) throw new ArgumentException("Unavailable parent " + declaration.BaseAction);
+                    parent = actions[declaration.BaseAction];
                 }
+                foreach (string fact in declaration.Condition.RequiredFacts())
+                    if (!facts.ContainsKey(fact)) throw new ArgumentException("Missing required fact " + fact);
+                // Inherit fixed conditions only. Routing, priority and mutable configuration are not inherited identities.
+                var condition = parent == null ? declaration.Condition
+                    : new Condition("all", "", parent.Condition, declaration.Condition);
+                actions.Add(key, new ActionPlan(key, declaration.Priority, condition,
+                    declaration.Interval, declaration.CheckShared, declaration.WriteShared, declaration.Chance,
+                    declaration.BaseAction, !declaration.TalkingEnabled, sustained: declaration.Sustained,
+                    requiresVocal: declaration.RequiresVocal || parent?.RequiresVocal == true));
+                return true;
             }
-
-            // Composition can narrow a base condition, never bypass its qualification.
-            actions.Add(declaration.Key, new ActionPlan(
-                declaration.Key,
-                parent.Priority,
-                new Condition("all", "", parent.Condition, declaration.Condition),
-                parent.Interval,
-                parent.CheckShared,
-                parent.WriteShared,
-                parent.Chance,
-                parent.BaseAction,
-                parent.SkipTalking,
-                parent.Volume,
-                parent.Pitch,
-                declaration.Sustained));
-            return true;
+            catch (Exception error)
+            {
+                failed.Add(key);
+                Issues.Add("Action:" + key + ":" + error.Message);
+                return false;
+            }
+            finally { visiting.Remove(key); }
         }
-        catch (Exception error)
-        {
-            Issues.Add("Action:" + error.Message);
-            return false;
-        }
+        int before = actions.Count;
+        foreach (string key in pending.Keys.OrderBy(x => x, StringComparer.Ordinal)) Resolve(key);
+        return actions.Count - before;
     }
 
     public bool AddPack(string packageId, string defName, VoicePackDeclaration declaration, Func<string, string?> bindSound,
@@ -414,7 +450,7 @@ public sealed class AuthorCatalog
         string key = packageId + "/" + defName;
         try
         {
-            if (!AuthorXml.ExactKey(packageId) || !AuthorXml.ExactKey(defName) || declaration.FormatVersion != 1 || !AuthorXml.ExactKey(declaration.Race) || packKeys.Contains(key))
+            if (!AuthorXml.ExactKey(packageId) || !AuthorXml.ExactKey(defName) || declaration.FormatVersion != 1 || packKeys.Contains(key))
             {
                 throw new ArgumentException("Invalid/duplicate pack identity");
             }
@@ -428,6 +464,9 @@ public sealed class AuthorCatalog
                 throw new ArgumentException("Invalid pack-local action participation identity");
             }
 
+            if (declaration.Race != "" && (declaration.Family != "Pawn" || declaration.Target != ""))
+                throw new ArgumentException("Use one exact target declaration");
+            var target = declaration.Domain;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var batch = new List<AudioCandidate>();
             foreach (var entry in declaration.Entries)
@@ -471,9 +510,9 @@ public sealed class AuthorCatalog
                 {
                     throw new ArgumentException("Invalid entry participation identity");
                 }
-                batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, declaration.Race,
-                    entry.Weight, entry.Volume ?? 1, pitch: entry.Pitch, participation: participation,
-                    packKey: selectionKey ?? packageId + ":" + defName, packWeight: declaration.Weight));
+                batch.Add(new AudioCandidate(key + "/" + entry.Key, audioId, entry.Action, target.Target,
+                    entry.Weight, entry.Volume ?? 1, target.Family == "Pawn" ? SubjectFamily.PawnRace : SubjectFamily.NonPawn, target.Namespace, pitch: entry.Pitch, participation: participation,
+                    packKey: selectionKey ?? packageId + ":" + defName, packWeight: declaration.Weight, childDomain: target.Child));
             }
 
             audio.AddRange(batch);

@@ -5,11 +5,13 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 S4AB/S5 technical delivery; migration stop
+## NOW — 0.6.0 D-A technical candidate; await next dispatch
 
-- Finish the authorized S4AB/S5 fixed-source and matching Dev handoff. Current requirements and evidence live in the dispatch/work order and `dist/evidence/s4ab-s5/REPORT.md`; do not substitute older S3 results for changed paths.
+- D-A delivers full contract identity, immutable roots/inheritance, actual Select/extension caller and source attribution through the existing owner. Current author entry and acceptance boundaries are in `docs/us-kernel-0.6-spec-zh.md` §21 and its acceptance/migration pages. Do not extend this dispatch into D-B.
+- Next authorized implementation package must complete service-profile settings and Eat phase/nutrition/drug separation, recipient/target/stage/result adapters and persistence. Preserve settled WholeProcess/Any/Any and precise Unknown; the fact record lists actual gaps.
+- D-C must complete all 15 package guides/coverage and retire official Crying/Giggling plus exclusive settings/responses; the current 17-entry implementation is not that completion.
 - Await explicit authorization for target 1.6 native loading, instance output and listening validation. Do not install or launch automatically; technical fixtures do not close native V08/V12/V14/V15 evidence.
-- Keep numerical daily policy, full 17-action ordering and first-unique behavior-source adoption as explicit candidates. The temporary one-process Dev injection is not a permanent player mode.
+- Official Pawn Select qualification, numerical daily policy, 15-package ordering and first-unique behavior-source adoption await the maintainer. The temporary process-only Dev injection is not a player default.
 - Stop before FL0.8 consumer migration. Continue only after the user's new step; retain the fixed 0.7 carrier and range.
 ## Retained interaction checkpoint (2026-10-09)
 

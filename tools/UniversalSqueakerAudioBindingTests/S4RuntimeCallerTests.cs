@@ -80,13 +80,20 @@ internal static partial class Program
             && SoundStarter.Played.Count == before && comp.MembershipUpdates == 2,
             "S4 real CompTick and public event callers reach the one temporary selection gate, zero sessions or dispatch before explicit selection");
 
-        var values = UniversalSqueakerMod.Settings.Values;
-        values.AgeEnabled = true;
-        values.MoodEnabled = true;
-        values.ResponseParameters["mood.low"] = .2;
-        values.ResponseParameters["mood.high"] = .8;
-        values.ResponseParameters["mood.high.pitch"] = .5;
-        values.ResponseParameters["mood.high.volume"] = .5;
+        foreach (string key in BuiltInPawnContracts.CandidateOrder)
+        {
+            UniversalSqueakerMod.Settings.actionTuning.Add(new ActionTuningRecord {
+                actionKey = "us.core/" + key,
+                responses = new List<ResponseTuningValue> {
+                    new() { key = "us.core/Age", hasEnabled = true, enabled = true },
+                    new() { key = "us.core/Mood", hasEnabled = true, enabled = true }
+                },
+                responseParameters = new List<ResponseParameterValue> {
+                    new() { key = "mood.low", value = .2 }, new() { key = "mood.high", value = .8 },
+                    new() { key = "mood.high.pitch", value = .5 }, new() { key = "mood.high.volume", value = .5 }
+                }
+            });
+        }
         pawn.ageTracker!.CurLifeStage.voxPitch = 1.5f;
         UniversalSqueakerMod.Settings.activity = 2;
         UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(100, 40, 120, 120, 0, 1, 1));
@@ -187,7 +194,7 @@ internal static partial class Program
         material.sustain = false;
 
         UniversalSqueakerMod.Settings.activity = 1;
-        UniversalSqueakerMod.Settings.Values = new BehaviorValues();
+        UniversalSqueakerMod.Settings.actionTuning.Clear();
         UsOneShotRuntime.ResetSession();
         SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
     }

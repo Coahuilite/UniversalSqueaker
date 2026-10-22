@@ -77,6 +77,8 @@ internal static partial class Program
 
     private static void Main()
     {
+        try
+        {
         ResultSettlement();
         RetryAndEventSequences();
         AudioIsolation();
@@ -92,12 +94,20 @@ internal static partial class Program
         AuthorShapeAndRegistration();
         AuthorCases();
         FileExamples();
+        DaContractIdentity();
         Console.WriteLine("OneShot/author production source checks PASS: " + checks);
         S2Resources();
         S3ContractsAndSources();
         S4RhythmAndResponses();
         S5SustainedOwner();
         Console.WriteLine("OneShot + S2 production source checks PASS: " + checks);
+        }
+        catch (Exception error)
+        {
+            // Keep the decisive assertion visible even when the host cannot format an uncaught stack trace.
+            Console.Error.WriteLine(error.GetType().FullName + ": " + error.Message);
+            Environment.ExitCode = 1;
+        }
     }
 
     private static void ResultSettlement()
@@ -300,7 +310,8 @@ internal static partial class Program
         var policy = new StatePolicy(40, 20);
         var randomInput = Input();
         randomInput.TalkingChance = .5;
-        randomInput.Actions = randomInput.Actions.Select(x => x.Key == "us.core/Work" ? new ActionPlan(x.Key, x.Priority, x.Condition, x.Interval, chance: .5) : x).ToArray();
+        randomInput.Actions = randomInput.Actions.Select(x => x.Key == "us.core/Work" ? new ActionPlan(x.Key, x.Priority, x.Condition, x.Interval,
+            chance: .5, skipTalking: x.SkipTalking, requiresVocal: x.RequiresVocal) : x).ToArray();
         randomInput.Audio = new[]
         {
             new AudioCandidate("a", "pack/first", "us.core/Work", "Ratkin", 1),
@@ -345,6 +356,24 @@ internal static partial class Program
         var d = new Driver();
         var outcome = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, d, d);
         Check(outcome.Action == "example/OnDutyWork" && d.Calls == 1, "real file/provider/combination dispatch production core");
+
+        var identity = new XmlDocument();
+        identity.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "examples", "IdentitySelect.xml"));
+        var selectCatalog = new AuthorCatalog(120, 120, true);
+        var selectAction = new ActionDeclaration();
+        selectAction.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsActionDef/declaration")!);
+        Check(selectCatalog.AddAction(selectAction), "DA public IdentitySelect XML action loads through production loader");
+        var selectAudio = new VoicePackDeclaration();
+        selectAudio.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
+        Check(selectCatalog.AddPack("example.audio", "US_ExampleIdentitySelectAudio", selectAudio, s => "example.audio/" + s)
+            && selectCatalog.Audio.Length == 2 && selectCatalog.Audio.Select(x => x.AudioId).Distinct().Count() == 1
+            && selectCatalog.Audio.Select(x => x.Action).Distinct().Count() == 2,
+            "DA public XML directly reuses one resource in two independently identified entries");
+        var selectSource = new BehaviorSourceDeclaration();
+        selectSource.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsBehaviorSourceDef/declaration")!);
+        Check(selectSource.Source.Contributions.Single(x => x.Action == selectAction.Key).Values.Volume == .25
+            && selectSource.Source.Contributions.Single(x => x.Action == selectAction.Key).Values.HardIntervalTicks == 50,
+            "DA public XML full-key source parameters load without parent-key substitution");
     }
 
     private static XmlNode Node(string text)
@@ -383,7 +412,7 @@ internal static partial class Program
         Check(catalog.AddPack("example.pack", "US_Pack", pack, x => "example.pack/" + x) && catalog.Audio.Length == 1 && catalog.Audio[0].Volume == 0, "ordinary audio-only assembled");
         Check(!catalog.AddPack("example.pack", "US_Pack", pack, x => x), "duplicate exact pack rejected");
         var action = new ActionDeclaration();
-        action.LoadDataFromXmlCustom(Node("<declaration><formatVersion>1</formatVersion><key>example/OnDutyWork</key><baseAction>us.core/Work</baseAction><condition><all><ref>us.core/WorkState</ref><ref>example/OnDuty</ref></all></condition></declaration>"));
+        action.LoadDataFromXmlCustom(Node("<declaration><formatVersion>1</formatVersion><key>example/OnDutyWork</key><priority>40</priority><baseAction>us.core/Work</baseAction><condition><all><ref>us.core/WorkState</ref><ref>example/OnDuty</ref></all></condition></declaration>"));
         Check(!catalog.AddAction(action), "missing required capability not removed");
         Check(!catalog.AddProvider(new Provider { Fail = true }), "provider failure no half batch");
         Check(!catalog.AddAction(action), "failed batch fact unavailable");

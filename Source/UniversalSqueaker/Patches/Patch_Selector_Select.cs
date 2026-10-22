@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -5,28 +7,53 @@ using Verse;
 
 namespace UniversalSqueaker;
 
+/// <summary>Observe the resolved feedback recipient, then verify the selector's committed membership.
+/// Source basis: RimSage 1.6.4850 SelectInternal/PlaySelectionSoundFor; target API compiled against 1.6.4871.
+/// No independent duplicate-selection policy: only actual upstream feedback is consumed.</summary>
 [HarmonyPatch]
 public static class Patch_Selector_Select
 {
-    private static MethodBase? TargetMethod()
+    internal sealed class Attempt
     {
-        // Selector.Select 实际签名: Select(object obj, bool playSound, bool forceDesignatorDeselect)
-        // 第一参数是 object(不是 Thing),按重载链 fallback。
-        return AccessTools.Method(typeof(Selector), "Select", new[] { typeof(object), typeof(bool), typeof(bool) })
-            ?? AccessTools.Method(typeof(Selector), "Select", new[] { typeof(object), typeof(bool) })
-            ?? AccessTools.Method(typeof(Selector), "Select", new[] { typeof(object) });
+        internal readonly Selector Selector;
+        internal readonly bool FeedbackRequested;
+        internal object? FeedbackSubject;
+        internal Attempt(Selector selector, bool feedback) { Selector = selector; FeedbackRequested = feedback; }
+    }
+    [ThreadStatic] private static Stack<Attempt>? attempts;
+
+    private static MethodBase TargetMethod() => AccessTools.Method(typeof(Selector), "SelectInternal",
+        new[] { typeof(object), typeof(bool), typeof(bool) });
+
+    private static void Prefix(Selector __instance, bool __1, out Attempt __state)
+    {
+        __state = new Attempt(__instance, __1);
+        (attempts ??= new Stack<Attempt>()).Push(__state);
     }
 
-    // 用位置注入 __0/__1 取值,避免与原方法参数名耦合(原方法参数名为 obj,不是 t)。
-    // 0.3.2 定案:只认 playSound=true 的交互式点选。RimWorld 1.6 全部 playSound=false 调用点均为
-    // 程序性后续选择(复活/区域创建/培养舱/基因提取/传送等自动选中),不属于玩家点击反馈。
-    private static void Postfix(object __0, bool __1)
+    internal static void ObserveFeedback(Selector selector, object subject)
     {
-        if (!__1 || __0 is not Pawn pawn)
-        {
-            return;
-        }
-
-        pawn.GetComp<CompSqueaker>()?.Notify_Select();
+        if (attempts?.Count > 0 && ReferenceEquals(attempts.Peek().Selector, selector))
+            attempts.Peek().FeedbackSubject = subject;
     }
+
+    private static void Postfix(Selector __instance, Attempt? __state)
+    {
+        // The actual feedback call resolves proxies. Membership alone is not feedback evidence.
+        if (__state?.FeedbackRequested == true && __state.FeedbackSubject is Pawn pawn && __instance.IsSelected(pawn))
+            pawn.GetComp<CompSqueaker>()?.Notify_Select();
+    }
+
+    private static Exception? Finalizer(Exception? __exception, Attempt? __state)
+    {
+        if (attempts?.Count > 0 && ReferenceEquals(attempts.Peek(), __state)) attempts.Pop();
+        return __exception;
+    }
+}
+
+[HarmonyPatch]
+public static class Patch_Selector_Feedback
+{
+    private static MethodBase TargetMethod() => AccessTools.Method(typeof(Selector), "PlaySelectionSoundFor", new[] { typeof(object) });
+    private static void Postfix(Selector __instance, object __0) => Patch_Selector_Select.ObserveFeedback(__instance, __0);
 }

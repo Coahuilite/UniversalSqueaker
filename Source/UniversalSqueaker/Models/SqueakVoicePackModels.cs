@@ -11,8 +11,10 @@ public class SqueakVoicePackDef : Def
 {
     // Directory-only projection of a validated 0.6 declaration. Its audio metadata remains in AuthorCatalog.
     internal bool IsKernelDeclaration;
+    internal IReadOnlyList<string> KernelActionKeys = Array.Empty<string>();
     public int CountPlayableActions(bool includeBabyActions)
     {
+        if (IsKernelDeclaration) return KernelActionKeys.Count;
         if (actions == null) return 0;
         var covered = new HashSet<SqueakAction>();
         foreach (SqueakVoicePackAction action in actions)
@@ -93,6 +95,8 @@ internal static class SqueakVoicePackValidator
         if (pack.scope == SqueakVoicePackScope.Race && !string.IsNullOrWhiteSpace(pack.targetDefName)) yield return name + " Race scope must not specify targetDefName.";
         if (pack.scope == SqueakVoicePackScope.Xenotype && (string.IsNullOrWhiteSpace(pack.targetDefName) || !string.Equals(pack.targetDefName, pack.targetDefName.Trim(), StringComparison.Ordinal))) yield return name + " Xenotype scope requires an exact targetDefName without leading/trailing whitespace.";
         if (!IsPositiveFinite(pack.weight)) yield return name + " has an invalid weight; weight must be finite and greater than zero.";
+
+        if (pack.IsKernelDeclaration && pack.KernelActionKeys.Count > 0) yield break; // Already validated by AuthorCatalog.
 
         HashSet<SqueakAction> fallbackActions = new();
         foreach (SqueakVoicePackFallback fallback in pack.fallbacks ?? new List<SqueakVoicePackFallback>())

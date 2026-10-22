@@ -54,7 +54,7 @@ internal static class Program
 
     private static int Main()
     {
-        tmpRoot = Path.Combine(AppContext.BaseDirectory, "reset1-tmp-" + Guid.NewGuid().ToString("N"));
+        tmpRoot = Path.Combine(Path.GetTempPath(), "reset1-tmp-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tmpRoot);
         GenFilePaths.ConfigFolderPath = tmpRoot; // belt-and-suspenders: even a forgotten seam stays inside out/
         Console.WriteLine("US-RESET1 restore harness | tmp root: " + tmpRoot);

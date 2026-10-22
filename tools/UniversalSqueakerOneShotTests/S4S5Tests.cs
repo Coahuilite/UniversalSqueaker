@@ -84,7 +84,7 @@ internal static partial class Program
                 "S4 enabled mood rejects nonfinite fact " + key);
         }
         var activeInput = Input();
-        activeInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, sustained: true) };
+        activeInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, sustained: true, requiresVocal: true) };
         activeInput.ActiveSustainedKey = "us.core/Work";
         activeInput.BlockedActions.Add("us.core/Work");
         var activeDriver = new Driver();

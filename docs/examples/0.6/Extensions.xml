@@ -7,7 +7,7 @@
     <defName>US_ControlledOnDutyWork</defName>
     <declaration>
       <formatVersion>1</formatVersion>
-      <key>example/OnDutyWork</key><baseAction>us.core/Work</baseAction>
+      <key>example/OnDutyWork</key><priority>40</priority><baseAction>us.core/Work</baseAction>
       <condition><all><ref>us.core/WorkState</ref><ref>example/OnDuty</ref></all></condition>
     </declaration>
   </UniversalSqueaker.UsActionDef>
