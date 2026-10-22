@@ -89,6 +89,15 @@ internal static partial class Program
         Check(session.LastOutcome.Action == "us.core/Eat" && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && session.DiagnosticText.Contains("sourceDomain=DB_Ratkin") && session.DiagnosticText.Contains("role=ActualIngester"),
             "DB minimal audio-only pack defaults Whole/Any/Any -> production dispatch with exact subject/domain");
+        var xeno = new XenotypeDef { defName = "DB_LegalXeno" };
+        Check(settings.TryChangeBehaviorOverride("Pawn", "", race.defName, xeno.defName, "us.core/Eat",
+            new BehaviorValues { Phase = EatPhase.Execution }, () => true, out _), "DB exact Xeno player phase published");
+        pawn.genes = new FixtureGenes { Xenotype = xeno }; Tick();
+        Check(session.LastOutcome.Receipt == null, "DB canonical legal Xeno parameter is consumed by production session and refuses preparation");
+        SqueakRuntimeResolver.Current.RejectChildContext = true; Tick();
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && session.DiagnosticText.Contains("sourceDomain=DB_Ratkin"),
+            "DB resolver-rejected raw Xeno cannot leak precise parameters; same Race mapping remains accurate");
+        SqueakRuntimeResolver.Current.RejectChildContext = false; pawn.genes = null;
         Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.Execution });
         Tick();
         Check(session.LastOutcome.Receipt == null, "DB Execution parameter refuses preparation without broadening Whole");
