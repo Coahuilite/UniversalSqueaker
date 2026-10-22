@@ -527,9 +527,12 @@ public sealed class AuthorCatalog
     }
 
     public FactSnapshot Capture(string subject, IDictionary<string, Truth> builtIns)
+        => Capture(subject, builtIns, null);
+
+    public FactSnapshot Capture(string subject, IDictionary<string, Truth> builtIns, IEnumerable<FactDiagnostic>? builtInDiagnostics)
     {
         var snapshot = new Dictionary<string, Truth>(builtIns, StringComparer.Ordinal);
-        var diagnostics = new List<FactDiagnostic>();
+        var diagnostics = new List<FactDiagnostic>(builtInDiagnostics ?? Array.Empty<FactDiagnostic>());
         foreach (var entry in facts)
         {
             string key = entry.Key;

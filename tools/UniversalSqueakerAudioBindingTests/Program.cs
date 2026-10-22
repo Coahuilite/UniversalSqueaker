@@ -33,6 +33,13 @@ internal static partial class Program
 
     private static void Main(string[] args)
     {
+        Console.WriteLine("Adapter args=[" + string.Join(",", args) + "]");
+        if (args.Contains("--da-select-missing-target"))
+        {
+            DaSelectMissingTarget();
+            Console.WriteLine("DA Select missing-target fixture PASS: " + checks);
+            return;
+        }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
         if (args.Contains("--da-select"))
         {

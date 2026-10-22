@@ -12,6 +12,9 @@ namespace UniversalSqueaker;
 /// <summary>One capture at the real opportunity/notification. No decisions, clocks or random draws.</summary>
 internal static class UsPawnFacts
 {
+    internal static FactSnapshot CaptureSnapshot(AuthorCatalog catalog, Pawn pawn, string? eventKey)
+        => catalog.Capture(pawn.ThingID, Capture(pawn, eventKey), UsSelectObservation.Diagnostics);
+
     internal static Dictionary<string, Truth> Capture(Pawn pawn, string? eventKey)
     {
         var result = new Dictionary<string, Truth>(StringComparer.Ordinal);
@@ -19,6 +22,8 @@ internal static class UsPawnFacts
         {
             result[BuiltInPawnContracts.FactKey(key)] = BuiltInPawnContracts.IsEvent(key) ? Yes("us.core/" + key == eventKey) : Truth.Unknown;
         }
+        // No complete observer means missing implementation, not evidence of an accepted selection.
+        if (!UsSelectObservation.Ready) result[UsSelectObservation.FactKey] = Truth.Unknown;
         var job = pawn.CurJob;
         var driver = pawn.jobs?.curDriver;
         result["us.core/SleepState"] = driver == null ? Truth.Unknown : Yes(driver.asleep);

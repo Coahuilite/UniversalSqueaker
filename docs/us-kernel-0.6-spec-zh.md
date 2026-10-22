@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r7（D-A 合同身份纵切）。状态：**身份链开发候选，编译／定向运行证据随验收页更新；Eat 新分层及完整15包仍待后续实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
+修订：2026-10-23，r8（D-A 合同身份纵切／Select接缝缺实现隔离）。状态：**身份链开发候选，编译／定向运行证据随验收页更新；Eat 新分层及完整15包仍待后续实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -600,5 +600,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 ### Select 的当前适配和未决资格
 
 当前观察`Selector.SelectInternal`内实际`PlaySelectionSoundFor`的最终主体，返回后核`IsSelected`。代理递归、无反馈、失败提交和异常清理分别处理；没有US自建的重复去重状态。RimSage方法体依据为1.6.4850，目标1.6.4871引用编译可用；精确目标方法体／原生仍待核。完整事实边界见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。
+
+两个观察目标共用缓存readiness与Prepare；任一缺失则两patch均跳过，只停用Select观察能力，一次具名记录缺失目标。SelectEvent为带SelectObservationUnavailable原因的Unknown，直接通知不能伪造接受事实；依赖该实现的来源贡献暂停，无关合同仍运行。缺目标替身与两目标存在路径分别实证，详见[事实记录](us-kernel-0.6-fact-adapters-zh.md)。
 
 官方Pawn资格仍须用户决定。隔离开发输入`UsDevelopmentPolicy`最后一个可选参数为`UsSelectPawnQualification`：省略`Unselected`会解释性拒绝官方Select；测试可明确选`Unrestricted`或`ResponsivePlayerControlled`，不写Config、不作为普通默认。这不改变已定的通用Select定义，也不替全部15包决定资格或发行节奏。

@@ -2,7 +2,7 @@
 
 D-A 当前候选改变合同身份及 Select 接缝；本页将技术证据、合同人工审阅、成果人工验收分开。新 Eat 纵切为 D-B，全部15包扩齐为 D-C。
 
-本页是[唯一规格 r7](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
+本页是[唯一规格 r8](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
 
 ## 核心只消费中性事实
 
@@ -95,22 +95,25 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 
 | 包装 | 合同修订／SR对照 | 当前成果／证据 | 合同人审 | 成果人验 | 未决／下一责任 |
 | --- | --- | --- | --- | --- | --- |
-| Select | 主规格r7／导读r3／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
-| Eat | r7／导读r3／SR tag v0.3.4-tagfix1 | 首份实际事实记录已交；新settings/阶段/角色/结果待D-B | pending | pending | D-B工程；Whole/Any/Any与尾音已定 |
-| Attack | r7／导读r3／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
-| Wounded | r7目标／SR对照待扩齐 | 完整合同与受损处理证据待D-C | pending | pending | US后续包 |
-| Death | r7目标／SR对照待扩齐 | Kill阶段与资格完整材料待D-C | pending | pending | US后续包 |
-| Move | r7目标／SR对照待扩齐 | 自身移动与来源政策完整材料待D-C | pending | pending | US后续包 |
-| Equip | r7目标／SR对照待扩齐 | 关系角色与旧玩家Job边界待D-C | pending | pending | US后续包/PM范围判断 |
-| Call | r7目标／SR对照待扩齐 | 已有正向闲置基础，完整材料待D-C | pending | pending | US后续包 |
-| Sleep | r7目标／SR对照待扩齐 | 已有asleep基础，完整材料待D-C | pending | pending | US后续包 |
-| Social | r7目标／SR对照待扩齐 | 准确机制覆盖材料待D-C | pending | pending | US后续包 |
-| Joy | r7目标／SR对照待扩齐 | 与Social重叠的完整材料待D-C | pending | pending | US后续包 |
-| Work | r7目标／SR对照待扩齐 | 来源/阶段/scope完整材料待D-C | pending | pending | US后续包 |
-| Draft | r7目标／SR对照待扩齐 | 玩家状态变化完整材料待D-C | pending | pending | US后续包 |
-| Undraft | r7目标／SR对照待扩齐 | 玩家状态变化方向完整材料待D-C | pending | pending | US后续包 |
-| MentalBreak | r7目标／SR对照待扩齐 | 正向崩溃来源/持续依据完整材料待D-C | pending | pending | US后续包 |
+| Select | 主规格r8／导读r4／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
+| Eat | r8／导读r4／SR tag v0.3.4-tagfix1 | 首份实际事实记录已交；新settings/阶段/角色/结果待D-B | pending | pending | D-B工程；Whole/Any/Any与尾音已定 |
+| Attack | r8／导读r4／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
+| Wounded | r8目标／SR对照待扩齐 | 完整合同与受损处理证据待D-C | pending | pending | US后续包 |
+| Death | r8目标／SR对照待扩齐 | Kill阶段与资格完整材料待D-C | pending | pending | US后续包 |
+| Move | r8目标／SR对照待扩齐 | 自身移动与来源政策完整材料待D-C | pending | pending | US后续包 |
+| Equip | r8目标／SR对照待扩齐 | 关系角色与旧玩家Job边界待D-C | pending | pending | US后续包/PM范围判断 |
+| Call | r8目标／SR对照待扩齐 | 已有正向闲置基础，完整材料待D-C | pending | pending | US后续包 |
+| Sleep | r8目标／SR对照待扩齐 | 已有asleep基础，完整材料待D-C | pending | pending | US后续包 |
+| Social | r8目标／SR对照待扩齐 | 准确机制覆盖材料待D-C | pending | pending | US后续包 |
+| Joy | r8目标／SR对照待扩齐 | 与Social重叠的完整材料待D-C | pending | pending | US后续包 |
+| Work | r8目标／SR对照待扩齐 | 来源/阶段/scope完整材料待D-C | pending | pending | US后续包 |
+| Draft | r8目标／SR对照待扩齐 | 玩家状态变化完整材料待D-C | pending | pending | US后续包 |
+| Undraft | r8目标／SR对照待扩齐 | 玩家状态变化方向完整材料待D-C | pending | pending | US后续包 |
+| MentalBreak | r8目标／SR对照待扩齐 | 正向崩溃来源/持续依据完整材料待D-C | pending | pending | US后续包 |
 
 D-A针对独立根/多级图/别名只读、完整动作配置/恢复/冷却、普通Select和受伤扩展真实调用、Ratkin/Kiiro/合法Xeno/两NonPawn、所有来源层条目/域及AudioId复用。纯层不带平台stub；适配测试的Selector/音频及原生保存调度为明确替身，生产观察/设置解析/session/决策/后端直接编译原文件。原生／听感不由替身关闭。
 
-本轮初始Framework输出加载受路径区域判定影响；经维护者授权复制完整测试输出到MyComputer区域后已进入并修复真实断言。当前OneShot纯生产源943项、Select定向63项、普通适配141项及独立失败观察3项已执行；生产settings/ExposeData/原子文件与Scribe替身往返、恢复／准确子行Reset亦已执行，原生Scribe及真实游戏Config未验。原日志命名冲突与误投递模式保留为证据缺陷，不计目标通过。原生／听感与逐包人审仍pending，全部21门未整批重跑。
+本轮初始Framework输出加载受路径区域判定影响；经维护者授权复制完整测试输出到MyComputer区域后已进入并修复真实断言。当前OneShot纯生产源943项、Select定向63项、普通适配141项及独立失败观察3项已执行；生产settings/ExposeData/原子文件与Scribe替身往返、恢复／准确子行Reset亦已执行，原生Scribe及真实游戏Config未验。原日志命名冲突与误投递模式保留为证据缺陷，不计目标通过。原生／听感与逐包人审仍pending，全部23门未整批重跑。
+
+
+D-A r2接缝修订补充：实际Harmony2.4.2在缺反馈目标时抛出TargetMethod返回null，且留下单边挂接；原构造调用会传播此异常。现成对Prepare避免该缺失路径，两种真实缺目标替身各13项通过，原两目标存在63项保持。验证生产观察／事实诊断／来源依赖暂停／无关Work，不以此声称目标4871原生已验。门禁22/23保存两个缺目标模式，其余本次未变矩阵沿用r1。

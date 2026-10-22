@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r5 · **D-A完整身份与Select技术纵切；Eat新分层、原生1.6、听感及产品默认继续分包。**
+2026-10-23 · r6 · **D-A完整身份与Select技术纵切；Eat新分层、原生1.6、听感及产品默认继续分包。**
 
 ## 当前D-A应如何迁移
 
@@ -12,17 +12,19 @@
 - `DaContractConfigTests`以生产settings/ExposeData/原子文件与Scribe替身往返，重读完整父／子键、false/0、来源快照和子行Reset；Pawn Global不能覆盖两NonPawn命名空间。新profile持久化分层及Eat参数在D-B。
 - verify-local保留原19门，追加20（`--da-select`）和21（另加`--unselected-qualification`）。每模式独立进程，凭目标断言而非exit0／文件名判断命中。当前本地测试复制完整输出到获准MyComputer目录运行相同入口；不作为原生游戏证据。
 
+缺目标回归位于DaSelectMissingTargetTests。工程属性SelectFixtureTarget=MissingInternal或MissingFeedback在明确平台double中真正移除对应方法，并非覆盖生产readiness布尔值；构建使用各自独立OutputPath/IntermediateOutputPath，运行参数为--da-select-missing-target。verify-local追加22/23执行两种缺失形状，每种必须检查目标确实缺失、PatchAll正常返回、无半套观察、单次具名诊断、依赖隔离与无关Work派发；存在两目标继续用gate20的原63项。
+
 以下S1–S5表保留历史迁移脉络。旧17项映射、Select响应性、Eat联动和覆盖式心情按已批准新合同定向迁移，不作为新线不变政策。
 
 S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层见[S3实施页](us-kernel-0.6-s3-zh.md)。gate17覆盖新增纯S3轨迹，gate18覆盖真实事实适配及自动Comp/新作者资格，gate3追加来源保存故障与Scribe重读；Reset继续单独执行。
 
 S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
 
-本页配合[首版规格 r7](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
+本页配合[首版规格 r8](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是21门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是23门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
 - [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前19门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。

@@ -7,6 +7,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(SelectFixtureTarget)' == 'MissingInternal'">
+    <DefineConstants>$(DefineConstants);US_FIXTURE_SELECT_MISSING_INTERNAL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(SelectFixtureTarget)' == 'MissingFeedback'">
+    <DefineConstants>$(DefineConstants);US_FIXTURE_SELECT_MISSING_FEEDBACK</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Production/Kernel/%(Filename)%(Extension)" />

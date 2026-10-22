@@ -63,6 +63,9 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     public DecisionOutcome LastOutcome { get; private set; }
     public DecisionState State => state;
 
+    private bool HasAvailableFact(string key) => catalog.HasFact(key)
+        && (key != UsSelectObservation.FactKey || UsSelectObservation.Ready);
+
     internal UsPawnPlaybackSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
     {
         this.pawn = pawn;
@@ -117,7 +120,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 continue;
             }
             string actionId = action.Key;
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, actionId, catalog.BehaviorSources, catalog.HasFact, out bool paused,
+            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, actionId, catalog.BehaviorSources, HasAvailableFact, out bool paused,
                 reason => blockedReasons[action.Key] = reason);
             if (paused || !comp.ControlledOneShotAllowed(actionId, activeCommand, behavior, authorAction: true))
             {
@@ -151,7 +154,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             values["us.compat/Event"] = Truth.True;
             plans.Clear();
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
-                catalog.HasFact, out bool paused);
+                HasAvailableFact, out bool paused);
             plans.Add(new ActionPlan(key, 0, new Condition("ref", "us.compat/Event"),
                 behavior.HardIntervalTicks ?? workTicks, chance: candidate.EventProbability,
                 skipTalking: behavior.TalkingEnabled == false, volume: behavior.Volume ?? 1, pitch: behavior.Pitch ?? 1,
@@ -185,7 +188,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 && SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled,
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = CompSqueaker.ScaleFrequencyWithTalking && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
-            Facts = catalog.Capture(pawn.ThingID, values),
+            Facts = catalog.Capture(pawn.ThingID, values, UsSelectObservation.Diagnostics),
             Actions = plans.ToArray(),
             Audio = UsAuthorVoicePacks.Selected(catalog.Audio, snapshot.Registry, audioDomain),
             SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
@@ -229,7 +232,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
                 SqueakRuntimeResolver.Current.ResolveContext(pawn).Xenotype?.defName ?? "");
             var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
-                catalog.HasFact, out bool paused);
+                HasAvailableFact, out bool paused);
             var comp = pawn.GetComp<CompSqueaker>();
             if (paused || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
                 || action?.RequiresVocal == true && comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
@@ -237,7 +240,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 EndSustained("CurrentAuthorizationUnavailable");
                 return;
             }
-            sustained.Review(now, catalog.Capture(pawn.ThingID, UsPawnFacts.Capture(pawn, null)));
+            sustained.Review(now, UsPawnFacts.CaptureSnapshot(catalog, pawn, null));
             ReportEndFault();
         }
         sustained.Maintain();

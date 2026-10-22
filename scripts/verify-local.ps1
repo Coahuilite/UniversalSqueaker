@@ -375,6 +375,19 @@ Invoke-Check 'D-A actual Select/extension production chain over platform doubles
 Invoke-Check 'D-A unresolved official Pawn Select qualification refuses explicitly' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select --unselected-qualification' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select --unselected-qualification }
+# Gates 22/23 compile genuinely absent targets, not a bool override of production readiness.
+foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
+    $selectFixtureOutput = Join-Path $root "dist\verify-select-readiness\$selectFixtureTarget"
+    $selectFixtureObj = Join-Path $root "dist\verify-select-readiness\obj\$selectFixtureTarget"
+    Invoke-Check "D-A Select missing target $selectFixtureTarget (paired isolation)" `
+        "build AudioBindingTests with -p:SelectFixtureTarget=$selectFixtureTarget and isolated output/obj; run --da-select-missing-target" `
+        {
+            dotnet build (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
+                "-p:SelectFixtureTarget=$selectFixtureTarget" "-p:OutputPath=$selectFixtureOutput/" "-p:IntermediateOutputPath=$selectFixtureObj/"
+            if ($LASTEXITCODE -ne 0) { throw "Select fixture build failed: $selectFixtureTarget" }
+            & (Join-Path $selectFixtureOutput 'UniversalSqueakerAudioBindingTests.exe') --da-select-missing-target
+        }
+}
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

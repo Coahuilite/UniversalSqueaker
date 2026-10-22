@@ -1,6 +1,6 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r1。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。本轮先交 Eat 的实际调查记录；新 Eat settings／阶段适配纵切属于 D-B。
+修订：2026-10-23，r2。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。本轮先交 Eat 的实际调查记录；新 Eat settings／阶段适配纵切属于 D-B。
 
 ## Eat：正在摄入、物品属性、结果是三类证据
 
@@ -58,6 +58,14 @@ Ratkin p1 走向一份饭时，可以处于摄入全过程，但尚未进入摄�
 | 普通与InjuredSelect同时成立 | 原生通知发布事实而非强制父ActionId，显式优先级仲裁一次，完整子键进配置／条目／截止／诊断 |
 
 以上定向适配检查已执行；精确1.6.4871方法体、真实Harmony挂接、原生音频与听感待后续环境观察。通用Select不含隐藏Pawn资格；官方Pawn的清醒／控制资格仍待用户，当前仅可显式选择进程级开发输入。
+
+### 缺少目标方法：成对停用Select观察，不中断模组启动
+
+SelectInternal与PlaySelectionSoundFor共同实现一个观察能力。仅发现其中一个不能装半套patch。原实现直接返回AccessTools.Method：在明确缺少反馈方法的编译替身上，实际Harmony2.4.2 PatchAll抛HarmonyException（TargetMethod返回null），且另一端已经挂接。Mod构造未捕获该调用；从调用位置可知该异常会传播，未运行原生Mod构造。
+
+现在两patch共用缓存目标与Prepare：任一目标缺失时两者都跳过，一次记录`capability=SelectObservation`、`us.core/SelectEvent`、`SelectObservationUnavailable:MissingTarget:<完整目标>`。没有全局PatchAll异常吞掉或对其他能力的停用。缺实现时SelectEvent保留Unknown并携带具名缺口，不能被直接通知造为True；显式requires该事实的行为贡献暂停，意图／快照不删除。普通Select、继承子合同和独立引用该事实的根均不能起播，无关合同继续成立。
+
+`DaSelectMissingTargetTests`用编译时真正移除的方法，分别验证缺SelectInternal、缺PlaySelectionSoundFor，各13项通过：PatchAll返回、无半套挂接、单次具名诊断、原版选择保留、直接通知／作者调用无伪造、相关来源暂停及无关Work仍派发。两端存在的原63项另通过。这里使用真实Harmony与生产源、明确Selector／音频double，未据此关闭目标1.6.4871原生证据。
 
 ## 当前伤口：不是历史受伤通知
 

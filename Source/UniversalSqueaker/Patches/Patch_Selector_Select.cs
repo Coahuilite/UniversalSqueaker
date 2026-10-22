@@ -4,8 +4,43 @@ using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
+using UniversalSqueaker.OneShot;
 
 namespace UniversalSqueaker;
+
+/// <summary>These two hooks implement one capability. Never install a half observer.</summary>
+internal static class UsSelectObservation
+{
+    internal const string FactKey = "us.core/SelectEvent";
+    internal static readonly MethodInfo? Selection = AccessTools.Method(typeof(Selector), "SelectInternal",
+        new[] { typeof(object), typeof(bool), typeof(bool) });
+    internal static readonly MethodInfo? Feedback = AccessTools.Method(typeof(Selector), "PlaySelectionSoundFor", new[] { typeof(object) });
+    internal static bool Ready => Selection != null && Feedback != null;
+    internal static string FailureReason => "SelectObservationUnavailable:MissingTarget:"
+        + (Selection == null ? "RimWorld.Selector.SelectInternal(object,bool,bool)" : "")
+        + (Selection == null && Feedback == null ? ";" : "")
+        + (Feedback == null ? "RimWorld.Selector.PlaySelectionSoundFor(object)" : "");
+    private static bool reported;
+
+    internal static bool Prepare()
+    {
+        if (Ready) return true;
+        if (!reported)
+        {
+            reported = true;
+            Log.Warning("usdiag capability=SelectObservation fact=" + FactKey + " reason=" + FailureReason);
+        }
+        return false;
+    }
+
+    internal static IEnumerable<FactDiagnostic> Diagnostics
+    {
+        get
+        {
+            if (!Ready) yield return new FactDiagnostic(FactKey, "SelectObservation", FailureReason);
+        }
+    }
+}
 
 /// <summary>Observe the resolved feedback recipient, then verify the selector's committed membership.
 /// Source basis: RimSage 1.6.4850 SelectInternal/PlaySelectionSoundFor; target API compiled against 1.6.4871.
@@ -22,8 +57,8 @@ public static class Patch_Selector_Select
     }
     [ThreadStatic] private static Stack<Attempt>? attempts;
 
-    private static MethodBase TargetMethod() => AccessTools.Method(typeof(Selector), "SelectInternal",
-        new[] { typeof(object), typeof(bool), typeof(bool) });
+    private static bool Prepare() => UsSelectObservation.Prepare();
+    private static MethodBase TargetMethod() => UsSelectObservation.Selection!;
 
     private static void Prefix(Selector __instance, bool __1, out Attempt __state)
     {
@@ -54,6 +89,7 @@ public static class Patch_Selector_Select
 [HarmonyPatch]
 public static class Patch_Selector_Feedback
 {
-    private static MethodBase TargetMethod() => AccessTools.Method(typeof(Selector), "PlaySelectionSoundFor", new[] { typeof(object) });
+    private static bool Prepare() => UsSelectObservation.Prepare();
+    private static MethodBase TargetMethod() => UsSelectObservation.Feedback!;
     private static void Postfix(Selector __instance, object __0) => Patch_Selector_Select.ObserveFeedback(__instance, __0);
 }

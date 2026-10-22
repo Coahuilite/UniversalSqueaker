@@ -1,6 +1,6 @@
 # 首批合同导读：Select、Eat、Attack
 
-修订：2026-10-23，r3。供维护者带用户逐包审阅。D-A 源码起点 d52dfeb；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-23，r4。供维护者带用户逐包审阅。D-A 源码起点 d52dfeb；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -43,6 +43,8 @@
 **两种形态／恢复：** 默认 OneShot 自然尾；Sustained 只按声明的持续依据维护，瞬时事件不能冒充持续选择状态。缺选择适配隔离该能力；Unknown 不发声；来源／输出故障按共同规则。扩展伤口条件必须读取“当前约定伤口”，不从旧 Wounded 通知推断，缺实现只隔离依赖扩展。
 
 **实际链与证据：** Patch_Selector_Select → Comp.Notify_Select → UsOneShotRuntime → 同一 UsPawnPlaybackSession → 完整动作配置／合同 → 准确域选音 → PlaybackRequest／四回执／诊断。原生通知发布事实，让普通与扩展合同共同仲裁；不强制只运行父动作。DaContractTests.cs覆盖生产目录／核心的独立根、多级图与只读隔离；DaSelectCallerTests.cs连接实际Harmony观察、真实行为来源事务／解析、session、选音和请求后端。原版Selector、Comp平台门、音频及Scribe／保存调度为明确替身；配置往返使用生产settings/ExposeData/原子文件与Scribe替身，原生Scribe／真实游戏Config未验。定向Select模式已运行63项，含代理最终主体、重复反馈无额外去重、失败提交、伤口扩展、合法Xeno及父音源不补子映射；资格未选择模式另53项。精确目标原生未跑。
+
+**实现缺失隔离：** SelectInternal与反馈方法共用成对Prepare；缺任一目标时两端都不挂接，一次具名报告SelectObservationUnavailable及目标签名。没有全局PatchAll吞异常。Select事实缺实现时不成立，普通／继承／独立依赖它的合同保持静默，相关来源贡献暂停；无关Work仍可派发。真正移除两个目标的两种编译替身各13项通过，两目标存在的原63项通过。
 
 **SR 实际差异：** SR patch只看原入参Pawn/playSound，另隐藏要求玩家可控、清醒且未倒地；Select出厂External／18 ticks／Realtime／ignoreGlobalCooldown。它忽略共享检查但进入尝试仍更新共享钟，并跳过周期随机。US改为有证据的接受／最终主体；资格显式且待用户，0.3s与共享例外未自动继承。不能仅复制XML数值宣称等频。
 
