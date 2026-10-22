@@ -96,6 +96,23 @@ public partial class UniversalSqueakerMod
         }
     }
 
+    public bool TryChangeBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
+        BehaviorValues values, out string failure)
+    {
+        bool committed = Settings.TryChangeBehaviorOverride(family, targetNamespace, target, child, action, values,
+            () => PersistBehaviorCandidate(Settings.behaviorSourcesXml), out failure);
+        if (committed)
+        {
+            try { Settings.ApplyToRuntime(); }
+            catch (Exception error)
+            {
+                failure = "Committed:RuntimePublishFailed:" + error.GetType().Name;
+                Log.Warning("usdiag player behavior " + failure);
+            }
+        }
+        return committed;
+    }
+
     internal void QueueSettingsSave()
     {
         if (Settings.IsPersistenceBlockedByMigrationFailure) return;
@@ -198,5 +215,10 @@ public partial class UniversalSqueakerMod
             saveStatusUntil = Time.realtimeSinceStartup + 1.8f;
         }
     }
+}
+
+public partial class UniversalSqueakerSettings
+{
+    partial void PopulateBehaviorDirectory(ref BehaviorSourceDirectory directory) => directory = UsOneShotRuntime.BehaviorSources;
 }
 

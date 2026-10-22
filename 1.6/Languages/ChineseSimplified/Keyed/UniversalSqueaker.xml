@@ -210,8 +210,6 @@
   <US.Tuning.ScaleCooldown>高倍速时保持叫声节奏稳定</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>按语言能力（Talking）调整普通叫声尝试</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>可听区域内已接入 US 的 Pawn 较多时减少周期叫声</US.Tuning.ScalePopulation>
-  <US.Tuning.EatPrecision>仅在真正进食（正在摄入营养）时触发 Eat 叫声</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>使用成瘾品</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>显示镜头指示器</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>全局音量：{0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>叫声间隔总控：{0}  ·  1.0x 使用当前默认节奏</US.Tuning.MinInterval>
@@ -363,10 +361,6 @@
   <US.Help.BasicTuning.ScaleTalking.Text>按发声者的语言能力（Talking）调整普通叫声：能力越低，普通叫声尝试通过的概率越低。自带交谈门控的动作不受影响。默认开启。</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>可听区域缩放</US.Help.BasicTuning.ScalePopulation.Label>
   <US.Help.BasicTuning.ScalePopulation.Text>可听区域内已接入 US 的 Pawn 较多时，周期叫声减少：间隔随可闻 Pawn 数除以十的系数增大（不低于一倍），随机尝试的通过概率同比例下降，因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
-  <US.Help.BasicTuning.EatPrecision.Label>进食判定</US.Help.BasicTuning.EatPrecision.Label>
-  <US.Help.BasicTuning.EatPrecision.Text>默认关：整段进食行程都算 Eat 叫声，含走向食物的路程。开启后只算真正摄入营养的阶段；大麻烟卷等零营养物品在未勾选「使用成瘾品」时不算，啤酒、仙馔等含营养的饮品仍会算。关闭本项会同时清除并隐藏下方选项。</US.Help.BasicTuning.EatPrecision.Text>
-  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>使用成瘾品</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
-  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>只在上方开关开启后出现。按咀嚼/点燃阶段判定，因此零营养成瘾品也会触发。若无法识别该阶段，则整段进食工作都算。</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
@@ -493,7 +487,7 @@
   <US.Reset.DistanceDefaults>恢复听取距离默认</US.Reset.DistanceDefaults>
   <US.Reset.Confirm>确认恢复</US.Reset.Confirm>
   <US.Reset.Area.Distance.Confirm>这将把听取距离区域恢复为默认值:输出音量、距离预设与距离范围。动作/心情调音、包选择与 fallback 表保持不变。</US.Reset.Area.Distance.Confirm>
-  <US.Reset.Area.Basics.Confirm>这将把播放行为区域恢复为默认值:彩蛋音效、随时间速度缩放冷却、随说话缩放频率、随可见人口缩放周期、相机指示器、婴儿动作、进食精确度及其药物子开关。其它区域与 fallback 表保持不变。</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Basics.Confirm>恢复播放行为控制与 Pawn 服务对象级 Eat 参数。保留 Race/Xenotype 覆盖、作者来源及其他区域；域覆盖请用准确动作行或层恢复。</US.Reset.Area.Basics.Confirm>
   <US.Reset.Area.Timing.Confirm>这将把触发时机区域恢复为默认值:最小间隔与全局冷却乘数。其它区域与 fallback 表保持不变。</US.Reset.Area.Timing.Confirm>
   <US.Reset.Area.Diagnostics.Confirm>这将把诊断区域恢复为默认值:开发者日志模式与本地化调试动作菜单。每窗口的布局诊断开关不是设置,不受影响。</US.Reset.Area.Diagnostics.Confirm>
   <US.Reset.Area.Action.Confirm>这将把下方所示当前层域的每一条动作行恢复为默认值(范围、间隔与概率覆盖,以及该行的预设锚点)。其它层、域和区域保持不变。</US.Reset.Area.Action.Confirm>
@@ -597,4 +591,21 @@
   <US.Kernel.CandidateActive>当前运行明示注入的开发候选。活跃度 A 与响应参数采用新 Config／作者合同；旧节奏控件已退役。</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>旧概率与心情因子编辑器已退役。上方动作许可仍有效；独立响应启用、参数及 Apply／Skip 参与请使用当前作者／Config 合同。</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>内核：最后观察到的决策</US.Kernel.LastObservedDecision>
+  <US.Eat.Any>不限物品</US.Eat.Any>
+  <US.Eat.ExcludeDrugs>排除药物</US.Eat.ExcludeDrugs>
+  <US.Eat.Execution>仅实际执行</US.Eat.Execution>
+  <US.Eat.Inherit>继承此字段</US.Eat.Inherit>
+  <US.Eat.NonNutritionGiving>仅不提供营养</US.Eat.NonNutritionGiving>
+  <US.Eat.NutritionGiving>仅提供营养</US.Eat.NutritionGiving>
+  <US.Eat.OnlyDrugs>仅药物</US.Eat.OnlyDrugs>
+  <US.Eat.WholeProcess>整个进食过程</US.Eat.WholeProcess>
+  <US.Help.BasicTuning.EatDrug.Label>药物筛选</US.Help.BasicTuning.EatDrug.Label>
+  <US.Help.BasicTuning.EatDrug.Text>按实际摄入物的 IsDrug 筛选，与营养、阶段独立。「不限」不依赖该事实，默认不限。</US.Help.BasicTuning.EatDrug.Text>
+  <US.Help.BasicTuning.EatNutrition.Label>营养筛选</US.Help.BasicTuning.EatNutrition.Label>
+  <US.Help.BasicTuning.EatNutrition.Text>按实际摄入物的 IsNutritionGivingIngestible 筛选，与阶段、药物属性独立。「不限」不依赖该事实，默认不限。</US.Help.BasicTuning.EatNutrition.Text>
+  <US.Help.BasicTuning.EatPhase.Label>Eat 阶段</US.Help.BasicTuning.EatPhase.Label>
+  <US.Help.BasicTuning.EatPhase.Text>编辑当前 Pawn 服务对象、Race 或 Xenotype 调音层。整个过程包含准备；实际执行要求真正进入咀嚼或点燃 Toil。精确事实缺失时暂停该路径，不放宽范围。「继承」只清除此字段。</US.Help.BasicTuning.EatPhase.Text>
+  <US.Tuning.EatDrug>Eat 药物筛选</US.Tuning.EatDrug>
+  <US.Tuning.EatNutrition>Eat 营养筛选</US.Tuning.EatNutrition>
+  <US.Tuning.EatPhase>Eat 阶段（当前调音层）</US.Tuning.EatPhase>
 </LanguageData>

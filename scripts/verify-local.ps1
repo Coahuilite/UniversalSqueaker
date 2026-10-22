@@ -388,6 +388,20 @@ foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
             & (Join-Path $selectFixtureOutput 'UniversalSqueakerAudioBindingTests.exe') --da-select-missing-target
         }
 }
+# Gates 24/25: D-B production Eat/config consumer and physically missing precision seam.
+Invoke-Check 'D-B Eat native-shape production owner and independent result root' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --db-eat' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --db-eat }
+Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole' `
+    'build AudioBindingTests -p:EatFixtureTarget=MissingChew with isolated output/obj; run --db-eat-missing' `
+    {
+        $eatOutput = Join-Path $root 'dist/verify-eat-readiness/MissingChew'
+        $eatObj = Join-Path $root 'dist/verify-eat-readiness/obj/MissingChew'
+        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
+            -p:EatFixtureTarget=MissingChew "-p:OutputPath=$eatOutput/" "-p:IntermediateOutputPath=$eatObj/"
+        if ($LASTEXITCODE -ne 0) { throw 'Eat missing-target fixture build failed' }
+        & (Join-Path $eatOutput 'UniversalSqueakerAudioBindingTests.exe') --db-eat-missing
+    }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

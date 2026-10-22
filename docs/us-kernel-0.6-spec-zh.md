@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r8（D-A 合同身份纵切／Select接缝缺实现隔离）。状态：**身份链开发候选，编译／定向运行证据随验收页更新；Eat 新分层及完整15包仍待后续实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
+修订：2026-10-23，r9（D-B 有效配置与Eat生产纵切）。状态：**D-B技术候选，有效配置与Eat已接入生产owner；其余12包D-C仍待实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -129,7 +129,7 @@ All：任一 False 则 False，全部 True 才 True，其余 Unknown；Any：任
 
 作者来源、玩家Pawn服务层、Race、合法Xeno按第9节覆盖；固定合同不可删除。最小声音包只需身份、准确目标与 Eat→可解析AudioId，不必给精细参数、另建动作或补原版适配。精确阶段不增加机会、不保证短阶段必播。OneShot在所选过程／阶段退出后停止新起播、既有自然尾；Sustained按所选依据失效结束并沿原生淡出，不能在每次chewing退出时一律结束WholeProcess。
 
-JobDriver_Ingest的准备／执行／Finalize、工厂不等进入、FoodFeedPatient的Deliveree、dispenser目标切换、Corpse复入、物品属性与0营养结果分别记证。新settings／保存恢复／session分支依赖及新适配属于D-B，当前旧EatState布尔联动不代表已完成这些目标。
+JobDriver_Ingest的准备／执行／Finalize、工厂不等进入、FoodFeedPatient的Deliveree、dispenser目标切换、Corpse复入、物品属性与0营养结果分别记证。D-B现已按实际进入／退出、Deliveree及返回结果接入生产owner；公开入口与配置语义见§22。旧布尔联动与debugName宽化已退役。
 
 ## 5. 初始化、资源身份与目录
 
@@ -289,7 +289,7 @@ Xenotype 请求可按明确路径使用 Race 常规声音，但不会因此借�
                     ＋ 独立 system profile 总控
 ```
 
-作者更具体的 Xenotype 默认不能盖过玩家 Race 覆盖。未写字段是不贡献，不等于显式 false、0 或 1。旧窗口Global行为行只属于Pawn服务层，不能影响NonPawn；system总控独立，域不能重新启用或抵消。新完整profile持久化在D-B实施；同一个字段不兼任两种语义。
+作者更具体的 Xenotype 默认不能盖过玩家 Race 覆盖。未写字段是不贡献，不等于显式 false、0 或 1。旧窗口Global行为行只属于Pawn服务层，不能影响NonPawn；system总控独立，域不能重新启用或抵消。完整profile现通过生产actionTuning稀疏行、ExposeData及同一原子保存入口持久化；同一个字段不兼任两种语义。
 
 可继承的 Pawn 策略包括动作资格／scope、动作与共用硬间隔基准、局部等待倾向、适用的 Talking／进食／人口节奏响应和调制参数。真实器官／年龄、DLC 可用性、身份、总音量、全局活跃度与彩蛋总许可不由 Race 覆盖伪造。距离仍只有当前全局定义，不增加逐种族范围。
 
@@ -589,7 +589,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 ### 同一身份进入配置、准确域与请求
 
-行为来源使用完整键，例如`<action key="example/InjuredSelect" enabled="true" hardIntervalTicks="50" volume="0.25"/>`。现有玩家动作行／响应API也接受完整键；`ResetActionTuningRow`只清该准确行的玩家字段，不清来源意图或作者快照。旧枚举格式在其适配边界映射为`us.core/<name>`，不会把`example/Select`或继承动作尾名当内置键。新完整服务层持久化及Eat参数仍待D-B。
+行为来源使用完整键，例如`<action key="example/InjuredSelect" enabled="true" hardIntervalTicks="50" volume="0.25"/>`。现有玩家动作行／响应API也接受完整键；`ResetActionTuningRow`只清该准确行的玩家字段，不清来源意图或作者快照。旧枚举格式在其适配边界映射为`us.core/<name>`，不会把`example/Select`或继承动作尾名当内置键。新完整服务层持久化及Eat参数见§22。
 
 `UsVoicePackDef.declaration`可用`race`简写Pawn Race；也可用`family=Pawn`、`target`及可选`child`表达准确Race/Xeno。不要同时给`race`和`target`。目标须是实际Pawn定义；子域须已加载且Biotech可用，实际运行还服从resolver给该Pawn解析的合法子域。子域选择不替代主域启用。
 
@@ -604,3 +604,55 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 两个观察目标共用缓存readiness与Prepare；任一缺失则两patch均跳过，只停用Select观察能力，一次具名记录缺失目标。SelectEvent为带SelectObservationUnavailable原因的Unknown，直接通知不能伪造接受事实；依赖该实现的来源贡献暂停，无关合同仍运行。缺目标替身与两目标存在路径分别实证，详见[事实记录](us-kernel-0.6-fact-adapters-zh.md)。
 
 官方Pawn资格仍须用户决定。隔离开发输入`UsDevelopmentPolicy`最后一个可选参数为`UsSelectPawnQualification`：省略`Unselected`会解释性拒绝官方Select；测试可明确选`Unrestricted`或`ResponsivePlayerControlled`，不写Config、不作为普通默认。这不改变已定的通用Select定义，也不替全部15包决定资格或发行节奏。
+
+## 22 D-B 有效配置与Eat当前入口
+
+### 一次决策只读一个配置视图
+
+`UniversalSqueakerSettings.CaptureBehaviorConfiguration()`复制来源状态与玩家行；每个动作从同一视图解析，字段来源、实际依赖与view Id进入诊断。返回值的Read再给副本，后续编辑不修改旧视图或共享合同定义。合法Xeno来自现有resolver的当前准确上下文，不直接相信raw genes；NonPawn仍只有中性配置／目录／核心链，没有完整原生宿主。
+
+三类控制分开：
+
+- **system**：声音服务模式、system总音量G、活动A、距离及彩蛋总许可等原全局控制。域enabled不能重开Disabled；局部音量不能抵消G=0。已派发声音保留L，在原生实例更新按L×当前G一次输出；0音量不改四结果结算为失败。
+- **服务对象profile**：Pawn的空Race／空Xeno动作行；NonPawn则为自己的Namespace＋空Target行。不是system，不互相继承。NonPawn不接收Pawn的Scope、Talking、Age/Mood或Eat字段。
+- **准确域覆盖**：Pawn Race／合法Xeno；NonPawn自己的Namespace＋Target。同名Target位于两个Namespace仍是两份配置。
+
+字段按“包装缺省 → 选中主域作者 → 选中合法子域作者 → 玩家服务对象profile → 玩家主域 → 玩家合法子域”稀疏折叠；所有作者先于玩家，最终才补缺省。false、0是贡献，不是继承。完整ActionId是身份，父固定条件继承不复制父参数。未配置的可选能力不成为依赖；非法显式值暂停相应配置，不修成默认。固定条件必需事实仍在依赖集中，不能由Whole参数抹掉固定Execution限制。
+
+玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，旧键只在边界规范成完整内置键。
+
+`UniversalSqueakerMod.TryChangeBehaviorOverride(family, namespace, target, child, fullActionId, values, out failure)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率／预设来源字段仍保留给原调用方。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
+
+### 三个Eat参数可以独立设置
+
+当前公开schema为：
+
+| 字段 | 合法值 | 缺省／额外依赖 |
+| --- | --- | --- |
+| phase | WholeProcess / Execution | WholeProcess；Execution增加us.core/IngestionExecution |
+| nutritionScope | Any / NutritionGiving / NonNutritionGiving | Any；非Any增加us.core/IngestibleNutrition |
+| drugScope | Any / ExcludeDrugs / OnlyDrugs | Any；非Any增加us.core/IngestibleDrug |
+
+例如作者行为来源可写：
+
+```xml
+<action key="us.core/Eat" phase="Execution"
+        nutritionScope="Any" drugScope="ExcludeDrugs" />
+```
+
+玩家在既有“规则与调制”选择Pawn／Race／合法Xeno层，再编辑三个独立下拉框；“继承此字段”只清该层该字段。Basics恢复只清Pawn服务级Eat参数，Race/Xeno用准确动作行／层恢复。没有旧精确／包含药物bool、调试名称识别或Unknown→Whole兼容分支。摄入结果根没有活跃阶段参数；在不带摄入过程／执行固定条件的合同上显式配置这些Eat字段会报告EatParametersRequireIngestionContract。
+
+### 最小包与两个不同方向的扩展
+
+[EatMinimal.xml](examples/0.6/EatMinimal.xml)只声明包Def身份、Ratkin准确目标及Eat→Core Click音源，不要求行为来源／精确字段／作者适配。Click用于可解析示例，不是语音设计；实际声音包可换成自己声明的SoundDef。US不复制Core或SR资源。
+
+[EatExtensions.xml](examples/0.6/EatExtensions.xml)给出可加载的：
+
+- `example/InjuredEat`：继承Eat固定过程，增加当前伤口；有自己的三轴、硬间隔与局部音量配置，直接复用同一AudioId。
+- `example/AfterIngestion`：独立引用`us.core/IngestionResultEvent`，不继承已经退出的chewing条件；音源和配置独立。例中的行为来源仍须显式选中，音频开关不选行为来源。
+
+原版观察先区分driver执行者、实际摄入者和当时物品：Setup/Cleanup维护支持的Ingest／FoodFeedPatient过程；Chew工厂只加观察，原init正常返回且当前Toil一致才进入，finish退出。Whole持续不因一次Chew退出停，Execution按所选阶段退出沿既有槽End；OneShot自然尾。Thing.Ingested仅在进入时可摄入且正常返回后发布结果；合法0值保留，异常／Job结束不伪造成功。
+
+中性`IngestionResultFact`携Ingester／Item／ItemDef／Nutrition，进入本次FactSnapshot、ResponseContext.Ingestion及PlaybackRequest.Ingestion；不传Pawn／Thing，不缓存成下一机会事件。事实、角色、版本与反例见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。缺执行接缝按成组readiness局部隔离，Whole／无关能力保留；不会用全局PatchAll catch藏故障。
+
+本切片证据为生产纯源／真实loader、生产settings/ExposeData/原子文件与Scribe替身往返、真实Harmony＋明确平台double，以及实际Source/Host绑定／布局。目标引用1.6.4871；本轮直接方法体来源1.6.4850，继承4871记录另列。真实游戏Config、原生方法体／挂接／音频和屏幕听感仍待授权与人工；全部15包人审pending，其余12包D-C不在本交付内。

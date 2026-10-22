@@ -293,16 +293,12 @@ internal static class UsKernelContractInvariantTests
                 "the declarative basic-tuning card owns a control on binding '" + expected + "'");
         }
 
-        // The parent/child rule is declarative too: the child row is gated by the parent's own bool.
-        XmlElement? child = null;
-        foreach (XmlNode node in card.SelectNodes(".//*[@Id='basic-eat-child-row']")!)
+        foreach (string axis in new[] { "phase", "nutrition", "drug" })
         {
-            if (node is XmlElement element) child = element;
+            var choice = card.SelectSingleNode(".//Widget[@Bind='eat-" + axis + "']") as XmlElement;
+            Assert(choice != null && choice.GetAttribute("Kind") == "input/dropdown" && !choice.HasAttribute("VisibleKey"),
+                "DB three independent Eat selectors exist without parent/child visibility");
         }
-
-        Assert(child != null && child.GetAttribute("VisibleKey") == "eat-precision",
-            "the eat-precision child row is gated by VisibleKey reading the parent's own bool binding");
-
         // The control lives in the Distance workspace and must not appear on this card. The assertion is
         // scoped to the CARD rather than to the whole manifest: since S4-3b the Distance workspace's own
         // three preset buttons are declarative input/button atoms, so the action legitimately exists in this
@@ -333,6 +329,8 @@ internal static class UsKernelContractInvariantTests
 
     private static string RepoRoot()
     {
+        string cwd = Environment.CurrentDirectory;
+        if (File.Exists(Path.Combine(cwd, "Source", "UniversalSqueaker", "UniversalSqueaker.csproj"))) return cwd;
         string? current = AppContext.BaseDirectory;
         for (int i = 0; i < 8 && current != null; i++)
         {

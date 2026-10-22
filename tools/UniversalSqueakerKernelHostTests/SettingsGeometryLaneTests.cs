@@ -87,7 +87,7 @@ internal static class SettingsGeometryLaneTests
         Step("uniform support-row control column at 1024/736/480/320 in EN + ZH", UniformControlColumn);
         Step("a long translated label cannot move the control column", LongLabelKeepsTheColumn);
         Step("navigation cards share one stable geometry", NavigationCardsShareOneGeometry);
-        Step("the eat-precision child row exists only while its parent switch is on", ChildRowFollowsTheParentSwitch);
+        Step("the three Eat axes remain independent and use exact tuning layers", ChildRowFollowsTheParentSwitch);
         Step("the declarative result card reproduces the card chrome (step A)", PacksResultSectionReproducesTheCardChrome);
         Console.WriteLine("SettingsGeometryLaneTests ALL PASS");
         return 0;
@@ -499,79 +499,9 @@ internal static class SettingsGeometryLaneTests
 
     private static void ChildRowFollowsTheParentSwitch()
     {
-        var metrics = new Program.StubMetrics();
-        Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
-        try
-        {
-            var offSource = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = false };
-            float offCard;
-            List<Rect> offSlots;
-            using (UiHost host = UsKernelSettingsHost.Create(offSource, metrics))
-            {
-                // UIR-001: Record sweeps the workspaces; the tuning tab is included there.
-                Rec rec = Record(host, 1024f, Height);
-                (offCard, offSlots) = BasicTuningSlotGeometry(rec);
-                Assert(offSlots.Count == 4,
-                    "with the parent OFF the card draws four effective checkboxes (egg + baby + talking + the"
-                    + " parent) - the child row does not exist at all, got " + offSlots.Count);
-                Assert(!rec.TabSnapshots["Tuning"].RectById.ContainsKey("basic-eat-child-row"),
-                    "and the child ROW must leave the arrangement entirely, not merely paint nothing:"
-                    + " VisibleKey is the engine's gate, and an arranged-but-invisible row would still"
-                    + " measure and still take the pointer");
-                Assert(offSource.LastEatPrecisionIncludeDrugs == null,
-                    "and nothing may write the child value while it is off screen");
-            }
-
-            var onSource = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
-            float onCard;
-            List<Rect> onSlots;
-            using (UiHost host = UsKernelSettingsHost.Create(onSource, metrics))
-            {
-                Rec rec = Record(host, 1024f, Height);
-                (onCard, onSlots) = BasicTuningSlotGeometry(rec);
-
-                Assert(onSlots.Count == offSlots.Count + 1,
-                    "turning the parent on adds exactly one checkbox band (the child), got "
-                    + offSlots.Count + " -> " + onSlots.Count);
-                Assert(rec.TabSnapshots["Tuning"].RectById.ContainsKey("basic-eat-child-row"),
-                    "and the child ROW is arranged once its parent bool answers true");
-                Assert(onCard > offCard + 20f,
-                    "and the card grows by the child row, got off=" + Num(offCard) + " on=" + Num(onCard));
-                for (int index = 0; index < offSlots.Count; index++)
-                {
-                    Rect before = offSlots[index];
-                    Rect after = onSlots[index];
-                    Assert(Math.Abs(before.x - after.x) <= 0.01f && Math.Abs(before.y - after.y) <= 0.01f
-                        && Math.Abs(before.width - after.width) <= 0.01f && Math.Abs(before.height - after.height) <= 0.01f,
-                        "checkbox slot " + index + " must keep identical geometry across the parent toggle (the"
-                        + " child is now the ONLY row that appears or disappears): "
-                        + Describe(before) + " -> " + Describe(after));
-                }
-
-                // UIR-001: Record leaves the host on the default workspace; the child row lives on the
-                // Tuning tab, so the press switches there and re-arranges before aiming.
-                host.Bindings.Invoke("set-tab", "Tuning");
-                host.MeasureAndArrange(new Vector2(1024f, Height));
-                Program.SetScrollPositionById(host.Session, "content-scroll", Vector2.zero);
-                host.MeasureAndArrange(new Vector2(1024f, Height));
-                PressRect(host, 1024f, onSlots[onSlots.Count - 1]);
-                Assert(onSource.LastEatPrecisionIncludeDrugs == true,
-                    "with the parent on the same press must route exactly one child write, got "
-                    + (onSource.LastEatPrecisionIncludeDrugs?.ToString() ?? "null"));
-                Assert(onSource.LastEatPrecision == null,
-                    "and that press must not touch the parent switch");
-            }
-
-            Console.WriteLine("[eat-child] parent-off card=" + Num(offCard) + "px slots=" + offSlots.Count
-                + " child-absent=true; parent-on card=" + Num(onCard) + "px slots=" + onSlots.Count
-                + " child-present=true press-writes=1");
-        }
-        finally
-        {
-            Program.SetTranslatorResolver(null);
-        }
+        // The retired dependent-checkbox fixture is replaced by three independent dropdowns.
+        DbEatUiTests.Run();
     }
-
     /// <summary>Width of the declared input/checkbox band every Overview card's control row ends in
     /// (the manifest's Width attribute; the atom paints its own 18px box inside it).</summary>
     private const float DeclaredCheckboxWidth = 36f;
@@ -701,7 +631,7 @@ internal static class SettingsGeometryLaneTests
     {
         // Parent ON: the child row exists only while its parent switch is on (ruling 2026-09-15). The
         // parent-off shape is covered by ChildRowFollowsTheParentSwitch.
-        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+        var source = new RecordingSettingsSource { RichData = true };
         UiHost host = UsKernelSettingsHost.Create(source, metrics);
         host.Bindings.Invoke("set-tab", "Overview");
         return host;

@@ -21,6 +21,7 @@
          bin/stubs output (INTERACTION-EXECUTION-20261008.md: the consumer verifies in its own
          outputs; FL released the slot at the freeze). -p:FerriteLibHarness=<path> still overrides. -->
     <FerriteLibHarness Condition="'$(FerriteLibHarness)' == ''">$(MSBuildProjectDirectory)\..\FerriteLib.Stubs</FerriteLibHarness>
+    <UsProductArtifactPath Condition="'$(UsProductArtifactPath)' == ''">$(MSBuildProjectDirectory)\..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</UsProductArtifactPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
@@ -34,7 +35,7 @@
        dotnet SDK 10 在嵌套 MSBuild 解析 UniversalSqueaker.csproj 的 SDK workload locator 时
        会静默失败（MSB4276），但直接构建生产项目成功；直接引用保持“使用真实生产代码”且可在
        no-restore 的 focused harness 中稳定复现。 -->
-  <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences">
+  <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences" Condition="'$(UsProductAlreadyBuilt)' != 'true'">
     <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactFullPath)&quot; --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
@@ -42,7 +43,7 @@
   <ItemGroup>
     <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
     <Reference Include="UniversalSqueaker">
-      <HintPath>..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</HintPath>
+      <HintPath>$(UsProductArtifactPath)</HintPath>
       <Private>true</Private>
     </Reference>
     <Reference Include="FerriteLib.UiKit">

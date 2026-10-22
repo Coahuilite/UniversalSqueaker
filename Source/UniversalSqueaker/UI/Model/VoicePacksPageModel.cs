@@ -132,6 +132,7 @@ public static class VoicePacksPageModel
             RaceBoardSource.Collect(settings, fallbackRaces, biotech), mode,
             state.BoardGroup, state.BoardFilter, state.BoardSearch, state.BoardXenoExpanded);
 
+        var eat = settings.ReadEatParameters(tuningRace, tuningXeno);
         return new VoicePacksViewState(
             mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed,
             settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation,
@@ -140,8 +141,8 @@ public static class VoicePacksPageModel
             settings.distanceRange.min, settings.distanceRange.max, biotech, banner, filteredRaces,
             filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains,
             moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter,
-            state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, settings.eatPrecisionEnabled,
-            settings.eatPrecisionIncludeDrugs, settings.allowBabyActions,
+            state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, eat.Phase ?? EatPhase.WholeProcess,
+            eat.NutritionScope ?? EatNutritionScope.Any, eat.DrugScope ?? EatDrugScope.Any, settings.allowBabyActions,
             packCards, packResultsEmpty, packNoPacks,
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
             state.FallbackStatusKey,
@@ -466,8 +467,8 @@ public static class VoicePacksPageModel
             string anchor = "";
             foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
             {
-                if (record == null || record.IsValidLayer(out int recordLayer) == false) continue;
-                if (!string.Equals(record.actionKey, key, StringComparison.Ordinal)) continue;
+                if (record == null || record.serviceFamily != "Pawn" || record.IsValidLayer(out int recordLayer) == false) continue;
+                if (!string.Equals(ActionKey.DefinitionId(record.actionKey), ActionKey.DefinitionId(key), StringComparison.Ordinal)) continue;
                 bool layer0 = recordLayer == 0;
                 bool layer1 = recordLayer == 1 && string.Equals(record.raceDefName, race, StringComparison.Ordinal);
                 bool layer2 = recordLayer == 2 && string.Equals(record.raceDefName, race, StringComparison.Ordinal)
@@ -876,7 +877,7 @@ public static class VoicePacksPageModel
                 Add(record.raceDefName, record.xenotypeDefName);
 
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
-            if (record != null && record.IsValidLayer(out int actionLayer) && actionLayer == 2)
+            if (record != null && record.serviceFamily == "Pawn" && record.IsValidLayer(out int actionLayer) && actionLayer == 2)
                 Add(record.raceDefName, record.xenotypeDefName);
         foreach (MoodTuningRecord record in settings.moodTuning ?? new List<MoodTuningRecord>())
             if (record != null && record.IsValidLayer(out int moodLayer) && moodLayer == 2)
@@ -1493,8 +1494,8 @@ public static class VoicePacksPageModel
         string anchor = "";
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
-            if (record == null || !string.Equals(record.actionKey, actionKey, StringComparison.Ordinal)) continue;
-            if (record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
+            if (record == null || !string.Equals(ActionKey.DefinitionId(record.actionKey), ActionKey.DefinitionId(actionKey), StringComparison.Ordinal)) continue;
+            if (record.serviceFamily != "Pawn" || record.IsValidLayer(out int recordLayer) == false || recordLayer != state.TuningLayer) continue;
             if (state.TuningLayer >= 1 && !string.Equals(record.raceDefName ?? "", state.TuningRaceDefName ?? "", StringComparison.Ordinal)) continue;
             if (state.TuningLayer == 2 && !string.Equals(record.xenotypeDefName ?? "", state.TuningXenotypeDefName ?? "", StringComparison.Ordinal)) continue;
             if (!string.IsNullOrEmpty(record.sourcePresetDefName)) anchor = record.sourcePresetDefName;

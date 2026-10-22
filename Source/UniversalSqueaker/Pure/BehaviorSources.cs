@@ -55,6 +55,9 @@ public sealed class BehaviorValues
     public long? HardIntervalTicks;
     public double? Volume;
     public double? Pitch;
+    public EatPhase? Phase;
+    public EatNutritionScope? NutritionScope;
+    public EatDrugScope? DrugScope;
     public BehaviorValues Copy()
     {
         var copy = (BehaviorValues)MemberwiseClone();
@@ -77,15 +80,15 @@ public sealed class BehaviorValues
         }
         foreach (var response in value.ResponseEnabled)
         {
-            ResponseEnabled[response.Key] = response.Value;
             if (response.Key == "us.core/Age")
             {
                 AgeEnabled = response.Value;
             }
-            if (response.Key == "us.core/Mood")
+            else if (response.Key == "us.core/Mood")
             {
                 MoodEnabled = response.Value;
             }
+            else ResponseEnabled[response.Key] = response.Value;
         }
         foreach (var response in value.Participation)
         {
@@ -93,8 +96,14 @@ public sealed class BehaviorValues
         }
         Volume = value.Volume ?? Volume;
         Pitch = value.Pitch ?? Pitch;
+        Phase = value.Phase ?? Phase;
+        NutritionScope = value.NutritionScope ?? NutritionScope;
+        DrugScope = value.DrugScope ?? DrugScope;
     }
     public bool Valid => (!Scope.HasValue || Enum.IsDefined(typeof(SqueakActionScope), Scope.Value))
+        && (!Phase.HasValue || Enum.IsDefined(typeof(EatPhase), Phase.Value))
+        && (!NutritionScope.HasValue || Enum.IsDefined(typeof(EatNutritionScope), NutritionScope.Value))
+        && (!DrugScope.HasValue || Enum.IsDefined(typeof(EatDrugScope), DrugScope.Value))
         && (!HardIntervalTicks.HasValue || HardIntervalTicks.Value >= 0)
         && (!Volume.HasValue || Finite(Volume.Value) && Volume.Value >= 0 && Volume.Value <= float.MaxValue)
         && (!Pitch.HasValue || Finite(Pitch.Value) && Pitch.Value > 0 && Pitch.Value <= float.MaxValue)
@@ -102,6 +111,26 @@ public sealed class BehaviorValues
         && ResponseEnabled.Keys.All(Exact) && Participation.Keys.All(Exact)
         && (!AgeEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Age"))
         && (!MoodEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Mood"));
+    public bool ApplicableTo(string family) => family == "Pawn" || !Phase.HasValue && !NutritionScope.HasValue && !DrugScope.HasValue
+        && !AgeEnabled.HasValue && !MoodEnabled.HasValue && !TalkingEnabled.HasValue && !Scope.HasValue
+        && !ResponseEnabled.ContainsKey("us.core/Age") && !ResponseEnabled.ContainsKey("us.core/Mood");
+    public IEnumerable<string> PresentKeys()
+    {
+        if (Enabled.HasValue) yield return "enabled";
+        if (Scope.HasValue) yield return "scope";
+        if (HardIntervalTicks.HasValue) yield return "hardIntervalTicks";
+        if (TalkingEnabled.HasValue) yield return "talkingEnabled";
+        if (Volume.HasValue) yield return "volume";
+        if (Pitch.HasValue) yield return "pitch";
+        if (AgeEnabled.HasValue) yield return "ageEnabled";
+        if (MoodEnabled.HasValue) yield return "moodEnabled";
+        if (Phase.HasValue) yield return "phase";
+        if (NutritionScope.HasValue) yield return "nutritionScope";
+        if (DrugScope.HasValue) yield return "drugScope";
+        foreach (string key in ResponseEnabled.Keys) yield return "response:" + key;
+        foreach (string key in ResponseParameters.Keys) yield return "parameter:" + key;
+        foreach (string key in Participation.Keys) yield return "participation:" + key;
+    }
     private static bool Exact(string key) => !string.IsNullOrWhiteSpace(key) && key == key.Trim();
     private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
 }
@@ -169,7 +198,7 @@ public sealed class BehaviorSourceState
     public bool Bind(BehaviorDomain domain, string sourceId, BehaviorSourceDirectory directory)
     {
         var source = directory.Find(domain, sourceId);
-        if (string.IsNullOrWhiteSpace(sourceId) || source == null || source.Semantics != 1 || source.Contributions.Any(x => !Valid(x)))
+        if (string.IsNullOrWhiteSpace(sourceId) || source == null || source.Semantics != 1 || source.Contributions.Any(x => !Valid(x, domain.Family)))
         {
             return false;
         }
@@ -200,8 +229,8 @@ public sealed class BehaviorSourceState
             }
             // A bad action update preserves that action's last good contribution; unrelated actions refresh.
             var next = current.Copy();
-            next.Contributions = current.Contributions.Where(Valid).Select(x => x.Copy()).ToList();
-            foreach (var bad in current.Contributions.Where(x => !Valid(x)))
+            next.Contributions = current.Contributions.Where(x => Valid(x, current.Domain.Family)).Select(x => x.Copy()).ToList();
+            foreach (var bad in current.Contributions.Where(x => !Valid(x, current.Domain.Family)))
             {
                 var previous = binding.Snapshot?.Contributions.SingleOrDefault(x => x.Action == bad.Action);
                 if (previous != null)
@@ -213,13 +242,18 @@ public sealed class BehaviorSourceState
         }
     }
 
-    private static bool Valid(BehaviorContribution value) => !string.IsNullOrWhiteSpace(value.Action)
-        && value.Values.Valid && value.Values.Participation.Count == 0
+    private static bool Valid(BehaviorContribution value, string family) => !string.IsNullOrWhiteSpace(value.Action)
+        && value.Values.Valid && value.Values.ApplicableTo(family) && value.Values.Participation.Count == 0
         && value.RequiredFacts.All(x => !string.IsNullOrWhiteSpace(x));
 
     public BehaviorValues Resolve(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
         IEnumerable<BehaviorValues> playerLayers, Func<string, bool> implementationAvailable, out bool paused,
         Action<string>? reportPause = null)
+        => Resolve(domain, action, directory, playerLayers, implementationAvailable, out paused, reportPause, null);
+
+    public BehaviorValues Resolve(BehaviorDomain domain, string action, BehaviorSourceDirectory directory,
+        IEnumerable<BehaviorValues> playerLayers, Func<string, bool> implementationAvailable, out bool paused,
+        Action<string>? reportPause, IDictionary<string, string>? origins, ISet<string>? dependencies = null)
     {
         var result = new BehaviorValues();
         paused = false;
@@ -255,7 +289,8 @@ public sealed class BehaviorSourceState
                     continue;
                 }
             }
-            if (contribution == null || !Valid(contribution))
+            bool fromSnapshot = contribution == null || !Valid(contribution, layer.Family);
+            if (fromSnapshot)
             {
                 contribution = binding.Snapshot?.Semantics == 1
                     ? binding.Snapshot.Contributions.SingleOrDefault(x => x.Action == action)
@@ -276,15 +311,23 @@ public sealed class BehaviorSourceState
                 paused = true;
                 reportPause?.Invoke("MissingRequiredImplementation:" + binding.SourceId + ":" + action);
             }
+            if (dependencies != null) foreach (string required in contribution.RequiredFacts) dependencies.Add(required);
             result.Overlay(contribution.Values);
+            if (origins != null)
+                foreach (string key in contribution.Values.PresentKeys()) origins[key] = "author:" + binding.SourceId
+                    + "@" + layer.Family + ":" + layer.Namespace + ":" + layer.Target + ":" + layer.Child + (fromSnapshot ? ":snapshot" : "");
         }
+        int playerIndex = 0;
         foreach (var player in playerLayers)
         {
-            if (!player.Valid)
+            if (!player.Valid || !player.ApplicableTo(domain.Family))
             {
                 throw new ArgumentException("InvalidPlayerBehaviorContribution");
             }
             result.Overlay(player);
+            if (origins != null)
+                foreach (string key in player.PresentKeys()) origins[key] = "player:" + playerIndex;
+            playerIndex++;
         }
         return result;
     }
@@ -353,7 +396,7 @@ public sealed class BehaviorSourceState
             {
                 binding.Snapshot = ReadSource(snapshot, domain, binding.SourceId);
             }
-            if (binding.Snapshot?.Semantics == 1 && binding.Snapshot.Contributions.Any(x => !Valid(x)))
+            if (binding.Snapshot?.Semantics == 1 && binding.Snapshot.Contributions.Any(x => !Valid(x, domain.Family)))
             {
                 throw new ArgumentException("Invalid author snapshot");
             }
@@ -396,7 +439,7 @@ public sealed class BehaviorSourceState
         };
         foreach (XmlElement action in node.ChildNodes.OfType<XmlElement>())
         {
-            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "requires");
+            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "phase", "nutritionScope", "drugScope", "requires");
             if (action.Name != "action")
             {
                 throw new ArgumentException("Invalid behavior action shape");
@@ -439,6 +482,9 @@ public sealed class BehaviorSourceState
                     case "pitch":
                         values.Pitch = double.Parse(text, CultureInfo.InvariantCulture);
                         break;
+                    case "phase": values.Phase = (EatPhase)Enum.Parse(typeof(EatPhase), text); break;
+                    case "nutritionScope": values.NutritionScope = (EatNutritionScope)Enum.Parse(typeof(EatNutritionScope), text); break;
+                    case "drugScope": values.DrugScope = (EatDrugScope)Enum.Parse(typeof(EatDrugScope), text); break;
                     default:
                         throw new ArgumentException("Unknown behavior parameter " + field.Name);
                 }
@@ -504,6 +550,9 @@ public sealed class BehaviorSourceState
             Field(action, "moodEnabled", v.MoodEnabled);
             Field(action, "volume", v.Volume);
             Field(action, "pitch", v.Pitch);
+            Field(action, "phase", v.Phase);
+            Field(action, "nutritionScope", v.NutritionScope);
+            Field(action, "drugScope", v.DrugScope);
             foreach (var parameter in v.ResponseParameters.OrderBy(x => x.Key, StringComparer.Ordinal))
             {
                 var element = document.CreateElement("parameter");

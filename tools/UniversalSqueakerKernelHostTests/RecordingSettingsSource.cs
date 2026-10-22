@@ -126,14 +126,14 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public ActionScopeRowView[]? TuningActionScopes;
 
     /// <summary>
-    /// Eat-occurrence pair the fake's <see cref="BuildView"/> projects. Read by the parent toggle and
-    /// its child row; the disabled-child lane flips the parent without writing anything, which is how
-    /// the two drawn states are compared for identical geometry.
+    /// Independent Eat axes projected by the same read-only view and typed write boundary.
     /// </summary>
-    public bool EatPrecisionEnabled = false;
+    public EatPhase EatPhase = EatPhase.WholeProcess;
+    public EatNutritionScope EatNutritionScope = EatNutritionScope.Any;
+    public EatDrugScope EatDrugScope = EatDrugScope.Any;
+    public readonly Dictionary<string, string> EatWrites = new();
 
-    /// <summary>See <see cref="EatPrecisionEnabled"/>.</summary>
-    public bool EatPrecisionIncludeDrugs = false;
+
 
     /// <summary>
     /// Author strings used by the rich BuildView (the pack/author filter options). The D9 lane
@@ -152,11 +152,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool? LastBasicToggleValue;
     public bool? LastCameraIndicator;
     public bool? LastEasterEggs;
-    /// <summary>Parent eat-precision write, or null when the control never fired.</summary>
-    public bool? LastEatPrecision;
-    /// <summary>Child "include drugs" write, or null when the control never fired (the disabled-child
-    /// lane asserts exactly this stays null while the parent is off).</summary>
-    public bool? LastEatPrecisionIncludeDrugs;
+
     public int? LastMinIntervalTicks;
     public float? LastCooldownMultiplier;
     public SqueakDevLoggingMode? LastDevLoggingMode;
@@ -336,8 +332,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             xenotypeFilter: "",
             raceFilterOptions: Array.Empty<FilterOptionView>(),
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
-            eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            eatPhase: EatPhase,
+            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope, allowBabyActions: AllowBabyActions,
             packNoPacks: true,
             raceBoard: UsRaceBoardView.Empty);
     }
@@ -505,8 +501,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                 new FilterOptionView("Sanguophage Race", "sanguophage")
             },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
-            eatPrecisionEnabled: EatPrecisionEnabled,
-            eatPrecisionIncludeDrugs: EatPrecisionIncludeDrugs, allowBabyActions: AllowBabyActions,
+            eatPhase: EatPhase,
+            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope, allowBabyActions: AllowBabyActions,
             // US-PACK1: the fake mirrors production's delegation exactly - fixture source pairs through
             // the SAME pure PackCardProjection.Build the model calls, reading the live page state's
             // filters and manual expansion set, so a lane drives the real rule end to end.
@@ -620,9 +616,15 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public bool AllowBabyActions;
     public bool? LastBabyActions;
     public void SetBabyActions(bool value) { LastBabyActions = value; AllowBabyActions = value; }
-    public void SetEatPrecision(bool value) => LastEatPrecision = value;
+    public void SetEatParameter(string key, string value)
+    {
+        EatWrites[key] = value;
+        if (key == "phase") EatPhase = value == "" ? EatPhase.WholeProcess : (EatPhase)Enum.Parse(typeof(EatPhase), value);
+        if (key == "nutritionScope") EatNutritionScope = value == "" ? EatNutritionScope.Any : (EatNutritionScope)Enum.Parse(typeof(EatNutritionScope), value);
+        if (key == "drugScope") EatDrugScope = value == "" ? EatDrugScope.Any : (EatDrugScope)Enum.Parse(typeof(EatDrugScope), value);
+    }
 
-    public void SetEatPrecisionIncludeDrugs(bool value) => LastEatPrecisionIncludeDrugs = value;
+
 
     public void SetGlobalMinIntervalTicks(int ticks) => LastMinIntervalTicks = ticks;
 

@@ -25,10 +25,12 @@ public readonly struct ResponseContribution
 public sealed class ResponseContext
 {
     public readonly string Subject;
+    public readonly IngestionResultFact? Ingestion;
     private readonly Dictionary<string, double> values;
-    public ResponseContext(string subject, IEnumerable<KeyValuePair<string, double>> values)
+    public ResponseContext(string subject, IEnumerable<KeyValuePair<string, double>> values, IngestionResultFact? ingestion = null)
     {
         Subject = subject;
+        Ingestion = ingestion;
         this.values = values.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
     }
     public bool TryRead(string key, out double value) => values.TryGetValue(key, out value);
@@ -111,7 +113,7 @@ public readonly struct LocalParameters
 public static class ResponseModulation
 {
     public static ModulationPlan Resolve(string subject, BehaviorValues values,
-        IEnumerable<KeyValuePair<string, double>> facts, IUsResponseRule[] rules)
+        IEnumerable<KeyValuePair<string, double>> facts, IUsResponseRule[] rules, IngestionResultFact? ingestion = null)
     {
         var parameters = new Dictionary<string, double>(values.ResponseParameters, StringComparer.Ordinal);
         foreach (var fact in facts)
@@ -129,7 +131,7 @@ public static class ResponseModulation
         }
         return new ModulationPlan
         {
-            Context = new ResponseContext(subject, parameters),
+            Context = new ResponseContext(subject, parameters, ingestion),
             Rules = rules,
             EnabledRules = enabled.Where(x => x.Value).Select(x => x.Key).ToArray(),
             PlayerParticipation = new Dictionary<string, bool>(values.Participation, StringComparer.Ordinal),

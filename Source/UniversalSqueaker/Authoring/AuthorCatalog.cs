@@ -312,7 +312,7 @@ public sealed class AuthorCatalog
         }
         if (fullDevCandidate)
         {
-            foreach (string key in new[] { "EatWholeJob", "EatNutrition", "EatChewing", "EatDrug", "ActiveCommand", "PlayerControlled", "Responsive", "HasCurrentInjury", "BiotechAvailable" })
+            foreach (string key in new[] { "IngestionExecution", "IngestibleNutrition", "IngestibleDrug", "IngestionResultEvent", "ActiveCommand", "PlayerControlled", "Responsive", "HasCurrentInjury", "BiotechAvailable" })
             {
                 string identity = "us.core/" + key;
                 facts.Add(identity, new RegisteredFact(new BuiltInFact(identity), "us.core"));
@@ -530,6 +530,8 @@ public sealed class AuthorCatalog
         => Capture(subject, builtIns, null);
 
     public FactSnapshot Capture(string subject, IDictionary<string, Truth> builtIns, IEnumerable<FactDiagnostic>? builtInDiagnostics)
+        => Capture(subject, builtIns, builtInDiagnostics, null);
+    public FactSnapshot Capture(string subject, IDictionary<string, Truth> builtIns, IEnumerable<FactDiagnostic>? builtInDiagnostics, IngestionResultFact? ingestion)
     {
         var snapshot = new Dictionary<string, Truth>(builtIns, StringComparer.Ordinal);
         var diagnostics = new List<FactDiagnostic>(builtInDiagnostics ?? Array.Empty<FactDiagnostic>());
@@ -558,7 +560,7 @@ public sealed class AuthorCatalog
             }
         }
 
-        return new FactSnapshot(snapshot, diagnostics);
+        return new FactSnapshot(snapshot, diagnostics, ingestion);
     }
 
     private sealed class RegisteredFact

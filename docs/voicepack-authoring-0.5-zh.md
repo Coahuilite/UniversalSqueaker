@@ -1,5 +1,7 @@
 # 0.5.x VoicePack 作者指南
 
+当前0.6.0 Dev的新作者应先看[主规格§22](us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口)的最小Eat包、独立扩展及配置入口。以下保留0.5格式的适用范围，不把旧Eat布尔政策带入新线。
+
 适用：保留的0.5.x作者格式；0.6 S2工作树继续读取，资源来源/完整绑定变化见[S2实施页](us-kernel-0.6-s2-zh.md)。旧发行版可能不同。普通作者从第 2–3 节最小包开始。第 12 节提供维护用源码入口。下一版接缝见 [0.6.x 规格](us-kernel-0.6-spec-zh.md)，其中的新字段不能直接用于本版。
 
 一个 `SqueakVoicePackDef` 是一个可选音频包，服务一个精确域。独立内容模组可包含多个 PackDef，只需 XML 与音频，不需要 C#。依赖 Universal Squeaker（`coahuilite.universalsqueaker`）及实际使用的种族模组；原版 `Human` 不需要第三方种族依赖。安装时也须满足 US 自身依赖。不要把内容安装进 US 主模组目录。

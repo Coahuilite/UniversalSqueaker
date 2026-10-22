@@ -98,6 +98,7 @@ internal static partial class Program
         Console.WriteLine("OneShot/author production source checks PASS: " + checks);
         S2Resources();
         S3ContractsAndSources();
+        DbEatAuthorExamples();
         S4RhythmAndResponses();
         S5SustainedOwner();
         Console.WriteLine("OneShot + S2 production source checks PASS: " + checks);

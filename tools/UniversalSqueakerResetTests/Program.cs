@@ -122,8 +122,7 @@ internal static class Program
         s.allowEasterEggSounds = true;
         s.allowExternalActions = true;
         s.allowBabyActions = true;
-        s.eatPrecisionEnabled = true;
-        s.eatPrecisionIncludeDrugs = true;
+        s.actionTuning.Add(new ActionTuningRecord { actionKey = "us.core/Eat", hasEatPhase = true, eatPhase = EatPhase.Execution, hasDrugScope = true, drugScope = EatDrugScope.OnlyDrugs });
         s.uiSwatchId = "biotech"; // UIR-006: the palette is a persisted appearance setting
         s.uiIntroCollapsed = true; // CORRECTIONS-R3: the persisted teaching preference must be in the pollution set
         s.behaviorSourcesXml = "<behaviorSources format=\"1\"><binding family=\"Pawn\" namespace=\"\" target=\"RaceA\" child=\"\" intent=\"Inherit\" source=\"\" /></behaviorSources>";
@@ -223,7 +222,7 @@ internal static class Program
             s.distancePreset == SqueakDistancePreset.Balanced && s.distanceRange.min == 15f && s.distanceRange.max == 50f);
         Check("global: gates back to false",
             !s.allowEasterEggSounds && !s.allowExternalActions && !s.allowBabyActions
-            && !s.eatPrecisionEnabled && !s.eatPrecisionIncludeDrugs);
+            && s.ReadEatParameters().Phase == EatPhase.WholeProcess && s.ReadEatParameters().DrugScope == EatDrugScope.Any);
         Check("global: legacy moodOverrides dict emptied", s.moodOverrides.Count == 0);
         Check("global: voicePackSelections cleared", s.voicePackSelections.Count == 0);
         Check("global: xenotypePresets cleared WITH domain-level multiplier (§6.6 global owns it)", s.xenotypePresets.Count == 0);
@@ -336,7 +335,7 @@ internal static class Program
             s.ResetActionTuningRow("Joy", "RaceZ", "XenoZ") == SqueakResetOutcome.NoChange);
         Check("row: rejected/unknown ops changed nothing",
             Probe.SaveQueuedCount == 0 && Probe.DiscreteNotifyCount == 0 && Probe.ContinuousNotifyCount == 0
-            && s.actionTuning.Count == 5 && s.voicePackSelections.Count == 2 && s.xenotypePresets.Count == 1
+            && s.actionTuning.Count == 6 && s.voicePackSelections.Count == 2 && s.xenotypePresets.Count == 1
             && s.moodTuning.Count == 3 && s.globalMinIntervalTicks == 999);
     }
 
@@ -361,7 +360,7 @@ internal static class Program
             s.actionTuning.Any(r => r.raceDefName == "RaceA" && r.xenotypeDefName == "XenoB" && r.sourcePresetDefName == "PresetTwo"));
         Check("area: race-layer and layer-0 rows preserved",
             s.actionTuning.Count(r => r.raceDefName == "RaceA" && r.xenotypeDefName == "") == 1
-            && s.actionTuning.Count(r => r.raceDefName == "" && r.xenotypeDefName == "") == 1);
+            && s.actionTuning.Count(r => r.raceDefName == "" && r.xenotypeDefName == "") == 2);
         Check("area: moodTuning preserved", s.moodTuning.Count == 3);
         Check("area: selections and legacy moodOverrides preserved", s.voicePackSelections.Count == 2 && s.moodOverrides.Count == 1);
         Check("area: xenotypePresets NOT enumerated; domain-level overall multiplier preserved (§6.6)",
@@ -423,7 +422,7 @@ internal static class Program
             s.moodTuning.Count == 1 && s.moodTuning[0].mood == SqueakMood.Good && s.moodTuning[0].hasPitchJitter);
         Check("mood-area: legacy moodOverrides dict NOT synced (§6.4 row 5: not runtime-participating)", s.moodOverrides.Count == 1);
         Check("mood-area: actionTuning/selections/presets/multiplier preserved",
-            s.actionTuning.Count == 5 && s.voicePackSelections.Count == 2 && s.xenotypePresets.Count == 1
+            s.actionTuning.Count == 6 && s.voicePackSelections.Count == 2 && s.xenotypePresets.Count == 1
             && s.xenotypePresets[0].hasOverallIntervalMultiplier);
         Check("mood-area: one continuous publish + one persistence",
             Probe.ContinuousNotifyCount == 1 && Probe.DiscreteNotifyCount == 0 && Probe.SaveQueuedCount == 1);
@@ -460,14 +459,14 @@ internal static class Program
         Check("area-Basics: eggs/scales/camera/baby/eat-pair restored",
             !s.allowEasterEggSounds && s.scaleCooldownWithTimeSpeed && s.scaleFrequencyWithTalking
             && s.scalePeriodicWithAudiblePopulation && !s.showCameraIndicator && !s.allowBabyActions
-            && !s.eatPrecisionEnabled && !s.eatPrecisionIncludeDrugs);
+            && s.ReadEatParameters().Phase == EatPhase.WholeProcess && s.ReadEatParameters().DrugScope == EatDrugScope.Any);
         Check("area-Basics: timing/diagnostics/gate-external retained",
             s.globalMinIntervalTicks == 999 && s.globalCooldownMultiplier == 2.5f
             && s.devLoggingMode == SqueakDevLoggingMode.Enabled && s.localizeDebugActions && s.allowExternalActions);
         Check("area-Basics: cheap statics republished + camera static + discrete for eggs + one persistence",
             Probe.DiscreteNotifyCount == 1 && Probe.SaveQueuedCount == 2
             && CompSqueaker.ScaleCooldownWithTimeSpeed && CompSqueaker.ScaleFrequencyWithTalking
-            && CompSqueaker.EatPrecisionEnabled == false && !SqueakDebug.ShowCameraIndicator);
+            && s.ReadEatParameters().Phase == EatPhase.WholeProcess && !SqueakDebug.ShowCameraIndicator);
 
         outcome = s.ResetNormalArea(SqueakNormalResetArea.Timing);
         Check("area-Timing: Applied", outcome == SqueakResetOutcome.Applied);
@@ -517,7 +516,7 @@ internal static class Program
             && Node(pollutedXml, "globalMinIntervalTicks") == "999");
         Count(pollutedXml, "voicePackSelections", 2);
         Count(pollutedXml, "xenotypePresets", 1);
-        Count(pollutedXml, "actionTuning", 5);
+        Count(pollutedXml, "actionTuning", 6);
         Count(pollutedXml, "moodTuning", 3);
 
         // (b) the production fallback store behind its test seam, with a player-written table.
@@ -550,7 +549,7 @@ internal static class Program
             Scribe.loader.FinalizeLoading();
             Check("roundtrip-load: production load maps polluted values",
                 loaded.voicePackMode == SqueakVoicePackMode.Vanilla && loaded.globalMinIntervalTicks == 999
-                && loaded.actionTuning.Count == 5 && loaded.xenotypePresets.Count == 1
+                && loaded.actionTuning.Count == 6 && loaded.xenotypePresets.Count == 1
                 && loaded.xenotypePresets[0].hasOverallIntervalMultiplier);
             Check("roundtrip-load: settingsLoadedFromFile diagnostic set by the load path", loaded.SettingsLoadedFromFile);
 

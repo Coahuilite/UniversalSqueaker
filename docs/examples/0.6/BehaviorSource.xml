@@ -11,7 +11,7 @@
     <defName>US_ExampleDrugChewing</defName>
     <declaration>
       <key>example/DrugChewing</key><priority>40</priority><baseAction>us.core/Eat</baseAction>
-      <condition><all><ref>us.core/EatChewing</ref><ref>us.core/EatDrug</ref></all></condition>
+      <condition><all><ref>us.core/IngestionExecution</ref><ref>us.core/IngestibleDrug</ref></all></condition>
     </declaration>
   </UniversalSqueaker.UsActionDef>
   <UniversalSqueaker.UsVoicePackDef>

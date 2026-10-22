@@ -13,7 +13,7 @@ namespace UniversalSqueaker;
 internal static class UsPawnFacts
 {
     internal static FactSnapshot CaptureSnapshot(AuthorCatalog catalog, Pawn pawn, string? eventKey)
-        => catalog.Capture(pawn.ThingID, Capture(pawn, eventKey), UsSelectObservation.Diagnostics);
+        => catalog.Capture(pawn.ThingID, Capture(pawn, eventKey), UsSelectObservation.Diagnostics.Concat(UsIngestionObservation.Diagnostics));
 
     internal static Dictionary<string, Truth> Capture(Pawn pawn, string? eventKey)
     {
@@ -36,25 +36,8 @@ internal static class UsPawnFacts
         // IsIdle is a positive JobTag observation. Wait_Combat/isIdle alone is not sufficient.
         result["us.core/CallState"] = pawn.mindState == null || pawn.pather == null ? Truth.Unknown
             : Yes(pawn.mindState.IsIdle && !pawn.pather.Moving && (name == "Wait" || name == "Wait_Wander"));
-        bool ingest = job?.def == JobDefOf.Ingest;
-        bool nutrition = driver is IEatingDriver eating && eating.GainingNutritionNow;
-        Truth chewing = Truth.False;
-        Truth drug = Truth.False;
-        if (ingest)
-        {
-            chewing = Truth.Unknown;
-            if (driver != null && string.Equals(driver.CurToilString, SqueakEatOccurrence.ChewingToilDebugName, StringComparison.Ordinal))
-            {
-                chewing = Truth.True;
-            }
-            drug = job?.targetA.Thing == null ? Truth.Unknown : Yes(job.targetA.Thing.def.IsDrug);
-        }
-        result["us.core/EatWholeJob"] = Yes(ingest);
-        result["us.core/EatNutrition"] = Yes(ingest && nutrition);
-        result["us.core/EatChewing"] = chewing;
-        result["us.core/EatDrug"] = drug;
-        // Retained player mode (including its explicit legacy fallback) is not the precise chewing fact.
-        result["us.core/EatState"] = Yes(PeriodicStateBinding.CaptureEatingOccurrence(pawn));
+        UsIngestionObservation.Capture(pawn, result);
+        result[EatPolicy.Result] = UsIngestionObservation.Ingested == null ? Truth.Unknown : Yes(eventKey == EatPolicy.Result);
         result["us.core/ActiveCommand"] = Yes(job?.playerForced == true && pawn.IsPlayerControlled);
         result["us.core/PlayerControlled"] = Yes(pawn.IsPlayerControlled);
         result["us.core/Responsive"] = pawn.health == null ? Truth.Unknown : Yes(!pawn.Downed && pawn.Awake());

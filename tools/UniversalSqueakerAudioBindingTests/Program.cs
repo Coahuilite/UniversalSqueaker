@@ -33,6 +33,18 @@ internal static partial class Program
 
     private static void Main(string[] args)
     {
+        try { Run(args); }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("TYPE=" + error.GetType().FullName);
+            Console.Error.WriteLine("MESSAGE=" + error.Message);
+            Console.Error.WriteLine("STACK=" + error.StackTrace);
+            Environment.ExitCode = 1;
+        }
+    }
+
+    private static void Run(string[] args)
+    {
         Console.WriteLine("Adapter args=[" + string.Join(",", args) + "]");
         if (args.Contains("--da-select-missing-target"))
         {
@@ -41,6 +53,20 @@ internal static partial class Program
             return;
         }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
+        if (args.Contains("--db-eat-missing"))
+        {
+            DbEatMissing();
+            Console.WriteLine("DB Eat missing-target fixture PASS: " + checks);
+            return;
+        }
+        if (args.Contains("--db-eat"))
+        {
+            InitializationOrder();
+            CompleteBinding();
+            DbEat();
+            Console.WriteLine("DB Eat production owner fixture PASS: " + checks);
+            return;
+        }
         if (args.Contains("--da-select"))
         {
             InitializationOrder();

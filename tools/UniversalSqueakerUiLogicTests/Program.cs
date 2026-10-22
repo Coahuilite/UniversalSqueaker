@@ -304,7 +304,7 @@ internal static class Program
         // US-PACK1 re-cuts the Packs block: the two browse-layer sections retire (their row items leave),
         // the checklist keeps only its forget entry, the filter region gains keyword/race/xenotype/summary
         // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).
-        Assert(itemCount == 54, "catalog item count matches the shipped wiring table (54 items after US-PACK1's card re-cut): " + itemCount);
+        Assert(itemCount == 55, "catalog item count matches the shipped wiring table (54 items after US-PACK1's card re-cut): " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).

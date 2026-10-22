@@ -1,0 +1,13 @@
+<Defs>
+  <!-- Requires US and the target race. Click is a Core SoundDef: no audio files or SR resources are copied.
+       Replace this sound reference with your own declared SoundDef for a real voice pack. -->
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleEatMinimal</defName>
+    <declaration>
+      <race>Ratkin</race>
+      <entries>
+        <li><key>eat</key><action>us.core/Eat</action><sound>Click</sound></li>
+      </entries>
+    </declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

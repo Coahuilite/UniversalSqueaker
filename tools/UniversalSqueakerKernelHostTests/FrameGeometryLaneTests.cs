@@ -140,7 +140,7 @@ internal static class FrameGeometryLaneTests
                     {
                         foreach (string tab in Tabs)
                         {
-                            var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                            var fake = new RecordingSettingsSource { RichData = true };
                             using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                             host.Bindings.Invoke("set-tab", tab);
                             host.Bindings.Set(HelpOpenKey, open);
@@ -231,7 +231,7 @@ internal static class FrameGeometryLaneTests
                 float bodyWidthClosed = float.NaN;
                 foreach (bool open in new[] { false, true })
                 {
-                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    var fake = new RecordingSettingsSource { RichData = true };
                     using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Overview");
                     host.Bindings.Set(HelpOpenKey, open);
@@ -370,7 +370,7 @@ internal static class FrameGeometryLaneTests
                 Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
                 foreach (bool open in new[] { false, true })
                 {
-                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    var fake = new RecordingSettingsSource { RichData = true };
                     using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Overview");
                     host.Bindings.Set(HelpOpenKey, open);
@@ -638,7 +638,7 @@ internal static class FrameGeometryLaneTests
             {
                 foreach (bool open in new[] { false, true })
                 {
-                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    var fake = new RecordingSettingsSource { RichData = true };
                     using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                     host.Bindings.Set(HelpOpenKey, open);
                     UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, Height));
@@ -738,7 +738,7 @@ internal static class FrameGeometryLaneTests
     {
         foreach (bool open in new[] { false, true })
         {
-            var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+            var fake = new RecordingSettingsSource { RichData = true };
             using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
             host.Bindings.Set(HelpOpenKey, open);
             UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(width, Height));
@@ -910,7 +910,7 @@ internal static class FrameGeometryLaneTests
                 Rect? headerClosed = null;
                 foreach (bool open in new[] { false, true })
                 {
-                    var fake = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                    var fake = new RecordingSettingsSource { RichData = true };
                     using UiHost host = UsKernelSettingsHost.Create(fake, new Program.StubMetrics());
                     host.Bindings.Invoke("set-tab", "Tuning");
                     host.Bindings.Set(HelpOpenKey, open);

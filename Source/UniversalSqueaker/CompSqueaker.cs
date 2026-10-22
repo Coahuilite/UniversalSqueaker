@@ -122,8 +122,6 @@ public partial class CompSqueaker : ThingComp
     public static int GlobalMinIntervalTicks = 216;
     // Eat occurrence granularity: cheap same-frame runtime statics published by the settings layer
     // (ApplyToRuntime / NotifyCheapRuntimeChanged). Defaults come from the pure rule, never a literal here.
-    public static bool EatPrecisionEnabled = SqueakEatOccurrence.EatPrecisionDefault;
-    public static bool EatPrecisionIncludeDrugs = SqueakEatOccurrence.EatPrecisionIncludeDrugsDefault;
     public static bool DiagnosticsEnabled;
 
     private static FloatRange activeDistanceRange = new(15f, 50f);

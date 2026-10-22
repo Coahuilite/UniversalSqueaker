@@ -1,6 +1,6 @@
 # Universal Squeaker 文档
 
-当前源码为 **0.6.0 开发分支**，目标 **RimWorld 1.6.4871**。统一生产owner及实例输出已有基础；D-A交付完整合同身份技术候选，Eat新分层／官方15包扩齐／发行默认／原生和逐包人审仍分阶段记录。
+当前源码为 **0.6.0 开发分支**，目标 **RimWorld 1.6.4871**。统一生产owner及实例输出已有基础；D-B已接入完整有效配置与Eat生产纵切；其余12包D-C、发行默认、原生和逐包人审仍分阶段记录。
 
 ## 先找到你要做的事
 
@@ -16,6 +16,7 @@
 | 使用当前0.6统一owner、响应作者格式与实例输出；核对未决默认 | [US Kernel 0.6.x 首版目标规格·按切片实现](us-kernel-0.6-spec-zh.md) |
 | 为0.6实现准备合同用例、测试迁移及FL联调 | [合同与固定输入](us-kernel-0.6-acceptance-zh.md)、[测试迁移与显式Dev消费](us-kernel-0.6-test-migration-zh.md) |
 | 组合独立根／继承扩展、完整ActionId与真实选音 | [主规格·当前作者入口 §21](us-kernel-0.6-spec-zh.md#21-d-a-当前作者入口) |
+| 配置三轴Eat、制作最小音频包与结果扩展 | [主规格·当前入口 §22](us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口) |
 | 审阅首三包与SR体验差异 | [Select／Eat／Attack完整导读](us-kernel-0.6-contract-review-zh.md) |
 | 维护适配及反例 | [事实—证据—反例](us-kernel-0.6-fact-adapters-zh.md) |
 | 本地构建、选择 FerriteLib、验证改动 | [Build and debug](build-and-debug.md) |

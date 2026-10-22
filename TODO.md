@@ -5,12 +5,11 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 D-A technical candidate; await next dispatch
+## NOW — 0.6.0 D-B technical candidate; await coordinator receipt
 
-- D-A delivers full contract identity, immutable roots/inheritance, actual Select/extension caller and source attribution through the existing owner. Current author entry and acceptance boundaries are in `docs/us-kernel-0.6-spec-zh.md` §21 and its acceptance/migration pages. Do not extend this dispatch into D-B.
-- Next authorized implementation package must complete service-profile settings and Eat phase/nutrition/drug separation, recipient/target/stage/result adapters and persistence. Preserve settled WholeProcess/Any/Any and precise Unknown; the fact record lists actual gaps.
+- D-B delivers effective sparse service/domain configuration and the Eat process/execution/item/result vertical slice through the existing production owner. Current author/player entry points and evidence boundaries are in `docs/us-kernel-0.6-spec-zh.md` §22 and the acceptance/migration pages. Do not extend this dispatch into D-C.
+- Exact 1.6.4871 method-body read-only access remains coordinator-managed. Direct RimSage bodies are 1.6.4850; inherited 4871 records and target-reference compilation are separate evidence. Native loading, real Scribe/Config, screen and listening validation await authorization; do not install or launch automatically.
 - D-C must complete all 15 package guides/coverage and retire official Crying/Giggling plus exclusive settings/responses; the current 17-entry implementation is not that completion.
-- Await explicit authorization for target 1.6 native loading, instance output and listening validation. Do not install or launch automatically; technical fixtures do not close native V08/V12/V14/V15 evidence.
 - Official Pawn Select qualification, numerical daily policy, 15-package ordering and first-unique behavior-source adoption await the maintainer. The temporary process-only Dev injection is not a player default.
 - Stop before FL0.8 consumer migration. Continue only after the user's new step; retain the fixed 0.7 carrier and range.
 ## Retained interaction checkpoint (2026-10-09)

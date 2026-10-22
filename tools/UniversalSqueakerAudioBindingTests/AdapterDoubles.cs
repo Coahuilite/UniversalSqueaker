@@ -57,9 +57,24 @@ namespace Verse
     public enum PawnPosture { LayingInBed }
     public sealed class Pawn_NeedsTracker { public object? rest; public FixtureMood? mood; }
     public sealed class FixtureMood { public float CurLevelPercentage = .5f; }
-    public class Thing { public ThingDef def = new(); }
+    public class Thing
+    {
+        public ThingDef def = new();
+        public string ThingID = "Food1";
+        public bool Destroyed;
+        public bool IngestibleNow = true;
+        public bool ThrowIngest;
+        public float NutritionResult = .5f;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public float Ingested(Pawn ingester, float nutritionWanted)
+        {
+            if (Destroyed || !IngestibleNow) return 0;
+            if (ThrowIngest) throw new InvalidOperationException("FixtureIngestFailure");
+            return NutritionResult;
+        }
+    }
     public enum ThingCategory { Pawn, Item }
-    public sealed class ThingDef : Def { public bool IsDrug; public object? race; public ThingCategory category = ThingCategory.Pawn; public Type? thingClass = typeof(Pawn); public List<CompProperties> comps = new(); }
+    public sealed class ThingDef : Def { public bool IsDrug, IsNutritionGivingIngestible; public object? ingestible; public object? race; public ThingCategory category = ThingCategory.Pawn; public Type? thingClass = typeof(Pawn); public List<CompProperties> comps = new(); }
     public class CompProperties { public Type? compClass; }
     public struct FloatRange { public float min, max; public float TrueMin => min; public float TrueMax => max; public FloatRange(float min, float max) { this.min = min; this.max = max; } }
     public sealed class Map { }
@@ -287,15 +302,50 @@ namespace UniversalSqueaker
 namespace Verse.AI
 {
     public sealed class JobDef : Verse.Def { public RimWorld.JoyKindDef? joyKind; }
-    public sealed class Job { public JobDef? def; public object? workGiverDef; public bool playerForced; public LocalTargetInfo targetA; }
-    public struct LocalTargetInfo { public Verse.Thing? Thing; }
+    public enum TargetIndex { None, A, B, C }
+    public enum JobCondition { Succeeded, InterruptForced, Incompletable }
+    public sealed class Job
+    {
+        public JobDef? def; public object? workGiverDef; public bool playerForced; public LocalTargetInfo targetA, targetB;
+        public LocalTargetInfo GetTarget(TargetIndex index) => index == TargetIndex.A ? targetA : targetB;
+    }
+    public struct LocalTargetInfo { public Verse.Thing? Thing; public Verse.Pawn? Pawn; }
     public sealed class Pawn_JobTracker { public JobDriver? curDriver; }
     public sealed class Pawn_PathFollower { public bool Moving; }
     public sealed class Pawn_MindState { public bool IsIdle; }
-    public class JobDriver { public bool asleep; public string CurToilString = ""; }
+    public class JobDriver
+    {
+        public bool asleep; public string CurToilString = "";
+        public Verse.Pawn pawn = null!; public Job job = null!;
+        public Toil? FixtureToil;
+        protected Toil? CurToil => FixtureToil;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        internal void SetupToils() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Cleanup(JobCondition condition) { FixtureToil?.Finish(); }
+    }
+    public sealed class Toil
+    {
+        public Verse.Pawn actor = null!;
+        public Action? initAction;
+        public readonly List<Action> finishActions = new();
+        public void AddFinishAction(Action action) => finishActions.Add(action);
+        public void Finish() { foreach (var action in finishActions) action(); }
+    }
 }
 namespace RimWorld
 {
+    public sealed class JobDriver_Ingest : Verse.AI.JobDriver { }
+    public sealed class JobDriver_FoodFeedPatient : Verse.AI.JobDriver { }
+    public static class Toils_Ingest
+    {
+        public static Action? FixtureInit;
+#if !US_FIXTURE_EAT_MISSING_CHEW
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public static Verse.AI.Toil ChewIngestible(Verse.Pawn chewer, float durationMultiplier, Verse.AI.TargetIndex index, Verse.AI.TargetIndex surface = Verse.AI.TargetIndex.None)
+            => new() { initAction = FixtureInit };
+#endif
+    }
     public sealed class XenotypeDef : Verse.Def { }
     public sealed class JoyKindDef { }
     public static class JoyKindDefOf { public static readonly JoyKindDef Social = new(); }

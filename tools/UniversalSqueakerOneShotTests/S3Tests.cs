@@ -135,7 +135,7 @@ internal static partial class Program
         audio.LoadDataFromXmlCustom(document.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
         Check(catalog.AddPack("example", "US_ExampleDrugAudio", audio, _ => "audio/Eat"), "real composite audio loaded");
         var input = new DecisionInput { Subject = "p1", Domain = "Ratkin", Tick = 1000, Actions = catalog.Actions, Audio = catalog.Audio,
-            Facts = catalog.Capture("p1", new Dictionary<string, Truth> { ["us.core/EatState"] = Truth.True, ["us.core/EatDrug"] = Truth.True, ["us.core/EatChewing"] = Truth.True }) };
+            Facts = catalog.Capture("p1", new Dictionary<string, Truth> { ["us.core/IngestionProcess"] = Truth.True, ["us.core/IngestibleDrug"] = Truth.True, ["us.core/IngestionExecution"] = Truth.True }) };
         var driver = new Driver();
         Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver).Action == "example/DrugChewing"
             && driver.Calls == 1, "real expanded XML fact composition dispatches same production core");

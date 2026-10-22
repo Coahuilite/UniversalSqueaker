@@ -1174,6 +1174,8 @@ internal static class UiSourceInvariantTests
 
     private static string RepoRoot()
     {
+        string cwd = Environment.CurrentDirectory;
+        if (File.Exists(Path.Combine(cwd, "Source", "UniversalSqueaker", "UniversalSqueaker.csproj"))) return cwd;
         DirectoryInfo? dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         for (int i = 0; i < 8 && dir != null; i++)
         {

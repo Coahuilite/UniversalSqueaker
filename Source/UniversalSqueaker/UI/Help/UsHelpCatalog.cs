@@ -185,21 +185,20 @@ internal static class UsHelpCatalog
                     "us/basic-tuning/scale-population",
                     "US.Help.BasicTuning.ScalePopulation.Label",
                     "US.Help.BasicTuning.ScalePopulation.Text"),
-                // The two-level eat-occurrence switch: the parent's entry explains the whole pair
-                // (including the zero-nutrition boundary), and the child's entry explains the
-                // chewing/lighting authority plus its fallback to the whole eating job.
+                // Independent phase and item filters; none depends on another control's visibility.
                 new HelpItem(
                     "us/basic-tuning/baby-actions",
                     "US.Help.BasicTuning.BabyActions.Label",
                     "US.Help.BasicTuning.BabyActions.Text"),
                 new HelpItem(
-                    "us/basic-tuning/eat-precision",
-                    "US.Help.BasicTuning.EatPrecision.Label",
-                    "US.Help.BasicTuning.EatPrecision.Text"),
+                    "us/basic-tuning/eat-phase",
+                    "US.Help.BasicTuning.EatPhase.Label",
+                    "US.Help.BasicTuning.EatPhase.Text"),
                 new HelpItem(
-                    "us/basic-tuning/eat-precision-include-drugs",
-                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label",
-                    "US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text"),
+                    "us/basic-tuning/eat-nutrition",
+                    "US.Help.BasicTuning.EatNutrition.Label",
+                    "US.Help.BasicTuning.EatNutrition.Text"),
+                new HelpItem("us/basic-tuning/eat-drug", "US.Help.BasicTuning.EatDrug.Label", "US.Help.BasicTuning.EatDrug.Text"),
             }),
         ["us/timing"] = new HelpSection(
             "us/timing",

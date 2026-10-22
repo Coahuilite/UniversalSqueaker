@@ -1,8 +1,8 @@
 # 0.6.x 合同—验收与切片
 
-D-A 当前候选改变合同身份及 Select 接缝；本页将技术证据、合同人工审阅、成果人工验收分开。新 Eat 纵切为 D-B，全部15包扩齐为 D-C。
+D-B当前候选已接入完整有效配置与Eat生产纵切；D-A身份与Select技术输入保持。本页将技术证据、合同人工审阅、成果人工验收分开，其余12包及全部15包收尾仍为D-C。
 
-本页是[唯一规格 r8](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
+本页是[唯一规格 r9](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
 
 ## 核心只消费中性事实
 
@@ -95,9 +95,9 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 
 | 包装 | 合同修订／SR对照 | 当前成果／证据 | 合同人审 | 成果人验 | 未决／下一责任 |
 | --- | --- | --- | --- | --- | --- |
-| Select | 主规格r8／导读r4／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
-| Eat | r8／导读r4／SR tag v0.3.4-tagfix1 | 首份实际事实记录已交；新settings/阶段/角色/结果待D-B | pending | pending | D-B工程；Whole/Any/Any与尾音已定 |
-| Attack | r8／导读r4／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
+| Select | 主规格r9／导读r5／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
+| Eat | r9／导读r5／SR tag v0.3.4-tagfix1 | D-B有效配置／阶段／角色／结果／持续退出已接入生产链；明确平台替身，见下节 | pending | pending | 目标4871方法体／原生与成果人验待核；Whole/Any/Any已定 |
+| Attack | r9／导读r5／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
 | Wounded | r8目标／SR对照待扩齐 | 完整合同与受损处理证据待D-C | pending | pending | US后续包 |
 | Death | r8目标／SR对照待扩齐 | Kill阶段与资格完整材料待D-C | pending | pending | US后续包 |
 | Move | r8目标／SR对照待扩齐 | 自身移动与来源政策完整材料待D-C | pending | pending | US后续包 |
@@ -117,3 +117,15 @@ D-A针对独立根/多级图/别名只读、完整动作配置/恢复/冷却、�
 
 
 D-A r2接缝修订补充：实际Harmony2.4.2在缺反馈目标时抛出TargetMethod返回null，且留下单边挂接；原构造调用会传播此异常。现成对Prepare避免该缺失路径，两种真实缺目标替身各13项通过，原两目标存在63项保持。验证生产观察／事实诊断／来源依赖暂停／无关Work，不以此声称目标4871原生已验。门禁22/23保存两个缺目标模式，其余本次未变矩阵沿用r1。
+
+## D-B：完整配置与Eat的技术验收边界
+
+已接通实际链：作者／玩家稀疏输入 → 生产settings／ExposeData／原子文件 → 捕获同次配置视图 → 原版形状观察与实际摄入者 → 同一session／仲裁／准确条目及供音域 → 四结果／自有持续槽。三类profile、公开参数／XML与API以主规格§22为准。
+
+- DbEffectiveConfigTests及ModSaveCallerTests：完整字段存在性、false/0、作者Xeno先于玩家Pawn、精准Race/Xeno、两个NonPawn命名空间、系统关闭/G=0、不可变视图、非法显式值、真实Mod事务代次与失败回滚。来源缺A/B存在/同身份重连继续由相同Config套件检查。这里是生产settings/ExposeData/原子文件与Scribe替身往返，不是原生Scribe或真实游戏Config。
+- DbEatTests：准备／工厂未进入／原init异常、实际进入退出、四组合物品属性、0正常结果／无效物品提前返回、feed接收者、目标切换、同Job复入、同生产槽的Whole及Execution退出、OneShot自然尾边界、InjuredEat完整配置、独立AfterIngestion根及作者实际读取结果身份。平台Job/Toil/物品与原生音频明确为double。
+- DbEatAuthorTests：公开最小XML和扩展经真实loader／catalog／核心派发，复用AudioId不借父动作配置，结果请求带中性身份与0值。
+- 真正移除ChewIngestible的编译fixture：PatchAll不抛、相关精确路径暂停，Whole／结果／Select能力保留；无全局catch、无Unknown宽化。verify-local追加24/25。
+- 既有Host入口定向验证三独立下拉框、三准确玩家层与单字段继承、英／中文布局／写绑定。退役的父关藏子checkbox断言换为新独立参数断言；普通按钮／行高／修订钟保护保留。没有重生golden，Kernel旧语料零差异。
+
+本包未执行全25门或未变原生矩阵；每次实际运行及对应候选由交付报告记录。精确4871方法体复核、真实原生加载／挂接／Scribe／音频／屏幕与听感仍pending，所有15包合同人审／成果人验也仍pending。D-C、FL0.8及发布不随D-B技术候选自动获准。

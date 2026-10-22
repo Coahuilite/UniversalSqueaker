@@ -80,12 +80,16 @@ public sealed class SustainedPlayback
     }
 
     public string Review(long tick, FactSnapshot facts)
+        => Review(tick, facts, null, false);
+
+    public string Review(long tick, FactSnapshot facts, Condition? currentCondition, bool force)
     {
-        if (!ReviewDue(tick))
+        if (!Active || !force && !ReviewDue(tick))
         {
             return "NotDue";
         }
         nextReview = TickDeadline.Add(tick, 60);
+        condition = currentCondition ?? condition;
         Truth truth;
         try
         {

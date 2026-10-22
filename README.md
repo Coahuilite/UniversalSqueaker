@@ -18,7 +18,7 @@ The settings window has five workspaces: **Overview / Packs / Tuning / Presets /
 
 ## Documentation
 
-This branch is **0.6.0 Dev**: the [controlled OneShot S1 and real author examples](docs/us-kernel-0.6-s1-zh.md) are implemented; ordinary daily defaults remain on the retained path. The [documentation index](docs/README.md) separates retained 0.5 behavior, implemented S1 and later 0.6 targets.
+This branch is **0.6.0 Dev**: the single production owner now consumes [effective layered configuration and the Eat vertical slice](docs/us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口), including real author examples. Daily release policy still requires explicit product decisions. The [documentation index](docs/README.md) separates retained 0.5 behavior, implemented S1 and later 0.6 targets.
 
 - [Current behavior and settings](docs/current-behavior-0.5-zh.md)
 - [VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)
@@ -26,4 +26,4 @@ This branch is **0.6.0 Dev**: the [controlled OneShot S1 and real author example
 - [Build and debug](docs/build-and-debug.md)
 - [Release flow](docs/release-runbook-zh.md) and [privacy gate](docs/push-privacy-gate.md)
 
-The current product declaration is 0.5.0. Documentation describes this source tree, which may include changes not present in an older download. Developer working instructions remain in `AGENTS.md`; durable state and open actions remain in `MEMORY.md` and `TODO.md`.
+The current product declaration is 0.6.0. Documentation describes this source tree, which may include changes not present in an older download. Developer working instructions remain in `AGENTS.md`; durable state and open actions remain in `MEMORY.md` and `TODO.md`.

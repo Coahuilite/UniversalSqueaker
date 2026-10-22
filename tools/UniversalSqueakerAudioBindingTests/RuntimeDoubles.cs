@@ -83,6 +83,8 @@ namespace UniversalSqueaker
     public partial class UniversalSqueakerSettings
     {
         public List<ActionTuningRecord> actionTuning = new();
+        public SqueakVoicePackMode voicePackMode = SqueakVoicePackMode.Fallback;
+        public float globalVolumeFactor = 1;
         internal bool IsPersistenceBlockedByMigrationFailure => false;
         internal void QueuePersistence() { }
     }

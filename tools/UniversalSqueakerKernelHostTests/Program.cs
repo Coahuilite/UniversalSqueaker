@@ -181,6 +181,7 @@ internal static class Program
 
     private static void RunAll()
     {
+        Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
         Step("real embedded resource + schema shape", RealEmbeddedResourcePresentAndShaped);
         Step("real host creation validates full schema", RealHostCreationValidatesFullSchema);
         Step("reopen session isolation", RealHostReopenIsolation);
@@ -1283,8 +1284,9 @@ internal static class Program
             { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
             { "scale-population", () => host.Bindings.Set("scale-population", true) },
             { "camera-indicator", () => host.Bindings.Set("camera-indicator", false) },
-            { "eat-precision", () => host.Bindings.Set("eat-precision", true) },
-            { "eat-precision-include-drugs", () => host.Bindings.Set("eat-precision-include-drugs", true) },
+            { "eat-phase", () => host.Bindings.Set("eat-phase", "Execution") },
+            { "eat-nutrition", () => host.Bindings.Set("eat-nutrition", "NutritionGiving") },
+            { "eat-drug", () => host.Bindings.Set("eat-drug", "OnlyDrugs") },
             { "interval-ticks", () => host.Bindings.Set("interval-ticks", 300f) },
             { "interval-seconds", () => host.Bindings.Set("interval-seconds", 5f) },
             { "timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus") },
@@ -2299,11 +2301,12 @@ internal static class Program
         bindings.Set("allow-baby-actions", true);
         // Mutation-proven: removing source.SetBabyActions from the registered write fails here.
         Assert(fake.LastBabyActions == true, "baby-actions write routes to the business boundary");
-        bindings.Set("eat-precision", true);
-        Assert(fake.LastEatPrecision == true, "eat-precision value write routes (the declared checkbox's channel)");
-        bindings.Set("eat-precision-include-drugs", true);
-        Assert(fake.LastEatPrecisionIncludeDrugs == true, "eat-precision-include-drugs value write routes");
-        bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative));
+        bindings.Set("eat-phase", "Execution");
+        Assert(fake.EatWrites["phase"] == "Execution", "DB phase typed write routes");
+        bindings.Set("eat-nutrition", "NonNutritionGiving");
+        Assert(fake.EatWrites["nutritionScope"] == "NonNutritionGiving", "DB nutrition typed write routes");
+        bindings.Set("eat-drug", "OnlyDrugs");
+        Assert(fake.EatWrites["drugScope"] == "OnlyDrugs", "DB drug typed write routes");        bindings.Invoke("set-distance-preset", nameof(SqueakDistancePreset.Conservative));
         Assert(fake.LastDistancePreset == SqueakDistancePreset.Conservative,
             "set-distance-preset action routes the button's string payload into the enum boundary");
         // The fail-soft half: a name no preset answers to must not drop the click into the wrong preset.
@@ -2769,6 +2772,8 @@ internal static class Program
 
     internal static string RepoRoot()
     {
+        string cwd = Environment.CurrentDirectory;
+        if (File.Exists(Path.Combine(cwd, "Source", "UniversalSqueaker", "UniversalSqueaker.csproj"))) return cwd;
         System.IO.DirectoryInfo? dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
         for (int i = 0; i < 8 && dir != null; i++)
         {

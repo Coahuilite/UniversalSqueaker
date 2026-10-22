@@ -1,15 +1,23 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r6 · **D-A完整身份与Select技术纵切；Eat新分层、原生1.6、听感及产品默认继续分包。**
+2026-10-23 · r7 · **D-B完整有效配置与Eat生产纵切；其余12包、原生1.6、听感及产品默认继续分包。**
 
 ## 当前D-A应如何迁移
+
+### D-B新增的定向迁移
+
+当前配置／作者入口见主规格§22。删除旧SqueakEatOccurrence、精确／包含药物bool及debugName宽化，旧XML/ABI不保双轨。S3旧Eat断言改为过程与真实阶段；Kernel旧bool规则改为独立枚举合法性与NonPawn边界；稳定路由／roll corpus不改。
+
+OneShot新增DbEatAuthorTests，运行可加载的EatMinimal／EatExtensions；AudioBinding用明确参数--db-eat运行生产链，--db-eat-missing运行EatFixtureTarget=MissingChew真正缺目标构建。结果Root、实际摄入者、当前物品及0值进入同一生产协议。settings新增DbEffectiveConfigTests和真实Mod保存调用失败反例，Reset继续检验准确字段与恢复；Scribe平台仍为替身。
+
+既有Host的旧父子checkboxfixture定向换成三个独立dropdown、三准确层及单字段继承；保行高、修订钟和其他按钮保护。Host可用--lane "DB Eat"、"Overview composites"及"typed"运行受改面，不因其中一个通过声称全Host套件通过。独立输出运行时优先从明确cwd定位项目，避免把私有管理目录当源码根。
 
 独立根／多级继承、不可变固定条件、完整ActionId和实际来源条目已进入原生产目录、session、选音、请求及诊断；作者入口见[主规格§21](us-kernel-0.6-spec-zh.md#21-d-a-当前作者入口)。官方目标为15包；当前代码仍有17旧包装，Crying/Giggling与专属设置／响应完整退役在D-C。
 
 - 原生事件发布事实，让独立根和扩展合同在同owner仲裁；显式公共作者动作调用仍只求该完整合同。普通Select与受伤扩展已过真实观察器／配置解析／session链正反例，原版Selector、Comp门及音频为明确替身。
 - `ActionPlan`的器官／Talking为显式选择，通用缺省不带Pawn门。旧手写Work夹具须明确`requiresVocal:true`及所需Talking政策，保留NoVocal、诊断零重采样和随机次序原断言。
 - `ChainResult.SelectedContext.Domain`表示**实际供音域**，请求主体域另存。Xeno请求用最终Race表时须记录Race供音。S2定向断言迁移；稳定选音／roll／请求golden不重生。
-- `DaContractConfigTests`以生产settings/ExposeData/原子文件与Scribe替身往返，重读完整父／子键、false/0、来源快照和子行Reset；Pawn Global不能覆盖两NonPawn命名空间。新profile持久化分层及Eat参数在D-B。
+- `DaContractConfigTests`以生产settings/ExposeData/原子文件与Scribe替身往返，重读完整父／子键、false/0、来源快照和子行Reset；Pawn Global不能覆盖两NonPawn命名空间。D-B已通过相同生产settings行接入完整稀疏分层与Eat参数。
 - verify-local保留原19门，追加20（`--da-select`）和21（另加`--unselected-qualification`）。每模式独立进程，凭目标断言而非exit0／文件名判断命中。当前本地测试复制完整输出到获准MyComputer目录运行相同入口；不作为原生游戏证据。
 
 缺目标回归位于DaSelectMissingTargetTests。工程属性SelectFixtureTarget=MissingInternal或MissingFeedback在明确平台double中真正移除对应方法，并非覆盖生产readiness布尔值；构建使用各自独立OutputPath/IntermediateOutputPath，运行参数为--da-select-missing-target。verify-local追加22/23执行两种缺失形状，每种必须检查目标确实缺失、PatchAll正常返回、无半套观察、单次具名诊断、依赖隔离与无关Work派发；存在两目标继续用gate20的原63项。
@@ -20,11 +28,11 @@ S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层�
 
 S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
 
-本页配合[首版规格 r8](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
+本页配合[首版规格 r9](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是23门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是25门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
 - [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前19门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。

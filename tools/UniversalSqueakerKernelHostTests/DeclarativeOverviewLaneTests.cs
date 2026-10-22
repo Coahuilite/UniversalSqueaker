@@ -88,8 +88,6 @@ internal static class DeclarativeOverviewLaneTests
         ("basic-egg-row", "basic-egg-label", "basic-egg-check", "US.Tuning.EasterEggs"),
         ("basic-baby-row", "basic-baby-label", "basic-baby-check", "US.Tuning.BabyActions"),
         ("basic-talking-row", "basic-talking-label", "basic-talking-check", "US.Tuning.ScaleTalking"),
-        ("basic-eat-row", "basic-eat-label", "basic-eat-check", "US.Tuning.EatPrecision"),
-        ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "US.Tuning.EatPrecision.IncludeDrugs"),
     };
 
     /// <summary>S6-2: the body's declared Column Gap, and the width the checklist card already uses. The
@@ -103,7 +101,7 @@ internal static class DeclarativeOverviewLaneTests
     private static readonly string[] DeclaredValueBindings =
     {
         "allow-eggs", "allow-baby-actions", "scale-cooldown", "scale-talking", "scale-population",
-        "eat-precision", "eat-precision-include-drugs", "camera-indicator"
+        "camera-indicator"
     };
 
     public static int RunAll()
@@ -140,8 +138,6 @@ internal static class DeclarativeOverviewLaneTests
             ("basic-egg-row", "basic-egg-text", "basic-egg-check", "Tuning"),
             ("basic-baby-row", "basic-baby-label", "basic-baby-check", "Tuning"),
             ("basic-talking-row", "basic-talking-label", "basic-talking-check", "Tuning"),
-            ("basic-eat-row", "basic-eat-label", "basic-eat-check", "Tuning"),
-            ("basic-eat-child-row", "basic-eat-child-label", "basic-eat-child-check", "Tuning"),
             ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check", "Overview"),
             ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check", "Advanced"),
             ("diagnostics-geometry-capture-row", "diagnostics-geometry-capture-label", "diagnostics-geometry-capture", "Advanced"),
@@ -171,7 +167,7 @@ internal static class DeclarativeOverviewLaneTests
                         // One host, swept tab by tab: the Tab gate hides a non-active workspace, so the
                         // lane arranges per tab and asserts only that tab's rows in each pass.
                         using UiHost host = UsKernelSettingsHost.Create(new RecordingSettingsSource
-                            { RichData = true, EatPrecisionEnabled = true }, new Program.StubMetrics());
+                            { RichData = true }, new Program.StubMetrics());
                         host.Bindings.Set("help-open", helpOpen);
                         foreach (string tab in new[] { "Overview", "Tuning", "Advanced" })
                         {
@@ -290,13 +286,7 @@ internal static class DeclarativeOverviewLaneTests
                 "the '" + bind + "' control must declare SelectedKey=\"" + bind + "\", got '" + selected + "'");
         }
 
-        UiElementSpec childRow = FindById(host.Manifest.Roots, "basic-eat-child-row")!;
-        Assert(childRow != null
-               && childRow.TryGetAttribute("VisibleKey", out string gate)
-               && gate == "eat-precision",
-            "the eat-precision child row must be gated by VisibleKey reading the parent's own bool binding"
-            + " - the declarative form of the rule the composite enforced in C#");
-
+        // DB three independent dropdown shape is exercised by DbEatUiTests.
         UiElementSpec volume = FindById(host.Manifest.Roots, "global-volume")!;
         UiElementSpec? slider = FindById(volume.Children, "global-volume-slider");
         Assert(slider?.Kind == "input/slider",
@@ -348,7 +338,7 @@ internal static class DeclarativeOverviewLaneTests
 
     private static void RunDeclaredWriteChannelChecks()
     {
-        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+        var source = new RecordingSettingsSource { RichData = true };
         using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
         host.Bindings.Invoke("set-tab", "Overview");
         UiLayoutSnapshot snapshot = Arrange(host);
@@ -427,17 +417,7 @@ internal static class DeclarativeOverviewLaneTests
         Assert(host.Session.ContentRevision == eggRevision + 1,
             "and exactly once (revision " + eggRevision + " -> " + host.Session.ContentRevision + ")");
 
-        // The last band is the eat-precision child's.
-        source.LastEatPrecisionIncludeDrugs = null;
-        source.LastEatPrecision = null;
-        int childRevision = host.Session.ContentRevision;
-        DrawWithButtons(host, rect => RectMatches(rect, basic[basic.Count - 1]));
-        Assert(source.LastEatPrecisionIncludeDrugs == true,
-            "pressing the child row's band must write the child value exactly once");
-        Assert(source.LastEatPrecision == null, "and it must not touch the parent switch");
-        Assert(host.Session.ContentRevision == childRevision + 1,
-            "and exactly once (revision " + childRevision + " -> " + host.Session.ContentRevision + ")");
-
+        DbEatUiTests.CheckBindings(host, source);
         // (c) the global-volume card: the slider atom's drag and the number-field atom's binding must land
         // in the SAME business field, or the two controls on one card would show different volumes.
         // (back on the Overview workspace, where the volume card is gated).
@@ -499,7 +479,7 @@ internal static class DeclarativeOverviewLaneTests
                     UiFitAudit.Enabled = true;
                     try
                     {
-                        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+                        var source = new RecordingSettingsSource { RichData = true };
                         using UiHost host = UsKernelSettingsHost.Create(source, metrics);
                         // UIR-001: basic-tuning is a TUNING-workspace card now; the Overview cards are
                         // arranged on their own gate, then the tab flips and the SAME host arranges the
@@ -615,9 +595,9 @@ internal static class DeclarativeOverviewLaneTests
                         // US-RESET1 area-restore row, one declared Column Gap between every neighbour -
                         // so changing a declared band, a row, the restore row or the body's own Gap
                         // reddens here instead of silently moving the card.
-                        float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height);
+                        float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height) + new[] { "basic-eat-row", "basic-eat-nutrition-row", "basic-eat-drug-row" }.Sum(id => RectOf(snapshot, id).height);
                         float restoreHeight = RectOf(snapshot, "basic-tuning-restore").height;
-                        float expectedBody = rowSum + restoreHeight + BasicBodyGap * BasicRows.Length;
+                        float expectedBody = rowSum + restoreHeight + BasicBodyGap * (BasicRows.Length + 3);
                         Assert(Math.Abs(bodyHeight - expectedBody) <= 0.5f,
                             "the declared body must be the rows + the Column's own Gap at " + width + " ("
                             + language + "): body " + bodyHeight + " vs " + expectedBody + " (rows " + rowSum

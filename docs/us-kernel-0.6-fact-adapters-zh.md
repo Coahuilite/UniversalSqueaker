@@ -1,47 +1,38 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r2。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。本轮先交 Eat 的实际调查记录；新 Eat settings／阶段适配纵切属于 D-B。
+修订：2026-10-23，r3。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。D-B已接入完整有效配置与Eat生产纵切，下面分别记录直接源码、继承依据、平台替身与原生状态。
 
-## Eat：正在摄入、物品属性、结果是三类证据
+## Eat：过程、执行、物品属性与返回结果分别维护
 
-Ratkin p1 走向一份饭时，可以处于摄入全过程，但尚未进入摄入执行。啤酒既可有营养属性又属于药物；一次摄入返回 0 营养也不能据此判定没有摄入。这三点必须在适配中分开。
+维护者：US 1.6适配维护者。消费者：内置Eat、InjuredEat固定扩展及独立AfterIngestion根；正式字段与入口以[主规格§22](us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口)为准。
 
-**版本依据：** 继承的既有项目定点源码核对记录：RimWorld 1.6.4871 Assembly-CSharp方法体，程序集1.6.9676.17735；Version.txt rev590／程序集算法rev591差异保留。具体符号和支持的结论逐行列于下表，本次没有重新读取游戏安装。参考程序集只证明API；源码核对、替身与原生状态分别列出。
+**来源版本：** 继承的既有项目定点源码核对记录为目标1.6.4871、Assembly-CSharp 1.6.9676.17735，Version.txt rev590／算法rev591差异保留。本轮直接读回RimSage 1.6.4850（程序集1.6.9655.19392）的下列方法体／类型头，并按Krafs 1.6.4871 API编译；4850不是4871同版本复核。精确目标安装只读许可尚待协调，本轮没有读取安装。
 
-| 稳定语义／候选事实身份 | 主体与原始来源 | 进入／退出／结果；依赖及 Unknown | 当前消费者／差距 |
+| 正式事实／数据 | 原始来源与主体 | 观察和Unknown／依赖 | 生产消费者 |
 | --- | --- | --- | --- |
-| 摄入全过程／us.core/EatWholeJob（当前键） | 实际摄入者；RimWorld.JobDriver_Ingest.MakeNewToils | 准备、取食、执行、Finalize 是不同阶段；中断结束过程，不合成成功事件。无当前 driver 的必要证据为 Unknown | UsPawnFacts.Capture 目前只认 JobDefOf.Ingest；EatState 仍经 PeriodicStateBinding 的旧布尔政策。被喂食覆盖未实现 |
-| 摄入执行／us.core/EatChewing（当前键） | 实际 chewer；Toils_Ingest.ChewIngestible 所构造 Toil 的实际进入与退出 | 工厂被调用只证明 Toil 已构造，不证明已进入；下一次复入须是新阶段观察。所选执行模式 Unknown 不回 WholeProcess | 当前只比较 CurToilString 与 ChewingToilDebugName；不构成可靠阶段覆盖，D-B 须替换 |
-| 被喂食角色／后续适配事实 | JobDriver_FoodFeedPatient.MakeNewToils，Deliveree 为 chewer | Job 执行者是喂食者，接收者才是摄入者；接收者自己的当前 Job 不必是 Ingest | 当前只采 Pawn 自己的 Ingest，不能把喂食者当摄入者；D-B 需要按接收者实例发布事实 |
-| 当前摄入物／后续适配事实 | Toils_Ingest.TakeMealFromDispenser | targetA 从 dispenser 变为实际食物，必须随阶段读取已解析食物；初始机器不代表最终摄入物 | 当前用 job.targetA.Thing.def.IsDrug；没有独立物品快照或目标切换证据 |
-| 阶段复入／后续适配事实 | JobDriver_Ingest 的 Corpse 分支 | 同 Job 可再次进入 chewing；一次阶段退出不代表全过程退出 | 当前无阶段代次／退出观察；D-B 正反例必须覆盖同 Job 二次进入 |
-| 物品营养属性／后续正式事实 | ThingDef.IsNutritionGivingIngestible | 可摄入且缓存营养正值的物品属性，不是 Pawn 当次实得营养；Any 不读取该可选筛选，选仅有／无属性才依赖 | 当前 us.core/EatNutrition 来自 IEatingDriver.GainingNutritionNow，混合物品属性与当前 Toil，不能作为独立营养属性消费 |
-| 药物属性／us.core/EatDrug（当前键） | 实际摄入物 ThingDef.IsDrug | drugCategory 独立判断；营养与药物可交叉。Any 不要求该事实已知；治疗并非全部摄入 | 当前 targetA 读取有目标切换缺口；无摄入时 False，缺必要目标时 Unknown |
-| 摄入结果／后续独立结果事件 | Toils_Ingest.FinalizeIngest → Thing.Ingested 返回值及后续记账 | Finalize 调用后才处理返回营养；0 不统一等于失败；Job 结束不统一等于成功。只发布能证明的摄入者、物品、数值／阶段，不伪造成功 bool | 当前没有结果消费者。AfterIngestion 应独立根，不继承仍在执行的固定条件 |
+| us.core/IngestionProcess | JobDriver.SetupToils／Cleanup；JobDriver_Ingest自身，FoodFeedPatient.job.targetB.Pawn即Deliveree | 仅支持这两种明确driver；driver、当前Job一致才活跃。自己Ingest另有正向Job事实；feed接缝缺失则未知，不猜喂食者 | Eat固定过程；Whole保持至全过程退出 |
+| us.core/IngestionExecution | Toils_Ingest.ChewIngestible(Pawn,float,TargetIndex,TargetIndex)，参数chewer为实际摄入者 | 工厂只挂观察；原init正常返回、driver／Job／CurToil同一才进入，finish关闭；每次真实进入增代。依赖成组Setup/Cleanup及Chew/CurToil；缺Chew不安装半套精确观察 | phase=Execution及固定精确扩展 |
+| us.core/IngestibleNutrition | 实际物品ThingDef.IsNutritionGivingIngestible | 物品属性，不是IEatingDriver标记、不是当次营养值；缺实际可摄入物为Unknown。Any不加此依赖 | nutritionScope非Any时 |
+| us.core/IngestibleDrug | 同一实际物品ThingDef.IsDrug | 与营养独立；Any不加此依赖。通过actor当前Job targetA重新读取，机器→食物后不沿用机器属性 | drugScope非Any时 |
+| us.core/IngestionResultEvent及IngestionResultFact | FinalizeIngest调用Thing.Ingested(Pawn,float)；捕获实际ingester及item，正常返回营养值 | 原版Destroyed／!IngestibleNow的提前返回不构造成功摄入；合法0结果保留。异常不发结果，Job Cleanup也不发结果；事件只存本次快照，结果身份／0值进入ResponseContext和PlaybackRequest | 独立AfterIngestion根，不继承仍在执行的条件 |
 
-## 必须保留的判别性输入
+**实际数据流：** FoodFeedPatient.MakeNewToils调用ChewIngestible(Deliveree,1.5,A)，但Toil.actor仍是喂食者；物品从actor的Job取、声音归Deliveree的唯一session。FinalizeIngest读取actor.jobs.curJob实际目标并调用Thing.Ingested；FoodFeedPatient会替换Finalize Toil.finishActions，所以结果不挂在该易被覆盖的finish列表。普通Ingest的Corpse分支可跳回同一chewing Toil；一次chewing退出不等于全过程退出。多个同时有效的feed来源指向同一接收者时，执行／物品保持Unknown，不猜一个。
 
-| 输入 | 合同应答 | 当前实现／检查状态 |
-| --- | --- | --- |
-| 准备中 Ingest，尚未进入执行 | WholeProcess 可成立；执行模式 False，不能因工厂已构造而 True | S3PawnFactTests 仅证明现有采样；新阶段替身待 D-B |
-| 正在饮用非营养药物 | WholeProcess／执行阶段独立于营养筛选；drug 为 True；营养 Any 不排除 | 当前 EatNutrition 与状态耦合，目标行为待 D-B |
-| 啤酒：营养 True、药物 True | Any/Any 纳入；仅营养＋排药排除；不能把两属性当互斥 | 源码依据已核，组合及真实 settings 消费待 D-B |
-| FoodFeedPatient：喂食者 a、Deliveree b | b 获得摄入事实，a 不因执行该 Job 获得 Eat | 角色适配与替身待 D-B；原生未跑 |
-| dispenser → 食物 | 属性与结果跟随食物，不跟随机器 | 数据流依据已核；新消费待 D-B |
-| Corpse 同 Job 执行 → 退出 → 再执行 | 精确 Sustained 在所选阶段退出时结束；WholeProcess 不因一次阶段退出结束 | 复入适配与新反例待 D-B |
-| 中断／异常，未到 Finalize | 不制造完成结果；持续依据失效或 Unknown 结束，保原因 | 通用 Sustained 合同已有纯／平台替身基础；新 Eat 生命周期待 D-B |
-| Thing.Ingested 返回 0 | 保留 0 的事实，不等同失败；不据此撤销已证摄入调用 | 源码已核；结果事件待 D-B |
-| 精确阶段 Unknown，Whole 已知 True | 精确仍 Unknown、无新起播，不改用 Whole | 当前旧 EatState 有宽化路径，必须在 D-B 关闭 |
-| phase=WholeProcess／Execution 的正常退出 | OneShot 停新起播、已起播自然尾；Sustained 按所选依据失效结束并沿原生淡出 | 生命周期基础可复用；参数选择与事实联动待 D-B |
+| 判别输入 | 本轮实际检查及结果边界 |
+| --- | --- |
+| 准备、工厂已构造未进入、原init抛异常 | Whole可成立；Execution不成立，不以工厂调用造进入 |
+| 真实进入→退出→同Job再进入 | 精确True→False→True，代次随真实进入增加；诊断读已捕获值，不重采事实／随机 |
+| 营养×药物四种物品组合×各筛选值 | 生产采事实与条件组合相符；两属性不互斥，Any不因属性Unknown失效 |
+| dispenser→实际食物 | 缺可摄入物为Unknown；目标替换后读取食物属性 |
+| 喂食者a、接收者b | b拥有过程／执行及其声音，a不被当摄入者；不要求b自己运行Ingest |
+| 正常0返回、无效物品0提前返回、摄入异常、中断Cleanup | 仅正常摄入返回产生独立结果；0不统一失败，后三者不伪造结果 |
+| Whole／Execution持续退出 | 同一生产owner／持续槽；Whole不因一次chewing退出停，Execution按阶段退出End，Cleanup关闭Whole |
+| OneShot退出 | 不再新起播；不调用旧OneShot裁尾或停止他方声音 |
+| 真正编译移除ChewIngestible | PatchAll完成；Whole仍可用，Execution为Unknown／所选精确贡献暂停，具名缺目标；其他过程／结果／Select能力仍可用 |
 
-## 维护和验收状态
+实现位置：UsIngestionObservation的短生命周期记录与四个窄Harmony hook；UsPawnFacts一次采样；UsPawnPlaybackSession当前有效配置／同一仲裁和持续槽。记录在session reset清除，不Scribe、不写save、不造第二时钟／调度器。Any/Whole的参数不会添加未选可选依赖；固定扩展条件始终保留。
 
-- 固定缺省为 **WholeProcess／nutritionScope=Any／drugScope=Any**。新字段尚未进入 settings／保存／恢复／session，不把本记录当实现完成。
-- 源码核对：上述1.6.4871方法体结论来自继承的既有项目定点源码核对记录；本次不重新反编译安装。当前代码核对：UsPawnFacts、PeriodicStateBinding、SqueakEatOccurrence、UsOneShotRuntime。
-- 现有替身：tools/UniversalSqueakerAudioBindingTests/S3PawnFactTests.cs；纯旧政策：tools/UniversalSqueakerOneShotTests/S3Tests.cs。只证明其实际断言，不证明新 Eat 覆盖。
-- 新 Eat 替身／生产纵切：D-B 待实现；原生与听感：未运行，须后续获准并由用户协助。
-- 改源后按“受影响事实 → 消费包装 → 适配／反例 → 本表”更新；主体、阶段、结果或产品范围变化交 CO/PM，不按方法名称猜合同。
-
+证据：DbEatTests的真实Harmony＋生产适配／settings解析／session／选音／输出链；DbEatAuthorTests运行公开XML和真实loader；DbEffectiveConfigTests及ModSaveCallerTests运行生产settings/ExposeData/原子文件与Scribe替身往返及失败恢复；DbEatUiTests运行真实Source／Host、平台替身。原版Job/Toil/物品/音频为明确double，尸体是复入机制形状而非真实Corpse运行；没有据此签原生Scribe、真实游戏Config、完整4871方法体、原生挂接、屏幕或听感通过。改源时同步事实／消费者／反例，不按新方法名猜合同。
 ## Select：最终反馈主体与已提交选择分别观察
 
 **来源版本：** RimSage返回的 `Source/RimWorld/Selector.cs`，程序集1.6.9655.19392（1.6.4850）。当前编译目标仍是Krafs引用1.6.4871；二者不是同一个方法体版本。

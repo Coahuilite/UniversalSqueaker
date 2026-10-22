@@ -88,6 +88,24 @@ internal static partial class Program
             mod.WriteSettings();
             Check(mod.PhysicalSaveCount == committedWrites && !mod.IsSettingsDirty,
                 "caller: publish failure does not cause successful disk transaction to repeat", ref failures);
+
+            settings.SetGlobalVolume(.25f);
+            Check(mod.TryChangeBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
+                new BehaviorValues { Enabled = false, Volume = 0, HardIntervalTicks = 0, Phase = EatPhase.Execution,
+                    NutritionScope = EatNutritionScope.NonNutritionGiving, DrugScope = EatDrugScope.OnlyDrugs }, out _)
+                && !mod.IsSettingsDirty && mod.PhysicalSaveCount == committedWrites + 1,
+                "DB actual Mod player operation commits new row and original pending generation once", ref failures);
+            string playerFile = File.ReadAllText(path);
+            Check(playerFile.Contains("Execution") && playerFile.Contains("NonNutritionGiving") && playerFile.Contains("OnlyDrugs")
+                && playerFile.Contains("author.b/Def"), "DB actual complete Settings serialization includes Eat axes and source intent together", ref failures);
+            using (var locked = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                Check(!mod.TryChangeBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
+                    new BehaviorValues { Phase = EatPhase.WholeProcess }, out _)
+                    && settings.actionTuning.Find(x => x.actionKey == "us.core/Eat")!.eatPhase == EatPhase.Execution,
+                    "DB actual Mod failed replacement preserves previous player row and does not publish new view", ref failures);
+            }
+            Check(File.ReadAllText(path) == playerFile, "DB actual Mod player failure preserves committed Config copy", ref failures);
         }
         finally
         {

@@ -116,16 +116,14 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         cachedView = null;
     }
 
-    public void SetEatPrecision(bool value)
+    public void SetEatParameter(string key, string value)
     {
-        settings.SetEatPrecision(value);
+        Type type = key == "phase" ? typeof(EatPhase) : key == "nutritionScope" ? typeof(EatNutritionScope) : typeof(EatDrugScope);
+        int? parsed = value == "" ? null : Convert.ToInt32(Enum.Parse(type, value));
+        settings.SetEatParameter(key, parsed, state.TuningLayer == 0 ? "" : state.TuningRaceDefName,
+            state.TuningLayer == 2 ? state.TuningXenotypeDefName : "");
+        cachedView = null;
     }
-
-    public void SetEatPrecisionIncludeDrugs(bool value)
-    {
-        settings.SetEatPrecisionIncludeDrugs(value);
-    }
-
     public void SetGlobalMinIntervalTicks(int ticks)
     {
         settings.SetGlobalMinIntervalTicks(ticks);

@@ -96,12 +96,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         allowBabyActions = value;
         QueuePersistence();
     }
-    // Eat occurrence granularity (two-level switch). Both fields are add-only and default false, and false
-    // is omitted at the Scribe boundary, so settingsSchemaVersion stays 5 and a default config writes no
-    // new node. Parent off forces the child false: see SetEatPrecision (UI write), the PostLoadInit
-    // normalisation (hand-edited file) and SqueakEatOccurrence.ResolveMode (pure rule, parent-off-first).
-    public bool eatPrecisionEnabled = false;
-    public bool eatPrecisionIncludeDrugs = false;
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
     {
@@ -132,8 +126,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
         ApplyGlobalVolumeStatic();
         CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
-        CompSqueaker.EatPrecisionEnabled = eatPrecisionEnabled;
-        CompSqueaker.EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 
     /// <summary>Cheap controls are same-frame static runtime values and never rebuild the resolver.</summary>
@@ -145,8 +137,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         CompSqueaker.GlobalCooldownMultiplier = Mathf.Clamp(globalCooldownMultiplier, 0f, 3f);
         CompSqueaker.GlobalMinIntervalTicks = Mathf.Max(1, globalMinIntervalTicks);
         ApplyGlobalVolumeStatic();
-        CompSqueaker.EatPrecisionEnabled = eatPrecisionEnabled;
-        CompSqueaker.EatPrecisionIncludeDrugs = eatPrecisionIncludeDrugs;
     }
 
     public void NotifyDistanceRuntimeChanged() => CompSqueaker.ApplyDistanceRange(ClampDistanceRange(distanceRange));
@@ -266,30 +256,6 @@ public partial class UniversalSqueakerSettings : ModSettings
         QueuePersistence();
     }
 
-    /// <summary>UI wiring: Eat occurrence granularity parent switch. Parent off beats the child: clearing the
-    /// parent clears the child in the same write so "parent off + child on" can never become a live or
-    /// persisted state (the second layer is the PostLoadInit normalisation, the third the pure rule).
-    /// Cheap runtime republish + queued persistence.</summary>
-    internal void SetEatPrecision(bool value)
-    {
-        if (eatPrecisionEnabled == value) return;
-        eatPrecisionEnabled = value;
-        if (!value) eatPrecisionIncludeDrugs = false;
-        NotifyCheapRuntimeChanged();
-        QueuePersistence();
-    }
-
-    /// <summary>UI wiring: Eat occurrence granularity child switch ("include drugs"). While the parent is off
-    /// the widget keeps the row disabled and never invokes this; the parent setter (child forced false in the
-    /// same write) and the PostLoadInit normalisation are what make "parent off + child on" unreachable.
-    /// Cheap runtime republish + queued persistence, same as the parent.</summary>
-    internal void SetEatPrecisionIncludeDrugs(bool value)
-    {
-        if (eatPrecisionIncludeDrugs == value) return;
-        eatPrecisionIncludeDrugs = value;
-        NotifyCheapRuntimeChanged();
-        QueuePersistence();
-    }
     public void NotifyContinuousXenotypeRuntimeChanged() => SqueakRuntimeResolver.NotifyContinuousResolverChange(this, SqueakXenotypeCatalog.Current);
     public void NotifyDiscreteResolverRuntimeChanged() => SqueakRuntimeResolver.NotifyDiscreteResolverChange(this, SqueakXenotypeCatalog.Current);
     public void QueuePersistence() => UniversalSqueakerMod.Instance?.QueueSettingsSave();
@@ -422,7 +388,7 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// </summary>
     private static bool CarriesAnyActionTuningField(ActionTuningRecord? record)
     {
-        return record != null && (record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier
+        return record != null && (record.CarriesBehaviorFields || record.hasScope || record.hasIntervalMultiplier || record.hasProbabilityMultiplier
             || record.responses.Count > 0 || record.responseParameters.Count > 0
             || !string.IsNullOrEmpty(record.sourcePresetDefName));
     }
@@ -618,8 +584,8 @@ public partial class UniversalSqueakerSettings : ModSettings
     /// <summary>调音记录的 (actionKey, race, xenotype) 身份比较，供 upsert 与去重共用。</summary>
     private static bool SameActionTuningIdentity(ActionTuningRecord? candidate, string actionKey, string raceDefName, string xenotypeDefName)
     {
-        return candidate != null
-            && string.Equals(candidate.actionKey, actionKey, StringComparison.Ordinal)
+        return candidate != null && candidate.serviceFamily == "Pawn"
+            && string.Equals(Kernel.ActionKey.DefinitionId(candidate.actionKey), Kernel.ActionKey.DefinitionId(actionKey), StringComparison.Ordinal)
             && string.Equals(candidate.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
             && string.Equals(candidate.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
     }

@@ -210,8 +210,6 @@
   <US.Tuning.ScaleCooldown>Keep squeak timing steady at high game speed</US.Tuning.ScaleCooldown>
   <US.Tuning.ScaleTalking>Adjust ordinary squeaks by the pawn's Talking ability</US.Tuning.ScaleTalking>
   <US.Tuning.ScalePopulation>Fewer periodic squeaks when many US-connected pawns are in earshot</US.Tuning.ScalePopulation>
-  <US.Tuning.EatPrecision>Eat squeaks only while actually eating (ingesting nutrition)</US.Tuning.EatPrecision>
-  <US.Tuning.EatPrecision.IncludeDrugs>Also for drugs</US.Tuning.EatPrecision.IncludeDrugs>
   <US.Tuning.CameraIndicator>Show camera indicator</US.Tuning.CameraIndicator>
   <US.Tuning.GlobalVolume>Global volume: {0}</US.Tuning.GlobalVolume>
   <US.Tuning.MinInterval>Call interval master: {0}  ·  1.0x uses the default rhythm</US.Tuning.MinInterval>
@@ -368,10 +366,6 @@
   <US.Help.BasicTuning.ScaleTalking.Text>Adjusts the ordinary squeaks by the pawn's Talking ability: the lower the ability, the lower the chance an ordinary attempt passes. Actions with their own talking gate are unaffected. On by default.</US.Help.BasicTuning.ScaleTalking.Text>
   <US.Help.BasicTuning.ScalePopulation.Label>Population Scaling</US.Help.BasicTuning.ScalePopulation.Label>
   <US.Help.BasicTuning.ScalePopulation.Text>When many US-connected pawns are within earshot, periodic squeaks thin out: the intervals lengthen and the probability of a random squeak attempt passing falls, both in proportion to the audible count divided by ten (the factor is never below one), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
-  <US.Help.BasicTuning.EatPrecision.Label>Eating Detection</US.Help.BasicTuning.EatPrecision.Label>
-  <US.Help.BasicTuning.EatPrecision.Text>Off by default: the whole eating trip counts as an Eat squeak, including the walk to the food. On, only the part where nutrition is actually being ingested counts; zero-nutrition items such as smokeleaf joints are ignored unless "Also for drugs" is on, while nutrition-bearing drinks such as beer and ambrosia still count. Turning this off also clears and hides the option below.</US.Help.BasicTuning.EatPrecision.Text>
-  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>Include Drugs</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Label>
-  <US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>Only shown while the option above is on. Counts the chewing or lighting stage, so zero-nutrition drugs also trigger. If that stage cannot be recognised, the whole eating job counts instead.</US.Help.BasicTuning.EatPrecision.IncludeDrugs.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
   <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>
@@ -497,7 +491,7 @@
   <US.Reset.DistanceDefaults>Restore distance defaults</US.Reset.DistanceDefaults>
   <US.Reset.Confirm>Restore</US.Reset.Confirm>
   <US.Reset.Area.Distance.Confirm>This restores the distance area to defaults: output volume, distance preset and the distance range. Action/mood tuning, pack selection and fallback tables are kept.</US.Reset.Area.Distance.Confirm>
-  <US.Reset.Area.Basics.Confirm>This restores the playback-behaviour area to defaults: easter-egg sounds, scale cooldown with time speed, scale frequency with talking, scale periodic with audible population, camera indicator, baby actions, eat precision and its include-drugs child. Other areas and fallback tables are kept.</US.Reset.Area.Basics.Confirm>
+  <US.Reset.Area.Basics.Confirm>Restore playback-behaviour controls and the Pawn service-profile Eat parameters. Race/Xenotype overrides, author sources and other areas are kept; use the exact action/layer restore for domain overrides.</US.Reset.Area.Basics.Confirm>
   <US.Reset.Area.Timing.Confirm>This restores the trigger-timing area to defaults: the minimum interval and the global cooldown multiplier. Other areas and fallback tables are kept.</US.Reset.Area.Timing.Confirm>
   <US.Reset.Area.Diagnostics.Confirm>This restores the diagnostics area to defaults: the developer log mode and the localized debug-action menu. The per-window layout-diagnosis switches are not settings and are untouched.</US.Reset.Area.Diagnostics.Confirm>
   <US.Reset.Area.Action.Confirm>This restores EVERY action row of the current layer/domain shown below to defaults (scope, interval and probability overrides plus the row's preset anchor). Other layers, domains and areas are kept.</US.Reset.Area.Action.Confirm>
@@ -603,4 +597,21 @@
   <US.Kernel.CandidateActive>An explicit development candidate is active. Activity A and response parameters use the new Config/author contract; old timing controls are retired.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>Kernel: last observed decision</US.Kernel.LastObservedDecision>
+  <US.Eat.Any>Any item</US.Eat.Any>
+  <US.Eat.ExcludeDrugs>Exclude drugs</US.Eat.ExcludeDrugs>
+  <US.Eat.Execution>Execution only</US.Eat.Execution>
+  <US.Eat.Inherit>Inherit this field</US.Eat.Inherit>
+  <US.Eat.NonNutritionGiving>Non-nutritious only</US.Eat.NonNutritionGiving>
+  <US.Eat.NutritionGiving>Nutritious only</US.Eat.NutritionGiving>
+  <US.Eat.OnlyDrugs>Drugs only</US.Eat.OnlyDrugs>
+  <US.Eat.WholeProcess>Whole process</US.Eat.WholeProcess>
+  <US.Help.BasicTuning.EatDrug.Label>Drug filter</US.Help.BasicTuning.EatDrug.Label>
+  <US.Help.BasicTuning.EatDrug.Text>Filters the actual ingested item by IsDrug, independently of nutrition and phase. Any does not require this fact. Default: Any.</US.Help.BasicTuning.EatDrug.Text>
+  <US.Help.BasicTuning.EatNutrition.Label>Nutrition filter</US.Help.BasicTuning.EatNutrition.Label>
+  <US.Help.BasicTuning.EatNutrition.Text>Filters the actual ingested item by IsNutritionGivingIngestible, independently of phase and drug status. Any does not require this fact. Default: Any.</US.Help.BasicTuning.EatNutrition.Text>
+  <US.Help.BasicTuning.EatPhase.Label>Eat phase</US.Help.BasicTuning.EatPhase.Label>
+  <US.Help.BasicTuning.EatPhase.Text>Edits the selected Pawn, Race or Xenotype tuning layer. Whole process includes preparation; execution requires actual chewing or lighting entry. Missing precise facts pause this path, never widen it. Inherit clears only this field.</US.Help.BasicTuning.EatPhase.Text>
+  <US.Tuning.EatDrug>Eat drug filter</US.Tuning.EatDrug>
+  <US.Tuning.EatNutrition>Eat nutrition filter</US.Tuning.EatNutrition>
+  <US.Tuning.EatPhase>Eat phase (selected tuning layer)</US.Tuning.EatPhase>
 </LanguageData>

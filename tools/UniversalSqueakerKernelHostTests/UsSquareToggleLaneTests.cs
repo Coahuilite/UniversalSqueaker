@@ -131,7 +131,7 @@ internal static class UsSquareToggleLaneTests
     private static readonly string[] DeclaredSwitches =
     {
         "basic-egg-check", "basic-baby-check", "basic-cooldown-check", "basic-talking-check",
-        "basic-population-check", "basic-eat-check", "basic-eat-child-check", "camera-indicator-check",
+        "basic-population-check", "camera-indicator-check",
         "diagnostics-localize-check"
     };
 
@@ -298,7 +298,7 @@ internal static class UsSquareToggleLaneTests
             // is behaving correctly - a red for the wrong reason. The old version of this lane ran with the
             // fixture's default (OFF) and counted the manifest's declarations, which is the same defect
             // waiting to fire; the gate is now part of the fixture state the lane declares.
-            var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+            var source = new RecordingSettingsSource { RichData = true };
             using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Tuning");
             host.MeasureAndArrange(new Vector2(PageWidth, TallHeight));
@@ -483,7 +483,7 @@ internal static class UsSquareToggleLaneTests
             // is only a meaningful assertion when the declared set and the arranged set agree, so the gate is
             // part of the fixture state this step declares rather than a count the lane narrows to fit.
             using UiHost host = UsKernelSettingsHost.Create(
-                new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true });
+                new RecordingSettingsSource { RichData = true });
             host.Bindings.Invoke("set-tab", "Tuning");
             UiLayoutSnapshot snapshot = Arrange(host);
             Rect band = RectOf(snapshot, checkId);

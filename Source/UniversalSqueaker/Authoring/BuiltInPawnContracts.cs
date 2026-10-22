@@ -16,7 +16,7 @@ public static class BuiltInPawnContracts
     public static bool IsEvent(string key) => key != "Call" && key != "Eat" && key != "Sleep"
         && key != "Social" && key != "Joy" && key != "Move" && key != "Work";
 
-    public static string FactKey(string key) => "us.core/" + key + (IsEvent(key) ? "Event" : "State");
+    public static string FactKey(string key) => key == "Eat" ? EatPolicy.Process : "us.core/" + key + (IsEvent(key) ? "Event" : "State");
 
     public static IEnumerable<ActionPlan> Create(long interval, long woundedInterval, bool fullDevCandidate)
     {

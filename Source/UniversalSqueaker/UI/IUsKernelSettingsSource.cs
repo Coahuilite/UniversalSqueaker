@@ -37,17 +37,9 @@ public interface IUsKernelSettingsSource
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
 
-    /// <summary>
-    /// Parent switch of the eat-occurrence pair: false (the shipped default) keeps the whole
-    /// <c>JobDefOf.Ingest</c> job counting as an Eat occurrence, true narrows it to genuinely
-    /// ingesting food. Turning it off forces the child switch false in the same write.
-    /// </summary>
-    void SetEatPrecision(bool value);
     void SetBabyActions(bool value);
-
-    /// <summary>Child option "include drugs"; only meaningful while the parent switch is on.</summary>
-    void SetEatPrecisionIncludeDrugs(bool value);
-
+    // Empty value restores this field's inheritance in the selected Pawn/Race/Xeno layer.
+    void SetEatParameter(string key, string value);
     void SetGlobalMinIntervalTicks(int ticks);
     void SetGlobalCooldownMultiplier(float value);
     void SetDevLoggingMode(SqueakDevLoggingMode mode);

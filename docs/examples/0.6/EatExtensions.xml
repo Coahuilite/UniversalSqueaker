@@ -1,0 +1,31 @@
+<Defs>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleInjuredEat</defName>
+    <declaration>
+      <key>example/InjuredEat</key><baseAction>us.core/Eat</baseAction><priority>40</priority>
+      <condition><ref>us.core/HasCurrentInjury</ref></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleAfterIngestion</defName>
+    <declaration>
+      <key>example/AfterIngestion</key><priority>50</priority>
+      <condition><ref>us.core/IngestionResultEvent</ref></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleEatExtensions</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>injured</key><action>example/InjuredEat</action><sound>Click</sound></li>
+      <li><key>after</key><action>example/AfterIngestion</action><sound>Click</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+  <UniversalSqueaker.UsBehaviorSourceDef>
+    <defName>US_ExampleEatBehavior</defName>
+    <declaration family="Pawn" namespace="" target="Ratkin">
+      <action key="us.core/Eat" phase="WholeProcess" nutritionScope="Any" drugScope="Any" />
+      <action key="example/InjuredEat" phase="Execution" nutritionScope="NutritionGiving" drugScope="ExcludeDrugs" volume="0.5" hardIntervalTicks="60" />
+      <action key="example/AfterIngestion" volume="0.75" hardIntervalTicks="120" />
+    </declaration>
+  </UniversalSqueaker.UsBehaviorSourceDef>
+</Defs>

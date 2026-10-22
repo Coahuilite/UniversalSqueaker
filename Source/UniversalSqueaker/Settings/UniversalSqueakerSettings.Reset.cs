@@ -98,8 +98,6 @@ public partial class UniversalSqueakerSettings
         if (allowEasterEggSounds != defaults.allowEasterEggSounds) { allowEasterEggSounds = defaults.allowEasterEggSounds; changed = true; }
         if (allowExternalActions != defaults.allowExternalActions) { allowExternalActions = defaults.allowExternalActions; changed = true; }
         if (allowBabyActions != defaults.allowBabyActions) { allowBabyActions = defaults.allowBabyActions; changed = true; }
-        if (eatPrecisionEnabled != defaults.eatPrecisionEnabled) { eatPrecisionEnabled = defaults.eatPrecisionEnabled; changed = true; }
-        if (eatPrecisionIncludeDrugs != defaults.eatPrecisionIncludeDrugs) { eatPrecisionIncludeDrugs = defaults.eatPrecisionIncludeDrugs; changed = true; }
 #if US_EXPERIMENTAL
         // 构建变体诚实标注：该字段仅 Dev/EXP 构建存在，ship 构建的字段表天然不含它。
         if (experimentalKiiroCompat != defaults.experimentalKiiroCompat) { experimentalKiiroCompat = defaults.experimentalKiiroCompat; changed = true; }
@@ -166,9 +164,10 @@ public partial class UniversalSqueakerSettings
         foreach (ActionTuningRecord row in actionTuning)
         {
             if (!SameActionTuningIdentity(row, actionKey, race, xeno)) continue;
-            if (row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
+            if (row.CarriesBehaviorFields || row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
                 || row.responses.Count > 0 || row.responseParameters.Count > 0
                 || !string.IsNullOrEmpty(row.sourcePresetDefName)) changed = true;
+            row.ClearBehaviorFields();
             row.hasScope = false;
             row.hasIntervalMultiplier = false;
             row.hasProbabilityMultiplier = false;
@@ -244,8 +243,6 @@ public partial class UniversalSqueakerSettings
     ///    distanceRange→15–50。与 ResetDistanceDefaults 的区别就是这个区域**含**音量滑杆。
     ///  - Basics（host 449-463）：allowEasterEggSounds→false、scaleCooldownWithTimeSpeed→true、
     ///    scaleFrequencyWithTalking→true、scalePeriodicWithAudiblePopulation→true、
-    ///    showCameraIndicator→false、allowBabyActions→false、eatPrecisionEnabled→false、
-    ///    eatPrecisionIncludeDrugs→false。
     ///  - Timing（host 470-508）：globalMinIntervalTicks→216、globalCooldownMultiplier→1f。
     ///  - Diagnostics（host 515-539）：devLoggingMode→Auto、localizeDebugActions→false。
     /// 未知枚举值 ⇒ Rejected 零副作用。发布按各字段既有通道恰好一轮，持久化请求一次。</summary>
@@ -289,10 +286,15 @@ public partial class UniversalSqueakerSettings
         bool populationChanged = scalePeriodicWithAudiblePopulation != defaults.scalePeriodicWithAudiblePopulation;
         bool cameraChanged = showCameraIndicator != defaults.showCameraIndicator;
         bool babyChanged = allowBabyActions != defaults.allowBabyActions;
-        bool eatChanged = eatPrecisionEnabled != defaults.eatPrecisionEnabled;
-        bool drugsChanged = eatPrecisionIncludeDrugs != defaults.eatPrecisionIncludeDrugs;
+        bool eatChanged = false;
+        foreach (var row in actionTuning)
+        {
+            if (row.serviceFamily != "Pawn" || row.raceDefName != "" || row.xenotypeDefName != "" || Kernel.ActionKey.DefinitionId(row.actionKey) != "us.core/Eat") continue;
+            eatChanged |= row.hasEatPhase || row.hasNutritionScope || row.hasDrugScope;
+            row.hasEatPhase = row.hasNutritionScope = row.hasDrugScope = false;
+        }
         if (!eggsChanged && !cooldownChanged && !talkingChanged && !populationChanged
-            && !cameraChanged && !babyChanged && !eatChanged && !drugsChanged) return SqueakResetOutcome.NoChange;
+            && !cameraChanged && !babyChanged && !eatChanged) return SqueakResetOutcome.NoChange;
 
         allowEasterEggSounds = defaults.allowEasterEggSounds;
         scaleCooldownWithTimeSpeed = defaults.scaleCooldownWithTimeSpeed;
@@ -300,10 +302,7 @@ public partial class UniversalSqueakerSettings
         scalePeriodicWithAudiblePopulation = defaults.scalePeriodicWithAudiblePopulation;
         showCameraIndicator = defaults.showCameraIndicator;
         allowBabyActions = defaults.allowBabyActions;
-        eatPrecisionEnabled = defaults.eatPrecisionEnabled;
-        // 父关强制子关（SetEatPrecision/PostLoadInit 同规则）：清父开关时子开关同步置默认，
-        // "parent off + child on" 不会成为本恢复的落点。
-        eatPrecisionIncludeDrugs = defaults.eatPrecisionIncludeDrugs;
+        // Basics clears only the Pawn service-profile Eat parameters; exact Race/Xeno rows remain owned by their layer restore.
 
         // 目标已形成；按各字段的既有通道一轮发布。
         if (cameraChanged) SqueakDebug.ShowCameraIndicator = showCameraIndicator;
@@ -361,9 +360,10 @@ public partial class UniversalSqueakerSettings
         foreach (ActionTuningRecord row in actionTuning)
         {
             if (!SameActionTuningDomain(row, race, xeno)) continue;
-            if (row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
+            if (row.CarriesBehaviorFields || row.hasScope || row.hasIntervalMultiplier || row.hasProbabilityMultiplier
                 || row.responses.Count > 0 || row.responseParameters.Count > 0
                 || !string.IsNullOrEmpty(row.sourcePresetDefName)) changed = true;
+            row.ClearBehaviorFields();
             row.hasScope = false;
             row.hasIntervalMultiplier = false;
             row.hasProbabilityMultiplier = false;
@@ -381,7 +381,7 @@ public partial class UniversalSqueakerSettings
     /// 键。与 <see cref="SameActionTuningIdentity"/> 同一 ?? "" Ordinal 规则。</summary>
     private static bool SameActionTuningDomain(ActionTuningRecord? record, string raceDefName, string xenotypeDefName)
     {
-        return record != null
+        return record != null && record.serviceFamily == "Pawn"
             && string.Equals(record.raceDefName ?? "", raceDefName ?? "", StringComparison.Ordinal)
             && string.Equals(record.xenotypeDefName ?? "", xenotypeDefName ?? "", StringComparison.Ordinal);
     }

@@ -79,10 +79,12 @@ public readonly struct FactDiagnostic
 
 public sealed class FactSnapshot
 {
+    public readonly IngestionResultFact? Ingestion;
     private readonly Dictionary<string, Truth> facts;
     private readonly Dictionary<string, FactDiagnostic> diagnostics;
-    public FactSnapshot(IEnumerable<KeyValuePair<string, Truth>> values, IEnumerable<FactDiagnostic>? diagnostics = null)
+    public FactSnapshot(IEnumerable<KeyValuePair<string, Truth>> values, IEnumerable<FactDiagnostic>? diagnostics = null, IngestionResultFact? ingestion = null)
     {
+        Ingestion = ingestion;
         facts = values.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
         this.diagnostics = (diagnostics ?? Array.Empty<FactDiagnostic>()).ToDictionary(x => x.Key, StringComparer.Ordinal);
     }
@@ -341,10 +343,12 @@ public sealed class PlaybackRequest
     public readonly bool Sustained;
     public readonly int Priority;
     public readonly Condition? Condition;
+    public readonly IngestionResultFact? Ingestion;
     public PlaybackRequest(string subject, string domain, string action, AudioCandidate audio, long tick, double pitch = 1,
-        bool sustained = false, int priority = 0, Condition? condition = null, string subjectRole = "Subject", string childDomain = "")
+        bool sustained = false, int priority = 0, Condition? condition = null, string subjectRole = "Subject", string childDomain = "", IngestionResultFact? ingestion = null)
     {
         Subject = subject;
+        Ingestion = ingestion;
         SubjectRole = subjectRole;
         ChildDomain = childDomain;
         Domain = domain;
@@ -504,7 +508,7 @@ public sealed class OneShotDecision
                 childDomain: audio.ChildDomain, sourceDomain: audio.SourceDomain, sourceTier: audio.SourceTier);
             enteredBackend = true;
             var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, local.Pitch,
-                action.Sustained, action.Priority, action.Condition, input.SubjectRole, input.ChildDomain));
+                action.Sustained, action.Priority, action.Condition, input.SubjectRole, input.ChildDomain, input.Facts.Ingestion));
             Settle(state, policy, input, action, receipt);
             return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
         }

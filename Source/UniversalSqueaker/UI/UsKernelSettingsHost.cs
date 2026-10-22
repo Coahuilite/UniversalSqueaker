@@ -24,6 +24,12 @@ namespace UniversalSqueaker.UI;
 /// </summary>
 public static class UsKernelSettingsHost
 {
+    private static IReadOnlyList<UiOption> EatOptions(Type type)
+    {
+        var options = new List<UiOption> { new("US.Eat.Inherit".Translate(), "") };
+        foreach (string value in Enum.GetNames(type)) options.Add(new UiOption(("US.Eat." + value).Translate(), value));
+        return options;
+    }
     private const int HelpHoverGracePasses = 15;
     private const string Source = "coahuilite.universalsqueaker";
     private const string ManifestResourceName = "UniversalSqueaker.UI.Layout.Schema2.xml";
@@ -556,14 +562,13 @@ public static class UsKernelSettingsHost
         writes.Value<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
         writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
-        // Basic: the eat-precision pair. The parent gates the child, but the guard deliberately lives in
-        // ONE place (the widget refuses to invoke while disabled; the settings layer forces the child to
-        // false when the parent closes; PostLoadInit normalises a hand-edited file). Do not add a third
-        // guard here: a binding-level guard would mask a widget that stops honouring the disabled state.
         writes.Value<bool>("allow-baby-actions", () => source.BuildView().AllowBabyActions, value => { source.SetBabyActions(value); bump(); });
-        writes.Value<bool>("eat-precision", () => source.BuildView().EatPrecisionEnabled, value => { source.SetEatPrecision(value); bump(); });
-        writes.Value<bool>("eat-precision-include-drugs", () => source.BuildView().EatPrecisionIncludeDrugs, value => { source.SetEatPrecisionIncludeDrugs(value); bump(); });
-
+        writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
+        writes.Value<string>("eat-nutrition", () => source.BuildView().EatNutritionScope.ToString(), value => { source.SetEatParameter("nutritionScope", value); bump(); });
+        writes.Value<string>("eat-drug", () => source.BuildView().EatDrugScope.ToString(), value => { source.SetEatParameter("drugScope", value); bump(); });
+        bindings.BindOptions<UiOption>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
+        bindings.BindOptions<UiOption>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
+        bindings.BindOptions<UiOption>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
         // S4-3 dissolved us/timing into manifest atoms. The interval is ONE value in two units, so the
         // declarative card keeps the same split the global-volume card uses: the slider atom owns the

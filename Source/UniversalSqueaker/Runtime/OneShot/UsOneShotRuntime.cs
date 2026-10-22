@@ -47,6 +47,10 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     private long lastObservation;
     private bool diagnosticFaultReported;
     private bool endFaultReported;
+    private BehaviorConfigurationSnapshot? configuration;
+    private readonly Dictionary<string, EffectiveBehavior> effectiveActions = new(StringComparer.Ordinal);
+    private string resultEvidence = "";
+    private string ingestionEvidence = "";
     internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
@@ -57,6 +61,9 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         + " sourceDomain=" + lastRequest?.Audio.SourceDomain + " tier=" + lastRequest?.Audio.SourceTier + " pack=" + lastRequest?.Audio.PackKey
         + " requestedEntry=" + lastRequest?.Audio.EntryKey + " requestedAudio=" + lastRequest?.Audio.AudioId
         + " localPitch=" + lastRequest?.Pitch + " localVolume=" + lastRequest?.Audio.Volume
+        + " configView=" + configuration?.Id + " effective=" + string.Join(";", effectiveActions.Where(x => x.Key == LastOutcome.Action).Select(x => x.Key + ":" + string.Join(",", x.Value.Origins.Select(v => v.Key + "=" + v.Value)) + ":requires=" + string.Join(",", x.Value.Dependencies)))
+        + " ingestion=" + ingestionEvidence
+        + " result=" + resultEvidence
         + " rolls=" + string.Join(",", draws.Select(x => x.Key + ":" + x.Value))
         + " missing=" + string.Join(",", (LastOutcome.Diagnostics ?? Array.Empty<FactDiagnostic>()).Select(x => x.Key + ":" + x.Reason));
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
@@ -64,7 +71,21 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     public DecisionState State => state;
 
     private bool HasAvailableFact(string key) => catalog.HasFact(key)
-        && (key != UsSelectObservation.FactKey || UsSelectObservation.Ready);
+        && (key != UsSelectObservation.FactKey || UsSelectObservation.Ready) && UsIngestionObservation.Available(key);
+
+    private static bool UsesEat(Condition condition) => condition.Operation == "ref" && (condition.Fact == EatPolicy.Process || condition.Fact == EatPolicy.Execution)
+        || condition.Children.Any(UsesEat);
+    private static Condition EffectiveCondition(ActionPlan action, BehaviorValues behavior)
+        => UsesEat(action.Condition) ? new Condition("all", "", action.Condition, EatConditions.Restriction(
+            behavior.Phase ?? EatPhase.WholeProcess, behavior.NutritionScope ?? EatNutritionScope.Any, behavior.DrugScope ?? EatDrugScope.Any)) : action.Condition;
+    private BehaviorValues Defaults(ActionPlan action) => new()
+    {
+        Enabled = true, HardIntervalTicks = Kernel.ActionKey.SchemaKey(action.Key) != action.Key ? action.Key == "us.core/Wounded" ? woundedTicks : workTicks : action.Interval,
+        TalkingEnabled = !action.SkipTalking, Volume = 1, Pitch = 1,
+        Phase = UsesEat(action.Condition) ? EatPhase.WholeProcess : null,
+        NutritionScope = UsesEat(action.Condition) ? EatNutritionScope.Any : null,
+        DrugScope = UsesEat(action.Condition) ? EatDrugScope.Any : null
+    };
 
     internal UsPawnPlaybackSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
     {
@@ -79,8 +100,8 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         this.candidate = candidate;
     }
 
-    public void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null,
-        string? registeredAction = null)
+    internal void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null,
+        string? registeredAction = null, UsIngestionObservation.Result? ingestionResult = null)
     {
         long now = Find.TickManager.TicksGame;
         if (eventKey == null && now < state.NextStateTick)
@@ -102,6 +123,19 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         var plans = new List<ActionPlan>();
         var modulation = new Dictionary<string, ModulationPlan>(StringComparer.Ordinal);
         var numericalFacts = new Dictionary<string, double>(StringComparer.Ordinal);
+        configuration = UniversalSqueakerMod.Settings.CaptureBehaviorConfiguration();
+        ingestionEvidence = UsIngestionObservation.Describe(pawn);
+        effectiveActions.Clear();
+        var resultFact = ingestionResult == null ? null : new IngestionResultFact(ingestionResult.Ingester.ThingID,
+            ingestionResult.ItemId, ingestionResult.ItemDef, ingestionResult.Nutrition);
+        values[EatPolicy.Result] = UsIngestionObservation.Ingested == null ? Truth.Unknown : resultFact == null ? Truth.False : Truth.True;
+        resultEvidence = "";
+        if (ingestionResult != null)
+        {
+            numericalFacts["ingestion.nutrition"] = ingestionResult.Nutrition;
+            resultEvidence = "ingester=" + ingestionResult.Ingester.ThingID + ",item=" + ingestionResult.ItemId
+                + ",def=" + ingestionResult.ItemDef + ",nutrition=" + ingestionResult.Nutrition;
+        }
         var stage = pawn.ageTracker?.CurLifeStage;
         if (stage != null)
         {
@@ -120,9 +154,13 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 continue;
             }
             string actionId = action.Key;
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, actionId, catalog.BehaviorSources, HasAvailableFact, out bool paused,
-                reason => blockedReasons[action.Key] = reason);
-            if (paused || !comp.ControlledOneShotAllowed(actionId, activeCommand, behavior, authorAction: true))
+            var effective = configuration.Resolve(domain, actionId, Defaults(action), catalog.BehaviorSources, HasAvailableFact, action.Condition.RequiredFacts());
+            effectiveActions[actionId] = effective;
+            var behavior = effective.Read();
+            if (effective.Paused) blockedReasons[actionId] = effective.Failure;
+            bool invalidEatFields = !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue);
+            if (invalidEatFields) blockedReasons[actionId] = "EatParametersRequireIngestionContract";
+            if (!configuration.SystemEnabled || effective.Paused || invalidEatFields || !comp.ControlledOneShotAllowed(actionId, activeCommand, behavior, authorAction: true))
             {
                 blocked.Add(action.Key);
             }
@@ -141,25 +179,25 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 }
             }
             bool builtIn = Kernel.ActionKey.SchemaKey(actionId) != actionId;
-            plans.Add(new ActionPlan(action.Key, action.Priority, action.Condition,
+            plans.Add(new ActionPlan(action.Key, action.Priority, EffectiveCondition(action, behavior),
                 behavior.HardIntervalTicks ?? (builtIn ? actionId == "us.core/Wounded" ? woundedTicks : workTicks : action.Interval),
                 action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : action.Chance * candidate.EventProbability, action.BaseAction,
                 behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking, behavior.Volume ?? 1, behavior.Pitch ?? 1,
                 action.Sustained || comp.ControlledPlaybackSustained(actionId), action.RequiresVocal));
-            modulation[action.Key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses);
+            modulation[action.Key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses, resultFact);
         }
         if (compatibilityInvocation.HasValue)
         {
             string key = eventKey!;
             values["us.compat/Event"] = Truth.True;
             plans.Clear();
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
-                HasAvailableFact, out bool paused);
+            var effective = configuration.Resolve(domain, key, new BehaviorValues(), catalog.BehaviorSources, HasAvailableFact);
+            var behavior = effective.Read();
             plans.Add(new ActionPlan(key, 0, new Condition("ref", "us.compat/Event"),
                 behavior.HardIntervalTicks ?? workTicks, chance: candidate.EventProbability,
                 skipTalking: behavior.TalkingEnabled == false, volume: behavior.Volume ?? 1, pitch: behavior.Pitch ?? 1,
                 sustained: comp.ControlledPlaybackSustained(key)));
-            if (paused || !comp.ControlledOneShotAllowed(key, activeCommand, behavior, authorAction: true))
+            if (!configuration.SystemEnabled || effective.Paused || !comp.ControlledOneShotAllowed(key, activeCommand, behavior, authorAction: true))
             {
                 blocked.Add(key);
             }
@@ -169,12 +207,12 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         {
             Subject = pawn.ThingID,
             SubjectRole = eventKey == "us.core/Select" ? "SelectedSubject" : eventKey == "us.core/Attack" ? "Attacker"
-                : eventKey == "us.core/Wounded" ? "DamageRecipient" : "Subject",
+                : eventKey == "us.core/Wounded" ? "DamageRecipient" : ingestionResult != null || eventKey == null && values[EatPolicy.Process] == Truth.True ? "ActualIngester" : "Subject",
             Domain = pawn.def.defName,
             ChildDomain = audioDomain.Xenotype?.DefName ?? "",
             Tick = now,
             ActiveSustainedKey = sustained.ActiveKey,
-            Activity = UniversalSqueakerMod.Settings.activity,
+            Activity = configuration.Activity,
             StateWaitFactor = candidate.StateWaitFactor,
             ActionModulation = modulation,
             AudioPool = snapshot.Registry,
@@ -188,7 +226,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 && SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled,
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = CompSqueaker.ScaleFrequencyWithTalking && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
-            Facts = catalog.Capture(pawn.ThingID, values, UsSelectObservation.Diagnostics),
+            Facts = catalog.Capture(pawn.ThingID, values, UsSelectObservation.Diagnostics.Concat(UsIngestionObservation.Diagnostics), resultFact),
             Actions = plans.ToArray(),
             Audio = UsAuthorVoicePacks.Selected(catalog.Audio, snapshot.Registry, audioDomain),
             SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
@@ -215,7 +253,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         }
     }
 
-    public void Maintain()
+    public void Maintain(bool force = false)
     {
         if (!pawn.Spawned || pawn.Destroyed || pawn.MapHeld != Find.CurrentMap
             || SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled)
@@ -224,23 +262,25 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             return;
         }
         long now = Find.TickManager.TicksGame;
-        if (sustained.ReviewDue(now))
+        if (force || sustained.ReviewDue(now))
         {
             string active = sustained.ActiveKey;
             var action = catalog.Actions.FirstOrDefault(x => x.Key == active);
             string key = active;
             var domain = new BehaviorDomain("Pawn", "", pawn.def.defName,
                 SqueakRuntimeResolver.Current.ResolveContext(pawn).Xenotype?.defName ?? "");
-            var behavior = UniversalSqueakerMod.Settings.ResolveBehaviorSource(domain, key, catalog.BehaviorSources,
-                HasAvailableFact, out bool paused);
+            var view = UniversalSqueakerMod.Settings.CaptureBehaviorConfiguration();
+            var effective = view.Resolve(domain, key, action == null ? new BehaviorValues() : Defaults(action), catalog.BehaviorSources, HasAvailableFact, action?.Condition.RequiredFacts());
+            var behavior = effective.Read();
             var comp = pawn.GetComp<CompSqueaker>();
-            if (paused || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
+            bool invalidEatFields = action != null && !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue);
+            if (!view.SystemEnabled || effective.Paused || invalidEatFields || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
                 || action?.RequiresVocal == true && comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
             {
                 EndSustained("CurrentAuthorizationUnavailable");
                 return;
             }
-            sustained.Review(now, UsPawnFacts.CaptureSnapshot(catalog, pawn, null));
+            sustained.Review(now, UsPawnFacts.CaptureSnapshot(catalog, pawn, null), action == null ? null : EffectiveCondition(action, behavior), force);
             ReportEndFault();
         }
         sustained.Maintain();
@@ -564,6 +604,14 @@ public static class UsOneShotRuntime
         sessions.Remove(pawn);
     }
     public static bool IsControlled(Pawn pawn) => sessions.ContainsKey(pawn);
+    internal static void IngestionChanged(Pawn pawn)
+    {
+        if (sessions.TryGetValue(pawn, out var session)) session.Maintain(true);
+    }
+    internal static void IngestionResult(UsIngestionObservation.Result result)
+    {
+        SessionFor(result.Ingester)?.Tick(EatPolicy.Result, ingestionResult: result);
+    }
     public static bool TryTick(Pawn pawn)
     {
         var session = SessionFor(pawn);
@@ -620,6 +668,7 @@ public static class UsOneShotRuntime
             session.Stop();
         }
         sessions.Clear();
+        UsIngestionObservation.Reset();
     }
 }
 

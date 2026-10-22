@@ -116,7 +116,7 @@ public static class SqueakRuntimeResolver
         Dictionary<string, LayerActionDelta> layers = new(StringComparer.Ordinal);
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
-            if (record == null || record.IsValidLayer(out int layer) == false || layer != 0) continue;
+            if (record == null || record.serviceFamily != "Pawn" || record.IsValidLayer(out int layer) == false || layer != 0) continue;
             if (string.IsNullOrEmpty(record.actionKey)) continue;
             // 外部动作键不进入本表（与 Pure 层契约一致；支持外部动作调音待生态出现后评估，YAGNI）。
             if (!UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(record.actionKey, out _)) continue;
@@ -267,7 +267,7 @@ public static class SqueakRuntimeResolver
         // S2: actionTuning 的 Xenotype 层记录叠加（layer==2），字段级覆盖旧 actionOverrides 派生值。
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
-            if (record == null || record.IsValidLayer(out int layer) == false || layer != 2) continue;
+            if (record == null || record.serviceFamily != "Pawn" || record.IsValidLayer(out int layer) == false || layer != 2) continue;
             if (!AudioDomains.TryCreate(record.raceDefName, record.xenotypeDefName, out AudioDomain domain)) continue;
             if (!ActionKey.TryParseBuiltIn(record.actionKey, out _)) continue;
             actions.Add((domain, record.actionKey, FromActionRecord(record)));
@@ -289,7 +289,7 @@ public static class SqueakRuntimeResolver
         List<(AudioDomain domain, SqueakMood mood, LayerMoodDelta delta)> moods = new();
         foreach (ActionTuningRecord record in settings.actionTuning ?? new List<ActionTuningRecord>())
         {
-            if (record == null || record.IsValidLayer(out int layer) == false || layer != 1) continue;
+            if (record == null || record.serviceFamily != "Pawn" || record.IsValidLayer(out int layer) == false || layer != 1) continue;
             if (string.IsNullOrEmpty(record.raceDefName)) continue;
             if (!ActionKey.TryParseBuiltIn(record.actionKey, out _)) continue;
             actions.Add((AudioDomains.RaceOnly(record.raceDefName), record.actionKey, FromActionRecord(record)));

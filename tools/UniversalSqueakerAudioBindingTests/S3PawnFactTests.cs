@@ -39,26 +39,17 @@ internal static partial class Program
         pawn.CurJob.def = JobDefOf.Ingest;
         pawn.CurJob.targetA = new LocalTargetInfo { Thing = new Thing { def = new ThingDef { IsDrug = true } } };
         var eating = new EatingDriver(); pawn.jobs.curDriver = eating;
-        CompSqueaker.EatPrecisionEnabled = false; CompSqueaker.EatPrecisionIncludeDrugs = false;
-        Check(Capture()["us.core/EatState"] == Truth.True && Capture()["us.core/EatChewing"] == Truth.Unknown,
-            "S3 actual capture: WholeJob preserved but precise chewing not fabricated");
-        CompSqueaker.EatPrecisionEnabled = true;
-        Check(Capture()["us.core/EatState"] == Truth.False, "S3 actual capture: precision nutrition excludes zero nutrition phase");
+        Check(Capture()[EatPolicy.Process] == Truth.True && Capture()[EatPolicy.Execution] == Truth.False,
+            "DB self Ingest preparation is process, not execution even when nutrition driver claims true");
         eating.Nutrition = true;
-        Check(Capture()["us.core/EatState"] == Truth.True && Capture()["us.core/EatDrug"] == Truth.True,
-            "S3 actual capture: nutrition-bearing drug retains old nutrition qualification");
-        eating.Nutrition = false; eating.CurToilString = SqueakEatOccurrence.ChewingToilDebugName;
-        CompSqueaker.EatPrecisionIncludeDrugs = true;
-        Check(Capture()["us.core/EatState"] == Truth.True && Capture()["us.core/EatChewing"] == Truth.True,
-            "S3 actual capture: exact chewing/lighting phase includes zero-nutrition drug");
-        pawn.CurJob.playerForced = true; pawn.IsPlayerControlled = true;
+        Check(Capture()[EatPolicy.Execution] == Truth.False, "DB IEatingDriver nutrition flag cannot manufacture Toil entry");        pawn.CurJob.playerForced = true; pawn.IsPlayerControlled = true;
         Check(Capture()["us.core/ActiveCommand"] == Truth.True, "S3 actual capture: work/move command provenance preserved independently of state");
         Check(Capture("us.core/Death")["us.core/DeathEvent"] == Truth.True && Capture()["us.core/DeathEvent"] == Truth.False,
             "S3 actual capture: notification is ephemeral and not replayed on later opportunities");
         ModsConfig.BiotechActive = false;
         Check(Capture()["us.core/BiotechAvailable"] == Truth.False, "S3 actual capture: no DLC fact stays false without deleting configuration");
         ModsConfig.BiotechActive = true;
-        CompSqueaker.EatPrecisionEnabled = false; CompSqueaker.EatPrecisionIncludeDrugs = false;
+
     }    private static void S3NewAuthorDoesNotNeedLegacyTable()
     {
         var race = new ThingDef { defName = "S3BabyRace", race = new object() };

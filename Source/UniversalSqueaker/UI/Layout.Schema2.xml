@@ -226,21 +226,19 @@
               </Column>
             </Row>
             <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision" HelpKey="us/basic-tuning/eat-precision" />
-              <Column Id="basic-eat-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-eat-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision" SelectedKey="eat-precision" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision" AlignX="Left" />
-              </Column>
+              <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpKey="us/basic-tuning/eat-phase" />
+              <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-phase" />
             </Row>
-            <Row Id="basic-eat-child-row" Gap="8" Padding="0" VisibleKey="eat-precision" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-eat-child-label" Kind="text/wrapped" TextKey="US.Tuning.EatPrecision.IncludeDrugs" HelpKey="us/basic-tuning/eat-precision-include-drugs" />
-              <Column Id="basic-eat-child-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-eat-child-check" Kind="input/checkbox" Appearance="switch" Bind="eat-precision-include-drugs" SelectedKey="eat-precision-include-drugs" Width="36" Height="30" HelpKey="us/basic-tuning/eat-precision-include-drugs" AlignX="Left" />
-              </Column>
+            <Row Id="basic-eat-nutrition-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-nutrition-label" Kind="text/wrapped" TextKey="US.Tuning.EatNutrition" HelpKey="us/basic-tuning/eat-nutrition" />
+              <Widget Id="basic-eat-nutrition-choice" Kind="input/dropdown" Bind="eat-nutrition" OptionsBind="eat-nutrition-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-nutrition" />
             </Row>
-            <!-- US-RESET1: the Basics-area restore, the body's eighth child (the card formula counts
-                 it inside the body). The question (US.Reset.Area.Basics.Confirm) lists the eight
-                 fields this card and the camera-indicator toggle own; the us/reset-entry widget opens
-                 the question and stages the effect key through the same UiBindings the writes use. -->
+            <Row Id="basic-eat-drug-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpKey="us/basic-tuning/eat-drug" />
+              <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-drug" />
+            </Row>
+            <!-- Basics restores system playback controls and Pawn-profile Eat parameters.
+                 Race/Xeno parameters are owned by their exact action/layer restore. -->
             <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
           </Column>
         </Section>

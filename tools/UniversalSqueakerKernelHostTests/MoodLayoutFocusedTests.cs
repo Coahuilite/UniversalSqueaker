@@ -130,9 +130,8 @@ internal static class MoodLayoutFocusedTests
     {
         const float Width = ViewportWidth;
         const float Height = 900f;
-        // Parent ON: the eat-precision child row exists only while its parent switch is on, so the card
-        // draws its full seven declared control rows.
-        var source = new RecordingSettingsSource { RichData = true, EatPrecisionEnabled = true };
+        // Three independent Eat dropdowns replace the retired dependent checkbox pair.
+        var source = new RecordingSettingsSource { RichData = true };
         UiHost host = UsKernelSettingsHost.Create(source);
         try
         {
@@ -172,9 +171,9 @@ internal static class MoodLayoutFocusedTests
                 .Where(r => IsInside(r, cardLocal) && IsDeclaredCheckbox(r))
                 .OrderBy(r => r.y)
                 .ToList();
-            Assert(slots.Count == 5,
-                "the current card draws five effective rows with the parent ON (egg + baby + talking + the"
-                + " eat-precision parent and child), got " + slots.Count);
+            Assert(slots.Count == 3,
+                "the current card draws three boolean rows (egg + baby + talking; Eat has independent dropdowns)"
+                + " got " + slots.Count);
 
             // THE DRAW FACT, stated as the property itself: for every declared checkbox band, that band is
             // the ONLY recorded hit surface that intersects it. Nothing is assumed about which band belongs
@@ -219,27 +218,7 @@ internal static class MoodLayoutFocusedTests
             Assert(host.Session.ContentRevision == revisionBefore + 1,
                 "and it must be exactly one write (revision " + revisionBefore + " -> " + host.Session.ContentRevision + ")");
 
-            // The LAST band is the eat-precision child's, the one row whose presence depends on another
-            // control - so a press there must route to the child value and to nothing else.
-            Rect child = slots[slots.Count - 1];
-            int childRevisionBefore = host.Session.ContentRevision;
-            bool? parentBefore = source.LastEatPrecision;
-            try
-            {
-                SetButtonOverride(rect => RectMatches(rect, child));
-                host.DrawChecked(new Rect(0f, 0f, Width, Height));
-            }
-            finally
-            {
-                ClearOverrides();
-            }
-
-            Assert(source.LastEatPrecisionIncludeDrugs == true,
-                "a press on the child row's declared checkbox must write the child value once");
-            Assert(source.LastEatPrecision == parentBefore, "and it must not touch the parent switch");
-            Assert(host.Session.ContentRevision == childRevisionBefore + 1,
-                "and that press must be exactly one write too (revision " + childRevisionBefore
-                + " -> " + host.Session.ContentRevision + ")");
+            DbEatUiTests.CheckBindings(host, source);
         }
         finally
         {

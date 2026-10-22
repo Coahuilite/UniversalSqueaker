@@ -16,7 +16,7 @@ US 把第三方语音接入准确的种族/异种域，提供分层调音、心�
 - 命名空间 / Def 前缀 / 诊断前缀：`UniversalSqueaker` / `US_` / `usdiag`。
 - 许可：[MPL-2.0](LICENSE)。
 
-当前分支为 **0.6.0 Dev**：[受控OneShot S1与作者示例](docs/us-kernel-0.6-s1-zh.md)已实现，普通日常默认路径保留；后续首版切片和真实1.6声音观察尚未完成。
+当前分支为 **0.6.0 Dev**：[完整有效配置与Eat生产纵切](docs/us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口)已接入同一生产owner，含可加载作者示例；其余12包、日常发行政策和真实1.6观察尚未完成。
 
 ## 文档
 
@@ -28,4 +28,4 @@ US 把第三方语音接入准确的种族/异种域，提供分层调音、心�
 - [构建与验证](docs/build-and-debug.md)
 - [发布流程](docs/release-runbook-zh.md)与[隐私门禁](docs/push-privacy-gate.md)
 
-当前产品声明为 0.5.0。文档描述本仓库源码，可能包含尚未进入旧下载版本的修改。开发工作约束仍在 `AGENTS.md`，持久状态与待办分别在 `MEMORY.md` 和 `TODO.md`。
+当前产品声明为 0.6.0。文档描述本仓库源码，可能包含尚未进入旧下载版本的修改。开发工作约束仍在 `AGENTS.md`，持久状态与待办分别在 `MEMORY.md` 和 `TODO.md`。

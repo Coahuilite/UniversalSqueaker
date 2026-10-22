@@ -1,6 +1,6 @@
 # 首批合同导读：Select、Eat、Attack
 
-修订：2026-10-23，r4。供维护者带用户逐包审阅。D-A 源码起点 d52dfeb；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-23，r5。供维护者带用户逐包审阅。D-B基于D-A最终26ce46b继续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -10,7 +10,7 @@
 2. 固定条件 All/Any/Not 三态：仅 True 有资格；必要事实 Unknown 不当 True；实现缺失在注册／所选依赖处隔离。定义不可变，扩展只能增加固定条件；玩家只能覆盖公开参数，不能删固定条件。
 3. 每主体一份状态机会；真实事件即到同一 owner。显式优先序选一，平级按完整键序；选后无音、拒绝或概率未中都不改选另一包补播。同 tick 一次新尝试，多个声音包不加机会。父子关系不决定优先／抢占。
 4. 节奏：游戏 tick；动作／共用硬截止取较晚，不缩放。状态等待 ceil(W_base/A)，事件概率 min(1,p_base×A)，A>0、1 中性；失败状态重检 R=60。候选数值 W20/H40/I120、p1、N/speed1 是隔离非持久开发输入，不是发行默认。15 包总排序、等待分布／数值、A 界面范围、关键例外、人口／速度、首次唯一作者来源政策由 PM 集中交用户。
-5. 行为层目标为包装缺省 → 已选主域作者 → 已选合法子域作者 → 玩家服务对象 profile → 玩家主域 → 玩家合法子域。省略不贡献，false／0 显式；作者整体先于玩家。system 总音量、活动、彩蛋总许可与距离独立，不被子域抵消。D-A 打通完整 ActionId；新 profile 持久化分层及 Eat 参数在 D-B。
+5. 行为层目标为包装缺省 → 已选主域作者 → 已选合法子域作者 → 玩家服务对象 profile → 玩家主域 → 玩家合法子域。省略不贡献，false／0 显式；作者整体先于玩家。system 总音量、活动、彩蛋总许可与距离独立，不被子域抵消。D-B已把完整分层与Eat参数接入生产settings／session；三类profile与当前入口见主规格§22。
 6. 可用音源：同 Race 的 Xeno 常规 → Race 常规 → 当前精确域 PackFallback → 最终 Race 表；NonPawn 无 Race 后备。Fallback 首层可用，Remix 非空层等权后层内选择，Vanilla 仅最终表，Disabled 零派发。Xeno 不能借 Race PackFallback。先包权重、后包内变体权重；精确年龄存在但不可播不退本包全龄；彩蛋独立许可。保条目、资源 AudioId、实际供音域／层，不能只写 fallback/动作。
 7. 局部音高／音量从条目校准和有效响应一次合成；年龄先、心情后、一次 jitter；省略均中性 1，年龄／心情缺省不启用，参与 Apply/Skip 不等于启用。包→本包动作→条目→玩家参与覆盖只解析一次。音量允许0、音高有限正值，非法参数在副作用前拒绝。输出 L×当前 system G(t)，不写共享 Def；共享资源的非 US 实例不受影响。
 8. OneShot 自然收尾，不因后续优先动作或状态退出精确裁剪，可与旧声音重叠。Sustained 自有单槽：同键 AlreadyActive 不抽样、不重启、不刷冷却；异键严格更高才可替换，先准备后 End，旧结束与新启动分记，不恢复／补播。活跃槽每60tick复检当前合同和权限，失效／Unknown 结束；离图、销毁、服务关闭释放自有句柄；概率未中／未中选不是依据失效。
@@ -21,7 +21,7 @@
 | 字段 | 缺省／单位／范围 | 谁能改；当前落点 |
 | --- | --- | --- |
 | enabled／scope | 包装启用；scope=AnyOccurrence 或显式 ActiveCommand/Disabled；无单位 | 作者贡献与玩家合法层；ActiveCommand 另需实际命令与控制事实。D-A 按完整 ActionId 解析，不拿父尾名 |
-| hardIntervalTicks | 包装显式值；缺失用隔离 Dev 候选；≥0 tick | 当前行为来源支持，玩家新通用字段 D-B；0 不等缺失 |
+| hardIntervalTicks | 包装显式值；缺失用隔离 Dev 候选；≥0 tick | 作者／玩家全部合法层均已持久化；0 不等缺失 |
 | talkingEnabled | 通用包缺省不要求 Pawn Talking；Pawn 包按显式资格选择 | 作者／玩家允许层；不得让通用 Select／NonPawn 暗接 Pawn 器官门。其余包默认资格还须逐包审阅 |
 | volume／pitch | 局部1；volume≥0、pitch>0，有限且原生float可表示 | 作者与允许玩家层；不当 system 总控 |
 | ageEnabled／moodEnabled／response／parameter | 默认关闭；数值倍率无单位，mood阈值0..1；jitter=[1,1] | 已有稀疏行为来源／玩家响应行；逐响应实际依赖，未配置不增加事实要求 |
@@ -62,7 +62,7 @@
 | nutritionScope | Any；NutritionGiving／NonNutritionGiving；无单位 | 同层序；按 IsNutritionGivingIngestible，不按实际营养结果。Any不要求属性已知 |
 | drugScope | Any；ExcludeDrugs／OnlyDrugs；无单位 | 同层序；按 IsDrug，独立于营养；Any不要求药物事实已知 |
 
-字段名为目标语义示意；D-B 才定可加载 schema。普通音频包最少包身份、准确域、Eat→可解析AudioId及基本声明；不用填上述参数、不造“精确Eat”动作、不补适配或重录声音。
+以上就是当前可加载schema，字段与枚举严格区分大小写。普通音频包最少包身份、准确域、Eat→可解析AudioId及基本声明；不用填上述参数、不造“精确Eat”动作、不补适配或重录声音。
 
 **正反例／Unknown：** p1走向饭：Whole可成立，Execution不成立；啤酒营养与药物均True，Any/Any纳入，营养＋排药排除；非营养药品仍有执行阶段。阶段未知不拓宽；仅营养筛选但属性未知则Unknown。中断不能造结果，喂食者a不借b的摄入声音。详细反例及测试状态在共享记录逐项列明。
 
@@ -70,11 +70,11 @@
 
 **退出／清理：** OneShot 正常过程／阶段退出只停新起播，既有自然尾；Sustained Whole按全过程、Execution按实际执行依据失效结束并淡出。阶段复入不能把 Whole一律停掉。Unknown 复检结束自有槽；其余故障／来源恢复按共同规则。
 
-**扩展隔离／设置／实现：** InjuredEat增加当前伤口仅影响其完整动作；结果扩展独立根。D-A 只交实际事实记录和接口基础；当前 EatState仍承接旧 eatNutritionOnly/includeDrugs布尔联动，尚未实现新 phase/属性/结果分离。新服务层、保存恢复、session分支依赖与新适配全部列入D-B，不能将现有替身当目标已完成。
+**扩展隔离／设置／实现：** InjuredEat增加当前伤口且使用自己的完整动作配置；AfterIngestion是独立结果根。D-B已移除旧精确／包含药物bool、CurToilString判阶段和Unknown宽化。玩家在已有调音层选择Pawn／Race／合法Xeno后，使用三个独立下拉框；「继承」只清该层该字段。Basics恢复只清Pawn服务级Eat参数，准确域由动作行／层恢复。完整字段、原子事务与可加载例见主规格§22。
 
-**SR 实际差异：** SR缺省父子开关false/false走WholeJob；精确父开子关读GainingNutritionNow，子开且名称尚未确认时会拓宽整Job。US已定phase／营养／药物独立，精确Unknown不拓宽；Whole/Any/Any保持过程资格，不保证相同频率。SR Eat出厂EachTime144ticks但共享216、人口／速度及启动相位都会改变机会，不能把144直接当US节奏。被喂食／dispenser／Corpse新覆盖仍需D-B证据。
+**SR 实际差异：** SR缺省父子开关false/false走WholeJob；精确父开子关读GainingNutritionNow，子开且名称尚未确认时会拓宽整Job。US已定phase／营养／药物独立，精确Unknown不拓宽；Whole/Any/Any保持过程资格，不保证相同频率。SR Eat出厂EachTime144ticks但共享216、人口／速度及启动相位都会改变机会，不能把144直接当US节奏。被喂食／dispenser／Corpse已由生产适配与明确平台替身执行，原生仍待核。
 
-**已定与后续验收：** WholeProcess/Any/Any、营养属性与尾音策略已定。D-B成果应按“走向饭／啤酒／非营养药物／被喂食／尸体复入”逐项验收，并保持上文SR差异；本记录交付事实依据，新Eat成果验收待D-B。
+**已定与后续验收：** WholeProcess/Any/Any、营养属性与尾音策略已定。D-B定向生产链已运行准备、工厂未进入、异常init、实际进入／退出、营养×药物、0结果、被喂食、目标切换和尸体形状复入；原生方法体复核／听感及成果人工验收仍pending。缺Chew目标的独立编译fixture证明精确暂停、Whole保留，无全局PatchAll吞异常。
 
 ## Attack：攻击执行不是命中
 

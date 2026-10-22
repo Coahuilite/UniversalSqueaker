@@ -13,6 +13,9 @@
   <PropertyGroup Condition="'$(SelectFixtureTarget)' == 'MissingFeedback'">
     <DefineConstants>$(DefineConstants);US_FIXTURE_SELECT_MISSING_FEEDBACK</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(EatFixtureTarget)' == 'MissingChew'">
+    <DefineConstants>$(DefineConstants);US_FIXTURE_EAT_MISSING_CHEW</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Production/Kernel/%(Filename)%(Extension)" />
@@ -31,7 +34,9 @@
     <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakActionPlan.cs" Link="Production/SqueakActionPlan.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Pure/BehaviorSources.cs" Link="Production/BehaviorSources.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs" Link="Production/SqueakTimingModel.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakEatOccurrence.cs" Link="Production/SqueakEatOccurrence.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/EatPolicy.cs" Link="Production/EatPolicy.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Pure/EffectiveBehavior.cs" Link="Production/EffectiveBehavior.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsIngestionObservation.cs" Link="Production/UsIngestionObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/PeriodicStateBinding.cs" Link="Production/PeriodicStateBinding.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsPawnFacts.cs" Link="Production/UsPawnFacts.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsControlledActionEligibility.cs" Link="Production/UsControlledActionEligibility.cs" />
