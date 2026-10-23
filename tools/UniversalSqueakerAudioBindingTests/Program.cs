@@ -53,6 +53,16 @@ internal static partial class Program
             return;
         }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
+        if (args.Contains("--equip-dev-entry"))
+        {
+#if US_DEV
+            InitializationOrder(); CompleteBinding(); EquipDevEntry();
+            Console.WriteLine("Equip GLOBAL Dev menu production fixture PASS: " + checks);
+            return;
+#else
+            throw new InvalidOperationException("--equip-dev-entry requires the Dev configuration and actual US_DEV menu source");
+#endif
+        }
         if (args.Contains("--dc-select-settings"))
         {
             InitializationOrder(); CompleteBinding(); DcSelectSettings();

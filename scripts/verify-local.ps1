@@ -412,9 +412,13 @@ Invoke-Check 'D-B Result routes only to explicit fixed-contract consumers (truly
 Invoke-Check 'D-C fifteen native-shape production callers and owner lifecycles' `
     'AudioBindingTests --dc-native' `
     { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-native }
-Invoke-Check 'D-C inactive runtime and explicit Equip candidate selection' `
-    'AudioBindingTests --dc-unselected' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-unselected }
+Invoke-Check 'D-C inactive runtime/unselected qualification and actual GLOBAL Dev Equip menu' `
+    'AudioBindingTests -c Release --dc-unselected; -c Dev --equip-dev-entry (separate processes)' `
+    {
+        dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-unselected
+        if ($LASTEXITCODE -ne 0) { throw 'D-C unselected fixture failed' }
+        dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Dev -- --equip-dev-entry
+    }
 Invoke-Check 'D-C physically missing Wounded and melee marker isolates only those mechanisms' `
     'build DcFixtureTarget=MissingWoundedAndMeleeMarker with isolated output/obj; run --dc-missing' `
     {

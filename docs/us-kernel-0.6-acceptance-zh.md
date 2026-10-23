@@ -1,8 +1,8 @@
 # 0.6.x 合同—验收与切片
 
-D-C当前候选已扩齐全部15包、专属响应退役和已裁Select三项可调默认，保D-A/B同owner及结果消费者边界。技术证据、合同人工审阅、成果人工验收分别记录；普通范围／政策及原生仍有具名关口。
+D-C当前候选已接入15包库存、专属响应退役和已裁Select三项可调默认，保D-A/B同owner及结果消费者边界。Work七过程收窄已有Dev覆盖，US-C3实质未完，不能归为仅听感／人审待验或把七项当批准全集。技术证据、范围工程缺口、合同人工审阅、成果人工验收分别记录。
 
-本页是[唯一规格 r11](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
+本页是[唯一规格 r13](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
 
 ## 核心只消费中性事实
 
@@ -101,12 +101,12 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 | Wounded | r11／r8／r5；SR受损通知原义 | PostApplyDamage正常0／正返回与throw；真实缺目标隔离、受损者域／角色；不伪称正伤害或当前伤口 | pending | pending | 普通回应政策、连伤密度／原生听感 |
 | Death | r11／r8／r5；SR Kill prefix阶段明确 | 实际请求先于Kill体、DyingSubject；离图清理，不称死亡完成／任意Destroy | pending | pending | 临终位置／致死Wounded先后／器官与关键例外、原生 |
 | Move | r11／r8／r5；SR自身pather | 自身Moving正向、未动／被动搬运不伪造；准确条目／角色，Sustained失效释放 | pending | pending | 竞争／普通资格与停止后尾音、人审原生 |
-| Equip | r11／r8／r5；旧Core Job门转显式候选 | 原tracker正常关系及真实物品；未选资格具名拒绝，PlayerCoreEquip候选、失败／异常／非成员反例 | pending | pending | PM用户裁玩家Core／自动／加载范围，服装／卸下非此合同 |
+| Equip | r13／r9／r5；旧Core Job门转显式候选 | GLOBAL Dev真实菜单显式PlayerCoreEquip；菜单→policy→EquipmentAdded→同owner请求、重复选保护及AI／非Core／异常／非成员反例；七参数仍Unselected | pending | pending | 本次只闭合Dev入口；PM用户仍裁普通玩家Core／自动／加载范围，服装／卸下非此合同 |
 | Call | r11／r8／r5；由SR兜底改正向闲置 | Wait/Wait_Wander、IsIdle、原地等待；Wait_Combat／未知Job不补Call，准确IdlePawn输出 | pending | pending | 已定正向合同不重批；密度／原生听感 |
 | Sleep | r11／r8／r5；由姿势改实际asleep | 睡／醒及被喂重叠，Sleep中选不误标ActualIngester；OneShot／持续依据分开 | pending | pending | 床／地面场景、密度及原生听感 |
 | Social | r11／r8／r5；准确kind／Def过程不片段扫描 | 明确过程、未知名称反例、与Joy同真；当前支持包含准备，不称互动成功 | pending | pending | Goto Def仍4850依据、当前Core无该内容；PM裁范围及重叠体验 |
 | Joy | r11／r8／r5；joyKind正向声明 | Social kind与Joy同真，非Social kind实际Joy中选；准确参与者域，不称Joy gain | pending | pending | 全过程／准备体验、正式排序与原生 |
-| Work | r11／r8／r5；七准确Def/driver过程 | 七对各正反、无Toil／错driver／workGiver反例，继承子命令scope和独立配置／保护 | pending | pending | PM裁七过程范围及ActiveCommand候选，搬运重叠／原生 |
+| Work | r13／r9／r5；七准确Def/driver过程 | 七对各正反、无Toil／错driver／workGiver反例，继承子命令scope和独立配置／保护；已有Dev覆盖收窄 | pending | pending | US-C3实质未完：PM带用户裁常用缺项范围后补工程，七项非批准全集；另有ActiveCommand／搬运重叠／原生 |
 | Draft | r11／r8／r5；实际玩家gizmo方向 | false→true实际通知、准确DraftedPawn；重复包装／setter／无变化不造事件 | pending | pending | 与Select及批量命令密度、关键保护／原生 |
 | Undraft | r11／r8／r5；独立反向身份 | true→false独立请求／条目／角色，禁Draft不折叠本包；无变化反例 | pending | pending | 快速往返／旧Draft尾／批量密度；本包独立人验 |
 | MentalBreak | r11／r8／r5；不复制SR任意精神状态调制 | 基类＋三直达override成功、Humanity base一次、false／throw不发布；更新后216候选fixture | pending | pending | PM裁新增直达支持范围／关键例外，原生与听感 |

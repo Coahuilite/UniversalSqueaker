@@ -10,6 +10,9 @@
   <PropertyGroup Condition="'$(SelectFixtureTarget)' == 'MissingInternal'">
     <DefineConstants>$(DefineConstants);US_FIXTURE_SELECT_MISSING_INTERNAL</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Dev'">
+    <DefineConstants>$(DefineConstants);US_DEV</DefineConstants>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(SelectFixtureTarget)' == 'MissingFeedback'">
     <DefineConstants>$(DefineConstants);US_FIXTURE_SELECT_MISSING_FEEDBACK</DefineConstants>
   </PropertyGroup>
@@ -33,6 +36,7 @@
     <Compile Include="../../Source/UniversalSqueaker/Authoring/BehaviorSourceDeclaration.cs" Link="Production/BehaviorSourceDeclaration.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsOneShotRuntime.cs" Link="Production/UsOneShotRuntime.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsDevelopmentPolicy.cs" Link="Production/UsDevelopmentPolicy.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsOneShotDebugActions.cs" Link="Production/UsOneShotDebugActions.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsAttackObservation.cs" Link="Production/UsAttackObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsPawnEventObservation.cs" Link="Production/UsPawnEventObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsWorkObservation.cs" Link="Production/UsWorkObservation.cs" />

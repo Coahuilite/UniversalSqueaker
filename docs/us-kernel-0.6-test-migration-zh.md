@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r10 · **D-C全15包、已裁Select资格与退休已进入生产链；原生、普通覆盖／政策和逐包人审分别保留。**
+2026-10-23 · r11 · **15库存、已裁Select资格与退休已进入生产链；GLOBAL Dev Equip入口已显式资格，Work覆盖仍有US-C3实质工程缺口。**
 
 ## D-C当前迁移：保合同，替换退役夹具
 
@@ -16,7 +16,11 @@
 
 ### 适用检查入口
 
-verify-local保原门20代理、22/23真缺Selector目标、24/25 Eat／缺Chew及26结果消费者，21转新Select资格；追加27 `--dc-native`、28 `--dc-unselected`（现在只指整体门／Equip候选）、29 `DcFixtureTarget=MissingWoundedAndMeleeMarker`＋`--dc-missing`。Host用既有`--lane`选DC Select、退休库存、typed、Overview composites、US switch、current navigation、DB Eat及text-fit等受改链；匹配零lane必须失败。
+GLOBAL Dev入口定向检查：以`-c Dev`构建UniversalSqueakerAudioBindingTests，运行`--equip-dev-entry`。工程直接编译生产UsOneShotDebugActions，不重新手构选择policy；通过实际菜单登记的SelectCandidate委托，进入生产SelectDevelopmentPolicy，再由真实Harmony接缝观察EquipmentAdded→Notify_Equip→同owner准确Equip条目。断言未选整体门零owner／输出、开发模式守门、玩家Core成功、AI／非Core／无关系／throw反例以及重复菜单不重置保护。LudeonTK菜单登记、Verse物体与音频是明确替身，不声称游戏菜单点击。七参数ctor缺省Unselected保持，原定向适配矩阵仍按未变输入沿用。
+
+Work七过程收窄已有Dev覆盖，是US-C3实质未完，不只人审／听感问题。常用缺项范围由PM带用户裁定后补工程；本入口检查不扩Work或代表完整C3通过。
+
+verify-local保原门20代理、22/23真缺Selector目标、24/25 Eat／缺Chew及26结果消费者，21转新Select资格；追加27 `--dc-native`、28分进程执行Release `--dc-unselected`及Dev `--equip-dev-entry`（整体门／未选资格与真实菜单入口）、29 `DcFixtureTarget=MissingWoundedAndMeleeMarker`＋`--dc-missing`。Host用既有`--lane`选DC Select、退休库存、typed、Overview composites、US switch、current navigation、DB Eat及text-fit等受改链；匹配零lane必须失败。
 
 实际执行仅取受改必要链，不机械全29门。完整输出复制到独立已获准运行区域，一次核MyComputer再原入口运行；保原输出和失败日志，不改CAS/ADS/ACL/owner。生成新候选后按改变的输入决定重跑范围，不以文件名或exit0代模式命中。当前结果与最终源码／Dev身份由交付记录绑定。精确4871定点来源已取得，真实Scribe／游戏Config、挂接／音频、屏幕／听感及15包两个人工关口仍pending。
 

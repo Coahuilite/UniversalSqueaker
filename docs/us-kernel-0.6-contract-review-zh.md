@@ -1,6 +1,6 @@
 # 官方15包合同导读
 
-修订：2026-10-23，r8（D-C全部15包审阅候选）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-23，r9（GLOBAL Dev Equip入口及Work实质缺口）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -155,6 +155,8 @@ Select/Eat/Attack在SR均用各自准确域映射与共同年龄／彩蛋／来�
 
 **事实与回应资格分开：** 旧Core Equip玩家Job限制是回应政策，不是tracker关系定义。当前适配观察正常返回且物品确在equipment集合；官方Equip另选显式PlayerCoreEquip开发资格：playerForced＋准确JobDefOf.Equip＋玩家控制，未选择资格则具名拒绝，不因范围未定自动开放AI／加载回应。独立根可明确消费关系事实。推荐先保用户熟悉的玩家Core换装回应，但把关系事实与资格分开供独立根／扩展使用；扩大到自动换装须由PM／用户决定。
 
+GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip (pending)`；完整入口与同参数示例见[规格§20](us-kernel-0.6-spec-zh.md)。七参数构造器仍为Unselected，普通激活门不变。实际菜单回调到policy、真实EquipmentAdded经Harmony到同owner有独立定向fixture；菜单登记／原生物体／音频为明确平台替身，未据此签游戏菜单操作通过。
+
 **可调、有效配置、来源：** 共同enabled／scope、硬tick、局部音量／音高、响应按完整`us.core/Equip`及合法层解析；没有通过scope=Any偷删固定来源证据。来源A快照保作者值，缺A不选B；关系物品不进配置。玩家在既有动作行改本包与层级，真实保存／恢复走同生产settings；不新增面板结构或自动加载回应默认。
 
 **机会、重叠及供音：** 真实加入且所选显式资格满足后到装备者同owner，事件p／同tick／硬保护照共同规则；与Draft、Select或Work同批不额外多选，选后缺声不补其他动作。只用装备者准确Race／合法Xeno的Equip条目和合法后备，不用eq.Def当Race或发到物品位置。复用Attack同AudioId可以显式声明，不合并两个动作冷却或配置。
@@ -214,6 +216,8 @@ Select/Eat/Attack在SR均用各自准确域映射与共同年龄／彩蛋／来�
 **SR实际及证据：** SR同joyKind非空，Social优先Joy、Joy优先Move/Work/Call；Random504/p.016、共享216、周期相位／人口／速度／Talking适用。US保正向声明及准确音源／自然尾，新增统一机会和四结果不同，不保证旧频率。DcNativeTests覆盖Social+Joy同真、改非Social joyKind后Joy中选及准确角色，4871 JobDef/调用依据见事实页。推荐先明确全过程，不用执行措辞暗承诺；完整合同／成果、原生和听感pending。
 
 ## Work：七个已核过程，工作事实与玩家命令分离
+
+**当前实质缺口：** 七过程收窄了已有Dev覆盖，US-C3尚未完成；不是只差听感或人审，七项也不是已批准的全部工作范围。常用缺项由PM带用户裁定，再按获准范围补工程；本次GLOBAL Dev Equip入口修复不扩Work，不回名字扫描。
 
 **固定支持集／阶段：** `us.core/WorkState`当前候选按准确Def/driver成对支持Research/JobDriver_Research、Mine/JobDriver_Mine、DoBill/JobDriver_DoBill、Repair/JobDriver_Repair、Clean/JobDriver_CleanFilth、HaulToCell/JobDriver_HaulToCell、FinishFrame/JobDriver_ConstructFinishFrame。4871逐Def及MakeNewToils已核；要求当前driver确属该Pawn、同一currentJob且CurToil有效。包含准备／移动Toils，是工作过程，不称已挥工具／产出／完成。角色Worker。
 
