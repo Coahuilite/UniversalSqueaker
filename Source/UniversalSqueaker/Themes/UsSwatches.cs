@@ -5,30 +5,10 @@ using FerriteLib.UiKit.Kernel;
 
 namespace UniversalSqueaker;
 
-/// <summary>
-/// One official US surface swatch: an identity, a Keyed label, a short author note, and the COMPLETE
-/// colour-role table the US baseline must declare (the same 24-token list <see cref="UsTheme"/> pins —
-/// <c>SelectedBorder</c> is deliberately absent from every swatch: its contract is the accent fallback
-/// <c>SelectedBorder ?? AccentGold</c>, and a flat declaration would alias that fallback away).
-///
-/// <para>
-/// The role tables are the PM-screened implementation input
-/// <c>modding_documents/us-fl-development/ProjectManager/palettes/US-OFFICIAL-PALETTES-20261014.json</c>
-/// r1 (collection <c>us-official-six-palettes</c>; source collection r3
-/// <c>87cf6a4b…3cfc60f</c>). Core's eight reference values are the published FHI TPG digital references
-/// quoted verbatim by that input — retailer digital HEX, not a Pantone Connect export and not a physical
-/// match; no image sampling was used for Core. The five DLC palettes are trial-swatch schemes kept for
-/// colour validation. This file carries ONLY the colour values and the author's own notes; no personal
-/// machine paths and no provenance records beyond the relative repository pointer above.
-/// </para>
-///
-/// <para>
-/// A swatch is PURE COLOUR (the UsTheme ruling): no font, no density, no metric. The layout-bearing
-/// vocabulary stays in the layout manifest's own <c>&lt;Styles&gt;</c> section and in the carrier.
-/// Selecting a swatch therefore repaints and never re-measures, which is what makes a swatch switch a
-/// colour-only invalidation instead of a layout event.
-/// </para>
-/// </summary>
+/// <summary>One official US colour-only swatch. The original 24 screened values retain their
+/// identity; six explicit FL 0.8 roles preserve the former border/foreground/Warning treatment.
+/// Core uses the published FHI TPG digital-reference colours, not physical-match claims.
+/// Each host owns its palette bag; selecting a swatch adds no font or density declaration.</summary>
 public sealed class UsSwatch
 {
     internal UsSwatch(string id, string labelKey, string noteKey, string authorNote, IReadOnlyList<string> roleHexes)
@@ -41,7 +21,14 @@ public sealed class UsSwatch
         // "US.Theme.Core.Note", so the author-note binding painted a raw key literal in game. The
         // real-source action chain (ThemeSwitch lane) caught it; a composed key must never drift again.
         NoteKey = noteKey;
-        RoleHexes = roleHexes;
+        // 0.8 removes nullable border fallbacks and the Warning alias. Preserve the old
+        // effective US colours as explicit independent roles, rather than inheriting FL defaults.
+        if (roleHexes.Count != 24) throw new ArgumentException("Expected the original 24 US colour values", nameof(roleHexes));
+        var complete = new List<string>(roleHexes) {
+            roleHexes[22], roleHexes[10], roleHexes[19], // selected edge, success edge/ink
+            roleHexes[8], roleHexes[20], roleHexes[21] // former warning -> danger effective treatment
+        };
+        RoleHexes = complete.AsReadOnly();
     }
 
     /// <summary>Machine token persisted in settings and compared ordinally. Never translated.</summary>
@@ -57,7 +44,7 @@ public sealed class UsSwatch
     /// <summary>Keyed short author note (zh authoritative, en translated) - the picker's explanation line.</summary>
     public string NoteKey { get; }
 
-    /// <summary>The 24 declared values, in the exact order of <see cref="UsTheme.ColorTokens"/>.</summary>
+    /// <summary>The thirty declared values, in the exact order of <see cref="UsTheme.ColorTokens"/>.</summary>
     public IReadOnlyList<string> RoleHexes { get; }
 
     public override string ToString() => Id;
@@ -278,7 +265,7 @@ public static class UsSwatches
         IReadOnlyList<string> tokens = UsTheme.ColorTokens;
         for (int i = 0; i < tokens.Count; i++)
         {
-            builder.Append("<Color Token='").Append(tokens[i]).Append("' Value='")
+            builder.Append("<Palette Role='").Append(tokens[i]).Append("' Value='")
                 .Append(swatch.RoleHexes[i]).Append("' />");
         }
 

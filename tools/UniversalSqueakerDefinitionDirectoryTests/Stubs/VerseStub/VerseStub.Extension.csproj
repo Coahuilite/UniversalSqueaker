@@ -14,12 +14,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The frozen renderer stubs are reused UNCHANGED (their own csprojs build in place,
-         exactly like the host harness does); only the VERSE half is this folder's extended
-         copy. The extension output is a separate assembly path - the frozen snapshot's
-         bin/stubs/verse bytes are never produced or touched by this project. -->
-    <ProjectReference Include="..\..\..\FerriteLib.Stubs\Stubs\UnityEngineStub\UnityEngineStub.csproj" />
-    <ProjectReference Include="..\..\..\FerriteLib.Stubs\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj" />
+    <!-- The current source-identified 0.8 renderer doubles build in the consumer's independent
+         dist directory. Only the Verse half is this folder's extended copy; its separate
+         assembly output does not modify either renderer source or the archived 0.7 snapshot. -->
+    <ProjectReference Include="..\..\..\FerriteLib08.Stubs\Stubs\UnityEngineStub\UnityEngineStub.csproj" />
+    <ProjectReference Include="..\..\..\FerriteLib08.Stubs\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj" />
   </ItemGroup>
 
 </Project>

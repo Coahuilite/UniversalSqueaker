@@ -160,15 +160,15 @@ public sealed class UsNavWidget : IUiWidget
             // carries "ordinary", so the accent keeps its meaning.
             if (active)
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme.AccentGold);
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.SelectedSurface.Fill, ctx.Theme[UiPaletteRole.Accent]);
             }
             else if (hovered)
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme.BorderStrong);
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
             }
             else
             {
-                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme.Border);
+                UiThemeDraw.Surface(card, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
             }
 
             UiThemeDraw.AccentRail(card, ctx.Theme, active, 3f);
@@ -180,7 +180,7 @@ public sealed class UsNavWidget : IUiWidget
                 new Rect(card.x + TextInset, card.y + LabelTop, textWidth, LabelHeight),
                 label,
                 ctx.Theme,
-                active ? ctx.Theme.TextOnGold : ctx.Theme.TextPrimary,
+                active ? ctx.Theme[UiPaletteRole.SelectedForeground] : ctx.Theme[UiPaletteRole.Foreground],
                 UiFont.Small,
                 TextAnchor.MiddleLeft,
                 singleLine: true);
@@ -191,7 +191,7 @@ public sealed class UsNavWidget : IUiWidget
                 new Rect(card.x + TextInset, card.y + LabelTop + LabelHeight + DescriptionGap, textWidth, subtitleBand),
                 description,
                 ctx.Theme,
-                active ? ctx.Theme.TextOnGold : hovered ? ctx.Theme.TextPrimary : ctx.Theme.TextSecondary,
+                active ? ctx.Theme[UiPaletteRole.SelectedForeground] : hovered ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Tiny,
                 TextAnchor.UpperLeft);
 

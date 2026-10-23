@@ -303,7 +303,7 @@ internal static class UsSquareToggleLaneTests
             Rect band = RectOf(snapshot, checkId);
             UiTheme theme = new UiStyleResolver(UsTheme.Surface(), host.Manifest.Styles)
                 .ThemeFor(new[] { new UiStyleDeclaration(FlatScheme) });
-            Color cardFace = theme.Raised;
+            Color cardFace = theme[UiPaletteRole.ControlSurface];
 
             // Parked: the pointer sits outside the page, so nothing is hovered and the control draws its own
             // material. The band's y range is what isolates this row's control from the other switches.
@@ -357,10 +357,10 @@ internal static class UsSquareToggleLaneTests
             // control collapsed onto the card face. The ladder (BorderStrong when the palette claims one, else
             // Border) reads an edge from a token the scope does NOT flatten, so a fill and an edge from two
             // independent tokens cannot both disappear.
-            Color expectedFill = state ? theme.Selected : theme.RaisedSurface.Fill;
+            Color expectedFill = state ? theme[UiPaletteRole.SelectedSurface] : theme.RaisedSurface.Fill;
             Color expectedEdge = state
                 ? theme.SelectedSurface.Border
-                : (theme.BorderStrong.a > 0f ? theme.BorderStrong : theme.Border);
+                : (theme[UiPaletteRole.StrongBorder].a > 0f ? theme[UiPaletteRole.StrongBorder] : theme[UiPaletteRole.Border]);
             // The thumb's ink. The two halves are DIFFERENT KINDS of token on purpose (CURRENT INSPECTED,
             // carrier `CheckboxWidget.PaintSwitch`): since SA1.1 OFF is the switch's OWN declared grey
             // (`SwitchThumbOff`, US declares #8a857a from the SR reference in UsTheme) on a neutral track -
@@ -369,7 +369,7 @@ internal static class UsSquareToggleLaneTests
             // half answers AccentGold whatever SwitchThumbOff says. Unset, the token answers TextPrimary
             // (the historical neutral thumb) - the expectation is derived from the theme, so it follows
             // US's palette wherever the declaration puts it.
-            Color expectedKnob = state ? theme.AccentGold : theme.SwitchThumbOff;
+            Color expectedKnob = state ? theme[UiPaletteRole.Accent] : theme[UiPaletteRole.SwitchOff];
             Assert(SameColor(trackFillColour, expectedFill),
                 bind + "=" + state + ": the track must be filled with this state's own role material ("
                 + Hex(expectedFill) + "), got " + Hex(trackFillColour) + " - a state-blind material reddens"
@@ -392,9 +392,9 @@ internal static class UsSquareToggleLaneTests
                 // are the behavior this pin exists for: the OFF thumb answers the DECLARED token (never
                 // the label ink it used to borrow), and the declared token equals the core role table, so
                 // deleting the declaration falls back to TextPrimary and reddens here anyway.
-                Assert(!SameColor(knobs[0].Colour, theme.TextPrimary),
+                Assert(!SameColor(knobs[0].Colour, theme[UiPaletteRole.Foreground]),
                     bind + ": the OFF thumb must not answer the label ink (SA1.1 declaration)");
-                Color declaredThumb = HexToColor(UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[System.Array.IndexOf(UsTheme.ColorTokens as string[], "SwitchThumbOff")]);
+                Color declaredThumb = HexToColor(UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[System.Array.IndexOf(UsTheme.ColorTokens as string[], "SwitchOff")]);
                 Assert(SameColor(knobs[0].Colour, declaredThumb),
                     bind + ": the OFF thumb must be the core palette SwitchThumbOff role (" + Hex(declaredThumb)
                     + "), got " + Hex(knobs[0].Colour));

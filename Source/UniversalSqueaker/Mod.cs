@@ -13,34 +13,11 @@ namespace UniversalSqueaker;
 public partial class UniversalSqueakerMod : Mod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
-    /// <summary>
-    /// The FerriteLib API range this build of US was compiled and verified against: the 0.7.0 contract
-    /// axis (0.5.0 carried <c>Visible</c>/<c>VisibleKey</c>, the invalidation classes and the common
-    /// controls; 0.6.0 carried the page lifecycle doors, the <c>INotifyPropertyChanged</c> adapter, the
-    /// reload scheduler's time seam and the widget catalog; 0.7.0 carried the two peer palettes, the
-    /// creation-time <c>Height</c> validation, the Row/<c>Auto</c> fallback fix, the dropdown value
-    /// precedence, and Batch 1's placement vocabulary (<c>AlignX</c>/<c>OffsetX</c>/<c>AlignY</c>/
-    /// <c>OffsetY</c>), the density fallback for container <c>Padding</c>/<c>Gap</c> and the tone/accent
-    /// vocabulary tightening in which <c>HoverPoint</c> became the derived <c>AccentHover</c>; the
-    /// accepted d5af4d8 freeze additionally carried the FL-IC1 interaction rules and the FL-IC2 ladder -
-    /// <c>UiWindowHost.TryHandleUnansweredCancel</c>, <c>UiHost.TryHandleCancel/TryHandleAccept</c>,
-    /// <c>IUiBindings.TryInvokeCommand</c> and the <c>CancelBind</c> manifest word).
-    /// This line is also a semantic precondition, not bookkeeping: the declarative help drawer uses
-    /// <c>VisibleKey</c>, which does not exist on the 0.4.0 carrier - so a 0.4.0 carrier fails at
-    /// CREATION (<c>UiContractException</c>: unknown attribute) rather than at first draw; the same now
-    /// holds twice over inside 0.7.0, because the settings manifest declares <c>CancelBind</c> and the
-    /// window subclasses call <c>TryHandleUnansweredCancel</c>, neither of which exists on an IC2-less
-    /// 0.7.0-dev carrier (creation refusal, not a draw-time surprise).
-    /// Pre-1.0 any public-surface change bumps the library's minor, so the accepted window is exactly one minor
-    /// wide and a consumer newer than the loaded carrier fails Require with a readable report instead
-    /// of exploding as a TypeLoadException at first draw. The kernel-host harness reads this pair out
-    /// of this file (the pin stays private: US ships no InternalsVisibleTo and the Verse stub has no
-    /// Verse.Mod to load), and asserts it against the Api of the carrier it linked, so a carrier
-    /// advance reddens a gate instead of a window and the range cannot be restated wrong in a test.
-    /// </summary>
-    private static readonly Version PrerequisiteApiMin = new Version(0, 7, 0);
-    private static readonly Version PrerequisiteApiMax = new Version(0, 8, 0);
-
+    /// <summary>Fixed 0.8 consumer contract: public kinds/context, semantic palette roles,
+    /// qualified primary release and explicit Live editing. One minor-wide prerequisite;
+    /// the selected package is supplied explicitly to every build and is shipped only by FL.</summary>
+    private static readonly Version PrerequisiteApiMin = new Version(0, 8, 0);
+    private static readonly Version PrerequisiteApiMax = new Version(0, 9, 0);
     /// <summary>
     /// Result of the constructor's prerequisite contract check. The UI surfaces read it so a
     /// carrier/consumer desync becomes a named notice instead of a draw-time TypeLoadException.
@@ -165,30 +142,30 @@ public partial class UniversalSqueakerMod : Mod
         Rect body = inRect.ContractedBy(18f);
         UiTheme theme = UsTheme.Surface();
         Rect box = new Rect(body.x, body.y, body.width, Mathf.Min(96f, Mathf.Max(0f, body.height)));
-        UiThemeDraw.Surface(box, theme, theme.Panel, theme.Border);
+        UiThemeDraw.Surface(box, theme, theme[UiPaletteRole.PanelSurface], theme[UiPaletteRole.Border]);
 
         Rect inner = box.ContractedBy(12f);
         UiThemeDraw.Label(
             new Rect(inner.x, inner.y, inner.width, 20f),
             "US.Settings.Shell.Title".Translate(),
             theme,
-            theme.TextPrimary,
+            theme[UiPaletteRole.Foreground],
             UiFont.Small);
         UiThemeDraw.Label(
             new Rect(inner.x, inner.y + 22f, inner.width, 34f),
             "US.Settings.Shell.Body".Translate(SqueakLabels.SettingsCategory),
             theme,
-            theme.TextSecondary,
+            theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny);
 
         Rect open = new Rect(inner.x, inner.yMax - 28f, 220f, 28f);
         bool hovered = UiNative.IsMouseOver(open);
-        UiThemeDraw.Surface(open, theme, hovered ? theme.Hover : theme.Raised, theme.Border);
+        UiThemeDraw.Surface(open, theme, hovered ? theme[UiPaletteRole.HoverSurface] : theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
         UiThemeDraw.Label(
             open,
             "US.Settings.Shell.Open".Translate(),
             theme,
-            hovered ? theme.TextPrimary : theme.TextSecondary,
+            hovered ? theme[UiPaletteRole.Foreground] : theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.MiddleCenter);
         // The context-free overload is deliberate here, and this is the only US call site left on it:

@@ -11,7 +11,7 @@
 - Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.
 - PM/user still decide the explicit Attack, Work, Equip and positive MentalBreak coverage/qualification candidates, ordinary timing/order/exception policy and first-unique source adoption. The overall runtime remains explicitly Dev-activated; no name-scan authority or ordinary default is inferred from tests.
 - Installed1.6.4871 method bodies are now available under the specific read-only task authorization. Preserve the named Social Goto Core-Def gap; no wider installation reads. Native loading, real Scribe/Config, screen and listening remain human gates, separately for all fifteen packages.
-- Keep fixedFL0.7 through this core handoff. Consume approved fixed0.8 only in the coordinator's separately dispatched C5 migration; UI/UX redesign follows its own owner and approval.
+- FixedFL0.8 technical consumer migration is complete for the existing UI, without a redesign. Use explicit fixed package input; do not restore the old0.7 fallback. CI/release acquisition awaits an available0.8 published carrier coordinated by PM. UI/UX design/implementation and native paired acceptance follow their own authorization.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical

@@ -83,35 +83,35 @@ public static class UsKernelDraw
         // theme.Danger, not theme.Warning: the two hold identical bytes today (Warning is the carrier's
         // pre-0.4 redirect onto Danger), and reading the destructive fill through the alias is how a
         // future Warning assignment would silently repaint every danger row. Same pixels, honest name.
-        Color fill = danger ? theme.Danger
-            : selected ? theme.Selected
-            : hovered ? theme.Hover
-            : theme.Raised;
+        Color fill = danger ? theme[UiPaletteRole.DangerSurface]
+            : selected ? theme[UiPaletteRole.SelectedSurface]
+            : hovered ? theme[UiPaletteRole.HoverSurface]
+            : theme[UiPaletteRole.ControlSurface];
 
-        Color border = danger ? theme.Danger : theme.Border;
+        Color border = danger ? theme[UiPaletteRole.DangerSurface] : theme[UiPaletteRole.Border];
         UiThemeDraw.Surface(rect, theme, fill, border);
 
         // The hatch ink is a plane token one step darker than the row (the spec's stripe is #1b1f27 over
         // #1f232c, which lands on s1 in this table) - never a new colour.
         if (rail == RowRail.Disabled)
         {
-            Hatch(rect, theme.Panel, RowHatchPitch);
+            Hatch(rect, theme[UiPaletteRole.PanelSurface], RowHatchPitch);
         }
 
         // Rails last, so the plane's edge cannot paint over them, and the dim rail before the accent one so
         // the accent stays the innermost mark in the dual state.
         if (rail == RowRail.CurrentAndSelected)
         {
-            UiThemeDraw.Solid(LeftRail(rect, CurrentAndSelectedOuterWidth), theme.TextSecondary);
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.AccentGold);
+            UiThemeDraw.Solid(LeftRail(rect, CurrentAndSelectedOuterWidth), theme[UiPaletteRole.SecondaryForeground]);
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
         }
         else if (rail == RowRail.Selected)
         {
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.TextSecondary);
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.SecondaryForeground]);
         }
         else if (rail == RowRail.Current)
         {
-            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme.AccentGold);
+            UiThemeDraw.Solid(LeftRail(rect, RailWidth), theme[UiPaletteRole.Accent]);
         }
         else if (rail == RowRail.Attention)
         {
@@ -155,21 +155,21 @@ public static class UsKernelDraw
         switch (shape)
         {
             case StateShape.InEffect:
-                Disc(rect, theme.TextPrimary);
+                Disc(rect, theme[UiPaletteRole.Foreground]);
                 break;
             case StateShape.Unavailable:
-                UiThemeDraw.Surface(rect, theme, Color.clear, theme.TextSecondary);
+                UiThemeDraw.Surface(rect, theme, Color.clear, theme[UiPaletteRole.SecondaryForeground]);
                 Hatch(
                     new Rect(rect.x + 1f, rect.y + 1f, Mathf.Max(1f, rect.width - 2f), Mathf.Max(1f, rect.height - 2f)),
-                    theme.Panel,
+                    theme[UiPaletteRole.PanelSurface],
                     ShapeHatchPitch);
                 break;
             case StateShape.Inherited:
-                DottedCircle(rect, theme.TextPrimary);
+                DottedCircle(rect, theme[UiPaletteRole.Foreground]);
                 break;
             case StateShape.Overridden:
-                Disc(rect, theme.TextPrimary);
-                Ring(rect, theme.AccentGold, 2f);
+                Disc(rect, theme[UiPaletteRole.Foreground]);
+                Ring(rect, theme[UiPaletteRole.Accent], 2f);
                 break;
         }
     }
@@ -297,17 +297,17 @@ public static class UsKernelDraw
 
     private static void CheckboxSurface(Rect rect, UiTheme theme, bool value)
     {
-        UiThemeDraw.Surface(rect, theme, theme.Raised, theme.Border);
+        UiThemeDraw.Surface(rect, theme, theme[UiPaletteRole.ControlSurface], theme[UiPaletteRole.Border]);
 
         // Radius 2, expressed the only way this library can: the outline's four 2px corner cells are
         // repainted with the box's own plane, so the border stops short of each corner. A real rounded
         // corner needs a primitive the backend contact does not expose (UiThemeDraw has exactly one fill -
         // an axis-aligned rect - on purpose, so the contact stays gateable).
         float cut = Mathf.Min(CheckboxCornerCut, Mathf.Min(rect.width, rect.height) * 0.25f);
-        UiThemeDraw.Solid(new Rect(rect.x, rect.y, cut, cut), theme.Raised);
-        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.y, cut, cut), theme.Raised);
-        UiThemeDraw.Solid(new Rect(rect.x, rect.yMax - cut, cut, cut), theme.Raised);
-        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.yMax - cut, cut, cut), theme.Raised);
+        UiThemeDraw.Solid(new Rect(rect.x, rect.y, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.y, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(new Rect(rect.x, rect.yMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
+        UiThemeDraw.Solid(new Rect(rect.xMax - cut, rect.yMax - cut, cut, cut), theme[UiPaletteRole.ControlSurface]);
 
         if (!value) return;
 
@@ -316,8 +316,8 @@ public static class UsKernelDraw
         // put a fourth accent on every screen that has a checkbox. The lane pins that this fill is the ink
         // token and that no accent colour is painted with it.
         Rect ink = new Rect(rect.x + 3f, rect.y + 3f, Mathf.Max(1f, rect.width - 6f), Mathf.Max(1f, rect.height - 6f));
-        UiThemeDraw.Surface(ink, theme, theme.TextPrimary, theme.TextPrimary);
-        CheckMark(new Rect(ink.x + 1f, ink.y + 1f, Mathf.Max(1f, ink.width - 2f), Mathf.Max(1f, ink.height - 2f)), theme.Border);
+        UiThemeDraw.Surface(ink, theme, theme[UiPaletteRole.Foreground], theme[UiPaletteRole.Foreground]);
+        CheckMark(new Rect(ink.x + 1f, ink.y + 1f, Mathf.Max(1f, ink.width - 2f), Mathf.Max(1f, ink.height - 2f)), theme[UiPaletteRole.Border]);
     }
 
     /// <summary>The spec's border-coloured check mark. The library has no line primitive, so each stroke is
@@ -367,7 +367,7 @@ public static class UsKernelDraw
     public static void RowBottomLine(Rect row, UiTheme theme)
     {
         float hairline = Mathf.Max(1f, theme.Geometry.Hairline);
-        UiThemeDraw.Solid(new Rect(row.x, row.yMax - hairline, row.width, hairline), theme.Divider);
+        UiThemeDraw.Solid(new Rect(row.x, row.yMax - hairline, row.width, hairline), theme[UiPaletteRole.Divider]);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -526,7 +526,7 @@ public static class UsKernelDraw
         TextAnchor anchor = TextAnchor.MiddleLeft,
         bool singleLine = false)
     {
-        UiThemeDraw.Label(rect, text, theme, color ?? theme.TextPrimary, font ?? UiFont.Small, anchor, singleLine);
+        UiThemeDraw.Label(rect, text, theme, color ?? theme[UiPaletteRole.Foreground], font ?? UiFont.Small, anchor, singleLine);
     }
 
     /// <summary>
@@ -593,7 +593,7 @@ public static class UsKernelDraw
             new Rect(rect.x + SelectionButtonLabelInset, rect.y, Mathf.Max(1f, rect.width - SelectionButtonLabelInset * 2f), rect.height),
             label,
             theme,
-            danger ? theme.TextOnDanger : selected ? theme.TextOnGold : theme.TextPrimary,
+            danger ? theme[UiPaletteRole.DangerForeground] : selected ? theme[UiPaletteRole.SelectedForeground] : theme[UiPaletteRole.Foreground],
             font ?? UiFont.Tiny,
             TextAnchor.MiddleLeft);
         return UiNative.Button(rect, ctx);
@@ -835,14 +835,14 @@ public static class UsKernelDraw
             new Rect(rect.x + UsCardLayout.Padding, rect.y + 2f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 22f),
             title,
             theme,
-            theme.TextPrimary,
+            theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
         UiThemeDraw.Surface(
             new Rect(rect.x + UsCardLayout.Padding, rect.y + UsCardLayout.HeaderHeight - 2f, Mathf.Max(1f, rect.width - UsCardLayout.Padding * 2f), 1f),
             theme,
-            theme.Divider,
-            theme.Divider);
+            theme[UiPaletteRole.Divider],
+            theme[UiPaletteRole.Divider]);
         return new Rect(
             rect.x + UsCardLayout.Padding,
             rect.y + UsCardLayout.HeaderHeight + UsCardLayout.HeaderGap,
@@ -856,6 +856,6 @@ public static class UsKernelDraw
     public static void DrawHelpFocusBorder(Rect rect, UiTheme theme, bool focused)
     {
         if (!focused) return;
-        UiThemeDraw.Surface(rect, theme, Color.clear, theme.BorderStrong);
+        UiThemeDraw.Surface(rect, theme, Color.clear, theme[UiPaletteRole.StrongBorder]);
     }
 }

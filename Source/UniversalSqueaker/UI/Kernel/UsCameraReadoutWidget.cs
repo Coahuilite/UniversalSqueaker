@@ -46,6 +46,6 @@ public sealed class UsCameraReadoutWidget : IUiWidget
         if (rect.width <= 1f || rect.height <= 1f) return;
         if (!ctx.Bindings.TryGet("camera-readout", out string text) || text.Length == 0) return;
 
-        UsKernelDraw.Label(rect, text, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small, TextAnchor.UpperRight);
+        UsKernelDraw.Label(rect, text, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small, TextAnchor.UpperRight);
     }
 }

@@ -557,8 +557,8 @@ internal static class DiagnosticsPanelLaneTests
 
         // The detail must actually have drawn. A tripping widget is swapped for the recovery band, which
         // would leave every assertion below vacuously green - the shape that hid this defect.
-        Assert(host.Session.TrippedNodes.Count == 0,
-            "the frame drew the gate chain through the guard without tripping (" + host.Session.TrippedNodes.Count + " tripped)");
+        Assert(Fl08PublicObservation.Recoveries(host.Session).Length == 0,
+            "the frame drew the gate chain through the guard without tripping (" + Fl08PublicObservation.Recoveries(host.Session).Length + " tripped)");
 
         int marked = 0;
         List<string> drawn = new();
@@ -614,14 +614,14 @@ internal static class DiagnosticsPanelLaneTests
         {
             Rect rail = (Rect)rects[i]!;
             Color colour = (Color)colors[i]!;
-            if (SameColor(colour, hostTheme.Divider) && Math.Abs(rail.width - 2f) <= 0.01f) dividerRails++;
+            if (SameColor(colour, hostTheme[UiPaletteRole.Divider]) && Math.Abs(rail.width - 2f) <= 0.01f) dividerRails++;
             if (!SameColor(colour, UniversalSqueaker.UsAttention.Brush)) continue;
             if (Math.Abs(rail.width - 2f) <= 0.01f) attentionRails++;
-            if (SameColor(colour, hostTheme.Warning)) warningRails++;
+            if (SameColor(colour, hostTheme[UiPaletteRole.WarningSurface])) warningRails++;
         }
 
         // The two names must be different colours, or this whole step is a tautology on this theme.
-        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, hostTheme.Warning),
+        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, hostTheme[UiPaletteRole.WarningSurface]),
             "the attention brush and the Warning/Danger alias are different colours on this theme");
         Assert(attentionRails == 1,
             "exactly one rail carries UsAttention.Brush (the first CURRENT block), got " + attentionRails);
@@ -660,9 +660,9 @@ internal static class DiagnosticsPanelLaneTests
         host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
 
         UiTheme theme = host.CreateContext(1f).Theme;
-        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, theme.AccentGold)
-                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme.Danger)
-                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme.Warning),
+        Assert(!SameColor(UniversalSqueaker.UsAttention.Brush, theme[UiPaletteRole.Accent])
+                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme[UiPaletteRole.DangerSurface])
+                && !SameColor(UniversalSqueaker.UsAttention.Brush, theme[UiPaletteRole.WarningSurface]),
             "the theme really distinguishes attention from gold and danger, or this step is a tautology");
 
         string statusText = Marker + " US.Diagnostics.Gate.BlockMark";
@@ -674,9 +674,9 @@ internal static class DiagnosticsPanelLaneTests
             Color colour = (Color)colors[i]!;
             Assert(SameColor(colour, UniversalSqueaker.UsAttention.Brush),
                 "a blocked status cell is painted with the attention brush, got " + colour);
-            Assert(!SameColor(colour, theme.AccentGold),
+            Assert(!SameColor(colour, theme[UiPaletteRole.Accent]),
                 "never the accent gold - the ruling's named acceptance clause, got " + colour);
-            Assert(!SameColor(colour, theme.Danger) && !SameColor(colour, theme.Warning),
+            Assert(!SameColor(colour, theme[UiPaletteRole.DangerSurface]) && !SameColor(colour, theme[UiPaletteRole.WarningSurface]),
                 "and never the danger family, got " + colour);
         }
 
@@ -701,8 +701,8 @@ internal static class DiagnosticsPanelLaneTests
         host.DrawChecked(new Rect(0f, 0f, 680f, 560f));
 
         UiTheme theme = host.CreateContext(1f).Theme;
-        Assert(!SameColor(theme.Success, theme.TextSecondary) && !SameColor(theme.Selected, theme.TextSecondary)
-                && !SameColor(theme.Success, theme.Selected),
+        Assert(!SameColor(theme[UiPaletteRole.SuccessSurface], theme[UiPaletteRole.SecondaryForeground]) && !SameColor(theme[UiPaletteRole.SelectedSurface], theme[UiPaletteRole.SecondaryForeground])
+                && !SameColor(theme[UiPaletteRole.SuccessSurface], theme[UiPaletteRole.SelectedSurface]),
             "the theme really distinguishes pass/pending/neutral ink, or the checks below are vacuous");
 
         int naDrawn = 0;
@@ -714,14 +714,14 @@ internal static class DiagnosticsPanelLaneTests
             if (string.Equals(text, "US.Diagnostics.Value.NotApplicable", StringComparison.Ordinal))
             {
                 naDrawn++;
-                Assert(!SameColor(colour, theme.Success), "N/A must never use the pass colour");
-                Assert(SameColor(colour, theme.TextSecondary), "N/A reads as neutral ink");
+                Assert(!SameColor(colour, theme[UiPaletteRole.SuccessSurface]), "N/A must never use the pass colour");
+                Assert(SameColor(colour, theme[UiPaletteRole.SecondaryForeground]), "N/A reads as neutral ink");
             }
             else if (string.Equals(text, "US.Diagnostics.Value.Undetermined", StringComparison.Ordinal))
             {
                 pendingDrawn++;
-                Assert(!SameColor(colour, theme.Selected), "Pending must never use the selection accent");
-                Assert(SameColor(colour, theme.TextSecondary), "Pending reads as neutral ink");
+                Assert(!SameColor(colour, theme[UiPaletteRole.SelectedSurface]), "Pending must never use the selection accent");
+                Assert(SameColor(colour, theme[UiPaletteRole.SecondaryForeground]), "Pending reads as neutral ink");
             }
 
             Assert(text.IndexOf("not reached", StringComparison.OrdinalIgnoreCase) < 0 && text.IndexOf("NotReached", StringComparison.Ordinal) < 0,

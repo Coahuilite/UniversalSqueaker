@@ -1207,19 +1207,8 @@ internal static class HelpPanelLaneTests
     }
 
 
-    /// <summary>The harness's own copy of Program.RepoRoot's rule (that helper is private): walk up from
-    /// the binary until the repository's gate script appears.</summary>
-    private static string RepoRoot()
-    {
-        DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (int i = 0; i < 8 && dir != null; i++)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "scripts", "verify-local.ps1"))) return dir.FullName;
-            dir = dir.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the repository root from " + AppContext.BaseDirectory);
-    }
+    /// <summary>Use the shared explicit-cwd rule when running a complete copied test output.</summary>
+    private static string RepoRoot() => Program.RepoRoot();
 
     /// <summary>Workspace-relative, forward-slashed path for a scan report.</summary>
     private static string Relative(string root, string path)

@@ -68,13 +68,13 @@ public sealed class UsKernelFooterWidget : IUiWidget
         ctx.Bindings.TryGet("save-status", out string saveStatus);
         bool isDirty = ctx.Bindings.TryGet("is-dirty", out bool dirty) && dirty;
 
-        UiThemeDraw.Surface(new Rect(rect.x, rect.y, rect.width, 1f), ctx.Theme, ctx.Theme.Divider, ctx.Theme.Divider);
+        UiThemeDraw.Surface(new Rect(rect.x, rect.y, rect.width, 1f), ctx.Theme, ctx.Theme[UiPaletteRole.Divider], ctx.Theme[UiPaletteRole.Divider]);
 
         UsKernelDraw.Label(
             new Rect(rect.x + Padding, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height),
             buildIdentity,
             ctx.Theme,
-            ctx.Theme.TextDisabled,
+            ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
@@ -85,13 +85,13 @@ public sealed class UsKernelFooterWidget : IUiWidget
         // primary. The destructive/handling failure keeps its status color (Danger).
         Color statusColor = saveStatus switch
         {
-            "Failed" => ctx.Theme.Danger,
-            "Saving" => ctx.Theme.TextPrimary,
-            _ => ctx.Theme.TextSecondary,
+            "Failed" => ctx.Theme[UiPaletteRole.DangerSurface],
+            "Saving" => ctx.Theme[UiPaletteRole.Foreground],
+            _ => ctx.Theme[UiPaletteRole.SecondaryForeground],
         };
         if (isDirty && saveStatus != "Failed")
         {
-            statusColor = ctx.Theme.TextPrimary;
+            statusColor = ctx.Theme[UiPaletteRole.Foreground];
         }
 
         Rect statusRect = new(rect.x + rect.width * 0.5f, rect.y, Math.Max(1f, rect.width * 0.5f - Padding), rect.height);

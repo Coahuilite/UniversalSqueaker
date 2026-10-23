@@ -146,6 +146,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     // Basic writes.
     public SqueakVoicePackMode? LastMode;
     public float? LastGlobalVolume;
+    public int GlobalVolumeWriteCount, PackFilterWriteCount, RaceFilterWriteCount, SearchWriteCount;
+    public string? LastSearchRequest;
+    public Func<string, string>? SearchTransform;
     public SqueakDistancePreset? LastDistancePreset;
     public float? LastDistanceRangeStart;
     public float? LastDistanceRangeEnd;
@@ -596,7 +599,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetMode(SqueakVoicePackMode mode) => LastMode = mode;
 
-    public void SetGlobalVolume(float value) => LastGlobalVolume = value;
+    public void SetGlobalVolume(float value) { GlobalVolumeWriteCount++; LastGlobalVolume = value; }
 
     public void SetDistancePreset(SqueakDistancePreset preset) => LastDistancePreset = preset;
 
@@ -903,16 +906,19 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetPackFilter(string author)
     {
+        PackFilterWriteCount++;
         LastPackFilter = author;
         VoicePacksPageModel.SetPackFilter(state, author);
     }
 
-    public void SetRaceFilter(string raceDefName) => LastRaceFilter = raceDefName;
+    public void SetRaceFilter(string raceDefName) { RaceFilterWriteCount++; LastRaceFilter = raceDefName; }
 
     public void SetXenotypeFilter(string xenotypeDefName) => LastXenotypeFilter = xenotypeDefName;
 
     public void SetSearchText(string text)
     {
+        SearchWriteCount++; LastSearchRequest = text;
+        if (SearchTransform != null) text = SearchTransform(text);
         // Mirror the production facade exactly: UsKernelSettingsSource.SetSearchText routes through
         // VoicePacksPageModel.SetSearchText, which writes ViewState.SearchText - the very field the
         // "search-text" binding READS. A fake that only recorded the write would leave the read-back

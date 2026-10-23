@@ -14,7 +14,7 @@
     <!-- UIR-006 (WO-US-UI-REFACTOR-20261014): the two REGION COLOUR schemes (us-flat-panel, us-command-
          button) are retired with their hard-coded Core hexes. They existed to spell region relationships
          (a no-box edge equal to the fill; the SA1.6 button re-separation) INSIDE one authored swatch.
-         With the six official palettes each declaring the full 24-token role table, those relationships
+         With the six official palettes each declaring the full thirty-role table, those relationships
          are carried by the swatch values themselves - the only way a swatch switch repaints every
          region at once. A swatch is pure colour; the density tiers and the preset-row font stay here,
          because font and density are the layout-bearing axes and never belong to a swatch. -->
@@ -139,7 +139,7 @@
             <Widget Id="race-board-filter-har" Kind="input/button" TextKey="US.Board.Filter.Har" ActionBind="board-filter" PayloadKey="board-filter-har" SelectedKey="board-filter-is-har" Width="84" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
             <Widget Id="race-board-filter-vanilla-races" Kind="input/button" TextKey="US.Board.Filter.VanillaRaces" ActionBind="board-filter" PayloadKey="board-filter-vanilla-races" SelectedKey="board-filter-is-vanilla-races" Width="128" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
             <Widget Id="race-board-filter-vanilla-creatures" Kind="input/button" TextKey="US.Board.Filter.VanillaCreatures" ActionBind="board-filter" PayloadKey="board-filter-vanilla-creatures" SelectedKey="board-filter-is-vanilla-creatures" Width="172" Height="24" AlignY="Middle" HelpKey="us/race-board/filters" />
-            <Widget Id="race-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Width="220" Height="24" AlignY="Middle" HelpKey="us/race-board/search" />
+            <Widget Id="race-board-search" Kind="input/text-field" Bind="board-search" PlaceholderKey="US.Board.SearchPlaceholder" Width="220" Height="24" AlignY="Middle" HelpKey="us/race-board/search" Live="true" />
           </Row>
           <!-- CORRECTIONS-R1 topic 3: before the long all-race list, the two nearest output
                destinations ride the page's EXISTING scroll-to action (declared string payloads,
@@ -183,7 +183,7 @@
           <Row Id="global-volume-top" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="global-volume-caption" Kind="text/wrapped" Bind="global-volume-caption" Emphasis="Muted" />
             <Column Id="global-volume-number-slot" Width="64" Padding="0" AlignY="Top">
-              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpKey="us/global-volume/number" AlignX="Left" />
+              <Widget Id="global-volume-number" Kind="input/number-field" Bind="global-volume-percent" Min="0" Max="100" Format="0" Width="64" Height="20" HelpKey="us/global-volume/number" AlignX="Left" Live="true" />
             </Column>
           </Row>
           <Widget Id="global-volume-slider" Kind="input/slider" Bind="global-volume" Min="0" Max="1" Height="20" HelpKey="us/global-volume/slider" />
@@ -285,14 +285,14 @@
           <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
           <Row Id="timing-interval-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
-            <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" />
+            <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" Live="true" />
           </Row>
           <Widget Id="timing-interval-slider" VisibleKey="legacy-policy-controls" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
           <Row Id="timing-multiplier-row" VisibleKey="legacy-policy-controls" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
             <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
             <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
             <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
-            <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" />
+            <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" Live="true" />
             <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
             </Row>
           </Row>
@@ -480,7 +480,7 @@
              body widget). -->
         <Section Id="packs-filter" Tab="Packs" Padding="12" Gap="6">
           <Widget Id="packs-filter-header" Kind="us/section-header" TitleKey="US.Section.FilterDomains" Height="26" HelpKey="us/filter-bar" />
-          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpKey="us/filter-bar/keyword" />
+          <Widget Id="packs-keyword" Kind="input/text-field" Bind="search-text" PlaceholderKey="US.Packs.Checklist.SearchPlaceholder" Height="26" HelpKey="us/filter-bar/keyword" Live="true" />
           <Widget Id="filter-bar" Kind="us/filter-bar" TitleHidden="true" />
           <Row Id="packs-domain-filters" Gap="4" Padding="0" Breakpoint="500" Narrow="Column">
             <Widget Id="packs-race-filter" Kind="input/dropdown" Bind="race-filter" OptionsBind="race-domain-options" Width="150" Height="26" HelpKey="us/filter-bar/race" />

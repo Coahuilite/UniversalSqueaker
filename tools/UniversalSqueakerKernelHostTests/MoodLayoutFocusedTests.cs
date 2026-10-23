@@ -2417,13 +2417,13 @@ internal static class MoodLayoutFocusedTests
         const string xml = "<UiPage Schema=\"2\" Source=\"coahuilite.universalsqueaker\">"
             + "<Styles Schema=\"1\" Density=\"regular\">"
             + "<Scheme Name=\"us-flat-panel\">"
-            + "<Color Token=\"WorkspacePlane\" Value=\"#191612\" />"
-            + "<Color Token=\"Raised\" Value=\"#191612\" />"
-            + "<Color Token=\"RaisedBorder\" Value=\"#191612\" />"
-            + "<Color Token=\"Hover\" Value=\"#242019\" />"
-            + "<Color Token=\"HoverBorder\" Value=\"#242019\" />"
-            + "<Color Token=\"Selected\" Value=\"#3a311f\" />"
-            + "<Color Token=\"SelectedBorder\" Value=\"#3a311f\" />"
+            + "<Palette Role=\"WorkspacePlane\" Value=\"#191612\" />"
+            + "<Palette Role=\"Raised\" Value=\"#191612\" />"
+            + "<Palette Role=\"RaisedBorder\" Value=\"#191612\" />"
+            + "<Palette Role=\"Hover\" Value=\"#242019\" />"
+            + "<Palette Role=\"HoverBorder\" Value=\"#242019\" />"
+            + "<Palette Role=\"Selected\" Value=\"#3a311f\" />"
+            + "<Palette Role=\"SelectedBorder\" Value=\"#3a311f\" />"
             + "</Scheme></Styles>"
             + "<Column Id=\"probe-column\" Padding=\"0\" Gap=\"0\" Scheme=\"us-flat-panel\">"
             + "<Widget Id=\"probe-nav\" Kind=\"us/nav\" />"
@@ -2537,7 +2537,7 @@ internal static class MoodLayoutFocusedTests
     private static bool TryGetPopupHitLayerFromHost(UiHost host, out UiHitLayer layer)
     {
         layer = default;
-        foreach (UiHitLayer candidate in host.Session.HitLayers)
+        foreach (UiHitLayer candidate in Fl08PublicObservation.Popup(host.Session, out var observedPopup) ? new[] { observedPopup } : Array.Empty<UiHitLayer>())
         {
             if (candidate.IsPopup)
             {

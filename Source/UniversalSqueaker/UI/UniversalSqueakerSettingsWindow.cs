@@ -180,14 +180,14 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
         // sentence beside the button prints. A produced report advances the same content clock every other
         // display write uses, so the band re-measures to the new sentence on the next pass instead of keeping
         // the pre-report band (the report is not itself a page write, so nothing else would move that clock).
-        if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Session.BumpContentRevision();
+        if (source?.ConsumeLayoutReportRequest() >= 0) Host?.Invalidate();
         mod.TickSettingsSaveForWindow();
     }
 
     /// <summary>Terminal state for this window instance: say what happened and how to recover, draw nothing else.</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme.Panel, WindowTheme.Border);
+        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(24f);
 
         // The library owns no strings, so the two notices are US's own vocabulary: the desync notice
@@ -197,22 +197,22 @@ public sealed class UniversalSqueakerSettingsWindow : UiWindowHost
             UiThemeDraw.Label(
                 new Rect(body.x, body.y, body.width, 30f),
                 "US.Settings.Prerequisite.Title".Translate(),
-                WindowTheme, WindowTheme.TextPrimary, UiFont.Medium);
+                WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
             UiThemeDraw.Label(
                 new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
                 "US.Settings.Prerequisite.Body".Translate(),
-                WindowTheme, WindowTheme.TextSecondary, UiFont.Small);
+                WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
             return;
         }
 
         UiThemeDraw.Label(
             new Rect(body.x, body.y, body.width, 30f),
             "US.Settings.PageUnavailable.Title".Translate(),
-            WindowTheme, WindowTheme.TextPrimary, UiFont.Medium);
+            WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
         UiThemeDraw.Label(
             new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
             "US.Settings.PageUnavailable.Body".Translate(SqueakLabels.SettingsCategory),
-            WindowTheme, WindowTheme.TextSecondary, UiFont.Small);
+            WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
     /// <summary>The named diagnostics record for a failed pass; the notice itself is drawn by the shell.</summary>

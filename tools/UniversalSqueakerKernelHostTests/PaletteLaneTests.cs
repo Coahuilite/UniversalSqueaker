@@ -39,14 +39,14 @@ internal static class PaletteLaneTests
     /// <summary>(ink selector, surface selector, why) - each pair is a place US actually paints.</summary>
     private static readonly (string Name, Func<UiTheme, Color> Ink, Func<UiTheme, Color> On)[] InkPairs =
     {
-        ("TextPrimary/Raised", t => t.TextPrimary, t => t.Raised),
-        ("TextPrimary/Panel", t => t.TextPrimary, t => t.Panel),
-        ("TextPrimary/Base", t => t.TextPrimary, t => t.Base),
-        ("TextSecondary/Raised", t => t.TextSecondary, t => t.Raised),
-        ("TextSecondary/Panel", t => t.TextSecondary, t => t.Panel),
-        ("TextOnGold/Selected", t => t.TextOnGold, t => t.Selected),
-        ("TextOnGold/NavSelected", t => t.TextOnGold, t => t.Selected), // the nav paints ink on the selected plate
-        ("TextOnDanger/Danger", t => t.TextOnDanger, t => t.Danger),
+        ("TextPrimary/Raised", t => t[UiPaletteRole.Foreground], t => t[UiPaletteRole.ControlSurface]),
+        ("TextPrimary/Panel", t => t[UiPaletteRole.Foreground], t => t[UiPaletteRole.PanelSurface]),
+        ("TextPrimary/Base", t => t[UiPaletteRole.Foreground], t => t[UiPaletteRole.WindowSurface]),
+        ("TextSecondary/Raised", t => t[UiPaletteRole.SecondaryForeground], t => t[UiPaletteRole.ControlSurface]),
+        ("TextSecondary/Panel", t => t[UiPaletteRole.SecondaryForeground], t => t[UiPaletteRole.PanelSurface]),
+        ("TextOnGold/Selected", t => t[UiPaletteRole.SelectedForeground], t => t[UiPaletteRole.SelectedSurface]),
+        ("TextOnGold/NavSelected", t => t[UiPaletteRole.SelectedForeground], t => t[UiPaletteRole.SelectedSurface]), // the nav paints ink on the selected plate
+        ("TextOnDanger/Danger", t => t[UiPaletteRole.DangerForeground], t => t[UiPaletteRole.DangerSurface]),
     };
 
     public static int RunAll()
@@ -81,9 +81,9 @@ internal static class PaletteLaneTests
         foreach (UsSwatch swatch in UsSwatches.All)
         {
             UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
-            Assert(!Same(UsAttention.Brush, bag.AccentGold),
+            Assert(!Same(UsAttention.Brush, bag[UiPaletteRole.Accent]),
                 swatch.Id + ": the accent equals the attention brush - [!] would stop meaning \"investigate\"");
-            Assert(!Same(UsAttention.InkOnBrush, bag.TextPrimary),
+            Assert(!Same(UsAttention.InkOnBrush, bag[UiPaletteRole.Foreground]),
                 swatch.Id + ": primary ink equals the attention badge's ink - the two marks collapse");
         }
 
@@ -97,11 +97,11 @@ internal static class PaletteLaneTests
         foreach (UsSwatch swatch in UsSwatches.All)
         {
             UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
-            Assert(!Same(bag.SwitchThumbOff, bag.Raised),
+            Assert(!Same(bag[UiPaletteRole.SwitchOff], bag[UiPaletteRole.ControlSurface]),
                 swatch.Id + ": the OFF thumb equals the resting surface - the switch reads as an empty track");
-            Assert(!Same(bag.SwitchThumbOff, bag.AccentGold),
+            Assert(!Same(bag[UiPaletteRole.SwitchOff], bag[UiPaletteRole.Accent]),
                 swatch.Id + ": the OFF thumb equals the ON colour - position stops being the answer");
-            double separation = Contrast(bag.SwitchThumbOff, bag.Raised);
+            double separation = Contrast(bag[UiPaletteRole.SwitchOff], bag[UiPaletteRole.ControlSurface]);
             Assert(separation >= MinThumbSeparation,
                 swatch.Id + ": OFF thumb vs track reads " + separation.ToString("0.00")
                 + ":1, under the " + MinThumbSeparation.ToString("0.0") + ":1 separation floor");
@@ -143,16 +143,16 @@ internal static class PaletteLaneTests
             UiTheme theme = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
             Color fill = UsSelectionSurfaceWidget.PaintedFill(theme);   // composite over the resting plane
             Color rail = UsSelectionSurfaceWidget.PaintedRail(theme);   // opaque
-            Color plane = theme.Raised;
+            Color plane = theme[UiPaletteRole.ControlSurface];
 
             // (a) the rail separates from BOTH real neighbouring surfaces (required selection mark).
             Require("rail-vs-fill " + swatch.Id, Contrast(rail, fill), 3.0);
             Require("rail-vs-plane " + swatch.Id, Contrast(rail, plane), 3.0);
             // (b) body ink on its real grounds keeps the full readability floor.
-            Require("body-on-raised " + swatch.Id, Contrast(theme.TextPrimary, plane), 4.5);
-            Require("body-on-panel " + swatch.Id, Contrast(theme.TextPrimary, theme.Panel), 4.5);
-            Require("body-on-base " + swatch.Id, Contrast(theme.TextPrimary, theme.Base), 4.5);
-            Require("body-on-selected-plate " + swatch.Id, Contrast(theme.TextOnGold, theme.Selected), 4.5);
+            Require("body-on-raised " + swatch.Id, Contrast(theme[UiPaletteRole.Foreground], plane), 4.5);
+            Require("body-on-panel " + swatch.Id, Contrast(theme[UiPaletteRole.Foreground], theme[UiPaletteRole.PanelSurface]), 4.5);
+            Require("body-on-base " + swatch.Id, Contrast(theme[UiPaletteRole.Foreground], theme[UiPaletteRole.WindowSurface]), 4.5);
+            Require("body-on-selected-plate " + swatch.Id, Contrast(theme[UiPaletteRole.SelectedForeground], theme[UiPaletteRole.SelectedSurface]), 4.5);
             // (c) the assist fill: measured, printed, and named - never a silent green.
             Console.WriteLine("[selection-legibility] " + swatch.Id
                 + " rail-vs-fill=" + Contrast(rail, fill).ToString("0.000")

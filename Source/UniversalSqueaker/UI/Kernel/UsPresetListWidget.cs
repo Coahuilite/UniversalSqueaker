@@ -138,7 +138,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
                 new Rect(rect.x, rect.y + TopPadding, rect.width, 48f),
                 Tr(ctx, EmptyTextKey),
                 ctx.Theme,
-                ctx.Theme.TextSecondary,
+                ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Small,
                 TextAnchor.MiddleCenter);
             return;
@@ -150,7 +150,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
         float noteHeight = BaselineNoteHeight(ctx, innerWidth);
         UsKernelDraw.Label(new Rect(x + LeftPadding, y, Math.Max(1f, innerWidth - LeftPadding * 2f), noteHeight),
-            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.UpperLeft);
+            Tr(ctx, BaselineNoteKey), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.UpperLeft);
         y += noteHeight + RowGap;
 
         foreach (BaselinePresetView preset in presets)
@@ -168,7 +168,7 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
                     new Rect(x + LeftPadding, y + 2f, Math.Max(1f, innerWidth - LeftPadding - 8f), descHeight - 4f),
                     preset.Description,
                     ctx.Theme,
-                    ctx.Theme.TextSecondary,
+                    ctx.Theme[UiPaletteRole.SecondaryForeground],
                     UiFont.Tiny,
                     TextAnchor.UpperLeft);
                 y += descHeight + RowGap;
@@ -207,14 +207,14 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, rect.y + HeaderTopPadding, Math.Max(1f, importRect.x - rect.x - LeftPadding - 8f), titleBand),
             HeaderTitle(preset),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
             new Rect(rect.x + LeftPadding + 4f, rect.y + HeaderTopPadding + titleBand + HeaderInnerGap, Math.Max(1f, importRect.x - rect.x - LeftPadding - 16f), summaryBand),
             SummaryText(ctx, preset),
             ctx.Theme,
-            ctx.Theme.TextSecondary,
+            ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 

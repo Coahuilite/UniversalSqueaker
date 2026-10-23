@@ -1,0 +1,80 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using FerriteLib.UiKit.Kernel;
+using UnityEngine;
+
+namespace UniversalSqueaker.KernelHostTests;
+
+// Read actual public trace/diagnostic output, never the carrier's private runtime tables.
+internal static class Fl08PublicObservation
+{
+    private sealed class Record
+    {
+        internal UiHitLayer? Popup;
+        internal readonly HashSet<string> Recoveries = new();
+    }
+    private static readonly ConditionalWeakTable<UiSession, Record> records = new();
+    internal static bool Popup(UiSession session, out UiHitLayer layer)
+    {
+        layer = default;
+        if (!records.TryGetValue(session, out var record) || !record.Popup.HasValue || session.OpenPopupId == null) return false;
+        layer = record.Popup.Value;
+        return layer.PopupOwnerId == session.OpenPopupId;
+    }
+    internal static string[] Recoveries(UiSession session)
+    {
+        var record = records.GetOrCreateValue(session);
+        // Also detect a deliberate trip or a measure failure before this helper's first draw.
+        var observed = UiHost.ObserveLiveHost(session.Identity, new UiObservationBudget(512, 32));
+        if (observed.Truncated) throw new InvalidOperationException("Trip observation exceeded its public node budget");
+        foreach (var node in observed.Nodes)
+        {
+            string? id = node.Facts.FirstOrDefault(x => x.Name == "identity")?.Value;
+            var actual = id == null ? null : session.GetNodeByElementId(id);
+            if (actual != null && session.IsTripped(actual)) {
+                session.TryGetTripLog(actual, out string text); record.Recoveries.Add(node.Path + ": " + text);
+            }
+        }
+        return record.Recoveries.ToArray();
+    }
+    internal static void Draw(UiHost host, Rect viewport)
+    {
+        var record = records.GetOrCreateValue(host.Session);
+        record.Popup = null;
+        var prior = UiNative.Trace;
+        UiNative.Trace = text => {
+            prior?.Invoke(text);
+            var match = Regex.Match(text, @"^publish id=(.*?) rect=([-0-9.,]+) firstRow=");
+            if (!match.Success) return;
+            float[] v = match.Groups[2].Value.Split(new[] { ',' }).Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+            string id = match.Groups[1].Value;
+            // These two US composites declare their dropdowns inside their own widget;
+            // ordinary default dropdowns have their own declared element id.
+            string ownerId = id.StartsWith("scope-tree-", StringComparison.Ordinal) ? "scope-tree"
+                : id == "pack-filter" ? "filter-bar" : id;
+            var owner = host.Session.GetNodeByElementId(ownerId);
+            if (owner == null) {
+                var declarations = BoundDropdowns(host.Manifest.Roots, id).ToArray();
+                if (declarations.Length == 1) owner = host.Session.GetNodeByElementId(declarations[0]);
+            }
+            owner = owner
+                ?? throw new InvalidOperationException("No declared US owner for observed popup " + id);
+            record.Popup = new UiHitLayer(owner, new Rect(v[0], v[1], v[2], v[3]), true, id);
+        };
+        try { host.DrawFrame(viewport); }
+        finally {
+            UiNative.Trace = prior;
+        }
+    }
+    private static IEnumerable<string> BoundDropdowns(IReadOnlyList<UiElementSpec> specs, string binding)
+    {
+        foreach (var spec in specs) {
+            if (spec.Kind == UiKinds.Dropdown && spec.TryGetAttribute("Bind", out string value) && value == binding) yield return spec.Id;
+            foreach (var id in BoundDropdowns(spec.Children, binding)) yield return id;
+        }
+    }
+}

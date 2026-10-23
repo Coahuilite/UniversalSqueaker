@@ -120,7 +120,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
         // literal, so a lane can assert the identity instead of a number. NOT SelectedSurface.Border: the
         // flat scope sets that equal to Selected (that is how a flat surface paints no box), so it is not
         // gold inside these cards - measured, recorded in the class comment.
-        UiThemeDraw.AccentRail(rect, theme, true, RailWidth, theme.AccentGold);
+        UiThemeDraw.AccentRail(rect, theme, true, RailWidth, theme[UiPaletteRole.Accent]);
 
         float left = rect.x + TitleInset;
         string title = ResolveTitle(ctx);
@@ -131,7 +131,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
                 new Rect(left, rect.y, markerWidth, rect.height),
                 Marker,
                 ctx,
-                theme.TextPrimary,
+                theme[UiPaletteRole.Foreground],
                 UiFont.Small,
                 TextAnchor.MiddleLeft,
                 singleLine: true);
@@ -143,7 +143,7 @@ public sealed class UsSectionHeaderWidget : IUiWidget
             new Rect(left, rect.y, textWidth, rect.height),
             title,
             ctx,
-            theme.TextPrimary,
+            theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
     }

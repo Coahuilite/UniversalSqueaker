@@ -274,18 +274,18 @@ internal sealed class SqueakDiagnosticsPanel : UiWindowHost
     /// <summary>Terminal notices in US's own vocabulary (the library ships zero strings).</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme.Panel, WindowTheme.Border);
+        UiThemeDraw.Surface(rect, WindowTheme, WindowTheme[UiPaletteRole.PanelSurface], WindowTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(24f);
         bool prerequisite = notice == UiWindowNotice.Prerequisite;
 
         UsKernelDraw.Label(
             new Rect(body.x, body.y, body.width, 30f),
             Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
-            WindowTheme, WindowTheme.TextPrimary, UiFont.Medium);
+            WindowTheme, WindowTheme[UiPaletteRole.Foreground], UiFont.Medium);
         UsKernelDraw.Label(
             new Rect(body.x, body.y + 38f, body.width, Mathf.Max(1f, body.height - 38f)),
             Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
-            WindowTheme, WindowTheme.TextSecondary, UiFont.Small);
+            WindowTheme, WindowTheme[UiPaletteRole.SecondaryForeground], UiFont.Small);
     }
 
     /// <summary>Plain log line, deliberately NOT a usdiag protocol event: the frozen vocabulary

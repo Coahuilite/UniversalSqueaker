@@ -371,7 +371,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UsKernelDraw.Label(
                 new Rect(x + LeftPadding, y, Mathf.Max(1f, innerWidth - LeftPadding), reasonBand),
                 EmptyTargetText(ctx),
-                ctx.Theme, ctx.Theme.TextSecondary,
+                ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Tiny, TextAnchor.MiddleLeft);
             y += reasonBand + RowGap;
         }
@@ -393,7 +393,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             UsKernelDraw.Label(
                 new Rect(x, y, Math.Max(1f, innerWidth - (canAreaReset ? areaResetWidth + RowGap : 0f)), RowHeight),
                 UsKernelDraw.Keyed(ctx, ActionScopeHeaderKey),
-                ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
+                ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small,
                 TextAnchor.MiddleLeft);
             if (canAreaReset
                 && UsKernelDraw.SelectionButton(
@@ -435,7 +435,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 UsKernelDraw.Label(
                     new Rect(x, y, innerWidth, RowHeight),
                     UsKernelDraw.Keyed(ctx, targetGroup == ActionScopeGroup.PlayerTriggered ? GroupPlayerKey : GroupSystemKey),
-                    ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny,
+                    ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny,
                     TextAnchor.MiddleLeft);
                 y += RowHeight + RowGap;
 
@@ -444,7 +444,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                     UsKernelDraw.Label(
                         new Rect(x + 6f, y, Math.Max(1f, innerWidth - 6f), DraftHeadingHeight),
                         UsKernelDraw.Keyed(ctx, DraftUndraftKey),
-                        ctx.Theme, ctx.Theme.AccentGold, UiFont.Tiny,
+                        ctx.Theme, ctx.Theme[UiPaletteRole.Accent], UiFont.Tiny,
                         TextAnchor.MiddleLeft);
                     y += DraftHeadingHeight + RowGap;
                 }
@@ -470,7 +470,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 UsKernelDraw.Label(
                     new Rect(x, y, Math.Max(1f, innerWidth - (canMoodReset ? moodResetWidth + RowGap : 0f)), RowHeight),
                     UsKernelDraw.Keyed(ctx, MoodTuningHeaderKey),
-                    ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small,
+                    ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small,
                     TextAnchor.MiddleLeft);
                 if (canMoodReset
                     && UsKernelDraw.SelectionButton(
@@ -698,8 +698,8 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 2 => "US.VF1.Source.Xenotype",
                 _ => "US.VF1.Source.Default",
             }) + ")";
-        UsKernelDraw.Label(new Rect(x, y, 110f, RowHeight), label, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
-        UsKernelDraw.Label(new Rect(x + 114f, y, 150f, RowHeight), valueText, ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new Rect(x, y, 110f, RowHeight), label, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleLeft);
+        UsKernelDraw.Label(new Rect(x + 114f, y, 150f, RowHeight), valueText, ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft);
 
         float bx = x + 270f;
         float buttonWidth = 30f;
@@ -746,7 +746,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
         else
         {
             UsKernelDraw.Label(new Rect(resetX, resetY, resetW, RowHeight), resetText,
-                ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+                ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft);
         }
 
         return wraps ? y + 2f * (RowHeight + RowGap) : y + RowHeight + RowGap;
@@ -761,7 +761,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 new Rect(rect.x + LeftPadding, rect.y, 120f, LayerRowLabelBandHeight),
                 UsKernelDraw.Keyed(ctx, LayerLabelKey),
                 ctx.Theme,
-                ctx.Theme.TextPrimary,
+                ctx.Theme[UiPaletteRole.Foreground],
                 UiFont.Small,
                 TextAnchor.MiddleLeft);
 
@@ -785,7 +785,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
             UsKernelDraw.Keyed(ctx, LayerLabelKey),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -818,7 +818,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, rect.y, 120f, rect.height),
             UsKernelDraw.Keyed(ctx, DomainLabelKey),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -861,7 +861,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, rect.y, layout.LabelWidth, layout.LabelLineHeight),
             UsKernelDraw.Keyed(ctx, DefinitionFor(row.Action).DisplayKey),
             ctx.Theme,
-            submittable ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
+            submittable ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -873,7 +873,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 new Rect(rect.x + layout.HintX, rect.y + layout.HintY, layout.HintWidth, layout.HintBandHeight),
                 layout.HintText,
                 ctx.Theme,
-                submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
+                submittable ? ctx.Theme[UiPaletteRole.SecondaryForeground] : ctx.Theme[UiPaletteRole.DisabledForeground],
                 UiFont.Tiny,
                 TextAnchor.MiddleLeft);
         }
@@ -936,7 +936,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + 6f, rect.y, textWidth, rect.height),
             UsKernelDraw.Ellipsized(display, ctx, UiFont.Tiny, textWidth),
             ctx.Theme,
-            ctx.Theme.TextDisabled,
+            ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft,
             singleLine: true);
@@ -1075,7 +1075,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + LeftPadding, nameY, layout.NameBandWidth, layout.NameBandHeight),
             MoodName(ctx, row),
             ctx.Theme,
-            submittable ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
+            submittable ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Small,
             TextAnchor.MiddleLeft);
 
@@ -1085,7 +1085,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                 new Rect(rect.x + LeftPadding, nameY + layout.NameBandHeight + layout.SourceGap, layout.NameBandWidth, layout.SourceBandHeight),
                 MoodSourceText(ctx, row),
                 ctx.Theme,
-                submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
+                submittable ? ctx.Theme[UiPaletteRole.SecondaryForeground] : ctx.Theme[UiPaletteRole.DisabledForeground],
                 UiFont.Tiny,
                 TextAnchor.MiddleLeft);
         }
@@ -1102,7 +1102,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
                         layout.TargetBandHeight),
                     target,
                     ctx.Theme,
-                    submittable ? ctx.Theme.TextSecondary : ctx.Theme.TextDisabled,
+                    submittable ? ctx.Theme[UiPaletteRole.SecondaryForeground] : ctx.Theme[UiPaletteRole.DisabledForeground],
                     UiFont.Tiny,
                     TextAnchor.MiddleLeft);
             }
@@ -1329,7 +1329,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + 6f, rect.y, Mathf.Max(1f, rect.width - 12f), rect.height),
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
-            enabled ? ctx.Theme.TextPrimary : ctx.Theme.TextDisabled,
+            enabled ? ctx.Theme[UiPaletteRole.Foreground] : ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
@@ -1393,7 +1393,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             labelRect,
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
-            ctx.Theme.TextSecondary,
+            ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
@@ -1450,7 +1450,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             labelRect,
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
-            ctx.Theme.TextDisabled,
+            ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 
@@ -1466,7 +1466,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(fieldRect.x + 4f, fieldRect.y, Mathf.Max(1f, fieldRect.width - 8f), fieldRect.height),
             value.ToString("0.###", CultureInfo.InvariantCulture),
             ctx.Theme,
-            ctx.Theme.TextDisabled,
+            ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft,
             singleLine: true);
@@ -1482,7 +1482,7 @@ public sealed class UsScopeTreeWidget : UsSectionWidgetBase
             new Rect(rect.x + 4f, rect.y, Mathf.Max(1f, rect.width - 8f), rect.height),
             glyph,
             ctx.Theme,
-            ctx.Theme.TextDisabled,
+            ctx.Theme[UiPaletteRole.DisabledForeground],
             UiFont.Tiny,
             TextAnchor.MiddleCenter,
             singleLine: true);

@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r9 · **D-C全15包、已裁Select资格与退休已进入生产链；原生、普通覆盖／政策和逐包人审分别保留。**
+2026-10-23 · r10 · **D-C全15包、已裁Select资格与退休已进入生产链；原生、普通覆盖／政策和逐包人审分别保留。**
 
 ## D-C当前迁移：保合同，替换退役夹具
 
@@ -75,7 +75,7 @@ S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.
 | [SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)：`MigrationFailureBlocksAndRetries`、`VoiceSchemaStaleDoesNotOverwriteMoodTuning`、字段clear及provenance案例 | 稳定合同：保留失败可重试、旧schema不偷进版本、字段级clear不丢来源；适配新域/来源三态；新增缺字段与显式false/0、Inherit与来源选择分离 | C08/C09；V11/12/15；S3。不以新来源要求阻断原来合法的旧配置读取 |
 | [Reset](../tools/UniversalSqueakerResetTests/Program.cs)：`ActionRowRestoreExactIdentity`、`ActionAreaLayerZeroIsNotGlobal`、全局污染/NoChange/round-trip | 稳定合同：保留准确范围、身份、一次publish/持久化、迁移阻塞保留和fallback不误删；新增单域遗忘来源、不清其他域与重新自动采用禁令 | C09/C08；V12/15；S3；“恢复默认”不等于“遗忘作者来源” |
 | [UiLogic源码不变量](../tools/UniversalSqueakerUiLogicTests/UiSourceInvariantTests.cs)、[Kernel合同探针](../tools/UniversalSqueakerUiLogicTests/UsKernelContractInvariantTests.cs) | 实现探针：保留有效边界/词表检查；随生产接缝定向适配源码字面匹配，新增运行转换与引用检查 | C00；S1–S5。文字匹配不能替代真实隔离 |
-| [Host/Program](../tools/UniversalSqueakerKernelHostTests/Program.cs)、[ResetUiLane](../tools/UniversalSqueakerKernelHostTests/ResetUiLaneTests.cs)、[ThemeSwitchLane](../tools/UniversalSqueakerKernelHostTests/ThemeSwitchLaneTests.cs)、[DefinitionDirectory](../tools/UniversalSqueakerDefinitionDirectoryTests/Program.cs) | 消费/平台证据：保留生产Source→Host动作链、身份、无多余写入、目录不扩大声音准入；本轮保持固定FL0.7实际调用，只移除退役政策探针，不重写页面/复制行为核心 | C00/C05/C08/C09；S3/S4。旧UI短测不关闭新Kernel V项 |
+| [Host/Program](../tools/UniversalSqueakerKernelHostTests/Program.cs)、[ResetUiLane](../tools/UniversalSqueakerKernelHostTests/ResetUiLaneTests.cs)、[ThemeSwitchLane](../tools/UniversalSqueakerKernelHostTests/ThemeSwitchLaneTests.cs)、[DefinitionDirectory](../tools/UniversalSqueakerDefinitionDirectoryTests/Program.cs) | 消费/平台证据：保留生产Source→Host动作链、身份、无多余写入、目录不扩大声音准入；当前按固定FL0.8实际release/edit/Palette条件迁移，保全部现有用途，不重写页面/复制行为核心 | C00/C05/C08/C09；S3/S4。旧UI短测不关闭新Kernel V项 |
 | [LogTests](../tools/UniversalSqueakerLogTests/Program.cs) Release/Dev；[运行适配](../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs) | 日志合同保留，诊断投影适配新原因/结果；新增诊断异常不撤销已派发、读取不重抽roll、历史请求与实例证据分离 | C04/C11；V05/14；S1/S5 |
 | [Kernel corpus入口](../tools/UniversalSqueakerKernelTests/Program.cs)与[Scenarios](../tools/UniversalSqueakerKernelTests/Scenarios.cs) | 稳定确定性＋旧政策语料：保留默认只比较、两次字节重放；逐条登记有意变化，分离0.6固定轨迹 | C00/C03/C04/C07/C10；S1–S4。现有17动作、多种子、多域语料不是新机会/原生播放覆盖 |
 
@@ -122,21 +122,13 @@ S2先由资源/输出适配所有者在获准的1.6环境记录实际游戏build
 
 S2/S5原生输出须记录实例创建/副作用边界、四结果、US归属的建立与清除、首帧到原版更新后的有效贡献、附属音与池化复用；同SoundDef非US对照不变，共享SoundDef不写入。总音量从0恢复、在播距离/音量变化、持续同键复用/高优先替换/状态失效与离图均需真实观察。听感另核对声源、音量/距离过渡、重叠和残留声音；回执Dispatched不等于“已听见”。stub、1.7或无错误日志不能签收这些项。接缝失败回到适配修复或明确取舍，不退回共享Def改写。
 
-## 6. FL0.8只以固定身份Dev产物联调
+## 6. 当前固定FL0.8消费者迁移
 
-FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../ferritelib/docs/development/0.8/README.md)及[合同验收/测试迁移§4–6](../../ferritelib/docs/development/0.8/acceptance-and-test-migration.md)。能力、纯层证明、三路共用行为、1.6文本/宿主证据及迁移规则直接遵循FL文档，不在US再定义。FL文档本身尚不是实现产物。
+现已实际消费564f78b固定0.8 Dev，范围[0.8.0,0.9.0)，Private=false；生产/Host/三Manifest/主窗口/Overlay/确认/主题/编辑与实际绑定均迁移，未重做页面或普通政策。显式构建命令、完整颜色映射、Live时机、native release、生命周期与原生边界见[固定FL0.8消费说明](fl08-consumer-migration-zh.md)。
 
-当前[Mod构造入口](../Source/UniversalSqueaker/Mod.cs)的`[0.7.0,0.8.0)`不包含0.8。[Directory.Build.props](../Directory.Build.props)仍有旧兼容默认路径；不能依默认值、移动HEAD或旧payload冒充0.8消费，也不在本文直接放宽pin。
+原0.7快照保历史，新Host平台double单独来源化至tools/FerriteLib08.Stubs；公开只读观测及实际事件替代旧私表计数。verify-local仍29门，Host新增FL08 actual目标；gate15扫当前0.8替身，gate16只保旧0.7冻结快照完整性，不冒充当前0.8运行证据。定向执行受改消费者链；D-C纯层/配置/音频输入未变的有效证据复用，不机械全测或重录golden。
 
-后续获准的新线联调包必须一起交付并核对：
-
-1. **FL输入身份**：明确Dev DLL/包位置、源commit及dirty事实、构建配置、API/ABI与支持入口/依赖；交付清单能确认选中的字节，不能只写“最新0.8”。US源码、Config副本、候选输出均独立于旧checkpoint及dist/payload。
-2. **US显式决定**：依实际0.8公开合同审定新线API范围、C#/XML/行为迁移；新能力的注册/依赖不得追加给旧合法入口。保留原线原范围，不能把新范围验收投射为旧线兼容。
-3. **构建与隔离**：复用[resolve-carrier](../scripts/resolve-carrier.ps1)、[build-dev](../scripts/build-dev.ps1)、verify-local的显式`-FerriteLibArtifactPath`及`-DevelopmentCarrier`入口；所有生产/Host/DefDir工程必须解析到同一固定输入。旧stub快照/扫描器依赖和API需在新线定向迁移，不能修改冻结快照伪装兼容或无依据免检。Dev与Release输出、构建顺序遵循既有隔离约定。
-4. **消费证明**：记录实际解析引用及US内嵌载体收据，编译并运行真实Source→Host关键动作/恢复/身份链；确认运行加载同一FL身份且无第二载体。US包继续不携带`FerriteLib.UiKit.dll`。Dev受控测试不等于Release载体放行。
-5. **实际1.6配对观察**：用该US/FL固定候选验证FL要求的输入归属、IME/字体、宿主布局与US设置保存/重开；Kernel音频仍按本页V表单独验收。列明未完成证据与消费者接收结果，不能只凭FL测试绿或US编译绿称消费完成。
-
-当前CI取得的固定0.7 release路线继续服务旧线；新Dev验证需后续任务书授权源码/pin/脚本与工作副本改动，复用同一CI/门禁体系而不是建立第二验证平台。D项裁定、FL真实Dev交付和1.6运行环境分别由对应所有者提供；本次文档工作不等待它们，也不据此关闭V项。
+CI/release仍获取旧已发布0.7，目前不能构建当前0.8消费者；维护者需提供真实0.8发布载体后再更新远端获取配置。本地固定Dev技术迁移与该发布依赖分开。
 
 ## S5已替代共享距离路径，原生证据仍待完成
 
@@ -151,4 +143,4 @@ FL基线为`bc1f200e0d47ba9beee9703547a9db3ba77c1471`上的[0.8规格](../../fer
 - Host仅定向迁移退役概率/时钟/覆盖式心情编辑探针；仍检验五工作区、许可/scope/Baby/Eat、当前说明、动作行恢复、真实确认窗及身份漂移。移除的旧numeric timing draft不再声称已执行；没有批量重生golden或改冻结FL stub。
 - 完整结果和每门适用性由`dist/evidence/s4ab-s5/REPORT.md`记录。S1–S3实施页是其历史交付，不回填为本轮成果。
 
-FL0.8一节仅保留未来迁移前提。本包停在消费迁移之前：pin、范围、Host、主题及Manifest仍为固定0.7；恢复需要用户新步骤。
+上述S4AB/S5段保其历史0.7输入；当前固定0.8消费与验证边界见§6，不将旧运行报告改写成0.8结果。

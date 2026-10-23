@@ -58,7 +58,7 @@ public abstract class UsSectionWidgetBase : IUiWidget
             rect,
             () => DrawBody(rect, ctx),
             fallback => DrawCard(fallback, ctx, body =>
-                UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny)));
+                UsKernelDraw.Label(body, FallbackNote(ctx), ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny)));
     }
 
     /// <summary>

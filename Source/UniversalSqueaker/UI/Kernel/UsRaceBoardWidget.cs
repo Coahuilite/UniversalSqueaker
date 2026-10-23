@@ -160,7 +160,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
                 new Rect(body.x, body.y, body.width, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + 2f),
                 UsKernelDraw.Keyed(ctx, KeyEmpty),
                 ctx,
-                ctx.Theme.TextSecondary,
+                ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Tiny);
             return;
         }
@@ -205,7 +205,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
                 new Rect(body.x + SidePadding, y, inner, UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny)),
                 UsKernelDraw.Keyed(ctx, "US.Board.XenoDir"),
                 ctx,
-                ctx.Theme.TextSecondary,
+                ctx.Theme[UiPaletteRole.SecondaryForeground],
                 UiFont.Tiny,
                 singleLine: true);
             y += UsKernelDraw.LineHeightOf(ctx, UiFont.Tiny) + RowGap;
@@ -237,7 +237,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
             new Rect(rowRect.x + TextInset, rowRect.y + RowTop, labelWidth, TitleBand),
             UsKernelDraw.Ellipsized(row.Label, ctx, UiFont.Small, labelWidth),
             ctx,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft,
             singleLine: true);
@@ -303,7 +303,7 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
             new Rect(rowRect.x + TextInset, rowRect.y + RowTop, labelWidth, TitleBand),
             UsKernelDraw.Ellipsized(row.Label, ctx, UiFont.Small, labelWidth),
             ctx,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft,
             singleLine: true);
@@ -370,12 +370,12 @@ public sealed class UsRaceBoardWidget : UsSectionWidgetBase
 
     private static void DrawChip(Rect chipRect, string text, UiWidgetContext ctx)
     {
-        UiThemeDraw.Surface(chipRect, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme.Border);
+        UiThemeDraw.Surface(chipRect, ctx.Theme, ctx.Theme.RaisedSurface.Fill, ctx.Theme[UiPaletteRole.Border]);
         UsKernelDraw.Label(
             new Rect(chipRect.x + ChipPadX, chipRect.y, Math.Max(1f, chipRect.width - ChipPadX * 2f), chipRect.height),
             text,
             ctx,
-            ctx.Theme.TextSecondary,
+            ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft,
             singleLine: true);

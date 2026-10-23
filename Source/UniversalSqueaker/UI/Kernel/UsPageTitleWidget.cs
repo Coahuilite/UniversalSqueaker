@@ -93,14 +93,14 @@ public sealed class UsPageTitleWidget : IUiWidget
             new Rect(rect.x + TextLeftInset, rect.y, textWidth, titleHeight),
             title,
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Medium,
             TextAnchor.MiddleLeft);
         UsKernelDraw.Label(
             new Rect(rect.x + TextLeftInset, captionTop, textWidth, captionHeight),
             caption,
             ctx.Theme,
-            ctx.Theme.TextSecondary,
+            ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.UpperLeft);
     }

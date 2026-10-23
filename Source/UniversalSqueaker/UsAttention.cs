@@ -45,7 +45,7 @@ public static class UsAttention
     public static UiSurfaceStyle BandSurface(UiTheme theme)
     {
         if (theme == null) throw new ArgumentNullException(nameof(theme));
-        return new UiSurfaceStyle(theme.Panel, Brush);
+        return new UiSurfaceStyle(theme[UiPaletteRole.PanelSurface], Brush);
     }
 
     /// <summary>Thin edge width. Two pixels against the location rails' three: attention must not read as

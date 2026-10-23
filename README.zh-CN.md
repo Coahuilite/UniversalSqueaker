@@ -16,6 +16,8 @@ US 把第三方语音接入准确的种族/异种域，提供分层调音、心�
 - 命名空间 / Def 前缀 / 诊断前缀：`UniversalSqueaker` / `US_` / `usdiag`。
 - 许可：[MPL-2.0](LICENSE)。
 
+当前Dev显式消费固定FerriteLib **0.8**包，范围`[0.8.0,0.9.0)`；构建输入、保留的界面行为与原生待验边界见[消费者迁移说明](docs/fl08-consumer-migration-zh.md)。
+
 当前分支为 **0.6.0 Dev**：[全部15包与已裁Select三项可调资格](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界)已接入同一生产owner，含可加载作者示例和逐包SR导读；普通范围／政策、原生观察与人工验收继续分开记录。
 
 ## 文档

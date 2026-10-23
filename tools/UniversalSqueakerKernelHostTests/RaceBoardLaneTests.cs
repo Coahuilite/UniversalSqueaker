@@ -313,8 +313,7 @@ internal static class RaceBoardLaneTests
     private static UiLayoutSnapshot Arrange(UiHost host)
     {
         host.MeasureAndArrange(ViewportSize());
-        Program.SetScrollPositionById(host.Session, "content-scroll", host.Session.ScrollPositions.Count >= 0
-            ? CurrentScroll(host) : Vector2.zero);
+        Program.SetScrollPositionById(host.Session, "content-scroll", CurrentScroll(host));
         return host.MeasureAndArrange(ViewportSize());
     }
 

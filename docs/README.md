@@ -21,6 +21,7 @@
 | 调整Select资格、审阅15包支持集与退役边界 | [主规格·D-C §23](us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界) |
 | 维护适配及反例 | [事实—证据—反例](us-kernel-0.6-fact-adapters-zh.md) |
 | 本地构建、选择 FerriteLib、验证改动 | [Build and debug](build-and-debug.md) |
+| 消费固定FL0.8、核对Palette/编辑/生命周期迁移 | [FL0.8消费者说明](fl08-consumer-migration-zh.md) |
 | 核对仓库和安装包目录 | [模组结构](mod-structure-reference-zh.md) |
 | 准备发布 | [发布流程](release-runbook-zh.md)、[隐私门禁](push-privacy-gate.md) |
 | 了解旧设计为何失效、历史验证覆盖了什么 | [历史结论与证据边界](history/README.md) |

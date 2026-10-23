@@ -52,8 +52,8 @@ internal static class ThemeSwitchLaneTests
         UiTheme page = host.StyleResolver.Baseline;
 
         int pageLayoutBefore = page.LayoutRevision;
-        int pageTitleBefore = page.TextPrimary == chrome.TextPrimary ? 0 : 1; // bags start on the same palette
-        string before = Components(page.Panel);
+        int pageTitleBefore = page[UiPaletteRole.Foreground] == chrome[UiPaletteRole.Foreground] ? 0 : 1; // bags start on the same palette
+        string before = Components(page[UiPaletteRole.PanelSurface]);
 
         bool wrote = UsKernelSettingsHost.ApplySwatchLive(settings, host, chrome, "anomaly");
 
@@ -63,11 +63,11 @@ internal static class ThemeSwitchLaneTests
             + " -> " + page.LayoutRevision + ") - a layout move re-measures the page");
         Assert(page.ColourRevision > 0 && chrome.ColourRevision > 0, "both bags recorded colour writes");
         UsSwatch anomaly = UsSwatches.Resolve("anomaly");
-        Assert(Same(page.TextPrimary, AnomalyTextPrimary),
+        Assert(Same(page[UiPaletteRole.Foreground], AnomalyTextPrimary),
             "the PAGE bag carries the target palette's ink");
-        Assert(Same(chrome.Panel, Hex(Role(anomaly, "Panel"))),
+        Assert(Same(chrome[UiPaletteRole.PanelSurface], Hex(Role(anomaly, "PanelSurface"))),
             "the CHROME bag carries the target palette's panel - one decision, two bags");
-        Assert(before != Components(page.Panel), "the panel colour actually moved (control)");
+        Assert(before != Components(page[UiPaletteRole.PanelSurface]), "the panel colour actually moved (control)");
         Assert(pageTitleBefore == 0, "the two bags started on one palette (fixture control)");
     }
 
@@ -89,7 +89,7 @@ internal static class ThemeSwitchLaneTests
         Vector2 scrollBefore = host.Session.GetScrollPosition(scroll!);
         string popupBefore = host.Session.OpenPopupId ?? "";
         string hoverBefore = host.Session.HoverClaim ?? "";
-        int nodesBefore = host.Session.ScrollPositions.Count;
+        int nodesBefore = host.Session.Identity;
 
         bool wrote = UsKernelSettingsHost.ApplySwatchLive(settings, host, chrome, "odyssey");
 
@@ -98,7 +98,7 @@ internal static class ThemeSwitchLaneTests
             "the palette switch must never close a live popup");
         Assert(SameVec(host.Session.GetScrollPosition(scroll!), scrollBefore),
             "the scroll position survives the switch unchanged");
-        Assert(host.Session.ScrollPositions.Count == nodesBefore, "no session scroll state was dropped or rebuilt");
+        Assert(host.Session.Identity == nodesBefore, "no session scroll state was dropped or rebuilt");
         Assert(hoverBefore == "us/pack-cards/row", "the fixture claimed a hover before the switch");
         Arrange(host);
         Assert(host.Session.GetNodeByElementId("content-scroll") == scroll,
@@ -180,7 +180,7 @@ internal static class ThemeSwitchLaneTests
                 swatch.Id + ": the popup survived the arrange after the switch");
             host.Session.ClosePopup();
 
-            Color want = Hex(Role(swatch, "TextPrimary"));
+            Color want = Hex(Role(swatch, "Foreground"));
             bool inkLanded = false;
             for (int i = 0; i < ink.Count; i++)
             {
@@ -298,7 +298,7 @@ internal static class ThemeSwitchLaneTests
             UiTheme page = host.StyleResolver.Baseline;
             UiTheme chrome = UsTheme.ChromeTheme; // the REAL shared bag the production chain paints
             int layoutBefore = page.LayoutRevision;
-            int nodesBefore = host.Session.ScrollPositions.Count;
+            int nodesBefore = host.Session.Identity;
             UiNode? scroll = host.Session.GetNodeByElementId("content-scroll");
             Assert(scroll != null, "the content scroll node exists on the real host");
             host.Session.SetScrollPosition(scroll!, new Vector2(0f, 48f));
@@ -322,22 +322,22 @@ internal static class ThemeSwitchLaneTests
                 + " the note-key composition drifted again, got " + noteAfter);
 
             UsSwatch anomaly = UsSwatches.Resolve("anomaly");
-            Assert(Same(page.TextPrimary, Hex(Role(anomaly, "TextPrimary"))),
+            Assert(Same(page[UiPaletteRole.Foreground], Hex(Role(anomaly, "Foreground"))),
                 "the PAGE bag carries the target ink through the real chain");
-            Assert(Same(chrome.TextPrimary, Hex(Role(anomaly, "TextPrimary"))),
+            Assert(Same(chrome[UiPaletteRole.Foreground], Hex(Role(anomaly, "Foreground"))),
                 "the shared CHROME bag follows through the same call");
             Assert(page.LayoutRevision == layoutBefore,
                 "the layout clock did not move (" + layoutBefore + " -> " + page.LayoutRevision + ")");
             host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
             Assert(SameVec(host.Session.GetScrollPosition(scroll!), new Vector2(0f, 48f)),
                 "the real session kept the scroll through the action chain");
-            Assert(host.Session.ScrollPositions.Count == nodesBefore, "no session rebuild");
+            Assert(host.Session.Identity == nodesBefore, "no session rebuild");
 
             // Fail-soft resolution lives on the source: an unknown id answers Core, silently.
             host.Bindings.Invoke("set-ui-swatch", "no-such-palette");
             Assert(source.UiSwatchId == "core" && settings.uiSwatchId == "core",
                 "an unknown id resolves fail-soft to the Core default");
-            Assert(Same(chrome.TextPrimary, Hex(Role(UsSwatches.Resolve("core"), "TextPrimary"))),
+            Assert(Same(chrome[UiPaletteRole.Foreground], Hex(Role(UsSwatches.Resolve("core"), "Foreground"))),
                 "and the shared chrome bag is left on Core for the lanes that follow");
         }
         finally
@@ -438,16 +438,16 @@ internal static class ThemeSwitchLaneTests
 
                 Rect lr = labelRect ?? default;
                 Assert(lr.width > 0f, where + "the current picker item label is drawn");
-                Rect fill = ContainingSolid(solids, lr, bag.Selected);
+                Rect fill = ContainingSolid(solids, lr, bag[UiPaletteRole.SelectedSurface]);
 
                 Assert(fill.width > 0f, where + "the fill ACTUALLY UNDER the current picker item is the declared Selected surface");
-                Assert(Contrast(labelInk, bag.Selected) >= 4.5,
+                Assert(Contrast(labelInk, bag[UiPaletteRole.SelectedSurface]) >= 4.5,
                     where + "picker body ink vs its real Selected ground: "
-                        + Contrast(labelInk, bag.Selected).ToString("0.00") + ":1 (floor 4.5)");
+                        + Contrast(labelInk, bag[UiPaletteRole.SelectedSurface]).ToString("0.00") + ":1 (floor 4.5)");
                 Color edge = bag.SelectedSurface.Border;
-                Assert(AdjacentSolid(solids, fill, edge) && Contrast(edge, bag.Selected) >= 3.0,
+                Assert(AdjacentSolid(solids, fill, edge) && Contrast(edge, bag[UiPaletteRole.SelectedSurface]) >= 3.0,
                     where + "the picker border touching that fill carries >= 3.0 against it: "
-                        + Contrast(edge, bag.Selected).ToString("0.00") + ":1 (floor 3.0)");
+                        + Contrast(edge, bag[UiPaletteRole.SelectedSurface]).ToString("0.00") + ":1 (floor 3.0)");
 
                 // ---- nav current-page marker vs the ground behind it ----
                 host.Bindings.Invoke("set-tab", "Overview");
@@ -459,12 +459,12 @@ internal static class ThemeSwitchLaneTests
                     if (s.Rect.x > 200f || s.Rect.width > 6f) continue;
                     if (!Same(s.Color, edge)) continue;
                     Rect ground = ContainingSolid(navSolids, new Rect(s.Rect.x, s.Rect.y + s.Rect.height / 2f,
-                        s.Rect.width + 8f, 1f), bag.Selected);
+                        s.Rect.width + 8f, 1f), bag[UiPaletteRole.SelectedSurface]);
                     if (ground.width > 0f)
                     {
-                        Assert(Contrast(edge, bag.Selected) >= 3.0,
+                        Assert(Contrast(edge, bag[UiPaletteRole.SelectedSurface]) >= 3.0,
                             where + "nav current rail vs the Selected card behind it: "
-                                + Contrast(edge, bag.Selected).ToString("0.00") + ":1 (floor 3.0)");
+                                + Contrast(edge, bag[UiPaletteRole.SelectedSurface]).ToString("0.00") + ":1 (floor 3.0)");
                         navMarked = true;
                         break;
                     }
@@ -505,7 +505,7 @@ internal static class ThemeSwitchLaneTests
                         // is group-local (origin 0,0) - position cannot bind it. The identity chain is:
                         // the host's own selected binding says WHICH element, and the element rect's
                         // SIZE says which recorded fill is that element's plate (1004 x 33.3 here).
-                        if (Same(s2.Color, bag.Selected)
+                        if (Same(s2.Color, bag[UiPaletteRole.SelectedSurface])
                                 && Math.Abs(s2.Rect.width - er.width) < 2f && Math.Abs(s2.Rect.height - er.height) < 2f)
                         {
                             rowFill = s2.Rect; rowId = k; foundRow = true; break;
@@ -538,9 +538,9 @@ internal static class ThemeSwitchLaneTests
                 }
 
                 Assert(railOnRow, where + "a rail primitive is recorded ON the identified row's left edge");
-                Assert(Contrast(railColor, bag.Selected) >= 3.0,
+                Assert(Contrast(railColor, bag[UiPaletteRole.SelectedSurface]) >= 3.0,
                     where + "that rail vs the Selected ground it sits on: "
-                        + Contrast(railColor, bag.Selected).ToString("0.00") + ":1 (floor 3.0)");
+                        + Contrast(railColor, bag[UiPaletteRole.SelectedSurface]).ToString("0.00") + ":1 (floor 3.0)");
                 // The gated body text on the plate is the ROW TITLE (TextPrimary). Secondary/meta
                 // inks inside the plate are measured and REPORTED (observation lines) - the author
                 // numbers claimed every body ink clears 4.5 on Selected; where the real draw says
@@ -550,15 +550,15 @@ internal static class ThemeSwitchLaneTests
                 {
                     if (ink.Rect.x < rowFill.x - 0.5f || ink.Rect.xMax > rowFill.xMax + 0.5f) continue;
                     if (ink.Rect.y < rowFill.y - 0.5f || ink.Rect.yMax > rowFill.yMax + 0.5f) continue;
-                    double c = Contrast(ink.Color, bag.Selected);
-                    if (Same(ink.Color, bag.TextSecondary))
+                    double c = Contrast(ink.Color, bag[UiPaletteRole.SelectedSurface]);
+                    if (Same(ink.Color, bag[UiPaletteRole.SecondaryForeground]))
                     {
                         Console.WriteLine("[selection-paint] " + swatch.Id + " observed: secondary ink on Selected "
                             + c.ToString("0.00") + ":1 (reported, not gated)");
                         continue;
                     }
 
-                    if (!Same(ink.Color, bag.TextPrimary)) continue;
+                    if (!Same(ink.Color, bag[UiPaletteRole.Foreground])) continue;
                     Assert(c >= 4.5,
                         where + "row TITLE ink vs the Selected ground under it: "
                             + c.ToString("0.00") + ":1 (floor 4.5)");
@@ -592,7 +592,7 @@ internal static class ThemeSwitchLaneTests
                     if (s2.Rect.y < fieldRect.y - 8f || s2.Rect.yMax > fieldRect.yMax + 8f) continue;
                     Rect ground = ContainingSolidAny(editSolids,
                         new Rect(fieldRect.x + 4f, fieldRect.y + fieldRect.height / 2f, 1f, 1f));
-                    Color groundColor = ground.width > 0f ? ColorAt(editSolids, ground) : bag.Raised;
+                    Color groundColor = ground.width > 0f ? ColorAt(editSolids, ground) : bag[UiPaletteRole.ControlSurface];
                     Assert(Contrast(s2.Color, groundColor) >= 3.0,
                         where + "focus caret mark vs the ground actually recorded under the field: "
                             + Contrast(s2.Color, groundColor).ToString("0.00") + ":1 (floor 3.0)");
@@ -743,7 +743,7 @@ internal static class ThemeSwitchLaneTests
 
     // ---- helpers ----
 
-    private static Color AnomalyTextPrimary => Hex(Role(UsSwatches.Resolve("anomaly"), "TextPrimary"));
+    private static Color AnomalyTextPrimary => Hex(Role(UsSwatches.Resolve("anomaly"), "Foreground"));
 
     private static UniversalSqueakerSettings NewSettings() => new UniversalSqueakerSettings();
 

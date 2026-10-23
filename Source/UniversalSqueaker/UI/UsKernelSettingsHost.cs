@@ -108,7 +108,7 @@ public static class UsKernelSettingsHost
             UsTheme.Surface(),
             metrics,
             translation);
-        bumper.Attach(host.Session);
+        bumper.Attach(host);
         // No first-frame reconciliation is needed any more: the manifest's VisibleKey is resolved
         // through the "help-open" binding on every arrange, so the RETRACTED default in the page state
         // is what the very first frame already follows.
@@ -185,11 +185,11 @@ public static class UsKernelSettingsHost
     /// </summary>
     private sealed class SessionRevisionBumper
     {
-        private UiSession? session;
+        private UiHost? host;
 
-        public void Attach(UiSession value)
+        public void Attach(UiHost value)
         {
-            session = value;
+            host = value;
         }
 
         /// <summary>
@@ -201,8 +201,8 @@ public static class UsKernelSettingsHost
         /// </summary>
         public void Bump()
         {
-            session?.ClosePopup();
-            session?.BumpContentRevision();
+            host?.Session.ClosePopup();
+            host?.Invalidate();
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ public static class UsKernelSettingsHost
         /// </summary>
         public void ResetScroll()
         {
-            if (session == null) return;
+            if (host == null) return;
 
             // FL 0.4.0 keys scroll positions by node identity, not by the string a page declares:
             // SetScrollPosition takes a UiNode and ScrollPositions is keyed by node (the string
@@ -224,22 +224,22 @@ public static class UsKernelSettingsHost
             // behaviour change: UiSession.GetScrollPosition answers Vector2.zero for a node that
             // holds nothing, so "no entry" and "entry = zero" are indistinguishable to every reader,
             // and these two calls never wrote anything but zero.
-            UiNode? contentNode = session.GetNodeByElementId(ContentScrollId);
+            UiNode? contentNode = host.Session.GetNodeByElementId(ContentScrollId);
             if (contentNode != null)
             {
-                session.SetScrollPosition(contentNode, Vector2.zero);
+                host.SetScrollPosition(ContentScrollId, Vector2.zero);
             }
 
-            UiNode? helpNode = session.GetNodeByElementId(HelpPanelScrollId);
+            UiNode? helpNode = host.Session.GetNodeByElementId(HelpPanelScrollId);
             if (helpNode != null)
             {
-                session.SetScrollPosition(helpNode, Vector2.zero);
+                host.SetScrollPosition(HelpPanelScrollId, Vector2.zero);
             }
         }
 
         public void SetScrollTarget(string elementId)
         {
-            session?.SetScrollTarget(elementId);
+            host?.Session.SetScrollTarget(elementId);
         }
 
         /// <summary>
@@ -256,8 +256,8 @@ public static class UsKernelSettingsHost
         public void ArmScrollTarget(string destination)
         {
             ResetScroll();
-            session?.ClearScrollTarget();
-            if (!string.IsNullOrEmpty(destination)) session?.SetScrollTarget(destination);
+            host?.Session.ClearScrollTarget();
+            if (!string.IsNullOrEmpty(destination)) host?.Session.SetScrollTarget(destination);
         }
     }
 

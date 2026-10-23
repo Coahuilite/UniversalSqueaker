@@ -172,7 +172,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             // ink - a cyan-on-cyan label would fail the same substrate rule the filled badge is held to.
             UsAttention.Band(bannerRect, ctx.Theme);
             UsAttention.Rail(bannerRect, ctx.Theme);
-            ink = ctx.Theme.TextPrimary;
+            ink = ctx.Theme[UiPaletteRole.Foreground];
         }
         else
         {
@@ -180,7 +180,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             // the band takes the kernel's disabled row treatment (neutral plane + hatch, the shape spec 1.4
             // gives an unavailable row) and its own sentence is the reason.
             UsKernelDraw.RowSurface(bannerRect, ctx.Theme, hovered: false, UsKernelDraw.RowRail.Disabled);
-            ink = ctx.Theme.TextDisabled;
+            ink = ctx.Theme[UiPaletteRole.DisabledForeground];
         }
 
         UsKernelDraw.Label(
@@ -208,7 +208,7 @@ public sealed class UsVoicePackChecklistWidget : UsSectionWidgetBase
             text,
             ctx.Translation.Translate(KeyOrphanBanner),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Tiny,
             TextAnchor.MiddleLeft);
 

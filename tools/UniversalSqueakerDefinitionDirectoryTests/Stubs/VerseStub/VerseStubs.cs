@@ -528,6 +528,9 @@ public static class Widgets
         return value;
     }
 
+    // 0.8 native editor loads both text entry signatures even for a single-line field.
+    // Same inert character-return double as the producer564f78b snapshot; not a game implementation.
+    public static string TextArea(Rect rect, string text, bool readOnly = false) => text;
     public static string TextField(Rect rect, string text)
     {
         return text ?? "";

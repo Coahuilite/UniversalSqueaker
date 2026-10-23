@@ -292,14 +292,14 @@ Invoke-Check 'UI boundary audit (renderer-backend containment + only-shrink whit
 # parameter binding (measured 2026-09-12), which silently scans one assembly and looks clean. This gate
 # sits after 13 because gate 13 builds both of the assemblies it scans.
 Invoke-Check 'harness stub coverage (every game member the US payload or the harness references resolves on the carrier stubs, or is exempted with a reason)' `
-    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir tools/FerriteLib.Stubs/bin/stubs -Exemptions scripts/stub-coverage-exemptions.txt"' `
+    'pwsh -NoProfile -Command "& ''../ferritelib/scripts/stub-coverage-scan.ps1'' -Path . -Assembly @(''dist/build/Release/UniversalSqueaker.dll'',''tools/UniversalSqueakerKernelHostTests/bin/Release/net472/UniversalSqueakerKernelHostTests.exe'') -StubsDir dist/fl08-migration-a001/stubs/Release -Exemptions scripts/stub-coverage-exemptions.txt"' `
     {
         $stubCoverageScan = Join-Path (Split-Path -Parent $root) 'ferritelib\scripts\stub-coverage-scan.ps1'
         if (-not (Test-Path -LiteralPath $stubCoverageScan -PathType Leaf)) {
             throw "The carrier's stub-coverage scanner is missing at $stubCoverageScan. It ships with the sibling ferritelib checkout (scripts/stub-coverage-scan.ps1); a scan that cannot run is not a clean result."
         }
 
-        $stubDir = Join-Path $root 'tools\FerriteLib.Stubs\bin\stubs'
+        $stubDir = Join-Path $root ("dist/fl08-migration-a001/stubs/" + $hostConfiguration)
         $stubExemptions = Join-Path $root 'scripts\stub-coverage-exemptions.txt'
         $stubTargets = @(
             (Join-Path $root 'dist\build\Release\UniversalSqueaker.dll'),
@@ -315,7 +315,9 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
 
         # An assembly that was never built is passed through rather than skipped: the scan reads it as its own
         # NOT SCANNED (exit 3), and an unscanned half is not a clean half.
-        $stubOutput = @(& pwsh -NoProfile -Command $stubCommand *>&1)
+        $stubShellName = if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { 'pwsh.exe' } else { 'pwsh' }
+        $stubShell = Join-Path $PSHOME $stubShellName
+        $stubOutput = @(& $stubShell -NoProfile -Command $stubCommand *>&1)
         $stubCode = $LASTEXITCODE
         foreach ($stubLine in $stubOutput) { Write-Host $stubLine }
 
@@ -330,9 +332,9 @@ Invoke-Check 'harness stub coverage (every game member the US payload or the har
 # Gate 16 (US-UI1/ESC1 frozen-delivery round): the harness runs against the FROZEN stub snapshot under
 # tools/FerriteLib.Stubs instead of building in the carrier's canonical bin/stubs (FL released the slot;
 # the consumer verifies in its own outputs - INTERACTION-EXECUTION-20261008.md). What keeps that snapshot
-# honest is not trust: every recorded source hash from fl/frozen-handoff.json must match byte-for-byte,
-# so a drifted double reddens here before gate 15's scan or any lane can agree with itself.
-Invoke-Check 'frozen stub snapshot integrity (all five recorded stub sources equal the frozen handoff hashes)' `
+# honest is not trust: every recorded source hash from fl/frozen-handoff.json must match byte-for-byte.
+# This gate preserves that archived input only; gate 15 scans the separate current 0.8 doubles.
+Invoke-Check 'archived 0.7 stub snapshot integrity (not current 0.8 runtime evidence)' `
     'Get-FileHash -Algorithm SHA256 over tools/FerriteLib.Stubs/Stubs/{VerseStub,UnityEngineStub,UnityEngineImGuiStub,UnityEngineTextRenderingModuleStub}/*.cs against the fl/frozen-handoff.json values' `
     {
         $frozenStubs = @(

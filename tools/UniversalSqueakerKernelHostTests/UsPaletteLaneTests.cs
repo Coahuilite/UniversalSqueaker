@@ -17,8 +17,8 @@ namespace UniversalSqueaker.KernelHostTests;
 /// <list type="number">
 /// <item><b>US owns its complete baseline (R12-P.1).</b> The carrier ships <c>Vanilla</c> only, so the US
 /// palette declares every colour the retired warm-gold template used to contribute, and no token a US
-/// surface renders still answers a Vanilla value. Every colour US renders is owned; the ONE documented
-/// exception is <c>SelectedBorder</c>, whose fallback is the ACCENT rather than a structural token.</item>
+/// surface renders still answers a Vanilla value. Every colour US renders is owned, including an
+/// explicit <c>SelectedBorder</c> that preserves the former effective accent.</item>
 /// <item><b>Two clocks, and a palette only touches one of them (R12-P.3 / R12-P.4).</b> A colour assignment
 /// moves <see cref="UiTheme.ColourRevision"/> and must NOT move <see cref="UiTheme.LayoutRevision"/>; a font
 /// or a density move is the other way round. That disjointness is what lets a re-tint repaint a page without
@@ -33,9 +33,9 @@ namespace UniversalSqueaker.KernelHostTests;
 /// "the palette reached the paint", an identical rect map plus an unmoved arrangement clock for "no layout
 /// moved", and the session's own state read back for "a colour is not a structural event". It does NOT claim
 /// all-state redraw proof; the carrier's resolver/popup lanes own that.</item>
-/// <item><b>Missing colour vs explicit transparent vs unclaimed edge (R12-P.2).</b> A token the document omits
-/// answers the carrier's Vanilla value; an explicitly assigned transparent stays transparent; an unclaimed
-/// per-surface edge keeps its documented "use the shared token" meaning.</item>
+/// <item><b>Missing colour vs explicit transparent (R12-P.2, migrated to 0.8).</b> A role the document omits
+/// answers the carrier's default value; explicitly assigned transparent stays transparent. US declares
+/// its concrete edges instead of relying on the retired nullable fallback.</item>
 /// </list>
 ///
 /// <para>
@@ -59,9 +59,9 @@ internal static class UsPaletteLaneTests
     private const string AltPaletteXml =
         @"<Styles Schema='1' Scheme='us-alt'>"
         + @"<Scheme Name='us-alt'>"
-        + @"<Color Token='Raised' Value='#123456' />"
-        + @"<Color Token='Panel' Value='#123456' />"
-        + @"<Color Token='WorkspacePlane' Value='#123456' />"
+        + @"<Palette Role='ControlSurface' Value='#123456' />"
+        + @"<Palette Role='PanelSurface' Value='#123456' />"
+        + @"<Palette Role='WorkspaceSurface' Value='#123456' />"
         + @"</Scheme></Styles>";
 
     /// <summary>
@@ -110,56 +110,55 @@ internal static class UsPaletteLaneTests
         // a real theme. Two instruments over the same claim, deliberately.
         foreach (string token in UsTheme.ColorTokens)
         {
-            Assert(UsTheme.SchemeXml.Contains("Token='" + token + "'"),
+            Assert(UsTheme.SchemeXml.Contains("Role='" + token + "'"),
                 "the palette's own token list names '" + token + "' but the document does not declare it -"
                 + " one of the two is stale");
         }
 
-        // The one documented exception, asserted so it cannot be "fixed" by accident: SelectedBorder stays
-        // unclaimed, because its fallback IS the accent (SelectedBorder ?? AccentGold) and a flat scope aliases
-        // that fallback away to express "no box".
-        Assert(!UsTheme.ColorTokens.Contains("SelectedBorder"),
-            "SelectedBorder must stay OUT of the declared token list: it is the one surface whose fallback is"
+        // 0.8 requires the former effective accent to be an explicit SelectedBorder declaration.
+        // A flat scope can still override that concrete role to express "no box".
+        Assert(UsTheme.ColorTokens.Contains("SelectedBorder"),
+            "SelectedBorder must be explicitly declared: its former effective colour is"
             + " the accent, and a flat scope is allowed to alias it away");
-        Assert(!UsTheme.SchemeXml.Contains("Token='SelectedBorder'"),
-            "and the document must not declare it either, or the accent fallback is gone");
+        Assert(UsTheme.SchemeXml.Contains("Role='SelectedBorder'"),
+            "the document must declare the selected edge explicitly in 0.8");
 
         // The identity accent, pinned twice: the constant and the colour the resolver produced. UIR-006
         // (WO-US-UI-REFACTOR-20261014) moved the value: the shipped default is now the official Core
         // palette, whose accent is the Bronze/Lark-family #B49C73 taken from the PM role table - the
         // pin therefore checks BOTH readings against the table itself, not against a remembered literal.
         string coreAccentHex = UsSwatches.Resolve(UsSwatches.DefaultId).RoleHexes[
-            System.Array.IndexOf(UsTheme.ColorTokens as string[], "AccentGold")];
+            System.Array.IndexOf(UsTheme.ColorTokens as string[], "Accent")];
         Assert(UsTheme.AccentGoldHex == coreAccentHex,
             "the identity accent constant must equal the core role table's AccentGold '" + coreAccentHex
             + "', got '" + UsTheme.AccentGoldHex + "'");
         UiTheme us = UsTheme.Surface();
-        Assert(SameColor(us.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
-            "and the accent must resolve to the Core Bronze #B49C73 (got " + Hex(us.AccentGold) + ")");
+        Assert(SameColor(us[UiPaletteRole.Accent], Rgb(0xb4, 0x9c, 0x73)),
+            "and the accent must resolve to the Core Bronze #B49C73 (got " + Hex(us[UiPaletteRole.Accent]) + ")");
 
         // NO VANILLA VALUE SURVIVES on a US surface, checked against UiTheme.Vanilla rather than against a list
         // of literals: the property is "nothing is inherited", not "these hexes are right".
         UiTheme vanilla = UiTheme.Vanilla;
         (string Name, Color Mine, Color Fallback)[] colours =
         {
-            ("Base", us.Base, vanilla.Base),
-            ("WorkspacePlane", us.WorkspacePlane, vanilla.WorkspacePlane),
-            ("Panel", us.Panel, vanilla.Panel),
-            ("SectionBand", us.SectionBand, vanilla.SectionBand),
-            ("Raised", us.Raised, vanilla.Raised),
-            ("Hover", us.Hover, vanilla.Hover),
-            ("Selected", us.Selected, vanilla.Selected),
-            ("Success", us.Success, vanilla.Success),
-            ("Danger", us.Danger, vanilla.Danger),
-            ("Border", us.Border, vanilla.Border),
-            ("BorderStrong", us.BorderStrong, vanilla.BorderStrong),
-            ("Divider", us.Divider, vanilla.Divider),
-            ("TextPrimary", us.TextPrimary, vanilla.TextPrimary),
-            ("TextSecondary", us.TextSecondary, vanilla.TextSecondary),
-            ("TextDisabled", us.TextDisabled, vanilla.TextDisabled),
-            ("TextOnGold", us.TextOnGold, vanilla.TextOnGold),
-            ("TextOnDanger", us.TextOnDanger, vanilla.TextOnDanger),
-            ("AccentGold", us.AccentGold, vanilla.AccentGold),
+            ("WindowSurface", us[UiPaletteRole.WindowSurface], vanilla[UiPaletteRole.WindowSurface]),
+            ("WorkspaceSurface", us[UiPaletteRole.WorkspaceSurface], vanilla[UiPaletteRole.WorkspaceSurface]),
+            ("PanelSurface", us[UiPaletteRole.PanelSurface], vanilla[UiPaletteRole.PanelSurface]),
+            ("SectionSurface", us[UiPaletteRole.SectionSurface], vanilla[UiPaletteRole.SectionSurface]),
+            ("ControlSurface", us[UiPaletteRole.ControlSurface], vanilla[UiPaletteRole.ControlSurface]),
+            ("HoverSurface", us[UiPaletteRole.HoverSurface], vanilla[UiPaletteRole.HoverSurface]),
+            ("SelectedSurface", us[UiPaletteRole.SelectedSurface], vanilla[UiPaletteRole.SelectedSurface]),
+            ("SuccessSurface", us[UiPaletteRole.SuccessSurface], vanilla[UiPaletteRole.SuccessSurface]),
+            ("DangerSurface", us[UiPaletteRole.DangerSurface], vanilla[UiPaletteRole.DangerSurface]),
+            ("Border", us[UiPaletteRole.Border], vanilla[UiPaletteRole.Border]),
+            ("StrongBorder", us[UiPaletteRole.StrongBorder], vanilla[UiPaletteRole.StrongBorder]),
+            ("Divider", us[UiPaletteRole.Divider], vanilla[UiPaletteRole.Divider]),
+            ("Foreground", us[UiPaletteRole.Foreground], vanilla[UiPaletteRole.Foreground]),
+            ("SecondaryForeground", us[UiPaletteRole.SecondaryForeground], vanilla[UiPaletteRole.SecondaryForeground]),
+            ("DisabledForeground", us[UiPaletteRole.DisabledForeground], vanilla[UiPaletteRole.DisabledForeground]),
+            ("SelectedForeground", us[UiPaletteRole.SelectedForeground], vanilla[UiPaletteRole.SelectedForeground]),
+            ("DangerForeground", us[UiPaletteRole.DangerForeground], vanilla[UiPaletteRole.DangerForeground]),
+            ("Accent", us[UiPaletteRole.Accent], vanilla[UiPaletteRole.Accent]),
         };
 
         foreach ((string name, Color mine, Color fallback) in colours)
@@ -174,14 +173,14 @@ internal static class UsPaletteLaneTests
         // edge (so "ownership" means CLAIMED, not "different"), and a palette may legitimately declare an
         // edge whose value equals Vanilla's - asserting inequality as ownership would make such a palette red.
         // Here the declared value and Vanilla's differ, so both halves are asserted for what they are.
-        Assert(us.DangerBorder.HasValue,
+        Assert(us.Palette.IsDeclared(UiPaletteRole.DangerBorder),
             "DangerBorder is in UsTheme.ColorTokens, so the palette must CLAIM it: an unclaimed edge answers"
             + " the carrier template's own value and the ownership claim would be false");
-        Assert(SameColor(us.DangerBorder!.Value, Rgb(0xc9, 0x60, 0x57)),
+        Assert(SameColor(us[UiPaletteRole.DangerBorder], Rgb(0xc9, 0x60, 0x57)),
             "DangerBorder must be the saturated edge the S6-3 warm palette adopted (#c96057), got "
-            + Hex(us.DangerBorder!.Value));
-        Assert(!SameColor(us.DangerBorder!.Value, vanilla.DangerBorder ?? vanilla.Danger),
-            "and it must not be the carrier's own danger edge (" + Hex(vanilla.DangerBorder ?? vanilla.Danger)
+            + Hex(us[UiPaletteRole.DangerBorder]));
+        Assert(!SameColor(us[UiPaletteRole.DangerBorder], vanilla[UiPaletteRole.DangerBorder]),
+            "and it must not be the carrier's own danger edge (" + Hex(vanilla[UiPaletteRole.DangerBorder])
             + "); this inequality is a fact about these two palettes and is asserted HERE rather than as an"
             + " ownership rule (see the comment above)");
 
@@ -191,35 +190,34 @@ internal static class UsPaletteLaneTests
         // edged by US's own structural tokens", so an edit that moves `Border` without moving the four claimed
         // edges (or the reverse) reddens and has to be reconciled on purpose. The values themselves are the
         // ones US painted at HEAD, where the edges were unclaimed and resolved to exactly these colours.
-        Assert(us.BaseBorder.HasValue && us.PanelBorder.HasValue && us.RaisedBorder.HasValue
-            && us.HoverBorder.HasValue,
+        Assert(us.Palette.IsDeclared(UiPaletteRole.WindowBorder) && us.Palette.IsDeclared(UiPaletteRole.PanelBorder) && us.Palette.IsDeclared(UiPaletteRole.ControlBorder)
+            && us.Palette.IsDeclared(UiPaletteRole.HoverBorder),
             "the four per-surface edges must be CLAIMED by the US palette, or each answers a carrier template"
-            + " value nobody chose (base=" + (us.BaseBorder.HasValue ? Hex(us.BaseBorder.Value) : "(unclaimed)")
-            + " panel=" + (us.PanelBorder.HasValue ? Hex(us.PanelBorder.Value) : "(unclaimed)")
-            + " raised=" + (us.RaisedBorder.HasValue ? Hex(us.RaisedBorder.Value) : "(unclaimed)")
-            + " hover=" + (us.HoverBorder.HasValue ? Hex(us.HoverBorder.Value) : "(unclaimed)") + ")");
-        Assert(SameColor(us.BaseBorder!.Value, us.Border) && SameColor(us.PanelBorder!.Value, us.Border)
-            && SameColor(us.RaisedBorder!.Value, us.Border),
-            "and Base/Panel/Raised must carry US's own shared Border value (" + Hex(us.Border) + ") - the"
+            + " value nobody chose (base=" + (us.Palette.IsDeclared(UiPaletteRole.WindowBorder) ? Hex(us[UiPaletteRole.WindowBorder]) : "(unclaimed)")
+            + " panel=" + (us.Palette.IsDeclared(UiPaletteRole.PanelBorder) ? Hex(us[UiPaletteRole.PanelBorder]) : "(unclaimed)")
+            + " raised=" + (us.Palette.IsDeclared(UiPaletteRole.ControlBorder) ? Hex(us[UiPaletteRole.ControlBorder]) : "(unclaimed)")
+            + " hover=" + (us.Palette.IsDeclared(UiPaletteRole.HoverBorder) ? Hex(us[UiPaletteRole.HoverBorder]) : "(unclaimed)") + ")");
+        Assert(SameColor(us[UiPaletteRole.WindowBorder], us[UiPaletteRole.Border]) && SameColor(us[UiPaletteRole.PanelBorder], us[UiPaletteRole.Border])
+            && SameColor(us[UiPaletteRole.ControlBorder], us[UiPaletteRole.Border]),
+            "and Base/Panel/Raised must carry US's own shared Border value (" + Hex(us[UiPaletteRole.Border]) + ") - the"
             + " colour they resolved to through `?? Border` in the committed look (base="
-            + Hex(us.BaseBorder!.Value) + " panel=" + Hex(us.PanelBorder!.Value) + " raised="
-            + Hex(us.RaisedBorder!.Value) + ")");
-        Assert(SameColor(us.HoverBorder!.Value, us.BorderStrong),
-            "and the hover edge must carry US's own BorderStrong value (" + Hex(us.BorderStrong) + "), its"
-            + " `?? BorderStrong` answer (got " + Hex(us.HoverBorder!.Value) + ")");
-        Assert(!us.SelectedBorder.HasValue,
-            "SelectedBorder must stay UNCLAIMED so the accent fallback (SelectedBorder ?? AccentGold) survives");
+            + Hex(us[UiPaletteRole.WindowBorder]) + " panel=" + Hex(us[UiPaletteRole.PanelBorder]) + " raised="
+            + Hex(us[UiPaletteRole.ControlBorder]) + ")");
+        Assert(SameColor(us[UiPaletteRole.HoverBorder], us[UiPaletteRole.StrongBorder]),
+            "and the hover edge must carry US's own BorderStrong value (" + Hex(us[UiPaletteRole.StrongBorder]) + "), its"
+            + " `?? BorderStrong` answer (got " + Hex(us[UiPaletteRole.HoverBorder]) + ")");
+        Assert(us.Palette.IsDeclared(UiPaletteRole.SelectedBorder),
+            "SelectedBorder must explicitly preserve the former effective accent");
 
-        // The two surfaces whose edge fallback is a DIFFERENT token are asserted as such, because "unclaimed"
-        // there is the documented contract rather than an omission: SuccessSurface answers `?? BorderStrong`
-        // and DangerSurface answers `?? Danger`.
-        Assert(!us.SuccessBorder.HasValue
-            && SameColor(us.SuccessSurface.Border, us.BorderStrong),
-            "an unclaimed SuccessBorder must still resolve to the shared BorderStrong ("
-            + Hex(us.SuccessSurface.Border) + " vs " + Hex(us.BorderStrong) + ")");
-        Assert(SameColor(us.DangerSurface.Border, us.DangerBorder!.Value),
+        // Explicit edges preserve the former effective treatment: success uses StrongBorder,
+        // while danger uses its dedicated DangerBorder declaration.
+        Assert(us.Palette.IsDeclared(UiPaletteRole.SuccessBorder)
+            && SameColor(us.SuccessSurface.Border, us[UiPaletteRole.StrongBorder]),
+            "the declared SuccessBorder must preserve the former StrongBorder treatment ("
+            + Hex(us.SuccessSurface.Border) + " vs " + Hex(us[UiPaletteRole.StrongBorder]) + ")");
+        Assert(SameColor(us.DangerSurface.Border, us[UiPaletteRole.DangerBorder]),
             "and a claimed DangerBorder must be the edge the Danger surface paints ("
-            + Hex(us.DangerSurface.Border) + " vs " + Hex(us.DangerBorder!.Value) + ")");
+            + Hex(us.DangerSurface.Border) + " vs " + Hex(us[UiPaletteRole.DangerBorder]) + ")");
 
         // The font is still a CARRIER default, and that is correct: the palette is colour-only, so the font
         // comes from the library baseline (Small). Named here so a future move of that baseline is visible
@@ -240,7 +238,7 @@ internal static class UsPaletteLaneTests
         int colour = theme.ColourRevision;
 
         // (a) a colour assignment: the colour clock only.
-        theme.Raised = Rgb(0x12, 0x34, 0x56);
+        theme[UiPaletteRole.ControlSurface] = Rgb(0x12, 0x34, 0x56);
         Assert(theme.ColourRevision > colour,
             "assigning a colour must move the colour clock, or a repaint could not be signalled at all");
         Assert(theme.LayoutRevision == layout,
@@ -251,7 +249,7 @@ internal static class UsPaletteLaneTests
         // a palette re-applied every frame is idempotent.
         int colourAfter = theme.ColourRevision;
         int layoutAfter = theme.LayoutRevision;
-        theme.Raised = Rgb(0x12, 0x34, 0x56);
+        theme[UiPaletteRole.ControlSurface] = Rgb(0x12, 0x34, 0x56);
         Assert(theme.ColourRevision == colourAfter && theme.LayoutRevision == layoutAfter,
             "re-assigning the value a token already holds must move NEITHER clock (colour " + colourAfter
             + " -> " + theme.ColourRevision + ", layout " + layoutAfter + " -> " + theme.LayoutRevision + ")");
@@ -300,9 +298,9 @@ internal static class UsPaletteLaneTests
             "a colour-only document must not advance the layout clock through the resolver either ("
             + documentedLayout + " -> " + documented.LayoutRevision + ")");
         Assert(documented.ColourRevision > documentedColour
-            && SameColor(documented.Raised, Rgb(0x12, 0x34, 0x56)),
+            && SameColor(documented[UiPaletteRole.ControlSurface], Rgb(0x12, 0x34, 0x56)),
             "control: it DID change the colour, so the assertion above is not passing on a no-op (raised "
-            + Hex(documented.Raised) + ")");
+            + Hex(documented[UiPaletteRole.ControlSurface]) + ")");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -323,19 +321,19 @@ internal static class UsPaletteLaneTests
             + " is the defect the clone exists to prevent");
         // UIR-006: with no region scheme left, the page theme's OWN role pair answers the clone - the
         // control that matters is "the clone carries the palette, edge and fill both".
-        Assert(SameColor(flat.RaisedSurface.Border, flat.RaisedBorder ?? flat.Border),
+        Assert(SameColor(flat.RaisedSurface.Border, flat[UiPaletteRole.ControlBorder]),
             "the clone's raised edge must answer the palette's RaisedBorder role, got "
             + Hex(flat.RaisedSurface.Border));
-        Color scopeRaised = flat.Raised;
-        Assert(SameColor(flat.Panel, live.Panel),
+        Color scopeRaised = flat[UiPaletteRole.ControlSurface];
+        Assert(SameColor(flat[UiPaletteRole.PanelSurface], live[UiPaletteRole.PanelSurface]),
             "control: the clone inherits the page's panel fill, so the panel is the token this step re-tints ("
-            + Hex(flat.Panel) + " vs page " + Hex(live.Panel) + ")");
-        Assert(!SameColor(scopeRaised, live.AccentGold),
+            + Hex(flat[UiPaletteRole.PanelSurface]) + " vs page " + Hex(live[UiPaletteRole.PanelSurface]) + ")");
+        Assert(!SameColor(scopeRaised, live[UiPaletteRole.Accent]),
             "the tinting token must differ from the accent so the override check below cannot pass by coincidence");
 
         // The re-tint, on the bag the host was injected with.
         Color tint = Rgb(0x12, 0x34, 0x56);
-        live.Panel = tint;
+        live[UiPaletteRole.PanelSurface] = tint;
         Assert(live.ColourRevision > colourBefore, "the re-tint must move the injected theme's colour clock");
         Assert(live.LayoutRevision == layoutBefore,
             "and must not move the layout clock (" + layoutBefore + " -> " + live.LayoutRevision + ")");
@@ -344,12 +342,12 @@ internal static class UsPaletteLaneTests
         Assert(!ReferenceEquals(rebuilt, flat),
             "the cached region clone must be DROPPED once the colour clock has moved - that is the stale-colour"
             + " fix, and the old instance is exactly what used to keep painting the old palette");
-        Assert(SameColor(rebuilt.Panel, tint),
-            "and the rebuilt clone must carry the new page palette (panel " + Hex(rebuilt.Panel) + " vs tint "
+        Assert(SameColor(rebuilt[UiPaletteRole.PanelSurface], tint),
+            "and the rebuilt clone must carry the new page palette (panel " + Hex(rebuilt[UiPaletteRole.PanelSurface]) + " vs tint "
             + Hex(tint) + ")");
-        Assert(SameColor(rebuilt.Raised, live.Raised),
+        Assert(SameColor(rebuilt[UiPaletteRole.ControlSurface], live[UiPaletteRole.ControlSurface]),
             "and with no region scheme left, every token of the rebuilt clone follows the page palette ("
-            + Hex(rebuilt.Raised) + " vs " + Hex(live.Raised) + ")");
+            + Hex(rebuilt[UiPaletteRole.ControlSurface]) + " vs " + Hex(live[UiPaletteRole.ControlSurface]) + ")");
 
         UiTheme flatAgain = resolver.ThemeFor(null);
         Assert(ReferenceEquals(flatAgain, rebuilt),
@@ -412,8 +410,8 @@ internal static class UsPaletteLaneTests
                 // (so its movement is what proves the ink came from the re-tinted theme), and Panel because a
                 // plane move is the other half of a palette change. The assertion is on the LABEL ink and not on
                 // Panel precisely because the recorded channel is what the outlet was handed.
-                paper.TextPrimary = Rgb(0x12, 0x34, 0x56);
-                paper.Panel = Rgb(0x12, 0x34, 0x56);
+                paper[UiPaletteRole.Foreground] = Rgb(0x12, 0x34, 0x56);
+                paper[UiPaletteRole.PanelSurface] = Rgb(0x12, 0x34, 0x56);
                 ClearSolids();
                 ClearLabels();
                 probe.DrawChecked(new Rect(0f, 0f, 300f, 120f));
@@ -457,8 +455,8 @@ internal static class UsPaletteLaneTests
         int layoutBefore = live.LayoutRevision;
         int contentBefore = host.Session.ContentRevision;
         UiTheme flatBefore = resolver.ThemeFor(null);
-        Color scopeRaised = flatBefore.Raised;
-        Color oldPanel = live.Panel;
+        Color scopeRaised = flatBefore[UiPaletteRole.ControlSurface];
+        Color oldPanel = live[UiPaletteRole.PanelSurface];
 
         Dictionary<string, Rect> rectsBefore = CopyRects(before);
         Assert(rectsBefore.Count > 20,
@@ -466,7 +464,7 @@ internal static class UsPaletteLaneTests
             + " rects; a tiny map would make the equality below vacuous");
 
         Color tint = Rgb(0x12, 0x34, 0x56);
-        live.Panel = tint;
+        live[UiPaletteRole.PanelSurface] = tint;
         Assert(live.LayoutRevision == layoutBefore,
             "a palette-only re-tint must not move the layout clock (" + layoutBefore + " -> "
             + live.LayoutRevision + ")");
@@ -474,12 +472,12 @@ internal static class UsPaletteLaneTests
             "control: the re-tint must actually change the panel (" + Hex(oldPanel) + " -> " + Hex(tint) + ")");
 
         UiTheme flatAfter = resolver.ThemeFor(null);
-        Assert(SameColor(flatAfter.Panel, tint),
+        Assert(SameColor(flatAfter[UiPaletteRole.PanelSurface], tint),
             "the scoped region must be rebuilt on the new palette, not painted from the old one (panel "
-            + Hex(flatAfter.Panel) + " vs tint " + Hex(tint) + ")");
-        Assert(SameColor(flatAfter.Raised, live.Raised),
+            + Hex(flatAfter[UiPaletteRole.PanelSurface]) + " vs tint " + Hex(tint) + ")");
+        Assert(SameColor(flatAfter[UiPaletteRole.ControlSurface], live[UiPaletteRole.ControlSurface]),
             "and every unoverridden token keeps following the page (raised "
-            + Hex(flatAfter.Raised) + " vs " + Hex(live.Raised) + ")");
+            + Hex(flatAfter[UiPaletteRole.ControlSurface]) + " vs " + Hex(live[UiPaletteRole.ControlSurface]) + ")");
 
         UiLayoutSnapshot after = Arrange(host);
         Assert(host.Session.ContentRevision == contentBefore,
@@ -500,7 +498,7 @@ internal static class UsPaletteLaneTests
         }
 
         Console.WriteLine("[palette-reuse] rects=" + rectsBefore.Count + " revision=" + contentBefore
-            + " scopePanel=" + Hex(oldPanel) + " -> " + Hex(flatAfter.Panel));
+            + " scopePanel=" + Hex(oldPanel) + " -> " + Hex(flatAfter[UiPaletteRole.PanelSurface]));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -553,8 +551,7 @@ internal static class UsPaletteLaneTests
         int contentRevisionBefore = host.Session.ContentRevision;
         int layoutBefore = live.LayoutRevision;
         Vector2 scrollBefore = host.Session.GetScrollPosition(scrollNode!);
-        int hitLayersBefore = host.Session.HitLayers.Count;
-        int nodesBefore = host.Session.ScrollPositions.Count;
+        int nodesBefore = host.Session.Identity;
 
         // NOT asserted here, and the gap is named rather than papered over: `UiSession.ActiveElement` is the
         // node whose Measure/Draw is running and it is `None` between elements - which is what a lane reads
@@ -564,8 +561,8 @@ internal static class UsPaletteLaneTests
         // cannot observe them; the honest state is "not observable here", not "asserted".
 
         // The palette application, and only that.
-        live.Panel = Rgb(0x12, 0x34, 0x56);
-        live.Raised = Rgb(0x0a, 0x0b, 0x0c);
+        live[UiPaletteRole.PanelSurface] = Rgb(0x12, 0x34, 0x56);
+        live[UiPaletteRole.ControlSurface] = Rgb(0x0a, 0x0b, 0x0c);
 
         Assert(live.LayoutRevision == layoutBefore,
             "a palette-only re-tint must not move the layout clock (" + layoutBefore + " -> "
@@ -581,12 +578,9 @@ internal static class UsPaletteLaneTests
             && Close(host.Session.OpenPopupAnchor!.Value.x, anchorBefore.x)
             && Close(host.Session.OpenPopupAnchor!.Value.y, anchorBefore.y),
             "and the session's published popup anchor must not move - a colour does not re-anchor a popup");
-        Assert(host.Session.HitLayers.Count == hitLayersBefore,
-            "and the owned hit stack must not gain or lose a layer (" + hitLayersBefore + " -> "
-            + host.Session.HitLayers.Count + ")");
-        Assert(host.Session.ScrollPositions.Count == nodesBefore,
-            "and the session's scroll-state table must not gain or lose a node entry (" + nodesBefore + " -> "
-            + host.Session.ScrollPositions.Count + ")");
+        Assert(host.Session.Identity == nodesBefore,
+            "and the same session must retain ownership (" + nodesBefore + " -> "
+            + host.Session.Identity + ")");
         Assert((host.Session.HoverClaim ?? "") == hoverBefore && hoverBefore.Length > 0,
             "and the hover claim must not move, got '" + (host.Session.HoverClaim ?? "(none)") + "' where '"
             + hoverBefore + "' was claimed");
@@ -612,50 +606,49 @@ internal static class UsPaletteLaneTests
         const string partialXml =
             @"<Styles Schema='1' Scheme='us-partial'>"
             + @"<Scheme Name='us-partial'>"
-            + @"<Color Token='Base' Value='#00000000' />"
+            + @"<Palette Role='WindowSurface' Value='#00000000' />"
             + @"</Scheme></Styles>";
 
-        Color vanillaSuccess = UiTheme.Vanilla.Success;
+        Color vanillaSuccess = UiTheme.Vanilla[UiPaletteRole.SuccessSurface];
 
         UiTheme theme = UiTheme.Vanilla;
         new UiStyleResolver(theme, UiStyleDocument.Parse(partialXml)).ApplyTo(theme);
 
         // (a) the declared transparent token IS a transparent colour, not a request for the default.
-        Assert(theme.Base.a == 0f,
+        Assert(theme[UiPaletteRole.WindowSurface].a == 0f,
             "an explicitly transparent token must resolve to alpha 0, got a="
-            + theme.Base.a.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+            + theme[UiPaletteRole.WindowSurface].a.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
         // (b) the omitted token answers the carrier's Vanilla value.
-        Assert(SameColor(theme.Success, vanillaSuccess),
+        Assert(SameColor(theme[UiPaletteRole.SuccessSurface], vanillaSuccess),
             "a token the document OMITS must answer the carrier's Vanilla value - that is the missing-colour"
-            + " default, and it is a different answer from an authored transparent (" + Hex(theme.Success)
+            + " default, and it is a different answer from an authored transparent (" + Hex(theme[UiPaletteRole.SuccessSurface])
             + " vs " + Hex(vanillaSuccess) + ")");
         // (c) the two are distinguishable: "missing" is not spelled as a transparent colour.
-        Assert(theme.Success.a != 0f,
+        Assert(theme[UiPaletteRole.SuccessSurface].a != 0f,
             "the missing-colour default must not be transparent, or 'omitted' and 'explicitly transparent'"
             + " would collapse into one answer");
 
         // (d) the edge half of the same contract: an edge set to NULL is "no override" and the surface falls
         // through to the shared token, while an explicitly transparent edge is a value that stays transparent.
         UiTheme edges = UiTheme.Vanilla;
-        Color sharedBorder = edges.Border;
-        edges.RaisedBorder = null;
+        Color sharedBorder = edges[UiPaletteRole.Border];
+        edges.Palette.Remove(UiPaletteRole.ControlBorder);
         Assert(SameColor(edges.RaisedSurface.Border, sharedBorder),
-            "an edge set to NULL must fall through to the shared Border token ("
+            "removing a concrete edge declaration reveals that role's own current default ("
             + Hex(edges.RaisedSurface.Border) + " vs " + Hex(sharedBorder) + ")");
-        edges.RaisedBorder = new Color(0f, 0f, 0f, 0f);
+        edges[UiPaletteRole.ControlBorder] = new Color(0f, 0f, 0f, 0f);
         Assert(edges.RaisedSurface.Border.a == 0f,
             "while an EXPLICITLY transparent edge is a value and stays transparent - the two spellings mean"
             + " different things");
-        Assert(SameColor(edges.Raised, UiTheme.Vanilla.Raised),
+        Assert(SameColor(edges[UiPaletteRole.ControlSurface], UiTheme.Vanilla[UiPaletteRole.ControlSurface]),
             "and assigning an edge must not move the fill it belongs to");
 
-        // (e) the same contract on the real US palette: US claims its four edges (so they are values), omits
-        // nothing (so no token answers Vanilla) and keeps SelectedBorder unclaimed (so the accent fallback is
-        // live rather than aliased away at the page level).
+        // (e) the real US palette declares every role, including the selected edge's former
+        // effective accent; no nullable edge fallback is needed in 0.8.
         UiTheme us = UsTheme.Surface();
-        Assert(us.SelectedBorder == null && SameColor(us.SelectedSurface.Border, us.AccentGold),
-            "US's unclaimed SelectedBorder must still resolve to the accent ("
-            + Hex(us.SelectedSurface.Border) + " vs accent " + Hex(us.AccentGold) + ")");
+        Assert(us.Palette.IsDeclared(UiPaletteRole.SelectedBorder) && SameColor(us.SelectedSurface.Border, us[UiPaletteRole.Accent]),
+            "US's explicit SelectedBorder must match the former effective accent ("
+            + Hex(us.SelectedSurface.Border) + " vs accent " + Hex(us[UiPaletteRole.Accent]) + ")");
     }
 
     // ---------------------------------------------------------------------------------------------

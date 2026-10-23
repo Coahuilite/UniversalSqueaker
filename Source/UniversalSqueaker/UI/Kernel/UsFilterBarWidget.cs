@@ -212,7 +212,7 @@ public sealed class UsFilterBarWidget : UsSectionWidgetBase
             new Rect(rect.x, rect.y, labelWidth, rect.height),
             UsKernelDraw.Keyed(ctx, labelKey),
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.MiddleLeft,
             singleLine: true);

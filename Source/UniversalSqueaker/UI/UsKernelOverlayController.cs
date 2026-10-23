@@ -37,7 +37,7 @@ public sealed class UsKernelOverlayController : IDisposable
     }
 
     /// <summary>True when the kernel overlay Host exists and its session is active.</summary>
-    public bool IsActive => host != null && host.Session.IsActive;
+    public bool IsActive => host != null && host.InputState.IsActive;
 
     /// <summary>True once creation or draw failed; the legacy fallback takes over for the session.</summary>
     public bool CreationFailed => creationFailed;

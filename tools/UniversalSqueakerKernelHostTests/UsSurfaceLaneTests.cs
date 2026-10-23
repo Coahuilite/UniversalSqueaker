@@ -99,7 +99,7 @@ internal static class UsSurfaceLaneTests
         Assert(string.Equals(UsTheme.AccentGoldHex, coreAccent, StringComparison.OrdinalIgnoreCase),
             "the identity accent constant must equal the core role table's AccentGold " + coreAccent
             + ", got '" + UsTheme.AccentGoldHex + "'");
-        Assert(Same(theme.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
+        Assert(Same(theme[UiPaletteRole.Accent], Rgb(0xb4, 0x9c, 0x73)),
             "the identity accent must resolve to the Core Bronze #B49C73 from the PM role table");
 
         // The FULL 24-role table: every resolved token equals the Core role table's hex (the single
@@ -116,13 +116,13 @@ internal static class UsSurfaceLaneTests
         // hexes: the interactive states must separate from the resting plane, and with Core's flat
         // fills (Base == WorkspacePlane == Raised by authorial design) the separation lives on the
         // EDGES - exactly what the region-scope retirement left to the palette.
-        Assert(!Same(theme.Hover, theme.Raised), "hover must separate from the resting plane");
+        Assert(!Same(theme[UiPaletteRole.HoverSurface], theme[UiPaletteRole.ControlSurface]), "hover must separate from the resting plane");
         Assert(!Same(theme.HoverSurface.Border, theme.RaisedSurface.Border),
             "the hover EDGE is what carries the state on Core - it must differ from the resting edge");
         Assert(!Same(theme.SelectedSurface.Border, theme.RaisedSurface.Border),
             "the selected EDGE (the accent fallback) must separate from the resting edge");
-        Assert(!Same(theme.Panel, theme.Raised), "the panel plane must differ from the raised plane");
-        Assert(theme.TextOnGold.a > 0f && !Same(theme.TextOnGold, theme.TextSecondary),
+        Assert(!Same(theme[UiPaletteRole.PanelSurface], theme[UiPaletteRole.ControlSurface]), "the panel plane must differ from the raised plane");
+        Assert(theme[UiPaletteRole.SelectedForeground].a > 0f && !Same(theme[UiPaletteRole.SelectedForeground], theme[UiPaletteRole.SecondaryForeground]),
             "the ink on the selected plate is its own role value");
 
         UiTheme second = UsTheme.Surface();
@@ -142,13 +142,13 @@ internal static class UsSurfaceLaneTests
 
         IList solids = RecordedSolids();
         Assert(solids.Count >= 5, "one surface paints a fill and four edges; recorded " + solids.Count);
-        Assert(Same(Colour(solids[0]), theme.Selected), "the selected row's plane is the selected token");
+        Assert(Same(Colour(solids[0]), theme[UiPaletteRole.SelectedSurface]), "the selected row's plane is the selected token");
         for (int i = 1; i < 5; i++)
         {
-            Assert(Same(Colour(solids[i]), theme.Border), "and its edge is the structural line");
+            Assert(Same(Colour(solids[i]), theme[UiPaletteRole.Border]), "and its edge is the structural line");
         }
 
-        Assert(!Painted(theme.AccentGold), "a selected row must not paint the accent at all");
+        Assert(!Painted(theme[UiPaletteRole.Accent]), "a selected row must not paint the accent at all");
     }
 
     /// <summary>
@@ -162,17 +162,17 @@ internal static class UsSurfaceLaneTests
         // Positive control for the property search below: two decoys in the ink token - one too small to be
         // the square, one square-sized but outside the box. A finder that keyed on position (the old
         // solids[5]/solids[6]) would land on a decoy and fail here; this one must step over both.
-        UiThemeDraw.Solid(new Rect(0f, 0f, 4f, 4f), theme.TextPrimary);
-        UiThemeDraw.Solid(new Rect(100f, 100f, UsKernelDraw.CheckboxVisual, UsKernelDraw.CheckboxVisual), theme.TextPrimary);
+        UiThemeDraw.Solid(new Rect(0f, 0f, 4f, 4f), theme[UiPaletteRole.Foreground]);
+        UiThemeDraw.Solid(new Rect(100f, 100f, UsKernelDraw.CheckboxVisual, UsKernelDraw.CheckboxVisual), theme[UiPaletteRole.Foreground]);
 
         Rect box = new Rect(0f, 0f, UsKernelDraw.CheckboxVisual, UsKernelDraw.CheckboxVisual);
         UsKernelDraw.Checkbox(box, theme, value: true);
 
         IList solids = RecordedSolids();
-        Assert(FindCheckedSquare(solids, RecordedSolidRects(), theme.TextPrimary, box) >= 0,
+        Assert(FindCheckedSquare(solids, RecordedSolidRects(), theme[UiPaletteRole.Foreground], box) >= 0,
             "the checked square is filled with the ink token (an ink solid, box-sized, inside the box) - "
             + "found by property and geometry, so one more rect anywhere cannot move the assertion");
-        Assert(!Painted(theme.AccentGold), "a checked box must not paint the accent");
+        Assert(!Painted(theme[UiPaletteRole.Accent]), "a checked box must not paint the accent");
     }
 
     /// <summary>
@@ -208,30 +208,30 @@ internal static class UsSurfaceLaneTests
 
         ClearSolids();
         UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.None);
-        Assert(!Painted(theme.AccentGold) && !Painted(theme.TextSecondary),
+        Assert(!Painted(theme[UiPaletteRole.Accent]) && !Painted(theme[UiPaletteRole.SecondaryForeground]),
             "a plain row paints no rail at all");
 
         ClearSolids();
         UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Selected);
-        Assert(RailIs(theme.TextSecondary, UsKernelDraw.RailWidth),
+        Assert(RailIs(theme[UiPaletteRole.SecondaryForeground], UsKernelDraw.RailWidth),
             "a selected row's rail is dim ink at the spec's 3px");
-        Assert(!Painted(theme.AccentGold), "and a selected row still takes no accent");
+        Assert(!Painted(theme[UiPaletteRole.Accent]), "and a selected row still takes no accent");
 
         ClearSolids();
         UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Current);
-        Assert(RailIs(theme.AccentGold, UsKernelDraw.RailWidth),
+        Assert(RailIs(theme[UiPaletteRole.Accent], UsKernelDraw.RailWidth),
             "the current object's rail is the accent at the spec's 3px");
 
         ClearSolids();
         UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.CurrentAndSelected);
-        Assert(RailIs(theme.TextSecondary, UsKernelDraw.CurrentAndSelectedOuterWidth)
-            && RailIs(theme.AccentGold, UsKernelDraw.RailWidth),
+        Assert(RailIs(theme[UiPaletteRole.SecondaryForeground], UsKernelDraw.CurrentAndSelectedOuterWidth)
+            && RailIs(theme[UiPaletteRole.Accent], UsKernelDraw.RailWidth),
             "both states at once draw the dim rail and the accent rail inside it");
 
         ClearSolids();
         UsKernelDraw.RowSurface(row, theme, hovered: false, UsKernelDraw.RowRail.Disabled);
-        Assert(Painted(theme.Panel), "an unavailable row is hatched in a plane token, not a new colour");
-        Assert(!Painted(theme.AccentGold), "and it never takes the accent");
+        Assert(Painted(theme[UiPaletteRole.PanelSurface]), "an unavailable row is hatched in a plane token, not a new colour");
+        Assert(!Painted(theme[UiPaletteRole.Accent]), "and it never takes the accent");
     }
 
     /// <summary>
@@ -247,27 +247,27 @@ internal static class UsSurfaceLaneTests
 
         ClearSolids();
         UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.InEffect);
-        Assert(Painted(theme.TextPrimary) && !Painted(theme.AccentGold),
+        Assert(Painted(theme[UiPaletteRole.Foreground]) && !Painted(theme[UiPaletteRole.Accent]),
             "in effect is a solid ink shape and takes no accent");
         Assert(CoversCentre(cell), "and it is solid at the centre");
         float discArea = InkArea();
 
         ClearSolids();
         UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Unavailable);
-        Assert(Painted(theme.TextSecondary) && Painted(theme.Panel),
+        Assert(Painted(theme[UiPaletteRole.SecondaryForeground]) && Painted(theme[UiPaletteRole.PanelSurface]),
             "unavailable is a dim stroke over a hatched fill");
-        Assert(!Painted(theme.TextPrimary), "and it is not the in-effect disc");
+        Assert(!Painted(theme[UiPaletteRole.Foreground]), "and it is not the in-effect disc");
 
         ClearSolids();
         UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Inherited);
-        Assert(Painted(theme.TextPrimary) && !Painted(theme.AccentGold),
+        Assert(Painted(theme[UiPaletteRole.Foreground]) && !Painted(theme[UiPaletteRole.Accent]),
             "inherited is an ink outline and takes no accent");
         Assert(!CoversCentre(cell), "hollow at the centre, which is what separates it from in effect");
         Assert(InkArea() < discArea * 0.6f, "and much less ink than the solid disc");
 
         ClearSolids();
         UsKernelDraw.DrawStateShape(cell, theme, UsKernelDraw.StateShape.Overridden);
-        Assert(Painted(theme.TextPrimary) && Painted(theme.AccentGold),
+        Assert(Painted(theme[UiPaletteRole.Foreground]) && Painted(theme[UiPaletteRole.Accent]),
             "overridden puts an accent ring around the ink disc");
         Assert(CoversCentre(cell), "and stays solid at the centre");
     }
@@ -298,29 +298,29 @@ internal static class UsSurfaceLaneTests
         // The alarm roles did NOT move with the palette: the official tables carry the same Success /
         // Danger / TextOnDanger / DangerBorder family the S6 ruling fixed (see the token loop above -
         // these two clauses name the promise in words).
-        Assert(Same(theme.AccentGold, Rgb(0xb4, 0x9c, 0x73)),
+        Assert(Same(theme[UiPaletteRole.Accent], Rgb(0xb4, 0x9c, 0x73)),
             "the identity accent is the Core Bronze from the role table, not a new colour");
-        Assert(Same(theme.Warning, theme.Danger),
+        Assert(Same(theme[UiPaletteRole.WarningSurface], theme[UiPaletteRole.DangerSurface]),
             "theme.Warning must stay the compatibility alias of theme.Danger, not a second attention token");
         // The redirect is live, not a coincidentally equal value: assigning Warning writes Danger. That
         // is exactly why nobody can "just set Warning to cyan" to get a Block colour - it would repaint
         // every destructive control in the same pass.
         UiTheme probe = UsTheme.Surface();
-        probe.Warning = cyan;
-        Assert(Same(probe.Danger, cyan) && Same(probe.Warning, cyan),
+        probe[UiPaletteRole.WarningSurface] = cyan;
+        Assert(Same(probe[UiPaletteRole.DangerSurface], cyan) && Same(probe[UiPaletteRole.WarningSurface], cyan),
             "Warning must stay a redirect onto Danger: a cyan Warning assignment repaints destructive controls");
 
-        Assert(!Same(UsAttention.Brush, theme.Warning),
+        Assert(!Same(UsAttention.Brush, theme[UiPaletteRole.WarningSurface]),
             "attention must not be the Warning redirect (assigning cyan there repaints destructive controls)");
-        Assert(!Same(UsAttention.Brush, theme.Danger)
-            && theme.DangerBorder.HasValue
-            && !Same(UsAttention.Brush, theme.DangerBorder.Value),
+        Assert(!Same(UsAttention.Brush, theme[UiPaletteRole.DangerSurface])
+            && theme.Palette.IsDeclared(UiPaletteRole.DangerBorder)
+            && !Same(UsAttention.Brush, theme[UiPaletteRole.DangerBorder]),
             "attention must not be the danger fill or its saturated edge");
-        Assert(!Same(UsAttention.Brush, theme.AccentGold),
+        Assert(!Same(UsAttention.Brush, theme[UiPaletteRole.Accent]),
             "attention must not be the accent gold: a gold Block marker is the failure this pins");
-        Assert(!Same(UsAttention.Brush, theme.TextPrimary)
-            && !Same(UsAttention.Brush, theme.TextSecondary)
-            && !Same(UsAttention.Brush, theme.TextDisabled),
+        Assert(!Same(UsAttention.Brush, theme[UiPaletteRole.Foreground])
+            && !Same(UsAttention.Brush, theme[UiPaletteRole.SecondaryForeground])
+            && !Same(UsAttention.Brush, theme[UiPaletteRole.DisabledForeground]),
             "attention must not be one of the three text tokens");
         Assert(!string.IsNullOrEmpty(UsAttention.Marker),
             "attention carries a shape marker: a bare cyan dot cannot be told from the neutral effect dot");
@@ -339,7 +339,7 @@ internal static class UsSurfaceLaneTests
         UsAttention.Badge(new Rect(0f, 0f, 40f, 16f), "3", theme);
 
         Assert(Painted(Rgb(0x86, 0xE7, 0xD8)), "the attention badge fill must be the ruling cyan");
-        Assert(!Painted(theme.Danger) && !Painted(theme.AccentGold),
+        Assert(!Painted(theme[UiPaletteRole.DangerSurface]) && !Painted(theme[UiPaletteRole.Accent]),
             "the attention badge must paint neither the danger fill nor the accent");
 
         IList inks = RecordedLabelColors();
@@ -353,10 +353,10 @@ internal static class UsSurfaceLaneTests
         // The forbidden half of the pair, as an assertion: the light ink on this cyan is ~1.20:1, so a
         // badge that used TextPrimary or TextOnDanger must fail, and it must fail for a reason this lane
         // states rather than a pixel nobody checked.
-        Assert(!Same(UsAttention.InkOnBrush, theme.TextPrimary)
-            && !Same(UsAttention.InkOnBrush, theme.TextOnDanger),
+        Assert(!Same(UsAttention.InkOnBrush, theme[UiPaletteRole.Foreground])
+            && !Same(UsAttention.InkOnBrush, theme[UiPaletteRole.DangerForeground]),
             "the attention ink must not be the light ink: light on this cyan is about 1.20:1");
-        Assert(RelativeLuminance(UsAttention.Brush) > RelativeLuminance(theme.Danger),
+        Assert(RelativeLuminance(UsAttention.Brush) > RelativeLuminance(theme[UiPaletteRole.DangerSurface]),
             "the cyan is a light fill; it belongs with dark ink, unlike the dark danger plane");
     }
 
@@ -374,24 +374,24 @@ internal static class UsSurfaceLaneTests
 
         IList colours = RecordedSolids();
         Assert(colours.Count >= 5, "an attention row paints a fill and four edges; recorded " + colours.Count);
-        Assert(Same(Colour(colours[0]), theme.Raised),
+        Assert(Same(Colour(colours[0]), theme[UiPaletteRole.ControlSurface]),
             "the attention row fill must stay the neutral raised plane");
         for (int i = 1; i < 5; i++)
         {
-            Assert(Same(Colour(colours[i]), theme.Border), "and its edge must stay the structural line");
+            Assert(Same(Colour(colours[i]), theme[UiPaletteRole.Border]), "and its edge must stay the structural line");
         }
 
         Assert(RailIs(UsAttention.Brush, UsAttention.RailWidth),
             "the attention edge is " + UsAttention.RailWidth + "px of the ruling cyan at the row's left edge");
         Assert(UsAttention.RailWidth < UsKernelDraw.RailWidth,
             "the attention edge must stay thinner than a location rail, or hue alone separates them");
-        Assert(!Painted(theme.Danger)
-            && theme.DangerBorder.HasValue
-            && !Painted(theme.DangerBorder.Value),
+        Assert(!Painted(theme[UiPaletteRole.DangerSurface])
+            && theme.Palette.IsDeclared(UiPaletteRole.DangerBorder)
+            && !Painted(theme[UiPaletteRole.DangerBorder]),
             "an attention row is not a destructive treatment");
-        Assert(!Painted(theme.AccentGold), "and an attention row must not take the accent");
-        Assert(!Painted(theme.Selected), "and attention must never be painted as selection");
-        Assert(!Painted(theme.TextOnDanger), "and it must not borrow the danger plane's text token");
+        Assert(!Painted(theme[UiPaletteRole.Accent]), "and an attention row must not take the accent");
+        Assert(!Painted(theme[UiPaletteRole.SelectedSurface]), "and attention must never be painted as selection");
+        Assert(!Painted(theme[UiPaletteRole.DangerForeground]), "and it must not borrow the danger plane's text token");
     }
 
     /// <summary>
@@ -600,30 +600,30 @@ internal static class UsSurfaceLaneTests
     {
         return token switch
         {
-            "Base" => theme.Base,
-            "WorkspacePlane" => theme.WorkspacePlane,
-            "Panel" => theme.Panel,
-            "SectionBand" => theme.SectionBand,
-            "Raised" => theme.Raised,
-            "Hover" => theme.Hover,
-            "Selected" => theme.Selected,
-            "Success" => theme.Success,
-            "Danger" => theme.Danger,
-            "Border" => theme.Border,
-            "BorderStrong" => theme.BorderStrong,
-            "Divider" => theme.Divider,
+            "Base" => theme[UiPaletteRole.WindowSurface],
+            "WorkspacePlane" => theme[UiPaletteRole.WorkspaceSurface],
+            "Panel" => theme[UiPaletteRole.PanelSurface],
+            "SectionBand" => theme[UiPaletteRole.SectionSurface],
+            "Raised" => theme[UiPaletteRole.ControlSurface],
+            "Hover" => theme[UiPaletteRole.HoverSurface],
+            "Selected" => theme[UiPaletteRole.SelectedSurface],
+            "Success" => theme[UiPaletteRole.SuccessSurface],
+            "Danger" => theme[UiPaletteRole.DangerSurface],
+            "Border" => theme[UiPaletteRole.Border],
+            "BorderStrong" => theme[UiPaletteRole.StrongBorder],
+            "Divider" => theme[UiPaletteRole.Divider],
             "BaseBorder" => theme.BaseSurface.Border,
             "PanelBorder" => theme.PanelSurface.Border,
             "RaisedBorder" => theme.RaisedSurface.Border,
             "HoverBorder" => theme.HoverSurface.Border,
-            "TextPrimary" => theme.TextPrimary,
-            "TextSecondary" => theme.TextSecondary,
-            "TextDisabled" => theme.TextDisabled,
-            "TextOnGold" => theme.TextOnGold,
-            "TextOnDanger" => theme.TextOnDanger,
+            "TextPrimary" => theme[UiPaletteRole.Foreground],
+            "TextSecondary" => theme[UiPaletteRole.SecondaryForeground],
+            "TextDisabled" => theme[UiPaletteRole.DisabledForeground],
+            "TextOnGold" => theme[UiPaletteRole.SelectedForeground],
+            "TextOnDanger" => theme[UiPaletteRole.DangerForeground],
             "DangerBorder" => theme.DangerSurface.Border,
-            "AccentGold" => theme.AccentGold,
-            "SwitchThumbOff" => theme.SwitchThumbOff,
+            "AccentGold" => theme[UiPaletteRole.Accent],
+            "SwitchThumbOff" => theme[UiPaletteRole.SwitchOff],
             _ => throw new InvalidOperationException("unknown token " + token),
         };
     }

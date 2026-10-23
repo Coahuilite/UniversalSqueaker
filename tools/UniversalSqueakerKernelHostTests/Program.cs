@@ -181,6 +181,7 @@ internal static class Program
 
     private static void RunAll()
     {
+        Step("FL08 actual release, editing and retained view migration", Fl08MigrationTests.Run);
         Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
         Step("DC Select three sparse qualifications, real settings and Host", DcSelectUiTests.Run);
         Step("real embedded resource + schema shape", RealEmbeddedResourcePresentAndShaped);
@@ -515,7 +516,7 @@ internal static class Program
     /// </summary>
     internal static bool TryGetPopupHitLayer(UiSession session, out UiHitLayer layer)
     {
-        foreach (UiHitLayer candidate in session.HitLayers)
+        foreach (UiHitLayer candidate in Fl08PublicObservation.Popup(session, out var observedPopup) ? new[] { observedPopup } : Array.Empty<UiHitLayer>())
         {
             if (candidate.IsPopup)
             {
@@ -1492,46 +1493,42 @@ internal static class Program
         }
     }
 
-    /// <summary>
-    /// US-PACK1: presses ONE declarative (engine-drawn) control through the carrier's own hit seam.
-    /// The ButtonOverride seam is armed so the ONE draw whose active node carries
-    /// <paramref name="elementId"/> answers true - the engine's real Button(rect, ctx) then records
-    /// the interaction subject (NoteInteractionTarget) and the control's own action/value write runs
-    /// through the real funnel. This is the press form the retired DeclarativePacks lane established
-    /// for template rows: a declarative control is drawn inside its row's own native group, so its
-    /// captured rect carries no window position a coordinate event could aim at; the node identity,
-    /// not a guessed point, names the pressed control. Returns how many times it answered.
-    /// </summary>
+    /// <summary>Locate the declared button's actual Dev window geometry, then drive native primary press/release.</summary>
     internal static int PressDeclarativeButton(UiHost host, Rect viewport, string elementId)
     {
-        int fired = 0;
-        System.Reflection.FieldInfo? seam = typeof(UiNative).GetField("ButtonOverride",
-            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
-            | System.Reflection.BindingFlags.NonPublic);
-        if (seam == null) throw new Exception("the carrier's ButtonOverride seam moved - the press must fail, not fake");
+        // The 0.8 logical ButtonOverride seam does not model pointer capture/Cancel provenance.
+        // Locate the actual window-space input through the fixed Dev carrier's public instrument,
+        // then run a genuine press/release. No private table access or synthetic cancel subject.
+        var diagnostics = host.Diagnostics;
+        bool prior = diagnostics.GeometryEnabled;
+        var priorTrace = UiNative.Trace;
+        diagnostics.GeometryEnabled = true;
         try
         {
-            seam.SetValue(null, new Func<Rect, bool>(_ =>
-            {
-                UiNode node = host.Session.ActiveNode;
-                if (node != null && string.Equals(node.ElementId, elementId, StringComparison.Ordinal))
-                {
-                    fired++;
-                    return true;
-                }
-
-                return false;
-            }));
-            host.DrawChecked(new Rect(0f, 0f, viewport.width, viewport.height));
+            host.Session.SetScrollTarget(elementId);
+            host.Invalidate();
+            DrawWithPointer(host, viewport, new Vector2(-1000, -1000));
+            if (!diagnostics.TryGetGeometrySnapshot(out var geometry) || geometry == null)
+                throw new InvalidOperationException("No actual Dev input geometry for " + elementId);
+            var hits = geometry.Nodes.Where(x => x.ElementId == elementId).ToArray();
+            if (hits.Length != 1) throw new InvalidOperationException("Expected one actual input for " + elementId + ", got " + hits.Length);
+            Rect rect = hits[0].Window;
+            Vector2 point = new(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            string targetKey = host.Session.GetNodeByElementId(elementId)!.Id.Key;
+            bool released = false;
+            UiNative.Trace = text => {
+                priorTrace?.Invoke(text);
+                if (text.StartsWith("interaction end node=" + targetKey + " part=", StringComparison.Ordinal)
+                    && text.EndsWith("reason=Released", StringComparison.Ordinal)) released = true;
+            };
+            DrawWithEvent(host, viewport, EventType.MouseDown, point);
+            bool captured = host.Session.Interactions.CaptureOwner?.Node == host.Session.GetNodeByElementId(elementId)?.Id.Key;
+            DrawWithEvent(host, viewport, EventType.MouseUp, point);
+            Console.WriteLine("[native-button] " + elementId + " captured=" + captured + " qualifiedRelease=" + released);
+            return captured && released ? 1 : 0;
         }
-        finally
-        {
-            seam.SetValue(null, null);
-        }
-
-        return fired;
+        finally { UiNative.Trace = priorTrace; diagnostics.GeometryEnabled = prior; }
     }
-
     /// <summary>
     /// D10 grace contract (maintainer ruling 2026-09-06), owned by <c>UiSession</c> since FL P3:
     ///  - a claim that landed during a pass is held, and the NEXT pass starts cleared (widgets
@@ -3131,12 +3128,14 @@ internal static class Program
         a.Session.OpenPopup("a-popup", new Rect(10f, 10f, 120f, 100f));
         Assert(a.Session.IsPopupOpen("a-popup"), "session A owns its popup");
         Assert(!b.Session.IsPopupOpen("a-popup"), "session B never sees session A's popup");
-        a.Session.RegisterPopupDraw(() => { });
-        Assert(a.Session.PopupDrawActions.Count == 1, "popup draw action registered on A");
-        Assert(b.Session.PopupDrawActions.Count == 0, "session B has no popup draw actions");
+        int staleCallbacks = 0; a.Session.RegisterPopupDraw(() => staleCallbacks++);
+        Assert(staleCallbacks == 0, "registering a popup callback does not execute it");
+        b.DrawChecked(new Rect(0f, 0f, 800f, 600f)); Assert(staleCallbacks == 0, "session B cannot run session A popup work");
 
         a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
-        Assert(a.Session.PopupDrawActions.Count == 0, "popup draw actions are consumed at EndFrame");
+        Assert(staleCallbacks == 1, "session A executes its pending popup callback exactly once");
+        a.DrawChecked(new Rect(0f, 0f, 800f, 600f));
+        Assert(staleCallbacks == 1, "the completed popup callback is not retained into the next frame");
         Assert(!a.Session.IsPopupOpen("a-popup"), "an undrawn owner releases its orphan popup in the same frame");
 
         // A real dropdown continues to report its anchor; only ownerless popups are reconciled away.

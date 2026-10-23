@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($FerriteLibArtifactPath)) {
 No FerriteLib carrier selected. Pass -FerriteLibArtifactPath <path to FerriteLib.UiKit.dll>.
   There is deliberately no default: the old one resolved the repository-root Release carrier, which is the
   wrong artifact for a Dev rehearsal and is no longer refreshed by ordinary FL builds.
-  Select the DLL from the paired FL dev package (staged by the carrier owner) or from an explicit FL build:
+  Select the DLL from the fixed FL 0.8 package delivered by the carrier owner:
       pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath <carrier> -DevelopmentCarrier
       pwsh -NoProfile -File scripts/build-dev.ps1 -FerriteLibArtifactPath <carrier>
   Selecting a carrier is read-only: this repository never rebuilds the FerriteLib payload.
@@ -24,5 +24,11 @@ No FerriteLib carrier selected. Pass -FerriteLibArtifactPath <path to FerriteLib
 $selected = [IO.Path]::GetFullPath($FerriteLibArtifactPath, $root)
 if (-not (Test-Path -LiteralPath $selected -PathType Leaf)) {
     throw "Selected FerriteLib artifact is missing: $selected. The FerriteLib payload is staged by its own owner (the carrier repository); select the DLL from the paired package or from an explicit FL build output."
+}
+$identity = [Diagnostics.FileVersionInfo]::GetVersionInfo($selected).ProductVersion
+$version = $null
+if (-not [Version]::TryParse(($identity -replace '[-+].*$', ''), [ref]$version) -or
+    $version -lt [Version]'0.8.0' -or $version -ge [Version]'0.9.0') {
+    throw "Selected carrier '$identity' is outside US's [0.8.0,0.9.0) consumer range. Supply a fixed 0.8 package; no fallback is used."
 }
 return $selected

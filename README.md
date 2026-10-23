@@ -16,6 +16,8 @@ The settings window has five workspaces: **Overview / Packs / Tuning / Presets /
 - Namespace / Def prefix / diagnostic prefix: `UniversalSqueaker` / `US_` / `usdiag`.
 - License: [MPL-2.0](LICENSE).
 
+Current Dev builds explicitly consume a fixed FerriteLib **0.8** package (`[0.8.0,0.9.0)`). See the [consumer migration guide](docs/fl08-consumer-migration-zh.md) for build input, retained UI behavior and native acceptance boundaries.
+
 ## Documentation
 
 This branch is **0.6.0 Dev**: the single production owner covers [all fifteen contracts and the settled configurable Select qualifications](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界), with real author examples and per-package SR comparisons. Ordinary coverage/policy, native behavior and human acceptance remain separate gates. The [documentation index](docs/README.md) distinguishes retained 0.5 guides from current 0.6 interfaces.

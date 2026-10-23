@@ -180,17 +180,17 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     /// shape the settings window and the diagnostics panel draw.</summary>
     protected override void DrawNotice(Rect rect, UiWindowNotice notice)
     {
-        UiThemeDraw.Surface(rect, PanelTheme, PanelTheme.Panel, PanelTheme.Border);
+        UiThemeDraw.Surface(rect, PanelTheme, PanelTheme[UiPaletteRole.PanelSurface], PanelTheme[UiPaletteRole.Border]);
         Rect body = rect.ContractedBy(16f);
         bool prerequisite = notice == UiWindowNotice.Prerequisite;
         UsKernelDraw.Label(
             new Rect(body.x, body.y, body.width, 24f),
             Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Title" : "US.Diagnostics.PageUnavailable.Title"),
-            PanelTheme, PanelTheme.TextPrimary, UiFont.Small);
+            PanelTheme, PanelTheme[UiPaletteRole.Foreground], UiFont.Small);
         UsKernelDraw.Label(
             new Rect(body.x, body.y + 28f, body.width, Mathf.Max(1f, body.height - 28f)),
             Translator.Translate(prerequisite ? "US.Settings.Prerequisite.Body" : "US.Diagnostics.PageUnavailable.Body"),
-            PanelTheme, PanelTheme.TextSecondary, UiFont.Tiny);
+            PanelTheme, PanelTheme[UiPaletteRole.SecondaryForeground], UiFont.Tiny);
     }
 
 
@@ -228,7 +228,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
     private void Requery()
     {
         source.RefreshStates();
-        Host?.Session.BumpContentRevision();
+        Host?.Invalidate();
     }
 
     private void Page(string tab)

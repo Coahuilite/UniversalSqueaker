@@ -40,7 +40,7 @@ public static class UsDiagnosticsHost
         bool flipped = source.Narrow != wasNarrow;
         if (flipped)
         {
-            host?.Session.BumpContentRevision();
+            host?.Invalidate();
         }
 
         return flipped;

@@ -146,7 +146,7 @@ internal static class UsSectionHeaderLaneTests
             // AccentGold, NOT SelectedSurface.Border: the flat scope sets SelectedBorder equal to Selected so
             // that a flat surface paints no box, which makes that token #3A311F inside these very cards.
             // Measured the hard way (the first rail came out #3A311F) and the reason is kept in the widget.
-            Color accent = theme.AccentGold;
+            Color accent = theme[UiPaletteRole.Accent];
             ClearSolids();
             host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
 
@@ -205,7 +205,7 @@ internal static class UsSectionHeaderLaneTests
                 Rect cardRect = RectOf(snapshot, card);
                 // UIR-006: the region scope retired; the card plane now resolves to the palette
                 // Panel role itself - one definition, the same bag the engine draws with.
-                Color panel = theme.Panel;
+                Color panel = theme[UiPaletteRole.PanelSurface];
                 bool planePainted = false;
                 for (int i = 0; i < rects.Count; i++)
                 {
@@ -243,8 +243,8 @@ internal static class UsSectionHeaderLaneTests
                 using UiHost host = UsKernelSettingsHost.Create(
                     new RecordingSettingsSource { RichData = true }, new Program.StubMetrics());
                 UiTheme theme = UsTheme.Surface();
-                Color divider = theme.Divider;
-                Color sectionBand = theme.SectionBand;
+                Color divider = theme[UiPaletteRole.Divider];
+                Color sectionBand = theme[UiPaletteRole.SectionSurface];
                 ClearSolids();
                 host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
                 UiLayoutSnapshot snapshot = Arrange(host);
@@ -395,8 +395,8 @@ internal static class UsSectionHeaderLaneTests
             // inventing one here would be a vocabulary addition with no forced consumer.
             foreach ((string _, Rect _, Color ink) in ownTitle)
             {
-                Assert(SameColor(ink, theme.TextPrimary),
-                    "the header title must be inked TextPrimary (" + Hex(theme.TextPrimary) + "), got "
+                Assert(SameColor(ink, theme[UiPaletteRole.Foreground]),
+                    "the header title must be inked TextPrimary (" + Hex(theme[UiPaletteRole.Foreground]) + "), got "
                     + Hex(ink) + ". Gold ink has no role path: the table's only gold text"
                     + " is TextOnGold, which travels with a gold fill");
             }
@@ -420,12 +420,12 @@ internal static class UsSectionHeaderLaneTests
                 + " make Supports answer no, or the widget would draw a broken glyph in that font");
 
             // And the marker is painted in TextPrimary ink, not accent ink: it is a glyph, not the rail.
-            Color accent = theme.AccentGold;
-            Assert(!SameColor(accent, theme.TextPrimary),
+            Color accent = theme[UiPaletteRole.Accent];
+            Assert(!SameColor(accent, theme[UiPaletteRole.Foreground]),
                 "control: the accent and TextPrimary must differ, or the next assertion is vacuous");
 
             Console.WriteLine("[header-marker] glyph='" + UsSectionHeaderWidget.Marker + "' drawn=" + (markers.Count > 0)
-                + " ink=" + Hex(theme.TextPrimary) + " railInk=" + Hex(accent) + " solidCount="
+                + " ink=" + Hex(theme[UiPaletteRole.Foreground]) + " railInk=" + Hex(accent) + " solidCount="
                 + solidRects.Count + "/" + solidColors.Count);
         }
         finally

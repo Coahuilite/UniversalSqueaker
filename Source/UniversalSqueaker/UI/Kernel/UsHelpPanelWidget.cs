@@ -149,7 +149,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         // hover-invariant maxima Measure allocated, so the content below cannot shift.
         string header = HeaderText(ctx, display);
         Rect headerRect = new(x, y, textWidth, MaxHeaderBand(ctx, textWidth));
-        UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme.TextPrimary, UiFont.Small);
+        UiThemeDraw.SectionHeader(headerRect, header, ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Small);
         y += headerRect.height + TitleGap;
 
         y += ContentGap;
@@ -157,7 +157,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
             new Rect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
             display.Label,
             ctx.Theme,
-            ctx.Theme.TextPrimary,
+            ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
             TextAnchor.UpperLeft);
         y += MaxLabelBand(ctx, textWidth) + 2f;
@@ -165,7 +165,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
             new Rect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
             display.Text,
             ctx.Theme,
-            ctx.Theme.TextSecondary,
+            ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
             TextAnchor.UpperLeft);
     }

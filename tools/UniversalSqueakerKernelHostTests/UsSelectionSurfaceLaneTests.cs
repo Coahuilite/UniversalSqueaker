@@ -168,7 +168,7 @@ internal static class UsSelectionSurfaceLaneTests
             // opaque, the same token the row plane paints. The retired 0.57-accent-alpha contract
             // is gone; the written channel must equal theme.Selected exactly, alpha included.
             Assert(Math.Abs(activeFill.a - 1f) <= 0.002f
-                    && SameColor(activeFill, theme.Selected),
+                    && SameColor(activeFill, theme[UiPaletteRole.SelectedSurface]),
                 "the written fill parameter must BE the declared Selected surface (opaque), got " + activeFill);
             Assert(Math.Abs(accent.a - 1f) <= 0.002f,
                 "the written rail parameter must be OPAQUE, got a=" + accent.a);
@@ -308,7 +308,7 @@ internal static class UsSelectionSurfaceLaneTests
             // opaque, the same token the row plane paints. The retired 0.57-accent-alpha contract
             // is gone; the written channel must equal theme.Selected exactly, alpha included.
             Assert(Math.Abs(activeFill.a - 1f) <= 0.002f
-                    && SameColor(activeFill, theme.Selected),
+                    && SameColor(activeFill, theme[UiPaletteRole.SelectedSurface]),
                 "the written fill parameter must BE the declared Selected surface (opaque), got " + activeFill);
             Assert(Math.Abs(accent.a - 1f) <= 0.002f,
                 "the written rail parameter must be OPAQUE, got a=" + accent.a);

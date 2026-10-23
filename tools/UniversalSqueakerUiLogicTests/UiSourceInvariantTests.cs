@@ -361,11 +361,16 @@ internal static class UiSourceInvariantTests
     private static void VerifyNoSecondEventAuthorityOrPalette(string root)
     {
         string uiDir = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
-        string[] forbiddenTypes = { "UiInteract", "Palette", "SurfaceFrame", "UiText", "UiValueStore", "UiPanel" };
+        // FL 0.8's public UiPalette/UiPaletteRole and theme.Palette are the supported colour API.
+        // Retired independent helper implementations remain forbidden; their old substring ban
+        // must not reject the real new API.
+        string[] forbiddenTypes = { "UiInteract", "SurfaceFrame", "UiText", "UiValueStore", "UiPanel" };
 
         foreach (string file in Directory.EnumerateFiles(uiDir, "*.cs", SearchOption.AllDirectories))
         {
             string text = File.ReadAllText(file);
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"\b(?:class|struct)\s+Palette\b"))
+                throw new InvalidOperationException("retired independent Palette implementation reappears: " + file);
             foreach (string forbidden in forbiddenTypes)
             {
                 // Word-boundary-ish check: "UiTextElement"/"PaletteToken" would also be a revival,

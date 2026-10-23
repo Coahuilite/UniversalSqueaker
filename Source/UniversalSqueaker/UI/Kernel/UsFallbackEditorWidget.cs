@@ -144,7 +144,7 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         }
 
         UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Race"),
-            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
+            ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleLeft);
         UsKernelDraw.Dropdown(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), "vf1-race", ctx, selectedRace, racePairs,
             selected => ctx.Bindings.Invoke("set-fallback-selection", new UsFallbackSelection(selected, null)));
         y += RowHeight + RowGap;
@@ -155,16 +155,16 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
         float statusBand = StatusBandHeight(ctx, width);
         UsKernelDraw.Label(new Rect(x, y, width, statusBand),
             statusText,
-            ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.UpperLeft);
+            ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.UpperLeft);
         y += statusBand + RowGap;
 
         // Create row: query + candidate dropdown (candidates = loaded pawn races, so a race with no
         // VoicePack at all is a legal new table).
-        UiValueState queryState = ctx.Session.GetOrCreateValueState("vf1-new-race-query");
+        UiValueState queryState = ctx.State("vf1-new-race-query");
         string query = ctx.Bindings.TryGet("fallback-new-race-query", out string q) ? q ?? "" : "";
         if (!queryState.Focused) queryState.EditText = query;
         UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.Create"),
-            ctx.Theme, ctx.Theme.TextPrimary, UiFont.Tiny, TextAnchor.MiddleLeft);
+            ctx.Theme, ctx.Theme[UiPaletteRole.Foreground], UiFont.Tiny, TextAnchor.MiddleLeft);
         string typed = UiNative.TextField(new Rect(x + 64f, y, 120f, RowHeight), queryState.EditText);
         if (typed != queryState.EditText)
         {
@@ -215,11 +215,11 @@ public sealed class UsFallbackEditorWidget : UsSectionWidgetBase
             // display-capped at 40 AFTER filtering, so typing a name or defName is how any legal Core
             // sound becomes reachable. The value binding already existed on the Host; this is the
             // control, with the same focus seam as the race-query field.
-            UiValueState soundQueryState = ctx.Session.GetOrCreateValueState("vf1-sound-query");
+            UiValueState soundQueryState = ctx.State("vf1-sound-query");
             string soundQuery = ctx.Bindings.TryGet("fallback-sound-query", out string sq) ? sq ?? "" : "";
             if (!soundQueryState.Focused) soundQueryState.EditText = soundQuery;
             UsKernelDraw.Label(new Rect(x, y, 60f, RowHeight), UsKernelDraw.Keyed(ctx, "US.VF1.SoundSearch"),
-                ctx.Theme, ctx.Theme.TextSecondary, UiFont.Tiny, TextAnchor.MiddleLeft);
+                ctx.Theme, ctx.Theme[UiPaletteRole.SecondaryForeground], UiFont.Tiny, TextAnchor.MiddleLeft);
             string typedSoundQuery = UiNative.TextField(new Rect(x + 64f, y, Math.Max(1f, width - 64f), RowHeight), soundQueryState.EditText);
             if (typedSoundQuery != soundQueryState.EditText)
             {

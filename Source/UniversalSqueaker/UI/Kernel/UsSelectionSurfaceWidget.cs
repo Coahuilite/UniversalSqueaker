@@ -57,7 +57,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// </summary>
     public static Color SelectedFill(UiTheme theme)
     {
-        return theme.Selected;
+        return theme[UiPaletteRole.SelectedSurface];
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// </summary>
     public static Color SelectedRail(UiTheme theme)
     {
-        return theme.TextPrimary;
+        return theme[UiPaletteRole.Foreground];
     }
 
     /// <summary>Source-over alpha compositing. ONE implementation of this rule on the product side: a
@@ -96,7 +96,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
     /// </summary>
     public static Color PaintedFill(UiTheme theme)
     {
-        return Composite(SelectedFill(theme), theme.Raised);
+        return Composite(SelectedFill(theme), theme[UiPaletteRole.ControlSurface]);
     }
 
     /// <summary>The perceived rail: opaque, so compositing is the identity.</summary>
@@ -168,7 +168,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
             // it >= 4.5, the drawn identity marks vs their adjacent ground >= 3.0. The Selected-vs-
             // Raised plane difference is deliberately NOT gated (PM ruling: <3 there is legal - the
             // identity rides the marks, not the background delta).
-            UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme.Border);
+            UiThemeDraw.Surface(rect, ctx.Theme, SelectedFill(ctx.Theme), ctx.Theme[UiPaletteRole.Border]);
             UiThemeDraw.AccentRail(rect, ctx.Theme, true, RailWidth, SelectedRail(ctx.Theme));
             return;
         }
@@ -183,7 +183,7 @@ public sealed class UsSelectionSurfaceWidget : IUiWidget
                 && string.Equals(hover, "true", StringComparison.OrdinalIgnoreCase)
                 && UiNative.IsMouseOver(rect))
         {
-            UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme.BorderStrong);
+            UiThemeDraw.Surface(rect, ctx.Theme, ctx.Theme.HoverSurface.Fill, ctx.Theme[UiPaletteRole.StrongBorder]);
         }
     }
 

@@ -240,7 +240,7 @@ public sealed class RemixConfirmationFlow
     private void Refresh()
     {
         bindings.NotifyChanged("confirm-step1", "confirm-step2");
-        dialogHost?.Session.BumpContentRevision();
+        dialogHost?.Invalidate();
     }
 
     private static string ReadManifest()

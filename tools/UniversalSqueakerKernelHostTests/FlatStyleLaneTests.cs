@@ -99,7 +99,7 @@ internal static class FlatStyleLaneTests
                 swatch.Id + ": the table document must parse with zero drops, got: "
                     + string.Join("; ", document.Issues.Select(i => i.Message)));
             Assert(swatch.RoleHexes.Count == tokens.Count,
-                swatch.Id + " must spell exactly the 24 declared tokens, got " + swatch.RoleHexes.Count);
+                swatch.Id + " must spell exactly the thirty declared roles, got " + swatch.RoleHexes.Count);
             UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, swatch.Id);
             for (int i = 0; i < tokens.Count; i++)
             {
@@ -136,16 +136,14 @@ internal static class FlatStyleLaneTests
             }
         }
 
-        // SelectedBorder is the documented exception: NO palette declares it, so the accent fallback
-        // (SelectedBorder ?? AccentGold) answers - the one edge that must stay derived. CORRECTIONS-R3
-        // catches that a previous edit mangled this block into ONE comment line (dead protection): it
-        // is now a real executable loop over all six tables.
+        // Every 0.8 palette explicitly declares SelectedBorder with its former effective accent.
+        // Check the actual resolved surface for all six tables, not only the declaration strings.
         for (int s = 0; s < UsSwatches.All.Count; s++)
         {
             UiTheme bag = UsTheme.Configure(UiTheme.Vanilla, UsSwatches.All[s].Id);
-            Assert(!bag.SelectedBorder.HasValue,
-                UsSwatches.All[s].Id + ": SelectedBorder must stay unclaimed so the accent fallback survives");
-            Assert(SameColor(bag.SelectedSurface.Border, bag.AccentGold),
+            Assert(bag.Palette.IsDeclared(UiPaletteRole.SelectedBorder),
+                UsSwatches.All[s].Id + ": SelectedBorder must be declared with the former effective accent");
+            Assert(SameColor(bag.SelectedSurface.Border, bag[UiPaletteRole.Accent]),
                 UsSwatches.All[s].Id + ": the selected surface's edge must answer the accent");
         }
     }
@@ -154,7 +152,7 @@ internal static class FlatStyleLaneTests
     {
         // Walk EVERY palette: the interactive ladder must stay readable without any region scope. The
         // PM tables keep the HOVER edge visibly stronger than the resting edge, and the SELECTED state
-        // separates from both through its accent edge (the unclaimed SelectedBorder fallback) or its own
+        // separates from both through its explicitly declared accent edge or its own
         // edge; a palette that erased all three differences at once would be a UX defect, so we require
         // (hover edge != raised edge) AND (selected edge != raised edge) for every shipped scheme.
         foreach (UsSwatch swatch in UsSwatches.All)
@@ -173,7 +171,7 @@ internal static class FlatStyleLaneTests
             foreach (UsSwatch other in UsSwatches.All)
             {
                 UiTheme otherBag = UsTheme.Configure(UiTheme.Vanilla, other.Id);
-                Assert(!SameColor(UsAttention.Brush, otherBag.AccentGold),
+                Assert(!SameColor(UsAttention.Brush, otherBag[UiPaletteRole.Accent]),
                     "the attention brush must not collide with palette '" + other.Id + "'s accent");
             }
         }
@@ -183,36 +181,8 @@ internal static class FlatStyleLaneTests
 
     private static Color Resolved(UiTheme bag, string token)
     {
-        return token switch
-        {
-            "Base" => bag.Base,
-            "WorkspacePlane" => bag.WorkspacePlane,
-            "Panel" => bag.Panel,
-            "SectionBand" => bag.SectionBand,
-            "Raised" => bag.Raised,
-            "Hover" => bag.Hover,
-            "Selected" => bag.Selected,
-            "Success" => bag.Success,
-            "Danger" => bag.Danger,
-            "Border" => bag.Border,
-            "BorderStrong" => bag.BorderStrong,
-            "Divider" => bag.Divider,
-            "BaseBorder" => bag.BaseBorder ?? bag.Border,
-            "PanelBorder" => bag.PanelBorder ?? bag.Border,
-            "RaisedBorder" => bag.RaisedBorder ?? bag.Border,
-            "HoverBorder" => bag.HoverBorder ?? bag.BorderStrong,
-            "TextPrimary" => bag.TextPrimary,
-            "TextSecondary" => bag.TextSecondary,
-            "TextDisabled" => bag.TextDisabled,
-            "TextOnGold" => bag.TextOnGold,
-            "TextOnDanger" => bag.TextOnDanger,
-            "DangerBorder" => bag.DangerBorder ?? bag.BorderStrong,
-            "AccentGold" => bag.AccentGold,
-            "SwitchThumbOff" => bag.SwitchThumbOff,
-            _ => throw new InvalidOperationException("unknown token '" + token + "' in the pin"),
-        };
+        return bag[(UiPaletteRole)Enum.Parse(typeof(UiPaletteRole), token)];
     }
-
 
     private static bool SameColor(Color a, Color b)
     {
@@ -264,13 +234,16 @@ internal static class FlatStyleLaneTests
         foreach (UsSwatch swatch in UsSwatches.All)
         {
             string[] want = ThemeBaseline[swatch.Id];
-            Assert(swatch.RoleHexes.Count == want.Length, swatch.Id + ": table width drift");
+            Assert(swatch.RoleHexes.Count == want.Length + 6, swatch.Id + ": table width drift");
             for (int i = 0; i < want.Length; i++)
             {
                 Assert(string.Equals(swatch.RoleHexes[i], want[i], StringComparison.OrdinalIgnoreCase),
                     swatch.Id + " role " + UsTheme.ColorTokens[i] + " must equal the baseline " + want[i]
                         + ", got " + swatch.RoleHexes[i]);
             }
+            string[] derived = { want[22], want[10], want[19], want[8], want[20], want[21] };
+            for (int i = 0; i < derived.Length; i++)
+                Assert(swatch.RoleHexes[24 + i] == derived[i], swatch.Id + ": explicit 0.8 role must preserve its former effective colour");
         }
     }
 
