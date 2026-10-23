@@ -7,7 +7,7 @@ using RimWorld;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
@@ -30,16 +30,15 @@ internal static partial class Program
         DefDatabase<UsVoicePackDef>.AllDefsListForReading.Add(pack);
         void Initialize()
         {
-            UsOneShotRuntime.Initialize();
+            SqueakerRuntime.Initialize();
             var directory = new SqueakXenotypeCatalogSnapshot();
             var selections = new Dictionary<AudioDomain, HashSet<string>>();
-            foreach (var projected in UsAuthorVoicePacks.Directory)
+            foreach (var projected in VoicePackDirectory.Directory)
             {
                 projected.TryGetPackKey(out string key);
                 directory.RacePacks.Add(projected);
                 selections[new AudioDomain(new RaceKey(projected.raceDefName), null)] = new HashSet<string> { key };
             }
-            SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
         }
         (Pawn Pawn, Thing Food, JobDriver_Ingest Driver) Begin(string id, float nutrition)
         {
@@ -53,9 +52,9 @@ internal static partial class Program
             return (pawn, food, driver);
         }
         Initialize();
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 3, 4, 4, 0, 1, 1));
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 3, 4, 4, 0, 1, 1));
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
-        var catalog = (AuthorCatalog)typeof(UsOneShotRuntime).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        var catalog = (DefinitionCatalog)typeof(SqueakerRuntime).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
         Check(pack.declaration.Entries.Count == 1 && DefDatabase<UsActionDef>.AllDefsListForReading.Count == 0
             && !catalog.Actions.Any(x => x.Condition.RequiredFacts().Contains(EatPolicy.Result)),
             "DB routing baseline is truly audio-only Eat with no Result-consuming contract, not a disabled high-priority root");
@@ -64,7 +63,7 @@ internal static partial class Program
         {
             Find.TickManager.TicksGame += 100;
             var (pawn, food, driver) = Begin("DB_OnlyEat_" + nutrition, nutrition);
-            UsOneShotRuntime.TryTick(pawn);
+            SqueakerRuntime.TryTick(pawn);
             var session = RuntimeSession(pawn);
             Check(session.LastOutcome.Action == eat && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched,
                 "DB routing ordinary state Eat first dispatch nutrition=" + nutrition);
@@ -82,12 +81,12 @@ internal static partial class Program
                 && ReferenceEquals(session, RuntimeSession(pawn)) && SoundStarter.Played.Count == starts
                 && session.State.AttemptTick == attempt && session.DiagnosticText == before,
                 "DB no Result consumer: normal return " + nutrition + " leaves playback, opportunity, attempts, cooldowns, rolls and diagnostics untouched"));
-            UsOneShotRuntime.TryTick(pawn);
+            SqueakerRuntime.TryTick(pawn);
             observations.Add((SoundStarter.Played.Count == starts && session.State.AttemptTick == attempt && session.DiagnosticText == before,
                 "DB no Result consumer: state still waits for its original due tick nutrition=" + nutrition));
             starts = SoundStarter.Played.Count;
             Find.TickManager.TicksGame = (int)due;
-            UsOneShotRuntime.TryTick(pawn);
+            SqueakerRuntime.TryTick(pawn);
             observations.Add((SoundStarter.Played.Count == starts + 1 && session.State.ConfirmedTick == due && session.LastOutcome.Action == eat,
                 "DB no Result consumer: original due state opportunity dispatches normally nutrition=" + nutrition));
             driver.Cleanup(JobCondition.Succeeded);
@@ -95,7 +94,7 @@ internal static partial class Program
             var cold = Begin("DB_ColdOnlyEat_" + nutrition, nutrition);
             starts = SoundStarter.Played.Count;
             cold.Food.Ingested(cold.Pawn, 1);
-            bool created = UsOneShotRuntime.IsControlled(cold.Pawn);
+            bool created = SqueakerRuntime.IsControlled(cold.Pawn);
             Console.WriteLine("COLD_ONLY_EAT nutrition=" + nutrition + " ownerCreated=" + created + " extraStarts=" + (SoundStarter.Played.Count - starts));
             observations.Add((!created && SoundStarter.Played.Count == starts,
                 "DB no Result consumer: result alone does not allocate an owner or fabricate a response nutrition=" + nutrition));
@@ -111,13 +110,13 @@ internal static partial class Program
         foreach (string action in new[] { after, child })
         {
             pack.declaration.Entries.Add(new VoiceEntry { Key = action.Split('/')[1], Action = action, Sound = "Ratkin1" });
-            Check(UniversalSqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", action,
+            Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", action,
                 new BehaviorValues { HardIntervalTicks = 7 }, () => true, out _), "DB routing independent result interval " + action);
         }
         Initialize();
         Find.TickManager.TicksGame += 100;
         var active = Begin("DB_ExplicitResult", 0);
-        UsOneShotRuntime.TryTick(active.Pawn);
+        SqueakerRuntime.TryTick(active.Pawn);
         var owner = RuntimeSession(active.Pawn);
         long stateDue = owner.State.NextStateTick, eatDeadline = owner.State.ActionDeadline(eat);
         Check(owner.LastOutcome.Action == eat, "DB result contracts are false on ordinary state opportunity");
@@ -151,10 +150,10 @@ internal static partial class Program
             && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && owner.State.NextStateTick == stateDue,
             "DB inherited Result consumer is routed by compiled fixed condition, not only a direct ref or root name");
         Find.TickManager.TicksGame = (int)stateDue;
-        UsOneShotRuntime.TryTick(active.Pawn);
+        SqueakerRuntime.TryTick(active.Pawn);
         Check(owner.LastOutcome.Action == eat && owner.State.ConfirmedTick == stateDue,
             "DB legitimate results leave the original ordinary Eat state opportunity usable");
         active.Driver.Cleanup(JobCondition.Succeeded);
-        UsOneShotRuntime.ResetSession();
+        SqueakerRuntime.ResetSession();
     }
 }

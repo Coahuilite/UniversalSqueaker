@@ -15,7 +15,7 @@ internal static partial class Program
         settings.SetActivity(2.5);
         settings.actionTuning.Add(new ActionTuningRecord
         {
-            actionKey = "Work",
+            actionKey = "us.core/Work",
             responses = new List<ResponseTuningValue>
             {
                 new() { key = "us.core/Age", hasEnabled = true, enabled = true },
@@ -25,18 +25,18 @@ internal static partial class Program
         });
         settings.actionTuning.Add(new ActionTuningRecord
         {
-            actionKey = "Work", raceDefName = "FixtureRace",
+            actionKey = "us.core/Work", raceDefName = "FixtureRace",
             responses = new List<ResponseTuningValue> { new() { key = "us.core/Age", hasParticipation = true, apply = false } },
             responseParameters = new List<ResponseParameterValue> { new() { key = "age.override", value = 1.3 } }
         });
         settings.actionTuning.Add(new ActionTuningRecord
         {
-            actionKey = "Work", raceDefName = "FixtureRace", xenotypeDefName = "FixtureXeno",
+            actionKey = "us.core/Work", raceDefName = "FixtureRace", xenotypeDefName = "FixtureXeno",
             responses = new List<ResponseTuningValue> { new() { key = "us.core/Mood", hasEnabled = true, enabled = false } }
         });
         var participation = new ResponseTuningValue { key = "us.core/Age", hasParticipation = true, apply = false };
         var calibration = new ResponseParameterValue { key = "age.override", value = 1.3 };
-        settings.ReplaceResponseTuning("Work", "FixtureRace", "", new[] { participation }, new[] { calibration });
+        settings.ReplaceResponseTuning("us.core/Work", "FixtureRace", "", new[] { participation }, new[] { calibration });
         calibration.value = 99;
         participation.apply = true;
         Check(settings.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "FixtureRace"), "us.core/Work",
@@ -45,7 +45,7 @@ internal static partial class Program
         bool rejected = false;
         try
         {
-            settings.ReplaceResponseTuning("Work", "FixtureRace", "", Array.Empty<ResponseTuningValue>(),
+            settings.ReplaceResponseTuning("us.core/Work", "FixtureRace", "", Array.Empty<ResponseTuningValue>(),
                 new[] { new ResponseParameterValue { key = "mood.low", value = double.NaN } });
         }
         catch (ArgumentException)
@@ -76,16 +76,17 @@ internal static partial class Program
             var neighbor = loaded.ResolveBehaviorSource(new BehaviorDomain("Pawn", "", "Neighbor", "FixtureXeno"), "us.core/Work", empty, _ => true, out _);
             Check(neighbor.AgeEnabled == true && neighbor.MoodEnabled == true && neighbor.Participation.Count == 0
                 && !neighbor.ResponseParameters.ContainsKey("age.override"), "S4 response player records do not cross exact race or xenotype domain", ref failures);
-            loaded.SetActionTuningScope("Work", "FixtureRace", "", null);
+            loaded.SetActionTuningScope("us.core/Work", "FixtureRace", "", null);
             effective = loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out _);
             Console.WriteLine("S4 reset participation=" + effective.Participation.Count + " mood=" + effective.MoodEnabled);
             Check(effective.Participation["us.core/Age"] == false, "S4 clearing unrelated scope cannot delete a response-only record", ref failures);
-            loaded.ResetActionTuningRow("Work", "FixtureRace", "");
+            loaded.ResetActionTuningRow("us.core/Work", "FixtureRace", "");
             effective = loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out _);
             Check(effective.Participation.Count == 0 && !effective.ResponseParameters.ContainsKey("age.override")
                 && effective.MoodEnabled == false && effective.ResponseParameters["mood.high"] == .8,
                 "S4 exact action Reset clears local response fields, preserves parent/child player layers", ref failures);
             loaded.actionTuning[0].responseParameters.Add(new ResponseParameterValue { key = "mood.low", value = .1 });
+            loaded.PublishBehaviorConfiguration();
             loaded.ResolveBehaviorSource(domain, "us.core/Work", empty, _ => true, out paused);
             Check(paused, "S4 duplicate response parameters are an explicit unreadable contribution, not last-wins style", ref failures);
         }

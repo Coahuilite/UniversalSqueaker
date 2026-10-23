@@ -89,7 +89,7 @@ internal static class HelpPanelLaneTests
     /// <summary>
     /// The four production files allowed to carry panel view state: the page's ephemeral state, its typed
     /// business boundary (declaration + implementation) and the Host binding table. BH1 REMOVED the fifth
-    /// (UniversalSqueakerSettingsWindow.cs): the window used to read the drawer state to size itself, and
+    /// (GameSettingsWindow.cs): the window used to read the drawer state to size itself, and
     /// with one window width there is nothing left for it to read - an owner list that still named the
     /// window would be pinning the widening it just retired.
     /// </summary>
@@ -707,9 +707,11 @@ internal static class HelpPanelLaneTests
         string settingsDirectory = Path.Combine(root, "Source", "UniversalSqueaker", "Settings");
         Assert(Directory.Exists(settingsDirectory), "the settings scan root must exist: " + settingsDirectory);
         persistenceFiles.AddRange(Directory.GetFiles(settingsDirectory, "*.cs", SearchOption.AllDirectories));
-        string modPath = Path.Combine(root, "Source", "UniversalSqueaker", "Mod.cs");
+        string modPath = Path.Combine(root, "Source", "UniversalSqueaker", "UniversalSqueaker.cs");
         Assert(File.Exists(modPath), "the Mod save path must exist: " + modPath);
         persistenceFiles.Add(modPath);
+        persistenceFiles.Add(Path.Combine(root,"Source","UniversalSqueaker","Game","GameSettingsPersistence.cs"));
+        persistenceFiles.Add(Path.Combine(root,"Source","UniversalSqueaker","Core","Configuration","SettingsSaveOwner.cs"));
 
         Assert(persistenceFiles.Count >= 4,
             "the persistence scan must really walk the settings + save path; found " + persistenceFiles.Count + " files");
@@ -975,7 +977,7 @@ internal static class HelpPanelLaneTests
         }
 
         string windowSource = File.ReadAllText(
-            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"));
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "GameSettingsWindow.cs"));
         Assert(CountToken(windowSource, "pageWidthFeed") == 0 && CountToken(windowSource, "ApplyDrawerWidth") == 0,
             "the settings window must stop feeding a page-width decision it no longer owns");
         Assert(CountToken(hostSource, "pageWidthFeed") == 0,

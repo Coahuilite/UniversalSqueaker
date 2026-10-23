@@ -155,7 +155,7 @@
   <US.Diagnostics.DevPanel.Label>Developer panel: capture, outline and report for the settings page and its confirmation dialog, from any page.</US.Diagnostics.DevPanel.Label>
   <US.Diagnostics.DevPanel.Open>Open developer panel</US.Diagnostics.DevPanel.Open>
   <US.Tuning.Area.Actions>Action rules</US.Tuning.Area.Actions>
-  <US.Tuning.Area.Mood>Mood tones</US.Tuning.Area.Mood>
+  <US.Tuning.Area.Mood>Response details</US.Tuning.Area.Mood>
   <US.Tuning.Area.Fallback>Native fallback</US.Tuning.Area.Fallback>
   <US.Tuning.Interval>Interval</US.Tuning.Interval>
   <US.Tuning.Probability>Probability</US.Tuning.Probability>
@@ -260,10 +260,10 @@
   <US.Preset.List.Empty>No baseline presets are installed. This feature reads presets provided by Defs.</US.Preset.List.Empty>
   <US.Preset.List.Import>Import</US.Preset.List.Import>
   <US.Preset.List.Selection>{0} races · {1} xenotypes</US.Preset.List.Selection>
-  <US.Preset.Race.Summary>{0}  ({1} actions, {2} moods)</US.Preset.Race.Summary>
+  <US.Preset.Race.Summary>{0}  ({1} actions, {2} fields)</US.Preset.Race.Summary>
   <US.Preset.Xeno.Inherits>(inherits race)</US.Preset.Xeno.Inherits>
   <US.Preset.Xeno.Own>(own only)</US.Preset.Xeno.Own>
-  <US.Preset.Xeno.Summary>{0}{1}  ({2} actions, {3} moods)</US.Preset.Xeno.Summary>
+  <US.Preset.Xeno.Summary>{0}{1}  ({2} actions, {3} fields)</US.Preset.Xeno.Summary>
   <US.Footer.SaveStatus.Idle>Idle</US.Footer.SaveStatus.Idle>
   <US.Footer.SaveStatus.Saving>Saving</US.Footer.SaveStatus.Saving>
   <US.Footer.SaveStatus.Saved>Saved</US.Footer.SaveStatus.Saved>
@@ -355,7 +355,7 @@
   <US.Help.Attenuation.Presets.Text>Three mutually exclusive buttons apply a distance range outright - Conservative 15-65, Balanced 15-50, Radical 15-40 - and the chart and status line update with them. Editing the range by hand switches the label to Custom.</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>Preset / Range Read-out</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>Read-only line under the chart: it names the active preset (Custom after a manual drag) and the current distance range. It changes nothing by itself.</US.Help.Attenuation.Status.Text>
-  <US.Help.BasicTuning.Overview>The playback-behaviour card: whether Easter-egg entries join the pool, plus the three runtime scalings - cooldown with time speed, frequency with talking, periodic sounds with the audible population. Distance presets and the curve live in the Distance workspace.</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Overview>Playback participation, Talking scaling and the independent Pawn Eat/Select options. Ordinary timing and competition remain a pending policy; only an explicitly activated Dev candidate dispatches.</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>Easter Egg Sounds</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>When on, Easter egg entries join the normal pool and can be drawn like any other clip; when off, only ordinary entries are eligible.</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>Time-Speed Scaling</US.Help.BasicTuning.ScaleCooldown.Label>
@@ -366,7 +366,7 @@
   <US.Help.BasicTuning.ScalePopulation.Text>When many US-connected pawns are within earshot, periodic squeaks thin out: the intervals lengthen and the probability of a random squeak attempt passing falls, both in proportion to the audible count divided by ten (the factor is never below one), so a crowded map is not proportionally noisier. On by default.</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>When enabled, a camera readout line appears above the bottom-left date bar, showing camera height and view size. Compare it against the distance band in Distance attenuation to judge who is audible at the current zoom. It never marks pawns.</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>Toggles that camera readout line. It is a viewing aid for the attenuation range and changes no audio itself.</US.Help.CameraIndicator.Toggle.Text>
-  <US.Help.Timing.Overview>The two global timing controls: the minimum interval any squeak must wait before another can fire, and the master multiplier applied to every cooldown. Both take effect immediately and never rebuild the audio routing.</US.Help.Timing.Overview>
+  <US.Help.Timing.Overview>Shows whether a Dev policy is explicitly active. Hard intervals and opportunity timing come from that candidate and the effective action configuration; the retired global cooldown and population controls are not applied.</US.Help.Timing.Overview>
   <US.Help.Timing.Interval.Label>Call Interval Master</US.Help.Timing.Interval.Label>
   <US.Help.Timing.Interval.Text>The hard floor between any two squeaks, in seconds (the slider moves in game ticks, 60 per second). 1.0x uses the default rhythm; raise it to thin out dense crowds. The default 3.6 s suits most colonies.</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>Cooldown Multiplier</US.Help.Timing.Multiplier.Label>
@@ -380,19 +380,19 @@
   <US.Help.Diagnostics.LayoutCapture.Text>Records every arranged element of this window - its rect in each coordinate space, its height mode and resolved height. Costs frames while on, and is off by default; it is never saved.</US.Help.Diagnostics.LayoutCapture.Text>
   <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around the rects this window paints, so a rect can be seen rather than read. It is independent of capture (SA1.5): with capture on it outlines the retained set, with capture off it outlines every drawn rect and samples nothing - no report is armed by this switch.</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>Writes the last completed capture once to the log, then stops. Press it again for another. For a rect that does not respond to clicks, read the input lines: each one carries the pointer, the queried rect and the verdict (hit, miss, covered or disabled).</US.Help.Diagnostics.LayoutReport.Text>
-  <US.Help.ScopeTree.Overview>The three-layer tuning editor: Global, Race and Xenotype. Each action's scope either inherits (Auto) or is forced to Off, Any or Command within the states that action supports; four mood rows override pitch, volume and jitter per layer.</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Overview>Choose the exact Global, Race or Race/Xenotype layer. Action scopes and response details read the same effective configuration as playback, including sparse overrides, origins, dependencies and local pauses.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
   <US.Help.ScopeTree.MoodTuning.Text>Four mood rows - Good, Neutral, Bad, Break - each adjusting pitch, volume and jitter via stepper and number field. Each row ends with two controls: "Reset to default" clears this layer's three factors (the preset source is kept) and "Reset to preset" re-applies that preset's baseline for this row. An unavailable control is still drawn, only disabled - hover it for the reason.</US.Help.ScopeTree.MoodTuning.Text>
-  <US.Help.ScopeTree.ResetDefault.Text>Clears this layer's pitch, volume and jitter factors back to inheritance. The preset source is kept, so "Reset to preset" stays available.</US.Help.ScopeTree.ResetDefault.Text>
-  <US.Help.ScopeTree.ResetPreset.Text>Finds the preset named by this row's source and re-applies that mood's baseline factors (pitch, volume and jitter) to this layer. The source is unchanged.</US.Help.ScopeTree.ResetPreset.Text>
+  <US.Help.ScopeTree.ResetDefault.Text>Removes the exact selected player row, including its template reset target. Author contributions and parent layers remain intact. This differs from clearing only the scope field.</US.Help.ScopeTree.ResetDefault.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>Re-applies the current template&apos;s present fields to this exact player row; unrelated player fields remain. The stored template identity is a reset target, not author-source provenance.</US.Help.ScopeTree.ResetPreset.Text>
   <US.Help.ScopeTree.Auto.Label>Auto / Use inherited value</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>Auto on an action scope clears only this layer's scope field; the mood rows' Use inherited value drops this layer's record. Either way the value falls through to the next effective layer.</US.Help.ScopeTree.Auto.Text>
-  <US.Help.PresetList.Overview>Imports tuning baselines provided by Defs: expand a preset, tick the races and xenotypes, then press Import to write its action and mood rows into the matching layers. With no preset Defs installed the card shows its empty state.</US.Help.PresetList.Overview>
+  <US.Help.ScopeTree.Auto.Text>Inherit clears only this layer&apos;s scope field. Other player fields and the template reset target remain; the effective scope then comes from the remaining layers and canonical contract.</US.Help.ScopeTree.Auto.Text>
+  <US.Help.PresetList.Overview>Templates import sparse values into explicitly selected player layers. They do not bind or replace an author behavior source. A stored template identity provides a separate reset target.</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>Preset Tree</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>Click a preset header to expand its race and xenotype tree and tick the domains that should receive the baseline. Xenotype rows are tagged "(inherits race)" or "(own only)"; the header summary counts the ticks live.</US.Help.PresetList.Tree.Text>
-  <US.Help.PresetList.Import.Text>Applies the preset's ticked action and mood rows to the matching race / xenotype layers - same keys overwrite, new keys append - tags every imported row with its source preset, and feeds the runtime resolver immediately.</US.Help.PresetList.Import.Text>
+  <US.Help.PresetList.Import.Text>Applies only template-present fields to the selected exact player domains. Repeating the import does not duplicate rows; values omitted by the template preserve the player&apos;s existing fields.</US.Help.PresetList.Import.Text>
   <US.Help.FilterBar.Overview>The composed conditions of the Packs workspace, all acting on the one card result below: the keyword matches pack names, internal names, mods, authors and the race / xenotype domains they provide; Enabled only keeps domain rows whose pack is enabled; Conflicts keeps rows whose domain is conflicting, dormant, target not loaded or dangling; Orphan only keeps rows from domains with stale selections; the author, race and xenotype dropdowns narrow the same rows; All clears every condition at once.</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>Keyword</US.Help.FilterBar.Keyword.Label>
   <US.Help.FilterBar.Keyword.Text>Case-insensitive substring matching the pack display name, defName, mod, author or pack key, and also the domain names a pack provides. A keyword that hits a xenotype name auto-expands the cards providing it; clearing the keyword restores the cards you opened yourself.</US.Help.FilterBar.Keyword.Text>
@@ -617,4 +617,13 @@
   <US.Select.NotRequired>Not required</US.Select.NotRequired>
   <US.Help.Select.Label>Selection qualifications</US.Help.Select.Label>
   <US.Help.Select.Text>Official Pawn Select requires player control, awake and not downed by default. Adjust each qualification independently for the current Pawn profile, Race or Xenotype layer; Inherit clears only that layer's field. A response still requires an accepted selection with feedback for the final selected subject. Basics restore clears only the Pawn-profile fields; restore the exact action row to clear Race or Xenotype overrides.</US.Help.Select.Text>
+  <US.Response.Details>Contract: {0}
+Effective enabled: {1}; scope: {2}; hard protection ticks: {3}; local volume/pitch: {4}/{5}
+Fixed/selected dependencies: {6}{7}
+Field origins: {8}
+Configuration/policy: {9}</US.Response.Details>
+  <US.Response.Profile>Effective system configuration: volume {0}; activity {1}; audio mode {2}; policy {3}. Select a contract in Actions to inspect the same parameters, dependencies and origins used by the response core.</US.Response.Profile>
+  <US.Response.PolicyPending>Policy unselected</US.Response.PolicyPending>
+  <US.Preset.Invalid>This template is invalid. No settings were changed. See the named preset diagnostic.</US.Preset.Invalid>
+  <US.Help.ScopeTree.ResponseDetails.Text>Read the selected action&apos;s current folded values, response participation, parameters, sources and dependencies. These are configuration facts, not a prediction that audio will dispatch.</US.Help.ScopeTree.ResponseDetails.Text>
 </LanguageData>

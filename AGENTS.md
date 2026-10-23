@@ -14,7 +14,7 @@
 - Neutral routing: a VoicePack declaration OR a per-race final fallback table admits a race. With neither, the race remains silent and receives no automatic comp; author-supplied comps are preserved. New table-only comp admission requires a full game restart; edits for already admitted races refresh the resolver. No built-in race special-casing: HAR races, vanilla Human and third-party races follow the same rule.
 - Optional dependencies degrade silently and never crash. HAR reflective discovery is **intent, not the shipped build**: `Catalog/SqueakXenotypeCatalog.cs` carries `TODO(HAR)` and discovers assembled defs only, so the reflective hint lists stay empty until that TODO lands.
 - Uninstall safety is a hard rule: removing the mod must never affect a saved game. No permanent data is written into saves; settings and profiles live in the Config folder.
-- Content and kernel are separate: the Kernel compile set must not reference Verse/Unity/RimWorld and must not contain product sound keys or race seeds. `SR_*`/Ratkin seed data belongs to SR content packs; US provides data-driven fallback profiles.
+- Content and core are separate: the complete `Core/**/*.cs` production compile set must not reference Verse/Unity/RimWorld, platform doubles, native objects or mutable process-global state. Canonical contract IDs belong there; audio algorithms contain no product sound keys or race seeds. `SR_*`/Ratkin seed data belongs to SR content packs; US provides data-driven fallback profiles. Game observation, resources and lifecycle belong to the native adapters.
 
 ## Memory protocol
 

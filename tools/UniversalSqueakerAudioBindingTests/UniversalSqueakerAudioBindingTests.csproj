@@ -30,22 +30,20 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
-    <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Production/Kernel/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Production/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/VoicePackDirectory.cs" Link="Production/VoicePackDirectory.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakerNotifications.cs" Link="Production/SqueakerNotifications.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Models/SqueakVoicePackModels.cs" Link="Production/VoicePackInfo.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Models/SqueakVoicePackDomain.cs" Link="Production/AudioSettingsVocabulary.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs" Link="Production/SqueakKernelAdapter.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsAudioBindings.cs" Link="Production/UsAudioBindings.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsNativeAudioPool.cs" Link="Production/UsNativeAudioPool.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs" Link="Production/UsInstanceOutput.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/UsAuthorVoicePacks.cs" Link="Production/UsAuthorVoicePacks.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Kernel/OneShot/*.cs" Link="Production/OneShot/%(Filename)%(Extension)" />
-    <Compile Include="../../Source/UniversalSqueaker/Authoring/BuiltInPawnContracts.cs" Link="Production/BuiltInPawnContracts.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Authoring/AuthorCatalog.cs" Link="Production/AuthorCatalog.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Authoring/BehaviorSourceDeclaration.cs" Link="Production/BehaviorSourceDeclaration.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsOneShotRuntime.cs" Link="Production/UsOneShotRuntime.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsDevelopmentPolicy.cs" Link="Production/UsDevelopmentPolicy.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsOneShotDebugActions.cs" Link="Production/UsOneShotDebugActions.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsAttackObservation.cs" Link="Production/UsAttackObservation.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsPawnEventObservation.cs" Link="Production/UsPawnEventObservation.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsWorkObservation.cs" Link="Production/UsWorkObservation.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/SqueakerRuntime.cs" Link="Production/SqueakerRuntime.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/ResponseDebugActions.cs" Link="Production/ResponseDebugActions.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsAttackObservation.cs" Link="Production/UsAttackObservation.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsPawnEventObservation.cs" Link="Production/UsPawnEventObservation.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsWorkObservation.cs" Link="Production/UsWorkObservation.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/CompSqueaker.Notifications.cs" Link="Production/CompSqueaker.Notifications.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_Verb_Attack.cs" Link="Production/Patch_Verb_Attack.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_Pawn_PostApplyDamage.cs" Link="Production/Patch_Pawn_PostApplyDamage.cs" />
@@ -54,23 +52,16 @@
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_DraftGizmo_Toggle.cs" Link="Production/Patch_DraftGizmo_Toggle.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_MentalBreak.cs" Link="Production/Patch_MentalBreak.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/CompSqueaker.EntryPoints.cs" Link="Production/CompSqueaker.EntryPoints.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakActionPlan.cs" Link="Production/SqueakActionPlan.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/BehaviorSources.cs" Link="Production/BehaviorSources.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/SqueakTimingModel.cs" Link="Production/SqueakTimingModel.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/EatPolicy.cs" Link="Production/EatPolicy.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/SelectPolicy.cs" Link="Production/SelectPolicy.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Pure/EffectiveBehavior.cs" Link="Production/EffectiveBehavior.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsIngestionObservation.cs" Link="Production/UsIngestionObservation.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/PeriodicStateBinding.cs" Link="Production/PeriodicStateBinding.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsPawnFacts.cs" Link="Production/UsPawnFacts.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/OneShot/UsControlledActionEligibility.cs" Link="Production/UsControlledActionEligibility.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/NativeActionMetadata.cs" Link="Production/SqueakActionPlan.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsIngestionObservation.cs" Link="Production/UsIngestionObservation.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsPawnFacts.cs" Link="Production/UsPawnFacts.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsControlledActionEligibility.cs" Link="Production/UsControlledActionEligibility.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Runtime/CompProperties_Squeaker.cs" Link="Production/CompProperties_Squeaker.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionConfig.cs" Link="Production/SqueakActionConfig.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs" Link="Production/SqueakActionModel.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/UI/Model/ActionPresentations.cs" Link="Production/SqueakActionModel.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Catalog/VoicePackCompAttach.cs" Link="Production/VoicePackCompAttach.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Patches/Patch_Selector_Select.cs" Link="Production/Patch_Selector_Select.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.BehaviorSources.cs" Link="Production/UniversalSqueakerSettings.BehaviorSources.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Settings/UniversalSqueakerSettings.Select.cs" Link="Production/UniversalSqueakerSettings.Select.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Settings/GameSettings.BehaviorSources.cs" Link="Production/GameSettings.BehaviorSources.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Settings/GameSettings.Select.cs" Link="Production/GameSettings.Select.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Settings/UsAtomicConfigFile.cs" Link="Production/UsAtomicConfigFile.cs" />
     <Compile Include="../../Source/UniversalSqueaker/Models/ActionTuningRecord.cs" Link="Production/ActionTuningRecord.cs" />
   </ItemGroup>

@@ -10,7 +10,7 @@ using Verse.AI;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse.Sound;
 
 internal static partial class Program
@@ -81,18 +81,16 @@ internal static partial class Program
             Contributions = new List<BehaviorContribution> { new() { Action = "us.core/Work",
                 Values = new BehaviorValues { Enabled = true }, RequiredFacts = new[] { UsSelectObservation.FactKey } } } });
         DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading.Add(dependentSource);
-        UsOneShotRuntime.Initialize();
-        Check(UniversalSqueakerMod.Settings.TryChangeBehaviorSource(behaviorDomain, "fixture.readiness/RequiresSelect",
-            UsOneShotRuntime.BehaviorSources, _ => true, out _), "source with an explicit Select implementation dependency retains its binding");
-        var directory = new SqueakXenotypeCatalogSnapshot(); directory.RacePacks.AddRange(UsAuthorVoicePacks.Directory);
+        SqueakerRuntime.Initialize(); SelectFixtureAudioPacks();
+        Check(SqueakerMod.Settings.TryChangeBehaviorSource(behaviorDomain, "fixture.readiness/RequiresSelect",
+            SqueakerRuntime.BehaviorSources, _ => true, out _), "source with an explicit Select implementation dependency retains its binding");
+        var directory = new SqueakXenotypeCatalogSnapshot(); directory.RacePacks.AddRange(VoicePackDirectory.Directory);
         directory.RacePacks.Single().TryGetPackKey(out string packKey);
         var domain = AudioDomains.RaceOnly(pawn.def.defName);
-        SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory,
-            new Dictionary<AudioDomain, HashSet<string>> { [domain] = new HashSet<string> { packKey } }), BuiltInFallbackTable.Empty);
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(harmony);
         var selector = new Selector(); selector.Select(pawn);
-        Check(selector.IsSelected(pawn) && !UsOneShotRuntime.IsControlled(pawn),
+        Check(selector.IsSelected(pawn) && !SqueakerRuntime.IsControlled(pawn),
             "vanilla selection remains intact but an incomplete observer emits no Select event or owner");
         pawn.Comp.Notify_Select();
         var session = RuntimeSession(pawn);
@@ -108,8 +106,8 @@ internal static partial class Program
         Check(session.LastOutcome.Receipt == null && session.LastOutcome.Reason.StartsWith("MissingRequiredImplementation:", StringComparison.Ordinal)
             && SoundStarter.Played.Count == 0,
             "production source resolution pauses the explicitly dependent contribution, not a fabricated available implementation");
-        Check(UniversalSqueakerMod.Settings.TryChangeBehaviorSource(behaviorDomain, null,
-            UsOneShotRuntime.BehaviorSources, _ => true, out _), "forgetting only the dependent source leaves other capability state intact");
+        Check(SqueakerMod.Settings.TryChangeBehaviorSource(behaviorDomain, null,
+            SqueakerRuntime.BehaviorSources, _ => true, out _), "forgetting only the dependent source leaves other capability state intact");
         Find.TickManager.TicksGame += 200; pawn.Comp.CompTick();
         Check(session.LastOutcome.Action == "us.core/Work" && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && SoundStarter.Played.Count == 1,

@@ -1,10 +1,10 @@
 # 0.6.0 S2：来源、资源绑定与保留的选音链
 
-S2已接入实际启动和正常播放选择路径。普通音频作者继续声明普通SoundDef，再用原有`SqueakVoicePackDef`或受控S1的`UsVoicePackDef`引用其defName；不填写资源owner、不新增注册Def，也不手修原版grain池。
+S2已接入实际启动和正常播放选择路径。普通音频作者继续声明普通SoundDef，再用当前唯一`UsVoicePackDef`引用其defName；不填写资源owner、不新增注册Def，也不手修原版grain池。
 
 ## 作者继续引用SoundDef，不冒认其提供者
 
-[LegacySupply.xml](examples/0.6/LegacySupply.xml)使用保留的普通格式；[AudioOnly.xml](examples/0.6/AudioOnly.xml)使用S1格式。两者都要求对应Race和音频模组实际加载。引用者可以是独立模组：条目归因仍是引用包，`AudioId`由实际音频来源的规范packageId和最终defName组成。规范owner使用实际`asset.mod.PackageId`的小写加载身份；原版真实`_steam`等后缀保留，不以PlayerFacing显示文本合并资源。普通声音引用不再要求被引用资源也使用`US_`前缀；包自身命名规则保持。
+[ReferencedAudio.xml](examples/0.6/ReferencedAudio.xml)和[AudioOnly.xml](examples/0.6/AudioOnly.xml)使用同一当前声明文法；旧普通reader已退休。两者都要求对应Race和音频模组实际加载。引用者可以是独立模组：条目归因仍是引用包，`AudioId`由实际音频来源的规范packageId和最终defName组成。规范owner使用实际`asset.mod.PackageId`的小写加载身份；原版真实`_steam`等后缀保留，不以PlayerFacing显示文本合并资源。普通声音引用不再要求被引用资源也使用`US_`前缀；包自身命名规则保持。
 
 独立发行声音时，自己的SoundDef名和素材目录仍须全局唯一。只改About.packageId不能消除同名SoundDef冲突。Work的一个SoundDef包含三个OGG时，US仍只有一个资源候选，原版内部池负责选clip。
 

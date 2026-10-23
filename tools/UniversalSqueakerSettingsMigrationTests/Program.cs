@@ -4,734 +4,63 @@ using System.IO;
 using UniversalSqueaker;
 using UniversalSqueaker.Kernel;
 using Verse;
-using Verse.Sound;
-
 namespace UniversalSqueaker.SettingsMigrationTests;
-
-/// <summary>
-/// Phase 3 settings-migration characterization harness. It links the production Settings/Models/Kernel/Pure
-/// sources and drives the same internal transaction methods the mod uses at startup:
-///   1. v3/v1 → v5/v2 migration creates actionTuning + moodTuning, advances schema markers, queues persistence.
-///   2. Malformed legacy records fail closed, preserve schema markers, and remain retryable.
-///   3. A settings-schema-current/voice-schema-stale load never overwrites user moodTuning edits.
-///   4. SetActionTuningScope(null) clears every duplicate for the same identity.
-///   5. SetMoodTuning with an unknown factor does not create an empty row; its "clear" clears every
-///      row's factor fields and only drops rows that carry no factor and no source (F-P).
-///   5c. The two mood reset actions: availability comes from flags/source alone (never from row
-///      existence), and "reset to preset" re-applies every factor from the preset while keeping the source.
-///   6. BaselinePresetImporter last-wins upsert and (race,xeno) composite xenotype selection keys.
-///   7. AudioDomains.TryCreate rejects whitespace-only race/xeno.
-/// </summary>
+/// <summary>Production settings/ExposeData/atomic-file and composition caller with explicit Scribe/game doubles.</summary>
 internal static partial class Program
 {
-    private static int failures;
-
-    private static int Main()
+    private static int failures, checks;
+    private static int Main(string[] args)
     {
         try
         {
-            MigrateV3RecordsTransactionallySucceeds();
-            MigrationFailureBlocksAndRetries();
-            VoiceSchemaStaleDoesNotOverwriteMoodTuning();
-            SetActionTuningScopeClearsOnlyTheNamedField();
-            SetActionTuningScopeMergesDuplicateRowsFieldWise();
-            SetActionTuningScopeKeepsProvenanceRows();
-            SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord();
-            SetMoodTuningClearKeepsProvenanceRows();
-            MoodResetAvailabilityAndPresetReapply();
-            BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys();
-            TwoPresetsImportIndependentlyAndIdempotently();
-            AudioDomainsRejectWhitespace();
-            GlobalVolumeDefaultsAndClamps();
-            GlobalVolumeScribeRoundTrip();
-            RetiredOfficialPackagesAndCoverage();
-            SetDistanceRangeClampsAndMarksCustom();
-            UiSwatchRoundTripRepairAndOmission();
-            IntroCollapsedScribeRoundTrip();
-            BehaviorSourceConfigTransaction();
-            SourceSaveUsesOriginalModGeneration();
-            S4ResponseConfigAndReset();
-            DaCompleteActionConfig();
-            DbEffectiveConfig();
-            DcSelectConfiguration();
-
-            if (failures == 0)
-            {
-                Console.WriteLine("UniversalSqueaker settings migration characterization passed.");
-                return 0;
-            }
-
-            Console.Error.WriteLine("UniversalSqueaker settings migration characterization FAILED (" + failures + ").");
-            return 1;
+            Console.WriteLine("ARGS=["+string.Join(",",args)+"]");
+            if(args.Length==1 && args[0]=="--public-template") { PublicTemplate(); return failures==0?0:1; }
+            if(args.Length!=0) throw new ArgumentException("Unknown settings test mode");
+            AudioDomainsRejectWhitespace(); GlobalVolumeDefaultsAndClamps(); GlobalVolumeScribeRoundTrip();
+            SetDistanceRangeClampsAndMarksCustom(); UiSwatchRoundTripRepairAndOmission(); IntroCollapsedScribeRoundTrip();
+            NewFormatAndPreset(); BehaviorSourceConfigTransaction(); S4ResponseConfigAndReset(); DaCompleteActionConfig();
+            DbEffectiveConfig(); DcSelectConfiguration(); SourceSaveUsesOriginalModGeneration(); CanonicalScopeAndPublication();
+            Console.WriteLine("Production settings/ExposeData/atomic-file with Scribe doubles: PASS=" + (checks-failures) + " FAIL=" + failures);
+            return failures == 0 ? 0 : 1;
         }
-        catch (Exception ex)
+        catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+    private static GameSettings NewSettings() => new();
+    private static void PublicTemplate()
+    {
+        var doc=new System.Xml.XmlDocument();doc.Load(Path.Combine(Environment.CurrentDirectory,"docs","examples","0.6","PlayerTemplate.xml"));
+        var nodes=doc.SelectNodes("//actions/li")!;int count=0;
+        foreach(System.Xml.XmlNode node in nodes)
         {
-            Console.Error.WriteLine("UNHANDLED: " + ex.GetType().FullName + " :: " + ex.Message);
-            return 1;
+            var value=new PresetActionValues();value.LoadDataFromXmlCustom(node);count++;
+            Check(value.ActionId==CoreActions.Work && value.Values.Volume.HasValue && value.Values.Scope==null,
+                "public player template uses exact fullID and preserves sparse scope absence",ref failures);
+            if(value.Values.Volume==.7)Check(value.Values.Participation["us.core/Age"]==false,"public template explicit Skip survives production value loader",ref failures);
+            else Check(value.Values.Volume==0 && !value.Values.Participation.ContainsKey("us.core/Age"),"public child template preserves zero and participation absence",ref failures);
         }
+        Check(count==2,"both public exact player-template values were consumed",ref failures);
+        Console.WriteLine("PUBLIC-TEMPLATE production value loader PASS="+(checks-failures)+" FAIL="+failures);
     }
-
-    private static void MigrateV3RecordsTransactionallySucceeds()
+    private static void CanonicalScopeAndPublication()
     {
-        Scenario("1-v3-to-v5-success");
-        UniversalSqueakerSettings settings = NewSettings(settingsSchemaVersion: 3, voicePackSchemaVersion: 1);
-
-        settings.moodOverrides.Add(SqueakMood.Good, new SqueakMoodMod
-        {
-            mood = SqueakMood.Good,
-            pitchFactor = 1.1f,
-            volumeFactor = 1f,
-            pitchJitter = FloatRange.One,
-        });
-
-        settings.xenotypePresets.Add(new XenotypePresetRecord
-        {
-            raceDefName = "RaceA",
-            xenotypeDefName = "XenoA",
-            actionOverrides = new List<XenotypeActionBehaviorOverride>
-            {
-                new XenotypeActionBehaviorOverride
-                {
-                    action = SqueakAction.Call,
-                    hasEnabled = true,
-                    enabled = true,
-                    hasIntervalMultiplier = true,
-                    intervalMultiplier = 1.5f,
-                },
-            },
-            moodOverrides = new List<XenotypeMoodOverride>
-            {
-                new XenotypeMoodOverride
-                {
-                    mood = SqueakMood.Bad,
-                    hasPitchFactor = true,
-                    pitchFactor = 0.7f,
-                },
-            },
-        });
-
-        bool migrated = settings.MigrateV3RecordsTransactionally();
-        Check(migrated, "migrate: v3/v1 transaction succeeds", ref failures);
-        Check(settings.settingsSchemaVersion == 5 && settings.voicePackSchemaVersion == 2,
-            "migrate: schema markers advanced to v5/v2", ref failures);
-        Check(settings.MigrationPersistencePendingForFixture && !settings.MigrationPersistenceBlockedForFixture,
-            "migrate: persistence pending, not blocked", ref failures);
-
-        Check(settings.actionTuning.Count == 1
-            && settings.actionTuning[0].actionKey == "Call"
-            && settings.actionTuning[0].raceDefName == "RaceA"
-            && settings.actionTuning[0].xenotypeDefName == "XenoA"
-            && settings.actionTuning[0].hasScope
-            && settings.actionTuning[0].scope == SqueakActionScope.AnyOccurrence
-            && settings.actionTuning[0].hasIntervalMultiplier
-            && Math.Abs(settings.actionTuning[0].intervalMultiplier - 1.5f) < 0.0001f,
-            "migrate: actionTuning built from legacy xenotypePresets.actionOverrides", ref failures);
-
-        Check(settings.moodTuning.Count == 2, "migrate: moodTuning contains global + xenotype rows", ref failures);
-        MoodTuningRecord? globalMood = settings.moodTuning.Find(r => r.mood == SqueakMood.Good
-            && string.IsNullOrEmpty(r.raceDefName) && string.IsNullOrEmpty(r.xenotypeDefName));
-        MoodTuningRecord? xenoMood = settings.moodTuning.Find(r => r.mood == SqueakMood.Bad
-            && r.raceDefName == "RaceA" && r.xenotypeDefName == "XenoA");
-        Check(globalMood != null && Math.Abs(globalMood.pitchFactor - 1.1f) < 0.0001f,
-            "migrate: global moodOverrides became layer-0 moodTuning", ref failures);
-        Check(xenoMood != null && xenoMood.hasPitchFactor && Math.Abs(xenoMood.pitchFactor - 0.7f) < 0.0001f,
-            "migrate: xenotypePresets.moodOverrides became layer-2 moodTuning", ref failures);
+        Scenario("r2-canonical-scope-and-single-configuration-publication");
+        var settings = NewSettings();
+        var before = settings.CaptureBehaviorConfiguration();
+        settings.ApplyToRuntime();
+        var after = settings.CaptureBehaviorConfiguration();
+        Check(after.Id == before.Id + 1 && ReferenceEquals(after, settings.CaptureBehaviorConfiguration()),
+            "one ApplyToRuntime publishes one captured configuration revision, not two", ref failures);
+        settings.SetActionTuningScope(CoreActions.Equip, "R1", "", BehaviorScope.AnyOccurrence);
+        settings.SetActionTuningScope(CoreActions.Work, "R1", "", BehaviorScope.AnyOccurrence);
+        Check(settings.ReadPlayerActionOverride(CoreActions.Equip, "R1", "").Scope == BehaviorScope.ActiveCommand
+            && settings.ReadPlayerActionOverride(CoreActions.Work, "R1", "").Scope == BehaviorScope.AnyOccurrence,
+            "settings normalize command-only Equip but preserve supported Any Work through canonical contracts", ref failures);
     }
-
-    private static void MigrationFailureBlocksAndRetries()
+    private static void Scenario(string name) => Console.WriteLine("Scenario " + name);
+    private static void Check(bool value, string name, ref int errors)
     {
-        Scenario("2-failure-and-retry");
-        UniversalSqueakerSettings settings = NewSettings(settingsSchemaVersion: 3, voicePackSchemaVersion: 1);
-        settings.voicePackSelections.Add(new VoicePackSelectionRecord
-        {
-            scope = SqueakVoicePackScope.Race,
-            raceDefName = "",
-            xenotypeDefName = "",
-            enabledPackKeys = new List<string> { "pack.mod:US_Pack" },
-        });
-
-        bool failed = settings.MigrateV3RecordsTransactionally();
-        Check(!failed, "failure: malformed selection rejects migration", ref failures);
-        Check(settings.MigrationPersistenceBlockedForFixture,
-            "failure: migrationPersistenceBlocked set", ref failures);
-        Check(settings.settingsSchemaVersion == 3 && settings.voicePackSchemaVersion == 1,
-            "failure: schema markers stay old", ref failures);
-        Check(!settings.MigrationPersistencePendingForFixture,
-            "failure: no persistence pending flag on failed transaction", ref failures);
-        Check(settings.voicePackSelections.Count == 1 && settings.voicePackSelections[0].raceDefName == "",
-            "failure: legacy source list left unchanged", ref failures);
-
-        // A later startup with the same object can fix the malformed source and retry the transaction.
-        settings.voicePackSelections[0].raceDefName = "RaceA";
-        bool retried = settings.MigrateV3RecordsTransactionally();
-        Check(retried, "retry: repaired selection migrates successfully", ref failures);
-        Check(settings.settingsSchemaVersion == 5 && settings.voicePackSchemaVersion == 2 && !settings.MigrationPersistenceBlockedForFixture,
-            "retry: schema advances and blocked flag clears", ref failures);
+        checks++; Console.WriteLine((value ? "PASS " : "FAIL ") + name); if (!value) errors++;
     }
-
-    private static void VoiceSchemaStaleDoesNotOverwriteMoodTuning()
-    {
-        Scenario("3-v5-stale-voice-does-not-overwrite-mood");
-        UniversalSqueakerSettings settings = NewSettings(settingsSchemaVersion: 5, voicePackSchemaVersion: 1);
-        settings.moodTuning.Add(new MoodTuningRecord
-        {
-            mood = SqueakMood.Bad,
-            raceDefName = "RaceB",
-            xenotypeDefName = "",
-            hasPitchFactor = true,
-            pitchFactor = 0.55f,
-        });
-        settings.moodOverrides.Add(SqueakMood.Good, new SqueakMoodMod { mood = SqueakMood.Good, pitchFactor = 1.2f });
-        settings.xenotypePresets.Add(new XenotypePresetRecord
-        {
-            raceDefName = "RaceA",
-            xenotypeDefName = "XenoA",
-            moodOverrides = new List<XenotypeMoodOverride>
-            {
-                new XenotypeMoodOverride { mood = SqueakMood.Bad, hasPitchFactor = true, pitchFactor = 0.4f },
-            },
-        });
-
-        bool migrated = settings.MigrateV3RecordsTransactionally();
-        Check(migrated, "stale-voice: voice-only migration succeeds", ref failures);
-        Check(settings.settingsSchemaVersion == 5 && settings.voicePackSchemaVersion == 2,
-            "stale-voice: settings schema unchanged at 5, voice advanced to 2", ref failures);
-        Check(settings.MigrationPersistencePendingForFixture && !settings.MigrationPersistenceBlockedForFixture,
-            "stale-voice: persistence pending, not blocked", ref failures);
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].mood == SqueakMood.Bad
-            && settings.moodTuning[0].raceDefName == "RaceB"
-            && settings.moodTuning[0].hasPitchFactor
-            && Math.Abs(settings.moodTuning[0].pitchFactor - 0.55f) < 0.0001f,
-            "stale-voice: user moodTuning edit preserved (old moodOverrides not replayed)", ref failures);
-    }
-
-    private static void SetActionTuningScopeClearsOnlyTheNamedField()
-    {
-        Scenario("4-action-scope-clears-the-named-field-only");
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.Disabled },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasIntervalMultiplier = true, intervalMultiplier = 2f },
-            new ActionTuningRecord { actionKey = "Eat", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", null);
-
-        // D2 invariant: clearing a scope names the scope field only. The two same-identity rows that
-        // carried nothing else are gone, because their last field was cleared (last-wins dedupe still
-        // holds), while the row that also carries an interval multiplier survives: that field was not
-        // named and has no control on the page, so dropping the row would silently discard data the
-        // player never saw. This check used to pin the opposite (whole row deleted) - the defect.
-        Check(settings.actionTuning.Count == 2,
-            "action-scope-null: dedupe keeps the surviving row plus the unrelated one", ref failures);
-
-        var survivingCall = settings.actionTuning.Find(r => r.actionKey == "Call");
-        Check(survivingCall != null && !survivingCall.hasScope
-            && survivingCall.hasIntervalMultiplier
-            && Math.Abs(survivingCall.intervalMultiplier - 2f) < 0.0001f,
-            "action-scope-null: the multiplier field survives, the named scope field is cleared", ref failures);
-
-        Check(settings.actionTuning.Find(r => r.actionKey == "Eat") != null,
-            "action-scope-null: unrelated row retained", ref failures);
-
-        // The same invariant on the write path: naming the scope must not drop the other fields either.
-        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
-        survivingCall = settings.actionTuning.Find(r => r.actionKey == "Call");
-        Check(survivingCall != null && survivingCall.hasScope
-            && survivingCall.scope == SqueakActionScope.Disabled
-            && survivingCall.hasIntervalMultiplier
-            && Math.Abs(survivingCall.intervalMultiplier - 2f) < 0.0001f,
-            "action-scope-write: writing the scope keeps the multiplier field", ref failures);
-
-        // And a record that carries nothing else still disappears once its last field is cleared.
-        settings.SetActionTuningScope("Eat", "RaceA", "", null);
-        Check(settings.actionTuning.Find(r => r.actionKey == "Eat") == null,
-            "action-scope-null: a row that carries nothing else is removed", ref failures);
-    }
-
-    private static void SetActionTuningScopeMergesDuplicateRowsFieldWise()
-    {
-        Scenario("4b-action-scope-duplicate-rows-merge-field-wise");
-
-        // Adversarial order: the multiplier lives in the EARLIER row and the scope-only row comes last.
-        // The runtime merges same-identity rows FIELD-WISE (union of HasX, later rows overwrite values),
-        // so the earlier row is live data. The survivor-only rule deleted the whole group and the
-        // independent verifier measured exactly that loss (F-J).
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasIntervalMultiplier = true, intervalMultiplier = 3f },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.Disabled },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", null);
-
-        Check(settings.actionTuning.Count == 1
-            && settings.actionTuning[0].hasIntervalMultiplier
-            && Math.Abs(settings.actionTuning[0].intervalMultiplier - 3f) < 0.0001f
-            && !settings.actionTuning[0].hasScope,
-            "action-scope-null (adversarial order): the earlier multiplier row survives the clear", ref failures);
-
-        // The same shape on the write path: a live probability multiplier in the earlier row must not
-        // be deleted just because the later row is the one that receives the scope.
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasProbabilityMultiplier = true, probabilityMultiplier = 0.25f },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
-
-        var probabilityRow = settings.actionTuning.Find(r => r.hasProbabilityMultiplier);
-        var scopeRow = settings.actionTuning.Find(r => r.hasScope);
-        Check(probabilityRow != null
-            && Math.Abs(probabilityRow.probabilityMultiplier - 0.25f) < 0.0001f,
-            "action-scope-write (adversarial order): the live probability multiplier survives", ref failures);
-        Check(scopeRow != null && scopeRow.scope == SqueakActionScope.Disabled,
-            "action-scope-write (adversarial order): the written scope lands on a row of the group", ref failures);
-        Check(settings.actionTuning.Count == 2
-            && !ReferenceEquals(probabilityRow, scopeRow),
-            "action-scope-write (adversarial order): the multiplier row is kept beside the scope row", ref failures);
-    }
-
-    private static void SetActionTuningScopeKeepsProvenanceRows()
-    {
-        Scenario("4c-action-scope-keeps-provenance");
-
-        // The source is the anchor of "reset to preset" (maintainer request, 2026-09-12): a row that
-        // carries only sourcePresetDefName must survive a scope clear wherever it sits in the identity
-        // group. The verifier's F-N/F-O finding judged such a row deletable because it had no reader;
-        // that reason is gone, so this scenario pins the reversed conclusion.
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset1" },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.Disabled },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", null);
-
-        Check(settings.actionTuning.Count == 1
-            && settings.actionTuning[0].sourcePresetDefName == "us.preset1",
-            "action-scope-null (provenance only): the source-only row survives the clear", ref failures);
-
-        // Provenance and multiplier in separate rows: clearing the scope must keep both.
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset2" },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasIntervalMultiplier = true, intervalMultiplier = 1.5f },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", null);
-
-        Check(settings.actionTuning.Count == 2
-            && settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset2") != null
-            && settings.actionTuning.Find(r => r.hasIntervalMultiplier) != null,
-            "action-scope-null (provenance and multiplier in separate rows): both survive", ref failures);
-
-        // The write path: the scope lands on the last row, the earlier provenance row stays, and a
-        // multiplier stored on that provenance row survives with it.
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset3", hasProbabilityMultiplier = true, probabilityMultiplier = 0.5f },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
-
-        Check(settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset3") != null,
-            "action-scope-write (provenance in the earlier row): provenance survives", ref failures);
-        Check(settings.actionTuning.Find(r => r.hasProbabilityMultiplier) != null,
-            "action-scope-write (provenance row also carries a multiplier): the multiplier survives", ref failures);
-        Check(settings.actionTuning.Find(r => r.hasScope && r.scope == SqueakActionScope.Disabled) != null,
-            "action-scope-write (provenance layout): the written scope is present in the group", ref failures);
-
-        // The write path with a *source-only* row: the F-J loss happened on exactly this side of the
-        // ledger, so the write path may not be weaker than the clear path here. The row must survive,
-        // and the write must not gift it any tuning value it did not carry (scope stays unset, both
-        // multipliers stay at their defaults).
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset4" },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-        };
-
-        settings.SetActionTuningScope("Call", "RaceA", "", SqueakActionScope.Disabled);
-
-        ActionTuningRecord? sourceOnly = settings.actionTuning.Find(r => r.sourcePresetDefName == "us.preset4");
-        Check(sourceOnly != null,
-            "action-scope-write (source-only row): the row survives the write", ref failures);
-        Check(sourceOnly != null && !sourceOnly.hasScope
-            && !sourceOnly.hasIntervalMultiplier && !sourceOnly.hasProbabilityMultiplier
-            && sourceOnly.intervalMultiplier == 1f && sourceOnly.probabilityMultiplier == 1f,
-            "action-scope-write (source-only row): the write gifts it no tuning value", ref failures);
-    }
-
-    private static void SetMoodTuningUnknownFactorDoesNotInsertEmptyRecord()
-    {
-        Scenario("5-mood-unknown-factor-no-empty-record");
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Good, raceDefName = "RaceA", hasPitchFactor = true, pitchFactor = 1f },
-        };
-
-        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "not-a-factor", 1.5f);
-
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].mood == SqueakMood.Good,
-            "mood-unknown-factor: no empty record inserted", ref failures);
-    }
-
-    private static void SetMoodTuningClearKeepsProvenanceRows()
-    {
-        Scenario("5b-mood-clear-keeps-provenance");
-
-        // F-P: the maintainer's two buttons (reset to default / reset to preset) ask about mood tuning,
-        // so the mood side needs the same source anchor the action side keeps. A row whose payload is
-        // just sourcePresetDefName must survive clear, while the three factor fields are still cleared.
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset1" },
-        };
-
-        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
-
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset1"
-            && !settings.moodTuning[0].hasPitchFactor
-            && !settings.moodTuning[0].hasVolumeFactor
-            && !settings.moodTuning[0].hasPitchJitter,
-            "mood-clear (source only): the provenance row survives, factors stay cleared", ref failures);
-
-        // Source plus one factor: the factor is cleared, the row and its source stay.
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset2", hasPitchFactor = true, pitchFactor = 1.5f },
-        };
-
-        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
-
-        // "Cleared" is the presence flag, not the stored number: the value stays byte-identical because
-        // nothing reads it while hasPitchFactor is false, and rewriting it would touch data the user never
-        // edited. Same rule as SetActionTuningScope, which clears hasScope and leaves the scope value alone.
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset2"
-            && !settings.moodTuning[0].hasPitchFactor
-            && settings.moodTuning[0].pitchFactor == 1.5f,
-            "mood-clear (source and one factor): source survives, the factor flag is cleared", ref failures);
-
-        // Adversarial order: a source-only row and a three-factor row share the identity. Only the row
-        // that ends up carrying nothing (no factor, no source) may be dropped.
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.moodpreset3" },
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasPitchFactor = true, pitchFactor = 1.5f, hasVolumeFactor = true, volumeFactor = 0.5f, hasPitchJitter = true, pitchJitter = new FloatRange(0.9f, 1.1f) },
-        };
-
-        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
-
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].sourcePresetDefName == "us.moodpreset3",
-            "mood-clear (source row plus three-factor row): only the provenance row survives", ref failures);
-
-        // No source anywhere: clear still removes the row entirely (the pre-F-P behaviour must stay).
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasVolumeFactor = true, volumeFactor = 0.5f },
-        };
-
-        settings.SetMoodTuning(SqueakMood.Bad, "RaceA", "", "clear", null);
-
-        Check(settings.moodTuning.Count == 0,
-            "mood-clear (no source): the cleared row is still dropped", ref failures);
-    }
-
-    private static void MoodResetAvailabilityAndPresetReapply()
-    {
-        Scenario("5c-mood-reset-actions");
-
-        // Availability is judged from flags and source only - F-Q: never from whether a row exists.
-        Check(SqueakMoodResetActions.EvaluateDefault(true, false, false) == SqueakMoodResetDefaultState.Ready
-            && SqueakMoodResetActions.EvaluateDefault(false, false, false) == SqueakMoodResetDefaultState.NoLocalSetting,
-            "reset-default: the three flags decide, not row existence", ref failures);
-
-        Check(SqueakMoodResetActions.EvaluatePreset("us.preset", presetDefResolved: true, presetHasEntry: true) == SqueakMoodResetPresetState.Ready
-            && SqueakMoodResetActions.EvaluatePreset("", true, true) == SqueakMoodResetPresetState.NotFromPreset
-            && SqueakMoodResetActions.EvaluatePreset("us.gone", presetDefResolved: false, presetHasEntry: true) == SqueakMoodResetPresetState.PresetMissing
-            && SqueakMoodResetActions.EvaluatePreset("us.preset", true, presetHasEntry: false) == SqueakMoodResetPresetState.PresetHasNoEntry,
-            "reset-preset: each of the four states has its own reason", ref failures);
-
-        // The F-Q row: a cleared row that kept its source is unavailable for default, ready for preset.
-        Check(SqueakMoodResetActions.EvaluateDefault(false, false, false) == SqueakMoodResetDefaultState.NoLocalSetting
-            && SqueakMoodResetActions.EvaluatePreset("us.preset", true, true) == SqueakMoodResetPresetState.Ready,
-            "reset actions: a source-only row is unavailable for default and ready for preset", ref failures);
-
-        UniversalSqueakerTuningBaselineDef preset = new()
-        {
-            defName = "us.preset",
-            races = new List<BaselineRaceEntry>
-            {
-                new BaselineRaceEntry
-                {
-                    raceDefName = "RaceA",
-                    moods = new List<BaselineMoodTuning>
-                    {
-                        new BaselineMoodTuning { mood = SqueakMood.Bad, pitchFactor = 1.4f, volumeFactor = 0.7f, pitchJitter = new FloatRange(0.9f, 1.2f) },
-                    },
-                },
-            },
-        };
-
-        // Reset to preset re-applies every factor from the preset entry and keeps the source.
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", sourcePresetDefName = "us.preset" },
-        };
-
-        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset),
-            "reset-preset: a source-bearing layer reports a successful write", ref failures);
-        Check(settings.moodTuning.Count == 1
-            && settings.moodTuning[0].hasPitchFactor && settings.moodTuning[0].pitchFactor == 1.4f
-            && settings.moodTuning[0].hasVolumeFactor && settings.moodTuning[0].volumeFactor == 0.7f
-            && settings.moodTuning[0].hasPitchJitter
-            && settings.moodTuning[0].pitchJitter.min == 0.9f && settings.moodTuning[0].pitchJitter.max == 1.2f
-            && settings.moodTuning[0].sourcePresetDefName == "us.preset",
-            "reset-preset: all three factors are re-applied and the source stays", ref failures);
-
-        // Xenotype layer mirrors the importer: inherited race baseline first, then the xeno block wins.
-        preset.races[0].moods[0].pitchFactor = 1.1f;
-        preset.races[0].xenotypes = new List<BaselineXenotypeEntry>
-        {
-            new BaselineXenotypeEntry
-            {
-                xenotypeDefName = "XenoX",
-                inheritFromRace = true,
-                moods = new List<BaselineMoodTuning>
-                {
-                    new BaselineMoodTuning { mood = SqueakMood.Bad, pitchFactor = 1.6f, volumeFactor = 1.1f, pitchJitter = new FloatRange(0.8f, 1.3f) },
-                },
-            },
-        };
-        settings.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "XenoX", sourcePresetDefName = "us.preset" },
-        };
-        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "XenoX", preset)
-            && settings.moodTuning[0].pitchFactor == 1.6f,
-            "reset-preset (xenotype): the xeno delta wins over the inherited race baseline", ref failures);
-
-        // inheritFromRace = false: the race baseline is not a source for this xenotype.
-        preset.races[0].xenotypes[0].inheritFromRace = false;
-        settings.moodTuning[0].hasPitchFactor = false;
-        settings.moodTuning[0].pitchFactor = 1f;
-        Check(settings.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "XenoX", preset)
-            && settings.moodTuning[0].pitchFactor == 1.6f,
-            "reset-preset (xenotype, inheritFromRace=false): only the xeno block is applied", ref failures);
-
-        // Refusals must leave the row untouched: no source, a source naming another def, no entry.
-        UniversalSqueakerSettings other = NewSettings();
-        other.moodTuning = new List<MoodTuningRecord>
-        {
-            new MoodTuningRecord { mood = SqueakMood.Bad, raceDefName = "RaceA", xenotypeDefName = "", hasPitchFactor = true, pitchFactor = 1.5f },
-        };
-        Check(!other.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset)
-            && other.moodTuning[0].pitchFactor == 1.5f,
-            "reset-preset (no source): refused, the row is untouched", ref failures);
-
-        other.moodTuning[0].sourcePresetDefName = "us.other";
-        Check(!other.ResetMoodTuningToPreset(SqueakMood.Bad, "RaceA", "", preset)
-            && other.moodTuning[0].pitchFactor == 1.5f,
-            "reset-preset (source names another def): refused", ref failures);
-
-        other.moodTuning[0].sourcePresetDefName = "us.preset";
-        Check(!other.ResetMoodTuningToPreset(SqueakMood.Good, "RaceA", "", preset),
-            "reset-preset (the preset has no entry for that mood): refused", ref failures);
-
-        Check(!UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Good, "RaceA", "", out _)
-            && UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Bad, "RaceA", "", out BaselineMoodTuning? raceEntry)
-            && raceEntry != null && raceEntry.pitchFactor == 1.1f
-            && UniversalSqueakerSettings.TryFindMoodBaseline(preset, SqueakMood.Bad, "RaceA", "XenoX", out _),
-            "reset-preset: the entry lookup follows the importer's merge rules", ref failures);
-    }
-
-    private static void BaselineImporterClearsDuplicatesAndUsesCompositeXenotypeKeys()
-    {
-        Scenario("6-baseline-import-last-wins-composite-key");
-        UniversalSqueakerTuningBaselineDef preset = new()
-        {
-            defName = "TestBaseline",
-            races = new List<BaselineRaceEntry>
-            {
-                new BaselineRaceEntry
-                {
-                    raceDefName = "RaceA",
-                    xenotypes = new List<BaselineXenotypeEntry>
-                    {
-                        new BaselineXenotypeEntry
-                        {
-                            xenotypeDefName = "XenoA",
-                            inheritFromRace = false,
-                            actions = new List<BaselineActionTuning>
-                            {
-                                new BaselineActionTuning { actionKey = "Call", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 1.25f, probabilityMultiplier = 1f },
-                            },
-                        },
-                    },
-                },
-                new BaselineRaceEntry
-                {
-                    raceDefName = "RaceB",
-                    xenotypes = new List<BaselineXenotypeEntry>
-                    {
-                        new BaselineXenotypeEntry
-                        {
-                            xenotypeDefName = "XenoA",
-                            inheritFromRace = false,
-                            actions = new List<BaselineActionTuning>
-                            {
-                                new BaselineActionTuning { actionKey = "Eat", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 1f, probabilityMultiplier = 1f },
-                            },
-                        },
-                    },
-                },
-            },
-        };
-
-        UniversalSqueakerSettings settings = NewSettings();
-        settings.actionTuning = new List<ActionTuningRecord>
-        {
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "XenoA", sourcePresetDefName = "old-1", hasScope = true, scope = SqueakActionScope.Disabled },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "XenoA", sourcePresetDefName = "old-2", hasScope = true, scope = SqueakActionScope.AnyOccurrence },
-            new ActionTuningRecord { actionKey = "Call", raceDefName = "RaceA", xenotypeDefName = "XenoA", sourcePresetDefName = "old-3", hasIntervalMultiplier = true, intervalMultiplier = 0.5f },
-        };
-
-        BaselinePresetImporter.Selection selection = new();
-        selection.XenotypeDomainKeys.Add(BaselinePresetImporter.XenotypeDomainKey("RaceA", "XenoA"));
-
-        BaselineImportResult result = BaselinePresetImporter.Import(preset, selection, settings);
-
-        Check(result.ActionsImported == 1 && result.MoodsImported == 0,
-            "baseline: exactly the selected RaceA/XenoA action imported", ref failures);
-        int sameIdentityCount = settings.actionTuning.FindAll(r => r.actionKey == "Call"
-            && r.raceDefName == "RaceA" && r.xenotypeDefName == "XenoA").Count;
-        Check(sameIdentityCount == 1, "baseline: duplicate same-identity rows cleared before append", ref failures);
-        Check(settings.actionTuning.Count == 1
-            && settings.actionTuning[0].sourcePresetDefName == "TestBaseline"
-            && Math.Abs(settings.actionTuning[0].intervalMultiplier - 1.25f) < 0.0001f,
-            "baseline: imported row is last-wins and carries sourcePresetDefName", ref failures);
-        Check(settings.actionTuning.Find(r => r.actionKey == "Eat" && r.raceDefName == "RaceB" && r.xenotypeDefName == "XenoA") == null,
-            "baseline: same xenotype under unselected race is not imported (composite (race,xeno) key)", ref failures);
-    }
-
-    // D8 pre-check: does the import pipeline actually support shipping TWO preset Defs and
-    // importing both? Importer-level end to end (the business boundary the UI's Import button
-    // calls through). Covers the exact shape the Nivarian fixture will take - two presets on one
-    // race, distinct action keys - and the semantics a single-preset test cannot see: cross-preset
-    // non-clobbering and re-import idempotency. The UI-click path itself is NOT exercisable here
-    // (Verse stub has no DefDatabase; that blind spot is tracked under D5), so this pins the
-    // importer contract the fixture depends on and leaves the real in-game pass to the pack.
-    private static void TwoPresetsImportIndependentlyAndIdempotently()
-    {
-        Scenario("6b-two-presets-independent-idempotent");
-
-        UniversalSqueakerTuningBaselineDef cheapTalk = new()
-        {
-            defName = "US_NivarianExp_CheapTalk",
-            presetLabel = "Cheap Talk",
-            races = new List<BaselineRaceEntry>
-            {
-                new BaselineRaceEntry
-                {
-                    raceDefName = "NivarianRace_Pawn",
-                    actions = new List<BaselineActionTuning>
-                    {
-                        new BaselineActionTuning { actionKey = "Work", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 0.15f, probabilityMultiplier = 1f },
-                    },
-                },
-            },
-        };
-        UniversalSqueakerTuningBaselineDef muteJoy = new()
-        {
-            defName = "US_NivarianExp_Mute",
-            presetLabel = "Mute Joy",
-            races = new List<BaselineRaceEntry>
-            {
-                new BaselineRaceEntry
-                {
-                    raceDefName = "NivarianRace_Pawn",
-                    actions = new List<BaselineActionTuning>
-                    {
-                        new BaselineActionTuning { actionKey = "Joy", scope = SqueakActionScope.Disabled, intervalMultiplier = 1f, probabilityMultiplier = 1f },
-                    },
-                },
-            },
-        };
-
-        UniversalSqueakerSettings settings = NewSettings();
-        BaselinePresetImporter.Selection raceSel = new();
-        raceSel.RaceDefNames.Add("NivarianRace_Pawn");
-
-        BaselineImportResult first = BaselinePresetImporter.Import(cheapTalk, raceSel, settings);
-        Check(first.ActionsImported == 1, "two-preset: first preset imports exactly one action row", ref failures);
-        ActionTuningRecord? work = settings.actionTuning.Find(r => r.actionKey == "Work");
-        Check(work != null
-                && work.sourcePresetDefName == "US_NivarianExp_CheapTalk"
-                && work.raceDefName == "NivarianRace_Pawn" && string.IsNullOrEmpty(work.xenotypeDefName)
-                && work.hasIntervalMultiplier && Math.Abs(work.intervalMultiplier - 0.15f) < 0.0001f,
-            "two-preset: Work row lands at the race layer, stamped with its own preset, interval 0.15", ref failures);
-
-        BaselineImportResult second = BaselinePresetImporter.Import(muteJoy, raceSel, settings);
-        Check(second.ActionsImported == 1, "two-preset: second preset imports exactly one action row", ref failures);
-        Check(settings.actionTuning.Count == 2, "two-preset: distinct action keys coexist (Work + Joy), count = 2", ref failures);
-        ActionTuningRecord? joy = settings.actionTuning.Find(r => r.actionKey == "Joy");
-        Check(joy != null
-                && joy.sourcePresetDefName == "US_NivarianExp_Mute"
-                && joy.hasScope && joy.scope == SqueakActionScope.Disabled,
-            "two-preset: Joy row stamped with the SECOND preset and forced Disabled", ref failures);
-        Check(settings.actionTuning.Find(r => r.actionKey == "Work")?.sourcePresetDefName == "US_NivarianExp_CheapTalk",
-            "two-preset: importing the second preset does NOT clobber the first preset's Work row (identity-scoped upsert)", ref failures);
-
-        // Re-import the first preset: same-identity clear-then-append is idempotent, and it must
-        // not touch the second preset's Joy row (different identity).
-        BaselinePresetImporter.Import(cheapTalk, raceSel, settings);
-        Check(settings.actionTuning.Count == 2
-                && settings.actionTuning.FindAll(r => r.actionKey == "Work").Count == 1
-                && settings.actionTuning.Find(r => r.actionKey == "Work")?.sourcePresetDefName == "US_NivarianExp_CheapTalk"
-                && settings.actionTuning.Find(r => r.actionKey == "Joy")?.sourcePresetDefName == "US_NivarianExp_Mute",
-            "two-preset: re-import is idempotent (no Work duplicate) and preserves the other preset's row", ref failures);
-
-        // Same key, two presets, later import wins the identity (the "same key overwrites" half).
-        UniversalSqueakerTuningBaselineDef cheapTalkLoud = new()
-        {
-            defName = "US_NivarianExp_Loud",
-            races = new List<BaselineRaceEntry>
-            {
-                new BaselineRaceEntry
-                {
-                    raceDefName = "NivarianRace_Pawn",
-                    actions = new List<BaselineActionTuning>
-                    {
-                        new BaselineActionTuning { actionKey = "Work", scope = SqueakActionScope.AnyOccurrence, intervalMultiplier = 3f, probabilityMultiplier = 1f },
-                    },
-                },
-            },
-        };
-        BaselinePresetImporter.Import(cheapTalkLoud, raceSel, settings);
-        ActionTuningRecord? workAfter = settings.actionTuning.Find(r => r.actionKey == "Work");
-        Check(settings.actionTuning.Count == 2
-                && workAfter != null
-                && workAfter.sourcePresetDefName == "US_NivarianExp_Loud"
-                && Math.Abs(workAfter.intervalMultiplier - 3f) < 0.0001f,
-            "two-preset: a different preset writing the SAME identity overwrites it (last import wins, source re-stamped)", ref failures);
-    }
-
     private static void AudioDomainsRejectWhitespace()
     {
         Scenario("7-audio-domains-reject-whitespace");
@@ -745,27 +74,28 @@ internal static partial class Program
             "audio-domains: non-empty xeno creates xenotype domain", ref failures);
     }
 
+
     private static void GlobalVolumeDefaultsAndClamps()
     {
         Scenario("8-global-volume-default-and-clamp");
-        UniversalSqueakerSettings settings = NewSettings();
+        GameSettings settings = NewSettings();
         Check(Math.Abs(settings.globalVolumeFactor - 1f) < 0.0001f,
             "global-volume: default is 1", ref failures);
 
-        CompSqueaker.GlobalVolumeFactor = 1f;
+
         settings.SetGlobalVolume(-0.5f);
         Check(Math.Abs(settings.globalVolumeFactor) < 0.0001f
-            && Math.Abs(CompSqueaker.GlobalVolumeFactor) < 0.0001f,
+            && Math.Abs((float)settings.CaptureBehaviorConfiguration().SystemVolume) < 0.0001f,
             "global-volume: negative clamps to 0 and syncs runtime", ref failures);
 
         settings.SetGlobalVolume(1.5f);
         Check(Math.Abs(settings.globalVolumeFactor - 1f) < 0.0001f
-            && Math.Abs(CompSqueaker.GlobalVolumeFactor - 1f) < 0.0001f,
+            && Math.Abs((float)settings.CaptureBehaviorConfiguration().SystemVolume - 1f) < 0.0001f,
             "global-volume: >1 clamps to 1 and syncs runtime", ref failures);
 
         settings.SetGlobalVolume(0.37f);
         Check(Math.Abs(settings.globalVolumeFactor - 0.37f) < 0.0001f
-            && Math.Abs(CompSqueaker.GlobalVolumeFactor - 0.37f) < 0.0001f,
+            && Math.Abs((float)settings.CaptureBehaviorConfiguration().SystemVolume - 0.37f) < 0.0001f,
             "global-volume: valid value writes field and runtime", ref failures);
 
         settings.SetGlobalVolume(float.NaN);
@@ -781,16 +111,17 @@ internal static partial class Program
             "global-volume: same-value no-op keeps current", ref failures);
     }
 
+
     private static void GlobalVolumeScribeRoundTrip()
     {
         Scenario("9-global-volume-scribe-round-trip");
-        UniversalSqueakerSettings source = NewSettings();
+        GameSettings source = NewSettings();
         source.globalVolumeFactor = 0.42f;
         string path = Path.Combine(Path.GetTempPath(), "us-settings-global-volume-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
         try
         {
             SafeSaver.Save(path, "Settings", () => source.ExposeData());
-            UniversalSqueakerSettings loaded = NewSettings();
+            GameSettings loaded = NewSettings();
             Scribe.loader.InitLoading(path);
             loaded.ExposeData();
             Scribe.loader.FinalizeLoading();
@@ -806,46 +137,11 @@ internal static partial class Program
 // CORRECTIONS-R1 topic 5: the teaching collapse is a persisted UI preference (uiIntroCollapsed)
     // and NOTHING else - the same Scribe file, the same default-on-omission repair path the swatch
     // round-trip established. A missing key must restore OPEN (default false), never a stuck collapse.
-    private static void IntroCollapsedScribeRoundTrip()
-    {
-        Scenario("10-intro-collapsed-scribe-round-trip");
-        UniversalSqueakerSettings source = NewSettings();
-        source.SetUiIntroCollapsed(true);
-        string path = Path.Combine(Path.GetTempPath(), "us-settings-intro-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
-        try
-        {
-            SafeSaver.Save(path, "Settings", () => source.ExposeData());
-            UniversalSqueakerSettings loaded = NewSettings();
-            Scribe.loader.InitLoading(path);
-            loaded.ExposeData();
-            Scribe.loader.FinalizeLoading();
-            Check(loaded.uiIntroCollapsed,
-                "intro: the collapsed preference survives the Scribe round-trip", ref failures);
-
-            // Omission repair: a file without the key re-reads to OPEN (default false), not garbage.
-            UniversalSqueakerSettings fresh = NewSettings();
-            string bare = Path.Combine(Path.GetTempPath(), "us-settings-intro-bare-" + Guid.NewGuid().ToString("N") + ".xml");
-            File.WriteAllText(bare, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Settings />");
-            UniversalSqueakerSettings omitted = NewSettings();
-            omitted.uiIntroCollapsed = true; // dirty pre-state must be repaired by the default
-            Scribe.loader.InitLoading(bare);
-            omitted.ExposeData();
-            Scribe.loader.FinalizeLoading();
-            Check(!omitted.uiIntroCollapsed,
-                "intro: an omitted key restores the OPEN default (Look default false)", ref failures);
-            if (File.Exists(bare)) File.Delete(bare);
-        }
-        finally
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
-    }
-
 
     private static void SetDistanceRangeClampsAndMarksCustom()
     {
         Scenario("10-distance-range-clamp-custom");
-        UniversalSqueakerSettings settings = NewSettings();
+        GameSettings settings = NewSettings();
         settings.distancePreset = SqueakDistancePreset.Balanced;
         settings.distanceRange = new FloatRange(15f, 50f);
 
@@ -882,56 +178,11 @@ internal static partial class Program
     }
 
     // The prepublication retirement removes the dedicated capability, not all responses by these Pawns.
-    private static void RetiredOfficialPackagesAndCoverage()
-    {
-        Scenario("retired-official-packages-and-production-coverage");
-        var settings = NewSettings();
-        Check(Enum.GetNames(typeof(SqueakAction)).Length == 15 && SqueakActionDefinitions.Count == 15,
-            "retirement: exact fifteen official packages, no reserved slots", ref failures);
-        Check(typeof(UniversalSqueakerSettings).GetField("allowBabyActions") == null
-            && typeof(UniversalSqueakerSettings).GetMethod("SetAllowBabyActions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) == null,
-            "retirement: dedicated flag and setter are gone rather than permanently forced off", ref failures);
-        var pack = new SqueakVoicePackDef();
-        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
-            pack.actions.Add(new SqueakVoicePackAction { action = action, sounds = new List<SoundDef> { new SoundDef() } });
-        pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Call, sounds = new List<SoundDef> { new SoundDef() } });
-        pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)15, sounds = new List<SoundDef> { new SoundDef() } });
-        pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)16, sounds = new List<SoundDef> { new SoundDef() } });
-        Check(pack.CountPlayableActions() == 15, "retirement: duplicate and retired numeric entries cannot inflate coverage", ref failures);
-        bool wasBiotech = ModsConfig.BiotechActive;
-        string path = Path.Combine(Path.GetTempPath(), "us-retired-package-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
-        try
-        {
-            foreach (bool biotech in new[] { false, true })
-            {
-                ModsConfig.BiotechActive = biotech;
-                Check(pack.CountPlayableActions() == 15 && SqueakActionDefinitions.IsKnown(SqueakAction.MentalBreak),
-                    "retirement: DLC changes neither official inventory nor genuine MentalBreak admission " + biotech, ref failures);
-            }
-            settings.allowEasterEggSounds = true;
-            SafeSaver.Save(path, "Settings", () => settings.ExposeData());
-            Check(!File.ReadAllText(path).Contains("allowBabyActions"), "retirement: production ExposeData no longer writes dedicated flag", ref failures);
-            var loaded = NewSettings();
-            Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
-            Check(loaded.allowEasterEggSounds, "retirement: unrelated shared setting survives production settings/Scribe-double round-trip", ref failures);
-        }
-        finally
-        {
-            ModsConfig.BiotechActive = wasBiotech;
-            if (File.Exists(path)) File.Delete(path);
-        }
-    }
-    // ---- helpers ----
 
-    /// <summary>
-    /// UIR-006 (WO-US-UI-REFACTOR-20261014): the selected palette persists through the real Scribe
-    /// boundary. Three failure classes: the value lost in round-trip; a hand-edited unknown id surviving
-    /// into the UI; and the default WRITING a node (the add-only zero-byte-delta rule).
-    /// </summary>
     private static void UiSwatchRoundTripRepairAndOmission()
     {
         Scenario("16-ui-swatch-round-trip-repair-omission");
-        UniversalSqueakerSettings source = NewSettings();
+        GameSettings source = NewSettings();
         source.SetUiSwatchId("biotech");
         Check(source.uiSwatchId == "biotech", "ui-swatch: setter accepts a known id", ref failures);
         string path = Path.Combine(Path.GetTempPath(), "us-settings-swatch-" + Guid.NewGuid().ToString("N") + ".xml");
@@ -939,15 +190,15 @@ internal static partial class Program
         {
             SafeSaver.Save(path, "Settings", () => source.ExposeData());
             string xml = File.ReadAllText(path);
-            Check(xml.Contains("uiSwatchId"), "ui-swatch: a non-default value writes its node", ref failures);
-            UniversalSqueakerSettings loaded = NewSettings();
+            Check(xml.Contains("appearanceSwatch"), "ui-swatch: a non-default value writes its node", ref failures);
+            GameSettings loaded = NewSettings();
             Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
             Check(loaded.uiSwatchId == "biotech", "ui-swatch: Scribe round-trip preserves the value", ref failures);
 
             // Unknown hand-edited id -> PostLoadInit repairs to the shipped default.
             string bad = path + "-bad.xml";
             File.WriteAllText(bad, xml.Replace(">biotech<", ">neon<"));
-            UniversalSqueakerSettings repaired = NewSettings();
+            GameSettings repaired = NewSettings();
             Scribe.loader.InitLoading(bad);
             repaired.ExposeData();
             // The normalisation block is the PostLoadInit pass - run it exactly as the
@@ -964,12 +215,12 @@ internal static partial class Program
         }
 
         // Default omits the node entirely (add-only zero-byte-delta rule).
-        UniversalSqueakerSettings clean = NewSettings();
+        GameSettings clean = NewSettings();
         string cleanPath = Path.Combine(Path.GetTempPath(), "us-settings-swatch-clean-" + Guid.NewGuid().ToString("N") + ".xml");
         try
         {
             SafeSaver.Save(cleanPath, "Settings", () => clean.ExposeData());
-            Check(!File.ReadAllText(cleanPath).Contains("uiSwatchId"),
+            Check(!File.ReadAllText(cleanPath).Contains("appearanceSwatch"),
                 "ui-swatch: the default writes no node", ref failures);
         }
         finally
@@ -978,26 +229,42 @@ internal static partial class Program
         }
     }
 
-    private static UniversalSqueakerSettings NewSettings(int settingsSchemaVersion = 5, int voicePackSchemaVersion = 2)
+
+    private static void IntroCollapsedScribeRoundTrip()
     {
-        UniversalSqueakerSettings settings = new()
+        Scenario("10-intro-collapsed-scribe-round-trip");
+        GameSettings source = NewSettings();
+        source.SetUiIntroCollapsed(true);
+        string path = Path.Combine(Path.GetTempPath(), "us-settings-intro-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
         {
-            settingsSchemaVersion = settingsSchemaVersion,
-            voicePackSchemaVersion = voicePackSchemaVersion,
-            voicePackSelections = new List<VoicePackSelectionRecord>(),
-            xenotypePresets = new List<XenotypePresetRecord>(),
-            actionTuning = new List<ActionTuningRecord>(),
-            moodTuning = new List<MoodTuningRecord>(),
-            moodOverrides = new Dictionary<SqueakMood, SqueakMoodMod>(),
-        };
-        return settings;
+            SafeSaver.Save(path, "Settings", () => source.ExposeData());
+            GameSettings loaded = NewSettings();
+            Scribe.loader.InitLoading(path);
+            loaded.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(loaded.uiIntroCollapsed,
+                "intro: the collapsed preference survives the Scribe round-trip", ref failures);
+
+            // Omission repair: a file without the key re-reads to OPEN (default false), not garbage.
+            GameSettings fresh = NewSettings();
+            string bare = Path.Combine(Path.GetTempPath(), "us-settings-intro-bare-" + Guid.NewGuid().ToString("N") + ".xml");
+            File.WriteAllText(bare, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Settings />");
+            GameSettings omitted = NewSettings();
+            omitted.uiIntroCollapsed = true; // dirty pre-state must be repaired by the default
+            Scribe.loader.InitLoading(bare);
+            omitted.ExposeData();
+            Scribe.loader.FinalizeLoading();
+            Check(!omitted.uiIntroCollapsed,
+                "intro: an omitted key restores the OPEN default (Look default false)", ref failures);
+            if (File.Exists(bare)) File.Delete(bare);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
-    private static void Scenario(string name) => Console.WriteLine("Scenario " + name + "...");
 
-    private static void Check(bool condition, string name, ref int failures)
-    {
-        if (condition) Console.WriteLine("  ok: " + name);
-        else { Console.Error.WriteLine("  FAIL: " + name); failures++; }
-    }
+
 }

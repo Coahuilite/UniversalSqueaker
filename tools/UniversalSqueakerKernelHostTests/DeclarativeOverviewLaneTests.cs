@@ -50,7 +50,7 @@ internal static class DeclarativeOverviewLaneTests
     /// The narrowest PAGE width the game can produce, and it is DERIVED rather than chosen: the settings
     /// window is floored at <c>WindowChromeLayout.SettingsWidthFloor</c> (pinned in <c>Program.cs</c> over a
     /// screen list), and the window contracts its body by 24px on each side before the host arranges it
-    /// (<c>UniversalSqueakerSettingsWindow.cs:169</c>). Derived from the shipped constant on purpose: if the
+    /// (<c>GameSettingsWindow.cs:169</c>). Derived from the shipped constant on purpose: if the
     /// product lowers the floor, this sweep follows it down instead of keeping a stale literal list.
     /// </summary>
     private const float NarrowestReachablePageWidth = WindowChromeLayout.SettingsWidthFloor - 24f * 2f;
@@ -99,7 +99,7 @@ internal static class DeclarativeOverviewLaneTests
     /// row; the declarative shape needs one channel per value.</summary>
     private static readonly string[] DeclaredValueBindings =
     {
-        "allow-eggs", "scale-cooldown", "scale-talking", "scale-population",
+        "allow-eggs", "scale-talking",
         "camera-indicator"
     };
 

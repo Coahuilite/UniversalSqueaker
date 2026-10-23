@@ -64,7 +64,7 @@ internal static class Fl08MigrationTests
             var retainedEditor = editor;
             int identity = host.Session.Identity;
             host.SetScrollPosition("content-scroll", new Vector2(0, 20));
-            var settings = new UniversalSqueakerSettings();
+            var settings = new GameSettings();
             UsKernelSettingsHost.ApplySwatchLive(settings, host, UsTheme.ChromeTheme, "biotech");
             Check(editor.Draft == "local" && ReferenceEquals(node, host.Session.GetNodeByElementId("packs-keyword")), "theme switch retains actual node and editor draft");
             host.SetDisplayDemand(false);

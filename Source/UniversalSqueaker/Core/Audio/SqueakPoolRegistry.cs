@@ -1,0 +1,302 @@
+using System;
+using System.Collections.Generic;
+
+namespace UniversalSqueaker.Kernel;
+
+/// <summary>一个域的池：条目按 PackKey 序数排序（跨重建稳定，orphan 语义沿用旧 GetSelected 的 Sort）。</summary>
+public sealed class DomainPool
+{
+    public readonly AudioDomain Domain;
+    public readonly IReadOnlyList<VoicePackEntry> Entries;
+
+    internal DomainPool(AudioDomain domain, List<VoicePackEntry> entries)
+    {
+        Domain = domain;
+        entries.Sort((a, b) => StringComparer.Ordinal.Compare(a.PackKey, b.PackKey));
+        Entries = entries;
+    }
+}
+
+/// <summary>
+/// 不可变选择注册表。语义规范（锚定历史等价评审）：
+///   Off       → 仅内置表
+///   Fallback  → XenotypePack → RacePack → PackFallback → BuiltInFallback 四级短路
+///   Remix     → 四级（非 None）等权折叠，固定序 [xeno, race, pack fallback, builtin]
+///   entry 级过滤 = 年龄变体候选集 → egg 资格 → gate；variant 级带权 = ActionSoundSet.Weight 累计权重；
+///   sound 级过滤 = 旧 pack.Choose 内过滤；等权抽取 = floor(rolls.Next01() * N) 的分布等价。
+///   带权 = entry.Weight 累计权重 + ActionSoundSet.Weight 累计权重；ageTag 未声明、egg 关闭、无 PackFallback 时严格保留 0.3.0 行为。
+/// </summary>
+public sealed class SqueakPoolRegistry
+{
+    private readonly IReadOnlyDictionary<AudioDomain, DomainPool> poolsByDomain;
+    private readonly BuiltInFallbackTable builtIn;
+
+    public static SqueakPoolRegistry Empty => new(Array.Empty<VoicePackEntry>(), BuiltInFallbackTable.Empty);
+
+    public SqueakPoolRegistry(IReadOnlyList<VoicePackEntry> entries, BuiltInFallbackTable builtIn)
+    {
+        this.builtIn = builtIn ?? throw new ArgumentNullException(nameof(builtIn));
+        Dictionary<AudioDomain, List<VoicePackEntry>> grouped = new();
+        foreach (VoicePackEntry entry in entries ?? Array.Empty<VoicePackEntry>())
+        {
+            if (entry == null || entry.PackKey == null || entry.Actions == null) continue;
+            if (!IsPositiveFinite(entry.Weight)) continue;
+            if (!grouped.TryGetValue(entry.Domain, out List<VoicePackEntry>? list))
+            {
+                list = new List<VoicePackEntry>();
+                grouped.Add(entry.Domain, list);
+            }
+            list.Add(entry);
+        }
+        Dictionary<AudioDomain, DomainPool> pools = new();
+        foreach (KeyValuePair<AudioDomain, List<VoicePackEntry>> group in grouped) pools.Add(group.Key, new DomainPool(group.Key, group.Value));
+        poolsByDomain = pools;
+    }
+
+    /// <summary>选择链求值。<see cref="SelectionMode"/> 是内核 API，适配层负责从设置枚举映射。
+    /// 空/空白 ActionKey 与未知 SelectionMode 均显式返回 None，绝不落入 Remix 或字典异常路径。</summary>
+    public ChainResult Select(SelectionContext ctx, SelectionMode mode, ISoundGate gate, IRollSource rolls, Func<AudioDomain, string, bool>? selectedPacks = null)
+    {
+        if (gate == null) throw new ArgumentNullException(nameof(gate));
+        if (rolls == null) throw new ArgumentNullException(nameof(rolls));
+        if (string.IsNullOrWhiteSpace(ctx.ActionKey)) return ChainResult.None;
+        if (mode != SelectionMode.Off && mode != SelectionMode.Fallback && mode != SelectionMode.Remix)
+            return ChainResult.None;
+        ChainResult vanilla = ctx.Domain.IsNonPawn ? ChainResult.None : SelectBuiltIn(ctx, gate);
+        if (mode == SelectionMode.Off) return vanilla;
+
+        ChainResult x = ctx.Domain.Xenotype != null
+            ? SelectTier(PoolFor(ctx.Domain), ChainTier.XenotypePack, ctx, gate, rolls, selectedPacks)
+            : ChainResult.None;
+        ChainResult r = SelectTier(PoolFor(ctx.Domain.Parent), ctx.Domain.IsNonPawn ? ChainTier.ObjectPack : ChainTier.RacePack, ctx, gate, rolls, selectedPacks);
+
+        if (mode == SelectionMode.Fallback)
+        {
+            if (!x.IsNone) return x;
+            if (!r.IsNone) return r;
+            ChainResult fallback = SelectPackFallback(PoolFor(ctx.Domain), ctx, gate, rolls, selectedPacks);
+            return !fallback.IsNone ? fallback : vanilla;
+        }
+
+        // Preserve the frozen default-state draw stream only when this action has no declared fallback.
+        // A declared but currently gated fallback remains a fourth, non-playable tier and is skipped.
+        DomainPool? fallbackPool = PoolFor(ctx.Domain);
+        if (!HasPackFallback(fallbackPool, ctx.ActionKey, selectedPacks)) return SelectRemixThree(x, r, vanilla, rolls);
+        ChainResult p = SelectPackFallback(fallbackPool, ctx, gate, rolls, selectedPacks);
+        return SelectRemixFour(x, r, p, vanilla, rolls);
+    }
+
+    private static ChainResult SelectRemixFour(ChainResult x, ChainResult r, ChainResult p, ChainResult vanilla, IRollSource rolls)
+    {
+        ChainResult tier0 = x, tier1 = r, tier2 = p, tier3 = vanilla;
+        int count = 0;
+        if (!tier0.IsNone) count++;
+        if (!tier1.IsNone) count++;
+        if (!tier2.IsNone) count++;
+        if (!tier3.IsNone) count++;
+        if (count == 0) return ChainResult.None;
+        if (count == 1)
+        {
+            if (!tier0.IsNone) return tier0;
+            if (!tier1.IsNone) return tier1;
+            return !tier2.IsNone ? tier2 : tier3;
+        }
+        int index = RollIndex(count, rolls, SelectionRollPurpose.Tier);
+        if (!tier0.IsNone && index-- == 0) return tier0;
+        if (!tier1.IsNone && index-- == 0) return tier1;
+        if (!tier2.IsNone && index-- == 0) return tier2;
+        return tier3;
+    }
+
+    public DomainPool? PoolFor(AudioDomain domain) => poolsByDomain.TryGetValue(domain, out DomainPool? pool) ? pool : null;
+
+    private static ChainResult SelectRemixThree(ChainResult x, ChainResult r, ChainResult vanilla, IRollSource rolls)
+    {
+        ChainResult tier0 = x, tier1 = r, tier2 = vanilla;
+        int count = 0;
+        if (!tier0.IsNone) count++;
+        if (!tier1.IsNone) count++;
+        if (!tier2.IsNone) count++;
+        if (count == 0) return ChainResult.None;
+        if (count == 1) return !tier0.IsNone ? tier0 : (!tier1.IsNone ? tier1 : tier2);
+        // 压缩索引按非空层依次递减（与 SelectRemixFour 的跳过逻辑一致）：
+        // 前置/中间层为空时索引仍落在 [xeno, race, builtin] 的**非空成员**上，绝不漏选末层或返回 None。
+        int index = RollIndex(count, rolls, SelectionRollPurpose.Tier);
+        if (!tier0.IsNone && index-- == 0) return tier0;
+        if (!tier1.IsNone && index-- == 0) return tier1;
+        return tier2;
+    }
+
+
+    /// <summary>诊断/编辑器枚举。</summary>
+    public IReadOnlyList<DomainPool> PoolsFor(AudioDomain domain)
+    {
+        DomainPool? pool = PoolFor(domain);
+        return pool == null ? Array.Empty<DomainPool>() : new[] { pool };
+    }
+
+    private static int VariantIndex(IReadOnlyList<ActionSoundSet> sets, ActionSoundSet selected)
+    {
+        for (int i = 0; i < sets.Count; i++) if (ReferenceEquals(sets[i], selected)) return i;
+        throw new InvalidOperationException("Selected variant was not in its declared action");
+    }
+
+    private static bool HasPackFallback(DomainPool? pool, string actionKey, Func<AudioDomain, string, bool>? selectedPacks)
+    {
+        if (pool == null) return false;
+        foreach (VoicePackEntry entry in pool.Entries)
+        {
+            if (selectedPacks != null && !selectedPacks(entry.Domain, entry.PackKey)) continue;
+            if (entry.PackFallback != null && entry.PackFallback.ContainsKey(actionKey)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>内置表 tier：TryParseBuiltIn（内置键 ↔ 枚举名一致性由 validator 双向锁）+ profile 键 + gate。</summary>
+    private ChainResult SelectBuiltIn(SelectionContext ctx, ISoundGate gate)
+    {
+        if (!builtIn.TryGetSoundKey(ctx.Domain.Race, ctx.ActionKey, out string? key) || key == null) return ChainResult.None;
+        return gate.Playable(key, ctx) ? new ChainResult(key, ChainTier.BuiltInFallback, null, false,
+            new SelectionContext(ctx.Domain.Parent, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs),
+            entryKey: "final/" + ctx.Domain.Parent + "/" + ctx.ActionKey) : ChainResult.None;
+    }
+
+    private static ChainResult SelectTier(DomainPool? pool, ChainTier tier, SelectionContext ctx, ISoundGate gate, IRollSource rolls, Func<AudioDomain, string, bool>? selectedPacks)
+    {
+        if (pool == null || pool.Entries.Count == 0) return ChainResult.None;
+        // 每个 pack 先收集年龄候选（exact-age 优先，无 exact 才 all-age），
+        // 再按 egg 资格与 playability 过滤；exact 存在即使全部不可用也绝不退回 all-age。
+        // entry 选中后才在候选变体中按 ActionSoundSet.Weight 抽一个，再做 sound 级抽取。
+        List<VoicePackEntry> valid = new(pool.Entries.Count);
+        Dictionary<VoicePackEntry, List<ActionSoundSet>> selectedVariants = new();
+        foreach (VoicePackEntry entry in pool.Entries)
+        {
+            if (selectedPacks != null && !selectedPacks(entry.Domain, entry.PackKey)) continue;
+            if (!entry.TryGetAction(ctx.ActionKey, out IReadOnlyList<ActionSoundSet>? variants)) continue;
+            List<ActionSoundSet>? candidates = SelectVariantCandidates(variants, ctx);
+            if (candidates == null) continue;
+            List<ActionSoundSet> available = new(candidates.Count);
+            foreach (ActionSoundSet set in candidates)
+            {
+                if (set == null || !set.HasSounds) continue;
+                if (set.IsEgg && !ctx.AllowEggs) continue;
+                if (!HasPlayableKey(set, ctx, gate)) continue;
+                available.Add(set);
+            }
+            if (available.Count == 0) continue;
+            valid.Add(entry);
+            selectedVariants.Add(entry, available);
+        }
+        if (valid.Count == 0) return ChainResult.None;
+        VoicePackEntry chosen = DrawEntry(valid, rolls);
+        ActionSoundSet chosenSet = DrawVariant(selectedVariants[chosen], rolls);
+        string? key = DrawSoundKey(chosenSet, ctx, gate, rolls);
+        return key == null ? ChainResult.None : new ChainResult(key, tier, chosen.PackKey, chosenSet.IsEgg,
+            new SelectionContext(chosen.Domain, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs), chosenSet,
+            chosenSet.Entry?.EntryKey ?? chosen.PackKey + "/" + ctx.ActionKey + "/variant/" + VariantIndex(chosen.Actions[ctx.ActionKey], chosenSet));
+    }
+
+    /// <summary>PackFallback 始终求 ctx.Domain 的精确池；xeno ctx 不越域读取 race fallback。</summary>
+    private static ChainResult SelectPackFallback(DomainPool? pool, SelectionContext ctx, ISoundGate gate, IRollSource rolls, Func<AudioDomain, string, bool>? selectedPacks)
+    {
+        if (pool == null || pool.Entries.Count == 0) return ChainResult.None;
+        List<VoicePackEntry> valid = new(pool.Entries.Count);
+        foreach (VoicePackEntry entry in pool.Entries)
+        {
+            if (selectedPacks != null && !selectedPacks(entry.Domain, entry.PackKey)) continue;
+            if (entry.PackFallback == null || !entry.PackFallback.TryGetValue(ctx.ActionKey, out string? key) || key == null) continue;
+            if (gate.Playable(key, ctx)) valid.Add(entry);
+        }
+        if (valid.Count == 0) return ChainResult.None;
+        VoicePackEntry chosen = DrawEntry(valid, rolls);
+        string? fallbackKey = chosen.PackFallback![ctx.ActionKey];
+        return new ChainResult(fallbackKey, ChainTier.PackFallback, chosen.PackKey, false,
+            new SelectionContext(chosen.Domain, ctx.ActionKey, ctx.Age, ctx.Production, ctx.AllowEggs),
+            entryKey: chosen.PackKey + "/fallback/" + ctx.ActionKey);
+    }
+
+    /// <summary>exact age 优先；exact 存在即使 egg 关闭或全 mute 也不退回 all-age。
+    /// 返回候选变体列表（exact 全部或 all-age 全部），由调用方过滤可用性后再加权抽取。</summary>
+    private static List<ActionSoundSet>? SelectVariantCandidates(IReadOnlyList<ActionSoundSet>? variants, SelectionContext ctx)
+    {
+        if (variants == null || variants.Count == 0) return null;
+        List<ActionSoundSet> exact = new();
+        foreach (ActionSoundSet set in variants)
+            if (set != null && set.AgeTag == ctx.Age) exact.Add(set);
+        if (exact.Count > 0) return exact;
+        List<ActionSoundSet> allAge = new();
+        foreach (ActionSoundSet set in variants)
+            if (set != null && set.AgeTag == null) allAge.Add(set);
+        return allAge.Count == 0 ? null : allAge;
+    }
+
+    /// <summary>变体级带权抽取：ActionSoundSet.Weight 累计权重；非法权重按 1f 等权处理，避免 NaN/0 清空候选。</summary>
+    private static ActionSoundSet DrawVariant(List<ActionSoundSet> variants, IRollSource rolls)
+    {
+        if (variants.Count == 1) return variants[0];
+        double total = 0;
+        foreach (ActionSoundSet set in variants) total += EffectiveVariantWeight(set.Weight);
+        double roll = Roll(rolls, SelectionRollPurpose.Variant) * total;
+        double cumulative = 0;
+        foreach (ActionSoundSet set in variants)
+        {
+            cumulative += EffectiveVariantWeight(set.Weight);
+            if (roll < cumulative) return set;
+        }
+        return variants[variants.Count - 1];
+    }
+
+    private static double EffectiveVariantWeight(float weight) => IsPositiveFinite(weight) ? weight : 1.0;
+
+    private static bool HasPlayableKey(ActionSoundSet set, SelectionContext ctx, ISoundGate gate)
+    {
+        foreach (string soundKey in set.SoundKeys)
+        {
+            if (soundKey != null && gate.Playable(soundKey, ctx)) return true;
+        }
+        return false;
+    }
+
+    private static VoicePackEntry DrawEntry(List<VoicePackEntry> valid, IRollSource rolls)
+    {
+        if (valid.Count == 1) return valid[0];
+        // 构造期已过滤无效 Weight，此处权重恒为有限正数。
+        double total = 0;
+        foreach (VoicePackEntry entry in valid) total += entry.Weight;
+        double roll = Roll(rolls, SelectionRollPurpose.Pack) * total;
+        double cumulative = 0;
+        foreach (VoicePackEntry entry in valid)
+        {
+            cumulative += entry.Weight;
+            if (roll < cumulative) return entry;
+        }
+        return valid[valid.Count - 1];
+    }
+
+    private static string? DrawSoundKey(ActionSoundSet set, SelectionContext ctx, ISoundGate gate, IRollSource rolls)
+    {
+        if (set.SoundKeys == null || set.SoundKeys.Count == 0) return null;
+        // sound 级过滤（= 旧 pack.Choose 内过滤）：逐个 playable 等权抽取。
+        List<string> playable = new(set.SoundKeys.Count);
+        foreach (string soundKey in set.SoundKeys)
+        {
+            if (soundKey != null && gate.Playable(soundKey, ctx)) playable.Add(soundKey);
+        }
+        if (playable.Count == 0) return null;
+        return playable.Count == 1 ? playable[0] : playable[RollIndex(playable.Count, rolls, SelectionRollPurpose.Sound)];
+    }
+
+    /// <summary>等权索引：floor(Next01() * count)，clamp 到 count-1。</summary>
+    private static int RollIndex(int count, IRollSource rolls, SelectionRollPurpose purpose)
+    {
+        int index = (int)(Roll(rolls, purpose) * count);
+        if (index < 0) index = 0;
+        if (index >= count) index = count - 1;
+        return index;
+    }
+
+    private static double Roll(IRollSource source, SelectionRollPurpose purpose)
+        => source is ISelectionRollSource tagged ? tagged.Next01(purpose) : source.Next01();
+
+    private static bool IsPositiveFinite(float value) => value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
+}

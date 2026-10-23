@@ -5,7 +5,7 @@ using HarmonyLib;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
@@ -31,23 +31,22 @@ internal static partial class Program
             Contributions = new List<BehaviorContribution> { new() { Action = "us.core/Select", Values = new BehaviorValues {
                 SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false } } } });
         DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading.Add(author);
-        UsOneShotRuntime.Initialize();
+        SqueakerRuntime.Initialize();
         var directory = new SqueakXenotypeCatalogSnapshot();
         var selections = new Dictionary<AudioDomain, HashSet<string>>();
-        foreach (var audio in UsAuthorVoicePacks.Directory) {
+        foreach (var audio in VoicePackDirectory.Directory) {
             audio.TryGetPackKey(out var key); directory.RacePacks.Add(audio);
             selections[new AudioDomain(new RaceKey(audio.raceDefName), null)] = new HashSet<string> { key };
         }
-        SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
-        var settings = UniversalSqueakerMod.Settings;
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        var settings = SqueakerMod.Settings;
         var selector = new Selector(); var proxy = new object(); selector.Proxies.Add(proxy, p);
         bool Select(bool expected, string label) {
             selector.Selected.Clear(); Find.TickManager.TicksGame += 40; int count = SoundStarter.Played.Count;
             selector.Select(proxy);
             bool played = SoundStarter.Played.Count == count + 1;
-            if (UsOneShotRuntime.IsControlled(p)) Console.WriteLine("DC SELECT " + RuntimeSession(p).DiagnosticText);
+            if (SqueakerRuntime.IsControlled(p)) Console.WriteLine("DC SELECT " + RuntimeSession(p).DiagnosticText);
             Check(played == expected, "DC Select " + label);
             return played;
         }
@@ -77,12 +76,12 @@ internal static partial class Program
             "DC Select unavailable health is precise Unknown, not false or cached true");
         var view = settings.CaptureBehaviorConfiguration();
         var effective = view.Resolve(new BehaviorDomain("Pawn", "", race.defName), "us.core/Select", SelectPolicy.OfficialDefaults,
-            UsOneShotRuntime.BehaviorSources, key => key != SelectPolicy.NotDowned && key != SelectPolicy.Awake);
+            SqueakerRuntime.BehaviorSources, key => key != SelectPolicy.NotDowned && key != SelectPolicy.Awake);
         Check(!effective.Paused && !effective.Dependencies.Contains(SelectPolicy.NotDowned) && !effective.Dependencies.Contains(SelectPolicy.Awake),
             "DC Select relaxed parameters do not require optional implementations");
         Field("notDowned", true);
         effective = settings.CaptureBehaviorConfiguration().Resolve(new BehaviorDomain("Pawn", "", race.defName), "us.core/Select", SelectPolicy.OfficialDefaults,
-            UsOneShotRuntime.BehaviorSources, key => key != SelectPolicy.NotDowned);
+            SqueakerRuntime.BehaviorSources, key => key != SelectPolicy.NotDowned);
         Check(effective.Paused && effective.Failure.Contains(SelectPolicy.NotDowned), "DC Select selected optional dependency is named and isolated when implementation absent");
         Field("notDowned", false);
         int before = SoundStarter.Played.Count; long? confirmed = owner.State.ConfirmedTick;
@@ -92,14 +91,14 @@ internal static partial class Program
             "DC Select relaxing all three cannot forge feedback or mutate confirmed owner state");
         Flags();
         Check(settings.TryChangeBehaviorSource(new BehaviorDomain("Pawn", "", race.defName), "fixture.dc/US_DC_SelectAuthor",
-            UsOneShotRuntime.BehaviorSources, _ => true, out _), "DC Select bind actual author source");
+            SqueakerRuntime.BehaviorSources, _ => true, out _), "DC Select bind actual author source");
         Field("playerControlled", true, race.defName); Flags(false); Select(false, "Race player true beats profile false and author false");
         Field("playerControlled", false, race.defName, xeno.defName); p.genes = new FixtureGenes { Xenotype = xeno };
         Select(true, "legal Xeno player false overrides Race true using the same owner");
         Check(RuntimeSession(p) == owner && owner.DiagnosticText.Contains("selectRequirePlayerControlled=player:Pawn::DC_SelectRace:DC_SelectXeno"),
             "DC Select captured effective configuration reports exact child provenance without a second owner");
-        SqueakRuntimeResolver.Current.RejectChildContext = true;
-        Select(false, "resolver-rejected child cannot widen Race qualification"); SqueakRuntimeResolver.Current.RejectChildContext = false;
+        GameRuntime.Current.RejectChildContext = true;
+        Select(false, "resolver-rejected child cannot widen Race qualification"); GameRuntime.Current.RejectChildContext = false;
         p.genes = null;
         Field("playerControlled", null, race.defName); Select(true, "clearing Race field reveals explicit profile false");
         Field("playerControlled", null); Field("awake", null); Field("notDowned", null);

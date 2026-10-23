@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors><NuGetAudit>false</NuGetAudit><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4871" />
+    <Reference Include="UniversalSqueaker"><HintPath>$(UniversalSqueakerArtifactPath)</HintPath><Private>false</Private></Reference>
+    <!-- A real external compilation: no production source files or platform doubles are linked. -->
+    <Compile Include="../../docs/examples/0.6/DeclaredNotification.cs" Link="DeclaredNotification.cs" />
+  </ItemGroup>
+  <Target Name="RequireProductCandidate" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(UniversalSqueakerArtifactPath)' == ''" Text="Select the built US candidate explicitly." />
+  </Target>
+</Project>

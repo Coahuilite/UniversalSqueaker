@@ -1,6 +1,8 @@
 # 官方15包合同导读
 
-修订：2026-10-23，r10（Core常用Work补齐）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
+
+修订：2026-10-24，r11（r2单语义与当前作者／配置入口）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -48,7 +50,7 @@
 
 **SR实际差异：** SR只看原入参Pawn/playSound，再隐藏要求玩家可控／清醒／未倒地；External18 Realtime ticks、ignoreGlobal，但尝试仍更新共享钟，跳过周期p。US保用户已裁的三项资格为可配置默认，修正接受／反馈／最终主体观察；计时、四结果与统一owner不按旧数值宣称等频。SR心情覆盖年龄，新响应是独立年龄×心情，见共同差异。
 
-**实际证据／人审：** `Patch_Selector_Select→Notify_Select→UsPawnPlaybackSession→配置／事实／选音→PlaybackRequest／回执`。DcSelectSettingsTests目标模式76项覆盖三真、逐项false与其他资格、Unknown／缺可选实现、作者／玩家／合法Xeno优先、固定拒绝／无反馈不被放宽、同owner准确条目；DaSelectCallerTests迁为显式玩家放宽后65项保代理、重复反馈、伤口扩展及子缺声；生产settings/ExposeData/原子文件与Scribe替身往返覆盖保存重开、失败恢复及准确Reset。成对缺目标历史两种各13项在原输入下成立，当前受改检查见验收页。原生挂接／Config／屏幕／听感及本包两项人工关口仍pending。默认已定，不再请用户重批；需审实际资格调整体验和完整成果。
+**实际证据／人审：** `Patch_Selector_Select→Notify_Select→PawnResponseAdapter→配置／事实／选音→PlaybackRequest／回执`。DcSelectSettingsTests目标模式76项覆盖三真、逐项false与其他资格、Unknown／缺可选实现、作者／玩家／合法Xeno优先、固定拒绝／无反馈不被放宽、同owner准确条目；DaSelectCallerTests迁为显式玩家放宽后65项保代理、重复反馈、伤口扩展及子缺声；生产settings/ExposeData/原子文件与Scribe替身往返覆盖保存重开、失败恢复及准确Reset。成对缺目标历史两种各13项在原输入下成立，当前受改检查见验收页。原生挂接／Config／屏幕／听感及本包两项人工关口仍pending。默认已定，不再请用户重批；需审实际资格调整体验和完整成果。
 ## Eat：过程、执行、属性、结果分别表达
 
 **组成合同：** Pawn 实际摄入者 AND 选中 phase 的依据 AND 所选 nutritionScope AND 所选 drugScope；Any 对应不施加该筛选。固定过程事实不允许玩家通过参数删除。结果回应 AfterIngestion 用独立结果事件根，不要求已经结束后仍在 chewing。事实依据、方法体与当前差距详见[Eat记录](us-kernel-0.6-fact-adapters-zh.md)。

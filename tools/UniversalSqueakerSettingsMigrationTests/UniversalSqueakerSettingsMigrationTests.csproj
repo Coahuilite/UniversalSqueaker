@@ -1,35 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net472</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <AssemblyName>UniversalSqueakerSettingsMigrationTests</AssemblyName>
-    <RootNamespace>UniversalSqueaker.SettingsMigrationTests</RootNamespace>
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <InformationalVersion>0.0.0+settings-migration</InformationalVersion>
-    <!-- 本地离线环境：禁用 NuGet 漏洞审计，避免无网 NU1900 噪声。 -->
-    <NuGetAudit>false</NuGetAudit>
-  </PropertyGroup>
-
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><PlatformTarget>x64</PlatformTarget><LangVersion>latest</LangVersion><Nullable>enable</Nullable><NuGetAudit>false</NuGetAudit></PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs" Link="Production/SqueakActionModel.cs" />
-    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionConfig.cs" Link="Production/SqueakActionConfig.cs" />
-    <!-- Settings migration / baseline import harness.
-         Production Settings files reference runtime/UI/catalog types; those are provided by
-         Stubs/UniversalSqueakerStubs.cs (test-side shims only, never product code). -->
-    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Settings\*.cs" Link="Settings\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Mod.Persistence.cs" Link="Production\Mod.Persistence.cs" />
-    <!-- UIR-006: the settings slice validates the persisted swatch id against the pure set. -->
-    <Compile Include="..\..\Source\UniversalSqueaker\Themes\UsSwatchIds.cs" Link="Themes\UsSwatchIds.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerTuningBaselineDef.cs" Link="Runtime\UniversalSqueakerTuningBaselineDef.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\UniversalSqueakerFallbackProfileDef.cs" Link="Runtime\UniversalSqueakerFallbackProfileDef.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Fallback\SqueakFallbackProfileStore.cs" Link="Fallback\SqueakFallbackProfileStore.cs" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Production/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Models/*.cs" Link="Production/Models/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Settings/*.cs" Link="Production/Settings/%(Filename)%(Extension)" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/GameSettingsPersistence.cs" Link="Production/GameSettingsPersistence.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/UsBehaviorPresetDef.cs" Link="Production/UsBehaviorPresetDef.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Game/NativeActionMetadata.cs" Link="Production/NativeActionMetadata.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/UniversalSqueaker.cs" Link="Production/UniversalSqueaker.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/UI/Model/ActionPresentations.cs" Link="Production/SqueakActionModel.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Themes/UsSwatchIds.cs" Link="Production/UsSwatchIds.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/UniversalSqueakerFallbackProfileDef.cs" Link="Production/FallbackDef.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Fallback/SqueakFallbackProfileStore.cs" Link="Production/FallbackStore.cs" />
   </ItemGroup>
-
 </Project>

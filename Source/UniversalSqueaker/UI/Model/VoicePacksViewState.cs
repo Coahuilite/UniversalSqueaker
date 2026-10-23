@@ -10,9 +10,7 @@ public sealed class VoicePacksViewState
     public SqueakVoicePackMode Mode { get; }
     public bool AllowEasterEggs { get; }
     public SqueakDistancePreset DistancePreset { get; }
-    public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
-    public bool ScalePeriodicWithAudiblePopulation { get; }
 
     public EatPhase EatPhase { get; }
     public EatNutritionScope EatNutritionScope { get; }
@@ -21,8 +19,6 @@ public sealed class VoicePacksViewState
     public bool? SelectRequireAwake { get; }
     public bool? SelectRequireNotDowned { get; }
     public bool ShowCameraIndicator { get; }
-    public float GlobalCooldownMultiplier { get; }
-    public int GlobalMinIntervalTicks { get; }
     public SqueakDevLoggingMode DevLoggingMode { get; }
     public bool LocalizeDebugActions { get; }
     public float GlobalVolumeFactor { get; }
@@ -39,7 +35,6 @@ public sealed class VoicePacksViewState
     public string TuningRaceDefName { get; }
     public string TuningXenotypeDefName { get; }
     public IReadOnlyList<TuningDomainOptionView> TuningDomains { get; }
-    public IReadOnlyList<MoodTuningRowView> MoodTuningRows { get; }
     public string BuildIdentity { get; }
     public string SaveStatus { get; }
     public bool IsDirty { get; }
@@ -80,12 +75,8 @@ public sealed class VoicePacksViewState
         SqueakVoicePackMode mode,
         bool allowEasterEggs,
         SqueakDistancePreset distancePreset,
-        bool scaleCooldownWithTimeSpeed,
         bool scaleFrequencyWithTalking,
-        bool scalePeriodicWithAudiblePopulation,
         bool showCameraIndicator,
-        float globalCooldownMultiplier,
-        int globalMinIntervalTicks,
         SqueakDevLoggingMode devLoggingMode,
         bool localizeDebugActions,
         float globalVolumeFactor,
@@ -101,7 +92,6 @@ public sealed class VoicePacksViewState
         string tuningRaceDefName,
         string tuningXenotypeDefName,
         IReadOnlyList<TuningDomainOptionView> tuningDomains,
-        IReadOnlyList<MoodTuningRowView> moodTuningRows,
         IReadOnlyList<BaselinePresetView> baselinePresets,
         string buildIdentity,
         string saveStatus,
@@ -130,12 +120,8 @@ public sealed class VoicePacksViewState
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
         DistancePreset = distancePreset;
-        ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
-        ScalePeriodicWithAudiblePopulation = scalePeriodicWithAudiblePopulation;
         ShowCameraIndicator = showCameraIndicator;
-        GlobalCooldownMultiplier = globalCooldownMultiplier;
-        GlobalMinIntervalTicks = globalMinIntervalTicks;
         DevLoggingMode = devLoggingMode;
         LocalizeDebugActions = localizeDebugActions;
         GlobalVolumeFactor = globalVolumeFactor;
@@ -151,7 +137,6 @@ public sealed class VoicePacksViewState
         TuningRaceDefName = tuningRaceDefName ?? "";
         TuningXenotypeDefName = tuningXenotypeDefName ?? "";
         TuningDomains = tuningDomains ?? Array.Empty<TuningDomainOptionView>();
-        MoodTuningRows = moodTuningRows ?? Array.Empty<MoodTuningRowView>();
         BaselinePresets = baselinePresets ?? Array.Empty<BaselinePresetView>();
         BuildIdentity = buildIdentity ?? "";
         SaveStatus = saveStatus ?? "";
@@ -317,7 +302,7 @@ public readonly struct FallbackEntryView
     }
 }
 /// <summary>S5 分层：动作 × 当前层的作用域行。行携带本层记录与有效作用域。
-/// Carries the built-in <see cref="SqueakAction"/> so the widget can skip scope states the action
+/// Carries the built-in <see cref="string"/> so the widget can skip scope states the action
 /// does not support (e.g. Draft/Undraft/Equip are ActiveCommand-only).</summary>
 public readonly struct ActionScopeRowView
 {
@@ -327,27 +312,20 @@ public readonly struct ActionScopeRowView
     /// 或系统/事件触发（SystemOrEvent）。纯呈现归属，不影响 typed 值与资格判定。</summary>
     public readonly ActionScopeGroup Group;
     /// <summary>本层记录的作用域（HasOwnScope=false 时无意义）。</summary>
-    public readonly SqueakActionScope Scope;
-    public readonly SqueakAction Action;
+    public readonly BehaviorScope Scope;
+    public readonly string Action;
     /// <summary>S5 分层：本层是否存在显式记录（false = 继承底层）。</summary>
     public readonly bool HasOwnScope;
     /// <summary>S5 分层：有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins）。</summary>
-    public readonly SqueakActionScope EffectiveScope;
+    public readonly BehaviorScope EffectiveScope;
+    public readonly string Explanation;
 
     // PRE1/VF1定稿 A1: the interval and probability multipliers ride the SAME fold the runtime uses
     // (field-level last-wins over Default < Global < Race < Xenotype). Before this projection the
     // multipliers were fully live in data and runtime but invisible in the UI - the maintainer's own
-    // comment in UniversalSqueakerSettings.cs named that fact. Own* = this layer's record (null =
+    // comment in GameSettings.cs named that fact. Own* = this layer's record (null =
     // inherit); Effective* = the folded answer; the source layers say WHERE the effective value came
     // from (0 Global / 1 Race / 2 Xenotype / -1 default).
-    public readonly bool HasOwnInterval;
-    public readonly float OwnInterval;
-    public readonly bool HasOwnProbability;
-    public readonly float OwnProbability;
-    public readonly float EffectiveInterval;
-    public readonly float EffectiveProbability;
-    public readonly int IntervalSourceLayer;
-    public readonly int ProbabilitySourceLayer;
     /// <summary>Reset-to-preset anchor state, same vocabulary as the mood rows: whether an anchor
     /// exists, whether it resolves to an entry for THIS action, and the target's display label.</summary>
     public readonly bool HasPresetAnchor;
@@ -355,11 +333,9 @@ public readonly struct ActionScopeRowView
     public readonly string ResetPresetTarget;
 
     public ActionScopeRowView(
-        string actionKey, string displayName, ActionScopeGroup group, SqueakActionScope scope, SqueakAction action,
-        bool hasOwnScope = false, SqueakActionScope effectiveScope = default,
-        bool hasOwnInterval = false, float ownInterval = 1f, bool hasOwnProbability = false, float ownProbability = 1f,
-        float effectiveInterval = 1f, float effectiveProbability = 1f, int intervalSourceLayer = -1, int probabilitySourceLayer = -1,
-        bool hasPresetAnchor = false, bool presetResetReady = false, string resetPresetTarget = "")
+        string actionKey, string displayName, ActionScopeGroup group, BehaviorScope scope, string action,
+        bool hasOwnScope = false, BehaviorScope effectiveScope = default,
+        bool hasPresetAnchor = false, bool presetResetReady = false, string resetPresetTarget = "", string explanation = "")
     {
         ActionKey = actionKey ?? "";
         DisplayName = displayName ?? actionKey ?? "";
@@ -369,14 +345,7 @@ public readonly struct ActionScopeRowView
         HasOwnScope = hasOwnScope;
         // 无条件保存有效值：本层有记录时，更高层（Race/Xeno）的覆盖也必须展示（折叠只认层优先级，与列表顺序无关）。
         EffectiveScope = effectiveScope;
-        HasOwnInterval = hasOwnInterval;
-        OwnInterval = ownInterval;
-        HasOwnProbability = hasOwnProbability;
-        OwnProbability = ownProbability;
-        EffectiveInterval = effectiveInterval;
-        EffectiveProbability = effectiveProbability;
-        IntervalSourceLayer = intervalSourceLayer;
-        ProbabilitySourceLayer = probabilitySourceLayer;
+        Explanation = explanation;
         HasPresetAnchor = hasPresetAnchor;
         PresetResetReady = presetResetReady;
         ResetPresetTarget = resetPresetTarget ?? "";
@@ -541,16 +510,16 @@ public sealed class BaselineRaceView
     public readonly string DisplayName;
     public readonly bool Selected;
     public readonly int ActionCount;
-    public readonly int MoodCount;
+    public readonly int FieldCount;
     public readonly IReadOnlyList<BaselineXenotypeView> Xenotypes;
 
-    public BaselineRaceView(string raceDefName, string displayName, bool selected, int actionCount, int moodCount, IReadOnlyList<BaselineXenotypeView> xenotypes)
+    public BaselineRaceView(string raceDefName, string displayName, bool selected, int actionCount, int fieldCount, IReadOnlyList<BaselineXenotypeView> xenotypes)
     {
         RaceDefName = raceDefName ?? "";
         DisplayName = displayName ?? raceDefName ?? "";
         Selected = selected;
         ActionCount = actionCount;
-        MoodCount = moodCount;
+        FieldCount = fieldCount;
         Xenotypes = xenotypes ?? Array.Empty<BaselineXenotypeView>();
     }
 }
@@ -563,7 +532,7 @@ public sealed class BaselineXenotypeView
     public readonly bool InheritFromRace;
     public readonly bool Selected;
     public readonly int ActionCount;
-    public readonly int MoodCount;
+    public readonly int FieldCount;
 
     /// <summary>
     /// The xenotype's native icon, or null when there is none to show. This is the R4-B adapter boundary:
@@ -574,14 +543,14 @@ public sealed class BaselineXenotypeView
     /// </summary>
     public readonly Texture2D? Image;
 
-    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int moodCount, Texture2D? image = null)
+    public BaselineXenotypeView(string xenotypeDefName, string displayName, bool inheritFromRace, bool selected, int actionCount, int fieldCount, Texture2D? image = null)
     {
         XenotypeDefName = xenotypeDefName ?? "";
         DisplayName = displayName ?? xenotypeDefName ?? "";
         InheritFromRace = inheritFromRace;
         Selected = selected;
         ActionCount = actionCount;
-        MoodCount = moodCount;
+        FieldCount = fieldCount;
         Image = image;
     }
 }
@@ -606,72 +575,3 @@ public readonly struct TuningDomainOptionView
 /// （F-P，来源是「重置为预设」的锚点），此时 Own 指向一行三旗标全 false 的记录。读 Own 的<b>值</b>前必须先看
 /// <c>hasPitchFactor</c>/<c>hasVolumeFactor</c>/<c>hasPitchJitter</c> 或 <c>sourcePresetDefName</c>；
 /// 现状消费者 <c>UsScopeTreeWidget</c> 已按 <c>hasXFactor == true</c> 门控，null 只表示本层没有行。</para></summary>
-public readonly struct MoodTuningRowView
-{
-    /// <summary>No layer supplies the factor: the effective value stays the built-in default (1f / FloatRange.One).</summary>
-    public const int NoSupplyingLayer = -1;
-
-    public readonly SqueakMood Mood;
-    public readonly string DisplayName;
-    public readonly MoodTuningRecord? Own;
-    public readonly float EffectivePitch;
-    public readonly float EffectiveVolume;
-    /// <summary>有效 jitter 半宽（pitchJitter.max-1，≥0），默认 0。</summary>
-    public readonly float EffectiveJitterHalf;
-    /// <summary>「重置为默认」可用性：三旗标皆 false ⇒ 本行没有本层设置（判定看旗标，不看行是否存在）。</summary>
-    public readonly SqueakMoodResetDefaultState DefaultReset;
-    /// <summary>「重置为预设」可用性：看来源字段 + 预设 Def/条目的可解析性，同样不看行是否存在。</summary>
-    public readonly SqueakMoodResetPresetState PresetReset;
-
-    /// <summary>
-    /// V3 P2 (corrected in task-18): the layer that actually SUPPLIES each factor's effective value, taken
-    /// from the authoritative fold (0 = Global, 1 = Race, 2 = Xenotype, <see cref="NoSupplyingLayer"/> = no
-    /// layer supplies it, so the value is the DEFAULT). This is provenance, and it is PER FACTOR because one
-    /// row can mix a local pitch with an inherited volume and a default jitter.
-    /// <para><b>What is deliberately NOT projected:</b> <c>MoodTuningRecord.sourcePresetDefName</c>. It is the
-    /// reset-to-preset ANCHOR - deliberately retained when the local factor flags are cleared - so it proves
-    /// only what the reset-to-preset control may target, never where the shown numbers came from. The earlier
-    /// row-level "inherited from &lt;preset&gt;" label was exactly that misreading.</para>
-    /// </summary>
-    public readonly int PitchSourceLayer;
-    public readonly int VolumeSourceLayer;
-    public readonly int JitterSourceLayer;
-
-    /// <summary>
-    /// V3 task-18 (b): the reset-to-preset TARGET, separately and explicitly labelled by the widget - the
-    /// display label of the resolved preset Def, or "" when there is no USABLE target (no anchor, the Def no
-    /// longer resolves, or it has no entry for this row). It is never drawn as provenance: it only says what
-    /// the reset-to-preset control would write.
-    /// </summary>
-    public readonly string ResetPresetTarget;
-
-    /// <summary>The supplying layer of one factor (see the three fields above).</summary>
-    public int SourceLayerFor(SqueakMoodFactor factor)
-    {
-        return factor == SqueakMoodFactor.Volume ? VolumeSourceLayer
-            : factor == SqueakMoodFactor.Jitter ? JitterSourceLayer
-            : PitchSourceLayer;
-    }
-
-    public MoodTuningRowView(SqueakMood mood, string displayName, MoodTuningRecord? own, float effectivePitch, float effectiveVolume, float effectiveJitterHalf,
-        SqueakMoodResetDefaultState defaultReset = SqueakMoodResetDefaultState.NoLocalSetting,
-        SqueakMoodResetPresetState presetReset = SqueakMoodResetPresetState.NotFromPreset,
-        int pitchSourceLayer = NoSupplyingLayer,
-        int volumeSourceLayer = NoSupplyingLayer,
-        int jitterSourceLayer = NoSupplyingLayer,
-        string resetPresetTarget = "")
-    {
-        Mood = mood;
-        DisplayName = displayName ?? mood.ToString();
-        Own = own;
-        EffectivePitch = effectivePitch;
-        EffectiveVolume = effectiveVolume;
-        EffectiveJitterHalf = Math.Max(0f, effectiveJitterHalf);
-        DefaultReset = defaultReset;
-        PresetReset = presetReset;
-        PitchSourceLayer = Math.Max(NoSupplyingLayer, pitchSourceLayer);
-        VolumeSourceLayer = Math.Max(NoSupplyingLayer, volumeSourceLayer);
-        JitterSourceLayer = Math.Max(NoSupplyingLayer, jitterSourceLayer);
-        ResetPresetTarget = resetPresetTarget ?? "";
-    }
-}

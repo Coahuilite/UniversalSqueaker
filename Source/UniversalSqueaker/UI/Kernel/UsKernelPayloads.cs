@@ -22,29 +22,12 @@ public readonly struct UsTuningDomainSelection
 public readonly struct UsScopeWrite
 {
     public readonly string ActionKey;
-    public readonly SqueakActionScope? Scope;
+    public readonly BehaviorScope? Scope;
 
-    public UsScopeWrite(string actionKey, SqueakActionScope? scope)
+    public UsScopeWrite(string actionKey, BehaviorScope? scope)
     {
         ActionKey = actionKey ?? "";
         Scope = scope;
-    }
-}
-
-/// <summary>VF1定稿 A2: field-level action multiplier write. Which multiplier field, and the value
-/// (null = clear the field and restore inheritance). The layer identity is the page state's current
-/// tuning identity - the payload carries no race/xeno, exactly like the scope write.</summary>
-public readonly struct UsActionTuningWrite
-{
-    public readonly string ActionKey;
-    public readonly bool IntervalField;
-    public readonly float? Value;
-
-    public UsActionTuningWrite(string actionKey, bool intervalField, float? Value)
-    {
-        ActionKey = actionKey ?? "";
-        IntervalField = intervalField;
-        this.Value = Value;
     }
 }
 
@@ -76,32 +59,6 @@ public readonly struct UsFallbackEntryWrite
     {
         ActionKey = actionKey ?? "";
         SoundDefName = soundDefName;
-    }
-}
-
-/// <summary>Field-level mood write. Clear restores inheritance; other factors require a value.</summary>
-public readonly struct UsMoodWrite
-{
-    public readonly SqueakMood Mood;
-    public readonly SqueakMoodFactor Factor;
-    public readonly float? Value;
-
-    public UsMoodWrite(SqueakMood mood, SqueakMoodFactor factor, float? value)
-    {
-        Mood = mood;
-        Factor = factor;
-        Value = value;
-    }
-}
-
-/// <summary>「重置为预设」：不做字段级写入，而是让设置层按本层来源重新写入预设基线（来源保持）。</summary>
-public readonly struct UsMoodPresetReset
-{
-    public readonly SqueakMood Mood;
-
-    public UsMoodPresetReset(SqueakMood mood)
-    {
-        Mood = mood;
     }
 }
 

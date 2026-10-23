@@ -1,10 +1,22 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r12 · **完整Core常用Work范围已补齐；固定FL A002只读补丁最小消费通过，普通政策／原生／逐包人审独立保留。**
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
 
-## D-C当前迁移：保合同，替换退役夹具
+2026-10-24 · r13 · **完整Core常用Work范围已补齐；固定FL A002只读补丁最小消费通过，普通政策／原生／逐包人审独立保留。**
 
-- 官方enum／key／metadata／作者目录／界面覆盖分母均15，删除Crying/Giggling、Patch_MentalFit／Notify_MentalFit、专属开关／Scribe／Help／Keyed／日志事件。没有给原版声音／状态或第三方独立合同加黑名单；新增纯例证明independent/Crying与independent/Giggling仍可正向派发。
+## r2当前迁移：保反例，明确退休的API前提
+
+完整生产Core由`UniversalSqueakerRefactorCoreTests`递归独立编译，无平台引用或替身；Kernel历史选择／回放golden不改。OneShot保同tick预留、同步四收据、失败推进、当前授权和持续保护；全15、20 WorkType／105 Giver／78过程及真实Dev Equip入口仍由生产适配链的明确平台替身验证。没有把四个贯穿例当全包覆盖。
+
+设置／Reset链接当前生产GameSettings、ExposeData、原子文件与Scribe替身，保null／false／0、来源三态、last-good、persist-first失败及Committed后发布修复。旧Config读取前提按获准breaking合同退休；新必需格式marker不是兼容探测。一次配置应用只发布一次；同一发布者修订递增，跨重载实例按快照引用区分。
+
+Host保真实确认窗、作用域命名、身份漂移、一次写入／revision、popup遮挡、导航和EN／ZH度量反例。原数值timing编辑器退休，其取消／确认／旧draft不得覆盖恢复值的反例改用仍在运行的音量字段；F06保当前详情的层／准确域／空目标理由，F07保当前详情按文字实测增长。原两条倍率reset行的固定+60px形状不再是当前界面合同。scope支持／默认／归一只读canonical合同，UI只有标签；按字段来源、依赖、局部暂停与无效模板不可用取自实际fold。
+
+新增作者例由当前整个Core loader解析；`PlayerTemplate.xml`另由生产preset解析器读取；一次C#声明例仅引用最终产品DLL与目标4871编译引用，不链接US源码／游戏替身。各阶段结果必须关联实际输入，不据工程编译或零匹配模式声称运行通过。
+
+## 保留的D-C迁移（r2前输入与API）
+
+- 官方完整ID／metadata／作者目录／界面覆盖分母均15（旧短键enum在r2退休），删除Crying/Giggling、Patch_MentalFit／Notify_MentalFit、专属开关／Scribe／Help／Keyed／日志事件。没有给原版声音／状态或第三方独立合同加黑名单；新增纯例证明independent/Crying与independent/Giggling仍可正向派发。
 - Kernel历史语料生成曾因使用新15库存缩小输入而实际失败两次；恢复冻结的17字符串查询及候选池，官方清单仍15，既有语料byte-identical／确定性零差异。不得重录golden以隐藏输入变化。S3旧17枚举矩阵仅移除退休两包装行，保其他期望；纯OneShot新增公开15映射／资格加载及独立根证据后933项。
 - 原生形状fixture直接链接生产通知／readiness／UsPawnFacts／配置／单session／输出，不再手写Notify_Select。216项分别覆盖十五包与七Work过程、真实角色、Scope命令来源、重叠及清理；未激活／Equip未选资格49，真实缺Wounded＋近战marker另54。全部是明确平台double和真实Harmony，不是游戏运行。
 - Select用户已裁默认三真；删除Unselected枚举及旧资格未选模式。gate21改为真正`--dc-select-settings`，76项覆盖独立调整／缺失／false／来源／合法Xeno／可选依赖／固定拒绝不被取消；gate20保代理／扩展链，显式玩家放宽后65项。旧53项保历史，不再作当前默认依据。
@@ -138,9 +150,9 @@ CI/release仍获取旧已发布0.7，目前不能构建当前0.8消费者；维�
 
 原活动`CompSqueaker.ApplyDistanceRange → SubSoundDef.distRange`写入已移除。Settings现在发布实例距离，`UsInstanceOutput`沿原生Sample更新只改准确归属的AudioSource；L固定、G实时，非US对照不变。首帧/后续Sample/起止辅助音/池复用及End后延迟grain已有生产适配反例，真实1.6与听感仍未运行，C11/V14不能凭fixture关闭。候选仅用于隔离Dev技术验证，不作为一般安装/发布建议。
 
-## 本轮S4AB/S5实际迁移范围
+## 历史S4AB/S5实际迁移范围（旧0.7输入，非r2）
 
-- `CompSqueaker.EntryPoints`的常规tick与公共通知进入唯一`UsPawnPlaybackSession`，17动作及已注册作者组合共用决策；真正未注册字符串保留合法调用能力，不要求新注册。临时全局开发候选选前零派发，选后实际调用消费，不保旧决策链。
+- `CompSqueaker.EntryPoints`的常规tick与公共通知进入唯一`PawnResponseAdapter`，17动作及已注册作者组合共用决策；真正未注册字符串保留合法调用能力，不要求新注册。临时全局开发候选选前零派发，选后实际调用消费，不保旧决策链。
 - 独立A只映射状态W与普通真实事件p；显式候选StateWaitFactor只进入W_base。新`S4S5ReplayTests`连续两次记录固定事实、tick、roll用途和值、四结果、硬截止及未来机会并比较；稳定旧golden未更新。
 - `S4AuthorResponseTests`用普通`Responses.xml`和生产loader验证响应启用、逐轴年龄覆盖、参数、包→本包动作→条目→玩家参与、跨包不泄漏及严格形状。行为来源不拥有参与权威；缺依赖/非法贡献明确拒绝。Config fixture重读真实Scribe字段，验证A、独立响应和准确域层级；Reset清新玩家字段而不遗忘作者来源。
 - gate18链接实际Runtime/Comp入口和实例输出，原生平台为明确替身，Harmony patch与辅助音transpiler为真实执行。覆盖构造时首Sample、实时G、同Def非US、aux重建info、池复用、End/Cleanup后延迟grain、缺patch owner拒绝，以及持续同键/高低替换/未知启动保护。它不证明真实Unity混音。

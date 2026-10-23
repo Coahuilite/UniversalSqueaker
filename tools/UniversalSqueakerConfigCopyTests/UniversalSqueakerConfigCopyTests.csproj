@@ -15,10 +15,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Core/%(RecursiveDir)%(Filename)%(Extension)" />
     <!-- 生产 Config 副本生命周期（适配层单写者）+ 零 Verse 内核/Pure 编译集。
          SqueakFallbackProfileStore 是 internal static，链接进本程序集后直接可测。 -->
-    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\Fallback\SqueakFallbackProfileStore.cs" Link="Fallback\SqueakFallbackProfileStore.cs" />
   </ItemGroup>
 

@@ -1,0 +1,24 @@
+<Defs>
+  <UniversalSqueaker.UsBehaviorPresetDef>
+    <defName>US_ExamplePlayerTemplate</defName>
+    <presetLabel>Quiet work</presetLabel>
+    <presetDescription>Explicit player import; does not bind an author source.</presetDescription>
+    <races>
+      <li>
+        <raceDefName>Human</raceDefName>
+        <actions>
+          <li key="us.core/Work" volume="0.7" pitch="1">
+            <participation key="us.core/Age" apply="false" />
+          </li>
+        </actions>
+        <xenotypes>
+          <li>
+            <xenotypeDefName>Genie</xenotypeDefName>
+            <inheritFromRace>true</inheritFromRace>
+            <actions><li key="us.core/Work" volume="0" /></actions>
+          </li>
+        </xenotypes>
+      </li>
+    </races>
+  </UniversalSqueaker.UsBehaviorPresetDef>
+</Defs>

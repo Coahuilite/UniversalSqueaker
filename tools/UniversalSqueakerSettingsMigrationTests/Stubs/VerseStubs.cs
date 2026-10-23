@@ -50,9 +50,11 @@ namespace Verse
         }
     }
 
+    public class Window { }
+
     public class ModContentPack
     {
-        public ModMetaData ModMetaData = new();
+        public ModMetaData ModMetaData = new(); public string PackageId => ModMetaData.PackageIdNonUnique;
         public string FolderName = "US-Fixture";
     }
 
@@ -532,6 +534,9 @@ namespace Verse
         public static int BaseWrites;
         public ModContentPack Content { get; }
         public Mod(ModContentPack content) { Content = content; }
+        public T GetSettings<T>() where T : ModSettings, new() => UniversalSqueaker.SqueakerMod.Settings is T existing ? existing : new T();
+        public virtual string SettingsCategory() => "";
+        public virtual void DoSettingsWindowContents(UnityEngine.Rect rect) { }
         public virtual void WriteSettings()
         {
             if (FailWrite) throw new System.IO.IOException("injected original writer failure");
@@ -539,7 +544,7 @@ namespace Verse
             var path = System.IO.Path.Combine(GenFilePaths.ConfigFolderPath, GenText.SanitizeFilename("Mod_" + Content.FolderName + "_" + GetType().Name + ".xml"));
             SafeSaver.Save(path, "SettingsBlock", () =>
             {
-                var settings = UniversalSqueaker.UniversalSqueakerMod.Settings;
+                var settings = UniversalSqueaker.SqueakerMod.Settings;
                 Scribe_Deep.Look(ref settings, "ModSettings");
             });
         }

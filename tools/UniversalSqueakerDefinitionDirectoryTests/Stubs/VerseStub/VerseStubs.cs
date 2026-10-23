@@ -1075,6 +1075,7 @@ public class Def
 {
     public string defName = "";
     public string label = "";
+    public string description = "";
     // EXTENSION (definition-directory harness only): the real 1.6 public field the
     // collector reads for source attribution. Nullable-annotated for the stub build only;
     // the runtime field name and shape are the real ones.

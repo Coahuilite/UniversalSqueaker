@@ -201,24 +201,14 @@
                 <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" HelpKey="us/basic-tuning/egg" AlignX="Left" />
               </Column>
             </Row>
-            <Row Id="basic-cooldown-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
-              <Column Id="basic-cooldown-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-cooldown-check" Kind="input/checkbox" Appearance="switch" Bind="scale-cooldown" SelectedKey="scale-cooldown" Width="36" Height="30" HelpKey="us/basic-tuning/scale-cooldown" AlignX="Left" />
-              </Column>
-            </Row>
+
             <Row Id="basic-talking-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-talking-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleTalking" HelpKey="us/basic-tuning/scale-talking" />
               <Column Id="basic-talking-check-slot" Width="36" Padding="0" AlignY="Middle">
                 <Widget Id="basic-talking-check" Kind="input/checkbox" Appearance="switch" Bind="scale-talking" SelectedKey="scale-talking" Width="36" Height="30" HelpKey="us/basic-tuning/scale-talking" AlignX="Left" />
               </Column>
             </Row>
-            <Row Id="basic-population-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-population-label" Kind="text/wrapped" TextKey="US.Tuning.ScalePopulation" HelpKey="us/basic-tuning/scale-population" />
-              <Column Id="basic-population-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-population-check" Kind="input/checkbox" Appearance="switch" Bind="scale-population" SelectedKey="scale-population" Width="36" Height="30" HelpKey="us/basic-tuning/scale-population" AlignX="Left" />
-              </Column>
-            </Row>
+
             <Row Id="basic-eat-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-eat-label" Kind="text/wrapped" TextKey="US.Tuning.EatPhase" HelpKey="us/basic-tuning/eat-phase" />
               <Widget Id="basic-eat-choice" Kind="input/dropdown" Bind="eat-phase" OptionsBind="eat-phase-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-phase" />
@@ -248,56 +238,15 @@
             <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
           </Column>
         </Section>
-        <!-- S4-3: the trigger-timing card is DECLARATIVE and its kind (us/timing) is retired in the same
-             change. Card chrome is the engine's Section with the checklist card's explicit geometry
-             (Padding 12 + header 26 + Section Gap 6 + body + Padding 12), which is what
-             UsCardLayout.MeasureBody drew.
-
-             The caption is the friction of this slice FIXED rather than routed around. The composite
-             reserved its caption band against a hand-written SAMPLE constant ("10.0 s") because measure and
-             draw had to agree; the declarative shape has no reserved-band vocabulary at all, so the caption
-             is a bound string instead: the host builds the ONE sentence the atom draws
-             (US.Tuning.MinInterval formatted with the live seconds value) and registers it as a read-only
-             string binding, and the atom measures exactly the string it paints. measure == draw now holds BY
-             CONSTRUCTION - the drift a sample constant could develop is gone, not moved.
-
-             What the declarative shape does NOT reproduce is the composite's reserved caption BAND. Its
-             floor came from that sample and the vocabulary has no MinHeight/reserved-band attribute, so
-             reserving one would have meant a fixed Height and a truncated band. The declaration takes the
-             other branch deliberately: the caption is a flex sibling that takes the row's leftover, exactly
-             like the global-volume card's caption, so nothing is reserved and nothing is clipped.
-             Consequence, measured: at the narrowest centre column the caption wraps to one extra line and
-             the card is taller there.
-
-             Both number fields are flex siblings for the same reason: a declared fixed width is what made
-             the engine place a child outside its own row when the drawer's degenerate arrangement shrank the
-             centre column below that width (FrameGeometryLaneTests measured it), while a flex field is
-             inside its row at every width by construction.
-
-             The multiplier row is the composite's stepper cluster declared directly: the label takes the
-             leftover (a translated label that needs two lines grows the row, which is what
-             WrappingTimingLabelGrowsTheCard measures), and the minus/plus buttons keep the composite's own
-             26px weight with the field flexing between them. The two buttons fire their own commands - a
-             declarative button needs an ActionBind, and the step itself (+/- 0.1 clamped to 0..3) lives on
-             the host side of the command, exactly where the composite applied it. -->
+        <!-- Current Dev policy status; retired timing controls have no runtime consumer. -->
         <Section Id="timing" Tab="Tuning" Padding="12" Gap="8">
-          <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" />
+          <Widget Id="kernel-policy-note" Kind="text/wrapped" Bind="kernel-policy-note" HelpKey="us/timing/policy" />
           <Widget Id="timing-header" Kind="us/section-header" TitleKey="US.Section.TriggerTiming" Height="26" HelpKey="us/timing" />
-          <Row Id="timing-interval-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="timing-interval-caption" Kind="text/wrapped" Bind="timing-interval-caption" Emphasis="Muted" HelpKey="us/timing/interval" />
-            <Widget Id="timing-interval-seconds" Kind="input/number-field" Bind="interval-seconds" Min="0.1" Max="10" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/interval" Live="true" />
-          </Row>
-          <Widget Id="timing-interval-slider" VisibleKey="legacy-policy-controls" Kind="input/slider" Bind="interval-ticks" Min="1" Max="600" Height="20" HelpKey="us/timing/interval" />
-          <Row Id="timing-multiplier-row" VisibleKey="legacy-policy-controls" Gap="4" Padding="0" Breakpoint="400" Narrow="Column">
-            <Widget Id="timing-multiplier-label" Kind="text/wrapped" TextKey="US.Tuning.CooldownMultiplier" HelpKey="us/timing/multiplier" />
-            <Row Id="timing-multiplier-controls" Gap="4" Padding="0" AlignY="Middle">
-            <Widget Id="timing-multiplier-minus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Minus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-minus" HelpKey="us/timing/multiplier" />
-            <Widget Id="timing-multiplier-field" Kind="input/number-field" Bind="cooldown-multiplier" Min="0" Max="3" Format="0.0" Height="20" AlignY="Middle" HelpKey="us/timing/multiplier" Live="true" />
-            <Widget Id="timing-multiplier-plus" Kind="input/button" TextKey="US.Tuning.CooldownMultiplier.Plus" Width="26" Height="20" AlignY="Middle" ActionBind="timing-multiplier-plus" HelpKey="us/timing/multiplier" />
-            </Row>
-          </Row>
-          <!-- US-RESET1: the Timing-area restore (interval floor + cooldown multiplier). -->
-          <Widget Id="timing-restore" VisibleKey="legacy-policy-controls" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Timing.Confirm" EffectKey="reset-normal-timing" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
+
+
+
+
+
         </Section>
         <Section Id="camera-indicator" Tab="Overview" Padding="12" Gap="8">
           <Widget Id="camera-indicator-header" Kind="us/section-header" TitleKey="US.Section.InWorldIndicator" Height="26" HelpKey="us/camera-indicator" />
@@ -446,8 +395,7 @@
           <Widget Id="attenuation-header" Kind="us/section-header" TitleKey="US.Section.DistanceAttenuation" Height="26" HelpKey="us/attenuation-editor" />
           <Column Id="attenuation-body" Gap="4" Padding="0">
             <Widget Id="attenuation-axis-caption" Kind="text/wrapped" Bind="attenuation-axis-caption" Emphasis="Muted" HelpKey="us/attenuation-editor/chart" />
-            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point"
-                    Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
+            <Widget Id="attenuation-chart" Kind="chart/line" Bind="attenuation-points" ActionBind="attenuation-point" Editable="true" EditablePoints="1,2" Height="64" HelpKey="us/attenuation-editor/chart" />
             <Widget Id="attenuation-status" Kind="text/wrapped" Bind="attenuation-status" Emphasis="Muted" HelpKey="us/attenuation-editor/status" />
             <!-- No Height on the preset buttons on purpose: at the narrowest accepted band a third of the
                row is narrower than "Conservative"/"Balanced" need, and a declared 26px band would CLIP the
@@ -573,9 +521,7 @@
          inset, so the footer stays in by construction at both help states. -->
     <Row Id="footer-band" Padding="6" Gap="6">
       <Widget Id="footer" Kind="us/footer" />
-      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle"
-              ActionBind="toggle-help-drawer" Width="128" Height="26"
-              AlignY="Middle" HelpKey="us/page-title/help-drawer" />
+      <Widget Id="help-toggle" Kind="input/button" TextKey="US.Help.Drawer.Toggle" ActionBind="toggle-help-drawer" Width="128" Height="26" AlignY="Middle" HelpKey="us/page-title/help-drawer" />
     </Row>
   </Column>
   <!-- Per-item subtrees a <Repeat> materializes, keyed by the Id a Template="..." names. Bind/VisibleKey/
@@ -606,22 +552,18 @@
           <Widget Id="pack-card-row-meta" Kind="text/wrapped" Bind="meta" Emphasis="Muted" HelpKey="us/pack-cards/card" />
           <Widget Id="pack-card-row-coverage" Kind="text/wrapped" Bind="coverage" Emphasis="Muted" HelpKey="us/pack-cards/card" />
         </Column>
-        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedKey="expanded"
-                ActionBind="toggle-pack-card" PayloadKey="payload" Width="116" Height="26" AlignY="Middle"
-                Emphasis="Muted" HelpKey="us/pack-cards/expand" />
+        <Widget Id="pack-card-row-expand" Kind="input/button" TextKey="US.Packs.Card.Contents" SelectedKey="expanded" ActionBind="toggle-pack-card" PayloadKey="payload" Width="116" Height="26" AlignY="Middle" Emphasis="Muted" HelpKey="us/pack-cards/expand" />
       </Row>
       <Row Id="pack-card-row-domain" Gap="4" Padding="0" VisibleKey="is-domain">
         <Column Id="pack-card-row-domain-gutter" Width="18" Gap="0" Padding="0" />
         <Overlay Id="pack-card-row-domain-area" Padding="0">
-          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent"
-                  ActionBind="select-domain" PayloadKey="payload" HelpKey="us/pack-cards/row" />
+          <Widget Id="pack-card-row-hit" Kind="input/button" Chrome="none" Height="MatchContent" ActionBind="select-domain" PayloadKey="payload" HelpKey="us/pack-cards/row" />
           <Row Id="pack-card-row-domain-content" Gap="0" Padding="0">
             <Column Id="pack-card-row-domain-inner-gutter" Width="6" Gap="0" Padding="0" />
             <Widget Id="pack-card-row-domain-text" Kind="text/wrapped" Bind="title" HelpKey="us/pack-cards/row" />
           </Row>
         </Overlay>
-        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled"
-                Width="36" Height="30" AlignY="Middle" HelpKey="us/pack-cards/enable" />
+        <Widget Id="pack-card-row-check" Kind="input/checkbox" Appearance="switch" Bind="enabled" SelectedKey="enabled" Width="36" Height="30" AlignY="Middle" HelpKey="us/pack-cards/enable" />
       </Row>
     </Overlay>
   </Templates>

@@ -74,8 +74,8 @@ internal static partial class Program
     {
         return new VoicePackEntry(pack, domain, 1, new Dictionary<string, IReadOnlyList<ActionSoundSet>>
         {
-            ["Work"] = new[] { new ActionSoundSet(new[] { sound }, null, 1) }
-        }, fallback == null ? null : new Dictionary<string, string> { ["Work"] = fallback });
+            ["us.core/Work"] = new[] { new ActionSoundSet(new[] { sound }, null, 1) }
+        }, fallback == null ? null : new Dictionary<string, string> { ["us.core/Work"] = fallback });
     }
     private static string S2RouteTrace()
     {
@@ -90,13 +90,13 @@ internal static partial class Program
             S2Entry("bench.author/Pack", bench, "bench.audio/Work"),
             S2Entry("armor.author/Pack", armor, "armor.audio/Work")
         };
-        var fallback = new BuiltInFallbackTable(new[] { new FallbackProfile(race.Race, 1, new Dictionary<string, string> { ["Work"] = "core/Work" }) });
+        var fallback = new BuiltInFallbackTable(new[] { new FallbackProfile(race.Race, 1, new Dictionary<string, string> { ["us.core/Work"] = "core/Work" }) });
         var pool = new SqueakPoolRegistry(entries, fallback);
         var text = new StringBuilder();
         void Case(string label, AudioDomain domain, SelectionMode mode, S2Gate gate, params double[] draws)
         {
             var random = new S2Rolls(draws);
-            var result = pool.Select(new SelectionContext(domain, "Work", AgeBucket.Adult, true), mode, gate, random);
+            var result = pool.Select(new SelectionContext(domain, "us.core/Work", AgeBucket.Adult, true), mode, gate, random);
             random.Complete();
             Check(result.IsNone || result.Resource.HasValue, "S2 selected resource has complete identity");
             if (!result.IsNone)
@@ -107,7 +107,7 @@ internal static partial class Program
                     ? domain.Parent
                     : entries.Single(entry => entry.PackKey == result.PoolStableKey).Domain;
                 Check(result.SelectedContext?.Domain == supplyingDomain, "S2 actual supplying domain retained");
-                Check(result.SelectedContext?.ActionKey == "Work", "S2 requested action retained across source tiers");
+                Check(result.SelectedContext?.ActionKey == "us.core/Work", "S2 requested action retained across source tiers");
                 Check(!string.IsNullOrEmpty(result.SelectedEntryKey), "S2 actual source entry retained");
             }
             text.Append(label).Append(" ").Append(result.SoundKey ?? "None").Append(" ")

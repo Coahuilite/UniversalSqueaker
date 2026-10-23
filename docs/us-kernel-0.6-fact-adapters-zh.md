@@ -1,6 +1,8 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r6。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[15包导读](us-kernel-0.6-contract-review-zh.md)。D-C接续完整有效配置，扩齐15包生产通知／事实和已裁Select三资格，下面分别记录直接源码、继承依据、平台替身与原生状态。
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
+
+修订：2026-10-24，r7。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[15包导读](us-kernel-0.6-contract-review-zh.md)。D-C接续完整有效配置，扩齐15包生产通知／事实和已裁Select三资格，下面分别记录直接源码、继承依据、平台替身与原生状态。
 
 ## Eat：过程、执行、物品属性与返回结果分别维护
 
@@ -33,9 +35,9 @@
 | OneShot退出 | 不再新起播；不调用旧OneShot裁尾或停止他方声音 |
 | 真正编译移除ChewIngestible | PatchAll完成；Whole仍可用，Execution为Unknown／所选精确贡献暂停，具名缺目标；其他过程／结果／Select能力仍可用 |
 
-实现位置：UsIngestionObservation的短生命周期记录与四个窄Harmony hook；UsPawnFacts一次采样；UsPawnPlaybackSession当前有效配置／同一仲裁和持续槽。记录在session reset清除，不Scribe、不写save、不造第二时钟／调度器。Any/Whole的参数不会添加未选可选依赖；固定扩展条件始终保留。
+实现位置：UsIngestionObservation的短生命周期记录与四个窄Harmony hook；UsPawnFacts一次采样；PawnResponseAdapter当前有效配置／同一仲裁和持续槽。记录在session reset清除，不Scribe、不写save、不造第二时钟／调度器。Any/Whole的参数不会添加未选可选依赖；固定扩展条件始终保留。
 
-**结果路由修订：** Thing.Ingested窄hook继续发布真实正常返回。UsOneShotRuntime在没有固定结果消费者时直接结束，不创建session；有消费者时仍用实际摄入者的同一session，只让固定条件树引用结果事实的候选进入本次事件。修前错误是把普通Eat的过程True当成本次结果的消费资格，绕过状态软等待，不是返回0的判据或阶段事实错误。没有修改通用决策／golden、共享保护、Whole/Any/Any或OneShot自然尾。
+**结果路由修订：** Thing.Ingested窄hook继续发布真实正常返回。SqueakerRuntime在没有固定结果消费者时直接结束，不创建session；有消费者时仍用实际摄入者的同一session，只让固定条件树引用结果事实的候选进入本次事件。修前错误是把普通Eat的过程True当成本次结果的消费资格，绕过状态软等待，不是返回0的判据或阶段事实错误。没有修改通用决策／golden、共享保护、Whole/Any/Any或OneShot自然尾。
 
 证据：DbEatTests的真实Harmony＋生产适配／settings解析／session／选音／输出链；DbEatAuthorTests运行公开XML和真实loader；DbEffectiveConfigTests及ModSaveCallerTests运行生产settings/ExposeData/原子文件与Scribe替身往返及失败恢复；DbEatUiTests运行真实Source／Host、平台替身。原版Job/Toil/物品/音频为明确double，尸体是复入机制形状而非真实Corpse运行；4871 SetupToils/Cleanup/CurToil、ChewIngestible/FinalizeIngest、Ingest/FoodFeedPatient.MakeNewToils及Thing.Ingested已定点核对；原生Scribe、真实游戏Config、挂接、屏幕或听感仍未验。改源时同步事实／消费者／反例，不按新方法名猜合同。
 ## Select：最终反馈主体与已提交选择分别观察
@@ -71,7 +73,7 @@ SelectInternal与PlaySelectionSoundFor共同实现一个观察能力。仅发现
 
 ## 全15包事实登记：来源、阶段与消费者不混写
 
-维护者均为US 1.6适配维护者；每次源机制／版本变动须更新本表、对应导读和正反fixture。生产消费者是同一个UsPawnPlaybackSession及其普通／继承／独立固定合同，按完整事实键显式引用。表内“4871”是上述指定安装只读依据；运行证据统一为真实Harmony＋生产源＋明确平台double，不是游戏挂接。共享事实可复用，但本包语义不能从其他包的通过推断。
+维护者均为US 1.6适配维护者；每次源机制／版本变动须更新本表、对应导读和正反fixture。生产消费者是同一个PawnResponseAdapter及其普通／继承／独立固定合同，按完整事实键显式引用。表内“4871”是上述指定安装只读依据；运行证据统一为真实Harmony＋生产源＋明确平台double，不是游戏挂接。共享事实可复用，但本包语义不能从其他包的通过推断。
 
 | 包／稳定事实 | 真实主体与阶段／源码 | False、Unknown、缺实现与覆盖边界 | 实际消费者／检查 |
 | --- | --- | --- | --- |

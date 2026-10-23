@@ -13,6 +13,8 @@ param(
     [ValidateSet('dev', 'release')][string]$BuildFlavor = 'dev',
     [string]$CommitLabel = 'unknown',
     [string]$FerriteLibArtifactPath,
+    # Optional isolated build input. Existing channel callers retain their original default.
+    [string]$PayloadDllPath,
     # The release channel publishes to strangers: its payload must not carry a dev suffix, its base
     # version must equal the label on the box, and it must have linked a Release carrier. The dev
     # rehearsal skips this - by definition it is an unnamed build.
@@ -35,7 +37,11 @@ function Resolve-NormalizedPath([string]$Path) { [System.IO.Path]::GetFullPath($
 $root = Resolve-NormalizedPath $ProjectRoot
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $configuration = if ($BuildFlavor -eq 'dev') { 'Dev' } else { 'Release' }
-$payloadDll = Join-Path $root "dist\build\$configuration\UniversalSqueaker.dll"
+$payloadDll = if ([string]::IsNullOrWhiteSpace($PayloadDllPath)) {
+    Join-Path $root "dist\build\$configuration\UniversalSqueaker.dll"
+} elseif ([IO.Path]::IsPathRooted($PayloadDllPath)) {
+    Resolve-NormalizedPath $PayloadDllPath
+} else { Resolve-NormalizedPath (Join-Path $root $PayloadDllPath) }
 $payloadHash = if (Test-Path -LiteralPath $payloadDll) { (Get-FileHash -LiteralPath $payloadDll).Hash } else { '' }
 $carrierDll = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $aboutXml = Join-Path $root 'About\About.xml'

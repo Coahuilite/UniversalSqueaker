@@ -20,7 +20,7 @@ namespace UniversalSqueaker.UI;
 public interface IUsRaceBoardFactsSource
 {
     UsRaceBoardFactsBundle Collect(
-        UniversalSqueakerSettings settings,
+        GameSettings settings,
         IReadOnlyList<FallbackRaceView> fallbackRaces,
         bool biotechActive);
 }
@@ -40,7 +40,7 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
     public static readonly VerseRaceBoardSource Instance = new VerseRaceBoardSource();
 
     public UsRaceBoardFactsBundle Collect(
-        UniversalSqueakerSettings settings,
+        GameSettings settings,
         IReadOnlyList<FallbackRaceView> fallbackRaces,
         bool biotechActive)
     {
@@ -49,15 +49,15 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
 
         // Xenotype supply grouped by the pack's OWN declared raceDefName (the exact identity
         // CollectXenotypeDomains uses; the CO-confirmed correction, not redone here).
-        var xenoPacksByRace = new Dictionary<string, List<SqueakVoicePackDef>>(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> group in catalog.XenotypePacksByDefName)
+        var xenoPacksByRace = new Dictionary<string, List<VoicePackInfo>>(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, IReadOnlyList<VoicePackInfo>> group in catalog.XenotypePacksByDefName)
         {
-            foreach (SqueakVoicePackDef pack in group.Value)
+            foreach (VoicePackInfo pack in group.Value)
             {
                 if (pack == null || string.IsNullOrEmpty(pack.raceDefName)) continue;
-                if (!xenoPacksByRace.TryGetValue(pack.raceDefName, out List<SqueakVoicePackDef>? list))
+                if (!xenoPacksByRace.TryGetValue(pack.raceDefName, out List<VoicePackInfo>? list))
                 {
-                    list = new List<SqueakVoicePackDef>();
+                    list = new List<VoicePackInfo>();
                     xenoPacksByRace.Add(pack.raceDefName, list);
                 }
 
@@ -86,8 +86,8 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
             var packs = new List<UsBoardPackFact>();
             var domains = new List<UsRaceDomainFact>();
 
-            IReadOnlyList<SqueakVoicePackDef> racePacks =
-                catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, identity.DefName) ?? Array.Empty<SqueakVoicePackDef>();
+            IReadOnlyList<VoicePackInfo> racePacks =
+                catalog.GetVoicePackDomainPacks(SqueakVoicePackScope.Race, identity.DefName) ?? Array.Empty<VoicePackInfo>();
             for (int p = 0; p < racePacks.Count; p++)
             {
                 if (racePacks[p].TryGetPackKey(out string key))
@@ -101,7 +101,7 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
             domains.Add(new UsRaceDomainFact(
                 SqueakVoicePackScope.Race, "", raceStatus.State, raceStatus.EnabledKeys ?? Array.Empty<string>()));
 
-            if (xenoPacksByRace.TryGetValue(identity.DefName, out List<SqueakVoicePackDef>? xenoPacks))
+            if (xenoPacksByRace.TryGetValue(identity.DefName, out List<VoicePackInfo>? xenoPacks))
             {
                 // One domain fact per distinct target this race's xeno packs name; the settings layer
                 // answers each target's status (dormant without Biotech, target-unavailable when the
@@ -109,7 +109,7 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
                 var seenTargets = new HashSet<string>(StringComparer.Ordinal);
                 for (int x = 0; x < xenoPacks.Count; x++)
                 {
-                    SqueakVoicePackDef pack = xenoPacks[x];
+                    VoicePackInfo pack = xenoPacks[x];
                     string target = pack.targetDefName ?? "";
                     if (pack.TryGetPackKey(out string key))
                     {
@@ -153,13 +153,13 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
             string quickRace = "";
             bool quickAmbiguous = false;
 
-            foreach (KeyValuePair<string, List<SqueakVoicePackDef>> pair in xenoPacksByRace)
+            foreach (KeyValuePair<string, List<VoicePackInfo>> pair in xenoPacksByRace)
             {
                 string raceDefName = pair.Key;
                 SqueakVoicePackDomainStatus? status = null;
                 for (int p = 0; p < pair.Value.Count; p++)
                 {
-                    SqueakVoicePackDef pack = pair.Value[p];
+                    VoicePackInfo pack = pair.Value[p];
                     if (!string.Equals(pack.targetDefName ?? "", xeno.DefName, StringComparison.Ordinal)) continue;
                     if (!pack.TryGetPackKey(out string key)) continue;
                     packCount++;
@@ -185,11 +185,11 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
             // Unambiguous race context: exactly ONE race's packs name this target.
             int namingRaces = 0;
             string onlyRace = "";
-            foreach (KeyValuePair<string, List<SqueakVoicePackDef>> pair in xenoPacksByRace)
+            foreach (KeyValuePair<string, List<VoicePackInfo>> pair in xenoPacksByRace)
             {
                 for (int p = 0; p < pair.Value.Count; p++)
                 {
-                    SqueakVoicePackDef pack = pair.Value[p];
+                    VoicePackInfo pack = pair.Value[p];
                     if (string.Equals(pack.targetDefName ?? "", xeno.DefName, StringComparison.Ordinal))
                     {
                         if (namingRaces == 0) onlyRace = pair.Key;
@@ -223,7 +223,7 @@ public sealed class VerseRaceBoardSource : IUsRaceBoardFactsSource
         return false;
     }
 
-    private static string PackDisplay(SqueakVoicePackDef pack)
+    private static string PackDisplay(VoicePackInfo pack)
     {
         string label = pack.label ?? "";
         return label.Length > 0 ? label : (pack.defName ?? "");

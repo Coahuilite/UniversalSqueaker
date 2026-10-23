@@ -8,7 +8,7 @@ using RimWorld;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
@@ -38,7 +38,7 @@ internal static partial class Program
             p.Comp = new CompSqueaker { Pawn = p };
             return p;
         }
-        var method = typeof(UsOneShotDebugActions).GetMethod(nameof(UsOneShotDebugActions.SelectCandidate))!;
+        var method = typeof(ResponseDebugActions).GetMethod(nameof(ResponseDebugActions.SelectCandidate))!;
         var menu = method.GetCustomAttribute<DebugActionAttribute>()!;
         var select = (Action)Delegate.CreateDelegate(typeof(Action), method);
         Console.WriteLine("MENU actual callback=" + method.DeclaringType!.FullName + "." + method.Name + " label=" + menu.Name);
@@ -52,18 +52,18 @@ internal static partial class Program
         var inactive = Actor();
         int starts = SoundStarter.Played.Count;
         new Pawn_EquipmentTracker { pawn = inactive }.AddEquipment(new ThingWithComps());
-        Check(!UsOneShotRuntime.DevelopmentActive && !UsOneShotRuntime.IsControlled(inactive)
+        Check(!SqueakerRuntime.DevelopmentActive && !SqueakerRuntime.IsControlled(inactive)
             && inactive.Comp.LastCandidateRequest == null && SoundStarter.Played.Count == starts,
             "unselected GLOBAL Dev gate creates zero owner/request/output on actual EquipmentAdded");
         Prefs.DevMode = false;
         bool refused = false;
         try { select(); } catch (InvalidOperationException e) { refused = e.Message.Contains("developer mode"); }
         finally { Prefs.DevMode = true; }
-        Check(refused && !UsOneShotRuntime.DevelopmentActive && !UsOneShotRuntime.IsControlled(inactive),
+        Check(refused && !SqueakerRuntime.DevelopmentActive && !SqueakerRuntime.IsControlled(inactive),
             "actual menu callback cannot activate the candidate outside developer mode");
 
         select(); // The production menu owns the policy. No hand-constructed policy is selected here.
-        Check(UsOneShotRuntime.DevelopmentActive && UsOneShotRuntime.PolicyStatus == "ExplicitDevelopmentCandidate",
+        Check(SqueakerRuntime.DevelopmentActive && SqueakerRuntime.PolicyStatus == "ExplicitDevelopmentCandidate",
             "actual SelectCandidate selects the process-only GLOBAL development policy");
         var actor = Actor();
         var tracker = new Pawn_EquipmentTracker { pawn = actor };
@@ -73,7 +73,7 @@ internal static partial class Program
         var owner = RuntimeSession(actor);
         Console.WriteLine("MENU Equip observation=" + owner.DiagnosticText);
         var request = actor.Comp.LastCandidateRequest;
-        Check(request != null && request.Action == "us.core/Equip" && request.Subject == actor.ThingID
+        Check(request != null && request.Action == "us.core/Equip" && request.Subject == SqueakerNotifications.SubjectKey(actor)
             && request.SubjectRole == "EquipmentWearer" && request.Domain == race.defName
             && request.Audio.SourceDomain == AudioDomains.RaceOnly(race.defName)
             && request.Audio.EntryKey == "fixture.equip/US_Equip_Menu/Equip" && request.Audio.AudioId == "actual.provider/Ratkin1"
@@ -124,7 +124,7 @@ internal static partial class Program
                 if (throwing) broken.AddEquipment(new ThingWithComps());
                 else broken.Notify_EquipmentAdded(new ThingWithComps()); // No actual membership.
             } catch (InvalidOperationException e) { observedThrow = e.Message == "NativeEquipmentFailure"; }
-            Check(observedThrow == throwing && !UsOneShotRuntime.IsControlled(denied)
+            Check(observedThrow == throwing && !SqueakerRuntime.IsControlled(denied)
                 && denied.Comp.LastCandidateRequest == null && SoundStarter.Played.Count == before,
                 "actual " + (throwing ? "throwing EquipmentAdded" : "notification without equipment relation") + " publishes no normal-return event/owner");
         }

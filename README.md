@@ -1,5 +1,7 @@
 # Universal Squeaker
 
+0.6 r2: [current author/configuration contract](docs/us-kernel-0.6-refactor-zh.md) — complete neutral Core, one synchronous response owner and explicit notification declarations. Ordinary policy and native/human acceptance remain pending.
+
 **English** | [中文](./README.zh-CN.md)
 
 A voice-pack routing kernel for RimWorld 1.6, derived from Squeaky Ratkin under MPL-2.0.
@@ -22,8 +24,8 @@ Current Dev builds explicitly consume a fixed FerriteLib **0.8** package (`[0.8.
 
 This branch is **0.6.0 Dev**: the single production owner covers [all fifteen contracts and the settled configurable Select qualifications](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界), with real author examples and per-package SR comparisons. Ordinary coverage/policy, native behavior and human acceptance remain separate gates. The [documentation index](docs/README.md) distinguishes retained 0.5 guides from current 0.6 interfaces.
 
-- [Current behavior and settings](docs/current-behavior-0.5-zh.md)
-- [Retained 0.5 VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)
+- [Current r2 behavior and settings](docs/us-kernel-0.6-refactor-zh.md)
+- [Current 0.6 r2 authoring](docs/us-kernel-0.6-authoring-zh.md)
 - [Kernel 0.6.x first-edition specification](docs/us-kernel-0.6-spec-zh.md)
 - [Build and debug](docs/build-and-debug.md)
 - [Release flow](docs/release-runbook-zh.md) and [privacy gate](docs/push-privacy-gate.md)

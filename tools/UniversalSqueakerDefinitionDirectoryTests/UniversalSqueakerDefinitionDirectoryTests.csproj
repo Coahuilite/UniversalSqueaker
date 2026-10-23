@@ -33,6 +33,8 @@
     <NuGetAudit>false</NuGetAudit>
     <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <FerriteLibStubOutputRoot Condition="'$(FerriteLibStubOutputRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\refactor-r2-a001\defdir-stubs\</FerriteLibStubOutputRoot>
+    <FerriteLibStubObjRoot Condition="'$(FerriteLibStubObjRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\refactor-r2-a001\defdir-stub-obj\</FerriteLibStubObjRoot>
     <UsProductArtifactPath Condition="'$(UsProductArtifactPath)' == ''">$(MSBuildProjectDirectory)\..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</UsProductArtifactPath>
   </PropertyGroup>
 
@@ -59,9 +61,15 @@
       <HintPath>$(FerriteLibArtifactFullPath)</HintPath>
       <Private>true</Private>
     </Reference>
-    <ProjectReference Include="Stubs\VerseStub\VerseStub.Extension.csproj" ReferenceOutputAssembly="true" />
+    <Reference Include="Assembly-CSharp"><HintPath>$(FerriteLibStubOutputRoot)verse-ext/Assembly-CSharp.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(FerriteLibStubOutputRoot)unityengine/UnityEngine.CoreModule.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(FerriteLibStubOutputRoot)unityengine-imgui/UnityEngine.IMGUIModule.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
 
+  <!-- Same serial explicit-build boundary as KernelHostTests; nested graph properties do not own this fixture's intermediates. -->
+  <Target Name="BuildExtendedRuntime" BeforeTargets="ResolveAssemblyReferences">
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)/Stubs/VerseStub/VerseStub.Extension.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot; &quot;-p:RestoreFallbackFolders=$(RestoreFallbackFolders)&quot;" />
+  </Target>
   <Target Name="BuildProductionAssemblies" BeforeTargets="ResolveReferences" Condition="'$(UsProductAlreadyBuilt)' != 'true'">
     <Exec Command="dotnet build &quot;..\..\Source\UniversalSqueaker\UniversalSqueaker.csproj&quot; -c $(Configuration) &quot;-p:FerriteLibArtifactPath=$(FerriteLibArtifactPath)&quot; --nologo -v quiet"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
@@ -71,14 +79,15 @@
        UNCHANGED from the snapshot's own build slot; the VERSE half is this project's extended
        build - recorded separately in the report (path + hash), never claimed as frozen bytes. -->
   <Target Name="BuildAndCopyRuntimeStubs" AfterTargets="Build">
-    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
-    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
-    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;" />
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs\Stubs\UnityEngineInputLegacyModuleStub\UnityEngineInputLegacyModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;" />
     <ItemGroup>
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine\UnityEngine.CoreModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-input\UnityEngine.InputLegacyModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine\UnityEngine.CoreModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-input\UnityEngine.InputLegacyModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>

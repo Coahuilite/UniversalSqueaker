@@ -5,7 +5,9 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 D-C candidate and product gates
+## NOW — 0.6.0 r2 candidate and product gates
+
+- The breaking Core/owner/configuration/author/UI-read-model cutover is described in `docs/us-kernel-0.6-refactor-zh.md`, with exact deleted-source replacements and current external author examples. Do not restore legacy readers, short-key fallback or a second runtime/settings authority. The overall r2 work remains pending the coordinated cross-library candidate and acceptance; fixed FL `fc010bd`/A002 is still the authorized input, not the forthcoming r2 library. A real remote0.8 CI carrier remains a PM dependency.
 
 - D-C covers all fifteen official contracts/facts/callers and SR guides through the single owner; the two dedicated baby-fit responses are retired. Current interfaces, evidence boundaries and explicit fixture migrations live in the public specification, fact ledger and acceptance/migration pages.
 - Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.

@@ -35,7 +35,7 @@ internal static class Program
         // reference resolves to the stub assembly that carries the HarmonyLib.Harmony type token.
         AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
             args.Name.StartsWith("0Harmony", StringComparison.Ordinal)
-                ? typeof(UniversalSqueakerMod).BaseType!.Assembly
+                ? typeof(SqueakerMod).BaseType!.Assembly
                 : null;
 
         try
@@ -240,7 +240,7 @@ internal static class DirectoryHostSmokeTests
         RaceDefinitionCatalog.CollectAndPublish(); // the PRODUCTION startup entry, once
         Full = RaceDefinitionCatalog.Current;
 
-        var settings = new UniversalSqueakerSettings();
+        var settings = new GameSettings();
         var source = new UsKernelSettingsSource(settings);
         using UiHost host = UsKernelSettingsHost.Create(source, new Metrics());
 
@@ -412,7 +412,7 @@ internal static class DirectoryHostSmokeTests
         Program.Check(reopenedDrew, "the REBUILT host actually drew the reused directory (real draw, not a getter)");
     }
 
-    private static void XenoArrival(UsKernelSettingsSource source, UniversalSqueakerSettings settings, UiHost host, string target,
+    private static void XenoArrival(UsKernelSettingsSource source, GameSettings settings, UiHost host, string target,
         string[]? savedKeys, SqueakVoicePackDomainState want, string why)
     {
         if (savedKeys != null)
@@ -462,7 +462,7 @@ internal static class DirectoryHostSmokeTests
         }
     }
 
-    private static string SelectionsSnapshot(UniversalSqueakerSettings settings)
+    private static string SelectionsSnapshot(GameSettings settings)
     {
         return string.Join(";", settings.voicePackSelections.Select(r =>
             r.scope + "|" + r.raceDefName + "|" + r.xenotypeDefName + "|" + string.Join(",", r.enabledPackKeys)));
@@ -548,14 +548,8 @@ internal static class NarrowXenoGeometryTests
         RaceDefinitionCatalog.Publish(new UsDefinitionSnapshot(races, xenos));
 
         // ONE valid production pack naming x_long (real validator + catalog refresh).
-        DefDatabase<SqueakVoicePackDef>.Clear();
-        var pack = new SqueakVoicePackDef
-        {
-            scope = SqueakVoicePackScope.Xenotype,
-            raceDefName = "Human",
-            targetDefName = "x_long",
-            weight = 1f,
-        };
+        DefDatabase<UsVoicePackDef>.Clear();
+        var pack = new UsVoicePackDef { declaration = new UniversalSqueaker.Authoring.VoicePackDeclaration { Race="Human", Child="x_long" } };
         pack.defName = "US_longpack";
         pack.label = "Long Pack";
         var packer = new ModContentPack("coahuilite.longpack", "Long Pack Maker");
@@ -564,32 +558,22 @@ internal static class NarrowXenoGeometryTests
         var sound = new SoundDef { context = Verse.Sound.SoundContext.MapOnly };
         sound.defName = "US_longsound";
         sound.subSounds = new List<Verse.Sound.SubSoundDef> { new Verse.Sound.SubSoundDef { onCamera = false, grains = new List<Verse.Sound.AudioGrain> { new Verse.Sound.AudioGrain() } } };
-        pack.actions = new List<SqueakVoicePackAction>
-        {
-            new SqueakVoicePackAction { action = SqueakAction.Call, sounds = new List<SoundDef> { sound } },
-        };
-        DefDatabase<SqueakVoicePackDef>.Add(pack);
+        pack.declaration.Entries.Add(new UniversalSqueaker.Authoring.VoiceEntry { Key="call", Action=CoreActions.Call, Sound="US_longsound" });
+        DefDatabase<UsVoicePackDef>.Add(pack);
         ModsConfig.BiotechActive = true;
-        var settings = new UniversalSqueakerSettings();
-        // DIAGNOSTIC: surface the REAL validator verdict through reflection (internal contract).
-        var validatorType = typeof(SqueakVoicePackDef).Assembly.GetType("UniversalSqueaker.SqueakVoicePackValidator");
-        if (validatorType != null)
-        {
-            var getErrors = validatorType.GetMethod("GetErrors", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-            var errs = getErrors?.Invoke(null, new object[] { pack }) as System.Collections.IEnumerable;
-            string joined = "";
-            if (errs != null) { foreach (object o in (System.Collections.IEnumerable)errs) { joined += (joined.Length > 0 ? " | " : "") + o; } }
-            Console.WriteLine("  [validator] " + (joined.Length > 0 ? joined : "CLEAN"));
-        }
-        else
-        {
-            Console.WriteLine("  [validator] type not found");
-        }
+        var settings = new GameSettings();
+        var builder=new UniversalSqueaker.Authoring.AudioInputBuilder(new UniversalSqueaker.Authoring.DefinitionCatalog(120,120,true));
+        builder.AddPack(packer.PackageId,pack.defName,pack.declaration,key=>packer.PackageId+"/"+key,packer.PackageId+":"+pack.defName);
+        Program.Check(builder.Entries.Length==1,"current canonical audio normalization retains the exact fixture pack/domain");
+        typeof(GameSettings).Assembly.GetType("UniversalSqueaker.VoicePackDirectory",true)!
+            .GetMethod("Refresh",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static)!.Invoke(null,new object[]{builder.Entries});
+        typeof(GameSettings).Assembly.GetType("UniversalSqueaker.GameRuntime",true)!
+            .GetMethod("InitializeMainThread",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static)!.Invoke(null,null);
         SqueakXenotypeCatalog.Refresh(settings);
         Console.WriteLine("  [catalog] xenotypePacks=" + SqueakXenotypeCatalog.Current.XenotypePacksByDefName.Count
             + " raceDefNames=" + SqueakXenotypeCatalog.Current.RaceDefNames.Count);
         Program.Check(SqueakXenotypeCatalog.Current.XenotypePacksByDefName.ContainsKey("x_long"),
-            "the seeded pack passes the REAL validator and assembles into the sound catalog");
+            "the normalized fixture pack appears in the production read-side catalog");
 
         // PM evidence clarification A: the dormant leg must prove CONTENT PRESERVATION, not an
         // empty-set equality. Seed a non-empty OLD saved selection on an unrelated domain (the

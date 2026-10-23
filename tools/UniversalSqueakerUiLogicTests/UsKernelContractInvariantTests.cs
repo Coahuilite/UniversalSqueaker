@@ -249,14 +249,15 @@ internal static class UsKernelContractInvariantTests
 
         string sourceInterface = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "IUsKernelSettingsSource.cs"));
-        Assert(sourceInterface.Contains("SetBasicToggle(SqueakBasicToggle")
+        Assert(sourceInterface.Contains("SetTalkingScaling(bool")
             && sourceInterface.Contains("SetDomainFilter(SqueakDomainFilterKind")
-            && sourceInterface.Contains("SetMoodTuning(SqueakMood mood, SqueakMoodFactor"),
-            "Kernel business selectors use closed enum types");
-        Assert(!sourceInterface.Contains("SetBasicToggle(string")
-            && !sourceInterface.Contains("SetDomainFilter(string")
-            && !sourceInterface.Contains("SetMoodTuning(SqueakMood mood, string"),
-            "Kernel business boundary contains no string selector protocol");
+            && sourceInterface.Contains("SetActionScope(string actionKey, BehaviorScope?"),
+            "current business selectors preserve boolean and closed scope/filter types");
+        string settings = File.ReadAllText(Path.Combine(root,"Source","UniversalSqueaker","Settings","GameSettings.cs"));
+        Assert(!settings.Contains("ActionPresentations") && settings.Contains("BuiltInPawnContracts.NormalizeScope"),
+            "UI labels do not own settings scope normalization");
+        Assert(typeof(ActionPresentation).GetField("SupportedScopes") == null && typeof(ActionPresentation).GetField("DefaultScope") == null,
+            "presentation has no second scope capability/default table");
     }
 
     /// <summary>
@@ -287,7 +288,7 @@ internal static class UsKernelContractInvariantTests
             if (node is XmlElement widget && widget.HasAttribute("Bind")) binds.Add(widget.GetAttribute("Bind"));
         }
 
-        foreach (string expected in new[] { "allow-eggs", "scale-cooldown", "scale-talking", "scale-population" })
+        foreach (string expected in new[] { "allow-eggs", "scale-talking" })
         {
             Assert(binds.Contains(expected),
                 "the declarative basic-tuning card owns a control on binding '" + expected + "'");

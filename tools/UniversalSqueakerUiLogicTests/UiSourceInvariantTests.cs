@@ -57,12 +57,12 @@ internal static class UiSourceInvariantTests
     private static void VerifyPrerequisiteDesyncIsNamed(string root)
     {
         CheckSourceContains(
-            Path.Combine(root, "Source", "UniversalSqueaker", "Mod.cs"),
+            Path.Combine(root, "Source", "UniversalSqueaker", "Game", "GameBootstrap.cs"),
             new[] { "PrerequisiteVerified = FerriteLibVersion.Require(" },
             "Mod must record the Require verdict in PrerequisiteVerified");
         CheckSourceContains(
-            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs"),
-            new[] { "UniversalSqueakerMod.PrerequisiteVerified" },
+            Path.Combine(root, "Source", "UniversalSqueaker", "UI", "GameSettingsWindow.cs"),
+            new[] { "SqueakerMod.PrerequisiteVerified" },
             "the settings window must short-circuit on an unverified prerequisite");
     }
 
@@ -227,10 +227,10 @@ internal static class UiSourceInvariantTests
             path,
             new[]
             {
-                "public sealed class UniversalSqueakerSettingsWindow : UiWindowHost",
+                "public sealed class GameSettingsWindow : UiWindowHost",
                 "protected override UiHost CreateHost()",
                 "protected override void DrawNotice(Rect rect, UiWindowNotice notice)",
-                "protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;",
+                "protected override bool PrerequisiteVerified => SqueakerMod.PrerequisiteVerified;",
                 "protected override Func<Vector2>? InitialSizePolicy",
                 "UiThemeDraw.Surface(",
             },
@@ -267,12 +267,12 @@ internal static class UiSourceInvariantTests
 
         // The legacy select-xenotype-tab request path was deleted from both sides of the entry
         // point: OpenSettings() takes no parameters and the settings class keeps no tab request.
-        string modPath = Path.Combine(root, "Source", "UniversalSqueaker", "Mod.cs");
+        string modPath = Path.Combine(root, "Source", "UniversalSqueaker", "UniversalSqueaker.cs");
         CheckSourceContains(modPath, new[] { "public void OpenSettings()" },
             "the settings entry point is the parameterless OpenSettings()");
         CheckSourceDoesNotContain(modPath, "selectXenotypeTab",
             "the deleted xenotype-tab request parameter must not return");
-        string settingsClass = Path.Combine(root, "Source", "UniversalSqueaker", "Settings", "UniversalSqueakerSettings.cs");
+        string settingsClass = Path.Combine(root, "Source", "UniversalSqueaker", "Settings", "GameSettings.cs");
         CheckSourceDoesNotContain(settingsClass, "RequestXenotypeTabOnNextDraw",
             "the settings class must not regain a xenotype-tab request API");
         CheckSourceDoesNotContain(settingsClass, "ClearXenotypeTabRequest",
@@ -316,7 +316,7 @@ internal static class UiSourceInvariantTests
                 + "(coexisting above the settings window)");
         }
 
-        string settingsWindow = File.ReadAllText(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"));
+        string settingsWindow = File.ReadAllText(Path.Combine(ui, "GameSettingsWindow.cs"));
         if (settingsWindow.IndexOf("layer = WindowLayer.Dialog", StringComparison.Ordinal) < 0
                 || settingsWindow.IndexOf("absorbInputAroundWindow = true", StringComparison.Ordinal) < 0
                 || settingsWindow.IndexOf("closeOnCancel", StringComparison.Ordinal) >= 0
@@ -652,7 +652,7 @@ internal static class UiSourceInvariantTests
         string[] retiredMachine = { "BeginHelpHoverFrame", "SetHelpHover", "HelpHoverKey", "HelpHoverGraceLeft" };
         foreach (string file in new[]
         {
-            "UI/UniversalSqueakerSettingsWindow.cs",
+            "UI/GameSettingsWindow.cs",
             "UI/Model/VoicePacksPageModel.cs",
             "UI/Model/VoicePacksPageState.cs",
             "UI/UsKernelSettingsSource.cs",
@@ -911,7 +911,7 @@ internal static class UiSourceInvariantTests
         // only, and the footer's closed save-status token set reports drift instead of silently
         // rendering an unknown state. Restoring a chrome literal or dropping the guard fails here.
         string windowChrome = Path.Combine(
-            root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs");
+            root, "Source", "UniversalSqueaker", "UI", "GameSettingsWindow.cs");
         CheckSourceDoesNotContain(windowChrome, "\"Close\"",
             "the close button must translate US.Settings.Window.Close, not ship an English literal");
         CheckSourceDoesNotContain(windowChrome, "VoicePack Routing",
@@ -1009,7 +1009,7 @@ internal static class UiSourceInvariantTests
         // The settings window used to read the drawer state to resize itself. With one window width there is
         // nothing left for it to read, so a window that names the panel state again is the widening coming
         // back through the side door.
-        CheckSourceDoesNotContain(Path.Combine(ui, "UniversalSqueakerSettingsWindow.cs"), "HelpPanelOpen",
+        CheckSourceDoesNotContain(Path.Combine(ui, "GameSettingsWindow.cs"), "HelpPanelOpen",
             "the settings window must not read or size for the help state any more: BH1 removed the second"
             + " width, so the window owns no help decision");
 
@@ -1118,7 +1118,7 @@ internal static class UiSourceInvariantTests
     }
 
     private static string SettingsWindowPath(string root) =>
-        Path.Combine(root, "Source", "UniversalSqueaker", "UI", "UniversalSqueakerSettingsWindow.cs");
+        Path.Combine(root, "Source", "UniversalSqueaker", "UI", "GameSettingsWindow.cs");
 
     private static bool IsSameSet(HashSet<string> a, HashSet<string> b)
     {

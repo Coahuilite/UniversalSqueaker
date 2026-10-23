@@ -11,7 +11,7 @@ namespace UniversalSqueaker.KernelHostTests;
 
 /// <summary>
 /// RPT1 lane: the Report button now answers. Before this slice a complete report could be written to the
-/// layout log while the button said nothing at all - <c>UniversalSqueakerSettingsWindow.BeforeDraw</c> discarded
+/// layout log while the button said nothing at all - <c>GameSettingsWindow.BeforeDraw</c> discarded
 /// the generated pass that <c>UsKernelSettingsSource.ConsumeLayoutReportRequest</c> already returned, and the
 /// only sentence in the card was capture state, which a click never moved.
 ///
@@ -200,7 +200,7 @@ internal static class ReportFeedbackLaneTests
             // report yet instead of a success. The full manifest cannot be drawn here (its bindings build the
             // view from RimWorld's def database, absent from the Verse stub), which is why the lifecycle below
             // runs on the minimal page - this clause is what keeps that page honest about the binding name.
-            var boundSource = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+            var boundSource = new UsKernelSettingsSource(new GameSettings());
             using (UiHost boundHost = UsKernelSettingsHost.Create(boundSource, new Program.StubMetrics()))
             using (UsTextFitAudit boundScope = UsTextFitAudit.Open(boundHost, auditFit: false))
             {
@@ -217,7 +217,7 @@ internal static class ReportFeedbackLaneTests
             // (b) The lifecycle, driven the way the window drives it: a real bound command, real passes, and
             // the same consume call BeforeDraw makes.
             var metrics = new DrawnTextMetrics();
-            var source = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+            var source = new UsKernelSettingsSource(new GameSettings());
             using UiHost host = CreateReportHost(source, metrics);
             var page = new Rect(0f, 0f, 320f, 240f);
 
@@ -323,8 +323,8 @@ internal static class ReportFeedbackLaneTests
         Program.SetTranslatorResolver(table);
         try
         {
-            var firstSource = new UsKernelSettingsSource(new UniversalSqueakerSettings());
-            var secondSource = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+            var firstSource = new UsKernelSettingsSource(new GameSettings());
+            var secondSource = new UsKernelSettingsSource(new GameSettings());
             using UiHost first = CreateReportHost(firstSource, new Program.StubMetrics());
             using UiHost second = CreateReportHost(secondSource, new Program.StubMetrics());
             // The second window deliberately has NO diagnosis scope, so its own reason is the scope, not the

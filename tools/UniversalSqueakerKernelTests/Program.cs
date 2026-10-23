@@ -171,7 +171,7 @@ internal static class Program
                             foreach (SimGate gate in new[] { SimGate.All, SimGate.Partial })
                             {
                                 ChainResult result = registry.Select(
-                                    new SelectionContext(domain, actionKey, AgeBucket.Adult, false, allowEggs),
+                                    new SelectionContext(domain, ActionKeyMirror.FrozenId(actionKey), AgeBucket.Adult, false, allowEggs),
                                     mode, gate, new LcgRandom(seed));
                                 sb.Append(scenario).Append('|').Append(ModeName(mode)).Append('|').Append(domain).Append('|')
                                   .Append(actionKey).Append('|').Append(seed).Append('|').Append(gate == SimGate.All ? "all" : "partial").Append('|');

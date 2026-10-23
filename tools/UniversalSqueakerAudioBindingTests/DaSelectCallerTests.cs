@@ -4,7 +4,7 @@ using System.Linq;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using RimWorld;
 using HarmonyLib;
@@ -49,11 +49,11 @@ internal static partial class Program
         source.declaration.Sources.Add(new BehaviorSource { Domain = new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
             Contributions = new List<BehaviorContribution> { new() { Action = "us.core/Select", Values = new BehaviorValues { Volume = .75 } } } });
         DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading.Add(source);
-        UsOneShotRuntime.Initialize();
+        SqueakerRuntime.Initialize();
         void PublishSelectedPacks() {
             var directory = new SqueakXenotypeCatalogSnapshot();
             var selections = new Dictionary<AudioDomain, HashSet<string>>();
-            foreach (var pack in UsAuthorVoicePacks.Directory) {
+            foreach (var pack in VoicePackDirectory.Directory) {
                 pack.TryGetPackKey(out var key);
                 var audioDomain = new AudioDomain(new RaceKey(pack.raceDefName),
                     pack.scope == SqueakVoicePackScope.Xenotype ? new XenotypeKey(pack.targetDefName) : (XenotypeKey?)null);
@@ -61,39 +61,38 @@ internal static partial class Program
                 if (pack.scope == SqueakVoicePackScope.Race) directory.RacePacks.Add(pack);
                 else directory.XenotypePacksByDefName[pack.targetDefName] = new[] { pack };
             }
-            SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
         }
         PublishSelectedPacks();
-        Check(!UsAuthorVoicePacks.Directory.Any(x => x.defName == "US_DaInvalidXeno"),
+        Check(!VoicePackDirectory.Directory.Any(x => x.defName == "US_DaInvalidXeno"),
             "DA unloaded Xeno declaration cannot become a legal child audio binding");
         string persisted = "";
-        Check(UniversalSqueakerMod.Settings.TryChangeBehaviorSource(domain, "fixture.da/US_DaSource", UsOneShotRuntime.BehaviorSources,
+        Check(SqueakerMod.Settings.TryChangeBehaviorSource(domain, "fixture.da/US_DaSource", SqueakerRuntime.BehaviorSources,
             xml => { persisted = xml; return true; }, out _) && persisted.Contains(childId),
             "DA actual settings source transaction persists full child identity before runtime publication");
-        Check(UniversalSqueakerMod.Settings.TryChangeBehaviorSource(new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
-            "fixture.da/US_DaSource", UsOneShotRuntime.BehaviorSources, _ => true, out _), "DA bind legal child author contribution independently");
-        void RelaxSelect() => Check(UniversalSqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Select",
+        Check(SqueakerMod.Settings.TryChangeBehaviorSource(new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
+            "fixture.da/US_DaSource", SqueakerRuntime.BehaviorSources, _ => true, out _), "DA bind legal child author contribution independently");
+        void RelaxSelect() => Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Select",
             new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false },
             () => true, out _), "DA explicit player settings relax the three official qualifications without changing accepted-feedback evidence");
         RelaxSelect();
-        UniversalSqueakerMod.Settings.actionTuning.Add(new ActionTuningRecord { actionKey = childId, raceDefName = "Ratkin",
-            hasScope = true, scope = SqueakActionScope.Disabled });
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        SqueakerMod.Settings.actionTuning.Add(new ActionTuningRecord { actionKey = childId, raceDefName = "Ratkin",
+            hasScope = true, scope = BehaviorScope.Disabled });
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         var selector = new Selector();
         var proxy = new object(); selector.Proxies.Add(proxy, pawn);
         int starts = SoundStarter.Played.Count;
         selector.Reject = true; selector.Select(proxy); selector.Reject = false;
-        Check(!UsOneShotRuntime.IsControlled(pawn) && SoundStarter.Played.Count == starts,
+        Check(!SqueakerRuntime.IsControlled(pawn) && SoundStarter.Played.Count == starts,
             "DA method invocation rejected by upstream does not create a Select event or owner");
         selector.Select(proxy, false);
-        Check(!UsOneShotRuntime.IsControlled(pawn), "DA accepted membership without feedback intent is not a Select response");
+        Check(!SqueakerRuntime.IsControlled(pawn), "DA accepted membership without feedback intent is not a Select response");
         selector.Selected.Clear();
         selector.Select(proxy);
         var session = RuntimeSession(pawn);
         Check(session.LastOutcome.Action == "us.core/Select" && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && SoundStarter.Played.Count == starts + 1 && session.DiagnosticText.Contains("role=SelectedSubject")
-            && session.DiagnosticText.Contains("subject=Ratkin-A") && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/ordinary"),
+            && session.DiagnosticText.Contains("subject=" + SqueakerNotifications.SubjectKey(pawn)) && session.DiagnosticText.Contains("nativeLabel=Ratkin-A") && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/ordinary"),
             "DA actual Harmony proxy selection -> committed final Pawn -> real settings -> same owner -> exact entry/request/receipt/diagnostic");
         selector.Select(proxy);
         Check(SoundStarter.Played.Count == starts + 1, "DA no upstream feedback produces no extra notification (no US dedup state)");
@@ -103,11 +102,11 @@ internal static partial class Program
             "DA if upstream accepts repeated feedback US adds no independent duplicate-selection rejection");
         selector.FailAfterFeedback = true;
         try { selector.Select(other); } catch (InvalidOperationException) { }
-        Check(!UsOneShotRuntime.IsControlled(other), "DA feedback before failed commit cannot select a different Pawn");
+        Check(!SqueakerRuntime.IsControlled(other), "DA feedback before failed commit cannot select a different Pawn");
         selector.FailAfterFeedback = false; selector.Select(other);
         Check(RuntimeSession(other).State.ConfirmedAction == "us.core/Select" && SoundStarter.Played.Count == starts + 3,
             "DA exception cleanup releases nested observation and separate Pawn owners may act on the same tick");
-        UniversalSqueakerMod.Settings.actionTuning.Clear();
+        SqueakerMod.Settings.actionTuning.Clear();
         RelaxSelect();
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         pawn.Comp.Vocal = true;
@@ -131,17 +130,17 @@ internal static partial class Program
             && session.DiagnosticText.Contains("sourceDomain=Ratkin+DA_Xeno")
             && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaXeno/ordinary"),
             "DA actual legal Xeno context selects its own declared entry and preserves source subdomain");
-        SqueakRuntimeResolver.Current.RejectChildContext = true;
+        GameRuntime.Current.RejectChildContext = true;
         Find.TickManager.TicksGame += 200; selector.Select(proxy);
         Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/ordinary")
             && session.DiagnosticText.Contains("localVolume=1 "),
             "DA resolver-rejected raw genes cannot admit child audio or child behavior contributions");
-        SqueakRuntimeResolver.Current.RejectChildContext = false;
+        GameRuntime.Current.RejectChildContext = false;
         pawn.genes = null;
         pawn.health = new FixtureHealth(); pawn.health.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         ratkin.declaration.Entries.RemoveAll(x => x.Action == childId);
-        UsOneShotRuntime.Initialize(); PublishSelectedPacks();
+        SqueakerRuntime.Initialize(); PublishSelectedPacks();
         Find.TickManager.TicksGame += 200; selector.Select(proxy);
         session = RuntimeSession(pawn);
         Check(session.LastOutcome.Action == childId && session.LastOutcome.Reason == "NoBoundAudio",

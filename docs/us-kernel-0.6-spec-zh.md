@@ -1,6 +1,8 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r14（Core常用Work与固定FL A002）。状态：**获准Core Work范围已按完整清单补齐；十五包现有适配经同一生产owner，普通政策／逐包人审／原生仍未关闭**。目标 RimWorld 1.6.4871，net472。
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
+
+修订：2026-10-24，r15（完整中立Core、单语义与新配置／声明合同）。状态：**获准Core Work范围已按完整清单补齐；十五包现有适配经同一生产owner，普通政策／逐包人审／原生仍未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -467,10 +469,10 @@ K20 封存、K21 完整实现首版外、种族／服务对象边界、K13／K17
 
 当前0.6作者入口见§21、统一owner及响应格式见§20；[文档目录](README.md)区分当前候选与历史交付。[0.5.x作者指南](voicepack-authoring-0.5-zh.md)只描述旧格式。以下代码用于解释保留／变化的基线，不要求实现保持原类结构：
 
-- [现有池与路由](../Source/UniversalSqueaker/Kernel/SqueakPoolRegistry.cs)、[池数据](../Source/UniversalSqueaker/Kernel/Pool.cs)。
+- [保留的池与路由算法](../Source/UniversalSqueaker/Core/Audio/SqueakPoolRegistry.cs)、[池数据](../Source/UniversalSqueaker/Core/Audio/Pool.cs)。
 - [现有声明](../Source/UniversalSqueaker/Models/SqueakVoicePackModels.cs)、[当前资源投影](../Source/UniversalSqueaker/Runtime/SqueakKernelAdapter.cs)。
-- [现有 Comp 入口／生命周期](../Source/UniversalSqueaker/CompSqueaker.cs)、[动作元数据](../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs)。
-- [唯一决策与结算](../Source/UniversalSqueaker/Kernel/OneShot/OneShotDecision.cs)、[独立响应](../Source/UniversalSqueaker/Kernel/OneShot/ResponseModulation.cs)、[持续槽](../Source/UniversalSqueaker/Kernel/OneShot/SustainedPlayback.cs)、[实例输出](../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs)。旧时序／调制纯函数只保历史政策语料，不是活动生产决策。
+- [现有 Comp 入口／生命周期](../Source/UniversalSqueaker/CompSqueaker.cs)、[canonical合同](../Source/UniversalSqueaker/Core/Definitions/BuiltInPawnContracts.cs)。
+- [唯一决策与结算](../Source/UniversalSqueaker/Core/Responses/ResponseDecision.cs)、[独立响应](../Source/UniversalSqueaker/Core/Responses/ResponseModulation.cs)、[持续槽](../Source/UniversalSqueaker/Core/Responses/SustainedPlayback.cs)、[实例输出](../Source/UniversalSqueaker/Runtime/UsInstanceOutput.cs)。旧时序／调制模型已退休，不是活动生产决策。
 
 S2已核对远端1.6.4850及本机目标1.6.4871/Unity2022.3.35f1的关键方法体，见[S2实施页](us-kernel-0.6-s2-zh.md)；方法体依据和目标引用编译不是原生运行验收。本文没有把旧 UI 接受、历史工具测试或正常派发回执扩大成新 Kernel 的产品验收。
 
@@ -494,15 +496,15 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 ### 唯一生产 owner 与临时激活门
 
-`CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`UsOneShotRuntime`，每Pawn只有一份`UsPawnPlaybackSession`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。真正未注册字符串无需补注册，但仍受外部许可、scope、身份、同tick名额与同一硬截止约束。
+`CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`SqueakerRuntime`，每Pawn只有一份`PawnResponseAdapter`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。自定义通知须先用XML或一次C#明确声明；未知字符串拒绝，不补默认计划。完整新作者／保存／删除合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
 
 产品数值默认尚未冻结。本开发版本未选择整体策略时返回可读状态`PolicySelectionRequired`，零派发、零每Pawn候选初始化，不回旧链。开发模式菜单`S4AB-S5 GLOBAL Dev candidate: W20 H40 I120 spread120 p1 N/speed1; Equip=PlayerCoreEquip (pending)`一次性注入全局隔离候选，显式选择待裁的玩家Core Equip回应资格；重复点同一工具不会清保护。若不用菜单，也可在新的开发进程中显式调用同一组候选输入：
 
 ```csharp
-UsOneShotRuntime.SelectDevelopmentPolicy(
+SqueakerRuntime.SelectDevelopmentPolicy(
     new UsDevelopmentPolicy(20, 40, 120, 120, 120, 1, 1,
         equipQualification: UsEquipQualification.PlayerCoreEquip)); // 待裁Dev资格
-UniversalSqueakerMod.Settings.SetActivity(1.5);
+SqueakerMod.Settings.SetActivity(1.5);
 ```
 
 这些数值是高频验证输入，不是日常推荐值。参数顺序为基础W、共用硬间隔、普通动作硬间隔、Wounded硬间隔、初始错峰宽度、事件基准p、状态基础等待因子。固定W是本候选的分布；初始错峰只设下一机会，不虚构派发。人口／速度因子由本候选显式提供为1，未暗读旧滑块；将来若启用，该状态等待因子只进入W_base一次，不改事件p_base或硬截止。活动A独立以`activity`保存，有限正数，1中性；`SetActivity`沿原保存队列排队，实际机会采新值，不重建session或重抽已安排等待。临时开发策略不写公开Config，无每Pawn模式开关；数值默认冻结后移除该门。
@@ -549,7 +551,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 持续槽只接受有效新句柄确认Dispatched；同键维护先过当前来源／许可／发声资格，不抽随机、不刷新保护；低优先拒绝，高优先先准备再结束旧音。未知新句柄保Indeterminate硬保护；旧音结束／新启动分别记录，失败不恢复。活跃槽独立60tick复检，当前资格／状态失效或Unknown结束；无槽不复检，离图／销毁／服务关闭释放自有槽。
 
-自动证据分为纯生产源重放、实际调用／Harmony替身、Config与Host。诊断从该owner已存结果读取action／原因／四结果／确认tick／硬截止／下一机会和持续槽，不再显示旧私有时钟伪结果；旧Timing／概率／心情编辑控件在原FL0.7页面显示退役原因，保有效scope、单动作恢复、Eat及声音供给控件。原生1.6音频、听感及产品数值默认仍分别由维护者／PM接收。这是S4AB/S5原0.7候选的历史边界；当前固定FL0.8消费见§24。
+自动证据分为纯生产源重放、实际调用／Harmony替身、Config与Host。诊断从该owner已存结果读取action／原因／四结果／确认tick／硬截止／下一机会和持续槽，不再显示旧私有时钟伪结果；旧Timing／概率乘数／四档心情存储及相应控件已退役，现有详情显示当前响应参数与归因，保有效scope、单动作恢复、Eat及声音供给控件。原生1.6音频、听感及产品数值默认仍分别由维护者／PM接收。这是S4AB/S5原0.7候选的历史边界；当前固定FL0.8消费见§24。
 
 新`UsVoicePackDef`不是永久启用：验证后的声明投影进既有Packs目录，沿`packageId:DefName`选择身份及准确Race域启停；未显式选择沿原目录规则为未选入，不自动采用。当前声明支持准确Race／合法Xeno及纯NonPawn域；平台完整宿主仍仅Pawn，子域选择不代替主域选择。Runtime只合入当前已选声明的条目，保其局部校准和参与元数据。关闭音频包不卸载独立行为来源，也不改变其绑定意图；Fallback/Remix/Vanilla/Disabled仍按原模式合同。
 
@@ -610,9 +612,9 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 ## 22 D-B 有效配置与Eat当前入口
 
-### 一次决策只读一个配置视图
+### 一次决策捕获三份一致引用
 
-`UniversalSqueakerSettings.CaptureBehaviorConfiguration()`复制来源状态与玩家行；每个动作从同一视图解析，字段来源、实际依赖与view Id进入诊断。返回值的Read再给副本，后续编辑不修改旧视图或共享合同定义。合法Xeno来自现有resolver的当前准确上下文，不直接相信raw genes；NonPawn仍只有中性配置／目录／核心链，没有完整原生宿主。
+`GameSettings.CaptureBehaviorConfiguration()`复制来源状态与玩家行；每个动作从同一视图解析，字段来源、实际依赖与view Id进入诊断。返回值的Read再给副本，后续编辑不修改旧视图或共享合同定义。合法Xeno来自现有resolver的当前准确上下文，不直接相信raw genes；NonPawn仍只有中性配置／目录／核心链，没有完整原生宿主。
 
 三类控制分开：
 
@@ -622,9 +624,9 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 字段按“包装缺省 → 选中主域作者 → 选中合法子域作者 → 玩家服务对象profile → 玩家主域 → 玩家合法子域”稀疏折叠；所有作者先于玩家，最终才补缺省。false、0是贡献，不是继承。完整ActionId是身份，父固定条件继承不复制父参数。未配置的可选能力不成为依赖；非法显式值暂停相应配置，不修成默认。固定条件必需事实仍在依赖集中，不能由Whole参数抹掉固定Execution限制。
 
-玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，旧键只在边界规范成完整内置键。
+玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，新格式只存完整ActionId，不读旧短键。
 
-`UniversalSqueakerMod.TryChangeBehaviorOverride(family, namespace, target, child, fullActionId, values, out failure)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率／预设来源字段仍保留给原调用方。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
+`SqueakerMod.TryChangeBehaviorOverride(family, namespace, target, child, fullActionId, values, out failure)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率不恢复；独立模板恢复目标保留。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
 
 ### 三个Eat参数可以独立设置
 
@@ -683,7 +685,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 | selectRequireAwake=true | us.core/Awake必须True，health缺失Unknown | Awake按4871原生可清醒能力和实际driver.asleep，不以躺床替代 |
 | selectRequireNotDowned=true | us.core/NotDowned必须True，health缺失Unknown | 单项继承仅清该层presence，所选false不要求该可选实现 |
 
-现有调音页沿当前层显示三个下拉及Help；不完整Race/Xeno目标不回落写服务profile。`ActionTuningRecord`每字段独立has/value，ExposeData／clone／清理都保留缺失与false差别。生产Settings完整原子保存／重开与序列化失败恢复使用既有事务；队列保存失败保脏态／重试。Basics清服务profile三项，准确动作行／层Reset清对应玩家字段，保作者来源和last-good快照。公开程序入口仍为`UniversalSqueakerMod.TryChangeBehaviorOverride`，`BehaviorValues.SelectRequirePlayerControlled/SelectRequireAwake/SelectRequireNotDowned`各为bool?。
+现有调音页沿当前层显示三个下拉及Help；不完整Race/Xeno目标不回落写服务profile。`ActionTuningRecord`每字段独立has/value，ExposeData／clone／清理都保留缺失与false差别。生产Settings完整原子保存／重开与序列化失败恢复使用既有事务；队列保存失败保脏态／重试。Basics清服务profile三项，准确动作行／层Reset清对应玩家字段，保作者来源和last-good快照。公开程序入口仍为`SqueakerMod.TryChangeBehaviorOverride`，`BehaviorValues.SelectRequirePlayerControlled/SelectRequireAwake/SelectRequireNotDowned`各为bool?。
 
 ### 每包当前支持什么，必须在实际调用中成立
 

@@ -1,5 +1,7 @@
 # Core常用Work：完整入口、过程与边界
 
+当前r2实际结构、通知新前提、Config与删除映射见[r2合同](us-kernel-0.6-refactor-zh.md)；本页保留各包原有的产品语义／来源／未决与人工关口。
+
 目标来源：指定安装DLL元数据1.6.9676.17735，经VersionControl映射为RimWorld1.6.4871 rev591；Core/Defs/WorkTypeDefs/WorkTypes.xml、WorkGiverDefs/WorkGivers.xml及下列JobDefs。这里只公开身份、符号和机制结论，不分发反编译正文。
 
 用户批准补齐的Core常用工作现按20个WorkType、105个具体WorkGiver逐行盘点；102个做工入口的返回/帮助分支落到78个准确Job/driver，另3个病人休息入口排除。相对原七过程新增71组Job映射，73种driver。

@@ -4,7 +4,7 @@ namespace UniversalSqueaker.UI;
 
 /// <summary>Business/view boundary of the kernel settings path. The Host adapter binds every typed widget
 /// binding/action to this surface; the production implementation routes to
-/// <see cref="UniversalSqueakerSettings"/> and <see cref="VoicePacksPageModel"/>. The interface is
+/// <see cref="GameSettings"/> and <see cref="VoicePacksPageModel"/>. The interface is
 /// deliberately narrow and typed so tests can substitute a recording fake without the RimWorld
 /// graph. View state (filters, selections, tuning layer) is owned here and exposed via
 /// <see cref="ViewState"/>; IMGUI transients (scroll, popup, focus, drag) stay in the UiKit session.
@@ -27,21 +27,20 @@ public interface IUsKernelSettingsSource
     bool SaveStatusVisible { get; }
 
     bool IsDirty { get; }
+    string ResponseExplanation { get; }
 
     // Basic
     void SetMode(SqueakVoicePackMode mode);
     void SetGlobalVolume(float value);
     void SetDistancePreset(SqueakDistancePreset preset);
     void SetDistanceRange(float start, float end);
-    void SetBasicToggle(SqueakBasicToggle key, bool value);
+    void SetTalkingScaling(bool value);
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
 
     // Empty value restores this field's inheritance in the selected Pawn/Race/Xeno layer.
     void SetEatParameter(string key, string value);
     void SetSelectParameter(string key, string value);
-    void SetGlobalMinIntervalTicks(int ticks);
-    void SetGlobalCooldownMultiplier(float value);
     void SetDevLoggingMode(SqueakDevLoggingMode mode);
     void SetLocalizeDebugActions(bool value);
 
@@ -103,7 +102,6 @@ public interface IUsKernelSettingsSource
     /// <summary>Batch restore for the CURRENT layer+domain action area; the identity is the page's
     /// exact tuning layer, never a fallback to Global for an empty or invalid target.</summary>
     SqueakResetOutcome ResetActionTuningArea();
-    SqueakResetOutcome ResetMoodTuningArea();
     /// <summary>US-RESET1 review1: end THIS host's open edit when, and only when, the edit belongs
     /// to the fields the just-Applied restore wrote. The decision (which element the operation
     /// affects) is the host command's; the mechanism is exactly one rung of the cancel ladder on
@@ -114,7 +112,7 @@ public interface IUsKernelSettingsSource
 
     // Developer layout diagnosis (R3-B). These are per-WINDOW developer switches, not settings: they are
     // never persisted, never touch Config or a save, and they are deliberately NOT routed through
-    // UniversalSqueakerSettings. The source holds the request; the window's own diagnostic scope applies it.
+    // GameSettings. The source holds the request; the window's own diagnostic scope applies it.
     /// <summary>Turn the layout capture on or off for this window's host. Off by default.</summary>
     void SetLayoutCapture(bool on);
 
@@ -151,12 +149,10 @@ public interface IUsKernelSettingsSource
     bool LayoutOutlineOn { get; }
 
     // Tuning
-    void SetActionScope(string actionKey, SqueakActionScope? scope);
+    void SetActionScope(string actionKey, BehaviorScope? scope);
     // VF1定稿 A2/A4: one multiplier field of the CURRENT tuning layer's action identity; value null
     // clears the field (restore inheritance). reset writes the anchored preset's values back.
-    void SetActionTuning(string actionKey, bool intervalField, float? value);
     void ResetActionToPreset(string actionKey);
-    void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value);
     // VF1定稿: tuning area/selection and the final-fallback table editor commands.
     void SetTuningArea(int area);
     void SetTuningSelectedAction(string actionKey);
@@ -168,7 +164,6 @@ public interface IUsKernelSettingsSource
     void DeleteFallbackTable(string raceDefName);
 
     /// <summary>「重置为预设」：把本层来源指向的预设基线重新写回（来源保持）。不可用时是空操作。</summary>
-    void ResetMoodToPreset(SqueakMood mood);
     void ToggleBaselinePreset(string presetDefName);
     void ToggleBaselineRace(string presetDefName, string raceDefName, bool selected);
     void ToggleBaselineXenotype(string presetDefName, string raceDefName, string xenotypeDefName, bool selected);

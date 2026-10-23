@@ -160,7 +160,7 @@ internal static class UsAuditRoutingLaneTests
     /// </summary>
     private static void ARepeatedRequestSurvivesToANewerPass()
     {
-        var source = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+        var source = new UsKernelSettingsSource(new GameSettings());
         var bindings = new UiBindings();
         bindings.BindValue<bool>("layout-capture", () => source.LayoutCaptureOn, source.SetLayoutCapture);
         bindings.BindCommand("request-layout-report", source.RequestLayoutReport);

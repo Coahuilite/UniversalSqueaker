@@ -50,63 +50,14 @@ public readonly struct SqueakRecentOutcome
 /// <summary>Read-only overlay input. Obtaining it never consumes random state or updates trigger state.</summary>
 internal readonly struct SqueakDiagnosticSnapshot
 {
-    public readonly SqueakAction? CurrentTimingAction;
-    public readonly bool CurrentActionEnabled;
-    public readonly SqueakTriggerMode? CurrentTriggerMode;
-    public readonly SqueakCooldownClock? CurrentCooldownClock;
-    public readonly float CurrentActionIntervalMultiplier;
-    public readonly SqueakTimingEvaluation Timing;
-    public readonly SqueakTimingEvaluation BaseTiming;
-    public readonly SqueakPeriodicPopulation.Snapshot Population;
-    public readonly float MasterMultiplier;
-    public readonly XenotypeDef? Xenotype;
-    public readonly float XenotypeIntervalMultiplier;
-    public readonly float TimeSpeedMultiplier;
-    public readonly float EffectiveProbability;
-    public readonly float BaseProbability;
-    public readonly bool StartupPending;
-    public readonly bool EffectiveTimingReady;
+    public readonly Responses.SessionObservation? Response;
     public readonly SqueakVocalCapability VocalCapability;
-    public readonly bool TalkingGateApplied;
-    public readonly bool CurrentActionDeathExempt;
-    public readonly SqueakRecentOutcome? LastEvaluation;
-    public readonly SqueakRecentOutcome? LastSignificantOutcome;
-    /// <summary>The last successful dispatch regardless of action or later failures - the panel's
-    /// "last heard audio" outlet. Failures never overwrite it; ResetDiagnosticState clears it.</summary>
-    public readonly SqueakRecentOutcome? LastDispatched;
+    public readonly SqueakRecentOutcome? LastEvaluation, LastSignificantOutcome, LastDispatched;
     public readonly string KernelText;
-
-    internal SqueakDiagnosticSnapshot(SqueakAction? currentTimingAction, bool currentActionEnabled,
-        SqueakTriggerMode? currentTriggerMode, SqueakCooldownClock? currentCooldownClock,
-        float currentActionIntervalMultiplier, SqueakTimingEvaluation timing, SqueakTimingEvaluation baseTiming, SqueakPeriodicPopulation.Snapshot population, float masterMultiplier,
-        XenotypeDef? xenotype, float xenotypeIntervalMultiplier,
-        float timeSpeedMultiplier, float effectiveProbability, float baseProbability, bool startupPending, bool effectiveTimingReady, SqueakVocalCapability vocalCapability,
-        bool talkingGateApplied, bool currentActionDeathExempt,
-        SqueakRecentOutcome? lastEvaluation, SqueakRecentOutcome? lastSignificantOutcome, SqueakRecentOutcome? lastDispatched = null,
-        string kernelText = "")
-    {
-        CurrentTimingAction = currentTimingAction; CurrentActionEnabled = currentActionEnabled;
-        CurrentTriggerMode = currentTriggerMode; CurrentCooldownClock = currentCooldownClock;
-        CurrentActionIntervalMultiplier = currentActionIntervalMultiplier; Timing = timing; BaseTiming = baseTiming; Population = population;
-        MasterMultiplier = masterMultiplier; Xenotype = xenotype; XenotypeIntervalMultiplier = xenotypeIntervalMultiplier;
-        TimeSpeedMultiplier = timeSpeedMultiplier; EffectiveProbability = effectiveProbability; BaseProbability = baseProbability;
-        StartupPending = startupPending; EffectiveTimingReady = effectiveTimingReady;
-        VocalCapability = vocalCapability; TalkingGateApplied = talkingGateApplied;
-        CurrentActionDeathExempt = currentActionDeathExempt;
-        LastEvaluation = lastEvaluation; LastSignificantOutcome = lastSignificantOutcome; LastDispatched = lastDispatched;
-        KernelText = kernelText;
-    }
+    internal SqueakDiagnosticSnapshot(Responses.SessionObservation? response, SqueakVocalCapability vocal,
+        SqueakRecentOutcome? evaluation, SqueakRecentOutcome? significant, SqueakRecentOutcome? dispatched, string text)
+    { Response = response; VocalCapability = vocal; LastEvaluation = evaluation; LastSignificantOutcome = significant; LastDispatched = dispatched; KernelText = text; }
 }
-
-public enum SqueakPlaybackAttemptResult { NoEligibleSound, EligibilityRejected, Dispatched, Exception }
-
-public readonly struct SqueakPlaybackAttempt
-{
-    public readonly SqueakPlaybackAttemptResult Result;
-    public readonly SqueakSoundChoice Choice;
-    internal SqueakPlaybackAttempt(SqueakPlaybackAttemptResult result, SqueakSoundChoice choice) { Result = result; Choice = choice; }
-}
-
 /// <summary>
 /// 挂在带 Squeaker 组件的 pawn 上的自驱动发声组件。
 /// 配置三层:CompProperties(XML默认) ← ModSettings(玩家override) ← 运行时。
@@ -114,22 +65,12 @@ public readonly struct SqueakPlaybackAttempt
 /// </summary>
 public partial class CompSqueaker : ThingComp
 {
-    public static bool ScaleCooldownWithTimeSpeed = true;
-    public static bool ScaleFrequencyWithTalking = true;
-    public static bool ScalePeriodicWithAudiblePopulation = true;
-    public static float GlobalCooldownMultiplier = 1f;
-    public static float GlobalVolumeFactor = 1f;
-    public static int GlobalMinIntervalTicks = 216;
     // Eat occurrence granularity: cheap same-frame runtime statics published by the settings layer
     // (ApplyToRuntime / NotifyCheapRuntimeChanged). Defaults come from the pure rule, never a literal here.
     public static bool DiagnosticsEnabled;
 
     private static FloatRange activeDistanceRange = new(15f, 50f);
 
-    private readonly Dictionary<string, SqueakActionPlan> actionPlans = new(StringComparer.Ordinal);
-    private SqueakRuntimeSnapshot? cachedRuntimeSnapshot;
-    private XenotypeDef? cachedXenotype;
-    private ResolvedSqueakContext cachedSqueakContext = ResolvedSqueakContext.GlobalOnly;
     private SqueakRecentOutcome? lastEvaluation;
     private SqueakRecentOutcome? lastSignificantOutcome;
     private SqueakRecentOutcome? lastDispatched;
@@ -140,26 +81,6 @@ public partial class CompSqueaker : ThingComp
 
     private Pawn Pawn => (Pawn)parent;
     internal Pawn RegisteredPawn => Pawn;
-    private CompProperties_Squeaker Props => (CompProperties_Squeaker)props;
-
-    private static string? ActionKeyOf(SqueakAction action) => UniversalSqueaker.Kernel.ActionKey.For(action);
-
-    public override void Initialize(CompProperties props)
-    {
-        base.Initialize(props);
-        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
-        {
-            string? key = UniversalSqueaker.Kernel.ActionKey.For(action);
-            if (key == null) continue;
-            actionPlans[key] = SqueakActionPlanFactory.Unconfigured(action);
-        }
-        foreach (SqueakActionConfig cfg in Props.actions)
-        {
-            if (cfg == null || !SqueakActionDefinitions.IsKnown(cfg.action)) continue;
-            string? key = UniversalSqueaker.Kernel.ActionKey.For(cfg.action);
-            if (key != null) actionPlans[key] = SqueakActionPlanFactory.FromLegacy(cfg);
-        }
-    }
 
     public override void PostSpawnSetup(bool respawningAfterLoad)
     {
@@ -208,7 +129,7 @@ public partial class CompSqueaker : ThingComp
     public override void PostDestroy(DestroyMode mode, Map previousMap)
     {
 
-        UsOneShotRuntime.ReleasePawn(Pawn);
+        SqueakerRuntime.ReleasePawn(Pawn);
         SqueakPeriodicPopulation.Unregister(this, previousMap);
         registeredMap = null;
         base.PostDestroy(mode, previousMap);
@@ -216,7 +137,7 @@ public partial class CompSqueaker : ThingComp
 
     internal void NotifyPeriodicDespawn(Map map)
     {
-        UsOneShotRuntime.ReleasePawn(Pawn);
+        SqueakerRuntime.ReleasePawn(Pawn);
         SqueakPeriodicPopulation.Unregister(this, map);
         if (ReferenceEquals(registeredMap, map)) registeredMap = null;
     }
@@ -233,48 +154,6 @@ public partial class CompSqueaker : ThingComp
         SqueakPeriodicPopulation.Register(this, registeredMap);
     }
 
-    private bool IsActionAllowed(SqueakAction action) => IsActionAllowedByKey(UniversalSqueaker.Kernel.ActionKey.For(action));
-
-    private bool IsActionAllowedByKey(string? actionKey)
-    {
-        if (string.IsNullOrEmpty(actionKey)) return false;
-        if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey!, out SqueakAction action))
-            return SqueakActionDefinitions.IsKnown(action);
-        return UniversalSqueakerMod.Settings?.allowExternalActions == true;
-    }
-
-    /// <summary>动作 plan 解析：先查静态 actionPlans（内置 17 键）；未命中且为非内置键时按需合成外部
-    /// 默认 plan（动作门由 IsActionAllowedByKey 另行校验）。YAGNI：不保留 ActionEntry/TriggerBinding 半成品。</summary>
-    private bool TryGetPlan(string actionKey, out SqueakActionPlan plan)
-    {
-        if (actionPlans.TryGetValue(actionKey, out plan)) return true;
-        if (!UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(actionKey))
-        {
-            plan = SqueakActionPlanFactory.External(actionKey);
-            return true;
-        }
-        plan = default;
-        return false;
-    }
-
-    private ResolvedSqueakContext GetRuntimeContext(out SqueakRuntimeSnapshot snapshot)
-    {
-        snapshot = SqueakRuntimeResolver.Current;
-        XenotypeDef? xenotype = null;
-        if (ModsConfig.BiotechActive)
-        {
-            xenotype = Pawn.genes?.Xenotype;
-        }
-
-        if (!ReferenceEquals(snapshot, cachedRuntimeSnapshot) || !ReferenceEquals(xenotype, cachedXenotype))
-        {
-            cachedRuntimeSnapshot = snapshot;
-            cachedXenotype = xenotype;
-            cachedSqueakContext = snapshot.ResolveContext(Pawn);
-        }
-
-        return cachedSqueakContext;
-    }
 
     private void RecordOutcome(SqueakTriggerOutcome outcome, string actionKey, bool external, bool cooldownConsumed,
         SoundDef? sound, SqueakSoundSource source, float nowRealtime, string? poolStableKey = null,
@@ -313,15 +192,12 @@ public partial class CompSqueaker : ThingComp
     /// <summary>Samples diagnostic state without selecting audio, consuming Rand, changing timestamps, or touching the production context cache.</summary>
     internal SqueakDiagnosticSnapshot GetDiagnosticSnapshot()
     {
-        return new SqueakDiagnosticSnapshot(null, false, null, null, 1f, default, default,
-            SqueakPeriodicPopulation.GetSnapshot(), 1f, null, 1f, 1f, 0f, 0f, false, false,
-            SampleVocalCapability(), ScaleFrequencyWithTalking, false,
-            lastEvaluation, lastSignificantOutcome, lastDispatched, UsOneShotRuntime.DiagnosticText(Pawn));
+        return new SqueakDiagnosticSnapshot(SqueakerRuntime.Observe(Pawn), SampleVocalCapability(), lastEvaluation, lastSignificantOutcome, lastDispatched, SqueakerRuntime.DiagnosticText(Pawn));
     }
 
-    internal void RecordKernelOutcome(OneShot.DecisionOutcome outcome, SoundDef? sound, OneShot.PlaybackRequest? request)
+    internal void RecordKernelOutcome(Responses.DecisionOutcome outcome, SoundDef? sound, Responses.PlaybackRequest? request)
     {
-        var mapped = outcome.Receipt?.Result == OneShot.PlaybackResult.Dispatched
+        var mapped = outcome.Receipt?.Result == Responses.PlaybackResult.Dispatched
             ? SqueakTriggerOutcome.Dispatched : SqueakTriggerOutcome.EligibilityRejected;
         var source = request?.Audio.SourceTier switch
         {
@@ -333,26 +209,8 @@ public partial class CompSqueaker : ThingComp
             _ => SqueakSoundSource.None
         };
         RecordOutcome(mapped, outcome.Action, false,
-            outcome.Receipt?.Result == OneShot.PlaybackResult.Dispatched || outcome.Receipt?.Result == OneShot.PlaybackResult.Indeterminate,
+            outcome.Receipt?.Result == Responses.PlaybackResult.Dispatched || outcome.Receipt?.Result == Responses.PlaybackResult.Indeterminate,
             sound, source, Time.realtimeSinceStartup, request?.Audio.PackKey, request?.Audio.SourceTier);
-    }
-    internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
-    {
-        key = UniversalSqueaker.Kernel.ActionKey.SchemaKey(key);
-        if (!TryGetPlan(key, out var plan)) return false;
-        var context = GetRuntimeContext(out _);
-        var delta = context.GetActionByKey(key);
-        var scope = behavior?.Scope ?? delta.Scope;
-        bool command = ((key == "Work" || key == "Move") && IsCurrentJobPlayerCommand()) || activeCommand;
-        return UsControlledActionEligibility.Allows(plan.Configured, authorAction,
-            UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(key) ? IsActionAllowedByKey(key) : authorAction || IsActionAllowedByKey(key),
-            behavior?.Enabled ?? delta.Enabled, scope, command, Pawn.IsPlayerControlled);
-    }
-    internal SqueakActionScope ControlledOneShotScope(string key)
-        => GetRuntimeContext(out _).GetActionByKey(UniversalSqueaker.Kernel.ActionKey.SchemaKey(key)).Scope;
-    internal bool ControlledPlaybackSustained(string key)
-    {
-        return TryGetPlan(UniversalSqueaker.Kernel.ActionKey.SchemaKey(key), out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
     }
     internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => IdentityGateAllows(invocation);
     internal SqueakVocalCapability ControlledOneShotVocal() => SampleVocalCapability();
@@ -408,7 +266,6 @@ public partial class CompSqueaker : ThingComp
     /// <summary>Explicit overlay/diagnostic maintenance; snapshot readers remain side-effect free.</summary>
     internal static void MaintainPeriodicPopulationDiagnostics() => SqueakPeriodicPopulation.Maintain(activeDistanceRange);
 
-    private bool IsCurrentJobPlayerCommand() => Pawn.CurJob?.playerForced == true;
 
 }
 

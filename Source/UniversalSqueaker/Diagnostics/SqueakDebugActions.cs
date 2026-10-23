@@ -23,7 +23,7 @@ public static class SqueakDebugActions
     {
         // DT1 pass condition 1: the dev feature gates the entry, and the tool never stands alone -
         // without an open settings target the open is refused. Normal play never reaches the panel.
-        if (UniversalSqueakerMod.Settings?.devLoggingMode == SqueakDevLoggingMode.Disabled)
+        if (SqueakerMod.Settings?.devLoggingMode == SqueakDevLoggingMode.Disabled)
         {
             Messages.Message("Universal Squeaker: enable a dev logging mode in the settings first.",
                 MessageTypeDefOf.RejectInput, historical: false);

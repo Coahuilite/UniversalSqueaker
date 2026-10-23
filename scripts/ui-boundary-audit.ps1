@@ -80,7 +80,7 @@ $Whitelist = [ordered]@{
     # gate reports this file only while that stays true - the term was invisible before task-60.
     # RECYCLE when the opener moves into the kernel tree (it then has a context and must use
     # Button(rect, ctx)), or when the shell retires.
-    'Mod.cs' = 'context-free UiNative.Button at Mod.cs:187 (settings opener, outside the kernel session) - maintainer session 2026-09-12 (task-60); recycle when the opener moves into the kernel tree or the shell retires'
+    'UI/SettingsWindowOwner.cs' = 'same task-60 context-free settings opener moved from Mod.cs; outside the kernel session, no new call-site exemption; recycle when the opener enters the kernel tree or the shell retires'
 }
 
 # ---- comment stripping -------------------------------------------------------

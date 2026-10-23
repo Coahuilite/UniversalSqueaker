@@ -1,6 +1,7 @@
+using UniversalSqueaker.Kernel;
 using System;
 using System.Collections.Generic;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 internal static partial class Program
 {
@@ -21,28 +22,28 @@ internal static partial class Program
         var state = new DecisionState(1000);
         var input = Input(); input.Activity = 2;
         var driver = new Driver();
-        new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
+        new ResponseDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
         Check(state.SharedDeadline == 1040 && state.ActionDeadline("us.core/Work") == 1120 && state.NextStateTick == 1050,
             "S4 A2 divides W20 once, never hard40/action120");
         var ratio = Input();
         ratio.Activity = ratio.StateWaitFactor = 1e308;
         var ratioState = new DecisionState(1000);
         var ratioDriver = new Driver();
-        new OneShotDecision().Run(ratioState, new StatePolicy(40, 100), ratio, ratioDriver, ratioDriver);
+        new ResponseDecision().Run(ratioState, new StatePolicy(40, 100), ratio, ratioDriver, ratioDriver);
         Check(ratioState.NextStateTick == 1140, "S4 finite neutral factor ratio does not overflow intermediate wait multiplication");
         input.Tick = 1041; input.Activity = .5;
-        Check(new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver).Reason == "NotDue" && state.NextStateTick == 1050,
+        Check(new ResponseDecision().Run(state, new StatePolicy(40, 20), input, driver, driver).Reason == "NotDue" && state.NextStateTick == 1050,
             "S4 changing A does not redraw or rescale an already arranged wait");
         var eventInput = Input(1000, false);
         eventInput.Actions = new[] { new ActionPlan("us.core/Work", 1, new Condition("all"), 120, chance: .25) };
         eventInput.Activity = 4;
         eventInput.StateWaitFactor = 100;
         var saturated = new Driver();
-        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, saturated, saturated).Receipt?.Result == PlaybackResult.Dispatched
+        Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, saturated, saturated).Receipt?.Result == PlaybackResult.Dispatched
             && !saturated.Purposes.Contains(RandomPurpose.Eligibility), "S4 ordinary event p_base*A saturates once; state-wait factor cannot add another event probability scaling");
         eventInput.Activity = .1;
         var low = new Driver();
-        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, low, low).Reason == "ChanceRejected" && low.Calls == 0,
+        Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), eventInput, low, low).Reason == "ChanceRejected" && low.Calls == 0,
             "S4 event activity is probability, not a queued wait");
 
         var values = new Dictionary<string, double> { ["age.native"] = 1.2, ["age.nativeVolume"] = 1, ["age.override"] = 1.5,
@@ -88,11 +89,11 @@ internal static partial class Program
         activeInput.ActiveSustainedKey = "us.core/Work";
         activeInput.BlockedActions.Add("us.core/Work");
         var activeDriver = new Driver();
-        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "ActionOrScopeRejected",
+        Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "ActionOrScopeRejected",
             "S5 same-key active slot cannot bypass revoked source or permission");
         activeInput.BlockedActions.Clear();
         activeInput.HasVocalOrgans = false;
-        Check(new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "NoVocalOrgans"
+        Check(new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), activeInput, activeDriver, activeDriver).Reason == "NoVocalOrgans"
             && activeDriver.Calls == 0 && activeDriver.Purposes.Count == 0,
             "S5 same-key active slot requires current vocal qualification without redrawing maintenance");
     }
@@ -121,10 +122,10 @@ internal static partial class Program
         {
             var failedSlot = new SustainedPlayback();
             var failedHandle = new Handle { EndFault = phase };
-            failedSlot.Dispatch(SustainedRequest("Work", 10), true,
+            failedSlot.Dispatch(SustainedRequest("us.core/Work", 10), true,
                 () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), failedHandle));
             int replacementCalls = 0;
-            var result = failedSlot.Dispatch(SustainedRequest("Wounded", 20), true, () =>
+            var result = failedSlot.Dispatch(SustainedRequest("us.core/Wounded", 20), true, () =>
             {
                 replacementCalls++;
                 return new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), new Handle());
@@ -137,25 +138,25 @@ internal static partial class Program
         }
         var slot = new SustainedPlayback();
         var handle = new Handle();
-        Check(slot.Dispatch(SustainedRequest("Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), handle)).Result == PlaybackResult.Dispatched,
+        Check(slot.Dispatch(SustainedRequest("us.core/Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), handle)).Result == PlaybackResult.Dispatched,
             "S5 valid new handle confirms sustained dispatch");
         int starts = 0;
-        Check(slot.Dispatch(SustainedRequest("Work", 10, 1001), true, () => { starts++; return default; }).Result == PlaybackResult.AlreadyActive
+        Check(slot.Dispatch(SustainedRequest("us.core/Work", 10, 1001), true, () => { starts++; return default; }).Result == PlaybackResult.AlreadyActive
             && starts == 0 && handle.Maintains == 1, "S5 same-key maintenance does not create a new instance");
-        Check(slot.Dispatch(SustainedRequest("Call", 0), true, () => { starts++; return default; }).Result == PlaybackResult.Rejected
+        Check(slot.Dispatch(SustainedRequest("us.core/Call", 0), true, () => { starts++; return default; }).Result == PlaybackResult.Rejected
             && handle.Ends == 0, "S5 lower/equal request cannot end active slot");
-        Check(slot.Dispatch(SustainedRequest("Wounded", 20), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Rejected, "prepared start rejected"))).Result == PlaybackResult.Rejected
+        Check(slot.Dispatch(SustainedRequest("us.core/Wounded", 20), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Rejected, "prepared start rejected"))).Result == PlaybackResult.Rejected
             && handle.Ends == 1 && !slot.Active, "S5 higher priority ends old only after preparation boundary, rejected new start does not restore old");
         slot.Stop("again"); Check(handle.Ends == 1, "S5 owner never Ends an already-ended handle twice");
         var unknown = new Handle();
-        slot.Dispatch(SustainedRequest("Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), unknown));
+        slot.Dispatch(SustainedRequest("us.core/Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), unknown));
         Check(!slot.ReviewDue(1059) && slot.ReviewDue(1060), "S5 independent low-frequency active review, no per-tick contract polling");
         Check(slot.Review(1060, new FactSnapshot(new Dictionary<string, Truth>())) == "StateReviewUnknown" && unknown.Ends == 1,
             "S5 unknown active basis ends own slot rather than grace/retry");
         Check(!slot.ReviewDue(2000), "S5 no instance means no review work");
-        Check(slot.Dispatch(SustainedRequest("Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched))).Result == PlaybackResult.Indeterminate,
+        Check(slot.Dispatch(SustainedRequest("us.core/Work", 10), true, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched))).Result == PlaybackResult.Indeterminate,
             "S5 no effective handle after possible startup side effect is indeterminate, never confirmed");
-        Check(slot.Dispatch(SustainedRequest("Work", 10), false, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched))).Result == PlaybackResult.Dispatched
+        Check(slot.Dispatch(SustainedRequest("us.core/Work", 10), false, () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched))).Result == PlaybackResult.Dispatched
             && !slot.Active, "S5 retained non-sustain material downgrade uses one prepared request and does not invent a handle");
     }
 }

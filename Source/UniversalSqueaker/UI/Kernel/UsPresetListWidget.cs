@@ -384,12 +384,12 @@ public sealed class UsPresetListWidget : UsSectionWidgetBase
 
     private static string RaceLabel(UiWidgetContext ctx, BaselineRaceView race)
     {
-        return string.Format(Tr(ctx, RaceSummaryKey), race.DisplayName, race.ActionCount, race.MoodCount);
+        return string.Format(Tr(ctx, RaceSummaryKey), race.DisplayName, race.ActionCount, race.FieldCount);
     }
 
     private static string XenotypeLabel(UiWidgetContext ctx, BaselineXenotypeView xenotype)
     {
         string inheritTag = " " + Tr(ctx, xenotype.InheritFromRace ? XenotypeInheritsKey : XenotypeOwnOnlyKey);
-        return string.Format(Tr(ctx, XenotypeSummaryKey), xenotype.DisplayName, inheritTag, xenotype.ActionCount, xenotype.MoodCount);
+        return string.Format(Tr(ctx, XenotypeSummaryKey), xenotype.DisplayName, inheritTag, xenotype.ActionCount, xenotype.FieldCount);
     }
 }

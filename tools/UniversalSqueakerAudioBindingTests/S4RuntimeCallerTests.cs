@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
@@ -22,282 +23,185 @@ internal static partial class Program
         public string Key => "fixture/Allowed";
         public Truth Capture(string subject) => Ready ? Truth.True : Truth.False;
     }
-    private static UsPawnPlaybackSession RuntimeSession(Pawn pawn)
+    private static PawnResponseAdapter RuntimeSession(Pawn pawn)
     {
-        var field = typeof(UsOneShotRuntime).GetField("sessions", BindingFlags.NonPublic | BindingFlags.Static)!;
-        return ((Dictionary<Pawn, UsPawnPlaybackSession>)field.GetValue(null)!)[pawn];
+        var field = typeof(SqueakerRuntime).GetField("sessions", BindingFlags.NonPublic | BindingFlags.Static)!;
+        return ((Dictionary<int, PawnResponseAdapter>)field.GetValue(null)!)[pawn.thingIDNumber];
     }
 
+
+    private const string MaintainedCall = "fixture.runtime/MaintainedCall", MaintainedWound = "fixture.runtime/MaintainedWound";
     private static void S4ActualRuntimeCallers()
     {
-        var pawn = new Pawn
-        {
-            IsPlayerControlled = true,
-            CurJob = new Job { def = new JobDef { defName = "Wait" } },
-            jobs = new Pawn_JobTracker { curDriver = new JobDriver() },
-            pather = new Pawn_PathFollower(),
-            mindState = new Pawn_MindState { IsIdle = true },
-            needs = new Pawn_NeedsTracker { mood = new FixtureMood { CurLevelPercentage = .9f } }
-        };
-        var comp = new CompSqueaker { Pawn = pawn };
-        pawn.Comp = comp;
+        Console.WriteLine("MODE normal/r2 caller: actual declared contracts, production published settings, one owner and native output double");
+        var settings = SqueakerMod.Settings;
+        settings.actionTuning.Clear(); settings.voicePackSelections.Clear(); settings.behaviorSourcesXml = "";
+        settings.activity = 2; settings.globalVolumeFactor = .8f; settings.voicePackMode = SqueakVoicePackMode.Fallback;
+        var pawn = new Pawn { IsPlayerControlled = true, CurJob = new Job { def = new JobDef { defName = "Wait" } },
+            jobs = new Pawn_JobTracker { curDriver = new JobDriver() }, pather = new Pawn_PathFollower(),
+            mindState = new Pawn_MindState { IsIdle = true }, needs = new Pawn_NeedsTracker { mood = new FixtureMood { CurLevelPercentage = .9f } } };
+        var comp = new CompSqueaker { Pawn = pawn }; pawn.Comp = comp;
         DefDatabase<ThingDef>.AllDefsListForReading.Add(pawn.def);
+        var declared = new NotificationContract("fixture.runtime/Finished", 120);
+        SqueakerNotifications.Declare(declared);
         var pack = new UsVoicePackDef { defName = "RuntimePack", modContentPack = new ModContentPack { PackageId = "fixture.author" } };
         pack.declaration.Race = pawn.def.defName;
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
-        {
-            pack.declaration.Entries.Add(new VoiceEntry { Key = key, Action = "us.core/" + key, Sound = "Ratkin1", Volume = 2, Pitch = 2 });
-        }
+            pack.declaration.Entries.Add(new VoiceEntry { Key = key, Action = key, Sound = "Ratkin1", Volume = 2, Pitch = 2 });
+        pack.declaration.Entries.Add(new VoiceEntry { Key = "notification", Action = declared.ActionId, Sound = "Ratkin1" });
+        DeclareMaintainedChild(pack, MaintainedCall, CoreActions.Call, 100);
+        DeclareMaintainedChild(pack, MaintainedWound, CoreActions.Wounded, 200);
         DefDatabase<UsVoicePackDef>.AllDefsListForReading.Add(pack);
         DefDatabase<UsProviderDef>.AllDefsListForReading.Add(new UsProviderDef { providerClass = typeof(RuntimeContractProvider) });
-        DefDatabase<UsActionDef>.AllDefsListForReading.Add(new UsActionDef
-        {
-            declaration = new ActionDeclaration
-            {
-                Key = "vendor/Working", BaseAction = "us.core/Work", Condition = new Condition("ref", "fixture/Allowed")
-            }
-        });
+        DefDatabase<UsActionDef>.AllDefsListForReading.Add(new UsActionDef { declaration = new ActionDeclaration {
+            Key = "vendor/Working", BaseAction = CoreActions.Work, Condition = new Condition("ref", "fixture/Allowed") } });
         pack.declaration.Entries.Add(new VoiceEntry { Key = "registered", Action = "vendor/Working", Sound = "Ratkin1" });
         var behaviorDomain = new BehaviorDomain("Pawn", "", pawn.def.defName);
         var behaviorDef = new UsBehaviorSourceDef { defName = "Source", modContentPack = pack.modContentPack };
         behaviorDef.declaration.Sources.Add(new BehaviorSource { Domain = behaviorDomain });
         DefDatabase<UsBehaviorSourceDef>.AllDefsListForReading.Add(behaviorDef);
-        UsOneShotRuntime.Initialize();
-        var directoryPack = UsAuthorVoicePacks.Directory[0];
+        SqueakerRuntime.Initialize();
+        Check(SqueakerRuntime.Definitions.HasAction(declared.ActionId), "ordinary public notification declared once before subject owners exist");
+        var directoryPack = VoicePackDirectory.Directory.Single(x => x.defName == pack.defName);
         Check(directoryPack.TryGetPackKey(out string selectionKey) && selectionKey == "fixture.author:RuntimePack"
             && directoryPack.scope == SqueakVoicePackScope.Race && directoryPack.raceDefName == pawn.def.defName,
-            "S4 new ordinary author pack projects the existing package:Def selection identity and exact Race directory");
+            "ordinary audio metadata retains author package:Def selection identity and exact domain");
         var domain = AudioDomains.RaceOnly(pawn.def.defName);
-        var selections = new Dictionary<AudioDomain, HashSet<string>> { [domain] = new HashSet<string> { selectionKey } };
-        var directory = new SqueakXenotypeCatalogSnapshot();
-        directory.RacePacks.Add(directoryPack);
-        var selectedRegistry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
-        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
+        var selections = new Dictionary<AudioDomain, HashSet<string>> { [domain] = new() { selectionKey } };
+        var directory = new SqueakXenotypeCatalogSnapshot(); directory.RacePacks.Add(directoryPack);
+        ProjectSelection(directory, selections);
         int before = SoundStarter.Played.Count;
-        comp.CompTick();
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(UsOneShotRuntime.PolicyStatus == "PolicySelectionRequired" && !UsOneShotRuntime.IsControlled(pawn)
-            && SoundStarter.Played.Count == before && comp.MembershipUpdates == 2,
-            "S4 real CompTick and public event callers reach the one temporary selection gate, zero sessions or dispatch before explicit selection");
-
+        comp.CompTick(); comp.Notify_Wounded();
+        Check(!SqueakerRuntime.IsControlled(pawn) && SoundStarter.Played.Count == before && comp.MembershipUpdates == 2,
+            "actual CompTick/event callers retain unselected process gate, zero owner/dispatch");
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
-        {
-            UniversalSqueakerMod.Settings.actionTuning.Add(new ActionTuningRecord {
-                actionKey = "us.core/" + key,
-                responses = new List<ResponseTuningValue> {
-                    new() { key = "us.core/Age", hasEnabled = true, enabled = true },
-                    new() { key = "us.core/Mood", hasEnabled = true, enabled = true }
-                },
-                responseParameters = new List<ResponseParameterValue> {
-                    new() { key = "mood.low", value = .2 }, new() { key = "mood.high", value = .8 },
-                    new() { key = "mood.high.pitch", value = .5 }, new() { key = "mood.high.volume", value = .5 }
-                }
-            });
-        }
-        pawn.ageTracker!.CurLifeStage.voxPitch = 1.5f;
-        UniversalSqueakerMod.Settings.activity = 2;
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(100, 40, 120, 120, 0, 1, 1));
-        comp.CompTick();
-        var session = RuntimeSession(pawn);
-        Console.WriteLine("S4 caller tick=" + Find.TickManager.TicksGame + " action=" + session.LastOutcome.Action
-            + " reason=" + session.LastOutcome.Reason + " receipt=" + session.LastOutcome.Receipt?.Result
-            + " count=" + SoundStarter.Played.Count + " next=" + session.State.NextStateTick);
+            settings.actionTuning.Add(new ActionTuningRecord { actionKey = key,
+                responses = new() { new() { key = "us.core/Age", hasEnabled = true, enabled = true }, new() { key = "us.core/Mood", hasEnabled = true, enabled = true } },
+                responseParameters = new() { new() { key = "mood.low", value = .2 }, new() { key = "mood.high", value = .8 },
+                    new() { key = "mood.high.pitch", value = .5 }, new() { key = "mood.high.volume", value = .5 } } });
+        settings.PublishBehaviorConfiguration(); pawn.ageTracker!.CurLifeStage.voxPitch = 1.5f;
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(100, 40, 120, 120, 0, 1, 1));
+        comp.CompTick(); var session = RuntimeSession(pawn);
+        Console.WriteLine("R2 CALLER " + session.DiagnosticText + " count=" + SoundStarter.Played.Count + " before=" + before
+            + " native=" + SoundStarter.Played.Last().source.pitch + "/" + SoundStarter.Played.Last().source.volume);
         Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == before + 1
             && session.State.NextStateTick == 1090 && session.State.SharedDeadline == 1040
             && Math.Abs(SoundStarter.Played[before].source.pitch - 1.5f) < .0001
-            && Math.Abs(SoundStarter.Played[before].source.volume - .8f) < .0001,
-            "S4 actual CompTick -> runtime -> selected ordinary author entry -> one response composition -> native-call boundary, A once and L/G separate");
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Reason == "TickOccupied" && SoundStarter.Played.Count == before + 1,
-            "S4 actual state then event same tick cannot create a second attempt owner");
-        Find.TickManager.TicksGame = 1040;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == before + 2,
-            "S4 real event notification consumes explicit event candidate and existing owner after hard deadline");
-        UniversalSqueakerMod.Settings.activity = .5;
-        comp.CompTick();
-        Check(ReferenceEquals(session, RuntimeSession(pawn)) && session.State.NextStateTick == 1090,
-            "S4 settings activity change cannot recreate owner or redraw already scheduled wait");
-
-        var id = UsAudioBindings.KeyForName("Ratkin1")!;
-        UniversalSqueakerMod.Settings.activity = 1;
-        SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(new[]
-        {
-            new VoicePackEntry("fixture/external", AudioDomains.RaceOnly(pawn.def.defName), 1,
-                new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["vendor/Unregistered"] = new[] { new ActionSoundSet(new[] { id }, null, 1) } })
-        }, BuiltInFallbackTable.Empty);
-        Find.TickManager.TicksGame = 1200;
-        comp.NotifyExternalByKey("vendor/Unregistered", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && session.LastOutcome.Action == "vendor/Unregistered",
-            "S4 valid unregistered public string uses existing audio registry and the same new decision owner without registration prerequisite");
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Reason == "TickOccupied", "S4 public string then built-in event same tick shares attempt reservation");
-        comp.ExternalAllowed = false;
-        Find.TickManager.TicksGame = 1300;
-        comp.NotifyExternalByKey("vendor/Unregistered", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
-            "S4 unregistered public string retains external permission under unified owner");
-        comp.ExternalAllowed = true;
-        Find.TickManager.TicksGame = 1400;
-        pawn.CurJob!.workGiverDef = new RimWorld.WorkGiverDef { defName = "FixtureLabelOnly" };
-        comp.NotifyExternalByKey("vendor/Working", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
-            "S4 actual registered public author call cannot bypass its false composed fact through bare-string adaptation");
-        RuntimeContractFact.Ready = true;
-        pawn.CurJob.workGiverDef = null;
-        Find.TickManager.TicksGame = 1460;
-        comp.NotifyExternalByKey("vendor/Working", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
-            "S4 actual registered public author call retains inherited Work qualification even when its extra fact becomes true");
-
-        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
+            && Math.Abs(SoundStarter.Played[before].source.volume - .8f * .8f) < .0001,
+            "actual caller consumes published responses/A once; native mapping/context 0.8 x local L1 x current G0.8");
+        comp.Notify_Wounded(); Check(session.LastOutcome.Reason == "TickOccupied", "actual state then event reserves original owner same tick");
+        Find.TickManager.TicksGame = 1040; comp.Notify_Wounded();
+        Check(SoundStarter.Played.Count == before + 2, "real Wounded event uses the existing owner after shared boundary");
+        long scheduled = session.State.NextStateTick; settings.SetActivity(.5); comp.CompTick();
+        Check(ReferenceEquals(session, RuntimeSession(pawn)) && session.State.NextStateTick == scheduled,
+            "accepted activity edit does not recreate owner or redraw an existing wait");
+        settings.SetActivity(1); Find.TickManager.TicksGame = 1200;
+        int starts = SoundStarter.Played.Count; long confirmed = session.State.ConfirmedTick!.Value;
+        Check(!SqueakerNotifications.Notify(pawn, "vendor/Unregistered") && SoundStarter.Played.Count == starts && session.State.ConfirmedTick == confirmed,
+            "unknown public string cannot synthesize plan/audio/attempt or replace the owner");
+        Check(SqueakerNotifications.Notify(pawn, declared) && session.LastOutcome.Action == declared.ActionId
+            && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == starts + 1,
+            "explicit C# declaration then public notify uses the same original owner and bound resource");
+        comp.Notify_Wounded(); Check(session.LastOutcome.Reason == "TickOccupied", "declared notification then native event shares same tick reservation");
+        Check(settings.TryChangeBehaviorOverride("Pawn", "", pawn.def.defName, "", declared.ActionId,
+            new BehaviorValues { Enabled = false }, () => true, out _), "explicit current player permission for the declared action");
+        Find.TickManager.TicksGame = 1340; SqueakerNotifications.Notify(pawn, declared);
+        Check(SoundStarter.Played.Count == starts + 1 && session.LastOutcome.Receipt == null,
+            "declaration cannot bypass current player permission");
+        RuntimeContractFact.Ready = false; Find.TickManager.TicksGame = 1400;
+        SqueakerNotifications.Notify(pawn, "vendor/Working");
+        Check(session.LastOutcome.Receipt == null, "registered author call cannot bypass its false added condition");
+        RuntimeContractFact.Ready = true; Find.TickManager.TicksGame = 1460;
+        SqueakerNotifications.Notify(pawn, "vendor/Working");
+        Check(session.LastOutcome.Receipt == null, "registered author call retains inherited false Work even after its extra fact becomes true");
         S5ActualRuntimeSustained(pawn, comp, session);
-        int afterSustained = SoundStarter.Played.Count;
-        SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
-        Find.TickManager.TicksGame = 3000;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == afterSustained
-            && UsOneShotRuntime.BehaviorSources.Find(behaviorDomain, "fixture.author/Source") != null,
-            "S4 new ordinary pack off removes candidates on actual caller without unloading independent behavior sources");
-        SqueakRuntimeResolver.Current.Registry = selectedRegistry;
-        Find.TickManager.TicksGame = 3120;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == afterSustained + 1,
-            "S4 new ordinary pack on resumes through the same owner and selected-entry response pipeline");
-        SqueakRuntimeResolver.Current.VoicePackMode = SqueakVoicePackMode.Disabled;
-        Find.TickManager.TicksGame = 3300;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(SoundStarter.Played.Count == afterSustained + 1, "S4 explicitly Disabled new ordinary audio pack cannot fall back");
-        SqueakRuntimeResolver.Current.VoicePackMode = SqueakVoicePackMode.Fallback;
-        var material = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!;
-        material.sustain = true;
-        comp.FixtureSustained = true;
-        Find.TickManager.TicksGame = 3500;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        var mapHandle = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
-        var oldMap = pawn.MapHeld;
-        pawn.MapHeld = new Map();
-        Find.TickManager.TicksGame = 3501;
-        comp.CompTick();
-        Check(mapHandle.EndCalls == 1, "S5 actual CompTick releases its sustained slot immediately on current-map loss");
-        pawn.MapHeld = oldMap;
-        Find.TickManager.TicksGame = 3640;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        var destroyedHandle = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
-        pawn.Destroyed = true;
-        comp.CompTick();
-        Check(destroyedHandle.EndCalls == 1 && !UsOneShotRuntime.IsControlled(pawn),
-            "S5 actual destroyed-subject caller releases the owned handle and its sole session");
-        pawn.Destroyed = false;
-        S5ActualEndFaults(pawn, comp);
-        comp.FixtureSustained = false;
-        material.sustain = false;
-
-        UniversalSqueakerMod.Settings.activity = 1;
-        UniversalSqueakerMod.Settings.actionTuning.Clear();
-        UsOneShotRuntime.ResetSession();
-        SqueakRuntimeResolver.Current.Registry = SqueakPoolRegistry.Empty;
+        starts = SoundStarter.Played.Count;
+        ProjectSelection(directory, new Dictionary<AudioDomain, HashSet<string>>());
+        Find.TickManager.TicksGame = 3000; comp.Notify_Wounded();
+        Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == starts
+            && SqueakerRuntime.BehaviorSources.Find(behaviorDomain, "fixture.author/Source") != null,
+            "exact current pack filter removes audio without unloading independent behavior definitions");
+        ProjectSelection(directory, selections); Find.TickManager.TicksGame = 3120; comp.Notify_Wounded();
+        Check(SoundStarter.Played.Count == starts + 1, "reenabled pack resumes on the same owner and canonical audio catalog");
+        settings.voicePackMode = SqueakVoicePackMode.Disabled; settings.PublishBehaviorConfiguration();
+        Find.TickManager.TicksGame = 3300; comp.Notify_Wounded();
+        Check(SoundStarter.Played.Count == starts + 1, "disabled system cannot be reopened by author/domain enabled settings");
+        settings.voicePackMode = SqueakVoicePackMode.Fallback; settings.PublishBehaviorConfiguration();
+        var material = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!; material.sustain = true; MaintainSubject(pawn, true);
+        Find.TickManager.TicksGame = 3500; comp.Notify_Wounded(); var mapHandle = SoundStarter.Spawned.Last();
+        var map = pawn.MapHeld; pawn.MapHeld = new Map(); Find.TickManager.TicksGame = 3501; comp.CompTick();
+        Check(mapHandle.EndCalls == 1, "actual current-map loss releases owned sustained once");
+        pawn.MapHeld = map; Find.TickManager.TicksGame = 3640; comp.Notify_Wounded(); var destroyed = SoundStarter.Spawned.Last();
+        pawn.Destroyed = true; comp.CompTick();
+        Check(destroyed.EndCalls == 1 && !SqueakerRuntime.IsControlled(pawn), "destroyed caller releases handle and sole session");
+        pawn.Destroyed = false; S5ActualEndFaults(pawn, comp);
+        MaintainSubject(pawn, false); material.sustain = false; settings.actionTuning.Clear(); settings.PublishBehaviorConfiguration();
+        SqueakerRuntime.ResetSession();
     }
-
+    private static void S5ActualRuntimeSustained(Pawn pawn, CompSqueaker comp, PawnResponseAdapter session)
+    {
+        var sound = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!; sound.sustain = true; MaintainSubject(pawn, true);
+        int baseline = SoundStarter.Spawned.Count;
+        Find.TickManager.TicksGame = 2000; comp.CompTick(); var original = SoundStarter.Spawned.Last();
+        long deadline = session.State.SharedDeadline;
+        Check(session.LastOutcome.Action == MaintainedCall && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && !original.Ended,
+            "explicit declared sustained child starts through actual caller/native boundary");
+        Find.TickManager.TicksGame = 2140; comp.CompTick();
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.AlreadyActive && SoundStarter.Spawned.Count == baseline + 1
+            && session.State.SharedDeadline == deadline && session.LastRandomDraws.Count == 0,
+            "same-key maintenance neither redraws/starts nor refreshes hard deadline");
+        SqueakSoundAvailabilityCache.RejectProductionInfo = true; Find.TickManager.TicksGame = 2200; comp.Notify_Wounded();
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && !original.Ended && SoundStarter.Spawned.Count == baseline + 1,
+            "higher-priority preparation failure leaves old owned handle untouched");
+        SqueakSoundAvailabilityCache.RejectProductionInfo = false; Find.TickManager.TicksGame = 2260; comp.Notify_Wounded();
+        var replacement = SoundStarter.Spawned.Last();
+        Check(session.LastOutcome.Action == MaintainedWound && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && original.EndCalls == 1 && !replacement.Ended,
+            "prepared higher-priority contract ends old once and confirms a distinct handle");
+        Find.TickManager.TicksGame = 2330; SqueakerRuntime.TryObservedEvent(pawn, CoreActions.Call, SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent, "FixtureCurrentCall");
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && !replacement.Ended && SoundStarter.Spawned.Count == baseline + 2,
+            "lower-priority contract cannot interrupt active sustained output");
+        Find.TickManager.TicksGame = 2400; session.Maintain(force: true);
+        Check(replacement.EndCalls == 1 && session.State.ConfirmedTick == 2260 && SoundStarter.Spawned.Count == baseline + 2,
+            "maintenance-only current fact review ends transient Wounded without inventing another response opportunity");
+        SoundStarter.SpawnFailure = "null"; Find.TickManager.TicksGame = 2500; comp.CompTick();
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Indeterminate && session.State.SharedDeadline == 2540 && session.State.ConfirmedTick == 2260,
+            "unconfirmed entered native call protects hard boundary without confirming a handle");
+        comp.Notify_Wounded(); Check(session.LastOutcome.Reason == "TickOccupied", "uncertain start cannot chain second attempt same tick");
+        SoundStarter.SpawnFailure = "ended"; Find.TickManager.TicksGame = 2620; comp.CompTick();
+        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Indeterminate && SoundStarter.Spawned.Last().EndCalls == 1,
+            "constructor-ended handle is unconfirmed and never ended twice");
+        SoundStarter.SpawnFailure = ""; MaintainSubject(pawn, false); sound.sustain = false;
+        UsInstanceOutput.Initialize(new Harmony("fixture.required-output-owner-missing"));
+        int starts = SoundStarter.Played.Count; long protectedUntil = session.State.SharedDeadline;
+        Find.TickManager.TicksGame = 2800; comp.Notify_Wounded();
+        Check(!UsInstanceOutput.Available && session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected
+            && SoundStarter.Played.Count == starts && session.State.SharedDeadline == protectedUntil,
+            "missing required output patch rejects before side effects or new protection");
+        UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
+    }
     private static void S5ActualEndFaults(Pawn pawn, CompSqueaker comp)
     {
         foreach (string phase in new[] { "before", "after" })
         {
-            UsOneShotRuntime.ResetSession();
-            Find.TickManager.TicksGame = 4000;
-            comp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-            var session = RuntimeSession(pawn);
-            var old = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
-            old.EndFailure = phase;
-            int starts = SoundStarter.Spawned.Count;
-            long shared = session.State.SharedDeadline;
-            Find.TickManager.TicksGame = 4140;
-            comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-            Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected
-                && session.LastOutcome.Reason.Contains("NewStartNotEntered:")
-                && session.DiagnosticText.Contains(":EndFault:") && SoundStarter.Spawned.Count == starts
-                && old.EndCalls == 1 && session.State.SharedDeadline == shared
-                && session.State.ActionDeadline("us.core/Wounded") == long.MinValue && session.State.ConfirmedTick == 4000,
-                "S5 actual old End fault " + phase + " records old uncertainty, zero new native starts and no new hard protection");
-            UsOneShotRuntime.ResetSession();
-            Check(old.EndCalls == 1, "S5 actual failed old End is not repeated by lifecycle cleanup");
+            SqueakerRuntime.ResetSession(); Find.TickManager.TicksGame = 4000; comp.CompTick();
+            var session = RuntimeSession(pawn); var old = SoundStarter.Spawned.Last(); old.EndFailure = phase;
+            int starts = SoundStarter.Spawned.Count; long shared = session.State.SharedDeadline;
+            Find.TickManager.TicksGame = 4140; comp.Notify_Wounded();
+            Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && session.LastOutcome.Reason.Contains("NewStartNotEntered:")
+                && session.DiagnosticText.Contains(":EndFault:") && SoundStarter.Spawned.Count == starts && old.EndCalls == 1
+                && session.State.SharedDeadline == shared && session.State.ActionDeadline(MaintainedWound) == long.MinValue && session.State.ConfirmedTick == 4000,
+                "old End fault " + phase + " reports uncertainty, zero new start and zero new hard protection");
+            SqueakerRuntime.ResetSession(); Check(old.EndCalls == 1, "failed old End is not repeated during lifecycle cleanup");
         }
-        Find.TickManager.TicksGame = 5000;
-        comp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        var failing = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
-        failing.EndFailure = "before";
-        var other = new Pawn { ThingID = "Pawn-EndCleanupControl", IsPlayerControlled = true, needs = pawn.needs };
-        var otherComp = new CompSqueaker { Pawn = other, FixtureSustained = true };
-        other.Comp = otherComp;
-        otherComp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        var healthy = SoundStarter.Spawned[SoundStarter.Spawned.Count - 1];
-        UsOneShotRuntime.ResetSession();
-        Check(failing.EndCalls == 1 && healthy.EndCalls == 1 && !UsOneShotRuntime.IsControlled(pawn)
-            && !UsOneShotRuntime.IsControlled(other) && Log.Lines.Exists(x => x.Contains("owned sustained end uncertain")),
-            "S5 lifecycle End fault is reported and cannot prevent another owned session from releasing");
-    }
-
-    private static void S5ActualRuntimeSustained(Pawn pawn, CompSqueaker comp, UsPawnPlaybackSession session)
-    {
-        var sound = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!;
-        sound.sustain = true;
-        comp.FixtureSustained = true;
-        Find.TickManager.TicksGame = 2000;
-        comp.CompTick();
-        var original = SoundStarter.Spawned[0];
-        long deadline = session.State.SharedDeadline;
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && !original.Ended,
-            "S5 actual caller shape reaches prepared native sustained start and confirms effective handle");
-        Find.TickManager.TicksGame = 2140;
-        comp.CompTick();
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.AlreadyActive && SoundStarter.Spawned.Count == 1
-            && session.State.SharedDeadline == deadline && session.LastRandomDraws.Count == 0,
-            "S5 actual same-key maintenance neither redraws nor starts nor refreshes hard protection");
-        SqueakSoundAvailabilityCache.RejectProductionInfo = true;
-        Find.TickManager.TicksGame = 2200;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && !original.Ended && SoundStarter.Spawned.Count == 1,
-            "S5 actual higher-priority preparation failure leaves old handle untouched");
-        SqueakSoundAvailabilityCache.RejectProductionInfo = false;
-        Find.TickManager.TicksGame = 2260;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        var replacement = SoundStarter.Spawned[1];
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && original.EndCalls == 1 && !replacement.Ended,
-            "S5 actual prepared higher-priority request ends old once and confirms distinct new handle");
-        Find.TickManager.TicksGame = 2330;
-        comp.NotifyExternalByKey("Call", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && !replacement.Ended && SoundStarter.Spawned.Count == 2,
-            "S5 actual lower-priority request cannot interrupt owned sustained slot");
-        comp.Allowed = false;
-        Find.TickManager.TicksGame = 2400;
-        comp.CompTick();
-        Check(replacement.EndCalls == 1, "S5 actual independent review ends current handle after permission is revoked");
-        comp.Allowed = true;
-        SoundStarter.SpawnFailure = "null";
-        Find.TickManager.TicksGame = 2500;
-        comp.CompTick();
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Indeterminate && session.State.SharedDeadline == 2540
-            && session.State.ConfirmedTick == 2260,
-            "S5 actual unconfirmed native call protects hard deadline without reporting successful sustained start");
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(session.LastOutcome.Reason == "TickOccupied" && SoundStarter.Spawned.Count == 2,
-            "S5 actual uncertain start cannot chain a second event attempt in the same tick");
-        SoundStarter.SpawnFailure = "ended";
-        Find.TickManager.TicksGame = 2620;
-        comp.CompTick();
-        Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Indeterminate && SoundStarter.Spawned[2].EndCalls == 1,
-            "S5 actual nonnull but constructor-ended native handle is not confirmed or ended twice");
-        SoundStarter.SpawnFailure = "";
-        sound.sustain = false;
-        comp.FixtureSustained = false;
-        UsInstanceOutput.Initialize(new Harmony("fixture.required-output-owner-missing"));
-        int dispatched = SoundStarter.Played.Count;
-        long protectedUntil = session.State.SharedDeadline;
-        Find.TickManager.TicksGame = 2800;
-        comp.NotifyExternalByKey("Wounded", SqueakTriggerOrigin.Wounded, SqueakInvocationSource.StateEvent);
-        Check(!UsInstanceOutput.Available && session.LastOutcome.Receipt?.Result == PlaybackResult.Rejected
-            && SoundStarter.Played.Count == dispatched && session.State.SharedDeadline == protectedUntil,
-            "S5 actual caller rejects unavailable required patch owner before native side effects or new hard protection");
-        UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
+        Find.TickManager.TicksGame = 5000; comp.CompTick(); var failing = SoundStarter.Spawned.Last(); failing.EndFailure = "before";
+        var other = new Pawn { ThingID = "Pawn-EndCleanupControl", IsPlayerControlled = true, needs = pawn.needs,
+            CurJob = new Job { def = new JobDef { defName = "Wait" } }, jobs = new Pawn_JobTracker { curDriver = new JobDriver() },
+            pather = new Pawn_PathFollower(), mindState = new Pawn_MindState { IsIdle = true } };
+        var otherComp = new CompSqueaker { Pawn = other }; other.Comp = otherComp; MaintainSubject(other, true); otherComp.CompTick();
+        var healthy = SoundStarter.Spawned.Last(); SqueakerRuntime.ResetSession();
+        Check(!ReferenceEquals(failing, healthy) && failing.EndCalls == 1 && healthy.EndCalls == 1 && !SqueakerRuntime.IsControlled(pawn)
+            && !SqueakerRuntime.IsControlled(other) && Log.Lines.Exists(x => x.Contains("owned sustained end uncertain")),
+            "one lifecycle End fault is reported without preventing another subject's owned release");
+        MaintainSubject(other, false);
     }
 }

@@ -1,38 +1,22 @@
 # 贡献指南 · Contributing
 
-本项目接受代码与第三方语音包方向的贡献。约束契约：语音包作者指南 [`.github/skills/us-voicepack-authoring/SKILL.md`](./.github/skills/us-voicepack-authoring/SKILL.md)、模组结构参考 [`docs/mod-structure-reference-zh.md`](./docs/mod-structure-reference-zh.md)、发布流程 [`docs/release-runbook-zh.md`](./docs/release-runbook-zh.md)。UI 内核（FerriteLib.UiKit）在独立前置仓 `../ferritelib`，其改动走那边的门禁。
+当前开发线为0.6.0 Dev，目标RimWorld1.6.4871。先读[当前作者指南](docs/us-kernel-0.6-authoring-zh.md)与[r2合同](docs/us-kernel-0.6-refactor-zh.md)，不要按保留的0.5 XML/API制作新线内容。
 
-This project accepts code and third-party voice-pack contributions. Binding contracts: the author guide [`.github/skills/us-voicepack-authoring/SKILL.md`](./.github/skills/us-voicepack-authoring/SKILL.md), the structure reference [`docs/mod-structure-reference-zh.md`](./docs/mod-structure-reference-zh.md), and the release flow [`docs/release-runbook-zh.md`](./docs/release-runbook-zh.md). The UI kernel (FerriteLib.UiKit) lives in the separate prerequisite repository `../ferritelib` and is gated there.
+Current development targets 0.6.0 Dev and RimWorld1.6.4871. Start with the [current author contract](docs/us-kernel-0.6-authoring-zh.md) and [r2 architecture](docs/us-kernel-0.6-refactor-zh.md), not the retained 0.5 format.
 
-## 音频 / Audio
+## 代码与内容 / Code and content
 
-Universal Squeaker **不携带任何音频**，也不接受向主仓添加音频的 PR——语音内容一律以第三方 VoicePack Def + 音频根目录的形式存在（见作者指南的 canonical 布局 `<lowercase packageId>/<PackDef.defName>/<Action>/`）。主仓的 `Extras/`、`1.6/Sounds/` 是门禁红线。
+- 完整 `Source/UniversalSqueaker/Core/**/*.cs` 无Verse／Unity／RimWorld、原生对象或mutable process-global state；游戏事实、音频和生命周期在adapter。单Subject owner同步预留、输出和四收据，不建第二状态机。
+- The complete Core compiles without game/platform references or doubles. Keep native sampling/resources in adapters and settlement in the one synchronous subject owner.
+- packageId `coahuilite.universalsqueaker`、namespace `UniversalSqueaker`、Def前缀 `US_`、诊断前缀 `usdiag`及MPL-2.0不变。不得混入SR类型、资源、品牌或程序集。
+- US主仓不携带音频、Extras或第二份FL DLL。第三方声音包提供自己的SoundDef与素材；声音资源的真实owner与引用者身份不同。
+- r2明确采用一次通知声明、新Config身份与格式，无旧reader。此许可不等于今后可任意改已发布持久化或公开合同；US不写永久存档业务数据，旧真实Config不自动触碰。
+- Player-facing copy uses symmetric English／ChineseSimplified Keyed entries. UI reads canonical configuration; it must not define another scope/default policy.
 
-Universal Squeaker ships **no audio** and does not accept PRs adding audio to the main repository. Voice content exists only as third-party VoicePack defs with their own audio roots (canonical layout in the author guide). `Extras/` and `1.6/Sounds/` are gate red lines here.
+## 验证与提交 / Verification and delivery
 
-## 代码 / Code
+选明确固定FL0.8包；参考[构建指南](docs/build-and-debug.md)。根据受改合同运行实际入口：完整Core、选择器冻结golden、真实生产caller／回执、配置失败恢复、当前UI／作者例。不要修改golden或削弱行为期望来迎合实现，也不例行重跑未变矩阵。
 
-1. 功能或行为改动：从当前开发线（现 `0.3.x`）切出**短生命功能分支**，在其上开发并随积累推送留存；完成后合回开发线，**删除该功能分支（本地与远端）**——不留任何活过工作项的分支（2026-09-10 裁定）。纯文档/裁定类提交（不触发布运字节）可直接落线。`main` 是发布信号面：仅在切 rc/release 时由维护者将开发线合入，日常改动绝不流向 `main`（2026-09-09 裁定）。
-2. 保持内核边界：`Source/UniversalSqueaker/Kernel/` 与 `Pure/` 零 Verse/Unity 引用；产品词汇不得渗入（`SqueakyRatkin` 类型引用由 `scripts/check-pack-readiness.ps1` 负向断言拦截）。
-3. 身份契约不得改动：packageId `coahuilite.universalsqueaker`、命名空间 `UniversalSqueaker`、Def 前缀 `US_`、日志前缀 `usdiag`。
-4. 存档兼容红线：`Scribe` 字段名（如 `experimentalKiiroCompat`）与 `usdiag` 事件词表是持久化/诊断契约，重命名 = 静默破坏旧档或排障工具链。
-5. 玩家可见文案一律走 `1.6/Languages/*/Keyed/`（中英双语对称，中文权威）；源码字面量不放英文文案。
-6. 验证：
+Use the required project checks and affected counterexamples. Distinguish native game checks from production code exercised with platform/Scribe doubles. A drawn Host or exit0 alone does not prove the intended mode executed.
 
-   ```powershell
-   pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'
-   ```
-
-   14 道门禁须全绿（6 个 harness、主程序集 Dev/Release 零警告、载体边界红线、MPL-2.0 许可一致、Schema=2 清单、UI 边界审计）。UI 行为改动另需实机验收清单（维护者本地维护，不入库），由维护者执行。
-
-7. 提交前跑隐私门禁：`pwsh -NoProfile -File scripts/privacy-audit.ps1`（个人路径 / 凭据 / PublishedFileId 值 / 身份唯一性；提交身份使用 GitHub noreply 邮箱）。
-8. 提 PR 到当前开发线（现 `0.3.x`），附改动与理由。历史重写、tag、推送由维护者裁决，贡献者不做。
-
-1. Feature or behavior change: cut a SHORT-LIVED branch from the current development line (`0.3.x`, named after the carrier API window), work and progress-push there; on completion merge it back into the line and DELETE the branch (local + remote) - no branch may outlive its work item (ruling 2026-09-10). Pure doc/decision commits (no shipped bytes) may land on the line directly. `main` is a release-signal surface: it moves only when the maintainer cuts an rc or stable release and merges the line in (ruling 2026-09-09); routine work never flows to `main`.
-2. Keep kernel boundaries: `Source/UniversalSqueaker/Kernel/` and `Pure/` stay zero-Verse; product vocabulary must not leak (`SqueakyRatkin` type references are caught by a negative assertion in `scripts/check-pack-readiness.ps1`).
-3. Identity contract is fixed: packageId `coahuilite.universalsqueaker`, namespace `UniversalSqueaker`, Def prefix `US_`, log prefix `usdiag`.
-4. Save-compatibility red lines: `Scribe` field names (e.g. `experimentalKiiroCompat`) and the `usdiag` event vocabulary are persistence/diagnostics contracts; renaming them silently breaks old saves or the triage toolchain.
-5. All player-facing strings go through `1.6/Languages/*/Keyed/` (English and Simplified Chinese symmetric, Chinese authoritative); no English literals in source.
-6. Verify with `pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '../ferritelib/dist/build/Release/FerriteLib.UiKit.dll'` — all 15 gates green. The carrier is selected explicitly (no default; see `docs/build-and-debug.md`). Gate 15 scans the US payload and the KernelHostTests harness assembly for game members the carrier's harness stubs do not declare (`../ferritelib/scripts/stub-coverage-scan.ps1` with `scripts/stub-coverage-exemptions.txt`; an exemption needs a reason from that file's legend, and a stale one fails). Gate 14 is `scripts/ui-boundary-audit.ps1`: a raw Unity IMGUI / Verse Widgets call (`GUI`, `Event.current`, `Mouse.IsOver`, `Widgets.*`, `GUIUtility`) outside the one ruled exemption (frozen camera-indicator fallback; the dev diagnostics panel left the whitelist with the 2026-09-10 UiKit migration) fails the run, and any raw `Mouse.IsOver` at all fails it — hover, layout-event gating and window chrome go through the library seams (`UiNative.IsMouseOver`, `UiNative.IsLayoutEvent`, `UiNative.Button`, `UiWindowHost`). The whitelist may only shrink; a new exemption is a maintainer decision. UI behaviour changes additionally need the in-game acceptance checklist (maintainer-local, not published), run by the maintainer.
-7. Run `pwsh -NoProfile -File scripts/privacy-audit.ps1` before committing (personal paths / credentials / PublishedFileId values / identity uniqueness; use the GitHub noreply identity).
-8. Open a PR against the current development line (`0.3.x`) with the change and its rationale. History rewrites, tags and pushes are maintainer decisions.
+提交前审完整diff及隐私门禁；使用GitHub noreply身份。普通本地提交可以进行；远端配置、push、PR、merge、tag、release及分支／worktree清理均按维护者明确授权，不自动开展。最终推送前须检查完整待推历史范围，见[隐私门禁](docs/push-privacy-gate.md)。

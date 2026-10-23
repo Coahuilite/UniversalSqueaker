@@ -47,7 +47,7 @@ internal static class DbEatUiTests
             finally { Program.SetTranslatorResolver(null); }
         }
         // Actual production facade writes the selected existing layer, not a disconnected global boolean.
-        var settings = new UniversalSqueakerSettings();
+        var settings = new GameSettings();
         var actual = new UsKernelSettingsSource(settings);
         actual.ViewState.TuningLayer = 0; actual.SetEatParameter("phase", "Execution");
         actual.ViewState.TuningLayer = 1; actual.ViewState.TuningRaceDefName = "Ratkin"; actual.SetEatParameter("drugScope", "OnlyDrugs");
@@ -61,10 +61,10 @@ internal static class DbEatUiTests
             && settings.actionTuning.Single(x => x.raceDefName == "Ratkin" && x.xenotypeDefName == "").hasDrugScope,
             "actual inheritance operation preserves neighboring layer");
         Check(settings.TryChangeBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
-            new BehaviorValues { Scope = SqueakActionScope.Disabled }, () => true, out _), "public settings API accepts full ActionId row");
+            new BehaviorValues { Scope = BehaviorScope.Disabled }, () => true, out _), "public settings API accepts full ActionId row");
         var fold = typeof(VoicePacksPageModel).GetMethod("BuildActionScopes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         var scopes = (System.Collections.Generic.IReadOnlyList<ActionScopeRowView>)fold.Invoke(null, new object[] { settings, 1, "Ratkin", "" })!;
-        Check(scopes.Single(x => x.ActionKey == "Eat").HasOwnScope && scopes.Single(x => x.ActionKey == "Eat").Scope == SqueakActionScope.Disabled,
+        Check(scopes.Single(x => x.ActionKey == CoreActions.Eat).HasOwnScope && scopes.Single(x => x.ActionKey == CoreActions.Eat).Scope == BehaviorScope.Disabled,
             "full ActionId persisted scope is visible through existing built-in row projection");
         Console.WriteLine("DB Eat UI production source/Host (platform doubles) PASS");
     }

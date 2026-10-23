@@ -8,7 +8,7 @@ using HarmonyLib;
 using UnityEngine;
 using Verse;
 using Verse.Sound;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 namespace UniversalSqueaker;
 
@@ -171,7 +171,7 @@ internal static class UsInstanceOutput
         {
             return;
         }
-        double factor = owner.Volume * CompSqueaker.GlobalVolumeFactor;
+        double factor = owner.Volume * SqueakerRuntime.CurrentSystemVolume;
         double result = originalNativeVolume * factor;
         if (!OneShotOutput.TryPrepare(result, 1, 1, out float volume, out _))
         {

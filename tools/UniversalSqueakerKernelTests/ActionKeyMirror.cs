@@ -1,54 +1,23 @@
 using System;
 using System.Collections.Generic;
 using UniversalSqueaker;
-
+using UniversalSqueaker.Kernel;
 namespace UniversalSqueaker.KernelTests;
-
-/// <summary>
-/// 15 动作名镜像（= enum 名序 = BuiltInActionKeys 序）。
-/// BuiltInCount = 15：只有内置 fallback 映射的动作数。
-/// 声音键是测试数据：内核不携带任何产品声音键；产品种子由适配层从数据文件注入。
-/// </summary>
+/// <summary>Test-only translation of the frozen corpus vocabulary. No product short-key reader.</summary>
 internal static class ActionKeyMirror
 {
-    private static readonly string[] actionNames =
+    public static IReadOnlyList<string> All => CoreActions.All;
+    public static int Count => All.Count;
+    public static int BuiltInCount => Count;
+    public static string For(string action)
     {
-        "Call",
-        "Eat",
-        "Sleep",
-        "Wounded",
-        "Select",
-        "Move",
-        "Social",
-        "Joy",
-        "Death",
-        "Draft",
-        "Undraft",
-        "Attack",
-        "Work",
-        "Equip",
-        "MentalBreak",
-    };
-
-    public static IReadOnlyList<string> All => Array.AsReadOnly(actionNames);
-
-    /// <summary>15 = 全动作镜像。</summary>
-    public static int Count => actionNames.Length;
-
-    /// <summary>15 = 有内置 SoundDef 映射的动作数；内置表只播种这些项。</summary>
-    public static int BuiltInCount => actionNames.Length;
-
-    public static string For(SqueakAction action)
-    {
-        int index = (int)action;
-        if ((uint)index >= (uint)actionNames.Length) throw new ArgumentOutOfRangeException(nameof(action));
-        return actionNames[index];
+        if (!BuiltInActionKeys.Contains(action)) throw new ArgumentOutOfRangeException(nameof(action));
+        return action.Substring("us.core/".Length); // Historical synthetic sound labels remain byte-identical.
     }
-
-    /// <summary>内置 fallback 的中性测试声音键（仅测试数据）。</summary>
-    public static string BuiltInFallbackKey(SqueakAction action)
+    public static string FrozenId(string label)
     {
-        if ((int)action >= BuiltInCount) throw new ArgumentOutOfRangeException(nameof(action));
-        return "US_Fallback_" + For(action);
+        if (BuiltInActionKeys.Contains("us.core/" + label)) return "us.core/" + label;
+        return label == "Crying" || label == "Giggling" ? "fixture.history/" + label : label;
     }
+    public static string BuiltInFallbackKey(string action) => "US_Fallback_" + For(action);
 }

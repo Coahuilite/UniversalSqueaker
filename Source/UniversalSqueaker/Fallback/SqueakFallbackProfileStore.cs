@@ -122,7 +122,7 @@ internal static class SqueakFallbackProfileStore
             string path = PathFor(race);
             if (!File.Exists(path)) return null;
             SqueakFallbackProfileCopy copy = Read(path);
-            if (!string.Equals(copy.packageId, UniversalSqueakerMod.PackageId, StringComparison.Ordinal)) return null;
+            if (!string.Equals(copy.packageId, SqueakerMod.PackageId, StringComparison.Ordinal)) return null;
             bool invalid = false;
             return ToDelta(copy, out invalid);
         }
@@ -205,7 +205,7 @@ internal static class SqueakFallbackProfileStore
         }
 
         bool invalid = false;
-        if (!string.Equals(copy?.packageId, UniversalSqueakerMod.PackageId, StringComparison.Ordinal)) corrupt = true;
+        if (!string.Equals(copy?.packageId, SqueakerMod.PackageId, StringComparison.Ordinal)) corrupt = true;
         FallbackDelta? delta = corrupt ? null : ToDelta(copy, out invalid);
         corrupt |= invalid;
         int copyVersion = copy?.sourceVersion ?? 0;
@@ -279,7 +279,7 @@ internal static class SqueakFallbackProfileStore
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             SqueakFallbackProfileCopy copy = new()
             {
-                packageId = UniversalSqueakerMod.PackageId,
+                packageId = SqueakerMod.PackageId,
                 sourceVersion = source.Version,
                 hasOverrides = delta != null,
                 raceDefName = source.Race.DefName,
@@ -334,7 +334,7 @@ internal static class SqueakFallbackProfileStore
                 continue;
             }
 
-            if (copy == null || !string.Equals(copy.packageId, UniversalSqueakerMod.PackageId, StringComparison.Ordinal)) continue;
+            if (copy == null || !string.Equals(copy.packageId, SqueakerMod.PackageId, StringComparison.Ordinal)) continue;
             string raceName = copy.raceDefName ?? "";
             if (string.IsNullOrWhiteSpace(raceName)) continue;
             RaceKey race = new(raceName);

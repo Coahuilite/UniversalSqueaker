@@ -1,6 +1,7 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
     [string]$FerriteLibArtifactPath,
+    [string]$PayloadDllPath,
     [switch]$SkipVerify,
     [switch]$RequireReleaseMetadata
 )
@@ -9,17 +10,16 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
-# resolve-carrier.ps1 has NO default carrier since 2026-09-24, so every caller must select one. This script
-# selects the SIBLING payload when none is given - the same path both workflows stage and the csproj HintPath
-# resolves - because "check the package this checkout built" is exactly what this script is for. The strict
-# refusal stays where it belongs (the resolver), so a caller that means a different artifact says so.
-if ([string]::IsNullOrWhiteSpace($FerriteLibArtifactPath)) {
-    $FerriteLibArtifactPath = Join-Path (Split-Path -Parent $root) 'ferritelib/1.6/Assemblies/FerriteLib.UiKit.dll'
-}
+# All callers select the fixed 0.8 carrier; never infer a stale sibling package.
+$FerriteLibArtifactPath = & (Join-Path $PSScriptRoot 'resolve-carrier.ps1') -ProjectRoot $root -FerriteLibArtifactPath $FerriteLibArtifactPath
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
 $aboutFile = Join-Path $root 'About\About.xml'
 $versionedDir = Join-Path $root '1.6'
-$assembliesDir = Join-Path $root 'dist\build\Release'
+$payloadDll = if ([string]::IsNullOrWhiteSpace($PayloadDllPath)) {
+    Join-Path $root 'dist\build\Release\UniversalSqueaker.dll'
+} elseif ([IO.Path]::IsPathRooted($PayloadDllPath)) { [IO.Path]::GetFullPath($PayloadDllPath) }
+else { [IO.Path]::GetFullPath((Join-Path $root $PayloadDllPath)) }
+$assembliesDir = Split-Path -Parent $payloadDll
 $failures = @()
 
 function Assert-Check {
@@ -51,7 +51,7 @@ Assert-Check 'packageId is coahuilite.universalsqueaker' ($packageId -eq 'coahui
 # The other half of the carrier boundary: US ships no FerriteLib payload, so it must name the carrier
 # as a dependency or the mod fails to load with no explanation. RimWorld's modDependencies cannot
 # carry a version (ModRequirement parses only packageId/alternativePackageIds/displayName), so the
-# API-range assert is in code - UniversalSqueakerMod's constructor calls FerriteLibVersion.Require.
+# API-range assert is in code - GameBootstrap calls FerriteLibVersion.Require.
 function Test-PackageIdList([string]$xpath) {
     $nodes = @($aboutXml.SelectNodes($xpath))
     foreach ($node in $nodes) {
@@ -73,7 +73,7 @@ if ($RequireReleaseMetadata) {
     # Version-axis lock (the lib MEMORY 0.1.0/0.2.0 drift lesson; see MEMORY.md "First cloud
     # upload: durable decisions"). This pins the axes that are statically visible in THIS repo and
     # are release-specific. The csproj <Version> == About.xml <modVersion> agreement is already asserted above (section A); here we
-    # add the two release-only facts: a release pack must not carry the -dev suffix, and Mod.cs must
+    # add the two release-only facts: a release pack must not carry the -dev suffix, and GameBootstrap must
     # declare the prerequisite range. The stronger invariant - that the range actually contains the
     # Api of the carrier DLL this build linked - is proven by the KernelHost harness gate
     # (PrerequisiteRangeTracksCompiledApi), which reflects the loaded assembly; reading the sibling
@@ -81,13 +81,12 @@ if ($RequireReleaseMetadata) {
     # under ci-ferritelib/, not ../ferritelib/Source/), so it is deliberately not done.
     Assert-Check 'release modVersion carries no -dev suffix' ($modVersion -notmatch '-dev') "($modVersion)"
 
-    $modCs = Get-Content -LiteralPath (Join-Path $root 'Source\UniversalSqueaker\Mod.cs') -Raw
-    Assert-Check 'Mod.cs declares PrerequisiteApiMin' ($modCs -match 'PrerequisiteApiMin\s*=\s*new\s+Version\(')
-    Assert-Check 'Mod.cs declares PrerequisiteApiMax' ($modCs -match 'PrerequisiteApiMax\s*=\s*new\s+Version\(')
+    $bootstrap = Get-Content -LiteralPath (Join-Path $root 'Source\UniversalSqueaker\Game\GameBootstrap.cs') -Raw
+    Assert-Check 'GameBootstrap enforces the supported FL0.8 range' ($bootstrap -match 'FerriteLibVersion.Require\(new Version\(0, 8, 0\), new Version\(0, 9, 0\)')
 }
 
 # C. Assemblies
-Assert-Check 'UniversalSqueaker.dll exists' (Test-Path -LiteralPath (Join-Path $assembliesDir 'UniversalSqueaker.dll') -PathType Leaf)
+Assert-Check 'UniversalSqueaker.dll exists' (Test-Path -LiteralPath $payloadDll -PathType Leaf)
 # Inverted since FerriteLib became its own prerequisite mod: coahuilite.ferritelib is the single
 # carrier, and a second copy would bind by load order through RimWorld's global AssemblyResolve with
 # no other detector for whichever copy lost.

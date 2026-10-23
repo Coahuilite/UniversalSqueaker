@@ -171,7 +171,7 @@ internal sealed class UsDevPanelWindow : UiWindowHost
 
     protected override string CloseText => Translator.Translate("US.Common.Cancel");
 
-    protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
+    protected override bool PrerequisiteVerified => SqueakerMod.PrerequisiteVerified;
 
     protected override Func<Vector2>? InitialSizePolicy => () => new Vector2(
         360f,

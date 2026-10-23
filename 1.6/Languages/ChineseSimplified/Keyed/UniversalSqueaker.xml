@@ -155,7 +155,7 @@
   <US.Diagnostics.DevPanel.Label>开发面板：在任意设置页对设置页及其确认弹窗执行采集、描边与报告。</US.Diagnostics.DevPanel.Label>
   <US.Diagnostics.DevPanel.Open>打开开发面板</US.Diagnostics.DevPanel.Open>
   <US.Tuning.Area.Actions>动作规则</US.Tuning.Area.Actions>
-  <US.Tuning.Area.Mood>心情音色</US.Tuning.Area.Mood>
+  <US.Tuning.Area.Mood>响应详情</US.Tuning.Area.Mood>
   <US.Tuning.Area.Fallback>原生回退</US.Tuning.Area.Fallback>
   <US.Tuning.Interval>间隔</US.Tuning.Interval>
   <US.Tuning.Probability>概率</US.Tuning.Probability>
@@ -256,10 +256,10 @@
   <US.Preset.List.Empty>未安装基线预设。此功能读取由 Def 提供的预设。</US.Preset.List.Empty>
   <US.Preset.List.Import>导入</US.Preset.List.Import>
   <US.Preset.List.Selection>{0} 个种族 · {1} 个异种</US.Preset.List.Selection>
-  <US.Preset.Race.Summary>{0}（{1} 个动作，{2} 种心情）</US.Preset.Race.Summary>
+  <US.Preset.Race.Summary>{0}（{1} 个动作，{2} 项字段）</US.Preset.Race.Summary>
   <US.Preset.Xeno.Inherits>（继承种族）</US.Preset.Xeno.Inherits>
   <US.Preset.Xeno.Own>（仅自身）</US.Preset.Xeno.Own>
-  <US.Preset.Xeno.Summary>{0}{1}（{2} 个动作，{3} 种心情）</US.Preset.Xeno.Summary>
+  <US.Preset.Xeno.Summary>{0}{1}（{2} 个动作，{3} 项字段）</US.Preset.Xeno.Summary>
   <US.Footer.SaveStatus.Idle>空闲</US.Footer.SaveStatus.Idle>
   <US.Footer.SaveStatus.Saving>保存中</US.Footer.SaveStatus.Saving>
   <US.Footer.SaveStatus.Saved>已保存</US.Footer.SaveStatus.Saved>
@@ -350,7 +350,7 @@
   <US.Help.Attenuation.Presets.Text>三枚互斥按钮直接套用距离区间：保守 15-65、适中 15-50、激进 15-40；套用后曲线与状态行同步更新。手动编辑区间后标签会变成「自定义」。</US.Help.Attenuation.Presets.Text>
   <US.Help.Attenuation.Status.Label>预设 / 区间读数</US.Help.Attenuation.Status.Label>
   <US.Help.Attenuation.Status.Text>曲线下方的只读状态行：显示当前生效的预设（手动拖动后为"自定义"）与当前距离区间。它本身不改变任何设置。</US.Help.Attenuation.Status.Text>
-  <US.Help.BasicTuning.Overview>播放行为卡：彩蛋音效是否入池，加上三项运行时缩放——冷却按时间流速、频率按交谈、周期语音按可闻人口。距离相关的预设与曲线都在"距离"工作区。</US.Help.BasicTuning.Overview>
+  <US.Help.BasicTuning.Overview>这里设置音频参与、说话能力缩放和独立的 Pawn Eat／Select 选项。普通节奏与竞争政策仍待裁定；仅显式激活的 Dev 候选会派发。</US.Help.BasicTuning.Overview>
   <US.Help.BasicTuning.Egg.Label>彩蛋音效</US.Help.BasicTuning.Egg.Label>
   <US.Help.BasicTuning.Egg.Text>开启后，彩蛋条目与普通条目一同参与抽取；关闭时只有普通条目可能被选中。</US.Help.BasicTuning.Egg.Text>
   <US.Help.BasicTuning.ScaleCooldown.Label>时间流速缩放</US.Help.BasicTuning.ScaleCooldown.Label>
@@ -361,7 +361,7 @@
   <US.Help.BasicTuning.ScalePopulation.Text>可听区域内已接入 US 的 Pawn 较多时，周期叫声减少：间隔随可闻 Pawn 数除以十的系数增大（不低于一倍），随机尝试的通过概率同比例下降，因此人多时整体不会等比变吵。默认开启。</US.Help.BasicTuning.ScalePopulation.Text>
   <US.Help.CameraIndicator.Overview>开启后，地图屏幕左下方（日期栏上方）出现一行镜头读数：相机高度与视距。用它对照"距离衰减"的距离带，判断当前视野下哪些殖民者可闻。该开关不在殖民者头顶添加任何标记。</US.Help.CameraIndicator.Overview>
   <US.Help.CameraIndicator.Toggle.Text>切换该行镜头读数的显示。它是查看衰减区间的参照，不改变任何音频本身。</US.Help.CameraIndicator.Toggle.Text>
-  <US.Help.Timing.Overview>两项全局节奏控制：任意两次 squeak 之间必须等待的最小间隔，以及作用于全部冷却的主倍率。两者即时生效，不重建音频路由。</US.Help.Timing.Overview>
+  <US.Help.Timing.Overview>这里显示是否已显式激活 Dev 政策。硬间隔与状态机会按该候选及动作有效配置执行；已退役的全局冷却和人口控件不再生效。</US.Help.Timing.Overview>
   <US.Help.Timing.Interval.Label>叫声间隔总控</US.Help.Timing.Interval.Label>
   <US.Help.Timing.Interval.Text>两次叫声之间的硬性下限，以秒为单位（滑条按游戏刻移动，每秒 60 刻）。1.0x 使用当前默认节奏，人群密集嫌吵时调高；默认 3.6 秒适合多数殖民地。</US.Help.Timing.Interval.Text>
   <US.Help.Timing.Multiplier.Label>冷却倍率</US.Help.Timing.Multiplier.Label>
@@ -375,19 +375,19 @@
   <US.Help.Diagnostics.LayoutCapture.Text>记录本窗口每个已排布元素的各坐标空间矩形、高度模式与最终高度。开启时会拖慢帧率，默认关闭，且从不写入存档。</US.Help.Diagnostics.LayoutCapture.Text>
   <US.Help.Diagnostics.LayoutOutline.Text>为本窗口绘制的矩形描出边框，让矩形可以被看到而不只是读到。它与采集互相独立（SA1.5）：采集开启时描出被保留的集合，采集关闭时描出每个绘制的矩形且不采样——本开关不会备好报告。</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>把最近一次完成的采集写入日志一次，然后停止；再按一次才会再写一份。若某个矩形不响应点击，请看输入行：每行带有指针位置、被查询的矩形与判定结果（命中/未命中/被遮挡/不可用）。</US.Help.Diagnostics.LayoutReport.Text>
-  <US.Help.ScopeTree.Overview>三层调音编辑器：全局、种族、异种。每个动作的范围取"自动"即继承下层生效值，也可在该动作支持的档位内强制关闭、任意或指令；四条心情行按层覆盖音高、音量与抖动。</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Overview>选择全局、种族或准确的种族／异种层。动作作用域与响应详情和播放读取同一有效配置，包括稀疏覆盖、来源、依赖和局部暂停。</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>选择本卡下方编辑作用于哪一层：全局、种族或异种。层与层的记录互相叠加，逐层生效。</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>种族层与异种层下，用下拉选定要编辑的种族域或（种族，异种）域；全局层不显示本行。</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>每个动作一行下拉："自动"继承下方生效值；也可强制为关闭、任意或指令，仅限该动作支持的档位。宽屏行内以箭头提示继承结果。</US.Help.ScopeTree.ActionScope.Text>
   <US.Help.ScopeTree.MoodTuning.Text>四条心情行（良好、中性、低落、崩溃），各以步进器加数字框调节音高、音量与抖动；行尾两个按钮：「重置为默认」清掉本层三个因子（来源保留），「重置为预设」按本行来源重新写入该预设的基线值。不可用的按钮仍然画出、只是禁用，悬停可看原因。</US.Help.ScopeTree.MoodTuning.Text>
-  <US.Help.ScopeTree.ResetDefault.Text>清掉本层的音高、音量、抖动三个因子，恢复继承值；预设来源保留，所以「重置为预设」仍然可用。</US.Help.ScopeTree.ResetDefault.Text>
-  <US.Help.ScopeTree.ResetPreset.Text>按本行的预设来源找到那份预设，把该心情的基线因子值（音高、音量、抖动）重新写入本层；来源不变。</US.Help.ScopeTree.ResetPreset.Text>
+  <US.Help.ScopeTree.ResetDefault.Text>移除准确选中的玩家行及其模板恢复目标，保留作者贡献与上层配置。这与只清除作用域字段不同。</US.Help.ScopeTree.ResetDefault.Text>
+  <US.Help.ScopeTree.ResetPreset.Text>把当前模板中存在的字段重新应用到准确玩家行，保留无关玩家字段。所存模板身份是恢复目标，不是作者来源归因。</US.Help.ScopeTree.ResetPreset.Text>
   <US.Help.ScopeTree.Auto.Label>自动 / 改回下层值</US.Help.ScopeTree.Auto.Label>
-  <US.Help.ScopeTree.Auto.Text>动作范围选"自动"只清除当前层的作用域字段；心情行用"改回下层值"清掉本层记录；两者都回落到下一个生效层给出的数值。</US.Help.ScopeTree.Auto.Text>
-  <US.Help.PresetList.Overview>导入由 Def 提供的调音基线：展开预设，勾选种族与异种，再按"导入"，把该预设保存的动作与心情调音行写入对应层。没有安装任何预设 Def 时，本卡显示空状态提示。</US.Help.PresetList.Overview>
+  <US.Help.ScopeTree.Auto.Text>继承只清除此层的作用域字段，保留其他玩家字段及模板恢复目标；有效作用域随后由其他层和规范合同决定。</US.Help.ScopeTree.Auto.Text>
+  <US.Help.PresetList.Overview>模板把稀疏值导入明确选中的玩家层，不绑定或替换作者行为来源。记录的模板身份另作恢复目标。</US.Help.PresetList.Overview>
   <US.Help.PresetList.Tree.Label>预设树</US.Help.PresetList.Tree.Label>
   <US.Help.PresetList.Tree.Text>点击预设标题展开其种族与异种两级列表；勾选要接收该基线的域。异种行以"（继承种族）"或"（仅自身）"标注其取数方式；标题行的摘要实时显示已勾选数量。</US.Help.PresetList.Tree.Text>
-  <US.Help.PresetList.Import.Text>将该预设中被勾选的动作与心情行应用到对应种族/异种层：同键覆盖、新键追加，并为每行记录来源预设；导入后立即参与运行时解析。</US.Help.PresetList.Import.Text>
+  <US.Help.PresetList.Import.Text>仅将模板中存在的字段应用到选中的准确玩家域；重复导入不重复建行，模板省略的字段保留玩家现值。</US.Help.PresetList.Import.Text>
   <US.Help.FilterBar.Overview>语音包工作区的一组可组合条件，全部作用于下方的唯一卡片结果：关键词匹配包显示名、内部名、Mod、作者及其提供的种族/异种域名；仅已启用留下该域已启用此包的行；仅冲突留下冲突、休眠、目标未加载或已失效域的行；仅已失效只看含失效选择域的行；作者、种族、异种下拉收窄同一批行；“全部”一次清空所有条件。</US.Help.FilterBar.Overview>
   <US.Help.FilterBar.Keyword.Label>关键词</US.Help.FilterBar.Keyword.Label>
   <US.Help.FilterBar.Keyword.Text>忽略大小写的连续子串，命中包显示名、defName、Mod、作者、包键，也命中包所提供的域名。关键词命中异种名时，提供该异种的卡片自动展开；清空关键词后恢复的是你自己展开的状态。</US.Help.FilterBar.Keyword.Text>
@@ -611,4 +611,13 @@
   <US.Select.NotRequired>不要求</US.Select.NotRequired>
   <US.Help.Select.Label>选择回应资格</US.Help.Select.Label>
   <US.Help.Select.Text>官方Pawn Select默认要求玩家可控、清醒且未倒地。三项可在当前Pawn服务、Race或Xenotype层独立调整；“继承”仅清除本层该字段。回应始终要求原版接受选择，并向最终选择主体发出反馈。基础恢复只清除Pawn服务层的字段；Race或Xenotype覆盖用对应动作行恢复。</US.Help.Select.Text>
+  <US.Response.Details>合同：{0}
+有效许可：{1}；范围：{2}；硬保护 tick：{3}；本地音量／音调：{4}／{5}
+固定／所选依赖：{6}{7}
+字段来源：{8}
+配置／政策：{9}</US.Response.Details>
+  <US.Response.Profile>有效系统配置：音量 {0}；活跃度 {1}；音源 {2}；政策 {3}。在动作页选中一个合同，可查看同运行核心的参数、依赖与字段来源。</US.Response.Profile>
+  <US.Response.PolicyPending>政策未选定</US.Response.PolicyPending>
+  <US.Preset.Invalid>此预设无效，未更改设置。请查看包含预设名称的诊断。</US.Preset.Invalid>
+  <US.Help.ScopeTree.ResponseDetails.Text>查看所选动作当前合成的值、响应参与、参数、来源与依赖。这些是配置事实，不是保证发声的预测。</US.Help.ScopeTree.ResponseDetails.Text>
 </LanguageData>

@@ -26,7 +26,7 @@ namespace UniversalSqueaker.KernelHostTests;
 /// cancel executes nothing; the confirmed restore ENDS the affected edit so no later Enter or focus
 /// pass can push the old value over the restored one). The real publish/persistence counts, settings
 /// instance identity, idempotence and the fallback file bytes stay the dedicated reset backend
-/// harness's boundary (120 checks); the real native focus/IME behaviour is the named human pass.
+/// harness's boundary; the real native focus/IME behaviour is the named human pass.
 /// </summary>
 internal static class ResetUiLaneTests
 {
@@ -43,14 +43,14 @@ internal static class ResetUiLaneTests
         DirectDistanceRestore();
         TuningAreaCeremonyAndXg1Refusal();
         RowRestoreDirectAndGuarded();
+        DraftOcclusionCancelAndConfirm();
         WindowReachabilityRealButtons();
         ScopedDraftBoundaries();
         StagedIdentityDriftRefusal();
-        // S4 removes the numeric timing editor and its same-card restore; no visible numeric draft owns that retired ceremony.
         Console.WriteLine("[us-reset] ceremony through the REAL question window (cancel zero writes; confirm one effect, one bump; "
             + "NoChange silent); distance defaults direct without a window; the area entry names the current layer/domain and the "
-            + "XG1 target offers none / refuses the command; the row restore is direct and guarded; the retired "
-            + "numeric timing draft is not exercised; the long EN/ZH body "
+            + "XG1 target offers none / refuses the command; the row restore is direct and guarded; "
+            + "the live volume draft survives cancellation and ends on the confirmed owning restore; the long EN/ZH body "
             + "GROWS the shell and the absurd body CAPS at the screen with the buttons answered by the "
             + "REAL dialog button press, the draft end is scoped to Applied + own fields (unrelated and "
             + "NoChange/Rejected edits survive), and a drifted staged identity restores nothing");
@@ -171,6 +171,27 @@ internal static class ResetUiLaneTests
         return found;
     }
 
+    // Fixed fc010bd UiNative.Button(rect,ctx) for this custom widget is synchronous native-bool
+    // input, not the ordinary atom's capture/qualified-release protocol. Exercise its actual outlet.
+    private static int PressResetEntry(UiHost host, Rect viewport, string id)
+    {
+        ArrangeIntoView(host,id);
+        Rect actual=ProbeDrawnRect(host,id); int calls=0;
+        Assert(actual.width>0,"current custom reset entry really drew its input band");
+        try
+        {
+            SetButton(rect=>
+            {
+                if(host.Session.ActiveNode.ElementId!=id || !RectMatches(rect,actual))return false;
+                calls++;return true;
+            });
+            host.DrawChecked(viewport);
+        }
+        finally {SetButton(null);}
+        Console.WriteLine("[custom-native-bool] "+id+" actual outlet calls="+calls);
+        return calls;
+    }
+
     /// <summary>RectById band (page position at scroll 0) -> the page point a pointer event must aim
     /// at under the CURRENT scroll.</summary>
     private static Rect ToPage(UiHost host, UiLayoutSnapshot snap, Rect band)
@@ -216,7 +237,7 @@ internal static class ResetUiLaneTests
         // viewport first: a below-fold Button call is clip-refused (the XG1 rule). The press may
         // only open the question; nothing is written yet.
         ArrangeIntoView(host, "restore-center-button");
-        Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+        Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1,
             "the restore-center button must answer exactly one press");
         UsConfirmWindow? flow = UsConfirmWindow.Active;
         Assert(flow != null, "the press must open the REAL question window");
@@ -229,7 +250,7 @@ internal static class ResetUiLaneTests
         int revAfterCancel = host.Session.ContentRevision;
 
         // Confirm: the staged action runs the EFFECT key once, Applied advances the clock once.
-        Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+        Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1,
             "the entry re-asks after an answered question");
         flow = UsConfirmWindow.Active;
         Assert(flow != null, "setup: the second press opened the window");
@@ -243,7 +264,7 @@ internal static class ResetUiLaneTests
         // no phantom rebuild. (The real funnel counts are the backend harness's boundary; this is the
         // UI's claim discipline.)
         fake.NextResetOutcome = SqueakResetOutcome.NoChange;
-        Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+        Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1,
             "setup: third ask");
         int revBefore = host.Session.ContentRevision;
         UsConfirmWindow.Active!.DialogBindings.Invoke("confirm-yes");
@@ -253,7 +274,7 @@ internal static class ResetUiLaneTests
 
         // Rejected behaves the same (identity lost between ask and answer - the backend refuses).
         fake.NextResetOutcome = SqueakResetOutcome.Rejected;
-        Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1, "setup: fourth ask");
+        Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1, "setup: fourth ask");
         UsConfirmWindow.Active!.DialogBindings.Invoke("confirm-yes");
         Assert(fake.ResetAllCount == 3 && host.Session.ContentRevision == revBefore,
             "Rejected: ran, wrote nothing, silent");
@@ -276,14 +297,15 @@ internal static class ResetUiLaneTests
         Assert(Program.PressDeclarativeButton(host, Viewport, "attenuation-reset-defaults") == 1,
             "the direct distance button must answer one press");
         Assert(fake.ResetDistanceCount == 1 && host.Session.ContentRevision == rev + 1,
-            "one press, one restore, one bump");
+            "one press, one restore, one bump: writes=" + fake.ResetDistanceCount
+            + ", revision delta=" + (host.Session.ContentRevision - rev));
         Assert(UsConfirmWindow.Active == null, "a simple restore must NOT open a question window");
         Assert(fake.ResetNormalAreaCount == 0,
             "the direct distance entry is ResetDistanceDefaults, never the distance+volume AREA restore");
 
         // The area entry (confirmation-gated) is a DIFFERENT scope: it asks, and its effect key is the
         // area command - the two entries cannot substitute for each other.
-        Assert(Program.PressDeclarativeButton(host, Viewport, "attenuation-reset-area") == 1,
+        Assert(PressResetEntry(host, Viewport, "attenuation-reset-area") == 1,
             "the area button answers one press");
         Assert(UsConfirmWindow.Active != null && fake.ResetNormalAreaCount == 0,
             "the area entry asks first and writes nothing until answered");
@@ -431,7 +453,7 @@ internal static class ResetUiLaneTests
         List<Rect> before = RecordScopeTreeButtons(host);
         Assert(!before.Exists(r => RowButton(r, tree)), "no row button without a selection");
 
-        host.Bindings.Set("tuning-selected-action", "Eat");
+        host.Bindings.Set("tuning-selected-action", CoreActions.Eat);
         snapT = Arrange(host);
         List<Rect> after = RecordScopeTreeButtons(host).FindAll(r => RowButton(r, tree));
         Assert(after.Count == 1,
@@ -444,7 +466,7 @@ internal static class ResetUiLaneTests
         Arrange(host);
         int rev = host.Session.ContentRevision;
         PressScopeTreeButton(host, after[0]);
-        Assert(fake.ResetActionRowCount == 1 && fake.LastResetActionKey == "Eat",
+        Assert(fake.ResetActionRowCount == 1 && fake.LastResetActionKey == CoreActions.Eat,
             "the row restore is DIRECT (no window) and carries the selected action's key");
         Assert(UsConfirmWindow.Active == null, "a simple row restore must not ask");
         // An invalid layer identity refuses the row too (never a Global fall-through).
@@ -472,15 +494,16 @@ internal static class ResetUiLaneTests
         UiHost host;
         RecordingSettingsSource fake = RichHost(out host, out _);
         fake.AttachHost(host);
-        // UIR-001: the timing band is a rules card on the Tuning workspace now.
-        host.Bindings.Invoke("set-tab", "Tuning");
-        UiLayoutSnapshot snap = ArrangeIntoView(host, "timing-restore");
+        // The retired timing field's cancel/restore counterexample now exercises the live volume field.
+        host.Bindings.Invoke("set-tab", "Overview");
+        UiLayoutSnapshot snap = ArrangeIntoView(host, "global-volume");
         // Spaces: the pointer events aim at the PAGE position (RectById at scroll 0, shifted by the
         // scroll), the seam predicates compare against the CONTENT-LOCAL rect the atom draws with.
-        Rect fieldPage = ToPage(host, snap, snap.RectById["timing-multiplier-field"]);
-        Rect fieldLocal = ToLocal(snap, snap.RectById["timing-multiplier-field"]);
-        Rect header = ToPage(host, snap, snap.RectById["timing-header"]); // no input: the outside point
+        Rect fieldPage = ToPage(host, snap, snap.RectById["global-volume-number"]);
+        Rect fieldLocal = ToLocal(snap, snap.RectById["global-volume-number"]);
+        Rect header = ToPage(host, snap, snap.RectById["global-volume-header"]); // no input: the outside point
 
+        int AskGlobalRestore() { UsConfirmWindow.Open("Restore all", "Restore current configuration", "Restore", () => host.Bindings.TryInvokeCommand("reset-all-settings")); return 1; }
         // (1) Focus the field through a real press - the edit opens with the value as its draft.
         // The stub's GUIUtility is process-static: an earlier lane's held control would swallow
         // this press, so the lane releases it first (the XG1 ReleasePointer rule).
@@ -495,53 +518,53 @@ internal static class ResetUiLaneTests
 
         // The atom's funnel keeps its own buffer slot; the lane's observable channels are the
         // session's edit record and the fake's write recorder.
-        fake.LastCooldownMultiplier = null;
+        fake.LastGlobalVolume = null;
 
         // (2) The live field's EXISTING commit contract: a valid draft writes once.
         try
         {
-            SetText((rect, text) => RectMatches(rect, fieldLocal) ? "0.75" : text);
+            SetText((rect, text) => RectMatches(rect, fieldLocal) ? "75" : text);
             host.DrawChecked(Viewport);
         }
         finally
         {
             SetText(null);
         }
-        Assert(Math.Abs((fake.LastCooldownMultiplier ?? 0f) - 0.75f) < 0.001f,
+        Assert(Math.Abs((fake.LastGlobalVolume ?? 0f) - 0.75f) < 0.001f,
             "the live field's existing commit contract must still write a valid draft");
-        fake.LastCooldownMultiplier = null;
+        fake.LastGlobalVolume = null;
 
         // (3) The question opening must not re-commit or discard the edit: the temporary window only
         // covers the page; commits belong to the field's own events, which the ceremony never sends.
-        Assert(Program.PressDeclarativeButton(host, Viewport, "timing-restore") == 1, "the entry asks");
+        Assert(AskGlobalRestore() == 1, "the entry asks");
         Assert(UsConfirmWindow.Active != null, "setup: the real window opened");
         Arrange(host);
-        Assert(fake.LastCooldownMultiplier == null && host.Session.ActiveEditNode != null,
+        Assert(fake.LastGlobalVolume == null && host.Session.ActiveEditNode != null,
             "occlusion alone neither re-commits nor discards the open edit");
 
         // (4) Cancel: no restore, and the edit survives untouched (the player may keep typing).
         UsConfirmWindow.Active!.DialogBindings.Invoke("confirm-no");
         Assert(fake.ResetNormalAreaCount == 0, "cancel does not execute the restore");
-        Assert(host.Session.ActiveEditNode != null && fake.LastCooldownMultiplier == null,
+        Assert(host.Session.ActiveEditNode != null && fake.LastGlobalVolume == null,
             "cancel leaves the open edit exactly where it was");
 
         // (5) Confirm: the restore runs once AND the affected edit ends. The discard applies at the
         // field's own next draw; afterwards there is no live edit left to push the old 0.75 over
         // the restored value (the contract's central clause - without EndOpenDraft the focused
         // field stays live and THIS assert reddens).
-        Assert(Program.PressDeclarativeButton(host, Viewport, "timing-restore") == 1, "the entry re-asks");
+        Assert(AskGlobalRestore() == 1, "the entry re-asks");
         int rev = host.Session.ContentRevision;
         UsConfirmWindow.Active!.DialogBindings.Invoke("confirm-yes");
-        Assert(fake.ResetNormalAreaCount == 1 && fake.LastNormalResetArea == SqueakNormalResetArea.Timing,
-            "the confirmed ceremony runs the timing-area restore exactly once");
+        Assert(fake.ResetAllCount == 1,
+            "the confirmed ceremony runs the global restore exactly once");
         Assert(host.Session.ContentRevision == rev + 1, "Applied bumps once");
         Arrange(host); // the field's next draw applies the marked discard
         Assert(host.Session.ActiveEditNode == null,
             "the old edit ended with the restore - it no longer exists to overwrite it");
-        fake.LastCooldownMultiplier = null;
+        fake.LastGlobalVolume = null;
         host.TryHandleAccept(); // Enter with no open edit: the caller keeps Verse's meaning and the
         Arrange(host);          // field must not resurrect a write - the restored value stands.
-        Assert(fake.LastCooldownMultiplier == null,
+        Assert(fake.LastGlobalVolume == null,
             "a follow-up Enter / focus pass must not re-write the restored field");
 
         // (6) The comparison point: the field's own channel still works after all of it, and an
@@ -549,17 +572,17 @@ internal static class ResetUiLaneTests
         Program.DrawWithPointer(host, Viewport, center);
         Program.DrawWithEvent(host, Viewport, EventType.MouseDown, center);
         Program.DrawWithEvent(host, Viewport, EventType.MouseUp, center);
-        fake.LastCooldownMultiplier = null; // the edit-open pass may re-commit the current value
+        fake.LastGlobalVolume = null; // the edit-open pass may re-commit the current value
         try
         {
-            SetText((rect, text) => RectMatches(rect, fieldLocal) ? "0.9" : text);
+            SetText((rect, text) => RectMatches(rect, fieldLocal) ? "90" : text);
             host.DrawChecked(Viewport);
         }
         finally
         {
             SetText(null);
         }
-        Assert(Math.Abs((fake.LastCooldownMultiplier ?? 0f) - 0.9f) < 0.001f,
+        Assert(Math.Abs((fake.LastGlobalVolume ?? 0f) - 0.9f) < 0.001f,
             "a fresh valid draft still commits through the existing live contract");
         Vector2 outside = new(header.x + header.width / 2f, header.y + header.height / 2f);
         Program.DrawWithPointer(host, Viewport, outside);
@@ -593,7 +616,7 @@ internal static class ResetUiLaneTests
             foreach (string language in new[] { "English", "ChineseSimplified" })
             {
                 Program.SetTranslatorResolver(Program.ReadKeyedTable(language));
-                Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+                Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1,
                     language + ": the entry asks");
                 UsConfirmWindow flow = UsConfirmWindow.Active!;
                 Assert(flow != null && flow.OpenedWindow != null, language + ": setup window");
@@ -609,7 +632,7 @@ internal static class ResetUiLaneTests
                     language + ": the real confirm button ran the staged action and closed");
 
                 // And the real cancel button answers without running anything.
-                Assert(Program.PressDeclarativeButton(host, Viewport, "restore-center-button") == 1,
+                Assert(PressResetEntry(host, Viewport, "restore-center-button") == 1,
                     language + ": re-ask");
                 before = fake.ResetAllCount;
                 PressDialogButton(UsConfirmWindow.Active!, "confirm-no");
@@ -673,7 +696,7 @@ internal static class ResetUiLaneTests
     }
 
     /// <summary>PM review1 item 2: the draft end is scoped to the operation's own fields and to
-    /// Applied. A volume edit survives a diagnostics restore (Applied!), survives a NoChange timing
+    /// Applied. A volume edit survives a diagnostics restore (Applied!), survives a NoChange distance
     /// restore, and is ended by the distance-area restore that really writes its field.</summary>
     private static void ScopedDraftBoundaries()
     {
@@ -697,19 +720,19 @@ internal static class ResetUiLaneTests
         Assert(fake.ResetNormalAreaCount == 1 && host.Session.ActiveEditNode != null,
             "an Applied restore of an UNRELATED area keeps the open edit (review1 item 2)");
 
-        // Same target, NoChange: the timing restore wrote nothing, so nothing is cleaned.
+        // Same target, NoChange: the distance restore wrote nothing, so nothing is cleaned.
         fake.NextResetOutcome = SqueakResetOutcome.NoChange;
-        host.Bindings.Invoke("reset-normal-timing");
+        host.Bindings.Invoke("reset-normal-distance");
         Assert(fake.ResetNormalAreaCount == 2 && host.Session.ActiveEditNode != null,
             "a NoChange restore never ends an edit - not even one whose fields it owns");
         fake.NextResetOutcome = SqueakResetOutcome.Rejected;
-        host.Bindings.Invoke("reset-normal-timing");
+        host.Bindings.Invoke("reset-normal-distance");
         Assert(host.Session.ActiveEditNode != null, "Rejected likewise leaves the edit untouched");
         fake.NextResetOutcome = SqueakResetOutcome.Applied;
 
         // Same target, Applied: the distance-area restore writes the volume field, so the edit ends.
         host.Bindings.Invoke("reset-normal-distance");
-        // The fake counts every call: diagnostics Applied, timing NoChange, timing Rejected, distance.
+        // The fake counts every call: diagnostics Applied, distance NoChange, Rejected, then Applied.
         Assert(fake.ResetNormalAreaCount == 4, "the distance-area restore ran");
         Arrange(host);
         Assert(host.Session.ActiveEditNode == null,

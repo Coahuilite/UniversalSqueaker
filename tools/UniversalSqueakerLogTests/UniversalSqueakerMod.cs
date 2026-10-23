@@ -1,6 +1,6 @@
 namespace UniversalSqueaker;
 
-/// <summary>Characterization stub: satisfies SqueakLog.Configure's typeof(UniversalSqueakerMod).Assembly lookup.</summary>
-public class UniversalSqueakerMod
+/// <summary>Characterization stub: satisfies SqueakLog.Configure's typeof(SqueakerMod).Assembly lookup.</summary>
+public class SqueakerMod
 {
 }

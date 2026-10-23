@@ -304,7 +304,9 @@ internal static class Program
         // US-PACK1 re-cuts the Packs block: the two browse-layer sections retire (their row items leave),
         // the checklist keeps only its forget entry, the filter region gains keyword/race/xenotype/summary
         // and the new us/pack-cards section claims card/expand/row/enable (50 -> 54).
-        Assert(itemCount == 55, "catalog item count matches the shipped wiring table (54 items after US-PACK1's card re-cut): " + itemCount);
+        // r2 removes eleven retired timing/mood controls and adds four current explanation/reset
+        // claims. Bidirectional source wiring above still proves each surviving item has a consumer.
+        Assert(itemCount == 48, "catalog item count matches the r2 current-control wiring table: " + itemCount);
 
         // The dead-entry guard: every section still owns at least one claimable item, and the
         // removed distance entry must stay removed (its control lives in the Distance workspace now).
@@ -422,21 +424,21 @@ internal static class Program
         // SA1.2: the membership is SR's fixed semantic split, NOT derived from SupportedScopes. The two
         // rows that prove the difference are pinned by name: Select joins the player group although it
         // carries no command scope, Work joins the system group although it supports and defaults to one.
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Draft) == ActionScopeGroup.PlayerTriggered,
+        Assert(ActionScopeRules.GroupFor(CoreActions.Draft) == ActionScopeGroup.PlayerTriggered,
             "Draft groups as player-triggered");
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Attack) == ActionScopeGroup.PlayerTriggered,
+        Assert(ActionScopeRules.GroupFor(CoreActions.Attack) == ActionScopeGroup.PlayerTriggered,
             "Attack groups as player-triggered");
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Select) == ActionScopeGroup.PlayerTriggered,
+        Assert(ActionScopeRules.GroupFor(CoreActions.Select) == ActionScopeGroup.PlayerTriggered,
             "Select groups as player-triggered even with no command scope (SR membership, not derivation)");
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Call) == ActionScopeGroup.SystemOrEvent,
+        Assert(ActionScopeRules.GroupFor(CoreActions.Call) == ActionScopeGroup.SystemOrEvent,
             "Call groups as system/event-triggered");
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Work) == ActionScopeGroup.SystemOrEvent,
+        Assert(ActionScopeRules.GroupFor(CoreActions.Work) == ActionScopeGroup.SystemOrEvent,
             "Work groups as system/event-triggered even though it supports ActiveCommand (SR membership)");
 
         // Two groups, no omission and no duplicate across the full built-in set (SA1.2 acceptance):
         // every known action appears in exactly one order list, and the lists agree with GroupFor.
-        var seen = new HashSet<SqueakAction>();
-        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+        var seen = new HashSet<string>();
+        foreach (string action in CoreActions.All)
         {
             int inPlayer = ContainsAction(ActionScopeRules.PlayerGroupOrder, action) ? 1 : 0;
             int inSystem = ContainsAction(ActionScopeRules.SystemGroupOrder, action) ? 1 : 0;
@@ -451,25 +453,25 @@ internal static class Program
             seen.Add(action);
         }
 
-        // The SqueakAction enum IS the built-in set (all 15 are known); the two order lists must cover
+        // The complete-ID catalog IS the built-in set (all 15 are known); the two order lists must cover
         // every one of them exactly once.
-        Assert(seen.Count == Enum.GetValues(typeof(SqueakAction)).Length,
-            "the classification scan covered all " + Enum.GetValues(typeof(SqueakAction)).Length
+        Assert(seen.Count == CoreActions.All.Count,
+            "the classification scan covered all " + CoreActions.All.Count
             + " built-ins, got " + seen.Count);
 
         // SA1.2 captions: per-action keys exist only where SR ships a caption; everything else falls
         // back to the generic key, and Auto/Off never enter the per-action lookup.
-        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Work, SqueakActionScope.ActiveCommand)
+        Assert(ActionScopeRules.ScopeLabelKey(CoreActions.Work, BehaviorScope.ActiveCommand)
                 == "US.Tuning.Scope.Work.Command",
             "Work's command caption is the SR per-action key (玩家强制工作 / Player-forced work)");
-        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Draft, SqueakActionScope.Disabled)
+        Assert(ActionScopeRules.ScopeLabelKey(CoreActions.Draft, BehaviorScope.Disabled)
                 == "US.Tuning.Scope.Off",
             "Off keeps the generic key whatever the action");
 
         Assert(seen.Count == 15, "all fifteen official scope rows remain visible, with no retired opt-in rows");
     }
 
-    private static bool ContainsAction(System.Collections.Generic.IReadOnlyList<SqueakAction> order, SqueakAction action)
+    private static bool ContainsAction(System.Collections.Generic.IReadOnlyList<string> order, string action)
     {
         for (int i = 0; i < order.Count; i++)
         {

@@ -7,7 +7,7 @@ namespace UniversalSqueaker;
 /// <summary>
 /// S2 分层动作调音记录（Global/Race/Xenotype 统一数据面）。
 /// 三态分层：全空=Global，仅 race=Race，race+xeno=Xenotype；hasX=false = 该层不决定、向下继承。
-/// actionKey 是字符串（内置键 = BuiltInActionKeys，与 SqueakAction 枚举序数对齐）。
+/// actionKey 使用完整ActionId；不读取短键或旧枚举序数。
 /// </summary>
 public class ActionTuningRecord : IExposable
 {
@@ -21,11 +21,7 @@ public class ActionTuningRecord : IExposable
     public string sourcePresetDefName = "";
 
     public bool hasScope;
-    public SqueakActionScope scope = SqueakActionScope.AnyOccurrence;
-    public bool hasIntervalMultiplier;
-    public float intervalMultiplier = 1f;
-    public bool hasProbabilityMultiplier;
-    public float probabilityMultiplier = 1f;
+    public BehaviorScope scope = BehaviorScope.AnyOccurrence;
     public List<ResponseTuningValue> responses = new();
     public List<ResponseParameterValue> responseParameters = new();
     public bool hasEnabled, enabled = true;
@@ -58,11 +54,7 @@ public class ActionTuningRecord : IExposable
         Scribe_Values.Look(ref objectTarget, "objectTarget", "");
         Scribe_Values.Look(ref sourcePresetDefName, "sourcePresetDefName", "");
         Scribe_Values.Look(ref hasScope, "hasScope", false);
-        Scribe_Values.Look(ref scope, "scope", SqueakActionScope.AnyOccurrence);
-        Scribe_Values.Look(ref hasIntervalMultiplier, "hasIntervalMultiplier", false);
-        Scribe_Values.Look(ref intervalMultiplier, "intervalMultiplier", 1f);
-        Scribe_Values.Look(ref hasProbabilityMultiplier, "hasProbabilityMultiplier", false);
-        Scribe_Values.Look(ref probabilityMultiplier, "probabilityMultiplier", 1f);
+        Scribe_Values.Look(ref scope, "scope", BehaviorScope.AnyOccurrence);
         Scribe_Values.Look(ref hasEnabled, "hasEnabled", false); Scribe_Values.Look(ref enabled, "enabled", true);
         Scribe_Values.Look(ref hasHardIntervalTicks, "hasHardIntervalTicks", false); Scribe_Values.Look(ref hardIntervalTicks, "hardIntervalTicks", 0L);
         Scribe_Values.Look(ref hasTalkingEnabled, "hasTalkingEnabled", false); Scribe_Values.Look(ref talkingEnabled, "talkingEnabled", false);
@@ -107,10 +99,6 @@ public class ActionTuningRecord : IExposable
         sourcePresetDefName = value.sourcePresetDefName,
         hasScope = value.hasScope,
         scope = value.scope,
-        hasIntervalMultiplier = value.hasIntervalMultiplier,
-        intervalMultiplier = value.intervalMultiplier,
-        hasProbabilityMultiplier = value.hasProbabilityMultiplier,
-        probabilityMultiplier = value.probabilityMultiplier,
         hasEnabled = value.hasEnabled, enabled = value.enabled,
         hasHardIntervalTicks = value.hasHardIntervalTicks, hardIntervalTicks = value.hardIntervalTicks,
         hasTalkingEnabled = value.hasTalkingEnabled, talkingEnabled = value.talkingEnabled,

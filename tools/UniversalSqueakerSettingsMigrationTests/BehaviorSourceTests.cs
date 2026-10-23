@@ -13,9 +13,9 @@ internal static partial class Program
     {
         Scenario("S3-source-config-transaction-and-recovery");
         var settings = NewSettings();
-        settings.actionTuning.Add(new ActionTuningRecord { actionKey = "us.core/Work", raceDefName = "Ratkin", sourcePresetDefName = "ImportedPlayer", hasProbabilityMultiplier = true, probabilityMultiplier = 0 });
-        settings.globalCooldownMultiplier = .42f;
-        settings.scaleCooldownWithTimeSpeed = false;
+        settings.actionTuning.Add(new ActionTuningRecord { actionKey = "us.core/Work", raceDefName = "Ratkin", sourcePresetDefName = "ImportedPlayer", hasTalkingEnabled = true, talkingEnabled = false });
+        settings.activity = .42;
+        settings.scaleFrequencyWithTalking = false;
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var neighbor = new BehaviorDomain("Pawn", "", "Kiiro");
         var a = new BehaviorSource { Id = "author.a/Def", Domain = domain, Contributions = new List<BehaviorContribution>
@@ -37,9 +37,9 @@ internal static partial class Program
             if (!saved) Console.Error.WriteLine("S3 persist failure: " + failure);
             return saved;
         }
-        UniversalSqueakerSettings Read()
+        GameSettings Read()
         {
-            UniversalSqueakerSettings result = null!;
+            GameSettings result = null!;
             Scribe.loader.InitLoading(path);
             Scribe_Deep.Look(ref result, "ModSettings");
             Scribe.loader.FinalizeLoading();
@@ -51,8 +51,8 @@ internal static partial class Program
             Check(settings.TryChangeBehaviorSource(neighbor, n.Id, directory, Persist, out _), "S3 neighbor binding persists independently", ref failures);
             var reloaded = Read();
             Check(reloaded.behaviorSourcesXml == settings.behaviorSourcesXml && reloaded.actionTuning.Single().sourcePresetDefName == "ImportedPlayer"
-                && reloaded.actionTuning.Single().probabilityMultiplier == 0 && reloaded.globalCooldownMultiplier == .42f && !reloaded.scaleCooldownWithTimeSpeed,
-                "S3 same Scribe SettingsBlock/ModSettings reload preserves sources AND old player provenance/zero/clock/master", ref failures);
+                && !reloaded.actionTuning.Single().talkingEnabled && reloaded.activity == .42 && !reloaded.scaleFrequencyWithTalking,
+                "S3 same Scribe SettingsBlock/ModSettings reload preserves sources AND player template anchor/false/activity/talking setting", ref failures);
             string beforeMemory = settings.behaviorSourcesXml;
             string beforeFile = File.ReadAllText(path);
             bool FailedSerialize(string candidate) => settings.TryWriteBehaviorCandidate(path, candidate, stage =>

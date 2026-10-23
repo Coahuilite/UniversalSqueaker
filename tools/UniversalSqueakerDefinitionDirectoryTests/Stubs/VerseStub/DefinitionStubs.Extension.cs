@@ -95,6 +95,7 @@ namespace Verse
         private static readonly List<T> defs = new List<T>();
 
         public static IEnumerable<T> AllDefs => defs;
+        public static List<T> AllDefsListForReading => defs;
 
         public static void Add(T def)
         {

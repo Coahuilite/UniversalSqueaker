@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace UniversalSqueaker;
 
 /// <summary>Characterization stub: the store reads the permanent packageId from the mod class.</summary>
-public class UniversalSqueakerMod
+public class SqueakerMod
 {
     public const string PackageId = "coahuilite.universalsqueaker";
 }

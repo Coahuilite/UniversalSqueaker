@@ -377,111 +377,40 @@ internal static class UsDiagnosticsRowFactory
 
     internal static UsDiagDetail BuildDetail(SqueakDiagnosticsOverlay.CachedPawn entry, bool showSeconds)
     {
-        Pawn pawn = entry.Pawn;
-        SqueakDiagnosticSnapshot s = entry.Snapshot;
-        int nowTick = Find.TickManager.TicksGame;
-        if (!string.IsNullOrEmpty(s.KernelText))
+        var s = entry.Snapshot;
+        var gates = new List<UsDiagGateLine>();
+        if (s.Response.HasValue)
         {
-            return new UsDiagDetail(LabelOf(pawn), false, SqueakDiagnosticsOverlay.IsLocked(pawn),
-                s.LastEvaluation?.Action ?? UsDiagnosticsProjection.Dash, DispatchText(s.LastDispatched),
-                Array.Empty<UsDiagGateLine>(),
-                new UsDiagCurrentSummary("US.Kernel.LastObservedDecision".Translate(), s.KernelText, false, true, Array.Empty<string>()),
-                new UsDiagPreviousBand("", "", DispatchText(s.LastDispatched)));
+            var observed = s.Response.Value;
+            bool blocked = observed.ProtectedAt(Find.TickManager.TicksGame);
+            gates.Add(new UsDiagGateLine("US.Diagnostics.Gate.ActionCooldown".Translate(), CooldownText(s, showSeconds),
+                blocked ? UsDiagGateState.Block : UsDiagGateState.Pass, UsDiagGateGroup.Rules, UsDiagBasis.CurrentObservation,
+                UsDiagnosticsProjection.Status(blocked ? UsDiagGateState.Block : UsDiagGateState.Pass, "!", Tr)));
+            gates.Add(new UsDiagGateLine("US.Kernel.LastObservedDecision".Translate(),
+                observed.Action + " @" + observed.ObservedTick + " " + observed.Reason + " " + observed.Receipt?.Result,
+                UsDiagGateState.NA, UsDiagGateGroup.Audio, UsDiagBasis.PreviousEvaluation, UsDiagnosticsProjection.Status(UsDiagGateState.NA, "!", Tr)));
         }
-        UsDiagGateFacts f = new()
-        {
-            ModeDisabled = SqueakRuntimeResolver.Current.VoicePackMode == SqueakVoicePackMode.Disabled,
-            OnMap = pawn.Spawned && pawn.MapHeld == Find.CurrentMap,
-            OnScreen = Find.CameraDriver.CurrentViewRect.ExpandedBy(10).Contains(pawn.Position),
-            HasTimingAction = s.CurrentTimingAction.HasValue,
-            ExternalTriggerPlan = s.CurrentTriggerMode == SqueakTriggerMode.External,
-            PlayerControlled = pawn.IsPlayerControlled,
-            NotDowned = !pawn.Downed,
-            Awake = pawn.Awake(),
-            ActionEnabled = s.CurrentActionEnabled,
-            StartupPending = s.StartupPending,
-            ProbabilityValue = Percent(s.EffectiveProbability, s.BaseProbability),
-            ActionCooldownPass = s.Timing.ActionReady,
-            ActionCooldownValue = UsDiagnosticsProjection.FormatCooldownPair(
-                s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds,
-                s.Timing.ActionIntervalTicks, s.Timing.ActionIntervalSeconds, showSeconds),
-            GlobalApplicable = s.Timing.GlobalApplicable,
-            GlobalPass = s.Timing.GlobalReady,
-            GlobalCooldownValue = UsDiagnosticsProjection.FormatCooldownPair(
-                s.Timing.GlobalRemainingTicks, null, s.Timing.GlobalCooldownTicks == 0 ? (int?)null : s.Timing.GlobalCooldownTicks, null, showSeconds),
-            VocalPass = s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
-            TalkingValue = Percent(s.VocalCapability.TalkingChance, null),
-            CurrentActionText = CurrentActionText(s),
-            HasLastDispatch = s.LastDispatched.HasValue,
-            LastDispatchText = DispatchText(s.LastDispatched),
-            Previous = new UsDiagPreviousFacts
-            {
-                HasEvaluation = s.LastEvaluation.HasValue,
-                EvaluationOutcome = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Outcome.ToString() : string.Empty,
-                EvaluationAction = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Action : string.Empty,
-                EvaluationTick = s.LastEvaluation.HasValue ? s.LastEvaluation.Value.Tick : -1,
-                HasDispatch = s.LastDispatched.HasValue,
-                DispatchText = DispatchText(s.LastDispatched),
-                DispatchTick = s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1,
-                NowTick = nowTick,
-            },
-        };
-
-        if (s.CurrentTimingAction.HasValue)
-        {
-            SqueakAction action = s.CurrentTimingAction.Value;
-            RuntimeActionDelta delta = SqueakRuntimeResolver.Current.ResolveContext(pawn).GetAction(action);
-            if (delta.Scope == SqueakActionScope.ActiveCommand)
-            {
-                f.ScopeMatchApplicable = true;
-                f.ScopeMatchPass = DiagnosticInvocationFor(action, pawn).IsActiveCommand;
-            }
-        }
-
-        if (OutcomeForCurrentAction(s, s.LastEvaluation) is SqueakRecentOutcome ev)
-        {
-            f.EvaluationBelongsToCurrentAction = true;
-            f.AudioPoolBlocked = ev.Outcome == SqueakTriggerOutcome.NoSoundFallback;
-            f.EligibilityRejected = ev.Outcome == SqueakTriggerOutcome.EligibilityRejected;
-            f.Dispatched = ev.Outcome == SqueakTriggerOutcome.Dispatched;
-            f.PlaybackFailed = ev.Outcome == SqueakTriggerOutcome.PlaybackFailed;
-        }
-
-        List<UsDiagGateLine> gates = UsDiagnosticsProjection.BuildGateChain(f, Tr, UsAttention.Marker);
-        bool ready = SqueakDiagnosticsOverlay.ReadyFor(s);
-        return new UsDiagDetail(
-            LabelOf(pawn),
-            ready,
-            SqueakDiagnosticsOverlay.IsLocked(pawn),
-            f.CurrentActionText,
-            f.LastDispatchText,
-            gates,
-            UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
-            UsDiagnosticsProjection.BuildPreviousBand(f.Previous, Tr));
+        gates.Add(new UsDiagGateLine("US.Diagnostics.Gate.Playability".Translate(), UsDiagnosticsProjection.Dash,
+            UsDiagGateState.Pending, UsDiagGateGroup.Audio, UsDiagBasis.CurrentObservation,
+            UsDiagnosticsProjection.Status(UsDiagGateState.Pending, "!", Tr), UsDiagPendingReason.SourceMissing));
+        return new UsDiagDetail(LabelOf(entry.Pawn), SqueakDiagnosticsOverlay.ReadyFor(s), SqueakDiagnosticsOverlay.IsLocked(entry.Pawn),
+            CurrentActionText(s), DispatchText(s.LastDispatched), gates, UsDiagnosticsProjection.BuildCurrentSummary(gates, Tr),
+            new UsDiagPreviousBand("US.Kernel.LastObservedDecision".Translate(), s.KernelText, DispatchText(s.LastDispatched)));
     }
 
     private static string LabelOf(Pawn pawn) => $"{pawn.LabelShort} ({pawn.def.defName})";
-
     private static string CurrentActionText(SqueakDiagnosticSnapshot s)
-        => !string.IsNullOrEmpty(s.KernelText) ? s.LastEvaluation?.Action ?? UsDiagnosticsProjection.Dash
-            : s.CurrentTimingAction.HasValue ? SqueakLabels.Action(s.CurrentTimingAction.Value) : UsDiagnosticsProjection.Dash;
-
+        => s.Response?.Action ?? UsDiagnosticsProjection.Dash;
     private static string CooldownText(SqueakDiagnosticSnapshot s, bool showSeconds)
     {
-        string action = UsDiagnosticsProjection.FormatCooldownPair(
-            s.Timing.ActionRemainingTicks, s.Timing.ActionRemainingSeconds,
-            s.Timing.ActionIntervalTicks, s.Timing.ActionIntervalSeconds, showSeconds);
-        if (!s.Timing.GlobalApplicable)
-        {
-            return action;
-        }
-
-        string global = UsDiagnosticsProjection.FormatCooldownPair(
-            s.Timing.GlobalRemainingTicks, null,
-            s.Timing.GlobalCooldownTicks == 0 ? (int?)null : s.Timing.GlobalCooldownTicks, null, showSeconds);
-        return action + " " + global;
+        if (!s.Response.HasValue) return UsDiagnosticsProjection.Dash;
+        var observed = s.Response.Value;
+        long now = Find.TickManager.TicksGame;
+        long action = Math.Max(0, observed.ActionDeadline - now);
+        long shared = observed.ChecksShared ? Math.Max(0, observed.SharedDeadline - now) : 0;
+        double divisor = showSeconds ? 60 : 1;
+        return (action / divisor).ToString("0.##") + " / " + (shared / divisor).ToString("0.##") + (showSeconds ? "s" : "t");
     }
-
     private static string DispatchText(SqueakRecentOutcome? dispatched)
     {
         if (dispatched == null) return UsDiagnosticsProjection.Dash;
@@ -495,39 +424,6 @@ internal static class UsDiagnosticsRowFactory
         return baseValue.HasValue
             ? $"{value.Value:0.###} / {baseValue.Value:0.###}"
             : $"{value.Value:0.###}";
-    }
-
-    /// <summary>Returns the supplied outcome only when it belongs to the currently displayed action,
-    /// so an older result from a different action never impersonates this chain's gate states.</summary>
-    private static SqueakRecentOutcome? OutcomeForCurrentAction(SqueakDiagnosticSnapshot s, SqueakRecentOutcome? outcome)
-    {
-        if (!s.CurrentTimingAction.HasValue || !outcome.HasValue) return null;
-        string? key = UniversalSqueaker.Kernel.ActionKey.For(s.CurrentTimingAction.Value) ?? s.CurrentTimingAction.Value.ToString();
-        return string.Equals(outcome.Value.Action, key, StringComparison.Ordinal) ? outcome : null;
-    }
-
-    /// <summary>Projects the legacy diagnostic source labels plus the external sources used by
-    /// Notify_Draft/Notify_Attack/Notify_Equip, so the diagnostic scope gate reads the same
-    /// IsActiveCommand semantics as production.</summary>
-    private static SqueakTriggerInvocation DiagnosticInvocationFor(SqueakAction action, Pawn pawn)
-    {
-        switch (action)
-        {
-            case SqueakAction.Work:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic,
-                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.Periodic);
-            case SqueakAction.Attack:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Attack,
-                    pawn.CurJob?.playerForced == true ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
-            case SqueakAction.Draft:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Draft, SqueakInvocationSource.ActiveCommand);
-            case SqueakAction.Undraft:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Undraft, SqueakInvocationSource.ActiveCommand);
-            case SqueakAction.Equip:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
-            default:
-                return new SqueakTriggerInvocation(SqueakTriggerOrigin.Periodic, SqueakInvocationSource.Periodic);
-        }
     }
 
     private static string Tr(string key) => key.Translate().ToString();

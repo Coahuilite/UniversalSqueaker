@@ -53,6 +53,18 @@ internal static partial class Program
             return;
         }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
+        if (args.Contains("--refactor-through"))
+        {
+            InitializationOrder(); CompleteBinding(); RefactorThrough();
+            Console.WriteLine("r2 Select/Eat/Attack/declared C# production chain PASS: " + checks);
+            return;
+        }
+        if (args.Contains("--canonical-audio"))
+        {
+            InitializationOrder(); CompleteBinding(); CallerConsumption(); S5InstanceOutputWithRealPatches();
+            Console.WriteLine("r2 canonical audio/dynamic owned output PASS: " + checks);
+            return;
+        }
         if (args.Contains("--work-core") || args.Contains("--work-missing") || args.Contains("--work-care-lifetime"))
         {
             InitializationOrder(); CompleteBinding(); WorkCore(args.Contains("--work-missing"), args.Contains("--work-care-lifetime"));
@@ -117,6 +129,7 @@ internal static partial class Program
         }
         else
         {
+            if (args.Length != 0) throw new ArgumentException("Unknown adapter mode: " + string.Join(",", args));
             InitializationOrder();
             NativePools();
             CompleteBinding();
@@ -302,89 +315,4 @@ internal static partial class Program
         public double Next01() => throw new Exception("Unexpected adapter selection reroll");
     }
 
-    private static void CallerConsumption()
-    {
-        var domain = UniversalSqueaker.Kernel.AudioDomains.RaceOnly("Ratkin");
-        var loaded = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin1")!;
-        var conflict = DefDatabase<SoundDef>.GetNamedSilentFail("Ratkin0")!;
-        var pack = new SqueakVoicePackDef
-        {
-            FixturePackKey = "entry.author:Pack",
-            raceDefName = "Ratkin",
-            actions = new List<SqueakVoicePackAction>
-            {
-                new SqueakVoicePackAction { action = SqueakAction.Work, sounds = new List<SoundDef> { loaded } },
-                new SqueakVoicePackAction { action = SqueakAction.Work, ageTag = UniversalSqueaker.Kernel.AgeBucket.Child, sounds = new List<SoundDef> { conflict } }
-            }
-        };
-        var catalog = new SqueakXenotypeCatalogSnapshot();
-        catalog.RacePacks.Add(pack);
-        catalog.PackByKey.Add(pack.FixturePackKey, pack);
-        var selected = new Dictionary<UniversalSqueaker.Kernel.AudioDomain, HashSet<string>>
-        {
-            [domain] = new HashSet<string> { pack.FixturePackKey }
-        };
-        int resourceReads = SqueakSoundAvailabilityCache.ResolveCalls;
-        var entries = SqueakKernelAdapter.BuildEntries(catalog, selected);
-        var pool = new UniversalSqueaker.Kernel.SqueakPoolRegistry(entries, UniversalSqueaker.Kernel.BuiltInFallbackTable.Empty);
-        var context = new UniversalSqueaker.Kernel.SelectionContext(domain, "Work", UniversalSqueaker.Kernel.AgeBucket.Adult, true);
-        var result = pool.Select(context, UniversalSqueaker.Kernel.SelectionMode.Fallback, SqueakKernelAdapter.GateFor(null, null, null), new NoRolls());
-        var choice = SqueakKernelAdapter.ToChoice(result, domain);
-        Check(result.Resource?.ToString() == "actual.provider/Ratkin1" && result.PoolStableKey == "entry.author:Pack",
-            "normal caller projection separates pack attribution and actual AudioId");
-        Check(ReferenceEquals(choice.Sound, loaded), "normal ToChoice consumes the identical validated final SoundDef");
-        Check(choice.Selection.SelectedVariant != null && choice.Selection.SelectedContext?.Domain == domain,
-            "normal caller retains selected variant/context without reroll");
-        var child = new UniversalSqueaker.Kernel.SelectionContext(domain, "Work", UniversalSqueaker.Kernel.AgeBucket.Child, true);
-        Check(pool.Select(child, UniversalSqueaker.Kernel.SelectionMode.Fallback, SqueakKernelAdapter.GateFor(null, null, null), new NoRolls()).IsNone,
-            "actual adapter preserves rejected exact-age declaration instead of unlocking all-age");
-        var orderPack = new SqueakVoicePackDef
-        {
-            FixturePackKey = "order:Pack",
-            raceDefName = "Ratkin",
-            actions = new List<SqueakVoicePackAction>
-            {
-                new SqueakVoicePackAction
-                {
-                    action = SqueakAction.Call,
-                    sounds = new List<SoundDef>
-                    {
-                        DefDatabase<SoundDef>.GetNamedSilentFail("Z_Audio")!,
-                        DefDatabase<SoundDef>.GetNamedSilentFail("A_Audio")!
-                    }
-                }
-            }
-        };
-        catalog.RacePacks.Add(orderPack);
-        selected[domain].Add(orderPack.FixturePackKey);
-        var orderEntry = SqueakKernelAdapter.BuildEntries(catalog, selected).Find(item => item.PackKey == orderPack.FixturePackKey)!;
-        Check(orderEntry.Actions["Call"][0].SoundKeys.SequenceEqual(new[] { "zzz.audio/A_Audio", "aaa.audio/Z_Audio" }),
-            "complete AudioId does not reorder retained defName-based sound draw order");
-        selected[domain].Remove(orderPack.FixturePackKey);
-        selected[domain].Clear();
-        Check(SqueakKernelAdapter.BuildEntries(catalog, selected).Count == 0, "pack disable changes only effective selection");
-        selected[domain].Add(pack.FixturePackKey);
-        Check(SqueakKernelAdapter.BuildEntries(catalog, selected).Count == 1 && SqueakSoundAvailabilityCache.ResolveCalls == resourceReads,
-            "pack reenable does not reload or recheck native resources");
-        Check(SqueakKernelAdapter.ToChoice(new UniversalSqueaker.Kernel.ChainResult("Ratkin1", UniversalSqueaker.Kernel.ChainTier.RacePack, "x"), domain).Sound == null,
-            "normal caller has no bare-name recovery");
-        foreach (SqueakVoicePackMode mode in Enum.GetValues(typeof(SqueakVoicePackMode)))
-        {
-            var mapped = SqueakKernelAdapter.ToSelectionMode(mode);
-            Check((mapped == UniversalSqueaker.Kernel.SelectionMode.Disabled) == (mode == SqueakVoicePackMode.Disabled),
-                "Disabled is not mapped to Off " + mode);
-        }
-        var raw = new UniversalSqueaker.Kernel.BuiltInFallbackTable(new[]
-        {
-            new UniversalSqueaker.Kernel.FallbackProfile(domain.Race, 1, new Dictionary<string, string> { ["Work"] = "Ratkin1" })
-        });
-        SqueakFallbackProfileStore.Current = raw;
-        Check(SqueakKernelAdapter.BuildBuiltIn().For(domain.Race)!.SoundKeys["Work"] == "actual.provider/Ratkin1",
-            "player fallback bare-name data is explicitly adapted to complete binding");
-        Check(raw.For(domain.Race)!.SoundKeys["Work"] == "Ratkin1", "compatibility persistence meaning stays unchanged");
-    }
-
 }
-
-
-

@@ -59,23 +59,6 @@ public enum SqueakDistancePreset
     Custom
 }
 
-/// <summary>Typed selector for the three cheap runtime-scaling settings.</summary>
-public enum SqueakBasicToggle
-{
-    ScaleCooldown,
-    ScaleTalking,
-    ScalePopulation
-}
-
-/// <summary>Typed field selector for one layered mood-tuning write.</summary>
-public enum SqueakMoodFactor
-{
-    Clear,
-    Pitch,
-    Volume,
-    Jitter
-}
-
 /// <summary>Typed selector for the Packs-page domain filter chips.</summary>
 public enum SqueakDomainFilterKind
 {

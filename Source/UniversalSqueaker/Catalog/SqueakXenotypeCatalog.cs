@@ -15,45 +15,38 @@ public static class SqueakXenotypeCatalog
     private static SqueakXenotypeCatalogSnapshot current = SqueakXenotypeCatalogSnapshot.Empty;
     public static SqueakXenotypeCatalogSnapshot Current => Volatile.Read(ref current);
 
-    public static void Refresh(UniversalSqueakerSettings? settings = null)
+    public static void Refresh(GameSettings? settings = null)
     {
-        settings ??= UniversalSqueakerMod.Settings;
+        settings ??= SqueakerMod.Settings;
         try
         {
-            Dictionary<string, List<SqueakVoicePackDef>> groups = new(StringComparer.Ordinal);
-            foreach (SqueakVoicePackDef pack in EnumerateAllPackDefs())
+            Dictionary<string, List<VoicePackInfo>> groups = new(StringComparer.Ordinal);
+            foreach (VoicePackInfo pack in EnumerateAllPackDefs())
             {
-                if (!pack.IsKernelDeclaration && !SqueakVoicePackValidator.IsAdmissible(pack))
-                {
-                    string packKey = pack.TryGetPackKey(out string validKey) ? validKey : pack.defName;
-                    string? firstError = SqueakVoicePackValidator.GetAdmissionErrors(pack).FirstOrDefault();
-                    SqueakLog.PackRejected(packKey, 1, "invalid:" + (firstError ?? "unknown"));
-                    continue;
-                }
                 if (pack.scope != SqueakVoicePackScope.Race && pack.scope != SqueakVoicePackScope.Xenotype) continue;
                 // Catalog admission is neutral: every pack's declared raceDefName is a valid routing domain.
                 if (!pack.TryGetPackKey(out string key)) continue;
-                if (!groups.TryGetValue(key, out List<SqueakVoicePackDef>? entries)) { entries = new List<SqueakVoicePackDef>(); groups.Add(key, entries); }
+                if (!groups.TryGetValue(key, out List<VoicePackInfo>? entries)) { entries = new List<VoicePackInfo>(); groups.Add(key, entries); }
                 entries.Add(pack);
             }
 
-            Dictionary<string, SqueakVoicePackDef> packsByKey = new(StringComparer.Ordinal);
-            List<SqueakVoicePackDef> racePacks = new();
-            foreach (KeyValuePair<string, List<SqueakVoicePackDef>> group in groups)
+            Dictionary<string, VoicePackInfo> packsByKey = new(StringComparer.Ordinal);
+            List<VoicePackInfo> racePacks = new();
+            foreach (KeyValuePair<string, List<VoicePackInfo>> group in groups)
             {
                 if (group.Value.Count != 1) { WarnDuplicatePackKey(group.Key, group.Value.Count); continue; }
-                SqueakVoicePackDef pack = group.Value[0];
+                VoicePackInfo pack = group.Value[0];
                 packsByKey.Add(group.Key, pack);
                 if (pack.scope == SqueakVoicePackScope.Race) racePacks.Add(pack);
             }
 
             // The Race domain is published before and independently from every optional DLC step.
             // Pack eligibility is strictly the declared, case-sensitive raceDefName/target strings.
-            Dictionary<string, List<SqueakVoicePackDef>> xenotypePacks = new(StringComparer.Ordinal);
-            foreach (SqueakVoicePackDef pack in packsByKey.Values)
+            Dictionary<string, List<VoicePackInfo>> xenotypePacks = new(StringComparer.Ordinal);
+            foreach (VoicePackInfo pack in packsByKey.Values)
             {
                 if (pack.scope != SqueakVoicePackScope.Xenotype || string.IsNullOrWhiteSpace(pack.targetDefName)) continue;
-                if (!xenotypePacks.TryGetValue(pack.targetDefName, out List<SqueakVoicePackDef>? target)) { target = new List<SqueakVoicePackDef>(); xenotypePacks.Add(pack.targetDefName, target); }
+                if (!xenotypePacks.TryGetValue(pack.targetDefName, out List<VoicePackInfo>? target)) { target = new List<VoicePackInfo>(); xenotypePacks.Add(pack.targetDefName, target); }
                 target.Add(pack);
             }
 
@@ -107,11 +100,9 @@ public static class SqueakXenotypeCatalog
         }
     }
 
-    private static IEnumerable<SqueakVoicePackDef> EnumerateAllPackDefs()
+    private static IEnumerable<VoicePackInfo> EnumerateAllPackDefs()
     {
-        foreach (SqueakVoicePackDef pack in DefDatabase<SqueakVoicePackDef>.AllDefs)
-            yield return pack;
-        foreach (SqueakVoicePackDef pack in UsAuthorVoicePacks.Directory)
+        foreach (VoicePackInfo pack in VoicePackDirectory.Directory)
         {
             yield return pack;
         }
@@ -125,7 +116,7 @@ public static class SqueakXenotypeCatalog
 
 public sealed class SqueakXenotypeCatalogSnapshot
 {
-    public static readonly SqueakXenotypeCatalogSnapshot Empty = new(new Dictionary<string, XenotypeDef>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new Dictionary<string, SqueakVoicePackDef>(StringComparer.Ordinal), new List<SqueakVoicePackDef>(), new Dictionary<string, List<SqueakVoicePackDef>>(StringComparer.Ordinal), new List<string>());
+    public static readonly SqueakXenotypeCatalogSnapshot Empty = new(new Dictionary<string, XenotypeDef>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal), new Dictionary<string, VoicePackInfo>(StringComparer.Ordinal), new List<VoicePackInfo>(), new Dictionary<string, List<VoicePackInfo>>(StringComparer.Ordinal), new List<string>());
     public readonly IReadOnlyList<XenotypeDef> Xenotypes;
     public readonly IReadOnlyDictionary<string, XenotypeDef> XenotypeByDefName;
     /// <summary>Names with multiple loaded Def instances. Runtime must fail closed for these.</summary>
@@ -137,10 +128,10 @@ public sealed class SqueakXenotypeCatalogSnapshot
     public readonly IReadOnlyCollection<string> OfficialHarHintDefNames;
     /// <summary>All race domains admitted by the current catalog, deduplicated ordinally.</summary>
     public readonly IReadOnlyList<string> RaceDefNames;
-    public readonly IReadOnlyDictionary<string, SqueakVoicePackDef> PackByKey;
-    public readonly IReadOnlyList<SqueakVoicePackDef> RacePacks;
-    public readonly IReadOnlyDictionary<string, IReadOnlyList<SqueakVoicePackDef>> XenotypePacksByDefName;
-    internal SqueakXenotypeCatalogSnapshot(Dictionary<string, XenotypeDef> xenotypes, HashSet<string> ambiguousCanonicalNames, HashSet<string> harHints, HashSet<string> officialHarHints, Dictionary<string, SqueakVoicePackDef> packs, List<SqueakVoicePackDef> racePacks, Dictionary<string, List<SqueakVoicePackDef>> xenotypePacks, IReadOnlyList<string> raceDefNames)
+    public readonly IReadOnlyDictionary<string, VoicePackInfo> PackByKey;
+    public readonly IReadOnlyList<VoicePackInfo> RacePacks;
+    public readonly IReadOnlyDictionary<string, IReadOnlyList<VoicePackInfo>> XenotypePacksByDefName;
+    internal SqueakXenotypeCatalogSnapshot(Dictionary<string, XenotypeDef> xenotypes, HashSet<string> ambiguousCanonicalNames, HashSet<string> harHints, HashSet<string> officialHarHints, Dictionary<string, VoicePackInfo> packs, List<VoicePackInfo> racePacks, Dictionary<string, List<VoicePackInfo>> xenotypePacks, IReadOnlyList<string> raceDefNames)
     {
         Dictionary<string, XenotypeDef> canonical = new(xenotypes, StringComparer.Ordinal);
         XenotypeByDefName = new ReadOnlyDictionary<string, XenotypeDef>(canonical);
@@ -148,64 +139,35 @@ public sealed class SqueakXenotypeCatalogSnapshot
         HarHintDefNames = new ReadOnlyCollection<string>(harHints.OrderBy(x => x, StringComparer.Ordinal).ToList());
         OfficialHarHintDefNames = new ReadOnlyCollection<string>(officialHarHints.OrderBy(x => x, StringComparer.Ordinal).ToList());
         Xenotypes = new ReadOnlyCollection<XenotypeDef>(canonical.Values.OrderBy(x => x.defName, StringComparer.Ordinal).ToList());
-        PackByKey = new ReadOnlyDictionary<string, SqueakVoicePackDef>(new Dictionary<string, SqueakVoicePackDef>(packs, StringComparer.Ordinal));
-        List<SqueakVoicePackDef> racePacksCopy = new(racePacks);
+        PackByKey = new ReadOnlyDictionary<string, VoicePackInfo>(new Dictionary<string, VoicePackInfo>(packs, StringComparer.Ordinal));
+        List<VoicePackInfo> racePacksCopy = new(racePacks);
         racePacksCopy.Sort((a, b) => StringComparer.Ordinal.Compare(a.defName, b.defName));
-        RacePacks = new ReadOnlyCollection<SqueakVoicePackDef>(racePacksCopy);
+        RacePacks = new ReadOnlyCollection<VoicePackInfo>(racePacksCopy);
         RaceDefNames = new ReadOnlyCollection<string>(raceDefNames == null ? new List<string>() : new List<string>(raceDefNames));
-        Dictionary<string, IReadOnlyList<SqueakVoicePackDef>> copy = new(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, List<SqueakVoicePackDef>> entry in xenotypePacks)
+        Dictionary<string, IReadOnlyList<VoicePackInfo>> copy = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, List<VoicePackInfo>> entry in xenotypePacks)
         {
-            List<SqueakVoicePackDef> entries = new(entry.Value);
+            List<VoicePackInfo> entries = new(entry.Value);
             entries.Sort((a, b) => StringComparer.Ordinal.Compare(a.defName, b.defName));
-            copy.Add(entry.Key, new ReadOnlyCollection<SqueakVoicePackDef>(entries));
+            copy.Add(entry.Key, new ReadOnlyCollection<VoicePackInfo>(entries));
         }
-        XenotypePacksByDefName = new ReadOnlyDictionary<string, IReadOnlyList<SqueakVoicePackDef>>(copy);
+        XenotypePacksByDefName = new ReadOnlyDictionary<string, IReadOnlyList<VoicePackInfo>>(copy);
     }
 
-    /// <summary>UI-facing assembled-only target union. Projects only assembled content (declared packs)
-    /// plus explicit references (selections/presets keep orphan/dormant rows); HAR discovery is deferred
-    /// and never projects rows.</summary>
-    public IReadOnlyList<SqueakXenotypeTargetCandidate> GetTargetCandidates(IEnumerable<VoicePackSelectionRecord> selections, IEnumerable<XenotypePresetRecord> presets)
-    {
-        Dictionary<string, HashSet<string>> sources = new(StringComparer.Ordinal);
-        void AddSource(string name, string source)
-        {
-            if (string.IsNullOrEmpty(name)) return;
-            if (!sources.TryGetValue(name, out HashSet<string>? values)) { values = new HashSet<string>(StringComparer.Ordinal); sources.Add(name, values); }
-            values.Add(source);
-        }
-        foreach (string name in XenotypePacksByDefName.Keys) AddSource(name, "declared_pack");
-        foreach (VoicePackSelectionRecord selection in selections ?? Array.Empty<VoicePackSelectionRecord>())
-            if (selection != null && selection.scope == SqueakVoicePackScope.Xenotype) AddSource(selection.xenotypeDefName, "selection");
-        foreach (XenotypePresetRecord preset in presets ?? Array.Empty<XenotypePresetRecord>())
-            if (preset != null) AddSource(preset.xenotypeDefName, "preset");
-        if (SqueakLog.ShouldEmitDev)
-        {
-            foreach (KeyValuePair<string, HashSet<string>> entry in sources.OrderBy(x => x.Key, StringComparer.Ordinal))
-                SqueakLog.XenotypeDiscoveryCandidate(entry.Key, string.Join("+", entry.Value.OrderBy(x => x, StringComparer.Ordinal)), true);
-            // Generic HAR discovery is deferred; hints remain empty and are only logged for future instrumentation.
-            foreach (string hint in HarHintDefNames.OrderBy(x => x, StringComparer.Ordinal))
-                if (!sources.ContainsKey(hint)) SqueakLog.XenotypeDiscoveryCandidate(hint, "har_hint_filtered", false);
-            foreach (string officialHint in OfficialHarHintDefNames.OrderBy(x => x, StringComparer.Ordinal))
-                if (!sources.ContainsKey(officialHint)) SqueakLog.XenotypeDiscoveryCandidate(officialHint, "har_official_filtered", false);
-        }
-        return new ReadOnlyCollection<SqueakXenotypeTargetCandidate>(sources.Keys.OrderBy(x => x, StringComparer.Ordinal)
-            .Select(name => new SqueakXenotypeTargetCandidate(name, XenotypeByDefName.TryGetValue(name, out XenotypeDef? canonical) ? canonical : null, HarHintDefNames.Contains(name), AmbiguousCanonicalDefNames.Contains(name), XenotypePacksByDefName.ContainsKey(name))).ToList());
-    }
+
 
     /// <summary>Returns only packs declared for the exact selectable domain; never use PackByKey for domain eligibility.
     /// Race scope is filtered by the target race name so multiple races never share a domain pool.</summary>
-    internal IReadOnlyList<SqueakVoicePackDef> GetVoicePackDomainPacks(SqueakVoicePackScope scope, string targetDefName)
+    internal IReadOnlyList<VoicePackInfo> GetVoicePackDomainPacks(SqueakVoicePackScope scope, string targetDefName)
     {
         if (scope == SqueakVoicePackScope.Race)
         {
             if (string.IsNullOrEmpty(targetDefName)) return RacePacks;
             return RacePacks.Where(pack => string.Equals(pack.raceDefName, targetDefName, StringComparison.Ordinal)).ToList();
         }
-        return scope == SqueakVoicePackScope.Xenotype && XenotypePacksByDefName.TryGetValue(targetDefName ?? "", out IReadOnlyList<SqueakVoicePackDef>? packs)
+        return scope == SqueakVoicePackScope.Xenotype && XenotypePacksByDefName.TryGetValue(targetDefName ?? "", out IReadOnlyList<VoicePackInfo>? packs)
             ? packs
-            : Array.Empty<SqueakVoicePackDef>();
+            : Array.Empty<VoicePackInfo>();
     }
 }
 

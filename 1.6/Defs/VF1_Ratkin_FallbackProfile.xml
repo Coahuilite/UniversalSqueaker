@@ -16,21 +16,21 @@
     <raceDefName>Ratkin</raceDefName>
     <profileVersion>1</profileVersion>
     <entries>
-      <li><actionKey>Call</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Eat</actionKey><soundKey>US_Voice_Eat</soundKey></li>
-      <li><actionKey>Sleep</actionKey><soundKey>US_Voice_Sleep</soundKey></li>
-      <li><actionKey>Wounded</actionKey><soundKey>US_Voice_Wounded</soundKey></li>
-      <li><actionKey>Select</actionKey><soundKey>US_Voice_Angry</soundKey></li>
-      <li><actionKey>Move</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Social</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Joy</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Death</actionKey><soundKey>US_Voice_Death</soundKey></li>
-      <li><actionKey>Draft</actionKey><soundKey>US_Voice_Angry</soundKey></li>
-      <li><actionKey>Undraft</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Attack</actionKey><soundKey>US_Voice_Angry</soundKey></li>
-      <li><actionKey>Work</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
-      <li><actionKey>Equip</actionKey><soundKey>US_Voice_Angry</soundKey></li>
-      <li><actionKey>MentalBreak</actionKey><soundKey>US_Voice_MentalBreak</soundKey></li>
+      <li><actionKey>us.core/Call</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Eat</actionKey><soundKey>US_Voice_Eat</soundKey></li>
+      <li><actionKey>us.core/Sleep</actionKey><soundKey>US_Voice_Sleep</soundKey></li>
+      <li><actionKey>us.core/Wounded</actionKey><soundKey>US_Voice_Wounded</soundKey></li>
+      <li><actionKey>us.core/Select</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>us.core/Move</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Social</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Joy</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Death</actionKey><soundKey>US_Voice_Death</soundKey></li>
+      <li><actionKey>us.core/Draft</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>us.core/Undraft</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Attack</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>us.core/Work</actionKey><soundKey>US_Voice_Chatter</soundKey></li>
+      <li><actionKey>us.core/Equip</actionKey><soundKey>US_Voice_Angry</soundKey></li>
+      <li><actionKey>us.core/MentalBreak</actionKey><soundKey>US_Voice_MentalBreak</soundKey></li>
     </entries>
   </UniversalSqueaker.UniversalSqueakerFallbackProfileDef>
 </Defs>

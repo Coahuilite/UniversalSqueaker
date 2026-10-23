@@ -11,10 +11,10 @@ internal static class Patch_SettingsWindowClose
     private static bool Prefix(Window window, ref bool __result)
     {
         // Dialog_Options is shared by every mod. Only a dialog instance opened and registered by this mod can flush it.
-        if (UniversalSqueakerMod.Instance?.IsOwnedSettingsWindow(window) == true)
+        if (SqueakerMod.Instance?.IsOwnedSettingsWindow(window) == true)
         {
-            SqueakRuntimeResolver.FlushPendingRuntimeChanges(true);
-            UniversalSqueakerMod.NotifySettingsWindowClosing(window);
+
+            SqueakerMod.NotifySettingsWindowClosing(window);
         }
         return true;
     }

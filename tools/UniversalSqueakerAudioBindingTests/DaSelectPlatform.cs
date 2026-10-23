@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 namespace Verse
 {
     public interface IExposable { void ExposeData(); }
-    public enum LookMode { Deep }
+    public enum LookMode { Deep, Value }
     public static class Scribe_Values { public static void Look<T>(ref T value, string name, T defaultValue) { } }
     public static class Scribe_Collections { public static void Look<T>(ref List<T> value, string name, LookMode mode) { } }
 }

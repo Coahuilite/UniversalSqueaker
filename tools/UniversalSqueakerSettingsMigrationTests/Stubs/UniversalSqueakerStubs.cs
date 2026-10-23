@@ -1,140 +1,70 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-
+using HarmonyLib;
+using Verse;
 namespace UniversalSqueaker
 {
-    public enum SqueakDevLoggingMode
-    {
-        Auto = 0,
-        Enabled = 1,
-        Disabled = 2,
-    }
-
-    /// <summary>Characterization stub for the log surface consumed by Settings/Fallback store.</summary>
+    public enum SqueakDevLoggingMode { Auto, Enabled, Disabled }
     public static class SqueakLog
     {
         public static bool EffectiveDevLogging { get; private set; }
-
-        public static void Configure(SqueakDevLoggingMode mode)
-        {
-            EffectiveDevLogging = mode != SqueakDevLoggingMode.Disabled;
-        }
-
-        public static void ResetSession()
-        {
-        }
-
-        public static void LoggingModeChanged(SqueakDevLoggingMode requested, bool enabled)
-        {
-        }
-
-        public static void TargetRejected(string target, string reason)
-        {
-        }
-
-        public static void FallbackProfileStoreFailed(string race, Exception ex)
-        {
-        }
+        public static void Configure(SqueakDevLoggingMode mode) => EffectiveDevLogging = mode != SqueakDevLoggingMode.Disabled;
+        public static void ResetSession() { }
+        public static void LoggingModeChanged(SqueakDevLoggingMode mode, bool enabled) { }
+        public static void FallbackProfileStoreFailed(string race, Exception ex) { }
     }
-
-    /// <summary>Characterization stub: the store reads the permanent packageId from the mod class.</summary>
-    public partial class UniversalSqueakerMod : Verse.Mod
+    // Only game lifecycle, native catalog/UI and diagnostic boundaries are doubled. The composition root,
+    // settings, ExposeData, atomic file adapter and single save owner are linked production source.
+    internal static class GameBootstrap
     {
-        public const string PackageId = "coahuilite.universalsqueaker";
-        public static UniversalSqueakerMod Instance;
-        public static UniversalSqueakerSettings Settings;
-        public UniversalSqueakerMod(Verse.ModContentPack content) : base(content) { Instance = this; }
+        internal static bool PrerequisiteVerified => true;
+        internal static void Start(Harmony harmony, GameSettings settings, GameSettingsPersistence persistence) { }
     }
-    public static class UsOneShotRuntime
+    internal sealed class SettingsWindowOwner
+    {
+        internal SettingsWindowOwner(SqueakerMod mod, GameSettingsPersistence persistence) { }
+        internal void DrawShell(UnityEngine.Rect rect) { }
+        internal void OpenSettings() { }
+        internal void RegisterSettingsWindow(Window window) { }
+        internal bool IsOwnedSettingsWindow(Window window) => false;
+        internal void NotifyClosing(Window window) { }
+        internal static string BuildIdentity() => "controlled-settings-fixture";
+    }
+    public static class SqueakLabels { public static string SettingsCategory => "US"; }
+    public static class SqueakerRuntime
     {
         public static BehaviorSourceDirectory BehaviorSources = new(Array.Empty<BehaviorSource>());
+        internal static bool ImplementationAvailable(string key) => true;
     }
-    namespace UI
+    public sealed class SqueakXenotypeCatalogSnapshot
     {
-        public static class VoicePacksPage
-        {
-            public static void BeginSession()
-            {
-            }
-
-            public static void EndSession()
-            {
-            }
-
-            public static void Draw(UnityEngine.Rect inRect)
-            {
-            }
-        }
+        public IReadOnlyList<string> RaceDefNames = Array.Empty<string>();
+        public Dictionary<string, object> XenotypeByDefName = new();
+        public IEnumerable<VoicePackInfo> GetVoicePackDomainPacks(SqueakVoicePackScope scope, string target) => Array.Empty<VoicePackInfo>();
     }
-
-    public class SqueakXenotypeCatalogSnapshot
-    {
-        public IReadOnlyList<string> RaceDefNames { get; } = new List<string>();
-        public Dictionary<string, SqueakVoicePackDef> XenotypeByDefName { get; } = new Dictionary<string, SqueakVoicePackDef>(StringComparer.Ordinal);
-
-        public IEnumerable<SqueakVoicePackDef> GetVoicePackDomainPacks(SqueakVoicePackScope scope, string targetDefName)
-        {
-            yield break;
-        }
-    }
-
     public static class SqueakXenotypeCatalog
     {
-        public static SqueakXenotypeCatalogSnapshot Current { get; } = new SqueakXenotypeCatalogSnapshot();
-
-        public static void Refresh(UniversalSqueakerSettings settings)
-        {
-        }
+        public static SqueakXenotypeCatalogSnapshot Current = new();
+        public static void Refresh(GameSettings settings) { }
     }
-
-    public static class ModsConfig
+    public static class ModsConfig { public static bool BiotechActive; }
+    public static class GameRuntime
     {
-        public static bool BiotechActive { get; set; }
+        public static bool FailPublish;
+        public static void PublishConfiguration(GameSettings settings)
+        {
+            if (FailPublish) throw new InvalidOperationException("injected native publication failure");
+            settings.PublishBehaviorConfiguration();
+        }
     }
-
-    public static class SqueakRuntimeResolver
+    public static class SqueakKernelAdapter
     {
-        public static bool FailDiscrete;
-        public static void NotifyDiscreteResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
-        {
-            if (FailDiscrete) throw new InvalidOperationException("injected runtime publication failure");
-        }
-
-        public static void NotifyContinuousResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
-        {
-        }
-
-        public static void FlushPendingRuntimeChanges(bool synchronous)
-        {
-        }
+        public static Kernel.SelectionMode ToSelectionMode(SqueakVoicePackMode mode) => mode == SqueakVoicePackMode.Disabled
+            ? Kernel.SelectionMode.Disabled : mode == SqueakVoicePackMode.Remix ? Kernel.SelectionMode.Remix
+            : mode == SqueakVoicePackMode.Vanilla ? Kernel.SelectionMode.Off : Kernel.SelectionMode.Fallback;
     }
-
-    public static class Patch_DebugTabMenu_Actions
-    {
-        public static void SetEnabled(bool enabled)
-        {
-        }
-    }
-
-    public static class SqueakDebug
-    {
-        public static bool ShowCameraIndicator;
-    }
-
-    public class CompSqueaker
-    {
-        public static bool ScaleCooldownWithTimeSpeed;
-        public static bool ScaleFrequencyWithTalking;
-        public static bool ScalePeriodicWithAudiblePopulation;
-        public static float GlobalCooldownMultiplier = 1f;
-        public static float GlobalVolumeFactor = 1f;
-        public static int GlobalMinIntervalTicks = 216;
-        // Mirror of the production cheap runtime statics the settings layer publishes (Pure/SqueakEatOccurrence
-        // is part of this harness's compile set, so the defaults stay the single source).
-
-        public static void ApplyDistanceRange(Verse.FloatRange range)
-        {
-        }
-    }
+    public static class Patch_DebugTabMenu_Actions { public static void SetEnabled(bool enabled) { } }
+    public static class SqueakDebug { public static bool ShowCameraIndicator; }
+    public class CompSqueaker { public static void ApplyDistanceRange(FloatRange range) { } }
 }

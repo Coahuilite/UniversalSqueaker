@@ -40,7 +40,7 @@ public static class UsTheme
     {
         get
         {
-            string id = UniversalSqueakerMod.Settings?.uiSwatchId ?? "";
+            string id = SqueakerMod.Settings?.uiSwatchId ?? "";
             return UsSwatches.IsKnown(id) ? id : UsSwatches.DefaultId;
         }
     }

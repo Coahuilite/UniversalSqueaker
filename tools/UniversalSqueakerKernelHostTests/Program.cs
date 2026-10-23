@@ -62,7 +62,7 @@ internal static class Program
         // Nothing patches methods here - the type just has to LOAD for a class initializer to run.
         AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
             args.Name != null && args.Name.StartsWith("0Harmony", StringComparison.Ordinal)
-                ? typeof(UniversalSqueakerMod).BaseType!.Assembly
+                ? typeof(SqueakerMod).BaseType!.Assembly
                 : null;
 
         for (int i = 0; i < args.Length; i++)
@@ -181,8 +181,11 @@ internal static class Program
 
     private static void RunAll()
     {
+        typeof(GameSettings).Assembly.GetType("UniversalSqueaker.GameRuntime", true)!
+            .GetMethod("InitializeMainThread", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
         Step("FL08 readonly patch minimal production consumption", Fl08ReadOnlyPatchTests.Run);
         Step("FL08 actual release, editing and retained view migration", Fl08MigrationTests.Run);
+        Step("R2 production current read-model and template", TuningMultiplierLaneTests.RunAll);
         Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
         Step("DC Select three sparse qualifications, real settings and Host", DcSelectUiTests.Run);
         Step("real embedded resource + schema shape", RealEmbeddedResourcePresentAndShaped);
@@ -194,13 +197,13 @@ internal static class Program
         Step("full typed write coverage", FullTypedWriteCoverage);
         Step("retired dedicated packages absent from real product inventory and APIs", () =>
         {
-            Assert(SqueakActionDefinitions.Count == 15 && Enum.GetNames(typeof(SqueakAction)).Length == 15,
+            Assert(ActionPresentations.Count == 15 && CoreActions.All.Count == 15,
                 "real product coverage has exactly fifteen official packages");
-            Assert(typeof(UniversalSqueakerSettings).GetField("allowBabyActions") == null,
+            Assert(typeof(GameSettings).GetField("allowBabyActions") == null,
                 "real product settings no longer has the dedicated persisted opt-in");
             // This frozen UI platform does not implement Verse.ThingComp. Full Comp/patch metadata
             // absence is inspected on the built product with ILSpy, not guessed from a UI type-load failure.
-            Assert(SqueakActionDefinitions.IsKnown(SqueakAction.MentalBreak), "positive MentalBreak is retained");
+            Assert(ActionPresentations.IsKnown(CoreActions.MentalBreak), "positive MentalBreak is retained");
         });
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("the pack-card result: projection, identities, channels and empties (US-PACK1)", () => PackCardsLaneTests.RunAll());
@@ -417,23 +420,23 @@ internal static class Program
         // the lane must say so rather than pass on a no-op commit.
         Assert(fake.LastActionScope == null, "the lane starts from a clean commit record");
 
-        SqueakActionScope? committed = ClickScopeOption(host, fake, viewport, "Eat", SqueakActionScope.Disabled);
-        Assert(committed == SqueakActionScope.Disabled,
+        BehaviorScope? committed = ClickScopeOption(host, fake, viewport, CoreActions.Eat, BehaviorScope.Disabled);
+        Assert(committed == BehaviorScope.Disabled,
             "a chosen scope option must commit the real enum instance, got "
             + (committed.HasValue ? committed.Value.ToString() : "null"));
-        Assert(fake.LastActionKey == "Eat" && fake.LastActionScope == SqueakActionScope.Disabled,
+        Assert(fake.LastActionKey == CoreActions.Eat && fake.LastActionScope == BehaviorScope.Disabled,
             "and it must arrive at SetActionScope unchanged");
 
-        committed = ClickScopeOption(host, fake, viewport, "Draft", null);
+        committed = ClickScopeOption(host, fake, viewport, CoreActions.Draft, null);
         Assert(committed == null,
             "a row with no own scope must commit null (inherit), not a default scope - got "
             + (committed.HasValue ? committed.Value.ToString() : "null"));
-        Assert(fake.LastActionKey == "Draft" && fake.LastActionScope == null,
+        Assert(fake.LastActionKey == CoreActions.Draft && fake.LastActionScope == null,
             "and the Draft setter must actually receive null");
 
         // A press that misses the option list must not write anything: the typed path is not a wider target
         // than the row hit rule was.
-        PressScopePopup(host, fake, viewport, "Draft", out Rect missed);
+        PressScopePopup(host, fake, viewport, CoreActions.Draft, out Rect missed);
         Assert(fake.LastActionKey == null && fake.LastActionScope == null,
             "a press outside the option list must not commit any scope ("
             + missed + " is outside the popup)");
@@ -449,7 +452,7 @@ internal static class Program
         fake.LastActionScope = null;
         fake.LastActionKey = null;
         host.Session.ClosePopup();
-        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.Session.OpenPopup("scope-tree-scope-" + Uri.EscapeDataString(actionKey), new Rect(600f, 200f, 120f, 24f));
         host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
         host.DrawChecked(viewport);
         Assert(TryGetPopupHitLayer(host.Session, out UiHitLayer layer),
@@ -465,17 +468,17 @@ internal static class Program
     /// Presses the real scope dropdown for one action and reports what it committed. The current value of
     /// the row is deliberately NOT the target, so the press is a real change under test.
     /// </summary>
-    private static SqueakActionScope? ClickScopeOption(
-        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, SqueakActionScope? target)
+    private static BehaviorScope? ClickScopeOption(
+        UiHost host, RecordingSettingsSource fake, Rect viewport, string actionKey, BehaviorScope? target)
     {
         // The option list the widget builds: Auto (null) first, then the action's supported states. Locating
         // the target the same way the widget does keeps the ROW index honest without this lane re-deriving
         // the filtering rule.
-        var states = new List<SqueakActionScope>();
-        foreach (SqueakActionScope scope in new[]
-                 { SqueakActionScope.Disabled, SqueakActionScope.AnyOccurrence, SqueakActionScope.ActiveCommand })
+        var states = new List<BehaviorScope>();
+        foreach (BehaviorScope scope in new[]
+                 { BehaviorScope.Disabled, BehaviorScope.AnyOccurrence, BehaviorScope.ActiveCommand })
         {
-            if (SqueakActionDefinitions.NormalizeScope(TestActionOf(actionKey), scope) == scope) states.Add(scope);
+            if (Authoring.BuiltInPawnContracts.NormalizeScope(TestActionOf(actionKey), scope) == scope) states.Add(scope);
         }
 
         int row = 0;
@@ -488,7 +491,7 @@ internal static class Program
         fake.LastActionScope = null;
         fake.LastActionKey = null;
         host.Session.ClosePopup();
-        host.Session.OpenPopup("scope-tree-scope-" + actionKey, new Rect(600f, 200f, 120f, 24f));
+        host.Session.OpenPopup("scope-tree-scope-" + Uri.EscapeDataString(actionKey), new Rect(600f, 200f, 120f, 24f));
         host.MeasureAndArrange(new Vector2(viewport.width, viewport.height));
         host.DrawChecked(viewport);
 
@@ -506,9 +509,10 @@ internal static class Program
     }
 
     /// <summary>The fixture rows' actions, by key, for the supported-states lookup.</summary>
-    private static SqueakAction TestActionOf(string actionKey)
+    private static string TestActionOf(string actionKey)
     {
-        return actionKey == "Draft" ? SqueakAction.Draft : SqueakAction.Eat;
+        if (!UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(actionKey)) throw new ArgumentException("Unknown fixture action: " + actionKey);
+        return actionKey;
     }
 
     /// <summary>
@@ -945,14 +949,17 @@ internal static class Program
     /// The expected range is PARSED from Mod.cs rather than repeated here: a literal copy of the number
     /// in this file is how a lockstep gate starts agreeing with itself instead of with the pin. Source
     /// is the only place to read it from - the Verse stub deliberately ships no Verse.Mod, so
-    /// UniversalSqueakerMod cannot be loaded (let alone its private fields reflected) here.
+    /// SqueakerMod cannot be loaded (let alone its private fields reflected) here.
     /// </summary>
     private static void PrerequisiteRangeTracksCompiledApi()
     {
         string modSource = File.ReadAllText(
-            Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "Mod.cs"));
-        Version min = ReadPinnedVersion(modSource, "PrerequisiteApiMin");
-        Version max = ReadPinnedVersion(modSource, "PrerequisiteApiMax");
+            Path.Combine(RepoRoot(), "Source", "UniversalSqueaker", "Game", "GameBootstrap.cs"));
+        var pin = System.Text.RegularExpressions.Regex.Match(modSource,
+            @"FerriteLibVersion.Require\(new Version\((\d+),\s*(\d+),\s*(\d+)\), new Version\((\d+),\s*(\d+),\s*(\d+)\)");
+        Assert(pin.Success, "actual GameBootstrap startup must enforce one explicit API range");
+        Version min = new(int.Parse(pin.Groups[1].Value),int.Parse(pin.Groups[2].Value),int.Parse(pin.Groups[3].Value));
+        Version max = new(int.Parse(pin.Groups[4].Value),int.Parse(pin.Groups[5].Value),int.Parse(pin.Groups[6].Value));
         Version api = FerriteLib.UiKit.Kernel.FerriteLibVersion.Api;
 
         Assert(api >= min && api < max,
@@ -1288,18 +1295,11 @@ internal static class Program
             { "select-awake", () => host.Bindings.Set("select-awake", "False") },
             { "select-not-downed", () => host.Bindings.Set("select-not-downed", "False") },
             { "allow-eggs", () => host.Bindings.Set("allow-eggs", false) },
-            { "scale-cooldown", () => host.Bindings.Set("scale-cooldown", false) },
             { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
-            { "scale-population", () => host.Bindings.Set("scale-population", true) },
             { "camera-indicator", () => host.Bindings.Set("camera-indicator", false) },
             { "eat-phase", () => host.Bindings.Set("eat-phase", "Execution") },
             { "eat-nutrition", () => host.Bindings.Set("eat-nutrition", "NutritionGiving") },
             { "eat-drug", () => host.Bindings.Set("eat-drug", "OnlyDrugs") },
-            { "interval-ticks", () => host.Bindings.Set("interval-ticks", 300f) },
-            { "interval-seconds", () => host.Bindings.Set("interval-seconds", 5f) },
-            { "timing-multiplier-minus", () => host.Bindings.Invoke("timing-multiplier-minus") },
-            { "timing-multiplier-plus", () => host.Bindings.Invoke("timing-multiplier-plus") },
-            { "cooldown-multiplier", () => host.Bindings.Set("cooldown-multiplier", 1.5f) },
             { "set-dev-logging", () => host.Bindings.Invoke("set-dev-logging", nameof(SqueakDevLoggingMode.Enabled)) },
             { "localize-debug-menu", () => host.Bindings.Set("localize-debug-menu", true) },
             // R3-B: the developer layout-diagnosis commands. Each is a display write - it changes what the
@@ -1309,9 +1309,7 @@ internal static class Program
             { "request-layout-report", () => host.Bindings.Invoke("request-layout-report") },
             { "set-tuning-layer", () => host.Bindings.Invoke("set-tuning-layer", 1) },
             { "set-tuning-domain", () => host.Bindings.Invoke("set-tuning-domain", new UsTuningDomainSelection("human", "")) },
-            { "set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.Disabled)) },
-            { "set-mood-tuning", () => host.Bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Good, SqueakMoodFactor.Pitch, 1.2f)) },
-            { "reset-mood-to-preset", () => host.Bindings.Invoke("reset-mood-to-preset", new UsMoodPresetReset(SqueakMood.Good)) },
+            { "set-action-scope", () => host.Bindings.Invoke("set-action-scope", new UsScopeWrite(CoreActions.Eat, BehaviorScope.Disabled)) },
             { "toggle-baseline-preset", () => host.Bindings.Invoke("toggle-baseline-preset", "us.preset1") },
             { "toggle-baseline-race", () => host.Bindings.Invoke("toggle-baseline-race", new UsBaselineRaceToggle("us.preset1", "human", false)) },
             { "toggle-baseline-xenotype", () => host.Bindings.Invoke("toggle-baseline-xenotype", new UsBaselineXenoToggle("us.preset1", "human", "sanguophage", true)) },
@@ -1352,7 +1350,6 @@ internal static class Program
             // the action preset reset.
             { "tuning-area", () => host.Bindings.Set("tuning-area", 1) },
             { "tuning-selected-action", () => host.Bindings.Set("tuning-selected-action", "Eat") },
-            { "set-action-tuning", () => host.Bindings.Invoke("set-action-tuning", new UsActionTuningWrite("Eat", true, 1.2f)) },
             { "reset-action-to-preset", () => host.Bindings.Invoke("reset-action-to-preset", "Eat") },
             // VF1 fallback table editor: selection, queries, the entry write, and the three table
             // commands. The fake mirrors the commands without touching any real Config file.
@@ -1507,7 +1504,8 @@ internal static class Program
         try
         {
             host.Session.SetScrollTarget(elementId);
-            host.Invalidate();
+            // Geometry is collected on this draw; probing it is not a content edit.
+            // Advancing the revision here would disguise a second business invalidation.
             DrawWithPointer(host, viewport, new Vector2(-1000, -1000));
             if (!diagnostics.TryGetGeometrySnapshot(out var geometry) || geometry == null)
                 throw new InvalidOperationException("No actual Dev input geometry for " + elementId);
@@ -1620,7 +1618,7 @@ internal static class Program
 
         string[] typedFacade =
         {
-            "SetActiveTab", "ScrollToSection", "SetDomainFilter", "SetMoodTuning",
+            "SetActiveTab", "ScrollToSection", "SetDomainFilter", "SetActionScope",
             "ToggleVoicePack", "ForgetUnavailable"
         };
         foreach (string facade in typedFacade)
@@ -1936,13 +1934,10 @@ internal static class Program
         bindings.ValidateValue<float>("global-volume", "test");
         bindings.ValidateValue<string>("distance-preset", "test");
         bindings.ValidateValue<bool>("allow-eggs", "test");
-        bindings.ValidateValue<bool>("scale-cooldown", "test");
         bindings.ValidateValue<bool>("scale-talking", "test");
-        bindings.ValidateValue<bool>("scale-population", "test");
         bindings.ValidateValue<bool>("camera-indicator", "test");
         bindings.ValidateValue<int>("tuning-layer", "test");
         bindings.ValidateValue<IReadOnlyList<ActionScopeRowView>>("action-scopes", "test");
-        bindings.ValidateValue<IReadOnlyList<MoodTuningRowView>>("mood-rows", "test");
         bindings.ValidateValue<IReadOnlyList<BaselinePresetView>>("baseline-presets", "test");
         bindings.ValidateValue<IReadOnlyList<RaceLayerRowView>>("races", "test");
         bindings.ValidateValue<IReadOnlyList<VoicePackDomainView>>("xenotype-domains", "test");
@@ -1954,7 +1949,6 @@ internal static class Program
         bindings.ValidateAction<UsDomainFilterWrite>("set-domain-filter", "test");
         bindings.ValidateAction<string>("clear-pack-filters", "test");
         bindings.ValidateAction<UsScopeWrite>("set-action-scope", "test");
-        bindings.ValidateAction<UsMoodWrite>("set-mood-tuning", "test");
         bindings.ValidateAction<UsBaselineRaceToggle>("toggle-baseline-race", "test");
         bindings.ValidateAction<UsBaselineXenoToggle>("toggle-baseline-xenotype", "test");
         // S4-2: the row's own key is the payload, so the action takes the string the button carries.
@@ -1976,15 +1970,11 @@ internal static class Program
         bindings.Invoke("set-tab", "Packs");
         Assert(fake.LastActiveTab == "Packs", "set-tab action routes to the business surface");
 
-        bindings.Invoke("set-action-scope", new UsScopeWrite("Eat", SqueakActionScope.ActiveCommand));
-        Assert(fake.LastActionKey == "Eat" && fake.LastActionScope == SqueakActionScope.ActiveCommand,
+        bindings.Invoke("set-action-scope", new UsScopeWrite(CoreActions.Eat, BehaviorScope.ActiveCommand));
+        Assert(fake.LastActionKey == CoreActions.Eat && fake.LastActionScope == BehaviorScope.ActiveCommand,
             "set-action-scope typed action routes to the business surface");
 
-        bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Neutral, SqueakMoodFactor.Pitch, 1.25f));
-        Assert(fake.LastMood == SqueakMood.Neutral
-            && fake.LastMoodFactor == SqueakMoodFactor.Pitch
-            && fake.LastMoodValue == 1.25f,
-            "set-mood-tuning typed action routes to the business surface");
+
 
         // US-PACK1: the enable write's business-boundary routing is asserted where the key actually
         // exists - on a materialised card row, in PackCardsLaneTests (the item-scoped enabled VALUE
@@ -2287,12 +2277,8 @@ internal static class Program
         Assert(Math.Abs(fake.LastGlobalVolume.GetValueOrDefault() - 0.25f) < 0.001f, "global-volume value write routes");
         bindings.Set("allow-eggs", true);
         Assert(fake.LastEasterEggs == true, "allow-eggs value write routes");
-        bindings.Set("scale-cooldown", false);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleCooldown && fake.LastBasicToggleValue == false, "scale-cooldown value write routes");
         bindings.Set("scale-talking", true);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScaleTalking && fake.LastBasicToggleValue == true, "scale-talking value write routes");
-        bindings.Set("scale-population", false);
-        Assert(fake.LastBasicToggle == SqueakBasicToggle.ScalePopulation && fake.LastBasicToggleValue == false, "scale-population value write routes");
+        Assert(fake.LastTalkingScaling == true, "talking scaling routes through its current single setter");
         bindings.Set("camera-indicator", true);
         Assert(fake.LastCameraIndicator == true, "camera-indicator value write routes");
         bindings.Set("camera-indicator", false);
@@ -2321,36 +2307,6 @@ internal static class Program
         Assert(fake.LastDistancePreset == SqueakDistancePreset.Custom,
             "an unrecognised preset name must land on Custom rather than being ignored or mis-parsed, got "
             + (fake.LastDistancePreset?.ToString() ?? "null"));
-        // S4-3: the interval is one value in two units, so both declared atoms must land in the SAME
-        // business field, and the seconds projection must convert back into machine ticks.
-        bindings.Set("interval-ticks", 300f);
-        Assert(fake.LastMinIntervalTicks == 300, "interval-ticks value write routes");
-        bindings.Set("interval-seconds", 5f);
-        Assert(fake.LastMinIntervalTicks == 300, "interval-seconds writes the same field in ticks (5 s = 300)");
-        bindings.Set("cooldown-multiplier", 1.5f);
-        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.5f) < 0.001f, "cooldown-multiplier value write routes");
-        // The two declarative stepper commands: the step and its window live on the host side of the
-        // command, exactly where the retired composite applied them. The expected values are read from the
-        // INSTRUMENT: this fixture's views carry a constant globalCooldownMultiplier of 1.0 (see
-        // RecordingSettingsSource.BuildRichView/BuildEmptyView), so the command's own arithmetic is what the
-        // two writes below measure - and the pair proves they step in opposite directions instead of both
-        // landing on one value.
-        fake.LastCooldownMultiplier = null;
-        bindings.Invoke("timing-multiplier-minus");
-        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 0.9f) < 0.001f,
-            "timing-multiplier-minus steps the viewed 1.0 down by the composite's 0.1, got "
-            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
-        fake.LastCooldownMultiplier = null;
-        bindings.Invoke("timing-multiplier-plus");
-        Assert(Math.Abs(fake.LastCooldownMultiplier.GetValueOrDefault() - 1.1f) < 0.001f,
-            "timing-multiplier-plus steps it up by 0.1, got "
-            + (fake.LastCooldownMultiplier?.ToString() ?? "null"));
-        // Deliberately NOT asserted here: "an out-of-window write is clamped". This fixture's
-        // SetGlobalCooldownMultiplier is a recording stub with no clamp (RecordingSettingsSource), so in
-        // THIS lane the assertion would measure the fake, not the product - the clamp lives in
-        // UniversalSqueakerSettings.SetGlobalCooldownMultiplier and assert on a route the instrument does
-        // not carry is the green-for-the-wrong-reason shape this project bans. The manifest's declared
-        // 0..3 window is pinned by DeclarativeTimingLaneTests against the manifest itself.
         // T3-2: the retired us/diagnostics card's three-way choice is three declarative buttons over ONE
         // string action, so the routing assertion moves to the action. Which BUTTON names which mode is
         // asserted by DeclarativeDiagnosticsLaneTests against the real drawn buttons.
@@ -2359,13 +2315,9 @@ internal static class Program
             "set-dev-logging action routes the button payload into the enum boundary");
         bindings.Set("localize-debug-menu", true);
         Assert(fake.LastLocalizeDebugActions == true, "localize-debug-menu value write routes");
-        bindings.Invoke("set-action-scope", new UsScopeWrite("Work", null));
-        Assert(fake.LastActionKey == "Work" && fake.LastActionScope == null, "set-action-scope null-clear routes");
-        bindings.Invoke("set-mood-tuning", new UsMoodWrite(SqueakMood.Bad, SqueakMoodFactor.Volume, 0.8f));
-        Assert(fake.LastMood == SqueakMood.Bad
-            && fake.LastMoodFactor == SqueakMoodFactor.Volume
-            && Math.Abs(fake.LastMoodValue.GetValueOrDefault() - 0.8f) < 0.001f,
-            "set-mood-tuning action routes");
+        bindings.Invoke("set-action-scope", new UsScopeWrite(CoreActions.Work, null));
+        Assert(fake.LastActionKey == CoreActions.Work && fake.LastActionScope == null, "set-action-scope null-clear routes");
+
         bindings.Invoke("set-domain-filter", new UsDomainFilterWrite(SqueakDomainFilterKind.OrphanOnly, true));
         Assert(fake.LastDomainFilterKind == SqueakDomainFilterKind.OrphanOnly && fake.LastDomainFilterFlag == true, "set-domain-filter action routes");
         bindings.Invoke("scroll-to", "preset-list");
@@ -2867,7 +2819,6 @@ internal static class Program
         // The rich fixture carries ALL FOUR product moods (Good/Neutral/Bad/Break): the closure pass
         // requires every mood card to be covered, so the count below tracks the fixture, not a
         // two-mood sample.
-        Assert(bindings.Get<IReadOnlyList<MoodTuningRowView>>("mood-rows").Count == 4, "mood-rows reads the rich four-mood list");
         Assert(bindings.Get<IReadOnlyList<TuningDomainOptionView>>("tuning-domains").Count == 2, "tuning-domains reads the rich list");
 
         // Full dynamic draw: every workspace with non-empty lists at the reference viewports.
@@ -3503,7 +3454,7 @@ internal static class Program
     ///    notices stay distinguishable (US branches one DrawNotice on them);
     ///  - closing disposes the page session (the shell's PreClose), which is the half US must NOT redo.
     ///
-    /// It drives a probe subclass rather than UniversalSqueakerSettingsWindow itself because the Verse
+    /// It drives a probe subclass rather than GameSettingsWindow itself because the Verse
     /// stub deliberately ships no Verse.Mod, so the real window type cannot be constructed here; the
     /// notice TEXTS are US's and are pinned by the Keyed localization gate instead.
     /// </summary>

@@ -36,7 +36,7 @@ internal static class DcSelectUiTests
                 }
             } finally { Program.SetTranslatorResolver(null); }
         }
-        var settings = new UniversalSqueakerSettings(); var actual = new UsKernelSettingsSource(settings);
+        var settings = new GameSettings(); var actual = new UsKernelSettingsSource(settings);
         actual.ViewState.TuningLayer = 0; actual.SetSelectParameter("playerControlled", "False");
         actual.ViewState.TuningLayer = 1; actual.ViewState.TuningRaceDefName = "SelectRace"; actual.SetSelectParameter("awake", "False");
         actual.ViewState.TuningLayer = 2; actual.ViewState.TuningXenotypeDefName = "LegalXeno"; actual.SetSelectParameter("notDowned", "False");

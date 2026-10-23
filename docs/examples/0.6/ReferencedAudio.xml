@@ -1,0 +1,10 @@
+<Defs>
+  <!-- This pack may live in a different mod from the two ordinary SoundDefs it references. -->
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_S2_ReferencingPack</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>work</key><action>us.core/Work</action><sound>US_RatkinExp_Work</sound></li>
+      <li><key>wounded</key><action>us.core/Wounded</action><sound>US_RatkinExp_Wounded</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

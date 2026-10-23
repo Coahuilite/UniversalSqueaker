@@ -18,7 +18,8 @@ namespace Verse
     public sealed partial class Pawn
     {
         public string ThingID = "Pawn1";
-        public int thingIDNumber = 1;
+        private static int nextId;
+        public int thingIDNumber = System.Threading.Interlocked.Increment(ref nextId);
         public ThingDef def = new() { defName = "FixtureRace", race = new object() };
         public bool Spawned = true, Destroyed;
         public Map MapHeld = Find.CurrentMap;
@@ -60,20 +61,15 @@ namespace UniversalSqueaker
         public bool Allowed = true;
         public bool ExternalAllowed = true;
         public bool Vocal = true;
-        public bool FixtureSustained;
         public int MembershipUpdates;
         private void SynchronizePeriodicMembership() => MembershipUpdates++;
-        public UniversalSqueaker.OneShot.PlaybackRequest? LastCandidateRequest;
-        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound, UniversalSqueaker.OneShot.PlaybackRequest? request)
+        public UniversalSqueaker.Responses.PlaybackRequest? LastCandidateRequest;
+        internal void RecordKernelOutcome(UniversalSqueaker.Responses.DecisionOutcome outcome, SoundDef? sound, UniversalSqueaker.Responses.PlaybackRequest? request)
             => LastCandidateRequest = request;
         internal SqueakVocalCapability ControlledOneShotVocal() => new(Vocal ? 1 : 0, 1);
-        internal bool ControlledPlaybackSustained(string key) => FixtureSustained;
-        internal SqueakActionScope ControlledOneShotScope(string key) => BuiltInActionKeys.TryGetIndex(ActionKey.SchemaKey(key), out int index)
-            ? SqueakActionDefinitions.Get((SqueakAction)index).DefaultScope : SqueakActionScope.AnyOccurrence;
         internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => true;
         internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
-            => UsControlledActionEligibility.Allows(false, authorAction, Allowed && (BuiltInActionKeys.Contains(ActionKey.SchemaKey(key)) || ExternalAllowed),
-                behavior?.Enabled ?? true, behavior?.Scope ?? SqueakActionScope.AnyOccurrence, activeCommand, Pawn.IsPlayerControlled);
+            => UsControlledActionEligibility.Allows(behavior?.Enabled ?? true, behavior?.Scope ?? BehaviorScope.AnyOccurrence, activeCommand, Pawn.IsPlayerControlled);
     }
     public readonly struct SqueakVocalCapability
     {
@@ -81,24 +77,27 @@ namespace UniversalSqueaker
         public readonly float VocalOrganEfficiency, TalkingChance;
         public SqueakVocalCapability(float vocal, float talking) { VocalOrganEfficiency = vocal; TalkingChance = talking; }
     }
-    public static class UniversalSqueakerMod { public static readonly UniversalSqueakerSettings Settings = new(); }
+    public static class SqueakerMod { public static readonly GameSettings Settings = new(); }
     // Only native persistence scheduling is doubled; source transactions and effective settings resolution are production.
-    public partial class UniversalSqueakerSettings
+    public partial class GameSettings
     {
         public List<ActionTuningRecord> actionTuning = new();
+        public List<VoicePackSelectionRecord> voicePackSelections = new();
+        public bool AllowEasterEggSounds;
         public SqueakVoicePackMode voicePackMode = SqueakVoicePackMode.Fallback;
-        public float globalVolumeFactor = 1;
-        internal bool IsPersistenceBlockedByMigrationFailure => false;
-        internal void QueuePersistence() { }
+        public float globalVolumeFactor = 1; public bool scaleFrequencyWithTalking = true;
+        internal bool IsConfigurationUnreadable => false;
+        private static bool IsValidTuningDomain(string race, string child) => race != "" || child == "";
+        private static bool SameActionTuningIdentity(ActionTuningRecord row, string action, string race, string child) => row.serviceFamily == "Pawn" && row.actionKey == action && row.raceDefName == race && row.xenotypeDefName == child;
+        internal void QueuePersistence() { PublishBehaviorConfiguration(); }
     }
-    public static class SqueakRuntimeResolver { public static readonly RuntimeSnapshot Current = new(); }
+    public static class GameRuntime { public static readonly RuntimeSnapshot Current = new(); }
     public sealed class RuntimeSnapshot
     {
         public SqueakVoicePackMode VoicePackMode = SqueakVoicePackMode.Fallback;
-        public SqueakPoolRegistry Registry = SqueakPoolRegistry.Empty;
         public bool AllowEggs;
         public bool RejectChildContext;
-        public RuntimeContext ResolveContext(Pawn pawn) => new() { Xenotype = ModsConfig.BiotechActive && !RejectChildContext ? pawn.genes?.Xenotype : null };
+        public RuntimeContext ResolveContext(Pawn pawn, BehaviorConfiguration configuration) => new() { Xenotype = ModsConfig.BiotechActive && !RejectChildContext ? pawn.genes?.Xenotype : null };
     }
     public sealed class RuntimeContext { public Def? Xenotype; }
     public static class SqueakLifeStageResolver { public static AgeBucket Resolve(Pawn pawn) => AgeBucket.Adult; }

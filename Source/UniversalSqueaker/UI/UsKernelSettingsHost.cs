@@ -153,7 +153,7 @@ public static class UsKernelSettingsHost
     /// attached) still persists and still repaints the chrome. Returns whether the write changed the
     /// persisted value - a same-value re-apply stays silent, like every other value binding.
     /// </summary>
-    public static bool ApplySwatchLive(UniversalSqueakerSettings? settings, UiHost? host, UiTheme chrome, string swatchId)
+    public static bool ApplySwatchLive(GameSettings? settings, UiHost? host, UiTheme chrome, string swatchId)
     {
         if (chrome == null) throw new ArgumentNullException(nameof(chrome));
         string resolved = UsSwatches.Resolve(swatchId).Id;
@@ -365,19 +365,7 @@ public static class UsKernelSettingsHost
         };
     }
 
-    /// <summary>
-    /// The one interval sentence the card paints and sizes, built from the live value so the
-    /// <c>text/wrapped</c> atom's band is the wrap of the very string that is drawn. The retired composite
-    /// measured its caption band against a hand-written worst-case SAMPLE constant; here measure and draw
-    /// read the same string by construction, so the drift that constant could develop is fixed rather than
-    /// relocated.
-    /// </summary>
-    private static string IntervalCaption(IUsKernelSettingsSource source, IUiTranslation translation)
-    {
-        string seconds = (source.BuildView().GlobalMinIntervalTicks / SecondsPerTick)
-            .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
-        return string.Format(translation.Translate("US.Tuning.MinInterval"), seconds);
-    }
+
 
     // UIR-002: the board's mode echo and summary line. Both read the SAME view the mode row and the
     // cards paint (one authority), and both are READ-ONLY strings because the manifest has no format
@@ -535,9 +523,9 @@ public static class UsKernelSettingsHost
         // sentence can never name two different presets.
         bindings.BindReadOnly<bool>(PresetConservativeKey, () => IsDistancePreset(source, SqueakDistancePreset.Conservative));
         bindings.BindReadOnly<bool>(PresetBalancedKey, () => IsDistancePreset(source, SqueakDistancePreset.Balanced));
-        bindings.BindReadOnly<bool>("legacy-policy-controls", () => false);
+        bindings.BindReadOnly<string>("response-details", () => source.ResponseExplanation);
         bindings.BindReadOnly<string>("kernel-policy-note", () => translation.Translate(
-            UsOneShotRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive"));
+            SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive"));
         bindings.BindReadOnly<bool>(PresetStrongKey, () => IsDistancePreset(source, SqueakDistancePreset.Strong));
         // Each button's own payload. A declarative input/button with a PayloadKey opens the STRING contract
         // (G2), so each datum lives in a value binding rather than as a manifest literal - the same shape
@@ -557,9 +545,7 @@ public static class UsKernelSettingsHost
         writes.Value<bool>("allow-eggs", () => source.BuildView().AllowEasterEggs, value => { source.SetEasterEggs(value); bump(); });
         bindings.BindReadOnly<bool>("easter-egg-on", () => source.BuildView().AllowEasterEggs);
         bindings.BindReadOnly<bool>("easter-egg-off", () => !source.BuildView().AllowEasterEggs);
-        writes.Value<bool>("scale-cooldown", () => source.BuildView().ScaleCooldownWithTimeSpeed, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleCooldown, value); bump(); });
-        writes.Value<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetBasicToggle(SqueakBasicToggle.ScaleTalking, value); bump(); });
-        writes.Value<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
+        writes.Value<bool>("scale-talking", () => source.BuildView().ScaleFrequencyWithTalking, value => { source.SetTalkingScaling(value); bump(); });
         writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
         writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
@@ -573,51 +559,6 @@ public static class UsKernelSettingsHost
         writes.Value<string>("select-not-downed", () => source.BuildView().SelectRequireNotDowned?.ToString() ?? "", value => { source.SetSelectParameter("notDowned", value); bump(); });
         bindings.BindOptions<UiOption>("select-qualification-options", () => new[] {
             new UiOption("US.Select.Inherit".Translate(), ""), new UiOption("US.Select.Required".Translate(), "True"), new UiOption("US.Select.NotRequired".Translate(), "False") });
-        // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
-        // S4-3 dissolved us/timing into manifest atoms. The interval is ONE value in two units, so the
-        // declarative card keeps the same split the global-volume card uses: the slider atom owns the
-        // machine ticks (a float binding, because input/slider validates float) and the number-field atom
-        // owns the player's seconds projection. Both read and write the same business setter.
-        writes.Value<float>(
-            "interval-ticks",
-            () => source.BuildView().GlobalMinIntervalTicks,
-            value =>
-            {
-                source.SetGlobalMinIntervalTicks(Mathf.RoundToInt(Mathf.Clamp(value, IntervalTicksFloor, IntervalTicksCeil)));
-                bump();
-            });
-        writes.Value<float>(
-            "interval-seconds",
-            () => source.BuildView().GlobalMinIntervalTicks / SecondsPerTick,
-            value =>
-            {
-                source.SetGlobalMinIntervalTicks(Mathf.Max(
-                    (int)IntervalTicksFloor,
-                    Mathf.RoundToInt(Mathf.Clamp(value, IntervalTicksFloor / SecondsPerTick, IntervalTicksCeil / SecondsPerTick) * SecondsPerTick)));
-                bump();
-            });
-        // The caption is a read-only projection of the same value, built HERE and nowhere else: the atom
-        // measures exactly the string it paints (see the manifest comment on this card).
-        bindings.BindReadOnly<string>("timing-interval-caption", () => IntervalCaption(source, translation));
-        // The declarative stepper: a button fires a command, and the step (0.1, clamped 0..3) stays here.
-        writes.Command(
-            "timing-multiplier-minus",
-            () =>
-            {
-                source.SetGlobalCooldownMultiplier(Mathf.Clamp(
-                    source.BuildView().GlobalCooldownMultiplier - MultiplierStep, MultiplierFloor, MultiplierCeil));
-                bump();
-            });
-        writes.Command(
-            "timing-multiplier-plus",
-            () =>
-            {
-                source.SetGlobalCooldownMultiplier(Mathf.Clamp(
-                    source.BuildView().GlobalCooldownMultiplier + MultiplierStep, MultiplierFloor, MultiplierCeil));
-                bump();
-            });
-        writes.Value<float>("cooldown-multiplier", () => source.BuildView().GlobalCooldownMultiplier, value => { source.SetGlobalCooldownMultiplier(value); bump(); });
-
         // Diagnostics (T3-2: us/diagnostics is retired). The three-way logging choice is three declarative
         // buttons over ONE string action, so the enum parse lives here on the host side of the boundary - the
         // same split set-distance-preset uses. Each button's payload and its selected answer are READ-ONLY, so
@@ -678,7 +619,6 @@ public static class UsKernelSettingsHost
         writes.Action<UsScopeWrite>("set-action-scope", write => { source.SetActionScope(write.ActionKey, write.Scope); bump(); });
         // VF1定稿 A2/A4: the multiplier fields and the action reset-to-preset join the same funnel -
         // they change what the action rows display, so they move the same clock.
-        writes.Action<UsActionTuningWrite>("set-action-tuning", write => { source.SetActionTuning(write.ActionKey, write.IntervalField, write.Value); bump(); });
         writes.Action<string>("reset-action-to-preset", key => { source.ResetActionToPreset(key); bump(); });
     // VF1定稿: the tuning area + the final-fallback editor. The area is a value binding (the tabs
     // write it); the editor's lists are read-only projections of the store, and every command bumps
@@ -701,9 +641,6 @@ public static class UsKernelSettingsHost
     writes.Command("restore-fallback-default", () => { source.RestoreFallbackDefault(); bump(); });
     writes.Action<string>("delete-fallback-table", race => { source.DeleteFallbackTable(race); bump(); });
 
-        bindings.BindReadOnly<IReadOnlyList<MoodTuningRowView>>("mood-rows", () => source.BuildView().MoodTuningRows);
-        writes.Action<UsMoodWrite>("set-mood-tuning", write => { source.SetMoodTuning(write.Mood, write.Factor, write.Value); bump(); });
-        writes.Action<UsMoodPresetReset>("reset-mood-to-preset", write => { source.ResetMoodToPreset(write.Mood); bump(); });
         bindings.BindReadOnly<IReadOnlyList<BaselinePresetView>>("baseline-presets", () => source.BuildView().BaselinePresets);
         // Preset expand/collapse, per-row selection and import all reflow the preset tree.
         writes.Action<string>("toggle-baseline-preset", preset => { source.ToggleBaselinePreset(preset); bump(); });
@@ -910,9 +847,6 @@ public static class UsKernelSettingsHost
             "reset-normal-basics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Basics) == SqueakResetOutcome.Applied) bump(); });
         writes.Command(
-            "reset-normal-timing",
-            () => { if (source.ResetNormalArea(SqueakNormalResetArea.Timing) == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "timing-interval-seconds" || id == "timing-multiplier-field"); bump(); } });
-        writes.Command(
             "reset-normal-diagnostics",
             () => { if (source.ResetNormalArea(SqueakNormalResetArea.Diagnostics) == SqueakResetOutcome.Applied) bump(); });
         writes.Command(
@@ -923,11 +857,6 @@ public static class UsKernelSettingsHost
             "reset-action-area",
             () => { if (source.ResetActionTuningArea() == SqueakResetOutcome.Applied) bump(); },
             () => source.CanResetTuningArea());
-        writes.Command(
-            "reset-mood-area",
-            () => { if (source.ResetMoodTuningArea() == SqueakResetOutcome.Applied) { source.EndAffectedEdit(id => id == "scope-tree" && state.TuningArea == 1); bump(); } },
-            () => source.CanResetTuningArea());
-
         // UIR-002/003 (WO-US-UI-REFACTOR-20261014): the overview board and the teaching toggle.
         // The intro is a page-state bool like help-open, with the two complementary VisibleKeys the
         // manifest's collapse/reopen buttons read. The board is READ-ONLY projection; its two exits

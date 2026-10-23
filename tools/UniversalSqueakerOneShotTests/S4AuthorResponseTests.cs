@@ -1,10 +1,11 @@
+using UniversalSqueaker.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 internal static partial class Program
 {
@@ -37,7 +38,8 @@ internal static partial class Program
     private static void S4AuthorResponses()
     {
         S4PackWeightHierarchy();
-        var catalog = new AuthorCatalog(720, 216, true);
+        var catalog = new DefinitionCatalog(720, 216, true);
+        var audioInputs = new AudioInputBuilder(catalog);
         Check(!catalog.AddProvider(new ResponseProvider { Duplicate = true }) && !catalog.HasFact("example/Ready")
             && catalog.Responses.Length == 2, "S4 provider response conflict rejects its complete fact-and-response batch");
         Check(catalog.AddProvider(new ResponseProvider()) && catalog.HasFact("example/Ready")
@@ -56,15 +58,15 @@ internal static partial class Program
             + "<participation><li key='example/Response'>Skip</li></participation></li></entries></declaration>");
         var pack = new VoicePackDeclaration();
         pack.LoadDataFromXmlCustom(xml.DocumentElement!);
-        Check(catalog.AddPack("example", "Pack", pack, _ => "audio/Work")
-            && catalog.Audio[0].Pitch == 2 && catalog.Audio[0].Participation["example/Response"]
-            && !catalog.Audio[1].Participation["example/Response"],
+        Check(audioInputs.AddPack("example", "Pack", pack, _ => "audio/Work")
+            && audioInputs.Entries[0].Pitch == 2 && audioInputs.Entries[0].Participation["example/Response"]
+            && !audioInputs.Entries[1].Participation["example/Response"],
             "S4 normal pack/action/entry defaults fold once; entry calibration pitch remains independent");
         var otherPack = new VoicePackDeclaration { Race = "Ratkin" };
         otherPack.Participation["example/Response"] = false;
         otherPack.Entries.Add(new VoiceEntry { Key = "other", Action = "example/Work", Sound = "Work" });
-        Check(catalog.AddPack("other", "Pack", otherPack, _ => "audio/Work")
-            && !catalog.Audio[2].Participation["example/Response"],
+        Check(audioInputs.AddPack("other", "Pack", otherPack, _ => "audio/Work")
+            && !audioInputs.Entries[2].Participation["example/Response"],
             "S4 first pack's action participation cannot override a different pack referencing the same action");
         foreach (string malformed in new[]
         {
@@ -88,7 +90,7 @@ internal static partial class Program
             Check(rejected, "S4 strict ordinary participation loader rejects malformed shape " + malformed);
         }
 
-        xml.LoadXml("<declaration family='Pawn' target='Ratkin'><action key='Work' ageEnabled='true' moodEnabled='true'>"
+        xml.LoadXml("<declaration family='Pawn' target='Ratkin'><action key='us.core/Work' ageEnabled='true' moodEnabled='true'>"
             + "<response key='example/Response' enabled='true'/>"
             + "<parameter key='example.pitch' value='2'/><parameter key='example.volume' value='.5'/>"
             + "<parameter key='mood.low' value='.2'/><parameter key='mood.high' value='.8'/>"
@@ -101,24 +103,24 @@ internal static partial class Program
         Check(bindings.Bind(source.Source.Domain, source.Source.Id, directory), "S4 real source identity binds response parameters without enabling audio");
         string saved = bindings.ToXml();
         var restored = BehaviorSourceState.FromXml(saved);
-        var effective = restored.Resolve(source.Source.Domain, "Work", directory, Array.Empty<BehaviorValues>(), _ => true, out bool paused);
+        var effective = restored.Resolve(source.Source.Domain, "us.core/Work", directory, Array.Empty<BehaviorValues>(), _ => true, out bool paused);
         var facts = new Dictionary<string, double> { ["age.native"] = 1.2, ["age.nativeVolume"] = .5, ["mood.level"] = .9 };
         var plan = ResponseModulation.Resolve("p1", effective, facts, catalog.Responses);
-        var result = ResponseModulation.Compose(2, 3, plan, catalog.Audio[0].Participation, new Driver());
+        var result = ResponseModulation.Compose(2, 3, plan, audioInputs.Entries[0].Participation, new Driver());
         Check(!paused && result.Valid && Math.Abs(result.Pitch - 2.4) < .000001 && result.Volume == .75
             && restored.ToXml() == saved, "S4 real source parser/snapshot/runtime resolver composes native age then custom age and mood from one raw context");
-        var entrySkip = ResponseModulation.Compose(1, 1, plan, catalog.Audio[1].Participation, new Driver());
+        var entrySkip = ResponseModulation.Compose(1, 1, plan, audioInputs.Entries[1].Participation, new Driver());
         Check(entrySkip.Valid && Math.Abs(entrySkip.Pitch - .6) < .000001 && entrySkip.Volume == .5,
             "S4 enabled author behavior response cannot override the selected audio entry Skip");
         var explicitApply = new BehaviorValues();
         explicitApply.Participation["example/Response"] = true;
-        var applied = restored.Resolve(source.Source.Domain, "Work", directory, new[] { explicitApply }, _ => true, out _);
+        var applied = restored.Resolve(source.Source.Domain, "us.core/Work", directory, new[] { explicitApply }, _ => true, out _);
         var applyPlan = ResponseModulation.Resolve("p1", applied, facts, catalog.Responses);
-        var playerApply = ResponseModulation.Compose(1, 1, applyPlan, catalog.Audio[1].Participation, new Driver());
+        var playerApply = ResponseModulation.Compose(1, 1, applyPlan, audioInputs.Entries[1].Participation, new Driver());
         Check(playerApply.Valid && Math.Abs(playerApply.Pitch - 1.2) < .000001 && playerApply.Volume == .25,
             "S4 real player Apply overrides entry Skip after author parameters and enablement resolve");
         var invalidSource = new XmlDocument();
-        invalidSource.LoadXml("<declaration family='Pawn' target='Ratkin'><action key='Work'><response key='us.core/Age' enabled='true' participation='Apply'/></action></declaration>");
+        invalidSource.LoadXml("<declaration family='Pawn' target='Ratkin'><action key='us.core/Work'><response key='us.core/Age' enabled='true' participation='Apply'/></action></declaration>");
         bool rejectedParticipation = false;
         try
         {
@@ -131,9 +133,9 @@ internal static partial class Program
         Check(rejectedParticipation, "S4 author behavior source cannot declare a player participation override; field rejected explicitly");
         var player = new BehaviorValues { MoodEnabled = false };
         player.Participation["example/Response"] = false;
-        effective = restored.Resolve(source.Source.Domain, "Work", directory, new[] { player }, _ => true, out _);
+        effective = restored.Resolve(source.Source.Domain, "us.core/Work", directory, new[] { player }, _ => true, out _);
         plan = ResponseModulation.Resolve("p1", effective, facts, catalog.Responses);
-        result = ResponseModulation.Compose(2, 3, plan, catalog.Audio[0].Participation, new Driver());
+        result = ResponseModulation.Compose(2, 3, plan, audioInputs.Entries[0].Participation, new Driver());
         Check(result.Valid && Math.Abs(result.Pitch - 2.4) < .000001 && result.Volume == 1.5,
             "S4 player explicit Skip wins entry Apply independently of player disabling only mood");
         plan.Rules = Array.Empty<IUsResponseRule>();
@@ -144,7 +146,8 @@ internal static partial class Program
 
     private static void S4PackWeightHierarchy()
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         foreach (string key in new[] { "A", "B" })
         {
             var declaration = new VoicePackDeclaration { Race = "Ratkin" };
@@ -156,7 +159,7 @@ internal static partial class Program
                     Pitch = key == "A" ? 2 : 3, Volume = key == "A" ? .4 : .6
                 });
             }
-            Check(catalog.AddPack("weights", key, declaration, sound => "audio/" + sound), "S4 weighted ordinary declaration accepted");
+            Check(audioInputs.AddPack("weights", key, declaration, sound => "audio/" + sound), "S4 weighted ordinary declaration accepted");
         }
         foreach (var mode in new[] { UniversalSqueaker.Kernel.SelectionMode.Fallback, UniversalSqueaker.Kernel.SelectionMode.Remix })
         {
@@ -166,9 +169,9 @@ internal static partial class Program
             {
                 var input = Input(call: false);
                 input.SourceMode = mode;
-                input.Audio = catalog.Audio;
+                input.AudioCatalog = new AudioCatalog(audioInputs.Entries);
                 var driver = new Driver { Value = (index + .5) / 20 };
-                var result = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
+                var result = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
                 var request = driver.LastRequest!;
                 bool a = request.Audio.EntryKey.StartsWith("weights/A/", StringComparison.Ordinal);
                 selectedA += a ? 1 : 0;
@@ -185,10 +188,10 @@ internal static partial class Program
             + "<action>us.core/Work</action><sound>W</sound><weight>7</weight></li></entries></declaration>");
         var weighted = new VoicePackDeclaration();
         weighted.LoadDataFromXmlCustom(xml.DocumentElement!);
-        Check(catalog.AddPack("weights", "C", weighted, _ => "audio/C")
-            && catalog.Audio.Last().PackWeight == 3 && catalog.Audio.Last().Weight == 7,
+        Check(audioInputs.AddPack("weights", "C", weighted, _ => "audio/C")
+            && audioInputs.Entries.Last().PackWeight == 3 && audioInputs.Entries.Last().Weight == 7,
             "S4 ordinary XML keeps package weight separate from its entry variant weight");
-        Check(!catalog.AddPack("weights", "Invalid", new VoicePackDeclaration { Race = "Ratkin", Weight = double.NaN }, _ => "audio/W"),
+        Check(!audioInputs.AddPack("weights", "Invalid", new VoicePackDeclaration { Race = "Ratkin", Weight = double.NaN }, _ => "audio/W"),
             "S4 invalid package weight is rejected even when no enabled entries remain");
     }
 
@@ -202,12 +205,13 @@ internal static partial class Program
         pack.LoadDataFromXmlCustom(file.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
         var behavior = new BehaviorSourceDeclaration();
         behavior.LoadDataFromXmlCustom(file.SelectSingleNode("Defs/UniversalSqueaker.UsBehaviorSourceDef/declaration")!);
-        var catalog = new AuthorCatalog(120, 120, true);
-        Check(catalog.AddAction(action) && catalog.AddPack("example", "ResponseAudio", pack, name => "example/" + name),
+        var catalog = new DefinitionCatalog(120, 120, true);
+        var audioInputs = new AudioInputBuilder(catalog);
+        Check(catalog.AddAction(action) && audioInputs.AddPack("example", "ResponseAudio", pack, name => "example/" + name),
             "S4 real Responses.xml ordinary loaders assemble exact action, pack-local participation and calibrated entries");
         var input = Input();
         input.Actions = catalog.Actions;
-        input.Audio = catalog.Audio;
+        input.AudioCatalog = new AudioCatalog(audioInputs.Entries);
         var effective = behavior.Source.Contributions.Single(x => x.Action == "us.core/Work").Values;
         input.ActionModulation = new Dictionary<string, ModulationPlan>
         {
@@ -215,7 +219,7 @@ internal static partial class Program
                 { ["age.native"] = 1.2, ["age.nativeVolume"] = 1, ["mood.level"] = .9 }, catalog.Responses)
         };
         var driver = new Driver();
-        var outcome = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
+        var outcome = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
         Check(outcome.Receipt?.Result == PlaybackResult.Dispatched && driver.LastRequest?.Sustained == true
             && driver.Purposes.Count(x => x == RandomPurpose.ModulationJitter) == 1,
             "S4 real author file reaches selected sustained-shaped production request with one composed response/jitter pass");

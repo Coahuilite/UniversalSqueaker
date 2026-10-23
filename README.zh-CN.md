@@ -1,5 +1,7 @@
 # Universal Squeaker
 
+0.6 r2：[当前作者／配置合同](docs/us-kernel-0.6-refactor-zh.md)采用完整中立Core、同步单owner及明确通知声明。普通政策、原生与人工接受仍待完成。
+
 [English](./README.md) | **中文**
 
 RimWorld 1.6 通用语音包路由内核，源自 Squeaky Ratkin，采用 MPL-2.0 许可。
@@ -24,8 +26,8 @@ US 把第三方语音接入准确的种族/异种域，提供分层调音、心�
 
 从 [文档总入口](docs/README.md) 开始。这里区分 **保留0.5.x指南**与 **当前0.6.x接口及候选**。
 
-- [当前功能与设置](docs/current-behavior-0.5-zh.md)
-- [保留0.5 VoicePack作者指南](docs/voicepack-authoring-0.5-zh.md)
+- [当前功能与设置](docs/us-kernel-0.6-refactor-zh.md)
+- [当前0.6 r2作者指南](docs/us-kernel-0.6-authoring-zh.md)
 - [Kernel 0.6.x 首版规格](docs/us-kernel-0.6-spec-zh.md)
 - [构建与验证](docs/build-and-debug.md)
 - [发布流程](docs/release-runbook-zh.md)与[隐私门禁](docs/push-privacy-gate.md)

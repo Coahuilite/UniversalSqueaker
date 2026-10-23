@@ -4,7 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 namespace UniversalSqueaker;
 

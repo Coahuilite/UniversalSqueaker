@@ -35,8 +35,8 @@ public static class Scenarios
         Dictionary<string, string> keys = new(StringComparer.Ordinal);
         for (int i = 0; i < ActionKeyMirror.BuiltInCount; i++)
         {
-            SqueakAction action = (SqueakAction)i;
-            keys[ActionKey.For(action)!] = ActionKeyMirror.BuiltInFallbackKey(action);
+            string action = CoreActions.All[i];
+            keys[action!] = ActionKeyMirror.BuiltInFallbackKey(action);
         }
         return new BuiltInFallbackTable(new[]
         {
@@ -175,7 +175,7 @@ public static class Scenarios
                     new(new[] { EggPack + "_" + actionName + "_0" }, null, 1f),
                 };
             }
-            actions[actionName] = sets;
+            actions[ActionKeyMirror.FrozenId(actionName)] = sets;
         }
         return new VoicePackEntry(EggPack, RaceDomain, 4f, actions);
     }
@@ -192,7 +192,7 @@ public static class Scenarios
                 if (muteLast && s == soundCount - 1) key += "_Muted";
                 sounds.Add(key);
             }
-            actions[actionName] = new[] { new ActionSoundSet(sounds, null, 1f) };
+            actions[ActionKeyMirror.FrozenId(actionName)] = new[] { new ActionSoundSet(sounds, null, 1f) };
         }
         return new VoicePackEntry(packKey, domain, 1f, actions);
     }

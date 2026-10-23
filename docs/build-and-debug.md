@@ -28,13 +28,31 @@ pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '<fixed-r
 
 CI/release still acquire the published 0.7 carrier, which is not a usable input for this 0.8 consumer. The maintainer must arrange an available fixed 0.8 release before updating that acquisition pin; no new tag or asset is assumed here.
 
+## Isolated candidates and the r2 boundaries
+
+For a task that must preserve existing build/stage directories, pass independent `BaseIntermediateOutputPath`, `MSBuildProjectExtensionsPath` and `OutputPath` to MSBuild. Pass the same isolation roots through nested stub builds; keep `TEMP`, `TMP`, `DOTNET_CLI_HOME` and NuGet caches inside the authorized task output. In a process that must not generate development certificates, set `DOTNET_GENERATE_ASPNET_CERTIFICATE=false` before starting dotnet.
+
+The standard staging engine also accepts an explicit isolated DLL without changing existing channel defaults:
+
+```powershell
+pwsh -NoProfile -File scripts/stage-package.ps1 `
+  -StageDir 'dist/<candidate>/UniversalSqueaker' `
+  -VersionLabel '<candidate-label>' -CommitLabel '<source-commit>' `
+  -BuildFlavor dev -PayloadDllPath '<isolated-output>/UniversalSqueaker.dll' `
+  -FerriteLibArtifactPath $carrier
+```
+
+`-RequireReleaseIdentity` additionally requires a Release carrier and publishable version identity. Compiling a Release US DLL against a fixed Dev carrier is a technical build, not a publishable paired release. No install or publication follows from staging.
+
+The [r2 contract](us-kernel-0.6-refactor-zh.md) and [author guide](us-kernel-0.6-authoring-zh.md) describe the breaking declaration/configuration boundary. `UniversalSqueakerRefactorCoreTests` compiles the **whole production Core** without a platform reference or game double. `UniversalSqueakerDomainAdapterTests` checks the production configuration/domain adapter separately. AudioBinding tests exercise production callers/output with explicit platform doubles; SettingsMigration and Reset exercise production settings/ExposeData/atomic files with **Scribe doubles**. None proves native Scribe or real game Config.
+
 ## What verification covers
 
 The current `scripts/verify-local.ps1` defines 31 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases.
 
 Gate 15 scans the payload and Host against the explicit 0.8 platform doubles in `tools/FerriteLib08.Stubs`, built into `dist/fl08-migration-a001/stubs/<Configuration>`. Gate 16 retains the archived 0.7 snapshot integrity check; it does not certify the new 0.8 runtime. The producer and its held package are never build targets.
 
-Pure logic, runtime doubles and native game behavior are different evidence. A live Host does not prove a widget executed rather than entered recovery; assert the actual affected output and write chain.
+The gate list is an entry point, not a claim that an arbitrary candidate has passed all 31 gates. Reuse evidence only while its inputs remain applicable, and record focused modes' actual arguments and assertion output. Pure logic, runtime doubles and native game behavior are different evidence. A live Host does not prove a widget executed rather than entered recovery; assert the actual affected output and write chain.
 
 ## Focused game verification
 

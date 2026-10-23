@@ -13,7 +13,7 @@ public interface IUsKernelOverlaySource
     /// <summary>
     /// Player-facing toggle. The single source of truth is the settings value
     /// (<see cref="SqueakDebug.ShowCameraIndicator"/>, kept in sync by
-    /// <see cref="UniversalSqueakerSettings.SetCameraIndicator"/>).
+    /// <see cref="GameSettings.SetCameraIndicator"/>).
     /// </summary>
     bool IndicatorEnabled { get; }
 

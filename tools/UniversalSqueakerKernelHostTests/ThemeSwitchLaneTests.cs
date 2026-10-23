@@ -264,7 +264,7 @@ internal static class ThemeSwitchLaneTests
     }
     /// <summary>
     /// CORRECTIONS-R3: the action chain on the REAL production pair - a real
-    /// <see cref="UniversalSqueakerSettings"/> behind a real <see cref="UsKernelSettingsSource"/>
+    /// <see cref="GameSettings"/> behind a real <see cref="UsKernelSettingsSource"/>
     /// on a real <see cref="UsKernelSettingsHost"/> (the Create path performs the production
     /// AttachHost/AttachRevisionSource wiring itself). The press is the declarative one -
     /// "set-ui-swatch" with the button's own -value payload - so it runs source.SetUiSwatch ->
@@ -279,7 +279,7 @@ internal static class ThemeSwitchLaneTests
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try
         {
-            var settings = new UniversalSqueakerSettings();
+            var settings = new GameSettings();
             var source = new UsKernelSettingsSource(settings);
             using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Advanced");
@@ -745,7 +745,7 @@ internal static class ThemeSwitchLaneTests
 
     private static Color AnomalyTextPrimary => Hex(Role(UsSwatches.Resolve("anomaly"), "Foreground"));
 
-    private static UniversalSqueakerSettings NewSettings() => new UniversalSqueakerSettings();
+    private static GameSettings NewSettings() => new GameSettings();
 
     private static string Role(UsSwatch swatch, string token)
     {

@@ -29,8 +29,8 @@ internal static partial class Program
         string path = Path.Combine(folder, "settings.xml");
         void Serialize(string file) => SafeSaver.Save(file, "SettingsBlock", () => { var value = settings; Scribe_Deep.Look(ref value, "ModSettings"); });
         bool Save() => settings.TryWriteBehaviorCandidate(path, settings.behaviorSourcesXml, Serialize, out _);
-        UniversalSqueakerSettings Reload() {
-            UniversalSqueakerSettings value = null!; Scribe.loader.InitLoading(path); Scribe_Deep.Look(ref value, "ModSettings"); Scribe.loader.FinalizeLoading(); return value;
+        GameSettings Reload() {
+            GameSettings value = null!; Scribe.loader.InitLoading(path); Scribe_Deep.Look(ref value, "ModSettings"); Scribe.loader.FinalizeLoading(); return value;
         }
         try
         {
@@ -75,7 +75,7 @@ internal static partial class Program
                 new BehaviorValues { SelectRequireAwake = true }, Save, out _), "DC Select Pawn parameters reject NonPawn rather than impose a hidden gate", ref failures);
             var unrelated = settings.CaptureBehaviorConfiguration().Resolve(domain, "vendor/IndependentSelect", new BehaviorValues(), directory, _ => true);
             Check(!unrelated.Paused && !SelectPolicy.HasParameters(unrelated.Read()), "DC Select parent parameters do not leak into independent/child full ActionId", ref failures);
-            var relaxed = new BehaviorConfigurationSnapshot("", new[] { new BehaviorPlayerOverride("Pawn", "", "", "", "us.core/Select",
+            var relaxed = new BehaviorConfiguration("", new[] { new BehaviorPlayerOverride("Pawn", "", "", "", "us.core/Select",
                 new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false }) }, true, 1, 1);
             Check(!relaxed.Resolve(domain, "us.core/Select", SelectPolicy.OfficialDefaults, directory, _ => false).Paused,
                 "DC Select unselected optional qualifications add no implementation dependency", ref failures);

@@ -29,8 +29,8 @@ internal static partial class Program
         foreach (var source in sources)
             Check(settings.TryChangeBehaviorSource(source.Domain, source.Id, directory, _ => true, out _),
                 "DA bind exact source " + source.Id, ref failures);
-        settings.SetActionTuningScope(ordinary, "", "", SqueakActionScope.Disabled);
-        settings.SetActionTuningScope(child, "Ratkin", "", SqueakActionScope.AnyOccurrence);
+        settings.SetActionTuningScope(ordinary, "", "", BehaviorScope.Disabled);
+        settings.SetActionTuningScope(child, "Ratkin", "", BehaviorScope.AnyOccurrence);
         settings.ReplaceResponseTuning(child, "Ratkin", "",
             new[] { new ResponseTuningValue { key = "us.core/Age", hasEnabled = true, enabled = false } },
             new[] { new ResponseParameterValue { key = "age.overrideVolume", value = 0 } });
@@ -47,10 +47,18 @@ internal static partial class Program
             var missing = new BehaviorSourceDirectory(Array.Empty<BehaviorSource>());
             var plain = loaded.ResolveBehaviorSource(race, ordinary, missing, _ => true, out bool paused);
             var injured = loaded.ResolveBehaviorSource(race, child, missing, _ => true, out _);
-            Check(!paused && plain.Enabled == false && plain.Volume == 0 && injured.Enabled == true
+            Check(!paused && plain.Enabled == true && plain.Scope == BehaviorScope.Disabled && plain.Volume == 0 && injured.Enabled == true
                 && injured.Volume == .25 && injured.HardIntervalTicks == 50 && injured.AgeEnabled == false
                 && injured.ResponseParameters["age.overrideVolume"] == 0,
                 "DA actual Scribe reload preserves separate full actions, author snapshot and player false/zero", ref failures);
+            var configuration = loaded.CaptureBehaviorConfiguration();
+            Check(!UniversalSqueaker.Responses.BehaviorContract.Authorized(configuration,
+                    configuration.Resolve(race, ordinary, new BehaviorValues(), missing, _ => true), plain,
+                    new UniversalSqueaker.Responses.ResponseFrame { Eligible = true })
+                && UniversalSqueaker.Responses.BehaviorContract.Authorized(configuration,
+                    configuration.Resolve(race, child, new BehaviorValues(), missing, _ => true), injured,
+                    new UniversalSqueaker.Responses.ResponseFrame { Eligible = true }),
+                "DA disabled scope blocks actual core authorization without synthesizing an explicit Enabled field or disabling the child", ref failures);
             foreach (var target in new[] { armor, bench })
             {
                 var value = loaded.ResolveBehaviorSource(target, ordinary, missing, _ => true, out paused);
@@ -62,7 +70,7 @@ internal static partial class Program
             injured = loaded.ResolveBehaviorSource(race, child, missing, _ => true, out _);
             Check(injured.Volume == .25 && injured.ResponseParameters.Count == 0 && injured.AgeEnabled == null
                 && loaded.behaviorSourcesXml == sourceBytes
-                && loaded.ResolveBehaviorSource(race, ordinary, missing, _ => true, out _).Enabled == false,
+                && loaded.ResolveBehaviorSource(race, ordinary, missing, _ => true, out _).Scope == BehaviorScope.Disabled,
                 "DA exact child reset clears only its player fields; parent/source intent and snapshots survive", ref failures);
         }
         finally { Directory.Delete(folder, true); }

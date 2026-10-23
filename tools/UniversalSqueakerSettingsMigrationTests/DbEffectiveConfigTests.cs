@@ -27,9 +27,9 @@ internal static partial class Program
         string path = Path.Combine(folder, "settings.xml");
         void Serialize(string stage) => SafeSaver.Save(stage, "SettingsBlock", () => { var value = settings; Scribe_Deep.Look(ref value, "ModSettings"); });
         bool Save() => settings.TryWriteBehaviorCandidate(path, settings.behaviorSourcesXml, Serialize, out _);
-        UniversalSqueakerSettings Reload()
+        GameSettings Reload()
         {
-            UniversalSqueakerSettings result = null!;
+            GameSettings result = null!;
             Scribe.loader.InitLoading(path); Scribe_Deep.Look(ref result, "ModSettings"); Scribe.loader.FinalizeLoading();
             return result;
         }
@@ -52,7 +52,7 @@ internal static partial class Program
                 "DB sparse Race and legal Xeno save independently", ref failures);
             var next = Reload().CaptureBehaviorConfiguration();
             var resolved = next.Resolve(child, "us.core/Eat", defaults, directory, _ => true);
-            Check(next.Id != captured.Id && resolved.Read().Volume == .4 && resolved.Read().Enabled == false
+            Check(!ReferenceEquals(next, captured) && resolved.Read().Volume == .4 && resolved.Read().Enabled == false
                 && resolved.Read().Phase == EatPhase.Execution && resolved.Dependencies.SequenceEqual(new[] { EatPolicy.Execution, EatPolicy.Drug, EatPolicy.Nutrition }.OrderBy(x => x, StringComparer.Ordinal)),
                 "DB production ExposeData + atomic file + Scribe double restore every field/presence and selected dependencies", ref failures);
             Check(captured.Resolve(child, "us.core/Eat", defaults, directory, _ => true).Read().Volume == 0,
@@ -83,21 +83,23 @@ internal static partial class Program
             Check(!settings.TryChangeBehaviorOverride("NonPawn", n1.Namespace, n1.Target, "", "example/Signal",
                 new BehaviorValues { Phase = EatPhase.Execution }, Save, out _), "DB explicit Pawn-only NonPawn contribution rejected, not silently omitted", ref failures);
             settings.voicePackMode = SqueakVoicePackMode.Disabled; settings.globalVolumeFactor = 0;
+            settings.PublishBehaviorConfiguration();
             var off = settings.CaptureBehaviorConfiguration();
             Check(!off.SystemEnabled && off.SystemVolume == 0, "DB system enabled/G remain outside overridable domain fold", ref failures);
             settings.actionTuning.Add(new ActionTuningRecord { actionKey = "example/Bad", raceDefName = race.Target, hasEatPhase = true, eatPhase = (EatPhase)99 });
+            settings.PublishBehaviorConfiguration();
             Check(settings.CaptureBehaviorConfiguration().Resolve(race, "example/Bad", defaults, directory, _ => true).Paused,
                 "DB illegal explicit enum retained as paused invalid input, never omission/default", ref failures);
             Check(settings.CaptureBehaviorConfiguration().Resolve(race, "example/Unrelated", new BehaviorValues(), directory, _ => true).Paused == false,
                 "DB bad action does not pause independent configuration", ref failures);
-            settings.ResetActionTuningRow("Eat", child.Target, child.Child);
+            settings.ResetActionTuningRow("us.core/Eat", child.Target, child.Child);
             Check(settings.CaptureBehaviorConfiguration().Resolve(child, "us.core/Eat", defaults, directory, _ => true).Read().Phase == EatPhase.WholeProcess,
                 "DB legacy visible Eat row reset clears canonical full-ActionId Xeno fields, preserving author/player-parent fold", ref failures);
-            settings.actionTuning.Add(new ActionTuningRecord { actionKey = "example/Legacy", raceDefName = race.Target,
-                hasProbabilityMultiplier = true, probabilityMultiplier = .5f, sourcePresetDefName = "OriginalPreset" });
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", race.Target, "", "example/Legacy", new BehaviorValues { Volume = .2 }, Save, out _)
-                && settings.actionTuning.Any(x => x.actionKey == "example/Legacy" && x.hasProbabilityMultiplier && x.probabilityMultiplier == .5f && x.sourcePresetDefName == "OriginalPreset"),
-                "DB new behavior transaction preserves numeric/provenance fields still consumed by retained callers", ref failures);
+            settings.actionTuning.Add(new ActionTuningRecord { actionKey = "example/Retained", raceDefName = race.Target,
+                hasPitch = true, pitch = .5, sourcePresetDefName = "OriginalPreset" });
+            Check(settings.TryChangeBehaviorOverride("Pawn", "", race.Target, "", "example/Retained", new BehaviorValues { Volume = .2 }, Save, out _)
+                && settings.actionTuning.Any(x => x.actionKey == "example/Retained" && !x.hasPitch && x.hasVolume && x.volume == .2 && x.sourcePresetDefName == "OriginalPreset"),
+                "DB complete sparse-row replacement restores omitted fields to inheritance and preserves the separate template reset anchor", ref failures);
             settings.ResetActionTuningArea("", "");
             Check(settings.actionTuning.Count(x => x.serviceFamily == "NonPawn") == 2,
                 "DB Pawn profile reset cannot remove either NonPawn namespace's own rows", ref failures);

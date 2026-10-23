@@ -14,12 +14,10 @@
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
 
-  <!-- 纯度门：内核编译集 = Source/UniversalSqueaker/Kernel/*.cs（零 Verse 依赖）。
-       另链接漏斗纯文件（执行层纯逻辑）只为纯度门；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
+  <!-- The entire production Core is linked without platform references or doubles.
+       Selector corpus/golden files remain frozen; historical labels are converted only at their fixture boundary. -->
   <ItemGroup>
-    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\*.cs" Link="Kernel\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\*.cs" Link="Pure\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Runtime\VerseEventBinding.cs" Link="Runtime\VerseEventBinding.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Production/Core/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

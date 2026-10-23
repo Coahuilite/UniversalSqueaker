@@ -40,12 +40,12 @@ namespace UniversalSqueaker
     }
 
     /// <summary>Characterization stub: the store reads the permanent packageId from the mod class.</summary>
-    public class UniversalSqueakerMod
+    public class SqueakerMod
     {
         public const string PackageId = "coahuilite.universalsqueaker";
         // The harness installs an instance so QueuePersistence() reaches the counting stub
-        // (production code path is identical: UniversalSqueakerMod.Instance?.QueueSettingsSave()).
-        public static UniversalSqueakerMod Instance = new UniversalSqueakerMod();
+        // (production code path is identical: SqueakerMod.Instance?.QueueSettingsSave()).
+        public static SqueakerMod Instance = new SqueakerMod();
 
         public void QueueSettingsSave() => UniversalSqueaker.Probe.SaveQueuedCount++;
     }
@@ -83,7 +83,7 @@ namespace UniversalSqueaker
     {
         public static SqueakXenotypeCatalogSnapshot Current { get; } = new SqueakXenotypeCatalogSnapshot();
 
-        public static void Refresh(UniversalSqueakerSettings settings)
+        public static void Refresh(GameSettings settings)
         {
         }
     }
@@ -95,12 +95,12 @@ namespace UniversalSqueaker
 
     public static class SqueakRuntimeResolver
     {
-        public static void NotifyDiscreteResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
+        public static void NotifyDiscreteResolverChange(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog)
         {
             UniversalSqueaker.Probe.DiscreteNotifyCount++;
         }
 
-        public static void NotifyContinuousResolverChange(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
+        public static void NotifyContinuousResolverChange(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog)
         {
             UniversalSqueaker.Probe.ContinuousNotifyCount++;
         }

@@ -1,0 +1,14 @@
+<Defs>
+  <UniversalSqueaker.UsNotificationDef>
+    <defName>US_ExampleFinishedNotification</defName>
+    <actionId>example.worker/XmlFinished</actionId>
+    <intervalTicks>120</intervalTicks>
+  </UniversalSqueaker.UsNotificationDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleFinishedVoice</defName>
+    <declaration>
+      <family>Pawn</family><target>Human</target>
+      <entries><li><key>finished</key><action>example.worker/XmlFinished</action><sound>Click</sound></li></entries>
+    </declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

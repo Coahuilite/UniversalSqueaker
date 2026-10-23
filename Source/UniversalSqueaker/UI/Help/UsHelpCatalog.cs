@@ -174,17 +174,9 @@ internal static class UsHelpCatalog
                     "US.Help.BasicTuning.Egg.Label",
                     "US.Help.BasicTuning.Egg.Text"),
                 new HelpItem(
-                    "us/basic-tuning/scale-cooldown",
-                    "US.Help.BasicTuning.ScaleCooldown.Label",
-                    "US.Help.BasicTuning.ScaleCooldown.Text"),
-                new HelpItem(
                     "us/basic-tuning/scale-talking",
                     "US.Help.BasicTuning.ScaleTalking.Label",
                     "US.Help.BasicTuning.ScaleTalking.Text"),
-                new HelpItem(
-                    "us/basic-tuning/scale-population",
-                    "US.Help.BasicTuning.ScalePopulation.Label",
-                    "US.Help.BasicTuning.ScalePopulation.Text"),
                 // Independent phase and item filters; none depends on another control's visibility.
                 new HelpItem(
                     "us/basic-tuning/eat-phase",
@@ -197,21 +189,10 @@ internal static class UsHelpCatalog
                 new HelpItem("us/basic-tuning/eat-drug", "US.Help.BasicTuning.EatDrug.Label", "US.Help.BasicTuning.EatDrug.Text"),
                 new HelpItem("us/basic-tuning/select", "US.Help.Select.Label", "US.Help.Select.Text"),
             }),
-        ["us/timing"] = new HelpSection(
-            "us/timing",
-            "US.Section.TriggerTiming",
-            "US.Help.Timing.Overview",
-            new[]
-            {
-                new HelpItem(
-                    "us/timing/interval",
-                    "US.Help.Timing.Interval.Label",
-                    "US.Help.Timing.Interval.Text"),
-                new HelpItem(
-                    "us/timing/multiplier",
-                    "US.Help.Timing.Multiplier.Label",
-                    "US.Help.Timing.Multiplier.Text"),
-            }),
+        ["us/timing"] = new HelpSection("us/timing", "US.Section.TriggerTiming", "US.Help.Timing.Overview", new[]
+        {
+            new HelpItem("us/timing/policy", "US.Section.TriggerTiming", "US.Help.Timing.Overview"),
+        }),
         ["us/camera-indicator"] = new HelpSection(
             "us/camera-indicator",
             "US.Section.InWorldIndicator",
@@ -290,60 +271,16 @@ internal static class UsHelpCatalog
                     "US.Reset.Area",
                     "US.Help.ResetArea.Button.Text"),
             }),
-        ["us/scope-tree"] = new HelpSection(
-            "us/scope-tree",
-            "US.Section.LayeredTuning",
-            "US.Help.ScopeTree.Overview",
-            new[]
-            {
-                new HelpItem(
-                    "us/scope-tree/layer",
-                    "US.Tuning.Layer",
-                    "US.Help.ScopeTree.Layer.Text"),
-                new HelpItem(
-                    "us/scope-tree/domain",
-                    "US.Tuning.Domain",
-                    "US.Help.ScopeTree.Domain.Text"),
-                new HelpItem(
-                    "us/scope-tree/action-scope",
-                    "US.Tuning.ActionScope",
-                    "US.Help.ScopeTree.ActionScope.Text"),
-                new HelpItem(
-                    "us/scope-tree/mood-tuning",
-                    "US.Tuning.MoodTuning",
-                    "US.Help.ScopeTree.MoodTuning.Text"),
-                new HelpItem(
-                    "us/scope-tree/auto",
-                    "US.Help.ScopeTree.Auto.Label",
-                    "US.Help.ScopeTree.Auto.Text"),
-                // The two mood reset controls: the first two entries explain the actions, the four
-                // below carry the reason sentence for each unavailable state (flags / source / preset
-                // resolution - never row existence).
-                new HelpItem(
-                    "us/scope-tree/mood-reset-default",
-                    "US.Tuning.ResetToDefault",
-                    "US.Help.ScopeTree.ResetDefault.Text"),
-                new HelpItem(
-                    "us/scope-tree/mood-reset-preset",
-                    "US.Tuning.ResetToPreset",
-                    "US.Help.ScopeTree.ResetPreset.Text"),
-                new HelpItem(
-                    "us/scope-tree/mood-reset-no-local",
-                    "US.Tuning.ResetToDefault",
-                    "US.Tuning.ResetToDefault.Reason.NoLocal"),
-                new HelpItem(
-                    "us/scope-tree/mood-reset-not-from-preset",
-                    "US.Tuning.ResetToPreset",
-                    "US.Tuning.ResetToPreset.Reason.NotFromPreset"),
-                new HelpItem(
-                    "us/scope-tree/mood-reset-preset-missing",
-                    "US.Tuning.ResetToPreset",
-                    "US.Tuning.ResetToPreset.Reason.PresetMissing"),
-                new HelpItem(
-                    "us/scope-tree/mood-reset-preset-no-entry",
-                    "US.Tuning.ResetToPreset",
-                    "US.Tuning.ResetToPreset.Reason.NoEntry"),
-            }),
+        ["us/scope-tree"] = new HelpSection("us/scope-tree", "US.Section.LayeredTuning", "US.Help.ScopeTree.Overview", new[]
+        {
+            new HelpItem("us/scope-tree/layer", "US.Tuning.Layer", "US.Help.ScopeTree.Layer.Text"),
+            new HelpItem("us/scope-tree/domain", "US.Tuning.Domain", "US.Help.ScopeTree.Domain.Text"),
+            new HelpItem("us/scope-tree/action-scope", "US.Tuning.ActionScope", "US.Help.ScopeTree.ActionScope.Text"),
+            new HelpItem("us/scope-tree/auto", "US.Help.ScopeTree.Auto.Label", "US.Help.ScopeTree.Auto.Text"),
+            new HelpItem("us/scope-tree/response-details", "US.Tuning.Area.Mood", "US.Help.ScopeTree.ResponseDetails.Text"),
+            new HelpItem("us/scope-tree/reset-default", "US.Reset.Row", "US.Help.ScopeTree.ResetDefault.Text"),
+            new HelpItem("us/scope-tree/reset-preset", "US.Tuning.ResetToPreset", "US.Help.ScopeTree.ResetPreset.Text"),
+        }),
         ["us/preset-list"] = new HelpSection(
             "us/preset-list",
             "US.Section.DefBaselines",

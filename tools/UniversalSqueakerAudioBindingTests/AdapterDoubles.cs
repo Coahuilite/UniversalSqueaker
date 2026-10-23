@@ -223,7 +223,6 @@ namespace UniversalSqueaker
 }
 namespace UniversalSqueaker
 {
-    public enum SqueakVoicePackMode { Fallback, Remix, Vanilla, Disabled }
     public sealed class UniversalSqueakerFallbackProfileDef : Verse.Def
     {
         public string raceDefName = "";
@@ -247,42 +246,12 @@ namespace UniversalSqueaker
     {
         public static UniversalSqueaker.Kernel.BuiltInFallbackTable? Current;
     }
-    public sealed class SqueakVoicePackDef : Verse.Def
-    {
-        internal bool IsKernelDeclaration;
-        internal IReadOnlyList<string> KernelActionKeys = Array.Empty<string>();
-        public SqueakVoicePackScope scope;
-        public string raceDefName = "";
-        public string targetDefName = "";
-        public float weight = 1;
-        public string FixturePackKey = "";
-        public List<SqueakVoicePackAction> actions = new();
-        public List<SqueakVoicePackFallback> fallbacks = new();
-        public bool TryGetPackKey(out string key)
-        {
-            key = FixturePackKey.Length == 0 ? modContentPack!.PackageId + ":" + defName : FixturePackKey;
-            return true;
-        }
-    }
-    public enum SqueakVoicePackScope { Unspecified, Race, Xenotype }
-    public sealed class SqueakVoicePackAction
-    {
-        public SqueakAction action;
-        public UniversalSqueaker.Kernel.AgeBucket? ageTag;
-        public bool IsEgg;
-        public List<Verse.SoundDef> sounds = new();
-    }
-    public sealed class SqueakVoicePackFallback
-    {
-        public SqueakAction action;
-        public Verse.SoundDef? sound;
-    }
     public sealed class SqueakXenotypeCatalogSnapshot
     {
         public List<string> RaceDefNames = new();
-        public List<SqueakVoicePackDef> RacePacks = new();
-        public Dictionary<string, IReadOnlyList<SqueakVoicePackDef>> XenotypePacksByDefName = new();
-        public Dictionary<string, SqueakVoicePackDef> PackByKey = new();
+        public List<VoicePackInfo> RacePacks = new();
+        public Dictionary<string, IReadOnlyList<VoicePackInfo>> XenotypePacksByDefName = new();
+        public Dictionary<string, VoicePackInfo> PackByKey = new();
     }
     public enum SqueakSoundSource { None, XenotypePack, RacePack, Vanilla }
     public readonly struct SqueakSoundChoice
@@ -359,16 +328,6 @@ namespace UniversalSqueaker
     {
         public static bool EatPrecisionEnabled, EatPrecisionIncludeDrugs;
         public static float GlobalVolumeFactor = 1;
-    }
-}
-
-namespace UniversalSqueaker
-{
-    public sealed class SqueakMoodMod
-    {
-        public SqueakMood mood;
-        public float pitchFactor, volumeFactor;
-        public Verse.FloatRange pitchJitter;
     }
 }
 

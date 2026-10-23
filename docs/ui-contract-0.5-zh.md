@@ -1,6 +1,6 @@
-# 0.5.x 设置与诊断 UI 契约
+# 0.6 r2 设置与诊断 UI 契约
 
-当前事实核对于 2026-10-18。页面功能见 [当前设置](current-behavior-0.5-zh.md)；本文给维护者说明写入、布局和主题边界。
+当前读模型切换核对于2026-10-24；新UI/UX方案未定稿。页面功能见 [当前设置](us-kernel-0.6-refactor-zh.md)；本文给维护者说明写入、布局和主题边界。
 
 ## 一个生产 Host，不保留旧页面 fallback
 
@@ -18,13 +18,13 @@ FerriteLib 负责通用 Host/session、布局、原生输入及控件；US 负�
 
 ## 类型化值不通过标签往返
 
-动作范围下拉使用 `UiChoice<SqueakActionScope?>`；Auto 的值是真正的 `null`，不是空字符串。提交 `UsScopeWrite`，不把翻译标签或 `ToString()` 再解析成业务值。域下拉同样携带 `UsTuningDomainSelection`，不拼接后拆分域字符串。
+动作范围下拉使用 `UiChoice<BehaviorScope?>`；Auto 的值是真正的 `null`，不是空字符串。提交 `UsScopeWrite`，不把翻译标签或 `ToString()` 再解析成业务值。域下拉同样携带 `UsTuningDomainSelection`，不拼接后拆分域字符串。
 
 预设卡片的 Race/Xenotype 行复用 FerriteLib `UiRowBand.Measure/Draw`。正文点击与复选动作分别绑定自身对象；层级缩进只施加一次，测量与绘制使用相同行高。Xenotype 图标由 Verse 适配器解析，UI Kernel 只接收可空图像；缺 DLC/Def/图像时不制造替代身份。
 
 ## 主题只有颜色权限
 
-US 拥有完整角色色表，定义于 `Themes/UsSwatches.cs`；六组为 Core、Royalty、Biotech、Ideology、Anomaly、Odyssey，默认 Core。每组声明当前 24 个颜色角色，不从已退役的 DarkGold 模板继承产品外观。
+US 拥有完整角色色表，定义于 `Themes/UsSwatches.cs`；六组为 Core、Royalty、Biotech、Ideology、Anomaly、Odyssey，默认 Core。每组声明当前30个明确语义颜色角色，不从已退役的 DarkGold 模板继承产品外观。
 
 - 更换 swatch 更新页面主题与公共 chrome，走 `ColourRevision`，不改变字体、密度或 `LayoutRevision`。
 - 滚动、焦点、弹层及编辑状态不是主题重置项。
@@ -47,3 +47,7 @@ US 拥有完整角色色表，定义于 `Themes/UsSwatches.cs`；六组为 Core�
 2026-10-09 交互检查点已有维护者接受记录；之后 2026-10-14/15 的总览目录、五工作区及三组主题改动不能自动继承该结论。2026-10-15 主题证据仍缺：选中绘制与目标节点的唯一关联、实际编辑 glyph/承托底、焦点与真实相邻底的对比、全部正文对比。真实 1.6 游戏和用户外观偏好也仍待验证。
 
 不要把 UI 的初始窗口尺寸与游戏屏幕下限混为一谈；旧文档里的 800×600 实机基线已废止。布局 probe 只是该尺寸的布局测试。
+
+## 当前配置读面
+
+Scope能力与默认值只由canonical BuiltInPawnContracts提供，UI表只持标签。当前响应详情复用实际配置折叠的值、按字段来源、依赖和局部暂停；模板身份只是恢复目标。旧Timing／概率／四档心情表没有当前消费者，原控件及死Help条目已退休；新响应参数仍可由来源、模板及公开设置方法表达。空Race／Xenotype目标拒绝Eat、Select与scope写入，不能误写profile。诊断只展示最后真实决策／收据和截止，未采样的可播放性保持未定。完整配置／保存合同见[r2导读](us-kernel-0.6-refactor-zh.md)。

@@ -16,14 +16,14 @@ internal static partial class Program
         Directory.CreateDirectory(folder);
         GenFilePaths.ConfigFolderPath = folder;
         var settings = NewSettings();
-        UniversalSqueakerMod.Settings = settings;
-        var mod = new UniversalSqueakerMod(new ModContentPack { FolderName = "US-Fixture" });
+        SqueakerMod.Settings = settings;
+        var mod = new SqueakerMod(new ModContentPack { FolderName = "US-Fixture" });
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var a = new BehaviorSource { Id = "author.a/Def", Domain = domain, Contributions = new List<BehaviorContribution>
-            { new() { Action = "Work", Values = new BehaviorValues { Enabled = false } } } };
+            { new() { Action = "us.core/Work", Values = new BehaviorValues { Enabled = false } } } };
         var b = a.Copy(); b.Id = "author.b/Def";
-        UsOneShotRuntime.BehaviorSources = new BehaviorSourceDirectory(new[] { a, b });
-        string path = Path.Combine(folder, "Mod_US-Fixture_UniversalSqueakerMod.xml");
+        SqueakerRuntime.BehaviorSources = new BehaviorSourceDirectory(new[] { a, b });
+        string path = Path.Combine(folder, "Mod_US-Fixture_SqueakerMod.xml");
         Mod.BaseWrites = 0;
         try
         {
@@ -31,7 +31,7 @@ internal static partial class Program
             Check(mod.IsSettingsDirty && mod.SaveQueueRequestCount == 1, "caller: ordinary production setter queues original generation", ref failures);
             Check(mod.ChangeBehaviorSource(domain, a.Id, out string failure) && failure == "", "caller: actual Mod source operation stages and commits entire SettingsBlock", ref failures);
             long writes = mod.PhysicalSaveCount;
-            Check(writes == 1 && !mod.IsSettingsDirty && mod.SaveState == UniversalSqueakerMod.SettingsSaveState.Saved,
+            Check(writes == 1 && !mod.IsSettingsDirty && mod.SaveState == SettingsSaveState.Saved,
                 "caller: source commit confirms included ordinary generation and final save state", ref failures);
             mod.WriteSettings();
             Check(mod.PhysicalSaveCount == writes && Mod.BaseWrites == 0,
@@ -57,33 +57,33 @@ internal static partial class Program
             Mod.FailWrite = true;
             mod.WriteSettings();
             Mod.FailWrite = false;
-            Check(mod.SaveState == UniversalSqueakerMod.SettingsSaveState.Failed && mod.IsSettingsDirty,
+            Check(mod.SaveState == SettingsSaveState.Failed && mod.IsSettingsDirty,
                 "caller: original serializer failure retains its ordinary generation", ref failures);
             Check(mod.ChangeBehaviorSource(domain, b.Id, out _) && !mod.IsSettingsDirty
-                && mod.SaveState == UniversalSqueakerMod.SettingsSaveState.Saved,
+                && mod.SaveState == SettingsSaveState.Saved,
                 "caller: successful source serialization consumes covered Failed generation and clears stale Failed state", ref failures);
 
             settings.SetGlobalVolume(.65f);
             ScribeSaver.BeforeFinalize = () => settings.SetGlobalVolume(.7f);
             Check(mod.ChangeBehaviorSource(domain, a.Id, out _) && mod.IsSettingsDirty
-                && mod.SaveState == UniversalSqueakerMod.SettingsSaveState.Saving,
+                && mod.SaveState == SettingsSaveState.Saving,
                 "caller: source commit only acknowledges captured generation, preserves edit queued during serialization", ref failures);
             long beforeLaterFlush = mod.PhysicalSaveCount;
             mod.WriteSettings();
             var saved = new System.Xml.XmlDocument();
             saved.Load(path);
-            float savedVolume = float.Parse(saved.SelectSingleNode("SettingsBlock/ModSettings/globalVolumeFactor")!.InnerText,
+            float savedVolume = float.Parse(saved.SelectSingleNode("SettingsBlock/ModSettings/outputVolume")!.InnerText,
                 System.Globalization.CultureInfo.InvariantCulture);
             Check(mod.PhysicalSaveCount == beforeLaterFlush + 1 && !mod.IsSettingsDirty && Math.Abs(savedVolume - .7f) < .0001f,
                 "caller: reentrant later generation is saved once by original framework queue", ref failures);
 
-            SqueakRuntimeResolver.FailDiscrete = true;
+            GameRuntime.FailPublish = true;
             Check(mod.ChangeBehaviorSource(domain, b.Id, out string publishFailure)
                 && publishFailure == "Committed:RuntimePublishFailed:InvalidOperationException"
                 && BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain).SourceId == b.Id
                 && File.ReadAllText(path).Contains("author.b/Def"),
                 "caller: post-commit runtime failure reports committed truth and keeps committed memory/file", ref failures);
-            SqueakRuntimeResolver.FailDiscrete = false;
+            GameRuntime.FailPublish = false;
             long committedWrites = mod.PhysicalSaveCount;
             mod.WriteSettings();
             Check(mod.PhysicalSaveCount == committedWrites && !mod.IsSettingsDirty,
@@ -110,9 +110,9 @@ internal static partial class Program
         finally
         {
             ScribeSaver.BeforeFinalize = null;
-            SqueakRuntimeResolver.FailDiscrete = false;
+            GameRuntime.FailPublish = false;
             Mod.FailWrite = false;
-            UniversalSqueakerMod.Instance = null;
+
             GenFilePaths.ConfigFolderPath = originalDirectory;
             Directory.Delete(folder, true);
         }

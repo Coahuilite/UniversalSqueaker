@@ -114,8 +114,7 @@ public static class SqueakDiagnosticsOverlay
     }
 
     /// <summary>The single readiness rule shared by the mark color, the header badge, and the summary row.</summary>
-    internal static bool ReadyFor(SqueakDiagnosticSnapshot s) => s.EffectiveTimingReady && s.CurrentActionEnabled
-        && s.VocalCapability.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold;
+    internal static bool ReadyFor(SqueakDiagnosticSnapshot s) => s.Response.HasValue && s.Response.Value.ActiveAction.Length != 0;
 
     /// <summary>Opens the session (idempotent) and the main window.</summary>
     public static void BeginSession()
@@ -413,8 +412,7 @@ public static class SqueakDiagnosticsOverlay
     internal static UI.UsDiagDotTone ToneFor(SqueakDiagnosticSnapshot s)
     {
         if (ReadyFor(s)) return UI.UsDiagDotTone.Ready;
-        if (s.StartupPending || !s.Timing.ActionReady || (s.Timing.GlobalApplicable && !s.Timing.GlobalReady)
-            || s.VocalCapability.VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
+        if (s.Response?.ProtectedAt(Find.TickManager.TicksGame) == true)
         {
             return UI.UsDiagDotTone.Blocked;
         }
@@ -438,14 +436,10 @@ public static class SqueakDiagnosticsOverlay
         unchecked
         {
             int hash = 17;
-            hash = hash * 31 + (s.CurrentTimingAction.HasValue ? (int)s.CurrentTimingAction.Value : -1);
-            hash = hash * 31 + (s.CurrentActionEnabled ? 1 : 0);
-            hash = hash * 31 + (s.StartupPending ? 1 : 0);
-            hash = hash * 31 + (s.Timing.ActionReady ? 1 : 0);
-            hash = hash * 31 + (s.Timing.GlobalReady ? 1 : 0);
-            hash = hash * 31 + (s.EffectiveTimingReady ? 1 : 0);
-            hash = hash * 31 + (s.Timing.ActionRemainingTicks ?? -1);
-            hash = hash * 31 + s.Timing.GlobalRemainingTicks;
+            hash = hash * 31 + (s.Response?.ObservedTick.GetHashCode() ?? -1);
+            hash = hash * 31 + (s.Response?.ActionDeadline.GetHashCode() ?? -1);
+            hash = hash * 31 + (s.Response?.SharedDeadline.GetHashCode() ?? -1);
+            hash = hash * 31 + (s.Response?.ProtectedAt(Find.TickManager.TicksGame) == true ? 1 : 0);
             hash = hash * 31 + (int)(s.VocalCapability.VocalOrganEfficiency * 64f);
             hash = hash * 31 + (s.LastDispatched.HasValue ? s.LastDispatched.Value.Tick : -1);
             hash = hash * 31 + (s.LastEvaluation.HasValue ? (int)s.LastEvaluation.Value.Outcome : -1);

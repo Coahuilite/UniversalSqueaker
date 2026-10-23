@@ -4,7 +4,7 @@ using System.Linq;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using RimWorld;
@@ -48,29 +48,30 @@ internal static partial class Program
             Key = after, Priority = 60, Condition = new Condition("ref", EatPolicy.Result) } });
         var pack = new UsVoicePackDef { defName = "US_DB_Minimal", modContentPack = new ModContentPack { PackageId = "fixture.db" } };
         pack.declaration.Race = race.defName;
+        const string maintainedEat = "fixture.db/MaintainedEat";
+        DeclareMaintainedChild(pack, maintainedEat, CoreActions.Eat);
         foreach (string key in new[] { "us.core/Eat", injured, after, precise })
             pack.declaration.Entries.Add(new VoiceEntry { Key = key.Split('/')[1], Action = key, Sound = "Ratkin1" });
         DefDatabase<UsVoicePackDef>.AllDefsListForReading.Add(pack);
-        UsOneShotRuntime.Initialize();
+        SqueakerRuntime.Initialize();
         var directory = new SqueakXenotypeCatalogSnapshot();
         var selections = new Dictionary<AudioDomain, HashSet<string>>();
-        foreach (var projected in UsAuthorVoicePacks.Directory)
+        foreach (var projected in VoicePackDirectory.Directory)
         {
             projected.TryGetPackKey(out string key);
             directory.RacePacks.Add(projected);
             selections[new AudioDomain(new RaceKey(projected.raceDefName), null)] = new HashSet<string> { key };
         }
-        SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
-        var settings = UniversalSqueakerMod.Settings;
+        var settings = SqueakerMod.Settings;
         void Set(string action, BehaviorValues values)
             => Check(settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", action, values, () => true, out _), "DB player full ActionId publish " + action);
         Set(injured, new BehaviorValues { Enabled = false });
         Set(precise, new BehaviorValues { Enabled = false });
         Set(after, new BehaviorValues { HardIntervalTicks = 0, ResponseEnabled = new Dictionary<string, bool> { ["example/ResultMetadata"] = true } });
         void Advance() => Find.TickManager.TicksGame += 200;
-        void Tick() { Advance(); UsOneShotRuntime.TryTick(pawn); }
+        void Tick() { Advance(); SqueakerRuntime.TryTick(pawn); }
         Thing Food(bool nutrition, bool drug) => new() { def = new ThingDef { defName = "DBFood", ingestible = new object(), IsNutritionGivingIngestible = nutrition, IsDrug = drug } };
         var food = Food(true, false);
         JobDriver_Ingest Begin()
@@ -94,10 +95,10 @@ internal static partial class Program
             new BehaviorValues { Phase = EatPhase.Execution }, () => true, out _), "DB exact Xeno player phase published");
         pawn.genes = new FixtureGenes { Xenotype = xeno }; Tick();
         Check(session.LastOutcome.Receipt == null, "DB canonical legal Xeno parameter is consumed by production session and refuses preparation");
-        SqueakRuntimeResolver.Current.RejectChildContext = true; Tick();
+        GameRuntime.Current.RejectChildContext = true; Tick();
         Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && session.DiagnosticText.Contains("sourceDomain=DB_Ratkin"),
             "DB resolver-rejected raw Xeno cannot leak precise parameters; same Race mapping remains accurate");
-        SqueakRuntimeResolver.Current.RejectChildContext = false; pawn.genes = null;
+        GameRuntime.Current.RejectChildContext = false; pawn.genes = null;
         Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.Execution });
         Tick();
         Check(session.LastOutcome.Receipt == null, "DB Execution parameter refuses preparation without broadening Whole");
@@ -143,18 +144,19 @@ internal static partial class Program
         Check(UsIngestionObservation.Describe(pawn).Contains("phaseGeneration=4"), "DB genuine execution entries advance observation generation");
         // Whole and Execution use the identical production sustained slot and notification path.
         var sound = DefDatabase<SoundDef>.AllDefsListForReading.First(x => x.defName == "Ratkin1");
-        sound.sustain = true; pawn.Comp.FixtureSustained = true;
-        Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.WholeProcess }); Tick();
+        sound.sustain = true; MaintainSubject(pawn, true);
+        Set(maintainedEat, new BehaviorValues { Phase = EatPhase.WholeProcess }); Tick();
         var whole = SoundStarter.Spawned.Last();
+        Check(pawn.Comp.LastCandidateRequest?.Action == maintainedEat, "DB explicit declared child supplies sustained shape independently of the official OneShot");
         chew.Finish();
         Check(!whole.Ended, "DB Whole sustained survives each chewing exit while process remains true");
         driver.Cleanup(JobCondition.InterruptForced);
         Check(whole.Ended && Fact(EatPolicy.Process) == Truth.False, "DB interruption immediately ends Whole through existing owned slot, no completion event");
         driver = Begin(); chew = Toils_Ingest.ChewIngestible(pawn, 1, TargetIndex.A); chew.actor = pawn; driver.FixtureToil = chew; chew.initAction!();
-        Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.Execution }); Tick();
+        Set(maintainedEat, new BehaviorValues { Phase = EatPhase.Execution }); Tick();
         var execution = SoundStarter.Spawned.Last(); chew.Finish();
         Check(execution.Ended && Fact(EatPolicy.Process) == Truth.True, "DB Execution sustained ends on exact phase exit while Whole process remains");
-        pawn.Comp.FixtureSustained = false; sound.sustain = false;
+        MaintainSubject(pawn, false); sound.sustain = false;
         Set(injured, new BehaviorValues { HardIntervalTicks = 7, Volume = .25 });
         Set("us.core/Eat", new BehaviorValues { Phase = EatPhase.WholeProcess });
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 }); Tick();
@@ -173,7 +175,7 @@ internal static partial class Program
         Check(session.LastOutcome.Action == after && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && session.DiagnosticText.Contains("role=ActualIngester") && session.DiagnosticText.Contains("nutrition=0"),
             "DB successful zero-nutrition return -> independent AfterIngestion root after phase exit");
-        Check(DbResultResponse.Seen?.Ingester == pawn.ThingID && DbResultResponse.Seen.Item == food.ThingID
+        Check(DbResultResponse.Seen?.Ingester == SqueakerNotifications.SubjectKey(pawn) && DbResultResponse.Seen.Item == food.ThingID
             && DbResultResponse.Seen.ItemDef == food.def.defName && DbResultResponse.Seen.Nutrition == 0,
             "DB author response consumes immutable actual ingester/item/zero result from production capture");
         Set(after, new BehaviorValues { Phase = EatPhase.Execution });
@@ -198,16 +200,17 @@ internal static partial class Program
         Check(Fact(EatPolicy.Nutrition) == Truth.True && Fact(EatPolicy.Drug) == Truth.True, "DB feed attributes follow actor's actual item target");
         feed.Cleanup(JobCondition.Incompletable);
         Check(Fact(EatPolicy.Execution) == Truth.False && Fact(EatPolicy.Result) == Truth.False, "DB feed cleanup closes observations without manufactured completion");
-        settings.globalVolumeFactor = 0; CompSqueaker.GlobalVolumeFactor = 0; // explicit runtime publication double, not a second G multiply
+        settings.globalVolumeFactor = 0; // The following accepted row transaction publishes this captured system setting too.
         Set("us.core/Eat", new BehaviorValues { Enabled = true, Volume = 1 });
         driver = Begin(); Tick();
         Check(session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Last().source.volume == 0,
             "DB system G zero cannot be counteracted by domain enabled/volume; silent dispatch retains settlement meaning");
         Check(!session.DiagnosticText.Contains("result=ingester="), "DB next state decision does not retain prior event result payload in current diagnostics");
-        starts = SoundStarter.Played.Count; settings.voicePackMode = SqueakVoicePackMode.Disabled; Tick();
-        Check(SoundStarter.Played.Count == starts && session.LastOutcome.Receipt == null,
+        starts = SoundStarter.Played.Count; long confirmed = session.State.ConfirmedTick ?? long.MinValue;
+        settings.voicePackMode = SqueakVoicePackMode.Disabled; settings.PublishBehaviorConfiguration(); Tick();
+        Check(SoundStarter.Played.Count == starts && (session.State.ConfirmedTick ?? long.MinValue) == confirmed,
             "DB system service disabled cannot be reopened by enabled=true domain");
-        UsOneShotRuntime.ResetSession();
+        SqueakerRuntime.ResetSession();
         Check(UsIngestionObservation.Describe(pawn) == "", "DB session reset clears ephemeral observation records, no save payload");
 #endif
     }
@@ -222,7 +225,7 @@ internal static partial class Program
         var pawn = new Pawn { CurJob = new Job { def = JobDefOf.Ingest }, jobs = new Pawn_JobTracker { curDriver = new JobDriver() } };
         var capture = UsPawnFacts.Capture(pawn, null);
         Check(capture[EatPolicy.Process] == Truth.True && capture[EatPolicy.Execution] == Truth.Unknown, "DB Whole self-process survives missing precision; precision is Unknown");
-        var view = new BehaviorConfigurationSnapshot("", Array.Empty<BehaviorPlayerOverride>(), true, 1, 1);
+        var view = new BehaviorConfiguration("", Array.Empty<BehaviorPlayerOverride>(), true, 1, 1);
         var domain = new BehaviorDomain("Pawn", "", "Ratkin");
         var directory = new BehaviorSourceDirectory(Array.Empty<BehaviorSource>());
         Check(!view.Resolve(domain, "us.core/Eat", new BehaviorValues { Phase = EatPhase.WholeProcess }, directory, UsIngestionObservation.Available).Paused,

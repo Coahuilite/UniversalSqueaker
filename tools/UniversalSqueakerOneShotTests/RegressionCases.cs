@@ -1,14 +1,15 @@
+using UniversalSqueaker.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using UniversalSqueaker.Authoring;
 
 internal static partial class Program
 {
     private static void ExactTimingFixtures()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var t05 = new DecisionState(1000)
         {
@@ -27,7 +28,7 @@ internal static partial class Program
         CheckEventAfterRejectedState(engine, policy, 1050, 1090, 1090, 1170, "T06 delayed");
     }
 
-    private static void CheckEventAfterRejectedState(OneShotDecision engine, StatePolicy policy, long eventTick, long shared, long next, long actionDeadline, string label)
+    private static void CheckEventAfterRejectedState(ResponseDecision engine, StatePolicy policy, long eventTick, long shared, long next, long actionDeadline, string label)
     {
         var state = new DecisionState(1000);
         var rejected = new Driver
@@ -47,7 +48,7 @@ internal static partial class Program
 
     private static void SameTickGateFailures()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var scopeState = new DecisionState(1000);
         var blocked = Input();
@@ -143,7 +144,8 @@ internal static partial class Program
 
     private static void AuthorDiagnostics()
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         var failed = new SampleFact("example/Failed")
         {
             FailCapture = true,
@@ -158,7 +160,7 @@ internal static partial class Program
             new ActionPlan("example/Test", 1, new Condition("all", "", new Condition("ref", "example/Failed"), new Condition("ref", "example/Missing")), 120)
         };
         var driver = new Driver();
-        var result = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
+        var result = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
         Check(result.Reason == "UnknownFacts" && result.Diagnostics.Count == 2, "D1 unknown outcome retains both fact identities");
         Check(result.Diagnostics.Any(x => x.Key == "example/Failed" && x.Provider.Contains("FactProvider") && x.Reason.Contains("capture failure")), "D1 captured provider exception identity and reason");
         Check(result.Diagnostics.Any(x => x.Key == "example/Missing" && x.Reason == "MissingFact"), "D1 missing key diagnostic");
@@ -167,7 +169,8 @@ internal static partial class Program
 
     private static void DiagnosticsSurviveChosenAction()
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         var failed = new SampleFact("example/HighPriority") { FailCapture = true };
         Check(catalog.AddProvider(new FactProvider(failed)), "chosen-path diagnostic provider registered");
         var snapshot = catalog.Capture("p1", new Dictionary<string, Truth>
@@ -213,10 +216,10 @@ internal static partial class Program
                     input.TalkingChance = .5;
                     break;
                 case "NoAudio":
-                    input.Audio = Array.Empty<AudioCandidate>();
+                    input.AudioCatalog = new AudioCatalog(Array.Empty<AudioCandidate>());
                     break;
             }
-            var outcome = new OneShotDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
+            var outcome = new ResponseDecision().Run(state, new StatePolicy(40, 20), input, driver, driver);
             Check(outcome.Action == "us.core/Work", scenario + ": lower independent True action remains selected");
             Check(outcome.Diagnostics.Count == 1
                 && outcome.Diagnostics[0].Key == "example/HighPriority"
@@ -262,7 +265,8 @@ internal static partial class Program
         ExpectInvalidXml(() => new ActionDeclaration().LoadDataFromXmlCustom(Node(header + "<key>example/B</key><condition><ref>a</ref></condition></declaration>")), "duplicate declaration field rejected");
         ExpectInvalidXml(() => new VoicePackDeclaration().LoadDataFromXmlCustom(Node("<declaration><race>Ratkin</race><entries><unexpected/></entries></declaration>")), "unknown entries element rejected");
         ExpectInvalidXml(() => new VoicePackDeclaration().LoadDataFromXmlCustom(Node("<declaration><race>Ratkin</race><unknown/></declaration>")), "unknown pack field rejected");
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         var retained = new SampleFact("example/Retained");
         Check(catalog.AddProvider(new FactProvider(retained)), "preexisting provider accepted");
         var first = new SampleFact("example/First");

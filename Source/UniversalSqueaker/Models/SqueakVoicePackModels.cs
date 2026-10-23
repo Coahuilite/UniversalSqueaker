@@ -1,163 +1,28 @@
 using System;
 using System.Collections.Generic;
-using UniversalSqueaker.Kernel;
+using System.Linq;
 using Verse;
-using Verse.Sound;
+using UniversalSqueaker.Responses;
 
 namespace UniversalSqueaker;
 
-/// <summary>One Def is one selectable pack in one domain. It never carries behavior or mood data.</summary>
-public class SqueakVoicePackDef : Def
+/// <summary>Native UI metadata for an admitted AudioCatalog pack. Not a Def or another audio reader.</summary>
+public sealed class VoicePackInfo
 {
-    // Directory-only projection of a validated 0.6 declaration. Its audio metadata remains in AuthorCatalog.
-    internal bool IsKernelDeclaration;
-    internal IReadOnlyList<string> KernelActionKeys = Array.Empty<string>();
-    public int CountPlayableActions()
-    {
-        if (IsKernelDeclaration) return KernelActionKeys.Count;
-        if (actions == null) return 0;
-        var covered = new HashSet<SqueakAction>();
-        foreach (SqueakVoicePackAction action in actions)
-        {
-            if (action == null || action.sounds == null
-                || !SqueakActionDefinitions.IsKnown(action.action)) continue;
-            foreach (SoundDef sound in action.sounds)
-            {
-                if (sound != null) { covered.Add(action.action); break; }
-            }
-        }
-        return covered.Count;
-    }
-
-
-    public SqueakVoicePackScope scope = SqueakVoicePackScope.Unspecified;
-    /// <summary>Pack 唯一路由声明，必填（validator 硬要求），无缺省默认。
-    /// 值 = 服务的 race 的精确、区分大小写 ThingDef.defName；装配由 catalog 的 race 域决定，无内置 race 特判。</summary>
-    public string raceDefName = "";
-    public string targetDefName = "";
-    public float weight = 1f;
-    public List<SqueakVoicePackFallback> fallbacks = new();
-    public List<SqueakVoicePackAction> actions = new();
-
+    public string defName = "", label = "", description = "", raceDefName = "", targetDefName = "";
+    public ModContentPack? modContentPack;
+    public SqueakVoicePackScope scope;
+    public float weight = 1;
+    public string LabelCap => label;
+    public IReadOnlyList<AudioCandidate> Entries = Array.Empty<AudioCandidate>();
+    public int CountPlayableActions() => Entries.Select(x => x.Action).Distinct(StringComparer.Ordinal).Count();
     public bool TryGetPackKey(out string key)
     {
-        key = "";
-        string? packageId = modContentPack?.ModMetaData?.PackageIdNonUnique;
-        if (string.IsNullOrWhiteSpace(packageId) || string.IsNullOrWhiteSpace(defName)) return false;
-        key = packageId + ":" + defName;
-        return true;
-    }
-
-    public override IEnumerable<string> ConfigErrors()
-    {
-        foreach (string error in base.ConfigErrors()) yield return error;
-        foreach (string error in SqueakVoicePackValidator.GetErrors(this)) yield return error;
+        string package = modContentPack?.PackageId ?? "";
+        key = package + ":" + defName;
+        return package != "" && defName != "";
     }
 }
-
-public class SqueakVoicePackAction
-{
-    public SqueakAction action = SqueakAction.Call;
-    public AgeBucket? ageTag = null;
-    public bool IsEgg = false;
-    public List<SoundDef> sounds = new();
-}
-
-public class SqueakVoicePackFallback
-{
-    public SqueakAction action = SqueakAction.Call;
-    public SoundDef sound = null!;
-}
-
-/// <summary>Pure production-audio contract shared by Def validation and candidate admission.</summary>
-internal static class SqueakVoicePackValidator
-{
-    internal static bool IsValid(SqueakVoicePackDef? pack)
-    {
-        foreach (string _ in GetErrors(pack)) return false;
-        return true;
-    }
-
-    internal static IEnumerable<string> GetAdmissionErrors(SqueakVoicePackDef? pack) => EnumerateErrors(pack, false);
-
-    internal static bool IsAdmissible(SqueakVoicePackDef? pack) => !System.Linq.Enumerable.Any(GetAdmissionErrors(pack));
-
-    internal static IEnumerable<string> GetErrors(SqueakVoicePackDef? pack) => EnumerateErrors(pack, true);
-
-    private static IEnumerable<string> EnumerateErrors(SqueakVoicePackDef? pack, bool resources)
-    {
-        if (pack == null) { yield return "SqueakVoicePackDef is null."; yield break; }
-        string name = string.IsNullOrWhiteSpace(pack.defName) ? "SqueakVoicePackDef" : pack.defName;
-        const string prefix = "US_";
-        if (string.IsNullOrWhiteSpace(pack.defName) || !pack.defName.StartsWith(prefix, StringComparison.Ordinal)) yield return name + " defName must begin with " + prefix + ".";
-        if (string.IsNullOrWhiteSpace(pack.raceDefName) || !string.Equals(pack.raceDefName, pack.raceDefName.Trim(), StringComparison.Ordinal)) yield return name + " has an invalid raceDefName; defName must be exact and contain no leading/trailing whitespace.";
-        if (pack.scope == SqueakVoicePackScope.Unspecified) yield return name + " has an unspecified scope.";
-        if (pack.scope == SqueakVoicePackScope.Race && !string.IsNullOrWhiteSpace(pack.targetDefName)) yield return name + " Race scope must not specify targetDefName.";
-        if (pack.scope == SqueakVoicePackScope.Xenotype && (string.IsNullOrWhiteSpace(pack.targetDefName) || !string.Equals(pack.targetDefName, pack.targetDefName.Trim(), StringComparison.Ordinal))) yield return name + " Xenotype scope requires an exact targetDefName without leading/trailing whitespace.";
-        if (!IsPositiveFinite(pack.weight)) yield return name + " has an invalid weight; weight must be finite and greater than zero.";
-
-        if (pack.IsKernelDeclaration && pack.KernelActionKeys.Count > 0) yield break; // Already validated by AuthorCatalog.
-
-        HashSet<SqueakAction> fallbackActions = new();
-        foreach (SqueakVoicePackFallback fallback in pack.fallbacks ?? new List<SqueakVoicePackFallback>())
-        {
-            if (fallback == null) { yield return name + " contains a null fallback entry."; continue; }
-            if (!SqueakActionDefinitions.IsKnown(fallback.action)) yield return name + " fallback contains unknown action " + fallback.action + ".";
-            if (!fallbackActions.Add(fallback.action)) yield return name + " contains duplicate fallback action " + fallback.action + ".";
-            if (!resources)
-            {
-                continue;
-            }
-            if (fallback.sound == null) { yield return name + " fallback " + fallback.action + " has a null SoundDef."; continue; }
-            if (string.IsNullOrWhiteSpace(fallback.sound.defName)) yield return name + " fallback " + fallback.action + " references a SoundDef without an exact defName.";
-        }
-
-        if (pack.actions == null || pack.actions.Count == 0) { yield return name + " has no action sounds."; yield break; }
-
-        Dictionary<SqueakAction, HashSet<AgeBucket?>> seen = new();
-        foreach (SqueakVoicePackAction entry in pack.actions)
-        {
-            if (entry == null) { yield return name + " contains a null action entry."; continue; }
-            if (!SqueakActionDefinitions.IsKnown(entry.action)) yield return name + " contains unknown action " + entry.action + ".";
-            if (entry.ageTag.HasValue && !Enum.IsDefined(typeof(AgeBucket), entry.ageTag.Value)) yield return name + " action " + entry.action + " has an unknown ageTag " + entry.ageTag.Value + ".";
-            if (!seen.TryGetValue(entry.action, out HashSet<AgeBucket?>? ages))
-            {
-                ages = new HashSet<AgeBucket?>();
-                seen.Add(entry.action, ages);
-            }
-            if (!ages.Add(entry.ageTag))
-            {
-                string ageName = entry.ageTag.HasValue ? entry.ageTag.Value.ToString() : "all-age";
-                yield return name + " contains duplicate action " + entry.action + " for ageTag " + ageName + ".";
-            }
-            if (!resources)
-            {
-                continue;
-            }
-            if (entry.sounds == null || entry.sounds.Count == 0) { yield return name + " action " + entry.action + " has no sounds."; continue; }
-            foreach (SoundDef sound in entry.sounds)
-            {
-                if (sound == null) { yield return name + " action " + entry.action + " contains a null SoundDef."; continue; }
-                if (string.IsNullOrWhiteSpace(sound.defName)) yield return name + " action " + entry.action + " references a SoundDef without an exact defName.";
-                // S3：sustained SoundDef 允许进生产池（Sustained 模式经 Sustainer 播放，一次性模式在
-                // 运行时优雅降级为 PlayOneShot）；context/SubSounds诊断保持。
-                if (sound.context != SoundContext.MapOnly) yield return name + " action " + entry.action + " references SoundDef " + sound.defName + " with context other than MapOnly.";
-                if (sound.subSounds == null || sound.subSounds.Count == 0) { yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has no SubSounds."; continue; }
-                foreach (SubSoundDef subSound in sound.subSounds)
-                {
-                    if (subSound == null) { yield return name + " action " + entry.action + " SoundDef " + sound.defName + " contains a null SubSound."; continue; }
-                    if (subSound.onCamera) yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has an onCamera SubSound; production voice SubSounds must be in-map only.";
-                    if (subSound.grains == null || subSound.grains.Count == 0) yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has a SubSound without grains.";
-                    else foreach (var grain in subSound.grains)
-                        if (grain == null) yield return name + " action " + entry.action + " SoundDef " + sound.defName + " has a SubSound containing a null grain.";
-                }
-            }
-        }
-    }
-
-    private static bool IsPositiveFinite(float value) => value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
-}
-
 /// <summary>Canonical, last-wins persisted selection for one exact Race or Xenotype domain.
 /// raceDefName is required after v4 migration; Xenotype scope additionally requires xenotypeDefName.
 /// 2b-2: record domain identity is the (scope, raceDefName, xenotypeDefName) fields themselves —
@@ -168,7 +33,6 @@ public class VoicePackSelectionRecord : IExposable
     public SqueakVoicePackScope scope = SqueakVoicePackScope.Unspecified;
     public string raceDefName = "";
     public string xenotypeDefName = "";
-    [System.NonSerialized] internal string legacyTargetDefName = "";
     public List<string> enabledPackKeys = new();
 
     public void ExposeData()
@@ -176,10 +40,8 @@ public class VoicePackSelectionRecord : IExposable
         Scribe_Values.Look(ref scope, "scope", SqueakVoicePackScope.Unspecified);
         Scribe_Values.Look(ref raceDefName, "raceDefName", "");
         Scribe_Values.Look(ref xenotypeDefName, "xenotypeDefName", "");
-        if (Scribe.mode == LoadSaveMode.LoadingVars)
-            Scribe_Values.Look(ref legacyTargetDefName, "targetDefName", "");
         Scribe_Collections.Look(ref enabledPackKeys, "enabledPackKeys", LookMode.Value);
-        if (Scribe.mode == LoadSaveMode.PostLoadInit && enabledPackKeys == null) enabledPackKeys = new List<string>();
+        enabledPackKeys ??= new List<string>();
     }
 
     /// <summary>2b-2: record domain identity (scope, raceDefName, xenotypeDefName) field match.

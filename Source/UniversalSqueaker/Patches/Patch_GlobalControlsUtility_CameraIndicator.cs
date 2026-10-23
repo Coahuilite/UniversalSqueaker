@@ -12,7 +12,7 @@ namespace UniversalSqueaker;
 /// S4 diagnostics foundation: player-facing camera indicator readout above the bottom-left
 /// date bar. US-adapted from the SR CameraIndicator patch: the <c>Prefs.DevMode</c> gate is
 /// removed, and the show is driven by the player settings toggle
-/// (<see cref="SqueakDebug.ShowCameraIndicator"/> / <see cref="UniversalSqueakerSettings.SetCameraIndicator"/>).
+/// (<see cref="SqueakDebug.ShowCameraIndicator"/> / <see cref="GameSettings.SetCameraIndicator"/>).
 ///
 /// This postfix is the SINGLE draw dispatcher for the camera readout: it first asks the UiKit
 /// overlay Host (second host, <see cref="UsCameraIndicatorOverlay"/>) to draw; the legacy

@@ -12,7 +12,7 @@ public static class SqueakAudioPoolNotificationService
 {
     private static bool shownThisProcess;
 
-    public static IReadOnlyList<SqueakVoicePackDomainStatus> GetDomainStatuses(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
+    public static IReadOnlyList<SqueakVoicePackDomainStatus> GetDomainStatuses(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog)
     {
         List<SqueakVoicePackDomainStatus> result = new();
         foreach (string race in catalog.RaceDefNames)
@@ -20,9 +20,9 @@ public static class SqueakAudioPoolNotificationService
         if (ModsConfig.BiotechActive)
         {
             HashSet<string> seen = new(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, IReadOnlyList<SqueakVoicePackDef>> pair in catalog.XenotypePacksByDefName)
+            foreach (KeyValuePair<string, IReadOnlyList<VoicePackInfo>> pair in catalog.XenotypePacksByDefName)
             {
-                foreach (SqueakVoicePackDef pack in pair.Value)
+                foreach (VoicePackInfo pack in pair.Value)
                 {
                     if (pack == null || string.IsNullOrEmpty(pack.raceDefName) || string.IsNullOrEmpty(pair.Key)) continue;
                     string identity = pack.raceDefName + "\n" + pair.Key;
@@ -34,11 +34,11 @@ public static class SqueakAudioPoolNotificationService
         return result;
     }
 
-    public static void EvaluateAndMaybeShow(UniversalSqueakerSettings settings, SqueakXenotypeCatalogSnapshot catalog)
+    public static void EvaluateAndMaybeShow(GameSettings settings, SqueakXenotypeCatalogSnapshot catalog)
     {
         if (shownThisProcess) return;
         List<string> missing = new();
-        foreach (SqueakVoicePackDef pack in catalog.PackByKey.Values)
+        foreach (VoicePackInfo pack in catalog.PackByKey.Values)
         {
             if (pack == null || !pack.TryGetPackKey(out string key)) continue;
             if (pack.scope == SqueakVoicePackScope.Race)
@@ -62,7 +62,7 @@ public static class SqueakAudioPoolNotificationService
         shownThisProcess = true;
     }
 
-    private static bool HasEnabledKnownPack(UniversalSqueakerSettings settings, SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
+    private static bool HasEnabledKnownPack(GameSettings settings, SqueakVoicePackScope scope, string raceDefName, string targetDefName, string packKey)
     {
         VoicePackSelectionRecord? record = (settings.voicePackSelections ?? new List<VoicePackSelectionRecord>())
             .LastOrDefault(x => VoicePackSelectionRecord.SameDomain(x, scope, raceDefName, targetDefName));

@@ -11,7 +11,9 @@
 > extended this round and a later round may archive it. Neither section is a verbatim copy. Read the cold
 > archive only for a historical conflict.
 
-## Development state (0.6.0, 2026-10-23)
+## Development state (0.6.0 r2, 2026-10-24)
+
+The authorized breaking r2 cutover uses the whole platform-free production `Core`, three separately published definition/configuration/audio inputs, a three-reference RuntimeView and one stable-subject response owner. Native observation/output/lifecycle live in `Game`; the product remains one DLL. Notifications require an explicit XML or one-time C# declaration. `SqueakerMod`/`GameSettings` use a new configuration identity and required format marker, with no legacy reader. Ordinary edits publish immediately and debounce physical saves; source/atomic-row writes persist first. Global reset preserves source intent/last-good and the separate final-fallback file. The current contract, author examples and deletion/capability map are in `docs/us-kernel-0.6-refactor-zh.md` and `docs/us-kernel-0.6-authoring-zh.md`. Existing five workspaces/Help remain; response details use the effective fold, while unconsumed timing/mood controls are retired. This technical cutover does not settle ordinary policy or native/human acceptance.
 
 D-C uses the existing single owner for exactly fifteen official contracts, immutable independent roots/multilevel fixed-condition inheritance and complete ActionId configuration, audio mapping, protection and diagnostics. Per-selected-contract roles distinguish overlapping ingestion/sleep and attacker/victim subjects. Crying/Giggling dedicated MentalFit responses, notifications, patch, persisted opt-in and UI/help/log consumers are retired without altering vanilla states/voices or blacklisting independent author contracts. Current public authority: `docs/us-kernel-0.6-spec-zh.md` §§21–23, all-fifteen review, fact ledger, acceptance and test-migration pages; historical S1–S3 keep their original scopes.
 

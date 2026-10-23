@@ -15,7 +15,7 @@ internal static partial class Program
         var sound = new SoundDef(); sound.subSounds.Add(definition);
         var originalDistance = definition.distRange;
         UsInstanceOutput.Distance = new FloatRange(15, 50);
-        CompSqueaker.GlobalVolumeFactor = 1;
+        SqueakerMod.Settings.globalVolumeFactor = 1; SqueakerMod.Settings.PublishBehaviorConfiguration();
         var info = SoundInfo.OnCamera();
         int request = UsInstanceOutput.Mark(ref info, new UsOutputContribution(2));
         var owned = SampleOneShot.TryMakeAndPlay(definition, info, new AudioSource());
@@ -25,9 +25,9 @@ internal static partial class Program
         var unowned = SampleOneShot.TryMakeAndPlay(definition, SoundInfo.OnCamera(), new AudioSource());
         Check(Math.Abs(unowned.source.volume - .8f) < .0001 && unowned.source.maxDistance == originalDistance.max,
             "S5 same SubSoundDef independent non-US request retains native mapping and distance");
-        CompSqueaker.GlobalVolumeFactor = 0; owned.Update(); unowned.Update();
+        SqueakerMod.Settings.globalVolumeFactor = 0; SqueakerMod.Settings.PublishBehaviorConfiguration(); owned.Update(); unowned.Update();
         Check(owned.source.volume == 0 && Math.Abs(unowned.source.volume - .8f) < .0001, "S5 current global zero affects only owned instance");
-        CompSqueaker.GlobalVolumeFactor = .5f; owned.Update(); owned.Update();
+        SqueakerMod.Settings.globalVolumeFactor = .5f; SqueakerMod.Settings.PublishBehaviorConfiguration(); owned.Update(); owned.Update();
         Check(Math.Abs(owned.source.volume - .8f) < .0001, "S5 one-to-zero-to-half restores original local L, not cumulative or division-by-old-G");
         UsInstanceOutput.Distance = new FloatRange(15, 65); owned.Update();
         Check(owned.source.maxDistance == 65 && definition.distRange.max == 20, "S5 live instance distance updates while shared definition remains unchanged");
@@ -65,7 +65,7 @@ internal static partial class Program
         var nativeDelayed = SampleSustainer.TryMakeAndPlay(new SubSustainer(nativeParent, definition), new AudioClip(), 10);
         Check(delayed == null && nativeDelayed != null && nativeDelayed.source.Playing,
             "S5 delayed grain callback after owned Cleanup cannot emit an unowned tail; unrelated native parent unchanged");
-        CompSqueaker.GlobalVolumeFactor = 1;
+        SqueakerMod.Settings.globalVolumeFactor = 1; SqueakerMod.Settings.PublishBehaviorConfiguration();
         UsInstanceOutput.Distance = new FloatRange(15, 50);
     }
 }

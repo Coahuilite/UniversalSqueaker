@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using UniversalSqueaker.Authoring;
 
 internal static partial class Program
 {
-    private sealed class S2Backend : IOneShotBackend, IOneShotRandom
+    private sealed class S2Backend : IResponseOutput, IResponseRandom
     {
         internal readonly PlaybackResult Result;
         internal readonly List<PlaybackRequest> Requests = new();
@@ -38,16 +38,17 @@ internal static partial class Program
             sources.ObserveFinal("US_RatkinExp_Work", "actual.audio");
             var pack = new VoicePackDeclaration { Race = "Ratkin" };
             pack.Entries.Add(new VoiceEntry { Key = "recorded", Action = "us.core/Work", Sound = "US_RatkinExp_Work" });
-            var catalog = new AuthorCatalog(120, 120);
-            catalog.AddPack("entry.author", "VoicePack", pack, name => sources.TryBind(name, true, out var id, out _) ? id.ToString() : null);
+            var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
+            audioInputs.AddPack("entry.author", "VoicePack", pack, name => sources.TryBind(name, true, out var id, out _) ? id.ToString() : null);
             var transcript = new StringBuilder();
             foreach (var result in new[] { PlaybackResult.Dispatched, PlaybackResult.Rejected, PlaybackResult.Indeterminate, PlaybackResult.AlreadyActive })
             {
                 var input = Input(1000);
-                input.Audio = catalog.Audio;
+                input.AudioCatalog = new AudioCatalog(audioInputs.Entries);
                 var state = new DecisionState(1000);
                 var backend = new S2Backend(result);
-                var outcome = new OneShotDecision().Run(state, new StatePolicy(40, 20), input, backend, backend);
+                var outcome = new ResponseDecision().Run(state, new StatePolicy(40, 20), input, backend, backend);
                 Check(backend.Requests.Count == 1, "S2 injected backend invoked once");
                 var request = backend.Requests.Single();
                 Check(request.Audio.EntryKey == "entry.author/VoicePack/recorded", "S2 request retains referring entry identity");
@@ -78,16 +79,16 @@ internal static partial class Program
             new ActionSoundSet(new[] { "real.audio/AllAge" }, null, 1),
             new ActionSoundSet(new[] { "real.audio/ChildEgg" }, AgeBucket.Child, 1, true)
         };
-        var actions = new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["Work"] = variants };
+        var actions = new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["us.core/Work"] = variants };
         var pool = new SqueakPoolRegistry(new[] { new VoicePackEntry("entry.author/P", domain, 1, actions) }, BuiltInFallbackTable.Empty);
         var noRoll = new S2Rolls();
-        Check(pool.Select(new SelectionContext(domain, "Work", AgeBucket.Child, true, false), SelectionMode.Fallback, new S2Gate(), noRoll).IsNone,
+        Check(pool.Select(new SelectionContext(domain, "us.core/Work", AgeBucket.Child, true, false), SelectionMode.Fallback, new S2Gate(), noRoll).IsNone,
             "S2 exact-age egg excluded does not unlock all-age");
         noRoll.Complete();
-        var enabled = pool.Select(new SelectionContext(domain, "Work", AgeBucket.Child, true, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls());
+        var enabled = pool.Select(new SelectionContext(domain, "us.core/Work", AgeBucket.Child, true, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls());
         Check(enabled.IsEgg && enabled.Resource?.DefName == "ChildEgg" && ReferenceEquals(enabled.SelectedVariant, variants[1]), "S2 exact-age egg and selected variant retained");
         variants[1] = new ActionSoundSet(Array.Empty<string>(), AgeBucket.Child, 1);
-        Check(pool.Select(new SelectionContext(domain, "Work", AgeBucket.Child, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).IsNone,
+        Check(pool.Select(new SelectionContext(domain, "us.core/Work", AgeBucket.Child, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).IsNone,
             "S2 unbound empty exact-age declaration does not unlock all-age");
 
         var weighted = new[]
@@ -95,14 +96,14 @@ internal static partial class Program
             new ActionSoundSet(new[] { "real.audio/Low" }, null, 1),
             new ActionSoundSet(new[] { "real.audio/HighA", "real.audio/HighB" }, null, 3)
         };
-        var weightedActions = new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["Work"] = weighted };
+        var weightedActions = new Dictionary<string, IReadOnlyList<ActionSoundSet>> { ["us.core/Work"] = weighted };
         pool = new SqueakPoolRegistry(new[]
         {
             new VoicePackEntry("a", domain, 1, weightedActions),
             new VoicePackEntry("b", domain, 3, weightedActions)
         }, BuiltInFallbackTable.Empty);
         var rolls = new S2Rolls(.5, .5, .75);
-        var choice = pool.Select(new SelectionContext(domain, "Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), rolls);
+        var choice = pool.Select(new SelectionContext(domain, "us.core/Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), rolls);
         Check(choice.PoolStableKey == "b" && choice.Resource?.DefName == "HighB", "S2 pack/variant/sound weighted boundaries preserved");
         Check(rolls.Purposes.SequenceEqual(new[] { SelectionRollPurpose.Pack, SelectionRollPurpose.Variant, SelectionRollPurpose.Sound }), "S2 exact purpose-tagged random consumption");
         rolls.Complete();
@@ -117,10 +118,10 @@ internal static partial class Program
         Check(AudioDomains.TryParseNonPawn(first.ToString(), out var restored) && restored == first, "S2 independent NonPawn identity serialization round trip");
         Check(first.ToString() == "NonPawn:A/Ratkin" && second.ToString() == "NonPawn:B/Ratkin", "S2 diagnostic identity preserves namespace");
         pool = new SqueakPoolRegistry(new[] { S2Entry("pawn", race, "pawn/Work"), S2Entry("nonpawn.a", first, "object.a/Work") },
-            new BuiltInFallbackTable(new[] { new FallbackProfile(race.Race, 1, new Dictionary<string, string> { ["Work"] = "core/PawnFallback" }) }));
-        Check(pool.Select(new SelectionContext(second, "Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).IsNone,
+            new BuiltInFallbackTable(new[] { new FallbackProfile(race.Race, 1, new Dictionary<string, string> { ["us.core/Work"] = "core/PawnFallback" }) }));
+        Check(pool.Select(new SelectionContext(second, "us.core/Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).IsNone,
             "S2 NonPawn B/Ratkin cannot borrow Pawn Ratkin or NonPawn A/Ratkin or Pawn fallback");
-        Check(pool.Select(new SelectionContext(first, "Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).Resource?.PackageId == "object.a",
+        Check(pool.Select(new SelectionContext(first, "us.core/Work", AgeBucket.Adult, true), SelectionMode.Fallback, new S2Gate(), new S2Rolls()).Resource?.PackageId == "object.a",
             "S2 NonPawn A consumes only its own exact pool");
     }
 }

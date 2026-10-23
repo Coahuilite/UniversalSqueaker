@@ -1,8 +1,9 @@
+using UniversalSqueaker.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using UniversalSqueaker.Authoring;
 
 internal static partial class Program
@@ -17,7 +18,7 @@ internal static partial class Program
         }
     }
 
-    private sealed class Driver : IOneShotRandom, IOneShotBackend
+    private sealed class Driver : IResponseRandom, IResponseOutput
     {
         public PlaybackResult Result = PlaybackResult.Dispatched;
         public int Calls, Rolls;
@@ -52,7 +53,8 @@ internal static partial class Program
 
     private static DecisionInput Input(long tick = 1000, bool state = true, bool work = true, bool wounded = false, bool call = true)
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         return new DecisionInput
         {
             Subject = "p1",
@@ -66,13 +68,12 @@ internal static partial class Program
                 ["us.core/WoundedEvent"] = wounded ? Truth.True : Truth.False,
                 ["us.core/CallState"] = call ? Truth.True : Truth.False
             }),
-            Audio = new[]
+            AudioCatalog = new AudioCatalog(new[]
             {
                 new AudioCandidate("a", "pack/Work", "us.core/Work", "Ratkin", 1),
                 new AudioCandidate("b", "pack/Wounded", "us.core/Wounded", "Ratkin", 1),
                 new AudioCandidate("c", "pack/Call", "us.core/Call", "Ratkin", 1)
-            }
-        };
+            })};
     }
 
     private static void Main()
@@ -107,13 +108,14 @@ internal static partial class Program
         {
             // Keep the decisive assertion visible even when the host cannot format an uncaught stack trace.
             Console.Error.WriteLine(error.GetType().FullName + ": " + error.Message);
+            Console.Error.WriteLine(error.StackTrace);
             Environment.ExitCode = 1;
         }
     }
 
     private static void ResultSettlement()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         foreach (var result in new[]
         {
@@ -140,7 +142,7 @@ internal static partial class Program
 
     private static void RetryAndEventSequences()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var rejected = new Driver
         {
@@ -184,10 +186,10 @@ internal static partial class Program
 
     private static void AudioIsolation()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var missing = Input();
-        missing.Audio = missing.Audio.Where(x => x.Action != "us.core/Work").ToArray();
+        missing.AudioCatalog = new AudioCatalog(new[] { new AudioCandidate("b", "pack/Wounded", "us.core/Wounded", "Ratkin", 1), new AudioCandidate("c", "pack/Call", "us.core/Call", "Ratkin", 1) });
         var none = new Driver();
         var noSound = engine.Run(new DecisionState(1000), policy, missing, none, none);
         Check(noSound.Reason == "NoBoundAudio" && none.Calls == 0, "T10 no cross-action fallback");
@@ -203,7 +205,7 @@ internal static partial class Program
 
     private static void ThreeValuedConditions()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         Truth[] values =
         {
@@ -239,7 +241,7 @@ internal static partial class Program
 
     private static void BackendBoundaries()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var bad = Input();
         bad.TalkingChance = .5;
@@ -259,7 +261,7 @@ internal static partial class Program
 
     private static void NonPawnIdentity()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var nonPawn = Input();
         nonPawn.Family = SubjectFamily.NonPawn;
@@ -268,10 +270,10 @@ internal static partial class Program
         var nonPawnDriver = new Driver();
         engine.Run(new DecisionState(1000), policy, nonPawn, nonPawnDriver, nonPawnDriver);
         Check(nonPawnDriver.Calls == 0, "NonPawn never borrows Pawn pool with same target text");
-        nonPawn.Audio = new[]
+        nonPawn.AudioCatalog = new AudioCatalog(new[]
         {
             new AudioCandidate("armor-a", "armor/Sound", "us.core/Work", "Ratkin", 1, 1, SubjectFamily.NonPawn, "armor")
-        };
+        });
         engine.Run(new DecisionState(1000), policy, nonPawn, nonPawnDriver, nonPawnDriver);
         Check(nonPawnDriver.Calls == 1, "neutral NonPawn namespace/target distinct protocol");
         nonPawn.TargetNamespace = "building";
@@ -281,12 +283,12 @@ internal static partial class Program
 
     private static void ScopeAndLegacyInvocation()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         bool oversized = false;
         try
         {
-            new AudioCandidate("x", "p/a", "Work", "Ratkin", 1, 1e300);
+            new AudioCandidate("x", "p/a", "us.core/Work", "Ratkin", 1, 1e300);
         }
         catch (ArgumentException)
         {
@@ -299,25 +301,23 @@ internal static partial class Program
         var scoped = new Driver();
         var scopeResult = engine.Run(new DecisionState(1000), policy, qualified, scoped, scoped);
         Check(scopeResult.Action == "us.core/Work" && scopeResult.Reason == "ActionOrScopeRejected" && scoped.Calls == 0, "scope rejection does not falsify facts or choose Call");
-        var selected = new UniversalSqueaker.SqueakTriggerInvocation(UniversalSqueaker.SqueakTriggerOrigin.Wounded, UniversalSqueaker.SqueakInvocationSource.PlayerSelection);
-        Check(selected.RequiresResponsivePawn && selected.IsPlayerInitiated && selected.SkipsRandomOneShotProbability, "legacy source metadata retained for controlled event bridge");
-        var nativeEvent = new UniversalSqueaker.SqueakTriggerInvocation(UniversalSqueaker.SqueakTriggerOrigin.Wounded, UniversalSqueaker.SqueakInvocationSource.StateEvent);
-        Check(!nativeEvent.RequiresResponsivePawn && !nativeEvent.IsPlayerInitiated, "native wounded event gains no selection/survival gate");
+        var select = new DefinitionCatalog(120, 120, true).Actions.Single(x => x.Key == "us.core/Select");
+        Check(!select.Condition.RequiredFacts().Contains("us.core/Responsive") && select.SkipTalking && !select.RequiresVocal,
+            "official Select fixed acceptance/feedback contract has no hidden Responsive/vocal/talking gate");
     }
-
     private static void RandomTranscript()
     {
-        var engine = new OneShotDecision();
+        var engine = new ResponseDecision();
         var policy = new StatePolicy(40, 20);
         var randomInput = Input();
         randomInput.TalkingChance = .5;
         randomInput.Actions = randomInput.Actions.Select(x => x.Key == "us.core/Work" ? new ActionPlan(x.Key, x.Priority, x.Condition, x.Interval,
             chance: .5, skipTalking: x.SkipTalking, requiresVocal: x.RequiresVocal) : x).ToArray();
-        randomInput.Audio = new[]
+        randomInput.AudioCatalog = new AudioCatalog(new[]
         {
             new AudioCandidate("a", "pack/first", "us.core/Work", "Ratkin", 1),
             new AudioCandidate("b", "pack/second", "us.core/Work", "Ratkin", 3)
-        };
+        });
         var transcript = new Driver();
         engine.Run(new DecisionState(1000), policy, randomInput, transcript, transcript);
         Check(transcript.Purposes.SequenceEqual(new[] { RandomPurpose.Talking, RandomPurpose.Eligibility, RandomPurpose.Sound }), "ordered purpose transcript has no missing/extra draw");
@@ -333,42 +333,44 @@ internal static partial class Program
 
     private static void FileExamples()
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         var ordinary = new XmlDocument();
         ordinary.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "examples", "AudioOnly.xml"));
         var pack = new VoicePackDeclaration();
         pack.LoadDataFromXmlCustom(ordinary.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
-        Check(catalog.AddPack("example.audio", "US_Ratkin_WorkSlice", pack, s => "example.audio/" + s), "real ordinary XML field loaded and assembled");
+        Check(audioInputs.AddPack("example.audio", "US_Ratkin_WorkSlice", pack, s => "example.audio/" + s), "real ordinary XML field loaded and assembled");
         var extensions = new XmlDocument();
         extensions.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "examples", "Extensions.xml"));
         string providerType = extensions.SelectSingleNode("Defs/UniversalSqueaker.UsProviderDef/providerClass")!.InnerText;
-        var type = typeof(AuthorCatalog).Assembly.GetType(providerType, true)!;
+        var type = typeof(DefinitionCatalog).Assembly.GetType(providerType, true)!;
         Check(catalog.AddProvider((IUsDefinitionProvider)Activator.CreateInstance(type)!), "real explicit C# provider type instantiated from example");
         var action = new ActionDeclaration();
         action.LoadDataFromXmlCustom(extensions.SelectSingleNode("Defs/UniversalSqueaker.UsActionDef/declaration")!);
         Check(catalog.AddAction(action), "real XML combination assembled");
         var audio = new VoicePackDeclaration();
         audio.LoadDataFromXmlCustom(extensions.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
-        Check(catalog.AddPack("example.ext", "US_ControlledExampleAudio", audio, s => "example.audio/" + s), "extension audio references assembled action");
+        Check(audioInputs.AddPack("example.ext", "US_ControlledExampleAudio", audio, s => "example.audio/" + s), "extension audio references assembled action");
         var input = Input();
         input.Actions = catalog.Actions;
-        input.Audio = catalog.Audio;
+        input.AudioCatalog = new AudioCatalog(audioInputs.Entries);
         input.Facts = catalog.Capture("p1", new Dictionary<string, Truth> { { "us.core/WorkState", Truth.True } });
         var d = new Driver();
-        var outcome = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, d, d);
+        var outcome = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, d, d);
         Check(outcome.Action == "example/OnDutyWork" && d.Calls == 1, "real file/provider/combination dispatch production core");
 
         var identity = new XmlDocument();
         identity.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "examples", "IdentitySelect.xml"));
-        var selectCatalog = new AuthorCatalog(120, 120, true);
+        var selectCatalog = new DefinitionCatalog(120, 120, true);
         var selectAction = new ActionDeclaration();
         selectAction.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsActionDef/declaration")!);
         Check(selectCatalog.AddAction(selectAction), "DA public IdentitySelect XML action loads through production loader");
         var selectAudio = new VoicePackDeclaration();
         selectAudio.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsVoicePackDef/declaration")!);
-        Check(selectCatalog.AddPack("example.audio", "US_ExampleIdentitySelectAudio", selectAudio, s => "example.audio/" + s)
-            && selectCatalog.Audio.Length == 2 && selectCatalog.Audio.Select(x => x.AudioId).Distinct().Count() == 1
-            && selectCatalog.Audio.Select(x => x.Action).Distinct().Count() == 2,
+        var selectInputs = new AudioInputBuilder(selectCatalog);
+        Check(selectInputs.AddPack("example.audio", "US_ExampleIdentitySelectAudio", selectAudio, s => "example.audio/" + s)
+            && selectInputs.Entries.Length == 2 && selectInputs.Entries.Select(x => x.AudioId).Distinct().Count() == 1
+            && selectInputs.Entries.Select(x => x.Action).Distinct().Count() == 2,
             "DA public XML directly reuses one resource in two independently identified entries");
         var selectSource = new BehaviorSourceDeclaration();
         selectSource.LoadDataFromXmlCustom(identity.SelectSingleNode("Defs/UniversalSqueaker.UsBehaviorSourceDef/declaration")!);
@@ -406,12 +408,13 @@ internal static partial class Program
 
     private static void AuthorCases()
     {
-        var catalog = new AuthorCatalog(120, 120);
+        var catalog = new DefinitionCatalog(120, 120);
+        var audioInputs = new AudioInputBuilder(catalog);
         var pack = new VoicePackDeclaration();
         pack.LoadDataFromXmlCustom(Node("<declaration><race>Ratkin</race><entries><li><key>w</key><action>us.core/Work</action><sound>US_Work</sound><volume>0</volume></li><li><key>off</key><action>us.core/Work</action><sound>US_Off</sound><enabled>false</enabled></li></entries></declaration>"));
         Check(pack.FormatVersion == 1 && pack.Entries[0].Volume == 0 && pack.Entries[1].Enabled == false, "U3 omission/presence zero false");
-        Check(catalog.AddPack("example.pack", "US_Pack", pack, x => "example.pack/" + x) && catalog.Audio.Length == 1 && catalog.Audio[0].Volume == 0, "ordinary audio-only assembled");
-        Check(!catalog.AddPack("example.pack", "US_Pack", pack, x => x), "duplicate exact pack rejected");
+        Check(audioInputs.AddPack("example.pack", "US_Pack", pack, x => "example.pack/" + x) && audioInputs.Entries.Length == 1 && audioInputs.Entries[0].Volume == 0, "ordinary audio-only assembled");
+        Check(!audioInputs.AddPack("example.pack", "US_Pack", pack, x => x), "duplicate exact pack rejected");
         var action = new ActionDeclaration();
         action.LoadDataFromXmlCustom(Node("<declaration><formatVersion>1</formatVersion><key>example/OnDutyWork</key><priority>40</priority><baseAction>us.core/Work</baseAction><condition><all><ref>us.core/WorkState</ref><ref>example/OnDuty</ref></all></condition></declaration>"));
         Check(!catalog.AddAction(action), "missing required capability not removed");
@@ -423,13 +426,13 @@ internal static partial class Program
         Check(catalog.Actions.Single(x => x.Key == "example/OnDutyWork").Condition.Evaluate(snapshot) == Truth.True, "real composed condition callable");
         var customPack = new VoicePackDeclaration();
         customPack.LoadDataFromXmlCustom(Node("<declaration><race>Ratkin</race><entries><li><key>a</key><action>example/OnDutyWork</action><sound>US_Work</sound></li></entries></declaration>"));
-        Check(catalog.AddPack("example.pack", "US_Custom", customPack, x => "example.pack/" + x), "custom action audio loaded");
+        Check(audioInputs.AddPack("example.pack", "US_Custom", customPack, x => "example.pack/" + x), "custom action audio loaded");
         var input = Input();
         input.Facts = snapshot;
         input.Actions = catalog.Actions;
-        input.Audio = catalog.Audio;
+        input.AudioCatalog = new AudioCatalog(audioInputs.Entries);
         var driver = new Driver();
-        var result = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
+        var result = new ResponseDecision().Run(new DecisionState(1000), new StatePolicy(40, 20), input, driver, driver);
         Check(result.Action == "example/OnDutyWork" && driver.Calls == 1, "author load enters production decision and dispatch");
         bool rejected = false;
         try

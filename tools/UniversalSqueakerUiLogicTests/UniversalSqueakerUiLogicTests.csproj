@@ -18,12 +18,12 @@
 
   <!-- 零 Verse 门：链接 UI 纯逻辑文件；任一引用 Verse/Unity/RimWorld 即编译失败。 -->
   <ItemGroup>
-    <Compile Include="..\..\Source\UniversalSqueaker\Kernel\SqueakActionDomain.cs" Link="SqueakActionDomain.cs" />
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\SqueakActionPlan.cs" Link="SqueakActionPlan.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/UI/Model/ActionPresentations.cs" Link="ActionPresentations.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Core/**/*.cs" Link="Production/Core/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Layout\VoicePacksFilters.cs" Link="VoicePacksFilters.cs" />
     <!-- CORRECTIONS-R1 topic 1: the board projection is plain data logic - compiled here so the
          full state matrix runs with real plain inputs in the zero-game harness. -->
-    <Compile Include="..\..\Source\UniversalSqueaker\Pure\UsDefinitionIdentity.cs" Link="UsDefinitionIdentity.cs" />
+    <Compile Include="..\..\Source\UniversalSqueaker\Catalog\UsDefinitionIdentity.cs" Link="UsDefinitionIdentity.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\UsBoardBrowsePolicy.cs" Link="UsBoardBrowsePolicy.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\RaceBoardView.cs" Link="RaceBoardView.cs" />
     <Compile Include="..\..\Source\UniversalSqueaker\UI\Model\RaceBoardProjection.cs" Link="RaceBoardProjection.cs" />

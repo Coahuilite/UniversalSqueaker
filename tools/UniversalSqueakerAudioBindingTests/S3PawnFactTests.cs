@@ -3,7 +3,7 @@ using Verse;
 using Verse.AI;
 using RimWorld;
 using UniversalSqueaker;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 internal static partial class Program
 {
@@ -57,25 +57,9 @@ internal static partial class Program
         var catalog = new SqueakXenotypeCatalogSnapshot();
         catalog.RaceDefNames.Add(race.defName);
         VoicePackCompAttach.Apply(catalog);
-        var properties = (CompProperties_Squeaker)race.comps[0];
-        Check(properties.actions.Count == 15, "S3 actual auto attachment retains legacy 15-plan defaults rather than changing daily policy");
-        foreach (string action in new[] { "vendor/IndependentSignal", "vendor/OptionalSignal" })
-        {
-            bool configured = properties.actions.Exists(x => UniversalSqueaker.Kernel.ActionKey.For(x.action) == action);
-            bool permitted = true; // Registration owns the new contract, not the retired baby opt-in.
-            Check(!configured && UsControlledActionEligibility.Allows(configured, true, permitted, true, SqueakActionScope.AnyOccurrence, false, false),
-                "S3 new author " + action + " is usable with automatic Comp without author writing legacy table");
-            Check(!System.Enum.IsDefined(typeof(SqueakAction), 15) && !System.Enum.IsDefined(typeof(SqueakAction), 16),
-                "DC retired numeric slots cannot return through author registration " + action);
-            Check(!UsControlledActionEligibility.Allows(configured, true, permitted, false, SqueakActionScope.AnyOccurrence, false, false),
-                "S3 explicit source/player disabled still rejects " + action);
-            Check(!UsControlledActionEligibility.Allows(configured, false, permitted, true, SqueakActionScope.AnyOccurrence, false, false),
-                "S3 retained legacy-only caller does not acquire new registration prerequisite or missing-plan admission " + action);
-        }
-        Check(!UsControlledActionEligibility.Allows(true, false, false, true, SqueakActionScope.AnyOccurrence, false, false),
-            "S3 unregistered string allowExternal false is still a hard permission");
-        Check(!UsControlledActionEligibility.Allows(true, true, true, true, SqueakActionScope.ActiveCommand, false, true),
-            "S3 new author cannot bypass active-command scope");
-    }
+        Check(race.comps[0] is CompProperties_Squeaker && race.comps.Count == 1, "new native Comp attachment has no second action-plan authority");
+        Check(UsControlledActionEligibility.Allows(true, BehaviorScope.AnyOccurrence, false, false), "explicit author contract can use an attached subject without old Comp action table");
+        Check(!UsControlledActionEligibility.Allows(false, BehaviorScope.AnyOccurrence, false, false), "folded explicit disabled remains a hard gate");
+        Check(!UsControlledActionEligibility.Allows(true, BehaviorScope.ActiveCommand, false, true), "registered author cannot bypass active-command scope");    }
 }
 

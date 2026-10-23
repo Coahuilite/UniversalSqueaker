@@ -16,7 +16,7 @@ namespace UniversalSqueaker.KernelTests;
 /// </summary>
 public static class RemixEmptyTierRegression
 {
-    private const SqueakAction Act = SqueakAction.Call;
+    private const string Act = CoreActions.Call;
 
     private const string XenoPackKey = "us.regression:XenoPack";
     private const string RacePackKey = "us.regression:RacePack";
@@ -277,10 +277,10 @@ public static class RemixEmptyTierRegression
     private static VoicePackEntry PackWithFallback(string packKey, AudioDomain domain, string? fallbackSound, params string[] soundKeys)
     {
         Dictionary<string, IReadOnlyList<ActionSoundSet>> actions = new();
-        actions[ActionKey.For(Act)!] = new[] { new ActionSoundSet(soundKeys, null, 1f) };
+        actions[Act!] = new[] { new ActionSoundSet(soundKeys, null, 1f) };
         Dictionary<string, string>? fallback = fallbackSound == null
             ? null
-            : new Dictionary<string, string> { [ActionKey.For(Act)!] = fallbackSound };
+            : new Dictionary<string, string> { [Act!] = fallbackSound };
         return new VoicePackEntry(packKey, domain, 1f, actions, fallback);
     }
 
@@ -288,8 +288,8 @@ public static class RemixEmptyTierRegression
     private static BuiltInFallbackTable BuiltIn()
         => new BuiltInFallbackTable(new[]
         {
-            new FallbackProfile(Scenarios.RaceA, 1, new Dictionary<string, string> { [ActionKey.For(Act)!] = BuiltInSound }),
-            new FallbackProfile(Scenarios.RaceB, 1, new Dictionary<string, string> { [ActionKey.For(Act)!] = BuiltInSound }),
+            new FallbackProfile(Scenarios.RaceA, 1, new Dictionary<string, string> { [Act!] = BuiltInSound }),
+            new FallbackProfile(Scenarios.RaceB, 1, new Dictionary<string, string> { [Act!] = BuiltInSound }),
         });
 
     private sealed class DenyGate : ISoundGate
@@ -330,7 +330,7 @@ public static class RemixEmptyTierRegression
         double[] script, int expectedConsumed, ChainTier? expectedTier, string? expectedKey, string? expectedPool, ref int failures)
     {
         ScriptedRolls rolls = new(script);
-        SelectionContext ctx = new(domain, ActionKey.For(Act)!, AgeBucket.Adult, false, false);
+        SelectionContext ctx = new(domain, Act!, AgeBucket.Adult, false, false);
         ChainResult result = registry.Select(ctx, mode, gate, rolls);
         bool ok = result.Tier == expectedTier
             && string.Equals(result.SoundKey, expectedKey, StringComparison.Ordinal)

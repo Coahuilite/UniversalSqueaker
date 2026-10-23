@@ -39,7 +39,7 @@ internal static class CancelLayerLaneTests
         DefaultGlobalContextReturnsOnceWithRealClick();
         PureLadderStaticsRoundTrip();
         F06FallbackAreaDropsTheTuningContext();
-        // S4 retires mood reset controls; current notice geometry is checked in S4RetiredPolicyUiTests.
+        F07MeasuredDetailsGrowInsteadOfOverdrawing();
         WindowLayeringRelationships();
         KeyboardCooperationWitness();
         DiagnosticsTwoPressEscThroughTheNativeStackDouble();
@@ -631,13 +631,13 @@ internal static class CancelLayerLaneTests
         var normal = new RecordingSettingsSource { RichData = true };
         var emptyXeno = new RecordingSettingsSource { RichData = true, EmptyXenotypeTarget = true };
 
-        normal.ViewState.TuningArea = 1; // mood
+        normal.ViewState.TuningArea = 1; // current response details, not the retired mood editor
         float moodNormal = ScopeTreeHeight(normal, metrics);
         emptyXeno.ViewState.TuningArea = 1;
         float moodEmpty = ScopeTreeHeight(emptyXeno, metrics);
-        Assert(Math.Abs(moodEmpty - moodNormal) <= .5f,
-            "the retired mood editor presents the same navigation/notice regardless of domain; old layer "
-            + "rows cannot imply an active editor, got " + moodNormal + " vs " + moodEmpty);
+        Assert(moodEmpty > moodNormal,
+            "response details retain their actual layer/domain and empty-target reason; the measured "
+            + "card must grow for those context rows, got " + moodNormal + " vs " + moodEmpty);
 
         // The context is IDENTICAL across the two remaining areas (both draw layer/domain/reason), and
         // an unknown stale area (2, pre-UIR-004) is clamped by SetTuningArea before the tree sees it -
@@ -653,17 +653,12 @@ internal static class CancelLayerLaneTests
         Console.WriteLine("[f06-gate] mood empty-vs-normal " + moodEmpty + "/" + moodNormal
             + ", clampedArea==action " + clampedHeight + "/" + actionHeight);
     }
-    private static void F07MeasuredResetLineGrowsInsteadOfOverdrawing()
+    private static void F07MeasuredDetailsGrowInsteadOfOverdrawing()
     {
         Dictionary<string, string> english = Program.ReadKeyedTable("English");
-        var fits = new Dictionary<string, string>(english, StringComparer.Ordinal)
-        {
-            ["US.Tuning.ResetToPreset"] = "Reset"
-        };
-        var wrapping = new Dictionary<string, string>(english, StringComparer.Ordinal)
-        {
-            ["US.Tuning.ResetToPreset"] = new string('W', 120)
-        };
+        const string fits = "Current response";
+        string wrapping = string.Join(" ", System.Linq.Enumerable.Repeat("Current response source and parameter", 30));
+        Program.SetTranslatorResolver(english);
 
         var reports = new List<UiOverflowReport>();
         var metrics = new Program.StubMetrics();
@@ -671,19 +666,17 @@ internal static class CancelLayerLaneTests
         UiFitAudit.Enabled = true;
         try
         {
-            float fitsHeight = ResetLineHeight(fits, metrics);
-            float wrapsHeight = ResetLineHeight(wrapping, metrics);
+            float fitsHeight = DetailsHeight(fits, metrics);
+            float wrapsHeight = DetailsHeight(wrapping, metrics);
             Assert(fitsHeight > 0f && wrapsHeight > fitsHeight,
-                "the reset slot must grow the card when its content cannot fit inline, got "
+                "the current response explanation must grow the card when it wraps, got "
                 + fitsHeight + "px / " + wrapsHeight + "px");
-            // Two multiplier lines move to their own line: exactly 2 * (RowHeight 28 + RowGap 2).
-            Assert(Math.Abs(wrapsHeight - fitsHeight - 60f) < 0.01f,
-                "measure and draw agree by construction: the wrapped shape adds exactly the two reset "
-                + "lines it paints (expected +60px, got +" + (wrapsHeight - fitsHeight) + ")");
+            // The two old multiplier reset rows are retired. Their literal +60px shape is not a
+            // current UI contract; the surviving invariant is measured content, not overdraw.
             Assert(reports.Count == 0,
-                "the reset phrase is never overdrawn or clipped any more: " + Describe(reports));
-            Console.WriteLine("[f07-reset-line] fits=" + fitsHeight + " wrapped=" + wrapsHeight
-                + " delta=" + (wrapsHeight - fitsHeight) + " (exactly the two own-line rows)"
+                "the explanation is neither overdrawn nor clipped: " + Describe(reports));
+            Console.WriteLine("[f07-current-details] fits=" + fitsHeight + " wrapped=" + wrapsHeight
+                + " delta=" + (wrapsHeight - fitsHeight)
                 + " overflowReports=" + reports.Count);
         }
         finally
@@ -693,24 +686,16 @@ internal static class CancelLayerLaneTests
         }
     }
 
-    private static float ResetLineHeight(Dictionary<string, string> table, Program.StubMetrics metrics)
+    private static float DetailsHeight(string text, Program.StubMetrics metrics)
     {
-        Program.SetTranslatorResolver(table);
         var fake = new RecordingSettingsSource
         {
             RichData = true,
-            TuningActionScopes = new[]
-            {
-                new ActionScopeRowView(
-                    "Eat", "Eat", ActionScopeGroup.SystemOrEvent, SqueakActionScope.AnyOccurrence, SqueakAction.Eat,
-                    hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence,
-                    hasOwnInterval: true, ownInterval: 1.2f, effectiveInterval: 1.2f, intervalSourceLayer: 1,
-                    hasPresetAnchor: true, presetResetReady: true, resetPresetTarget: "Harness Baseline")
-            }
+            ResponseExplanation = text
         };
         using UiHost host = UsKernelSettingsHost.Create(fake, metrics);
         host.Bindings.Invoke("set-tab", "Tuning");
-        host.Bindings.Set("tuning-selected-action", "Eat");
+        host.Bindings.Set("tuning-area", 1);
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(new Vector2(PageWidth, PageHeight));
         float height = snapshot.RectById.TryGetValue("scope-tree", out Rect rect) ? rect.height : 0f;
         host.DrawChecked(new Rect(0f, 0f, PageWidth, PageHeight));
@@ -787,7 +772,7 @@ internal static class CancelLayerLaneTests
         (bool again, Event second) = PressEscape(host);
         Assert(!again && second.type != EventType.Used,
             "with rows and context both declined and no help open, the key reaches the root unconsumed");
-        Assert(fake.LastActionScope == null && fake.LastPackScope == null && fake.LastMood == null,
+        Assert(fake.LastActionScope == null && fake.LastPackScope == null,
             "and the whole path touched no persisted business value");
     }
 

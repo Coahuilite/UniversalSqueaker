@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using FerriteLib.UiKit.Kernel;
@@ -10,18 +11,20 @@ namespace UniversalSqueaker.UI;
 /// Production implementation of <see cref="IUsKernelSettingsSource"/>. It owns one per-window
 /// <see cref="VoicePacksPageState"/> (created by the settings window and passed in), builds the
 /// read-only view once per Unity frame, and routes every typed write to the existing business
-/// surface (<see cref="UniversalSqueakerSettings"/> and the typed
+/// surface (<see cref="GameSettings"/> and the typed
 /// <see cref="VoicePacksPageModel"/> facade).
 /// </summary>
 public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 {
-    private readonly UniversalSqueakerSettings settings;
+    private readonly GameSettings settings;
     private readonly VoicePacksPageState state;
     private VoicePacksViewState? cachedView;
     private Func<int>? revisionSource;
     private int cachedRevision = -1;
+    private long cachedConfiguration = -1;
+    private Authoring.DefinitionCatalog? cachedDefinitions;
 
-    public UsKernelSettingsSource(UniversalSqueakerSettings settings)
+    public UsKernelSettingsSource(GameSettings settings)
     {
         this.settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
         state = new VoicePacksPageState();
@@ -50,10 +53,14 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public VoicePacksViewState BuildView()
     {
         int revision = revisionSource != null ? revisionSource() : Time.frameCount;
-        if (cachedView == null || revision != cachedRevision)
+        long configuration = settings.CaptureBehaviorConfiguration().Id;
+        if (cachedView == null || revision != cachedRevision || configuration != cachedConfiguration
+            || !ReferenceEquals(cachedDefinitions, SqueakerRuntime.Definitions))
         {
             cachedView = VoicePacksPageModel.BuildView(settings, SqueakXenotypeCatalog.Current, state);
             cachedRevision = revision;
+            cachedConfiguration = configuration;
+            cachedDefinitions = SqueakerRuntime.Definitions;
         }
 
         return cachedView;
@@ -67,13 +74,24 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     // Fallback shares the footer's Keyed entry so a missing instance never leaks a raw English token
     // into a translated page. SaveStatus stays a raw token: the footer maps status tokens itself and
     // must keep matching on them.
-    public string BuildIdentity => UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
+    public string BuildIdentity => SqueakerMod.Instance != null ? SqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
 
-    public string SaveStatus => UniversalSqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
+    public string SaveStatus => SqueakerMod.Instance?.SaveState.ToString() ?? "Unknown";
 
-    public bool SaveStatusVisible => UniversalSqueakerMod.Instance?.SaveStatusVisible ?? true;
+    public bool SaveStatusVisible => SqueakerMod.Instance?.SaveStatusVisible ?? true;
 
-    public bool IsDirty => UniversalSqueakerMod.Instance?.IsSettingsDirty ?? false;
+    public bool IsDirty => SqueakerMod.Instance?.IsSettingsDirty ?? false;
+    public string ResponseExplanation
+    {
+        get
+        {
+            var row = BuildView().ActionScopes.FirstOrDefault(x => x.ActionKey == state.TuningSelectedAction);
+            if (row.ActionKey != null) return row.Explanation;
+            var configuration = settings.CaptureBehaviorConfiguration();
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "US.Response.Profile".Translate().ToString(),
+                configuration.SystemVolume, configuration.Activity, configuration.SourceMode, SqueakerRuntime.PolicyStatus);
+        }
+    }
 
     public void SetMode(SqueakVoicePackMode mode)
     {
@@ -95,10 +113,9 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetDistanceRange(start, end);
     }
 
-    public void SetBasicToggle(SqueakBasicToggle key, bool value)
-    {
-        settings.SetBasicTuning(key, value);
-    }
+
+
+    public void SetTalkingScaling(bool value) => settings.SetTalkingScaling(value);
 
     public void SetCameraIndicator(bool value)
     {
@@ -112,16 +129,14 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
 
     public void SetEatParameter(string key, string value)
     {
+        if (!CanResetTuningArea()) return;
         Type type = key == "phase" ? typeof(EatPhase) : key == "nutritionScope" ? typeof(EatNutritionScope) : typeof(EatDrugScope);
         int? parsed = value == "" ? null : Convert.ToInt32(Enum.Parse(type, value));
         settings.SetEatParameter(key, parsed, state.TuningLayer == 0 ? "" : state.TuningRaceDefName,
             state.TuningLayer == 2 ? state.TuningXenotypeDefName : "");
         cachedView = null;
     }
-    public void SetGlobalMinIntervalTicks(int ticks)
-    {
-        settings.SetGlobalMinIntervalTicks(ticks);
-    }
+
 
     public void SetSelectParameter(string key, string value)
     {
@@ -132,10 +147,7 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         cachedView = null;
     }
 
-    public void SetGlobalCooldownMultiplier(float value)
-    {
-        settings.SetGlobalCooldownMultiplier(value);
-    }
+
 
     public void SetDevLoggingMode(SqueakDevLoggingMode mode)
     {
@@ -143,7 +155,7 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     }
 
     // === Developer layout diagnosis (R3-B) =====================================================
-    // Per-window, never persisted, and NOT routed through UniversalSqueakerSettings: these are developer
+    // Per-window, never persisted, and NOT routed through GameSettings: these are developer
     // switches over this window's own diagnostic scope. The geometry instrument is per HOST, so enabling it
     // here cannot reach the diagnostics panel's host or any other window's.
     private UiHost? host;
@@ -537,11 +549,7 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         return settings.ResetActionTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
     }
 
-    public SqueakResetOutcome ResetMoodTuningArea()
-    {
-        if (!CanResetTuningArea()) return SqueakResetOutcome.Rejected;
-        return settings.ResetMoodTuningArea(state.TuningRaceDefName, state.TuningXenotypeDefName);
-    }
+
 
     /// <summary>US-RESET1 review1: the mechanism half of the scoped draft end - the DECISION (which
     /// element this operation affects, and whether the outcome was Applied) stays with the host
@@ -550,10 +558,7 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         => UsKernelSettingsHost.EndAffectedEdit(host, editIsAffected);
 
     // VF1定稿 A2/A4: the multiplier facade rides the same state identity as the scope facade.
-    public void SetActionTuning(string actionKey, bool intervalField, float? value)
-    {
-        VoicePacksPageModel.SetActionTuningMultiplier(settings, state, actionKey, intervalField, value);
-    }
+
 
     public void ResetActionToPreset(string actionKey)
     {
@@ -571,20 +576,14 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void RestoreFallbackDefault() => VoicePacksPageModel.RestoreFallbackDefault(settings, state);
     public void DeleteFallbackTable(string raceDefName) => VoicePacksPageModel.DeleteFallbackTable(settings, state, raceDefName);
 
-    public void SetActionScope(string actionKey, SqueakActionScope? scope)
+    public void SetActionScope(string actionKey, BehaviorScope? scope)
     {
         VoicePacksPageModel.SetActionScope(settings, state, actionKey, scope);
     }
 
-    public void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value)
-    {
-        VoicePacksPageModel.SetMoodTuning(settings, state, mood, factor, value);
-    }
 
-    public void ResetMoodToPreset(SqueakMood mood)
-    {
-        VoicePacksPageModel.ResetMoodToPreset(settings, state, mood);
-    }
+
+
 
     public void ToggleBaselinePreset(string presetDefName)
     {

@@ -84,51 +84,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// (mood-major, factor-minor: pitch, volume, jitter), 0=Global 1=Race 2=Xenotype -1=no layer (default).
     /// Null keeps the fixture's production-shaped mix. This is the input the corrected readout renders.
     /// </summary>
-    public int[]? MoodSourceLayers;
-
-    /// <summary>
-    /// V3 task-18 instrument: the record the FIRST rich mood row (Good) reports as its own. The PM's
-    /// counterexample feeds a record whose factor flags are CLEARED but whose <c>sourcePresetDefName</c>
-    /// anchor is RETAINED - the readout must never present that anchor as the origin of the shown numbers.
-    /// </summary>
-    public MoodTuningRecord? MoodOwnRecord;
-
-    /// <summary>
-    /// V3 task-18 instrument: the display label the resolved reset-to-preset TARGET carries for the rich
-    /// rows whose <c>PresetReset</c> is Ready (the model projects the Def's own label). Empty keeps the
-    /// built-in "Harness Baseline"; rows with no usable target get "".
-    /// </summary>
-    public string ResetTargetLabel = "Harness Baseline";
-
-    /// <summary>V3 task-18 instrument: overrides the FIRST rich mood row's reset-to-preset availability, so
-    /// the matrix can feed an anchor whose Def no longer resolves (PresetMissing). Null keeps Ready.</summary>
-    public SqueakMoodResetPresetState? Row1PresetReset;
-
-    private static readonly int[] DefaultMoodSourceLayers = { 0, 0, -1, -1, -1, -1, 1, 1, 0, 2, 0, -1 };
-
-    /// <summary>Supplying layer of one factor slot: the lane's input when it feeds one, otherwise the
-    /// production-shaped mix (Global+default, all-default, Race+Global, Xenotype+Global+default).</summary>
-    private int SourceLayerAt(int index)
-    {
-        int[] layers = MoodSourceLayers ?? DefaultMoodSourceLayers;
-        return index >= 0 && index < layers.Length ? layers[index] : -1;
-    }
-
-    private static string ResetTargetFor(SqueakMoodResetPresetState state, string label)
-    {
-        return state == SqueakMoodResetPresetState.Ready ? label : "";
-    }
-
-    /// <summary>
-    /// V3 instrument: replaces the fixture's two production-shaped action-scope rows with the given set
-    /// (empty = a DEGENERATE input no production model produces; the V3 lane uses it only as a labelled
-    /// defensive probe of the mood area's coupling). Null keeps the two real rows.
-    /// </summary>
     public ActionScopeRowView[]? TuningActionScopes;
-
-    /// <summary>
-    /// Independent Eat axes projected by the same read-only view and typed write boundary.
-    /// </summary>
     public EatPhase EatPhase = EatPhase.WholeProcess;
     public EatNutritionScope EatNutritionScope = EatNutritionScope.Any;
     public EatDrugScope EatDrugScope = EatDrugScope.Any;
@@ -152,8 +108,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public SqueakDistancePreset? LastDistancePreset;
     public float? LastDistanceRangeStart;
     public float? LastDistanceRangeEnd;
-    public SqueakBasicToggle? LastBasicToggle;
-    public bool? LastBasicToggleValue;
+    public bool? LastTalkingScaling;
     public bool? LastCameraIndicator;
     public bool? LastEasterEggs;
 
@@ -182,13 +137,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     // Tuning writes.
     public string? LastActionKey;
-    public SqueakActionScope? LastActionScope;
-    public SqueakMood? LastMood;
-    public SqueakMoodFactor? LastMoodFactor;
-    public float? LastMoodValue;
+    public BehaviorScope? LastActionScope;
     /// <summary>Mood of the last "reset to preset" write, or null when the control never fired.</summary>
-    public SqueakMood? LastMoodPresetReset;
-    public int LastMoodPresetResetCount;
     public string? LastBaselinePresetToggle;
     public string? LastBaselineRacePreset;
     public string? LastBaselineRace;
@@ -305,12 +255,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             SqueakVoicePackMode.Vanilla,
             allowEasterEggs: false,
             SqueakDistancePreset.Balanced,
-            scaleCooldownWithTimeSpeed: true,
             scaleFrequencyWithTalking: true,
-            scalePeriodicWithAudiblePopulation: true,
             showCameraIndicator: false,
-            globalCooldownMultiplier: 1f,
-            globalMinIntervalTicks: 216,
             devLoggingMode: SqueakDevLoggingMode.Auto,
             localizeDebugActions: false,
             globalVolumeFactor: 1f,
@@ -326,7 +272,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             tuningRaceDefName: "",
             tuningXenotypeDefName: "",
             tuningDomains: Array.Empty<TuningDomainOptionView>(),
-            moodTuningRows: Array.Empty<MoodTuningRowView>(),
             baselinePresets: Array.Empty<BaselinePresetView>(),
             buildIdentity: BuildIdentity,
             saveStatus: SaveStatus,
@@ -381,10 +326,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     "Human",
                     selected: true,
                     actionCount: 5,
-                    moodCount: 3,
+                    fieldCount: 3,
                     xenotypes: new[]
                     {
-                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, moodCount: 3, image: XenotypeIcon)
+                        new BaselineXenotypeView("sanguophage", "Sanguophage", inheritFromRace: false, selected: false, actionCount: 5, fieldCount: 3, image: XenotypeIcon)
                     })
             },
             selectedRaceCount: 1,
@@ -394,12 +339,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             SqueakVoicePackMode.Remix,
             allowEasterEggs: true,
             SqueakDistancePreset.Strong,
-            scaleCooldownWithTimeSpeed: false,
             scaleFrequencyWithTalking: RichScaleFrequencyWithTalking,
-            scalePeriodicWithAudiblePopulation: false,
             showCameraIndicator: true,
-            globalCooldownMultiplier: 1f,
-            globalMinIntervalTicks: 216,
             devLoggingMode: SqueakDevLoggingMode.Enabled,
             localizeDebugActions: true,
             globalVolumeFactor: 0.6f,
@@ -415,8 +356,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             selectedDomain: state.DomainSelectionCanceled ? null : SelectedForView(sang, filterSanguophage),
             actionScopes: TuningActionScopes ?? new[]
             {
-                new ActionScopeRowView("Eat", "Eat", ActionScopeGroup.SystemOrEvent, SqueakActionScope.AnyOccurrence, SqueakAction.Eat, hasOwnScope: true, effectiveScope: SqueakActionScope.AnyOccurrence),
-                new ActionScopeRowView("Draft", "Draft", ActionScopeGroup.PlayerTriggered, SqueakActionScope.ActiveCommand, SqueakAction.Draft, hasOwnScope: false, effectiveScope: SqueakActionScope.ActiveCommand)
+                new ActionScopeRowView(CoreActions.Eat, "Eat", ActionScopeGroup.SystemOrEvent, BehaviorScope.AnyOccurrence, CoreActions.Eat, hasOwnScope: true, effectiveScope: BehaviorScope.AnyOccurrence),
+                new ActionScopeRowView(CoreActions.Draft, "Draft", ActionScopeGroup.PlayerTriggered, BehaviorScope.ActiveCommand, CoreActions.Draft, hasOwnScope: false, effectiveScope: BehaviorScope.ActiveCommand)
             },
             // US-ESC1: layer and area FOLLOW the fake's own page state (production builds both straight
             // from state); with the default state this equals the old constants.
@@ -439,58 +380,6 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
                     new TuningDomainOptionView("human", "Human"),
                     new TuningDomainOptionView("testrace", "Test Race")
                 },
-            // All FOUR product moods, in the production enumeration order (VoicePacksPageModel
-            // builds one row per SqueakMood: Good, Neutral, Bad, Break). Availability is a VIEW input
-            // (the model computes it from flags/source), so this fake sets it directly instead of
-            // materialising owned records: with own: null the controls would render correctly inert
-            // and no interaction step could route a click. Every row carries DISTINCT effective
-            // values, so the mood layout lane can identify a card by the write its own controls route
-            // (a two-row fixture could not tell the third and fourth cards apart from the first two).
-            // "reset to preset" stays ready on rows one and three and unavailable on two and four, so
-            // both reset states are exercised on more than one card.
-            moodTuningRows: new[]
-            {
-                new MoodTuningRowView(
-                    SqueakMood.Good,
-                    SqueakMood.Good.ToString(),
-                    own: MoodOwnRecord,
-                    effectivePitch: 1f,
-                    effectiveVolume: 1f,
-                    effectiveJitterHalf: 0f,
-                    defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: Row1PresetReset ?? SqueakMoodResetPresetState.Ready,
-                    pitchSourceLayer: SourceLayerAt(0), volumeSourceLayer: SourceLayerAt(1), jitterSourceLayer: SourceLayerAt(2), resetPresetTarget: ResetTargetFor(Row1PresetReset ?? SqueakMoodResetPresetState.Ready, ResetTargetLabel)),
-                new MoodTuningRowView(
-                    SqueakMood.Neutral,
-                    SqueakMood.Neutral.ToString(),
-                    own: null,
-                    effectivePitch: 0.9f,
-                    effectiveVolume: 0.8f,
-                    effectiveJitterHalf: 0.1f,
-                    defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
-                    pitchSourceLayer: SourceLayerAt(3), volumeSourceLayer: SourceLayerAt(4), jitterSourceLayer: SourceLayerAt(5), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel)),
-                new MoodTuningRowView(
-                    SqueakMood.Bad,
-                    SqueakMood.Bad.ToString(),
-                    own: null,
-                    effectivePitch: 0.75f,
-                    effectiveVolume: 0.6f,
-                    effectiveJitterHalf: 0.2f,
-                    defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.Ready,
-                    pitchSourceLayer: SourceLayerAt(6), volumeSourceLayer: SourceLayerAt(7), jitterSourceLayer: SourceLayerAt(8), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.Ready, "Harness Baseline")),
-                new MoodTuningRowView(
-                    SqueakMood.Break,
-                    SqueakMood.Break.ToString(),
-                    own: null,
-                    effectivePitch: 0.6f,
-                    effectiveVolume: 0.4f,
-                    effectiveJitterHalf: 0.3f,
-                    defaultReset: SqueakMoodResetDefaultState.Ready,
-                    presetReset: SqueakMoodResetPresetState.NotFromPreset,
-                    pitchSourceLayer: SourceLayerAt(9), volumeSourceLayer: SourceLayerAt(10), jitterSourceLayer: SourceLayerAt(11), resetPresetTarget: ResetTargetFor(SqueakMoodResetPresetState.NotFromPreset, ResetTargetLabel))
-            },
             baselinePresets: new[] { preset },
             buildIdentity: BuildIdentity,
             saveStatus: SaveStatus,
@@ -609,12 +498,10 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         LastDistanceRangeEnd = end;
     }
 
-    public void SetBasicToggle(SqueakBasicToggle key, bool value)
-    {
-        LastBasicToggle = key;
-        LastBasicToggleValue = value;
-    }
 
+
+    public string ResponseExplanation { get; set; } = "Fixture response details: explicit current input.";
+    public void SetTalkingScaling(bool value) => LastTalkingScaling = value;
     public void SetCameraIndicator(bool value) => LastCameraIndicator = value;
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
@@ -669,7 +556,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     public void AttachHost(UiHost host)
     {
         DiagnosisHost = host;
-        reportMirror = new UsKernelSettingsSource(new UniversalSqueakerSettings());
+        reportMirror = new UsKernelSettingsSource(new GameSettings());
         reportMirror.AttachHost(host);
     }
 
@@ -1017,7 +904,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     // state (ClaimHover/HoverClaim), not a business write, so the end-to-end lanes read it off the
     // host's session. SetHelpSelection stays retired with the D2 index-list cut.
 
-    public void SetActionScope(string actionKey, SqueakActionScope? scope)
+    public void SetActionScope(string actionKey, BehaviorScope? scope)
     {
         LastActionKey = actionKey;
         LastActionScope = scope;
@@ -1079,18 +966,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// records it so a lane can prove the payload identity survives to the boundary.</summary>
     public string? LastFallbackDeletedRace { get; private set; }
 
-    public void SetMoodTuning(SqueakMood mood, SqueakMoodFactor factor, float? value)
-    {
-        LastMood = mood;
-        LastMoodFactor = factor;
-        LastMoodValue = value;
-    }
 
-    public void ResetMoodToPreset(SqueakMood mood)
-    {
-        LastMoodPresetReset = mood;
-        LastMoodPresetResetCount++;
-    }
+
+
 
     public void ToggleBaselinePreset(string presetDefName)
     {

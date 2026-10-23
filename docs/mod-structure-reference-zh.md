@@ -1,6 +1,6 @@
 # Universal Squeaker 仓库与安装包结构
 
-当前声明：US **0.5.0**，RimWorld **1.6**，packageId **`coahuilite.universalsqueaker`**，许可 **MPL-2.0**。版本以 `Source/UniversalSqueaker/UniversalSqueaker.csproj` 为主源，`About/About.xml` 同步。
+当前声明：US **0.6.0 Dev**，RimWorld **1.6**，packageId **`coahuilite.universalsqueaker`**，许可 **MPL-2.0**。版本以 `Source/UniversalSqueaker/UniversalSqueaker.csproj` 为主源，`About/About.xml` 同步。
 
 ## 仓库中的权威入口
 
@@ -14,8 +14,8 @@ UniversalSqueaker/
 │  ├─ Patches/
 │  └─ Languages/
 ├─ Source/UniversalSqueaker/
-│  ├─ Kernel/                     # 纯选池/身份等，不依赖 Verse/Unity
-│  ├─ Pure/                       # 可隔离测试的业务纯逻辑
+│  ├─ Core/                       # 完整中立定义/配置/选音/决策/会话
+│  ├─ Game/                       # 原生事实/输出接入/生命周期
 │  └─ Catalog/ Runtime/ Models/ Settings/ Fallback/ UI/ ...
 ├─ tools/                        # Kernel、迁移、日志、UI 与 Host 等测试
 ├─ scripts/                      # 构建、载体选择、打包、验证、隐私
@@ -24,9 +24,9 @@ UniversalSqueaker/
 └─ LICENSE
 ```
 
-`Kernel/` 与 `Pure/` 当前都存在；旧结构稿中“已经删除”的句子不再适用。`LoadFolders.xml` 对 1.6 加载根与 `1.6`，不按某个种族或内容包开关主模组。
+旧Kernel/Pure源码已迁入完整Core或实际adapter，不保第二条计划链。
 
-US 不带自己的音频文件，不带 Extras 音频包，也不复制 FerriteLib DLL。当前 Ratkin fallback XML 是数据层的原版音频引用，不是 Kernel 中的种族特判。旧 SR C# 类型桥接不在当前产品中；音频包迁移见 [作者指南](voicepack-authoring-0.5-zh.md)。
+US 不带自己的音频文件，不带 Extras 音频包，也不复制 FerriteLib DLL。当前 Ratkin fallback XML 是数据层的原版音频引用，不是 Kernel 中的种族特判。旧 SR C# 类型桥接不在当前产品中；音频包迁移见 [作者指南](us-kernel-0.6-authoring-zh.md)。
 
 ## 安装包由脚本构造
 

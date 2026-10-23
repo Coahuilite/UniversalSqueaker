@@ -13,8 +13,8 @@ namespace UniversalSqueaker.Runtime;
 /// </summary>
 public static class SqueakGameDefs
 {
-    public static Func<string, UniversalSqueakerTuningBaselineDef?> BaselineByName = DefaultBaselineByName;
-    public static Func<IEnumerable<UniversalSqueakerTuningBaselineDef>> AllBaselines = DefaultAllBaselines;
+    public static Func<string, UsBehaviorPresetDef?> BaselineByName = DefaultBaselineByName;
+    public static Func<IEnumerable<UsBehaviorPresetDef>> AllBaselines = DefaultAllBaselines;
 
     public static void ResetToGameDefaults()
     {
@@ -22,6 +22,6 @@ public static class SqueakGameDefs
         AllBaselines = DefaultAllBaselines;
     }
 
-    private static UniversalSqueakerTuningBaselineDef? DefaultBaselineByName(string defName) => DefDatabase<UniversalSqueakerTuningBaselineDef>.GetNamedSilentFail(defName);
-    private static IEnumerable<UniversalSqueakerTuningBaselineDef> DefaultAllBaselines() => DefDatabase<UniversalSqueakerTuningBaselineDef>.AllDefs;
+    private static UsBehaviorPresetDef? DefaultBaselineByName(string defName) => DefDatabase<UsBehaviorPresetDef>.GetNamedSilentFail(defName);
+    private static IEnumerable<UsBehaviorPresetDef> DefaultAllBaselines() => DefDatabase<UsBehaviorPresetDef>.AllDefs;
 }

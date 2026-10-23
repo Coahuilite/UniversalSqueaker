@@ -1,7 +1,8 @@
+using UniversalSqueaker.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 
 internal static partial class Program
 {
@@ -21,7 +22,7 @@ internal static partial class Program
             };
             var state = new DecisionState(1000);
             var driver = new Driver { Result = result };
-            var engine = new OneShotDecision();
+            var engine = new ResponseDecision();
             var policy = new StatePolicy(40, 20);
             var decision = engine.Run(state, policy, input, driver, driver);
             transcript.Append("S4 t=1000 facts=Work A=2 nativeAge=1.2/.8 jitter=.9..1.1 chosen=").Append(decision.Action)
@@ -39,11 +40,11 @@ internal static partial class Program
         }
         var slot = new SustainedPlayback();
         var old = new Handle();
-        var start = slot.Dispatch(SustainedRequest("Work", 10), true,
+        var start = slot.Dispatch(SustainedRequest("us.core/Work", 10), true,
             () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Dispatched), old));
-        var same = slot.Dispatch(SustainedRequest("Work", 10, 1001), true, () => throw new Exception("must not start"));
-        var lower = slot.Dispatch(SustainedRequest("Call", 0, 1002), true, () => throw new Exception("must not start"));
-        var replace = slot.Dispatch(SustainedRequest("Wounded", 20, 1003), true,
+        var same = slot.Dispatch(SustainedRequest("us.core/Work", 10, 1001), true, () => throw new Exception("must not start"));
+        var lower = slot.Dispatch(SustainedRequest("us.core/Call", 0, 1002), true, () => throw new Exception("must not start"));
+        var replace = slot.Dispatch(SustainedRequest("us.core/Wounded", 20, 1003), true,
             () => new SustainedStart(new PlaybackReceipt(PlaybackResult.Indeterminate, "NativeStartupUnconfirmed")));
         transcript.Append("S5 start=").Append(start.Result).Append(" same=").Append(same.Result).Append(" low=").Append(lower.Result)
             .Append(" replacement=").Append(replace.Result).Append(" oldEnds=").Append(old.Ends)

@@ -8,7 +8,7 @@ using RimWorld;
 using UniversalSqueaker;
 using UniversalSqueaker.Authoring;
 using UniversalSqueaker.Kernel;
-using UniversalSqueaker.OneShot;
+using UniversalSqueaker.Responses;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
@@ -27,6 +27,8 @@ internal static partial class Program
         DefDatabase<ThingDef>.AllDefsListForReading.Add(race);
         var pack = new UsVoicePackDef { defName = "US_CoreWork", modContentPack = new ModContentPack { PackageId = "fixture.work" } };
         pack.declaration.Race = race.defName;
+        const string maintainedWork = "fixture.work/MaintainedWork";
+        DeclareMaintainedChild(pack, maintainedWork, CoreActions.Work);
         pack.declaration.Entries.Add(new VoiceEntry { Key = "Work", Action = "us.core/Work", Sound = "Ratkin1" });
         const string child = "vendor/FieldCare";
         DefDatabase<UsActionDef>.AllDefsListForReading.Add(new UsActionDef { declaration = new ActionDeclaration {
@@ -52,7 +54,7 @@ internal static partial class Program
         void Request(Pawn p, string action = "us.core/Work", string entry = "Work")
         {
             var q = p.Comp.LastCandidateRequest;
-            Check(q?.Action == action && q.Subject == p.ThingID && q.SubjectRole == "Worker" && q.Domain == race.defName
+            Check(q?.Action == action && q.Subject == SqueakerNotifications.SubjectKey(p) && q.SubjectRole == "Worker" && q.Domain == race.defName
                 && q.Audio.SourceDomain == AudioDomains.RaceOnly(race.defName) && q.Audio.EntryKey == "fixture.work/US_CoreWork/" + entry
                 && q.Audio.AudioId == "actual.provider/Ratkin1" && RuntimeSession(p).LastOutcome.Receipt?.Result == PlaybackResult.Dispatched,
                 "production request " + p.CurJob!.def!.defName + " exact full key/Worker/entry/AudioId/supplying domain");
@@ -72,7 +74,7 @@ internal static partial class Program
                 && UsPawnFacts.Capture(recipient, null)[EatPolicy.Process] == Truth.True,
                 "actual FeedPatient setup separates working feeder from actual ingester in another Race");
             Find.TickManager.TicksGame += 100; feeder.Comp.CompTick(); Request(feeder);
-            Check(!UsOneShotRuntime.IsControlled(recipient) && feeder.Comp.LastCandidateRequest!.SubjectRole == "Worker",
+            Check(!SqueakerRuntime.IsControlled(recipient) && feeder.Comp.LastCandidateRequest!.SubjectRole == "Worker",
                 "care setup/request does not manufacture recipient owner or replace Worker with ActualIngester");
             feeder.jobs.curDriver.ended = true; feeder.jobs.curDriver.Cleanup(JobCondition.Succeeded);
             Check(Fact(feeder) == Truth.False && UsPawnFacts.Capture(recipient, null)[EatPolicy.Process] == Truth.False,
@@ -89,11 +91,11 @@ internal static partial class Program
         }
         var inactive = Actor(sow); Current(inactive); int starts = SoundStarter.Played.Count;
         inactive.Comp.CompTick();
-        Check(!UsOneShotRuntime.DevelopmentActive && !UsOneShotRuntime.IsControlled(inactive) && SoundStarter.Played.Count == starts,
+        Check(!SqueakerRuntime.DevelopmentActive && !SqueakerRuntime.IsControlled(inactive) && SoundStarter.Played.Count == starts,
             "expanded Work coverage retains overall unselected Dev zero-owner/output gate");
         // Explicit fixture timing only; do not alter ordinary scope or built-in priority.
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
-        if (careOnly) { CareAndTail(); UsOneShotRuntime.ResetSession(); return; }
+        SqueakerRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
+        if (careOnly) { CareAndTail(); SqueakerRuntime.ResetSession(); return; }
         if (missing)
         {
             Check(AccessTools.TypeByName(sow[1]) == null, "Sow driver class is physically absent in this separate compilation");
@@ -161,13 +163,13 @@ internal static partial class Program
         var doctor = Actor(cases.Single(x => x[0] == "TendPatient")); Current(doctor);
         var patient = new Pawn { ThingID = "PatientOtherDomain", def = new ThingDef { defName = "OtherRace", race = new object() } };
         patient.Comp = new CompSqueaker { Pawn = patient }; doctor.CurJob!.targetA = new LocalTargetInfo { Pawn = patient };
-        Check(Fact(patient) == Truth.False && Fact(doctor) == Truth.True && !UsOneShotRuntime.IsControlled(patient), "care recipient/animal target is not promoted to Worker or another owner");
+        Check(Fact(patient) == Truth.False && Fact(doctor) == Truth.True && !SqueakerRuntime.IsControlled(patient), "care recipient/animal target is not promoted to Worker or another owner");
         doctor.CurJob.playerForced = false; Find.TickManager.TicksGame += 100; starts = SoundStarter.Played.Count; doctor.Comp.CompTick();
         Check(SoundStarter.Played.Count == starts && doctor.Comp.LastCandidateRequest == null && Fact(doctor) == Truth.True,
             "automatic care remains a true Work fact but the unchanged ActiveCommand response qualification refuses");
         doctor.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
-        Check(UniversalSqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", child,
-            new BehaviorValues { Scope = SqueakActionScope.ActiveCommand, HardIntervalTicks = 9, Volume = .3 }, () => true, out _), "inherited full Work action uses production sparse settings writer");
+        Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", child,
+            new BehaviorValues { Scope = BehaviorScope.ActiveCommand, HardIntervalTicks = 9, Volume = .3 }, () => true, out _), "inherited full Work action uses production sparse settings writer");
         doctor.CurJob.playerForced = true; Find.TickManager.TicksGame += 100; doctor.Comp.CompTick(); Request(doctor, child, "Care");
         Check(doctor.Comp.LastCandidateRequest!.Audio.Volume == .3 && RuntimeSession(doctor).State.ActionDeadline(child) == Find.TickManager.TicksGame + 9,
             "new care process keeps child scope/config/entry and its independent complete-key protection");
@@ -176,14 +178,16 @@ internal static partial class Program
         sound.sustain = true;
         foreach (var condition in new[] { JobCondition.Succeeded, JobCondition.InterruptForced })
         {
-            var p = Actor(sow); Current(p); p.Comp.FixtureSustained = true; Find.TickManager.TicksGame += 100; p.Comp.CompTick();
+            var p = Actor(sow); Current(p); MaintainSubject(p, true); Find.TickManager.TicksGame += 100; p.Comp.CompTick();
             var handle = SoundStarter.Spawned.Last(); Check(!handle.Ended, "new Sow process establishes its owned Sustained slot before " + condition);
+            Check(p.Comp.LastCandidateRequest?.Action == maintainedWork, "new Sow sustained shape comes from its explicit declared child, not a Comp plan flag");
             p.jobs!.curDriver!.ended = true; p.jobs.curDriver.Cleanup(condition);
             Find.TickManager.TicksGame += 60; p.Comp.CompTick();
             Check(handle.Ended, "native ended/Cleanup order releases only the current Work Sustained on " + condition);
+            MaintainSubject(p, false);
         }
         sound.sustain = false;
         CareAndTail();
-        UsOneShotRuntime.ResetSession();
+        SqueakerRuntime.ResetSession();
     }
 }

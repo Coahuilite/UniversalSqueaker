@@ -66,7 +66,7 @@ internal sealed class SqueakDiagnosticsDetailWindow : UiWindowHost
 
     protected override string CloseText => Translator.Translate("US.Diagnostics.UnlockClose");
 
-    protected override bool PrerequisiteVerified => UniversalSqueakerMod.PrerequisiteVerified;
+    protected override bool PrerequisiteVerified => SqueakerMod.PrerequisiteVerified;
 
     /// <summary>
     /// This window's own audit scope over its own host subscription. R3-B fix 4: the scope exists in every
