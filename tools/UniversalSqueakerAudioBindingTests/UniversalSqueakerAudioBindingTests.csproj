@@ -22,6 +22,12 @@
   <PropertyGroup Condition="'$(DcFixtureTarget)' == 'MissingWoundedAndMeleeMarker'">
     <DefineConstants>$(DefineConstants);US_FIXTURE_DC_MISSING_WOUNDED;US_FIXTURE_DC_MISSING_MELEE_MARKER</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(WorkFixtureTarget)' == 'MissingSow'">
+    <DefineConstants>$(DefineConstants);US_FIXTURE_WORK_MISSING_SOW</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="WorkCoreExpected.tsv" LogicalName="WorkCoreExpected" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../Source/UniversalSqueaker/Kernel/*.cs" Link="Production/Kernel/%(Filename)%(Extension)" />

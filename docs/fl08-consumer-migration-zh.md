@@ -1,6 +1,8 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前 US 0.6 消费固定 FerriteLib 0.8：源码 `564f78b1e88f5450aff075e5bd3f07db2a894c1f`，Dev DLL 567296 bytes，ProductVersion `0.8.0-dev+564f78b1e88f5450aff075e5bd3f07db2a894c1f`。运行前提为 `[0.8.0,0.9.0)`；这个交付支持 1.6 adapter，原生1.6待验，未交付1.7 adapter。
+当前 US 0.6 消费固定 FerriteLib 0.8：源码 `fc010bd1eab8ed434e03de6241fdae89e94b1283`，Dev DLL 568832 bytes，ProductVersion `0.8.0-dev+fc010bd1eab8ed434e03de6241fdae89e94b1283`。运行前提为 `[0.8.0,0.9.0)`；这个交付支持 1.6 adapter，原生1.6待验，未交付1.7 adapter。
+
+A002只读补丁保持公开签名/合法读取条件；ResolvedMetrics/ResolvedColours为缓存只读view，仍随正常声明更新。US无cast写该view的调用；既有生产Host已编译并定向验证普通属性/几何及override→update→remove露出当前来源，不重迁旧编辑/主题矩阵。
 
 ## 显式选择交付包，不依赖邻库移动输出
 

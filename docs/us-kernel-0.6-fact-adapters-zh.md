@@ -1,6 +1,6 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r5。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[15包导读](us-kernel-0.6-contract-review-zh.md)。D-C接续完整有效配置，扩齐15包生产通知／事实和已裁Select三资格，下面分别记录直接源码、继承依据、平台替身与原生状态。
+修订：2026-10-23，r6。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[15包导读](us-kernel-0.6-contract-review-zh.md)。D-C接续完整有效配置，扩齐15包生产通知／事实和已裁Select三资格，下面分别记录直接源码、继承依据、平台替身与原生状态。
 
 ## Eat：过程、执行、物品属性与返回结果分别维护
 
@@ -86,7 +86,7 @@ SelectInternal与PlaySelectionSoundFor共同实现一个观察能力。仅发现
 | Sleep／us.core/SleepState | Sleeper；当前JobDriver.asleep，4871 JobDriver字段／RestUtility相互区分 | driver缺失Unknown、未睡False；姿势／Job名称／!Awake不足为据。不是所有第三方睡眠系统 | Sleep；DcNativeTests清醒／睡眠及被喂重叠正确角色 |
 | Social／us.core/SocialState | SocialParticipant；joyKind Social或精确StandAndBeSociallyActive/GotoAndBeSociallyActive/Lovin当前Job全过程 | 未覆盖名称片段不变True，不是互动成功或双人事务；与Joy可同真。Stand/Lovin的4871 Core Def已核，Goto Def仍为4850依据：指定4871 Core Def中未找到，不能称同版本全内容已核 | Social及显式过程扩展；DcNativeTests准确Def、未知片段、Social+Joy。Goto当前内容缺口保留，不自行扩大安装读取 |
 | Joy／us.core/JoyState | JoyParticipant；当前Job.def.joyKind非空的正向声明，包含准备过程 | 无Job／无kind False；不是Joy gain或实际游玩Toil。Social kind也为True，未声明kind机制不自动覆盖 | Joy；DcNativeTests重叠与非Social kind实际中选 |
-| Work／us.core/WorkState | Worker；4871七对准确Def/driver＋同Pawn／currentJob／CurToil：Research/Mine/DoBill/Repair/Clean/HaulToCell/FinishFrame | 无Job False、已核但无Toil False；未知Job、缺driver、主体／Job不符或缺CurToil为具名Unknown。包括准备Toils，非工作完成；ActiveCommand是可调回应scope，不是事实 | Work及继承子Work；DcNativeTests七对各正反、workGiver标签反例和完整子键命令来源／保护 |
+| Work／us.core/WorkState | Worker；4871 Core完整20 WorkType/105具体WorkGiver的返回及帮助分支，78准确Job/driver（73类型），3患者休息入口不作Worker；见[全清单](us-core-work-scope-zh.md) | 同Pawn/currentJob/driver且未ended、CurToil有效，包括准备；无Job/已结束/无Toil False。未知/缺实现/主体不符具名Unknown，TakeInventory/VisitSickPawn有准确来源限制；不是工作完成 | Work及继承子同owner；新增71组逐生产捕获/请求/退出及反例，物理缺Sow仅局部Unknown，实际feed主体分离、Move/Social不改仲裁、两形态退出；原七组证据复用 |
 | Draft／us.core/DraftEvent | DraftedPawn；4871 Pawn.GetGizmos/draft controller准确gizmo，原toggle正常后false→true | 无变化／异常／setter／加载不发布；缺GetGizmos只隔离该观察。当前值true不等事件 | Draft；DcNativeTests重复获取不重复包装、实际方向／无变化／setter |
 | Undraft／us.core/UndraftEvent | UndraftedPawn；同一准确gizmo正常后true→false，独立ActionId | 与Draft共享接缝、不共享动作身份／时钟／音源；当前false不刷事件，缺实现同组隔离 | Undraft；DcNativeTests独立反向请求／条目／角色与无变化反例 |
 | MentalBreak／us.core/MentalBreakEvent | BreakSubject；4871基类TryStart成功，以及Catatonic/RunWild/WildDecree直达成功；HumanityBreak调用base，不重复挂包装 | false／throw不发布；基类不代表所有override。Catatonic不是MentalState；WildDecree true不保证Wander状态。任意MentalState／MentalFit不算；逐机制readiness，扩围仅Dev候选 | MentalBreak及明确启动根；DcNativeTests四实际入口、Humanity包装一次、失败／throw、来源诊断，更新后216项fixture |
@@ -101,7 +101,7 @@ SelectInternal与PlaySelectionSoundFor共同实现一个观察能力。仅发现
 
 ### 版本与覆盖缺口的实际影响
 
-4871版本及Select、Eat、近战和其他显式攻击根、Wounded/Kill/Equip、gizmo、JobDriver/CurToil、七工作过程与正向MentalBreak方法体已取得。源码可挂接不等于游戏中实际加载／声播放通过；引用编译和double仍分别列证据。Social的Goto准确Def为跨版本继承依据、当前Core内容未找到是具名缺口，不读未批DLC目录补齐；不据此把所有Goto或名字含Social的Job纳入。
+4871版本及Select、Eat、近战和其他显式攻击根、Wounded/Kill/Equip、gizmo、JobDriver/CurToil、完整Core WorkGiver/Job-driver过程与正向MentalBreak方法体已取得。源码可挂接不等于游戏中实际加载／声播放通过；引用编译和double仍分别列证据。Social的Goto准确Def为跨版本继承依据、当前Core内容未找到是具名缺口，不读未批DLC目录补齐；不据此把所有Goto或名字含Social的Job纳入。
 
 ## 退休不删除第三方正向合同
 

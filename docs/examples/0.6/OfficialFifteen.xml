@@ -15,6 +15,8 @@
       <li><key>sleep</key><action>us.core/Sleep</action><sound>Click</sound></li>
       <li><key>social</key><action>us.core/Social</action><sound>Click</sound></li>
       <li><key>joy</key><action>us.core/Joy</action><sound>Click</sound></li>
+      <!-- One Work mapping serves the audited Core processes: no per-Job sounds or mode selection.
+           Response scope/timing and the overall Dev activation remain independent. -->
       <li><key>work</key><action>us.core/Work</action><sound>Click</sound></li>
       <li><key>draft</key><action>us.core/Draft</action><sound>Click</sound></li>
       <li><key>undraft</key><action>us.core/Undraft</action><sound>Click</sound></li>

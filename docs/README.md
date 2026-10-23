@@ -18,6 +18,7 @@
 | 组合独立根／继承扩展、完整ActionId与真实选音 | [主规格·当前作者入口 §21](us-kernel-0.6-spec-zh.md#21-d-a-当前作者入口) |
 | 配置三轴Eat、制作最小音频包与结果扩展 | [主规格·当前入口 §22](us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口) |
 | 审阅全部15包与SR体验差异 | [官方15包完整导读](us-kernel-0.6-contract-review-zh.md) |
+| 查看Core全部工作入口/Job/driver与边界 | [Core常用Work完整清单](us-core-work-scope-zh.md) |
 | 调整Select资格、审阅15包支持集与退役边界 | [主规格·D-C §23](us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界) |
 | 维护适配及反例 | [事实—证据—反例](us-kernel-0.6-fact-adapters-zh.md) |
 | 本地构建、选择 FerriteLib、验证改动 | [Build and debug](build-and-debug.md) |

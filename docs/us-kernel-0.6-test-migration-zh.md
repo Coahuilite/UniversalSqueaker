@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r11 · **15库存、已裁Select资格与退休已进入生产链；GLOBAL Dev Equip入口已显式资格，Work覆盖仍有US-C3实质工程缺口。**
+2026-10-23 · r12 · **完整Core常用Work范围已补齐；固定FL A002只读补丁最小消费通过，普通政策／原生／逐包人审独立保留。**
 
 ## D-C当前迁移：保合同，替换退役夹具
 
@@ -18,11 +18,11 @@
 
 GLOBAL Dev入口定向检查：以`-c Dev`构建UniversalSqueakerAudioBindingTests，运行`--equip-dev-entry`。工程直接编译生产UsOneShotDebugActions，不重新手构选择policy；通过实际菜单登记的SelectCandidate委托，进入生产SelectDevelopmentPolicy，再由真实Harmony接缝观察EquipmentAdded→Notify_Equip→同owner准确Equip条目。断言未选整体门零owner／输出、开发模式守门、玩家Core成功、AI／非Core／无关系／throw反例以及重复菜单不重置保护。LudeonTK菜单登记、Verse物体与音频是明确替身，不声称游戏菜单点击。七参数ctor缺省Unselected保持，原定向适配矩阵仍按未变输入沿用。
 
-Work七过程收窄已有Dev覆盖，是US-C3实质未完，不只人审／听感问题。常用缺项范围由PM带用户裁定后补工程；本入口检查不扩Work或代表完整C3通过。
+本轮Core Work在原七组之上补71组准确Job/driver，共78组；20 WorkType/105具体WorkGiver完整分类见[范围表](us-core-work-scope-zh.md)。--work-core逐新增组执行实际捕获/请求/主体/Job/driver/Toil/ended反例及重叠/继承/持续链；--work-missing配WorkFixtureTarget=MissingSow真缺实现；--work-care-lifetime只执行实际喂食主体/OneShot自然尾的增量判别。Job/driver/调度/音频为明确替身，原七组和其他15包未变矩阵按原身份复用。
 
 verify-local保原门20代理、22/23真缺Selector目标、24/25 Eat／缺Chew及26结果消费者，21转新Select资格；追加27 `--dc-native`、28分进程执行Release `--dc-unselected`及Dev `--equip-dev-entry`（整体门／未选资格与真实菜单入口）、29 `DcFixtureTarget=MissingWoundedAndMeleeMarker`＋`--dc-missing`。Host用既有`--lane`选DC Select、退休库存、typed、Overview composites、US switch、current navigation、DB Eat及text-fit等受改链；匹配零lane必须失败。
 
-实际执行仅取受改必要链，不机械全29门。完整输出复制到独立已获准运行区域，一次核MyComputer再原入口运行；保原输出和失败日志，不改CAS/ADS/ACL/owner。生成新候选后按改变的输入决定重跑范围，不以文件名或exit0代模式命中。当前结果与最终源码／Dev身份由交付记录绑定。精确4871定点来源已取得，真实Scribe／游戏Config、挂接／音频、屏幕／听感及15包两个人工关口仍pending。
+实际执行仅取受改必要链，不机械全31门。完整输出复制到独立已获准运行区域，一次核MyComputer再原入口运行；保原输出和失败日志，不改CAS/ADS/ACL/owner。生成新候选后按改变的输入决定重跑范围，不以文件名或exit0代模式命中。当前结果与最终源码／Dev身份由交付记录绑定。精确4871定点来源已取得，真实Scribe／游戏Config、挂接／音频、屏幕／听感及15包两个人工关口仍pending。
 
 ## 历史D-A/B迁移（原输入）
 
@@ -57,7 +57,7 @@ S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的当前入口是29门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20为D-A Select，21为已裁Select独立三资格，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture，26为无Result合同／独立Result消费者路由；27–29分别为D-C十五包通知、未激活／Equip资格候选、真实缺Wounded与近战marker。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的当前入口是31门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20为D-A Select，21为已裁Select独立三资格，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture，26为无Result合同／独立Result消费者路由；27–29分别为D-C十五包通知、未激活／Equip资格候选、真实缺Wounded与近战marker。30为完整Core Work增量，31为真缺Sow局部隔离。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
 - [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是verify-local的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。
@@ -128,9 +128,9 @@ S2/S5原生输出须记录实例创建/副作用边界、四结果、US归属的
 
 ## 6. 当前固定FL0.8消费者迁移
 
-现已实际消费564f78b固定0.8 Dev，范围[0.8.0,0.9.0)，Private=false；生产/Host/三Manifest/主窗口/Overlay/确认/主题/编辑与实际绑定均迁移，未重做页面或普通政策。显式构建命令、完整颜色映射、Live时机、native release、生命周期与原生边界见[固定FL0.8消费说明](fl08-consumer-migration-zh.md)。
+现已实际消费fc010bd A002固定0.8 Dev只读补丁，范围[0.8.0,0.9.0)，Private=false；生产/Host/三Manifest/主窗口/Overlay/确认/主题/编辑与实际绑定均迁移，未重做页面或普通政策。显式构建命令、完整颜色映射、Live时机、native release、生命周期与原生边界见[固定FL0.8消费说明](fl08-consumer-migration-zh.md)。
 
-原0.7快照保历史，新Host平台double单独来源化至tools/FerriteLib08.Stubs；公开只读观测及实际事件替代旧私表计数。verify-local仍29门，Host新增FL08 actual目标；gate15扫当前0.8替身，gate16只保旧0.7冻结快照完整性，不冒充当前0.8运行证据。定向执行受改消费者链；D-C纯层/配置/音频输入未变的有效证据复用，不机械全测或重录golden。
+原0.7快照保历史，新Host平台double单独来源化至tools/FerriteLib08.Stubs；公开只读观测及实际事件替代旧私表计数。verify-local现31门，Host另有FL08 readonly最小消费目标（旧FL08 actual证据按适用输入复用）；gate15扫当前0.8替身，gate16只保旧0.7冻结快照完整性，不冒充当前0.8运行证据。定向执行受改消费者链；D-C纯层/配置/音频输入未变的有效证据复用，不机械全测或重录golden。
 
 CI/release仍获取旧已发布0.7，目前不能构建当前0.8消费者；维护者需提供真实0.8发布载体后再更新远端获取配置。本地固定Dev技术迁移与该发布依赖分开。
 

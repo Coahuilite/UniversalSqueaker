@@ -306,7 +306,7 @@ namespace Verse.AI
     public enum JobCondition { Succeeded, InterruptForced, Incompletable }
     public sealed class Job
     {
-        public JobDef? def; public object? workGiverDef; public bool playerForced; public LocalTargetInfo targetA, targetB;
+        public JobDef? def; public RimWorld.WorkGiverDef? workGiverDef; public bool playerForced; public LocalTargetInfo targetA, targetB;
         public LocalTargetInfo GetTarget(TargetIndex index) => index == TargetIndex.A ? targetA : targetB;
     }
     public struct LocalTargetInfo { public Verse.Thing? Thing; public Verse.Pawn? Pawn; }
@@ -315,7 +315,7 @@ namespace Verse.AI
     public sealed class Pawn_MindState { public bool IsIdle; }
     public class JobDriver
     {
-        public bool asleep; public string CurToilString = "";
+        public bool asleep, ended; public string CurToilString = "";
         public Verse.Pawn pawn = null!; public Job job = null!;
         public Toil? FixtureToil;
         protected Toil? CurToil => FixtureToil;
@@ -335,6 +335,7 @@ namespace Verse.AI
 }
 namespace RimWorld
 {
+    public sealed class WorkGiverDef : Verse.Def { }
     public sealed class JobDriver_Ingest : Verse.AI.JobDriver { }
     public sealed class JobDriver_FoodFeedPatient : Verse.AI.JobDriver { }
     public static class Toils_Ingest

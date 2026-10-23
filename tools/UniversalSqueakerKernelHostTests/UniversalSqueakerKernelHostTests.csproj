@@ -17,6 +17,8 @@
     <!-- Current 0.8 source-identified platform doubles; the archived 0.7 freeze is unchanged.
          Build only this consumer's independent dist output, never the producer checkout. -->
     <FerriteLibHarness Condition="'$(FerriteLibHarness)' == ''">$(MSBuildProjectDirectory)\..\FerriteLib08.Stubs</FerriteLibHarness>
+    <FerriteLibStubOutputRoot Condition="'$(FerriteLibStubOutputRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\</FerriteLibStubOutputRoot>
+    <FerriteLibStubObjRoot Condition="'$(FerriteLibStubObjRoot)' == ''">$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stub-obj\</FerriteLibStubObjRoot>
     <UsProductArtifactPath Condition="'$(UsProductArtifactPath)' == ''">$(MSBuildProjectDirectory)\..\..\dist\build\$(Configuration)\UniversalSqueaker.dll</UsProductArtifactPath>
   </PropertyGroup>
 
@@ -57,21 +59,21 @@
        command succeeds with -m:1. It reproduces on clean sibling-repo sources, so it is an environment
        limitation, not a stub defect; single-node keeps the nested build deterministic. -->
   <Target Name="BuildAndCopyRuntimeStubs" AfterTargets="Build">
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1"
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineStub\UnityEngineStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1"
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineImGuiStub\UnityEngineImGuiStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1"
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineTextRenderingModuleStub\UnityEngineTextRenderingModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1"
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\VerseStub\VerseStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;"
           WorkingDirectory="$(FerriteLibHarness)" />
-    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineInputLegacyModuleStub\UnityEngineInputLegacyModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1" WorkingDirectory="$(FerriteLibHarness)" />
+    <Exec Command="dotnet build &quot;$(FerriteLibHarness)\Stubs\UnityEngineInputLegacyModuleStub\UnityEngineInputLegacyModuleStub.csproj&quot; -c $(Configuration) --nologo -v quiet -m:1 &quot;-p:FerriteLibStubOutputRoot=$(FerriteLibStubOutputRoot)&quot; &quot;-p:FerriteLibStubObjRoot=$(FerriteLibStubObjRoot)&quot;" WorkingDirectory="$(FerriteLibHarness)" />
     <ItemGroup>
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine\UnityEngine.CoreModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-input\UnityEngine.InputLegacyModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-imgui\UnityEngine.IMGUIModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
-      <RuntimeStub Include="$(MSBuildProjectDirectory)\..\..\dist\fl08-migration-a001\stubs\$(Configuration)\verse\Assembly-CSharp.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine\UnityEngine.CoreModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-input\UnityEngine.InputLegacyModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-imgui\UnityEngine.IMGUIModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)unityengine-textrendering\UnityEngine.TextRenderingModule.dll" />
+      <RuntimeStub Include="$(FerriteLibStubOutputRoot)verse\Assembly-CSharp.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeStub)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>

@@ -53,6 +53,12 @@ internal static partial class Program
             return;
         }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
+        if (args.Contains("--work-core") || args.Contains("--work-missing") || args.Contains("--work-care-lifetime"))
+        {
+            InitializationOrder(); CompleteBinding(); WorkCore(args.Contains("--work-missing"), args.Contains("--work-care-lifetime"));
+            Console.WriteLine("Core Work production fixture PASS: " + checks);
+            return;
+        }
         if (args.Contains("--equip-dev-entry"))
         {
 #if US_DEV

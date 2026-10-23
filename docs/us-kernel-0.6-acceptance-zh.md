@@ -1,8 +1,8 @@
 # 0.6.x 合同—验收与切片
 
-D-C当前候选已接入15包库存、专属响应退役和已裁Select三项可调默认，保D-A/B同owner及结果消费者边界。Work七过程收窄已有Dev覆盖，US-C3实质未完，不能归为仅听感／人审待验或把七项当批准全集。技术证据、范围工程缺口、合同人工审阅、成果人工验收分别记录。
+当前候选保15包库存、专属响应退役和已裁Select三项可调默认，保D-A/B同owner及结果消费者边界。本轮用户批准的Core常用Work按20 WorkType/105具体入口/78准确Job-driver完整补齐，原七过程不是全集。技术补齐、普通政策和逐包合同／成果人验分别记录，不能以Core范围批准代其他产品接受。
 
-本页是[唯一规格 r13](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
+本页是[唯一规格 r14](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
 
 ## 核心只消费中性事实
 
@@ -106,7 +106,7 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 | Sleep | r11／r8／r5；由姿势改实际asleep | 睡／醒及被喂重叠，Sleep中选不误标ActualIngester；OneShot／持续依据分开 | pending | pending | 床／地面场景、密度及原生听感 |
 | Social | r11／r8／r5；准确kind／Def过程不片段扫描 | 明确过程、未知名称反例、与Joy同真；当前支持包含准备，不称互动成功 | pending | pending | Goto Def仍4850依据、当前Core无该内容；PM裁范围及重叠体验 |
 | Joy | r11／r8／r5；joyKind正向声明 | Social kind与Joy同真，非Social kind实际Joy中选；准确参与者域，不称Joy gain | pending | pending | 全过程／准备体验、正式排序与原生 |
-| Work | r13／r9／r5；七准确Def/driver过程 | 七对各正反、无Toil／错driver／workGiver反例，继承子命令scope和独立配置／保护；已有Dev覆盖收窄 | pending | pending | US-C3实质未完：PM带用户裁常用缺项范围后补工程，七项非批准全集；另有ActiveCommand／搬运重叠／原生 |
+| Work | r14／r10／r6；完整Core常用范围 | 105入口全分类，78准确Job/driver；新增71组捕获/请求及当前Toil/主体/退出反例，Sow真缺局部隔离，照护角色/继承配置/原仲裁/两形态退出；旧七组沿用 | pending | pending | 本轮Core工程范围已补，详[清单](us-core-work-scope-zh.md)；普通ActiveCommand/顺序/节奏及原生/听感仍待裁验，未扩未查DLC/第三方 |
 | Draft | r11／r8／r5；实际玩家gizmo方向 | false→true实际通知、准确DraftedPawn；重复包装／setter／无变化不造事件 | pending | pending | 与Select及批量命令密度、关键保护／原生 |
 | Undraft | r11／r8／r5；独立反向身份 | true→false独立请求／条目／角色，禁Draft不折叠本包；无变化反例 | pending | pending | 快速往返／旧Draft尾／批量密度；本包独立人验 |
 | MentalBreak | r11／r8／r5；不复制SR任意精神状态调制 | 基类＋三直达override成功、Humanity base一次、false／throw不发布；更新后216候选fixture | pending | pending | PM裁新增直达支持范围／关键例外，原生与听感 |
@@ -136,6 +136,6 @@ D-A r2接缝修订补充：实际Harmony2.4.2在缺反馈目标时抛出TargetMe
 
 ## 固定FL0.8消费者技术迁移
 
-现有主设置/Overlay/确认、三Manifest、typed业务身份、主题/编辑/输入与生命周期已按固定564f78b Dev迁移，范围[0.8.0,0.9.0)、Private=false、US不带FL副本。实际入口与边界见[消费者说明](fl08-consumer-migration-zh.md)。新增真实press/release、同值一次、Dropdown外按不穿透、草稿/模型拒绝/规范化、主题/隐藏恢复及订阅关闭；受改Source/Host与DefDir检查使用明确0.8平台替身。纯配置/Scribe替身往返及核心音频未改的D-C证据保其适用范围。
+现有主设置/Overlay/确认、三Manifest、typed业务身份、主题/编辑/输入与生命周期已按固定0.8迁移，当前固定输入为fc010bd A002只读补丁，范围[0.8.0,0.9.0)、Private=false、US不带FL副本。实际入口与边界见[消费者说明](fl08-consumer-migration-zh.md)。新增真实press/release、同值一次、Dropdown外按不穿透、草稿/模型拒绝/规范化、主题/隐藏恢复及订阅关闭；受改Source/Host与DefDir检查使用明确0.8平台替身。纯配置/Scribe替身往返及核心音频未改的D-C证据保其适用范围。
 
 本轮只完成US-C5消费者技术部分和适用US-C6交付。UI/UX方案与实施另行定稿；15包合同/成果人工关口、真实Config/Scribe、字体/IME/窗口栈和音频/听感仍pending。CI/release仍有旧0.7获取pin，维护者须先给真实可用0.8发布输入，不把本地Dev通过称远端CI已绿或产品接受。

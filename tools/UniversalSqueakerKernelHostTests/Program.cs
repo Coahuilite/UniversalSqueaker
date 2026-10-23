@@ -181,6 +181,7 @@ internal static class Program
 
     private static void RunAll()
     {
+        Step("FL08 readonly patch minimal production consumption", Fl08ReadOnlyPatchTests.Run);
         Step("FL08 actual release, editing and retained view migration", Fl08MigrationTests.Run);
         Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
         Step("DC Select three sparse qualifications, real settings and Host", DcSelectUiTests.Run);

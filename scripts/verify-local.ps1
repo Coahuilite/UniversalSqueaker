@@ -429,6 +429,20 @@ Invoke-Check 'D-C physically missing Wounded and melee marker isolates only thos
         if ($LASTEXITCODE -ne 0) { throw 'D-C missing-target fixture build failed' }
         & (Join-Path $dcOutput 'UniversalSqueakerAudioBindingTests.exe') --dc-missing
     }
+# Gates 30/31: approved Core Work return branches and one physically absent implementation.
+Invoke-Check 'Core Work exact processes, current phase/owner/config and care lifecycles' `
+    'AudioBindingTests -c Release --work-core' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --work-core }
+Invoke-Check 'Core Work physically missing Sow leaves unrelated work usable' `
+    'build WorkFixtureTarget=MissingSow with isolated output/obj; run --work-missing' `
+    {
+        $workOutput = Join-Path $root 'dist/verify-work-readiness/MissingSow'
+        $workObj = Join-Path $root 'dist/verify-work-readiness/obj/MissingSow'
+        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
+            -p:WorkFixtureTarget=MissingSow "-p:OutputPath=$workOutput/" "-p:IntermediateOutputPath=$workObj/"
+        if ($LASTEXITCODE -ne 0) { throw 'Core Work missing-Sow fixture build failed' }
+        & (Join-Path $workOutput 'UniversalSqueakerAudioBindingTests.exe') --work-missing
+    }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

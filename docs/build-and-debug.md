@@ -30,7 +30,7 @@ CI/release still acquire the published 0.7 carrier, which is not a usable input 
 
 ## What verification covers
 
-The current `scripts/verify-local.ps1` defines 29 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases.
+The current `scripts/verify-local.ps1` defines 31 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases.
 
 Gate 15 scans the payload and Host against the explicit 0.8 platform doubles in `tools/FerriteLib08.Stubs`, built into `dist/fl08-migration-a001/stubs/<Configuration>`. Gate 16 retains the archived 0.7 snapshot integrity check; it does not certify the new 0.8 runtime. The producer and its held package are never build targets.
 

@@ -104,7 +104,7 @@ internal static partial class Program
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == 0,
             "an explicit registered Select-dependent author call cannot bypass the unavailable capability");
         Find.TickManager.TicksGame += 200;
-        pawn.CurJob!.workGiverDef = new object(); pawn.Comp.CompTick();
+        pawn.CurJob!.workGiverDef = new RimWorld.WorkGiverDef { defName = "FixtureLabelOnly" }; pawn.Comp.CompTick();
         Check(session.LastOutcome.Receipt == null && session.LastOutcome.Reason.StartsWith("MissingRequiredImplementation:", StringComparison.Ordinal)
             && SoundStarter.Played.Count == 0,
             "production source resolution pauses the explicitly dependent contribution, not a fabricated available implementation");

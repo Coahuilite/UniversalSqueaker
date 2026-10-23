@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r13（GLOBAL Dev Equip入口）。状态：**十五包现有适配经同一生产owner；Work覆盖收窄为US-C3实质未完，普通范围／节奏及逐包人审／原生未关闭**。目标 RimWorld 1.6.4871，net472。
+修订：2026-10-23，r14（Core常用Work与固定FL A002）。状态：**获准Core Work范围已按完整清单补齐；十五包现有适配经同一生产owner，普通政策／逐包人审／原生仍未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -690,7 +690,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 - Wounded是受损Pawn的PostApplyDamage正常返回，0不自动变正伤；当前伤口另读。Death是Kill进入前，不是死亡完成或任意Destroy。Equip是tracker正常加入且实际成员关系，装备者与物品不换位；PlayerCoreEquip另为显式Dev回应资格候选。
 - Attack显式Dev支持近战成对scope＋实际挥击marker、投射物、已核束流／喷射、点火和明确轰击启动；false近战须有marker才算，早退不算，执行不保证命中。工具／跳跃／支援部署／任意生成等排除／待扩展逐机制在导读列出，正式覆盖pending。整体Dev不激活就不采用该支持集为普通产品行为。
 - Call取正向IsIdle＋Wait/Wait_Wander＋自身未动，不作兜底；Sleep用driver.asleep；Move用自己的pather.Moving。Social有明确kind／准确Def过程支持集，Joy取明确joyKind，两者可同真交同owner；不按名称片段或非工作猜测。Social Goto Def的当前Core内容缺口在事实页明示。
-- Work七对Def/driver及当前同Pawn／Job／CurToil是明确开发过程覆盖，包括准备Toils，不凭workGiver标签或名字称所有工作。这收窄了已有Dev覆盖，US-C3实质未完，不能只列为听感／人审待验或将七项当已批准全集；常用缺项范围由PM带用户决定，再按获准范围补工程，本次Equip入口修复不扩Work。命令来源是另一个回应scope。实际Comp已解析scope也进入同一捕获配置视图，避免把资格留在视图之外。继承子完整键消费真实当前命令，而非只识别内置Work尾名。
+- Work已按获准4871 Core全清单补齐：20 WorkType、105 WorkGiver，102做工入口映射78准确Job/driver，3患者休息入口排除。过程包含准备Toils，要求同Pawn/Job/driver、未ended且当前Toil有效，具体分支和共享来源限制见[完整Core范围](us-core-work-scope-zh.md)。工作事实与ActiveCommand等回应scope独立，继承子消费同一命令/有效配置，不重排Move/Social竞争或增加引擎。
 - Draft／Undraft只认原玩家gizmo正常执行后的真实状态方向；MentalBreak用基类及三个已核直达override的正向成功来源，Humanity包装只观察base一次，不把任意MentalState当崩溃。扩围是显式Dev候选，逐目标readiness和具名诊断，不吞全局PatchAll异常。
 
 [OfficialFifteen.xml](examples/0.6/OfficialFifteen.xml)给每包完整ActionId和直接Core Click音频映射，不选行为来源、不激活Dev、不给发行总序／频率。真实语音包替换自己的SoundDef；US不复制SR音频。所选合同显式携带主体角色；喂食与Sleep重叠时，Sleep仍Sleeper、Eat才ActualIngester，直接AudioId复用不抹条目／包／供音域。
@@ -699,10 +699,10 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 官方Crying/Giggling、专属MentalFit通知／patch／日志事件／开关和无消费者残余已经删除；不保旧数值enum槽，不改原版婴儿声音／状态，不禁这些Pawn的其他合同。独立作者仍可注册自己的正向合同，甚至使用独立命名空间的同名尾部；没有全局类型／名字黑名单。冻结17字符串历史语料只服务旧路由不变性，活跃官方枚举／目录／metadata及覆盖分母均15。
 
-指定安装程序集已核到1.6.4871 rev591；公开正文只给身份、符号和结论，反编译原文不分发。4871定点源码、目标引用编译、生产纯源、真实Harmony＋平台double、Scribe替身往返、原生游戏／听感各自成立，不能互相替代。当前全部15包库存、现有适配纵切与人审入口已具备；Work仍有上述US-C3实质工程缺口。合同人审／成果人验仍逐包pending，普通政策／覆盖范围和首次来源选择由PM用户处理。本节D-C输入仍为固定0.7；后续实际0.8消费者迁移见§24。
+指定安装程序集已核到1.6.4871 rev591；公开正文只给身份、符号和结论，反编译原文不分发。4871定点源码、目标引用编译、生产纯源、真实Harmony＋平台double、Scribe替身往返、原生游戏／听感各自成立，不能互相替代。当前全部15包库存、现有适配纵切与人审入口已具备；原七过程造成的Core Work范围缺口已按本轮批准清单补齐；这不代替US-C3其余范围及两个人工关口。合同人审／成果人验仍逐包pending，普通政策／覆盖范围和首次来源选择由PM用户处理。原D-C证据使用固定0.7；后续迁移及当前固定0.8 A002消费见§24。
 
 ## 24 固定FL0.8技术消费，不预定下一版页面
 
-当前依赖为FL源码564f78b1e88f5450aff075e5bd3f07db2a894c1f的固定0.8 Dev，范围[0.8.0,0.9.0)、Private=false、单carrier。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已经迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。原24色值和旧有效边框/警告处理保为30明确语义角色；活跃主题只写颜色，不撤销页面度量。普通getters与业务settings保存的所有权/原条件不变。
+当前依赖为FL源码fc010bd1eab8ed434e03de6241fdae89e94b1283的固定0.8 Dev，范围[0.8.0,0.9.0)、Private=false、单carrier。生产Host/三个Manifest、主窗口/Overlay/确认、公开Palette颜色、显式Live编辑和实际绑定/请求/生命周期已经迁移，完整用法与检查入口见[消费者说明](fl08-consumer-migration-zh.md)。原24色值和旧有效边框/警告处理保为30明确语义角色；活跃主题只写颜色，不撤销页面度量。普通getters与业务settings保存的所有权/原条件不变。
 
 这是现有消费者技术迁移，不改变15包事实、已裁Select三资格/Eat三轴、Dev政策门或声音决策；不固化Dashboard/页面数/Help新方案。后续UI/UX定稿与实现另行安排。原生1.6/真实Config/Scribe/字体/音频/听感及逐包两个人工关口仍待验；固定FL未交付1.7 adapter。CI获取尚指旧0.7，须维护者另排真实0.8发布载体，不能静默回退。

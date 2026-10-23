@@ -139,7 +139,7 @@ internal static partial class Program
             "S4 unregistered public string retains external permission under unified owner");
         comp.ExternalAllowed = true;
         Find.TickManager.TicksGame = 1400;
-        pawn.CurJob!.workGiverDef = new object();
+        pawn.CurJob!.workGiverDef = new RimWorld.WorkGiverDef { defName = "FixtureLabelOnly" };
         comp.NotifyExternalByKey("vendor/Working", SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
         Check(session.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 3,
             "S4 actual registered public author call cannot bypass its false composed fact through bare-string adaptation");

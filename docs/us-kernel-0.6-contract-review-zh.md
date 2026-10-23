@@ -1,6 +1,6 @@
 # 官方15包合同导读
 
-修订：2026-10-23，r9（GLOBAL Dev Equip入口及Work实质缺口）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-23，r10（Core常用Work补齐）。全部15包逐节可读；实现与证据按下文边界区分。D-C从535d0af接续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。全部15包均须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -215,22 +215,21 @@ GLOBAL Dev菜单已显式传此待裁资格，标签注明`Equip=PlayerCoreEquip
 
 **SR实际及证据：** SR同joyKind非空，Social优先Joy、Joy优先Move/Work/Call；Random504/p.016、共享216、周期相位／人口／速度／Talking适用。US保正向声明及准确音源／自然尾，新增统一机会和四结果不同，不保证旧频率。DcNativeTests覆盖Social+Joy同真、改非Social joyKind后Joy中选及准确角色，4871 JobDef/调用依据见事实页。推荐先明确全过程，不用执行措辞暗承诺；完整合同／成果、原生和听感pending。
 
-## Work：七个已核过程，工作事实与玩家命令分离
+## Work：完整Core常用清单，工作事实与回应资格分离
 
-**当前实质缺口：** 七过程收窄了已有Dev覆盖，US-C3尚未完成；不是只差听感或人审，七项也不是已批准的全部工作范围。常用缺项由PM带用户裁定，再按获准范围补工程；本次GLOBAL Dev Equip入口修复不扩Work，不回名字扫描。
+**范围／主体：** 用户已批准补齐1.6 Core常用工作，原七过程不再是全集。指定4871 Core的20 WorkType、105具体WorkGiver逐行盘点，102个做工入口的实际返回／帮助分支落到78组准确Job/driver，另3个病人休息入口排除。[完整Core清单](us-core-work-scope-zh.md)自足列明种植／收获／砍伐、医疗／救援／喂食／手术、驯兽／训练／动物照护、施工清障／搬运／制作／资源采集／研究等每入口、分支、driver及条件。角色Worker是执行Pawn，不是患者、动物、物品或被搬运者；自我治疗的执行者仍可工作。普通作者继续映射同一个us.core/Work音频，不需每Job声音或临时完整版开关。
 
-**固定支持集／阶段：** `us.core/WorkState`当前候选按准确Def/driver成对支持Research/JobDriver_Research、Mine/JobDriver_Mine、DoBill/JobDriver_DoBill、Repair/JobDriver_Repair、Clean/JobDriver_CleanFilth、HaulToCell/JobDriver_HaulToCell、FinishFrame/JobDriver_ConstructFinishFrame。4871逐Def及MakeNewToils已核；要求当前driver确属该Pawn、同一currentJob且CurToil有效。包含准备／移动Toils，是工作过程，不称已挥工具／产出／完成。角色Worker。
+**固定过程／阶段：** 当前driver须属同Pawn、同一currentJob、准确Job/driver且当前Toil有效；包括准备、移动、取材料和执行，非挥工具／产出／完成保证。原Pawn_JobTracker先置ended再Cleanup/ClearDriver，退出窗口即使保旧Toil也不是真。TakeInventory须准确Train来源，VisitSickPawn须准确同名WorkGiver来源；没有泛用Goto/Wait、workGiver非空、名字片段或仅反射存在即True的兜底。具体Core中的DLC条件和地图出行准备按完整表说明，不外推未查DLC／世界任务／第三方库存。
 
-**False／Unknown及资格：** 无Job为False；已核过程尚无当前Toil为False；未知Job／缺driver实现／当前driver或主体不匹配为具名Unknown。workGiverDef标签不是充分证据，未覆盖工作也不因此算Call。是否只回应玩家强制工作是显式scope政策，不是“自动工作不算工作”。沿用ActiveCommand为开发默认候选，AnyOccurrence可显式开放该已核过程的自动来源；正式范围／资格由PM用户裁定，整体Dev门不打开普通发行。
+**False／Unknown与资格：** 无Job、已结束或已核过程未到当前Toil为False；未知Job／缺driver实现／当前driver或主体不匹配为具名Unknown，未覆盖工作不因此算Call。患者LayDown三入口不当Worker，未审的其他LayDown用途也不猜。是否只回应玩家强制工作是独立scope政策，不是“自动工作不算工作”；沿用ActiveCommand为Dev候选，AnyOccurrence可显式放宽已核工作来源。范围补齐不批准普通scope／总序／节奏，整体Dev门不变。
 
-**参数、配置与来源：** 完整Work键共同字段按作者及玩家服务／Race／合法Xeno层解析；ActiveCommand必须实际playerForced且玩家可控，继承子Work也检查同一捕获的命令来源。玩家可选scope、禁用及恢复精确行；不会把scope标签变成新工作机制。无七过程专属音频或阶段开关，若要其他过程须独立明确事实。作者快照只恢复配置，不缓存上次工作True。
+**参数、配置与来源：** 完整Work键的共同字段按作者及玩家服务／Race／合法Xeno层解析；ActiveCommand须实际playerForced且玩家可控，继承子也检查同次捕获命令。玩家可选scope、禁用和恢复精确行，不用scope标签新增工作机制。作者快照恢复配置，不缓存上次工作True。没有每Job另一个引擎或永久存档工作状态。
 
-**机会、音源、调制：** 同owner状态机会，可与Move／Joy／Eat重叠，先选候选一包；无声不切Call。工作者准确域Work条目及合法后备，不用workGiver／工作台当发声域。局部年龄×心情／一次jitter与G适用，搬运途中的速度不自动改音高。子Work独立完整键有自己的配置、动作截止和显式音频，直接共享AudioId不共用保护。
+**机会、重叠与供音／调制：** 同owner状态机会，Move与工作准备可同时True；当前Dev仍Move先Work，Move中选但无声不补Work。VisitSickPawn原joyKind=Social，也可能Social先中选，不提高Work优先掩盖重叠。准确Worker域Work条目／合法后备、局部年龄×心情／一次jitter与G保留；不借工作台或患者域。子Work独立完整键有自己的scope／参数／条目／硬保护，直接共享AudioId不共用冷却。
 
-**形态、退出与证据：** OneShot离开过程自然尾；Sustained当前driver／Toil失效或Unknown复检结束，换任务／离图不留旧句柄。`CompTick→UsWorkObservation.Capture→同session→Work请求`使用一次捕获，不为诊断重采样。DcNativeTests七对逐一正例、无Toil／错driver、未知workGiver标签、继承子命令scope及持续退出；精确方法体4871，运行是明确平台double。
+**形态、退出与证据：** OneShot正常结束／中断保自然尾；Sustained在当前合同失效／Unknown、宿主退出时复检释放自有槽。新增71组分别经UsWorkObservation→UsPawnFacts→实际CompTick→同session→准确请求及同主体／Job／driver／Toil反例，旧七组有效证据沿用；真缺Sow局部Unknown而CutPlant仍派发。额外真实feed观察分离Worker和ActualIngester，保OneShot两种退出自然尾及Sustained正常／中断结束。Job/driver/Toil/调度／音频是明确平台double，精确方法体／Def来自4871；不称游戏内工作或声音已验。
 
-**SR差异／用户关口：** SR只认workGiverDef、Move先Work；Random720/p.012、共享216，出厂ActiveCommand，playerForced才给该来源，自动工作默认静默。US用实际支持清单替代标签，同时保事实／回应资格分离，不按720宣称等频。推荐先以清单和可调scope审阅手动／自动及搬运重叠，不回名字扫描；普通支持范围、合同／成果及原生听感pending。
-
+**SR差异／后续关口：** SR只认workGiverDef、Move先Work；Random720/p.012、共享216，出厂ActiveCommand，playerForced才给该来源，自动工作默认静默。US用准确过程清单替代标签，保事实／回应资格分离，不按720宣称等频。原七过程造成的Core范围工程缺口已在本轮补齐；普通scope／竞争／节奏及合同／成果人审、原生听感仍pending，未据此关闭整个US-C3。
 ## Draft：实际玩家gizmo由未征召变为征召
 
 **固定合同／主体／阶段：** 4871 Pawn.GetGizmos经draft controller给出准确Command_ColonistDraft hotKey、Draft/Undraft tutorTag的Command_Toggle。包装原toggleAction，先记Drafted、正常执行后比较；false→true才发布`us.core/DraftEvent`，角色DraftedPawn。重复包装用弱引用表避免同Command嵌多层；setter、加载已征召、无变化／异常不是本事件。不是命令下达成功便假定状态已变化。

@@ -1,7 +1,8 @@
 <Project>
   <PropertyGroup>
-    <FerriteLibStubOutputRoot>$(MSBuildThisFileDirectory)..\..\dist\fl08-migration-a001\stubs\$(Configuration)\</FerriteLibStubOutputRoot>
-    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\..\dist\fl08-migration-a001\stub-obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <FerriteLibStubOutputRoot Condition="'$(FerriteLibStubOutputRoot)' == ''">$(MSBuildThisFileDirectory)..\..\dist\fl08-migration-a001\stubs\$(Configuration)\</FerriteLibStubOutputRoot>
+    <FerriteLibStubObjRoot Condition="'$(FerriteLibStubObjRoot)' == ''">$(MSBuildThisFileDirectory)..\..\dist\fl08-migration-a001\stub-obj\</FerriteLibStubObjRoot>
+    <BaseIntermediateOutputPath>$(FerriteLibStubObjRoot)$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/obj/**;**/bin/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

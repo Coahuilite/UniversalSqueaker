@@ -232,7 +232,7 @@ internal static partial class Program
             var captured = UsPawnFacts.Capture(worker, null, out var diagnostics);
             Check(captured["us.core/WorkState"] == Truth.Unknown && diagnostics.Any(x => x.Reason.Contains("Mismatch")), "DC Work current Job/driver mismatch is named Unknown " + pair.Job);
         }
-        var labelled = Pawn(); labelled.CurJob = new Job { def = new JobDef { defName = "UnknownWork" }, workGiverDef = new object() };
+        var labelled = Pawn(); labelled.CurJob = new Job { def = new JobDef { defName = "UnknownWork" }, workGiverDef = new RimWorld.WorkGiverDef { defName = "FixtureLabelOnly" } };
         Check(UsPawnFacts.Capture(labelled, null)["us.core/WorkState"] == Truth.Unknown, "DC workGiver tag alone cannot grant Work");
 
         // A full child identity must receive actual state command provenance, not only built-in tail names.
