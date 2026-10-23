@@ -51,6 +51,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     private readonly Dictionary<string, EffectiveBehavior> effectiveActions = new(StringComparer.Ordinal);
     private string resultEvidence = "";
     private string ingestionEvidence = "";
+    private string observationEvidence = "";
     internal string DiagnosticText => "tick=" + lastObservation + " action=" + LastOutcome.Action
         + " reason=" + LastOutcome.Reason + " receipt=" + LastOutcome.Receipt?.Result
         + " confirmed=" + state.ConfirmedTick + " sharedUntil=" + state.SharedDeadline
@@ -64,6 +65,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         + " configView=" + configuration?.Id + " effective=" + string.Join(";", effectiveActions.Where(x => x.Key == LastOutcome.Action).Select(x => x.Key + ":" + string.Join(",", x.Value.Origins.Select(v => v.Key + "=" + v.Value)) + ":requires=" + string.Join(",", x.Value.Dependencies)))
         + " ingestion=" + ingestionEvidence
         + " result=" + resultEvidence
+        + " observation=" + observationEvidence
         + " rolls=" + string.Join(",", draws.Select(x => x.Key + ":" + x.Value))
         + " missing=" + string.Join(",", (LastOutcome.Diagnostics ?? Array.Empty<FactDiagnostic>()).Select(x => x.Key + ":" + x.Reason));
     public IReadOnlyList<KeyValuePair<RandomPurpose, double>> LastRandomDraws => draws.AsReadOnly();
@@ -71,22 +73,33 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     public DecisionState State => state;
 
     private bool HasAvailableFact(string key) => catalog.HasFact(key)
-        && (key != UsSelectObservation.FactKey || UsSelectObservation.Ready) && UsIngestionObservation.Available(key);
+        && (key != UsSelectObservation.FactKey || UsSelectObservation.Ready)
+        && (key != "us.core/AttackEvent" || UsAttackObservation.Ready)
+        && (key != "us.core/WorkState" || UsWorkObservation.Ready)
+        && UsPawnEventObservation.Available(key) && UsIngestionObservation.Available(key);
 
     private static bool UsesEat(Condition condition) => condition.Operation == "ref" && (condition.Fact == EatPolicy.Process || condition.Fact == EatPolicy.Execution)
         || condition.Children.Any(UsesEat);
     internal static bool ConsumesIngestionResult(ActionPlan action)
         => action.Condition.RequiredFacts().Contains(EatPolicy.Result, StringComparer.Ordinal);
     private static Condition EffectiveCondition(ActionPlan action, BehaviorValues behavior)
-        => UsesEat(action.Condition) ? new Condition("all", "", action.Condition, EatConditions.Restriction(
+    {
+        var condition = UsesEat(action.Condition) ? new Condition("all", "", action.Condition, EatConditions.Restriction(
             behavior.Phase ?? EatPhase.WholeProcess, behavior.NutritionScope ?? EatNutritionScope.Any, behavior.DrugScope ?? EatDrugScope.Any)) : action.Condition;
+        return SelectConditions.UsesSelection(action.Condition) && SelectPolicy.HasParameters(behavior)
+            ? new Condition("all", "", condition, SelectConditions.Restriction(behavior)) : condition;
+    }
     private BehaviorValues Defaults(ActionPlan action) => new()
     {
+        Scope = pawn.GetComp<CompSqueaker>().ControlledOneShotScope(action.Key),
         Enabled = true, HardIntervalTicks = Kernel.ActionKey.SchemaKey(action.Key) != action.Key ? action.Key == "us.core/Wounded" ? woundedTicks : workTicks : action.Interval,
         TalkingEnabled = !action.SkipTalking, Volume = 1, Pitch = 1,
         Phase = UsesEat(action.Condition) ? EatPhase.WholeProcess : null,
         NutritionScope = UsesEat(action.Condition) ? EatNutritionScope.Any : null,
-        DrugScope = UsesEat(action.Condition) ? EatDrugScope.Any : null
+        DrugScope = UsesEat(action.Condition) ? EatDrugScope.Any : null,
+        SelectRequirePlayerControlled = action.Key == "us.core/Select" ? true : null,
+        SelectRequireAwake = action.Key == "us.core/Select" ? true : null,
+        SelectRequireNotDowned = action.Key == "us.core/Select" ? true : null
     };
 
     internal UsPawnPlaybackSession(Pawn pawn, AuthorCatalog catalog, UsDevelopmentPolicy candidate)
@@ -103,7 +116,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
     }
 
     internal void Tick(string? eventKey = null, bool activeCommand = false, SqueakTriggerInvocation? compatibilityInvocation = null,
-        string? registeredAction = null, UsIngestionObservation.Result? ingestionResult = null)
+        string? registeredAction = null, UsIngestionObservation.Result? ingestionResult = null, string evidence = "")
     {
         long now = Find.TickManager.TicksGame;
         if (eventKey == null && now < state.NextStateTick)
@@ -112,8 +125,12 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         }
 
         var comp = pawn.GetComp<CompSqueaker>();
+        observationEvidence = evidence != "" ? evidence : eventKey == null
+            ? "StateOpportunity:job=" + pawn.CurJob?.def?.defName + ",driver=" + pawn.jobs?.curDriver?.GetType().FullName
+            : "Event:" + eventKey;
         var vocal = comp.ControlledOneShotVocal();
-        var values = UsPawnFacts.Capture(pawn, eventKey);
+        var values = UsPawnFacts.Capture(pawn, eventKey, out var capturedDiagnostics);
+        bool commandContext = activeCommand || eventKey == null && values["us.core/ActiveCommand"] == Truth.True;
         var blocked = new HashSet<string>(StringComparer.Ordinal);
         var blockedReasons = new Dictionary<string, string>(StringComparer.Ordinal);
         var snapshot = SqueakRuntimeResolver.Current;
@@ -168,31 +185,26 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             var behavior = effective.Read();
             if (effective.Paused) blockedReasons[actionId] = effective.Failure;
             bool invalidEatFields = !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue);
+            bool invalidSelectFields = !SelectConditions.UsesSelection(action.Condition) && SelectPolicy.HasParameters(behavior);
             if (invalidEatFields) blockedReasons[actionId] = "EatParametersRequireIngestionContract";
-            if (!configuration.SystemEnabled || effective.Paused || invalidEatFields || !comp.ControlledOneShotAllowed(actionId, activeCommand, behavior, authorAction: true))
+            if (invalidSelectFields) blockedReasons[actionId] = "SelectParametersRequireSelectionContract";
+            if (!configuration.SystemEnabled || effective.Paused || invalidEatFields || invalidSelectFields || !comp.ControlledOneShotAllowed(actionId, commandContext, behavior, authorAction: true))
             {
                 blocked.Add(action.Key);
             }
-            if (actionId == "us.core/Select")
+            if (actionId == "us.core/Equip" && (candidate.EquipQualification == UsEquipQualification.Unselected
+                || values["us.core/PlayerEquipCommand"] != Truth.True))
             {
-                if (candidate.SelectQualification == UsSelectPawnQualification.Unselected)
-                {
-                    blocked.Add(actionId);
-                    blockedReasons[actionId] = "SelectPawnQualificationRequired";
-                }
-                else if (candidate.SelectQualification == UsSelectPawnQualification.ResponsivePlayerControlled
-                    && (values["us.core/Responsive"] != Truth.True || !pawn.IsPlayerControlled))
-                {
-                    blocked.Add(actionId);
-                    blockedReasons[actionId] = "ExplicitPawnSelectionQualification";
-                }
+                blocked.Add(actionId);
+                blockedReasons[actionId] = candidate.EquipQualification == UsEquipQualification.Unselected
+                    ? "EquipQualificationRequired" : "ExplicitPlayerCoreEquipQualification";
             }
             bool builtIn = Kernel.ActionKey.SchemaKey(actionId) != actionId;
             plans.Add(new ActionPlan(action.Key, action.Priority, EffectiveCondition(action, behavior),
                 behavior.HardIntervalTicks ?? (builtIn ? actionId == "us.core/Wounded" ? woundedTicks : workTicks : action.Interval),
                 action.CheckShared, action.WriteShared, eventKey == null ? action.Chance : action.Chance * candidate.EventProbability, action.BaseAction,
                 behavior.TalkingEnabled.HasValue ? !behavior.TalkingEnabled.Value : action.SkipTalking, behavior.Volume ?? 1, behavior.Pitch ?? 1,
-                action.Sustained || comp.ControlledPlaybackSustained(actionId), action.RequiresVocal));
+                action.Sustained || comp.ControlledPlaybackSustained(actionId), action.RequiresVocal, action.SubjectRole));
             modulation[action.Key] = ResponseModulation.Resolve(pawn.ThingID, behavior, numericalFacts, catalog.Responses, resultFact);
         }
         if (compatibilityInvocation.HasValue)
@@ -216,7 +228,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         {
             Subject = pawn.ThingID,
             SubjectRole = eventKey == "us.core/Select" ? "SelectedSubject" : eventKey == "us.core/Attack" ? "Attacker"
-                : eventKey == "us.core/Wounded" ? "DamageRecipient" : ingestionResult != null || eventKey == null && values[EatPolicy.Process] == Truth.True ? "ActualIngester" : "Subject",
+                : eventKey == "us.core/Wounded" ? "DamageRecipient" : ingestionResult != null ? "ActualIngester" : "Subject",
             Domain = pawn.def.defName,
             ChildDomain = audioDomain.Xenotype?.DefName ?? "",
             Tick = now,
@@ -235,7 +247,7 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
                 && SqueakRuntimeResolver.Current.VoicePackMode != SqueakVoicePackMode.Disabled,
             HasVocalOrgans = vocal.VocalOrganEfficiency > SqueakVocalCapability.VocalSilenceThreshold,
             TalkingChance = CompSqueaker.ScaleFrequencyWithTalking && vocal.TalkingChance < SqueakVocalCapability.TalkingCertainThreshold ? vocal.TalkingChance : 1,
-            Facts = catalog.Capture(pawn.ThingID, values, UsSelectObservation.Diagnostics.Concat(UsIngestionObservation.Diagnostics), resultFact),
+            Facts = catalog.Capture(pawn.ThingID, values, capturedDiagnostics, resultFact),
             Actions = plans.ToArray(),
             Audio = UsAuthorVoicePacks.Selected(catalog.Audio, snapshot.Registry, audioDomain),
             SourceMode = SqueakKernelAdapter.ToSelectionMode(SqueakRuntimeResolver.Current.VoicePackMode),
@@ -283,7 +295,9 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
             var behavior = effective.Read();
             var comp = pawn.GetComp<CompSqueaker>();
             bool invalidEatFields = action != null && !UsesEat(action.Condition) && (behavior.Phase.HasValue || behavior.NutritionScope.HasValue || behavior.DrugScope.HasValue);
-            if (!view.SystemEnabled || effective.Paused || invalidEatFields || !comp.ControlledOneShotAllowed(key, behavior: behavior, authorAction: true)
+            bool invalidSelectFields = action != null && !SelectConditions.UsesSelection(action.Condition) && SelectPolicy.HasParameters(behavior);
+            if (!view.SystemEnabled || effective.Paused || invalidEatFields || invalidSelectFields || !comp.ControlledOneShotAllowed(key,
+                activeCommand: pawn.CurJob?.playerForced == true && pawn.IsPlayerControlled, behavior: behavior, authorAction: true)
                 || action?.RequiresVocal == true && comp.ControlledOneShotVocal().VocalOrganEfficiency <= SqueakVocalCapability.VocalSilenceThreshold)
             {
                 EndSustained("CurrentAuthorizationUnavailable");
@@ -474,6 +488,7 @@ public static class UsOneShotRuntime
     private static readonly Dictionary<Pawn, UsPawnPlaybackSession> sessions = new();
     private static AuthorCatalog catalog = new(720, 216, fullDevCandidate: true);
     private static UsDevelopmentPolicy? selectedPolicy;
+    internal static bool DevelopmentActive => selectedPolicy != null;
     public static string PolicyStatus => selectedPolicy == null ? "PolicySelectionRequired" : "ExplicitDevelopmentCandidate";
     public static IReadOnlyList<string> Issues => catalog.Issues;
 
@@ -648,6 +663,9 @@ public static class UsOneShotRuntime
     }
 
     public static bool TryEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source)
+        => TryObservedEvent(pawn, key, origin, source, "CallerSupplied");
+
+    internal static bool TryObservedEvent(Pawn pawn, string key, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence)
     {
         var session = SessionFor(pawn);
         if (session == null)
@@ -665,7 +683,7 @@ public static class UsOneShotRuntime
                 // A native notification publishes facts, not a forced wrapper identity.
                 // Independent roots and narrowed children using that fact enter the same arbitration.
                 // An explicit public call naming an author action still targets that definition.
-                registered && Kernel.ActionKey.SchemaKey(key) == key ? key : null);
+                registered && Kernel.ActionKey.SchemaKey(key) == key ? key : null, evidence: evidence);
         }
 
         // Registered and unregistered keys share this owner; Comp's old cooldown writer is never called.

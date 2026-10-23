@@ -171,8 +171,8 @@ internal static class MoodLayoutFocusedTests
                 .Where(r => IsInside(r, cardLocal) && IsDeclaredCheckbox(r))
                 .OrderBy(r => r.y)
                 .ToList();
-            Assert(slots.Count == 3,
-                "the current card draws three boolean rows (egg + baby + talking; Eat has independent dropdowns)"
+            Assert(slots.Count == 2,
+                "the current card draws two boolean rows (egg + talking; Eat and Select have independent dropdowns)"
                 + " got " + slots.Count);
 
             // THE DRAW FACT, stated as the property itself: for every declared checkbox band, that band is

@@ -13,6 +13,12 @@ namespace UniversalSqueaker.KernelTests;
 /// </summary>
 public static class Scenarios
 {
+    // Historical routing data, independent of today's official package inventory. All original
+    // string keys AND their candidate pools stay fixed; this does not register an official action.
+    internal static readonly string[] FrozenRoutingKeys = {
+        "Call", "Eat", "Sleep", "Wounded", "Select", "Move", "Social", "Joy", "Death",
+        "Draft", "Undraft", "Attack", "Work", "Equip", "MentalBreak", "Crying", "Giggling"
+    };
     public static readonly RaceKey RaceA = new("US_Race_A");
     public static readonly RaceKey RaceB = new("US_Race_B");
     public static readonly XenotypeKey XenoA = new("US_Xeno_A");
@@ -144,12 +150,10 @@ public static class Scenarios
     private static VoicePackEntry EggRaceEntry()
     {
         Dictionary<string, IReadOnlyList<ActionSoundSet>> actions = new();
-        for (int i = 0; i < ActionKeyMirror.Count; i++)
+        foreach (string actionName in FrozenRoutingKeys)
         {
-            SqueakAction action = (SqueakAction)i;
-            string actionName = ActionKeyMirror.For(action);
             List<ActionSoundSet> sets;
-            if (action == SqueakAction.Call)
+            if (actionName == "Call")
             {
                 sets = new List<ActionSoundSet>
                 {
@@ -157,7 +161,7 @@ public static class Scenarios
                     new(new[] { EggPack + "_" + actionName + "_Egg" }, null, 1f, isEgg: true),
                 };
             }
-            else if (action == SqueakAction.Move)
+            else if (actionName == "Move")
             {
                 sets = new List<ActionSoundSet>
                 {
@@ -171,7 +175,7 @@ public static class Scenarios
                     new(new[] { EggPack + "_" + actionName + "_0" }, null, 1f),
                 };
             }
-            actions[ActionKeyFor(action)] = sets;
+            actions[actionName] = sets;
         }
         return new VoicePackEntry(EggPack, RaceDomain, 4f, actions);
     }
@@ -179,10 +183,8 @@ public static class Scenarios
     private static VoicePackEntry Entry(string packKey, AudioDomain domain, int soundCount, bool muteLast)
     {
         Dictionary<string, IReadOnlyList<ActionSoundSet>> actions = new();
-        for (int i = 0; i < ActionKeyMirror.Count; i++)
+        foreach (string actionName in FrozenRoutingKeys)
         {
-            SqueakAction action = (SqueakAction)i;
-            string actionName = ActionKeyMirror.For(action);
             List<string> sounds = new(soundCount);
             for (int s = 0; s < soundCount; s++)
             {
@@ -190,10 +192,9 @@ public static class Scenarios
                 if (muteLast && s == soundCount - 1) key += "_Muted";
                 sounds.Add(key);
             }
-            actions[ActionKeyFor(action)] = new[] { new ActionSoundSet(sounds, null, 1f) };
+            actions[actionName] = new[] { new ActionSoundSet(sounds, null, 1f) };
         }
         return new VoicePackEntry(packKey, domain, 1f, actions);
     }
 
-    private static string ActionKeyFor(SqueakAction action) => ActionKey.For(action)!;
 }

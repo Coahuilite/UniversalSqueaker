@@ -44,7 +44,7 @@ internal static partial class Program
             AudioDomainsRejectWhitespace();
             GlobalVolumeDefaultsAndClamps();
             GlobalVolumeScribeRoundTrip();
-            BabyActionsOptInAndCoverage();
+            RetiredOfficialPackagesAndCoverage();
             SetDistanceRangeClampsAndMarksCustom();
             UiSwatchRoundTripRepairAndOmission();
             IntroCollapsedScribeRoundTrip();
@@ -53,6 +53,7 @@ internal static partial class Program
             S4ResponseConfigAndReset();
             DaCompleteActionConfig();
             DbEffectiveConfig();
+            DcSelectConfiguration();
 
             if (failures == 0)
             {
@@ -880,55 +881,39 @@ internal static partial class Program
             "distance-range: same Custom range is no-op", ref failures);
     }
 
-    // Mutation-proven: unconditional eligibility fails the OFF coverage assertion; removing the
-    // Scribe field fails the ON round-trip assertion. Remaining checks are guards. Coverage executes
-    // the production Def method; runtime sound playback is not simulated.
-    private static void BabyActionsOptInAndCoverage()
+    // The prepublication retirement removes the dedicated capability, not all responses by these Pawns.
+    private static void RetiredOfficialPackagesAndCoverage()
     {
-        Scenario("baby-actions-opt-in-coverage-and-persistence");
-        UniversalSqueakerSettings settings = NewSettings();
+        Scenario("retired-official-packages-and-production-coverage");
+        var settings = NewSettings();
+        Check(Enum.GetNames(typeof(SqueakAction)).Length == 15 && SqueakActionDefinitions.Count == 15,
+            "retirement: exact fifteen official packages, no reserved slots", ref failures);
+        Check(typeof(UniversalSqueakerSettings).GetField("allowBabyActions") == null
+            && typeof(UniversalSqueakerSettings).GetMethod("SetAllowBabyActions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) == null,
+            "retirement: dedicated flag and setter are gone rather than permanently forced off", ref failures);
+        var pack = new SqueakVoicePackDef();
+        foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
+            pack.actions.Add(new SqueakVoicePackAction { action = action, sounds = new List<SoundDef> { new SoundDef() } });
+        pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Call, sounds = new List<SoundDef> { new SoundDef() } });
+        pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)15, sounds = new List<SoundDef> { new SoundDef() } });
+        pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)16, sounds = new List<SoundDef> { new SoundDef() } });
+        Check(pack.CountPlayableActions() == 15, "retirement: duplicate and retired numeric entries cannot inflate coverage", ref failures);
         bool wasBiotech = ModsConfig.BiotechActive;
-        string path = Path.Combine(Path.GetTempPath(), "us-baby-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
+        string path = Path.Combine(Path.GetTempPath(), "us-retired-package-roundtrip-" + Guid.NewGuid().ToString("N") + ".xml");
         try
         {
-            ModsConfig.BiotechActive = true;
-            Check(!settings.allowBabyActions && !settings.BabyActionsEnabled, "baby: default is OFF", ref failures);
-            Check((int)SqueakAction.Crying == 15 && (int)SqueakAction.Giggling == 16,
-                "baby: serialized action IDs stay append-only", ref failures);
-            var pack = new SqueakVoicePackDef();
-            for (int i = 0; i < 15; i++) pack.actions.Add(new SqueakVoicePackAction
-                { action = (SqueakAction)i, sounds = new List<SoundDef> { new SoundDef() } });
-            Check(pack.CountPlayableActions(false) == 15 && pack.CountPlayableActions(true) == 15,
-                "baby: absent resources remain uncovered with either setting", ref failures);
-            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Crying, sounds = new List<SoundDef> { new SoundDef() } });
-            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Giggling, sounds = new List<SoundDef> { new SoundDef() } });
-            pack.actions.Add(new SqueakVoicePackAction { action = SqueakAction.Call, sounds = new List<SoundDef> { new SoundDef() } });
-            pack.actions.Add(new SqueakVoicePackAction { action = (SqueakAction)999, sounds = new List<SoundDef> { new SoundDef() } });
-            Check(pack.CountPlayableActions(false) == 15 && pack.CountPlayableActions(true) == 17,
-                "baby: OFF excludes both, ON includes both, duplicate/unknown entries never inflate coverage", ref failures);
-            Check(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, settings.BabyActionsEnabled)
-                && !SqueakActionEligibility.IsEligible(SqueakAction.Giggling, settings.BabyActionsEnabled)
-                && SqueakActionEligibility.IsEligible(SqueakAction.MentalBreak, settings.BabyActionsEnabled),
-                "baby: OFF gates only the two baby actions, not genuine mental breaks", ref failures);
+            foreach (bool biotech in new[] { false, true })
+            {
+                ModsConfig.BiotechActive = biotech;
+                Check(pack.CountPlayableActions() == 15 && SqueakActionDefinitions.IsKnown(SqueakAction.MentalBreak),
+                    "retirement: DLC changes neither official inventory nor genuine MentalBreak admission " + biotech, ref failures);
+            }
+            settings.allowEasterEggSounds = true;
             SafeSaver.Save(path, "Settings", () => settings.ExposeData());
-            Check(!File.ReadAllText(path).Contains("allowBabyActions"), "baby: default field is omitted", ref failures);
+            Check(!File.ReadAllText(path).Contains("allowBabyActions"), "retirement: production ExposeData no longer writes dedicated flag", ref failures);
             var loaded = NewSettings();
-            loaded.allowBabyActions = true;
             Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
-            Check(!loaded.allowBabyActions, "baby: old settings without the field load OFF", ref failures);
-            settings.SetAllowBabyActions(true);
-            Check(settings.BabyActionsEnabled && SqueakActionEligibility.IsEligible(SqueakAction.Crying, settings.BabyActionsEnabled)
-                && SqueakActionEligibility.IsEligible(SqueakAction.Giggling, settings.BabyActionsEnabled),
-                "baby: ON is effective immediately", ref failures);
-            SafeSaver.Save(path, "Settings", () => settings.ExposeData());
-            loaded = NewSettings();
-            Scribe.loader.InitLoading(path); loaded.ExposeData(); Scribe.loader.FinalizeLoading();
-            Check(loaded.allowBabyActions && loaded.BabyActionsEnabled, "baby: ON survives Scribe round-trip", ref failures);
-            ModsConfig.BiotechActive = false;
-            Check(!loaded.BabyActionsEnabled && pack.CountPlayableActions(loaded.BabyActionsEnabled) == 15,
-                "baby: no Biotech keeps routing/coverage ineligible without deleting the saved preference", ref failures);
-            settings.SetAllowBabyActions(false);
-            Check(!settings.allowBabyActions, "baby: switch can be closed again", ref failures);
+            Check(loaded.allowEasterEggSounds, "retirement: unrelated shared setting survives production settings/Scribe-double round-trip", ref failures);
         }
         finally
         {
@@ -936,7 +921,6 @@ internal static partial class Program
             if (File.Exists(path)) File.Delete(path);
         }
     }
-
     // ---- helpers ----
 
     /// <summary>

@@ -47,7 +47,7 @@ public readonly struct SqueakActionPlan
     { Definition = definition; ActionKey = definition.ActionKey; Configured = configured; Mode = mode; MinIntervalTicks = minIntervalTicks; ProbabilityPerCheck = probabilityPerCheck; IgnoreGlobalCooldown = ignoreGlobalCooldown; CooldownClock = cooldownClock; }
 }
 
-public enum SqueakTriggerOrigin { Periodic, Wounded, Select, Death, Draft, Undraft, Attack, Equip, MentalBreak, Crying, Giggling, External }
+public enum SqueakTriggerOrigin { Periodic, Wounded, Select, Death, Draft, Undraft, Attack, Equip, MentalBreak, External }
 public enum SqueakInvocationSource { Periodic, StateEvent, PlayerSelection, ActiveCommand }
 
 /// <summary>Explicit trigger source; non-periodic hooks preserve legacy probability skipping.

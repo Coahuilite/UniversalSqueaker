@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -8,9 +9,11 @@ using Verse;
 namespace UniversalSqueaker;
 
 /// <summary>Wraps only the player-facing Draft gizmo action, never Pawn_DraftController.Drafted setters.</summary>
-[HarmonyPatch(typeof(Pawn), nameof(Pawn.GetGizmos))]
+[HarmonyPatch]
 public static class Patch_DraftGizmo_Toggle
 {
+    private static bool Prepare() => UsPawnEventObservation.Prepare("us.core/DraftEvent");
+    private static MethodBase TargetMethod() => UsPawnEventObservation.Draft!;
     private static readonly ConditionalWeakTable<Command_Toggle, object> WrappedCommands = new();
     private static void Postfix(Pawn __instance, ref IEnumerable<Gizmo> __result)
     {

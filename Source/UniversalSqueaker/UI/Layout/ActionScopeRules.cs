@@ -35,14 +35,11 @@ public static class ActionScopeRules
         SqueakAction.Draft, SqueakAction.Undraft, SqueakAction.Attack, SqueakAction.Equip, SqueakAction.Select,
     };
 
-    /// <summary>The system/event group in SR's display order. US's optional Crying/Giggling join the
-    /// tail here; they only ever appear under the eligibility gate that already decides the row
-    /// exists, so this table adds no reachability of its own.</summary>
+    /// <summary>The ten official system/event rows in SR's display order.</summary>
     public static readonly IReadOnlyList<SqueakAction> SystemGroupOrder = new[]
     {
         SqueakAction.Call, SqueakAction.Eat, SqueakAction.Sleep, SqueakAction.Wounded, SqueakAction.Move,
         SqueakAction.Work, SqueakAction.Social, SqueakAction.Joy, SqueakAction.Death, SqueakAction.MentalBreak,
-        SqueakAction.Crying, SqueakAction.Giggling,
     };
 
     private static readonly Dictionary<SqueakAction, ActionScopeGroup> membership = BuildMembership();
@@ -74,7 +71,7 @@ public static class ActionScopeRules
     /// <summary>
     /// Display-text key of a scope for one action. Auto and Off are US's own semantics and keep the
     /// generic keys; Any/Command read the SR per-action caption when the tables carry one and fall back
-    /// to the generic key otherwise (Crying/Giggling have no SR caption).
+    /// to the generic key otherwise.
     /// </summary>
     public static string ScopeLabelKey(SqueakAction action, SqueakActionScope scope)
     {
@@ -89,11 +86,6 @@ public static class ActionScopeRules
             _ => "US.Tuning.Scope.Off",
         };
     }
-
-    /// <summary>The editor's exclusion rule, unchanged by SA1.2: the baby actions share the runtime
-    /// eligibility rule and the default editor excludes them.</summary>
-    public static bool IsHiddenByDefault(SqueakAction action) => !SqueakActionEligibility.IsEligible(action, false);
-
 
     private static Dictionary<SqueakAction, ActionScopeGroup> BuildMembership()
     {

@@ -91,6 +91,9 @@ public sealed class BehaviorConfigurationSnapshot
             if (result.Phase == EatPhase.Execution) dependencies.Add(EatPolicy.Execution);
             if (result.NutritionScope.HasValue && result.NutritionScope != EatNutritionScope.Any) dependencies.Add(EatPolicy.Nutrition);
             if (result.DrugScope.HasValue && result.DrugScope != EatDrugScope.Any) dependencies.Add(EatPolicy.Drug);
+            if (result.SelectRequirePlayerControlled == true) dependencies.Add("us.core/PlayerControlled");
+            if (result.SelectRequireAwake == true) dependencies.Add("us.core/Awake");
+            if (result.SelectRequireNotDowned == true) dependencies.Add("us.core/NotDowned");
             foreach (string required in dependencies)
                 if (!implementationAvailable(required)) { paused = true; problem = "MissingRequiredImplementation:" + required; }
         }

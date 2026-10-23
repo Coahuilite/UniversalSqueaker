@@ -92,8 +92,6 @@
   <US.Action.Work>Work</US.Action.Work>
   <US.Action.Equip>Equip</US.Action.Equip>
   <US.Action.MentalBreak>Mental break</US.Action.MentalBreak>
-  <US.Action.Crying>Crying</US.Action.Crying>
-  <US.Action.Giggling>Giggling</US.Action.Giggling>
 
   <US.Mood.Good>Good</US.Mood.Good>
   <US.Mood.Neutral>Neutral</US.Mood.Neutral>
@@ -286,7 +284,7 @@
   <US.Tuning.Scope.Any>Any</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>Command</US.Tuning.Scope.Command>
   <!-- SA1.2 SR-parity captions: the per-action scope names SR ships. An action with no row here keeps
-       the generic Any/Command caption above (Crying/Giggling are US-only and have no SR caption). -->
+       the generic Any/Command caption above as needed. -->
   <US.Action.DraftUndraft>Draft / Undraft</US.Action.DraftUndraft>
   <US.Tuning.Scope.Call.Any>Periodic occurrence</US.Tuning.Scope.Call.Any>
   <US.Tuning.Scope.Eat.Any>Eating occurrence</US.Tuning.Scope.Eat.Any>
@@ -473,9 +471,6 @@
   <US.Diagnostics.Recency.JustNow>at {0}, less than a minute ago</US.Diagnostics.Recency.JustNow>
   <US.Diagnostics.Recency.Ago>at {0}, {1} min ago</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>Back to list</US.Diagnostics.Nav.Back>
-  <US.Tuning.BabyActions>Route baby crying and giggling</US.Tuning.BabyActions>
-  <US.Help.BasicTuning.BabyActions.Label>Route baby crying and giggling</US.Help.BasicTuning.BabyActions.Label>
-  <US.Help.BasicTuning.BabyActions.Text>Off by default. With Biotech active, enable to route Crying and Giggling, expose their tuning rows and include both in action coverage. Off excludes both from routing and the coverage numerator/denominator. This does not change vanilla mental states or genuine mental breaks. Missing audio stays uncovered; without Biotech this option has no effect.</US.Help.BasicTuning.BabyActions.Text>
   <US.Tuning.Source.Default>Default</US.Tuning.Source.Default>
 
   <US.Distance.AxisCaption>Camera height {0}–{1} (game values) · Volume 100%→0%</US.Distance.AxisCaption>
@@ -614,4 +609,12 @@
   <US.Tuning.EatDrug>Eat drug filter</US.Tuning.EatDrug>
   <US.Tuning.EatNutrition>Eat nutrition filter</US.Tuning.EatNutrition>
   <US.Tuning.EatPhase>Eat phase (selected tuning layer)</US.Tuning.EatPhase>
+  <US.Select.PlayerControlled>Select: require player control</US.Select.PlayerControlled>
+  <US.Select.Awake>Select: require awake</US.Select.Awake>
+  <US.Select.NotDowned>Select: require not downed</US.Select.NotDowned>
+  <US.Select.Inherit>Inherit</US.Select.Inherit>
+  <US.Select.Required>Required</US.Select.Required>
+  <US.Select.NotRequired>Not required</US.Select.NotRequired>
+  <US.Help.Select.Label>Selection qualifications</US.Help.Select.Label>
+  <US.Help.Select.Text>Official Pawn Select requires player control, awake and not downed by default. Adjust each qualification independently for the current Pawn profile, Race or Xenotype layer; Inherit clears only that layer's field. A response still requires an accepted selection with feedback for the final selected subject. Basics restore clears only the Pawn-profile fields; restore the exact action row to clear Race or Xenotype overrides.</US.Help.Select.Text>
 </LanguageData>

@@ -157,6 +157,9 @@ public partial class UniversalSqueakerSettings
         row.hasEatPhase = values.Phase.HasValue; row.eatPhase = values.Phase ?? EatPhase.WholeProcess;
         row.hasNutritionScope = values.NutritionScope.HasValue; row.nutritionScope = values.NutritionScope ?? EatNutritionScope.Any;
         row.hasDrugScope = values.DrugScope.HasValue; row.drugScope = values.DrugScope ?? EatDrugScope.Any;
+        row.hasSelectRequirePlayerControlled = values.SelectRequirePlayerControlled.HasValue; row.selectRequirePlayerControlled = values.SelectRequirePlayerControlled ?? true;
+        row.hasSelectRequireAwake = values.SelectRequireAwake.HasValue; row.selectRequireAwake = values.SelectRequireAwake ?? true;
+        row.hasSelectRequireNotDowned = values.SelectRequireNotDowned.HasValue; row.selectRequireNotDowned = values.SelectRequireNotDowned ?? true;
         foreach (var pair in values.ResponseEnabled) row.responses.Add(new ResponseTuningValue { key = pair.Key, hasEnabled = true, enabled = pair.Value });
         if (values.AgeEnabled.HasValue) row.responses.Add(new ResponseTuningValue { key = "us.core/Age", hasEnabled = true, enabled = values.AgeEnabled.Value });
         if (values.MoodEnabled.HasValue) row.responses.Add(new ResponseTuningValue { key = "us.core/Mood", hasEnabled = true, enabled = values.MoodEnabled.Value });
@@ -200,7 +203,10 @@ public partial class UniversalSqueakerSettings
             Volume = record.hasVolume ? record.volume : null, Pitch = record.hasPitch ? record.pitch : null,
             Phase = record.hasEatPhase ? record.eatPhase : null,
             NutritionScope = record.hasNutritionScope ? record.nutritionScope : null,
-            DrugScope = record.hasDrugScope ? record.drugScope : null
+            DrugScope = record.hasDrugScope ? record.drugScope : null,
+            SelectRequirePlayerControlled = record.hasSelectRequirePlayerControlled ? record.selectRequirePlayerControlled : null,
+            SelectRequireAwake = record.hasSelectRequireAwake ? record.selectRequireAwake : null,
+            SelectRequireNotDowned = record.hasSelectRequireNotDowned ? record.selectRequireNotDowned : null
         };
         foreach (var response in record.responses)
         {

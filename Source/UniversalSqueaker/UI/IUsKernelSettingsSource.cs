@@ -37,9 +37,9 @@ public interface IUsKernelSettingsSource
     void SetCameraIndicator(bool value);
     void SetEasterEggs(bool value);
 
-    void SetBabyActions(bool value);
     // Empty value restores this field's inheritance in the selected Pawn/Race/Xeno layer.
     void SetEatParameter(string key, string value);
+    void SetSelectParameter(string key, string value);
     void SetGlobalMinIntervalTicks(int ticks);
     void SetGlobalCooldownMultiplier(float value);
     void SetDevLoggingMode(SqueakDevLoggingMode mode);

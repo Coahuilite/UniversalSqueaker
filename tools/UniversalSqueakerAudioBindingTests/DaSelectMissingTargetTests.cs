@@ -59,7 +59,9 @@ internal static partial class Program
             "unrelated production binding patches still run after the missing Select pair is skipped");
 
         var pawn = new Pawn { ThingID = "ReadinessPawn", def = new ThingDef { defName = "ReadinessRace", race = new object() },
-            CurJob = new Verse.AI.Job { def = new JobDef { defName = "ReadinessJob" } } };
+            IsPlayerControlled = true, CurJob = new Verse.AI.Job { def = new JobDef { defName = "Research" }, playerForced = true } };
+        var work = new JobDriver_Research { pawn = pawn, job = pawn.CurJob, FixtureToil = new Toil() };
+        pawn.jobs = new Pawn_JobTracker { curDriver = work };
         pawn.Comp = new CompSqueaker { Pawn = pawn };
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         DefDatabase<ThingDef>.AllDefsListForReading.Add(pawn.def);
@@ -87,7 +89,7 @@ internal static partial class Program
         var domain = AudioDomains.RaceOnly(pawn.def.defName);
         SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory,
             new Dictionary<AudioDomain, HashSet<string>> { [domain] = new HashSet<string> { packKey } }), BuiltInFallbackTable.Empty);
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1, UsSelectPawnQualification.Unrestricted));
+        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(harmony);
         var selector = new Selector(); selector.Select(pawn);
         Check(selector.IsSelected(pawn) && !UsOneShotRuntime.IsControlled(pawn),

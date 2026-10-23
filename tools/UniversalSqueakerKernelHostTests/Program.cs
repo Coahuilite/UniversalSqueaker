@@ -182,6 +182,7 @@ internal static class Program
     private static void RunAll()
     {
         Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
+        Step("DC Select three sparse qualifications, real settings and Host", DcSelectUiTests.Run);
         Step("real embedded resource + schema shape", RealEmbeddedResourcePresentAndShaped);
         Step("real host creation validates full schema", RealHostCreationValidatesFullSchema);
         Step("reopen session isolation", RealHostReopenIsolation);
@@ -189,13 +190,15 @@ internal static class Program
         Step("unknown attribute fails at creation", UnknownAttributeFailsAtCreation);
         Step("typed bindings route to business boundary", TypedBindingsRouteToBusinessBoundary);
         Step("full typed write coverage", FullTypedWriteCoverage);
-        Step("baby eligibility uses the production metadata denominator", () =>
+        Step("retired dedicated packages absent from real product inventory and APIs", () =>
         {
-            Assert(SqueakActionDefinitions.EligibleCount(false) == 15 && SqueakActionDefinitions.EligibleCount(true) == 17,
-                "coverage denominator follows the same opt-in");
-            Assert(!SqueakActionDefinitions.IsEligible(SqueakAction.Crying, false)
-                && !SqueakActionDefinitions.IsEligible(SqueakAction.Giggling, false)
-                && SqueakActionDefinitions.IsEligible(SqueakAction.MentalBreak, false), "baby gate leaves true breaks alone");
+            Assert(SqueakActionDefinitions.Count == 15 && Enum.GetNames(typeof(SqueakAction)).Length == 15,
+                "real product coverage has exactly fifteen official packages");
+            Assert(typeof(UniversalSqueakerSettings).GetField("allowBabyActions") == null,
+                "real product settings no longer has the dedicated persisted opt-in");
+            // This frozen UI platform does not implement Verse.ThingComp. Full Comp/patch metadata
+            // absence is inspected on the built product with ILSpy, not guessed from a UI type-load failure.
+            Assert(SqueakActionDefinitions.IsKnown(SqueakAction.MentalBreak), "positive MentalBreak is retained");
         });
         Step("the three dissolved Overview composites are declarative and retired (S4-1)", () => DeclarativeOverviewLaneTests.RunAll());
         Step("the pack-card result: projection, identities, channels and empties (US-PACK1)", () => PackCardsLaneTests.RunAll());
@@ -261,6 +264,7 @@ internal static class Program
         Step("XG1 empty xenotype tuning target: reason, blocked submits, real boxes",
             () => XenotypeEmptyTargetLaneTests.RunAll());
         // S4 retires old interval/probability policy controls; new Config composition is checked by SettingsMigrationTests.
+        Step("S4 retired policy controls and live Select/Eat permissions", S4RetiredPolicyUiTests.Run);
         Step("US-RESET1 UI: ceremony, direct entries, scope naming, draft integration",
             () => ResetUiLaneTests.RunAll());
         // UIR-002/003/006 (WO-US-UI-REFACTOR-20261014): the race board and the live theme switch.
@@ -1278,7 +1282,9 @@ internal static class Program
             // S4-1 retired the seven toggle-* action bindings with the three composites: a declarative
             // input/checkbox writes the inverse of the value it read, so the VALUE binding is the whole
             // toggle and there is no second channel to keep in step.
-            { "allow-baby-actions", () => host.Bindings.Set("allow-baby-actions", true) },
+            { "select-player-controlled", () => host.Bindings.Set("select-player-controlled", "False") },
+            { "select-awake", () => host.Bindings.Set("select-awake", "False") },
+            { "select-not-downed", () => host.Bindings.Set("select-not-downed", "False") },
             { "allow-eggs", () => host.Bindings.Set("allow-eggs", false) },
             { "scale-cooldown", () => host.Bindings.Set("scale-cooldown", false) },
             { "scale-talking", () => host.Bindings.Set("scale-talking", false) },
@@ -2298,9 +2304,11 @@ internal static class Program
         bindings.Set("global-volume-percent", 42f);
         Assert(Math.Abs(fake.LastGlobalVolume.GetValueOrDefault() - 0.42f) < 0.001f,
             "global-volume-percent writes the normalized volume through the business setter");
-        bindings.Set("allow-baby-actions", true);
-        // Mutation-proven: removing source.SetBabyActions from the registered write fails here.
-        Assert(fake.LastBabyActions == true, "baby-actions write routes to the business boundary");
+        bindings.Set("select-player-controlled", "False");
+        bindings.Set("select-awake", "True");
+        bindings.Set("select-not-downed", "");
+        Assert(fake.SelectWrites["playerControlled"] == "False" && fake.SelectWrites["awake"] == "True"
+            && fake.SelectWrites["notDowned"] == "", "DC Select independent presence/value routes to business boundary");
         bindings.Set("eat-phase", "Execution");
         Assert(fake.EatWrites["phase"] == "Execution", "DB phase typed write routes");
         bindings.Set("eat-nutrition", "NonNutritionGiving");

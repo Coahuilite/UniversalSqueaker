@@ -87,15 +87,6 @@ public partial class UniversalSqueakerSettings : ModSettings
     public List<MoodTuningRecord> moodTuning = new();
     // Action gate: non-built-in external actions fire only when true. Default false (closed).
     public bool allowExternalActions = false;
-    // Add-only opt-in: missing old configuration fields stay false; the enum/catalog remain append-only.
-    public bool allowBabyActions = false;
-    public bool BabyActionsEnabled => allowBabyActions && ModsConfig.BiotechActive;
-    internal void SetAllowBabyActions(bool value)
-    {
-        if (allowBabyActions == value) return;
-        allowBabyActions = value;
-        QueuePersistence();
-    }
     public bool EffectiveDevLogging => SqueakLog.EffectiveDevLogging;
     public void SetDevLoggingMode(SqueakDevLoggingMode value)
     {

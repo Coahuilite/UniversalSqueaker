@@ -1,74 +1,43 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using HarmonyLib;
-using RimWorld;
 using Verse;
 
 namespace UniversalSqueaker;
 
-/// <summary>
-/// Covers successful Core melee, ranged, and special non-Ability verb implementations that declare TryCastShot.
-/// It intentionally excludes Ability and DLC assemblies; this is not a claim to cover every possible attack API.
-/// </summary>
+// Patch only explicit mechanism roots. Shoot / ShootOneUse / AbilityShoot wrappers are
+// covered when they actually call the observed launch implementation, never patched twice.
 [HarmonyPatch]
 public static class Patch_Verb_Attack
 {
-    private const int MaxSkippedTargetWarnings = 8;
-    private static int skippedTargetWarnings;
-
-    private static IEnumerable<MethodBase> TargetMethods()
+    private static bool Prepare() => UsAttackObservation.Prepare(UsAttackObservation.Ranged.Length != 0);
+    private static IEnumerable<MethodBase> TargetMethods() => UsAttackObservation.Ranged;
+    private static void Postfix(Verb __instance, bool __result, MethodBase __originalMethod)
     {
-        HashSet<MethodBase> targets = new();
-        foreach (Assembly assembly in new[] { typeof(Verb).Assembly, typeof(JobDefOf).Assembly }.Distinct())
-        {
-            foreach (Type type in GetTypesSafely(assembly))
-            {
-                if (!typeof(Verb).IsAssignableFrom(type) || type.FullName?.IndexOf("Ability", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                MethodInfo? method = AccessTools.DeclaredMethod(type, "TryCastShot", Type.EmptyTypes);
-                if (method == null || method.IsStatic || method.IsAbstract || method.ContainsGenericParameters || method.ReturnType != typeof(bool)) continue;
-                try
-                {
-                    if (method.GetMethodBody() == null)
-                    {
-                        WarnSkippedTarget(method, "has no method body");
-                        continue;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    WarnSkippedTarget(method, "could not inspect its method body (" + ex.GetType().Name + ")");
-                    continue;
-                }
-
-                targets.Add(method);
-            }
-        }
-
-        if (targets.Count == 0)
-        {
-            SqueakLog.HookAttackUnavailable();
-        }
-        foreach (MethodBase target in targets) yield return target;
+        if (__result && __instance.caster is Pawn pawn)
+            UsAttackObservation.Publish(pawn, __originalMethod.DeclaringType?.FullName + "." + __originalMethod.Name + ":True");
     }
+}
 
-    private static void WarnSkippedTarget(MethodInfo method, string reason)
+[HarmonyPatch]
+public static class Patch_Melee_Attack
+{
+    private static bool Prepare() => UsAttackObservation.Prepare(UsAttackObservation.MeleeReady);
+    private static MethodBase TargetMethod() => UsAttackObservation.Melee!;
+    private static void Prefix(Verb __instance, out UsAttackObservation.Frame? __state) => __state = UsAttackObservation.Begin(__instance);
+    private static void Postfix(UsAttackObservation.Frame? __state) => UsAttackObservation.Complete(__state, true);
+    private static Exception? Finalizer(Exception? __exception, UsAttackObservation.Frame? __state)
     {
-        if (skippedTargetWarnings++ >= MaxSkippedTargetWarnings) return;
-        if (!SqueakLog.ShouldEmitDev) return;
-        SqueakLog.HookAttackTargetSkipped(method.DeclaringType?.FullName + "." + method.Name, reason);
+        if (__exception != null) UsAttackObservation.Complete(__state, false);
+        return __exception;
     }
+}
 
-    private static IEnumerable<Type> GetTypesSafely(Assembly assembly)
-    {
-        try { return assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { return ex.Types.Where(type => type != null)!; }
-    }
-
-    private static void Postfix(object __instance, bool __result)
-    {
-        if (!__result || __instance is not Verb verb || verb.caster is not Pawn pawn || !pawn.Spawned || pawn.MapHeld != Find.CurrentMap) return;
-        pawn.GetComp<CompSqueaker>()?.Notify_Attack();
-    }
+[HarmonyPatch]
+public static class Patch_Melee_Attack_Executed
+{
+    private static bool Prepare() => UsAttackObservation.Prepare(UsAttackObservation.MeleeReady);
+    private static MethodBase TargetMethod() => UsAttackObservation.MeleeExecuted!;
+    private static void Prefix(Pawn_DrawTracker __instance) => UsAttackObservation.Mark(__instance);
 }

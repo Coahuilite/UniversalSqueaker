@@ -36,11 +36,16 @@ public class ActionTuningRecord : IExposable
     public bool hasEatPhase; public EatPhase eatPhase;
     public bool hasNutritionScope; public EatNutritionScope nutritionScope;
     public bool hasDrugScope; public EatDrugScope drugScope;
+    public bool hasSelectRequirePlayerControlled, selectRequirePlayerControlled = true;
+    public bool hasSelectRequireAwake, selectRequireAwake = true;
+    public bool hasSelectRequireNotDowned, selectRequireNotDowned = true;
     public bool CarriesBehaviorFields => hasEnabled || hasHardIntervalTicks || hasTalkingEnabled || hasVolume || hasPitch
-        || hasEatPhase || hasNutritionScope || hasDrugScope;
+        || hasEatPhase || hasNutritionScope || hasDrugScope
+        || hasSelectRequirePlayerControlled || hasSelectRequireAwake || hasSelectRequireNotDowned;
     internal void ClearBehaviorFields()
     {
         hasEnabled = hasHardIntervalTicks = hasTalkingEnabled = hasVolume = hasPitch = hasEatPhase = hasNutritionScope = hasDrugScope = false;
+        hasSelectRequirePlayerControlled = hasSelectRequireAwake = hasSelectRequireNotDowned = false;
     }
 
     public void ExposeData()
@@ -66,6 +71,9 @@ public class ActionTuningRecord : IExposable
         Scribe_Values.Look(ref hasEatPhase, "hasEatPhase", false); Scribe_Values.Look(ref eatPhase, "eatPhase", EatPhase.WholeProcess);
         Scribe_Values.Look(ref hasNutritionScope, "hasNutritionScope", false); Scribe_Values.Look(ref nutritionScope, "nutritionScope", EatNutritionScope.Any);
         Scribe_Values.Look(ref hasDrugScope, "hasDrugScope", false); Scribe_Values.Look(ref drugScope, "drugScope", EatDrugScope.Any);
+        Scribe_Values.Look(ref hasSelectRequirePlayerControlled, "hasSelectRequirePlayerControlled", false); Scribe_Values.Look(ref selectRequirePlayerControlled, "selectRequirePlayerControlled", true);
+        Scribe_Values.Look(ref hasSelectRequireAwake, "hasSelectRequireAwake", false); Scribe_Values.Look(ref selectRequireAwake, "selectRequireAwake", true);
+        Scribe_Values.Look(ref hasSelectRequireNotDowned, "hasSelectRequireNotDowned", false); Scribe_Values.Look(ref selectRequireNotDowned, "selectRequireNotDowned", true);
         Scribe_Collections.Look(ref responses, "responses", LookMode.Deep);
         Scribe_Collections.Look(ref responseParameters, "responseParameters", LookMode.Deep);
         responses ??= new List<ResponseTuningValue>();
@@ -110,6 +118,9 @@ public class ActionTuningRecord : IExposable
         hasEatPhase = value.hasEatPhase, eatPhase = value.eatPhase,
         hasNutritionScope = value.hasNutritionScope, nutritionScope = value.nutritionScope,
         hasDrugScope = value.hasDrugScope, drugScope = value.drugScope,
+        hasSelectRequirePlayerControlled = value.hasSelectRequirePlayerControlled, selectRequirePlayerControlled = value.selectRequirePlayerControlled,
+        hasSelectRequireAwake = value.hasSelectRequireAwake, selectRequireAwake = value.selectRequireAwake,
+        hasSelectRequireNotDowned = value.hasSelectRequireNotDowned, selectRequireNotDowned = value.selectRequireNotDowned,
         responses = value.responses.Select(x => x.Copy()).ToList(),
         responseParameters = value.responseParameters.Select(x => x.Copy()).ToList(),
     };

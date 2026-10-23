@@ -197,8 +197,9 @@ public sealed class ActionPlan
     public readonly double Volume;
     public readonly double Pitch;
     public readonly bool Sustained;
+    public readonly string? SubjectRole;
     public ActionPlan(string key, int priority, Condition condition, long interval, bool checkShared = true, bool writeShared = true, double chance = 1, string? baseAction = null,
-        bool skipTalking = true, double volume = 1, double pitch = 1, bool sustained = false, bool requiresVocal = false)
+        bool skipTalking = true, double volume = 1, double pitch = 1, bool sustained = false, bool requiresVocal = false, string? subjectRole = null)
     {
         if (interval < 0)
         {
@@ -226,6 +227,7 @@ public sealed class ActionPlan
         Volume = volume;
         Pitch = pitch;
         Sustained = sustained;
+        SubjectRole = subjectRole;
     }
 }
 
@@ -508,7 +510,7 @@ public sealed class OneShotDecision
                 childDomain: audio.ChildDomain, sourceDomain: audio.SourceDomain, sourceTier: audio.SourceTier);
             enteredBackend = true;
             var receipt = backend.Dispatch(new PlaybackRequest(input.Subject, input.Domain, action.Key, audio, input.Tick, local.Pitch,
-                action.Sustained, action.Priority, action.Condition, input.SubjectRole, input.ChildDomain, input.Facts.Ingestion));
+                action.Sustained, action.Priority, action.Condition, action.SubjectRole ?? input.SubjectRole, input.ChildDomain, input.Facts.Ingestion));
             Settle(state, policy, input, action, receipt);
             return new DecisionOutcome(action.Key, receipt.Reason, receipt, diagnostics);
         }

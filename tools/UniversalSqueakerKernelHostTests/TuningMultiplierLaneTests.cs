@@ -65,12 +65,9 @@ internal static class TuningMultiplierLaneTests
         }
     }
 
-    // babyEnabled=false: the fold takes the flag as a parameter precisely so this lane can run the
-    // REAL fold in the stub harness (Verse.ModsConfig is not loadable here); the default fixture
-    // writes no baby-gated rows, so the projections below are the production answer for a
-    // non-biotech host too.
+    // Exact current production fold; the retired package opt-in no longer participates.
     private static IReadOnlyList<ActionScopeRowView> Fold(UniversalSqueakerSettings settings, int layer, string race, string xeno)
-        => (IReadOnlyList<ActionScopeRowView>)BuildActionScopes.Invoke(null, new object[] { settings, layer, race, xeno, false })!;
+        => (IReadOnlyList<ActionScopeRowView>)BuildActionScopes.Invoke(null, new object[] { settings, layer, race, xeno })!;
 
     private static ActionScopeRowView Row(IReadOnlyList<ActionScopeRowView> rows, string key)
     {

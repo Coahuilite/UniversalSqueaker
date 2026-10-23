@@ -12,7 +12,7 @@ using Verse.Sound;
 
 internal static partial class Program
 {
-    private static void DaActualSelect(bool qualificationSelected)
+    private static void DaActualSelect()
     {
         const string childId = "example/InjuredSelect";
         var pawn = new Pawn { ThingID = "Ratkin-A", def = new ThingDef { defName = "Ratkin", race = new object() },
@@ -72,10 +72,13 @@ internal static partial class Program
             "DA actual settings source transaction persists full child identity before runtime publication");
         Check(UniversalSqueakerMod.Settings.TryChangeBehaviorSource(new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
             "fixture.da/US_DaSource", UsOneShotRuntime.BehaviorSources, _ => true, out _), "DA bind legal child author contribution independently");
+        void RelaxSelect() => Check(UniversalSqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Select",
+            new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false },
+            () => true, out _), "DA explicit player settings relax the three official qualifications without changing accepted-feedback evidence");
+        RelaxSelect();
         UniversalSqueakerMod.Settings.actionTuning.Add(new ActionTuningRecord { actionKey = childId, raceDefName = "Ratkin",
             hasScope = true, scope = SqueakActionScope.Disabled });
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1,
-            qualificationSelected ? UsSelectPawnQualification.Unrestricted : UsSelectPawnQualification.Unselected));
+        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         var selector = new Selector();
         var proxy = new object(); selector.Proxies.Add(proxy, pawn);
@@ -88,12 +91,6 @@ internal static partial class Program
         selector.Selected.Clear();
         selector.Select(proxy);
         var session = RuntimeSession(pawn);
-        if (!qualificationSelected)
-        {
-            Check(session.LastOutcome.Reason == "SelectPawnQualificationRequired" && SoundStarter.Played.Count == starts,
-                "DA unresolved official Pawn qualification is explicit, not silently unrestricted");
-            return;
-        }
         Check(session.LastOutcome.Action == "us.core/Select" && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched
             && SoundStarter.Played.Count == starts + 1 && session.DiagnosticText.Contains("role=SelectedSubject")
             && session.DiagnosticText.Contains("subject=Ratkin-A") && session.DiagnosticText.Contains("requestedEntry=fixture.da/US_DaRatkin/ordinary"),
@@ -111,6 +108,7 @@ internal static partial class Program
         Check(RuntimeSession(other).State.ConfirmedAction == "us.core/Select" && SoundStarter.Played.Count == starts + 3,
             "DA exception cleanup releases nested observation and separate Pawn owners may act on the same tick");
         UniversalSqueakerMod.Settings.actionTuning.Clear();
+        RelaxSelect();
         pawn.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
         pawn.Comp.Vocal = true;
         Find.TickManager.TicksGame += 200; selector.Select(proxy);

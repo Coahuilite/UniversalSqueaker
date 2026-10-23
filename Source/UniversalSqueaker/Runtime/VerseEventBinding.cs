@@ -18,8 +18,6 @@ public static class VerseEventBinding
         SqueakAction.Attack => SqueakTriggerOrigin.Attack,
         SqueakAction.Equip => SqueakTriggerOrigin.Equip,
         SqueakAction.MentalBreak => SqueakTriggerOrigin.MentalBreak,
-        SqueakAction.Crying => SqueakTriggerOrigin.Crying,
-        SqueakAction.Giggling => SqueakTriggerOrigin.Giggling,
         _ => SqueakTriggerOrigin.External,
     };
 

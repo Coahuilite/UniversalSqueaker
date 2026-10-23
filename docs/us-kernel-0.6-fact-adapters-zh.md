@@ -1,12 +1,12 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r4。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。D-B已接入完整有效配置与Eat生产纵切，下面分别记录直接源码、继承依据、平台替身与原生状态。
+修订：2026-10-23，r5。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[15包导读](us-kernel-0.6-contract-review-zh.md)。D-C接续完整有效配置，扩齐15包生产通知／事实和已裁Select三资格，下面分别记录直接源码、继承依据、平台替身与原生状态。
 
 ## Eat：过程、执行、物品属性与返回结果分别维护
 
 维护者：US 1.6适配维护者。消费者：内置Eat、InjuredEat固定扩展及独立AfterIngestion根；正式字段与入口以[主规格§22](us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口)为准。
 
-**来源版本：** 继承的既有项目定点源码核对记录为目标1.6.4871、Assembly-CSharp 1.6.9676.17735，Version.txt rev590／算法rev591差异保留。本轮直接读回RimSage 1.6.4850（程序集1.6.9655.19392）的下列方法体／类型头，并按Krafs 1.6.4871 API编译；4850不是4871同版本复核。精确目标安装只读许可尚待协调，本轮没有读取安装。
+**来源版本：** 继承的既有项目定点源码核对记录为目标1.6.4871、Assembly-CSharp 1.6.9676.17735，Version.txt rev590／算法rev591差异保留。本轮直接读回RimSage 1.6.4850（程序集1.6.9655.19392）的下列方法体／类型头，并按Krafs 1.6.4871 API编译；4850不是4871同版本复核。A002已获指定安装只读许可并实际核到Assembly-CSharp 1.6.9676.17735；RimWorld.VersionControl将build减4805、revision乘2再整除60，得到1.6.4871 rev591。只读定点方法体已核，不运行游戏，也未读取未授权Version.txt来消解继承rev590记法。
 
 | 正式事实／数据 | 原始来源与主体 | 观察和Unknown／依赖 | 生产消费者 |
 | --- | --- | --- | --- |
@@ -37,10 +37,10 @@
 
 **结果路由修订：** Thing.Ingested窄hook继续发布真实正常返回。UsOneShotRuntime在没有固定结果消费者时直接结束，不创建session；有消费者时仍用实际摄入者的同一session，只让固定条件树引用结果事实的候选进入本次事件。修前错误是把普通Eat的过程True当成本次结果的消费资格，绕过状态软等待，不是返回0的判据或阶段事实错误。没有修改通用决策／golden、共享保护、Whole/Any/Any或OneShot自然尾。
 
-证据：DbEatTests的真实Harmony＋生产适配／settings解析／session／选音／输出链；DbEatAuthorTests运行公开XML和真实loader；DbEffectiveConfigTests及ModSaveCallerTests运行生产settings/ExposeData/原子文件与Scribe替身往返及失败恢复；DbEatUiTests运行真实Source／Host、平台替身。原版Job/Toil/物品/音频为明确double，尸体是复入机制形状而非真实Corpse运行；没有据此签原生Scribe、真实游戏Config、完整4871方法体、原生挂接、屏幕或听感通过。改源时同步事实／消费者／反例，不按新方法名猜合同。
+证据：DbEatTests的真实Harmony＋生产适配／settings解析／session／选音／输出链；DbEatAuthorTests运行公开XML和真实loader；DbEffectiveConfigTests及ModSaveCallerTests运行生产settings/ExposeData/原子文件与Scribe替身往返及失败恢复；DbEatUiTests运行真实Source／Host、平台替身。原版Job/Toil/物品/音频为明确double，尸体是复入机制形状而非真实Corpse运行；4871 SetupToils/Cleanup/CurToil、ChewIngestible/FinalizeIngest、Ingest/FoodFeedPatient.MakeNewToils及Thing.Ingested已定点核对；原生Scribe、真实游戏Config、挂接、屏幕或听感仍未验。改源时同步事实／消费者／反例，不按新方法名猜合同。
 ## Select：最终反馈主体与已提交选择分别观察
 
-**来源版本：** RimSage返回的 `Source/RimWorld/Selector.cs`，程序集1.6.9655.19392（1.6.4850）。当前编译目标仍是Krafs引用1.6.4871；二者不是同一个方法体版本。
+**来源版本：** RimSage返回的 `Source/RimWorld/Selector.cs`，程序集1.6.9655.19392（1.6.4850）。另已直接核对指定安装的1.6.4871 rev591 Selector两方法体；4850保留为继承来源，目标API编译仍分别记录。
 
 `Selector.Select`调用私有`SelectInternal(object,bool,bool)`；代理经`CompSelectProxy`递归到最终对象。所核版本在实际接受分支按`playSound`调用`PlaySelectionSoundFor(obj)`，随后加入选择集合。只看公共方法入参或已有集合无法证明本次反馈接受。
 
@@ -53,7 +53,7 @@
 | 上游对已有选择再发反馈 | 无US额外去重；仍按同owner的tick／动作／共享硬规则处理 |
 | 普通与InjuredSelect同时成立 | 原生通知发布事实而非强制父ActionId，显式优先级仲裁一次，完整子键进配置／条目／截止／诊断 |
 
-以上定向适配检查已执行；精确1.6.4871方法体、真实Harmony挂接、原生音频与听感待后续环境观察。通用Select不含隐藏Pawn资格；官方Pawn的清醒／控制资格仍待用户，当前仅可显式选择进程级开发输入。
+以上定向适配检查已执行，4871方法体已核；真实游戏Harmony挂接、原生音频与听感仍待观察。通用Select不含隐藏Pawn门。官方Pawn三默认已裁为玩家可控／清醒／未倒地各true，三个独立presence-value参数；false仅放宽本项，缺失继承，未要求的可选资格不添加依赖。DcSelectSettingsTests与DcSelectConfigTests验证实际调用、分层／false／缺失、保存重开／失败恢复／准确Reset；整体Dev门保持。
 
 ### 缺少目标方法：成对停用Select观察，不中断模组启动
 
@@ -68,3 +68,41 @@ SelectInternal与PlaySelectionSoundFor共同实现一个观察能力。仅发现
 `us.core/HasCurrentInjury`由`UsPawnFacts.Capture`读取该Pawn当前`health.hediffSet.hediffs`：存在`Hediff_Injury`且`Severity>0`为True，包括仍存在的伤疤；无此项为False，缺health或hediffSet为Unknown。消费者为示例`example/InjuredSelect`固定附加条件；它不改普通Select，也不从先前Wounded事件缓存True。
 
 生产事实读取和普通／受伤扩展调用已由DaSelectCallerTests的加伤、移除、缺health序列执行；类型／API经目标1.6.4871引用编译，健康集合为明确平台替身。真实游戏伤口／伤疤样本尚未运行。此判据是示例明示的合同，不给全部“受伤”扩展规定永久统一定义。
+
+## 全15包事实登记：来源、阶段与消费者不混写
+
+维护者均为US 1.6适配维护者；每次源机制／版本变动须更新本表、对应导读和正反fixture。生产消费者是同一个UsPawnPlaybackSession及其普通／继承／独立固定合同，按完整事实键显式引用。表内“4871”是上述指定安装只读依据；运行证据统一为真实Harmony＋生产源＋明确平台double，不是游戏挂接。共享事实可复用，但本包语义不能从其他包的通过推断。
+
+| 包／稳定事实 | 真实主体与阶段／源码 | False、Unknown、缺实现与覆盖边界 | 实际消费者／检查 |
+| --- | --- | --- | --- |
+| Select／us.core/SelectEvent | SelectedSubject；4871 Selector.SelectInternal＋PlaySelectionSoundFor，反馈最终对象且正常返回后集合提交 | 无接受／反馈不发布；缺任一目标成对隔离并Unknown。无US独立去重，NonPawn仅纯身份链 | 官方Select及显式扩展；DaSelectCallerTests、DaSelectMissingTargetTests、DcSelectSettingsTests |
+| Wounded／us.core/WoundedEvent | DamageRecipient；4871 Pawn.PostApplyDamage正常返回，捕获totalDamageDealt | 0不是正伤害保证；异常不发布。不是当前伤口；缺方法Unknown并只隔离该能力，不扩所有Thing伤害 | Wounded及正向受损根；DcNativeTests正常0／正、throw与编译真缺目标 |
+| Death／us.core/DeathEvent | DyingSubject；4871 Pawn.Kill prefix进入，SetDead／DeSpawn在其后 | 不是死亡完成或任意Destroy／消耗；异常不倒推prefix完成。缺方法隔离，不造尸体／凶手主体 | Death；DcNativeTests检查请求在Kill体前，离图清理owner |
+| Attack／us.core/AttackEvent | Attacker；4871显式近战／发射／束流喷射／点火／明确轰击根 | 近战成对scope＋实际挥击marker，正常返回可false；早退false无marker不成立。其他根按已核true含义。工具／跳跃／支援／任意生成排除，完整清单见导读；新范围Dev候选 | Attack及明确执行根；DcNativeTests包装单通知、false早退／挥击、throw、工具／NonPawn与未激活反例 |
+| Move／us.core/MoveState | SelfMover；自己Pawn.pather.Moving，当前状态采样 | pather缺失Unknown；未动False。被搬运位移、世界旅行不算；无按位置差猜测 | Move；DcNativeTests自身移动／被动未动、Sustained失效 |
+| Equip／us.core/EquipEvent | EquipmentWearer＋实际eq；4871 tracker.Notify_EquipmentAdded正常返回，eq仍在该equipment列表 | 失败／throw／非成员不发布；非服装、卸下、库存拾取。关系事实与PlayerCoreEquip回应资格候选分开，缺目标隔离 | Equip显式Dev资格及独立关系根；DcNativeTests添加／失败／已移除、未选资格、准确主体／物品 |
+| Call／us.core/CallState | IdlePawn；4871 Pawn_MindState.IsIdle＋!pather.Moving＋Wait/Wait_Wander准确Job | 缺mindState/pather Unknown；Wait_Combat／其他Job False，不是排除所有别包后的兜底。IsIdle的原版Downed／Spawned条件仅属该事实 | Call；DcNativeTests正向Wait两种及战斗等待反例，S3PawnFactTests保未知Job不落Call |
+| Eat／us.core/IngestionProcess | ActualIngester；4871 Ingest自身或FoodFeedPatient.Deliveree，过程／阶段／属性／结果分列上表 | Whole/Any/Any不要求未选可选事实；精确Unknown不宽化。结果事件仅显式Result合同消费，无消费者不建owner | Eat、InjuredEat、AfterIngestion；DbEatTests127、DbResultRoutingTests68及缺Chewfixture |
+| Sleep／us.core/SleepState | Sleeper；当前JobDriver.asleep，4871 JobDriver字段／RestUtility相互区分 | driver缺失Unknown、未睡False；姿势／Job名称／!Awake不足为据。不是所有第三方睡眠系统 | Sleep；DcNativeTests清醒／睡眠及被喂重叠正确角色 |
+| Social／us.core/SocialState | SocialParticipant；joyKind Social或精确StandAndBeSociallyActive/GotoAndBeSociallyActive/Lovin当前Job全过程 | 未覆盖名称片段不变True，不是互动成功或双人事务；与Joy可同真。Stand/Lovin的4871 Core Def已核，Goto Def仍为4850依据：指定4871 Core Def中未找到，不能称同版本全内容已核 | Social及显式过程扩展；DcNativeTests准确Def、未知片段、Social+Joy。Goto当前内容缺口保留，不自行扩大安装读取 |
+| Joy／us.core/JoyState | JoyParticipant；当前Job.def.joyKind非空的正向声明，包含准备过程 | 无Job／无kind False；不是Joy gain或实际游玩Toil。Social kind也为True，未声明kind机制不自动覆盖 | Joy；DcNativeTests重叠与非Social kind实际中选 |
+| Work／us.core/WorkState | Worker；4871七对准确Def/driver＋同Pawn／currentJob／CurToil：Research/Mine/DoBill/Repair/Clean/HaulToCell/FinishFrame | 无Job False、已核但无Toil False；未知Job、缺driver、主体／Job不符或缺CurToil为具名Unknown。包括准备Toils，非工作完成；ActiveCommand是可调回应scope，不是事实 | Work及继承子Work；DcNativeTests七对各正反、workGiver标签反例和完整子键命令来源／保护 |
+| Draft／us.core/DraftEvent | DraftedPawn；4871 Pawn.GetGizmos/draft controller准确gizmo，原toggle正常后false→true | 无变化／异常／setter／加载不发布；缺GetGizmos只隔离该观察。当前值true不等事件 | Draft；DcNativeTests重复获取不重复包装、实际方向／无变化／setter |
+| Undraft／us.core/UndraftEvent | UndraftedPawn；同一准确gizmo正常后true→false，独立ActionId | 与Draft共享接缝、不共享动作身份／时钟／音源；当前false不刷事件，缺实现同组隔离 | Undraft；DcNativeTests独立反向请求／条目／角色与无变化反例 |
+| MentalBreak／us.core/MentalBreakEvent | BreakSubject；4871基类TryStart成功，以及Catatonic/RunWild/WildDecree直达成功；HumanityBreak调用base，不重复挂包装 | false／throw不发布；基类不代表所有override。Catatonic不是MentalState；WildDecree true不保证Wander状态。任意MentalState／MentalFit不算；逐机制readiness，扩围仅Dev候选 | MentalBreak及明确启动根；DcNativeTests四实际入口、Humanity包装一次、失败／throw、来源诊断，更新后216项fixture |
+
+### 参数／共享事实的准确依赖
+
+- PlayerControlled：Pawn.IsPlayerControlled；ActiveCommand：当前Job.playerForced且玩家可控。状态捕获为所有完整ActionId带真实命令来源，不只识别Work尾名；事件由实际调用来源传入。scope=ActiveCommand是额外回应资格，不修改事实本体。
+- Awake：4871 RestUtility.Awake先查health.capacities.CanBeAwake，再在有当前Job/driver时取!driver.asleep，否则true。health缺失Unknown，不把“缺jobs”额外规定为Unknown。NotDowned：health存在时!Pawn.Downed，否则Unknown。只在有效Select参数true时成为所选必需依赖；false／缺省不适用扩展不会借其缺口暂停。
+- Responsive保留供已有明确作者扩展使用，不再作为官方Select三项合并开关。HasCurrentInjury为当前Hediff_Injury且Severity>0，含仍存在伤疤；不从Wounded事件取值。
+- PlayerEquipCommand：玩家可控且当前准确JobDefOf.Equip/playerForced；仅所选Equip资格候选消费，原tracker关系通知不因该政策被预过滤。
+- 年龄／心情数值取当前Pawn life stage与mood need；缺数据按响应的显式required/optional规则，不由声音名字决定，也不把任意MentalState分类Break。未启用响应恒等，不因退休两专属包装删除他包仍需的共同事实。
+
+### 版本与覆盖缺口的实际影响
+
+4871版本及Select、Eat、近战和其他显式攻击根、Wounded/Kill/Equip、gizmo、JobDriver/CurToil、七工作过程与正向MentalBreak方法体已取得。源码可挂接不等于游戏中实际加载／声播放通过；引用编译和double仍分别列证据。Social的Goto准确Def为跨版本继承依据、当前Core内容未找到是具名缺口，不读未批DLC目录补齐；不据此把所有Goto或名字含Social的Job纳入。
+
+## 退休不删除第三方正向合同
+
+官方清单、metadata、作者目录、设置／Help／Keyed及实际通知移除Crying/Giggling专属能力；不保失效enum槽或永久关掉的旧开关。编译产品metadata核对旧Patch_MentalFit与Notify_MentalFit已不存在，Host／Settings检查实际15库存及持久字段缺失，纯作者fixture仍能注册并派发independent/Crying和independent/Giggling正向独立根。原版婴儿状态／声音未修改，其他合同仍可服务这些Pawn。冻结历史17字符串语料是历史测试输入，不是活跃产品库存。

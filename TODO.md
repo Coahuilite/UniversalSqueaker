@@ -5,13 +5,13 @@
 > durable engineering rules are in `MEMORY.md` and `AGENTS.md`. Standing ruling (maintainer 2026-09-07): at
 > every memory edit **compress stale/verbose parts instead of appending session-shaped prose**.
 
-## NOW — 0.6.0 D-B technical candidate; await coordinator receipt
+## NOW — 0.6.0 D-C candidate and product gates
 
-- D-B delivers effective sparse service/domain configuration and the Eat process/execution/item/result vertical slice through the existing production owner. Current author/player entry points and evidence boundaries are in `docs/us-kernel-0.6-spec-zh.md` §22 and the acceptance/migration pages. Do not extend this dispatch into D-C.
-- Exact 1.6.4871 method-body read-only access remains coordinator-managed. Direct RimSage bodies are 1.6.4850; inherited 4871 records and target-reference compilation are separate evidence. Native loading, real Scribe/Config, screen and listening validation await authorization; do not install or launch automatically.
-- D-C must complete all 15 package guides/coverage and retire official Crying/Giggling plus exclusive settings/responses; the current 17-entry implementation is not that completion.
-- Official Pawn Select qualification, numerical daily policy, 15-package ordering and first-unique behavior-source adoption await the maintainer. The temporary process-only Dev injection is not a player default.
-- Stop before FL0.8 consumer migration. Continue only after the user's new step; retain the fixed 0.7 carrier and range.
+- D-C covers all fifteen official contracts/facts/callers and SR guides through the single owner; the two dedicated baby-fit responses are retired. Current interfaces, evidence boundaries and explicit fixture migrations live in the public specification, fact ledger and acceptance/migration pages.
+- Official Pawn Select defaults are settled and implemented as three independent adjustable true qualifications. Do not reopen this decision or change fixed accepted-feedback/final-subject evidence. Eat Whole/Any/Any is also settled.
+- PM/user still decide the explicit Attack, Work, Equip and positive MentalBreak coverage/qualification candidates, ordinary timing/order/exception policy and first-unique source adoption. The overall runtime remains explicitly Dev-activated; no name-scan authority or ordinary default is inferred from tests.
+- Installed1.6.4871 method bodies are now available under the specific read-only task authorization. Preserve the named Social Goto Core-Def gap; no wider installation reads. Native loading, real Scribe/Config, screen and listening remain human gates, separately for all fifteen packages.
+- Keep fixedFL0.7 through this core handoff. Consume approved fixed0.8 only in the coordinator's separately dispatched C5 migration; UI/UX redesign follows its own owner and approval.
 ## Retained interaction checkpoint (2026-10-09)
 
 The approved checkpoint implements D4, DT1.US, Tuning/PRE1, VF1, DX1 and SA1-F02. Technical

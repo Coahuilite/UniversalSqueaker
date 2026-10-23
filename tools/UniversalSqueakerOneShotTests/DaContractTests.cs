@@ -82,7 +82,30 @@ internal static partial class Program
             "DA missing child mapping never creates implicit parent-audio fallback");
         DaSourceAttribution();
         DaDeclaredDomains();
+        DcRetiredNamesRemainAvailableToIndependentAuthors();
+        DcAuthorExamples();
         Console.WriteLine("DA contract identity, graph and source attribution checks passed");
+    }
+
+    private static void DcRetiredNamesRemainAvailableToIndependentAuthors()
+    {
+        var catalog = new AuthorCatalog(120, 120, true);
+        Check(catalog.Actions.Length == 15 && catalog.Actions.All(x => x.SubjectRole != ""),
+            "DC official inventory is exactly fifteen with explicit selected-contract roles");
+        foreach (string name in new[] { "Crying", "Giggling" })
+        {
+            string key = "independent/" + name;
+            Check(catalog.AddAction(new ActionDeclaration { Key = key, Condition = new Condition("ref", "us.core/SelectEvent") }),
+                "DC retirement is not a global third-party contract-name blacklist " + key);
+            var input = new DecisionInput { Subject = "p1", SubjectRole = "DeclaredSubject", Domain = "Ratkin", Tick = 1000,
+                Facts = new FactSnapshot(new Dictionary<string, Truth> { ["us.core/SelectEvent"] = Truth.True }),
+                Actions = catalog.Actions.Where(x => x.Key == key).ToArray(),
+                Audio = new[] { new AudioCandidate("independent-entry", "audio/direct", key, "Ratkin", 1) } };
+            var driver = new Driver();
+            var result = new OneShotDecision().Run(new DecisionState(1000), new StatePolicy(0, 20), input, driver, driver);
+            Check(result.Receipt?.Result == PlaybackResult.Dispatched && driver.LastRequest?.Action == key
+                && driver.LastRequest.SubjectRole == "DeclaredSubject", "DC independent positive contract still dispatches with its own key/subject " + key);
+        }
     }
 
     private static void DaDeclaredDomains()

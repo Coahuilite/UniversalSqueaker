@@ -71,7 +71,6 @@ public partial class UniversalSqueakerSettings
         Scribe_Values.Look(ref distanceRange, "distanceRange", GetDistancePresetRange(SqueakDistancePreset.Balanced));
         Scribe_Values.Look(ref allowEasterEggSounds, "allowEasterEggSounds", false);
         Scribe_Values.Look(ref allowExternalActions, "allowExternalActions", false);
-        Scribe_Values.Look(ref allowBabyActions, "allowBabyActions", false);
         // UIR-006: add-only appearance setting; the default "core" is omitted at this boundary, so the
         // shipped default config keeps its zero-byte delta. PostLoadInit repairs an unknown value.
         Scribe_Values.Look(ref uiSwatchId, "uiSwatchId", "core");

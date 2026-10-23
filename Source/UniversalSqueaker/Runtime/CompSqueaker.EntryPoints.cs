@@ -10,8 +10,11 @@ public partial class CompSqueaker
 
     /// <summary>Built-in and public string calls never fall back to another decision owner.</summary>
     public void NotifyExternalByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source)
+        => NotifyObservedByKey(actionKey, origin, source, "CallerSupplied");
+
+    internal void NotifyObservedByKey(string actionKey, SqueakTriggerOrigin origin, SqueakInvocationSource source, string evidence)
     {
         SynchronizePeriodicMembership();
-        UsOneShotRuntime.TryEvent(Pawn, actionKey, origin, source);
+        UsOneShotRuntime.TryObservedEvent(Pawn, actionKey, origin, source, evidence);
     }
 }

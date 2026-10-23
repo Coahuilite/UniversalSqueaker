@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UniversalSqueaker;
 using UniversalSqueaker.Kernel;
 
@@ -197,15 +198,13 @@ public static class UnitTests
                 || !ActionKey.TryParseBuiltIn(key, out SqueakAction parsed) || parsed != action)
                 allOk = false;
         }
-        Check(BuiltInActionKeys.All.Count == 17 && BuiltInActionKeys.All[15] == "Crying" && BuiltInActionKeys.All[16] == "Giggling",
-            "BuiltInActionKeys holds 17 ordered keys", ref failures);
-        Check(allOk, "ActionKey 17-action prefix is bidirectional", ref failures);
-        Check(enumNames.Length == 17 && enumNames[15] == "Crying" && enumNames[16] == "Giggling",
-            "SqueakAction append-only ordinals 15/16 = Crying/Giggling", ref failures);
+        Check(BuiltInActionKeys.All.Count == 15, "BuiltInActionKeys holds exactly fifteen official keys", ref failures);
+        Check(allOk, "ActionKey fifteen-action inventory is bidirectional", ref failures);
+        Check(enumNames.Length == 15 && !enumNames.Contains("Crying") && !enumNames.Contains("Giggling"),
+            "retired packages are absent, not optional reserved slots", ref failures);
         Check(ActionKey.For((SqueakAction)99) == null, "ActionKey.For unknown null", ref failures);
-        Check(BuiltInActionKeys.TryGetIndex("Crying", out int cryingIndex) && cryingIndex == 15
-            && ActionKey.TryParseBuiltIn("Crying", out SqueakAction crying) && crying == SqueakAction.Crying,
-            "Crying key is enum-mappable after append", ref failures);
+        Check(!BuiltInActionKeys.TryGetIndex("Crying", out _) && !ActionKey.TryParseBuiltIn("Giggling", out _),
+            "retired names do not acquire official identities", ref failures);
         Check(!ActionKey.TryParseBuiltIn("other.mod:US_X", out _), "TryParseBuiltIn external key false", ref failures);
         Check(!ActionKey.TryParseBuiltIn("call", out _), "TryParseBuiltIn wrong case false", ref failures);
     }
@@ -222,8 +221,6 @@ public static class UnitTests
         Check(VerseEventBinding.OriginFor(SqueakAction.Attack) == SqueakTriggerOrigin.Attack, "OriginFor Attack", ref failures);
         Check(VerseEventBinding.OriginFor(SqueakAction.Equip) == SqueakTriggerOrigin.Equip, "OriginFor Equip", ref failures);
         Check(VerseEventBinding.OriginFor(SqueakAction.MentalBreak) == SqueakTriggerOrigin.MentalBreak, "OriginFor MentalBreak", ref failures);
-        Check(VerseEventBinding.OriginFor(SqueakAction.Crying) == SqueakTriggerOrigin.Crying, "OriginFor Crying", ref failures);
-        Check(VerseEventBinding.OriginFor(SqueakAction.Giggling) == SqueakTriggerOrigin.Giggling, "OriginFor Giggling", ref failures);
         Check(VerseEventBinding.OriginFor(SqueakAction.Call) == SqueakTriggerOrigin.External, "OriginFor periodic Call falls back External", ref failures);
         Check(VerseEventBinding.DefaultSource(SqueakAction.Select) == SqueakInvocationSource.PlayerSelection, "DefaultSource Select", ref failures);
         Check(VerseEventBinding.DefaultSource(SqueakAction.Draft) == SqueakInvocationSource.ActiveCommand, "DefaultSource Draft", ref failures);
@@ -248,8 +245,8 @@ public static class UnitTests
             && !profile.SoundKeys.ContainsKey("Crying") && !profile.SoundKeys.ContainsKey("Giggling");
         Check(builtInExcludes, "three-way sync: built-in table 15 mappings without Crying/Giggling (default silence)", ref failures);
 
-        Check(ActionKeyMirror.Count == 17 && ActionKeyMirror.BuiltInCount == 15,
-            "three-way sync: mirror 17-action with 15 built-in mappings", ref failures);
+        Check(ActionKeyMirror.Count == 15 && ActionKeyMirror.BuiltInCount == 15,
+            "three-way sync: fifteen official actions and fifteen fallback mappings", ref failures);
     }
 
     private static void BuiltInTable(ref int failures)
@@ -262,12 +259,10 @@ public static class UnitTests
         Check(table.TryGetSoundKey(Scenarios.RaceA, "Call", out string? k) && k == "US_Fallback_Call", "TryGetSoundKey Call=US_Fallback_Call", ref failures);
         Check(!table.TryGetSoundKey(Scenarios.RaceA, "other.mod:US_X", out _) && !table.TryGetSoundKey(Scenarios.RaceA, "Crying", out _),
             "built-in lookup rejects external and reserved-unmapped keys", ref failures);
-        BuiltInFallbackTable reservedTable = new(new[]
-        {
-            new FallbackProfile(Scenarios.RaceA, 1, new Dictionary<string, string> { ["Crying"] = "US_Reserved_Crying" }),
-        });
-        Check(reservedTable.TryGetSoundKey(Scenarios.RaceA, "Crying", out string? reserved) && reserved == "US_Reserved_Crying",
-            "string fallback lookup accepts reserved built-in keys", ref failures);
+        bool retiredRejected = false;
+        try { _ = new FallbackProfile(Scenarios.RaceA, 1, new Dictionary<string, string> { ["Crying"] = "US_Retired" }); }
+        catch (ArgumentException) { retiredRejected = true; }
+        Check(retiredRejected, "closed official fallback rejects retired slots; third-party contracts have independent mappings", ref failures);
         bool rejected = false;
         try
         {
@@ -426,13 +421,6 @@ public static class UnitTests
                         Check(false, "Off " + scenario + " " + domain + " " + action, ref failures);
                         return;
                     }
-                }
-                ChainResult crying = registry.Select(Ctx(domain, SqueakAction.Crying), SelectionMode.Off, SimGate.All, new LcgRandom(1));
-                ChainResult giggling = registry.Select(Ctx(domain, SqueakAction.Giggling), SelectionMode.Off, SimGate.All, new LcgRandom(1));
-                if (!crying.IsNone || !giggling.IsNone)
-                {
-                    Check(false, "Off unmapped Crying/Giggling must be silent", ref failures);
-                    return;
                 }
             }
         }
@@ -891,12 +879,9 @@ public static class UnitTests
         Check(select.IsPlayerInitiated && select.RequiresResponsivePawn,
             "invocation player selection is player initiated and requires a responsive pawn", ref failures);
 
-        SqueakTriggerInvocation crying = new(SqueakTriggerOrigin.Crying, SqueakInvocationSource.StateEvent);
-        SqueakTriggerInvocation giggling = new(SqueakTriggerOrigin.Giggling, SqueakInvocationSource.StateEvent);
-        Check(crying.IsExternal && giggling.IsExternal,
-            "invocation Crying/Giggling origins are external", ref failures);
-        Check(!crying.IsPlayerInitiated && !giggling.IsPlayerInitiated,
-            "invocation Crying/Giggling origins are not player initiated", ref failures);
+        SqueakTriggerInvocation authored = new(SqueakTriggerOrigin.External, SqueakInvocationSource.StateEvent);
+        Check(authored.IsExternal && !authored.IsPlayerInitiated,
+            "third-party event origins remain legal without retired official origins", ref failures);
 
         SqueakTriggerInvocation equip = new(SqueakTriggerOrigin.Equip, SqueakInvocationSource.ActiveCommand);
         Check(equip.IsPlayerInitiated && !equip.RequiresResponsivePawn,

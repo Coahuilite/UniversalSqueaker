@@ -312,7 +312,7 @@ public sealed class AuthorCatalog
         }
         if (fullDevCandidate)
         {
-            foreach (string key in new[] { "IngestionExecution", "IngestibleNutrition", "IngestibleDrug", "IngestionResultEvent", "ActiveCommand", "PlayerControlled", "Responsive", "HasCurrentInjury", "BiotechAvailable" })
+            foreach (string key in new[] { "IngestionExecution", "IngestibleNutrition", "IngestibleDrug", "IngestionResultEvent", "ActiveCommand", "PlayerControlled", "Awake", "NotDowned", "PlayerEquipCommand", "Responsive", "HasCurrentInjury", "BiotechAvailable" })
             {
                 string identity = "us.core/" + key;
                 facts.Add(identity, new RegisteredFact(new BuiltInFact(identity), "us.core"));
@@ -428,7 +428,8 @@ public sealed class AuthorCatalog
                 actions.Add(key, new ActionPlan(key, declaration.Priority, condition,
                     declaration.Interval, declaration.CheckShared, declaration.WriteShared, declaration.Chance,
                     declaration.BaseAction, !declaration.TalkingEnabled, sustained: declaration.Sustained,
-                    requiresVocal: declaration.RequiresVocal || parent?.RequiresVocal == true));
+                    requiresVocal: declaration.RequiresVocal || parent?.RequiresVocal == true,
+                    subjectRole: parent?.SubjectRole));
                 return true;
             }
             catch (Exception error)

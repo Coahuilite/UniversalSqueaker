@@ -113,7 +113,7 @@ public static class VoicePacksPageModel
         IReadOnlyList<TuningDomainOptionView> tuningDomains = BuildTuningDomains(settings, catalog, state.TuningLayer, ref tuningRace, ref tuningXeno);
         state.TuningRaceDefName = tuningRace;
         state.TuningXenotypeDefName = tuningXeno;
-        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno, settings.BabyActionsEnabled);
+        IReadOnlyList<ActionScopeRowView> actionScopes = BuildActionScopes(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<MoodTuningRowView> moodTuningRows = BuildMoodTuningRows(settings, state.TuningLayer, tuningRace, tuningXeno);
         IReadOnlyList<BaselinePresetView> baselinePresets = BuildBaselinePresets(state);
         string buildIdentity = UniversalSqueakerMod.Instance != null ? UniversalSqueakerMod.BuildIdentity() : "US.Footer.Build.Unknown".Translate();
@@ -133,6 +133,7 @@ public static class VoicePacksPageModel
             state.BoardGroup, state.BoardFilter, state.BoardSearch, state.BoardXenoExpanded);
 
         var eat = settings.ReadEatParameters(tuningRace, tuningXeno);
+        var select = settings.ReadSelectParameterOverrides(tuningRace, tuningXeno);
         return new VoicePacksViewState(
             mode, settings.AllowEasterEggSounds, settings.distancePreset, settings.scaleCooldownWithTimeSpeed,
             settings.scaleFrequencyWithTalking, settings.scalePeriodicWithAudiblePopulation,
@@ -142,11 +143,11 @@ public static class VoicePacksPageModel
             filteredXenotypes, selected, actionScopes, state.TuningLayer, tuningRace, tuningXeno, tuningDomains,
             moodTuningRows, baselinePresets, buildIdentity, saveStatus, isDirty, authors, state.RaceFilter,
             state.XenotypeFilter, raceFilterOptions, xenotypeFilterOptions, eat.Phase ?? EatPhase.WholeProcess,
-            eat.NutritionScope ?? EatNutritionScope.Any, eat.DrugScope ?? EatDrugScope.Any, settings.allowBabyActions,
+            eat.NutritionScope ?? EatNutritionScope.Any, eat.DrugScope ?? EatDrugScope.Any,
             packCards, packResultsEmpty, packNoPacks,
             tuningArea, fallbackRaces, fallbackRace, fallbackEntries, fallbackSounds, fallbackCandidates,
             state.FallbackStatusKey,
-            raceBoard);
+            raceBoard, select.SelectRequirePlayerControlled, select.SelectRequireAwake, select.SelectRequireNotDowned);
     }
 
     private static void ApplyDomainFilter(VoicePacksPageState state, SqueakDomainFilterKind kind, bool flag)
@@ -429,20 +430,15 @@ public static class VoicePacksPageModel
         return options;
     }
 
-    /// <summary>S5 分层 scope 投影：17 内置动作 × 当前调音层。行携带本层记录（HasOwnScope/Scope）与
+    /// <summary>S5 分层 scope 投影：15 内置动作 × 当前调音层。行携带本层记录（HasOwnScope/Scope）与
     /// 有效作用域（DefaultScope &lt; Global &lt; Race &lt; Xenotype，字段级 last-wins，与运行时同规则）。
     /// 外部动作键不在编辑器范围内（与 BuildGlobalActions 的 YAGNI 契约一致）。</summary>
-    // The baby-eligibility flag arrives as a parameter (the caller reads settings.BabyActionsEnabled):
-    // the fold itself must not touch ModsConfig, so the real-writer/real-fold lane can run in the
-    // stub harness where Verse.ModsConfig is not loadable (the same reason BuildBannerText takes
-    // biotech as an argument).
-    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno, bool babyEnabled)
+    private static IReadOnlyList<ActionScopeRowView> BuildActionScopes(UniversalSqueakerSettings settings, int layer, string race, string xeno)
     {
         List<ActionScopeRowView> rows = new();
         foreach (SqueakAction action in Enum.GetValues(typeof(SqueakAction)))
         {
             if (!SqueakActionDefinitions.IsKnown(action)) continue;
-            if (!SqueakActionDefinitions.IsEligible(action, babyEnabled)) continue;
             string key = UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString();
             SqueakActionDefinition definition = SqueakActionDefinitions.Get(action);
             SqueakActionScope effective = definition.DefaultScope;
@@ -756,7 +752,7 @@ public static class VoicePacksPageModel
             string displayName = ResolveXenotypeLabel(catalog, key.TargetDefName);
             int orphanCount = CountOrphanKeys(status.EnabledKeys, packs);
             List<VoicePackRowView> rows = packs
-                .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys, settings.BabyActionsEnabled))
+                .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
                 .ToList();
             bool targetUnavailable = ModsConfig.BiotechActive && !catalog.XenotypeByDefName.ContainsKey(key.TargetDefName);
             bool hasConflict = catalog.AmbiguousCanonicalDefNames.Contains(key.TargetDefName);
@@ -1046,7 +1042,7 @@ public static class VoicePacksPageModel
             ?? Array.Empty<SqueakVoicePackDef>();
         SqueakVoicePackDomainStatus status = settings.GetVoicePackSelectionStatus(SqueakVoicePackScope.Race, raceDefName);
         List<VoicePackRowView> rows = packs
-            .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys, settings.BabyActionsEnabled))
+            .Select(pack => CreateVoicePackRow(pack, status.EnabledKeys))
             .ToList();
         return new VoicePackDomainView(
             SqueakVoicePackScope.Race,
@@ -1065,19 +1061,19 @@ public static class VoicePacksPageModel
             rows);
     }
 
-    private static VoicePackRowView CreateVoicePackRow(SqueakVoicePackDef pack, IReadOnlyList<string> enabledKeys, bool includeBabyActions)
+    private static VoicePackRowView CreateVoicePackRow(SqueakVoicePackDef pack, IReadOnlyList<string> enabledKeys)
     {
         string key = pack.TryGetPackKey(out string packKey) ? packKey : pack.defName;
         string label = string.IsNullOrEmpty(pack.LabelCap) ? pack.defName : pack.LabelCap;
         string modName = pack.modContentPack?.Name ?? pack.modContentPack?.PackageId ?? "—";
         string author = pack.modContentPack?.ModMetaData?.AuthorsString ?? "";
         if (string.IsNullOrEmpty(author)) author = modName;
-        int playable = pack.CountPlayableActions(includeBabyActions);
+        int playable = pack.CountPlayableActions();
         string coverage = string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
             "US.Packs.Checklist.PackActions".Translate(),
             playable,
-            SqueakActionDefinitions.EligibleCount(includeBabyActions));
+            SqueakActionDefinitions.Count);
         string searchText = label + "\n" + pack.defName + "\n" + modName + "\n" + author + "\n" + key;
         bool selected = enabledKeys != null && enabledKeys.Contains(key);
         return new VoicePackRowView(key, label, modName, author, pack.defName, coverage, searchText, selected);
@@ -1093,7 +1089,7 @@ public static class VoicePacksPageModel
                 ?? Array.Empty<SqueakVoicePackDef>();
             foreach (SqueakVoicePackDef pack in racePacks)
             {
-                string author = CreateVoicePackRow(pack, Array.Empty<string>(), settings.BabyActionsEnabled).Author;
+                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
                 if (!string.IsNullOrEmpty(author)) authors.Add(author);
             }
         }
@@ -1102,7 +1098,7 @@ public static class VoicePacksPageModel
         {
             foreach (SqueakVoicePackDef pack in pair.Value)
             {
-                string author = CreateVoicePackRow(pack, Array.Empty<string>(), settings.BabyActionsEnabled).Author;
+                string author = CreateVoicePackRow(pack, Array.Empty<string>()).Author;
                 if (!string.IsNullOrEmpty(author)) authors.Add(author);
             }
         }
@@ -1187,7 +1183,7 @@ public static class VoicePacksPageModel
             foreach (SqueakVoicePackDef pack in packs)
             {
                 if (pack == null) continue;
-                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys);
                 if (string.IsNullOrEmpty(identity.Key)) continue;
                 source.Add(new PackCardSourceRow(
                     identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,
@@ -1216,7 +1212,7 @@ public static class VoicePacksPageModel
             foreach (SqueakVoicePackDef pack in packs)
             {
                 if (pack == null) continue;
-                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys, settings.BabyActionsEnabled);
+                VoicePackRowView identity = CreateVoicePackRow(pack, enabledKeys);
                 if (string.IsNullOrEmpty(identity.Key)) continue;
                 source.Add(new PackCardSourceRow(
                     identity.Key, identity.Label, identity.DefName, identity.ModName, identity.Author, identity.Coverage,

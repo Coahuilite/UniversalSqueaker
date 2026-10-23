@@ -63,7 +63,7 @@ internal static class DbEatUiTests
         Check(settings.TryChangeBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
             new BehaviorValues { Scope = SqueakActionScope.Disabled }, () => true, out _), "public settings API accepts full ActionId row");
         var fold = typeof(VoicePacksPageModel).GetMethod("BuildActionScopes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var scopes = (System.Collections.Generic.IReadOnlyList<ActionScopeRowView>)fold.Invoke(null, new object[] { settings, 1, "Ratkin", "", false })!;
+        var scopes = (System.Collections.Generic.IReadOnlyList<ActionScopeRowView>)fold.Invoke(null, new object[] { settings, 1, "Ratkin", "" })!;
         Check(scopes.Single(x => x.ActionKey == "Eat").HasOwnScope && scopes.Single(x => x.ActionKey == "Eat").Scope == SqueakActionScope.Disabled,
             "full ActionId persisted scope is visible through existing built-in row projection");
         Console.WriteLine("DB Eat UI production source/Host (platform doubles) PASS");

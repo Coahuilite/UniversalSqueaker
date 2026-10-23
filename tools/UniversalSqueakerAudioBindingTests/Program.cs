@@ -53,6 +53,20 @@ internal static partial class Program
             return;
         }
         new Harmony("us.s2.controlled.adapter.fixture").PatchAll(Assembly.GetExecutingAssembly());
+        if (args.Contains("--dc-select-settings"))
+        {
+            InitializationOrder(); CompleteBinding(); DcSelectSettings();
+            Console.WriteLine("DC Select player settings production fixture PASS: " + checks);
+            return;
+        }
+        if (args.Any(x => x == "--dc-native" || x == "--dc-unselected" || x == "--dc-missing"))
+        {
+            InitializationOrder();
+            CompleteBinding();
+            DcNative(args.Contains("--dc-unselected"), args.Contains("--dc-missing"));
+            Console.WriteLine("DC production native candidate fixture PASS: " + checks);
+            return;
+        }
         if (args.Contains("--db-eat-missing"))
         {
             DbEatMissing();
@@ -79,7 +93,7 @@ internal static partial class Program
         {
             InitializationOrder();
             CompleteBinding();
-            DaActualSelect(!args.Contains("--unselected-qualification"));
+            DaActualSelect();
         }
         else if (args.Contains("--partial-observation"))
         {

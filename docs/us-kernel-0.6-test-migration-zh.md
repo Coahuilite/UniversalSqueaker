@@ -1,8 +1,27 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r8 · **D-B完整有效配置与Eat生产纵切；其余12包、原生1.6、听感及产品默认继续分包。**
+2026-10-23 · r9 · **D-C全15包、已裁Select资格与退休已进入生产链；原生、普通覆盖／政策和逐包人审分别保留。**
 
-## 当前D-A应如何迁移
+## D-C当前迁移：保合同，替换退役夹具
+
+- 官方enum／key／metadata／作者目录／界面覆盖分母均15，删除Crying/Giggling、Patch_MentalFit／Notify_MentalFit、专属开关／Scribe／Help／Keyed／日志事件。没有给原版声音／状态或第三方独立合同加黑名单；新增纯例证明independent/Crying与independent/Giggling仍可正向派发。
+- Kernel历史语料生成曾因使用新15库存缩小输入而实际失败两次；恢复冻结的17字符串查询及候选池，官方清单仍15，既有语料byte-identical／确定性零差异。不得重录golden以隐藏输入变化。S3旧17枚举矩阵仅移除退休两包装行，保其他期望；纯OneShot新增公开15映射／资格加载及独立根证据后933项。
+- 原生形状fixture直接链接生产通知／readiness／UsPawnFacts／配置／单session／输出，不再手写Notify_Select。216项分别覆盖十五包与七Work过程、真实角色、Scope命令来源、重叠及清理；未激活／Equip未选资格49，真实缺Wounded＋近战marker另54。全部是明确平台double和真实Harmony，不是游戏运行。
+- Select用户已裁默认三真；删除Unselected枚举及旧资格未选模式。gate21改为真正`--dc-select-settings`，76项覆盖独立调整／缺失／false／来源／合法Xeno／可选依赖／固定拒绝不被取消；gate20保代理／扩展链，显式玩家放宽后65项。旧53项保历史，不再作当前默认依据。
+- Settings／Reset原metadata double固定17导致新15库存断言失败，现链接真实SqueakActionModel；SqueakActionConfig仅从Verse Comp容器分出，类型／字段／XML意义不变。没有把期望改成旧double17。生产settings/ExposeData/原子文件与Scribe替身往返验证新三资格的独立has/value、保存重开、失败恢复与准确Reset。
+- Host退休断言按真实当前控件迁移：旧baby checkbox删除，保egg／Talking的单写与hit surface；Eat三下拉不再用退役精确checkbox，Select新增独立三下拉、三层写及单字段继承。视图／布局钟一次写一次失效；不重排页面。完整Comp metadata用已构建产品ILSpy核，避免冻结UI平台缺ThingComp时把TypeLoad失败冒充能力缺失。
+- Work不再workGiverDef即True；正例迁为明确Research等driver／同Job／有效Toil，命令资格明确输入。官方Work开发scope默认保持ActiveCommand，覆盖事实的夹具显式选Any，继承子自己的ActiveCommand不被父参数取消。实际Comp已解析scope进入同一有效配置视图；不增加额外状态机。
+- 日志协议只删除退休的hook.mental_fit.unavailable期望和注册项，fmt2活跃9项逐个完整性校验；其余行不削弱。MentalBreak显式正向基类和三直达override，Humanity经base只通知一次，不把任意精神状态或名称相似当启动。
+- 持续维护补齐与启动相同的Select参数适用性：非选择合同收到Select专属字段时，其自有持续槽也结束，不等下一次启动才拒绝。真实Move持续槽修前断言失败、修后通过，216项包含这一保存有效配置后的当前授权反例；不改变无这些字段的Eat／其他合同。
+
+### 适用检查入口
+
+verify-local保原门20代理、22/23真缺Selector目标、24/25 Eat／缺Chew及26结果消费者，21转新Select资格；追加27 `--dc-native`、28 `--dc-unselected`（现在只指整体门／Equip候选）、29 `DcFixtureTarget=MissingWoundedAndMeleeMarker`＋`--dc-missing`。Host用既有`--lane`选DC Select、退休库存、typed、Overview composites、US switch、current navigation、DB Eat及text-fit等受改链；匹配零lane必须失败。
+
+实际执行仅取受改必要链，不机械全29门。完整输出复制到独立已获准运行区域，一次核MyComputer再原入口运行；保原输出和失败日志，不改CAS/ADS/ACL/owner。生成新候选后按改变的输入决定重跑范围，不以文件名或exit0代模式命中。当前结果与最终源码／Dev身份由交付记录绑定。精确4871定点来源已取得，真实Scribe／游戏Config、挂接／音频、屏幕／听感及15包两个人工关口仍pending。
+
+## 历史D-A/B迁移（原输入）
+
 
 ### D-B新增的定向迁移
 
@@ -30,14 +49,14 @@ S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层�
 
 S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
 
-本页配合[首版规格 r10](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
+本页配合[首版规格 r11](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。下面旧切片表保留历史责任，“新增”不单独证明已经执行；当前D-C执行边界以上文为准。原迁移基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；当前D-C从535d0af接续，旧载荷独立保留。
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是26门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture，26为无Result合同／独立Result消费者路由。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的当前入口是29门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20为D-A Select，21为已裁Select独立三资格，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture，26为无Result合同／独立Result消费者路由；27–29分别为D-C十五包通知、未激活／Equip资格候选、真实缺Wounded与近战marker。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
-- [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前19门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。
+- [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是verify-local的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。
 - [Host工程](../tools/UniversalSqueakerKernelHostTests/UniversalSqueakerKernelHostTests.csproj)加载产品和FL载体并复制runtime stubs；[DefinitionDirectory工程](../tools/UniversalSqueakerDefinitionDirectoryTests/UniversalSqueakerDefinitionDirectoryTests.csproj)用独立扩展stub执行生产collector及真实Source/Host，当前也不是独立门禁。二者证明适配/消费轨迹，不证明C00纯层或真实游戏方法体。
 
 ## 2. 按合同决定保留什么
@@ -49,7 +68,7 @@ S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.
 | [UnitTests](../tools/UniversalSqueakerKernelTests/UnitTests.cs)：`PerRacePoolIsolation`、`XenoDoubleKeyDomains`、`PackFallbackExactDomainOnly`、`DomainKeys` | 稳定合同：保留准确域、同Race合法父路径；适配完整身份，新增两个不同NonPawn目录身份及对象运行状态隔离 | C01/C00；V01；S1/S2。无需为目录用例实现完整NonPawn宿主 |
 | 同文件：`SelectOff`、`SelectFallbackChain`、`SelectRemix`、`VariantWeightMixing`、`PackWeight`、`EggFiltering`、`EntryLevelFilter`；[RemixEmptyTierRegression](../tools/UniversalSqueakerKernelTests/RemixEmptyTierRegression.cs) | 稳定合同：保留四模式、空层等权、层内权重、年龄/彩蛋独立；适配AudioId及稳定条目键，新增带标签roll消费断言 | C07/C01；V10；S1/S2。`SelectOff`检验的是Vanilla→Kernel Off的最终后备，不是Disabled；Disabled另测生产入口提前旁路、零派发 |
 | `FailurePathFallback` | 稳定的动作内音源后备：保留；新增“选Work后失败不得改Call”的反例，不能把音源fallback误作跨动作fallback | C02/C04/C07；V02/05/10；S1 |
-| `ActionKeyMapping`、`ActionSync`、`BuiltInTable`、[ActionKeyMirror](../tools/UniversalSqueakerKernelTests/ActionKeyMirror.cs)、`VerseEventBindingContract` | 实现探针＋稳定旧入口：17动作映射保留为兼容适配检查；替换“中央枚举就是全部动作”的限制，新增公开包装/提供者及XML组合fixture | C05/C02；V07/09/15；S1/S3。D6冻结后才能写可加载新语法 |
+| `ActionKeyMapping`、`ActionSync`、`BuiltInTable`、[ActionKeyMirror](../tools/UniversalSqueakerKernelTests/ActionKeyMirror.cs)、`VerseEventBindingContract` | 实现探针＋稳定旧入口：当前官方15动作映射，历史语料17字符串仅保路由输入；替换“中央枚举就是全部动作”的限制，新增公开包装/提供者及XML组合fixture | C05/C02；V07/09/15；S1/S3至D-C。实际可加载XML例见主规格§21–23 |
 | `TimingModelRules`、`TriggerInvocationRules`、`EatOccurrenceRules`；[CompSqueaker](../Source/UniversalSqueaker/CompSqueaker.cs) | 旧政策＋入口合同：保留旧clock、主动scope、Select响应性、Eat细分及外部许可的逐项对账；新线定向替换时速/人口乘硬间隔、概率/冷却顺序与统一尝试结算断言 | C03/C04/C05；V03–06/15；S1/S3/S4。新单机会、硬门先于随机依D2；不把所有trigger或Wounded默认设为共用豁免 |
 | `ModulationRules`、`AgeDefault`、`AgePriority`、`LayeredTuning` | 稳定年龄变体选择、字段存在性/继承与旧心情覆盖年龄调制政策分开；保留`AgeDefault`/`AgePriority`选音语义、false/0及玩家覆盖，D4获批后替换覆盖式合成为独立响应；新增恒等、改倍率不启用、Apply/Skip及去重/一次抖动 | C08/C10；V11/13；S3/S4。局部启用不能覆盖独立全局活跃度 |
 | [ConfigCopy A–H](../tools/UniversalSqueakerConfigCopyTests/Program.cs)：`VersionBumpKeepsDelta`、`SingleEntryEditKeepsOtherMarkers`等 | 稳定合同：保留临时Config、原子写、版本更新不丢玩家delta、删除标记与重启幂等；新增来源快照独立fixture，不重解释旧fallback副本为新行为来源 | C09/C08；V12/15；S3 |

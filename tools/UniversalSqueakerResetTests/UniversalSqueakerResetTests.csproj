@@ -18,6 +18,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs" Link="Production/SqueakActionModel.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionConfig.cs" Link="Production/SqueakActionConfig.cs" />
     <!-- US-RESET1 restore harness. Links the PRODUCTION Settings/Models/Kernel/Pure sources and
          drives the production restore operations (Settings/UniversalSqueakerSettings.Reset.cs)
          plus the production Scribe boundary and the production fallback store (test seam only).

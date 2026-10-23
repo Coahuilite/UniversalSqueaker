@@ -12,7 +12,7 @@ public class SqueakVoicePackDef : Def
     // Directory-only projection of a validated 0.6 declaration. Its audio metadata remains in AuthorCatalog.
     internal bool IsKernelDeclaration;
     internal IReadOnlyList<string> KernelActionKeys = Array.Empty<string>();
-    public int CountPlayableActions(bool includeBabyActions)
+    public int CountPlayableActions()
     {
         if (IsKernelDeclaration) return KernelActionKeys.Count;
         if (actions == null) return 0;
@@ -20,7 +20,7 @@ public class SqueakVoicePackDef : Def
         foreach (SqueakVoicePackAction action in actions)
         {
             if (action == null || action.sounds == null
-                || (!SqueakActionDefinitions.IsKnown(action.action) || !SqueakActionEligibility.IsEligible(action.action, includeBabyActions))) continue;
+                || !SqueakActionDefinitions.IsKnown(action.action)) continue;
             foreach (SoundDef sound in action.sounds)
             {
                 if (sound != null) { covered.Add(action.action); break; }

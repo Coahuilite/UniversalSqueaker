@@ -118,11 +118,10 @@ internal static class UsSquareToggleLaneTests
     /// </summary>
     private static readonly (string RowId, string CheckId, string Bind, bool State)[] Rows =
     {
-        // Measured: the egg row is the first toggle the page draws and it is ON; the cooldown row is the
-        // second and it is OFF. The written contract is asserted, so a fixture or manifest reorder reddens
-        // rather than silently measuring the other control.
+        // D-C retires the dedicated baby response. Use the two remaining live basic switches:
+        // egg ON and talking OFF in this lane's explicit rich projection. Keep both knob ends measured.
         ("basic-egg-row", "basic-egg-check", "allow-eggs", true),
-        ("basic-baby-row", "basic-baby-check", "allow-baby-actions", false),
+        ("basic-talking-row", "basic-talking-check", "scale-talking", false),
     };
 
     /// <summary>Every declared switch on the shipped Overview page, by element id, so the retiral's own
@@ -130,7 +129,7 @@ internal static class UsSquareToggleLaneTests
     /// </summary>
     private static readonly string[] DeclaredSwitches =
     {
-        "basic-egg-check", "basic-baby-check", "basic-cooldown-check", "basic-talking-check",
+        "basic-egg-check", "basic-cooldown-check", "basic-talking-check",
         "basic-population-check", "camera-indicator-check",
         "diagnostics-localize-check"
     };
@@ -291,14 +290,7 @@ internal static class UsSquareToggleLaneTests
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         try
         {
-            // EatPrecisionEnabled is pinned ON here, and that is a RE-CUT rather than a preference: the
-            // manifest declares one more switch than it arranges when the parent is off, because
-            // `basic-eat-child-row` carries `VisibleKey="eat-precision"`. With the parent off the page draws
-            // 8 tracks and this lane's "one cluster per DECLARED switch" assertion would redden on a page that
-            // is behaving correctly - a red for the wrong reason. The old version of this lane ran with the
-            // fixture's default (OFF) and counted the manifest's declarations, which is the same defect
-            // waiting to fire; the gate is now part of the fixture state the lane declares.
-            var source = new RecordingSettingsSource { RichData = true };
+            var source = new RecordingSettingsSource { RichData = true, RichScaleFrequencyWithTalking = false };
             using UiHost host = UsKernelSettingsHost.Create(source, new Program.StubMetrics());
             host.Bindings.Invoke("set-tab", "Tuning");
             host.MeasureAndArrange(new Vector2(PageWidth, TallHeight));

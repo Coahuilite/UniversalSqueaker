@@ -4,8 +4,7 @@ using System.Collections.Generic;
 namespace UniversalSqueaker.Kernel;
 
 /// <summary>
-/// 内置动作键的唯一权威。顺序是序列化 <c>SqueakAction</c> 的 append-only 顺序；
-/// 已 append Crying/Giggling（15/16），与产品枚举双向映射。
+/// The fifteen official package keys, in the same order as <c>SqueakAction</c>.
 /// 内置 fallback 只能使用此清单内的键；外部动作键永远不进入内置表。
 /// </summary>
 public static class BuiltInActionKeys
@@ -27,8 +26,6 @@ public static class BuiltInActionKeys
         "Work",
         "Equip",
         "MentalBreak",
-        "Crying",
-        "Giggling",
     };
 
     private static readonly IReadOnlyList<string> readOnlyKeys = Array.AsReadOnly(keys);

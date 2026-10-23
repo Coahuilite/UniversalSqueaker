@@ -58,6 +58,7 @@ public sealed class BehaviorValues
     public EatPhase? Phase;
     public EatNutritionScope? NutritionScope;
     public EatDrugScope? DrugScope;
+    public bool? SelectRequirePlayerControlled, SelectRequireAwake, SelectRequireNotDowned;
     public BehaviorValues Copy()
     {
         var copy = (BehaviorValues)MemberwiseClone();
@@ -99,6 +100,9 @@ public sealed class BehaviorValues
         Phase = value.Phase ?? Phase;
         NutritionScope = value.NutritionScope ?? NutritionScope;
         DrugScope = value.DrugScope ?? DrugScope;
+        SelectRequirePlayerControlled = value.SelectRequirePlayerControlled ?? SelectRequirePlayerControlled;
+        SelectRequireAwake = value.SelectRequireAwake ?? SelectRequireAwake;
+        SelectRequireNotDowned = value.SelectRequireNotDowned ?? SelectRequireNotDowned;
     }
     public bool Valid => (!Scope.HasValue || Enum.IsDefined(typeof(SqueakActionScope), Scope.Value))
         && (!Phase.HasValue || Enum.IsDefined(typeof(EatPhase), Phase.Value))
@@ -112,6 +116,7 @@ public sealed class BehaviorValues
         && (!AgeEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Age"))
         && (!MoodEnabled.HasValue || !ResponseEnabled.ContainsKey("us.core/Mood"));
     public bool ApplicableTo(string family) => family == "Pawn" || !Phase.HasValue && !NutritionScope.HasValue && !DrugScope.HasValue
+        && !SelectRequirePlayerControlled.HasValue && !SelectRequireAwake.HasValue && !SelectRequireNotDowned.HasValue
         && !AgeEnabled.HasValue && !MoodEnabled.HasValue && !TalkingEnabled.HasValue && !Scope.HasValue
         && !ResponseEnabled.ContainsKey("us.core/Age") && !ResponseEnabled.ContainsKey("us.core/Mood");
     public IEnumerable<string> PresentKeys()
@@ -127,6 +132,9 @@ public sealed class BehaviorValues
         if (Phase.HasValue) yield return "phase";
         if (NutritionScope.HasValue) yield return "nutritionScope";
         if (DrugScope.HasValue) yield return "drugScope";
+        if (SelectRequirePlayerControlled.HasValue) yield return "selectRequirePlayerControlled";
+        if (SelectRequireAwake.HasValue) yield return "selectRequireAwake";
+        if (SelectRequireNotDowned.HasValue) yield return "selectRequireNotDowned";
         foreach (string key in ResponseEnabled.Keys) yield return "response:" + key;
         foreach (string key in ResponseParameters.Keys) yield return "parameter:" + key;
         foreach (string key in Participation.Keys) yield return "participation:" + key;
@@ -439,7 +447,7 @@ public sealed class BehaviorSourceState
         };
         foreach (XmlElement action in node.ChildNodes.OfType<XmlElement>())
         {
-            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "phase", "nutritionScope", "drugScope", "requires");
+            CheckAttributes(action, "key", "enabled", "scope", "hardIntervalTicks", "talkingEnabled", "ageEnabled", "moodEnabled", "volume", "pitch", "phase", "nutritionScope", "drugScope", "selectRequirePlayerControlled", "selectRequireAwake", "selectRequireNotDowned", "requires");
             if (action.Name != "action")
             {
                 throw new ArgumentException("Invalid behavior action shape");
@@ -485,6 +493,9 @@ public sealed class BehaviorSourceState
                     case "phase": values.Phase = (EatPhase)Enum.Parse(typeof(EatPhase), text); break;
                     case "nutritionScope": values.NutritionScope = (EatNutritionScope)Enum.Parse(typeof(EatNutritionScope), text); break;
                     case "drugScope": values.DrugScope = (EatDrugScope)Enum.Parse(typeof(EatDrugScope), text); break;
+                    case "selectRequirePlayerControlled": values.SelectRequirePlayerControlled = bool.Parse(text); break;
+                    case "selectRequireAwake": values.SelectRequireAwake = bool.Parse(text); break;
+                    case "selectRequireNotDowned": values.SelectRequireNotDowned = bool.Parse(text); break;
                     default:
                         throw new ArgumentException("Unknown behavior parameter " + field.Name);
                 }
@@ -553,6 +564,9 @@ public sealed class BehaviorSourceState
             Field(action, "phase", v.Phase);
             Field(action, "nutritionScope", v.NutritionScope);
             Field(action, "drugScope", v.DrugScope);
+            Field(action, "selectRequirePlayerControlled", v.SelectRequirePlayerControlled);
+            Field(action, "selectRequireAwake", v.SelectRequireAwake);
+            Field(action, "selectRequireNotDowned", v.SelectRequireNotDowned);
             foreach (var parameter in v.ResponseParameters.OrderBy(x => x.Key, StringComparer.Ordinal))
             {
                 var element = document.CreateElement("parameter");

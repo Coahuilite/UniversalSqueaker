@@ -248,7 +248,6 @@ internal static class Program
         SqueakLog.AudioRouteSelected("Joy", "RaceA", null, "888", "US_EggTest_Select_Joy", "race_pack", "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", true, 3, "Mousy", "Thing_Race888", false, "Pirate");
         SqueakLog.AudioVanillaFallback("Move", "RaceA", null, "99", "US_Move_Vanilla", "vanilla", null, false, "Mousy", "Thing_Race99", false, "Pirate");
         SqueakLog.FallbackProfileStoreFailed("RaceA", new Exception("profile write failed"));
-        SqueakLog.HookMentalFitUnavailable();
         SqueakLog.AudioDisabled("Select");
 
         AssertLines(nameof(VerifyV2Protocol) + " enabled",
@@ -259,7 +258,6 @@ internal static class Program
             V2("info", "dev_only", "audio.route.selected", "Audio route: Joy -> US_EggTest_Select_Joy (race_pack, egg, nonplayer).", action: "Joy", target: "888", pack: "coahuilite.universalsqueaker.eggtest:US_EggTest_Select", race: "RaceA", trailing: " sound=US_EggTest_Select_Joy tier=race_pack egg=true suppressed_detail=3 pawn=Mousy pawn_id=Thing_Race888 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("info", "dev_only", "audio.dispatch.vanilla_fallback", "Audio dispatch fell back to vanilla: Move -> US_Move_Vanilla (vanilla, nonplayer).", action: "Move", target: "99", race: "RaceA", trailing: " sound=US_Move_Vanilla tier=vanilla egg=false pawn=Mousy pawn_id=Thing_Race99 pawn_faction=Pirate pawn_ctrl=nonplayer"),
             V2("warning", "dev_only", "fallback.profile.store_failed", "Fallback profile store operation failed.", race: "RaceA", trailing: " ex_type=System.Exception ex_msg=profile%20write%20failed"),
-            V2("error", "daily", "hook.mental_fit.unavailable", "Baby-fits squeak hook is unavailable."),
             V2("info", "daily", "audio.disabled", "Squeak audio is disabled (true bypass): Select not intercepted.", action: "Select"));
         CaptureV2Coverage();
         // log-v2 once: the first settings.origin claim wins per session; ResetSession reopens the domain.
@@ -357,7 +355,8 @@ internal static class Program
             if (definition.Version >= 2) expected.Add(SqueakLogRegistry.EventId(e));
         }
 
-        AssertEqual(10, expected.Count, nameof(VerifyV2Completeness) + " v2 registry size");
+        AssertEqual(9, expected.Count, nameof(VerifyV2Completeness) + " active v2 registry after dedicated MentalFit retirement");
+        AssertEqual(false, expected.Contains("hook.mental_fit.unavailable"), "retired dedicated hook has no active log registry entry");
         foreach (string id in expected)
             AssertEqual(true, v2CoveredEvents.Contains(id), nameof(VerifyV2Completeness) + " exercised " + id);
         foreach (string id in v2CoveredEvents)

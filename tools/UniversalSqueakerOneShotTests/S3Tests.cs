@@ -27,7 +27,7 @@ internal static partial class Program
     private static void AllBuiltInContractsUseSameDecision()
     {
         var catalog = new AuthorCatalog(120, 120, fullDevCandidate: true);
-        Check(catalog.Actions.Length == 17, "all 17 built-in wrappers present only in expanded Dev selection");
+        Check(catalog.Actions.Length == 15, "all fifteen official wrappers present only in expanded Dev selection");
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
         {
             var facts = BuiltInPawnContracts.CandidateOrder.ToDictionary(BuiltInPawnContracts.FactKey,

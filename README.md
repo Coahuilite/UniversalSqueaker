@@ -18,10 +18,10 @@ The settings window has five workspaces: **Overview / Packs / Tuning / Presets /
 
 ## Documentation
 
-This branch is **0.6.0 Dev**: the single production owner now consumes [effective layered configuration and the Eat vertical slice](docs/us-kernel-0.6-spec-zh.md#22-d-b-有效配置与eat当前入口), including real author examples. Daily release policy still requires explicit product decisions. The [documentation index](docs/README.md) separates retained 0.5 behavior, implemented S1 and later 0.6 targets.
+This branch is **0.6.0 Dev**: the single production owner covers [all fifteen contracts and the settled configurable Select qualifications](docs/us-kernel-0.6-spec-zh.md#23-d-c-十五包select资格与明确事实边界), with real author examples and per-package SR comparisons. Ordinary coverage/policy, native behavior and human acceptance remain separate gates. The [documentation index](docs/README.md) distinguishes retained 0.5 guides from current 0.6 interfaces.
 
 - [Current behavior and settings](docs/current-behavior-0.5-zh.md)
-- [VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)
+- [Retained 0.5 VoicePack authoring](docs/voicepack-authoring-0.5-zh.md)
 - [Kernel 0.6.x first-edition specification](docs/us-kernel-0.6-spec-zh.md)
 - [Build and debug](docs/build-and-debug.md)
 - [Release flow](docs/release-runbook-zh.md) and [privacy gate](docs/push-privacy-gate.md)

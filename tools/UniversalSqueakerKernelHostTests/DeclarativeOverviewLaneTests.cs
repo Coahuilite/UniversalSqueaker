@@ -86,7 +86,6 @@ internal static class DeclarativeOverviewLaneTests
     private static readonly (string Row, string Label, string Check, string LabelKey)[] BasicRows =
     {
         ("basic-egg-row", "basic-egg-label", "basic-egg-check", "US.Tuning.EasterEggs"),
-        ("basic-baby-row", "basic-baby-label", "basic-baby-check", "US.Tuning.BabyActions"),
         ("basic-talking-row", "basic-talking-label", "basic-talking-check", "US.Tuning.ScaleTalking"),
     };
 
@@ -100,7 +99,7 @@ internal static class DeclarativeOverviewLaneTests
     /// row; the declarative shape needs one channel per value.</summary>
     private static readonly string[] DeclaredValueBindings =
     {
-        "allow-eggs", "allow-baby-actions", "scale-cooldown", "scale-talking", "scale-population",
+        "allow-eggs", "scale-cooldown", "scale-talking", "scale-population",
         "camera-indicator"
     };
 
@@ -136,7 +135,6 @@ internal static class DeclarativeOverviewLaneTests
         {
             ("global-volume-top", "global-volume-caption", "global-volume-number", "Overview"),
             ("basic-egg-row", "basic-egg-text", "basic-egg-check", "Tuning"),
-            ("basic-baby-row", "basic-baby-label", "basic-baby-check", "Tuning"),
             ("basic-talking-row", "basic-talking-label", "basic-talking-check", "Tuning"),
             ("camera-indicator-row", "camera-indicator-label", "camera-indicator-check", "Overview"),
             ("diagnostics-localize-row", "diagnostics-localize-label", "diagnostics-localize-check", "Advanced"),
@@ -398,14 +396,6 @@ internal static class DeclarativeOverviewLaneTests
                 + " second band behind a checkbox turns one press into two writes");
         }
 
-        // New baby's square toggle: actual declared hit surface, one typed write and one revision bump.
-        source.LastBabyActions = null;
-        int babyRevision = host.Session.ContentRevision;
-        DrawWithButtons(host, rect => RectMatches(rect, basic[1]));
-        Assert(source.LastBabyActions == true && host.Bindings.Get<bool>("allow-baby-actions"),
-            "baby square toggle must route and expose the new value in the same pass");
-        Assert(host.Session.ContentRevision == babyRevision + 1, "baby toggle invalidates the shared view/layout clock once");
-
         // The egg row is the first band; that it really is the egg row is verified by what the press does.
         bool eggBefore = host.Bindings.Get<bool>("allow-eggs");
         source.LastEasterEggs = null;
@@ -591,13 +581,15 @@ internal static class DeclarativeOverviewLaneTests
                             "the declarative rows must separate by whitespace: the card still declares a"
                             + " chrome/rule separator at " + width + " (" + language + ")");
 
-                        // MUTATION PROOF: the body is the declared stack - seven rows plus the
+                        // MUTATION PROOF: the body is the declared current toggle/parameter stack plus the
                         // US-RESET1 area-restore row, one declared Column Gap between every neighbour -
                         // so changing a declared band, a row, the restore row or the body's own Gap
                         // reddens here instead of silently moving the card.
-                        float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height) + new[] { "basic-eat-row", "basic-eat-nutrition-row", "basic-eat-drug-row" }.Sum(id => RectOf(snapshot, id).height);
+                        string[] parameterRows = { "basic-eat-row", "basic-eat-nutrition-row", "basic-eat-drug-row",
+                            "basic-select-player-row", "basic-select-awake-row", "basic-select-not-downed-row" };
+                        float rowSum = BasicRows.Sum(r => RectOf(snapshot, r.Row).height) + parameterRows.Sum(id => RectOf(snapshot, id).height);
                         float restoreHeight = RectOf(snapshot, "basic-tuning-restore").height;
-                        float expectedBody = rowSum + restoreHeight + BasicBodyGap * (BasicRows.Length + 3);
+                        float expectedBody = rowSum + restoreHeight + BasicBodyGap * (BasicRows.Length + parameterRows.Length);
                         Assert(Math.Abs(bodyHeight - expectedBody) <= 0.5f,
                             "the declared body must be the rows + the Column's own Gap at " + width + " ("
                             + language + "): body " + bodyHeight + " vs " + expectedBody + " (rows " + rowSum

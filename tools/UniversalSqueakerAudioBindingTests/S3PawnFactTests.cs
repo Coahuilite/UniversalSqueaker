@@ -59,14 +59,14 @@ internal static partial class Program
         VoicePackCompAttach.Apply(catalog);
         var properties = (CompProperties_Squeaker)race.comps[0];
         Check(properties.actions.Count == 15, "S3 actual auto attachment retains legacy 15-plan defaults rather than changing daily policy");
-        foreach (var action in new[] { SqueakAction.Crying, SqueakAction.Giggling })
+        foreach (string action in new[] { "vendor/IndependentSignal", "vendor/OptionalSignal" })
         {
-            bool configured = properties.actions.Exists(x => x.action == action);
-            bool permitted = SqueakActionEligibility.IsEligible(action, true);
+            bool configured = properties.actions.Exists(x => UniversalSqueaker.Kernel.ActionKey.For(x.action) == action);
+            bool permitted = true; // Registration owns the new contract, not the retired baby opt-in.
             Check(!configured && UsControlledActionEligibility.Allows(configured, true, permitted, true, SqueakActionScope.AnyOccurrence, false, false),
                 "S3 new author " + action + " is usable with automatic Comp without author writing legacy table");
-            Check(!UsControlledActionEligibility.Allows(configured, true, SqueakActionEligibility.IsEligible(action, false), true, SqueakActionScope.AnyOccurrence, false, false),
-                "S3 baby player permission off still rejects " + action);
+            Check(!System.Enum.IsDefined(typeof(SqueakAction), 15) && !System.Enum.IsDefined(typeof(SqueakAction), 16),
+                "DC retired numeric slots cannot return through author registration " + action);
             Check(!UsControlledActionEligibility.Allows(configured, true, permitted, false, SqueakActionScope.AnyOccurrence, false, false),
                 "S3 explicit source/player disabled still rejects " + action);
             Check(!UsControlledActionEligibility.Allows(configured, false, permitted, true, SqueakActionScope.AnyOccurrence, false, false),

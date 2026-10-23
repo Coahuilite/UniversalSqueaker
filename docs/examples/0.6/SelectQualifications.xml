@@ -1,0 +1,31 @@
+<Defs>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleQualifiedSelected</defName>
+    <declaration><key>example/QualifiedSelected</key><baseAction>us.core/Select</baseAction>
+      <priority>40</priority><condition><ref>us.core/HasCurrentInjury</ref></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <UniversalSqueaker.UsActionDef>
+    <defName>US_ExampleSelectionWitness</defName>
+    <declaration><key>example/SelectionWitness</key>
+      <condition><ref>us.core/SelectEvent</ref></condition>
+    </declaration>
+  </UniversalSqueaker.UsActionDef>
+  <!-- Choose this source explicitly. Parent configuration never supplies child parameters.
+       The independent root declares accepted feedback, with no automatic Pawn qualifications. -->
+  <UniversalSqueaker.UsBehaviorSourceDef>
+    <defName>US_ExampleSelectQualifications</defName>
+    <declaration family="Pawn" target="Ratkin">
+      <action key="us.core/Select" selectRequirePlayerControlled="true" selectRequireAwake="true" selectRequireNotDowned="true"/>
+      <action key="example/QualifiedSelected" selectRequirePlayerControlled="true" selectRequireAwake="false" selectRequireNotDowned="false"/>
+    </declaration>
+  </UniversalSqueaker.UsBehaviorSourceDef>
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleSelectQualificationAudio</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>ordinary</key><action>us.core/Select</action><sound>Click</sound></li>
+      <li><key>qualified</key><action>example/QualifiedSelected</action><sound>Click</sound></li>
+      <li><key>witness</key><action>example/SelectionWitness</action><sound>Click</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

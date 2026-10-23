@@ -368,13 +368,13 @@ Invoke-Check 'S2 real binding/pool adapter sources over controlled doubles' `
 Invoke-Check 'S2 incomplete original-observation batch fails closed' `
     'dotnet run --project tools/UniversalSqueakerAudioBindingTests -c Release -- --partial-observation' `
     { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --partial-observation }
-# Gates 20/21: separate processes isolate the explicit Select qualification inputs.
+# Gates 20/21: fixed accepted-feedback chain and the settled three independent player qualifications.
 Invoke-Check 'D-A actual Select/extension production chain over platform doubles' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select' `
     { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select }
-Invoke-Check 'D-A unresolved official Pawn Select qualification refuses explicitly' `
-    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --da-select --unselected-qualification' `
-    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --da-select --unselected-qualification }
+Invoke-Check 'D-C Select defaults, sparse player qualifiers and fixed accepted-feedback evidence' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --dc-select-settings' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools\UniversalSqueakerAudioBindingTests') -c Release -- --dc-select-settings }
 # Gates 22/23 compile genuinely absent targets, not a bool override of production readiness.
 foreach ($selectFixtureTarget in @('MissingInternal', 'MissingFeedback')) {
     $selectFixtureOutput = Join-Path $root "dist\verify-select-readiness\$selectFixtureTarget"
@@ -406,6 +406,23 @@ Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole
 Invoke-Check 'D-B Result routes only to explicit fixed-contract consumers (truly Eat-only pack included)' `
     'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --db-result-routing' `
     { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --db-result-routing }
+# Gates 27-29: all fifteen actual notification/fact callers, inactive gate and local missing-capability isolation.
+Invoke-Check 'D-C fifteen native-shape production callers and owner lifecycles' `
+    'AudioBindingTests --dc-native' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-native }
+Invoke-Check 'D-C inactive runtime and explicit Equip candidate selection' `
+    'AudioBindingTests --dc-unselected' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --dc-unselected }
+Invoke-Check 'D-C physically missing Wounded and melee marker isolates only those mechanisms' `
+    'build DcFixtureTarget=MissingWoundedAndMeleeMarker with isolated output/obj; run --dc-missing' `
+    {
+        $dcOutput = Join-Path $root 'dist/verify-dc-readiness/MissingWoundedAndMeleeMarker'
+        $dcObj = Join-Path $root 'dist/verify-dc-readiness/obj/MissingWoundedAndMeleeMarker'
+        dotnet build (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release --no-restore -m:1 `
+            -p:DcFixtureTarget=MissingWoundedAndMeleeMarker "-p:OutputPath=$dcOutput/" "-p:IntermediateOutputPath=$dcObj/"
+        if ($LASTEXITCODE -ne 0) { throw 'D-C missing-target fixture build failed' }
+        & (Join-Path $dcOutput 'UniversalSqueakerAudioBindingTests.exe') --dc-missing
+    }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

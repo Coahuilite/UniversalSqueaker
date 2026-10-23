@@ -92,8 +92,6 @@
   <US.Action.Work>工作</US.Action.Work>
   <US.Action.Equip>装备</US.Action.Equip>
   <US.Action.MentalBreak>精神崩溃</US.Action.MentalBreak>
-  <US.Action.Crying>哭泣</US.Action.Crying>
-  <US.Action.Giggling>咯咯笑</US.Action.Giggling>
 
   <US.Mood.Good>良好</US.Mood.Good>
   <US.Mood.Neutral>中性</US.Mood.Neutral>
@@ -281,7 +279,7 @@
   <US.Tuning.Scope.Off>关闭</US.Tuning.Scope.Off>
   <US.Tuning.Scope.Any>任意</US.Tuning.Scope.Any>
   <US.Tuning.Scope.Command>指令</US.Tuning.Scope.Command>
-  <!-- SA1.2 SR 正本同步：每动作 scope 文案。表内没有的动作（Crying/Giggling 为 US 独有）沿用上面的通用文案。 -->
+  <!-- SA1.2 SR 正本同步：每动作 scope 文案。表内没有的动作沿用上面的通用文案。 -->
   <US.Action.DraftUndraft>征召 / 取消征召</US.Action.DraftUndraft>
   <US.Tuning.Scope.Call.Any>周期派发的普通叫声</US.Tuning.Scope.Call.Any>
   <US.Tuning.Scope.Eat.Any>进食时发生</US.Tuning.Scope.Eat.Any>
@@ -468,9 +466,6 @@
   <US.Diagnostics.Recency.JustNow>{0}，不到 1 分钟前</US.Diagnostics.Recency.JustNow>
   <US.Diagnostics.Recency.Ago>{0}，{1} 分钟前</US.Diagnostics.Recency.Ago>
   <US.Diagnostics.Nav.Back>返回列表</US.Diagnostics.Nav.Back>
-  <US.Tuning.BabyActions>路由婴幼儿哭泣与咯咯笑</US.Tuning.BabyActions>
-  <US.Help.BasicTuning.BabyActions.Label>路由婴幼儿哭泣与咯咯笑</US.Help.BasicTuning.BabyActions.Label>
-  <US.Help.BasicTuning.BabyActions.Text>默认关闭。启用 Biotech 时，开启后将 Crying（哭泣）和 Giggling（咯咯笑）纳入语音路由、动作调音和覆盖统计；关闭后，两者不路由，也不计入覆盖分子与总数。不改变原版精神状态或真正的精神崩溃。缺少音频的动作不会算作已覆盖；未启用 Biotech 时此选项不生效。</US.Help.BasicTuning.BabyActions.Text>
   <US.Tuning.Source.Default>默认</US.Tuning.Source.Default>
 
 
@@ -608,4 +603,12 @@
   <US.Tuning.EatDrug>Eat 药物筛选</US.Tuning.EatDrug>
   <US.Tuning.EatNutrition>Eat 营养筛选</US.Tuning.EatNutrition>
   <US.Tuning.EatPhase>Eat 阶段（当前调音层）</US.Tuning.EatPhase>
+  <US.Select.PlayerControlled>Select：要求玩家可控</US.Select.PlayerControlled>
+  <US.Select.Awake>Select：要求清醒</US.Select.Awake>
+  <US.Select.NotDowned>Select：要求未倒地</US.Select.NotDowned>
+  <US.Select.Inherit>继承</US.Select.Inherit>
+  <US.Select.Required>要求</US.Select.Required>
+  <US.Select.NotRequired>不要求</US.Select.NotRequired>
+  <US.Help.Select.Label>选择回应资格</US.Help.Select.Label>
+  <US.Help.Select.Text>官方Pawn Select默认要求玩家可控、清醒且未倒地。三项可在当前Pawn服务、Race或Xenotype层独立调整；“继承”仅清除本层该字段。回应始终要求原版接受选择，并向最终选择主体发出反馈。基础恢复只清除Pawn服务层的字段；Race或Xenotype覆盖用对应动作行恢复。</US.Help.Select.Text>
 </LanguageData>

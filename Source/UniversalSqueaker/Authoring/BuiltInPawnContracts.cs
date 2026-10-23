@@ -9,14 +9,24 @@ public static class BuiltInPawnContracts
 {
     public static IReadOnlyList<string> CandidateOrder { get; } = Array.AsReadOnly(new[]
     {
-        "Death", "Wounded", "MentalBreak", "Attack", "Draft", "Undraft", "Equip", "Crying",
-        "Giggling", "Select", "Sleep", "Eat", "Social", "Joy", "Move", "Work", "Call"
+        "Death", "Wounded", "MentalBreak", "Attack", "Draft", "Undraft", "Equip",
+        "Select", "Sleep", "Eat", "Social", "Joy", "Move", "Work", "Call"
     });
 
     public static bool IsEvent(string key) => key != "Call" && key != "Eat" && key != "Sleep"
         && key != "Social" && key != "Joy" && key != "Move" && key != "Work";
 
     public static string FactKey(string key) => key == "Eat" ? EatPolicy.Process : "us.core/" + key + (IsEvent(key) ? "Event" : "State");
+
+    private static string Role(string key) => key switch
+    {
+        "Select" => "SelectedSubject", "Wounded" => "DamageRecipient", "Death" => "DyingSubject",
+        "Attack" => "Attacker", "Move" => "SelfMover", "Equip" => "EquipmentWearer",
+        "Call" => "IdlePawn", "Eat" => "ActualIngester", "Sleep" => "Sleeper",
+        "Social" => "SocialParticipant", "Joy" => "JoyParticipant", "Work" => "Worker",
+        "Draft" => "DraftedPawn", "Undraft" => "UndraftedPawn", "MentalBreak" => "BreakSubject",
+        _ => "Subject"
+    };
 
     public static IEnumerable<ActionPlan> Create(long interval, long woundedInterval, bool fullDevCandidate)
     {
@@ -30,7 +40,7 @@ public static class BuiltInPawnContracts
             int priority = fullDevCandidate ? CandidateOrder.Count - i : key == "Wounded" ? 30 : key == "Work" ? 20 : 0;
             yield return new ActionPlan("us.core/" + key, priority, new Condition("ref", FactKey(key)),
                 key == "Wounded" ? woundedInterval : interval, skipTalking: key == "Death" || key == "Select",
-                requiresVocal: key != "Select");
+                requiresVocal: key != "Select", subjectRole: Role(key));
         }
     }
 }

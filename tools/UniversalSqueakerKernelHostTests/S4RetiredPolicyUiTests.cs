@@ -31,8 +31,9 @@ internal static class S4RetiredPolicyUiTests
                         "selection status must be visible and measured");
                     Require(host.Bindings.TryGet("kernel-policy-note", out string text) && text == table["US.Kernel.PolicyRequired"],
                         "the current selection requirement must resolve through the actual language table");
-                    Require(snapshot.RectById.ContainsKey("basic-talking-check") && snapshot.RectById.ContainsKey("basic-baby-check")
-                        && snapshot.RectById.ContainsKey("basic-eat-check"), "effective permission and occurrence controls must remain present");
+                    Require(snapshot.RectById.ContainsKey("basic-talking-check") && snapshot.RectById.ContainsKey("basic-select-player-choice")
+                        && snapshot.RectById.ContainsKey("basic-select-awake-choice") && snapshot.RectById.ContainsKey("basic-select-not-downed-choice")
+                        && snapshot.RectById.ContainsKey("basic-eat-choice"), "effective permissions and independent Select/Eat controls remain present");
                     host.Bindings.Set("tuning-area", 1);
                     var mood = host.MeasureAndArrange(new Vector2(width, 720));
                     host.DrawChecked(new Rect(0, 0, width, 720));

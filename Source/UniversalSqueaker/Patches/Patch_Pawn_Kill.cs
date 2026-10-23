@@ -1,11 +1,14 @@
 using HarmonyLib;
+using System.Reflection;
 using Verse;
 
 namespace UniversalSqueaker;
 
-[HarmonyPatch(typeof(Pawn), nameof(Pawn.Kill))]
+[HarmonyPatch]
 public static class Patch_Pawn_Kill
 {
+    private static bool Prepare() => UsPawnEventObservation.Prepare("us.core/DeathEvent");
+    private static MethodBase TargetMethod() => UsPawnEventObservation.Death!;
     // Prefix: 在 Kill 主体(DeSpawnOrDeselect / SetDead)前触发。
     // 此时 pawn 仍 spawned,position 有效,SoundInfo.InMap 的 distRange 衰减正常。
     // 被击杀和流血而亡都统一走 Pawn.Kill,一个 hook 覆盖两种死亡。

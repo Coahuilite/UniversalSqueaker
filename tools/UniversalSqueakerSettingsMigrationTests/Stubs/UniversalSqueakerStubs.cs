@@ -50,22 +50,6 @@ namespace UniversalSqueaker
     {
         public static BehaviorSourceDirectory BehaviorSources = new(Array.Empty<BehaviorSource>());
     }
-    /// <summary>
-    /// SqueakActionDefinitions lives in the production Runtime adapter but is not part of this harness's
-    /// link set; this stub supplies the two members the linked Models/Settings files call.
-    /// </summary>
-    public static class SqueakActionDefinitions
-    {
-        public const int Count = 17;
-
-        public static bool IsKnown(SqueakAction action) => (uint)action < Count;
-
-        public static SqueakActionScope NormalizeScope(SqueakAction action, SqueakActionScope scope)
-        {
-            return scope;
-        }
-    }
-
     namespace UI
     {
         public static class VoicePacksPage

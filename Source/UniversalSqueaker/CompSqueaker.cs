@@ -161,19 +161,6 @@ public partial class CompSqueaker : ThingComp
         }
     }
 
-    public void Notify_Wounded() => NotifyExternal(SqueakAction.Wounded, VerseEventBinding.OriginFor(SqueakAction.Wounded), SqueakInvocationSource.StateEvent);
-    public void Notify_Select() => NotifyExternal(SqueakAction.Select, VerseEventBinding.OriginFor(SqueakAction.Select), SqueakInvocationSource.PlayerSelection);
-    public void Notify_Death() => NotifyExternal(SqueakAction.Death, VerseEventBinding.OriginFor(SqueakAction.Death), SqueakInvocationSource.StateEvent);
-    public void Notify_Draft(bool drafted) => NotifyExternal(drafted ? SqueakAction.Draft : SqueakAction.Undraft, VerseEventBinding.OriginFor(drafted ? SqueakAction.Draft : SqueakAction.Undraft), SqueakInvocationSource.ActiveCommand);
-    public void Notify_Attack() => NotifyExternal(SqueakAction.Attack, VerseEventBinding.OriginFor(SqueakAction.Attack), IsCurrentJobPlayerCommand() ? SqueakInvocationSource.ActiveCommand : SqueakInvocationSource.StateEvent);
-    public void Notify_Equip()
-    {
-        // Equipment tracker notifications also cover AI, loading, and system equipment changes.
-        // Equip is deliberately only the player's ordered Core Equip job, regardless of its scope.
-        if (!IsCurrentEquipJobPlayerCommand()) return;
-        NotifyExternal(SqueakAction.Equip, VerseEventBinding.OriginFor(SqueakAction.Equip), SqueakInvocationSource.ActiveCommand);
-    }
-
     public override void PostSpawnSetup(bool respawningAfterLoad)
     {
         base.PostSpawnSetup(respawningAfterLoad);
@@ -233,16 +220,6 @@ public partial class CompSqueaker : ThingComp
         SqueakPeriodicPopulation.Unregister(this, map);
         if (ReferenceEquals(registeredMap, map)) registeredMap = null;
     }
-    public void Notify_MentalBreak() => NotifyExternal(SqueakAction.MentalBreak, VerseEventBinding.OriginFor(SqueakAction.MentalBreak), SqueakInvocationSource.StateEvent);
-
-    /// <summary>0.3.1 波 3c：BabyFits 窄 hook 入口（Patch_MentalFit 已用 MentalFitDef 反向 map 验证状态）。</summary>
-    public void Notify_MentalFit(SqueakAction action) => NotifyExternal(action,
-        VerseEventBinding.OriginFor(action),
-        SqueakInvocationSource.StateEvent);
-
-    private void NotifyExternal(SqueakAction action, SqueakTriggerOrigin origin, SqueakInvocationSource source)
-        => NotifyExternalByKey(UniversalSqueaker.Kernel.ActionKey.For(action) ?? action.ToString(), origin, source);
-
     /// <summary>主动命令保持玩家控制权来源门；选择事实与官方Pawn回应资格在各自明确合同处处理。</summary>
     private bool IdentityGateAllows(SqueakTriggerInvocation invocation)
         => !invocation.IsActiveCommand || Pawn.IsPlayerControlled; // Explicit player-command provenance, not a Select qualification.
@@ -262,7 +239,7 @@ public partial class CompSqueaker : ThingComp
     {
         if (string.IsNullOrEmpty(actionKey)) return false;
         if (UniversalSqueaker.Kernel.ActionKey.TryParseBuiltIn(actionKey!, out SqueakAction action))
-            return SqueakActionDefinitions.IsEligible(action, UniversalSqueakerMod.Settings?.BabyActionsEnabled == true);
+            return SqueakActionDefinitions.IsKnown(action);
         return UniversalSqueakerMod.Settings?.allowExternalActions == true;
     }
 
@@ -371,6 +348,8 @@ public partial class CompSqueaker : ThingComp
             UniversalSqueaker.Kernel.BuiltInActionKeys.Contains(key) ? IsActionAllowedByKey(key) : authorAction || IsActionAllowedByKey(key),
             behavior?.Enabled ?? delta.Enabled, scope, command, Pawn.IsPlayerControlled);
     }
+    internal SqueakActionScope ControlledOneShotScope(string key)
+        => GetRuntimeContext(out _).GetActionByKey(UniversalSqueaker.Kernel.ActionKey.SchemaKey(key)).Scope;
     internal bool ControlledPlaybackSustained(string key)
     {
         return TryGetPlan(UniversalSqueaker.Kernel.ActionKey.SchemaKey(key), out var plan) && plan.Mode == SqueakTriggerMode.Sustained;
@@ -430,7 +409,6 @@ public partial class CompSqueaker : ThingComp
     internal static void MaintainPeriodicPopulationDiagnostics() => SqueakPeriodicPopulation.Maintain(activeDistanceRange);
 
     private bool IsCurrentJobPlayerCommand() => Pawn.CurJob?.playerForced == true;
-    private bool IsCurrentEquipJobPlayerCommand() => Pawn.CurJob?.playerForced == true && Pawn.CurJob.def == JobDefOf.Equip;
 
 }
 

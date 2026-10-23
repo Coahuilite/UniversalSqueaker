@@ -121,7 +121,6 @@ internal static class Program
         s.distanceRange = new FloatRange(20f, 45f);
         s.allowEasterEggSounds = true;
         s.allowExternalActions = true;
-        s.allowBabyActions = true;
         s.actionTuning.Add(new ActionTuningRecord { actionKey = "us.core/Eat", hasEatPhase = true, eatPhase = EatPhase.Execution, hasDrugScope = true, drugScope = EatDrugScope.OnlyDrugs });
         s.uiSwatchId = "biotech"; // UIR-006: the palette is a persisted appearance setting
         s.uiIntroCollapsed = true; // CORRECTIONS-R3: the persisted teaching preference must be in the pollution set
@@ -221,7 +220,7 @@ internal static class Program
         Check("global: distance back to Balanced 15-50",
             s.distancePreset == SqueakDistancePreset.Balanced && s.distanceRange.min == 15f && s.distanceRange.max == 50f);
         Check("global: gates back to false",
-            !s.allowEasterEggSounds && !s.allowExternalActions && !s.allowBabyActions
+            !s.allowEasterEggSounds && !s.allowExternalActions
             && s.ReadEatParameters().Phase == EatPhase.WholeProcess && s.ReadEatParameters().DrugScope == EatDrugScope.Any);
         Check("global: legacy moodOverrides dict emptied", s.moodOverrides.Count == 0);
         Check("global: voicePackSelections cleared", s.voicePackSelections.Count == 0);
@@ -458,7 +457,7 @@ internal static class Program
         Check("area-Basics: Applied", outcome == SqueakResetOutcome.Applied);
         Check("area-Basics: eggs/scales/camera/baby/eat-pair restored",
             !s.allowEasterEggSounds && s.scaleCooldownWithTimeSpeed && s.scaleFrequencyWithTalking
-            && s.scalePeriodicWithAudiblePopulation && !s.showCameraIndicator && !s.allowBabyActions
+            && s.scalePeriodicWithAudiblePopulation && !s.showCameraIndicator
             && s.ReadEatParameters().Phase == EatPhase.WholeProcess && s.ReadEatParameters().DrugScope == EatDrugScope.Any);
         Check("area-Basics: timing/diagnostics/gate-external retained",
             s.globalMinIntervalTicks == 999 && s.globalCooldownMultiplier == 2.5f

@@ -201,12 +201,6 @@
                 <Widget Id="basic-egg-check" Kind="input/checkbox" Appearance="switch" Bind="allow-eggs" SelectedKey="allow-eggs" Width="36" Height="30" HelpKey="us/basic-tuning/egg" AlignX="Left" />
               </Column>
             </Row>
-            <Row Id="basic-baby-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
-              <Widget Id="basic-baby-label" Kind="text/wrapped" TextKey="US.Tuning.BabyActions" HelpKey="us/basic-tuning/baby-actions" />
-              <Column Id="basic-baby-check-slot" Width="36" Padding="0" AlignY="Middle">
-                <Widget Id="basic-baby-check" Kind="input/checkbox" Appearance="switch" Bind="allow-baby-actions" SelectedKey="allow-baby-actions" Width="36" Height="30" HelpKey="us/basic-tuning/baby-actions" AlignX="Left" />
-              </Column>
-            </Row>
             <Row Id="basic-cooldown-row" VisibleKey="legacy-policy-controls" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
               <Widget Id="basic-cooldown-label" Kind="text/wrapped" TextKey="US.Tuning.ScaleCooldown" HelpKey="us/basic-tuning/scale-cooldown" />
               <Column Id="basic-cooldown-check-slot" Width="36" Padding="0" AlignY="Middle">
@@ -237,7 +231,19 @@
               <Widget Id="basic-eat-drug-label" Kind="text/wrapped" TextKey="US.Tuning.EatDrug" HelpKey="us/basic-tuning/eat-drug" />
               <Widget Id="basic-eat-drug-choice" Kind="input/dropdown" Bind="eat-drug" OptionsBind="eat-drug-options" Width="190" Height="30" HelpKey="us/basic-tuning/eat-drug" />
             </Row>
-            <!-- Basics restores system playback controls and Pawn-profile Eat parameters.
+            <Row Id="basic-select-player-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-player-label" Kind="text/wrapped" TextKey="US.Select.PlayerControlled" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-player-choice" Kind="input/dropdown" Bind="select-player-controlled" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+            </Row>
+            <Row Id="basic-select-awake-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-awake-label" Kind="text/wrapped" TextKey="US.Select.Awake" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-awake-choice" Kind="input/dropdown" Bind="select-awake" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+            </Row>
+            <Row Id="basic-select-not-downed-row" Gap="8" Padding="0" Breakpoint="400" Narrow="Column">
+              <Widget Id="basic-select-not-downed-label" Kind="text/wrapped" TextKey="US.Select.NotDowned" HelpKey="us/basic-tuning/select" />
+              <Widget Id="basic-select-not-downed-choice" Kind="input/dropdown" Bind="select-not-downed" OptionsBind="select-qualification-options" Width="190" Height="30" HelpKey="us/basic-tuning/select" />
+            </Row>
+            <!-- Basics restores system playback controls and Pawn-profile Eat/Select parameters.
                  Race/Xeno parameters are owned by their exact action/layer restore. -->
             <Widget Id="basic-tuning-restore" Kind="us/reset-entry" TextKey="US.Reset.Area" TitleKey="US.Reset.Area" MessageKey="US.Reset.Area.Basics.Confirm" EffectKey="reset-normal-basics" Width="160" Height="24" AlignX="Left" HelpKey="us/reset-area/button" />
           </Column>

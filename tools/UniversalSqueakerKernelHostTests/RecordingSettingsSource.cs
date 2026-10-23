@@ -23,6 +23,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
     /// harness exercises the real dynamic-list widget draw paths instead of the empty projections.
     /// </summary>
     public bool RichData;
+    public bool RichScaleFrequencyWithTalking = true;
     /// <summary>UIR-002: board rows the fake projection returns (the harness cannot build a real
     /// catalog snapshot - its constructor is internal by design; the rows themselves are the
     /// production value types the real projection emits).</summary>
@@ -333,7 +334,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             raceFilterOptions: Array.Empty<FilterOptionView>(),
             xenotypeFilterOptions: Array.Empty<FilterOptionView>(),
             eatPhase: EatPhase,
-            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope, allowBabyActions: AllowBabyActions,
+            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope,
+            selectRequirePlayerControlled: SelectRequirePlayerControlled, selectRequireAwake: SelectRequireAwake, selectRequireNotDowned: SelectRequireNotDowned,
             packNoPacks: true,
             raceBoard: UsRaceBoardView.Empty);
     }
@@ -390,7 +392,7 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             allowEasterEggs: true,
             SqueakDistancePreset.Strong,
             scaleCooldownWithTimeSpeed: false,
-            scaleFrequencyWithTalking: true,
+            scaleFrequencyWithTalking: RichScaleFrequencyWithTalking,
             scalePeriodicWithAudiblePopulation: false,
             showCameraIndicator: true,
             globalCooldownMultiplier: 1f,
@@ -502,7 +504,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             },
             xenotypeFilterOptions: new[] { new FilterOptionView("All", ""), new FilterOptionView("Sanguophage", "sanguophage") },
             eatPhase: EatPhase,
-            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope, allowBabyActions: AllowBabyActions,
+            eatNutritionScope: EatNutritionScope, eatDrugScope: EatDrugScope,
+            selectRequirePlayerControlled: SelectRequirePlayerControlled, selectRequireAwake: SelectRequireAwake, selectRequireNotDowned: SelectRequireNotDowned,
             // US-PACK1: the fake mirrors production's delegation exactly - fixture source pairs through
             // the SAME pure PackCardProjection.Build the model calls, reading the live page state's
             // filters and manual expansion set, so a lane drives the real rule end to end.
@@ -613,9 +616,16 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
 
     public void SetEasterEggs(bool value) => LastEasterEggs = value;
 
-    public bool AllowBabyActions;
-    public bool? LastBabyActions;
-    public void SetBabyActions(bool value) { LastBabyActions = value; AllowBabyActions = value; }
+    public readonly Dictionary<string, string> SelectWrites = new();
+    public bool? SelectRequirePlayerControlled, SelectRequireAwake, SelectRequireNotDowned;
+    public void SetSelectParameter(string key, string value)
+    {
+        SelectWrites[key] = value;
+        bool? parsed = value == "" ? null : bool.Parse(value);
+        if (key == "playerControlled") SelectRequirePlayerControlled = parsed;
+        if (key == "awake") SelectRequireAwake = parsed;
+        if (key == "notDowned") SelectRequireNotDowned = parsed;
+    }
     public void SetEatParameter(string key, string value)
     {
         EatWrites[key] = value;

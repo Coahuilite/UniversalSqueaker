@@ -1,0 +1,24 @@
+<Defs>
+  <!-- Audio mappings only: does not select behavior sources or activate the Dev runtime.
+       Core Click is a resolvable example, not a voice design; replace it with your own SoundDef. -->
+  <UniversalSqueaker.UsVoicePackDef>
+    <defName>US_ExampleFifteen</defName>
+    <declaration><race>Ratkin</race><entries>
+      <li><key>select</key><action>us.core/Select</action><sound>Click</sound></li>
+      <li><key>wounded</key><action>us.core/Wounded</action><sound>Click</sound></li>
+      <li><key>death</key><action>us.core/Death</action><sound>Click</sound></li>
+      <li><key>attack</key><action>us.core/Attack</action><sound>Click</sound></li>
+      <li><key>move</key><action>us.core/Move</action><sound>Click</sound></li>
+      <li><key>equip</key><action>us.core/Equip</action><sound>Click</sound></li>
+      <li><key>call</key><action>us.core/Call</action><sound>Click</sound></li>
+      <li><key>eat</key><action>us.core/Eat</action><sound>Click</sound></li>
+      <li><key>sleep</key><action>us.core/Sleep</action><sound>Click</sound></li>
+      <li><key>social</key><action>us.core/Social</action><sound>Click</sound></li>
+      <li><key>joy</key><action>us.core/Joy</action><sound>Click</sound></li>
+      <li><key>work</key><action>us.core/Work</action><sound>Click</sound></li>
+      <li><key>draft</key><action>us.core/Draft</action><sound>Click</sound></li>
+      <li><key>undraft</key><action>us.core/Undraft</action><sound>Click</sound></li>
+      <li><key>break</key><action>us.core/MentalBreak</action><sound>Click</sound></li>
+    </entries></declaration>
+  </UniversalSqueaker.UsVoicePackDef>
+</Defs>

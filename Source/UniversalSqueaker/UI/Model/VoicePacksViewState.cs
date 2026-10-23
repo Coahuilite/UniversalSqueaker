@@ -9,7 +9,6 @@ public sealed class VoicePacksViewState
 {
     public SqueakVoicePackMode Mode { get; }
     public bool AllowEasterEggs { get; }
-    public bool AllowBabyActions { get; }
     public SqueakDistancePreset DistancePreset { get; }
     public bool ScaleCooldownWithTimeSpeed { get; }
     public bool ScaleFrequencyWithTalking { get; }
@@ -18,6 +17,9 @@ public sealed class VoicePacksViewState
     public EatPhase EatPhase { get; }
     public EatNutritionScope EatNutritionScope { get; }
     public EatDrugScope EatDrugScope { get; }
+    public bool? SelectRequirePlayerControlled { get; }
+    public bool? SelectRequireAwake { get; }
+    public bool? SelectRequireNotDowned { get; }
     public bool ShowCameraIndicator { get; }
     public float GlobalCooldownMultiplier { get; }
     public int GlobalMinIntervalTicks { get; }
@@ -112,7 +114,6 @@ public sealed class VoicePacksViewState
         EatPhase eatPhase = EatPhase.WholeProcess,
         EatNutritionScope eatNutritionScope = EatNutritionScope.Any,
         EatDrugScope eatDrugScope = EatDrugScope.Any,
-        bool allowBabyActions = false,
         IReadOnlyList<PackCardView>? packCards = null,
         bool packResultsEmpty = false,
         bool packNoPacks = false,
@@ -123,11 +124,11 @@ public sealed class VoicePacksViewState
         IReadOnlyList<FilterOptionView>? fallbackSoundOptions = null,
         IReadOnlyList<FilterOptionView>? fallbackCandidateOptions = null,
         string fallbackStatusKey = "",
-        UsRaceBoardView? raceBoard = null)
+        UsRaceBoardView? raceBoard = null,
+        bool? selectRequirePlayerControlled = null, bool? selectRequireAwake = null, bool? selectRequireNotDowned = null)
     {
         Mode = mode;
         AllowEasterEggs = allowEasterEggs;
-        AllowBabyActions = allowBabyActions;
         DistancePreset = distancePreset;
         ScaleCooldownWithTimeSpeed = scaleCooldownWithTimeSpeed;
         ScaleFrequencyWithTalking = scaleFrequencyWithTalking;
@@ -173,6 +174,9 @@ public sealed class VoicePacksViewState
         FallbackCandidateOptions = fallbackCandidateOptions ?? Array.Empty<FilterOptionView>();
         FallbackStatusKey = fallbackStatusKey ?? "";
         RaceBoard = raceBoard ?? UsRaceBoardView.Empty;
+        SelectRequirePlayerControlled = selectRequirePlayerControlled;
+        SelectRequireAwake = selectRequireAwake;
+        SelectRequireNotDowned = selectRequireNotDowned;
     }
 
     /// <summary>UIR-002: the ALL-loaded-race board rows (read-only facts; the board never writes).

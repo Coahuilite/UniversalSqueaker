@@ -61,12 +61,15 @@ namespace UniversalSqueaker
         public bool ExternalAllowed = true;
         public bool Vocal = true;
         public bool FixtureSustained;
-        public void Notify_Select() => NotifyExternalByKey("Select", SqueakTriggerOrigin.External, SqueakInvocationSource.PlayerSelection);
         public int MembershipUpdates;
         private void SynchronizePeriodicMembership() => MembershipUpdates++;
-        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound, UniversalSqueaker.OneShot.PlaybackRequest? request) { }
+        public UniversalSqueaker.OneShot.PlaybackRequest? LastCandidateRequest;
+        internal void RecordKernelOutcome(UniversalSqueaker.OneShot.DecisionOutcome outcome, SoundDef? sound, UniversalSqueaker.OneShot.PlaybackRequest? request)
+            => LastCandidateRequest = request;
         internal SqueakVocalCapability ControlledOneShotVocal() => new(Vocal ? 1 : 0, 1);
         internal bool ControlledPlaybackSustained(string key) => FixtureSustained;
+        internal SqueakActionScope ControlledOneShotScope(string key) => BuiltInActionKeys.TryGetIndex(ActionKey.SchemaKey(key), out int index)
+            ? SqueakActionDefinitions.Get((SqueakAction)index).DefaultScope : SqueakActionScope.AnyOccurrence;
         internal bool ControlledInvocationAllowed(SqueakTriggerInvocation invocation) => true;
         internal bool ControlledOneShotAllowed(string key, bool activeCommand = false, BehaviorValues? behavior = null, bool authorAction = false)
             => UsControlledActionEligibility.Allows(false, authorAction, Allowed && (BuiltInActionKeys.Contains(ActionKey.SchemaKey(key)) || ExternalAllowed),

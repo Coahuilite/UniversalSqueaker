@@ -432,8 +432,6 @@ internal static class Program
             "Call groups as system/event-triggered");
         Assert(ActionScopeRules.GroupFor(SqueakAction.Work) == ActionScopeGroup.SystemOrEvent,
             "Work groups as system/event-triggered even though it supports ActiveCommand (SR membership)");
-        Assert(ActionScopeRules.GroupFor(SqueakAction.Crying) == ActionScopeGroup.SystemOrEvent,
-            "the US-only Crying joins the system group tail (ruling: optional, later group only)");
 
         // Two groups, no omission and no duplicate across the full built-in set (SA1.2 acceptance):
         // every known action appears in exactly one order list, and the lists agree with GroupFor.
@@ -453,7 +451,7 @@ internal static class Program
             seen.Add(action);
         }
 
-        // The SqueakAction enum IS the built-in set (all 17 are known); the two order lists must cover
+        // The SqueakAction enum IS the built-in set (all 15 are known); the two order lists must cover
         // every one of them exactly once.
         Assert(seen.Count == Enum.GetValues(typeof(SqueakAction)).Length,
             "the classification scan covered all " + Enum.GetValues(typeof(SqueakAction)).Length
@@ -464,21 +462,11 @@ internal static class Program
         Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Work, SqueakActionScope.ActiveCommand)
                 == "US.Tuning.Scope.Work.Command",
             "Work's command caption is the SR per-action key (玩家强制工作 / Player-forced work)");
-        Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Crying, SqueakActionScope.AnyOccurrence)
-                == "US.Tuning.Scope.Any",
-            "Crying has no SR caption and keeps the generic Any key");
         Assert(ActionScopeRules.ScopeLabelKey(SqueakAction.Draft, SqueakActionScope.Disabled)
                 == "US.Tuning.Scope.Off",
             "Off keeps the generic key whatever the action");
 
-        Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Crying),
-            "Crying is hidden from the Action Scope editor by default");
-        Assert(ActionScopeRules.IsHiddenByDefault(SqueakAction.Giggling),
-            "Giggling is hidden from the Action Scope editor by default");
-        Assert(!ActionScopeRules.IsHiddenByDefault(SqueakAction.Call),
-            "regular actions remain visible in the Action Scope editor");
-        Assert(!SqueakActionEligibility.IsEligible(SqueakAction.Crying, false),
-            "the Biotech defensive action UI switch defaults to hidden");
+        Assert(seen.Count == 15, "all fifteen official scope rows remain visible, with no retired opt-in rows");
     }
 
     private static bool ContainsAction(System.Collections.Generic.IReadOnlyList<SqueakAction> order, SqueakAction action)

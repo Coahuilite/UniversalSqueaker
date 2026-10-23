@@ -61,7 +61,7 @@ internal static partial class Program
             selections[new AudioDomain(new RaceKey(projected.raceDefName), null)] = new HashSet<string> { key };
         }
         SqueakRuntimeResolver.Current.Registry = new SqueakPoolRegistry(SqueakKernelAdapter.BuildEntries(directory, selections), BuiltInFallbackTable.Empty);
-        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1, UsSelectPawnQualification.Unselected));
+        UsOneShotRuntime.SelectDevelopmentPolicy(new UsDevelopmentPolicy(20, 0, 0, 0, 0, 1, 1));
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         var settings = UniversalSqueakerMod.Settings;
         void Set(string action, BehaviorValues values)

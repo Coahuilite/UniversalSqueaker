@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r10（D-B 有效配置与Eat生产纵切，结果消费者边界修订）。状态：**D-B技术候选，有效配置与Eat已接入生产owner；其余12包D-C仍待实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
+修订：2026-10-23，r11（D-C十五包、退休和已裁Select资格）。状态：**D-C技术候选；十五包经同一生产owner，普通范围／节奏及逐包人审／原生未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -106,7 +106,7 @@ All：任一 False 则 False，全部 True 才 True，其余 Unknown；Any：任
 
 | 范围分类 | 官方包装 | 正向语义／不得混同 |
 | --- | --- | --- |
-| 通用 | Select | 实际接受的选择＋反馈意图＋最终主体；仅方法被调用不够。官方 Pawn 额外资格独立待决 |
+| 通用 | Select | 实际接受的选择＋反馈意图＋最终主体；仅方法被调用不够。官方Pawn三项可调默认已裁，固定接受证据不变 |
 | 能力限定 | Wounded | 实际受损者／处理阶段；瞬时通知不等于现存伤口，不能自动保证正伤害阈值 |
 | 能力限定 | Death | 明确进入Kill或死亡完成；当前prefix只证明前者，不把Destroy/消耗都称死亡 |
 | 能力限定 | Attack | 已核机制攻击执行；不等于命中／伤害，目标与攻击者分开 |
@@ -121,7 +121,7 @@ All：任一 False 则 False，全部 True 才 True，其余 Unknown；Any：任
 | Pawn | Draft、Undraft | 玩家命令前后状态真实变化及方向，不监听任意setter或制造逐机会事件 |
 | Pawn | MentalBreak | 相应崩溃来源成功启动；任意InMentalState不等于崩溃，持续依据另列 |
 
-分类不是继承树或三个执行引擎。完整 NonPawn 宿主仍首版外；目录／身份／纯链不能锁成 Pawn。官方 Crying/Giggling 包装、专属响应／开关及无消费者残余须在D-C完整移除；不改原版状态／婴儿声、不整体禁声这些Pawn，第三方仍可定义自己的独立合同。当前代码目录仍有17项旧包装，D-A不将文档目标冒称代码移除完成。
+分类不是继承树或三个执行引擎。完整 NonPawn 宿主仍首版外；目录／身份／纯链不能锁成 Pawn。官方 Crying/Giggling 包装、专属响应／开关及无消费者残余须在D-C完整移除；不改原版状态／婴儿声、不整体禁声这些Pawn，第三方仍可定义自己的独立合同。当前官方库存已迁为15，专属MentalFit patch／通知／开关及其无消费者残余退役；独立第三方合同不受名称黑名单限制，历史17字符串语料不作当前库存。
 
 ### 4.4 Eat 已定参数与退出
 
@@ -198,7 +198,7 @@ D2单机会与四结果现同时适用于OneShot和Sustained新启动／替换�
 | 事件／状态的随机资格 | 只在所属策略的明确点采样一次；同一频率因素不重复作用 |
 | 播放前动态检查 | 核对对象仍有效与位置可用，不重跑合同、抽样或资源首检 |
 
-官方 Pawn 各包资格须逐项显式审阅。Select 的通用机制不含玩家控制／清醒／未倒地；官方 Pawn 回应是否组合这些资格仍待用户，开发输入单独选择，未决不启用发行默认。视野／定位属于服务边界，Death Talking等例外与新扩展许可须明示；不得把 allowExternalActions 自动作为所有已注册扩展的总闸。
+官方 Pawn 各包资格须逐项显式审阅。Select 的通用机制不含玩家控制／清醒／未倒地；官方Pawn Select三项默认已由用户裁定为true，分别以公开可调参数表达；不取消固定接受／反馈／最终主体，也不把这些条件塞入NonPawn或独立根。其余政策仍由隔离Dev输入承载。视野／定位属于服务边界，Death Talking等例外与新扩展许可须明示；不得把 allowExternalActions 自动作为所有已注册扩展的总闸。
 
 ### 6.3 计时状态与结算
 
@@ -494,7 +494,7 @@ S2复用原选择器，将真实patch前来源、通过原版依赖过滤后的�
 
 ### 唯一生产 owner 与临时激活门
 
-`CompSqueaker.CompTick`、17通知和`NotifyExternalByKey`均进入`UsOneShotRuntime`，每Pawn只有一份`UsPawnPlaybackSession`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。真正未注册字符串无需补注册，但仍受外部许可、scope、身份、同tick名额与同一硬截止约束。
+`CompSqueaker.CompTick`、十五包适用通知和`NotifyExternalByKey`均进入`UsOneShotRuntime`，每Pawn只有一份`UsPawnPlaybackSession`。注册组合保留固定父条件与附加条件，自己的优先／形态／参数独立声明；直接调用注册key只执行该合同，失败不退裸字符串或其他动作。真正未注册字符串无需补注册，但仍受外部许可、scope、身份、同tick名额与同一硬截止约束。
 
 产品数值默认尚未冻结。本开发版本未选择整体策略时返回可读状态`PolicySelectionRequired`，零派发、零每Pawn候选初始化，不回旧链。开发模式菜单`S4AB-S5 GLOBAL candidate: W20 H40 I120 spread120 p1 N/speed1`一次性注入全局隔离候选；重复点同一工具不会清保护。也可显式调用：
 
@@ -597,13 +597,13 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 `AudioCandidate`与请求保留完整动作、条目、包、实际供音域／来源层、AudioId、主体角色及请求域。普通新声明、旧包变体、精确PackFallback及最终表均有自己的来源身份。局部调制复制已选上下文，不用AudioId倒猜条目；回执和诊断交还原owner，不重新抽选。
 
-### Select 的当前适配和未决资格
+### Select 的当前适配和已裁资格
 
-当前观察`Selector.SelectInternal`内实际`PlaySelectionSoundFor`的最终主体，返回后核`IsSelected`。代理递归、无反馈、失败提交和异常清理分别处理；没有US自建的重复去重状态。RimSage方法体依据为1.6.4850，目标1.6.4871引用编译可用；精确目标方法体／原生仍待核。完整事实边界见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。
+当前观察`Selector.SelectInternal`内实际`PlaySelectionSoundFor`的最终主体，返回后核`IsSelected`。代理递归、无反馈、失败提交和异常清理分别处理；没有US自建的重复去重状态。继承RimSage方法体为1.6.4850；本次另核指定安装的1.6.4871 rev591两方法体，目标API引用编译和实际原生挂接分别记录。完整事实边界见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。
 
 两个观察目标共用缓存readiness与Prepare；任一缺失则两patch均跳过，只停用Select观察能力，一次具名记录缺失目标。SelectEvent为带SelectObservationUnavailable原因的Unknown，直接通知不能伪造接受事实；依赖该实现的来源贡献暂停，无关合同仍运行。缺目标替身与两目标存在路径分别实证，详见[事实记录](us-kernel-0.6-fact-adapters-zh.md)。
 
-官方Pawn资格仍须用户决定。隔离开发输入`UsDevelopmentPolicy`最后一个可选参数为`UsSelectPawnQualification`：省略`Unselected`会解释性拒绝官方Select；测试可明确选`Unrestricted`或`ResponsivePlayerControlled`，不写Config、不作为普通默认。这不改变已定的通用Select定义，也不替全部15包决定资格或发行节奏。
+用户已裁定官方Pawn Select默认玩家可控 AND 清醒 AND 未倒地；落实为`selectRequirePlayerControlled`、`selectRequireAwake`、`selectRequireNotDowned`三个独立bool?公开字段，包装缺省各true。null是缺失继承，false只放宽本项，不连带其他两项；玩家Pawn服务／Race／合法Xeno逐字段覆盖全部作者贡献。临时Unselected枚举已删除，现有设置下拉／Help及保存／Reset入口见§23；整体Dev激活门保留，其余发行节奏不随本默认项关闭。
 
 ## 22 D-B 有效配置与Eat当前入口
 
@@ -614,12 +614,12 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 三类控制分开：
 
 - **system**：声音服务模式、system总音量G、活动A、距离及彩蛋总许可等原全局控制。域enabled不能重开Disabled；局部音量不能抵消G=0。已派发声音保留L，在原生实例更新按L×当前G一次输出；0音量不改四结果结算为失败。
-- **服务对象profile**：Pawn的空Race／空Xeno动作行；NonPawn则为自己的Namespace＋空Target行。不是system，不互相继承。NonPawn不接收Pawn的Scope、Talking、Age/Mood或Eat字段。
+- **服务对象profile**：Pawn的空Race／空Xeno动作行；NonPawn则为自己的Namespace＋空Target行。不是system，不互相继承。NonPawn不接收Pawn的Scope、Talking、Age/Mood、Eat或Select资格字段。
 - **准确域覆盖**：Pawn Race／合法Xeno；NonPawn自己的Namespace＋Target。同名Target位于两个Namespace仍是两份配置。
 
 字段按“包装缺省 → 选中主域作者 → 选中合法子域作者 → 玩家服务对象profile → 玩家主域 → 玩家合法子域”稀疏折叠；所有作者先于玩家，最终才补缺省。false、0是贡献，不是继承。完整ActionId是身份，父固定条件继承不复制父参数。未配置的可选能力不成为依赖；非法显式值暂停相应配置，不修成默认。固定条件必需事实仍在依赖集中，不能由Whole参数抹掉固定Execution限制。
 
-玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，旧键只在边界规范成完整内置键。
+玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，旧键只在边界规范成完整内置键。
 
 `UniversalSqueakerMod.TryChangeBehaviorOverride(family, namespace, target, child, fullActionId, values, out failure)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率／预设来源字段仍保留给原调用方。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
 
@@ -657,4 +657,43 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 中性`IngestionResultFact`携Ingester／Item／ItemDef／Nutrition，进入本次FactSnapshot、ResponseContext.Ingestion及PlaybackRequest.Ingestion；不传Pawn／Thing，不缓存成下一机会事件。事实、角色、版本与反例见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。缺执行接缝按成组readiness局部隔离，Whole／无关能力保留；不会用全局PatchAll catch藏故障。
 
-本切片证据为生产纯源／真实loader、生产settings/ExposeData/原子文件与Scribe替身往返、真实Harmony＋明确平台double，以及实际Source/Host绑定／布局。目标引用1.6.4871；本轮直接方法体来源1.6.4850，继承4871记录另列。真实游戏Config、原生方法体／挂接／音频和屏幕听感仍待授权与人工；全部15包人审pending，其余12包D-C不在本交付内。
+本切片证据为生产纯源／真实loader、生产settings/ExposeData/原子文件与Scribe替身往返、真实Harmony＋明确平台double，以及实际Source/Host绑定／布局。目标引用1.6.4871；继承远端4850与本次指定安装4871 rev591的定点方法体分别记录。真实游戏Config／挂接／音频和屏幕听感未跑；全部15包合同人审／成果人验pending。D-C全15导读和事实见§23，不拿其中一个共同通过替代每包覆盖。
+
+## 23 D-C 十五包、Select资格与明确事实边界
+
+先用[逐包导读](us-kernel-0.6-contract-review-zh.md)选择要审阅的实际效果，再用[事实登记](us-kernel-0.6-fact-adapters-zh.md)核主体、版本／方法／Def、阶段、False／Unknown／缺实现及正反fixture。官方库存恰15：Select、Wounded、Death、Attack、Move、Equip、Call、Eat、Sleep、Social、Joy、Work、Draft、Undraft、MentalBreak；每包都沿现有同一owner，不增加轮询或第二引擎。
+
+### 调整Select的一项资格，不改另外两项
+
+官方Pawn Select三项默认true。作者来源的当前schema例如：
+
+```xml
+<action key="us.core/Select" selectRequirePlayerControlled="true"
+        selectRequireAwake="false" selectRequireNotDowned="true" />
+```
+
+这里只放宽清醒要求，玩家控制／未倒地仍要求。省略字段继承；显式false有值，不表示继承。包装缺省只补`us.core/Select`，父合同参数不自动复制到子合同；[SelectQualifications.xml](examples/0.6/SelectQualifications.xml)展示继承固定接受条件的子包如何自行选择三资格，以及没有自动Pawn门的独立根。三项字段只用于显式引用SelectEvent的Pawn合同；不适用的合同报SelectParametersRequireSelectionContract，NonPawn拒绝这些字段。它们不删除固定条件树中的任何接受、反馈、最终主体证据。
+
+| 字段／值 | 必需事实／Unknown | 设置与恢复 |
+| --- | --- | --- |
+| selectRequirePlayerControlled=true | us.core/PlayerControlled必须True | 可在Pawn服务／Race／合法Xeno逐项改；false不取消另外两项 |
+| selectRequireAwake=true | us.core/Awake必须True，health缺失Unknown | Awake按4871原生可清醒能力和实际driver.asleep，不以躺床替代 |
+| selectRequireNotDowned=true | us.core/NotDowned必须True，health缺失Unknown | 单项继承仅清该层presence，所选false不要求该可选实现 |
+
+现有调音页沿当前层显示三个下拉及Help；不完整Race/Xeno目标不回落写服务profile。`ActionTuningRecord`每字段独立has/value，ExposeData／clone／清理都保留缺失与false差别。生产Settings完整原子保存／重开与序列化失败恢复使用既有事务；队列保存失败保脏态／重试。Basics清服务profile三项，准确动作行／层Reset清对应玩家字段，保作者来源和last-good快照。公开程序入口仍为`UniversalSqueakerMod.TryChangeBehaviorOverride`，`BehaviorValues.SelectRequirePlayerControlled/SelectRequireAwake/SelectRequireNotDowned`各为bool?。
+
+### 每包当前支持什么，必须在实际调用中成立
+
+- Wounded是受损Pawn的PostApplyDamage正常返回，0不自动变正伤；当前伤口另读。Death是Kill进入前，不是死亡完成或任意Destroy。Equip是tracker正常加入且实际成员关系，装备者与物品不换位；PlayerCoreEquip另为显式Dev回应资格候选。
+- Attack显式Dev支持近战成对scope＋实际挥击marker、投射物、已核束流／喷射、点火和明确轰击启动；false近战须有marker才算，早退不算，执行不保证命中。工具／跳跃／支援部署／任意生成等排除／待扩展逐机制在导读列出，正式覆盖pending。整体Dev不激活就不采用该支持集为普通产品行为。
+- Call取正向IsIdle＋Wait/Wait_Wander＋自身未动，不作兜底；Sleep用driver.asleep；Move用自己的pather.Moving。Social有明确kind／准确Def过程支持集，Joy取明确joyKind，两者可同真交同owner；不按名称片段或非工作猜测。Social Goto Def的当前Core内容缺口在事实页明示。
+- Work七对Def/driver及当前同Pawn／Job／CurToil是明确开发过程覆盖，包括准备Toils，不凭workGiver标签或名字称所有工作；命令来源是另一个回应scope。实际Comp已解析scope也进入同一捕获配置视图，避免把资格留在视图之外。继承子完整键消费真实当前命令，而非只识别内置Work尾名。
+- Draft／Undraft只认原玩家gizmo正常执行后的真实状态方向；MentalBreak用基类及三个已核直达override的正向成功来源，Humanity包装只观察base一次，不把任意MentalState当崩溃。扩围是显式Dev候选，逐目标readiness和具名诊断，不吞全局PatchAll异常。
+
+[OfficialFifteen.xml](examples/0.6/OfficialFifteen.xml)给每包完整ActionId和直接Core Click音频映射，不选行为来源、不激活Dev、不给发行总序／频率。真实语音包替换自己的SoundDef；US不复制SR音频。所选合同显式携带主体角色；喂食与Sleep重叠时，Sleep仍Sleeper、Eat才ActualIngester，直接AudioId复用不抹条目／包／供音域。
+
+### 退役与证据边界
+
+官方Crying/Giggling、专属MentalFit通知／patch／日志事件／开关和无消费者残余已经删除；不保旧数值enum槽，不改原版婴儿声音／状态，不禁这些Pawn的其他合同。独立作者仍可注册自己的正向合同，甚至使用独立命名空间的同名尾部；没有全局类型／名字黑名单。冻结17字符串历史语料只服务旧路由不变性，活跃官方枚举／目录／metadata及覆盖分母均15。
+
+指定安装程序集已核到1.6.4871 rev591；公开正文只给身份、符号和结论，反编译原文不分发。4871定点源码、目标引用编译、生产纯源、真实Harmony＋平台double、Scribe替身往返、原生游戏／听感各自成立，不能互相替代。当前全部15包技术纵切与人审入口已具备；合同人审／成果人验仍逐包pending，普通政策／覆盖范围和首次来源选择由PM用户处理。FL仍固定0.7，0.8消费另行接续，不在本节混改。

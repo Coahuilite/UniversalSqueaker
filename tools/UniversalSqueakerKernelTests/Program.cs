@@ -10,7 +10,7 @@ namespace UniversalSqueaker.KernelTests;
 /// <summary>
 /// US 内核验证门：
 /// 1) 单测：语义规范逐条断言（UnitTests）。
-/// 2) 正常运行：设置全项矩阵（场景 × mode × 域 × 17 action × 彩蛋开关 × 多种子 × gate 面）生成确定性
+/// 2) 正常运行：冻结的历史路由输入矩阵（不是当前官方包装目录）生成确定性
 ///    输入→期望 ChainResult 字节，并在写入前与提交的 US 0.1.0 冻结基线比较。
 ///    重建该基线只有显式 <c>--update-corpus</c> 维护模式；<c>--emit-corpus &lt;path&gt;</c> 写调用方显式给定的那个路径，
 ///    不隐式选择默认基线，两写法互斥（把默认基线路径显式交给 emit 时，该路径同样会被写入）。
@@ -68,7 +68,7 @@ internal static class Program
         string corpusDir = Path.Combine(FindRepositoryRoot(), "tools", "UniversalSqueakerKernelTests", "fixtures", "corpus");
         string corpusPath = Path.Combine(corpusDir, CorpusFileName);
 
-        Console.WriteLine("Golden corpus generation (17 actions + egg dimension + two-race)...");
+        Console.WriteLine("Golden corpus generation (frozen string-key inputs, not the official package inventory)...");
         string corpus;
         try
         {
@@ -157,16 +157,13 @@ internal static class Program
 
     private static void AppendScenarioCases(StringBuilder sb, string scenario, SqueakPoolRegistry registry, AudioDomain[] domains)
     {
-        int actionCount = ActionKeyMirror.Count;
         bool[] eggFlags = new[] { false, true };
         foreach (SelectionMode mode in new[] { SelectionMode.Off, SelectionMode.Fallback, SelectionMode.Remix })
         {
             foreach (AudioDomain domain in domains)
             {
-                for (int actionIndex = 0; actionIndex < actionCount; actionIndex++)
+                foreach (string actionKey in Scenarios.FrozenRoutingKeys)
                 {
-                    SqueakAction action = (SqueakAction)actionIndex;
-                    string actionKey = ActionKey.For(action)!;
                     foreach (bool allowEggs in eggFlags)
                     {
                         foreach (long seed in Seeds)

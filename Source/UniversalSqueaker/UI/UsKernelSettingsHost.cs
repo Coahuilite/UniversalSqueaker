@@ -562,13 +562,17 @@ public static class UsKernelSettingsHost
         writes.Value<bool>("scale-population", () => source.BuildView().ScalePeriodicWithAudiblePopulation, value => { source.SetBasicToggle(SqueakBasicToggle.ScalePopulation, value); bump(); });
         writes.Value<bool>("camera-indicator", () => source.BuildView().ShowCameraIndicator, value => { source.SetCameraIndicator(value); bump(); });
 
-        writes.Value<bool>("allow-baby-actions", () => source.BuildView().AllowBabyActions, value => { source.SetBabyActions(value); bump(); });
         writes.Value<string>("eat-phase", () => source.BuildView().EatPhase.ToString(), value => { source.SetEatParameter("phase", value); bump(); });
         writes.Value<string>("eat-nutrition", () => source.BuildView().EatNutritionScope.ToString(), value => { source.SetEatParameter("nutritionScope", value); bump(); });
         writes.Value<string>("eat-drug", () => source.BuildView().EatDrugScope.ToString(), value => { source.SetEatParameter("drugScope", value); bump(); });
         bindings.BindOptions<UiOption>("eat-phase-options", () => EatOptions(typeof(EatPhase)));
         bindings.BindOptions<UiOption>("eat-nutrition-options", () => EatOptions(typeof(EatNutritionScope)));
         bindings.BindOptions<UiOption>("eat-drug-options", () => EatOptions(typeof(EatDrugScope)));
+        writes.Value<string>("select-player-controlled", () => source.BuildView().SelectRequirePlayerControlled?.ToString() ?? "", value => { source.SetSelectParameter("playerControlled", value); bump(); });
+        writes.Value<string>("select-awake", () => source.BuildView().SelectRequireAwake?.ToString() ?? "", value => { source.SetSelectParameter("awake", value); bump(); });
+        writes.Value<string>("select-not-downed", () => source.BuildView().SelectRequireNotDowned?.ToString() ?? "", value => { source.SetSelectParameter("notDowned", value); bump(); });
+        bindings.BindOptions<UiOption>("select-qualification-options", () => new[] {
+            new UiOption("US.Select.Inherit".Translate(), ""), new UiOption("US.Select.Required".Translate(), "True"), new UiOption("US.Select.NotRequired".Translate(), "False") });
         // Timing: global interval floor + cooldown multiplier (cheap runtime statics, display writes).
         // S4-3 dissolved us/timing into manifest atoms. The interval is ONE value in two units, so the
         // declarative card keeps the same split the global-volume card uses: the slider atom owns the

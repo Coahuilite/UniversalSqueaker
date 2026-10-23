@@ -15,6 +15,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionModel.cs" Link="Production/SqueakActionModel.cs" />
+    <Compile Include="../../Source/UniversalSqueaker/Runtime/SqueakActionConfig.cs" Link="Production/SqueakActionConfig.cs" />
     <!-- Settings migration / baseline import harness.
          Production Settings files reference runtime/UI/catalog types; those are provided by
          Stubs/UniversalSqueakerStubs.cs (test-side shims only, never product code). -->

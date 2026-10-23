@@ -43,7 +43,7 @@ internal static class UsSelectObservation
 }
 
 /// <summary>Observe the resolved feedback recipient, then verify the selector's committed membership.
-/// Source basis: RimSage 1.6.4850 SelectInternal/PlaySelectionSoundFor; target API compiled against 1.6.4871.
+/// Source basis: installed 1.6.4871 SelectInternal/PlaySelectionSoundFor, cross-checked with RimSage 1.6.4850.
 /// No independent duplicate-selection policy: only actual upstream feedback is consumed.</summary>
 [HarmonyPatch]
 public static class Patch_Selector_Select

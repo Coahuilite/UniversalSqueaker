@@ -3,15 +3,10 @@ namespace UniversalSqueaker;
 // 适配层产品元数据（0.3.1 波 4a 结构：SqueakActionPlan/SqueakTriggerInvocation/SqueakActionDefinition
 // 等纯类型位于 Pure/，本文件只保留 US 动作常量与绑定 SqueakActionConfig 的工厂，不入内核编译单元）。
 
-/// <summary>Single source for the 17 built-in actions and their US_ SoundDef keys.
-/// Crying/Giggling AudioKeys point at SoundDefs that a VoicePack may declare (GetNamedSilentFail
-/// degrades silently when absent); the built-in fallback table is data-driven and carries no seed.</summary>
+/// <summary>Single source for the fifteen official actions and their US_ SoundDef keys.</summary>
 public static class SqueakActionDefinitions
 {
-    public const int Count = 17;
-    public static bool IsEligible(SqueakAction action, bool includeBabyActions) => IsKnown(action)
-        && SqueakActionEligibility.IsEligible(action, includeBabyActions);
-    public static int EligibleCount(bool includeBabyActions) => includeBabyActions ? Count : Count - 2;
+    public const int Count = 15;
     private static readonly SqueakActionDefinition[] definitions =
     {
         new(SqueakAction.Call, "US.Action.Call", "US_Call", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),
@@ -29,8 +24,6 @@ public static class SqueakActionDefinitions
         new(SqueakAction.Work, "US.Action.Work", "US_Work", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence | SqueakActionScopeSupport.ActiveCommand, SqueakActionScope.ActiveCommand),
         new(SqueakAction.Equip, "US.Action.Equip", "US_Equip", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.ActiveCommand, SqueakActionScope.ActiveCommand),
         new(SqueakAction.MentalBreak, "US.Action.MentalBreak", "US_MentalBreak", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),
-        new(SqueakAction.Crying, "US.Action.Crying", "US_Crying", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),
-        new(SqueakAction.Giggling, "US.Action.Giggling", "US_Giggling", SqueakVocalGatePolicy.ApplyTalkingGate, SqueakActionScopeSupport.AnyOccurrence, SqueakActionScope.AnyOccurrence),
     };
     public static SqueakActionDefinition Get(SqueakAction action) => definitions[(int)action];
     public static bool IsKnown(SqueakAction action) => (uint)action < Count;

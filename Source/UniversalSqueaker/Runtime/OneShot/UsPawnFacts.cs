@@ -13,22 +13,34 @@ namespace UniversalSqueaker;
 internal static class UsPawnFacts
 {
     internal static FactSnapshot CaptureSnapshot(AuthorCatalog catalog, Pawn pawn, string? eventKey)
-        => catalog.Capture(pawn.ThingID, Capture(pawn, eventKey), UsSelectObservation.Diagnostics.Concat(UsIngestionObservation.Diagnostics));
+    {
+        var facts = Capture(pawn, eventKey, out var diagnostics);
+        return catalog.Capture(pawn.ThingID, facts, diagnostics);
+    }
 
     internal static Dictionary<string, Truth> Capture(Pawn pawn, string? eventKey)
+        => Capture(pawn, eventKey, out _);
+
+    internal static Dictionary<string, Truth> Capture(Pawn pawn, string? eventKey, out IReadOnlyList<FactDiagnostic> diagnostics)
     {
         var result = new Dictionary<string, Truth>(StringComparer.Ordinal);
         foreach (string key in BuiltInPawnContracts.CandidateOrder)
         {
             result[BuiltInPawnContracts.FactKey(key)] = BuiltInPawnContracts.IsEvent(key) ? Yes("us.core/" + key == eventKey) : Truth.Unknown;
+            if (!UsPawnEventObservation.Available(BuiltInPawnContracts.FactKey(key))) result[BuiltInPawnContracts.FactKey(key)] = Truth.Unknown;
         }
         // No complete observer means missing implementation, not evidence of an accepted selection.
         if (!UsSelectObservation.Ready) result[UsSelectObservation.FactKey] = Truth.Unknown;
+        if (!UsAttackObservation.Ready) result["us.core/AttackEvent"] = Truth.Unknown;
         var job = pawn.CurJob;
         var driver = pawn.jobs?.curDriver;
         result["us.core/SleepState"] = driver == null ? Truth.Unknown : Yes(driver.asleep);
         result["us.core/MoveState"] = pawn.pather == null ? Truth.Unknown : Yes(pawn.pather.Moving);
-        result["us.core/WorkState"] = Yes(job?.workGiverDef != null);
+        result["us.core/WorkState"] = UsWorkObservation.Capture(pawn, out var workDiagnostic);
+        var capturedDiagnostics = UsSelectObservation.Diagnostics.Concat(UsIngestionObservation.Diagnostics)
+            .Concat(UsAttackObservation.Diagnostics).Concat(UsPawnEventObservation.Diagnostics).ToList();
+        if (workDiagnostic.HasValue) capturedDiagnostics.Add(workDiagnostic.Value);
+        diagnostics = capturedDiagnostics.AsReadOnly();
         result["us.core/JoyState"] = Yes(job?.def?.joyKind != null);
         string name = job?.def?.defName ?? "";
         result["us.core/SocialState"] = Yes(job?.def?.joyKind == JoyKindDefOf.Social
@@ -40,6 +52,9 @@ internal static class UsPawnFacts
         result[EatPolicy.Result] = UsIngestionObservation.Ingested == null ? Truth.Unknown : Yes(eventKey == EatPolicy.Result);
         result["us.core/ActiveCommand"] = Yes(job?.playerForced == true && pawn.IsPlayerControlled);
         result["us.core/PlayerControlled"] = Yes(pawn.IsPlayerControlled);
+        result["us.core/Awake"] = pawn.health == null ? Truth.Unknown : Yes(pawn.Awake());
+        result["us.core/NotDowned"] = pawn.health == null ? Truth.Unknown : Yes(!pawn.Downed);
+        result["us.core/PlayerEquipCommand"] = Yes(pawn.IsPlayerControlled && job?.playerForced == true && job.def == JobDefOf.Equip);
         result["us.core/Responsive"] = pawn.health == null ? Truth.Unknown : Yes(!pawn.Downed && pawn.Awake());
         result["us.core/HasCurrentInjury"] = pawn.health?.hediffSet == null ? Truth.Unknown
             : Yes(pawn.health.hediffSet.hediffs.OfType<Hediff_Injury>().Any(x => x.Severity > 0));

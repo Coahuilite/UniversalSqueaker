@@ -110,12 +110,6 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         settings.SetAllowEasterEggSounds(value);
     }
 
-    public void SetBabyActions(bool value)
-    {
-        settings.SetAllowBabyActions(value);
-        cachedView = null;
-    }
-
     public void SetEatParameter(string key, string value)
     {
         Type type = key == "phase" ? typeof(EatPhase) : key == "nutritionScope" ? typeof(EatNutritionScope) : typeof(EatDrugScope);
@@ -127,6 +121,15 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
     public void SetGlobalMinIntervalTicks(int ticks)
     {
         settings.SetGlobalMinIntervalTicks(ticks);
+    }
+
+    public void SetSelectParameter(string key, string value)
+    {
+        if (!CanResetTuningArea()) return; // An incomplete Race/Xeno selection never falls back to the Pawn profile.
+        settings.SetSelectParameter(key, value == "" ? null : bool.Parse(value),
+            state.TuningLayer == 0 ? "" : state.TuningRaceDefName,
+            state.TuningLayer == 2 ? state.TuningXenotypeDefName : "");
+        cachedView = null;
     }
 
     public void SetGlobalCooldownMultiplier(float value)

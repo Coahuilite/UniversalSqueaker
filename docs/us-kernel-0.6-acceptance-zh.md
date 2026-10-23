@@ -1,8 +1,8 @@
 # 0.6.x 合同—验收与切片
 
-D-B当前候选已接入完整有效配置与Eat生产纵切；D-A身份与Select技术输入保持。本页将技术证据、合同人工审阅、成果人工验收分开，其余12包及全部15包收尾仍为D-C。
+D-C当前候选已扩齐全部15包、专属响应退役和已裁Select三项可调默认，保D-A/B同owner及结果消费者边界。技术证据、合同人工审阅、成果人工验收分别记录；普通范围／政策及原生仍有具名关口。
 
-本页是[唯一规格 r9](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
+本页是[唯一规格 r11](us-kernel-0.6-spec-zh.md)的验收附页。历史 S1–S5 固定输入保留其接受范围；新合同不因旧结果自动合格。持续四结果已采用，发行数值与资格待决另列，测试输入不作为产品默认。
 
 ## 核心只消费中性事实
 
@@ -27,7 +27,7 @@ C00（已定，主规格§2）：纯合同、决策、选音和参数合成只�
 | C11 输出归属（已定边界，机制候选D5，§10/11） | 同SoundDef的US/非US同播；总音量1→0→0.5 | 只改US实例贡献且可从0恢复，定义不变；禁止整份Def复制、共享写入或凭Pawn推断归属 | V14；S2/S5 |
 | C12 持续与生命周期（已定最小范围，§11/12） | 既有持续槽同键、异键、失效、离图与池复用 | 同键复用不刷新冷却；严格更高才可换；清自己订阅/句柄；禁止把概率未中当状态失效或停他方音 | V06/V15；S5 |
 
-完整首版必须覆盖§4.3的15包及各自全部合同；当前实现的17项迁移状态不等同目标。Crying/Giggling专属响应在D-C移除，不改原版声音／状态。首三包是审阅顺序，不删减其余12包。
+完整首版必须覆盖§4.3的15包及各自全部合同；当前官方库存已为15；历史17字符串测试输入不作当前库存。Crying/Giggling专属响应已在D-C移除，不改原版声音／状态。首三包是审阅顺序，不删减其余12包。
 
 ## S1 固定输入与期望转移（已采用OneShot范围）
 
@@ -89,28 +89,31 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 
 这些是纯层或明确平台替身+真实Harmony证据。V08/V12/V14/V15涉及目标1.6实际加载、Config重开、Unity输出和听感的部分仍待获准环境观察；完整产品默认/首次唯一来源采用及全17总排序未因此冻结。技术结果、固定源码/Dev身份和未运行项以本轮原作者报告为准，不把Dispatched解释为已听见。
 
-## D-A 候选与逐包人工关口（2026-10-23）
+## D-C 当前候选与逐包人工关口（2026-10-23）
 
-[首批完整导读](us-kernel-0.6-contract-review-zh.md)覆盖每包全部组成合同、参数、角色／范围、阶段／结果、资格、节奏竞争、供音／调制、两形态、Unknown／恢复、扩展及实际证据；[事实记录](us-kernel-0.6-fact-adapters-zh.md)先交实际Eat依据。SR实际基线和差异已关联导读。
+[全部15包完整导读](us-kernel-0.6-contract-review-zh.md)覆盖每包全部组成合同、参数、角色／范围、阶段／结果、资格、节奏竞争、供音／调制、两形态、Unknown／恢复、扩展及实际证据；[事实记录](us-kernel-0.6-fact-adapters-zh.md)登记全部15包、精确4871及跨版本缺口。SR实际基线和差异已关联导读。
 
 | 包装 | 合同修订／SR对照 | 当前成果／证据 | 合同人审 | 成果人验 | 未决／下一责任 |
 | --- | --- | --- | --- | --- | --- |
-| Select | 主规格r10／导读r6／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
-| Eat | r10／导读r6／SR tag v0.3.4-tagfix1 | D-B有效配置／阶段／角色／结果／持续退出已接入生产链；明确平台替身，见下节 | pending | pending | 目标4871方法体／原生与成果人验待核；Whole/Any/Any已定 |
-| Attack | r10／导读r6／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
-| Wounded | r8目标／SR对照待扩齐 | 完整合同与受损处理证据待D-C | pending | pending | US后续包 |
-| Death | r8目标／SR对照待扩齐 | Kill阶段与资格完整材料待D-C | pending | pending | US后续包 |
-| Move | r8目标／SR对照待扩齐 | 自身移动与来源政策完整材料待D-C | pending | pending | US后续包 |
-| Equip | r8目标／SR对照待扩齐 | 关系角色与旧玩家Job边界待D-C | pending | pending | US后续包/PM范围判断 |
-| Call | r8目标／SR对照待扩齐 | 已有正向闲置基础，完整材料待D-C | pending | pending | US后续包 |
-| Sleep | r8目标／SR对照待扩齐 | 已有asleep基础，完整材料待D-C | pending | pending | US后续包 |
-| Social | r8目标／SR对照待扩齐 | 准确机制覆盖材料待D-C | pending | pending | US后续包 |
-| Joy | r8目标／SR对照待扩齐 | 与Social重叠的完整材料待D-C | pending | pending | US后续包 |
-| Work | r8目标／SR对照待扩齐 | 来源/阶段/scope完整材料待D-C | pending | pending | US后续包 |
-| Draft | r8目标／SR对照待扩齐 | 玩家状态变化完整材料待D-C | pending | pending | US后续包 |
-| Undraft | r8目标／SR对照待扩齐 | 玩家状态变化方向完整材料待D-C | pending | pending | US后续包 |
-| MentalBreak | r8目标／SR对照待扩齐 | 正向崩溃来源/持续依据完整材料待D-C | pending | pending | US后续包 |
+| Select | 规格r11／导读r8／事实r5；SR实际三资格已转显式默认 | 实际选择76、保D-A代理／扩展65；配置三层／false／缺失／保存／失败恢复／Reset，设置Host独立三项 | pending | pending | 三默认已裁；完整合同／成果、原生与听感仍待人审 |
+| Eat | r11／r8／r5；Whole/Any/Any已定 | 生产摄入127、结果消费者68；准备／执行／feed／非A索引／0结果与两形态，缺Chew局部隔离 | pending | pending | 原生挂接、物品场景／听感；不重开已定三轴 |
+| Attack | r11／r8／r5；SR旧扫描差异逐机制 | 显式Dev执行根、近战成对marker、包装单通知；早退false／挥击false、异常、工具排除、未激活门、异主体owner | pending | pending | PM用户裁支持／排除范围及普通资格；原生／听感 |
+| Wounded | r11／r8／r5；SR受损通知原义 | PostApplyDamage正常0／正返回与throw；真实缺目标隔离、受损者域／角色；不伪称正伤害或当前伤口 | pending | pending | 普通回应政策、连伤密度／原生听感 |
+| Death | r11／r8／r5；SR Kill prefix阶段明确 | 实际请求先于Kill体、DyingSubject；离图清理，不称死亡完成／任意Destroy | pending | pending | 临终位置／致死Wounded先后／器官与关键例外、原生 |
+| Move | r11／r8／r5；SR自身pather | 自身Moving正向、未动／被动搬运不伪造；准确条目／角色，Sustained失效释放 | pending | pending | 竞争／普通资格与停止后尾音、人审原生 |
+| Equip | r11／r8／r5；旧Core Job门转显式候选 | 原tracker正常关系及真实物品；未选资格具名拒绝，PlayerCoreEquip候选、失败／异常／非成员反例 | pending | pending | PM用户裁玩家Core／自动／加载范围，服装／卸下非此合同 |
+| Call | r11／r8／r5；由SR兜底改正向闲置 | Wait/Wait_Wander、IsIdle、原地等待；Wait_Combat／未知Job不补Call，准确IdlePawn输出 | pending | pending | 已定正向合同不重批；密度／原生听感 |
+| Sleep | r11／r8／r5；由姿势改实际asleep | 睡／醒及被喂重叠，Sleep中选不误标ActualIngester；OneShot／持续依据分开 | pending | pending | 床／地面场景、密度及原生听感 |
+| Social | r11／r8／r5；准确kind／Def过程不片段扫描 | 明确过程、未知名称反例、与Joy同真；当前支持包含准备，不称互动成功 | pending | pending | Goto Def仍4850依据、当前Core无该内容；PM裁范围及重叠体验 |
+| Joy | r11／r8／r5；joyKind正向声明 | Social kind与Joy同真，非Social kind实际Joy中选；准确参与者域，不称Joy gain | pending | pending | 全过程／准备体验、正式排序与原生 |
+| Work | r11／r8／r5；七准确Def/driver过程 | 七对各正反、无Toil／错driver／workGiver反例，继承子命令scope和独立配置／保护 | pending | pending | PM裁七过程范围及ActiveCommand候选，搬运重叠／原生 |
+| Draft | r11／r8／r5；实际玩家gizmo方向 | false→true实际通知、准确DraftedPawn；重复包装／setter／无变化不造事件 | pending | pending | 与Select及批量命令密度、关键保护／原生 |
+| Undraft | r11／r8／r5；独立反向身份 | true→false独立请求／条目／角色，禁Draft不折叠本包；无变化反例 | pending | pending | 快速往返／旧Draft尾／批量密度；本包独立人验 |
+| MentalBreak | r11／r8／r5；不复制SR任意精神状态调制 | 基类＋三直达override成功、Humanity base一次、false／throw不发布；更新后216候选fixture | pending | pending | PM裁新增直达支持范围／关键例外，原生与听感 |
 
+十五包原生通知／状态请求共用DcNativeTests216项候选fixture，但每包正反事实分别建立。Crying/Giggling专属响应已退役；compiled product metadata、真实15库存、持久字段／Help／UI与独立同名根各有不同证据，不只看字符串为零。所有行沿SR实际0.3.4/tag v0.3.4-tagfix1源码对照，结论已在导读自足说明。
+
+### 历史D-A/B技术输入（保留原候选范围）
 D-A针对独立根/多级图/别名只读、完整动作配置/恢复/冷却、普通Select和受伤扩展真实调用、Ratkin/Kiiro/合法Xeno/两NonPawn、所有来源层条目/域及AudioId复用。纯层不带平台stub；适配测试的Selector/音频及原生保存调度为明确替身，生产观察/设置解析/session/决策/后端直接编译原文件。原生／听感不由替身关闭。
 
 本轮初始Framework输出加载受路径区域判定影响；经维护者授权复制完整测试输出到MyComputer区域后已进入并修复真实断言。当前OneShot纯生产源943项、Select定向63项、普通适配141项及独立失败观察3项已执行；生产settings/ExposeData/原子文件与Scribe替身往返、恢复／准确子行Reset亦已执行，原生Scribe及真实游戏Config未验。原日志命名冲突与误投递模式保留为证据缺陷，不计目标通过。原生／听感与逐包人审仍pending，全部23门未整批重跑。

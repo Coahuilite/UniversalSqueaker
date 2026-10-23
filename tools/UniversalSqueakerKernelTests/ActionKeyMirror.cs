@@ -5,8 +5,8 @@ using UniversalSqueaker;
 namespace UniversalSqueaker.KernelTests;
 
 /// <summary>
-/// 17 动作名镜像（= enum 名序 = BuiltInActionKeys 序）。
-/// BuiltInCount = 15：只有内置 fallback 映射的动作数（Crying/Giggling 无内置 SoundDef = 默认静默）。
+/// 15 动作名镜像（= enum 名序 = BuiltInActionKeys 序）。
+/// BuiltInCount = 15：只有内置 fallback 映射的动作数。
 /// 声音键是测试数据：内核不携带任何产品声音键；产品种子由适配层从数据文件注入。
 /// </summary>
 internal static class ActionKeyMirror
@@ -28,17 +28,15 @@ internal static class ActionKeyMirror
         "Work",
         "Equip",
         "MentalBreak",
-        "Crying",
-        "Giggling",
     };
 
     public static IReadOnlyList<string> All => Array.AsReadOnly(actionNames);
 
-    /// <summary>17 = 全动作镜像。</summary>
+    /// <summary>15 = 全动作镜像。</summary>
     public static int Count => actionNames.Length;
 
     /// <summary>15 = 有内置 SoundDef 映射的动作数；内置表只播种这些项。</summary>
-    public static int BuiltInCount => actionNames.Length - 2;
+    public static int BuiltInCount => actionNames.Length;
 
     public static string For(SqueakAction action)
     {

@@ -97,7 +97,6 @@ public partial class UniversalSqueakerSettings
         if (!DistanceRangesEqual(distanceRange, defaults.distanceRange)) { distanceRange = defaults.distanceRange; changed = true; }
         if (allowEasterEggSounds != defaults.allowEasterEggSounds) { allowEasterEggSounds = defaults.allowEasterEggSounds; changed = true; }
         if (allowExternalActions != defaults.allowExternalActions) { allowExternalActions = defaults.allowExternalActions; changed = true; }
-        if (allowBabyActions != defaults.allowBabyActions) { allowBabyActions = defaults.allowBabyActions; changed = true; }
 #if US_EXPERIMENTAL
         // 构建变体诚实标注：该字段仅 Dev/EXP 构建存在，ship 构建的字段表天然不含它。
         if (experimentalKiiroCompat != defaults.experimentalKiiroCompat) { experimentalKiiroCompat = defaults.experimentalKiiroCompat; changed = true; }
@@ -285,24 +284,29 @@ public partial class UniversalSqueakerSettings
         bool talkingChanged = scaleFrequencyWithTalking != defaults.scaleFrequencyWithTalking;
         bool populationChanged = scalePeriodicWithAudiblePopulation != defaults.scalePeriodicWithAudiblePopulation;
         bool cameraChanged = showCameraIndicator != defaults.showCameraIndicator;
-        bool babyChanged = allowBabyActions != defaults.allowBabyActions;
         bool eatChanged = false;
+        bool selectChanged = false;
         foreach (var row in actionTuning)
         {
-            if (row.serviceFamily != "Pawn" || row.raceDefName != "" || row.xenotypeDefName != "" || Kernel.ActionKey.DefinitionId(row.actionKey) != "us.core/Eat") continue;
+            if (row.serviceFamily != "Pawn" || row.raceDefName != "" || row.xenotypeDefName != "") continue;
+            if (Kernel.ActionKey.DefinitionId(row.actionKey) == "us.core/Select")
+            {
+                selectChanged |= row.hasSelectRequirePlayerControlled || row.hasSelectRequireAwake || row.hasSelectRequireNotDowned;
+                row.hasSelectRequirePlayerControlled = row.hasSelectRequireAwake = row.hasSelectRequireNotDowned = false;
+            }
+            if (Kernel.ActionKey.DefinitionId(row.actionKey) != "us.core/Eat") continue;
             eatChanged |= row.hasEatPhase || row.hasNutritionScope || row.hasDrugScope;
             row.hasEatPhase = row.hasNutritionScope = row.hasDrugScope = false;
         }
         if (!eggsChanged && !cooldownChanged && !talkingChanged && !populationChanged
-            && !cameraChanged && !babyChanged && !eatChanged) return SqueakResetOutcome.NoChange;
+            && !cameraChanged && !eatChanged && !selectChanged) return SqueakResetOutcome.NoChange;
 
         allowEasterEggSounds = defaults.allowEasterEggSounds;
         scaleCooldownWithTimeSpeed = defaults.scaleCooldownWithTimeSpeed;
         scaleFrequencyWithTalking = GetDefaultScaleFrequencyWithTalking();
         scalePeriodicWithAudiblePopulation = defaults.scalePeriodicWithAudiblePopulation;
         showCameraIndicator = defaults.showCameraIndicator;
-        allowBabyActions = defaults.allowBabyActions;
-        // Basics clears only the Pawn service-profile Eat parameters; exact Race/Xeno rows remain owned by their layer restore.
+        // Basics clears only Pawn service-profile Eat/Select parameters; exact Race/Xeno rows retain their layer ownership.
 
         // 目标已形成；按各字段的既有通道一轮发布。
         if (cameraChanged) SqueakDebug.ShowCameraIndicator = showCameraIndicator;

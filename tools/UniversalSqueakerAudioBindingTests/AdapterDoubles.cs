@@ -349,7 +349,7 @@ namespace RimWorld
     public sealed class XenotypeDef : Verse.Def { }
     public sealed class JoyKindDef { }
     public static class JoyKindDefOf { public static readonly JoyKindDef Social = new(); }
-    public static class JobDefOf { public static readonly Verse.AI.JobDef Ingest = new() { defName = "Ingest" }; }
+    public static class JobDefOf { public static readonly Verse.AI.JobDef Ingest = new() { defName = "Ingest" }; public static readonly Verse.AI.JobDef Equip = new() { defName = "Equip" }; }
     public interface IEatingDriver { bool GainingNutritionNow { get; } }
 }
 namespace UniversalSqueaker
