@@ -75,6 +75,8 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
 
     private static bool UsesEat(Condition condition) => condition.Operation == "ref" && (condition.Fact == EatPolicy.Process || condition.Fact == EatPolicy.Execution)
         || condition.Children.Any(UsesEat);
+    internal static bool ConsumesIngestionResult(ActionPlan action)
+        => action.Condition.RequiredFacts().Contains(EatPolicy.Result, StringComparer.Ordinal);
     private static Condition EffectiveCondition(ActionPlan action, BehaviorValues behavior)
         => UsesEat(action.Condition) ? new Condition("all", "", action.Condition, EatConditions.Restriction(
             behavior.Phase ?? EatPhase.WholeProcess, behavior.NutritionScope ?? EatNutritionScope.Any, behavior.DrugScope ?? EatDrugScope.Any)) : action.Condition;
@@ -149,6 +151,13 @@ public sealed class UsPawnPlaybackSession : IOneShotBackend, IOneShotRandom
         }
         foreach (var action in catalog.Actions)
         {
+            // A completion notification is an opportunity for its explicit fixed-contract consumers,
+            // not an extra state opportunity for ordinary Eat (or another still-true state).
+            // RequiredFacts traverses the compiled tree, including inherited/nested conditions.
+            if (ingestionResult != null && !ConsumesIngestionResult(action))
+            {
+                continue;
+            }
             if (registeredAction != null && action.Key != registeredAction)
             {
                 continue;
@@ -610,6 +619,8 @@ public static class UsOneShotRuntime
     }
     internal static void IngestionResult(UsIngestionObservation.Result result)
     {
+        // No consumer means no decision, owner allocation, random draw or settlement.
+        if (!catalog.Actions.Any(UsPawnPlaybackSession.ConsumesIngestionResult)) return;
         SessionFor(result.Ingester)?.Tick(EatPolicy.Result, ingestionResult: result);
     }
     public static bool TryTick(Pawn pawn)

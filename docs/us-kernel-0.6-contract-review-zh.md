@@ -1,6 +1,6 @@
 # 首批合同导读：Select、Eat、Attack
 
-修订：2026-10-23，r5。供维护者带用户逐包审阅。D-B基于D-A最终26ce46b继续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
+修订：2026-10-23，r6。供维护者带用户逐包审阅。D-B基于D-A最终26ce46b继续；下面区分已定目标、当前候选和后续实施。合同人工审阅／成果人工验收均 **pending**。SR 对照版本为0.3.4，tag `v0.3.4-tagfix1`、commit `d06b607c7b1720bb3c32a28db3e57e989a61d434`；复核HEAD `b28f414b5b4cb40e772f29c6d964dec4eb56689e`与该tag的运行源码相同，仅文档不同。可按SR的 `CompSqueaker.IdentityGateAllows/TryTrigger/CurrentMood`、`Kernel/Modulation.ComposeModulation`、`Patches/Patch_Selector_Select.cs`、`Patches/Patch_Verb_Attack.cs` 和 `1.6/Patches/Ratkin_AddSqueakComp.xml`定位下文差异。结论在本文自足说明，不依赖私有工作区或复制SR资源。其余12包仍须相同完整关口，见[验收清单](us-kernel-0.6-acceptance-zh.md)。
 
 ## 先读共同规则，再逐包判断
 
@@ -67,6 +67,8 @@
 **正反例／Unknown：** p1走向饭：Whole可成立，Execution不成立；啤酒营养与药物均True，Any/Any纳入，营养＋排药排除；非营养药品仍有执行阶段。阶段未知不拓宽；仅营养筛选但属性未知则Unknown。中断不能造结果，喂食者a不借b的摄入声音。详细反例及测试状态在共享记录逐项列明。
 
 **机会／竞争／音源／调制：** 使用共同规则及同一 Eat 映射，精细模式不增加机会、不保证短阶段必播；Eat可与Move/Work/Joy重叠，事实不必互斥，由显式仲裁择一。营养／药物不自动决定素材或调制，作者选择声音适用范围；声音内容不是Kernel判据。
+
+**结果通知的消费者：** 普通Eat仍是状态合同，正常0或正营养返回不额外给它一次机会。只有编译后固定条件树显式引用IngestionResultEvent的合同（含嵌套／继承）进入该结果通知的同owner仲裁；独立AfterIngestion即使优先低于普通Eat也可响应，仍受自身及共享硬规则约束，失败不补位普通Eat。无结果消费者时不建owner、不改机会／保护或伪造回应。它修正的是结果接入越界，不改变Whole/Any/Any、阶段或尾音政策。
 
 **退出／清理：** OneShot 正常过程／阶段退出只停新起播，既有自然尾；Sustained Whole按全过程、Execution按实际执行依据失效结束并淡出。阶段复入不能把 Whole一律停掉。Unknown 复检结束自有槽；其余故障／来源恢复按共同规则。
 

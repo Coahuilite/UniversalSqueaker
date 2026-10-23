@@ -95,9 +95,9 @@ T01–T12保持原固定输入，不把候选默认写进基线。已批准的A�
 
 | 包装 | 合同修订／SR对照 | 当前成果／证据 | 合同人审 | 成果人验 | 未决／下一责任 |
 | --- | --- | --- | --- | --- | --- |
-| Select | 主规格r9／导读r5／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
-| Eat | r9／导读r5／SR tag v0.3.4-tagfix1 | D-B有效配置／阶段／角色／结果／持续退出已接入生产链；明确平台替身，见下节 | pending | pending | 目标4871方法体／原生与成果人验待核；Whole/Any/Any已定 |
-| Attack | r9／导读r5／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
+| Select | 主规格r10／导读r6／SR tag v0.3.4-tagfix1 | D-A完整身份与接受观察候选；DaContractTests、DaSelectCallerTests；Select定向63项、资格未选53项；纯目录／核心943项 | pending | pending | 官方Pawn资格由用户决定；精确1.6.4871接缝／原生待核 |
+| Eat | r10／导读r6／SR tag v0.3.4-tagfix1 | D-B有效配置／阶段／角色／结果／持续退出已接入生产链；明确平台替身，见下节 | pending | pending | 目标4871方法体／原生与成果人验待核；Whole/Any/Any已定 |
+| Attack | r10／导读r6／SR tag v0.3.4-tagfix1 | 执行≠命中目标已解释；当前机制覆盖待D-C | pending | pending | D-C逐机制证据，变化交PM |
 | Wounded | r8目标／SR对照待扩齐 | 完整合同与受损处理证据待D-C | pending | pending | US后续包 |
 | Death | r8目标／SR对照待扩齐 | Kill阶段与资格完整材料待D-C | pending | pending | US后续包 |
 | Move | r8目标／SR对照待扩齐 | 自身移动与来源政策完整材料待D-C | pending | pending | US后续包 |
@@ -124,8 +124,9 @@ D-A r2接缝修订补充：实际Harmony2.4.2在缺反馈目标时抛出TargetMe
 
 - DbEffectiveConfigTests及ModSaveCallerTests：完整字段存在性、false/0、作者Xeno先于玩家Pawn、精准Race/Xeno、两个NonPawn命名空间、系统关闭/G=0、不可变视图、非法显式值、真实Mod事务代次与失败回滚。来源缺A/B存在/同身份重连继续由相同Config套件检查。这里是生产settings/ExposeData/原子文件与Scribe替身往返，不是原生Scribe或真实游戏Config。
 - DbEatTests：准备／工厂未进入／原init异常、实际进入退出、四组合物品属性、0正常结果／无效物品提前返回、feed接收者、目标切换、同Job复入、同生产槽的Whole及Execution退出、OneShot自然尾边界、InjuredEat完整配置、独立AfterIngestion根及作者实际读取结果身份。平台Job/Toil/物品与原生音频明确为double。
+- DbResultRoutingTests（`--db-result-routing`／gate26）：真正无Result合同的最小Eat包，过程仍True且状态未到期；正常0／0.5返回不额外起播、不消费原机会／尝试／冷却，不创建冷owner或伪造回应。修前失败已保留，修后另验低优先独立Result根、嵌套／继承条件、同owner硬截止与原状态机会。它补上原DbEatTests高优先After根掩盖的消费者边界，不替换既有期望或golden。
 - DbEatAuthorTests：公开最小XML和扩展经真实loader／catalog／核心派发，复用AudioId不借父动作配置，结果请求带中性身份与0值。
 - 真正移除ChewIngestible的编译fixture：PatchAll不抛、相关精确路径暂停，Whole／结果／Select能力保留；无全局catch、无Unknown宽化。verify-local追加24/25。
 - 既有Host入口定向验证三独立下拉框、三准确玩家层与单字段继承、英／中文布局／写绑定。退役的父关藏子checkbox断言换为新独立参数断言；普通按钮／行高／修订钟保护保留。没有重生golden，Kernel旧语料零差异。
 
-本包未执行全25门或未变原生矩阵；每次实际运行及对应候选由交付报告记录。精确4871方法体复核、真实原生加载／挂接／Scribe／音频／屏幕与听感仍pending，所有15包合同人审／成果人验也仍pending。D-C、FL0.8及发布不随D-B技术候选自动获准。
+本包未执行全26门或未变原生矩阵；每次实际运行及对应候选由交付报告记录。精确4871方法体复核、真实原生加载／挂接／Scribe／音频／屏幕与听感仍pending，所有15包合同人审／成果人验也仍pending。D-C、FL0.8及发布不随D-B技术候选自动获准。

@@ -1,6 +1,6 @@
 # 0.6 事实—证据—反例维护记录
 
-修订：2026-10-23，r3。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。D-B已接入完整有效配置与Eat生产纵切，下面分别记录直接源码、继承依据、平台替身与原生状态。
+修订：2026-10-23，r4。维护者：US 1.6 适配维护者。消费者及合同见[规格](us-kernel-0.6-spec-zh.md)、[逐包验收](us-kernel-0.6-acceptance-zh.md)、[首批导读](us-kernel-0.6-contract-review-zh.md)。D-B已接入完整有效配置与Eat生产纵切，下面分别记录直接源码、继承依据、平台替身与原生状态。
 
 ## Eat：过程、执行、物品属性与返回结果分别维护
 
@@ -13,8 +13,8 @@
 | us.core/IngestionProcess | JobDriver.SetupToils／Cleanup；JobDriver_Ingest自身，FoodFeedPatient.job.targetB.Pawn即Deliveree | 仅支持这两种明确driver；driver、当前Job一致才活跃。自己Ingest另有正向Job事实；feed接缝缺失则未知，不猜喂食者 | Eat固定过程；Whole保持至全过程退出 |
 | us.core/IngestionExecution | Toils_Ingest.ChewIngestible(Pawn,float,TargetIndex,TargetIndex)，参数chewer为实际摄入者 | 工厂只挂观察；原init正常返回、driver／Job／CurToil同一才进入，finish关闭；每次真实进入增代。依赖成组Setup/Cleanup及Chew/CurToil；缺Chew不安装半套精确观察 | phase=Execution及固定精确扩展 |
 | us.core/IngestibleNutrition | 实际物品ThingDef.IsNutritionGivingIngestible | 物品属性，不是IEatingDriver标记、不是当次营养值；缺实际可摄入物为Unknown。Any不加此依赖 | nutritionScope非Any时 |
-| us.core/IngestibleDrug | 同一实际物品ThingDef.IsDrug | 与营养独立；Any不加此依赖。通过actor当前Job targetA重新读取，机器→食物后不沿用机器属性 | drugScope非Any时 |
-| us.core/IngestionResultEvent及IngestionResultFact | FinalizeIngest调用Thing.Ingested(Pawn,float)；捕获实际ingester及item，正常返回营养值 | 原版Destroyed／!IngestibleNow的提前返回不构造成功摄入；合法0结果保留。异常不发结果，Job Cleanup也不发结果；事件只存本次快照，结果身份／0值进入ResponseContext和PlaybackRequest | 独立AfterIngestion根，不继承仍在执行的条件 |
+| us.core/IngestibleDrug | 同一实际物品ThingDef.IsDrug | 与营养独立；Any不加此依赖。支持的原版准备过程从actor当前Job targetA读取；实际Chew进入后改用工厂捕获的itemIndex（不限A），退出恢复准备A。营养属性用同一物品规则；机器→食物后不沿用机器属性 | drugScope非Any时 |
+| us.core/IngestionResultEvent及IngestionResultFact | FinalizeIngest调用Thing.Ingested(Pawn,float)；捕获实际ingester及item，正常返回营养值 | 原版Destroyed／!IngestibleNow的提前返回不构造成功摄入；合法0结果保留。异常不发结果，Job Cleanup也不发结果；事件只存本次快照，结果身份／0值进入ResponseContext和PlaybackRequest | 编译后固定条件显式引用Result事实的合同（含嵌套／继承）；独立AfterIngestion根不要求仍在执行，普通Eat不消费该通知 |
 
 **实际数据流：** FoodFeedPatient.MakeNewToils调用ChewIngestible(Deliveree,1.5,A)，但Toil.actor仍是喂食者；物品从actor的Job取、声音归Deliveree的唯一session。FinalizeIngest读取actor.jobs.curJob实际目标并调用Thing.Ingested；FoodFeedPatient会替换Finalize Toil.finishActions，所以结果不挂在该易被覆盖的finish列表。普通Ingest的Corpse分支可跳回同一chewing Toil；一次chewing退出不等于全过程退出。多个同时有效的feed来源指向同一接收者时，执行／物品保持Unknown，不猜一个。
 
@@ -24,13 +24,18 @@
 | 真实进入→退出→同Job再进入 | 精确True→False→True，代次随真实进入增加；诊断读已捕获值，不重采事实／随机 |
 | 营养×药物四种物品组合×各筛选值 | 生产采事实与条件组合相符；两属性不互斥，Any不因属性Unknown失效 |
 | dispenser→实际食物 | 缺可摄入物为Unknown；目标替换后读取食物属性 |
+| 准备A→实际Chew index B→退出准备A | DbEatTests实际执行非A工厂索引，执行营养／药物随B，退出还原支持的准备A；不是所有阶段硬编码A |
 | 喂食者a、接收者b | b拥有过程／执行及其声音，a不被当摄入者；不要求b自己运行Ingest |
 | 正常0返回、无效物品0提前返回、摄入异常、中断Cleanup | 仅正常摄入返回产生独立结果；0不统一失败，后三者不伪造结果 |
+| 真正无Result合同的最小Eat音频包，过程仍True且状态未到期 | DbResultRoutingTests修前复现0／0.5各多起播一次、改写确认／冷却且冷owner被创建；修后均零额外播放、原机会／尝试／保护／roll／诊断不变，原到期机会仍可用 |
+| 低于普通Eat优先级的独立Result根及继承子合同 | 同一owner正确接收0／正结果，实际共享／自身硬截止生效；普通Eat不抢结果机会，硬拒绝不退普通Eat，下一状态机会保留 |
 | Whole／Execution持续退出 | 同一生产owner／持续槽；Whole不因一次chewing退出停，Execution按阶段退出End，Cleanup关闭Whole |
 | OneShot退出 | 不再新起播；不调用旧OneShot裁尾或停止他方声音 |
 | 真正编译移除ChewIngestible | PatchAll完成；Whole仍可用，Execution为Unknown／所选精确贡献暂停，具名缺目标；其他过程／结果／Select能力仍可用 |
 
 实现位置：UsIngestionObservation的短生命周期记录与四个窄Harmony hook；UsPawnFacts一次采样；UsPawnPlaybackSession当前有效配置／同一仲裁和持续槽。记录在session reset清除，不Scribe、不写save、不造第二时钟／调度器。Any/Whole的参数不会添加未选可选依赖；固定扩展条件始终保留。
+
+**结果路由修订：** Thing.Ingested窄hook继续发布真实正常返回。UsOneShotRuntime在没有固定结果消费者时直接结束，不创建session；有消费者时仍用实际摄入者的同一session，只让固定条件树引用结果事实的候选进入本次事件。修前错误是把普通Eat的过程True当成本次结果的消费资格，绕过状态软等待，不是返回0的判据或阶段事实错误。没有修改通用决策／golden、共享保护、Whole/Any/Any或OneShot自然尾。
 
 证据：DbEatTests的真实Harmony＋生产适配／settings解析／session／选音／输出链；DbEatAuthorTests运行公开XML和真实loader；DbEffectiveConfigTests及ModSaveCallerTests运行生产settings/ExposeData/原子文件与Scribe替身往返及失败恢复；DbEatUiTests运行真实Source／Host、平台替身。原版Job/Toil/物品/音频为明确double，尸体是复入机制形状而非真实Corpse运行；没有据此签原生Scribe、真实游戏Config、完整4871方法体、原生挂接、屏幕或听感通过。改源时同步事实／消费者／反例，不按新方法名猜合同。
 ## Select：最终反馈主体与已提交选择分别观察

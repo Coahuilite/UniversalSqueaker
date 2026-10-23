@@ -402,6 +402,10 @@ Invoke-Check 'D-B missing Chew target isolates precision without disabling Whole
         if ($LASTEXITCODE -ne 0) { throw 'Eat missing-target fixture build failed' }
         & (Join-Path $eatOutput 'UniversalSqueakerAudioBindingTests.exe') --db-eat-missing
     }
+# Gate 26: result notifications cannot turn a still-true state into an event opportunity.
+Invoke-Check 'D-B Result routes only to explicit fixed-contract consumers (truly Eat-only pack included)' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerAudioBindingTests -c Release -- --db-result-routing' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --db-result-routing }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 

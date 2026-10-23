@@ -1,6 +1,6 @@
 # 0.6.x 测试迁移与显式 Dev 消费
 
-2026-10-23 · r7 · **D-B完整有效配置与Eat生产纵切；其余12包、原生1.6、听感及产品默认继续分包。**
+2026-10-23 · r8 · **D-B完整有效配置与Eat生产纵切；其余12包、原生1.6、听感及产品默认继续分包。**
 
 ## 当前D-A应如何迁移
 
@@ -9,6 +9,8 @@
 当前配置／作者入口见主规格§22。删除旧SqueakEatOccurrence、精确／包含药物bool及debugName宽化，旧XML/ABI不保双轨。S3旧Eat断言改为过程与真实阶段；Kernel旧bool规则改为独立枚举合法性与NonPawn边界；稳定路由／roll corpus不改。
 
 OneShot新增DbEatAuthorTests，运行可加载的EatMinimal／EatExtensions；AudioBinding用明确参数--db-eat运行生产链，--db-eat-missing运行EatFixtureTarget=MissingChew真正缺目标构建。结果Root、实际摄入者、当前物品及0值进入同一生产协议。settings新增DbEffectiveConfigTests和真实Mod保存调用失败反例，Reset继续检验准确字段与恢复；Scribe平台仍为替身。
+
+结果消费者回归用`--db-result-routing`独立模式（gate26），不再只靠总有高优先After根的DbEatTests：先真实加载仅Eat音频、零Result合同，原状态已成功且下一机会未到期时正常返回0／正值；再加低于Eat优先级的独立Result根及继承子合同。修复只筛选本次结果通知的固定合同消费者，未变通用仲裁、软／硬规则或golden。修前／修后日志分存，未变纯层／Config／UI矩阵复用有效证据。
 
 既有Host的旧父子checkboxfixture定向换成三个独立dropdown、三准确层及单字段继承；保行高、修订钟和其他按钮保护。Host可用--lane "DB Eat"、"Overview composites"及"typed"运行受改面，不因其中一个通过声称全Host套件通过。独立输出运行时优先从明确cwd定位项目，避免把私有管理目录当源码根。
 
@@ -28,11 +30,11 @@ S3实际17动作/来源三态/Config事务/同owner兼容时钟与证据分层�
 
 S2的实际证据、旧→新保留含义、独立路由/请求golden及目标1.6接缝见[S2实施页](us-kernel-0.6-s2-zh.md)。verify-local现保留原16门并追加17纯S1/S2、18正常适配和19失败观察批次。以下总图继续保留后续责任，不能把计划表当完成表。
 
-本页配合[首版规格 r9](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
+本页配合[首版规格 r10](us-kernel-0.6-spec-zh.md)和[合同—验收附页](us-kernel-0.6-acceptance-zh.md)，只安排真实入口如何迁移，不另定义 C00–C12、T01–T12 或 S1–S5。OneShot S1已批准部分见主规格与实施页，D项其余候选仍须在依赖切片前裁定；下文“新增”是后续实施责任，不表示已有测试。基线为 US `d35dee7ca9bb790f097f00537477b363c9a06565`；checkpoint已包含获准UI/目录源码与测试；旧载荷独立保留。
 
 ## 1. 从现有入口推进，不另建平台
 
-- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是25门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
+- [verify-local.ps1](../scripts/verify-local.ps1)的实际入口是26门：gate 1 Kernel；2 ConfigCopy；3 SettingsMigration；4/5 Release/Dev Log；6选定载体身份；7/8产品Dev/Release构建；9单载体；10许可证；11 manifest；12 UiLogic；13真实Host消费；14 UI边界；15 stub覆盖；16冻结stub来源；17纯S1/S2；18正常资源适配fixture；19独立失败观察批次；20/21为D-A Select及未选择资格两个独立模式，22/23为真正缺少Select目标的两个编译fixture。24为D-B Eat生产链，25为真缺Chew的编译fixture，26为无Result合同／独立Result消费者路由。编号保持追加规则，不把源码注释或CI步骤标题中的旧门数当实际覆盖。
 - [CI](../.github/workflows/ci.yml)恢复 Source/tools 工程后调用同一脚本；[release workflow](../.github/workflows/release.yml)是发布入口。当前两者仍绑定 `v0.7.0-rc1`，不是0.8验证；本页不更改流水线。
 - [KernelTests工程](../tools/UniversalSqueakerKernelTests/UniversalSqueakerKernelTests.csproj)链接生产 Kernel、Pure 和 `VerseEventBinding.cs`，net472，无游戏引用；0.6继续使用这一纯测试边界，增加生产转换用例，不复制一套状态机。核对完整编译集、解析/传递引用及公共参数、返回、泛型约束，不能只grep命名空间，也不能加入Verse/Unity同名stub后仍称纯层。
 - [ConfigCopy](../tools/UniversalSqueakerConfigCopyTests/Program.cs)、[SettingsMigration](../tools/UniversalSqueakerSettingsMigrationTests/Program.cs)、[Reset](../tools/UniversalSqueakerResetTests/Program.cs)链接生产持久化代码并使用stub，属于Config适配证据。Reset不是当前19门中的独立执行项；获准实施包需显式执行其工程，不可因CI恢复了项目就称已运行。

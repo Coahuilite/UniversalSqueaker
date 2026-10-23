@@ -67,6 +67,14 @@ internal static partial class Program
             Console.WriteLine("DB Eat production owner fixture PASS: " + checks);
             return;
         }
+        if (args.Contains("--db-result-routing"))
+        {
+            InitializationOrder();
+            CompleteBinding();
+            DbResultRouting();
+            Console.WriteLine("DB result consumer routing fixture PASS: " + checks);
+            return;
+        }
         if (args.Contains("--da-select"))
         {
             InitializationOrder();

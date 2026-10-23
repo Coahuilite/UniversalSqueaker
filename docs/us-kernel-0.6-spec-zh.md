@@ -1,6 +1,6 @@
 # US Kernel 0.6.x 首版规格
 
-修订：2026-10-23，r9（D-B 有效配置与Eat生产纵切）。状态：**D-B技术候选，有效配置与Eat已接入生产owner；其余12包D-C仍待实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
+修订：2026-10-23，r10（D-B 有效配置与Eat生产纵切，结果消费者边界修订）。状态：**D-B技术候选，有效配置与Eat已接入生产owner；其余12包D-C仍待实施，人审／原生／发行默认未关闭**。目标 RimWorld 1.6.4871，net472。
 
 本规格面向 Kernel 开发者、合同／能力扩展作者及 VoicePack 作者。它集中定义首版目的、职责、数据含义和验收，不要求阅读开发过程中的讨论稿。0.6 当前声明与完整动作键用法见第21节；0.5.x 格式只在[旧作者指南](voicepack-authoring-0.5-zh.md)说明，不作为未发布新线兼容约束。
 
@@ -652,6 +652,8 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 - `example/AfterIngestion`：独立引用`us.core/IngestionResultEvent`，不继承已经退出的chewing条件；音源和配置独立。例中的行为来源仍须显式选中，音频开关不选行为来源。
 
 原版观察先区分driver执行者、实际摄入者和当时物品：Setup/Cleanup维护支持的Ingest／FoodFeedPatient过程；Chew工厂只加观察，原init正常返回且当前Toil一致才进入，finish退出。Whole持续不因一次Chew退出停，Execution按所选阶段退出沿既有槽End；OneShot自然尾。Thing.Ingested仅在进入时可摄入且正常返回后发布结果；合法0值保留，异常／Job结束不伪造成功。
+
+普通Eat消费过程／执行的状态机会，不消费摄入结果事件。结果通知只把编译后固定条件树显式引用`us.core/IngestionResultEvent`的合同送入同一owner仲裁，包括嵌套引用与继承该条件的扩展；各自条件、优先级、同tick及硬截止仍照常执行。即使普通Eat的过程此刻仍True，也不能借结果通知绕过状态等待；没有任何结果消费者时，不创建owner、不运行决策或改写保护／诊断。已有独立结果合同可以在其硬门允许时先于下一状态机会回应，但仍按既有共享保护结算，不回退普通Eat补位。
 
 中性`IngestionResultFact`携Ingester／Item／ItemDef／Nutrition，进入本次FactSnapshot、ResponseContext.Ingestion及PlaybackRequest.Ingestion；不传Pawn／Thing，不缓存成下一机会事件。事实、角色、版本与反例见[维护记录](us-kernel-0.6-fact-adapters-zh.md)。缺执行接缝按成组readiness局部隔离，Whole／无关能力保留；不会用全局PatchAll catch藏故障。
 
