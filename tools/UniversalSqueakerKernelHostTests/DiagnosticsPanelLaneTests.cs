@@ -1173,37 +1173,34 @@ internal static class DiagnosticsPanelLaneTests
         // The old logical override used draw-local rectangles, including off-screen ones. Native
         // input needs the public window origin and an actual visible point inside the owner's clip.
         Event? previous = Event.current;
-        bool geometryWasOn = host.Diagnostics.GeometryEnabled;
-        host.Diagnostics.GeometryEnabled = true;
         try
         {
             Event.current = new Event { type = EventType.Repaint, mousePosition = new Vector2(-1000, -1000) };
             host.DrawChecked(viewport);
-            if (!host.Diagnostics.TryGetGeometrySnapshot(out var geometry) || geometry == null)
-                throw new InvalidOperationException("No actual geometry for existing click " + elementId);
-            var drawn = geometry.Nodes.Single(node => node.ElementId == elementId);
-            UiLayoutPoint point = VerseUiExecution.Point(labelRect.center) + drawn.Origin;
-            if (drawn.Clip.IsKnown && !drawn.Clip.Rect.Contains(point))
+            var node = host.Session.GetNodeByElementId(elementId)
+                ?? throw new InvalidOperationException("No arranged owner for existing click " + elementId);
+            UiLayoutPoint origin = Fl08PublicObservation.NodeWindowOrigin(host, node);
+            UiLayoutPoint point = VerseUiExecution.Point(labelRect.center) + origin;
+            UiNode? scroll = node.Parent;
+            while (scroll != null && scroll.Kind != "Scroll") scroll = scroll.Parent;
+            UiLayoutRect clip = scroll == null ? VerseUiExecution.Rect(viewport) : Fl08PublicObservation.NodeWindowRect(host, scroll);
+            if (!clip.Contains(point))
             {
-                UiNode? scroll = host.Session.GetNodeByElementId(elementId)?.Parent;
-                while (scroll != null && scroll.Kind != "Scroll") scroll = scroll.Parent;
                 if (scroll == null) throw new InvalidOperationException("Existing click has no visible scroll route: " + elementId);
                 UiLayoutPoint offset = host.GetScrollPosition(scroll.ElementId);
-                host.SetScrollPosition(scroll.ElementId, new UiLayoutPoint(offset.X, offset.Y + point.Y - drawn.Clip.Rect.Center.Y));
+                host.SetScrollPosition(scroll.ElementId, new UiLayoutPoint(offset.X, offset.Y + point.Y - clip.Center.Y));
                 host.DrawChecked(viewport);
-                if (!host.Diagnostics.TryGetGeometrySnapshot(out geometry) || geometry == null)
-                    throw new InvalidOperationException("No scrolled geometry for existing click " + elementId);
-                drawn = geometry.Nodes.Single(node => node.ElementId == elementId);
-                point = VerseUiExecution.Point(labelRect.center) + drawn.Origin;
+                origin = Fl08PublicObservation.NodeWindowOrigin(host, node);
+                point = VerseUiExecution.Point(labelRect.center) + origin;
             }
-            Console.WriteLine("[existing-click] " + elementId + " local=" + labelRect + " origin=" + drawn.Origin + " point=" + point + " clip=" + drawn.Clip);
+            Console.WriteLine("[existing-click] " + elementId + " local=" + labelRect + " origin=" + origin + " point=" + point + " clip=" + clip);
             foreach (var phase in new[] { EventType.MouseDown, EventType.MouseUp })
             {
                 Event.current = new Event { type = phase, button = 0, mousePosition = VerseUiExecution.Point(point) };
                 host.DrawChecked(viewport);
             }
         }
-        finally { host.Diagnostics.GeometryEnabled = geometryWasOn; Event.current = previous; }
+        finally { Event.current = previous; }
     }
 
     private static bool DrawnContains(IList texts, int from, string needle)

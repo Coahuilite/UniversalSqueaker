@@ -89,14 +89,13 @@ internal static class InteractionPreservationTests
         Program.Check(source.LastSelectedScope == SqueakVoicePackScope.Xenotype
             && source.LastSelectedRace == "human" && source.LastSelectedTarget == "sanguophage", "actual domain hit keeps Namespace/target identity after reorder");
     }
-    private static UiDevGeometrySnapshot Geometry(Program.Page page, string id)
+    private static Fl08PublicObservation.PaintedControl[] Geometry(Program.Page page, string id)
     {
-        page.Host.Diagnostics.GeometryEnabled = true; page.Host.Session.SetScrollTarget(id);
-        // Public input snapshots sample pointer down/up, not idle Repaint. An outside release
-        // observes all control queries without making a business request.
+        page.Host.Session.SetScrollTarget(id);
         page.Draw(View, EventType.MouseUp, new UiLayoutPoint(-1000, -1000));
-        Program.Check(page.Host.Diagnostics.TryGetGeometrySnapshot(out var result) && result != null && result.InputsDropped == 0, "complete public control input observation " + id);
-        return result!;
+        var result = page.Observation.Controls.ToArray();
+        Program.Check(result.Length != 0, "complete public execution control-allocation observation " + id);
+        return result;
     }
     private static void DirectoryNativeActions()
     {
@@ -106,13 +105,13 @@ internal static class InteractionPreservationTests
         }};
         using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
         var geometry = Geometry(page, "race-board-cards");
-        var input = geometry.Inputs.Where(x => x.ElementId == "race-board-cards").ToArray();
-        Program.Check(input.Length == 6, "two directory rows expose enable/open/body controls separately; actual=" + input.Length
-            + " recorded=" + string.Join("|", geometry.Inputs.Select(x => x.ElementId + ":" + x.Rect)));
+        var input = geometry.Where(x => x.ElementId == "race-board-cards").ToArray();
+        Program.Check(input.Length == 6, "two directory rows allocate enable/open/body controls separately; actual=" + input.Length
+            + " recorded=" + string.Join("|", geometry.Select(x => x.ElementId + ":" + x.Rect)));
         Program.Click(page, View, input[3].Rect);
         Program.Check(source.QuickEnableCount == 1 && source.LastQuickRace == "human" && source.LastQuickPackKey == "us.sang2"
             && source.LastQuickScope == SqueakVoicePackScope.Race && source.LastMode == null, "actual non-first directory enable writes named pack/target, never mode");
-        input = Geometry(page, "race-board-cards").Inputs.Where(x => x.ElementId == "race-board-cards").ToArray();
+        input = Geometry(page, "race-board-cards").Where(x => x.ElementId == "race-board-cards").ToArray();
         Program.Click(page, View, input[4].Rect);
         Program.Check(source.LastRaceBoardOpenRace == "human" && source.LastRaceBoardScrollKey == "pack-card-row#us.sang2"
             && page.Host.Bindings.Get<string>(UiBindings.ActiveTabBind) == "Packs", "actual directory Open arrives at named second pack row");
@@ -126,7 +125,7 @@ internal static class InteractionPreservationTests
         page.Host.Bindings.Invoke("set-tab", "Packs");
         source.ViewState.FallbackSelectedEntryAction = "us.core/Call";
         var geometry = Geometry(page, "fallback-editor");
-        var inputs = geometry.Inputs.Where(x => x.ElementId == "fallback-editor" || x.Path.Contains("/fallback-editor/@")).ToArray();
+        var inputs = geometry.Where(x => x.ElementId == "fallback-editor" || x.Path.Contains("/fallback-editor/@")).ToArray();
         Program.Check(inputs.Length > 1, "actual fallback editor exposes interactive rows");
         // Open then dismiss its native race popup: this establishes the actual subtree as Cancel subject.
         Program.Click(page, View, inputs[0].Rect);

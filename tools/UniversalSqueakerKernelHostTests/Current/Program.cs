@@ -94,14 +94,16 @@ internal static partial class Program
     {
         internal readonly UiHost Host;
         internal readonly VerseUiExecution Execution;
-        internal Page(UiHost host, VerseUiExecution? execution = null) { Host = host; Execution = execution ?? new VerseUiExecution(); }
+        internal readonly Fl08PublicObservation.PaintedControlExecution Observation;
+        internal Page(UiHost host, VerseUiExecution? execution = null) { Host = host; Execution = execution ?? new VerseUiExecution(); Observation = new(host, Execution); }
         internal void Draw(UiLayoutRect viewport, EventType phase = EventType.Repaint, UiLayoutPoint? pointer = null)
         {
             Event? previous = Event.current;
             try
             {
                 Event.current = new Event { type = phase, button = 0, mousePosition = VerseUiExecution.Point(pointer ?? new UiLayoutPoint(-1000, -1000)) };
-                Host.DrawFrame(viewport, Execution.CaptureFrame(), Execution);
+                Observation.BeginPass();
+                Host.DrawFrame(viewport, Execution.CaptureFrame(), Observation);
                 NoTrips(Host);
             }
             finally { Event.current = previous; }
@@ -122,13 +124,12 @@ internal static partial class Program
     }
     internal static UiLayoutRect WindowRect(Page page, UiLayoutRect view, string id)
     {
-        page.Host.Diagnostics.GeometryEnabled = true;
         page.Host.Session.SetScrollTarget(id);
         page.Draw(view);
-        Check(page.Host.Diagnostics.TryGetGeometrySnapshot(out var geometry) && geometry != null, "actual completed Dev geometry available");
-        var hits = geometry!.Nodes.Where(n => n.ElementId == id).ToArray();
-        Check(hits.Length == 1, "exact actual input geometry " + id);
-        return hits[0].Window;
+        var layout = page.Host.MeasureAndArrange(view.Size);
+        Check(layout.RectById.ContainsKey(id), "actual completed Release arrangement available");
+        Check(layout.VisibleIds.Count(value => value == page.Host.Session.GetNodeByElementId(id)!.Path) == 1, "exact arranged input identity " + id);
+        return Fl08PublicObservation.NodeWindowRect(page.Host, page.Host.Session.GetNodeByElementId(id)!);
     }
     internal static void Click(Page page, UiLayoutRect view, UiLayoutRect rect)
     {
@@ -256,10 +257,10 @@ internal static partial class Program
         window = flow.OpenedWindow!; host = null; window.HostAttached += value => host = value;
         Event.current = new Event { type = EventType.Repaint, mousePosition = new Vector2(-1000, -1000) };
         window.DoWindowContents(new Rect(0, 0, 500, 400));
-        var diag = host!.Diagnostics; diag.GeometryEnabled = true;
         window.DoWindowContents(new Rect(0, 0, 500, 400));
-        Check(diag.TryGetGeometrySnapshot(out var geometry) && geometry != null, "window-executed confirmation exposes completed input geometry");
-        var rect = geometry!.Nodes.Single(n => n.ElementId == "confirm-yes").Window;
+        var confirmNode = host!.Session.GetNodeByElementId("confirm-yes");
+        Check(confirmNode != null && confirmNode.IsArranged, "window-executed confirmation exposes completed public arrangement");
+        var rect = Fl08PublicObservation.NodeWindowRect(host, confirmNode!);
         foreach (EventType phase in new[] { EventType.MouseDown, EventType.MouseUp })
         {
             Event.current = new Event { type = phase, button = 0, mousePosition = VerseUiExecution.Point(rect.Center) };

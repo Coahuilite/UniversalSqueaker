@@ -60,7 +60,9 @@ internal static class CurrentHelpTests
         foreach (string language in new[] { "English", "ChineseSimplified" })
         {
             var table = Program.ReadKeyedTable(language); Program.SetTranslatorResolver(table);
-            ((IList)typeof(Widgets).GetField("LabelTexts")!.GetValue(null)!).Clear();
+            // Parallel native recording tables share one index; clear them together.
+            foreach (string field in new[] { "LabelTexts", "LabelRects", "LabelColors" })
+                ((IList)typeof(Widgets).GetField(field)!.GetValue(null)!).Clear();
             page.Draw(viewport, EventType.Repaint, inside);
             var texts = ((IEnumerable)typeof(Widgets).GetField("LabelTexts")!.GetValue(null)!).Cast<string>().ToArray();
             Program.Check(texts.Contains(table["US.Help.ModeRow.Remix.Text"]), language + " actual unified panel draws translated explicit topic with no sink");

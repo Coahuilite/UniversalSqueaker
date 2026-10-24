@@ -1,6 +1,6 @@
 # 使用固定 FL 0.8 构建当前 US
 
-当前 US 0.6 消费固定 FerriteLib 源码 `7eb8073492a1380aa18c67cc30960d19645efbd1` 的 final 包：Dev DLL 587776 bytes，ProductVersion `0.8.0-dev+7eb8073492a1380aa18c67cc30960d19645efbd1`。运行范围为 `[0.8.0,0.9.0)`，生产 Reference 为 `Private=false`。该输入提供 1.6 adapter；原生 1.6 仍待验，未交付 1.7 adapter。
+当前 US 0.6 的 Release 配对输入为 [FerriteLib v0.8.0-rc1](https://github.com/Coahuilite/FerriteLib/releases/tag/v0.8.0-rc1) 的实际发布资产，源码 `a0b5b983c3c13a099c62d936305eaebaf1deb5a8`，ProductVersion `0.8.0+a0b5b983c3c13a099c62d936305eaebaf1deb5a8`、配置 Release。先前 `7eb8073` final Dev 配对保留为历史证据。运行范围为 `[0.8.0,0.9.0)`，生产 Reference 为 `Private=false`。该输入提供 1.6 adapter；原生 1.6 仍待验，未交付 1.7 adapter。
 
 ## 安装运行前置
 
@@ -58,8 +58,10 @@ XML 的 `HelpKey` 改为 `HelpRef`，运行时 binding 地址的 `VisibleKey / W
 
 Core、完整十五合同、CoreWork、通知／四回执、稀疏配置、生产 settings／ExposeData／原子文件与 Scribe 替身往返的未变证据继续按原范围适用，不重录 golden。真实游戏 Config／Scribe、IME／字体像素、屏幕外观、窗口栈、音频／听感及逐包人工验收仍待验；当前迁移不预定新页面或普通政策。
 
-## 远端 CI 仍缺真实 0.8 发布载体
+Release 夹具不启用 Dev-only `GeometryEnabled`：既有控件定位读取公开 arranged 节点与 scroll 状态，原生 press/release 仍走同一 `VerseUiExecution`。目录／fallback 的既有夹具仅在同一执行器外记录真实 text paint 和 `PrepareControl` 分配；该记录不是 Dev input-query 矩形／命中快照，也不扩大原生游戏覆盖。并行的文字／矩形／颜色平台记录必须一起重置，不能用错位索引判定产品颜色。
+
+## 真实 RC 获取与远端 CI 分工
 
 两个 workflow 已移除旧 0.7 固定值，先要求维护者配置 `FERRITELIB_CARRIER_REPOSITORY / FERRITELIB_CARRIER_TAG / FERRITELIB_CARRIER_COMMIT`；空输入在 checkout 前拒绝，源码按完整 commit 获取。既有 acquire 流程仍检查明确 tag 对应的 `FerriteLib-<tag>.zip`、平台 digest、闭集、版本、Release 配置和源码配对，不从默认分支再造 runtime。
 
-实际可下载的 0.8 Release 资产及批准坐标尚未交付，因此本地 Dev 配对不等于远端 CI 已绿。US Release 只做技术构建／stage；不能称其与当前 Dev FL 构成可发布的 Release 配对。
+实际 `v0.8.0-rc1` 资产已沿该入口下载并完成完整性／Release／源码配对检查。本地以该 Release DLL 跑现有 37 门并标准 stage；本地结果与维护者随后执行的远端 CI、原生及人工验收分开。CI 保留 main，并在 0.6.x push／PR-base 上运行同一 gates job；隐私 workflow 已覆盖所有分支。US 的远端推送、tag 和发布仍由维护者独占。

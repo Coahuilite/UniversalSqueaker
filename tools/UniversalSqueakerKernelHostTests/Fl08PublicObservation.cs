@@ -12,6 +12,70 @@ namespace UniversalSqueaker.KernelHostTests;
 // Read actual public trace/diagnostic output, never the carrier's private runtime tables.
 internal static class Fl08PublicObservation
 {
+    // Release has no Dev geometry capture. These existing fixtures locate declared elements from
+    // public arranged nodes and scroll state; the native press/release still decides the outcome.
+    internal static UiLayoutRect NodeWindowRect(UiHost host, UiNode node)
+    {
+        var rect = node.Rect ?? throw new InvalidOperationException("No arranged rectangle: " + node.Path);
+        UiLayoutPoint offset = host.Session.HostViewport.Position;
+        for (UiNode? parent = node.Parent; parent != null; parent = parent.Parent)
+            if (parent.Kind == "Scroll") offset -= host.Session.GetScrollPosition(parent);
+        return new UiLayoutRect(rect.X + offset.X, rect.Y + offset.Y, rect.Width, rect.Height);
+    }
+    internal static UiLayoutPoint NodeWindowOrigin(UiHost host, UiNode node)
+    {
+        UiNode? scope = node.Parent;
+        while (scope != null && scope.Kind != "Scroll" && scope.Kind != "Clip") scope = scope.Parent;
+        if (scope == null) return UiLayoutPoint.Zero;
+        UiLayoutPoint origin = NodeWindowRect(host, scope).Position;
+        if (scope.Kind == "Scroll") origin -= host.Session.GetScrollPosition(scope);
+        return origin;
+    }
+    internal sealed class PaintedControl
+    {
+        internal string ElementId = "", Path = "";
+        internal UiLayoutRect Rect; // Last actual text paint, an interior click point, NOT an input-query rectangle.
+    }
+    // Forward to the SAME native adapter. Record only the public control-allocation and text-paint
+    // outlets used by the existing directory/fallback fixtures, whose US helpers paint before activation.
+    internal sealed class PaintedControlExecution : IUiExecution
+    {
+        private readonly UiHost host;
+        private readonly VerseUiExecution native;
+        private UiLayoutRect lastText;
+        internal readonly List<PaintedControl> Controls = new();
+        internal PaintedControlExecution(UiHost host, VerseUiExecution native) { this.host = host; this.native = native; }
+        internal void BeginPass() { Controls.Clear(); lastText = default; }
+        public void PrepareControl(UiControlKey key)
+        {
+            var node = host.Session.GetNode(host.Session.ActiveElement)!;
+            Controls.Add(new PaintedControl { ElementId = node.ElementId, Path = node.Path, Rect = lastText });
+            native.PrepareControl(key);
+        }
+        public void Text(UiLayoutRect rect, string text, UiFont font, UiColour colour, UiTextAnchor anchor, bool wrap)
+        {
+            var node = host.Session.GetNode(host.Session.ActiveElement)!;
+            var origin = NodeWindowOrigin(host, node);
+            lastText = new UiLayoutRect(rect.X + origin.X, rect.Y + origin.Y, rect.Width, rect.Height);
+            native.Text(rect, text, font, colour, anchor, wrap);
+        }
+        public bool HasCapture(UiControlKey key) => native.HasCapture(key);
+        public bool CaptureAvailable => native.CaptureAvailable;
+        public void Capture(UiControlKey key) => native.Capture(key);
+        public void Release(UiControlKey key) => native.Release(key);
+        public bool HasFocus(UiControlKey key) => native.HasFocus(key);
+        public void ReleaseFocus(UiControlKey key) => native.ReleaseFocus(key);
+        public UiNativeEditResult Edit(UiNativeEdit request) => native.Edit(request);
+        public void ConsumeEvent() => native.ConsumeEvent();
+        public void WithState(Action action) => native.WithState(action);
+        public void Scroll(UiLayoutRect viewport, UiLayoutRect content, UiLayoutPoint position, bool showScrollbar, Action<UiLayoutPoint> body) => native.Scroll(viewport, content, position, showScrollbar, body);
+        public void Warning(string message) => native.Warning(message);
+        public void Clip(UiLayoutRect bounds, Action body) => native.Clip(bounds, body);
+        public void Fill(UiLayoutRect rect, UiColour colour) => native.Fill(rect, colour);
+        public void Line(UiLayoutPoint from, UiLayoutPoint to, UiColour colour, float width) => native.Line(from, to, colour, width);
+        public void Image(UiLayoutRect rect, UiImage image, UiColour tint) => native.Image(rect, image, tint);
+        public void Tooltip(UiLayoutRect rect, string text) => native.Tooltip(rect, text);
+    }
     private sealed class Record
     {
         internal UiHitLayer? Popup;
