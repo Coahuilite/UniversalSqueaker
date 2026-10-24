@@ -2,6 +2,10 @@
 
 当前 US 0.6 消费固定 FerriteLib 源码 `7eb8073492a1380aa18c67cc30960d19645efbd1` 的 final 包：Dev DLL 587776 bytes，ProductVersion `0.8.0-dev+7eb8073492a1380aa18c67cc30960d19645efbd1`。运行范围为 `[0.8.0,0.9.0)`，生产 Reference 为 `Private=false`。该输入提供 1.6 adapter；原生 1.6 仍待验，未交付 1.7 adapter。
 
+## 安装运行前置
+
+独立安装并启用 [Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)（`brrainz.harmony`）和配对 FerriteLib，将两者排在 Universal Squeaker 之前。US 只分发自身 DLL，不带 `0Harmony.dll` 或 `FerriteLib.UiKit.dll`；编译引用和 About 依赖声明不能代替实际安装。
+
 ## 显式选择交付包
 
 将 `$carrier` 指向固定包的 `1.6/Assemblies/FerriteLib.UiKit.dll`，不追邻库移动输出：

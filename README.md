@@ -13,10 +13,13 @@ The settings window has five workspaces: **Overview / Packs / Tuning / Presets /
 ## Requirements and identity
 
 - RimWorld 1.6.
+- **[Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)** (`brrainz.harmony`) is a required external mod; US does not bundle `0Harmony.dll`.
 - **FerriteLib** (`coahuilite.ferritelib`) is a required prerequisite. US references its DLL and never ships a second copy; the supported API range is checked in code.
 - packageId: `coahuilite.universalsqueaker`.
 - Namespace / Def prefix / diagnostic prefix: `UniversalSqueaker` / `US_` / `usdiag`.
 - License: [MPL-2.0](LICENSE).
+
+Install and enable Harmony and the paired FerriteLib package before Universal Squeaker in the mod list. Both prerequisites are installed separately from the US archive.
 
 Current Dev builds explicitly consume a fixed FerriteLib **0.8** package (`[0.8.0,0.9.0)`). See the [consumer migration guide](docs/fl08-consumer-migration-zh.md) for build input, retained UI behavior and native acceptance boundaries.
 

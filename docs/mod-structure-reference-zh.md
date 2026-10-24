@@ -26,7 +26,7 @@ UniversalSqueaker/
 
 旧Kernel/Pure源码已迁入完整Core或实际adapter，不保第二条计划链。
 
-US 不带自己的音频文件，不带 Extras 音频包，也不复制 FerriteLib DLL。当前 Ratkin fallback XML 是数据层的原版音频引用，不是 Kernel 中的种族特判。旧 SR C# 类型桥接不在当前产品中；音频包迁移见 [作者指南](us-kernel-0.6-authoring-zh.md)。
+US 不带自己的音频文件，不带 Extras 音频包，也不复制 `0Harmony.dll` 或 FerriteLib DLL。运行时须独立安装并启用 [Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)（`brrainz.harmony`）和配对 FerriteLib，均排在 US 之前；About 声明两个必需前置，不替玩家安装。当前 Ratkin fallback XML 是数据层的原版音频引用，不是 Kernel 中的种族特判。旧 SR C# 类型桥接不在当前产品中；音频包迁移见 [作者指南](us-kernel-0.6-authoring-zh.md)。
 
 ## 安装包由脚本构造
 
@@ -45,7 +45,7 @@ UniversalSqueaker/
 
 - `About` 只复制 `About.xml`，不复制 Workshop 标识文件。
 - `version.txt` 记录产品版本、build、commit、carrier、carrier-sha256 与源码地址，不是旧稿所说的固定三行。
-- `*.pdb`、`*.gitkeep`、`PublishedFileId.txt`、`codemap.md`、`Extras/`、`1.6/Sounds/` 和第二份 FerriteLib 载荷不应进入包。
+- `*.pdb`、`*.gitkeep`、`PublishedFileId.txt`、`codemap.md`、`Extras/`、`1.6/Sounds/`、`0Harmony.dll` 和第二份 FerriteLib 载荷不应进入包。
 - 当前 staging 不复制 `docs/` 或根 README。本次交付属于仓库文档面；以后若把文档装进 mod ZIP，需同步打包范围与包验收。
 
 更多操作见 [构建指南](build-and-debug.md) 与 [发布流程](release-runbook-zh.md)。

@@ -13,10 +13,13 @@ US 把第三方语音接入准确的种族/异种域，提供分层调音、心�
 ## 运行要求与身份
 
 - RimWorld 1.6。
+- 前置模组 **[Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)**（`brrainz.harmony`），独立安装；US 不内嵌 `0Harmony.dll`。
 - 前置模组 **FerriteLib**（`coahuilite.ferritelib`）。US 引用其 DLL，不随包复制；支持的 API 区间在代码中检查。
 - packageId：`coahuilite.universalsqueaker`。
 - 命名空间 / Def 前缀 / 诊断前缀：`UniversalSqueaker` / `US_` / `usdiag`。
 - 许可：[MPL-2.0](LICENSE)。
+
+安装并启用 Harmony 与配对 FerriteLib，将它们排在 Universal Squeaker 之前。两个前置均需独立安装，不包含在 US 压缩包内。
 
 当前Dev显式消费固定FerriteLib **0.8**包，范围`[0.8.0,0.9.0)`；构建输入、保留的界面行为与原生待验边界见[消费者迁移说明](docs/fl08-consumer-migration-zh.md)。
 

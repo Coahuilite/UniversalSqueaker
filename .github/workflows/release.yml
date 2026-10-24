@@ -190,9 +190,10 @@ jobs:
 
           ## Installing
 
-          1. Install the paired prerequisite **FerriteLib** release ``$env:FL_TAG`` (``coahuilite.ferritelib``) from https://github.com/$env:FL_REPOSITORY/releases - this build is compiled against that carrier.
-          2. Unzip this archive **directly into** ``RimWorld/Mods/`` (it contains a top-level ``UniversalSqueaker`` folder).
-          3. Enable both in the mod list. Universal Squeaker ships no copy of ``FerriteLib.UiKit.dll``; exactly one carrier - FerriteLib itself - must be installed.
+          1. Install **[Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077)** (``brrainz.harmony``) as a separate prerequisite mod.
+          2. Install the paired prerequisite **FerriteLib** release ``$env:FL_TAG`` (``coahuilite.ferritelib``) from https://github.com/$env:FL_REPOSITORY/releases - this build is compiled against that carrier.
+          3. Unzip this archive **directly into** ``RimWorld/Mods/`` (it contains a top-level ``UniversalSqueaker`` folder).
+          4. Enable all three, with Harmony and FerriteLib before Universal Squeaker. US bundles neither ``0Harmony.dll`` nor ``FerriteLib.UiKit.dll``; keep one external provider for each prerequisite.
 
           ## Version identity
 

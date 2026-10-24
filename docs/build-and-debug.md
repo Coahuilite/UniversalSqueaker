@@ -1,6 +1,6 @@
 # Build and debug
 
-Select the fixed FerriteLib 0.8 package you intend to test with, then build US against that exact DLL. US does not build or ship FerriteLib. The current identity and migration conditions are in the [0.8 consumer guide](fl08-consumer-migration-zh.md).
+Select the fixed FerriteLib 0.8 package you intend to test with, then build US against that exact DLL. US does not build or ship FerriteLib. Game use also requires the external [Harmony mod](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077) (`brrainz.harmony`); the Lib.Harmony compilation reference does not supply the game runtime. Neither `0Harmony.dll` nor `FerriteLib.UiKit.dll` is bundled with US. The current identity and migration conditions are in the [0.8 consumer guide](fl08-consumer-migration-zh.md).
 
 ## Local Dev workflow
 
@@ -56,7 +56,7 @@ The gate list is an entry point, not a claim that an arbitrary candidate has pas
 
 ## Focused game verification
 
-Install the paired candidate only when game testing is authorized. Restart after replacing loaded DLLs; keep exactly one FerriteLib carrier active.
+Install the paired candidate only when game testing is authorized. Install and enable Harmony and the paired FerriteLib package separately, with both before Universal Squeaker in the mod list. Restart after replacing loaded DLLs; keep one external provider for each prerequisite.
 
 Choose scenarios for the changed behavior: accurate Race/Xenotype selection and enablement, the original failing interaction, adjacent popup/scroll/cancel paths, settings save/reopen, or the affected sound action. Record candidate identity, game build, dependencies, language, screen/UI scale and expected/observed result without publishing personal paths or raw logs.
 
