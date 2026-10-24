@@ -40,7 +40,12 @@ public sealed class SqueakerMod : Mod
     internal bool IsSettingsDirty => persistence.Owner.Dirty;
     public long SaveQueueRequestCount => persistence.Owner.RequestCount;
     public long PhysicalSaveCount => persistence.Owner.PhysicalSaveCount;
-    public bool ChangeBehaviorSource(BehaviorDomain domain, string? source, out string failure) => persistence.ChangeBehaviorSource(domain, source, out failure);
-    public bool TryChangeBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
-        BehaviorValues values, out string failure) => persistence.ChangeBehaviorOverride(family, targetNamespace, target, child, action, values, out failure);
+    /// <summary>Persist source intent before adopting and publishing it.</summary>
+    /// <returns>Whether disk committed. A Committed:RuntimePublishFailed diagnostic means publication
+    /// repair is pending, not rollback; do not resubmit the disk transaction.</returns>
+    public bool TryCommitBehaviorSource(BehaviorDomain domain, string? source, out string diagnostic) => persistence.TryCommitBehaviorSource(domain, source, out diagnostic);
+    /// <summary>Persist one complete sparse player row before adoption/publication; absent fields inherit.</summary>
+    /// <returns>Disk committed, even if the diagnostic reports a subsequent publication failure.</returns>
+    public bool TryCommitBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
+        BehaviorValues values, out string diagnostic) => persistence.TryCommitBehaviorOverride(family, targetNamespace, target, child, action, values, out diagnostic);
 }

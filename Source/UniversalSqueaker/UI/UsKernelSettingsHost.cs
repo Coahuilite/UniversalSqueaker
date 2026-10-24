@@ -759,7 +759,7 @@ public static class UsKernelSettingsHost
         // fallback stays a binding because it is business state; the hover claim does not - since FL
         // P3 the per-pass claim machine lives on the session (UsKernelDraw.HelpHover claims it, the
         // panel and the accent border read ctx.Session.HoverClaim).
-        bindings.BindReadOnly<string>("help-section-key", () => source.SectionHelpKey(state.ActiveSectionKey));
+        bindings.BindReadOnly<string>("help-section-ref", () => source.SectionHelpRef(state.ActiveSectionKey));
 
         // The retractable bottom help panel (BH1): INDEPENDENT per-window visibility state, never the
         // engine's active-tab gate (the manifest's panel element deliberately carries no Tab). Both writes

@@ -8,6 +8,7 @@
     <Reference Include="UniversalSqueaker"><HintPath>$(UniversalSqueakerArtifactPath)</HintPath><Private>false</Private></Reference>
     <!-- A real external compilation: no production source files or platform doubles are linked. -->
     <Compile Include="../../docs/examples/0.6/DeclaredNotification.cs" Link="DeclaredNotification.cs" />
+    <Compile Include="../../docs/examples/0.6/CommittedOverride.cs" Link="CommittedOverride.cs" />
   </ItemGroup>
   <Target Name="RequireProductCandidate" BeforeTargets="ResolveReferences">
     <Error Condition="'$(UniversalSqueakerArtifactPath)' == ''" Text="Select the built US candidate explicitly." />

@@ -186,6 +186,7 @@ internal static class Program
         Step("FL08 readonly patch minimal production consumption", Fl08ReadOnlyPatchTests.Run);
         Step("FL08 actual release, editing and retained view migration", Fl08MigrationTests.Run);
         Step("R2 production current read-model and template", TuningMultiplierLaneTests.RunAll);
+        Step("A002 help references: empty option preserves general help and fixed grace", HelpReferenceContractTests.Run);
         Step("DB Eat three independent fields and layers", DbEatUiTests.Run);
         Step("DC Select three sparse qualifications, real settings and Host", DcSelectUiTests.Run);
         Step("real embedded resource + schema shape", RealEmbeddedResourcePresentAndShaped);

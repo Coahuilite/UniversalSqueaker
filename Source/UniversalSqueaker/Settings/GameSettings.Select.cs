@@ -28,7 +28,7 @@ public partial class GameSettings
             case "notDowned": values.SelectRequireNotDowned = value; break;
             default: throw new ArgumentException("Unknown Select qualification", nameof(key));
         }
-        if (!TryChangeBehaviorOverride("Pawn", "", race, child, "us.core/Select", values,
+        if (!TryReplaceBehaviorOverride("Pawn", "", race, child, "us.core/Select", values,
             () => { QueuePersistence(); return true; }, out string failure)) throw new InvalidOperationException(failure);
         PublishBehaviorConfiguration();
     }

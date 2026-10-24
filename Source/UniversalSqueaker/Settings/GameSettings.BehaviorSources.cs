@@ -41,13 +41,15 @@ public partial class GameSettings
         }
     }
 
+    /// <summary>Stage source intent and adopt only if the caller's acceptCandidate returns true.
+    /// True means adoption, not disk commit. The Mod caller supplies persistence; pure callers may not.</summary>
     public bool TryChangeBehaviorSource(BehaviorDomain domain, string? sourceId, BehaviorSourceDirectory directory,
-        Func<string, bool> persistCandidate, out string failure)
+        Func<string, bool> acceptCandidate, out string diagnostic)
     {
-        failure = "";
+        diagnostic = "";
         if (IsConfigurationUnreadable)
         {
-            failure = "ConfigurationUnreadable";
+            diagnostic = "ConfigurationUnreadable";
             return false;
         }
         try
@@ -59,19 +61,19 @@ public partial class GameSettings
             }
             else if (!candidate.Bind(domain, sourceId, directory))
             {
-                failure = "InvalidBehaviorSource";
+                diagnostic = "InvalidBehaviorSource";
                 return false;
             }
-            return CommitBehaviorState(candidate, persistCandidate, out failure);
+            return TryAdoptBehaviorState(candidate, acceptCandidate, out diagnostic);
         }
         catch (Exception error)
         {
-            failure = error.GetType().Name + ":" + error.Message;
+            diagnostic = error.GetType().Name + ":" + error.Message;
             return false;
         }
     }
 
-    public bool TryRefreshBehaviorSources(BehaviorSourceDirectory directory, Func<string, bool> persistCandidate, out string failure)
+    public bool TryRefreshBehaviorSources(BehaviorSourceDirectory directory, Func<string, bool> acceptCandidate, out string failure)
     {
         failure = "";
         if (IsConfigurationUnreadable)
@@ -87,7 +89,7 @@ public partial class GameSettings
             {
                 return true;
             }
-            return CommitBehaviorState(candidate, persistCandidate, out failure);
+            return TryAdoptBehaviorState(candidate, acceptCandidate, out failure);
         }
         catch (Exception error)
         {
@@ -96,7 +98,7 @@ public partial class GameSettings
         }
     }
 
-    private bool CommitBehaviorState(BehaviorSourceState candidate, Func<string, bool> persistCandidate, out string failure)
+    private bool TryAdoptBehaviorState(BehaviorSourceState candidate, Func<string, bool> acceptCandidate, out string failure)
     {
         failure = "";
         string xml = candidate.ToXml();
@@ -104,9 +106,9 @@ public partial class GameSettings
         {
             throw new InvalidOperationException("Unstable source serialization");
         }
-        if (!persistCandidate(xml))
+        if (!acceptCandidate(xml))
         {
-            failure = "BehaviorSourceSaveFailed";
+            failure = "BehaviorSourceCandidateRejected";
             return false;
         }
         behaviorSourcesXml = xml;
@@ -154,15 +156,17 @@ public partial class GameSettings
             record.xenotypeDefName, record.actionKey, values, valid);
     }
 
-    /// <summary>Replace one sparse player row transactionally using the existing complete Settings serializer.</summary>
-    public bool TryChangeBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
-        BehaviorValues values, Func<bool> persistCandidate, out string failure)
+    /// <summary>Replace one complete sparse row only when acceptCandidate accepts it.
+    /// True means replacement, not physical commit: the caller may persist first or queue an ordinary
+    /// edit. This method neither writes a file, queues saving nor publishes the native runtime.</summary>
+    public bool TryReplaceBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
+        BehaviorValues values, Func<bool> acceptCandidate, out string diagnostic)
     {
-        failure = "";
-        if (IsConfigurationUnreadable) { failure = "ConfigurationUnreadable"; return false; }
+        diagnostic = "";
+        if (IsConfigurationUnreadable) { diagnostic = "ConfigurationUnreadable"; return false; }
         if (!Authoring.AuthorXml.ActionId(action) || target != target.Trim() || child != child.Trim()
             || !new ActionTuningRecord { serviceFamily = family, targetNamespace = targetNamespace, raceDefName = family == "Pawn" ? target : "", objectTarget = family == "NonPawn" ? target : "", xenotypeDefName = child }.IsValidLayer(out _) || !values.Valid || !values.ApplicableTo(family))
-        { failure = "InvalidPlayerOverride"; return false; }
+        { diagnostic = "InvalidPlayerOverride"; return false; }
         var row = CreatePlayerRecord(family, targetNamespace, target, child, action, values);
         var previous = actionTuning;
         var candidate = previous.Where(x => !(x.serviceFamily == family && x.targetNamespace == targetNamespace
@@ -174,10 +178,10 @@ public partial class GameSettings
         try
         {
             actionTuning = candidate;
-            if (persistCandidate()) { publishedBehavior = null; return true; }
-            failure = "PlayerOverrideSaveFailed";
+            if (acceptCandidate()) { publishedBehavior = null; return true; }
+            diagnostic = "PlayerOverrideCandidateRejected";
         }
-        catch (Exception error) { failure = error.GetType().Name + ":" + error.Message; }
+        catch (Exception error) { diagnostic = error.GetType().Name + ":" + error.Message; }
         actionTuning = previous;
         return false;
     }

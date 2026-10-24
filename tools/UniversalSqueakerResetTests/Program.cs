@@ -74,7 +74,7 @@ internal static class Program
             Check(File.ReadAllBytes(fallback).SequenceEqual(fallbackBytes),"settings reset/save never touches separate fallback bytes");
             File.WriteAllText(file,"<SettingsBlock><ModSettings><responseConfigurationFormat>99</responseConfigurationFormat><outputVolume>0.2</outputVolume></ModSettings></SettingsBlock>");
             GameSettings unreadable=null!;Scribe.loader.InitLoading(file);Scribe_Deep.Look(ref unreadable,"ModSettings");Scribe.loader.FinalizeLoading();unreadable.ResetAllSettings();
-            Check(unreadable.IsConfigurationUnreadable && !unreadable.TryChangeBehaviorOverride("Pawn","","RaceA","",CoreActions.Work,new BehaviorValues{Volume=0},()=>true,out _),"reset does not disguise unreadable format as a migration");
+            Check(unreadable.IsConfigurationUnreadable && !unreadable.TryReplaceBehaviorOverride("Pawn","","RaceA","",CoreActions.Work,new BehaviorValues{Volume=0},()=>true,out _),"reset does not disguise unreadable format as a migration");
             Console.WriteLine("R2 production reset/ExposeData/atomic-file with Scribe doubles PASS "+checks);return 0;
         }
         catch(Exception error){Console.Error.WriteLine(error);return 1;}

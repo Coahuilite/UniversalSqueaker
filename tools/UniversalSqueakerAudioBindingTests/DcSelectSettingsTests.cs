@@ -103,7 +103,7 @@ internal static partial class Program
         Field("playerControlled", null, race.defName); Select(true, "clearing Race field reveals explicit profile false");
         Field("playerControlled", null); Field("awake", null); Field("notDowned", null);
         Select(true, "author false remains after player fields are absent");
-        Check(!settings.TryChangeBehaviorOverride("NonPawn", "fixture", "object", "", "us.core/Select",
+        Check(!settings.TryReplaceBehaviorOverride("NonPawn", "fixture", "object", "", "us.core/Select",
             new BehaviorValues { SelectRequireAwake = false }, () => true, out _), "DC Select Pawn qualification is not silently attached to NonPawn");
         Console.WriteLine("DC SELECT FINAL " + owner.DiagnosticText);
     }

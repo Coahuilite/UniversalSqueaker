@@ -50,7 +50,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
 
     public void Validate(IUiBindings bindings, string elementPath)
     {
-        bindings.ValidateValue<string>("help-section-key", elementPath);
+        bindings.ValidateValue<string>("help-section-ref", elementPath);
     }
 
     public float Measure(UiWidgetContext ctx)
@@ -74,7 +74,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// </summary>
     private static string HeaderText(UiWidgetContext ctx, UsHelpPanelLogic.HelpPanelDisplay display)
     {
-        return string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.Title);
+        return string.Format(UsKernelDraw.Keyed(ctx, HeaderFormatKey), display.TitleText);
     }
 
     /// <summary>
@@ -85,8 +85,8 @@ public sealed class UsHelpPanelWidget : IUiWidget
     private static float MaxHeaderBand(UiWidgetContext ctx, float textWidth)
     {
         string format = UsKernelDraw.Keyed(ctx, HeaderFormatKey);
-        float max = Band(ctx, string.Format(format, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitle)), textWidth, UiFont.Small);
-        foreach (string titleKey in UsHelpCatalog.AllSectionTitles())
+        float max = Band(ctx, string.Format(format, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitleKey)), textWidth, UiFont.Small);
+        foreach (string titleKey in UsHelpCatalog.AllSectionTitleKeys())
         {
             max = Math.Max(max, Band(ctx, string.Format(format, UsKernelDraw.Keyed(ctx, titleKey)), textWidth, UiFont.Small));
         }
@@ -97,9 +97,9 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// <summary>Label band (Small, as drawn) against the overview label, the empty title and every resolved item label.</summary>
     private static float MaxLabelBand(UiWidgetContext ctx, float textWidth)
     {
-        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabel), textWidth, UiFont.Small);
-        max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitle), textWidth, UiFont.Small));
-        foreach (string labelKey in UsHelpCatalog.AllItemLabels())
+        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.OverviewLabelKey), textWidth, UiFont.Small);
+        max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTitleKey), textWidth, UiFont.Small));
+        foreach (string labelKey in UsHelpCatalog.AllItemLabelKeys())
         {
             max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, labelKey), textWidth, UiFont.Small));
         }
@@ -113,13 +113,13 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// </summary>
     private static float MaxBodyBand(UiWidgetContext ctx, float textWidth)
     {
-        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyText), textWidth, UiFont.Tiny);
-        foreach (string overviewKey in UsHelpCatalog.AllSectionOverviews())
+        float max = Band(ctx, UsKernelDraw.Keyed(ctx, UsHelpPanelLogic.EmptyTextKey), textWidth, UiFont.Tiny);
+        foreach (string overviewKey in UsHelpCatalog.AllSectionOverviewKeys())
         {
             max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, overviewKey), textWidth, UiFont.Tiny));
         }
 
-        foreach (string textKey in UsHelpCatalog.AllItemTexts())
+        foreach (string textKey in UsHelpCatalog.AllItemTextKeys())
         {
             max = Math.Max(max, Band(ctx, UsKernelDraw.Keyed(ctx, textKey), textWidth, UiFont.Tiny));
         }
@@ -155,7 +155,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         y += ContentGap;
         UsKernelDraw.Label(
             new Rect(x, y, textWidth, MaxLabelBand(ctx, textWidth)),
-            display.Label,
+            display.LabelText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.Foreground],
             UiFont.Small,
@@ -163,7 +163,7 @@ public sealed class UsHelpPanelWidget : IUiWidget
         y += MaxLabelBand(ctx, textWidth) + 2f;
         UsKernelDraw.Label(
             new Rect(x, y, textWidth, MaxBodyBand(ctx, textWidth)),
-            display.Text,
+            display.BodyText,
             ctx.Theme,
             ctx.Theme[UiPaletteRole.SecondaryForeground],
             UiFont.Tiny,
@@ -173,13 +173,13 @@ public sealed class UsHelpPanelWidget : IUiWidget
     /// <summary>The section this panel is currently falling back to (null when none is active).</summary>
     private static HelpSection? CurrentSection(UiWidgetContext ctx)
     {
-        string sectionKey = ctx.Bindings.TryGet("help-section-key", out string key) ? key : "";
+        string sectionKey = ctx.Bindings.TryGet("help-section-ref", out string key) ? key : "";
         UsHelpCatalog.TryGetSection(sectionKey, out HelpSection section);
         return section;
     }
 
-    /// <summary>Resolves the display for the frame's current hover claim (session-owned since FL P3;
-    /// the claim is not a binding, so there is nothing to validate here beyond the section fallback).</summary>
+    /// <summary>Reads the session's effective help reference, including its 15-pass grace.
+    /// HoverClaim is the fixed fc010bd API spelling, not a binding or a raw current-frame hit.</summary>
     private static UsHelpPanelLogic.HelpPanelDisplay ResolveFrameDisplay(UiWidgetContext ctx, HelpSection? section)
     {
         return UsHelpPanelLogic.Resolve(section, ctx.Session.HoverClaim ?? "", TranslationSeam(ctx));

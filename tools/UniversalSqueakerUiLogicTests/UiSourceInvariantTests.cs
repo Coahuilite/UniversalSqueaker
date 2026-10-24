@@ -575,7 +575,7 @@ internal static class UiSourceInvariantTests
             manifestHelpKeys.Add(key);
         }
 
-        var mapKeys = ReadSectionHelpKeyMap(root);
+        var mapKeys = ReadSectionHelpRefMap(root);
 
         foreach (string key in manifestHelpKeys)
         {
@@ -593,7 +593,7 @@ internal static class UiSourceInvariantTests
         foreach (string key in mapKeys)
         {
             Assert(UsHelpCatalog.TryGetSection(key, out _),
-                "SectionHelpKeyOf target '" + key + "' has no UsHelpCatalog section (nav selection would empty the panel)");
+                "SectionHelpRefOf target '" + key + "' has no UsHelpCatalog section (nav selection would empty the panel)");
         }
 
         foreach (string key in catalogSections)
@@ -602,7 +602,7 @@ internal static class UiSourceInvariantTests
                 || manifestHelpKeys.Any(help => help.StartsWith(key + "/", StringComparison.Ordinal))
                 || mapKeys.Contains(key),
                 "catalog section '" + key + "' is unreachable: neither a manifest HelpKey (itself or one of "
-                + "its items) nor a SectionHelpKeyOf value (dead catalog content)");
+                + "its items) nor a SectionHelpRefOf value (dead catalog content)");
         }
 
         Assert(mapKeys.Contains("us/page-title"),
@@ -626,7 +626,7 @@ internal static class UiSourceInvariantTests
         string panel = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsHelpPanelWidget.cs");
         CheckSourceContains(panel, new[]
         {
-            "ValidateValue<string>(\"help-section-key\"",
+            "ValidateValue<string>(\"help-section-ref\"",
             "MaxBodyBand(ctx, textWidth)",
             "ctx.Session.HoverClaim ?? \"\"",
             "TranslationSeam(ctx)",
@@ -641,7 +641,7 @@ internal static class UiSourceInvariantTests
 
         CheckSourceContains(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsKernelDraw.cs"),
-            new[] { "ctx.Session.ClaimHover(itemKey)" },
+            new[] { "ctx.Session.ClaimHover(helpRef)" },
             "HelpHover is the single claim outlet and it claims on the session, not through a binding");
         CheckSourceDoesNotContain(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Kernel", "UsSectionWidgetBase.cs"),
@@ -679,11 +679,11 @@ internal static class UiSourceInvariantTests
         // the scroll-to action wiring" - that is what is asserted now, receiver-agnostic - while the "a write
         // registration must go through the funnel" half is owned by
         // VerifyWriteBindingsGoThroughTheRegistry, so the receiver is deliberately not pinned here.
-        Assert(host.Contains("BindReadOnly<string>(\"help-section-key\"")
+        Assert(host.Contains("BindReadOnly<string>(\"help-section-ref\"")
                && host.Contains("host.Session.HoverGraceFrames = HelpHoverGracePasses")
                && !host.Contains("set-help-hover")
                && host.Contains("Action<string>(\"scroll-to\""),
-            "the Host owns help-section-key/scroll-to wiring, sets the grace length on the session, "
+            "the Host owns help-section-ref/scroll-to wiring, sets the grace length on the session, "
             + "and the retired hover/selection channels stay dead (single event authority)");
     }
 
@@ -766,7 +766,7 @@ internal static class UiSourceInvariantTests
             HelpSection section = (HelpSection)entry.Value!;
             foreach (HelpItem item in section.Items)
             {
-                Assert(keys.Add(item.Key), "catalog item key collides across sections: " + item.Key);
+                Assert(keys.Add(item.Ref), "catalog item key collides across sections: " + item.Ref);
             }
         }
 
@@ -804,22 +804,22 @@ internal static class UiSourceInvariantTests
         foreach (DictionaryEntry entry in sections)
         {
             HelpSection section = (HelpSection)entry.Value!;
-            counts[section.Key] = section.Items.Count;
+            counts[section.Ref] = section.Items.Count;
         }
 
         return counts;
     }
 
-    private static HashSet<string> ReadSectionHelpKeyMap(string root)
+    private static HashSet<string> ReadSectionHelpRefMap(string root)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         string model = File.ReadAllText(
             Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Model", "VoicePacksPageModel.cs"));
 
-        int start = model.IndexOf("SectionHelpKeyOf", StringComparison.Ordinal);
+        int start = model.IndexOf("SectionHelpRefOf", StringComparison.Ordinal);
         if (start < 0)
         {
-            throw new InvalidOperationException("VoicePacksPageModel.SectionHelpKeyOf is gone; re-point this guard deliberately.");
+            throw new InvalidOperationException("VoicePacksPageModel.SectionHelpRefOf is gone; re-point this guard deliberately.");
         }
 
         int end = model.IndexOf("SetTuningLayer", start, StringComparison.Ordinal);

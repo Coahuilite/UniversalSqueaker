@@ -20,16 +20,21 @@ public static class SqueakerNotifications
         declarations.Add(contract.ActionId, contract);
     }
 
-    public static bool Notify(Pawn subject, NotificationContract contract)
+    /// <summary>Synchronously offer the declared event to its actual subject's response owner.</summary>
+    /// <returns>True when the input was processed. Qualification, missing audio or a rejected output
+    /// can still prevent playback; only a PlaybackReceipt describes actual dispatch.</returns>
+    public static bool TryProcess(Pawn subject, NotificationContract contract)
     {
         if (subject == null) throw new ArgumentNullException(nameof(subject));
         if (contract == null || !declarations.TryGetValue(contract.ActionId, out var registered) || !ReferenceEquals(contract, registered)) return false;
-        return SqueakerRuntime.NotifyDeclared(subject, contract.ActionId);
+        return SqueakerRuntime.TryProcessDeclaredNotification(subject, contract.ActionId);
     }
-    public static bool Notify(Pawn subject, string actionId)
+    /// <summary>Process an already declared complete ActionId, without guessing from a label or sound name.</summary>
+    /// <returns>Input processed, not playback success. Unknown/official native IDs or no current owner return false.</returns>
+    public static bool TryProcess(Pawn subject, string actionId)
     {
         if (subject == null) throw new ArgumentNullException(nameof(subject));
         if (!AuthorXml.ActionId(actionId)) return false;
-        return SqueakerRuntime.NotifyDeclared(subject, actionId);
+        return SqueakerRuntime.TryProcessDeclaredNotification(subject, actionId);
     }
 }

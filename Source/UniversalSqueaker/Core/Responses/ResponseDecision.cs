@@ -182,6 +182,8 @@ public sealed class Condition
     }
 }
 
+/// <summary>Immutable action input: declared defaults in the catalog, or an opportunity's folded values.
+/// It is not mutable subject state, a playback request or confirmation that the condition succeeded.</summary>
 public sealed class ActionPlan
 {
     public readonly string Key;

@@ -357,7 +357,7 @@ public static class SqueakerRuntime
         catalog = next.Publish();
         return true;
     }
-    internal static bool NotifyDeclared(Pawn pawn, string actionId)
+    internal static bool TryProcessDeclaredNotification(Pawn pawn, string actionId)
     {
         if (Kernel.BuiltInActionKeys.Contains(actionId) || !catalog.HasAction(actionId)) return false;
         var session = SessionFor(pawn);

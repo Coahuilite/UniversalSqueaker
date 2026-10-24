@@ -245,7 +245,7 @@ internal static partial class Program
         var researcher = new JobDriver_Research { pawn = commanded, job = researchJob, FixtureToil = new Toil() };
         commanded.CurJob = researchJob; commanded.jobs!.curDriver = researcher;
         commanded.health!.hediffSet!.hediffs.Add(new Hediff_Injury { Severity = 1 });
-        Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", commandWork,
+        Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", commandWork,
             new BehaviorValues { Scope = BehaviorScope.ActiveCommand, HardIntervalTicks = 9, Volume = .3 }, () => true, out _),
             "DC full child settings use production sparse writer");
         beforeFailure = SoundStarter.Played.Count; Find.TickManager.TicksGame += 100; commanded.Comp!.CompTick();
@@ -259,7 +259,7 @@ internal static partial class Program
             "DC child keeps actual command/Worker role, independent full config/entry/deadline and direct AudioId reuse");
 
         var victim = Pawn(otherRace);
-        Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", otherRace.defName, "", "us.core/Wounded",
+        Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", otherRace.defName, "", "us.core/Wounded",
             new BehaviorValues { HardIntervalTicks = 7, Volume = .25 }, () => true, out _), "DC victim has independent accurate-domain effective settings");
         beforeFailure = SoundStarter.Played.Count; Find.TickManager.TicksGame += 100;
         new Verb_LaunchProjectile { caster = actor, OnExecution = () => DcDamage(victim, 0) }.Execute();
@@ -286,7 +286,7 @@ internal static partial class Program
         mover.pather.Moving = true; Find.TickManager.TicksGame += 100; mover.Comp.CompTick();
         var invalidParameterHandle = SoundStarter.Spawned.Last();
         Check(!invalidParameterHandle.Ended, "DC Move has a live owned slot before changing its effective configuration");
-        Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", maintainedMove,
+        Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", maintainedMove,
             new BehaviorValues { SelectRequireAwake = false }, () => true, out _), "DC stores the explicit Pawn parameter contribution before contract applicability is checked");
         RuntimeSession(mover).Maintain(force: true);
         Check(invalidParameterHandle.Ended, "DC Select-only fields on a non-selection contract invalidate its current Sustained authorization, not only its next start");

@@ -26,6 +26,7 @@
 | 引用另一音频模组的普通SoundDef | 同一声明，[ReferencedAudio](examples/0.6/ReferencedAudio.xml)；保依赖与真实来源 |
 | 继承已有固定条件或增加独立根 | `UsActionDef`，[IdentitySelect](examples/0.6/IdentitySelect.xml)／[EatExtensions](examples/0.6/EatExtensions.xml) |
 | 一个明确自定义事件 | [一次C#声明](examples/0.6/DeclaredNotification.cs) 或 [UsNotificationDef](examples/0.6/DeclaredNotification.xml) |
+| 明确提交玩家稀疏行 | [CommittedOverride.cs](examples/0.6/CommittedOverride.cs)及[提交与处理语义](us-public-contracts-and-help-zh.md) |
 | 提供新事实／响应实现 | `IUsDefinitionProvider.Collect`，批次中的 `IUsFactSource`／`IUsResponseRule` |
 | 为准确域提供作者行为贡献 | `UsBehaviorSourceDef`，[BehaviorSource](examples/0.6/BehaviorSource.xml)，须显式绑定来源 |
 | 玩家手动导入稀疏调音值 | `UsBehaviorPresetDef`，[PlayerTemplate](examples/0.6/PlayerTemplate.xml)，不自动绑定作者来源 |
@@ -45,5 +46,7 @@ Pawn 包声明准确 Race；可选 `child` 是该 Race 下真实 canonical Xenot
 ## 编译与验证作者调用
 
 引用当前 `UniversalSqueaker.dll` 和匹配的 RimWorld1.6编译引用，不链接US源码或测试替身。将示例中的 `Register()`放在本模组定义初始化阶段，只调用一次；实际工作成功后才用实际worker通知。不要按声音名字、标签或显示文本猜合同。
+
+通知用`TryProcess`，返回true只表示输入处理，不代表已派发。Mod的`TryCommit…`返回true表示实际文件已提交，out diagnostic仍可报告随后发布失败；GameSettings的行替换与普通setter不承诺即时落盘。具体边界、帮助ref／译文key及保留名字的理由见[公开合同与帮助](us-public-contracts-and-help-zh.md)。
 
 先解析完整XML，核对完整ID、继承图、准确域、参与／参数presence与资源依赖。自动替身测试能证明调用和请求，不能证明已听见声音。获准游戏验证时，再用固定配对候选确认正常加载、选包、实际事件、保存重开、各模式与试听；不为静态验证自行启动游戏或修改真实Config。

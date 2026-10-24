@@ -71,7 +71,7 @@ internal static partial class Program
             "DA actual settings source transaction persists full child identity before runtime publication");
         Check(SqueakerMod.Settings.TryChangeBehaviorSource(new BehaviorDomain("Pawn", "", "Ratkin", xeno.defName),
             "fixture.da/US_DaSource", SqueakerRuntime.BehaviorSources, _ => true, out _), "DA bind legal child author contribution independently");
-        void RelaxSelect() => Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Select",
+        void RelaxSelect() => Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", "", "", "us.core/Select",
             new BehaviorValues { SelectRequirePlayerControlled = false, SelectRequireAwake = false, SelectRequireNotDowned = false },
             () => true, out _), "DA explicit player settings relax the three official qualifications without changing accepted-feedback evidence");
         RelaxSelect();

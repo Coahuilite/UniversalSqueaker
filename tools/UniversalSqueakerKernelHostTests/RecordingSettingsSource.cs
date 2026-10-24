@@ -481,9 +481,9 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
         };
     }
 
-    public string SectionHelpKey(string sectionKey)
+    public string SectionHelpRef(string sectionKey)
     {
-        return VoicePacksPageModel.SectionHelpKeyOf(sectionKey);
+        return VoicePacksPageModel.SectionHelpRefOf(sectionKey);
     }
 
     public void SetMode(SqueakVoicePackMode mode) => LastMode = mode;
@@ -695,8 +695,8 @@ internal sealed class RecordingSettingsSource : IUsKernelSettingsSource
             return;
 
         // Mirror VoicePacksPageModel.ApplyActiveTab exactly: a real workspace switch also moves the
-        // active section to that workspace's primary section, and help-section-key resolves through
-        // it. Without this the fake would pin help-section-key to "us/mode-row" forever, so no lane
+        // active section to that workspace's primary section, and help-section-ref resolves through
+        // it. Without this the fake would pin help-section-ref to "us/mode-row" forever, so no lane
         // could observe the help topic following the workspace while the drawer stays open.
         if (!string.Equals(state.ActiveTab, normalized, StringComparison.Ordinal))
         {

@@ -4,33 +4,33 @@ using System.Collections.Generic;
 namespace UniversalSqueaker.UI;
 
 /// <summary>
-/// Structured help section returned by <see cref="UsHelpCatalog"/>. <see cref="Title"/> and
-/// <see cref="Overview"/> are Keyed entry NAMES, never display text; they are resolved through the
+/// Structured help section returned by <see cref="UsHelpCatalog"/>. <see cref="TitleKey"/> and
+/// <see cref="OverviewKey"/> are Keyed entry NAMES, never display text; they are resolved through the
 /// Host translation seam in <see cref="UsHelpPanelLogic.Resolve"/> and in the panel's band maxima.
 /// </summary>
 internal sealed class HelpSection
 {
     public HelpSection(string key, string titleKey, string overviewKey, IReadOnlyList<HelpItem> items)
     {
-        Key = key ?? throw new ArgumentNullException(nameof(key));
-        Title = titleKey ?? throw new ArgumentNullException(nameof(titleKey));
-        Overview = overviewKey ?? throw new ArgumentNullException(nameof(overviewKey));
+        Ref = key ?? throw new ArgumentNullException(nameof(key));
+        TitleKey = titleKey ?? throw new ArgumentNullException(nameof(titleKey));
+        OverviewKey = overviewKey ?? throw new ArgumentNullException(nameof(overviewKey));
         Items = items ?? throw new ArgumentNullException(nameof(items));
     }
 
-    public string Key { get; }
+    public string Ref { get; }
 
     /// <summary>Keyed entry name of the section title.</summary>
-    public string Title { get; }
+    public string TitleKey { get; }
 
     /// <summary>Keyed entry name of the section overview body.</summary>
-    public string Overview { get; }
+    public string OverviewKey { get; }
 
     public IReadOnlyList<HelpItem> Items { get; }
 }
 
 /// <summary>
-/// One individual help entry inside a <see cref="HelpSection"/>. Label and Text are Keyed entry
+/// One individual help entry inside a <see cref="HelpSection"/>. LabelKey and TextKey are Keyed entry
 /// NAMES; some labels deliberately reuse the control's own caption key (a mode button and its help
 /// row must never read differently in either language).
 /// </summary>
@@ -38,30 +38,30 @@ internal sealed class HelpItem
 {
     public HelpItem(string key, string labelKey, string textKey)
     {
-        Key = key ?? throw new ArgumentNullException(nameof(key));
-        Label = labelKey ?? throw new ArgumentNullException(nameof(labelKey));
-        Text = textKey ?? throw new ArgumentNullException(nameof(textKey));
+        Ref = key ?? throw new ArgumentNullException(nameof(key));
+        LabelKey = labelKey ?? throw new ArgumentNullException(nameof(labelKey));
+        TextKey = textKey ?? throw new ArgumentNullException(nameof(textKey));
     }
 
-    public string Key { get; }
+    public string Ref { get; }
 
     /// <summary>Keyed entry name of the index row / content label.</summary>
-    public string Label { get; }
+    public string LabelKey { get; }
 
     /// <summary>Keyed entry name of the help body.</summary>
-    public string Text { get; }
+    public string TextKey { get; }
 }
 
 /// <summary>
 /// US-side structured help catalog backing the bottom help panel (C+A model: the panel shows the
-/// hovered control's entry, falling back to the active section's overview). Every string here is a
-/// Keyed entry name - the ChineseSimplified table is the authoritative copy (说明书体, terminology
+/// current topic's entry, falling back to the active section's overview). Ref is a directory address;
+/// TitleKey/OverviewKey/LabelKey/TextKey are translation resource keys. The ChineseSimplified table is the authoritative copy (说明书体, terminology
 /// rulings applied: 异种/强效/已失效/清除失效) and the English table translates it. The audit
 /// gate drives both tables through the real panel, so every body must fit the panel's own wrapped band
 /// at the shipped page box in both languages (BH1: the panel spans the page's inner width above the
 /// footer instead of the old 320px side column; HelpPanelLaneTests measures the band it hands the
 /// widget and keeps the audit attached while it does).
-/// Item keys are globally unique and embed their section prefix ("us/&lt;section&gt;/&lt;item&gt;");
+/// Item references are globally unique and embed their section prefix ("us/&lt;section&gt;/&lt;item&gt;");
 /// hover claims in the widget tree resolve through <see cref="TryFindItem"/> across the whole
 /// catalog, and the zero-Verse gate pins both the uniqueness and the claim↔entry equality.
 /// </summary>
@@ -70,7 +70,7 @@ internal static class UsHelpCatalog
     private static readonly Dictionary<string, HelpSection> Sections = new(StringComparer.Ordinal)
     {
         // Window-level fallback section: the section-map guard keeps it reachable via
-        // SectionHelpKeyOf's default branch; its three items are claimed live by the navigation
+        // SectionHelpRefOf's default branch; its three items are claimed live by the navigation
         // rows, the footer save status and the footer Help switch.
         ["us/page-title"] = new HelpSection(
             "us/page-title",
@@ -466,7 +466,7 @@ internal static class UsHelpCatalog
 
         foreach (HelpItem candidate in section.Items)
         {
-            if (string.Equals(candidate.Key, itemKey, StringComparison.Ordinal))
+            if (string.Equals(candidate.Ref, itemKey, StringComparison.Ordinal))
             {
                 item = candidate;
                 return true;
@@ -490,7 +490,7 @@ internal static class UsHelpCatalog
         if (string.IsNullOrEmpty(itemKey)) return false;
         foreach (HelpSection candidate in Sections.Values)
         {
-            if (TryGetItem(candidate.Key, itemKey, out HelpItem found))
+            if (TryGetItem(candidate.Ref, itemKey, out HelpItem found))
             {
                 item = found;
                 section = candidate;
@@ -502,32 +502,32 @@ internal static class UsHelpCatalog
     }
 
     /// <summary>All section title keys; the hover-invariant header band measures against these.</summary>
-    internal static IEnumerable<string> AllSectionTitles()
+    internal static IEnumerable<string> AllSectionTitleKeys()
     {
-        foreach (HelpSection section in Sections.Values) yield return section.Title;
+        foreach (HelpSection section in Sections.Values) yield return section.TitleKey;
     }
 
     /// <summary>All item label keys; the hover-invariant label band measures against these.</summary>
-    internal static IEnumerable<string> AllItemLabels()
+    internal static IEnumerable<string> AllItemLabelKeys()
     {
         foreach (HelpSection section in Sections.Values)
         {
-            foreach (HelpItem item in section.Items) yield return item.Label;
+            foreach (HelpItem item in section.Items) yield return item.LabelKey;
         }
     }
 
     /// <summary>All item body keys; the hover-invariant body band measures against these.</summary>
-    internal static IEnumerable<string> AllItemTexts()
+    internal static IEnumerable<string> AllItemTextKeys()
     {
         foreach (HelpSection section in Sections.Values)
         {
-            foreach (HelpItem item in section.Items) yield return item.Text;
+            foreach (HelpItem item in section.Items) yield return item.TextKey;
         }
     }
 
     /// <summary>All section overview keys; the hover-invariant body band measures against these too.</summary>
-    internal static IEnumerable<string> AllSectionOverviews()
+    internal static IEnumerable<string> AllSectionOverviewKeys()
     {
-        foreach (HelpSection section in Sections.Values) yield return section.Overview;
+        foreach (HelpSection section in Sections.Values) yield return section.OverviewKey;
     }
 }

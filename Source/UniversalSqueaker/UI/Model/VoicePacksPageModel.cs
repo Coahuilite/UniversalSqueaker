@@ -1230,7 +1230,7 @@ public static class VoicePacksPageModel
         return SectionGroup(sectionKey ?? "");
     }
 
-    public static string SectionHelpKeyOf(string sectionKey)
+    public static string SectionHelpRefOf(string sectionKey)
     {
         return sectionKey switch
         {

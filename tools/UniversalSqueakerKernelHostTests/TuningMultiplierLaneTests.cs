@@ -20,8 +20,8 @@ internal static class TuningMultiplierLaneTests
         var initial = Rows(0,"","");
         Require(initial.Count == 15 && initial.Select(x=>x.ActionKey).Distinct().Count()==15, "all fifteen canonical IDs appear exactly once");
         Require(initial.Single(x=>x.ActionKey==CoreActions.Work).EffectiveScope==BehaviorScope.ActiveCommand, "actual Work scope default comes from canonical contract");
-        Require(settings.TryChangeBehaviorOverride("Pawn","","","",CoreActions.Work,new BehaviorValues{Volume=0,HardIntervalTicks=0},()=>true,out _), "sparse profile edit committed");
-        Require(settings.TryChangeBehaviorOverride("Pawn","","RaceA","",CoreActions.Work,new BehaviorValues{Pitch=2},()=>true,out _), "independent race field committed");
+        Require(settings.TryReplaceBehaviorOverride("Pawn","","","",CoreActions.Work,new BehaviorValues{Volume=0,HardIntervalTicks=0},()=>true,out _), "sparse profile edit committed");
+        Require(settings.TryReplaceBehaviorOverride("Pawn","","RaceA","",CoreActions.Work,new BehaviorValues{Pitch=2},()=>true,out _), "independent race field committed");
         var global = Rows(0,"","").Single(x=>x.ActionKey==CoreActions.Work);
         var race = Rows(1,"RaceA","").Single(x=>x.ActionKey==CoreActions.Work);
         Require(global.Explanation.Contains("volume=player:Pawn::profile") && !global.Explanation.Contains("pitch=player:Pawn::RaceA:"), "profile never borrows a race supplier");

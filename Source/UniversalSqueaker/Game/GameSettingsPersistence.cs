@@ -65,18 +65,18 @@ internal sealed class GameSettingsPersistence
         if (!committed) Log.Warning("usdiag behavior candidate " + commitFailure);
         return committed;
     }
-    internal bool ChangeBehaviorSource(BehaviorDomain domain, string? source, out string failure)
+    internal bool TryCommitBehaviorSource(BehaviorDomain domain, string? source, out string diagnostic)
     {
-        bool committed = settings.TryChangeBehaviorSource(domain, source, SqueakerRuntime.BehaviorSources, PersistBehaviorCandidate, out failure);
-        if (committed) Owner.PublishCommitted(settings.ApplyToRuntime, out failure);
+        bool committed = settings.TryChangeBehaviorSource(domain, source, SqueakerRuntime.BehaviorSources, PersistBehaviorCandidate, out diagnostic);
+        if (committed) Owner.PublishCommitted(settings.ApplyToRuntime, out diagnostic);
         return committed;
     }
-    internal bool ChangeBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
-        BehaviorValues values, out string failure)
+    internal bool TryCommitBehaviorOverride(string family, string targetNamespace, string target, string child, string action,
+        BehaviorValues values, out string diagnostic)
     {
-        bool committed = settings.TryChangeBehaviorOverride(family, targetNamespace, target, child, action, values,
-            () => PersistBehaviorCandidate(settings.behaviorSourcesXml), out failure);
-        if (committed) Owner.PublishCommitted(settings.ApplyToRuntime, out failure);
+        bool committed = settings.TryReplaceBehaviorOverride(family, targetNamespace, target, child, action, values,
+            () => PersistBehaviorCandidate(settings.behaviorSourcesXml), out diagnostic);
+        if (committed) Owner.PublishCommitted(settings.ApplyToRuntime, out diagnostic);
         return committed;
     }
 }

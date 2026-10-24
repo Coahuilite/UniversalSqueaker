@@ -18,11 +18,15 @@ internal static partial class Program
         Console.WriteLine("MODE --refactor-through: actual Harmony hooks → production declaration/config/facts/neutral owner/audio → native output double/receipt");
         var custom = new NotificationContract("external.worker/Finished", 120, 40);
         SqueakerNotifications.Declare(custom);
+        var restricted = new NotificationContract("external.worker/NeedsInjury", restriction: new Condition("ref", "us.core/HasCurrentInjury"));
+        var noAudio = new NotificationContract("external.worker/WithoutAudio");
+        var refusedOutput = new NotificationContract("external.worker/OutputRefused");
+        SqueakerNotifications.Declare(restricted); SqueakerNotifications.Declare(noAudio); SqueakerNotifications.Declare(refusedOutput);
         var race = new ThingDef { defName = "RefactorRace", race = new object() };
         DefDatabase<ThingDef>.AllDefsListForReading.Add(race);
         var pack = new UsVoicePackDef { defName = "US_Through", modContentPack = new ModContentPack { PackageId = "fixture.through" } };
         pack.declaration.Race = race.defName;
-        foreach (var key in new[] { CoreActions.Select, CoreActions.Eat, CoreActions.Attack, custom.ActionId })
+        foreach (var key in new[] { CoreActions.Select, CoreActions.Eat, CoreActions.Attack, custom.ActionId, restricted.ActionId, refusedOutput.ActionId })
             pack.declaration.Entries.Add(new VoiceEntry { Key = key, Action = key, Sound = "Ratkin1" });
         const string sustained = "external.worker/Moving";
         DefDatabase<UsActionDef>.AllDefsListForReading.Add(new UsActionDef { declaration = new ActionDeclaration {
@@ -70,16 +74,35 @@ internal static partial class Program
         Check(owner.State.NextStateTick == wait && owner.State.AttemptTick == attempt && SoundStarter.Played.Count == before + 3,
             "normal zero/positive ingestion results with no Result consumer do not create ordinary Eat opportunities");
         Find.TickManager.TicksGame += 1;
-        Check(SqueakerNotifications.Notify(pawn, custom), "declared external C# notification enters production gateway");
+        Check(SqueakerNotifications.TryProcess(pawn, custom), "declared external C# notification enters production gateway");
         var request = pawn.Comp.LastCandidateRequest;
         Check(ReferenceEquals(owner, RuntimeSession(pawn)) && request?.Action == custom.ActionId && request.Subject == SqueakerNotifications.SubjectKey(pawn)
             && request.Audio.EntryKey == "fixture.through/US_Through/" + custom.ActionId
             && request.Audio.AudioId == "actual.provider/Ratkin1" && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched,
             "C# author notification settles original subject owner with exact ActionId/entry/AudioId/receipt");
         long deadline = owner.State.ActionDeadline(custom.ActionId);
-        Find.TickManager.TicksGame += 1; SqueakerNotifications.Notify(pawn, custom);
+        Find.TickManager.TicksGame += 1; SqueakerNotifications.TryProcess(pawn, custom);
         Check(owner.LastOutcome.Reason == "HardDeadline" && owner.State.ActionDeadline(custom.ActionId) == deadline && SoundStarter.Played.Count == before + 4,
             "explicit notification shares original hard owner, not a parallel event cooldown");
+        Find.TickManager.TicksGame++;
+        Check(SqueakerNotifications.TryProcess(pawn, restricted) && owner.LastOutcome.Receipt == null
+            && SoundStarter.Played.Count == before + 4,
+            "processed notification is true when the actual injury qualification prevents playback");
+        Console.WriteLine("NOTIFICATION qualification " + owner.DiagnosticText);
+        Find.TickManager.TicksGame++;
+        Check(SqueakerNotifications.TryProcess(pawn, noAudio) && owner.LastOutcome.Reason == "NoBoundAudio"
+            && owner.LastOutcome.Receipt == null && SoundStarter.Played.Count == before + 4,
+            "processed notification is true with no mapped audio, not a playback claim");
+        Find.TickManager.TicksGame++;
+        SqueakSoundAvailabilityCache.RejectProductionInfo = true;
+        try
+        {
+            Check(SqueakerNotifications.TryProcess(pawn, refusedOutput)
+                && owner.LastOutcome.Receipt?.Result == PlaybackResult.Rejected && SoundStarter.Played.Count == before + 4,
+                "processed notification stays true while actual native output preflight returns Rejected");
+            Console.WriteLine("NOTIFICATION rejected output " + owner.DiagnosticText);
+        }
+        finally { SqueakSoundAvailabilityCache.RejectProductionInfo = false; }
         var audio = SqueakerRuntime.Audio;
         var configuration = SqueakerMod.Settings.CaptureBehaviorConfiguration();
         Check(ReferenceEquals(configuration, SqueakerMod.Settings.CaptureBehaviorConfiguration()), "repeated opportunities/readers capture published configuration reference without reparsing XML");
@@ -87,12 +110,12 @@ internal static partial class Program
         Check(!ReferenceEquals(configuration, SqueakerMod.Settings.CaptureBehaviorConfiguration()) && ReferenceEquals(audio, SqueakerRuntime.Audio)
             && owner.State.NextStateTick == wait && owner.State.ActionDeadline(custom.ActionId) == deadline,
             "configuration edit publishes only behavior revision, retaining audio and scheduled waits/deadlines");
-        Check(!SqueakerNotifications.Notify(pawn, "unknown/Undeclared") && !SqueakerNotifications.Notify(pawn, CoreActions.Select)
+        Check(!SqueakerNotifications.TryProcess(pawn, "unknown/Undeclared") && !SqueakerNotifications.TryProcess(pawn, CoreActions.Select)
             && SoundStarter.Played.Count == before + 4, "unknown full string is rejected rather than guessed into a default Call plan");
         pawn.def = new ThingDef { defName = "ChangedRace", race = new object() };
         pawn.ThingID = "ChangedRace_" + pawn.thingIDNumber;
         Find.TickManager.TicksGame++;
-        SqueakerNotifications.Notify(pawn, custom);
+        SqueakerNotifications.TryProcess(pawn, custom);
         Check(ReferenceEquals(owner, RuntimeSession(pawn)) && owner.LastOutcome.Reason == "HardDeadline"
             && owner.State.ActionDeadline(custom.ActionId) == deadline && SoundStarter.Played.Count == before + 4,
             "actual adapter uses stable numeric subject identity across changed race/display ThingID, retaining the same owner/deadline");
@@ -105,7 +128,7 @@ internal static partial class Program
         var native = SoundStarter.Spawned.Last();
         Check(owner.LastOutcome.Action == sustained && owner.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && !native.Ended,
             "explicit maintained contract starts one native sustainer through original neutral owner");
-        Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", sustained, new BehaviorValues { Enabled = false }, () => true, out _),
+        Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", sustained, new BehaviorValues { Enabled = false }, () => true, out _),
             "current configuration can close sustained contract independently");
         Find.TickManager.TicksGame++;
         pawn.Comp.CompTick();

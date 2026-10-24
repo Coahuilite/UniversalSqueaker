@@ -314,7 +314,7 @@ internal static class HelpPanelLaneTests
 
             Program.SetScrollPositionById(host.Session, HelpBandId, new Vector2(0f, preserved));
             Program.SetScrollPositionById(host.Session, "content-scroll", new Vector2(0f, 30f));
-            string topic = host.Bindings.Get<string>("help-section-key");
+            string topic = host.Bindings.Get<string>("help-section-ref");
 
             host.Bindings.Set(HelpOpenKey, false);
             UiLayoutSnapshot closed = host.MeasureAndArrange(viewport);
@@ -330,9 +330,9 @@ internal static class HelpPanelLaneTests
                 viewport + ": the panel's own scroll position set before the toggle must survive it");
             Assert(Math.Abs(Program.ScrollPositionById(host.Session, "content-scroll").y - 30f) < 0.01f,
                 viewport + ": the centre column's scroll position must survive the help toggle untouched");
-            Assert(string.Equals(host.Bindings.Get<string>("help-section-key"), topic, StringComparison.Ordinal),
+            Assert(string.Equals(host.Bindings.Get<string>("help-section-ref"), topic, StringComparison.Ordinal),
                 "the selected help topic must survive a close/open cycle: '" + topic + "' -> '"
-                + host.Bindings.Get<string>("help-section-key") + "'");
+                + host.Bindings.Get<string>("help-section-ref") + "'");
 
             Console.WriteLine("[bh1-scroll] box " + viewport.x + "x" + viewport.y + " panelHeadroom=" + headroom
                 + " centreHeadroom=" + centreHeadroom + " preserved panel.y=" + preserved + " centre.y=30");
@@ -347,13 +347,13 @@ internal static class HelpPanelLaneTests
         // The shipped default is retracted; this step needs the panel open across the switch.
         host.Bindings.Set(HelpOpenKey, true);
         host.MeasureAndArrange(AcceptancePageBox);
-        string before = host.Bindings.Get<string>("help-section-key");
+        string before = host.Bindings.Get<string>("help-section-ref");
 
         host.Bindings.Invoke("set-tab", "Packs");
         UiLayoutSnapshot snapshot = host.MeasureAndArrange(AcceptancePageBox);
         Assert(snapshot.Viewports.ContainsKey(HelpBandId),
             "switching workspaces while the panel is open must not close it");
-        string after = host.Bindings.Get<string>("help-section-key");
+        string after = host.Bindings.Get<string>("help-section-ref");
         Assert(!string.Equals(after, before, StringComparison.Ordinal) && after.Length > 0,
             "the help topic must follow the workspace while the panel stays open: '"
             + before + "' -> '" + after + "'");
@@ -834,7 +834,7 @@ internal static class HelpPanelLaneTests
                 && Math.Abs(Program.ScrollPositionById(session, "content-scroll").y - 24f) < 0.01f,
             "the lane must really move both page scrolls before it asserts preservation");
 
-        string beforeTopic = host.Bindings.Get<string>("help-section-key");
+        string beforeTopic = host.Bindings.Get<string>("help-section-ref");
         host.Bindings.Invoke("set-tab", "Tuning");
         UiLayoutSnapshot switched = host.MeasureAndArrange(viewport);
         Assert(switched.Viewports.ContainsKey(HelpBandId), "a workspace switch must not close the panel");
@@ -843,10 +843,10 @@ internal static class HelpPanelLaneTests
                 && Math.Abs(Program.ScrollPositionById(session, "content-scroll").y) < 0.01f,
             "a workspace switch resets both page scrolls to top by design (SessionRevisionBumper.ResetScroll)");
 
-        string topic = host.Bindings.Get<string>("help-section-key");
+        string topic = host.Bindings.Get<string>("help-section-ref");
         Assert(!string.Equals(topic, beforeTopic, StringComparison.Ordinal),
             "the help topic must follow the switched workspace: '" + beforeTopic + "' -> '" + topic + "'");
-        Assert(string.Equals(topic, fake.SectionHelpKey(fake.ViewState.ActiveSectionKey), StringComparison.Ordinal),
+        Assert(string.Equals(topic, fake.SectionHelpRef(fake.ViewState.ActiveSectionKey), StringComparison.Ordinal),
             "the open panel must show the active section's help: topic '" + topic + "' vs active section '"
             + fake.ViewState.ActiveSectionKey + "'");
 
@@ -875,7 +875,7 @@ internal static class HelpPanelLaneTests
         UiLayoutSnapshot reopened = host.MeasureAndArrange(viewport);
         Assert(reopened.Viewports.ContainsKey(HelpBandId), "the reopened arrange must carry the band");
 
-        Assert(string.Equals(host.Bindings.Get<string>("help-section-key"), topic, StringComparison.Ordinal),
+        Assert(string.Equals(host.Bindings.Get<string>("help-section-ref"), topic, StringComparison.Ordinal),
             "close/reopen must keep the topic the workspace switch selected: '" + topic + "'");
         Assert(Math.Abs(Program.ScrollPositionById(session, HelpBandId).y - 40f) < 0.01f,
             "close/reopen must keep the panel's own scroll position");

@@ -17,11 +17,13 @@ public static class WorkFinished
     // 定义初始化时调用一次，早于主体开始响应。
     public static void Register() => SqueakerNotifications.Declare(Contract);
     public static bool AfterSuccessfulWork(Pawn actualWorker) =>
-        SqueakerNotifications.Notify(actualWorker, Contract);
+        SqueakerNotifications.TryProcess(actualWorker, Contract);
 }
 ```
 
 完整外部编译例为 [DeclaredNotification.cs](examples/0.6/DeclaredNotification.cs)。C# 作者无需另写 Def；XML 作者可用 [UsNotificationDef](examples/0.6/DeclaredNotification.xml)。一个通知合同确定完整 ActionId 与固定通知事实。未知字符串、重复声明及冒用官方原生通知均有明确拒绝，不猜 Call 或默认计划。通知进入当前主体原有 owner；返回值不等于已经听见声音。
+
+`TryProcess`的true指输入已同步处理，包括资格／无音／输出拒绝等未派发情况。原子Mod入口使用`TryCommitBehaviorSource`／`TryCommitBehaviorOverride`和out diagnostic；GameSettings的`TryReplaceBehaviorOverride`只保证候选获调用方回调接受，普通编辑仍排队，不称Committed。完整[命名与帮助语义／旧新映射](us-public-contracts-and-help-zh.md)给出真实调用与保留理由。
 
 需要组合正向事实时，使用 `UsActionDef` 的独立根或继承：[受伤主体的 Select](examples/0.6/IdentitySelect.xml)、[Eat 扩展](examples/0.6/EatExtensions.xml)。父固定条件只会增加，不能被来源或玩家设置取消；子动作不继承父音源、优先级、配置身份或播放形态。每个实际动作都需自己的直接音频映射。
 

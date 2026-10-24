@@ -97,22 +97,22 @@ internal static partial class Program
             "accepted activity edit does not recreate owner or redraw an existing wait");
         settings.SetActivity(1); Find.TickManager.TicksGame = 1200;
         int starts = SoundStarter.Played.Count; long confirmed = session.State.ConfirmedTick!.Value;
-        Check(!SqueakerNotifications.Notify(pawn, "vendor/Unregistered") && SoundStarter.Played.Count == starts && session.State.ConfirmedTick == confirmed,
+        Check(!SqueakerNotifications.TryProcess(pawn, "vendor/Unregistered") && SoundStarter.Played.Count == starts && session.State.ConfirmedTick == confirmed,
             "unknown public string cannot synthesize plan/audio/attempt or replace the owner");
-        Check(SqueakerNotifications.Notify(pawn, declared) && session.LastOutcome.Action == declared.ActionId
+        Check(SqueakerNotifications.TryProcess(pawn, declared) && session.LastOutcome.Action == declared.ActionId
             && session.LastOutcome.Receipt?.Result == PlaybackResult.Dispatched && SoundStarter.Played.Count == starts + 1,
             "explicit C# declaration then public notify uses the same original owner and bound resource");
         comp.Notify_Wounded(); Check(session.LastOutcome.Reason == "TickOccupied", "declared notification then native event shares same tick reservation");
-        Check(settings.TryChangeBehaviorOverride("Pawn", "", pawn.def.defName, "", declared.ActionId,
+        Check(settings.TryReplaceBehaviorOverride("Pawn", "", pawn.def.defName, "", declared.ActionId,
             new BehaviorValues { Enabled = false }, () => true, out _), "explicit current player permission for the declared action");
-        Find.TickManager.TicksGame = 1340; SqueakerNotifications.Notify(pawn, declared);
+        Find.TickManager.TicksGame = 1340; SqueakerNotifications.TryProcess(pawn, declared);
         Check(SoundStarter.Played.Count == starts + 1 && session.LastOutcome.Receipt == null,
             "declaration cannot bypass current player permission");
         RuntimeContractFact.Ready = false; Find.TickManager.TicksGame = 1400;
-        SqueakerNotifications.Notify(pawn, "vendor/Working");
+        SqueakerNotifications.TryProcess(pawn, "vendor/Working");
         Check(session.LastOutcome.Receipt == null, "registered author call cannot bypass its false added condition");
         RuntimeContractFact.Ready = true; Find.TickManager.TicksGame = 1460;
-        SqueakerNotifications.Notify(pawn, "vendor/Working");
+        SqueakerNotifications.TryProcess(pawn, "vendor/Working");
         Check(session.LastOutcome.Receipt == null, "registered author call retains inherited false Work even after its extra fact becomes true");
         S5ActualRuntimeSustained(pawn, comp, session);
         starts = SoundStarter.Played.Count;

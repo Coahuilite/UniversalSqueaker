@@ -10,5 +10,6 @@ public static class FinishedNotification
 {
     public static readonly NotificationContract Contract = new("example.worker/Finished", intervalTicks: 120);
     public static void Register() => SqueakerNotifications.Declare(Contract);
-    public static bool AfterSuccessfulWork(Pawn actualWorker) => SqueakerNotifications.Notify(actualWorker, Contract);
+    // True means input processed, even when qualification/audio/output prevents playback.
+    public static bool TryProcessWorkFinished(Pawn actualWorker) => SqueakerNotifications.TryProcess(actualWorker, Contract);
 }

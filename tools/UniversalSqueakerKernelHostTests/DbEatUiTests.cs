@@ -60,7 +60,7 @@ internal static class DbEatUiTests
         Check(!settings.actionTuning.Single(x => x.xenotypeDefName == "LegalXeno").hasNutritionScope
             && settings.actionTuning.Single(x => x.raceDefName == "Ratkin" && x.xenotypeDefName == "").hasDrugScope,
             "actual inheritance operation preserves neighboring layer");
-        Check(settings.TryChangeBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
+        Check(settings.TryReplaceBehaviorOverride("Pawn", "", "Ratkin", "", "us.core/Eat",
             new BehaviorValues { Scope = BehaviorScope.Disabled }, () => true, out _), "public settings API accepts full ActionId row");
         var fold = typeof(VoicePacksPageModel).GetMethod("BuildActionScopes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         var scopes = (System.Collections.Generic.IReadOnlyList<ActionScopeRowView>)fold.Invoke(null, new object[] { settings, 1, "Ratkin", "" })!;

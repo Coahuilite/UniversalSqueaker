@@ -38,7 +38,7 @@ internal static partial class Program
             Check(settings.TryChangeBehaviorSource(race, author.Id, directory, xml => settings.TryWriteBehaviorCandidate(path, xml, Serialize, out _), out _)
                 && settings.TryChangeBehaviorSource(child, xeno.Id, directory, xml => settings.TryWriteBehaviorCandidate(path, xml, Serialize, out _), out _),
                 "DB parent and legal child author source persisted before player layers", ref failures);
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Eat",
+            Check(settings.TryReplaceBehaviorOverride("Pawn", "", "", "", "us.core/Eat",
                 new BehaviorValues { Enabled = false, Volume = 0, HardIntervalTicks = 0, Phase = EatPhase.WholeProcess, NutritionScope = EatNutritionScope.Any, DrugScope = EatDrugScope.Any },
                 Save, out _), "DB player Pawn service profile commits false/zero/independent Eat defaults", ref failures);
             var captured = settings.CaptureBehaviorConfiguration();
@@ -46,8 +46,8 @@ internal static partial class Program
             Check(!effective.Paused && effective.Read().Enabled == false && effective.Read().Volume == 0 && effective.Read().HardIntervalTicks == 0
                 && effective.Read().Phase == EatPhase.WholeProcess && effective.Origins["volume"] == "player:Pawn::profile" && effective.Dependencies.Count == 0,
                 "DB all authors precede player Pawn; Any/Whole adds no optional capability requirement", ref failures);
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", race.Target, "", "us.core/Eat", new BehaviorValues { Volume = .4 }, Save, out _)
-                && settings.TryChangeBehaviorOverride("Pawn", "", child.Target, child.Child, "us.core/Eat", new BehaviorValues {
+            Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.Target, "", "us.core/Eat", new BehaviorValues { Volume = .4 }, Save, out _)
+                && settings.TryReplaceBehaviorOverride("Pawn", "", child.Target, child.Child, "us.core/Eat", new BehaviorValues {
                     Phase = EatPhase.Execution, NutritionScope = EatNutritionScope.NonNutritionGiving, DrugScope = EatDrugScope.OnlyDrugs }, Save, out _),
                 "DB sparse Race and legal Xeno save independently", ref failures);
             var next = Reload().CaptureBehaviorConfiguration();
@@ -66,21 +66,21 @@ internal static partial class Program
                 "DB Kiiro receives only player Pawn service profile, never Ratkin author/Race/Xeno", ref failures);
             string file = File.ReadAllText(path);
             var before = settings.CaptureBehaviorConfiguration();
-            Check(!settings.TryChangeBehaviorOverride("Pawn", "", race.Target, "", "us.core/Eat", new BehaviorValues { Volume = .8 },
+            Check(!settings.TryReplaceBehaviorOverride("Pawn", "", race.Target, "", "us.core/Eat", new BehaviorValues { Volume = .8 },
                 () => settings.TryWriteBehaviorCandidate(path, settings.behaviorSourcesXml, stage => { File.WriteAllText(stage, "partial"); throw new IOException("DB injected serialization"); }, out _),
                 out _), "DB injected actual atomic serialization failure rejects candidate", ref failures);
             Check(File.ReadAllText(path) == file && settings.CaptureBehaviorConfiguration().Resolve(race, "us.core/Eat", defaults, directory, _ => true).Read().Volume
                 == before.Resolve(race, "us.core/Eat", defaults, directory, _ => true).Read().Volume,
                 "DB failed player transaction preserves previous disk and in-memory effective configuration", ref failures);
-            Check(settings.TryChangeBehaviorOverride("NonPawn", n1.Namespace, "", "", "example/Signal", new BehaviorValues { Enabled = false, Volume = 0 }, Save, out _)
-                && settings.TryChangeBehaviorOverride("NonPawn", n2.Namespace, n2.Target, "", "example/Signal", new BehaviorValues { Enabled = true, Volume = .8 }, Save, out _),
+            Check(settings.TryReplaceBehaviorOverride("NonPawn", n1.Namespace, "", "", "example/Signal", new BehaviorValues { Enabled = false, Volume = 0 }, Save, out _)
+                && settings.TryReplaceBehaviorOverride("NonPawn", n2.Namespace, n2.Target, "", "example/Signal", new BehaviorValues { Enabled = true, Volume = .8 }, Save, out _),
                 "DB two NonPawn namespaces have own profile and precise target rows", ref failures);
             var nonPawn = Reload().CaptureBehaviorConfiguration();
             Check(nonPawn.Resolve(n1, "example/Signal", new BehaviorValues(), directory, _ => true).Read().Volume == 0
                 && nonPawn.Resolve(n2, "example/Signal", new BehaviorValues(), directory, _ => true).Read().Volume == .8
                 && nonPawn.Resolve(n1, "us.core/Eat", new BehaviorValues(), directory, _ => true).Read().Phase == null,
                 "DB same NonPawn target string never crosses namespace or acquires Pawn Eat fields", ref failures);
-            Check(!settings.TryChangeBehaviorOverride("NonPawn", n1.Namespace, n1.Target, "", "example/Signal",
+            Check(!settings.TryReplaceBehaviorOverride("NonPawn", n1.Namespace, n1.Target, "", "example/Signal",
                 new BehaviorValues { Phase = EatPhase.Execution }, Save, out _), "DB explicit Pawn-only NonPawn contribution rejected, not silently omitted", ref failures);
             settings.voicePackMode = SqueakVoicePackMode.Disabled; settings.globalVolumeFactor = 0;
             settings.PublishBehaviorConfiguration();
@@ -97,7 +97,7 @@ internal static partial class Program
                 "DB legacy visible Eat row reset clears canonical full-ActionId Xeno fields, preserving author/player-parent fold", ref failures);
             settings.actionTuning.Add(new ActionTuningRecord { actionKey = "example/Retained", raceDefName = race.Target,
                 hasPitch = true, pitch = .5, sourcePresetDefName = "OriginalPreset" });
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", race.Target, "", "example/Retained", new BehaviorValues { Volume = .2 }, Save, out _)
+            Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.Target, "", "example/Retained", new BehaviorValues { Volume = .2 }, Save, out _)
                 && settings.actionTuning.Any(x => x.actionKey == "example/Retained" && !x.hasPitch && x.hasVolume && x.volume == .2 && x.sourcePresetDefName == "OriginalPreset"),
                 "DB complete sparse-row replacement restores omitted fields to inheritance and preserves the separate template reset anchor", ref failures);
             settings.ResetActionTuningArea("", "");

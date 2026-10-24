@@ -34,9 +34,9 @@ internal static partial class Program
             var old = Read();
             Check(old.IsConfigurationUnreadable && !old.CaptureBehaviorConfiguration().SystemEnabled,
                 "missing new marker is unreadable, not an old-reader/default migration", ref failures);
-            Check(!old.TryChangeBehaviorOverride("Pawn", "", "R", "", CoreActions.Work, new BehaviorValues(), () => true, out _),
+            Check(!old.TryReplaceBehaviorOverride("Pawn", "", "R", "", CoreActions.Work, new BehaviorValues(), () => true, out _),
                 "unreadable format cannot be silently overwritten by an atomic edit", ref failures);
-            Check(!settings.TryChangeBehaviorOverride("Pawn", "", "R", "", "Work", new BehaviorValues(), () => true, out _),
+            Check(!settings.TryReplaceBehaviorOverride("Pawn", "", "R", "", "Work", new BehaviorValues(), () => true, out _),
                 "short action spelling is not another internal identity", ref failures);
 
             var doc = new XmlDocument();

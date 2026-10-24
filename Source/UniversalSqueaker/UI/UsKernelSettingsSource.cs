@@ -66,9 +66,9 @@ public sealed class UsKernelSettingsSource : IUsKernelSettingsSource
         return cachedView;
     }
 
-    public string SectionHelpKey(string sectionKey)
+    public string SectionHelpRef(string sectionKey)
     {
-        return VoicePacksPageModel.SectionHelpKeyOf(sectionKey);
+        return VoicePacksPageModel.SectionHelpRefOf(sectionKey);
     }
 
     // Fallback shares the footer's Keyed entry so a missing instance never leaks a raw English token

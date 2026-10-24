@@ -66,7 +66,7 @@ internal static partial class Program
         UsInstanceOutput.Initialize(new Harmony("us.s2.controlled.adapter.fixture"));
         var settings = SqueakerMod.Settings;
         void Set(string action, BehaviorValues values)
-            => Check(settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", action, values, () => true, out _), "DB player full ActionId publish " + action);
+            => Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", action, values, () => true, out _), "DB player full ActionId publish " + action);
         Set(injured, new BehaviorValues { Enabled = false });
         Set(precise, new BehaviorValues { Enabled = false });
         Set(after, new BehaviorValues { HardIntervalTicks = 0, ResponseEnabled = new Dictionary<string, bool> { ["example/ResultMetadata"] = true } });
@@ -91,7 +91,7 @@ internal static partial class Program
             && session.DiagnosticText.Contains("sourceDomain=DB_Ratkin") && session.DiagnosticText.Contains("role=ActualIngester"),
             "DB minimal audio-only pack defaults Whole/Any/Any -> production dispatch with exact subject/domain");
         var xeno = new XenotypeDef { defName = "DB_LegalXeno" };
-        Check(settings.TryChangeBehaviorOverride("Pawn", "", race.defName, xeno.defName, "us.core/Eat",
+        Check(settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, xeno.defName, "us.core/Eat",
             new BehaviorValues { Phase = EatPhase.Execution }, () => true, out _), "DB exact Xeno player phase published");
         pawn.genes = new FixtureGenes { Xenotype = xeno }; Tick();
         Check(session.LastOutcome.Receipt == null, "DB canonical legal Xeno parameter is consumed by production session and refuses preparation");

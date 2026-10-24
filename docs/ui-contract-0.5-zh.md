@@ -51,3 +51,7 @@ US 拥有完整角色色表，定义于 `Themes/UsSwatches.cs`；六组为 Core�
 ## 当前配置读面
 
 Scope能力与默认值只由canonical BuiltInPawnContracts提供，UI表只持标签。当前响应详情复用实际配置折叠的值、按字段来源、依赖和局部暂停；模板身份只是恢复目标。旧Timing／概率／四档心情表没有当前消费者，原控件及死Help条目已退休；新响应参数仍可由来源、模板及公开设置方法表达。空Race／Xenotype目标拒绝Eat、Select与scope写入，不能误写profile。诊断只展示最后真实决策／收据和截止，未采样的可播放性保持未定。完整配置／保存合同见[r2导读](us-kernel-0.6-refactor-zh.md)。
+
+## 帮助目录、译文与binding分别命名
+
+目录`us/section/item`是Ref，`US.Help.*`是翻译资源key，`help-section-ref`是binding地址。目录TitleKey／OverviewKey／LabelKey／TextKey在同一Host译文入口解析后，才成为面板实际文字。四mode话题显式给ref；空选项ref不抹一般帮助，未知ref回section概述；当前session的15-pass grace不是离开立刻清空。完整[公开合同和新旧映射](us-public-contracts-and-help-zh.md)同时记录固定fc010bd旧FL签名与尚未放行的新库词汇，不提前替换Manifest。

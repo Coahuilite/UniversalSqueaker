@@ -34,11 +34,11 @@ internal static partial class Program
         }
         try
         {
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", "", "", "us.core/Select",
+            Check(settings.TryReplaceBehaviorOverride("Pawn", "", "", "", "us.core/Select",
                 new BehaviorValues { SelectRequirePlayerControlled = true, SelectRequireAwake = false }, Save, out _),
                 "DC Select persist sparse Pawn service fields, including false", ref failures);
-            Check(settings.TryChangeBehaviorOverride("Pawn", "", "SelectRace", "", "us.core/Select",
-                new BehaviorValues { SelectRequireAwake = true }, Save, out _) && settings.TryChangeBehaviorOverride("Pawn", "", "SelectRace", "LegalXeno", "us.core/Select",
+            Check(settings.TryReplaceBehaviorOverride("Pawn", "", "SelectRace", "", "us.core/Select",
+                new BehaviorValues { SelectRequireAwake = true }, Save, out _) && settings.TryReplaceBehaviorOverride("Pawn", "", "SelectRace", "LegalXeno", "us.core/Select",
                 new BehaviorValues { SelectRequireNotDowned = true }, Save, out _), "DC Select persist independent Race and Xeno fields", ref failures);
             var loaded = Reload();
             var effective = loaded.CaptureBehaviorConfiguration().Resolve(domain, "us.core/Select", SelectPolicy.OfficialDefaults, directory, _ => true);
@@ -52,7 +52,7 @@ internal static partial class Program
                 && !loaded.actionTuning.Single(x => x.raceDefName == "").selectRequireAwake,
                 "DC Select omission and explicit false remain different after reload", ref failures);
             string previous = File.ReadAllText(path); var original = settings.actionTuning;
-            Check(!settings.TryChangeBehaviorOverride("Pawn", "", "SelectRace", "LegalXeno", "us.core/Select",
+            Check(!settings.TryReplaceBehaviorOverride("Pawn", "", "SelectRace", "LegalXeno", "us.core/Select",
                 new BehaviorValues { SelectRequireNotDowned = false }, () => settings.TryWriteBehaviorCandidate(path, settings.behaviorSourcesXml,
                     _ => throw new IOException("fixture serialization failure"), out _), out _)
                 && ReferenceEquals(settings.actionTuning, original) && File.ReadAllText(path) == previous,
@@ -71,7 +71,7 @@ internal static partial class Program
             Check(settings.ReadSelectParameterOverrides().SelectRequirePlayerControlled == false
                 && !settings.ReadSelectParameterOverrides().SelectRequireAwake.HasValue && settings.ReadSelectParameterOverrides().SelectRequireNotDowned == false,
                 "DC Select setting Inherit clears only its own field", ref failures);
-            Check(!settings.TryChangeBehaviorOverride("NonPawn", "vendor", "relay", "", "us.core/Select",
+            Check(!settings.TryReplaceBehaviorOverride("NonPawn", "vendor", "relay", "", "us.core/Select",
                 new BehaviorValues { SelectRequireAwake = true }, Save, out _), "DC Select Pawn parameters reject NonPawn rather than impose a hidden gate", ref failures);
             var unrelated = settings.CaptureBehaviorConfiguration().Resolve(domain, "vendor/IndependentSelect", new BehaviorValues(), directory, _ => true);
             Check(!unrelated.Paused && !SelectPolicy.HasParameters(unrelated.Read()), "DC Select parent parameters do not leak into independent/child full ActionId", ref failures);

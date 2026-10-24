@@ -563,12 +563,12 @@ public static class UsKernelDraw
     /// inside the pass because hover is read through <c>UiNative.IsMouseOver</c>).
     /// </summary>
     /// <returns>Whether the pointer is over the rect, so callers can reuse it for row highlighting.</returns>
-    public static bool HelpHover(Rect rect, UiWidgetContext ctx, string itemKey)
+    public static bool HelpHover(Rect rect, UiWidgetContext ctx, string helpRef)
     {
         bool hovered = UiNative.IsMouseOver(rect);
-        if (hovered)
+        if (hovered && !string.IsNullOrEmpty(helpRef))
         {
-            ctx.Session.ClaimHover(itemKey);
+            ctx.Session.ClaimHover(helpRef); // Fixed fc010bd spelling; a catalog reference, not translated text.
         }
         return hovered;
     }

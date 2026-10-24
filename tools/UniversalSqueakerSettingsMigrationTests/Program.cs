@@ -15,6 +15,11 @@ internal static partial class Program
         {
             Console.WriteLine("ARGS=["+string.Join(",",args)+"]");
             if(args.Length==1 && args[0]=="--public-template") { PublicTemplate(); return failures==0?0:1; }
+            if(args.Length==1 && args[0]=="--commit-contract") {
+                OrdinaryEditsAreNotDiskCommits(); SourceSaveUsesOriginalModGeneration();
+                Console.WriteLine("COMMIT-CONTRACT actual Mod/settings/atomic file with Scribe doubles PASS="+(checks-failures)+" FAIL="+failures);
+                return failures==0?0:1;
+            }
             if(args.Length!=0) throw new ArgumentException("Unknown settings test mode");
             AudioDomainsRejectWhitespace(); GlobalVolumeDefaultsAndClamps(); GlobalVolumeScribeRoundTrip();
             SetDistanceRangeClampsAndMarksCustom(); UiSwatchRoundTripRepairAndOmission(); IntroCollapsedScribeRoundTrip();

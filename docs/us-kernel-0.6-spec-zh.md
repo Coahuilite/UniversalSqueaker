@@ -626,7 +626,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 
 玩家行沿现有`actionTuning`／`ActionTuningRecord.ExposeData`持久化。新增presence/value字段承载enabled、hardIntervalTicks、talkingEnabled、volume、pitch及三轴Eat／三项Select资格；既有response/parameter/participation保持各自权限。旧interval/probability倍率不翻译成新chance／硬tick。服务族／Namespace／Target独立持久化；Pawn原行仍按原身份读取，新格式只存完整ActionId，不读旧短键。
 
-`SqueakerMod.TryChangeBehaviorOverride(family, namespace, target, child, fullActionId, values, out failure)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率不恢复；独立模板恢复目标保留。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
+`SqueakerMod.TryCommitBehaviorOverride(family, namespace, target, child, fullActionId, values, out diagnostic)`替换该准确身份的新稀疏贡献，复用完整SettingsBlock／UsAtomicConfigFile及原保存代次：序列化／替换失败保旧内存和文件，成功才发布新配置；旧倍率不恢复；独立模板恢复目标保留。成功提交后的运行时发布失败报告Committed状态，不再重写已成功文件。普通可见设置沿既有队列保存／失败显脏／显式重试，不另设配置平台。来源仍为Unconfigured/Inherit/Bound；last-good仅存作者贡献，缺A不让B接管，同身份A可重连，不烘玩家值、事实或句柄。
 
 ### 三个Eat参数可以独立设置
 
@@ -685,7 +685,7 @@ US请求使用短寿命SoundInfo token确证创建归属；Sample／父Sustainer
 | selectRequireAwake=true | us.core/Awake必须True，health缺失Unknown | Awake按4871原生可清醒能力和实际driver.asleep，不以躺床替代 |
 | selectRequireNotDowned=true | us.core/NotDowned必须True，health缺失Unknown | 单项继承仅清该层presence，所选false不要求该可选实现 |
 
-现有调音页沿当前层显示三个下拉及Help；不完整Race/Xeno目标不回落写服务profile。`ActionTuningRecord`每字段独立has/value，ExposeData／clone／清理都保留缺失与false差别。生产Settings完整原子保存／重开与序列化失败恢复使用既有事务；队列保存失败保脏态／重试。Basics清服务profile三项，准确动作行／层Reset清对应玩家字段，保作者来源和last-good快照。公开程序入口仍为`SqueakerMod.TryChangeBehaviorOverride`，`BehaviorValues.SelectRequirePlayerControlled/SelectRequireAwake/SelectRequireNotDowned`各为bool?。
+现有调音页沿当前层显示三个下拉及Help；不完整Race/Xeno目标不回落写服务profile。`ActionTuningRecord`每字段独立has/value，ExposeData／clone／清理都保留缺失与false差别。生产Settings完整原子保存／重开与序列化失败恢复使用既有事务；队列保存失败保脏态／重试。Basics清服务profile三项，准确动作行／层Reset清对应玩家字段，保作者来源和last-good快照。公开程序入口仍为`SqueakerMod.TryCommitBehaviorOverride`，`BehaviorValues.SelectRequirePlayerControlled/SelectRequireAwake/SelectRequireNotDowned`各为bool?。
 
 ### 每包当前支持什么，必须在实际调用中成立
 

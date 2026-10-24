@@ -110,7 +110,7 @@ internal static partial class Program
         foreach (string action in new[] { after, child })
         {
             pack.declaration.Entries.Add(new VoiceEntry { Key = action.Split('/')[1], Action = action, Sound = "Ratkin1" });
-            Check(SqueakerMod.Settings.TryChangeBehaviorOverride("Pawn", "", race.defName, "", action,
+            Check(SqueakerMod.Settings.TryReplaceBehaviorOverride("Pawn", "", race.defName, "", action,
                 new BehaviorValues { HardIntervalTicks = 7 }, () => true, out _), "DB routing independent result interval " + action);
         }
         Initialize();

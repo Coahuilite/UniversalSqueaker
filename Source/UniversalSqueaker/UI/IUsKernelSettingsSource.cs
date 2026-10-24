@@ -18,7 +18,7 @@ public interface IUsKernelSettingsSource
     VoicePacksViewState BuildView();
 
     /// <summary>Help section key for a settings section key (e.g. "mode-row" → "us/mode-row").</summary>
-    string SectionHelpKey(string sectionKey);
+    string SectionHelpRef(string sectionKey);
 
     string BuildIdentity { get; }
 
@@ -83,7 +83,7 @@ public interface IUsKernelSettingsSource
     // US-PACK1: the two domain lists' own search texts retired WITH the browse cards - the unified
     // keyword (SetSearchText) is the page's only text condition and it narrows the card rows.
     // No help-hover channel here any more (FL 0.3.0 P3): the claim is UiSession state, not business
-    // state, so it never crosses this boundary. SectionHelpKey stays - that IS business resolution.
+    // state, so it never crosses this boundary. SectionHelpRef stays - that IS business resolution.
     // US-RESET1 (UI integration, review1-scoped): the restore operations the settings page exposes.
     // Each call goes through the backend's single publish/persistence funnel EXACTLY once (the UI
     // never re-calls it); the returned outcome is the only save claim the UI may make - NoChange/

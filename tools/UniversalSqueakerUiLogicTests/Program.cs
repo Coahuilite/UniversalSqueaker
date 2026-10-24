@@ -247,8 +247,8 @@ internal static class Program
     {
         Assert(UsHelpCatalog.TryGetSection("us/scope-tree", out HelpSection scopeTree),
             "TryGetSection finds us/scope-tree");
-        Assert(scopeTree.Title.Length > 0, "scope-tree section has a title");
-        Assert(scopeTree.Overview.Length > 0, "scope-tree section has an overview");
+        Assert(scopeTree.TitleKey.Length > 0, "scope-tree section has a title");
+        Assert(scopeTree.OverviewKey.Length > 0, "scope-tree section has an overview");
         Assert(scopeTree.Items.Count >= 1, "every section has at least one item");
 
         string[] sectionKeys =
@@ -265,7 +265,7 @@ internal static class Program
 
         Assert(UsHelpCatalog.TryGetItem("us/scope-tree", "us/scope-tree/action-scope", out HelpItem item),
             "TryGetItem finds an item by section and item key");
-        Assert(item.Label.Length > 0 && item.Text.Length > 0, "help item has label and text");
+        Assert(item.LabelKey.Length > 0 && item.TextKey.Length > 0, "help item has label and text");
 
         Assert(!UsHelpCatalog.TryGetSection("missing/section", out _), "missing section returns false");
         Assert(!UsHelpCatalog.TryGetItem("us/scope-tree", "us/scope-tree/not-real", out _),
@@ -281,9 +281,9 @@ internal static class Program
             foreach (HelpItem helpItem in s.Items)
             {
                 itemCount++;
-                Assert(seenKeys.Add(helpItem.Key), "item key is globally unique: " + helpItem.Key);
-                Assert(helpItem.Key.StartsWith(sectionKey + "/", StringComparison.Ordinal),
-                    "item key embeds its section prefix: " + helpItem.Key);
+                Assert(seenKeys.Add(helpItem.Ref), "item key is globally unique: " + helpItem.Ref);
+                Assert(helpItem.Ref.StartsWith(sectionKey + "/", StringComparison.Ordinal),
+                    "item key embeds its section prefix: " + helpItem.Ref);
             }
         }
 
@@ -323,45 +323,58 @@ internal static class Program
 
         // No hover: the panel explains the active section's overview (the big-level fallback).
         UsHelpPanelLogic.HelpPanelDisplay overview = UsHelpPanelLogic.Resolve(scopeTree, "");
-        Assert(overview.Title == scopeTree.Title, "overview display uses section title");
-        Assert(overview.Label == UsHelpPanelLogic.OverviewLabel, "overview display uses the overview label");
-        Assert(overview.Text == scopeTree.Overview, "overview display uses section overview");
+        Assert(overview.TitleText == scopeTree.TitleKey, "overview display uses section title");
+        Assert(overview.LabelText == UsHelpPanelLogic.OverviewLabelKey, "overview display uses the overview label");
+        Assert(overview.BodyText == scopeTree.OverviewKey, "overview display uses section overview");
 
         // The zero-Verse seam is identity, so display strings are the catalog's Keyed entry names;
         // the action-scope label reuses the row's own caption key (US.Tuning.ActionScope).
         UsHelpPanelLogic.HelpPanelDisplay hover = UsHelpPanelLogic.Resolve(scopeTree, "us/scope-tree/action-scope");
-        Assert(hover.Label == "US.Tuning.ActionScope", "hover display uses the hovered item's label key");
-        Assert(hover.Text == "US.Help.ScopeTree.ActionScope.Text", "hover display uses the hovered item's body key");
-        Assert(hover.Title == scopeTree.Title, "in-section hover keeps the active section header");
+        Assert(hover.LabelText == "US.Tuning.ActionScope", "hover display uses the hovered item's label key");
+        Assert(hover.BodyText == "US.Help.ScopeTree.ActionScope.Text", "hover display uses the hovered item's body key");
+        Assert(hover.TitleText == scopeTree.TitleKey, "in-section hover keeps the active section header");
 
         // Global hover: the always-visible surfaces claim entries of other sections (nav claims
         // page-title/nav while any section is active); the header follows the claimed entry's section.
         Assert(UsHelpCatalog.TryFindItem("us/global-volume/slider", out HelpItem sliderItem, out _),
             "global-volume slider exists in the catalog");
         UsHelpPanelLogic.HelpPanelDisplay foreignHover = UsHelpPanelLogic.Resolve(scopeTree, "us/global-volume/slider");
-        Assert(foreignHover.Title == globalVolume.Title, "foreign hover header names the claimed entry's section");
-        Assert(foreignHover.Label == sliderItem.Label && foreignHover.Text == sliderItem.Text,
+        Assert(foreignHover.TitleText == globalVolume.TitleKey, "foreign hover header names the claimed entry's section");
+        Assert(foreignHover.LabelText == sliderItem.LabelKey && foreignHover.BodyText == sliderItem.TextKey,
             "foreign hover resolves across the whole catalog, not just the current section");
 
         // An unknown key is ignored, not fatal: the panel falls back to the section overview.
         UsHelpPanelLogic.HelpPanelDisplay unknown = UsHelpPanelLogic.Resolve(scopeTree, "us/nope/not-real");
-        Assert(unknown.Label == UsHelpPanelLogic.OverviewLabel && unknown.Text == scopeTree.Overview,
+        Assert(unknown.LabelText == UsHelpPanelLogic.OverviewLabelKey && unknown.BodyText == scopeTree.OverviewKey,
             "unknown hover key falls back to the section overview");
 
         UsHelpPanelLogic.HelpPanelDisplay noSection = UsHelpPanelLogic.Resolve(null, "");
-        Assert(noSection.Title == UsHelpPanelLogic.EmptyTitle, "missing section uses Help title");
-        Assert(noSection.Text == UsHelpPanelLogic.EmptyText, "missing section uses empty text");
+        Assert(noSection.TitleText == UsHelpPanelLogic.EmptyTitleKey, "missing section uses Help title");
+        Assert(noSection.BodyText == UsHelpPanelLogic.EmptyTextKey, "missing section uses empty text");
         UsHelpPanelLogic.HelpPanelDisplay noSectionHover = UsHelpPanelLogic.Resolve(null, "us/scope-tree/layer");
-        Assert(noSectionHover.Title == scopeTree.Title, "hover works even with no active section");
+        Assert(noSectionHover.TitleText == scopeTree.TitleKey, "hover works even with no active section");
 
         // Every returned string - the panel's own three AND the catalog's - resolves through the
         // one seam handed to Resolve, so measured and drawn text can never come from different passes.
         UsHelpPanelLogic.HelpPanelDisplay translated = UsHelpPanelLogic.Resolve(
             scopeTree, "us/scope-tree/action-scope", key => "[" + key + "]");
-        Assert(translated.Title == "[" + scopeTree.Title + "]"
-                && translated.Label == "[US.Tuning.ActionScope]"
-                && translated.Text == "[US.Help.ScopeTree.ActionScope.Text]",
+        Assert(translated.TitleText == "[" + scopeTree.TitleKey + "]"
+                && translated.LabelText == "[US.Tuning.ActionScope]"
+                && translated.BodyText == "[US.Help.ScopeTree.ActionScope.Text]",
             "the translation seam wraps title, label and body in one pass");
+        foreach (string notARef in new[] {"US.Help.ScopeTree.ActionScope.Text", "help-section-ref", "Translated body"})
+        {
+            var resolved = UsHelpPanelLogic.Resolve(scopeTree, notARef, key => "[" + key + "]");
+            Assert(resolved.BodyText == "[" + scopeTree.OverviewKey + "]",
+                "translation keys, binding addresses and display content are not guessed as help refs: " + notARef);
+        }
+        foreach (string mode in new[] {"vanilla", "fallback", "remix", "disabled"})
+        {
+            string reference = "us/mode-row/" + mode;
+            Assert(UsHelpCatalog.TryFindItem(reference, out HelpItem modeItem, out _), "explicit mode help exists: " + reference);
+            Assert(UsHelpPanelLogic.Resolve(scopeTree, reference, key => "[" + key + "]").BodyText == "[" + modeItem.TextKey + "]",
+                "each mode resolves its explicit reference then translates its body: " + reference);
+        }
     }
 
 

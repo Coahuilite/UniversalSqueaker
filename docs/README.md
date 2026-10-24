@@ -6,6 +6,7 @@
 | --- | --- |
 | 理解当前使用、配置、保存与旧能力去向 | [r2合同与删除映射](us-kernel-0.6-refactor-zh.md) |
 | 写声音包、动作扩展或一次C#通知 | [当前作者指南](us-kernel-0.6-authoring-zh.md)及[可加载示例](examples/0.6/) |
+| 区分输入处理／磁盘提交／实际派发和帮助身份 | [公开合同与帮助命名](us-public-contracts-and-help-zh.md) |
 | 审阅全部十五包、各自SR差异和待裁体验 | [完整合同导读](us-kernel-0.6-contract-review-zh.md) |
 | 核对正向事实、调用主体、版本和Unknown | [事实适配表](us-kernel-0.6-fact-adapters-zh.md) |
 | 核对Core工作完整范围 | [20 WorkType／105 Giver／78过程清单](us-core-work-scope-zh.md) |
