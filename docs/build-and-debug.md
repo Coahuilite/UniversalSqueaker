@@ -26,7 +26,7 @@ Explicit Release verification:
 pwsh -NoProfile -File scripts/verify-local.ps1 -FerriteLibArtifactPath '<fixed-release-package>/1.6/Assemblies/FerriteLib.UiKit.dll'
 ```
 
-CI/release still acquire the published 0.7 carrier, which is not a usable input for this 0.8 consumer. The maintainer must arrange an available fixed 0.8 release before updating that acquisition pin; no new tag or asset is assumed here.
+CI/release require approved `FERRITELIB_CARRIER_REPOSITORY`, `FERRITELIB_CARRIER_TAG` (0.8) and full `FERRITELIB_CARRIER_COMMIT` before checkout. They acquire the exact Release asset and pair it to that source; there is no 0.7 or default-branch fallback. A local Dev package does not satisfy this Release input.
 
 ## Isolated candidates and the r2 boundaries
 
@@ -48,7 +48,7 @@ The [r2 contract](us-kernel-0.6-refactor-zh.md) and [author guide](us-kernel-0.6
 
 ## What verification covers
 
-The current `scripts/verify-local.ps1` defines 31 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases.
+The current `scripts/verify-local.ps1` defines 37 gates. Keep its commands authoritative instead of copying them into every guide. Use the affected entry points rather than repeating unrelated valid matrices. Coverage includes Kernel/corpus, configuration, logs, selected-carrier/build/package identity, UI logic/Host, adapter contracts and isolated missing-target cases. Gates 32–37 call the existing r2 whole-Core, exact-domain, production through-chain, queued-edit/physical-commit, public-template and DLL-only author checks. The workflows install .NET 8 for the existing net8.0 fixtures and .NET 10 for the build SDK.
 
 Gate 15 scans the payload and Host against the explicit 0.8 platform doubles in `tools/FerriteLib08.Stubs`, built into `dist/fl08-migration-a001/stubs/<Configuration>`. Gate 16 retains the archived 0.7 snapshot integrity check; it does not certify the new 0.8 runtime. The producer and its held package are never build targets.
 

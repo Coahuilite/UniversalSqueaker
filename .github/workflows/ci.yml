@@ -24,8 +24,7 @@ concurrency:
 jobs:
   gates:
     runs-on: windows-latest
-    # The 14-gate suite is seconds of work; the minute is runner startup. A hung runner should burn
-    # 10, not the 360 default.
+    # Keep the complete current gate entry point bounded; a hung runner must not use the default 360 minutes.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +56,9 @@ jobs:
           # green under 8.0.424 on a clean restore (measured), but an obj/ restored by one SDK major
           # fails NETSDK1047 when the other builds it, so pinning to the proven major keeps CI and the
           # local evidence identical. net472 targeting resolves from NuGet (Krafs.Rimworld.Ref) either way.
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       # Dependency chain (decision recorded in MEMORY.md "First cloud upload: durable decisions" and the
       # 2026-10-09 carrier-acquisition route). actions/checkout resolves `path` INSIDE GITHUB_WORKSPACE and
@@ -94,14 +95,17 @@ jobs:
       - name: Restore
         shell: pwsh
         run: |
-          # verify-local's six harness gates each run `dotnet run --no-restore`, so every project
+          # verify-local runs its existing harnesses with --no-restore, so every project
           # they touch needs an obj/ from a restore on a clean checkout (locally the obj/ already
           # exists, which is why -NoRestore passes here but would not on the runner). Glob rather
           # than a hand list so a new tools/ project can never be forgotten.
           Get-ChildItem -Path Source,tools -Recurse -Filter *.csproj |
-            ForEach-Object { dotnet restore $_.FullName --nologo }
+            ForEach-Object {
+              dotnet restore $_.FullName --nologo
+              if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
+            }
 
-      - name: Verify (15 gates)
+      - name: Verify (37 gates, including current r2 entry points)
         shell: pwsh
         # The carrier is SELECTED, never defaulted: resolve-carrier refuses an empty path since 2026-09-24
         # (a silent pick of the repository-root Release payload was the wrong artifact for a Dev rehearsal).

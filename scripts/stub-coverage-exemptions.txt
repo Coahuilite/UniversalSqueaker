@@ -55,13 +55,9 @@ Assembly-CSharp!RimWorld.XenotypeDef::get_Icon() | defs
 # ------------------------------------------------------------------------------------------------
 # world (78) - world - needs a live in-game object graph the harness never builds
 # ------------------------------------------------------------------------------------------------
-Assembly-CSharp!RimWorld.Faction::def:c:RimWorld.FactionDef | world
-Assembly-CSharp!RimWorld.IEatingDriver::get_GainingNutritionNow() | world
 Assembly-CSharp!RimWorld.Need::get_CurLevelPercentage() | world
-Assembly-CSharp!RimWorld.PawnUtility::GetPosture(c:Verse.Pawn) | world
 Assembly-CSharp!RimWorld.Pawn_GeneTracker::get_Xenotype() | world
 Assembly-CSharp!RimWorld.Pawn_NeedsTracker::mood:c:RimWorld.Need_Mood | world
-Assembly-CSharp!RimWorld.Pawn_NeedsTracker::rest:c:RimWorld.Need_Rest | world
 Assembly-CSharp!RimWorld.Planet.WorldRendererUtility::get_WorldRendered() | world
 Assembly-CSharp!RimWorld.RestUtility::Awake(c:Verse.Pawn) | world
 Assembly-CSharp!RimWorld.Selector::Select(Object,Boolean,Boolean) | world
@@ -69,9 +65,6 @@ Assembly-CSharp!RimWorld.Selector::get_SingleSelectedThing() | world
 Assembly-CSharp!Verse.AI.Job::def:c:Verse.JobDef | world
 Assembly-CSharp!Verse.AI.Job::playerForced:Boolean | world
 Assembly-CSharp!Verse.AI.Job::workGiverDef:c:RimWorld.WorkGiverDef | world
-Assembly-CSharp!Verse.AI.JobDriver::get_CurToilString() | world
-Assembly-CSharp!Verse.AI.MentalState::pawn:c:Verse.Pawn | world
-Assembly-CSharp!Verse.AI.MentalStateHandler::get_CurState() | world
 Assembly-CSharp!Verse.AI.Pawn_JobTracker::curDriver:c:Verse.AI.JobDriver | world
 Assembly-CSharp!Verse.AI.Pawn_PathFollower::get_Moving() | world
 Assembly-CSharp!Verse.CameraDriver::get_CurrentViewRect() | world
@@ -114,18 +107,15 @@ Assembly-CSharp!Verse.TargetInfo::get_Map() | world
 Assembly-CSharp!Verse.Thing::def:c:Verse.ThingDef | world
 Assembly-CSharp!Verse.Thing::get_Destroyed() | world
 Assembly-CSharp!Verse.Thing::get_DrawPos() | world
-Assembly-CSharp!Verse.Thing::get_Faction() | world
 Assembly-CSharp!Verse.Thing::get_MapHeld() | world
 Assembly-CSharp!Verse.Thing::get_Position() | world
 Assembly-CSharp!Verse.Thing::get_Spawned() | world
 Assembly-CSharp!Verse.Thing::get_ThingID() | world
 Assembly-CSharp!Verse.Thing::thingIDNumber:Int32 | world
 Assembly-CSharp!Verse.ThingComp::.ctor() | world
-Assembly-CSharp!Verse.ThingComp::Initialize(c:Verse.CompProperties) | world
 Assembly-CSharp!Verse.ThingComp::PostDestroy(v:Verse.DestroyMode,c:Verse.Map) | world
 Assembly-CSharp!Verse.ThingComp::PostSpawnSetup(Boolean) | world
 Assembly-CSharp!Verse.ThingComp::parent:c:Verse.ThingWithComps | world
-Assembly-CSharp!Verse.ThingComp::props:c:Verse.CompProperties | world
 Assembly-CSharp!Verse.ThingCompUtility::TryGetComp(c:Verse.Thing)^1 | world
 Assembly-CSharp!Verse.ThingWithComps::GetComp()^1 | world
 Assembly-CSharp!Verse.TickManager::get_Paused() | world
@@ -150,11 +140,9 @@ Assembly-CSharp!RimWorld.PawnCapacityDefOf::Talking:c:Verse.PawnCapacityDef | de
 Assembly-CSharp!Verse.BodyDef::get_AllParts() | defs
 Assembly-CSharp!Verse.BodyPartDef::tags:c:System.Collections.Generic.List`1<c:Verse.BodyPartTagDef> | defs
 Assembly-CSharp!Verse.BodyPartRecord::def:c:Verse.BodyPartDef | defs
-Assembly-CSharp!Verse.Def::ConfigErrors() | defs
 Assembly-CSharp!Verse.Def::get_LabelCap() | defs
 Assembly-CSharp!Verse.Def::modContentPack:c:Verse.ModContentPack | defs
 Assembly-CSharp!Verse.JobDef::joyKind:c:RimWorld.JoyKindDef | defs
-Assembly-CSharp!Verse.MentalFitDef::mentalState:c:Verse.MentalStateDef | defs
 Assembly-CSharp!Verse.Mod::.ctor(c:Verse.ModContentPack) | defs
 Assembly-CSharp!Verse.Mod::GetSettings()^1 | defs
 Assembly-CSharp!Verse.Mod::SettingsCategory() | defs
@@ -163,7 +151,6 @@ Assembly-CSharp!Verse.ModContentPack::get_ModMetaData() | defs
 Assembly-CSharp!Verse.ModContentPack::get_Name() | defs
 Assembly-CSharp!Verse.ModContentPack::get_PackageId() | defs
 Assembly-CSharp!Verse.ModMetaData::get_AuthorsString() | defs
-Assembly-CSharp!Verse.ModMetaData::get_PackageIdNonUnique() | defs
 Assembly-CSharp!Verse.ModsConfig::get_BiotechActive() | defs
 Assembly-CSharp!Verse.RaceProperties::body:c:Verse.BodyDef | defs
 Assembly-CSharp!Verse.ThingDef::comps:c:System.Collections.Generic.List`1<c:Verse.CompProperties> | defs
@@ -178,8 +165,6 @@ Assembly-CSharp!Verse.Scribe::loader:c:Verse.ScribeLoader | scribe
 Assembly-CSharp!Verse.Scribe::mode:v:Verse.LoadSaveMode | scribe
 Assembly-CSharp!Verse.ScribeLoader::FinalizeLoading() | scribe
 Assembly-CSharp!Verse.ScribeLoader::InitLoading(String) | scribe
-Assembly-CSharp!Verse.ScribeLoader::curXmlParent:c:System.Xml.XmlNode | scribe
-Assembly-CSharp!Verse.Scribe_Collections::Look(c:System.Collections.Generic.Dictionary`2<!!0,!!1>&,String,v:Verse.LookMode,v:Verse.LookMode)^2 | scribe
 Assembly-CSharp!Verse.Scribe_Collections::Look(c:System.Collections.Generic.List`1<!!0>&,String,v:Verse.LookMode,Object[])^1 | scribe
 Assembly-CSharp!Verse.Scribe_Deep::Look(!!0&,String,Object[])^1 | scribe
 Assembly-CSharp!Verse.Scribe_Values::Look(!!0&,String,!!0,Boolean)^1 | scribe
@@ -194,7 +179,6 @@ Assembly-CSharp!Verse.Sound.SoundInfo::pitchFactor:Single | audio
 Assembly-CSharp!Verse.Sound.SoundInfo::volumeFactor:Single | audio
 Assembly-CSharp!Verse.Sound.SoundStarter::PlayOneShot(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
 Assembly-CSharp!Verse.Sound.SoundStarter::TrySpawnSustainer(c:Verse.SoundDef,v:Verse.Sound.SoundInfo) | audio
-Assembly-CSharp!Verse.Sound.SubSoundDef::grains:c:System.Collections.Generic.List`1<c:Verse.Sound.AudioGrain> | audio
 Assembly-CSharp!Verse.Sound.SubSoundDef::onCamera:Boolean | audio
 Assembly-CSharp!Verse.Sound.Sustainer::End() | audio
 Assembly-CSharp!Verse.Sound.Sustainer::Maintain() | audio
@@ -282,7 +266,6 @@ Assembly-CSharp!Verse.ThingDef::get_IsDrug() | defs
 # establish folder-name filename and SettingsBlock/ModSettings shape. MigrationTests runs
 # production candidate/atomic file/Scribe round-trip with serializer, precommit and OS-lock
 # faults in isolated Config fixtures. The actual game's Scribe writer remains native-pending.
-Assembly-CSharp!Verse.Mod::get_Content() | defs
 Assembly-CSharp!Verse.ModContentPack::get_FolderName() | defs
 Assembly-CSharp!Verse.Scribe::saver:c:Verse.ScribeSaver | scribe
 Assembly-CSharp!Verse.ScribeSaver::FinalizeSaving() | scribe
@@ -300,3 +283,25 @@ Assembly-CSharp!Verse.Sound.SoundInfo::get_DefinedParameters() | audio
 Assembly-CSharp!Verse.Sound.SoundInfo::SetParameter(String,Single) | audio
 Assembly-CSharp!Verse.Sound.SubSustainer::parent:c:Verse.Sound.Sustainer | audio
 Assembly-CSharp!Verse.Sound.Sustainer::info:v:Verse.Sound.SoundInfo | audio
+
+# r2 current-product delta: the public-Execution Host exercises UI, not native pawn/job graphs.
+# The following exact refs belong to production Select, ingestion process/result, Work lifetime,
+# Wounded, Equip and melee observation. Existing AudioBindingTests drive those production files
+# with their separate game doubles; the Host stub surface is not their runtime or native evidence.
+Assembly-CSharp!RimWorld.Selector::IsSelected(Object) | world
+Assembly-CSharp!Verse.AI.Job::GetTarget(v:Verse.AI.TargetIndex) | world
+Assembly-CSharp!Verse.AI.Job::targetB:v:Verse.LocalTargetInfo | world
+Assembly-CSharp!Verse.AI.JobDriver::ended:Boolean | world
+Assembly-CSharp!Verse.AI.JobDriver::job:c:Verse.AI.Job | world
+Assembly-CSharp!Verse.AI.JobDriver::pawn:c:Verse.Pawn | world
+Assembly-CSharp!Verse.AI.Toil::actor:c:Verse.Pawn | world
+Assembly-CSharp!Verse.AI.Toil::AddFinishAction(c:System.Action) | world
+Assembly-CSharp!Verse.AI.Toil::initAction:c:System.Action | world
+Assembly-CSharp!Verse.Hediff::get_Severity() | world
+Assembly-CSharp!Verse.HediffSet::hediffs:c:System.Collections.Generic.List`1<c:Verse.Hediff> | world
+Assembly-CSharp!Verse.LocalTargetInfo::get_Pawn() | world
+Assembly-CSharp!Verse.Pawn_EquipmentTracker::get_AllEquipmentListForReading() | world
+Assembly-CSharp!Verse.Pawn::get_Drawer() | world
+Assembly-CSharp!Verse.Thing::get_IngestibleNow() | world
+Assembly-CSharp!Verse.ThingDef::get_IsNutritionGivingIngestible() | defs
+Assembly-CSharp!Verse.ThingDef::ingestible:c:RimWorld.IngestibleProperties | defs

@@ -30,12 +30,10 @@ $ErrorActionPreference = "Stop"
 #  15   harness stub coverage: the carrier's reference-driven scan (read-only) over the US payload AND
 #       the KernelHostTests harness assembly, against US's own exemption ledger
 #       (scripts/stub-coverage-exemptions.txt). Runs after 13 on purpose - gate 13 builds both scanned
-#       assemblies, and since the frozen-delivery round the scanned stub surface is US's own byte-pinned
-#       snapshot (gate 16), not the carrier tree.
+#       assemblies. Current 0.8 doubles live in tools/FerriteLib08.Stubs, not the producer tree.
 #  16   frozen stub snapshot integrity: all five tools/FerriteLib.Stubs source files must equal the
 #       sha256 values recorded in fl/frozen-handoff.json (ferritelib 0.7.x@d5af4d8). Runs after 15
-#       because 15 consumes the same snapshot; the pin is what lets the snapshot stand in for the
-#       carrier's canonical stubs without drift.
+#       as an archived-input integrity gate only; it does not certify the current 0.8 doubles.
 # GATE PROVENANCE: 1-5 and 10-16 are US-owned; 6 and 9 assert the carrier boundary itself. 14 shares
 # its metric with the FerriteLib containment gate (its HANDOFF item B): the two whitelists must agree
 # entry by entry. 15 consumes the carrier's scanner (its gate 8) but the ledger and both scanned
@@ -46,7 +44,8 @@ $ErrorActionPreference = "Stop"
 # Gate numbers are append-only: "gate N" is cited across MEMORY/TODO/docs, so a new check joins as the
 # next number (this one: 16) instead of shifting the checks below it.
 # -PackDev: after all checks pass, build the dev package (allows a dirty tree; auto -dirty label).
-# US has no settings fixtures, voicepack authoring, or audio mirrors; those SR checks are not inherited.
+# r2 gates 32-37 invoke already-existing Core/domain/through/save/template/author checks.
+# No new unit cases are defined here; native game and real Scribe acceptance remain separate.
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
 $projectFile = Join-Path $root 'Source\UniversalSqueaker\UniversalSqueaker.csproj'
@@ -235,7 +234,8 @@ Invoke-Check 'Schema=2 manifests present, well-formed and correctly attributed' 
         # manifest that parses but claims another schema or source would silently load the wrong page.
         $manifests = @(
             (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.Schema2.xml'),
-            (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.Overlay.Schema2.xml')
+            (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.Overlay.Schema2.xml'),
+            (Join-Path $root 'Source\UniversalSqueaker\UI\Layout.RemixConfirm.Schema2.xml')
         )
         foreach ($manifestPath in $manifests) {
             if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
@@ -443,6 +443,25 @@ Invoke-Check 'Core Work physically missing Sow leaves unrelated work usable' `
         if ($LASTEXITCODE -ne 0) { throw 'Core Work missing-Sow fixture build failed' }
         & (Join-Path $workOutput 'UniversalSqueakerAudioBindingTests.exe') --work-missing
     }
+# Gates 32-37: current r2 entry points already exercised by the refactor's existing fixtures.
+Invoke-Check 'r2 whole production Core without platform references' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerRefactorCoreTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerRefactorCoreTests') -c Release }
+Invoke-Check 'r2 actual GameRuntime exact canonical-domain adapter' `
+    'dotnet run --no-restore --project tools/UniversalSqueakerDomainAdapterTests -c Release' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerDomainAdapterTests') -c Release }
+Invoke-Check 'r2 Select/Eat/Attack and declared C# production through-chain' `
+    'AudioBindingTests -c Release --refactor-through' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerAudioBindingTests') -c Release -- --refactor-through }
+Invoke-Check 'r2 ordinary queued edits versus physical atomic commit (Scribe doubles)' `
+    'SettingsMigrationTests -c Release --commit-contract' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerSettingsMigrationTests') -c Release -- --commit-contract }
+Invoke-Check 'r2 public player template through the production value loader' `
+    'SettingsMigrationTests -c Release --public-template' `
+    { dotnet run --no-restore --project (Join-Path $root 'tools/UniversalSqueakerSettingsMigrationTests') -c Release -- --public-template }
+Invoke-Check 'r2 DLL-only external author examples against the built Release product' `
+    'dotnet build tools/UniversalSqueakerExternalAuthorTests -c Release with explicit UniversalSqueakerArtifactPath' `
+    { dotnet build (Join-Path $root 'tools/UniversalSqueakerExternalAuthorTests') -c Release --no-restore --nologo "-p:UniversalSqueakerArtifactPath=$(Join-Path $root 'dist/build/Release/UniversalSqueaker.dll')" }
 if ($DevelopmentCarrier) { Write-Host '[verify] all integration checks passed (development carrier; not release evidence).' }
 else { Write-Host '[verify] all checks passed.' }
 
