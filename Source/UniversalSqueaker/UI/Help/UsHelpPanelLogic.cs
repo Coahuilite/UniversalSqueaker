@@ -58,6 +58,9 @@ internal static class UsHelpPanelLogic
                 keyed(hoveredItem.TextKey));
         }
 
+        // Explicit page help may address a section overview; unknown refs still use the origin.
+        if (UsHelpCatalog.TryGetSection(currentHelpRef, out HelpSection explicitSection)) section = explicitSection;
+
         if (section == null)
         {
             return new HelpPanelDisplay(keyed(EmptyTitleKey), keyed(EmptyTitleKey), keyed(EmptyTextKey));

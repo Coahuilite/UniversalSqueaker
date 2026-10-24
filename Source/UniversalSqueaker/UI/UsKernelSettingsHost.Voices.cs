@@ -7,6 +7,15 @@ namespace UniversalSqueaker.UI;
 
 public static partial class UsKernelSettingsHost
 {
+    private static readonly string[] ToolPages = { "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore" };
+    private static bool IsToolPage(string page) => Array.IndexOf(ToolPages, page) >= 0;
+    private static string PageHelpRef(VoicePacksPageState state) => state.Page switch
+    {
+        "Voices" => state.BrowseDefinitions ? "us/race-board" : "us/pack-cards",
+        "Behavior" => "us/scope-tree", "Presets" => "us/preset-list", "Output" => "us/basic-tuning",
+        "Fallback" => "us/fallback-editor", "Appearance" => "us/theme-picker",
+        "Diagnostics" => "us/diagnostics", "Restore" => "us/reset-center", _ => "us/page-title"
+    };
     private static string LegacyPage(string tab) => tab switch { "Tuning" => "Behavior", "Presets" => "Presets", "Advanced" => "Diagnostics", _ => "Voices" };
     private static void SetPage(VoicePacksPageState state, string page)
     {
@@ -21,7 +30,11 @@ public static partial class UsKernelSettingsHost
     }
     private static void NavigatePage(VoicePacksPageState state, string page)
     {
-        if (state.Page != page) state.PageHistory.Add(state.Page);
+        if (state.Page == page) return;
+        if (page == "Voices") state.PageHistory.Clear();
+        // Sibling tools replace the current destination, not the return trail to Voices.
+        else if (!(IsToolPage(page) && (IsToolPage(state.Page) || state.Page == "Tools")))
+            state.PageHistory.Add(state.Page);
         SetPage(state, page);
     }
     private static void ReturnToPreviousPage(VoicePacksPageState state)
@@ -58,13 +71,30 @@ public static partial class UsKernelSettingsHost
             NavigatePage(s, page);
             bumper.Bump();
         }
+        string EditContext() => s.TuningLayer == 0 ? T("PawnProfile") : s.TuningRaceDefName +
+            (s.TuningLayer == 2 ? "/" + s.TuningXenotypeDefName : "");
+        void OpenHelp(string topic, string context)
+        {
+            if (s.Page == "Help") return;
+            s.PinnedHelpRef = topic;
+            s.PinnedHelpContext = context;
+            Go("Help");
+        }
         foreach (string page in new[] { "Voices", "Tools", "Behavior", "Presets", "Output", "Fallback", "Appearance", "Diagnostics", "Restore", "Help" })
         {
             string p = page;
             b.BindReadOnly<bool>("page-" + p, () => s.Page == p);
             b.BindReadOnly<string>("go-" + p + "-payload", () => p);
+            b.BindReadOnly<bool>("tool-is-" + p, () => s.Page == p);
         }
         writes.Action<string>("go-page", Go);
+        writes.Command("go-home", () => Go("Voices"));
+        b.BindReadOnly<bool>("page-tools-area", () => s.Page == "Tools" || IsToolPage(s.Page));
+        b.BindReadOnly<bool>("page-not-help", () => s.Page != "Help");
+        b.BindReadOnly<bool>("tool-nav-wide", () => IsToolPage(s.Page) && s.WideLayout);
+        b.BindReadOnly<bool>("tool-nav-compact", () => IsToolPage(s.Page) && !s.WideLayout);
+        b.BindChoices<string>("tool-page-options", () => ToolPages.Select(p => new UiChoice<string>(T(p), p)).ToArray());
+        writes.Value<string>("tool-page", () => s.Page, page => { if (IsToolPage(page)) Go(page); });
         b.BindReadOnly<string>("voice-page-title", () => T(s.Page));
         b.BindReadOnly<bool>("page-not-home", () => s.Page != "Voices");
         writes.Command("page-back", () => {
@@ -87,7 +117,14 @@ public static partial class UsKernelSettingsHost
         b.BindReadOnly<bool>("voice-list-visible", () => !s.BrowseDefinitions && (s.WideLayout || !s.DetailOpen));
         b.BindReadOnly<bool>("voice-detail-visible", () => !s.BrowseDefinitions && (s.WideLayout || s.DetailOpen));
         b.BindReadOnly<bool>("voice-compact-back", () => !s.WideLayout && s.DetailOpen);
-        b.BindReadOnly<string>("voice-detail-title", () => source.BuildView().PackCards.FirstOrDefault(x => x.Key == s.SelectedPackKey).Label ?? T("ChoosePack"));
+        b.BindReadOnly<string>("voice-detail-title", () => {
+            var card = source.BuildView().PackCards.FirstOrDefault(x => x.Key == s.SelectedPackKey);
+            return card.Key == null ? T("ChoosePack") : T("ViewingPack") + ": " + card.Label;
+        });
+        b.BindReadOnly<string>("voice-editing-target", () => {
+            var domain = source.BuildView().SelectedDomain;
+            return T("Editing") + ": " + (domain.HasValue ? domain.Value.DisplayName : T("ChooseDomain"));
+        });
         b.BindReadOnly<string>("voice-detail-meta", () => {
             var card = source.BuildView().PackCards.FirstOrDefault(x => x.Key == s.SelectedPackKey);
             return card.Key == null ? T("ChoosePackNote") : card.ModName + " · " + card.Author + "\n" + card.DefName + "\n" + card.Coverage;
@@ -110,12 +147,17 @@ public static partial class UsKernelSettingsHost
             Go("Behavior");
         });
         writes.Command("open-topic", () => {
-            if (s.Page == "Help") return;
-            s.PinnedHelpRef = bumper.CurrentHelpRef;
-            if (s.PinnedHelpRef == "") s.PinnedHelpRef = source.SectionHelpRef(s.ActiveSectionKey);
-            Go("Help");
+            OpenHelp(PageHelpRef(s), T(s.Page));
         });
+        writes.Action<string>("explain-topic", topic => OpenHelp(topic,
+            topic.StartsWith("us/basic-tuning/", StringComparison.Ordinal) || topic.StartsWith("us/behavior-source/", StringComparison.Ordinal)
+                ? EditContext() : topic == "us/fallback-editor" && s.FallbackSelectedRace != ""
+                    ? s.FallbackSelectedRace : T(s.Page)));
+        foreach (string topic in new[] { "us/behavior-source/selection", "us/scope-tree", "us/preset-list", "us/basic-tuning/select",
+            "us/basic-tuning/eat-phase", "us/basic-tuning/eat-nutrition", "us/basic-tuning/eat-drug", "us/attenuation-editor", "us/fallback-editor" })
+            b.BindReadOnly<string>("explain:" + topic, () => topic);
         b.BindReadOnly<string>("pinned-help-ref", () => s.PinnedHelpRef);
+        b.BindReadOnly<string>("pinned-help-context", () => s.PinnedHelpContext);
         b.BindReadOnly<string>("voice-missing-selections", () => { source.BuildView(); return s.MissingSelections; });
         b.BindReadOnly<bool>("voice-has-missing", () => { source.BuildView(); return s.OrphanSelectionCount > 0; });
         b.BindReadOnly<bool>("restore-all-open", () => s.RestoreAllOpen);
@@ -128,8 +170,8 @@ public static partial class UsKernelSettingsHost
         writes.Value<string>("behavior-source", () => production?.SelectedSource ?? "", value => { production?.CommitSource(value); bumper.Bump(); });
         b.BindReadOnly<string>("behavior-source-status", () => production?.SourceStatus(t) ?? T("SourceUnavailable"));
         b.BindReadOnly<bool>("action-fields-visible", () => production != null && s.TuningSelectedAction != "" && source.CanResetTuningArea());
-        b.BindReadOnly<string>("action-fields-target", () => s.TuningSelectedAction + " · " + (s.TuningLayer == 0 ? "Pawn" : s.TuningRaceDefName + (s.TuningLayer == 2 ? "/" + s.TuningXenotypeDefName : "")));
-        b.BindReadOnly<string>("edit-domain-context", () => { source.BuildView(); return T("EditContext") + ": " + (s.TuningLayer == 0 ? "Pawn profile" : s.TuningRaceDefName + (s.TuningLayer == 2 ? "/" + s.TuningXenotypeDefName : "")); });
+        b.BindReadOnly<string>("action-fields-target", () => T("Editing") + ": " + s.TuningSelectedAction + " · " + EditContext());
+        b.BindReadOnly<string>("edit-domain-context", () => { source.BuildView(); return T("EditContext") + ": " + EditContext(); });
         // Retained editors belong to the exact action/domain, not mutable navigation state.
         // Previously visited rows remain hidden compatible nodes, so switching context cannot
         // publish an old draft into a different row or silently discard it.
@@ -153,13 +195,18 @@ public static partial class UsKernelSettingsHost
                 writes.ItemValue<string>("action-edit-keys", key, "action-field-" + f,
                     () => production.ReadActionField(f, action, race, child),
                     v => { production.CommitActionField(f, v, action, race, child); bumper.Bump(); });
+                b.BindReadOnly<string>(Address("explain-" + f + "-topic"), () => "us/action-fields/" + f);
+                writes.ItemAction<string>("action-edit-keys", key, "explain-" + f,
+                    topic => OpenHelp(topic, action + " · " + (race == "" ? T("PawnProfile") : race + (child == "" ? "" : "/" + child))));
             }
             return editKeys;
         });
         b.BindReadOnly<string>("action-row-diagnostic", () => {
             string[] parts = (production?.RowDiagnostic ?? "").Split(new[] { '\n' }, 2);
-            return parts[0] == "" ? "" : t.Translate(parts[0]) + (parts.Length == 2 ? "\n" + parts[1] : "");
+            return parts[0] == "" ? "" : t.Translate(parts[0]);
         });
+        b.BindReadOnly<string>("transaction-diagnostics", () => s.SourceChangeDiagnostic + "\n" + (production?.RowDiagnostic ?? ""));
+        b.BindReadOnly<string>("kernel-status-raw", () => SqueakerRuntime.PolicyStatus);
         b.BindReadOnly<string>("dependency-status", () => source.BuildIdentity + "\nFerriteLib v0.8.0-rc1 · a0b5b98\n" + T("ObservationBoundary"));
     }
 }

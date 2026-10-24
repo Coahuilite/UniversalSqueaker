@@ -181,25 +181,58 @@ internal static partial class Program
             foreach ((string destination, bool definitions) in new[] { ("Voices", true), ("Voices", false), ("Behavior", false), ("Presets", false), ("Diagnostics", false) })
             foreach (bool help in new[] { false, true })
             {
-                page.Host.Bindings.Invoke("go-page", destination);
-                page.Host.Bindings.TryInvokeCommand(definitions ? "browse-definitions" : "browse-packs");
-                if (help) page.Host.Bindings.TryInvokeCommand("open-topic");
                 var view = new UiLayoutRect(0, 0, width, height);
+                if (new[] { "Behavior", "Presets", "Diagnostics" }.Contains(destination)
+                    && new[] { "Behavior", "Presets", "Diagnostics" }.Contains(source.ViewState.Page))
+                {
+                    if (source.ViewState.WideLayout) Press(page, view, "nav-" + destination);
+                    else
+                    {
+                        Press(page, view, "tool-category");
+                        var options = page.Host.Bindings.Choices("tool-page-options").Read();
+                        int index = options.Select(x => (string)x.Value!).ToList().IndexOf(destination);
+                        var popup = UiPopup.RectFor(page.Host.Session.OpenPopupAnchor!.Value, options.Count, view);
+                        Click(page, view, new UiLayoutRect(popup.X + 8, popup.Y + index * UiPopup.OptionHeight + 4, popup.Width - 16, UiPopup.OptionHeight - 8));
+                    }
+                }
+                else page.Host.Bindings.Invoke("go-page", destination);
+                page.Host.Bindings.TryInvokeCommand(definitions ? "browse-definitions" : "browse-packs");
+                if (help)
+                {
+                    // Same help-open scenario, now the WO r4 explicit current-page entry.
+                    // A prior real field hover cannot choose the page-help destination.
+                    if (destination == "Voices")
+                        page.Draw(view, EventType.Repaint, WindowRect(page, view, "global-volume-slider").Center);
+                    Press(page, view, "topic-link");
+                }
                 UiLayoutSnapshot layout = page.Host.MeasureAndArrange(view.Size);
-                Check(layout.VisibleIds.Count > 10 && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual layout");
+                // Help hides unrelated navigation controls under WO r4. Pin its required roles,
+                // not an incidental node count inherited from the old always-visible toolbar.
+                bool contentPresent = help ? new[] { "page-root", "header-band", "page-back", "page-title", "page-Help-scroll", "help-pinned-note", "help-object-context", "help-panel", "footer-band", "footer" }
+                    .All(id => layout.RectById.TryGetValue(id, out var rect) && rect.Width > 0 && rect.Height > 0)
+                    : layout.VisibleIds.Count > 10;
+                Check(contentPresent && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual layout");
                 page.Draw(view);
                 bool visible = layout.RectById.ContainsKey("help-panel") && layout.RectById.ContainsKey("page-Help-scroll");
                 bool followsPage = source.ViewState.Page == (help ? "Help" : destination);
                 if (help)
                 {
                     string pinned = page.Host.Bindings.Get<string>("pinned-help-ref");
+                    string expected = destination switch { "Behavior" => "us/scope-tree", "Presets" => "us/preset-list",
+                        "Diagnostics" => "us/diagnostics", _ => definitions ? "us/race-board" : "us/pack-cards" };
                     // Reuse the existing open/closed scenario: the fixed topic outlives the normal
                     // hover grace, and Back returns to the originating page on the same Host.
                     for (int pass = 0; pass <= 15; pass++) page.Draw(view);
-                    followsPage &= pinned.Length > 0 && page.Host.Bindings.Get<string>("pinned-help-ref") == pinned;
+                    followsPage &= pinned == expected && page.Host.Bindings.Get<string>("pinned-help-ref") == expected;
                     page.Host.Bindings.TryInvokeCommand("page-back"); page.Draw(view);
                     followsPage &= source.ViewState.Page == destination && !page.Host.MeasureAndArrange(view.Size).RectById.ContainsKey("help-panel");
+                    if (destination == "Diagnostics")
+                    {
+                        Press(page, view, "home-return");
+                        followsPage &= source.ViewState.Page == "Voices" && source.ViewState.PageHistory.Count == 0;
+                    }
                 }
+                followsPage &= source.ViewState.PageHistory.Count <= 1;
                 Check(visible == help && followsPage, "help occupies its fixed content page, retains its topic beyond15 passes and returns to the origin; no permanent bottom reservation");
             }
             Check(page.Host.Manifest.Roots.Count > 0 && page.Host.Bindings.BindingOwner != null, "actual manifest and concrete registry retained");

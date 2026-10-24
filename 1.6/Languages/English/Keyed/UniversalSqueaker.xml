@@ -333,10 +333,10 @@
   <US.Help.PageTitle.Overview>Start in Voices to choose exact pack targets. Settings &amp; tools contains the secondary editors. Back restores the originating page and its context.</US.Help.PageTitle.Overview>
   <US.Help.PageTitle.Nav.Label>Pages &amp; tools</US.Help.PageTitle.Nav.Label>
   <US.Help.PageTitle.Nav.Text>Voices combines configuration status, mode, volume, search and pack management. Behaviour, presets, output, fallback, appearance, diagnostics and restore are secondary tools, not a permanent sidebar.</US.Help.PageTitle.Nav.Text>
-  <US.Help.PageTitle.Apply.Label>Publication &amp; saving</US.Help.PageTitle.Apply.Label>
-  <US.Help.PageTitle.Apply.Text>Ordinary edits publish immediately and share a 0.35-second physical-save debounce. Source and sparse-row transactions persist before publication. Failed saves expose Retry; closing flushes queued Live changes and abandons unpublished retained drafts.</US.Help.PageTitle.Apply.Text>
+  <US.Help.PageTitle.Apply.Label>Editing and saving</US.Help.PageTitle.Apply.Label>
+  <US.Help.PageTitle.Apply.Text>Ordinary edits take effect immediately and save automatically shortly afterwards. Source and action-field edits first attempt saving: failure keeps the previous configuration; saved-but-not-applied changes can be inspected in Diagnostics without saving again. Closing saves applied edits and discards unconfirmed drafts.</US.Help.PageTitle.Apply.Text>
   <US.Help.PageTitle.HelpDrawer.Label>Detailed help &amp; return</US.Help.PageTitle.HelpDrawer.Label>
-  <US.Help.PageTitle.HelpDrawer.Text>Detailed help occupies the content area of the same window. Opening fixes the current topic; hover cannot replace it while reading. Back restores the previous page and its independent scroll.</US.Help.PageTitle.HelpDrawer.Text>
+  <US.Help.PageTitle.HelpDrawer.Text>Page help explains the current page; Explain beside a field explains that field and the target captured when opened. Moving the pointer never changes the pinned topic. Back keeps the originating page and scroll.</US.Help.PageTitle.HelpDrawer.Text>
   <US.Help.ModeRow.Title>Routing Mode</US.Help.ModeRow.Title>
   <US.Help.ModeRow.Overview>Choose how VoicePack audio is routed: Vanilla keeps only the built-in tier, Fallback prefers enabled packs and falls through the tiers in order, Remix draws from the candidates with equal weight, and Disabled bypasses this mod entirely.</US.Help.ModeRow.Overview>
   <US.Help.ModeRow.Vanilla.Text>Routes no VoicePack audio and keeps only the built-in tier, which ships no content today - this mod stays silent. The game's own voices are unaffected.</US.Help.ModeRow.Vanilla.Text>
@@ -380,7 +380,7 @@
   <US.Help.Diagnostics.LayoutCapture.Text>Records every arranged element of this window - its rect in each coordinate space, its height mode and resolved height. Costs frames while on, and is off by default; it is never saved.</US.Help.Diagnostics.LayoutCapture.Text>
   <US.Help.Diagnostics.LayoutOutline.Text>Draws an outline around the rects this window paints, so a rect can be seen rather than read. It is independent of capture (SA1.5): with capture on it outlines the retained set, with capture off it outlines every drawn rect and samples nothing - no report is armed by this switch.</US.Help.Diagnostics.LayoutOutline.Text>
   <US.Help.Diagnostics.LayoutReport.Text>Writes the last completed capture once to the log, then stops. Press it again for another. For a rect that does not respond to clicks, read the input lines: each one carries the pointer, the queried rect and the verdict (hit, miss, covered or disabled).</US.Help.Diagnostics.LayoutReport.Text>
-  <US.Help.ScopeTree.Overview>Choose Pawn profile, Race or legal Race/Xenotype. Scopes and response details read the same effective fold as playback. Source selection is independent of packs; sparse-row fields distinguish inheritance from false or zero and persist atomically before publication.</US.Help.ScopeTree.Overview>
+  <US.Help.ScopeTree.Overview>Choose a general Pawn, Race or legal Xenotype profile, then an action. This page shows effective values and where they came from. Unset fields inherit; explicit No and zero override. Behaviour sources, audio packs and preset imports are separate actions.</US.Help.ScopeTree.Overview>
   <US.Help.ScopeTree.Layer.Text>Choose which layer the edits below write to: Global, Race or Xenotype. Layer records stack and resolve one after another.</US.Help.ScopeTree.Layer.Text>
   <US.Help.ScopeTree.Domain.Text>On the Race and Xenotype layers, pick the exact race domain - or the (race, xenotype) domain - being edited; the row is hidden on the Global layer.</US.Help.ScopeTree.Domain.Text>
   <US.Help.ScopeTree.ActionScope.Text>One dropdown per action: Auto inherits the effective value from below, or force Off, Any or Command within what the action supports. On wide layouts the row shows the effective value with an arrow for inherited scopes.</US.Help.ScopeTree.ActionScope.Text>
@@ -588,8 +588,8 @@
   <US.Help.Theme.Overview>Choose among the official Core and DLC palettes for colour validation. The shipped default is Core.</US.Help.Theme.Overview>
   <US.Help.Theme.Switch.Label>Palette</US.Help.Theme.Switch.Label>
   <US.Help.Theme.Switch.Text>A switch changes colour and nothing else - the page keeps its layout, focus and scroll. The choice is saved with the settings and returned by Restore defaults; author-supplied custom themes stay supported by the library.</US.Help.Theme.Switch.Text>
-  <US.Kernel.PolicyRequired>PolicySelectionRequired: ordinary playback policy is unselected. Configuration remains editable; dispatch is paused unless an explicit development candidate was activated.</US.Kernel.PolicyRequired>
-  <US.Kernel.CandidateActive>An explicit development candidate is active. Activity A and response parameters use the new Config/author contract; old timing controls are retired.</US.Kernel.CandidateActive>
+  <US.Kernel.PolicyRequired>US responses are not enabled: ordinary playback rules are still pending. You can still choose packs and edit settings.</US.Kernel.PolicyRequired>
+  <US.Kernel.CandidateActive>An explicitly enabled development playback plan is active, not an ordinary default. Sound still depends on the response conditions.</US.Kernel.CandidateActive>
   <US.Kernel.ResponseEditorRetired>The old probability and mood-factor editors are retired. Action permissions above still apply. Configure independent response enablement, parameters and Apply/Skip participation through the current author/Config contract.</US.Kernel.ResponseEditorRetired>
   <US.Kernel.LastObservedDecision>Kernel: last observed decision</US.Kernel.LastObservedDecision>
   <US.Eat.Any>Any item</US.Eat.Any>
@@ -630,7 +630,7 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Voices>Voices</US.UI.Voices>
   <US.UI.Tools>Settings &amp; tools</US.UI.Tools>
   <US.UI.Back>Back</US.UI.Back>
-  <US.UI.Help>Help</US.UI.Help>
+  <US.UI.Help>Page help</US.UI.Help>
   <US.UI.Behavior>Behaviour &amp; sources</US.UI.Behavior>
   <US.UI.Presets>Import presets</US.UI.Presets>
   <US.UI.Output>Sound selection &amp; output</US.UI.Output>
@@ -648,13 +648,13 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.PageCount>Page {0} / {1}</US.UI.PageCount>
   <US.UI.Summary>Selected packs {0}/{1} · missing saved selections {2}</US.UI.Summary>
   <US.UI.StableFilter>Enabled filter retains these rows while you edit. Refresh or change a filter to recalculate.</US.UI.StableFilter>
-  <US.UI.ChoosePack>Choose a pack</US.UI.ChoosePack>
+  <US.UI.ChoosePack>View an audio pack</US.UI.ChoosePack>
   <US.UI.ChoosePackNote>Open a pack to inspect its exact targets. A pack title never toggles all targets.</US.UI.ChoosePackNote>
   <US.UI.BackToList>Back to list</US.UI.BackToList>
-  <US.UI.ChooseDomain>Use this domain for tools</US.UI.ChooseDomain>
-  <US.UI.SelectedForDomain>Selected for this domain</US.UI.SelectedForDomain>
-  <US.UI.SelectionNote>Catalogued, selected and playable are different facts. A dispatch is not proof of audible sound. Select a target before opening its behaviour or fallback.</US.UI.SelectionNote>
-  <US.UI.ToolsNote>Editors share the same configuration and save owner. Back preserves the window context.</US.UI.ToolsNote>
+  <US.UI.ChooseDomain>Edit this target</US.UI.ChooseDomain>
+  <US.UI.SelectedForDomain>Use this pack for this target</US.UI.SelectedForDomain>
+  <US.UI.SelectionNote>Viewing is not selection. Target switches show pack selection; playback still depends on its conditions.</US.UI.SelectionNote>
+  <US.UI.ToolsNote>Choose what to adjust. Switch tools directly; returning to Voices keeps your pack, target and list position.</US.UI.ToolsNote>
   <US.UI.PresetNote>Choose import targets and review the affected rows. Import changes player overrides, not behaviour-source selection or voice-pack selection.</US.UI.PresetNote>
   <US.UI.EntryNote>These switches change entry visibility only. Mod Settings remains available; the open panel and playback policy are unaffected.</US.UI.EntryNote>
   <US.UI.MainMenuEntry>Show in startup menu</US.UI.MainMenuEntry>
@@ -663,23 +663,23 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.RestoreNote>Prefer the current scope or a single area. Global restore affects all settings and requires confirmation.</US.UI.RestoreNote>
   <US.UI.RestoreAllExpand>Show global restore…</US.UI.RestoreAllExpand>
   <US.UI.HelpPinned>This topic stays fixed while you read. Back returns to the previous page.</US.UI.HelpPinned>
-  <US.UI.SourceNote>Behaviour sources are independent of audio packs and preset imports. Choose a Race or legal Xenotype scope above. Source changes persist atomically before publication; blank means inherit.</US.UI.SourceNote>
-  <US.UI.SourceStatus>Stored source intent</US.UI.SourceStatus>
+  <US.UI.SourceNote>Choose a Race or legal Xenotype, then its behaviour source. This does not change audio packs or import a preset.</US.UI.SourceNote>
+  <US.UI.SourceStatus>Behaviour source for this target</US.UI.SourceStatus>
   <US.UI.SourceInherit>Inherit / no explicit source</US.UI.SourceInherit>
   <US.UI.SourceChooseDomain>The Pawn profile has no author-source binding. Select a Race or legal Xenotype to change a source.</US.UI.SourceChooseDomain>
-  <US.UI.SourceUnavailable>Source editing is unavailable in this host.</US.UI.SourceUnavailable>
-  <US.UI.SourceCommitted>Configuration saved and published.</US.UI.SourceCommitted>
-  <US.UI.SourcePublishFailed>Saved to disk; runtime publication failed. Do not repeat the disk transaction.</US.UI.SourcePublishFailed>
-  <US.UI.SourceRejected>Source was not committed; previous configuration remains active.</US.UI.SourceRejected>
+  <US.UI.SourceUnavailable>Behaviour-source editing is unavailable here.</US.UI.SourceUnavailable>
+  <US.UI.SourceCommitted>Changes saved and applied to subsequent responses.</US.UI.SourceCommitted>
+  <US.UI.SourcePublishFailed>Changes are saved but could not be applied to playback. Check Diagnostics; do not save the same change again.</US.UI.SourcePublishFailed>
+  <US.UI.SourceRejected>This change could not be saved; the previous configuration was not replaced. Check Diagnostics.</US.UI.SourceRejected>
   <US.UI.ObservationBoundary>Policy and save state are real configuration observations. Geometry diagnostics depend on the build; local harness results do not verify game rendering, real Config or audible playback.</US.UI.ObservationBoundary>
   <US.UI.MissingSelections>Missing saved selections (kept, not counted as selected catalog packs)</US.UI.MissingSelections>
-  <US.UI.SparseNote>Blank inherits; false and zero are explicit. These row fields save atomically before publication. Other fields and source selection are kept.</US.UI.SparseNote>
+  <US.UI.SparseNote>These values affect only the current action and target. Blank inherits; No and zero are explicit settings. Other fields are kept.</US.UI.SparseNote>
   <US.UI.InheritBlank>Blank = inherit</US.UI.InheritBlank>
   <US.UI.Yes>Yes</US.UI.Yes>
   <US.UI.No>No</US.UI.No>
-  <US.UI.RowInvalid>Invalid sparse value; no change committed. Use an invariant number or leave blank to inherit.</US.UI.RowInvalid>
+  <US.UI.RowInvalid>This edit was not saved. Enter a valid number with a decimal point, or leave blank to inherit.</US.UI.RowInvalid>
   <US.UI.Field.enabled>Enabled</US.UI.Field.enabled>
-  <US.UI.Field.interval>Hard interval (ticks)</US.UI.Field.interval>
+  <US.UI.Field.interval>Minimum interval (ticks)</US.UI.Field.interval>
   <US.UI.Field.volume>Volume multiplier</US.UI.Field.volume>
   <US.UI.Field.pitch>Pitch multiplier</US.UI.Field.pitch>
   <US.UI.Field.talking>Talking participation</US.UI.Field.talking>
@@ -687,4 +687,36 @@ Configuration/policy: {9}</US.Response.Details>
   <US.UI.Field.mood>Mood response</US.UI.Field.mood>
   <US.UI.EditContext>Current Eat / Select edit domain</US.UI.EditContext>
   <US.UI.OutputContext>Change scope / per-action volume and pitch…</US.UI.OutputContext>
+  <US.UI.ExplainSelect>Select response</US.UI.ExplainSelect>
+  <US.UI.PawnProfile>General Pawn profile</US.UI.PawnProfile>
+  <US.UI.ExplainEatNutrition>Nutrition filter</US.UI.ExplainEatNutrition>
+  <US.UI.StatusDetails>Diagnostics</US.UI.StatusDetails>
+  <US.UI.Help.Field.talking>Controls participation in the defined talking modulation for this action. No explicitly opts out; blank inherits.</US.UI.Help.Field.talking>
+  <US.UI.ViewingPack>Viewing</US.UI.ViewingPack>
+  <US.UI.SourceUnconfigured>Not configured (no automatic candidate selection)</US.UI.SourceUnconfigured>
+  <US.UI.Help.Field.enabled>Controls whether this action is enabled for this target. Inherit uses the upper layer; No explicitly disables it. Enabled does not guarantee a trigger or sound.</US.UI.Help.Field.enabled>
+  <US.UI.Help.Fields.Overview>Check the action and target. Blank inherits; an explicit No or zero does not. Editing one field keeps the others.</US.UI.Help.Fields.Overview>
+  <US.UI.PackListSummary>{0} · {1} targets</US.UI.PackListSummary>
+  <US.UI.Help.Field.volume>Volume multiplier for this action and target. Zero mutes; blank inherits. It does not replace the system volume on Voices.</US.UI.Help.Field.volume>
+  <US.UI.Explain>Explain</US.UI.Explain>
+  <US.UI.Editing>Editing target</US.UI.Editing>
+  <US.UI.Help.Field.pitch>Pitch multiplier for this action and target. Blank inherits; the value must satisfy the parameter range.</US.UI.Help.Field.pitch>
+  <US.UI.Help.Source.Text>Check the Race/Xenotype being edited. A source supplies author behaviour configuration for that target, separately from audio packs, player overrides and preset imports. Inherit does not automatically select a lone candidate. A save failure keeps the previous configuration; a saved-but-not-applied result should be checked in Diagnostics without saving the same change again.</US.UI.Help.Source.Text>
+  <US.UI.Help.Field.age>Controls declared age responses for this action. It does not create age responses that an author has not defined.</US.UI.Help.Field.age>
+  <US.UI.Help.Field.mood>Controls declared mood responses for this action. It does not add mood responses that an author has not defined.</US.UI.Help.Field.mood>
+  <US.UI.ToolCategory>Current tool</US.UI.ToolCategory>
+  <US.UI.Help.Field.interval>Minimum interval for this action, in ticks. Blank inherits; zero is explicit, not inheritance. Other defined response conditions still apply.</US.UI.Help.Field.interval>
+  <US.UI.Help.Fields.Title>Settings for this action and target</US.UI.Help.Fields.Title>
+  <US.UI.Help.Source.Title>Behaviour sources</US.UI.Help.Source.Title>
+  <US.UI.SourceBound>Specified</US.UI.SourceBound>
+  <US.UI.ExplainEatDrug>Drug filter</US.UI.ExplainEatDrug>
+  <US.UI.ExplainEatPhase>Eating phase</US.UI.ExplainEatPhase>
+  <US.UI.BackToVoices>Back to Voices</US.UI.BackToVoices>
+  <US.UI.Nav.Output>Output</US.UI.Nav.Output>
+  <US.UI.Nav.Restore>Restore</US.UI.Nav.Restore>
+  <US.UI.Nav.Presets>Presets</US.UI.Nav.Presets>
+  <US.UI.Nav.Appearance>Appearance</US.UI.Nav.Appearance>
+  <US.UI.Nav.Behavior>Behaviour &amp; sources</US.UI.Nav.Behavior>
+  <US.UI.Nav.Fallback>Fallback</US.UI.Nav.Fallback>
+  <US.UI.Nav.Diagnostics>Diagnostics</US.UI.Nav.Diagnostics>
 </LanguageData>

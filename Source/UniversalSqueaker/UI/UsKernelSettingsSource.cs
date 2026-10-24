@@ -105,7 +105,8 @@ public sealed partial class UsKernelSettingsSource : IUsKernelSettingsSource, IU
             if (row.ActionKey != null) return row.Explanation;
             var configuration = settings.CaptureBehaviorConfiguration();
             return string.Format(System.Globalization.CultureInfo.CurrentCulture, "US.Response.Profile".Translate().ToString(),
-                configuration.SystemVolume, configuration.Activity, configuration.SourceMode, SqueakerRuntime.PolicyStatus);
+                configuration.SystemVolume, configuration.Activity, configuration.SourceMode,
+                (SqueakerRuntime.PolicyStatus == "PolicySelectionRequired" ? "US.Kernel.PolicyRequired" : "US.Kernel.CandidateActive").Translate());
         }
     }
 

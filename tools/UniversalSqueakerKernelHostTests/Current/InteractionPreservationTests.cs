@@ -23,45 +23,47 @@ internal static class InteractionPreservationTests
     }
     private static void HelpScrollAndTheme()
     {
-        // The original BH1 scroll fixture uses the real translated catalog, whose maximum body
-        // exceeds the declared viewport. Raw resource keys are not a valid long-content fixture.
+        // Existing scroll-retention stress scene: real translated catalog and a deliberately
+        // short Host viewport, not a claimed native screen. WO r4 replaces the bottom reservation
+        // with a full-content help page, so its independently scrollable body needs this short box.
         Program.SetTranslatorResolver(Program.ReadKeyedTable("English"));
         var source = new RecordingSettingsSource { RichData = true };
         using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
-        var view = new UiLayoutRect(0, 0, 760, 524);
+        var view = new UiLayoutRect(0, 0, 760, 300);
         var closed = page.Host.MeasureAndArrange(view.Size); page.Draw(view);
-        Program.Check(!closed.RectById.ContainsKey("help-scroll"), "help opens retracted");
+        Program.Check(!closed.RectById.ContainsKey("page-Help-scroll"), "help starts outside home content");
+        page.Host.SetScrollPosition("voice-list-scroll", new UiLayoutPoint(0, 60)); page.Draw(view);
+        UiLayoutPoint content = page.Host.GetScrollPosition("voice-list-scroll");
         int revision = page.Host.Session.ContentRevision;
-        Program.Press(page, view, "help-toggle");
-        Program.Check(page.Host.Bindings.Get<bool>("help-open") && page.Host.Session.ContentRevision == revision + 1, "real footer hit opens help with one revision");
+        Program.Press(page, view, "topic-link");
+        Program.Check(source.ViewState.Page == "Help" && page.Host.Session.ContentRevision == revision + 1, "real page-help hit opens help with one revision");
         var open = page.Host.MeasureAndArrange(view.Size); page.Draw(view);
-        Program.Check(open.RectById["body-row"].Width == closed.RectById["body-row"].Width
-            && open.Viewports["nav-column"].Width == closed.Viewports["nav-column"].Width, "help never widens body or navigation");
-        Program.Check(Math.Abs((closed.RectById["body-row"].Height - open.RectById["body-row"].Height)
-            - (open.Viewports["help-scroll"].Height + 8)) < .05f, "body returns exactly declared help140 plus rootgap8");
-        page.Host.Bindings.Invoke("set-tab", "Packs"); page.Draw(view);
-        page.Host.SetScrollPosition("content-scroll", new UiLayoutPoint(0, 60));
-        page.Host.SetScrollPosition("help-scroll", new UiLayoutPoint(0, 90)); page.Draw(view);
-        UiLayoutPoint content = page.Host.GetScrollPosition("content-scroll"), help = page.Host.GetScrollPosition("help-scroll");
-        UiNode helpNode = page.Host.Session.GetNodeByElementId("help-scroll")!;
+        Program.Check(open.RectById["page-root"].Width == closed.RectById["page-root"].Width
+            && open.Viewports["page-Help-scroll"].Width == closed.RectById["voice-home"].Width, "help never widens the window content");
+        Program.Check(!open.RectById.ContainsKey("voice-home") && !closed.RectById.ContainsKey("page-Help-scroll")
+            && Math.Abs(open.Viewports["page-Help-scroll"].Height - closed.RectById["voice-home"].Height) < .05f,
+            "home and detailed help use the same full flexible content slot, not a permanent140 reservation");
+        page.Host.SetScrollPosition("page-Help-scroll", new UiLayoutPoint(0, 90)); page.Draw(view);
+        UiLayoutPoint help = page.Host.GetScrollPosition("page-Help-scroll");
+        UiNode helpNode = page.Host.Session.GetNodeByElementId("page-Help-scroll")!;
         Program.Check(content.Y > 0 && help.Y > 0 && content != help, "body and help really hold independent nonzero scroll: content=" + content.Y + " help=" + help.Y);
-        page.Host.Bindings.Set("help-open", false); page.Draw(view);
-        page.Host.Bindings.Set("help-open", true); page.Draw(view);
-        Program.Check(ReferenceEquals(helpNode, page.Host.Session.GetNodeByElementId("help-scroll"))
-            && page.Host.GetScrollPosition("help-scroll") == help && page.Host.GetScrollPosition("content-scroll") == content, "close/open retains help node and both scroll positions");
+        Program.Press(page, view, "page-back"); page.Draw(view);
+        Program.Press(page, view, "topic-link"); page.Draw(view);
+        Program.Check(ReferenceEquals(helpNode, page.Host.Session.GetNodeByElementId("page-Help-scroll"))
+            && page.Host.GetScrollPosition("page-Help-scroll") == help && page.Host.GetScrollPosition("voice-list-scroll") == content, "close/open retains help node and both scroll positions");
         var before = page.Host.MeasureAndArrange(view.Size);
         var colour = page.Host.StyleResolver.Baseline[UiPaletteRole.Accent];
         UsKernelSettingsHost.ApplySwatchLive(new GameSettings(), page.Host, UsTheme.ChromeTheme, "royalty"); page.Draw(view);
         var after = page.Host.MeasureAndArrange(view.Size);
         Program.Check(before.RectById.Count == after.RectById.Count && before.RectById.All(pair => after.RectById.TryGetValue(pair.Key, out var rect) && rect == pair.Value), "live theme changes zero actual arranged rects");
         Program.Check(page.Host.StyleResolver.Baseline[UiPaletteRole.Accent] != colour
-            && page.Host.GetScrollPosition("help-scroll") == help && page.Host.GetScrollPosition("content-scroll") == content, "theme really repaints while preserving independent scroll");
+            && page.Host.GetScrollPosition("page-Help-scroll") == help && page.Host.GetScrollPosition("voice-list-scroll") == content, "theme really repaints while preserving independent scroll");
         // Outside the actual button must not toggle it; the following real press closes it once.
-        var toggle = Program.WindowRect(page, view, "help-toggle");
+        var toggle = Program.WindowRect(page, view, "page-back");
         Program.Click(page, view, new UiLayoutRect(toggle.XMax + 100, toggle.Y, 2, toggle.Height));
-        Program.Check(page.Host.Bindings.Get<bool>("help-open"), "outside footer hit does not activate help");
+        Program.Check(source.ViewState.Page == "Help", "outside Back hit does not navigate");
         Program.Click(page, view, toggle);
-        Program.Check(!page.Host.Bindings.Get<bool>("help-open"), "inside footer hit activates exactly its own control");
+        Program.Check(source.ViewState.Page == "Voices", "inside Back hit activates exactly its own control");
         Program.SetTranslatorResolver(null);
     }
     private static void PackIdentityAndNativeAction()
@@ -156,13 +158,17 @@ internal static class InteractionPreservationTests
             try
             {
                 using var page = new Program.Page(UsKernelSettingsHost.Create(source, Program.Metrics));
-                page.Host.Bindings.Set("help-open", true);
-                page.Draw(new UiLayoutRect(0, 0, 760, 524));
-                var affected = reports.Where(r => r.ElementPath.Contains("help-panel") || r.ElementPath.EndsWith("/footer", StringComparison.Ordinal)).ToArray();
+                var view = new UiLayoutRect(0, 0, 896, 604); // WO minimum logical-screen content, not native rendering.
+                page.Draw(view);
+                Program.Press(page, view, "topic-link");
+                page.Draw(view);
+                var affected = reports.Where(r => r.ElementPath.Contains("help-panel") || r.ElementPath.Contains("kernel-policy-note") || r.ElementPath.EndsWith("/footer", StringComparison.Ordinal)).ToArray();
                 Program.Check(affected.Length == 0, language + " actual long footer and help bands fit measured text: " + string.Join("|", affected.Select(x => x.ElementPath + ":" + x.Needed + "/" + x.Available)));
-                var layout = page.Host.MeasureAndArrange(new UiLayoutPoint(760, 524));
-                Program.Check(layout.RectById["help-toggle"].X >= layout.RectById["footer"].XMax - .05f
-                    && layout.RectById["help-toggle"].Height == 26, "actual footer text and button hit bands do not overlap");
+                var layout = page.Host.MeasureAndArrange(view.Size);
+                Program.Check(layout.RectById["page-back"].XMax <= layout.RectById["page-title"].X + .05f
+                    && layout.RectById["page-back"].Height == 28
+                    && layout.RectById["page-Help-scroll"].YMax <= layout.RectById["footer-band"].Y + .05f,
+                    "actual explicit Back/title hit bands and independently wrapped footer do not overlap");
                 int prior = reports.Count;
                 UiThemeDraw.Label(page.Execution, new UiLayoutRect(0, 0, 2, 2), "positive overflow control", UsTheme.Surface(), singleLine: true);
                 Program.Check(reports.Count > prior, "text-fit guard detects real undersized paint positive control");

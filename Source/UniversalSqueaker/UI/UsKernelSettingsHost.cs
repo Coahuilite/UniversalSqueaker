@@ -1201,7 +1201,14 @@ public static partial class UsKernelSettingsHost
         {
             PackCardView? card = FindCard(key);
             if (!card.HasValue) return "";
-            return UsPacksText.Format(translation, KeyPackChecklistMeta, card.Value.ModName, card.Value.Author);
+            string origin = card.Value.ModName == "" ? card.Value.Key : card.Value.ModName;
+            var collisions = source.BuildView().PackCards.Where(other => other.Key != key
+                && string.Equals(other.Label, card.Value.Label, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(other.ModName, card.Value.ModName, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (collisions.Length > 0)
+                origin += " · " + (card.Value.DefName != "" && !collisions.Any(other => other.DefName == card.Value.DefName)
+                    ? card.Value.DefName : card.Value.Key);
+            return string.Format(translation.Translate("US.UI.PackListSummary"), origin, card.Value.Rows.Count);
         }
 
         private PackCardView? FindCard(string key)

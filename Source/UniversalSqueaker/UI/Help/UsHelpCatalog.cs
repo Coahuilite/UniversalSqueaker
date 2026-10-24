@@ -69,6 +69,20 @@ internal static class UsHelpCatalog
 {
     private static readonly Dictionary<string, HelpSection> Sections = new(StringComparer.Ordinal)
     {
+        ["us/behavior-source"] = new HelpSection("us/behavior-source", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text", new[]
+        {
+            new HelpItem("us/behavior-source/selection", "US.UI.Help.Source.Title", "US.UI.Help.Source.Text"),
+        }),
+        ["us/action-fields"] = new HelpSection("us/action-fields", "US.UI.Help.Fields.Title", "US.UI.Help.Fields.Overview", new[]
+        {
+            new HelpItem("us/action-fields/enabled", "US.UI.Field.enabled", "US.UI.Help.Field.enabled"),
+            new HelpItem("us/action-fields/interval", "US.UI.Field.interval", "US.UI.Help.Field.interval"),
+            new HelpItem("us/action-fields/volume", "US.UI.Field.volume", "US.UI.Help.Field.volume"),
+            new HelpItem("us/action-fields/pitch", "US.UI.Field.pitch", "US.UI.Help.Field.pitch"),
+            new HelpItem("us/action-fields/talking", "US.UI.Field.talking", "US.UI.Help.Field.talking"),
+            new HelpItem("us/action-fields/age", "US.UI.Field.age", "US.UI.Help.Field.age"),
+            new HelpItem("us/action-fields/mood", "US.UI.Field.mood", "US.UI.Help.Field.mood"),
+        }),
         // Window-level fallback section: the section-map guard keeps it reachable via
         // SectionHelpRefOf's default branch; its three items are claimed live by the navigation
         // rows, the footer save status and the footer Help switch.

@@ -16,6 +16,7 @@ public sealed class VoicePacksPageState
     public string Page = "Voices";
     public readonly List<string> PageHistory = new();
     public string PinnedHelpRef = "";
+    public string PinnedHelpContext = "";
     public bool BrowseDefinitions;
     public bool FiltersOpen;
     public bool RestoreAllOpen;
@@ -106,7 +107,7 @@ public sealed class VoicePacksPageState
 
     public void Reset()
     {
-        Page = "Voices"; PinnedHelpRef = "";
+        Page = "Voices"; PinnedHelpRef = ""; PinnedHelpContext = "";
         PageHistory.Clear();
         BrowseDefinitions = false; FiltersOpen = false; RestoreAllOpen = false;
         DetailOpen = false; SelectedPackKey = ""; PackPage = 0;

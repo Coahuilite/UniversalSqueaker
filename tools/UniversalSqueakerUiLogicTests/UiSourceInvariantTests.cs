@@ -984,7 +984,8 @@ internal static class UiSourceInvariantTests
         CheckSourceContains(Path.Combine(ui, "UsKernelSettingsHost.Voices.cs"), new[]
         {
             "\"open-topic\"",
-            "s.PinnedHelpRef = bumper.CurrentHelpRef",
+            "s.PinnedHelpRef = topic",
+            "OpenHelp(PageHelpRef(s), T(s.Page))",
             "ReturnToPreviousPage(s)",
         },
         "the Host captures the topic and owns return navigation on the same page state");

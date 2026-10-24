@@ -89,13 +89,16 @@ public sealed partial class UsKernelSettingsSource
         if (SourceDomain is BehaviorDomain domain)
         {
             var binding = BehaviorSourceState.FromXml(settings.behaviorSourcesXml).Read(domain);
-            note = t.Translate("US.UI.SourceStatus") + ": " + binding.Intent + " · " + binding.SourceId;
+            string intent = binding.Intent switch { BehaviorSourceIntent.Bound => "US.UI.SourceBound",
+                BehaviorSourceIntent.Inherit => "US.UI.SourceInherit", _ => "US.UI.SourceUnconfigured" };
+            note = t.Translate("US.UI.SourceStatus") + ": " + t.Translate(intent)
+                + (binding.SourceId == "" ? "" : " · " + binding.SourceId);
         }
         else note = t.Translate("US.UI.SourceChooseDomain");
         if (state.SourceChangeDiagnostic != "")
         {
             string[] parts = state.SourceChangeDiagnostic.Split(new[] { '\n' }, 2);
-            note += "\n" + t.Translate(parts[0]) + (parts.Length == 2 ? "\n" + parts[1] : "");
+            note += "\n" + t.Translate(parts[0]);
         }
         return note;
     }
