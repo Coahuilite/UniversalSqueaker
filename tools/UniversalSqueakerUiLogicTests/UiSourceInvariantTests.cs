@@ -376,6 +376,8 @@ internal static class UiSourceInvariantTests
                 // UiTextAnchor is the new neutral FL enum, not the retired UiText helper.
                 // Other old UiText-prefixed helpers remain rejected.
                 string scanned = forbidden == "UiText" ? text.Replace("UiTextAnchor", "") : text;
+                // FL 0.8's capture-abort enum is not the deleted UiInteract event authority.
+                if (forbidden == "UiInteract") scanned = scanned.Replace("UiInteractionEnd", "");
                 if (scanned.IndexOf(forbidden, StringComparison.Ordinal) >= 0)
                 {
                     throw new InvalidOperationException(
@@ -432,10 +434,14 @@ internal static class UiSourceInvariantTests
             if (kind.StartsWith("us/", StringComparison.Ordinal)) manifestKinds.Add(kind);
         }
 
-        Assert(registeredKinds.Count == manifestKinds.Count && IsSameSet(registeredKinds, manifestKinds),
-            "UsKernelWidgetRegistrar must register exactly the us/* kinds the Schema2 manifests use "
+        // WO r3 replaces these two presentation kinds with declared page/header controls. Keep
+        // their public registrations for existing standalone manifests (MoodLayout/FrameGeometry),
+        // not as a second navigation surface in the shipped settings page.
+        var expectedKinds = new HashSet<string>(manifestKinds, StringComparer.Ordinal) { "us/nav", "us/page-title" };
+        Assert(registeredKinds.Count == expectedKinds.Count && IsSameSet(registeredKinds, expectedKinds),
+            "UsKernelWidgetRegistrar must register exactly the current manifest kinds plus the two retained standalone presentation kinds "
             + "(registered=" + registeredKinds.Count + ", manifest=" + manifestKinds.Count + "; "
-            + "missing=[" + Join(registeredKinds, manifestKinds) + "], orphan=[" + Join(manifestKinds, registeredKinds) + "])");
+            + "missing=[" + Join(registeredKinds, expectedKinds) + "], orphan=[" + Join(expectedKinds, registeredKinds) + "])");
 
         // The 10 settings us/* kinds + the 1 overlay readout kind are the shipped surface; pinning
         // the cardinality makes an accidental silent drop (registration removed AND manifest line
@@ -923,15 +929,9 @@ internal static class UiSourceInvariantTests
             "an unknown footer save-status token must be reported once per value (drift guard)");
     }
 
-    // 10. The bottom help panel (BH1) is INDEPENDENT state (brief: "Help visibility is independent
-    //     state. Do not reuse active-tab"). The engine compares the Tab attribute against
-    //     UiBindings.ActiveTabBind - so a panel that rode active-tab would leak into workspace switching
-    //     and leave a reserved band whenever the workspace happened to match. The declarative switch for
-    //     this page is VisibleBind="help-open": a bool value binding that is this page's own state, gating
-    //     the ONE presentation. BH1 retired the two derived presentation keys (help-open-wide /
-    //     help-open-narrow) and body-visible together with the defensive band they selected, so the guard
-    //     now has a second half: the retired keys must stay absent, and the body row must be
-    //     unconditional again.
+    // 10. WO r3 replaces the reserved bottom band with one fixed-topic content page and Back.
+    // Keep the original visibility, single-owner, retained-node and translated-control guards;
+    // migrate their location/state authority, rather than requiring the retired presentation.
     private static void VerifyHelpPanelIsIndependentState(string root)
     {
         string ui = Path.Combine(root, "Source", "UniversalSqueaker", "UI");
@@ -939,61 +939,55 @@ internal static class UiSourceInvariantTests
         var document = new XmlDocument();
         document.XmlResolver = null;
         document.Load(manifest);
-        XmlElement? band = document.SelectSingleNode("//*[@Id='help-scroll']") as XmlElement;
+        XmlElement? band = document.SelectSingleNode("//*[@Id='page-Help-scroll']") as XmlElement;
         Assert(band != null,
-            "Layout.Schema2.xml must keep the Id='help-scroll' band element; without it help has no home");
+            "detailed help must have its own retained content scroll");
         Assert(!band!.HasAttribute("Tab"),
-            "the help band must not carry a Tab attribute: Tab is the engine's active-tab switch, "
-            + "and help visibility is independent state");
+            "the help page must not reuse the legacy active-tab switch");
         Assert(band.HasAttribute("VisibleBind")
-                && string.Equals(band.GetAttribute("VisibleBind"), "help-open", StringComparison.Ordinal),
-            "the help band must be hidden DECLARATIVELY through VisibleBind=\"help-open\" - the one key the"
-            + " player's footer switch writes");
-        Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal) == false,
-            "the band must not ask to Fill: a Fill child that also pins a Height is refused the flexible"
-            + " slot by the engine, and the footer would then leave the page");
-        Assert(band.HasAttribute("Height"),
-            "the band must declare its reservation as a Height (the number BH1.1 budgets and the panel lane"
-            + " reads back from this file)");
+                && string.Equals(band.GetAttribute("VisibleBind"), "page-Help", StringComparison.Ordinal),
+            "the fixed help page follows the one per-window page selection");
+        Assert(string.Equals(band.GetAttribute("Fill"), "true", StringComparison.Ordinal),
+            "detailed help uses the remaining content space, not a bottom reservation");
+        Assert(!band.HasAttribute("Height"),
+            "detailed help must not restore the fixed 140-height band");
 
         // The retired machinery must stay retired: a reappearing derived key means the drawer presentation
         // came back in some form, and a body row gated by a key means a help state can eat the settings.
         Assert(document.SelectSingleNode("//*[@Id='help-band']") == null,
-            "the defensive full-width band (help-band) must not come back: the single bottom element"
-            + " with the stable id 'help-scroll' owns the one declared presentation");
+            "the retired defensive help band must not return");
         Assert(document.SelectSingleNode("//*[@Id='help-panel-narrow']") == null,
             "the second help panel instance must not come back with the retired band");
-        XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='body-row']") as XmlElement;
-        Assert(bodyRow != null && !bodyRow!.HasAttribute("VisibleBind"),
-            "the body row must be unconditional again: BH1 removed the 'body-visible' swap so no help"
-            + " state can replace the settings");
+        XmlElement? bodyRow = document.SelectSingleNode("//*[@Id='voice-home']") as XmlElement;
+        Assert(bodyRow != null && bodyRow.GetAttribute("VisibleBind") == "page-Voices",
+            "home and detailed help are separate content destinations, not simultaneous columns");
         Assert(document.SelectNodes("//*[@VisibleBind='help-open-wide']").Count == 0
                 && document.SelectNodes("//*[@VisibleBind='help-open-narrow']").Count == 0
                 && document.SelectNodes("//*[@VisibleBind='body-visible']").Count == 0,
-            "the derived presentation keys must be gone from the manifest: help-open is the only truth about"
-            + " whether the panel is showing");
-        Assert(document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count == 1,
-            "exactly ONE element may bind the panel command, found "
-            + document.SelectNodes("//*[@ActionBind='toggle-help-drawer']").Count);
+            "retired width-derived help/body visibility keys must stay absent");
+        Assert(document.SelectNodes("//*[@ActionBind='open-topic']").Count == 1,
+            "exactly ONE element opens the fixed help topic");
         Assert(document.SelectNodes("//*[@ActionBind='toggle-help-panel']").Count == 0,
-            "the command the footer switch binds is the stable one: a renamed binding is a second token"
-            + " the persistence and retired scans would miss");
+            "no second help-toggle presentation may return");
         XmlElement? footer = document.SelectSingleNode("//*[@Id='footer-band']") as XmlElement;
         Assert(footer != null && footer!.Name.Equals("Row", StringComparison.Ordinal)
                 && footer.SelectSingleNode("*[@Id='footer']") != null
-                && footer.SelectSingleNode("*[@Id='help-toggle']") != null,
-            "the footer band must be a Row holding the status widget and the page's single help switch");
+                && footer.SelectSingleNode("*[@Id='save-retry']") != null
+                && footer.SelectSingleNode("*[@Id='help-toggle']") == null,
+            "the footer holds real save status/Retry without a help reservation or switch");
         XmlElement? header = document.SelectSingleNode("//*[@Id='header-band']") as XmlElement;
-        Assert(header != null && header!.SelectSingleNode("*[@Id='help-toggle']") == null,
-            "the header band must no longer hold the switch: BH1 moved it next to the band it opens");
+        Assert(header != null && header.SelectSingleNode("*[@Id='topic-link'][@ActionBind='open-topic']") != null
+                && header.SelectSingleNode("*[@Id='page-back'][@ActionBind='page-back']") != null,
+            "the shared header exposes the detailed-help entry and explicit return");
 
         string hostPath = Path.Combine(ui, "UsKernelSettingsHost.cs");
-        CheckSourceContains(hostPath, new[]
+        CheckSourceContains(Path.Combine(ui, "UsKernelSettingsHost.Voices.cs"), new[]
         {
-            "\"help-open\"",
-            "SetHelpPanelOpen",
+            "\"open-topic\"",
+            "s.PinnedHelpRef = bumper.CurrentHelpRef",
+            "ReturnToPreviousPage(s)",
         },
-        "the Host must own help visibility as its own value binding and write the panel state through the source boundary");
+        "the Host captures the topic and owns return navigation on the same page state");
         foreach (string retired in new[] { "\"help-open-wide\"", "\"help-open-narrow\"", "\"body-visible\"", "pageWidthFeed" })
         {
             CheckSourceDoesNotContain(hostPath, retired,
@@ -1001,11 +995,11 @@ internal static class UiSourceInvariantTests
         }
 
         string statePath = Path.Combine(ui, "Model", "VoicePacksPageState.cs");
-        CheckSourceContains(statePath, new[] { "HelpPanelOpen" },
-            "help visibility must live in the per-window page state");
-        Assert(File.ReadAllText(statePath).IndexOf("public bool HelpPanelOpen = false;", StringComparison.Ordinal) >= 0,
-            "HelpPanelOpen must default to false: the shipped window opens with the panel retracted above"
-            + " the footer, and expanding it never widens or moves the window");
+        CheckSourceContains(statePath, new[] { "PinnedHelpRef", "PageHistory" },
+            "fixed topic and return history belong to the per-window state");
+        Assert(File.ReadAllText(statePath).Contains("public string Page = \"Voices\";")
+                && File.ReadAllText(statePath).Contains("public string PinnedHelpRef = \"\";"),
+            "the window opens on Voices without an invented fixed topic");
 
         // The settings window used to read the drawer state to resize itself. With one window width there is
         // nothing left for it to read, so a window that names the panel state again is the widening coming
@@ -1035,9 +1029,8 @@ internal static class UiSourceInvariantTests
         // lost it". A renamed caption key would be a second live token the persistence and retired
         // scans miss, so the placeholder name the presentation round briefly tried must stay out.
         CheckSourceContains(Path.Combine(ui, "Layout.Schema2.xml"),
-            new[] { "\"US.Help.Drawer.Toggle\"" },
-            "the footer switch must expose its caption through the Keyed table: the caption belongs to the"
-            + " declared footer button");
+            new[] { "\"US.UI.Help\"" },
+            "the declared help entry exposes its translated caption");
         CheckSourceDoesNotContain(Path.Combine(ui, "Layout.Schema2.xml"), "US.Help.Panel.Toggle",
             "no second caption key in the manifest: the switch keeps its stable machine name");
         CheckSourceDoesNotContain(Path.Combine(ui, "Kernel", "UsPageTitleWidget.cs"), "US.Help.",

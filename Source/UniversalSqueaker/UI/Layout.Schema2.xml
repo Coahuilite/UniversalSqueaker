@@ -13,7 +13,7 @@
   </Styles>
   <Column Id="page-root" Gap="6" Padding="12" CancelBind="page-cancel">
     <Row Id="header-band" Gap="8" Padding="0">
-      <Widget Id="page-back" Kind="input/button" TextKey="US.UI.Back" ActionBind="page-back" VisibleBind="page-not-home" Width="82" Height="28" />
+      <Widget Id="page-back" Kind="input/button" TextKey="US.UI.Back" ActionBind="page-back" VisibleBind="page-not-home" Width="82" Height="28" HelpRef="us/page-title/help-drawer" />
       <Widget Id="page-title" Kind="text/wrapped" Bind="voice-page-title" />
       <Widget Id="tools-link" Kind="input/button" TextKey="US.UI.Tools" ActionBind="go-page" PayloadBind="go-Tools-payload" Width="160" Height="28" />
       <Widget Id="topic-link" Kind="input/button" TextKey="US.UI.Help" ActionBind="open-topic" Width="90" Height="28" />
@@ -47,7 +47,7 @@
           </Row>
         </Column>
         <Row Id="voice-filter-summary-row" Padding="0" Gap="8">
-          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleBind="pack-filter-active" />
+          <Widget Id="packs-filter-summary" Kind="text/wrapped" Bind="pack-filter-summary" Emphasis="Muted" VisibleBind="pack-filter-active" HelpRef="us/filter-bar/summary" />
           <Widget Id="voice-filter-clear" Kind="input/button" TextKey="US.UI.Clear" ActionBind="clear-pack-filters" PayloadBind="voice-empty" Width="70" Height="24" VisibleBind="pack-filter-active" />
         </Row>
         <Row Id="voice-stable-note" Gap="8" Padding="0" VisibleBind="voice-stable-filter">
@@ -55,7 +55,7 @@
           <Widget Id="voice-refresh" Kind="input/button" TextKey="US.UI.Refresh" ActionBind="voice-refresh" Width="86" Height="24" />
         </Row>
       </Column>
-      <Row Id="voice-split" Breakpoint="0" Narrow="Column" Fill="true" Gap="16" Padding="0" VisibleBind="voice-packs">
+      <Row Id="voice-split" Breakpoint="1" Narrow="Column" Fill="true" Gap="16" Padding="0" VisibleBind="voice-packs">
         <Scroll Id="voice-list-scroll" Fill="true" Gap="4" Padding="0" VisibleBind="voice-list-visible" CancelBind="voice-detail-cancel">
           <Repeat Id="packs-card-rows" Items="pack-card-keys" Template="pack-card-row" Gap="4" Padding="0" />
           <Widget Id="packs-empty" Kind="state/empty" TextKey="US.Packs.Results.Empty" VisibleBind="pack-results-empty" />
@@ -86,8 +86,8 @@
             <Widget Id="race-board-filter-vanilla-creatures" Kind="input/button" TextKey="US.Board.Filter.VanillaCreatures" ActionBind="board-filter" PayloadBind="board-filter-vanilla-creatures" SelectedBind="board-filter-is-vanilla-creatures" Width="172" Height="24" AlignY="Middle" HelpRef="us/race-board/filters" />
           </Row>
         </Column>
-        <Widget Id="race-board-counts" Kind="text/wrapped" Bind="race-board-counts" Emphasis="Muted" />
-        <Widget Id="race-board-xeno-toggle" Kind="input/button" TextKey="US.Board.XenoDir" ActionBind="board-xeno-toggle" Width="200" Height="26" />
+        <Widget Id="race-board-counts" Kind="text/wrapped" Bind="race-board-counts" Emphasis="Muted" HelpRef="us/race-board/counts" />
+        <Widget Id="race-board-xeno-toggle" Kind="input/button" TextKey="US.Board.XenoDir" ActionBind="board-xeno-toggle" Width="200" Height="26" HelpRef="us/race-board/xenodir" />
         <Widget Id="race-board-cards" Kind="us/race-board" TitleHidden="true" />
       </Scroll>
       <Row Id="voice-pager" Padding="0" Gap="8" VisibleBind="voice-pager">

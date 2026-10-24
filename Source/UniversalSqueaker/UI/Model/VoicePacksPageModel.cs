@@ -1272,7 +1272,7 @@ public static class VoicePacksPageModel
             "packs-results" => "us/pack-cards",
             "checklist" => "us/voice-pack-checklist",
             // UIR-002/003/004/006: the new workspaces' own help sections.
-            "overview-intro" => "us/overview-intro",
+            "overview-intro" => "us/page-title",
             "race-board" => "us/race-board",
             "theme-picker" => "us/theme-picker",
             "packs-fallback" => "us/fallback-editor",

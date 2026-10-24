@@ -25,63 +25,30 @@ internal static class UsKernelContractInvariantTests
     }
 
     /// <summary>
-    /// Structural check of the REAL embedded Schema=2 manifest: the fixed footer must be a sibling
-    /// of the body row (never inside the content scroll), the body row must be a Row of Fill
-    /// children, and the footer must declare Height=28. Layout math (non-overlap) is asserted
-    /// behaviorally by the neutral equivalent fixture in the UiKit harness; this guard pins the
-    /// real XML shape.
+    /// Existing real-resource structure guard, migrated to WO r3: one home or secondary content
+    /// destination, the same independent wrap-aware footer, and a full-content detailed-help page.
+    /// The old fixed sidebar/bottom reservation is explicitly replaced, not silently tolerated.
     /// </summary>
     private static void VerifyRealSchema2RootStructure(string root)
     {
         string path = Path.Combine(root, "Source", "UniversalSqueaker", "UI", "Layout.Schema2.xml");
-        if (!File.Exists(path))
-        {
-            throw new Exception("Real Schema2 manifest missing: " + path);
-        }
-
-        var document = new XmlDocument();
-        document.XmlResolver = null;
+        if (!File.Exists(path)) throw new Exception("Real Schema2 manifest missing: " + path);
+        var document = new XmlDocument { XmlResolver = null };
         document.Load(path);
-
         XmlElement? page = document.DocumentElement;
         Assert(page != null && page.Name == "UiPage" && page.GetAttribute("Schema") == "2",
             "real Schema2 manifest root is UiPage Schema=2");
-
-        XmlElement? pageRoot = null;
-        foreach (XmlNode node in page!.ChildNodes)
-        {
-            if (node is XmlElement element && element.Name == "Column" && element.GetAttribute("Id") == "page-root")
-            {
-                pageRoot = element;
-            }
-        }
-
-        Assert(pageRoot != null && pageRoot.GetAttribute("Gap") == "8" && pageRoot.GetAttribute("Padding") == "12",
-            "page-root Column declares Gap=8 Padding=12");
-
-        XmlElement? bodyRow = null;
-        XmlElement? footerBand = null;
-        foreach (XmlNode node in pageRoot!.ChildNodes)
-        {
-            if (node is not XmlElement element) continue;
-            if (element.Name == "Row" && element.GetAttribute("Id") == "body-row") bodyRow = element;
-            if (element.GetAttribute("Id") == "footer-band") footerBand = element;
-        }
-
-        Assert(bodyRow != null, "body-row Row is a direct child of page-root");
-        // The footer band is a direct child of page-root (outside every scroll), and NEITHER it nor its
-        // children may pin a Height: the attribute overrides the wrap-aware measure, which is how the
-        // in-game log kept reporting "footer needs 33px has 28px" while the attribute held 28 (2026-09-15).
-        // BH1 turned the band from an Overlay into a ROW, because the page's single help switch now lives
-        // beside the status text: the Row hands the unsized us/footer the leftover after the fixed-width
-        // switch, so no reserved width is spelled in code. The kind is asserted, not assumed.
-        Assert(footerBand != null && footerBand.Name == "Row"
-            && footerBand.GetAttribute("Height") == "",
-            "footer-band must be a Row that is a direct child of page-root, outside every scroll, with no"
-            + " Height (BH1: the band holds the status widget AND the single help switch)");
-
+        var pageRoot = page!.SelectSingleNode("Column[@Id='page-root']") as XmlElement;
+        Assert(pageRoot != null && pageRoot.GetAttribute("Gap") == "6" && pageRoot.GetAttribute("Padding") == "12",
+            "compact page root keeps the declared six-unit gap and twelve-unit inner padding");
+        var home = pageRoot!.SelectSingleNode("Column[@Id='voice-home']") as XmlElement;
+        var footerBand = pageRoot.SelectSingleNode("*[@Id='footer-band']") as XmlElement;
+        Assert(home != null && IsTrue(home.GetAttribute("Fill")) && home.GetAttribute("VisibleBind") == "page-Voices",
+            "the Voice management home occupies one flexible page destination");
+        Assert(footerBand != null && footerBand.Name == "Row" && !footerBand.HasAttribute("Height"),
+            "footer is a direct page sibling outside every scroll, with wrap-aware height");
         XmlElement? footer = null;
-        XmlElement? helpToggle = null;
+        XmlElement? retry = null;
         foreach (XmlNode node in footerBand!.ChildNodes)
         {
             if (node is not XmlElement element) continue;
@@ -90,98 +57,40 @@ internal static class UsKernelContractInvariantTests
                 Assert(footer == null, "the footer band must carry exactly one status widget");
                 footer = element;
             }
-            else if (element.GetAttribute("Id") == "help-toggle")
+            else if (element.GetAttribute("Id") == "save-retry")
             {
-                Assert(helpToggle == null, "the footer band must carry exactly one help switch");
-                helpToggle = element;
+                Assert(retry == null, "the footer band must carry exactly one save-retry action");
+                retry = element;
             }
-            else
-            {
-                Assert(false, "the footer band may hold only the status widget and the help switch, found "
-                    + element.Name + " Id='" + element.GetAttribute("Id") + "'");
-            }
+            else Assert(false, "footer may hold only real save status and Retry, found " + element.GetAttribute("Id"));
         }
-
-        Assert(footer != null
-                && footer.Name == "Widget"
-                && footer.GetAttribute("Kind") == "us/footer"
-                && footer.GetAttribute("Height") == "",
-            "footer Widget (us/footer, no Height attribute) is the band's status half");
-        Assert(helpToggle != null
-                && helpToggle.GetAttribute("Kind") == "input/button"
-                && helpToggle.GetAttribute("ActionBind") == "toggle-help-drawer"
-                && helpToggle.GetAttribute("VisibleBind") == "",
-            "the band's switch is the carrier's own input/button bound to the panel command and gated by"
-            + " nothing: the panel it opens is the page's other help state surface, and a second visibility"
-            + " key would be a second truth about whether help is showing");
-
-        Assert(bodyRow!.GetAttribute("Gap") == "12", "body-row declares Gap=12");
-
-        bool navFixed = false;
-        bool navFlexSlot = false;
-        bool contentScrollFill = false;
-        int helpInsideBody = 0;
-        foreach (XmlNode node in bodyRow.ChildNodes)
-        {
-            if (node is not XmlElement element) continue;
-            if (element.Name == "Scroll" && element.GetAttribute("Id") == "nav-column")
-            {
-                navFixed = element.GetAttribute("Width") == "200";
-                navFlexSlot = IsTrue(element.GetAttribute("Fill"));
-            }
-
-            if (element.Name == "Scroll" && element.GetAttribute("Id") == "content-scroll"
-                && IsTrue(element.GetAttribute("Fill")))
-            {
-                contentScrollFill = true;
-            }
-
-            // BH1: nothing help-shaped may sit inside the body row again. A help Scroll returning here is
-            // the side column coming back, which is the shape that cost the settings their width.
-            if (element.GetAttribute("Id").StartsWith("help", StringComparison.Ordinal)) helpInsideBody++;
-        }
-
-        // V1 replaces the plain Column with an actual Scroll: its Fill viewport can shrink while its
-        // natural nav content is clipped and remains reachable. A plain Fill Column still violates the
-        // frame containment guards; SettingsGeometryLaneTests drives the scrolled final destination.
-        Assert(navFixed && navFlexSlot && contentScrollFill && helpInsideBody == 0,
-            "body-row contains the width-fixed nav Scroll (200, Fill) and content-scroll (Fill) and NO help"
-            + " element of its own (BH1: the panel is a page-root sibling below the body)");
-        Assert(navFlexSlot,
-            "nav-column must be a shrinking scroll viewport so its natural content cannot overflow the frame");
-
-        XmlElement? helpBand = null;
-        foreach (XmlNode node in pageRoot!.ChildNodes)
-        {
+        Assert(footer != null && footer.Name == "Widget" && footer.GetAttribute("Kind") == "us/footer"
+                && !footer.HasAttribute("Height"),
+            "status widget has no fixed height that could truncate translated save feedback");
+        Assert(retry != null && retry.GetAttribute("Kind") == "input/button"
+                && retry.GetAttribute("ActionBind") == "retry-save" && retry.GetAttribute("VisibleBind") == "save-failed",
+            "footer action is the existing save-owner Retry, visible only on real failure");
+        Assert(home!.GetAttribute("Gap") == "6", "home retains compact six-unit vertical gaps");
+        var browse = home.SelectSingleNode("Row[@Id='voice-browse-tabs']") as XmlElement;
+        var split = home.SelectSingleNode("Row[@Id='voice-split']") as XmlElement;
+        bool navigation = browse != null && !browse.HasAttribute("Width")
+            && document.SelectSingleNode("//*[@Id='nav-column']") == null;
+        bool listScroll = split?.SelectSingleNode("Scroll[@Id='voice-list-scroll'][@Fill='true']") != null;
+        bool detailScroll = split?.SelectSingleNode("Scroll[@Id='voice-detail-scroll'][@Fill='true']") != null;
+        Assert(navigation && listScroll && detailScroll && home.SelectSingleNode(".//*[@Id='help-panel']") == null,
+            "home has compact browse navigation and flexible list/detail scrolls, never a permanent help column");
+        Assert(listScroll && detailScroll,
+            "both list and detail remain shrinking scroll viewports rather than overflowing natural-height columns");
+        var help = pageRoot.SelectSingleNode("Scroll[@Id='page-Help-scroll']") as XmlElement;
+        Assert(help != null && !help.HasAttribute("Height") && IsTrue(help.GetAttribute("Fill"))
+                && help.GetAttribute("VisibleBind") == "page-Help",
+            "detailed help is a full-content destination, not a reserved 140-unit bottom band");
+        bool hasPageSections = false;
+        foreach (XmlNode node in pageRoot.ChildNodes)
             if (node is XmlElement element && element.Name == "Scroll"
-                && element.GetAttribute("Id") == "help-scroll")
-            {
-                helpBand = element;
-            }
-        }
-
-        Assert(helpBand != null && helpBand.GetAttribute("Height") == "140"
-                && !IsTrue(helpBand!.GetAttribute("Fill"))
-                && helpBand.GetAttribute("VisibleBind") == "help-open",
-            "page-root must declare the help band as a fixed-Height, non-Filling Scroll gated by the one"
-            + " player intent (BH1.1's reservation: height out of the body, never a column beside it)");
-
-        bool hasTabSections = false;
-        foreach (XmlNode node in bodyRow.ChildNodes)
-        {
-            if (node is not XmlElement element || element.Name != "Scroll") continue;
-            foreach (XmlNode child in element.ChildNodes)
-            {
-                if (child is XmlElement widget && widget.GetAttribute("Tab").Length > 0)
-                {
-                    hasTabSections = true;
-                }
-            }
-        }
-
-        Assert(hasTabSections, "content scroll contains Tab-gated dynamic sections (layout reflows per tab)");
+                && element.GetAttribute("VisibleBind").StartsWith("page-", StringComparison.Ordinal)) hasPageSections = true;
+        Assert(hasPageSections, "secondary content scrolls reflow through explicit page visibility bindings");
     }
-
     /// <summary>
     /// Structural guard for the Host binding/action revision boundary: layout-affecting actions
     /// must bump the session content revision through the Host's SessionRevisionBumper, and the

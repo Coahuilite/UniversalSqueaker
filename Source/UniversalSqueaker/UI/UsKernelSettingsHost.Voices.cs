@@ -43,7 +43,7 @@ public static partial class UsKernelSettingsHost
     }
     // Definition updates preserve the host and every compatible node identity, including scroll/drafts.
     internal static UiLayoutManifest PageDefinition(bool wide) => UiLayoutManifest.Parse(ReadManifest()
-        .Replace("Id=\"voice-split\" Breakpoint=\"0\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "0" : "99999") + "\"")
+        .Replace("Id=\"voice-split\" Breakpoint=\"1\"", "Id=\"voice-split\" Breakpoint=\"" + (wide ? "1" : "99999") + "\"")
         .Replace("Id=\"voice-detail-scroll\" Width=\"440\"", "Id=\"voice-detail-scroll\"" + (wide ? " Width=\"440\"" : "")));
 
     private static void BindVoiceManagement(IUsKernelSettingsSource source, UsWriteBindings writes,

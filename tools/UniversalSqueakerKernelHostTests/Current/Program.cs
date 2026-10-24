@@ -58,7 +58,7 @@ internal static partial class Program
             using (var digest = System.Security.Cryptography.SHA256.Create())
                 Check(BitConverter.ToString(digest.ComputeHash(carrierBytes)).Replace("-", "") == expectedCarrier,
                     "actual loaded FL DLL matches the product compiler-reference receipt");
-            Run("manifest / five workspaces / bilingual help / geometry", WorkspaceAndResources);
+            Run("manifest / voice management and secondary pages / bilingual help / geometry", WorkspaceAndResources);
             Run("ordinary getters / held property views / native Live and retained draft", EditingAndProperties);
             Run("typed choices / explicit and empty help / source and15passes / no sink", HelpAndTypedChoices);
             Run("full binding proxy / same-Host backing change", ProxyCapabilities);
@@ -169,20 +169,41 @@ internal static partial class Program
         foreach (string language in new[] { "English", "ChineseSimplified" })
         {
             var table = ReadKeyedTable(language); SetTranslatorResolver(table);
-            using var page = new Page(UsKernelSettingsHost.Create(new RecordingSettingsSource { RichData = true }, Metrics));
+            // Same two layout scenarios and five destinations as before. WO r3 moves Overview's
+            // directory into Voices and the low-frequency workspaces into explicit secondary pages.
+            // Content boxes come from the WO's 1920x1080 and 1024x768 logical-screen examples.
+            foreach ((float width, float height) in new[] { (1216f, 720f), (896f, 604f) })
+            {
+            var source = new RecordingSettingsSource { RichData = true };
+            source.ViewState.WideLayout = width == 1216f;
+            using var page = new Page(UsKernelSettingsHost.Create(source, Metrics));
             Check(page.Host.Session.HelpGracePasses == 15, "US retains15 help passes " + language);
-            foreach (float width in new[] { 760f, 480f })
-            foreach (string tab in new[] { "Overview", "Packs", "Tuning", "Presets", "Advanced" })
+            foreach ((string destination, bool definitions) in new[] { ("Voices", true), ("Voices", false), ("Behavior", false), ("Presets", false), ("Diagnostics", false) })
             foreach (bool help in new[] { false, true })
             {
-                page.Host.Bindings.Invoke("set-tab", tab); page.Host.Bindings.Set("help-open", help);
-                var view = new UiLayoutRect(0, 0, width, 900);
+                page.Host.Bindings.Invoke("go-page", destination);
+                page.Host.Bindings.TryInvokeCommand(definitions ? "browse-definitions" : "browse-packs");
+                if (help) page.Host.Bindings.TryInvokeCommand("open-topic");
+                var view = new UiLayoutRect(0, 0, width, height);
                 UiLayoutSnapshot layout = page.Host.MeasureAndArrange(view.Size);
-                Check(layout.VisibleIds.Count > 10 && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + tab + "/help=" + help + " actual layout");
+                Check(layout.VisibleIds.Count > 10 && layout.RectById["footer"].Width > 0, language + "/" + width + "/" + destination + "/definitions=" + definitions + "/help=" + help + " actual layout");
                 page.Draw(view);
-                Check(layout.RectById.ContainsKey("help-panel") == help, "unified help arrangement follows declared VisibleBind");
+                bool visible = layout.RectById.ContainsKey("help-panel") && layout.RectById.ContainsKey("page-Help-scroll");
+                bool followsPage = source.ViewState.Page == (help ? "Help" : destination);
+                if (help)
+                {
+                    string pinned = page.Host.Bindings.Get<string>("pinned-help-ref");
+                    // Reuse the existing open/closed scenario: the fixed topic outlives the normal
+                    // hover grace, and Back returns to the originating page on the same Host.
+                    for (int pass = 0; pass <= 15; pass++) page.Draw(view);
+                    followsPage &= pinned.Length > 0 && page.Host.Bindings.Get<string>("pinned-help-ref") == pinned;
+                    page.Host.Bindings.TryInvokeCommand("page-back"); page.Draw(view);
+                    followsPage &= source.ViewState.Page == destination && !page.Host.MeasureAndArrange(view.Size).RectById.ContainsKey("help-panel");
+                }
+                Check(visible == help && followsPage, "help occupies its fixed content page, retains its topic beyond15 passes and returns to the origin; no permanent bottom reservation");
             }
             Check(page.Host.Manifest.Roots.Count > 0 && page.Host.Bindings.BindingOwner != null, "actual manifest and concrete registry retained");
+            }
         }
         SetTranslatorResolver(null);
     }

@@ -149,15 +149,10 @@ internal static class Program
     // exactly the seam defect the deletion closes.
 
     /// <summary>
-    /// Pure size policy of the settings window (task-10, re-cut by BH1 2026-10-05): the window opens at
-    /// half the screen width, clamped into the [800, 1600] floor/ceiling, and the height is that width at
-    /// 4:3 with vanilla's own 600 as the floor. BH1 removed the drawer's SECOND width: the help panel
-    /// reserves HEIGHT inside the page above the footer, so there is exactly one width per screen and no
-    /// help-state argument that could disagree with it. The floor is derived, not written down: 800x600 is
-    /// the smallest whole-pixel 4:3 box covering Dialog_Options.InitialSize = 650x600, so a US settings
-    /// window is never smaller than the dialog the game itself opens in the same place. This file is
-    /// compiled by the zero-Verse gate, so these are float helpers; the window composes them into its
-    /// UnityEngine.Vector2 at the Verse boundary.
+    /// Existing opening-size scenarios migrated to WO-US06-UIUX-20261025 r3:
+    /// W=min(1280,max(960,round(.8*Ws)),Ws-64), H=min(820,Hs-64), in logical units.
+    /// Expected boxes were calculated from that independent contract, not captured from the helpers.
+    /// Help still cannot change the outer size; the detailed page replaces the old bottom band.
     /// </summary>
     private static void TestSettingsWindowSizePolicy()
     {
@@ -167,15 +162,13 @@ internal static class Program
         // helpers: a gate that re-derives the answer from the code under test agrees with any change to it.
         foreach ((float screen, float screenHeight, float expectedWidth, float expectedHeight) in new[]
                  {
-                     (1024f, 768f, 800f, 600f),
-                     (1280f, 800f, 800f, 600f),
-                     (1920f, 1080f, 960f, 720f),
-                     (2560f, 1440f, 1280f, 960f),
-                     (3840f, 2160f, 1600f, 1200f),
-                     // A short, ultra-wide display: the 90%-of-screen-height rule shrinks the WIDTH (1080)
-                     // below half the screen (1280). This is the clause that keeps the old portrait shape
-                     // (614x950 at 2560x1440, which wrapped every long label) from coming back.
-                     (2560f, 900f, 1080f, 810f),
+                     (1024f, 768f, 960f, 704f),
+                     (1280f, 800f, 1024f, 736f),
+                     (1920f, 1080f, 1280f, 820f),
+                     (2560f, 1440f, 1280f, 820f),
+                     (3840f, 2160f, 1280f, 820f),
+                     // A short ultra-wide screen keeps independent width/height caps, not 4:3.
+                     (2560f, 900f, 1280f, 820f),
                  })
         {
             float width = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
@@ -194,8 +187,9 @@ internal static class Program
                 "the width is a whole pixel count at screen " + screen + ": " + width);
             Assert(Math.Abs(height - Math.Round(height)) < tolerance,
                 "the height is a whole pixel count at " + screen + "x" + screenHeight + ": " + height);
-            Assert(Math.Abs(height * 4f - width * 3f) < tolerance,
-                "the window keeps 4:3 exactly at " + screen + "x" + screenHeight + ": " + width + "x" + height);
+            Assert(height <= 820f + tolerance && height <= screenHeight - 64f + tolerance,
+                "the height respects both the 820 cap and 64 logical-unit screen clearance at "
+                + screen + "x" + screenHeight + ": " + width + "x" + height);
         }
 
         // BH1.2's policy half: one width per screen, with no state to vary. The helper is a pure function
@@ -209,33 +203,30 @@ internal static class Program
             Assert(Math.Abs(first - second) < tolerance,
                 "the window width is a function of the screen alone at " + screen + "x" + screenHeight
                 + ": " + first + " vs " + second);
-            Assert(first <= Math.Max(screen, WindowChromeLayout.SettingsWidthFloor) + tolerance,
-                "the window is never wider than the screen it opens on (above the floor) at " + screen
+            Assert(first <= screen - 64f + tolerance,
+                "the window preserves 64 logical units of screen clearance at " + screen
                 + ": " + first);
         }
 
-        // The policy's floor is vanilla's OWN options window (Dialog_Options.InitialSize = 650x600, a fixed
-        // size): 800x600 is the smallest whole-pixel 4:3 box covering it, and the minimum canvas opens
-        // exactly there.
+        // Keep the native baseline fact separate from the newly approved US opening policy.
         Assert(Math.Abs(WindowChromeLayout.VanillaBaselineWidth - 650f) < tolerance
                 && Math.Abs(WindowChromeLayout.VanillaBaselineHeight - 600f) < tolerance,
             "the vanilla baseline is the game's own 650x600 dialog");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWidthFloor - 800f) < tolerance
+        Assert(Math.Abs(WindowChromeLayout.SettingsWidthFloor - 960f) < tolerance
                 && Math.Abs(WindowChromeLayout.SettingsHeightFloor - 600f) < tolerance,
-            "the smallest allowed box is the whole-pixel 4:3 box that covers vanilla's 650x600: 800x600");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(1024f, 768f) - 800f) < tolerance,
-            "1024x768 opens at the 800 floor (vanilla's 650x600 rounded up to whole-pixel 4:3)");
-        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 600f) < tolerance,
-            "1024x768 is 800x600 - 4:3 at vanilla's own height, both whole numbers");
+            "US uses the approved 960 width floor; the retained 600 native height baseline is not an aspect policy");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowWidth(1024f, 768f) - 960f) < tolerance,
+            "1024x768 opens at the approved 960 width floor");
+        Assert(Math.Abs(WindowChromeLayout.SettingsWindowHeight(1024f, 768f) - 704f) < tolerance,
+            "1024x768 leaves the independent 64-unit height clearance: 704");
 
-        // Below the game's minimum logical resolution the floor still bites: the window never shrinks under
-        // vanilla's footprint, and its width stays a whole multiple of the step.
-        foreach ((float screen, float screenHeight) in new[] { (800f, 600f), (900f, 700f), (640f, 480f) })
+        // Existing below-minimum inputs remain defensive arithmetic, not supported game modes.
+        // The explicit screen-clearance term wins over the preferred floor there.
+        foreach ((float screen, float screenHeight, float expectedWidth) in new[] { (800f, 600f, 736f), (900f, 700f, 836f), (640f, 480f, 576f) })
         {
             float width = WindowChromeLayout.SettingsWindowWidth(screen, screenHeight);
-            Assert(Math.Abs(width - WindowChromeLayout.SettingsWidthFloor) < tolerance,
-                "a sub-minimum screen still opens at the floor (the game cannot select one, and the policy"
-                + " never shrinks below vanilla) at " + screen + "x" + screenHeight + ": " + width);
+            Assert(Math.Abs(width - expectedWidth) < tolerance,
+                "a sub-minimum input preserves the explicit screen clearance at " + screen + "x" + screenHeight + ": " + width);
             float step = width % WindowChromeLayout.SettingsWidthStep;
             Assert(step < tolerance || Math.Abs(step - WindowChromeLayout.SettingsWidthStep) < tolerance,
                 "the width is a whole multiple of the " + WindowChromeLayout.SettingsWidthStep
